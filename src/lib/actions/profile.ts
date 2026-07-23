@@ -6,6 +6,7 @@ import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { AVATAR_ICONS, ICON_PREFIX, isIcon } from "@/lib/avatars";
+import { toDateColumn } from "@/lib/dates";
 
 const UPLOADS = path.join(process.env.DATA_DIR || "/app/data", "uploads");
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -27,6 +28,7 @@ export async function updateProfile(
   const displayName = String(formData.get("displayName") ?? "").trim().slice(0, 40);
   const color = String(formData.get("color") ?? "").trim();
   const icon = String(formData.get("icon") ?? "").trim();
+  const birthday = String(formData.get("birthday") ?? "").trim();
   const removePhoto = formData.get("removePhoto") === "1";
   const photo = formData.get("photo");
 
@@ -35,6 +37,10 @@ export async function updateProfile(
 
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
     return { error: "Pick a colour.", saved: false };
+  }
+
+  if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
+    return { error: "That birthday isn't a valid date.", saved: false };
   }
 
   let avatarPath = user.avatarPath;
@@ -74,6 +80,7 @@ export async function updateProfile(
       displayName: displayName || null,
       color,
       avatarPath,
+      birthday: birthday ? toDateColumn(birthday) : null,
     },
   });
 

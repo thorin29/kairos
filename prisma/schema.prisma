@@ -26,6 +26,10 @@ model User {
   role        Role    @default(MEMBER)
   pinHash     String? // only set for ADMIN accounts while we're local-only
   avatarPath  String? // uploaded image, stored under appdata
+
+  // Date only — a birthday is a calendar day, never an instant, and it has
+  // no year-relative meaning that a timestamp would capture.
+  birthday DateTime? @db.Date
   color       String  @default("#64748b") // this person's color in the all-users calendar
   sortOrder   Int     @default(0)
   isActive    Boolean @default(true)

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadPersonDay } from "@/lib/queries/overview";
@@ -17,9 +18,8 @@ import { generatePoolChores } from "@/lib/chores/pool";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
 import { BackLink, DoneBar } from "@/components/back-link";
-import { Card, SectionHeading, IconButtonLink } from "@/components/ui";
+import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
-import { SettingsIcon } from "@/components/icons";
 import { CATEGORY_COLORS } from "@/lib/colors";
 
 export const dynamic = "force-dynamic";
@@ -97,12 +97,22 @@ export default async function PersonPage({
 
       <header className="mb-8 mt-5 flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-5">
         <div className="flex items-center gap-3">
-          <Avatar
-            name={person.displayName ?? person.name}
-            color={person.color}
-            avatarPath={person.avatarPath}
-            size="lg"
-          />
+          <Link
+            href={`/person/${person.id}/profile`}
+            title="Edit profile"
+            aria-label={`Edit ${person.displayName ?? person.name}'s profile`}
+            className="group relative rounded-full transition-transform hover:scale-105"
+          >
+            <Avatar
+              name={person.displayName ?? person.name}
+              color={person.color}
+              avatarPath={person.avatarPath}
+              size="lg"
+            />
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-ink/45 text-[0.6rem] font-semibold uppercase tracking-wide text-white opacity-0 transition-opacity group-hover:opacity-100">
+              Edit
+            </span>
+          </Link>
           <div>
             <h1 className="font-display text-3xl font-semibold tracking-tight">
               {person.displayName ?? person.name}
@@ -112,14 +122,7 @@ export default async function PersonPage({
             </p>
           </div>
         </div>
-        <div className="ml-auto flex items-center gap-3">
-          <IconButtonLink
-            href={`/person/${person.id}/profile`}
-            label="Edit profile"
-            variant="outlined"
-          >
-            <SettingsIcon />
-          </IconButtonLink>
+        <div className="ml-auto">
           <div className="text-right">
           <p className="tabular text-3xl font-medium leading-none">
             {percent === null ? (

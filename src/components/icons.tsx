@@ -121,25 +121,6 @@ export function ReleaseIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
-export function SettingsIcon({ className = "h-5 w-5" }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      aria-hidden
-    >
-      {/* Solid cog: teeth read clearly at 20px, where a stroked star of
-          spokes just looks like a sunburst. */}
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M10.6 2.5a1 1 0 0 0-.98.8l-.24 1.2a7.6 7.6 0 0 0-1.6.93l-1.16-.4a1 1 0 0 0-1.19.45L4.2 7.4a1 1 0 0 0 .2 1.24l.92.8a7.7 7.7 0 0 0 0 1.85l-.92.8a1 1 0 0 0-.2 1.25l1.23 1.93a1 1 0 0 0 1.19.45l1.16-.4c.5.38 1.03.7 1.6.93l.24 1.2a1 1 0 0 0 .98.8h2.8a1 1 0 0 0 .98-.8l.24-1.2c.57-.24 1.1-.55 1.6-.93l1.16.4a1 1 0 0 0 1.19-.45l1.23-1.93a1 1 0 0 0-.2-1.24l-.92-.8a7.7 7.7 0 0 0 0-1.85l.92-.8a1 1 0 0 0 .2-1.25l-1.23-1.93a1 1 0 0 0-1.19-.45l-1.16.4a7.6 7.6 0 0 0-1.6-.93l-.24-1.2a1 1 0 0 0-.98-.8h-2.8Zm1.4 6.1a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Z"
-      />
-    </svg>
-  );
-}
-
 export function TrophyIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>

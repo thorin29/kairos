@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ProfileForm } from "./profile-form";
 import { BackLink } from "@/components/back-link";
+import { fromDateColumn } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function ProfilePage({
           displayName: person.displayName,
           color: person.color,
           avatarPath: person.avatarPath,
+          birthdayISO: person.birthday ? fromDateColumn(person.birthday) : null,
         }}
       />
     </main>

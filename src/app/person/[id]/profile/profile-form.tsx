@@ -17,6 +17,7 @@ export function ProfileForm({
     displayName: string | null;
     color: string;
     avatarPath: string | null;
+    birthdayISO: string | null;
   };
 }) {
   const [state, formAction, pending] = useActionState(updateProfile, initial);
@@ -59,6 +60,24 @@ export function ProfileForm({
         />
         <p className="mt-2 text-xs text-muted">
           Leave empty to keep using {person.name}.
+        </p>
+
+        <label
+          htmlFor="birthday"
+          className="mt-5 block text-sm font-medium"
+        >
+          Birthday
+        </label>
+        <input
+          id="birthday"
+          name="birthday"
+          type="date"
+          defaultValue={person.birthdayISO ?? ""}
+          className="tabular mt-2 h-11 rounded-full border border-hairline px-5 outline-none focus:border-accent"
+        />
+        <p className="mt-2 text-xs text-muted">
+          Optional. Nothing uses this yet &mdash; it&rsquo;s here so the
+          dashboard can mark the day later.
         </p>
       </Card>
 
