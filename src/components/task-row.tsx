@@ -1,10 +1,10 @@
 "use client";
 
 import { useTransition } from "react";
-import { deleteTask, toggleTask } from "@/lib/actions/tasks";
+import { deleteTask, releaseTask, toggleTask } from "@/lib/actions/tasks";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import { formatShort } from "@/lib/dates";
-import { TrashIcon } from "@/components/icons";
+import { ReleaseIcon, TrashIcon } from "@/components/icons";
 
 type Row = {
   id: string;
@@ -53,6 +53,27 @@ export function TaskRow({ task }: { task: Row }) {
           )}
         </p>
       </div>
+
+      {task.locked && !done && !task.stale && (
+        <button
+          type="button"
+          aria-label={`Release ${task.title} to the household`}
+          title="Release to the household"
+          disabled={pending}
+          onClick={() => {
+            if (
+              confirm(
+                `Release "${task.title}"? It goes up for grabs and stops counting here until someone claims it.`,
+              )
+            ) {
+              startTransition(() => void releaseTask(task.id));
+            }
+          }}
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-amber-50 hover:text-amber-700 disabled:opacity-40"
+        >
+          <ReleaseIcon className="h-4 w-4" />
+        </button>
+      )}
 
       {!task.locked && (
         <button

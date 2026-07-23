@@ -1,6 +1,6 @@
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { toDateColumn } from "@/lib/dates";
+import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { isStale, loadStaleContext } from "@/lib/chores/stale";
 
 export type CategorySummary = {
@@ -51,6 +51,7 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
         status: true,
         dueDate: true,
         choreId: true,
+        isOpen: true,
       },
     }),
   ]);
@@ -58,7 +59,11 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
   // Expired chores are no longer actionable, so they drop out of today's
   // numbers entirely rather than dragging the percentage down forever. The
   // rows survive against their original due date for weekly reporting.
-  const tasks = allTasks.filter((t) => !isStale(t, dayISO, stale));
+  // Released chores belong to nobody right now, so they sit out of everyone's
+  // score until someone claims them.
+  const tasks = allTasks.filter(
+    (t) => !t.isOpen && !isStale(t, dayISO, stale),
+  );
 
   return people.map((person) => {
     const mine = tasks.filter((t) => t.userId === person.id);
@@ -103,6 +108,42 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
   });
 }
 
+export type OpenTask = {
+  id: string;
+  title: string;
+  category: string;
+  dueDateISO: string;
+  isOverdue: boolean;
+  releasedByName: string;
+};
+
+/** Chores handed back to the household and waiting for someone to claim. */
+export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
+  const stale = await loadStaleContext(dayISO);
+  const day = toDateColumn(dayISO);
+
+  const rows = await prisma.task.findMany({
+    where: {
+      isOpen: true,
+      status: TaskStatus.PENDING,
+      dueDate: { lte: day },
+    },
+    orderBy: [{ dueDate: "asc" }, { sortOrder: "asc" }],
+    include: { user: { select: { name: true } } },
+  });
+
+  return rows
+    .filter((t) => !isStale(t, dayISO, stale))
+    .map((t) => ({
+      id: t.id,
+      title: t.title,
+      category: t.category as string,
+      dueDateISO: fromDateColumn(t.dueDate),
+      isOverdue: fromDateColumn(t.dueDate) < dayISO,
+      releasedByName: t.user.name,
+    }));
+}
+
 /** Full task rows for one person on one day, overdue items first. */
 export async function loadPersonDay(userId: string, dayISO: string) {
   const day = toDateColumn(dayISO);
@@ -111,6 +152,7 @@ export async function loadPersonDay(userId: string, dayISO: string) {
   const rows = await prisma.task.findMany({
     where: {
       userId,
+      isOpen: false,
       OR: [
         { dueDate: day },
         { dueDate: { lt: day }, status: TaskStatus.PENDING },

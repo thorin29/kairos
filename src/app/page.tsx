@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { loadDay } from "@/lib/queries/overview";
+import { loadDay, loadOpenTasks } from "@/lib/queries/overview";
 import { formatLong, todayISO } from "@/lib/dates";
 import { PersonCard } from "@/components/person-card";
 import { AddTaskForm } from "@/components/add-task-form";
@@ -8,6 +8,7 @@ import { generateChores } from "@/lib/chores/generate";
 import { loadScores } from "@/lib/queries/scoreboard";
 import { IconButtonLink, Card } from "@/components/ui";
 import { ChoresIcon, PeopleIcon, AlertIcon } from "@/components/icons";
+import { OpenTasks } from "@/components/open-tasks";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,8 @@ export default async function Home() {
 
   const totalOverdue = people.reduce((n, p) => n + p.overdue, 0);
   const scores = await loadScores(today);
-  const anyActivity = scores.some((s) => s.completed > 0 || s.missed > 0);
+  const openTasks = await loadOpenTasks(today);
+  const anyActivity = scores.some((s) => s.assigned > 0);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -82,6 +84,8 @@ export default async function Home() {
         ))}
       </div>
 
+      <OpenTasks tasks={openTasks} people={roster} />
+
       <div className="mt-8">
         <AddTaskForm people={roster} defaultDate={today} />
       </div>
@@ -99,8 +103,18 @@ export default async function Home() {
                   className="h-5 w-1.5 rounded-full"
                   style={{ backgroundColor: s.color }}
                 />
-                <span className="flex-1 text-sm font-medium">{s.name}</span>
-                <span className="tabular text-sm">
+                <span className="min-w-[6rem] flex-1 text-sm font-medium">
+                  {s.name}
+                </span>
+                <span className="tabular w-24 text-right text-sm text-muted">
+                  {s.assigned}
+                  <span className="ml-1 text-xs">assigned</span>
+                </span>
+                <span className="tabular w-20 text-right text-sm text-muted">
+                  {s.assignedChores}
+                  <span className="ml-1 text-xs">chores</span>
+                </span>
+                <span className="tabular w-16 text-right text-sm">
                   {s.completed}
                   <span className="ml-1 text-xs text-muted">done</span>
                 </span>

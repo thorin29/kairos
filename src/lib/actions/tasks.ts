@@ -59,6 +59,60 @@ export async function toggleTask(id: string): Promise<void> {
   revalidatePath(`/person/${task.userId}`);
 }
 
+/**
+ * Hand a chore back to the household. It stays due on the same day and keeps
+ * its slot, but stops counting toward the original person until claimed.
+ */
+export async function releaseTask(id: string): Promise<void> {
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task || task.status === TaskStatus.COMPLETE) return;
+
+  await prisma.task.update({
+    where: { id },
+    data: { isOpen: true },
+  });
+
+  revalidatePath("/");
+  revalidatePath(`/person/${task.userId}`);
+}
+
+export type ClaimState = { error: string | null };
+
+export async function claimTask(
+  id: string,
+  userId: string,
+): Promise<ClaimState> {
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) return { error: "That task is gone." };
+  if (!task.isOpen) return { error: "Someone already picked that up." };
+
+  // The unique index on (chore, person, day) means a person can't hold the
+  // same chore twice in a day.
+  if (task.choreId) {
+    const clash = await prisma.task.findFirst({
+      where: {
+        choreId: task.choreId,
+        userId,
+        dueDate: task.dueDate,
+        id: { not: id },
+      },
+    });
+    if (clash) return { error: "They already have that chore today." };
+  }
+
+  const previousOwner = task.userId;
+
+  await prisma.task.update({
+    where: { id },
+    data: { userId, isOpen: false },
+  });
+
+  revalidatePath("/");
+  revalidatePath(`/person/${userId}`);
+  revalidatePath(`/person/${previousOwner}`);
+  return { error: null };
+}
+
 export async function deleteTask(id: string): Promise<void> {
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return;

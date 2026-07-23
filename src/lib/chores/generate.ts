@@ -27,6 +27,11 @@ const HORIZON_DAYS = 14;
  *  - Anything before today. History stays as it happened, so a missed chore
  *    from last week doesn't disappear when the roster changes.
  *
+ * Slots are matched on the assignment they came from, not on who holds them.
+ * A chore released and picked up by a sibling still fills its slot, so
+ * reconciliation leaves it alone instead of rebuilding it for the original
+ * owner and creating a duplicate.
+ *
  * Date comparisons are on YYYY-MM-DD strings throughout, since the pg driver
  * returns DATE columns as Date objects whose time component depends on the
  * process timezone.
@@ -65,7 +70,7 @@ export async function generateChores(
       if (fromDateColumn(a.effectiveFrom) > iso) continue;
       if (a.effectiveTo && fromDateColumn(a.effectiveTo) < iso) continue;
 
-      expected.set(`${a.choreId}|${a.userId}|${iso}`, {
+      expected.set(`${a.id}|${iso}`, {
         userId: a.userId,
         choreId: a.choreId,
         title: a.chore.title,
@@ -85,8 +90,7 @@ export async function generateChores(
     },
     select: {
       id: true,
-      choreId: true,
-      userId: true,
+      generatedFrom: true,
       dueDate: true,
       status: true,
     },
@@ -96,7 +100,7 @@ export async function generateChores(
   const orphaned: string[] = [];
 
   for (const t of existing) {
-    const key = `${t.choreId}|${t.userId}|${fromDateColumn(t.dueDate)}`;
+    const key = `${t.generatedFrom}|${fromDateColumn(t.dueDate)}`;
     present.add(key);
 
     if (!expected.has(key) && t.status === "PENDING") {

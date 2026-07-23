@@ -81,9 +81,15 @@ model Task {
   createdById String?
   createdBy   User?   @relation("TaskCreator", fields: [createdById], references: [id])
 
-  // Set when generated from a template/plan rather than added by hand.
-  // Lets us regenerate a plan by deleting untouched generated rows.
+  // The assignment this row was generated from. Reconciliation matches on
+  // this rather than on the person, so a chore handed to someone else keeps
+  // filling its slot instead of being rebuilt for the original owner.
   generatedFrom String?
+
+  // Released back to the household: still due, but nobody owns it yet. Open
+  // items drop out of the original person's score and appear on the
+  // dashboard for anyone to claim.
+  isOpen Boolean @default(false)
 
   sortOrder Int @default(0)
 
@@ -106,6 +112,7 @@ model Task {
   @@index([dueDate, status])
   @@index([userId, category, dueDate])
   @@index([choreId, dueDate])
+  @@index([isOpen, dueDate])
 }
 
 // ---------------------------------------------------------------
