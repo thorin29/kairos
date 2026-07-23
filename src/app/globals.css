@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  /* Cool paper ground rather than warm cream — this lives on a kitchen
+     tablet in daylight, so contrast beats coziness. */
+  --color-ground: #edf1f5;
+  --color-surface: #ffffff;
+  --color-ink: #10202f;
+  --color-muted: #5b6b7d;
+  --color-hairline: #dce3ea;
+  --color-accent: #0f5c63;
+
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+html {
+  background: var(--color-ground);
+  color: var(--color-ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Percentages, clock times, and dates all need to stay column-aligned
+   as values change. */
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

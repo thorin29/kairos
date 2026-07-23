@@ -1,0 +1,199 @@
+// Family Dashboard — core schema
+// Modules (bible, school, exercise) attach detail tables to Task as we build them.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------
+// People
+// ---------------------------------------------------------------
+
+enum Role {
+  ADMIN // parent: can assign to anyone, edit templates and plans
+  MEMBER
+}
+
+model User {
+  id          String  @id @default(cuid())
+  name        String  @unique // short name used on the dashboard
+  displayName String?
+  role        Role    @default(MEMBER)
+  pinHash     String? // only set for ADMIN accounts while we're local-only
+  avatarPath  String? // uploaded image, stored under appdata
+  color       String  @default("#64748b") // this person's color in the all-users calendar
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  tasks           Task[]         @relation("TaskOwner")
+  createdTasks    Task[]         @relation("TaskCreator")
+  events          Event[]
+  choreTemplates  ChoreTemplate[]
+  calendars       ExternalCalendar[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------
+// Tasks — the single completable unit behind every category.
+// Percent complete, overdue rollover, streaks, and the weekly
+// scoreboard are all queries against this one table.
+// ---------------------------------------------------------------
+
+enum Category {
+  CHORE
+  EXERCISE
+  BIBLE
+  SCHOOL
+  WORK
+  APPOINTMENT
+  OTHER
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETE
+  SKIPPED // excused; counts against neither numerator nor denominator
+}
+
+model Task {
+  id       String     @id @default(cuid())
+  userId   String
+  user     User       @relation("TaskOwner", fields: [userId], references: [id], onDelete: Cascade)
+  category Category
+  title    String
+  notes    String?
+
+  // Date only, no timezone. A chore is due "Tuesday", not "Tuesday 00:00 UTC".
+  dueDate     DateTime   @db.Date
+  status      TaskStatus @default(PENDING)
+  completedAt DateTime?
+
+  // Never rewrite dueDate to roll a task forward — overdue is a display
+  // rule (dueDate <= today AND status = PENDING), so history stays intact.
+
+  createdById String?
+  createdBy   User?   @relation("TaskCreator", fields: [createdById], references: [id])
+
+  // Set when generated from a template/plan rather than added by hand.
+  // Lets us regenerate a plan by deleting untouched generated rows.
+  generatedFrom String?
+
+  sortOrder Int @default(0)
+
+  // Optional link to a timed calendar block (a class, a shift, an appointment)
+  eventId String? @unique
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, dueDate])
+  @@index([dueDate, status])
+  @@index([userId, category, dueDate])
+}
+
+// ---------------------------------------------------------------
+// Events — anything that occupies time on the week grid.
+// ---------------------------------------------------------------
+
+enum EventKind {
+  CLASS
+  WORK
+  APPOINTMENT
+  EXTERNAL // pulled from a subscribed ICS feed
+  OTHER
+}
+
+model Event {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind     EventKind
+  title    String
+  location String?
+  notes    String?
+
+  // Timestamptz — a 4pm shift is a real instant, unlike a task's due date.
+  startsAt DateTime
+  endsAt   DateTime
+  allDay   Boolean  @default(false)
+
+  // RFC 5545 RRULE for repeating classes and shifts.
+  rrule       String?
+  recurrenceId String? // instance of a series, for single-occurrence edits
+
+  externalCalendarId String?
+  externalCalendar   ExternalCalendar? @relation(fields: [externalCalendarId], references: [id], onDelete: Cascade)
+  externalUid        String? // ICS UID, for dedupe across refetches
+
+  task Task?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([externalCalendarId, externalUid])
+  @@index([userId, startsAt])
+  @@index([startsAt, endsAt])
+}
+
+model ExternalCalendar {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  url           String // webcal/ICS
+  color         String?
+  isActive      Boolean   @default(true)
+  lastFetchedAt DateTime?
+  lastError     String?
+
+  events Event[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------
+// Chores — weekly pattern that materializes Task rows.
+// ---------------------------------------------------------------
+
+model ChoreTemplate {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  notes       String?
+  dayOfWeek   Int // 0 = Sunday .. 6 = Saturday
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  // Edits apply going forward; already-generated tasks are left alone.
+  effectiveFrom DateTime  @db.Date
+  effectiveTo   DateTime? @db.Date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, dayOfWeek, isActive])
+}
+
+// ---------------------------------------------------------------
+// Weather — one row, refreshed on a 15-minute timer, shared by all.
+// ---------------------------------------------------------------
+
+model WeatherCache {
+  id          Int      @id @default(1)
+  payload     Json
+  fetchedAt   DateTime @default(now())
+  provider    String
+  lastError   String?
+}
