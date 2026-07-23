@@ -5,39 +5,34 @@ import { fromDateColumn, toDateColumn } from "@/lib/dates";
 /**
  * A chore's value expires; a school assignment's does not.
  *
- * If Monday's vacuuming never happened and vacuuming comes due again, the
- * old instance is moot — the floor only needs doing once, and whoever holds
- * the new one will handle it. Same if it simply sat untouched past its
- * stale window.
+ * If Monday's vacuuming never happened and vacuuming comes due again — next
+ * Monday, or Wednesday for someone else — the old instance is moot. The
+ * floor only needs doing once, and whoever holds the newer one owns it now.
  *
- * Stale instances are greyed out and never count as complete. They stay in
- * the record as missed rather than disappearing, so a week of ignored
- * chores still reads as a week of ignored chores.
+ * Expiry is purely by succession. Nothing expires on a timer: a chore that
+ * comes around once a month stays actionable for that whole month.
  *
- * Like overdue, this is computed rather than written to the row. Nothing
- * needs a nightly sweep, and changing the rule never requires a backfill.
+ * Expired instances grey out, can't be checked off, and never count as
+ * complete. The rows stay against their original due date so a missed chore
+ * remains a missed chore in the record.
+ *
+ * Computed at read time rather than written to the row: no nightly sweep,
+ * and changing the rule takes effect without a backfill.
  */
 
 export type StaleContext = {
   /** Newest instance of each chore that has already come due. */
   latestDue: Map<string, string>;
-  /** Per-chore expiry window in days; 0 disables it. */
-  window: Map<string, number>;
 };
 
 export async function loadStaleContext(
   todayISO: string,
 ): Promise<StaleContext> {
-  const today = toDateColumn(todayISO);
-
-  const [grouped, chores] = await Promise.all([
-    prisma.task.groupBy({
-      by: ["choreId"],
-      where: { choreId: { not: null }, dueDate: { lte: today } },
-      _max: { dueDate: true },
-    }),
-    prisma.chore.findMany({ select: { id: true, staleAfterDays: true } }),
-  ]);
+  const grouped = await prisma.task.groupBy({
+    by: ["choreId"],
+    where: { choreId: { not: null }, dueDate: { lte: toDateColumn(todayISO) } },
+    _max: { dueDate: true },
+  });
 
   const latestDue = new Map<string, string>();
   for (const g of grouped) {
@@ -46,10 +41,7 @@ export async function loadStaleContext(
     }
   }
 
-  const window = new Map<string, number>();
-  for (const c of chores) window.set(c.id, c.staleAfterDays);
-
-  return { latestDue, window };
+  return { latestDue };
 }
 
 export type StaleInput = {
@@ -69,18 +61,6 @@ export function isStale(
   const due = fromDateColumn(task.dueDate);
   if (due >= todayISO) return false;
 
-  // Superseded: a newer instance of the same chore has already come due.
   const latest = ctx.latestDue.get(task.choreId);
-  if (latest && latest > due) return true;
-
-  // Timed out: nobody did it and the window closed.
-  const days = ctx.window.get(task.choreId) ?? 7;
-  if (days > 0) {
-    const age =
-      (Date.parse(`${todayISO}T00:00:00Z`) - Date.parse(`${due}T00:00:00Z`)) /
-      86_400_000;
-    if (age >= days) return true;
-  }
-
-  return false;
+  return Boolean(latest && latest > due);
 }

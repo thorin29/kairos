@@ -174,9 +174,9 @@ model ExternalCalendar {
 // Chores
 //
 // A Chore is the job itself ("Vacuum the living room"), independent of who
-// does it or when. That identity is what makes expiry work: if Monday's
-// vacuum never happened and a new vacuum comes due, the old one is moot —
-// the house only needs vacuuming once.
+// does it or when. That identity is what drives expiry: an unfinished
+// instance expires the moment the same chore comes due again for anyone,
+// because the floor only needs doing once. Expiry is never time-based.
 // ---------------------------------------------------------------
 
 model Chore {
@@ -185,10 +185,6 @@ model Chore {
   notes     String?
   sortOrder Int     @default(0)
   isActive  Boolean @default(true)
-
-  // An unfinished instance stops being actionable after this many days even
-  // if the chore never comes due again. Zero disables time-based expiry.
-  staleAfterDays Int @default(7)
 
   assignments ChoreAssignment[]
   tasks       Task[]

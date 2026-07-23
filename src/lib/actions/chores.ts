@@ -7,68 +7,82 @@ import { generateChores } from "@/lib/chores/generate";
 
 export type ChoreActionState = { error: string | null };
 
+/** Master list: the set of jobs that exist, independent of who does them. */
 export async function addChore(
   _prev: ChoreActionState,
   formData: FormData,
 ): Promise<ChoreActionState> {
   const title = String(formData.get("title") ?? "").trim().slice(0, 80);
-  const staleAfterDays = Number(formData.get("staleAfterDays") ?? 7);
-
   if (title.length < 2) return { error: "Give the chore a name." };
-  if (!Number.isInteger(staleAfterDays) || staleAfterDays < 0) {
-    return { error: "Expiry must be a whole number of days, or 0 for never." };
-  }
 
   const existing = await prisma.chore.findUnique({ where: { title } });
   if (existing) return { error: `"${title}" is already on the list.` };
 
   const count = await prisma.chore.count();
-  await prisma.chore.create({
-    data: { title, staleAfterDays, sortOrder: count },
-  });
+  await prisma.chore.create({ data: { title, sortOrder: count } });
 
   revalidatePath("/chores");
   return { error: null };
 }
 
 export async function deleteChore(id: string): Promise<void> {
-  // Generated tasks keep their title and history; only the link is cleared.
+  // Finished tasks keep their title and history; only the link is cleared.
   await prisma.chore.delete({ where: { id } });
   revalidatePath("/chores");
   revalidatePath("/");
 }
 
 /**
- * One person per chore per weekday. Passing an empty userId clears the slot.
- * Existing tasks are left alone — a reassignment applies from today forward,
- * so nobody loses credit for something already done.
+ * Assign an existing chore to one person on one weekday. Repeats weekly
+ * from today forward; days already generated are left alone so nobody
+ * loses credit for something finished.
  */
-export async function setAssignment(
-  choreId: string,
-  dayOfWeek: number,
-  userId: string,
-): Promise<void> {
-  const today = toDateColumn(todayISO());
+export async function assignChore(
+  _prev: ChoreActionState,
+  formData: FormData,
+): Promise<ChoreActionState> {
+  const choreId = String(formData.get("choreId") ?? "");
+  const userId = String(formData.get("userId") ?? "");
+  const dayOfWeek = Number(formData.get("dayOfWeek"));
 
-  await prisma.choreAssignment.deleteMany({ where: { choreId, dayOfWeek } });
-
-  if (userId) {
-    await prisma.choreAssignment.create({
-      data: { choreId, dayOfWeek, userId, effectiveFrom: today },
-    });
+  if (!choreId) return { error: "Pick a chore." };
+  if (!userId) return { error: "Pick who does it." };
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+    return { error: "Pick a day." };
   }
 
-  // Future tasks that no longer match an assignment are dropped; anything
-  // already completed or due today stays put.
-  await prisma.task.deleteMany({
-    where: {
-      choreId,
-      dueDate: { gt: today },
-      status: "PENDING",
-    },
+  const existing = await prisma.choreAssignment.findUnique({
+    where: { choreId_userId_dayOfWeek: { choreId, userId, dayOfWeek } },
+  });
+  if (existing) return { error: "That's already assigned." };
+
+  await prisma.choreAssignment.create({
+    data: { choreId, userId, dayOfWeek, effectiveFrom: toDateColumn(todayISO()) },
   });
 
   await generateChores();
+
+  revalidatePath("/chores");
+  revalidatePath("/");
+  return { error: null };
+}
+
+export async function removeAssignment(id: string): Promise<void> {
+  const assignment = await prisma.choreAssignment.findUnique({ where: { id } });
+  if (!assignment) return;
+
+  await prisma.choreAssignment.delete({ where: { id } });
+
+  // Drop future instances that no longer have an assignment behind them.
+  // Anything due today or already finished stays put.
+  await prisma.task.deleteMany({
+    where: {
+      choreId: assignment.choreId,
+      userId: assignment.userId,
+      dueDate: { gt: toDateColumn(todayISO()) },
+      status: "PENDING",
+    },
+  });
 
   revalidatePath("/chores");
   revalidatePath("/");

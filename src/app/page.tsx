@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadDay } from "@/lib/queries/overview";
@@ -6,6 +5,9 @@ import { formatLong, todayISO } from "@/lib/dates";
 import { PersonCard } from "@/components/person-card";
 import { AddTaskForm } from "@/components/add-task-form";
 import { generateChores } from "@/lib/chores/generate";
+import { loadScores } from "@/lib/queries/scoreboard";
+import { IconButtonLink, Card } from "@/components/ui";
+import { ChoresIcon, PeopleIcon, AlertIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +48,8 @@ export default async function Home() {
   });
 
   const totalOverdue = people.reduce((n, p) => n + p.overdue, 0);
+  const scores = await loadScores(today);
+  const anyActivity = scores.some((s) => s.completed > 0 || s.missed > 0);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -58,22 +62,17 @@ export default async function Home() {
         </div>
         <div className="flex items-center gap-3">
           {totalOverdue > 0 && (
-            <p className="tabular text-sm font-medium text-red-700">
+            <p className="tabular inline-flex items-center gap-1.5 text-sm font-medium text-red-700">
+              <AlertIcon className="h-4 w-4" />
               {totalOverdue} overdue
             </p>
           )}
-          <Link
-            href="/chores"
-            className="rounded-md border border-hairline px-3 py-2 text-sm text-muted hover:border-accent hover:text-accent"
-          >
-            Chores
-          </Link>
-          <Link
-            href="/setup"
-            className="rounded-md border border-hairline px-3 py-2 text-sm text-muted hover:border-accent hover:text-accent"
-          >
-            Household
-          </Link>
+          <IconButtonLink href="/chores" label="Manage chores">
+            <ChoresIcon />
+          </IconButtonLink>
+          <IconButtonLink href="/setup" label="Manage household">
+            <PeopleIcon />
+          </IconButtonLink>
         </div>
       </header>
 
@@ -86,6 +85,38 @@ export default async function Home() {
       <div className="mt-8">
         <AddTaskForm people={roster} defaultDate={today} />
       </div>
+
+      {anyActivity && (
+        <section className="mt-10">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
+            Running totals
+          </h2>
+          <Card className="divide-y divide-hairline">
+            {scores.map((s) => (
+              <div key={s.id} className="flex items-center gap-3 px-5 py-3">
+                <span
+                  aria-hidden
+                  className="h-5 w-1.5 rounded-full"
+                  style={{ backgroundColor: s.color }}
+                />
+                <span className="flex-1 text-sm font-medium">{s.name}</span>
+                <span className="tabular text-sm">
+                  {s.completed}
+                  <span className="ml-1 text-xs text-muted">done</span>
+                </span>
+                <span className="tabular w-20 text-right text-sm">
+                  {s.missed > 0 ? (
+                    <span className="text-red-700">{s.missed}</span>
+                  ) : (
+                    <span className="text-muted">0</span>
+                  )}
+                  <span className="ml-1 text-xs text-muted">missed</span>
+                </span>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
     </main>
   );
 }

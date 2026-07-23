@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadPersonDay } from "@/lib/queries/overview";
@@ -6,6 +5,7 @@ import { CATEGORY_LABELS } from "@/lib/colors";
 import { formatLong, fromDateColumn, todayISO } from "@/lib/dates";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
+import { BackLink, DoneBar } from "@/components/back-link";
 
 export const dynamic = "force-dynamic";
 
@@ -45,14 +45,9 @@ export default async function PersonPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <Link
-        href="/"
-        className="text-sm text-muted underline underline-offset-4 hover:text-accent"
-      >
-        Everyone
-      </Link>
+      <BackLink />
 
-      <header className="mb-8 mt-4 flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-5">
+      <header className="mb-8 mt-5 flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-5">
         <div className="flex items-center gap-3">
           <span
             aria-hidden
@@ -128,6 +123,8 @@ export default async function PersonPage({
           defaultDate={today}
         />
       </div>
+
+      <DoneBar />
     </main>
   );
 }

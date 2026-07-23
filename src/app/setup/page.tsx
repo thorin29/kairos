@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AddPersonForm } from "./add-person-form";
 import { RemovePersonButton } from "./remove-person-button";
+import { BackLink, DoneBar } from "@/components/back-link";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,9 @@ export default async function SetupPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
-      <header className="mb-8">
+      {people.length > 0 && <BackLink />}
+
+      <header className="mb-8 mt-5">
         <p className="text-xs font-semibold uppercase tracking-widest text-muted">
           Setup
         </p>
@@ -51,17 +53,12 @@ export default async function SetupPage() {
       </section>
 
       {hasAdmin && (
-        <div className="mt-8 flex items-center justify-between border-t border-hairline pt-6">
-          <p className="text-sm text-muted">
+        <>
+          <p className="mt-6 text-sm text-muted">
             {people.length} {people.length === 1 ? "person" : "people"} added.
           </p>
-          <Link
-            href="/"
-            className="rounded-md border border-hairline px-4 py-2 text-sm font-medium hover:border-accent hover:text-accent"
-          >
-            Go to the dashboard
-          </Link>
-        </div>
+          <DoneBar />
+        </>
       )}
     </main>
   );
