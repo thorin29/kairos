@@ -1,4 +1,6 @@
-import { Category } from "@/generated/prisma/client";
+// Type-only: a value import here would pull the Prisma runtime into any
+// client component that needs these labels.
+import type { Category } from "@/generated/prisma/client";
 
 /**
  * Two coloring modes for the calendar, as specified:

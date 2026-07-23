@@ -1,3 +1,8 @@
+// Throws at build time if a client component ever imports this file, even
+// indirectly. Without it the failure surfaces as webpack being unable to
+// resolve Node's net and tls modules, which points nowhere useful.
+import "server-only";
+
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 

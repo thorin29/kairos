@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { assignChore, type ChoreActionState } from "@/lib/actions/chores";
 import { PlusIcon } from "@/components/icons";
-import { DAY_NAMES } from "@/lib/queries/chores-summary";
+import { DAY_NAMES } from "@/lib/days";
 
 const initial: ChoreActionState = { error: null };
 

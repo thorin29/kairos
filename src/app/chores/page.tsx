@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { loadChoreSummary, DAY_SHORT } from "@/lib/queries/chores-summary";
+import { loadChoreSummary } from "@/lib/queries/chores-summary";
+import { DAY_SHORT } from "@/lib/days";
 import { AddChoreForm } from "./add-chore-form";
 import { AssignForm } from "./assign-form";
 import { DeleteChoreButton, RemoveAssignmentButton } from "./row-actions";

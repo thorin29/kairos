@@ -1,17 +1,5 @@
 import { prisma } from "@/lib/prisma";
 
-export const DAY_NAMES = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
-
-export const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 export type AssignmentRow = {
   id: string;
   dayOfWeek: number;
