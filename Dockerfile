@@ -38,7 +38,8 @@ COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Avatars and nightly dumps live on the host, not in the image.
-RUN mkdir -p /app/uploads /app/backups
+ENV DATA_DIR=/app/data
+RUN mkdir -p /app/data
 
 EXPOSE 3000
 ENTRYPOINT ["docker-entrypoint.sh"]
