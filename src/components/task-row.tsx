@@ -63,15 +63,16 @@ export function TaskRow({ task }: { task: Row }) {
           onClick={() => {
             if (
               confirm(
-                `Release "${task.title}"? It goes up for grabs and stops counting here until someone claims it.`,
+                `Release "${task.title}" for today only? It goes up for grabs, and the next one still comes back to you.`,
               )
             ) {
               startTransition(() => void releaseTask(task.id));
             }
           }}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-amber-50 hover:text-amber-700 disabled:opacity-40"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-hairline px-3 text-xs font-medium text-muted transition-colors hover:border-amber-400 hover:bg-amber-50 hover:text-amber-800 disabled:opacity-40"
         >
-          <ReleaseIcon className="h-4 w-4" />
+          <ReleaseIcon className="h-3.5 w-3.5" />
+          Release
         </button>
       )}
 
