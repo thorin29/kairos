@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { deleteTask, toggleTask } from "@/lib/actions/tasks";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import { formatShort } from "@/lib/dates";
+import { TrashIcon } from "@/components/icons";
 
 type Row = {
   id: string;
@@ -13,6 +14,8 @@ type Row = {
   dueDateISO: string;
   isOverdue: boolean;
   stale?: boolean;
+  /** Generated from a chore: only a parent can remove it, from Chores. */
+  locked?: boolean;
 };
 
 export function TaskRow({ task }: { task: Row }) {
@@ -51,18 +54,22 @@ export function TaskRow({ task }: { task: Row }) {
         </p>
       </div>
 
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => {
-          if (confirm(`Delete "${task.title}"?`)) {
-            startTransition(() => void deleteTask(task.id));
-          }
-        }}
-        className="text-xs text-muted underline underline-offset-4 hover:text-red-700"
-      >
-        Delete
-      </button>
+      {!task.locked && (
+        <button
+          type="button"
+          aria-label={`Delete ${task.title}`}
+          title={`Delete ${task.title}`}
+          disabled={pending}
+          onClick={() => {
+            if (confirm(`Delete "${task.title}"?`)) {
+              startTransition(() => void deleteTask(task.id));
+            }
+          }}
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-40"
+        >
+          <TrashIcon className="h-4 w-4" />
+        </button>
+      )}
     </li>
   );
 }

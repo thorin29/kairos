@@ -2,6 +2,7 @@ import { TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
 import { isStale, loadStaleContext } from "@/lib/chores/stale";
+import { getScoringStart } from "@/lib/settings";
 
 export type PersonScore = {
   id: string;
@@ -21,6 +22,10 @@ export async function loadScores(todayISO: string): Promise<PersonScore[]> {
   const ctx = await loadStaleContext(todayISO);
   const today = toDateColumn(todayISO);
 
+  // Everything before this day stays in the database but stops counting.
+  const startISO = await getScoringStart();
+  const since = startISO ? { gte: toDateColumn(startISO) } : undefined;
+
   const [people, completed, pendingChores] = await Promise.all([
     prisma.user.findMany({
       where: { isActive: true },
@@ -29,14 +34,17 @@ export async function loadScores(todayISO: string): Promise<PersonScore[]> {
     }),
     prisma.task.groupBy({
       by: ["userId"],
-      where: { status: TaskStatus.COMPLETE },
+      where: {
+        status: TaskStatus.COMPLETE,
+        ...(since ? { dueDate: since } : {}),
+      },
       _count: { _all: true },
     }),
     prisma.task.findMany({
       where: {
         status: TaskStatus.PENDING,
         choreId: { not: null },
-        dueDate: { lt: today },
+        dueDate: since ? { lt: today, ...since } : { lt: today },
       },
       select: { userId: true, choreId: true, status: true, dueDate: true },
     }),

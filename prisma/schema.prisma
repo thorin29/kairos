@@ -215,6 +215,20 @@ model ChoreAssignment {
 }
 
 // ---------------------------------------------------------------
+// Settings
+//
+// Small key/value store. Currently holds the scoring start date, which lets
+// the scoreboard ignore everything from before a chosen day without deleting
+// any history — useful for starting a season even after months of testing.
+// ---------------------------------------------------------------
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------
 // Weather — one row, refreshed on a 15-minute timer, shared by all.
 // ---------------------------------------------------------------
 

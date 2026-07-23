@@ -6,6 +6,14 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
+# The pg driver parses DATE columns at the process's local midnight, so the
+# process must run in UTC for stored dates to read back as written. The
+# household's real timezone moves to HOUSEHOLD_TZ, which is what decides
+# when "today" rolls over.
+export HOUSEHOLD_TZ="${HOUSEHOLD_TZ:-${TZ:-UTC}}"
+export TZ=UTC
+echo "Household timezone: ${HOUSEHOLD_TZ}"
+
 echo "Waiting for the database..."
 i=0
 until npx prisma migrate status >/dev/null 2>&1 || [ $i -ge 30 ]; do

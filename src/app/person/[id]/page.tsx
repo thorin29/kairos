@@ -3,11 +3,25 @@ import { prisma } from "@/lib/prisma";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import { formatLong, fromDateColumn, todayISO } from "@/lib/dates";
+import { generateChores } from "@/lib/chores/generate";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
 import { BackLink, DoneBar } from "@/components/back-link";
+import { Card, SectionHeading } from "@/components/ui";
+import { CATEGORY_COLORS } from "@/lib/colors";
 
 export const dynamic = "force-dynamic";
+
+/** Order the day reads in. Chores first because they're the daily habit. */
+const ORDER = [
+  "CHORE",
+  "BIBLE",
+  "EXERCISE",
+  "SCHOOL",
+  "WORK",
+  "APPOINTMENT",
+  "OTHER",
+] as const;
 
 export default async function PersonPage({
   params,
@@ -20,6 +34,10 @@ export default async function PersonPage({
   const person = await prisma.user.findUnique({ where: { id } });
   if (!person) notFound();
 
+  // Self-healing: if this page is opened before the dashboard, today's
+  // chores still get created.
+  await generateChores(today);
+
   const tasks = await loadPersonDay(id, today);
 
   const rows = tasks.map((t) => ({
@@ -31,6 +49,7 @@ export default async function PersonPage({
     isOverdue:
       fromDateColumn(t.dueDate) < today && t.status === "PENDING" && !t.stale,
     stale: t.stale,
+    locked: Boolean(t.choreId),
   }));
 
   const counted = rows.filter((r) => r.status !== "SKIPPED" && !r.stale);
@@ -41,17 +60,23 @@ export default async function PersonPage({
 
   const overdue = rows.filter((r) => r.isOverdue);
   const missed = rows.filter((r) => r.stale);
-  const rest = rows.filter((r) => !r.isOverdue && !r.stale);
+  const todayRows = rows.filter((r) => !r.isOverdue && !r.stale);
+
+  // Grouped so the day reads as sections rather than one long list.
+  const groups = ORDER.map((category) => ({
+    category,
+    items: todayRows.filter((r) => r.category === category),
+  })).filter((g) => g.items.length > 0);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
+    <main className="mx-auto max-w-3xl px-6 py-8">
       <BackLink />
 
       <header className="mb-8 mt-5 flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-5">
         <div className="flex items-center gap-3">
           <span
             aria-hidden
-            className="h-9 w-1.5 rounded-full"
+            className="h-10 w-1.5 rounded-full"
             style={{ backgroundColor: person.color }}
           />
           <div>
@@ -63,55 +88,74 @@ export default async function PersonPage({
             </p>
           </div>
         </div>
-        <p className="tabular text-2xl font-medium">
-          {percent === null ? (
-            <span className="text-base text-muted">Nothing today</span>
-          ) : (
-            `${percent}%`
+        <div className="text-right">
+          <p className="tabular text-3xl font-medium leading-none">
+            {percent === null ? (
+              <span className="text-base text-muted">Nothing today</span>
+            ) : (
+              `${percent}%`
+            )}
+          </p>
+          {counted.length > 0 && (
+            <p className="tabular mt-1 text-xs text-muted">
+              {done} of {counted.length} done
+            </p>
           )}
-        </p>
+        </div>
       </header>
 
       {overdue.length > 0 && (
-        <section className="mb-6">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-red-700">
+        <section className="mb-8">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-red-700">
             Carried over
           </h2>
-          <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-red-200 bg-surface">
+          <Card className="divide-y divide-hairline border-red-200">
             {overdue.map((t) => (
               <TaskRow key={t.id} task={t} />
             ))}
-          </ul>
+          </Card>
         </section>
       )}
 
-      {rest.length > 0 ? (
-        <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-surface">
-          {rest.map((t) => (
-            <TaskRow key={t.id} task={t} />
+      {groups.length > 0 ? (
+        <div className="space-y-8">
+          {groups.map((g) => (
+            <section key={g.category}>
+              <div className="mb-3 flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: CATEGORY_COLORS[g.category] }}
+                />
+                <SectionHeading>{CATEGORY_LABELS[g.category]}</SectionHeading>
+              </div>
+              <Card className="divide-y divide-hairline">
+                {g.items.map((t) => (
+                  <TaskRow key={t.id} task={t} />
+                ))}
+              </Card>
+            </section>
           ))}
-        </ul>
+        </div>
       ) : (
         overdue.length === 0 && (
-          <p className="rounded-xl border border-hairline bg-surface p-6 text-sm text-muted">
-            Nothing scheduled. Add something below.
-          </p>
+          <Card className="p-6 text-sm text-muted">
+            Nothing scheduled today.
+          </Card>
         )
       )}
 
       {missed.length > 0 && (
-        <section className="mt-6">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
-            Missed
-          </h2>
-          <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-surface opacity-60">
+        <section className="mt-8">
+          <SectionHeading>Missed</SectionHeading>
+          <Card className="divide-y divide-hairline opacity-60">
             {missed.map((t) => (
               <TaskRow key={t.id} task={t} />
             ))}
-          </ul>
+          </Card>
           <p className="mt-2 text-xs text-muted">
-            These expired or came around again. They no longer count either
-            way.
+            Someone else has these now, or they came around again. They no
+            longer count either way.
           </p>
         </section>
       )}

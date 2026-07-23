@@ -2,11 +2,15 @@ import { prisma } from "@/lib/prisma";
 import { AddPersonForm } from "./add-person-form";
 import { RemovePersonButton } from "./remove-person-button";
 import { BackLink, DoneBar } from "@/components/back-link";
+import { ScoringStartForm } from "./scoring-start-form";
+import { getScoringStart } from "@/lib/settings";
+import { SectionHeading } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function SetupPage() {
   const people = await prisma.user.findMany({ orderBy: { sortOrder: "asc" } });
+  const scoringStart = await getScoringStart();
   const hasAdmin = people.some((p) => p.role === "ADMIN");
 
   return (
@@ -54,6 +58,11 @@ export default async function SetupPage() {
 
       {hasAdmin && (
         <>
+          <section className="mt-10">
+            <SectionHeading>Scoring</SectionHeading>
+            <ScoringStartForm current={scoringStart} />
+          </section>
+
           <p className="mt-6 text-sm text-muted">
             {people.length} {people.length === 1 ? "person" : "people"} added.
           </p>

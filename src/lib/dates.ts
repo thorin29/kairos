@@ -1,19 +1,28 @@
 /**
- * Task.dueDate is a DATE column: a calendar day with no timezone. Prisma
- * represents those as a Date at UTC midnight, so every conversion between
- * "the day it is here" and a stored value goes through this file.
+ * Task.dueDate and the chore effective dates are DATE columns: calendar days
+ * with no timezone. Every conversion between "the day it is here" and a
+ * stored value goes through this file.
  *
- * Getting this wrong is how chores show up a day early. TZ is read from the
- * environment so the household's day boundary is the one that counts, not
- * the server's.
+ * Two rules make this survivable:
+ *
+ * 1. The Node process always runs in UTC. The pg driver parses DATE columns
+ *    into a JS Date at *local* midnight, so if the process ran in Chicago a
+ *    stored 2026-07-23 would come back as 05:00Z and compare as greater than
+ *    the 00:00Z value we wrote. Forcing the process to UTC makes reads and
+ *    writes agree. HOUSEHOLD_TZ carries the real timezone for display and
+ *    for deciding when "today" rolls over.
+ *
+ * 2. Dates are compared as YYYY-MM-DD strings, never as Date objects.
+ *    String comparison can't be thrown off by an hours-level offset.
  */
 
-const TZ = process.env.TZ || "UTC";
+const HOUSEHOLD_TZ =
+  process.env.HOUSEHOLD_TZ || process.env.TZ || "UTC";
 
 /** Calendar day in the household timezone, as YYYY-MM-DD. */
 export function todayISO(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: TZ,
+    timeZone: HOUSEHOLD_TZ,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -25,9 +34,17 @@ export function toDateColumn(iso: string): Date {
   return new Date(`${iso}T00:00:00.000Z`);
 }
 
-/** A stored DATE value back to YYYY-MM-DD. */
+/**
+ * A stored DATE value back to YYYY-MM-DD. Formatted in UTC because the
+ * process runs in UTC; anything else reintroduces the off-by-one.
+ */
 export function fromDateColumn(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
 }
 
 export function addDays(iso: string, days: number): string {
@@ -36,10 +53,14 @@ export function addDays(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** 0 = Sunday .. 6 = Saturday, for a YYYY-MM-DD string. */
+export function dayOfWeek(iso: string): number {
+  return new Date(`${iso}T00:00:00.000Z`).getUTCDay();
+}
+
 /** Sunday of the week containing the given day. Weeks run Sunday–Saturday. */
 export function startOfWeek(iso: string): string {
-  const d = new Date(`${iso}T00:00:00.000Z`);
-  return addDays(iso, -d.getUTCDay());
+  return addDays(iso, -dayOfWeek(iso));
 }
 
 export function weekDays(iso: string): string[] {
