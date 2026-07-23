@@ -1,4 +1,4 @@
-import { Category } from "@prisma/client";
+import { Category } from "@/generated/prisma/client";
 
 /**
  * Two coloring modes for the calendar, as specified:

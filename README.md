@@ -74,8 +74,7 @@ docker run -d \
   -p 8642:3000 \
   -e DATABASE_URL="postgresql://famdash:choose-a-strong-password@<postgres-host>:5432/familydashboard?schema=public" \
   -e TZ="America/New_York" \
-  -v /path/to/appdata/family-dashboard/uploads:/app/uploads \
-  -v /path/to/appdata/family-dashboard/backups:/app/backups \
+  -v /path/to/appdata/family-dashboard:/app/data \
   ghcr.io/<username>/family-dashboard:latest
 ```
 
@@ -98,7 +97,8 @@ protected by a PIN.
 | `DATABASE_URL` | yes | PostgreSQL connection string |
 | `TZ` | no | Local timezone for due dates and the calendar. Defaults to UTC. |
 | `PORT` | no | Port inside the container. Defaults to `3000`. |
-| `PUID` / `PGID` | no | Ownership for uploaded files. Defaults to `99:100`. |
+| `PUID` / `PGID` | no | Ownership for files in the data volume. Defaults to `99:100`. |
+| `DATA_DIR` | no | Where uploads and backups are written. Defaults to `/app/data`. |
 | `WEATHER_LAT` / `WEATHER_LON` | no | Coordinates for the weather panel |
 | `ACCUWEATHER_API_KEY` | no | Required only if using AccuWeather |
 
@@ -107,7 +107,7 @@ See `.env.example` for the full list.
 ### Unraid
 
 `unraid-template.xml` can be imported directly. Replace the repository field
-with your own image, set `DATABASE_URL`, and point the two volume paths at your
+with your own image, set `DATABASE_URL`, and point the data volume at your
 appdata share.
 
 ## A note on security
@@ -122,6 +122,7 @@ reverse proxy with real authentication in front.
 ```bash
 npm install
 cp .env.example .env      # point DATABASE_URL at a local PostgreSQL
+npx prisma generate       # Prisma 7 generates into src/generated
 npx prisma migrate deploy
 npm run dev
 ```
@@ -131,7 +132,7 @@ worked on without touching the others.
 
 ## Tech
 
-Next.js 15 (App Router) · TypeScript · Prisma · PostgreSQL · Tailwind CSS
+Next.js 15 (App Router) · TypeScript · Prisma 7 · PostgreSQL · Tailwind CSS
 
 ## License
 

@@ -16,6 +16,5 @@
   <Config Name="TZ" Target="TZ" Default="UTC" Mode="" Description="Timezone" Type="Variable" Display="always" Required="true">UTC</Config>
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID" Type="Variable" Display="advanced" Required="false">99</Config>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group ID" Type="Variable" Display="advanced" Required="false">100</Config>
-  <Config Name="Uploads" Target="/app/uploads" Default="/mnt/user/appdata/family-dashboard/uploads" Mode="rw" Description="Profile photos" Type="Path" Display="always" Required="true">/mnt/user/appdata/family-dashboard/uploads</Config>
-  <Config Name="Backups" Target="/app/backups" Default="/mnt/user/appdata/family-dashboard/backups" Mode="rw" Description="Nightly database dumps" Type="Path" Display="always" Required="false">/mnt/user/appdata/family-dashboard/backups</Config>
+  <Config Name="Appdata" Target="/app/data" Default="/mnt/user/appdata/family-dash" Mode="rw" Description="Uploads and database backups" Type="Path" Display="always" Required="true">/mnt/user/appdata/family-dash</Config>
 </Container>

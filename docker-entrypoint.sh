@@ -8,13 +8,13 @@ fi
 
 echo "Waiting for the database..."
 i=0
-until prisma migrate status --schema=/app/prisma/schema.prisma >/dev/null 2>&1 || [ $i -ge 30 ]; do
+until npx prisma migrate status >/dev/null 2>&1 || [ $i -ge 30 ]; do
   i=$((i + 1))
   sleep 2
 done
 
 echo "Applying migrations..."
-prisma migrate deploy --schema=/app/prisma/schema.prisma
+npx prisma migrate deploy
 
 # Single mapped volume; the container builds its own structure inside.
 DATA_DIR=${DATA_DIR:-/app/data}

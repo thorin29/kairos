@@ -11,8 +11,8 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Prisma client must be generated before next build, since server
-# components import it at compile time.
+# Prisma 7 generates the client into src/generated, and server components
+# import it at compile time, so this must run before the build.
 RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
@@ -25,20 +25,24 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-
-# Prisma CLI is needed at runtime to apply migrations on start.
-RUN npm install -g prisma@6.19.3
+ENV DATA_DIR=/app/data
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+
+# The Prisma CLI applies migrations on start, and prisma.config.ts imports
+# from prisma/config and dotenv. Those must resolve from /app, so the full
+# dependency tree is copied rather than relying on a global install. This
+# costs image size but avoids module resolution failures at boot.
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder /app/src/generated ./src/generated
 
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Avatars and nightly dumps live on the host, not in the image.
-ENV DATA_DIR=/app/data
 RUN mkdir -p /app/data
 
 EXPOSE 3000

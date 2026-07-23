@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Role } from "@prisma/client";
+import { Role } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashPin } from "@/lib/auth";
 import { nextColor } from "@/lib/palette";
