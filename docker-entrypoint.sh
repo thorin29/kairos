@@ -16,10 +16,13 @@ done
 echo "Applying migrations..."
 prisma migrate deploy --schema=/app/prisma/schema.prisma
 
-# PUID/PGID so uploaded avatars land on the array owned by nobody:users.
+# Single mapped volume; the container builds its own structure inside.
+DATA_DIR=${DATA_DIR:-/app/data}
+mkdir -p "$DATA_DIR/uploads" "$DATA_DIR/backups"
+
 PUID=${PUID:-99}
 PGID=${PGID:-100}
-chown -R "$PUID:$PGID" /app/uploads /app/backups 2>/dev/null || true
+chown -R "$PUID:$PGID" "$DATA_DIR" 2>/dev/null || true
 
 echo "Starting on port ${PORT}. Open the web UI to create the first account."
 exec su-exec "$PUID:$PGID" "$@"
