@@ -73,16 +73,10 @@ export async function removeAssignment(id: string): Promise<void> {
 
   await prisma.choreAssignment.delete({ where: { id } });
 
-  // Drop future instances that no longer have an assignment behind them.
-  // Anything due today or already finished stays put.
-  await prisma.task.deleteMany({
-    where: {
-      choreId: assignment.choreId,
-      userId: assignment.userId,
-      dueDate: { gt: toDateColumn(todayISO()) },
-      status: "PENDING",
-    },
-  });
+  // Reconciling clears out the unfinished instances this assignment left
+  // behind, today's included. Completed ones and anything before today are
+  // left alone.
+  await generateChores();
 
   revalidatePath("/chores");
   revalidatePath("/");
