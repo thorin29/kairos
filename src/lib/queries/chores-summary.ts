@@ -26,7 +26,10 @@ export type ChoreSummary = {
 export async function loadChoreSummary(): Promise<ChoreSummary[]> {
   const chores = await prisma.chore.findMany({
     where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
+    // Alphabetical everywhere: the master list, the assign dropdown, and the
+    // catch-up table all read from this, and a stable predictable order
+    // beats insertion order once there are more than a handful.
+    orderBy: { title: "asc" },
     include: {
       assignments: {
         where: { isActive: true },

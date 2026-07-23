@@ -7,7 +7,9 @@ import { generateChores } from "@/lib/chores/generate";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
 import { BackLink, DoneBar } from "@/components/back-link";
-import { Card, SectionHeading } from "@/components/ui";
+import { Card, SectionHeading, IconButtonLink } from "@/components/ui";
+import { Avatar } from "@/components/avatar";
+import { SettingsIcon } from "@/components/icons";
 import { CATEGORY_COLORS } from "@/lib/colors";
 
 export const dynamic = "force-dynamic";
@@ -74,10 +76,11 @@ export default async function PersonPage({
 
       <header className="mb-8 mt-5 flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-5">
         <div className="flex items-center gap-3">
-          <span
-            aria-hidden
-            className="h-10 w-1.5 rounded-full"
-            style={{ backgroundColor: person.color }}
+          <Avatar
+            name={person.displayName ?? person.name}
+            color={person.color}
+            avatarPath={person.avatarPath}
+            size="lg"
           />
           <div>
             <h1 className="font-display text-3xl font-semibold tracking-tight">
@@ -88,7 +91,15 @@ export default async function PersonPage({
             </p>
           </div>
         </div>
-        <div className="text-right">
+        <div className="ml-auto flex items-center gap-3">
+          <IconButtonLink
+            href={`/person/${person.id}/profile`}
+            label="Edit profile"
+            variant="outlined"
+          >
+            <SettingsIcon />
+          </IconButtonLink>
+          <div className="text-right">
           <p className="tabular text-3xl font-medium leading-none">
             {percent === null ? (
               <span className="text-base text-muted">Nothing today</span>
@@ -101,6 +112,7 @@ export default async function PersonPage({
               {done} of {counted.length} done
             </p>
           )}
+          </div>
         </div>
       </header>
 

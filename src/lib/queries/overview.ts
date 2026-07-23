@@ -16,6 +16,7 @@ export type PersonSummary = {
   id: string;
   name: string;
   color: string;
+  avatarPath: string | null;
   role: string;
   categories: CategorySummary[];
   total: number;
@@ -98,6 +99,7 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
       id: person.id,
       name: person.displayName ?? person.name,
       color: person.color,
+      avatarPath: person.avatarPath,
       role: person.role,
       categories: categories.filter((c) => c.total > 0),
       total,

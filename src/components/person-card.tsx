@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CATEGORY_LABELS } from "@/lib/colors";
+import { Avatar } from "@/components/avatar";
 import type { PersonSummary } from "@/lib/queries/overview";
 import { CompletionBar } from "./completion-bar";
 
@@ -9,11 +10,12 @@ export function PersonCard({ person }: { person: PersonSummary }) {
       href={`/person/${person.id}`}
       className="group flex flex-col rounded-xl border border-hairline bg-surface p-5 transition-colors hover:border-accent"
     >
-      <div className="flex items-baseline gap-3">
-        <span
-          aria-hidden
-          className="h-7 w-1.5 shrink-0 self-center rounded-full"
-          style={{ backgroundColor: person.color }}
+      <div className="flex items-center gap-3">
+        <Avatar
+          name={person.name}
+          color={person.color}
+          avatarPath={person.avatarPath}
+          size="sm"
         />
         <h2 className="font-display text-xl font-semibold tracking-tight">
           {person.name}
