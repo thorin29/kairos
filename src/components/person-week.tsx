@@ -1,18 +1,19 @@
 import Link from "next/link";
-import type { DayTask, GridEvent } from "@/lib/queries/calendar";
+import type { GridEvent } from "@/lib/queries/calendar";
 import { formatShort, formatWeekday } from "@/lib/dates";
 import { Card } from "@/components/ui";
 
 /**
- * A person's week in seven columns. Deliberately not the hour grid — on a
- * personal page the useful question is "what's coming up", not "when exactly
- * does Tuesday get busy", and a compact strip leaves room for the day's
- * tasks above it.
+ * A person's week in seven columns, showing scheduled events only. Chores
+ * and tasks live in the day list above; they have a due date but no place on
+ * a timeline.
+ *
+ * Deliberately not the hour grid — on a personal page the useful question is
+ * "what's coming up", not "when exactly does Tuesday get busy".
  */
 export function PersonWeek({
   days,
   events,
-  tasks,
   todayISO,
   prevHref,
   nextHref,
@@ -22,7 +23,6 @@ export function PersonWeek({
 }: {
   days: string[];
   events: GridEvent[];
-  tasks: DayTask[];
   todayISO: string;
   prevHref: string;
   nextHref: string;
@@ -64,10 +64,6 @@ export function PersonWeek({
                 (a, b) =>
                   Number(b.allDay) - Number(a.allDay) || a.startMin - b.startMin,
               );
-            const dayTasks = tasks.filter((t) => t.dayISO === iso);
-            const doneCount = dayTasks.filter(
-              (t) => t.status === "COMPLETE",
-            ).length;
             const isToday = iso === todayISO;
 
             return (
@@ -88,12 +84,6 @@ export function PersonWeek({
                   </span>
                 </div>
 
-                {dayTasks.length > 0 && (
-                  <p className="tabular mb-1.5 text-center text-[0.65rem] text-muted">
-                    {doneCount}/{dayTasks.length} tasks
-                  </p>
-                )}
-
                 {dayEvents.slice(0, 3).map((e) => (
                   <span
                     key={e.id}
@@ -111,7 +101,7 @@ export function PersonWeek({
                   </span>
                 )}
 
-                {dayEvents.length === 0 && dayTasks.length === 0 && (
+                {dayEvents.length === 0 && (
                   <p className="text-center text-[0.65rem] text-muted/60">
                     &mdash;
                   </p>

@@ -5,6 +5,7 @@ import { formatLong, todayISO } from "@/lib/dates";
 import { PersonCard } from "@/components/person-card";
 import { AddTaskForm } from "@/components/add-task-form";
 import { generateChores } from "@/lib/chores/generate";
+import { generatePoolChores } from "@/lib/chores/pool";
 import { IconButtonLink } from "@/components/ui";
 import {
   ChoresIcon,
@@ -27,6 +28,7 @@ export default async function Home() {
     // Idempotent: fills in any chore days not yet materialized. Cheap enough
     // to run on load, which avoids needing a scheduler.
     await generateChores(today);
+    await generatePoolChores(today);
     people = await loadDay(today);
   } catch (e) {
     return (

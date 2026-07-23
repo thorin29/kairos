@@ -41,7 +41,7 @@ export function OpenTasks({
             <div className="min-w-[10rem] flex-1">
               <p className="font-medium">{t.title}</p>
               <p className="mt-0.5 text-xs text-muted">
-                released from {t.releasedByName}
+                {t.isShared ? "shared chore" : `released from ${t.releasedByName}`}
                 {t.isOverdue && (
                   <span className="tabular ml-2 font-medium text-red-700">
                     due {formatShort(t.dueDateISO)}

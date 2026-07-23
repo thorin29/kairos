@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { generateChores } from "@/lib/chores/generate";
+import { generatePoolChores } from "@/lib/chores/pool";
 
 export type ChoreActionState = { error: string | null };
 
@@ -77,6 +78,60 @@ export async function removeAssignment(id: string): Promise<void> {
   // behind, today's included. Completed ones and anything before today are
   // left alone.
   await generateChores();
+
+  revalidatePath("/chores");
+  revalidatePath("/");
+}
+
+/**
+ * A shared chore: no assignee, no weekday, just an interval measured from
+ * whenever it was last finished.
+ */
+export async function addPoolChore(
+  _prev: ChoreActionState,
+  formData: FormData,
+): Promise<ChoreActionState> {
+  const title = String(formData.get("title") ?? "").trim().slice(0, 80);
+  const intervalDays = Number(formData.get("intervalDays") ?? 0);
+
+  if (title.length < 2) return { error: "Give the chore a name." };
+  if (!Number.isInteger(intervalDays) || intervalDays < 1 || intervalDays > 365) {
+    return { error: "Set how many days between rounds, from 1 to 365." };
+  }
+
+  const existing = await prisma.chore.findUnique({ where: { title } });
+  if (existing) return { error: `"${title}" is already on the list.` };
+
+  const count = await prisma.chore.count();
+  await prisma.chore.create({
+    data: { title, isPool: true, intervalDays, sortOrder: count },
+  });
+
+  await generatePoolChores();
+
+  revalidatePath("/chores");
+  revalidatePath("/");
+  return { error: null };
+}
+
+export async function setChorePaused(
+  id: string,
+  paused: boolean,
+): Promise<void> {
+  await prisma.chore.update({
+    where: { id },
+    data: { isPaused: paused },
+  });
+
+  if (paused) {
+    // Pull the outstanding round. Anything already finished stays counted.
+    await prisma.task.deleteMany({
+      where: { choreId: id, status: "PENDING" },
+    });
+  } else {
+    // Resuming puts one out today rather than waiting a full interval.
+    await generatePoolChores();
+  }
 
   revalidatePath("/chores");
   revalidatePath("/");

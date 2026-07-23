@@ -36,6 +36,8 @@ export function CalendarView({
 
   return (
     <div className="space-y-6">
+      {/* The grid shows scheduled events only. Tasks appear in the day
+          panel below, where a due date makes sense without a time. */}
       <WeekGrid
         days={days}
         timed={timed}

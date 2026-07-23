@@ -10,9 +10,10 @@ import {
   todayISO,
   weekDays,
 } from "@/lib/dates";
-import { loadRange, loadTasksForDays } from "@/lib/queries/calendar";
+import { loadRange } from "@/lib/queries/calendar";
 import { PersonWeek } from "@/components/person-week";
 import { generateChores } from "@/lib/chores/generate";
+import { generatePoolChores } from "@/lib/chores/pool";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
 import { BackLink, DoneBar } from "@/components/back-link";
@@ -55,14 +56,12 @@ export default async function PersonPage({
   // Self-healing: if this page is opened before the dashboard, today's
   // chores still get created.
   await generateChores(today);
+  await generatePoolChores(today);
 
   const tasks = await loadPersonDay(id, today);
 
   const days = weekDays(weekAnchor);
-  const [weekRange, weekTasks] = await Promise.all([
-    loadRange(days, id),
-    loadTasksForDays(days, id),
-  ]);
+  const weekRange = await loadRange(days, id);
 
   const rows = tasks.map((t) => ({
     id: t.id,
@@ -198,7 +197,6 @@ export default async function PersonPage({
         <PersonWeek
           days={days}
           events={[...weekRange.allDay, ...weekRange.timed]}
-          tasks={weekTasks}
           todayISO={today}
           label="This week"
           prevHref={`/person/${id}?week=${addDays(weekAnchor, -7)}`}

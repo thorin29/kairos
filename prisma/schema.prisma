@@ -193,6 +193,18 @@ model Chore {
   sortOrder Int     @default(0)
   isActive  Boolean @default(true)
 
+  // A shared chore belongs to nobody. It appears up for grabs, and once
+  // somebody finishes it, the next one is scheduled intervalDays later —
+  // measured from completion, not from a fixed weekday. Mowing is the
+  // motivating case: it depends on how fast the grass grew, not on it
+  // being Saturday.
+  isPool       Boolean @default(false)
+  intervalDays Int?
+
+  // Seasonal chores stop rather than pile up. Resuming puts one out
+  // immediately rather than waiting a full interval.
+  isPaused Boolean @default(false)
+
   assignments ChoreAssignment[]
   tasks       Task[]
 

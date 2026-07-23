@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { loadChoreSummary } from "@/lib/queries/chores-summary";
+import {
+  loadChoreSummary,
+  loadPoolChores,
+} from "@/lib/queries/chores-summary";
 import { DAY_SHORT } from "@/lib/days";
 import { AddChoreForm } from "./add-chore-form";
+import { PoolChores } from "./pool-chores";
 import { AssignForm } from "./assign-form";
 import { DeleteChoreButton, RemoveAssignmentButton } from "./row-actions";
 import { BackLink, DoneBar } from "@/components/back-link";
@@ -11,8 +15,9 @@ import { AlertIcon } from "@/components/icons";
 export const dynamic = "force-dynamic";
 
 export default async function ChoresPage() {
-  const [summary, people] = await Promise.all([
+  const [summary, poolChores, people] = await Promise.all([
     loadChoreSummary(),
+    loadPoolChores(),
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -77,6 +82,11 @@ export default async function ChoresPage() {
                 </ul>
               )}
             </Card>
+          </section>
+
+          <section>
+            <SectionHeading>Shared chores</SectionHeading>
+            <PoolChores chores={poolChores} />
           </section>
 
           {summary.length > 0 && (

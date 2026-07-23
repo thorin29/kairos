@@ -117,6 +117,8 @@ export type OpenTask = {
   dueDateISO: string;
   isOverdue: boolean;
   releasedByName: string;
+  /** Shared chores were never anyone's, so they read differently. */
+  isShared: boolean;
 };
 
 /** Chores handed back to the household and waiting for someone to claim. */
@@ -131,7 +133,10 @@ export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
       dueDate: { lte: day },
     },
     orderBy: [{ dueDate: "asc" }, { sortOrder: "asc" }],
-    include: { user: { select: { name: true } } },
+    include: {
+      user: { select: { name: true, displayName: true } },
+      chore: { select: { isPool: true, intervalDays: true } },
+    },
   });
 
   return rows
@@ -142,7 +147,8 @@ export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
       category: t.category as string,
       dueDateISO: fromDateColumn(t.dueDate),
       isOverdue: fromDateColumn(t.dueDate) < dayISO,
-      releasedByName: t.user.name,
+      releasedByName: t.user.displayName ?? t.user.name,
+      isShared: Boolean(t.chore?.isPool),
     }));
 }
 

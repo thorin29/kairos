@@ -1,27 +1,29 @@
 import Link from "next/link";
-import type { DayTask, GridEvent } from "@/lib/queries/calendar";
+import type { GridEvent } from "@/lib/queries/calendar";
 import { DAY_SHORT } from "@/lib/days";
 import { isSameMonth } from "@/lib/dates";
 
 const MAX_CHIPS = 3;
 
 /**
- * Month overview. Each cell shows a few chips and a count of the rest —
- * trying to fit everything makes the grid unreadable, and the day view is
- * one click away.
+ * Month overview of scheduled events only. Chores and tasks are to-do
+ * items with a due date, not things that occupy time, so they never appear
+ * here — mixing them in produced "+1 more" counts that pointed at nothing
+ * visible.
+ *
+ * Each cell shows a few chips and a count of the rest; the day view is one
+ * click away.
  */
 export function MonthGrid({
   days,
   monthISO,
   events,
-  tasks,
   todayISO,
   hrefForDay,
 }: {
   days: string[];
   monthISO: string;
   events: GridEvent[];
-  tasks: DayTask[];
   todayISO: string;
   hrefForDay: (iso: string) => string;
 }) {
@@ -41,12 +43,10 @@ export function MonthGrid({
       <div className="grid grid-cols-7">
         {days.map((iso, i) => {
           const dayEvents = events.filter((e) => e.dayISO === iso);
-          const dayTasks = tasks.filter((t) => t.dayISO === iso);
           const outside = !isSameMonth(iso, monthISO);
           const isToday = iso === todayISO;
           const chips = dayEvents.slice(0, MAX_CHIPS);
-          const extra =
-            dayEvents.length - chips.length + (dayTasks.length > 0 ? 1 : 0);
+          const extra = dayEvents.length - chips.length;
 
           return (
             <Link

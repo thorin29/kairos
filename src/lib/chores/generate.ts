@@ -86,6 +86,10 @@ export async function generateChores(
   const existing = await prisma.task.findMany({
     where: {
       choreId: { not: null },
+      // Shared chores have no assignment behind them and run on their own
+      // completion cycle, so they must stay out of this reconciliation or
+      // they'd be treated as orphans and deleted.
+      generatedFrom: { not: null },
       dueDate: { gte: toDateColumn(fromISO), lte: toDateColumn(toISO) },
     },
     select: {

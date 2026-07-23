@@ -23,6 +23,7 @@ import { CalendarView } from "@/components/calendar-view";
 import { DaySchedule } from "@/components/day-schedule";
 import { MonthGrid } from "@/components/month-grid";
 import { Subscriptions } from "./subscriptions";
+import { AddEventForm } from "./add-event-form";
 import { BackLink, DoneBar } from "@/components/back-link";
 import { SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
@@ -219,11 +220,21 @@ export default async function CalendarPage({
           days={days}
           monthISO={startOfMonth(date)}
           events={[...range.allDay, ...range.timed]}
-          tasks={tasks}
           todayISO={today}
           hrefForDay={(iso) => link({ view: "day", date: iso, who: userId })}
         />
       )}
+
+      <section className="mt-10">
+        <SectionHeading>Add your own event</SectionHeading>
+        <AddEventForm
+          people={people.map((p) => ({
+            id: p.id,
+            name: p.displayName ?? p.name,
+          }))}
+          defaultDate={view === "month" ? today : date}
+        />
+      </section>
 
       <section className="mt-12">
         <SectionHeading>Subscribed calendars</SectionHeading>

@@ -23,9 +23,54 @@ export type ChoreSummary = {
  * Monday gives seven days to catch up; Monday and Wednesday gives two and
  * five. Surfacing the gaps makes that visible before it surprises anyone.
  */
+export type PoolChoreRow = {
+  id: string;
+  title: string;
+  intervalDays: number;
+  isPaused: boolean;
+  nextDueISO: string | null;
+  outstanding: boolean;
+};
+
+/** Shared chores, with where each one currently stands. */
+export async function loadPoolChores(): Promise<PoolChoreRow[]> {
+  const chores = await prisma.chore.findMany({
+    where: { isActive: true, isPool: true },
+    orderBy: { title: "asc" },
+    include: {
+      tasks: { orderBy: { dueDate: "desc" }, take: 1 },
+    },
+  });
+
+  return chores.map((c) => {
+    const latest = c.tasks[0];
+    const interval = c.intervalDays ?? 7;
+    const outstanding = Boolean(latest && latest.status !== "COMPLETE");
+
+    let nextDueISO: string | null = null;
+    if (latest && latest.status === "COMPLETE") {
+      const from = latest.completedAt ?? latest.dueDate;
+      const d = new Date(
+        Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()),
+      );
+      d.setUTCDate(d.getUTCDate() + interval);
+      nextDueISO = d.toISOString().slice(0, 10);
+    }
+
+    return {
+      id: c.id,
+      title: c.title,
+      intervalDays: interval,
+      isPaused: c.isPaused,
+      nextDueISO,
+      outstanding,
+    };
+  });
+}
+
 export async function loadChoreSummary(): Promise<ChoreSummary[]> {
   const chores = await prisma.chore.findMany({
-    where: { isActive: true },
+    where: { isActive: true, isPool: false },
     // Alphabetical everywhere: the master list, the assign dropdown, and the
     // catch-up table all read from this, and a stable predictable order
     // beats insertion order once there are more than a handful.
