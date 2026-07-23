@@ -123,9 +123,47 @@ export function ReleaseIcon({ className = "h-5 w-5" }: IconProps) {
 
 export function SettingsIcon({ className = "h-5 w-5" }: IconProps) {
   return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden
+    >
+      {/* Solid cog: teeth read clearly at 20px, where a stroked star of
+          spokes just looks like a sunburst. */}
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M10.6 2.5a1 1 0 0 0-.98.8l-.24 1.2a7.6 7.6 0 0 0-1.6.93l-1.16-.4a1 1 0 0 0-1.19.45L4.2 7.4a1 1 0 0 0 .2 1.24l.92.8a7.7 7.7 0 0 0 0 1.85l-.92.8a1 1 0 0 0-.2 1.25l1.23 1.93a1 1 0 0 0 1.19.45l1.16-.4c.5.38 1.03.7 1.6.93l.24 1.2a1 1 0 0 0 .98.8h2.8a1 1 0 0 0 .98-.8l.24-1.2c.57-.24 1.1-.55 1.6-.93l1.16.4a1 1 0 0 0 1.19-.45l1.23-1.93a1 1 0 0 0-.2-1.24l-.92-.8a7.7 7.7 0 0 0 0-1.85l.92-.8a1 1 0 0 0 .2-1.25l-1.23-1.93a1 1 0 0 0-1.19-.45l-1.16.4a7.6 7.6 0 0 0-1.6-.93l-.24-1.2a1 1 0 0 0-.98-.8h-2.8Zm1.4 6.1a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Z"
+      />
+    </svg>
+  );
+}
+
+export function CalendarPlusIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
     <svg {...base} className={className} aria-hidden>
-      <circle cx="12" cy="12" r="3.25" />
-      <path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3" />
+      <path d="M21 11V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+      <path d="M17 15v6M14 18h6" />
+    </svg>
+  );
+}
+
+export function RefreshIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M20 11a8 8 0 1 0-.6 4" />
+      <path d="M20 4v7h-7" />
+    </svg>
+  );
+}
+
+export function LinkIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M10 13a4 4 0 0 0 5.7.3l3-3A4 4 0 0 0 13 4.7l-1.4 1.3" />
+      <path d="M14 11a4 4 0 0 0-5.7-.3l-3 3A4 4 0 0 0 11 19.3l1.4-1.3" />
     </svg>
   );
 }

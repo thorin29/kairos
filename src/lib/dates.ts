@@ -85,3 +85,92 @@ export function formatShort(iso: string): string {
     day: "numeric",
   }).format(new Date(`${iso}T00:00:00.000Z`));
 }
+
+export function householdTz(): string {
+  return HOUSEHOLD_TZ;
+}
+
+/**
+ * Offset between a named timezone and UTC at a given instant, in ms.
+ * Formatting the instant in that zone and reading it back as if it were UTC
+ * gives the offset, DST included.
+ */
+function tzOffsetMs(at: Date, tz: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(at);
+
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? "0");
+
+  const asUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour") % 24,
+    get("minute"),
+    get("second"),
+  );
+
+  return asUtc - at.getTime();
+}
+
+/**
+ * A wall-clock time in a named zone to the real instant it refers to.
+ * Applied twice because the offset itself depends on the instant, which is
+ * what makes DST boundaries work.
+ */
+export function zonedToUtc(
+  y: number,
+  mo: number,
+  d: number,
+  h: number,
+  mi: number,
+  s: number,
+  tz: string,
+): Date {
+  const guess = Date.UTC(y, mo - 1, d, h, mi, s);
+  const first = tzOffsetMs(new Date(guess), tz);
+  const second = tzOffsetMs(new Date(guess - first), tz);
+  return new Date(guess - second);
+}
+
+/** Where an instant falls on the household's calendar grid. */
+export function localParts(at: Date): {
+  iso: string;
+  minutes: number;
+  label: string;
+} {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: HOUSEHOLD_TZ,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(at);
+
+  const get = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? "00";
+
+  const hour = Number(get("hour")) % 24;
+  const minute = Number(get("minute"));
+
+  return {
+    iso: `${get("year")}-${get("month")}-${get("day")}`,
+    minutes: hour * 60 + minute,
+    label: new Intl.DateTimeFormat("en-US", {
+      timeZone: HOUSEHOLD_TZ,
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(at),
+  };
+}

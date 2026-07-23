@@ -7,7 +7,12 @@ import { AddTaskForm } from "@/components/add-task-form";
 import { generateChores } from "@/lib/chores/generate";
 import { loadScores } from "@/lib/queries/scoreboard";
 import { IconButtonLink, Card } from "@/components/ui";
-import { ChoresIcon, PeopleIcon, AlertIcon } from "@/components/icons";
+import {
+  ChoresIcon,
+  PeopleIcon,
+  AlertIcon,
+  CalendarIcon,
+} from "@/components/icons";
 import { OpenTasks } from "@/components/open-tasks";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +74,9 @@ export default async function Home() {
               {totalOverdue} overdue
             </p>
           )}
+          <IconButtonLink href="/calendar" label="Calendar">
+            <CalendarIcon />
+          </IconButtonLink>
           <IconButtonLink href="/chores" label="Manage chores">
             <ChoresIcon />
           </IconButtonLink>
