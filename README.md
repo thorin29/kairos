@@ -32,7 +32,7 @@ in Unraid, so the server can pull it.
 | Setting | Value |
 | --- | --- |
 | Repository | `ghcr.io/<user>/family-dashboard:latest` |
-| Network | `roguenet` |
+| Network | `docker_network` |
 | Port | `8642` → `3000` |
 | Path | `/mnt/user/appdata/family-dashboard/uploads` → `/app/uploads` |
 | Path | `/mnt/user/appdata/family-dashboard/backups` → `/app/backups` |
