@@ -28,17 +28,20 @@ export default async function PersonPage({
     category: t.category as keyof typeof CATEGORY_LABELS,
     status: t.status as string,
     dueDateISO: fromDateColumn(t.dueDate),
-    isOverdue: fromDateColumn(t.dueDate) < today && t.status === "PENDING",
+    isOverdue:
+      fromDateColumn(t.dueDate) < today && t.status === "PENDING" && !t.stale,
+    stale: t.stale,
   }));
 
-  const counted = rows.filter((r) => r.status !== "SKIPPED");
+  const counted = rows.filter((r) => r.status !== "SKIPPED" && !r.stale);
   const done = counted.filter((r) => r.status === "COMPLETE").length;
   const percent = counted.length
     ? Math.round((done / counted.length) * 100)
     : null;
 
   const overdue = rows.filter((r) => r.isOverdue);
-  const rest = rows.filter((r) => !r.isOverdue);
+  const missed = rows.filter((r) => r.stale);
+  const rest = rows.filter((r) => !r.isOverdue && !r.stale);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -99,6 +102,23 @@ export default async function PersonPage({
             Nothing scheduled. Add something below.
           </p>
         )
+      )}
+
+      {missed.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
+            Missed
+          </h2>
+          <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-surface opacity-60">
+            {missed.map((t) => (
+              <TaskRow key={t.id} task={t} />
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-muted">
+            These expired or came around again. They no longer count either
+            way.
+          </p>
+        </section>
       )}
 
       <div className="mt-8">

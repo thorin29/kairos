@@ -12,6 +12,7 @@ type Row = {
   status: string;
   dueDateISO: string;
   isOverdue: boolean;
+  stale?: boolean;
 };
 
 export function TaskRow({ task }: { task: Row }) {
@@ -25,16 +26,23 @@ export function TaskRow({ task }: { task: Row }) {
       <input
         type="checkbox"
         checked={done}
-        disabled={pending}
+        disabled={pending || task.stale}
         onChange={() => startTransition(() => void toggleTask(task.id))}
         className="h-5 w-5 shrink-0 accent-[var(--color-accent)]"
         aria-label={done ? `Mark ${task.title} not done` : `Mark ${task.title} done`}
       />
 
       <div className="min-w-0 flex-1">
-        <p className={done ? "text-muted line-through" : ""}>{task.title}</p>
+        <p
+          className={
+            done || task.stale ? "text-muted line-through" : undefined
+          }
+        >
+          {task.title}
+        </p>
         <p className="mt-0.5 text-xs text-muted">
           {CATEGORY_LABELS[task.category]}
+          {task.stale && <span className="ml-2">expired</span>}
           {task.isOverdue && (
             <span className="tabular ml-2 font-medium text-red-700">
               due {formatShort(task.dueDateISO)}

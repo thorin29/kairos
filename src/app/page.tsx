@@ -5,6 +5,7 @@ import { loadDay } from "@/lib/queries/overview";
 import { formatLong, todayISO } from "@/lib/dates";
 import { PersonCard } from "@/components/person-card";
 import { AddTaskForm } from "@/components/add-task-form";
+import { generateChores } from "@/lib/chores/generate";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,9 @@ export default async function Home() {
 
   let people;
   try {
+    // Idempotent: fills in any chore days not yet materialized. Cheap enough
+    // to run on load, which avoids needing a scheduler.
+    await generateChores(today);
     people = await loadDay(today);
   } catch (e) {
     return (
@@ -58,6 +62,12 @@ export default async function Home() {
               {totalOverdue} overdue
             </p>
           )}
+          <Link
+            href="/chores"
+            className="rounded-md border border-hairline px-3 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+          >
+            Chores
+          </Link>
           <Link
             href="/setup"
             className="rounded-md border border-hairline px-3 py-2 text-sm text-muted hover:border-accent hover:text-accent"

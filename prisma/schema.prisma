@@ -33,7 +33,7 @@ model User {
   tasks           Task[]         @relation("TaskOwner")
   createdTasks    Task[]         @relation("TaskCreator")
   events          Event[]
-  choreTemplates  ChoreTemplate[]
+  choreAssignments ChoreAssignment[]
   calendars       ExternalCalendar[]
 
   createdAt DateTime @default(now())
@@ -87,6 +87,11 @@ model Task {
 
   sortOrder Int @default(0)
 
+  // Set on generated chore tasks. Gives every instance of the same job a
+  // shared identity so a superseded one can be recognized.
+  choreId String?
+  chore   Chore?  @relation(fields: [choreId], references: [id], onDelete: SetNull)
+
   // Optional link to a timed calendar block (a class, a shift, an appointment)
   eventId String? @unique
   event   Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
@@ -94,9 +99,13 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Makes chore generation idempotent: re-running it can never duplicate a
+  // row. Postgres treats NULLs as distinct, so hand-added tasks are exempt.
+  @@unique([choreId, userId, dueDate])
   @@index([userId, dueDate])
   @@index([dueDate, status])
   @@index([userId, category, dueDate])
+  @@index([choreId, dueDate])
 }
 
 // ---------------------------------------------------------------
@@ -162,28 +171,51 @@ model ExternalCalendar {
 }
 
 // ---------------------------------------------------------------
-// Chores — weekly pattern that materializes Task rows.
+// Chores
+//
+// A Chore is the job itself ("Vacuum the living room"), independent of who
+// does it or when. That identity is what makes expiry work: if Monday's
+// vacuum never happened and a new vacuum comes due, the old one is moot —
+// the house only needs vacuuming once.
 // ---------------------------------------------------------------
 
-model ChoreTemplate {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Chore {
+  id        String  @id @default(cuid())
+  title     String  @unique
+  notes     String?
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
 
-  title       String
-  notes       String?
-  dayOfWeek   Int // 0 = Sunday .. 6 = Saturday
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
+  // An unfinished instance stops being actionable after this many days even
+  // if the chore never comes due again. Zero disables time-based expiry.
+  staleAfterDays Int @default(7)
+
+  assignments ChoreAssignment[]
+  tasks       Task[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ChoreAssignment {
+  id      String @id @default(cuid())
+  choreId String
+  chore   Chore  @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  dayOfWeek Int // 0 = Sunday .. 6 = Saturday
 
   // Edits apply going forward; already-generated tasks are left alone.
   effectiveFrom DateTime  @db.Date
   effectiveTo   DateTime? @db.Date
+  isActive      Boolean   @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId, dayOfWeek, isActive])
+  @@unique([choreId, userId, dayOfWeek])
+  @@index([dayOfWeek, isActive])
 }
 
 // ---------------------------------------------------------------

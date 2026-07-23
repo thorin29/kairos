@@ -1,6 +1,7 @@
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
+import { isStale, loadStaleContext } from "@/lib/chores/stale";
 
 export type CategorySummary = {
   category: Category;
@@ -30,8 +31,9 @@ export type PersonSummary = {
  */
 export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
   const day = toDateColumn(dayISO);
+  const stale = await loadStaleContext(dayISO);
 
-  const [people, tasks] = await Promise.all([
+  const [people, allTasks] = await Promise.all([
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -43,9 +45,20 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
           { dueDate: { lt: day }, status: TaskStatus.PENDING },
         ],
       },
-      select: { userId: true, category: true, status: true, dueDate: true },
+      select: {
+        userId: true,
+        category: true,
+        status: true,
+        dueDate: true,
+        choreId: true,
+      },
     }),
   ]);
+
+  // Expired chores are no longer actionable, so they drop out of today's
+  // numbers entirely rather than dragging the percentage down forever. The
+  // rows survive against their original due date for weekly reporting.
+  const tasks = allTasks.filter((t) => !isStale(t, dayISO, stale));
 
   return people.map((person) => {
     const mine = tasks.filter((t) => t.userId === person.id);
@@ -93,8 +106,9 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
 /** Full task rows for one person on one day, overdue items first. */
 export async function loadPersonDay(userId: string, dayISO: string) {
   const day = toDateColumn(dayISO);
+  const stale = await loadStaleContext(dayISO);
 
-  return prisma.task.findMany({
+  const rows = await prisma.task.findMany({
     where: {
       userId,
       OR: [
@@ -104,4 +118,6 @@ export async function loadPersonDay(userId: string, dayISO: string) {
     },
     orderBy: [{ dueDate: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
   });
+
+  return rows.map((t) => ({ ...t, stale: isStale(t, dayISO, stale) }));
 }
