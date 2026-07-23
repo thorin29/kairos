@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>family-dashboard</Name>
+  <Repository>ghcr.io/USERNAME/family-dashboard:latest</Repository>
+  <Registry>https://ghcr.io/USERNAME/family-dashboard</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project/>
+  <Overview>Household chores, school, Bible reading, exercise, work and calendar dashboard.</Overview>
+  <Category>HomeAutomation: Productivity:</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <Icon/>
+  <Config Name="WebUI Port" Target="3000" Default="8642" Mode="tcp" Description="Web interface" Type="Port" Display="always" Required="true">8642</Config>
+  <Config Name="DATABASE_URL" Target="DATABASE_URL" Default="postgresql://famdash:CHANGE_ME@postgres:5432/familydashboard?schema=public" Mode="" Description="Postgres connection string" Type="Variable" Display="always" Required="true"/>
+  <Config Name="TZ" Target="TZ" Default="UTC" Mode="" Description="Timezone" Type="Variable" Display="always" Required="true">UTC</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID" Type="Variable" Display="advanced" Required="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group ID" Type="Variable" Display="advanced" Required="false">100</Config>
+  <Config Name="Uploads" Target="/app/uploads" Default="/mnt/user/appdata/family-dashboard/uploads" Mode="rw" Description="Profile photos" Type="Path" Display="always" Required="true">/mnt/user/appdata/family-dashboard/uploads</Config>
+  <Config Name="Backups" Target="/app/backups" Default="/mnt/user/appdata/family-dashboard/backups" Mode="rw" Description="Nightly database dumps" Type="Path" Display="always" Required="false">/mnt/user/appdata/family-dashboard/backups</Config>
+</Container>
