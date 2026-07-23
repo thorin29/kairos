@@ -1,9 +1,27 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { loadWeek, loadWeekTasks } from "@/lib/queries/calendar";
+import {
+  loadRange,
+  loadTasksForDays,
+  type DayTask,
+  type GridEvent,
+} from "@/lib/queries/calendar";
 import { syncStaleCalendars } from "@/lib/calendar/sync";
-import { addDays, formatShort, startOfWeek, todayISO } from "@/lib/dates";
+import {
+  addDays,
+  addMonths,
+  formatLong,
+  formatMonth,
+  formatShort,
+  monthGridDays,
+  startOfMonth,
+  startOfWeek,
+  todayISO,
+  weekDays,
+} from "@/lib/dates";
 import { CalendarView } from "@/components/calendar-view";
+import { DaySchedule } from "@/components/day-schedule";
+import { MonthGrid } from "@/components/month-grid";
 import { Subscriptions } from "./subscriptions";
 import { BackLink, DoneBar } from "@/components/back-link";
 import { SectionHeading } from "@/components/ui";
@@ -11,46 +29,67 @@ import { Avatar } from "@/components/avatar";
 
 export const dynamic = "force-dynamic";
 
+type View = "day" | "week" | "month";
+
+const VIEWS: { key: View; label: string }[] = [
+  { key: "day", label: "Day" },
+  { key: "week", label: "Week" },
+  { key: "month", label: "Month" },
+];
+
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string; who?: string }>;
+  searchParams: Promise<{ view?: string; date?: string; who?: string }>;
 }) {
-  const { week, who } = await searchParams;
+  const { view: rawView, date: rawDate, who } = await searchParams;
 
   const today = todayISO();
-  const anchor = startOfWeek(
-    week && /^\d{4}-\d{2}-\d{2}$/.test(week) ? week : today,
-  );
+  const view: View =
+    rawView === "day" || rawView === "month" ? rawView : "week";
+  const date =
+    rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : today;
   const userId = who || undefined;
 
-  // Keeps feeds current without a scheduler. Failures are recorded against
-  // the subscription, so a dead feed can't blank the page.
+  // The span each view covers, and how far the arrows move.
+  const days =
+    view === "day"
+      ? [date]
+      : view === "week"
+        ? weekDays(date)
+        : monthGridDays(date);
+
+  const step = (n: number) =>
+    view === "day"
+      ? addDays(date, n)
+      : view === "week"
+        ? addDays(startOfWeek(date), n * 7)
+        : addMonths(startOfMonth(date), n);
+
   await syncStaleCalendars();
 
-  const [{ days, timed, allDay }, tasks, people, calendars] =
-    await Promise.all([
-      loadWeek(anchor, userId),
-      loadWeekTasks(anchor, userId),
-      prisma.user.findMany({
-        where: { isActive: true },
-        orderBy: { sortOrder: "asc" },
-        select: {
-          id: true,
-          name: true,
-          displayName: true,
-          color: true,
-          avatarPath: true,
-        },
-      }),
-      prisma.externalCalendar.findMany({
-        orderBy: { name: "asc" },
-        include: {
-          user: { select: { name: true, displayName: true, color: true } },
-          _count: { select: { events: true } },
-        },
-      }),
-    ]);
+  const [range, tasks, people, calendars] = await Promise.all([
+    loadRange(days, userId),
+    loadTasksForDays(days, userId),
+    prisma.user.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        color: true,
+        avatarPath: true,
+      },
+    }),
+    prisma.externalCalendar.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        user: { select: { name: true, displayName: true, color: true } },
+        _count: { select: { events: true } },
+      },
+    }),
+  ]);
 
   const subscriptions = calendars.map((c) => ({
     id: c.id,
@@ -63,73 +102,86 @@ export default async function CalendarPage({
     lastError: c.lastError,
   }));
 
-  const link = (params: { week?: string; who?: string }) => {
+  const link = (p: { view?: View; date?: string; who?: string }) => {
     const q = new URLSearchParams();
-    if (params.week) q.set("week", params.week);
-    if (params.who) q.set("who", params.who);
+    if (p.view && p.view !== "week") q.set("view", p.view);
+    if (p.date) q.set("date", p.date);
+    if (p.who) q.set("who", p.who);
     const s = q.toString();
     return s ? `/calendar?${s}` : "/calendar";
   };
 
+  const heading =
+    view === "day"
+      ? formatLong(date)
+      : view === "month"
+        ? formatMonth(date)
+        : `${formatShort(days[0])} – ${formatShort(days[6])}`;
+
   const chip =
     "inline-flex h-10 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors";
+  const idle = "border-hairline hover:border-accent hover:text-accent";
+  const active = "border-accent bg-accent/10 text-accent";
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
       <BackLink />
 
-      <header className="mb-6 mt-5 flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-5">
+      <header className="mb-5 mt-5 flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-5">
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">
             Calendar
           </h1>
-          <p className="tabular mt-1 text-sm text-muted">
-            {formatShort(days[0])} &ndash; {formatShort(days[6])}
-          </p>
+          <p className="tabular mt-1 text-sm text-muted">{heading}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="mr-1 inline-flex rounded-full border border-hairline p-0.5">
+            {VIEWS.map((v) => (
+              <Link
+                key={v.key}
+                href={link({ view: v.key, date, who: userId })}
+                className={`inline-flex h-9 items-center rounded-full px-4 text-sm font-medium transition-colors ${
+                  view === v.key
+                    ? "bg-accent text-white"
+                    : "text-muted hover:text-accent"
+                }`}
+              >
+                {v.label}
+              </Link>
+            ))}
+          </div>
+
           <Link
-            href={link({ week: addDays(anchor, -7), who: userId })}
-            className={`${chip} border-hairline hover:border-accent hover:text-accent`}
+            href={link({ view, date: step(-1), who: userId })}
+            className={`${chip} ${idle}`}
           >
-            &larr; Prev
+            &larr;
           </Link>
-          <Link
-            href={link({ who: userId })}
-            className={`${chip} border-hairline hover:border-accent hover:text-accent`}
-          >
+          <Link href={link({ view, who: userId })} className={`${chip} ${idle}`}>
             Today
           </Link>
           <Link
-            href={link({ week: addDays(anchor, 7), who: userId })}
-            className={`${chip} border-hairline hover:border-accent hover:text-accent`}
+            href={link({ view, date: step(1), who: userId })}
+            className={`${chip} ${idle}`}
           >
-            Next &rarr;
+            &rarr;
           </Link>
         </div>
       </header>
 
-      <div className="mb-5 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <Link
-          href={link({ week: anchor })}
-          className={`${chip} ${
-            userId
-              ? "border-hairline text-muted hover:border-accent"
-              : "border-accent bg-accent/10 text-accent"
-          }`}
+          href={link({ view, date })}
+          className={`${chip} ${userId ? idle : active}`}
         >
           Everyone
         </Link>
         {people.map((p) => (
           <Link
             key={p.id}
-            href={link({ week: anchor, who: p.id })}
-            className={`${chip} ${
-              userId === p.id
-                ? "border-accent bg-accent/10 text-accent"
-                : "border-hairline hover:border-accent"
-            }`}
+            href={link({ view, date, who: p.id })}
+            className={`${chip} ${userId === p.id ? active : idle}`}
           >
             <Avatar
               name={p.displayName ?? p.name}
@@ -148,20 +200,99 @@ export default async function CalendarPage({
           : "Showing everyone, so colours show whose commitment it is."}
       </p>
 
-      <CalendarView
-        days={days}
-        timed={timed}
-        allDay={allDay}
-        tasks={tasks}
-        todayISO={today}
-      />
+      {view === "week" && (
+        <CalendarView
+          days={days}
+          timed={range.timed}
+          allDay={range.allDay}
+          tasks={tasks}
+          todayISO={today}
+        />
+      )}
+
+      {view === "day" && (
+        <DayPanel date={date} range={range} tasks={tasks} />
+      )}
+
+      {view === "month" && (
+        <MonthGrid
+          days={days}
+          monthISO={startOfMonth(date)}
+          events={[...range.allDay, ...range.timed]}
+          tasks={tasks}
+          todayISO={today}
+          hrefForDay={(iso) => link({ view: "day", date: iso, who: userId })}
+        />
+      )}
 
       <section className="mt-12">
         <SectionHeading>Subscribed calendars</SectionHeading>
-        <Subscriptions subscriptions={subscriptions} people={people.map((p) => ({ id: p.id, name: p.displayName ?? p.name, color: p.color }))} />
+        <Subscriptions
+          subscriptions={subscriptions}
+          people={people.map((p) => ({
+            id: p.id,
+            name: p.displayName ?? p.name,
+            color: p.color,
+          }))}
+        />
       </section>
 
       <DoneBar />
     </main>
+  );
+}
+
+function DayPanel({
+  date,
+  range,
+  tasks,
+}: {
+  date: string;
+  range: { timed: GridEvent[]; allDay: GridEvent[] };
+  tasks: DayTask[];
+}) {
+  const dayTasks = tasks.filter((t) => t.dayISO === date);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <div>
+        <SectionHeading>To do</SectionHeading>
+        <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+          {dayTasks.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-muted">Nothing due.</p>
+          ) : (
+            <ul className="divide-y divide-hairline">
+              {dayTasks.map((t) => (
+                <li key={t.id} className="flex items-start gap-3 px-5 py-3">
+                  <span
+                    aria-hidden
+                    className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: t.color }}
+                  />
+                  <div className="min-w-0">
+                    <p
+                      className={`text-sm ${
+                        t.status === "COMPLETE" ? "text-muted line-through" : ""
+                      }`}
+                    >
+                      {t.title}
+                    </p>
+                    <p className="text-xs text-muted">{t.ownerName}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <SectionHeading>Schedule</SectionHeading>
+        <DaySchedule
+          events={[...range.allDay, ...range.timed]}
+          emptyText="Nothing scheduled."
+        />
+      </div>
+    </div>
   );
 }

@@ -140,6 +140,17 @@ export function SettingsIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+export function TrophyIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 6H4.5A1.5 1.5 0 0 0 3 7.5C3 9.4 4.6 11 6.5 11H7" />
+      <path d="M17 6h2.5A1.5 1.5 0 0 1 21 7.5c0 1.9-1.6 3.5-3.5 3.5H17" />
+      <path d="M12 14v3M9 20h6M10 17h4l.5 3h-5l.5-3Z" />
+    </svg>
+  );
+}
+
 export function CalendarPlusIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>

@@ -174,3 +174,43 @@ export function localParts(at: Date): {
     }).format(at),
   };
 }
+
+export function startOfMonth(iso: string): string {
+  return `${iso.slice(0, 7)}-01`;
+}
+
+export function addMonths(iso: string, n: number): string {
+  const d = new Date(`${startOfMonth(iso)}T00:00:00.000Z`);
+  d.setUTCMonth(d.getUTCMonth() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * The 42 cells a month view needs: whole weeks from the Sunday on or before
+ * the 1st. Trailing days from the neighbouring months are included so the
+ * grid is always a clean six rows and doesn't reflow between months.
+ */
+export function monthGridDays(iso: string): string[] {
+  const first = startOfMonth(iso);
+  const start = startOfWeek(first);
+  return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+}
+
+export function isSameMonth(iso: string, monthIso: string): boolean {
+  return iso.slice(0, 7) === monthIso.slice(0, 7);
+}
+
+export function formatMonth(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${iso}T00:00:00.000Z`));
+}
+
+export function formatWeekday(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    weekday: "short",
+  }).format(new Date(`${iso}T00:00:00.000Z`));
+}

@@ -5,15 +5,17 @@ import { formatLong, todayISO } from "@/lib/dates";
 import { PersonCard } from "@/components/person-card";
 import { AddTaskForm } from "@/components/add-task-form";
 import { generateChores } from "@/lib/chores/generate";
-import { loadScores } from "@/lib/queries/scoreboard";
-import { IconButtonLink, Card } from "@/components/ui";
+import { IconButtonLink } from "@/components/ui";
 import {
   ChoresIcon,
   PeopleIcon,
   AlertIcon,
   CalendarIcon,
+  TrophyIcon,
 } from "@/components/icons";
 import { OpenTasks } from "@/components/open-tasks";
+import { DaySchedule } from "@/components/day-schedule";
+import { loadDaySchedule } from "@/lib/queries/calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -54,9 +56,8 @@ export default async function Home() {
   });
 
   const totalOverdue = people.reduce((n, p) => n + p.overdue, 0);
-  const scores = await loadScores(today);
   const openTasks = await loadOpenTasks(today);
-  const anyActivity = scores.some((s) => s.assigned > 0);
+  const todaySchedule = await loadDaySchedule(today);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -74,6 +75,9 @@ export default async function Home() {
               {totalOverdue} overdue
             </p>
           )}
+          <IconButtonLink href="/summary" label="Summary and totals">
+            <TrophyIcon />
+          </IconButtonLink>
           <IconButtonLink href="/calendar" label="Calendar">
             <CalendarIcon />
           </IconButtonLink>
@@ -92,53 +96,20 @@ export default async function Home() {
         ))}
       </div>
 
+      <div className="mt-10">
+        <DaySchedule
+          events={[...todaySchedule.allDay, ...todaySchedule.timed]}
+          title="Today's schedule"
+          href="/calendar"
+        />
+      </div>
+
       <OpenTasks tasks={openTasks} people={roster} />
 
       <div className="mt-8">
         <AddTaskForm people={roster} defaultDate={today} />
       </div>
 
-      {anyActivity && (
-        <section className="mt-10">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
-            Running totals
-          </h2>
-          <Card className="divide-y divide-hairline">
-            {scores.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 px-5 py-3">
-                <span
-                  aria-hidden
-                  className="h-5 w-1.5 rounded-full"
-                  style={{ backgroundColor: s.color }}
-                />
-                <span className="min-w-[6rem] flex-1 text-sm font-medium">
-                  {s.name}
-                </span>
-                <span className="tabular w-24 text-right text-sm text-muted">
-                  {s.assigned}
-                  <span className="ml-1 text-xs">assigned</span>
-                </span>
-                <span className="tabular w-20 text-right text-sm text-muted">
-                  {s.assignedChores}
-                  <span className="ml-1 text-xs">chores</span>
-                </span>
-                <span className="tabular w-16 text-right text-sm">
-                  {s.completed}
-                  <span className="ml-1 text-xs text-muted">done</span>
-                </span>
-                <span className="tabular w-20 text-right text-sm">
-                  {s.missed > 0 ? (
-                    <span className="text-red-700">{s.missed}</span>
-                  ) : (
-                    <span className="text-muted">0</span>
-                  )}
-                  <span className="ml-1 text-xs text-muted">missed</span>
-                </span>
-              </div>
-            ))}
-          </Card>
-        </section>
-      )}
     </main>
   );
 }

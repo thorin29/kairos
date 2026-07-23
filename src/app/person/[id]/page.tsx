@@ -2,7 +2,16 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { CATEGORY_LABELS } from "@/lib/colors";
-import { formatLong, fromDateColumn, todayISO } from "@/lib/dates";
+import {
+  addDays,
+  formatLong,
+  fromDateColumn,
+  startOfWeek,
+  todayISO,
+  weekDays,
+} from "@/lib/dates";
+import { loadRange, loadTasksForDays } from "@/lib/queries/calendar";
+import { PersonWeek } from "@/components/person-week";
 import { generateChores } from "@/lib/chores/generate";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
@@ -27,11 +36,18 @@ const ORDER = [
 
 export default async function PersonPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ week?: string }>;
 }) {
   const { id } = await params;
+  const { week } = await searchParams;
   const today = todayISO();
+
+  const weekAnchor = startOfWeek(
+    week && /^\d{4}-\d{2}-\d{2}$/.test(week) ? week : today,
+  );
 
   const person = await prisma.user.findUnique({ where: { id } });
   if (!person) notFound();
@@ -41,6 +57,12 @@ export default async function PersonPage({
   await generateChores(today);
 
   const tasks = await loadPersonDay(id, today);
+
+  const days = weekDays(weekAnchor);
+  const [weekRange, weekTasks] = await Promise.all([
+    loadRange(days, id),
+    loadTasksForDays(days, id),
+  ]);
 
   const rows = tasks.map((t) => ({
     id: t.id,
@@ -171,6 +193,20 @@ export default async function PersonPage({
           </p>
         </section>
       )}
+
+      <div className="mt-10">
+        <PersonWeek
+          days={days}
+          events={[...weekRange.allDay, ...weekRange.timed]}
+          tasks={weekTasks}
+          todayISO={today}
+          label="This week"
+          prevHref={`/person/${id}?week=${addDays(weekAnchor, -7)}`}
+          nextHref={`/person/${id}?week=${addDays(weekAnchor, 7)}`}
+          thisWeekHref={`/person/${id}`}
+          fullHref={`/calendar?who=${id}`}
+        />
+      </div>
 
       <div className="mt-8">
         <AddTaskForm

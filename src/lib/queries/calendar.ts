@@ -43,11 +43,17 @@ export async function loadWeek(
   anchorISO: string,
   userId?: string,
 ): Promise<WeekData> {
-  const days = weekDays(anchorISO);
+  return loadRange(weekDays(anchorISO), userId);
+}
 
+/** Events for an arbitrary run of days — one, seven, or a whole month grid. */
+export async function loadRange(
+  days: string[],
+  userId?: string,
+): Promise<WeekData> {
   const rangeStart = toDateColumn(days[0]);
   const rangeEnd = new Date(
-    toDateColumn(days[6]).getTime() + 2 * 86_400_000,
+    toDateColumn(days[days.length - 1]).getTime() + 2 * 86_400_000,
   );
 
   const events = await prisma.event.findMany({
@@ -116,9 +122,9 @@ export async function loadWeek(
   return { days, timed, allDay };
 }
 
-/** Everything on one day, for the day detail panel. */
+/** Everything on one day, for the dashboard strip and the day view. */
 export async function loadDaySchedule(dayISO: string, userId?: string) {
-  const { timed, allDay } = await loadWeek(dayISO, userId);
+  const { timed, allDay } = await loadRange([dayISO], userId);
   return {
     timed: timed.filter((e) => e.dayISO === dayISO),
     allDay: allDay.filter((e) => e.dayISO === dayISO),
@@ -144,13 +150,21 @@ export async function loadWeekTasks(
   anchorISO: string,
   userId?: string,
 ): Promise<DayTask[]> {
-  const days = weekDays(anchorISO);
+  return loadTasksForDays(weekDays(anchorISO), userId);
+}
 
+export async function loadTasksForDays(
+  days: string[],
+  userId?: string,
+): Promise<DayTask[]> {
   const rows = await prisma.task.findMany({
     where: {
       ...(userId ? { userId } : {}),
       isOpen: false,
-      dueDate: { gte: toDateColumn(days[0]), lte: toDateColumn(days[6]) },
+      dueDate: {
+        gte: toDateColumn(days[0]),
+        lte: toDateColumn(days[days.length - 1]),
+      },
     },
     orderBy: [{ dueDate: "asc" }, { sortOrder: "asc" }],
     include: {
