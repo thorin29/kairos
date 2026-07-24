@@ -9,6 +9,7 @@ own server; no accounts, no cloud, no third parties holding your family's
 schedule.
 
 **[Roadmap](ROADMAP.md)** — everything planned, and what is already built.
+**[Architecture](ARCHITECTURE.md)** — how it works and why.
 
 > **Status:** early development. The data model and deployment pipeline are in
 > place. Feature modules are landing one at a time — see the roadmap below.
