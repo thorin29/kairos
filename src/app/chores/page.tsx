@@ -6,7 +6,7 @@ import {
 import { loadChoreMetrics } from "@/lib/queries/chore-metrics";
 import { DAY_SHORT } from "@/lib/days";
 import { formatShort, todayISO } from "@/lib/dates";
-import { BackLink, DoneBar } from "@/components/back-link";
+import { BackLink } from "@/components/back-link";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
 import { LockIcon } from "@/components/icons";
@@ -186,8 +186,6 @@ export default async function ChoresOverviewPage() {
           </Card>
         </section>
       )}
-
-      <DoneBar />
     </main>
   );
 }

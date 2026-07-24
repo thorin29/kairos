@@ -3,7 +3,7 @@ import { getScoringStart } from "@/lib/settings";
 import { formatLong, todayISO } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/avatar";
-import { BackLink, DoneBar } from "@/components/back-link";
+import { BackLink } from "@/components/back-link";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -121,8 +121,6 @@ export default async function SummaryPage() {
           Change the scoring start date
         </ButtonLink>
       </div>
-
-      <DoneBar />
     </main>
   );
 }

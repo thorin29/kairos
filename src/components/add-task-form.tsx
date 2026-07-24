@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { addTask, type TaskActionState } from "@/lib/actions/tasks";
-import { CATEGORY_LABELS } from "@/lib/colors";
 
 const initial: TaskActionState = { error: null };
 
@@ -72,24 +71,6 @@ export function AddTaskForm({
             {people.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="category" className="block text-sm font-medium">
-            Category
-          </label>
-          <select
-            id="category"
-            name="category"
-            defaultValue="OTHER"
-            className="mt-1.5 w-full rounded-md border border-hairline bg-surface px-3 py-2 outline-none focus:border-accent"
-          >
-            {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
               </option>
             ))}
           </select>

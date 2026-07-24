@@ -8,7 +8,6 @@ import { AddChoreForm } from "./add-chore-form";
 import { PoolChores } from "./pool-chores";
 import { AssignForm } from "./assign-form";
 import { DeleteChoreButton, RemoveAssignmentButton } from "./row-actions";
-import { DoneBar } from "@/components/back-link";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
 import { AlertIcon } from "@/components/icons";
@@ -203,7 +202,6 @@ export default async function ChoresPage() {
         </div>
       )}
 
-      <DoneBar href="/admin" label="Back to admin" />
     </main>
   );
 }

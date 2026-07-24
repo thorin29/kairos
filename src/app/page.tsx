@@ -13,6 +13,7 @@ import {
   AlertIcon,
   CalendarIcon,
   TrophyIcon,
+  GamepadIcon,
 } from "@/components/icons";
 import { OpenTasks } from "@/components/open-tasks";
 import { DaySchedule } from "@/components/day-schedule";
@@ -93,7 +94,10 @@ export default async function Home({
           <IconButtonLink href="/calendar" label="Calendar">
             <CalendarIcon />
           </IconButtonLink>
-          <IconButtonLink href="/chores" label="Manage chores">
+          <IconButtonLink href="/games" label="Game time">
+            <GamepadIcon />
+          </IconButtonLink>
+          <IconButtonLink href="/chores" label="Chores overview">
             <ChoresIcon />
           </IconButtonLink>
           <IconButtonLink href="/setup" label="Manage household">

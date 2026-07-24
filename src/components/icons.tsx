@@ -157,6 +157,25 @@ export function LockIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+export function GamepadIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M7 8h10a4 4 0 0 1 3.9 3.1l1 4.4A2.6 2.6 0 0 1 19.4 19c-.8 0-1.5-.4-2-1l-1.3-1.7H7.9L6.6 18c-.5.6-1.2 1-2 1a2.6 2.6 0 0 1-2.5-3.5l1-4.4A4 4 0 0 1 7 8Z" />
+      <path d="M7.5 11.5v2.2M6.4 12.6h2.2" />
+      <path d="M15.5 12h.01M17.5 14h.01" />
+    </svg>
+  );
+}
+
+export function TokenIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="4" />
+    </svg>
+  );
+}
+
 export function TrophyIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>

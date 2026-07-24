@@ -10,27 +10,10 @@ export function BackLink({
   label?: string;
 }) {
   return (
-    <ButtonLink href={href} variant="tonal" size="md">
+    <ButtonLink href={href} variant="filled" size="md">
       <ArrowLeftIcon className="h-4 w-4" />
+      <HomeIcon className="h-4 w-4" />
       {label}
     </ButtonLink>
-  );
-}
-
-/** Repeated at the foot of long lists so leaving never needs a scroll up. */
-export function DoneBar({
-  href = "/",
-  label = "Back to dashboard",
-}: {
-  href?: string;
-  label?: string;
-}) {
-  return (
-    <div className="mt-10 border-t border-hairline pt-6">
-      <ButtonLink href={href} variant="filled" size="lg" className="w-full">
-        <HomeIcon className="h-5 w-5" />
-        {label}
-      </ButtonLink>
-    </div>
   );
 }

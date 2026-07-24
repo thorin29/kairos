@@ -11,6 +11,7 @@ import {
   BookIcon,
   DumbbellIcon,
   SchoolIcon,
+  GamepadIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,13 @@ const TILES: Tile[] = [
     blurb: "Classes, terms, and assignment templates",
     icon: <SchoolIcon className="h-7 w-7" />,
     ready: false,
+  },
+  {
+    href: "/admin/games",
+    label: "Game time",
+    blurb: "Daily limits and weekly tokens",
+    icon: <GamepadIcon className="h-7 w-7" />,
+    ready: true,
   },
   {
     href: "/setup",

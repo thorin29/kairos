@@ -24,7 +24,7 @@ import { DaySchedule } from "@/components/day-schedule";
 import { MonthGrid } from "@/components/month-grid";
 import { Subscriptions } from "./subscriptions";
 import { AddEventForm } from "./add-event-form";
-import { BackLink, DoneBar } from "@/components/back-link";
+import { BackLink } from "@/components/back-link";
 import { SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
 import { isAdmin } from "@/lib/session";
@@ -252,8 +252,6 @@ export default async function CalendarPage({
           }))}
         />
       </section>
-
-      <DoneBar />
     </main>
   );
 }

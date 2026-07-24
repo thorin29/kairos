@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { AddPersonForm } from "./add-person-form";
 import { RemovePersonButton } from "./remove-person-button";
-import { BackLink, DoneBar } from "@/components/back-link";
+import { BackLink } from "@/components/back-link";
 import { AdminBack } from "@/components/admin-back";
 import { ChangePinForm } from "./change-pin-form";
 import { ScoringStartForm } from "./scoring-start-form";
@@ -100,7 +100,6 @@ export default async function SetupPage() {
           <p className="mt-6 text-sm text-muted">
             {people.length} {people.length === 1 ? "person" : "people"} added.
           </p>
-          <DoneBar href="/admin" label="Back to admin" />
         </>
       )}
     </main>

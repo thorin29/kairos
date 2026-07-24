@@ -12,12 +12,14 @@ import {
   weekDays,
 } from "@/lib/dates";
 import { loadRange } from "@/lib/queries/calendar";
+import { loadGameStatus } from "@/lib/queries/games";
+import { GameTimeCard } from "@/components/game-time-card";
 import { PersonWeek } from "@/components/person-week";
 import { generateChores } from "@/lib/chores/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
-import { BackLink, DoneBar } from "@/components/back-link";
+import { BackLink } from "@/components/back-link";
 import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
 import { LockIcon } from "@/components/icons";
@@ -63,6 +65,7 @@ export default async function PersonPage({
 
   const days = weekDays(weekAnchor);
   const weekRange = await loadRange(days, id);
+  const [gameStatus] = await loadGameStatus(today, id);
 
   const rows = tasks.map((t) => ({
     id: t.id,
@@ -206,6 +209,12 @@ export default async function PersonPage({
         </section>
       )}
 
+      {gameStatus?.enabled && (
+        <div className="mt-8">
+          <GameTimeCard status={gameStatus} />
+        </div>
+      )}
+
       <div className="mt-10">
         <PersonWeek
           days={days}
@@ -226,8 +235,6 @@ export default async function PersonPage({
           defaultDate={today}
         />
       </div>
-
-      <DoneBar />
     </main>
   );
 }

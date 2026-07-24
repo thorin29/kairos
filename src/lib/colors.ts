@@ -28,7 +28,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   CHORE:       "Chores",
   EXERCISE:    "Exercise",
   BIBLE:       "Bible Reading",
-  OTHER:       "Other",
+  OTHER:       "Tasks",
 };
 
 /** Completion states on the overview cards. */
@@ -39,3 +39,14 @@ export const STATUS_COLORS = {
   overdue:    "#b91c1c",
   none:       "#94a3b8", // nothing assigned; render neutral, not red
 } as const;
+
+/** Display order for category sections and tiles on a person's day. */
+export const CATEGORY_ORDER: Category[] = [
+  "CHORE",
+  "SCHOOL",
+  "BIBLE",
+  "EXERCISE",
+  "WORK",
+  "APPOINTMENT",
+  "OTHER",
+];

@@ -34,6 +34,8 @@ model User {
   sortOrder   Int     @default(0)
   isActive    Boolean @default(true)
 
+  gameProfile     GameProfile?
+  gameSessions    GameSession[]
   tasks           Task[]         @relation("TaskOwner")
   createdTasks    Task[]         @relation("TaskCreator")
   events          Event[]
@@ -236,6 +238,44 @@ model ChoreAssignment {
 
   @@unique([choreId, userId, dayOfWeek])
   @@index([dayOfWeek, isActive])
+}
+
+// ---------------------------------------------------------------
+// Screen time
+//
+// A daily allowance plus a small number of weekly tokens that buy extra
+// minutes. Tokens are the interesting part: they're scarce, so spending one
+// is a decision, which is what makes them usable as a reward later.
+// ---------------------------------------------------------------
+
+model GameProfile {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  dailyMinutes Int     @default(60)
+  weeklyTokens Int     @default(3)
+  tokenMinutes Int     @default(20)
+  isActive     Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+}
+
+model GameSession {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Date only: a session belongs to a day's allowance, not to an instant.
+  day     DateTime @db.Date
+  minutes Int
+
+  // Whether this session spent one of the week's tokens.
+  usedToken Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, day])
+  @@index([day])
 }
 
 // ---------------------------------------------------------------
