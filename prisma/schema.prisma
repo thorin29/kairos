@@ -241,6 +241,43 @@ model ChoreAssignment {
 }
 
 // ---------------------------------------------------------------
+// Bible reading
+//
+// A plan is a dated list of passages — the schedule, not the text. Plans are
+// data, never code: a household's own plan lives here and never enters the
+// repository. Only one plan is published at a time; drafts can be reviewed
+// and rebuilt freely because nothing reaches anyone's list until published.
+// ---------------------------------------------------------------
+
+model ReadingPlan {
+  id     String  @id @default(cuid())
+  name   String
+  notes  String?
+
+  isPublished Boolean @default(false)
+
+  startDate DateTime? @db.Date
+  endDate   DateTime? @db.Date
+
+  days ReadingDay[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ReadingDay {
+  id     String      @id @default(cuid())
+  planId String
+  plan   ReadingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  day     DateTime @db.Date
+  passage String
+
+  @@unique([planId, day])
+  @@index([planId, day])
+}
+
+// ---------------------------------------------------------------
 // Screen time
 //
 // A daily allowance plus a small number of weekly tokens that buy extra

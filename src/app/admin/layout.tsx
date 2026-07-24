@@ -11,6 +11,9 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (!(await isAdmin())) redirect("/admin/unlock");
+  // The unlock page deliberately lives outside /admin. Nesting it here made
+  // the guard redirect that page to itself, which is an infinite loop and a
+  // 500 rather than a login prompt.
+  if (!(await isAdmin())) redirect("/unlock");
   return <>{children}</>;
 }

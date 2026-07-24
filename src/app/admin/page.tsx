@@ -35,9 +35,9 @@ const TILES: Tile[] = [
   {
     href: "/admin/bible",
     label: "Bible reading",
-    blurb: "Build and review a reading plan",
+    blurb: "Import, review, and publish a reading plan",
     icon: <BookIcon className="h-7 w-7" />,
-    ready: false,
+    ready: true,
   },
   {
     href: "/admin/exercise",
@@ -85,7 +85,7 @@ const TILES: Tile[] = [
 
 export default async function AdminPage() {
   const admin = await currentAdmin();
-  if (!admin) redirect("/admin/unlock");
+  if (!admin) redirect("/unlock");
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-8">

@@ -6,6 +6,7 @@ import { PersonCard } from "@/components/person-card";
 import { AddTaskForm } from "@/components/add-task-form";
 import { generateChores } from "@/lib/chores/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
+import { generateReadingTasks } from "@/lib/bible/generate";
 import { IconButtonLink } from "@/components/ui";
 import {
   ChoresIcon,
@@ -14,6 +15,7 @@ import {
   CalendarIcon,
   TrophyIcon,
   GamepadIcon,
+  BookIcon,
 } from "@/components/icons";
 import { OpenTasks } from "@/components/open-tasks";
 import { DaySchedule } from "@/components/day-schedule";
@@ -40,6 +42,7 @@ export default async function Home({
     // to run on load, which avoids needing a scheduler.
     await generateChores(today);
     await generatePoolChores(today);
+    await generateReadingTasks(today);
     people = await loadDay(today);
   } catch (e) {
     return (
@@ -93,6 +96,9 @@ export default async function Home({
           </IconButtonLink>
           <IconButtonLink href="/calendar" label="Calendar">
             <CalendarIcon />
+          </IconButtonLink>
+          <IconButtonLink href="/bible" label="Bible reading">
+            <BookIcon />
           </IconButtonLink>
           <IconButtonLink href="/games" label="Game time">
             <GamepadIcon />

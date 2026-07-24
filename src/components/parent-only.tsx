@@ -15,7 +15,7 @@ export function ParentOnly({ what }: { what: string }) {
         area.
       </p>
       <Link
-        href="/admin/unlock"
+        href="/unlock"
         className="mt-5 inline-flex h-11 items-center rounded-full bg-accent px-6 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md hover:brightness-110"
       >
         Enter PIN

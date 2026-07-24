@@ -17,6 +17,7 @@ import { GameTimeCard } from "@/components/game-time-card";
 import { PersonWeek } from "@/components/person-week";
 import { generateChores } from "@/lib/chores/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
+import { generateReadingTasks } from "@/lib/bible/generate";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
 import { BackLink } from "@/components/back-link";
@@ -60,6 +61,7 @@ export default async function PersonPage({
   // chores still get created.
   await generateChores(today);
   await generatePoolChores(today);
+  await generateReadingTasks(today);
 
   const tasks = await loadPersonDay(id, today);
 
