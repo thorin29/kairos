@@ -2,8 +2,8 @@ import { loadScores } from "@/lib/queries/scoreboard";
 import { getScoringStart } from "@/lib/settings";
 import { formatLong, todayISO } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
+import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
-import { BackLink } from "@/components/back-link";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -31,18 +31,14 @@ export default async function SummaryPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <BackLink />
 
-      <header className="mb-8 mt-5 border-b border-hairline pb-5">
-        <h1 className="font-display text-3xl font-semibold tracking-tight">
-          Summary
-        </h1>
-        <p className="mt-2 text-sm text-muted">
-          {since
-            ? `Counting from ${formatLong(since)}.`
-            : "Counting everything so far."}
-        </p>
-      </header>
+      <AppHeader
+        title="Summary"
+        subtitle={
+          since ? `Counting from ${formatLong(since)}` : "Counting everything so far"
+        }
+        active="summary"
+      />
 
       {leader && leader.completed > 0 && (
         <Card className="mb-8 p-5">

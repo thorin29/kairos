@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { AppHeader } from "@/components/app-header";
 import {
   loadChoreSummary,
   loadPoolChores,
@@ -6,7 +7,6 @@ import {
 import { loadChoreMetrics } from "@/lib/queries/chore-metrics";
 import { DAY_SHORT } from "@/lib/days";
 import { formatShort, todayISO } from "@/lib/dates";
-import { BackLink } from "@/components/back-link";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
 import { LockIcon } from "@/components/icons";
@@ -53,22 +53,17 @@ export default async function ChoresOverviewPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
-      <BackLink />
 
-      <header className="mb-8 mt-5 flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-5">
-        <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">
-            Chores
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            Who has what, and how this week is going.
-          </p>
-        </div>
-        <ButtonLink href="/admin/chores" variant="outlined" size="md">
+      <AppHeader
+        title="Chores"
+        subtitle="Who has what, and how this week is going"
+        active="chores"
+      >
+        <ButtonLink href="/admin/chores" variant="outlined" size="sm">
           <LockIcon className="h-4 w-4" />
           Edit
         </ButtonLink>
-      </header>
+      </AppHeader>
 
       <section className="mb-10">
         <SectionHeading>This week</SectionHeading>

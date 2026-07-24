@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { AppHeader } from "@/components/app-header";
 import { loadGameStatus } from "@/lib/queries/games";
 import { todayISO } from "@/lib/dates";
-import { BackLink } from "@/components/back-link";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
 import { LockIcon, TokenIcon } from "@/components/icons";
@@ -26,22 +26,17 @@ export default async function GamesPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-8">
-      <BackLink />
 
-      <header className="mb-8 mt-5 flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-5">
-        <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">
-            Game time
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            Today&rsquo;s allowance and this week&rsquo;s tokens.
-          </p>
-        </div>
-        <ButtonLink href="/admin/games" variant="outlined" size="md">
+      <AppHeader
+        title="Game time"
+        subtitle="Today's allowance and this week's tokens"
+        active="games"
+      >
+        <ButtonLink href="/admin/games" variant="outlined" size="sm">
           <LockIcon className="h-4 w-4" />
           Edit limits
         </ButtonLink>
-      </header>
+      </AppHeader>
 
       {anyProfile === 0 || active.length === 0 ? (
         <Card className="p-6 text-sm text-muted">

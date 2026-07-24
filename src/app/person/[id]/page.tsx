@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { AppHeader } from "@/components/app-header";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import {
@@ -20,7 +21,6 @@ import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
-import { BackLink } from "@/components/back-link";
 import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
 import { LockIcon } from "@/components/icons";
@@ -99,46 +99,42 @@ export default async function PersonPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <BackLink />
 
-      <header className="mb-8 mt-5 flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-5">
-        <div className="flex items-center gap-3">
+      <AppHeader
+        title={person.displayName ?? person.name}
+        subtitle={formatLong(today)}
+        active="home"
+      />
+
+      <div className="mb-8 flex flex-wrap items-center gap-4 border-b border-hairline pb-5">
+        <Link
+          href={`/person/${person.id}/profile`}
+          title="Edit profile"
+          aria-label={`Edit ${person.displayName ?? person.name}'s profile`}
+          className="group relative rounded-full transition-transform hover:scale-105"
+        >
+          <Avatar
+            name={person.displayName ?? person.name}
+            color={person.color}
+            avatarPath={person.avatarPath}
+            size="lg"
+          />
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-ink/45 text-[0.6rem] font-semibold uppercase tracking-wide text-white opacity-0 transition-opacity group-hover:opacity-100">
+            Edit
+          </span>
+        </Link>
+
+        {person.role === "ADMIN" && (
           <Link
-            href={`/person/${person.id}/profile`}
-            title="Edit profile"
-            aria-label={`Edit ${person.displayName ?? person.name}'s profile`}
-            className="group relative rounded-full transition-transform hover:scale-105"
+            href="/admin"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
           >
-            <Avatar
-              name={person.displayName ?? person.name}
-              color={person.color}
-              avatarPath={person.avatarPath}
-              size="lg"
-            />
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-ink/45 text-[0.6rem] font-semibold uppercase tracking-wide text-white opacity-0 transition-opacity group-hover:opacity-100">
-              Edit
-            </span>
+            <LockIcon className="h-4 w-4" />
+            Admin
           </Link>
-          <div>
-            <h1 className="font-display text-3xl font-semibold tracking-tight">
-              {person.displayName ?? person.name}
-            </h1>
-            <p className="tabular mt-1 text-sm text-muted">
-              {formatLong(today)}
-            </p>
-          </div>
-        </div>
-        <div className="ml-auto flex items-center gap-3">
-          {person.role === "ADMIN" && (
-            <Link
-              href="/admin"
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
-            >
-              <LockIcon className="h-4 w-4" />
-              Admin
-            </Link>
-          )}
-          <div className="text-right">
+        )}
+
+        <div className="ml-auto text-right">
           <p className="tabular text-3xl font-medium leading-none">
             {percent === null ? (
               <span className="text-base text-muted">Nothing today</span>
@@ -151,9 +147,8 @@ export default async function PersonPage({
               {done} of {counted.length} done
             </p>
           )}
-          </div>
         </div>
-      </header>
+      </div>
 
       {overdue.length > 0 && (
         <section className="mb-8">

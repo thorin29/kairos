@@ -171,6 +171,14 @@ all live in the database, never in this repository.
 - [x] Icon navigation
 - [x] One navigation control per page
 - [x] Tabular figures for every number, time, and date
+- [x] Persistent top bar: page name, plus every section reachable from every
+      page without returning to the dashboard
+- [x] Fixed icon positions so the bar never reflows between pages
+- [x] Current section shown by a larger, filled, coloured icon
+- [ ] Motion on the bar: icons that grow and settle on selection, a sliding
+      indicator that travels between them, and page content that transitions
+      rather than snapping
+- [ ] Icon badges — overdue count, unclaimed chores, unread plan days
 - [ ] Dark mode
 - [ ] Large touch tiles on each person's page for exercise, school, and
       reading

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { AppHeader } from "@/components/app-header";
 import {
   loadRange,
   loadTasksForDays,
@@ -24,7 +25,6 @@ import { DaySchedule } from "@/components/day-schedule";
 import { MonthGrid } from "@/components/month-grid";
 import { Subscriptions } from "./subscriptions";
 import { AddEventForm } from "./add-event-form";
-import { BackLink } from "@/components/back-link";
 import { SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
 import { isAdmin } from "@/lib/session";
@@ -130,16 +130,10 @@ export default async function CalendarPage({
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
-      <BackLink />
 
-      <header className="mb-5 mt-5 flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-5">
-        <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">
-            Calendar
-          </h1>
-          <p className="tabular mt-1 text-sm text-muted">{heading}</p>
-        </div>
+      <AppHeader title="Calendar" subtitle={heading} active="calendar" />
 
+      <div className="mb-5 flex flex-wrap items-center justify-end gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <div className="mr-1 inline-flex rounded-full border border-hairline p-0.5">
             {VIEWS.map((v) => (
@@ -173,7 +167,7 @@ export default async function CalendarPage({
             &rarr;
           </Link>
         </div>
-      </header>
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Link
