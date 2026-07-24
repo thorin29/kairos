@@ -291,9 +291,9 @@ export function AddEventForm({
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="inline-flex h-11 items-center rounded-full border border-hairline px-5 text-sm font-medium text-muted"
+            className="inline-flex h-11 items-center rounded-full border border-hairline px-5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
           >
-            Done
+            Cancel
           </button>
         </div>
       </form>
