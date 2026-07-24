@@ -6,6 +6,8 @@ import { CATEGORY_LABELS } from "@/lib/colors";
 import { formatLong } from "@/lib/dates";
 import { WeekGrid } from "@/components/week-grid";
 import { Card } from "@/components/ui";
+import { DeleteEventButton } from "@/components/event-actions";
+import { canDeleteEvent } from "@/lib/can-delete-event";
 
 export function CalendarView({
   days,
@@ -13,12 +15,14 @@ export function CalendarView({
   allDay,
   tasks,
   todayISO,
+  admin = false,
 }: {
   days: string[];
   timed: GridEvent[];
   allDay: GridEvent[];
   tasks: DayTask[];
   todayISO: string;
+  admin?: boolean;
 }) {
   const [selected, setSelected] = useState<string | null>(
     days.includes(todayISO) ? todayISO : null,
@@ -103,7 +107,7 @@ export function CalendarView({
                         className="mt-0.5 h-8 w-1 shrink-0 rounded-full"
                         style={{ backgroundColor: e.color }}
                       />
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">{e.title}</p>
                         <p className="tabular text-xs text-muted">
                           {e.timeLabel}
@@ -111,9 +115,13 @@ export function CalendarView({
                         </p>
                         <p className="text-xs text-muted">
                           {e.ownerName}
+                          {e.recurring ? " · repeats" : ""}
                           {e.calendarName ? ` · ${e.calendarName}` : ""}
                         </p>
                       </div>
+                      {canDeleteEvent(e, admin) && (
+                        <DeleteEventButton event={e} />
+                      )}
                     </li>
                   ))}
                 </ul>

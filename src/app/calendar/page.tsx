@@ -27,6 +27,9 @@ import { AddEventForm } from "./add-event-form";
 import { BackLink, DoneBar } from "@/components/back-link";
 import { SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
+import { isAdmin } from "@/lib/session";
+import { DeleteEventButton } from "@/components/event-actions";
+import { canDeleteEvent } from "@/lib/can-delete-event";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +71,7 @@ export default async function CalendarPage({
         : addMonths(startOfMonth(date), n);
 
   await syncStaleCalendars();
+  const admin = await isAdmin();
 
   const [range, tasks, people, calendars] = await Promise.all([
     loadRange(days, userId),
@@ -208,11 +212,12 @@ export default async function CalendarPage({
           allDay={range.allDay}
           tasks={tasks}
           todayISO={today}
+          admin={admin}
         />
       )}
 
       {view === "day" && (
-        <DayPanel date={date} range={range} tasks={tasks} />
+        <DayPanel date={date} range={range} tasks={tasks} admin={admin} />
       )}
 
       {view === "month" && (
@@ -257,10 +262,12 @@ function DayPanel({
   date,
   range,
   tasks,
+  admin,
 }: {
   date: string;
   range: { timed: GridEvent[]; allDay: GridEvent[] };
   tasks: DayTask[];
+  admin: boolean;
 }) {
   const dayTasks = tasks.filter((t) => t.dayISO === date);
 
@@ -299,10 +306,45 @@ function DayPanel({
 
       <div>
         <SectionHeading>Schedule</SectionHeading>
-        <DaySchedule
-          events={[...range.allDay, ...range.timed]}
-          emptyText="Nothing scheduled."
-        />
+        <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+          {range.allDay.length + range.timed.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-muted">Nothing scheduled.</p>
+          ) : (
+            <ul className="divide-y divide-hairline">
+              {[...range.allDay, ...range.timed]
+                .filter((e) => e.dayISO === date)
+                .sort(
+                  (a, b) =>
+                    Number(b.allDay) - Number(a.allDay) ||
+                    a.startMin - b.startMin,
+                )
+                .map((e) => (
+                  <li key={e.id} className="flex items-start gap-3 px-5 py-3">
+                    <span
+                      aria-hidden
+                      className="mt-0.5 h-9 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: e.color }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{e.title}</p>
+                      <p className="tabular truncate text-xs text-muted">
+                        {e.timeLabel}
+                        {e.location ? ` · ${e.location}` : ""}
+                      </p>
+                      <p className="truncate text-xs text-muted">
+                        {e.ownerName}
+                        {e.recurring ? " · repeats" : ""}
+                        {e.calendarName ? ` · ${e.calendarName}` : ""}
+                      </p>
+                    </div>
+                    {canDeleteEvent(e, admin) && (
+                      <DeleteEventButton event={e} />
+                    )}
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

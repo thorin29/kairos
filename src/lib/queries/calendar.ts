@@ -19,6 +19,10 @@ export type GridEvent = {
   ownerName: string;
   kind: string;
   calendarName: string | null;
+  /** The underlying row, without the per-occurrence suffix. */
+  eventId: string;
+  recurring: boolean;
+  external: boolean;
 };
 
 export type WeekData = {
@@ -112,6 +116,10 @@ async function birthdayEvents(
         ownerName: who,
         kind: "BIRTHDAY",
         calendarName: null,
+        // Derived from the profile, not a stored row: nothing to delete.
+        eventId: "",
+        recurring: true,
+        external: false,
       });
     }
   }
@@ -201,6 +209,9 @@ export async function loadRange(
       ownerName: e.user.displayName ?? e.user.name,
       kind: e.kind as string,
       calendarName: e.externalCalendar?.name ?? null,
+      eventId: e.id,
+      recurring: Boolean(e.rrule),
+      external: Boolean(e.externalCalendarId),
     };
 
     if (e.allDay) {

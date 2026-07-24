@@ -65,3 +65,42 @@ export async function removePerson(id: string): Promise<void> {
   revalidatePath("/setup");
   revalidatePath("/");
 }
+
+export type PinState = { error: string | null; saved: boolean };
+
+/**
+ * Only parents hold PINs, and only inside the unlocked admin area — so the
+ * old PIN isn't asked for again. Losing every PIN means editing the User
+ * row directly in Postgres, which is the intended escape hatch.
+ */
+export async function changePin(
+  _prev: PinState,
+  formData: FormData,
+): Promise<PinState> {
+  await requireAdmin();
+
+  const userId = String(formData.get("userId") ?? "");
+  const pin = String(formData.get("pin") ?? "").trim();
+  const confirm = String(formData.get("confirm") ?? "").trim();
+
+  if (!/^\d{4,8}$/.test(pin)) {
+    return { error: "A PIN is 4 to 8 digits.", saved: false };
+  }
+  if (pin !== confirm) {
+    return { error: "The two PINs don't match.", saved: false };
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { error: "That person no longer exists.", saved: false };
+  if (user.role !== Role.ADMIN) {
+    return { error: "Only parent accounts use a PIN.", saved: false };
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { pinHash: hashPin(pin) },
+  });
+
+  revalidatePath("/setup");
+  return { error: null, saved: true };
+}

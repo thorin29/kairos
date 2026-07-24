@@ -5,6 +5,7 @@ import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { householdTz, toDateColumn, zonedToUtc } from "@/lib/dates";
 import { buildRule } from "@/lib/calendar/recur";
+import { isAdmin } from "@/lib/session";
 
 export type EventState = { error: string | null; saved: boolean };
 
@@ -109,17 +110,32 @@ export async function addEvent(
   return { error: null, saved: true };
 }
 
-export async function deleteEvent(id: string): Promise<void> {
+export type DeleteState = { error: string | null };
+
+export async function deleteEvent(id: string): Promise<DeleteState> {
   const event = await prisma.event.findUnique({ where: { id } });
-  if (!event) return;
+  if (!event) return { error: null };
 
   // Subscribed events are owned by their feed — removing one here would
   // just bring it back on the next sync. Unsubscribe instead.
-  if (event.externalCalendarId) return;
+  if (event.externalCalendarId) {
+    return { error: "Unsubscribe from the feed to remove its events." };
+  }
+
+  // A repeating event and a birthday both affect far more than the day
+  // you're looking at, so removing one is a parent decision.
+  if (event.rrule || event.kind === "BIRTHDAY") {
+    if (!(await isAdmin())) {
+      return {
+        error: "Only a parent can delete a repeating event or a birthday.",
+      };
+    }
+  }
 
   await prisma.event.delete({ where: { id } });
 
   revalidatePath("/calendar");
   revalidatePath("/");
   revalidatePath(`/person/${event.userId}`);
+  return { error: null };
 }

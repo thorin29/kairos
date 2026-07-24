@@ -25,7 +25,7 @@ type Tile = {
 
 const TILES: Tile[] = [
   {
-    href: "/chores",
+    href: "/admin/chores",
     label: "Chores",
     blurb: "Master list, weekly assignments, shared chores",
     icon: <ChoresIcon className="h-7 w-7" />,
