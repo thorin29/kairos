@@ -25,8 +25,7 @@ export default async function GamesPage() {
   const active = statuses.filter((s) => s.enabled);
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-8">
-
+    <>
       <AppHeader
         title="Game time"
         subtitle="Today's allowance and this week's tokens"
@@ -37,6 +36,9 @@ export default async function GamesPage() {
           Edit limits
         </ButtonLink>
       </AppHeader>
+
+      <main className="mx-auto max-w-4xl px-6 py-6">
+
 
       {anyProfile === 0 || active.length === 0 ? (
         <Card className="p-6 text-sm text-muted">
@@ -125,5 +127,6 @@ export default async function GamesPage() {
         </>
       )}
     </main>
+    </>
   );
 }

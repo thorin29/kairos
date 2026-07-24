@@ -52,8 +52,7 @@ export default async function ChoresOverviewPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8">
-
+    <>
       <AppHeader
         title="Chores"
         subtitle="Who has what, and how this week is going"
@@ -64,6 +63,9 @@ export default async function ChoresOverviewPage() {
           Edit
         </ButtonLink>
       </AppHeader>
+
+      <main className="mx-auto max-w-5xl px-6 py-6">
+
 
       <section className="mb-10">
         <SectionHeading>This week</SectionHeading>
@@ -182,5 +184,6 @@ export default async function ChoresOverviewPage() {
         </section>
       )}
     </main>
+    </>
   );
 }

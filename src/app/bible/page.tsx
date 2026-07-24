@@ -61,8 +61,7 @@ export default async function BiblePage() {
     : null;
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-8">
-
+    <>
       <AppHeader
         title="Bible reading"
         subtitle={plan ? plan.name : "No plan is published yet"}
@@ -73,6 +72,9 @@ export default async function BiblePage() {
           Edit plan
         </ButtonLink>
       </AppHeader>
+
+      <main className="mx-auto max-w-4xl px-6 py-6">
+
 
       {plan && (
         <section className="mb-10">
@@ -159,5 +161,6 @@ export default async function BiblePage() {
         </p>
       </section>
     </main>
+    </>
   );
 }

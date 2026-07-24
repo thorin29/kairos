@@ -68,7 +68,7 @@ export default async function Home({
   const todaySchedule = await loadDaySchedule(scheduleDay);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
+    <>
       <AppHeader title="Today" subtitle={formatLong(today)} active="home">
         {totalOverdue > 0 && (
           <p className="tabular inline-flex items-center gap-1.5 text-sm font-medium text-red-700">
@@ -77,6 +77,8 @@ export default async function Home({
           </p>
         )}
       </AppHeader>
+
+      <main className="mx-auto max-w-6xl px-6 py-6">
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {people.map((p) => (
@@ -109,5 +111,6 @@ export default async function Home({
       </div>
 
     </main>
+    </>
   );
 }

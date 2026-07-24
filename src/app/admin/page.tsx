@@ -12,6 +12,7 @@ import {
   DumbbellIcon,
   SchoolIcon,
   GamepadIcon,
+  LockIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -72,6 +73,13 @@ const TILES: Tile[] = [
     label: "Calendars",
     blurb: "Subscribed feeds and shared events",
     icon: <CalendarPlusIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/about",
+    label: "About",
+    blurb: "Version and database check",
+    icon: <LockIcon className="h-7 w-7" />,
     ready: true,
   },
   {

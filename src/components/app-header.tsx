@@ -87,10 +87,14 @@ export function AppHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-30 -mx-6 mb-6 border-b border-hairline bg-ground/85 px-6 py-3 backdrop-blur">
-      <div className="flex flex-wrap items-center gap-4">
+    // Rendered outside every page's content container, so its width is the
+    // viewport rather than whatever that page happens to be constrained to.
+    // Nesting it inside meant the bar resized between pages, which reads as
+    // the whole top of the app jumping.
+    <header className="sticky top-0 z-30 border-b border-hairline bg-ground/90 backdrop-blur">
+      <div className="mx-auto flex h-20 max-w-6xl flex-wrap items-center gap-4 px-6">
         <div className="min-w-0 flex-1">
-          <h1 className="font-display truncate text-2xl font-semibold tracking-tight">
+          <h1 className="font-display truncate text-2xl font-semibold leading-tight tracking-tight">
             {title}
           </h1>
           {subtitle && (

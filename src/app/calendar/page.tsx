@@ -129,9 +129,11 @@ export default async function CalendarPage({
   const active = "border-accent bg-accent/10 text-accent";
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
-
+    <>
       <AppHeader title="Calendar" subtitle={heading} active="calendar" />
+
+      <main className="mx-auto max-w-6xl px-6 py-6">
+
 
       <div className="mb-5 flex flex-wrap items-center justify-end gap-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -247,6 +249,7 @@ export default async function CalendarPage({
         />
       </section>
     </main>
+    </>
   );
 }
 

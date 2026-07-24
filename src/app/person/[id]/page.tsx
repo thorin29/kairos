@@ -98,13 +98,15 @@ export default async function PersonPage({
   })).filter((g) => g.items.length > 0);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
-
+    <>
       <AppHeader
         title={person.displayName ?? person.name}
         subtitle={formatLong(today)}
         active="home"
       />
+
+      <main className="mx-auto max-w-3xl px-6 py-6">
+
 
       <div className="mb-8 flex flex-wrap items-center gap-4 border-b border-hairline pb-5">
         <Link
@@ -233,5 +235,6 @@ export default async function PersonPage({
         />
       </div>
     </main>
+    </>
   );
 }

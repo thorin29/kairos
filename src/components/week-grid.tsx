@@ -12,7 +12,8 @@ const COLUMNS = "grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]";
  * positioned by minutes from midnight.
  *
  * The day header and the all-day band sit *inside* the scroll container and
- * stick to the top. Keeping them outside it made them a different width to
+ * stick to the top, with a heavier rule beneath them so the frozen rows read
+ * as a separate plane from the grid that scrolls under them. Keeping them outside it made them a different width to
  * the body whenever a scrollbar appeared, so the dates drifted out of line
  * with their columns.
  *
@@ -54,9 +55,9 @@ export function WeekGrid({
         style={{ scrollbarGutter: "stable" }}
       >
         {/* Frozen header. Same container, same width, so columns line up. */}
-        <div className="sticky top-0 z-20">
-          <div className={`grid ${COLUMNS} bg-shade`}>
-            <div className="border-b border-hairline" />
+        <div className="sticky top-0 z-20 shadow-[0_1px_0_0_var(--color-ink)]">
+          <div className={`grid ${COLUMNS} border-b-2 border-ink/25 bg-shade`}>
+            <div />
             {days.map((iso) => {
               const d = new Date(`${iso}T00:00:00Z`);
               const isToday = iso === todayISO;
@@ -67,7 +68,7 @@ export function WeekGrid({
                   key={iso}
                   type="button"
                   onClick={() => onSelectDay(iso)}
-                  className={`border-b border-l border-hairline px-1 py-2.5 text-center transition-colors ${
+                  className={`border-l border-ink/15 px-1 py-2.5 text-center transition-colors ${
                     isSelected ? "bg-accent/15" : "hover:bg-shade-soft"
                   }`}
                 >
@@ -87,15 +88,14 @@ export function WeekGrid({
           </div>
 
           {allDay.length > 0 && (
-            <div className={`grid ${COLUMNS} bg-shade-soft`}>
-              <div className="border-b border-hairline px-2 py-2 text-right text-[0.6rem] uppercase tracking-wide text-muted">
+            <div
+              className={`grid ${COLUMNS} border-b border-ink/20 bg-shade-soft`}
+            >
+              <div className="px-2 py-2 text-right text-[0.6rem] uppercase tracking-wide text-muted">
                 All day
               </div>
               {days.map((iso) => (
-                <div
-                  key={iso}
-                  className="border-b border-l border-hairline p-1"
-                >
+                <div key={iso} className="border-l border-ink/10 p-1">
                   {allDay
                     .filter((e) => e.dayISO === iso)
                     .map((e) => (

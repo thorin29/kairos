@@ -30,8 +30,7 @@ export default async function SummaryPage() {
   const contested = ranked.filter((s) => s.completed === leader?.completed);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
-
+    <>
       <AppHeader
         title="Summary"
         subtitle={
@@ -39,6 +38,9 @@ export default async function SummaryPage() {
         }
         active="summary"
       />
+
+      <main className="mx-auto max-w-3xl px-6 py-6">
+
 
       {leader && leader.completed > 0 && (
         <Card className="mb-8 p-5">
@@ -118,5 +120,6 @@ export default async function SummaryPage() {
         </ButtonLink>
       </div>
     </main>
+    </>
   );
 }

@@ -18,6 +18,7 @@ all live in the database, never in this repository.
       with a separate household timezone
 - [x] Schema migrations applied automatically on container start
 - [x] Nightly `pg_dump` into the mapped data volume
+- [x] About page with version number and a migration completeness check
 - [ ] Export everything to JSON from the admin panel
 - [ ] PWA install and offline queueing for actions taken without signal
 
