@@ -11,14 +11,14 @@ export function ParentOnly({ what }: { what: string }) {
     <Card className="p-8 text-center">
       <h2 className="font-display text-xl font-semibold">Parents only</h2>
       <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-        {what} is managed by a parent account. Switch profiles and enter the
-        PIN to continue.
+        {what} is managed by a parent. Enter your PIN to unlock the admin
+        area.
       </p>
       <Link
-        href="/switch"
+        href="/admin/unlock"
         className="mt-5 inline-flex h-11 items-center rounded-full bg-accent px-6 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md hover:brightness-110"
       >
-        Switch profile
+        Enter PIN
       </Link>
     </Card>
   );

@@ -121,6 +121,42 @@ export function ReleaseIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+export function BookIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v14H6.5A2.5 2.5 0 0 0 4 19.5V5.5Z" />
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H19v4H6.5A2.5 2.5 0 0 1 4 19.5Z" />
+      <path d="M9 7h6" />
+    </svg>
+  );
+}
+
+export function DumbbellIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M6.5 8v8M3.5 10v4M17.5 8v8M20.5 10v4M6.5 12h11" />
+    </svg>
+  );
+}
+
+export function SchoolIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M12 4 2.5 9 12 14l9.5-5L12 4Z" />
+      <path d="M6 11.5V17c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5" />
+    </svg>
+  );
+}
+
+export function LockIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <rect x="4" y="10" width="16" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
 export function TrophyIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>
@@ -156,34 +192,6 @@ export function LinkIcon({ className = "h-5 w-5" }: IconProps) {
     <svg {...base} className={className} aria-hidden>
       <path d="M10 13a4 4 0 0 0 5.7.3l3-3A4 4 0 0 0 13 4.7l-1.4 1.3" />
       <path d="M14 11a4 4 0 0 0-5.7-.3l-3 3A4 4 0 0 0 11 19.3l1.4-1.3" />
-    </svg>
-  );
-}
-
-export function DumbbellIcon({ className = "h-5 w-5" }: IconProps) {
-  return (
-    <svg {...base} className={className} aria-hidden>
-      <path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10" />
-    </svg>
-  );
-}
-
-export function SchoolIcon({ className = "h-5 w-5" }: IconProps) {
-  return (
-    <svg {...base} className={className} aria-hidden>
-      <path d="m12 4 9 4.5-9 4.5-9-4.5L12 4Z" />
-      <path d="M7 11v4.5c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5V11" />
-      <path d="M21 8.5V14" />
-    </svg>
-  );
-}
-
-export function BookIcon({ className = "h-5 w-5" }: IconProps) {
-  return (
-    <svg {...base} className={className} aria-hidden>
-      <path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5Z" />
-      <path d="M4 19.5A1.5 1.5 0 0 1 5.5 18H19v3H5.5A1.5 1.5 0 0 1 4 19.5Z" />
-      <path d="M12 6.5v6M9 9.5h6" />
     </svg>
   );
 }

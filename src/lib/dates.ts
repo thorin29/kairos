@@ -214,3 +214,19 @@ export function formatWeekday(iso: string): string {
     weekday: "short",
   }).format(new Date(`${iso}T00:00:00.000Z`));
 }
+
+/** Same day-of-month n months on, clamped when the month is shorter. */
+export function shiftMonths(iso: string, n: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const target = new Date(Date.UTC(y, m - 1 + n, 1));
+  const lastDay = new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  const day = Math.min(d, lastDay);
+  return `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/** Same date n years on. Feb 29 lands on Feb 28 in common years. */
+export function shiftYears(iso: string, n: number): string {
+  return shiftMonths(iso, n * 12);
+}

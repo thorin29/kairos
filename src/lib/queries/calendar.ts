@@ -2,6 +2,8 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, localParts, toDateColumn, weekDays } from "@/lib/dates";
 import { CATEGORY_COLORS } from "@/lib/colors";
+import { householdTz } from "@/lib/dates";
+import { occurrencesIn } from "@/lib/calendar/recur";
 
 export type GridEvent = {
   id: string;
@@ -29,6 +31,7 @@ const KIND_TO_CATEGORY: Record<string, keyof typeof CATEGORY_COLORS> = {
   CLASS: "SCHOOL",
   WORK: "WORK",
   APPOINTMENT: "APPOINTMENT",
+  BIRTHDAY: "OTHER",
   EXTERNAL: "OTHER",
   OTHER: "OTHER",
 };
@@ -134,8 +137,12 @@ export async function loadRange(
   const events = await prisma.event.findMany({
     where: {
       ...(userId ? { userId } : {}),
-      startsAt: { lt: rangeEnd },
-      endsAt: { gte: rangeStart },
+      OR: [
+        // Ordinary events overlapping the window.
+        { startsAt: { lt: rangeEnd }, endsAt: { gte: rangeStart } },
+        // Repeating ones may have started long before it.
+        { rrule: { not: null }, startsAt: { lt: rangeEnd } },
+      ],
     },
     orderBy: { startsAt: "asc" },
     include: {
@@ -147,18 +154,47 @@ export async function loadRange(
   const timed: GridEvent[] = [];
   const allDay: GridEvent[] = [];
 
-  for (const e of events) {
-    const start = localParts(e.startsAt);
-    const end = localParts(e.endsAt);
+  const tz = householdTz();
 
-    if (!days.includes(start.iso) && !days.includes(end.iso)) continue;
+  for (const e of events) {
+    // A repeating event contributes one entry per occurrence in range;
+    // everything else contributes itself.
+    const starts =
+      e.rrule && !e.externalCalendarId
+        ? occurrencesIn(
+            e.startsAt,
+            e.rrule,
+            days[0],
+            days[days.length - 1],
+            tz,
+          )
+        : [e.startsAt];
+
+    const durationMs = e.endsAt.getTime() - e.startsAt.getTime();
+
+    for (const occurrenceStart of starts) {
+      addOccurrence(e, occurrenceStart, durationMs);
+    }
+  }
+
+  function addOccurrence(
+    e: (typeof events)[number],
+    startsAt: Date,
+    durationMs: number,
+  ) {
+    const start = localParts(startsAt);
+    const end = localParts(new Date(startsAt.getTime() + durationMs));
+
+    if (!days.includes(start.iso) && !days.includes(end.iso)) return;
 
     const color = userId
       ? CATEGORY_COLORS[KIND_TO_CATEGORY[e.kind] ?? "OTHER"]
       : e.user.color;
 
+    const suffix = e.rrule ? `-${start.iso}` : "";
+
     const base = {
-      id: e.id,
+      id: `${e.id}${suffix}`,
       title: e.title,
       location: e.location,
       color,
@@ -176,7 +212,7 @@ export async function loadRange(
         timeLabel: "All day",
         allDay: true,
       });
-      continue;
+      return;
     }
 
     // An event running past midnight is clipped to its starting day rather

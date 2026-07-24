@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
-import { canActFor } from "@/lib/session";
 
 export type TaskActionState = { error: string | null };
 
@@ -18,9 +17,6 @@ export async function addTask(
   const dueDate = String(formData.get("dueDate") ?? "") || todayISO();
 
   if (!userId) return { error: "Pick who this is for." };
-  if (!(await canActFor(userId))) {
-    return { error: "Only a parent can add tasks for someone else." };
-  }
   if (title.length < 2) return { error: "Give the task a name." };
 
   const category = (Object.values(Category) as string[]).includes(rawCategory)

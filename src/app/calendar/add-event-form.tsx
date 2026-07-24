@@ -14,7 +14,17 @@ const KINDS = [
   { value: "APPOINTMENT", label: "Appointment" },
   { value: "CLASS", label: "Class" },
   { value: "WORK", label: "Work shift" },
+  { value: "BIRTHDAY", label: "Birthday" },
   { value: "OTHER", label: "Other" },
+];
+
+const REPEATS = [
+  { value: "NONE", label: "Does not repeat" },
+  { value: "WEEKLY", label: "Weekly" },
+  { value: "MONTHLY", label: "Monthly" },
+  { value: "YEARLY", label: "Annually" },
+  { value: "DAILY", label: "Daily" },
+  { value: "CUSTOM", label: "Custom\u2026" },
 ];
 
 export function AddEventForm({
@@ -26,6 +36,21 @@ export function AddEventForm({
 }) {
   const [open, setOpen] = useState(false);
   const [allDay, setAllDay] = useState(false);
+  const [kind, setKind] = useState("APPOINTMENT");
+  const [repeat, setRepeat] = useState("NONE");
+  const [customFreq, setCustomFreq] = useState("WEEKLY");
+
+  // A birthday is annual and all-day by definition, so choosing it sets
+  // both rather than making you set them again.
+  const chooseKind = (value: string) => {
+    setKind(value);
+    if (value === "BIRTHDAY") {
+      setAllDay(true);
+      setRepeat("YEARLY");
+    }
+  };
+
+  const effectiveRepeat = repeat === "CUSTOM" ? customFreq : repeat;
   const [state, formAction, pending] = useActionState(addEvent, initial);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -86,7 +111,8 @@ export function AddEventForm({
             <select
               id="ev-kind"
               name="kind"
-              defaultValue="APPOINTMENT"
+              value={kind}
+              onChange={(e) => chooseKind(e.target.value)}
               className={field}
             >
               {KINDS.map((k) => (
@@ -149,6 +175,86 @@ export function AddEventForm({
                   defaultValue="17:00"
                   className={`tabular ${field}`}
                 />
+              </div>
+            </>
+          )}
+        </div>
+
+        <input type="hidden" name="repeat" value={effectiveRepeat} />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="ev-repeat" className="mb-1.5 block text-sm font-medium">
+              Repeats
+            </label>
+            <select
+              id="ev-repeat"
+              value={repeat}
+              onChange={(e) => setRepeat(e.target.value)}
+              className={field}
+            >
+              {REPEATS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {repeat !== "NONE" && (
+            <div>
+              <label htmlFor="ev-until" className="mb-1.5 block text-sm font-medium">
+                Repeat until
+              </label>
+              <input
+                id="ev-until"
+                name="until"
+                type="date"
+                className={`tabular ${field}`}
+              />
+              <p className="mt-1.5 text-xs text-muted">
+                Leave empty to repeat indefinitely.
+              </p>
+            </div>
+          )}
+
+          {repeat === "CUSTOM" && (
+            <>
+              <div>
+                <label
+                  htmlFor="ev-interval"
+                  className="mb-1.5 block text-sm font-medium"
+                >
+                  Every
+                </label>
+                <input
+                  id="ev-interval"
+                  name="interval"
+                  type="number"
+                  min={1}
+                  max={52}
+                  defaultValue={2}
+                  className={`tabular ${field}`}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="ev-freq"
+                  className="mb-1.5 block text-sm font-medium"
+                >
+                  Unit
+                </label>
+                <select
+                  id="ev-freq"
+                  value={customFreq}
+                  onChange={(e) => setCustomFreq(e.target.value)}
+                  className={field}
+                >
+                  <option value="DAILY">days</option>
+                  <option value="WEEKLY">weeks</option>
+                  <option value="MONTHLY">months</option>
+                  <option value="YEARLY">years</option>
+                </select>
               </div>
             </>
           )}

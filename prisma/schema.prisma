@@ -127,6 +127,7 @@ enum EventKind {
   CLASS
   WORK
   APPOINTMENT
+  BIRTHDAY
   EXTERNAL // pulled from a subscribed ICS feed
   OTHER
 }

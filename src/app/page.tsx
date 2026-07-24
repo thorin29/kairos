@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadDay, loadOpenTasks } from "@/lib/queries/overview";
-import { formatLong, todayISO } from "@/lib/dates";
+import { addDays, formatLong, todayISO } from "@/lib/dates";
 import { PersonCard } from "@/components/person-card";
 import { AddTaskForm } from "@/components/add-task-form";
 import { generateChores } from "@/lib/chores/generate";
@@ -16,13 +16,22 @@ import {
 } from "@/components/icons";
 import { OpenTasks } from "@/components/open-tasks";
 import { DaySchedule } from "@/components/day-schedule";
-import { CurrentUserChip } from "@/components/current-user";
 import { loadDaySchedule } from "@/lib/queries/calendar";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ day?: string }>;
+}) {
+  const { day } = await searchParams;
   const today = todayISO();
+
+  // The person cards always show today; only the schedule strip moves, so
+  // you can look ahead without losing sight of what's outstanding now.
+  const scheduleDay =
+    day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : today;
 
   let people;
   try {
@@ -60,7 +69,7 @@ export default async function Home() {
 
   const totalOverdue = people.reduce((n, p) => n + p.overdue, 0);
   const openTasks = await loadOpenTasks(today);
-  const todaySchedule = await loadDaySchedule(today);
+  const todaySchedule = await loadDaySchedule(scheduleDay);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -78,7 +87,6 @@ export default async function Home() {
               {totalOverdue} overdue
             </p>
           )}
-          <CurrentUserChip />
           <IconButtonLink href="/summary" label="Summary and totals">
             <TrophyIcon />
           </IconButtonLink>
@@ -103,8 +111,18 @@ export default async function Home() {
       <div className="mt-10">
         <DaySchedule
           events={[...todaySchedule.allDay, ...todaySchedule.timed]}
-          title="Today's schedule"
-          href="/calendar"
+          title={
+            scheduleDay === today
+              ? "Today's schedule"
+              : formatLong(scheduleDay)
+          }
+          emptyText="Nothing scheduled."
+          href={`/calendar?view=day&date=${scheduleDay}`}
+          nav={{
+            prevHref: `/?day=${addDays(scheduleDay, -1)}`,
+            todayHref: "/",
+            nextHref: `/?day=${addDays(scheduleDay, 1)}`,
+          }}
         />
       </div>
 

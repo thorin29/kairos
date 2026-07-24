@@ -8,18 +8,23 @@ import { CalendarIcon } from "@/components/icons";
  * where a full grid for one day would be mostly empty space, and as the
  * calendar's day view.
  */
+const navChip =
+  "inline-flex h-8 items-center rounded-full border border-hairline px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent";
+
 export function DaySchedule({
   events,
   emptyText = "Nothing scheduled today.",
   href,
   title,
   compact = false,
+  nav,
 }: {
   events: GridEvent[];
   emptyText?: string;
   href?: string;
   title?: string;
   compact?: boolean;
+  nav?: { prevHref: string; todayHref: string; nextHref: string };
 }) {
   const sorted = [...events].sort(
     (a, b) => Number(b.allDay) - Number(a.allDay) || a.startMin - b.startMin,
@@ -58,19 +63,40 @@ export function DaySchedule({
 
   return (
     <section>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted">
           <CalendarIcon className="h-4 w-4" />
           {title}
         </h2>
-        {href && (
-          <Link
-            href={href}
-            className="text-xs font-medium text-muted underline underline-offset-4 hover:text-accent"
-          >
-            Full calendar
-          </Link>
-        )}
+
+        <div className="flex items-center gap-1.5">
+          {nav && (
+            <>
+              <Link
+                href={nav.prevHref}
+                aria-label="Previous day"
+                className={navChip}
+              >
+                &larr;
+              </Link>
+              <Link href={nav.todayHref} className={navChip}>
+                Today
+              </Link>
+              <Link
+                href={nav.nextHref}
+                aria-label="Next day"
+                className={navChip}
+              >
+                &rarr;
+              </Link>
+            </>
+          )}
+          {href && (
+            <Link href={href} className={`${navChip} ml-1`}>
+              Full calendar
+            </Link>
+          )}
+        </div>
       </div>
       <Card className="overflow-hidden">{body}</Card>
     </section>

@@ -3,15 +3,19 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
-const COOKIE = "fd_session";
-const MAX_AGE_DAYS = 30;
+const COOKIE = "fd_admin";
+const UNLOCK_HOURS = 8;
 const SECRET_KEY = "sessionSecret";
 
 /**
- * Sessions are a signed cookie rather than a database table. There are six
- * people on a home network; a stored session table would be machinery for
- * nothing. The signing secret is generated once and kept in AppSetting, so
- * there's no environment variable to set and cookies survive a restart.
+ * There is no per-person sign-in. The dashboard is a shared household
+ * screen: everyone sees everything and checks off their own work without
+ * identifying themselves, which is the whole point of a wall tablet.
+ *
+ * The only thing behind a lock is administration — the chore schedule,
+ * reading plans, the household list. A parent enters their PIN once and the
+ * unlock lasts a few hours, then lapses on its own so an unattended tablet
+ * doesn't stay open.
  */
 async function secret(): Promise<string> {
   const existing = await prisma.appSetting.findUnique({
@@ -19,11 +23,10 @@ async function secret(): Promise<string> {
   });
   if (existing) return existing.value;
 
-  const value = randomBytes(32).toString("hex");
   const row = await prisma.appSetting.upsert({
     where: { key: SECRET_KEY },
     update: {},
-    create: { key: SECRET_KEY, value },
+    create: { key: SECRET_KEY, value: randomBytes(32).toString("hex") },
   });
   return row.value;
 }
@@ -38,35 +41,33 @@ function safeEqual(a: string, b: string): boolean {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-export type CurrentUser = {
-  id: string;
-  name: string;
-  displayName: string | null;
-  color: string;
-  avatarPath: string | null;
-  isAdmin: boolean;
-};
-
-export async function startSession(userId: string): Promise<void> {
-  const key = await secret();
-  const expires = Date.now() + MAX_AGE_DAYS * 86_400_000;
+export async function startAdminSession(userId: string): Promise<void> {
+  const expires = Date.now() + UNLOCK_HOURS * 3_600_000;
   const payload = `${userId}.${expires}`;
 
   const store = await cookies();
-  store.set(COOKIE, `${payload}.${sign(payload, key)}`, {
+  store.set(COOKIE, `${payload}.${sign(payload, await secret())}`, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: MAX_AGE_DAYS * 86_400,
+    maxAge: UNLOCK_HOURS * 3600,
   });
 }
 
-export async function endSession(): Promise<void> {
+export async function endAdminSession(): Promise<void> {
   const store = await cookies();
   store.delete(COOKIE);
 }
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export type AdminUser = {
+  id: string;
+  name: string;
+  color: string;
+  avatarPath: string | null;
+};
+
+/** The parent who unlocked, or null if the lock is on. */
+export async function currentAdmin(): Promise<AdminUser | null> {
   const store = await cookies();
   const raw = store.get(COOKIE)?.value;
   if (!raw) return null;
@@ -81,38 +82,29 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   if (Number(expires) < Date.now()) return null;
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || !user.isActive) return null;
+  if (!user || !user.isActive || user.role !== "ADMIN") return null;
 
   return {
     id: user.id,
-    name: user.name,
-    displayName: user.displayName,
+    name: user.displayName ?? user.name,
     color: user.color,
     avatarPath: user.avatarPath,
-    isAdmin: user.role === "ADMIN",
   };
 }
 
 export async function isAdmin(): Promise<boolean> {
-  return (await getCurrentUser())?.isAdmin ?? false;
+  return (await currentAdmin()) !== null;
 }
 
 /**
  * Guard for actions only a parent may take. Throwing rather than returning
- * an error keeps every caller honest: forgetting to check is impossible if
- * the action can't run without it.
+ * an error keeps callers honest: forgetting the check makes the action
+ * impossible to run, not silently open.
  */
-export async function requireAdmin(): Promise<CurrentUser> {
-  const user = await getCurrentUser();
-  if (!user?.isAdmin) {
-    throw new Error("That's a parent-only action. Switch profiles first.");
+export async function requireAdmin(): Promise<AdminUser> {
+  const admin = await currentAdmin();
+  if (!admin) {
+    throw new Error("That's a parent-only action. Unlock admin first.");
   }
-  return user;
-}
-
-/** Self or a parent — used for editing a profile or adding someone's task. */
-export async function canActFor(userId: string): Promise<boolean> {
-  const user = await getCurrentUser();
-  if (!user) return false;
-  return user.isAdmin || user.id === userId;
+  return admin;
 }

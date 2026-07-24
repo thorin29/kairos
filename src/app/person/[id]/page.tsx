@@ -20,6 +20,7 @@ import { AddTaskForm } from "@/components/add-task-form";
 import { BackLink, DoneBar } from "@/components/back-link";
 import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
+import { LockIcon } from "@/components/icons";
 import { CATEGORY_COLORS } from "@/lib/colors";
 
 export const dynamic = "force-dynamic";
@@ -122,7 +123,16 @@ export default async function PersonPage({
             </p>
           </div>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          {person.role === "ADMIN" && (
+            <Link
+              href="/admin"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+            >
+              <LockIcon className="h-4 w-4" />
+              Admin
+            </Link>
+          )}
           <div className="text-right">
           <p className="tabular text-3xl font-medium leading-none">
             {percent === null ? (

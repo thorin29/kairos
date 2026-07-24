@@ -4,11 +4,19 @@ import { revalidatePath } from "next/cache";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { householdTz, toDateColumn, zonedToUtc } from "@/lib/dates";
-import { canActFor } from "@/lib/session";
+import { buildRule } from "@/lib/calendar/recur";
 
 export type EventState = { error: string | null; saved: boolean };
 
-const KINDS = ["CLASS", "WORK", "APPOINTMENT", "OTHER"] as const;
+const KINDS = [
+  "CLASS",
+  "WORK",
+  "APPOINTMENT",
+  "BIRTHDAY",
+  "OTHER",
+] as const;
+
+const FREQS = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"] as const;
 
 /**
  * Times are entered as wall-clock in the household timezone and stored as
@@ -26,14 +34,11 @@ export async function addEvent(
   const end = String(formData.get("end") ?? "");
   const allDay = formData.get("allDay") === "on";
   const location = String(formData.get("location") ?? "").trim().slice(0, 200);
+  const repeat = String(formData.get("repeat") ?? "NONE");
+  const interval = Number(formData.get("interval") ?? 1);
+  const until = String(formData.get("until") ?? "").trim();
 
   if (!userId) return { error: "Pick whose event this is.", saved: false };
-  if (!(await canActFor(userId))) {
-    return {
-      error: "You can only add events to your own calendar.",
-      saved: false,
-    };
-  }
   if (title.length < 2) return { error: "Give the event a name.", saved: false };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return { error: "Pick a date.", saved: false };
@@ -67,6 +72,24 @@ export async function addEvent(
     }
   }
 
+  let rrule: string | null = null;
+  if ((FREQS as readonly string[]).includes(repeat)) {
+    if (!Number.isInteger(interval) || interval < 1 || interval > 52) {
+      return { error: "Repeat every 1 to 52.", saved: false };
+    }
+    if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) {
+      return { error: "That end date isn't valid.", saved: false };
+    }
+    if (until && until < date) {
+      return { error: "The repeat ends before it starts.", saved: false };
+    }
+    rrule = buildRule(
+      repeat as "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY",
+      interval,
+      until || null,
+    );
+  }
+
   await prisma.event.create({
     data: {
       userId,
@@ -76,6 +99,7 @@ export async function addEvent(
       startsAt,
       endsAt,
       allDay,
+      rrule,
     },
   });
 
@@ -88,7 +112,6 @@ export async function addEvent(
 export async function deleteEvent(id: string): Promise<void> {
   const event = await prisma.event.findUnique({ where: { id } });
   if (!event) return;
-  if (!(await canActFor(event.userId))) return;
 
   // Subscribed events are owned by their feed — removing one here would
   // just bring it back on the next sync. Unsubscribe instead.
