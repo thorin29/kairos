@@ -4,12 +4,17 @@ import { useEffect, useRef } from "react";
 import type { GridEvent } from "@/lib/queries/calendar";
 import { DAY_SHORT } from "@/lib/days";
 
-const HOUR_PX = 52;
-const START_HOUR = 0;
+const HOUR_PX = 56;
+const COLUMNS = "grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]";
 
 /**
  * Outlook-style week: hour gutter down the left, a column per day, blocks
  * positioned by minutes from midnight.
+ *
+ * The day header and the all-day band sit *inside* the scroll container and
+ * stick to the top. Keeping them outside it made them a different width to
+ * the body whenever a scrollbar appeared, so the dates drifted out of line
+ * with their columns.
  *
  * The grid renders all 24 hours but scrolls to the earliest event on mount,
  * so a 7am practice is visible without hiding a midnight shift.
@@ -36,88 +41,83 @@ export function WeekGrid({
     const earliest = timed.length
       ? Math.min(...timed.map((e) => e.startMin))
       : 8 * 60;
-    scroller.current.scrollTop = Math.max(
-      0,
-      ((earliest - 60) / 60) * HOUR_PX,
-    );
+    scroller.current.scrollTop = Math.max(0, ((earliest - 60) / 60) * HOUR_PX);
   }, [timed]);
 
   const byDay = (iso: string) => timed.filter((e) => e.dayISO === iso);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
-      <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] border-b border-hairline">
-        <div />
-        {days.map((iso) => {
-          const d = new Date(`${iso}T00:00:00Z`);
-          const isToday = iso === todayISO;
-          return (
-            <button
-              key={iso}
-              type="button"
-              onClick={() => onSelectDay(iso)}
-              className={`border-l border-hairline px-1 py-2.5 text-center transition-colors hover:bg-ground ${
-                selectedDay === iso ? "bg-accent/10" : ""
-              }`}
-            >
-              <span className="block text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
-                {DAY_SHORT[d.getUTCDay()]}
-              </span>
-              <span
-                className={`tabular mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
-                  isToday ? "bg-accent text-white" : ""
-                }`}
-              >
-                {d.getUTCDate()}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <div
+        ref={scroller}
+        className="max-h-[36rem] overflow-y-auto"
+        style={{ scrollbarGutter: "stable" }}
+      >
+        {/* Frozen header. Same container, same width, so columns line up. */}
+        <div className="sticky top-0 z-20">
+          <div className={`grid ${COLUMNS} bg-shade`}>
+            <div className="border-b border-hairline" />
+            {days.map((iso) => {
+              const d = new Date(`${iso}T00:00:00Z`);
+              const isToday = iso === todayISO;
+              const isSelected = selectedDay === iso;
 
-      {allDay.length > 0 && (
-        <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] border-b border-hairline bg-ground/50">
-          <div className="px-2 py-2 text-right text-[0.65rem] uppercase tracking-wide text-muted">
-            All day
-          </div>
-          {days.map((iso) => (
-            <div key={iso} className="border-l border-hairline p-1">
-              {allDay
-                .filter((e) => e.dayISO === iso)
-                .map((e) => (
-                  <span
-                    key={e.id}
-                    title={`${e.title}${e.location ? ` · ${e.location}` : ""}`}
-                    className="mb-1 block truncate rounded px-1.5 py-1 text-[0.7rem] font-medium text-white"
-                    style={{ backgroundColor: e.color }}
-                  >
-                    {e.title}
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  onClick={() => onSelectDay(iso)}
+                  className={`border-b border-l border-hairline px-1 py-2.5 text-center transition-colors ${
+                    isSelected ? "bg-accent/15" : "hover:bg-shade-soft"
+                  }`}
+                >
+                  <span className="block text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
+                    {DAY_SHORT[d.getUTCDay()]}
                   </span>
-                ))}
-            </div>
-          ))}
-        </div>
-      )}
+                  <span
+                    className={`tabular mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
+                      isToday ? "bg-accent text-white" : ""
+                    }`}
+                  >
+                    {d.getUTCDate()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-      <div ref={scroller} className="max-h-[34rem] overflow-y-auto">
-        <div className="relative grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]">
+          {allDay.length > 0 && (
+            <div className={`grid ${COLUMNS} bg-shade-soft`}>
+              <div className="border-b border-hairline px-2 py-2 text-right text-[0.6rem] uppercase tracking-wide text-muted">
+                All day
+              </div>
+              {days.map((iso) => (
+                <div
+                  key={iso}
+                  className="border-b border-l border-hairline p-1"
+                >
+                  {allDay
+                    .filter((e) => e.dayISO === iso)
+                    .map((e) => (
+                      <span
+                        key={e.id}
+                        title={`${e.title}${e.location ? ` · ${e.location}` : ""}`}
+                        className="mb-1 block truncate rounded px-1.5 py-1 text-[0.7rem] font-medium text-white"
+                        style={{ backgroundColor: e.color }}
+                      >
+                        {e.title}
+                      </span>
+                    ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className={`relative grid ${COLUMNS}`}>
           <div>
             {Array.from({ length: 24 }, (_, h) => (
-              <div
-                key={h}
-                style={{ height: HOUR_PX }}
-                className="relative border-b border-hairline/60"
-              >
-                <span className="tabular absolute -top-2 right-2 text-[0.65rem] text-muted">
-                  {h === 0
-                    ? ""
-                    : h < 12
-                      ? `${h} AM`
-                      : h === 12
-                        ? "12 PM"
-                        : `${h - 12} PM`}
-                </span>
-              </div>
+              <HourCell key={h} label={hourLabel(h)} />
             ))}
           </div>
 
@@ -133,16 +133,12 @@ export function WeekGrid({
                 }`}
               >
                 {Array.from({ length: 24 }, (_, h) => (
-                  <div
-                    key={h}
-                    style={{ height: HOUR_PX }}
-                    className="border-b border-hairline/60"
-                  />
+                  <HourCell key={h} />
                 ))}
 
                 {events.map((e) => {
                   const lane = lanes.get(e.id) ?? { index: 0, of: 1 };
-                  const top = ((e.startMin - START_HOUR * 60) / 60) * HOUR_PX;
+                  const top = (e.startMin / 60) * HOUR_PX;
                   const height = Math.max(
                     ((e.endMin - e.startMin) / 60) * HOUR_PX - 2,
                     18,
@@ -185,6 +181,37 @@ export function WeekGrid({
 }
 
 /**
+ * One hour, split by a dashed half-hour rule. Without it a 3:30 start looks
+ * identical to a 3:15 one, and reading the grid means counting pixels.
+ */
+function HourCell({ label }: { label?: string }) {
+  return (
+    <div
+      style={{ height: HOUR_PX }}
+      className="relative border-b border-hairline"
+    >
+      <div
+        style={{ height: HOUR_PX / 2 }}
+        className="border-b border-dashed border-hairline"
+        aria-hidden
+      />
+      {label && (
+        <span className="tabular absolute -top-2 right-2 bg-surface px-1 text-[0.65rem] text-muted">
+          {label}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function hourLabel(h: number): string | undefined {
+  if (h === 0) return undefined;
+  if (h < 12) return `${h} AM`;
+  if (h === 12) return "12 PM";
+  return `${h - 12} PM`;
+}
+
+/**
  * Side-by-side placement for overlapping blocks. Greedy: an event takes the
  * first lane whose last event has already finished. Good enough for a family
  * schedule, and it degrades gracefully when three things collide.
@@ -213,10 +240,7 @@ function assignLanes(events: GridEvent[]) {
     }
 
     for (const e of cluster) {
-      result.set(e.id, {
-        index: placed.get(e.id) ?? 0,
-        of: laneEnds.length,
-      });
+      result.set(e.id, { index: placed.get(e.id) ?? 0, of: laneEnds.length });
     }
     cluster = [];
   };

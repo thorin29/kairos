@@ -8,6 +8,10 @@
   --color-ink: #10202f;
   --color-muted: #5b6b7d;
   --color-hairline: #dce3ea;
+  /* Header bands on the calendar: darker than the grid so the frozen row
+     reads as a different plane without needing a heavy rule. */
+  --color-shade: #dde5ed;
+  --color-shade-soft: #e8edf3;
   --color-accent: #0f5c63;
 
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
