@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
+import { AdminReturn } from "@/components/admin-return";
 import {
   loadChoreSummary,
   loadPoolChores,
@@ -65,6 +66,7 @@ export default async function ChoresOverviewPage() {
       </AppHeader>
 
       <main className="mx-auto max-w-5xl px-6 py-6">
+        <AdminReturn />
 
 
       <section className="mb-10">

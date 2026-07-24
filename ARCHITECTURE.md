@@ -93,7 +93,22 @@ behind the lock it opens.
 
 A household's reading plan lives in the database and never enters this
 repository. What ships is the machinery: canon reference, passage parser,
-importer, statistics. A fresh clone gets an empty plan builder.
+importer, statistics, and the generator. A fresh clone gets an empty plan
+builder.
+
+The generator (`src/lib/bible/plan-builder.ts`) is a pure function with no
+server dependencies, which is what lets the same code preview a plan in the
+browser as the form is filled in and build the saved one on the server. The
+server never accepts the preview's output — only the inputs cross the wire and
+the schedule is rebuilt on arrival, so the two can't drift.
+
+### Position is laid out, not scrolled to
+
+The reading deck centres today by pushing every card sideways by its distance
+from the selection, so the correct arrangement is the first paint. The earlier
+version set `scrollLeft` after mount and put today hard against the left edge
+whenever the measurement ran before the fonts settled. Anything that has to
+measure the DOM to look right will occasionally look wrong.
 
 ### The client/server boundary is enforced
 

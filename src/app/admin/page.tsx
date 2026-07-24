@@ -36,7 +36,7 @@ const TILES: Tile[] = [
   {
     href: "/admin/bible",
     label: "Bible reading",
-    blurb: "Import, review, and publish a reading plan",
+    blurb: "Build or import a plan, review it, publish it",
     icon: <BookIcon className="h-7 w-7" />,
     ready: true,
   },
@@ -85,7 +85,7 @@ const TILES: Tile[] = [
   {
     href: "/summary",
     label: "Summary",
-    blurb: "Totals, streaks, and scoring window",
+    blurb: "Household totals — the shared page everyone sees",
     icon: <TrophyIcon className="h-7 w-7" />,
     ready: true,
   },

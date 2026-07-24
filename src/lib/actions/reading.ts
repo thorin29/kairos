@@ -6,6 +6,12 @@ import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { isAdmin, requireAdmin } from "@/lib/session";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { parsePassage } from "@/lib/bible/books";
+import {
+  buildPlan,
+  decodeSelection,
+  MAX_DAYS,
+  type Pace,
+} from "@/lib/bible/plan-builder";
 
 export type ImportState = {
   error: string | null;
@@ -95,6 +101,93 @@ export async function importPlan(
     error: null,
     imported: rows.length,
     skipped: skipped.slice(0, 20),
+  };
+}
+
+export type GenerateState = {
+  error: string | null;
+  created: number;
+  name: string | null;
+  startISO: string | null;
+  endISO: string | null;
+  leftover: number;
+};
+
+const emptyGenerate: GenerateState = {
+  error: null,
+  created: 0,
+  name: null,
+  startISO: null,
+  endISO: null,
+  leftover: 0,
+};
+
+/**
+ * Builds a dated plan from a choice of books and a pace, and saves it as a
+ * draft. The form previews with the same builder, but nothing it computed is
+ * trusted here — only the inputs cross the wire, and the schedule is built
+ * again on this side.
+ */
+export async function generatePlan(
+  _prev: GenerateState,
+  formData: FormData,
+): Promise<GenerateState> {
+  if (!(await isAdmin())) {
+    return { ...emptyGenerate, error: "Only a parent can build a plan." };
+  }
+
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  if (name.length < 2) return { ...emptyGenerate, error: "Name the plan." };
+
+  const selection = decodeSelection(String(formData.get("selection") ?? ""));
+  const startISO = String(formData.get("start") ?? "");
+  const weekdays = String(formData.get("weekdays") ?? "")
+    .split(",")
+    .map((d) => Number(d))
+    .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+
+  const pace: Pace =
+    String(formData.get("paceKind") ?? "chapters") === "finish"
+      ? { kind: "finish", endISO: String(formData.get("finish") ?? "") }
+      : { kind: "chapters", perDay: Number(formData.get("perDay") ?? 0) };
+
+  const built = buildPlan({
+    selection,
+    startISO,
+    weekdays,
+    pace,
+    keepBooksWhole: formData.get("whole") === "on",
+  });
+
+  if (built.error) return { ...emptyGenerate, error: built.error };
+  if (built.days.length === 0 || built.days.length > MAX_DAYS) {
+    return { ...emptyGenerate, error: "That plan is empty or far too long." };
+  }
+
+  await prisma.readingPlan.create({
+    data: {
+      name,
+      notes: `Generated ${built.totalChapters} chapters over ${built.days.length} days`,
+      startDate: toDateColumn(built.days[0].iso),
+      endDate: toDateColumn(built.days[built.days.length - 1].iso),
+      days: {
+        create: built.days.map((d) => ({
+          day: toDateColumn(d.iso),
+          passage: d.passage.slice(0, 120),
+        })),
+      },
+    },
+  });
+
+  revalidatePath("/admin/bible");
+
+  return {
+    error: null,
+    created: built.days.length,
+    name,
+    startISO: built.startISO,
+    endISO: built.endISO,
+    leftover: built.leftover,
   };
 }
 

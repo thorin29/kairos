@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { listPlans } from "@/lib/actions/reading";
 import { fromDateColumn, formatShort, todayISO } from "@/lib/dates";
 import { AdminBack } from "@/components/admin-back";
-import { Card, SectionHeading } from "@/components/ui";
+import { Card, SectionHeading, ButtonLink } from "@/components/ui";
 import { ImportForm } from "./import-form";
 import { PlanActions } from "./plan-actions";
 
@@ -105,6 +105,20 @@ export default async function AdminBiblePage() {
           </p>
         </section>
       )}
+
+      <section className="mb-10">
+        <SectionHeading>Build a new plan</SectionHeading>
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <p className="max-w-md text-sm text-muted">
+            Pick books and a pace and the dates are worked out for you. It can
+            pick up where the published plan leaves off, so nothing gets read
+            twice by accident.
+          </p>
+          <ButtonLink href="/admin/bible/generate" variant="filled">
+            Build a plan
+          </ButtonLink>
+        </Card>
+      </section>
 
       <section>
         <SectionHeading>Import a plan</SectionHeading>

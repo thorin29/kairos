@@ -53,6 +53,8 @@ all live in the database, never in this repository.
 - [x] Route-level guard so a typed URL cannot reach an admin page
 - [x] Parents can change their own PIN
 - [x] Read-only metrics pages separate from the editors behind the lock
+- [x] Shared pages reached from the admin hub offer a way back to it while
+      the unlock is live
 - [ ] Audit trail of admin changes
 
 ## Chores
@@ -81,9 +83,15 @@ all live in the database, never in this repository.
       (Pentateuch, History, Wisdom, Major and Minor Prophets, Gospels, Acts,
       Paul, General Epistles, Revelation)
 - [x] Today's reading shown large, with neighbouring days as cards either
-      side that can be brought to the centre
-- [ ] **Plan generator** — pick books and a date range, balanced by verse
-      count rather than chapter count so days stay even
+      side that can be brought to the centre — by click, arrow, keyboard, or
+      swipe
+- [x] **Plan generator** — pick books, a start date, which weekdays carry a
+      reading, and either chapters a day or a finish date; previewed live and
+      saved as a draft
+- [x] Carry on from where the published plan leaves off, so a book already
+      read isn't scheduled twice
+- [x] Keep books whole — a day's reading never runs across two books
+- [ ] Balance by verse count rather than chapter count so days stay even
 - [ ] Per-weekday chapter counts, including a lighter Sunday as an option
 - [ ] Guarantee no passage is scheduled twice within a plan
 - [ ] Preset plans generated from book lists (canonical, historical,

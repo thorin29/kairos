@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
+import { AdminReturn } from "@/components/admin-return";
 import { loadReadingStats } from "@/lib/queries/reading-stats";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import {
@@ -106,6 +107,7 @@ export default async function BiblePage() {
       </AppHeader>
 
       <main className="mx-auto max-w-4xl px-6 py-6">
+        <AdminReturn />
 
 
       {plan && cards.length > 0 && (

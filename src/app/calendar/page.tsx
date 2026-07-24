@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
+import { AdminReturn } from "@/components/admin-return";
 import {
   loadRange,
   loadTasksForDays,
@@ -120,6 +121,7 @@ export default async function CalendarPage({
       </AppHeader>
 
       <main className="mx-auto max-w-6xl px-6 py-6">
+        <AdminReturn />
 
 
       <div className="mb-5 flex flex-wrap items-center justify-end gap-2">

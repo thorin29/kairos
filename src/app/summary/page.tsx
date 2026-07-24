@@ -3,6 +3,7 @@ import { getScoringStart } from "@/lib/settings";
 import { formatLong, todayISO } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
+import { AdminReturn } from "@/components/admin-return";
 import { Avatar } from "@/components/avatar";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
 import { LockIcon } from "@/components/icons";
@@ -41,6 +42,7 @@ export default async function SummaryPage() {
       />
 
       <main className="mx-auto max-w-3xl px-6 py-6">
+        <AdminReturn />
 
 
       {leader && leader.completed > 0 && (
