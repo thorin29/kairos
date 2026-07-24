@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
+import { LockIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -114,11 +115,7 @@ export default async function SummaryPage() {
         and still catchable isn&rsquo;t a miss yet.
       </p>
 
-      <div className="mt-6">
-        <ButtonLink href="/setup" variant="outlined" size="sm">
-          Change the scoring start date
-        </ButtonLink>
-      </div>
+
     </main>
     </>
   );

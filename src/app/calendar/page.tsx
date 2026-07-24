@@ -23,10 +23,10 @@ import {
 import { CalendarView } from "@/components/calendar-view";
 import { DaySchedule } from "@/components/day-schedule";
 import { MonthGrid } from "@/components/month-grid";
-import { Subscriptions } from "./subscriptions";
 import { AddEventForm } from "./add-event-form";
-import { SectionHeading } from "@/components/ui";
+import { SectionHeading, ButtonLink } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
+import { LockIcon } from "@/components/icons";
 import { isAdmin } from "@/lib/session";
 import { DeleteEventButton } from "@/components/event-actions";
 import { canDeleteEvent } from "@/lib/can-delete-event";
@@ -73,7 +73,7 @@ export default async function CalendarPage({
   await syncStaleCalendars();
   const admin = await isAdmin();
 
-  const [range, tasks, people, calendars] = await Promise.all([
+  const [range, tasks, people] = await Promise.all([
     loadRange(days, userId),
     loadTasksForDays(days, userId),
     prisma.user.findMany({
@@ -87,25 +87,7 @@ export default async function CalendarPage({
         avatarPath: true,
       },
     }),
-    prisma.externalCalendar.findMany({
-      orderBy: { name: "asc" },
-      include: {
-        user: { select: { name: true, displayName: true, color: true } },
-        _count: { select: { events: true } },
-      },
-    }),
   ]);
-
-  const subscriptions = calendars.map((c) => ({
-    id: c.id,
-    name: c.name,
-    url: c.url,
-    ownerName: c.user.displayName ?? c.user.name,
-    ownerColor: c.user.color,
-    eventCount: c._count.events,
-    lastFetchedAt: c.lastFetchedAt?.toISOString() ?? null,
-    lastError: c.lastError,
-  }));
 
   const link = (p: { view?: View; date?: string; who?: string }) => {
     const q = new URLSearchParams();
@@ -130,7 +112,12 @@ export default async function CalendarPage({
 
   return (
     <>
-      <AppHeader title="Calendar" subtitle={heading} active="calendar" />
+      <AppHeader title="Calendar" subtitle={heading} active="calendar">
+        <ButtonLink href="/admin/calendar" variant="outlined" size="sm">
+          <LockIcon className="h-4 w-4" />
+          Feeds
+        </ButtonLink>
+      </AppHeader>
 
       <main className="mx-auto max-w-6xl px-6 py-6">
 
@@ -237,17 +224,6 @@ export default async function CalendarPage({
         />
       </section>
 
-      <section className="mt-12">
-        <SectionHeading>Subscribed calendars</SectionHeading>
-        <Subscriptions
-          subscriptions={subscriptions}
-          people={people.map((p) => ({
-            id: p.id,
-            name: p.displayName ?? p.name,
-            color: p.color,
-          }))}
-        />
-      </section>
     </main>
     </>
   );

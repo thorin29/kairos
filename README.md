@@ -8,6 +8,8 @@ Built for a wall tablet or laptop in a shared space. Everything lives on your
 own server; no accounts, no cloud, no third parties holding your family's
 schedule.
 
+**[Roadmap](ROADMAP.md)** — everything planned, and what is already built.
+
 > **Status:** early development. The data model and deployment pipeline are in
 > place. Feature modules are landing one at a time — see the roadmap below.
 

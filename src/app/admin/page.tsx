@@ -69,9 +69,9 @@ const TILES: Tile[] = [
     ready: true,
   },
   {
-    href: "/calendar",
+    href: "/admin/calendar",
     label: "Calendars",
-    blurb: "Subscribed feeds and shared events",
+    blurb: "Subscribed feeds",
     icon: <CalendarPlusIcon className="h-7 w-7" />,
     ready: true,
   },

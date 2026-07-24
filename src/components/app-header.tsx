@@ -92,8 +92,12 @@ export function AppHeader({
     // Nesting it inside meant the bar resized between pages, which reads as
     // the whole top of the app jumping.
     <header className="sticky top-0 z-30 border-b border-hairline bg-ground/90 backdrop-blur">
-      <div className="mx-auto flex h-20 max-w-6xl flex-wrap items-center gap-4 px-6">
-        <div className="min-w-0 flex-1">
+      <div className="mx-auto flex h-20 max-w-6xl items-center gap-3 px-4 sm:gap-4 sm:px-6">
+        <h1 className="font-display min-w-0 flex-1 truncate text-xl font-semibold tracking-tight sm:hidden">
+          {title}
+        </h1>
+
+        <div className="hidden min-w-0 flex-1 sm:block">
           <h1 className="font-display truncate text-2xl font-semibold leading-tight tracking-tight">
             {title}
           </h1>
@@ -104,8 +108,14 @@ export function AppHeader({
 
         {children}
 
-        <nav aria-label="Sections">
-          <ul className="flex items-center gap-1.5">
+        {/* Scrolls rather than wraps: a second row would change the header's
+            height between pages, which is the jumping this bar exists to
+            avoid. */}
+        <nav
+          aria-label="Sections"
+          className="min-w-0 shrink overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <ul className="flex items-center gap-1.5 px-1 py-2">
             {NAV.map((item) => {
               const current = item.key === active;
 

@@ -4,11 +4,13 @@ import { loadReadingStats } from "@/lib/queries/reading-stats";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import {
   addDays,
+  formatLong,
   formatShort,
   fromDateColumn,
   toDateColumn,
   todayISO,
 } from "@/lib/dates";
+import { ReadingCards, type ReadingCard } from "@/components/reading-cards";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
 import { LockIcon } from "@/components/icons";
 
@@ -34,18 +36,48 @@ export default async function BiblePage() {
     loadReadingStats(today),
   ]);
 
-  const upcoming = plan
+  // A window either side of today, so yesterday's missed reading and the
+  // next few days are one swipe away.
+  const WINDOW_BACK = 7;
+  const WINDOW_FORWARD = 14;
+
+  const window = plan
     ? await prisma.readingDay.findMany({
         where: {
           planId: plan.id,
           day: {
-            gte: toDateColumn(today),
-            lte: toDateColumn(addDays(today, 6)),
+            gte: toDateColumn(addDays(today, -WINDOW_BACK)),
+            lte: toDateColumn(addDays(today, WINDOW_FORWARD)),
           },
         },
         orderBy: { day: "asc" },
       })
     : [];
+
+  const cards: ReadingCard[] = window.map((d) => {
+    const iso = fromDateColumn(d.day);
+    const offset =
+      (Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) /
+      86_400_000;
+
+    const relative =
+      offset === 0
+        ? "Today"
+        : offset === 1
+          ? "Tomorrow"
+          : offset === -1
+            ? "Yesterday"
+            : offset > 0
+              ? `In ${offset} days`
+              : `${Math.abs(offset)} days ago`;
+
+    return { iso, passage: d.passage, label: formatLong(iso), relative };
+  });
+
+  const todayIndex = Math.max(
+    0,
+    cards.findIndex((c) => c.iso === today),
+  );
 
   const remainingCount = plan
     ? await prisma.readingDay.count({
@@ -76,45 +108,16 @@ export default async function BiblePage() {
       <main className="mx-auto max-w-4xl px-6 py-6">
 
 
-      {plan && (
-        <section className="mb-10">
-          <SectionHeading>This week</SectionHeading>
-          <Card className="divide-y divide-hairline">
-            {upcoming.length === 0 ? (
-              <p className="px-5 py-4 text-sm text-muted">
-                Nothing scheduled in the next week.
-              </p>
-            ) : (
-              upcoming.map((d) => {
-                const iso = fromDateColumn(d.day);
-                return (
-                  <div
-                    key={d.id}
-                    className={`flex items-center gap-4 px-5 py-3 ${
-                      iso === today ? "bg-accent/5" : ""
-                    }`}
-                  >
-                    <span className="tabular w-16 shrink-0 text-xs text-muted">
-                      {formatShort(iso)}
-                    </span>
-                    <span className="text-sm font-medium">{d.passage}</span>
-                    {iso === today && (
-                      <span className="ml-auto text-xs uppercase tracking-wide text-accent">
-                        today
-                      </span>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </Card>
+      {plan && cards.length > 0 && (
+        <div className="mb-10">
+          <ReadingCards cards={cards} todayIndex={todayIndex} />
           {last && (
-            <p className="tabular mt-2 text-xs text-muted">
+            <p className="tabular mt-1 text-xs text-muted">
               {remainingCount} days left &middot; plan runs out{" "}
               {formatShort(fromDateColumn(last.day))}
             </p>
           )}
-        </section>
+        </div>
       )}
 
       <section>

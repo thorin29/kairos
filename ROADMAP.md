@@ -21,6 +21,9 @@ all live in the database, never in this repository.
 - [x] About page with version number and a migration completeness check
 - [ ] Export everything to JSON from the admin panel
 - [ ] PWA install and offline queueing for actions taken without signal
+- [ ] **Installable Android app** — a real APK rather than a home-screen
+      shortcut, so it can be allowed on a child device with a time limit and
+      work where general internet access is blocked
 
 ## Dashboard
 
@@ -77,6 +80,8 @@ all live in the database, never in this repository.
 - [x] Coverage statistics: Old Testament, New Testament, and by group
       (Pentateuch, History, Wisdom, Major and Minor Prophets, Gospels, Acts,
       Paul, General Epistles, Revelation)
+- [x] Today's reading shown large, with neighbouring days as cards either
+      side that can be brought to the centre
 - [ ] **Plan generator** — pick books and a date range, balanced by verse
       count rather than chapter count so days stay even
 - [ ] Per-weekday chapter counts, including a lighter Sunday as an option
@@ -184,3 +189,5 @@ all live in the database, never in this repository.
 - [ ] Large touch tiles on each person's page for exercise, school, and
       reading
 - [ ] Phone layout for the week grid
+- [ ] Phone layout throughout — the top bar behaves differently on narrow
+      screens and each page needs checking on a handset
