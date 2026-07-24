@@ -5,11 +5,23 @@ import { BackLink, DoneBar } from "@/components/back-link";
 import { ScoringStartForm } from "./scoring-start-form";
 import { getScoringStart } from "@/lib/settings";
 import { SectionHeading } from "@/components/ui";
+import { isAdmin } from "@/lib/session";
+import { ParentOnly } from "@/components/parent-only";
 
 export const dynamic = "force-dynamic";
 
 export default async function SetupPage() {
   const people = await prisma.user.findMany({ orderBy: { sortOrder: "asc" } });
+
+  // First run has no accounts, so it must stay open. After that it's
+  // parent-only like the rest of the management screens.
+  if (people.length > 0 && !(await isAdmin())) {
+    return (
+      <main className="mx-auto max-w-2xl px-6 py-16">
+        <ParentOnly what="The household list" />
+      </main>
+    );
+  }
   const scoringStart = await getScoringStart();
   const hasAdmin = people.some((p) => p.role === "ADMIN");
 

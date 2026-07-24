@@ -47,6 +47,81 @@ export async function loadWeek(
 }
 
 /** Events for an arbitrary run of days — one, seven, or a whole month grid. */
+/**
+ * Birthdays are synthesized rather than stored as events.
+ *
+ * A birthday is a rule — this month and day, every year — so writing rows
+ * for it would mean deciding how many years ahead to generate and rewriting
+ * them whenever a date is corrected. Building them per range is always
+ * right, needs no maintenance, and makes the age arithmetic fall out for
+ * free.
+ */
+async function birthdayEvents(
+  days: string[],
+  userId?: string,
+): Promise<GridEvent[]> {
+  const people = await prisma.user.findMany({
+    where: {
+      isActive: true,
+      birthday: { not: null },
+      ...(userId ? { id: userId } : {}),
+    },
+    select: {
+      id: true,
+      name: true,
+      displayName: true,
+      color: true,
+      birthday: true,
+    },
+  });
+
+  if (people.length === 0) return [];
+
+  const inRange = new Set(days);
+  const events: GridEvent[] = [];
+
+  for (const p of people) {
+    const born = fromDateColumn(p.birthday!);
+    const [bornYear, month, day] = born.split("-");
+
+    // Only the years the range actually touches, so a month view spanning a
+    // new year still lands both.
+    const years = new Set(days.map((d) => d.slice(0, 4)));
+
+    for (const year of years) {
+      const iso = `${year}-${month}-${day}`;
+      if (!inRange.has(iso)) continue;
+
+      const turning = Number(year) - Number(bornYear);
+      const who = p.displayName ?? p.name;
+
+      events.push({
+        id: `birthday-${p.id}-${year}`,
+        title:
+          turning > 0 ? `${who} turns ${turning}` : `${who}'s birthday`,
+        location: null,
+        dayISO: iso,
+        startMin: 0,
+        endMin: 1440,
+        timeLabel: "All day",
+        allDay: true,
+        color: userId ? CATEGORY_COLORS.OTHER : p.color,
+        ownerName: who,
+        kind: "BIRTHDAY",
+        calendarName: null,
+      });
+    }
+  }
+
+  return events;
+}
+
+/**
+ * Birthdays repeat forever, so storing them as event rows would mean
+ * generating one per person per year and maintaining them. Instead they're
+ * synthesized for whatever range is being viewed: match on month and day,
+ * and the birth year gives the age being turned.
+ */
 export async function loadRange(
   days: string[],
   userId?: string,
@@ -118,6 +193,8 @@ export async function loadRange(
       allDay: false,
     });
   }
+
+  allDay.push(...(await birthdayEvents(days, userId)));
 
   return { days, timed, allDay };
 }

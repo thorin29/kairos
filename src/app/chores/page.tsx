@@ -11,10 +11,20 @@ import { DeleteChoreButton, RemoveAssignmentButton } from "./row-actions";
 import { BackLink, DoneBar } from "@/components/back-link";
 import { Card, SectionHeading } from "@/components/ui";
 import { AlertIcon } from "@/components/icons";
+import { isAdmin } from "@/lib/session";
+import { ParentOnly } from "@/components/parent-only";
 
 export const dynamic = "force-dynamic";
 
 export default async function ChoresPage() {
+  if (!(await isAdmin())) {
+    return (
+      <main className="mx-auto max-w-2xl px-6 py-16">
+        <ParentOnly what="The chore schedule" />
+      </main>
+    );
+  }
+
   const [summary, poolChores, people] = await Promise.all([
     loadChoreSummary(),
     loadPoolChores(),

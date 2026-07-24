@@ -16,6 +16,7 @@ import {
 } from "@/components/icons";
 import { OpenTasks } from "@/components/open-tasks";
 import { DaySchedule } from "@/components/day-schedule";
+import { CurrentUserChip } from "@/components/current-user";
 import { loadDaySchedule } from "@/lib/queries/calendar";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +78,7 @@ export default async function Home() {
               {totalOverdue} overdue
             </p>
           )}
+          <CurrentUserChip />
           <IconButtonLink href="/summary" label="Summary and totals">
             <TrophyIcon />
           </IconButtonLink>

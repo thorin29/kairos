@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { AVATAR_ICONS, ICON_PREFIX, isIcon } from "@/lib/avatars";
 import { toDateColumn } from "@/lib/dates";
+import { canActFor } from "@/lib/session";
 
 const UPLOADS = path.join(process.env.DATA_DIR || "/app/data", "uploads");
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -31,6 +32,13 @@ export async function updateProfile(
   const birthday = String(formData.get("birthday") ?? "").trim();
   const removePhoto = formData.get("removePhoto") === "1";
   const photo = formData.get("photo");
+
+  if (!(await canActFor(id))) {
+    return {
+      error: "You can only edit your own profile.",
+      saved: false,
+    };
+  }
 
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) return { error: "That person no longer exists.", saved: false };

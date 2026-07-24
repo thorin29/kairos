@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { generateChores } from "@/lib/chores/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
+import { isAdmin, requireAdmin } from "@/lib/session";
 
 export type ChoreActionState = { error: string | null };
 
@@ -13,6 +14,8 @@ export async function addChore(
   _prev: ChoreActionState,
   formData: FormData,
 ): Promise<ChoreActionState> {
+  if (!(await isAdmin())) return { error: "Only a parent can change this. Switch profiles first." };
+
   const title = String(formData.get("title") ?? "").trim().slice(0, 80);
   if (title.length < 2) return { error: "Give the chore a name." };
 
@@ -27,6 +30,8 @@ export async function addChore(
 }
 
 export async function deleteChore(id: string): Promise<void> {
+  await requireAdmin();
+
   // Finished tasks keep their title and history; only the link is cleared.
   await prisma.chore.delete({ where: { id } });
   revalidatePath("/chores");
@@ -42,6 +47,8 @@ export async function assignChore(
   _prev: ChoreActionState,
   formData: FormData,
 ): Promise<ChoreActionState> {
+  if (!(await isAdmin())) return { error: "Only a parent can change this. Switch profiles first." };
+
   const choreId = String(formData.get("choreId") ?? "");
   const userId = String(formData.get("userId") ?? "");
   const dayOfWeek = Number(formData.get("dayOfWeek"));
@@ -69,6 +76,8 @@ export async function assignChore(
 }
 
 export async function removeAssignment(id: string): Promise<void> {
+  await requireAdmin();
+
   const assignment = await prisma.choreAssignment.findUnique({ where: { id } });
   if (!assignment) return;
 
@@ -91,6 +100,8 @@ export async function addPoolChore(
   _prev: ChoreActionState,
   formData: FormData,
 ): Promise<ChoreActionState> {
+  if (!(await isAdmin())) return { error: "Only a parent can change this. Switch profiles first." };
+
   const title = String(formData.get("title") ?? "").trim().slice(0, 80);
   const intervalDays = Number(formData.get("intervalDays") ?? 0);
 
@@ -118,6 +129,8 @@ export async function setChorePaused(
   id: string,
   paused: boolean,
 ): Promise<void> {
+  await requireAdmin();
+
   await prisma.chore.update({
     where: { id },
     data: { isPaused: paused },

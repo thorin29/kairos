@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { syncCalendar, syncStaleCalendars } from "@/lib/calendar/sync";
+import { isAdmin, requireAdmin } from "@/lib/session";
 
 export type CalendarState = { error: string | null; saved: boolean };
 
@@ -15,6 +16,10 @@ export async function addCalendar(
   _prev: CalendarState,
   formData: FormData,
 ): Promise<CalendarState> {
+  if (!(await isAdmin())) {
+    return { error: "Only a parent can change this. Switch profiles first.", saved: false };
+  }
+
   const userId = String(formData.get("userId") ?? "");
   const name = String(formData.get("name") ?? "").trim().slice(0, 60);
   const rawUrl = String(formData.get("url") ?? "").trim();
@@ -55,6 +60,8 @@ export async function renameCalendar(
   id: string,
   name: string,
 ): Promise<void> {
+  await requireAdmin();
+
   const clean = name.trim().slice(0, 60);
   if (clean.length < 2) return;
 
@@ -67,6 +74,8 @@ export async function renameCalendar(
 }
 
 export async function removeCalendar(id: string): Promise<void> {
+  await requireAdmin();
+
   // Events cascade with the subscription.
   await prisma.externalCalendar.delete({ where: { id } });
   revalidatePath("/calendar");

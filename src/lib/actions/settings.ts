@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { clearSetting, SCORING_START, setSetting } from "@/lib/settings";
+import { isAdmin } from "@/lib/session";
 
 export type SettingsState = { error: string | null; saved: boolean };
 
@@ -9,6 +10,10 @@ export async function saveScoringStart(
   _prev: SettingsState,
   formData: FormData,
 ): Promise<SettingsState> {
+  if (!(await isAdmin())) {
+    return { error: "Only a parent can change this. Switch profiles first.", saved: false };
+  }
+
   const value = String(formData.get("scoringStart") ?? "").trim();
 
   if (!value) {
