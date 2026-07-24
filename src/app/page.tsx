@@ -10,7 +10,6 @@ import { generateReadingTasks } from "@/lib/bible/generate";
 import { IconButtonLink } from "@/components/ui";
 import {
   ChoresIcon,
-  PeopleIcon,
   AlertIcon,
   CalendarIcon,
   TrophyIcon,
@@ -105,9 +104,6 @@ export default async function Home({
           </IconButtonLink>
           <IconButtonLink href="/chores" label="Chores overview">
             <ChoresIcon />
-          </IconButtonLink>
-          <IconButtonLink href="/setup" label="Manage household">
-            <PeopleIcon />
           </IconButtonLink>
         </div>
       </header>
