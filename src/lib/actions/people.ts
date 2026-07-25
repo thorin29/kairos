@@ -104,3 +104,25 @@ export async function changePin(
   revalidatePath("/setup");
   return { error: null, saved: true };
 }
+
+/**
+ * Reorder the household. The given ids set each person's sortOrder, which is
+ * the order people appear in everywhere — the dashboard, the chore cards, and
+ * the rest. Ids missing from the list keep their existing order after those
+ * given.
+ */
+export async function reorderPeople(orderedIds: string[]): Promise<void> {
+  await requireAdmin();
+  if (orderedIds.length === 0) return;
+
+  await prisma.$transaction(
+    orderedIds.map((id, index) =>
+      prisma.user.update({ where: { id }, data: { sortOrder: index } }),
+    ),
+  );
+
+  revalidatePath("/admin/chores");
+  revalidatePath("/");
+  revalidatePath("/setup");
+  revalidatePath("/chores");
+}

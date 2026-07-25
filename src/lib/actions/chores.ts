@@ -149,3 +149,49 @@ export async function setChorePaused(
   revalidatePath("/chores");
   revalidatePath("/");
 }
+
+/**
+ * Move an existing assignment to a different person and/or day. The assignment
+ * keeps its identity, so reconciliation shifts the unfinished instances to the
+ * new person and day while leaving completed history alone. If the target slot
+ * already exists, the moved one is dropped rather than duplicated.
+ */
+export async function reassignChore(
+  assignmentId: string,
+  userId: string,
+  dayOfWeek: number,
+): Promise<void> {
+  await requireAdmin();
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) return;
+
+  const assignment = await prisma.choreAssignment.findUnique({
+    where: { id: assignmentId },
+  });
+  if (!assignment) return;
+
+  const clash = await prisma.choreAssignment.findFirst({
+    where: {
+      choreId: assignment.choreId,
+      userId,
+      dayOfWeek,
+      NOT: { id: assignmentId },
+    },
+  });
+
+  if (clash) {
+    // The destination already has this chore on this day — just retire the
+    // one being moved so it isn't a duplicate.
+    await prisma.choreAssignment.delete({ where: { id: assignmentId } });
+  } else {
+    await prisma.choreAssignment.update({
+      where: { id: assignmentId },
+      data: { userId, dayOfWeek },
+    });
+  }
+
+  await generateChores();
+
+  revalidatePath("/admin/chores");
+  revalidatePath("/chores");
+  revalidatePath("/");
+}

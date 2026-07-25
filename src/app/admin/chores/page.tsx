@@ -7,7 +7,8 @@ import { DAY_SHORT } from "@/lib/days";
 import { AddChoreForm } from "./add-chore-form";
 import { PoolChores } from "./pool-chores";
 import { AssignForm } from "./assign-form";
-import { DeleteChoreButton, RemoveAssignmentButton } from "./row-actions";
+import { DeleteChoreButton } from "./row-actions";
+import { ChoreCards } from "./chore-cards";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
 import { AlertIcon } from "@/components/icons";
@@ -29,12 +30,14 @@ export default async function ChoresPage() {
 
   // Per person, so a parent can see one child's whole week at a glance.
   const byPerson = people.map((p) => ({
-    ...p,
+    id: p.id,
+    name: p.name,
+    color: p.color,
     items: summary
       .flatMap((c) =>
         c.assignments
           .filter((a) => a.userId === p.id)
-          .map((a) => ({ ...a, chore: c.title })),
+          .map((a) => ({ id: a.id, chore: c.title, dayOfWeek: a.dayOfWeek })),
       )
       .sort((a, b) => a.dayOfWeek - b.dayOfWeek),
   }));
@@ -48,8 +51,10 @@ export default async function ChoresPage() {
           Chores
         </h1>
         <p className="mt-2 max-w-2xl text-muted">
-          Build the master list first, then assign each chore to a person and
-          a day. Assignments repeat every week.
+          Assign each chore to a person and a day &mdash; assignments repeat
+          every week. Drag a card to reorder people, or use the move button on a
+          chore to shift it to someone else. The master list of jobs is at the
+          bottom.
         </p>
       </header>
 
@@ -59,36 +64,6 @@ export default async function ChoresPage() {
         </Card>
       ) : (
         <div className="space-y-10">
-          <section>
-            <SectionHeading>Master chore list</SectionHeading>
-            <Card className="p-5">
-              <AddChoreForm />
-              {summary.length > 0 && (
-                <ul className="mt-5 flex flex-wrap gap-2 border-t border-hairline pt-5">
-                  {summary.map((c) => (
-                    <li
-                      key={c.id}
-                      className="inline-flex items-center gap-1 rounded-full bg-ground py-1 pl-4 pr-1 text-sm"
-                    >
-                      {c.title}
-                      {c.unassigned && (
-                        <span className="ml-1 text-xs text-muted">
-                          unassigned
-                        </span>
-                      )}
-                      <DeleteChoreButton id={c.id} title={c.title} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-          </section>
-
-          <section>
-            <SectionHeading>Shared chores</SectionHeading>
-            <PoolChores chores={poolChores} />
-          </section>
-
           {summary.length > 0 && (
             <section>
               <SectionHeading>Assign a chore</SectionHeading>
@@ -97,6 +72,11 @@ export default async function ChoresPage() {
               </Card>
             </section>
           )}
+
+          <section>
+            <SectionHeading>Shared chores</SectionHeading>
+            <PoolChores chores={poolChores} />
+          </section>
 
           {unassigned.length > 0 && (
             <Card className="flex items-start gap-3 border-amber-300 bg-amber-50 p-5">
@@ -117,48 +97,7 @@ export default async function ChoresPage() {
 
           <section>
             <SectionHeading>Who has what</SectionHeading>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {byPerson.map((p) => (
-                <Card key={p.id} className="p-5">
-                  <div className="mb-3 flex items-center gap-2.5">
-                    <span
-                      aria-hidden
-                      className="h-6 w-1.5 rounded-full"
-                      style={{ backgroundColor: p.color }}
-                    />
-                    <h3 className="font-display text-lg font-semibold">
-                      {p.name}
-                    </h3>
-                    <span className="tabular ml-auto text-sm text-muted">
-                      {p.items.length}
-                    </span>
-                  </div>
-                  {p.items.length === 0 ? (
-                    <p className="text-sm text-muted">No chores assigned.</p>
-                  ) : (
-                    <ul className="divide-y divide-hairline">
-                      {p.items.map((a) => (
-                        <li
-                          key={a.id}
-                          className="flex items-center gap-3 py-2"
-                        >
-                          <span className="tabular w-10 shrink-0 text-xs font-medium text-muted">
-                            {DAY_SHORT[a.dayOfWeek]}
-                          </span>
-                          <span className="min-w-0 flex-1 text-sm">
-                            {a.chore}
-                          </span>
-                          <RemoveAssignmentButton
-                            id={a.id}
-                            label={`${a.chore} on ${DAY_SHORT[a.dayOfWeek]}`}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </Card>
-              ))}
-            </div>
+            <ChoreCards cards={byPerson} people={people} />
           </section>
 
           <section>
@@ -199,9 +138,33 @@ export default async function ChoresPage() {
               number after each slot is how many days that is.
             </p>
           </section>
+
+          <section>
+            <SectionHeading>Master chore list</SectionHeading>
+            <Card className="p-5">
+              <AddChoreForm />
+              {summary.length > 0 && (
+                <ul className="mt-5 flex flex-wrap gap-2 border-t border-hairline pt-5">
+                  {summary.map((c) => (
+                    <li
+                      key={c.id}
+                      className="inline-flex items-center gap-1 rounded-full bg-ground py-1 pl-4 pr-1 text-sm"
+                    >
+                      {c.title}
+                      {c.unassigned && (
+                        <span className="ml-1 text-xs text-muted">
+                          unassigned
+                        </span>
+                      )}
+                      <DeleteChoreButton id={c.id} title={c.title} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </section>
         </div>
       )}
-
     </main>
   );
 }

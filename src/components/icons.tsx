@@ -261,3 +261,25 @@ export function CartIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+export function SwitchIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M4 8h13M14 5l3 3-3 3" />
+      <path d="M20 16H7M10 13l-3 3 3 3" />
+    </svg>
+  );
+}
+
+export function GripIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <circle cx="9" cy="6" r="1.6" />
+      <circle cx="15" cy="6" r="1.6" />
+      <circle cx="9" cy="12" r="1.6" />
+      <circle cx="15" cy="12" r="1.6" />
+      <circle cx="9" cy="18" r="1.6" />
+      <circle cx="15" cy="18" r="1.6" />
+    </svg>
+  );
+}
