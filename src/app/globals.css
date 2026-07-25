@@ -65,3 +65,17 @@ body {
 .book-pop:hover {
   animation: book-pop 0.35s ease;
 }
+
+/* Tailwind v4 no longer gives buttons a pointer cursor by default, which left
+   the arrow showing on every custom button (links were already fine). Restore
+   the finger on anything interactive, and a not-allowed cursor when disabled. */
+button:not(:disabled),
+[role="button"]:not(:disabled),
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]),
+summary {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}

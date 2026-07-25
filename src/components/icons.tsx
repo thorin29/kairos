@@ -252,12 +252,12 @@ export function GearIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
-export function BasketIcon({ className = "h-5 w-5" }: IconProps) {
+export function CartIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>
-      <path d="M5 11h14l-1.2 8.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 11Z" />
-      <path d="M9 11 12 4l3 7" />
-      <path d="M9.5 14.5v3M14.5 14.5v3" />
+      <circle cx="9" cy="20" r="1.3" />
+      <circle cx="17" cy="20" r="1.3" />
+      <path d="M2.5 3.5H5l2.1 10.5a1.6 1.6 0 0 0 1.6 1.3h7.6a1.6 1.6 0 0 0 1.6-1.3L20.5 7H6" />
     </svg>
   );
 }
