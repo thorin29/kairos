@@ -210,10 +210,14 @@ own exercises, optionally schedules them, and records what they did.
 - [x] Running totals: assigned, chores, completed, missed
 - [x] Scoring start date so a testing period can be excluded
 - [x] Summary page with leader and tie handling
+- [x] Admin-only chore effort weighting (easy / average / hard) and a
+      per-person balance table, so workloads can be evened out by hand
 - [ ] Streaks
 - [ ] Weekly winner, by streak, completion count, or first finished
 - [ ] Badges, including Bible completions
-- [ ] Handle unequal workloads fairly when comparing people
+- [ ] Weighted, fair scoring: because chores differ in count and effort, work
+      out a score (using the effort weights) that gives everyone an equal
+      chance to win regardless of who was handed more or harder chores
 
 ## Pauses and vacations
 

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.18.0";
+export const APP_VERSION = "0.19.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -23,11 +23,21 @@ export const MIGRATIONS = [
   "13_exercise",
   "14_collaborative_chores",
   "15_workouts",
+  "16_chore_effort",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.19.0",
+    summary: [
+      "Chores carry an admin-only effort weight (easy / average / hard)",
+      "New effort-balance table shows each person's load by day and week",
+      "Highest load each day and for the week is highlighted, to even things out",
+      "Renamed \"Who has what\" to \"Assigned chores\"",
+    ],
+  },
   {
     version: "0.18.0",
     summary: [

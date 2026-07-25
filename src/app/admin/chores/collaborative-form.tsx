@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { addCollaborativeChore } from "@/lib/actions/chores";
 import { PlusIcon } from "@/components/icons";
 import { DAY_NAMES } from "@/lib/days";
+import { EFFORT_LEVELS } from "@/lib/chores/effort";
 
 type Person = { id: string; name: string; color: string };
 
@@ -20,6 +21,7 @@ export function CollaborativeForm({ people }: { people: Person[] }) {
   const [dayOfWeek, setDayOfWeek] = useState(6); // Saturday
   const [intervalWeeks, setIntervalWeeks] = useState(1);
   const [startISO, setStartISO] = useState(() => new Date().toISOString().slice(0, 10));
+  const [effort, setEffort] = useState(2);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -40,6 +42,7 @@ export function CollaborativeForm({ people }: { people: Person[] }) {
         dayOfWeek,
         intervalWeeks,
         startISO,
+        effort,
       });
       if (result.error) {
         setError(result.error);
@@ -140,6 +143,26 @@ export function CollaborativeForm({ people }: { people: Person[] }) {
             onChange={(e) => setStartISO(e.target.value)}
             className={`tabular ${field}`}
           />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Effort</label>
+          <div className="inline-flex h-11 items-center rounded-full border border-hairline p-0.5">
+            {EFFORT_LEVELS.map((lvl) => {
+              const on = effort === lvl.value;
+              return (
+                <button
+                  key={lvl.value}
+                  type="button"
+                  onClick={() => setEffort(lvl.value)}
+                  className="inline-flex h-9 items-center rounded-full px-3 text-sm font-medium transition-colors"
+                  style={on ? { backgroundColor: lvl.color, color: "#fff" } : { color: "var(--color-muted)" }}
+                >
+                  {lvl.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <button

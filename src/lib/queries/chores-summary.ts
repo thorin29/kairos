@@ -17,6 +17,7 @@ export type ChoreSummary = {
   unassigned: boolean;
   isCollaborative: boolean;
   intervalWeeks: number;
+  effort: number;
 };
 
 /**
@@ -113,6 +114,7 @@ export async function loadChoreSummary(): Promise<ChoreSummary[]> {
       unassigned: assignments.length === 0,
       isCollaborative: c.isCollaborative,
       intervalWeeks: c.intervalWeeks,
+      effort: c.effort,
     };
   });
 }
