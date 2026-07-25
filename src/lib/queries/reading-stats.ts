@@ -52,7 +52,9 @@ export async function loadReadingStats(
       },
       select: { passage: true, day: true },
     }),
-    prisma.bookCompletion.findMany({ select: { bookName: true } }),
+    prisma.chapterCompletion.findMany({
+      select: { bookName: true, chapter: true },
+    }),
   ]);
 
   const byName = new Map(BOOKS.map((b) => [b.name, b]));
@@ -65,14 +67,20 @@ export async function loadReadingStats(
     }
   }
 
-  // A completed book counts every chapter as read.
-  const completedBooks: string[] = [];
-  for (const { bookName } of completions) {
-    const book = byName.get(bookName);
-    if (!book) continue;
-    completedBooks.push(bookName);
-    for (let c = 1; c <= book.chapters; c++) seen.add(`${bookName}|${c}`);
+  // Manually marked chapters — the household's own baseline.
+  const manualByBook = new Map<string, Set<number>>();
+  for (const { bookName, chapter } of completions) {
+    if (!byName.has(bookName)) continue;
+    seen.add(`${bookName}|${chapter}`);
+    if (!manualByBook.has(bookName)) manualByBook.set(bookName, new Set());
+    manualByBook.get(bookName)!.add(chapter);
   }
+
+  // A book counts as "already read" when every one of its chapters is marked.
+  const completedBooks = BOOKS.filter((b) => {
+    const marked = manualByBook.get(b.name);
+    return marked && marked.size >= b.chapters;
+  }).map((b) => b.name);
 
   const countFor = (predicate: (bookName: string) => boolean) => {
     const books = BOOKS.filter((b) => predicate(b.name));
