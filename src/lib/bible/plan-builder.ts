@@ -10,8 +10,9 @@
  * as the rest of the app: a reading day is a calendar day, never an instant.
  */
 
-import { BOOK_BY_NAME, BOOKS } from "@/lib/bible/books";
+import { BOOK_BY_NAME } from "@/lib/bible/books";
 
+/** A stretch of one book. Segments are read in the order they're listed. */
 export type Selection = {
   book: string;
   /** 1-based, inclusive. Defaults to the whole book. */
@@ -19,21 +20,28 @@ export type Selection = {
   to?: number;
 };
 
+/** A special reading pinned to a date, left out of the statistics. */
+export type Extra = { iso: string; passage: string };
+
 export type Pace =
-  | { kind: "chapters"; perDay: number }
-  | { kind: "finish"; endISO: string };
+  | {
+      kind: "weekly";
+      /** Weekday (0 = Sunday) to chapters that day. Absent or 0 = no reading. */
+      perWeekday: Record<number, number>;
+    }
+  | { kind: "finish"; endISO: string; weekdays: number[] };
 
 export type BuildOptions = {
-  selection: Selection[];
+  /** Ordered — the reading follows this list, not canonical order. */
+  segments: Selection[];
   startISO: string;
-  /** 0 = Sunday .. 6 = Saturday. A day not listed gets no reading. */
-  weekdays: number[];
   pace: Pace;
   /** A day's reading never runs across two books. */
   keepBooksWhole: boolean;
+  extras?: Extra[];
 };
 
-export type BuiltDay = { iso: string; passage: string };
+export type BuiltDay = { iso: string; passage: string; isExtra: boolean };
 
 export type BuildResult = {
   days: BuiltDay[];
@@ -54,7 +62,10 @@ export const MAX_DAYS = 1500;
 const DAY_MS = 86_400_000;
 
 function isISO(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    !Number.isNaN(Date.parse(`${value}T00:00:00Z`))
+  );
 }
 
 function shift(iso: string, days: number): string {
@@ -77,11 +88,11 @@ function daysBetween(a: string, b: string): number {
 
 export type ChapterRef = { book: string; chapter: number };
 
-/** The chosen chapters, in the order they were selected. */
-export function expandSelection(selection: Selection[]): ChapterRef[] {
+/** The chosen chapters, in listed order. */
+export function expandSegments(segments: Selection[]): ChapterRef[] {
   const out: ChapterRef[] = [];
 
-  for (const item of selection) {
+  for (const item of segments) {
     const book = BOOK_BY_NAME.get(item.book);
     if (!book) continue;
 
@@ -150,23 +161,37 @@ export function buildPlan(options: BuildOptions): BuildResult {
     error: null,
   };
 
-  const weekdays = [...new Set(options.weekdays)].filter(
-    (d) => Number.isInteger(d) && d >= 0 && d <= 6,
-  );
-
   if (!isISO(options.startISO)) {
     return { ...empty, error: "Pick a start date." };
   }
-  if (weekdays.length === 0) {
-    return { ...empty, error: "Pick at least one day of the week." };
-  }
 
-  const chapters = expandSelection(options.selection);
+  const chapters = expandSegments(options.segments);
   if (chapters.length === 0) {
     return { ...empty, error: "Pick at least one book." };
   }
 
-  // The dates that will carry a reading.
+  // Extras occupy a date on their own; a reading day that coincides with one
+  // is given over to it, and the plan's chapters flow to the next day.
+  const extras = (options.extras ?? []).filter((e) => isISO(e.iso) && e.passage.trim());
+  const extraDates = new Set(extras.map((e) => e.iso));
+
+  // Which weekdays carry a reading, and how much each does.
+  const activeDays =
+    options.pace.kind === "weekly"
+      ? Object.entries(options.pace.perWeekday)
+          .filter(([, n]) => n > 0)
+          .map(([d]) => Number(d))
+      : options.pace.weekdays;
+
+  const weekdays = [...new Set(activeDays)].filter(
+    (d) => Number.isInteger(d) && d >= 0 && d <= 6,
+  );
+
+  if (weekdays.length === 0) {
+    return { ...empty, error: "Give at least one day of the week a reading." };
+  }
+
+  // The dates the plan may schedule chapters onto (extras excluded).
   const dates: string[] = [];
 
   if (options.pace.kind === "finish") {
@@ -176,8 +201,12 @@ export function buildPlan(options: BuildOptions): BuildResult {
       return { ...empty, error: "The finish date is before the start date." };
     }
 
-    for (let iso = options.startISO; daysBetween(iso, end) >= 0; iso = shift(iso, 1)) {
-      if (weekdays.includes(weekdayOf(iso))) dates.push(iso);
+    for (
+      let iso = options.startISO;
+      daysBetween(iso, end) >= 0;
+      iso = shift(iso, 1)
+    ) {
+      if (weekdays.includes(weekdayOf(iso)) && !extraDates.has(iso)) dates.push(iso);
       if (dates.length >= MAX_DAYS) break;
     }
 
@@ -189,35 +218,32 @@ export function buildPlan(options: BuildOptions): BuildResult {
       };
     }
   } else {
-    const perDay = Math.floor(options.pace.perDay);
-    if (!Number.isFinite(perDay) || perDay < 1) {
-      return { ...empty, error: "A day needs at least one chapter." };
-    }
-
-    // Walk forward until there are enough days for the chapters, with room
-    // for the shortfall that keeping books whole can introduce.
-    const needed = Math.min(MAX_DAYS, chapters.length);
+    // Walk forward until there are enough days for the chapters. The weekly
+    // per-day counts decide how far each day gets.
     let iso = options.startISO;
-    while (dates.length < needed) {
-      if (weekdays.includes(weekdayOf(iso))) dates.push(iso);
+    let guard = 0;
+    while (dates.length < chapters.length && guard < MAX_DAYS * 8) {
+      if (weekdays.includes(weekdayOf(iso)) && !extraDates.has(iso)) dates.push(iso);
       iso = shift(iso, 1);
+      guard++;
     }
   }
 
-  const days: BuiltDay[] = [];
+  const perWeekday = options.pace.kind === "weekly" ? options.pace.perWeekday : null;
+
+  const scheduled: BuiltDay[] = [];
   let cursor = 0;
 
   for (let d = 0; d < dates.length && cursor < chapters.length; d++) {
+    const iso = dates[d];
     const remainingChapters = chapters.length - cursor;
     const remainingDays = dates.length - d;
 
-    // For a fixed pace the target is the pace. For a deadline it's
-    // recomputed every day, which spreads the remainder instead of dumping
-    // it all on the last day.
-    const target =
-      options.pace.kind === "chapters"
-        ? Math.floor(options.pace.perDay)
-        : Math.ceil(remainingChapters / remainingDays);
+    // Weekly mode uses that weekday's count; finish mode recomputes an even
+    // share every day so the remainder spreads rather than piling on the end.
+    const target = perWeekday
+      ? Math.max(1, Math.floor(perWeekday[weekdayOf(iso)] ?? 1))
+      : Math.ceil(remainingChapters / remainingDays);
 
     let take = Math.min(target, remainingChapters);
 
@@ -230,29 +256,34 @@ export function buildPlan(options: BuildOptions): BuildResult {
       ) {
         inBook++;
       }
-
-      // Stop at the book's end; and if only a chapter or two would be left
-      // over, take the rest rather than leaving a stub for tomorrow.
       take = Math.min(take, inBook);
+      // Sweep up a stub of a chapter or two rather than leaving it alone.
       if (inBook <= target + 1) take = inBook;
     }
 
     take = Math.max(1, Math.min(take, remainingChapters));
 
-    days.push({
-      iso: dates[d],
+    scheduled.push({
+      iso,
       passage: labelChapters(chapters.slice(cursor, cursor + take)),
+      isExtra: false,
     });
     cursor += take;
   }
 
-  // Keeping books whole can eat days faster than expected; top up.
-  if (options.pace.kind === "chapters" && cursor < chapters.length) {
-    let iso = dates.length > 0 ? shift(dates[dates.length - 1], 1) : options.startISO;
-    while (cursor < chapters.length && days.length < MAX_DAYS) {
-      if (weekdays.includes(weekdayOf(iso))) {
+  // Keeping books whole can use days faster than expected; top up in weekly
+  // mode by walking further out.
+  if (options.pace.kind === "weekly" && cursor < chapters.length) {
+    let iso =
+      scheduled.length > 0
+        ? shift(scheduled[scheduled.length - 1].iso, 1)
+        : options.startISO;
+    let guard = 0;
+    while (cursor < chapters.length && scheduled.length < MAX_DAYS && guard < MAX_DAYS * 8) {
+      if (weekdays.includes(weekdayOf(iso)) && !extraDates.has(iso)) {
         const remainingChapters = chapters.length - cursor;
-        let take = Math.min(Math.floor(options.pace.perDay), remainingChapters);
+        const target = Math.max(1, Math.floor(perWeekday![weekdayOf(iso)] ?? 1));
+        let take = Math.min(target, remainingChapters);
 
         if (options.keepBooksWhole) {
           const book = chapters[cursor].book;
@@ -264,19 +295,31 @@ export function buildPlan(options: BuildOptions): BuildResult {
             inBook++;
           }
           take = Math.min(take, inBook);
-          if (inBook <= Math.floor(options.pace.perDay) + 1) take = inBook;
+          if (inBook <= target + 1) take = inBook;
         }
 
         take = Math.max(1, take);
-        days.push({
+        scheduled.push({
           iso,
           passage: labelChapters(chapters.slice(cursor, cursor + take)),
+          isExtra: false,
         });
         cursor += take;
       }
       iso = shift(iso, 1);
+      guard++;
     }
   }
+
+  // Weave the extras in by date. They keep their place in the calendar but
+  // never counted against the plan's chapters.
+  const extraDays: BuiltDay[] = extras
+    .filter((e) => daysBetween(options.startISO, e.iso) >= 0)
+    .map((e) => ({ iso: e.iso, passage: e.passage.trim().slice(0, 120), isExtra: true }));
+
+  const days = [...scheduled, ...extraDays].sort((a, b) =>
+    a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0,
+  );
 
   return {
     days,
@@ -288,7 +331,7 @@ export function buildPlan(options: BuildOptions): BuildResult {
     error:
       days.length === 0
         ? "Nothing to schedule."
-        : days.length >= MAX_DAYS
+        : scheduled.length >= MAX_DAYS
           ? `That plan is longer than ${MAX_DAYS} days. Shorten it or read more each day.`
           : null,
   };
@@ -297,11 +340,11 @@ export function buildPlan(options: BuildOptions): BuildResult {
 // --- selections over the wire -------------------------------------------
 
 /**
- * "Genesis:1-50,Exodus:1-40". Compact enough for a hidden form field, and
- * readable in a payload when something goes wrong.
+ * "Genesis:1-50|Exodus:1-40" — pipe-separated so order is preserved and a
+ * book can appear more than once. Compact enough for a hidden form field.
  */
-export function encodeSelection(selection: Selection[]): string {
-  return selection
+export function encodeSegments(segments: Selection[]): string {
+  return segments
     .map((s) => {
       const book = BOOK_BY_NAME.get(s.book);
       if (!book) return "";
@@ -310,13 +353,13 @@ export function encodeSelection(selection: Selection[]): string {
       return `${s.book}:${from}-${to}`;
     })
     .filter(Boolean)
-    .join(",");
+    .join("|");
 }
 
-export function decodeSelection(raw: string): Selection[] {
+export function decodeSegments(raw: string): Selection[] {
   const out: Selection[] = [];
 
-  for (const part of raw.split(",")) {
+  for (const part of raw.split("|")) {
     const [name, range] = part.split(":");
     const book = BOOK_BY_NAME.get((name ?? "").trim());
     if (!book) continue;
@@ -336,12 +379,6 @@ export function decodeSelection(raw: string): Selection[] {
   return out;
 }
 
-/** Canonical order, for presets and for tidying a custom pick. */
-export function selectionFromBooks(names: string[]): Selection[] {
-  const wanted = new Set(names);
-  return BOOKS.filter((b) => wanted.has(b.name)).map((b) => ({ book: b.name }));
-}
-
-export function chapterCount(selection: Selection[]): number {
-  return expandSelection(selection).length;
+export function chapterCount(segments: Selection[]): number {
+  return expandSegments(segments).length;
 }

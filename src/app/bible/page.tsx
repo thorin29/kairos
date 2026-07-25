@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
-import { AdminReturn } from "@/components/admin-return";
 import { loadReadingStats } from "@/lib/queries/reading-stats";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import {
@@ -12,8 +11,8 @@ import {
   todayISO,
 } from "@/lib/dates";
 import { ReadingCards, type ReadingCard } from "@/components/reading-cards";
-import { Card, SectionHeading, ButtonLink } from "@/components/ui";
-import { LockIcon } from "@/components/icons";
+import { Card, SectionHeading } from "@/components/ui";
+import { TrophyIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -57,22 +56,7 @@ export default async function BiblePage() {
 
   const cards: ReadingCard[] = window.map((d) => {
     const iso = fromDateColumn(d.day);
-    const offset =
-      (Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) /
-      86_400_000;
-
-    const relative =
-      offset === 0
-        ? "Today"
-        : offset === 1
-          ? "Tomorrow"
-          : offset === -1
-            ? "Yesterday"
-            : offset > 0
-              ? `In ${offset} days`
-              : `${Math.abs(offset)} days ago`;
-
-    return { iso, passage: d.passage, label: formatLong(iso), relative };
+    return { iso, passage: d.passage, label: formatLong(iso) };
   });
 
   const todayIndex = Math.max(
@@ -99,15 +83,9 @@ export default async function BiblePage() {
         title="Bible reading"
         subtitle={plan ? plan.name : "No plan is published yet"}
         active="bible"
-      >
-        <ButtonLink href="/admin/bible" variant="outlined" size="sm">
-          <LockIcon className="h-4 w-4" />
-          Edit plan
-        </ButtonLink>
-      </AppHeader>
+      />
 
       <main className="mx-auto max-w-4xl px-6 py-6">
-        <AdminReturn />
 
 
       {plan && cards.length > 0 && (
@@ -123,7 +101,15 @@ export default async function BiblePage() {
       )}
 
       <section>
-        <SectionHeading>Covered in {stats.yearISO}</SectionHeading>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <SectionHeading>How far we&rsquo;ve come</SectionHeading>
+          {stats.wholeBible && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-white">
+              <TrophyIcon className="h-4 w-4" />
+              Whole Bible read
+            </span>
+          )}
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           {[stats.ot, stats.nt].map((g) => (
@@ -160,9 +146,13 @@ export default async function BiblePage() {
         </Card>
 
         <p className="mt-3 text-xs text-muted">
-          Counts distinct chapters the published plan scheduled between 1
-          January and today, so a passage read twice can&rsquo;t push a figure
-          past 100%.
+          Distinct chapters the published plan has taken us through so far, plus
+          any books marked as already read
+          {stats.completedBooks.length > 0
+            ? ` (${stats.completedBooks.length} so far)`
+            : ""}
+          . Special one-off readings don&rsquo;t count, and a chapter read twice
+          can&rsquo;t push a figure past 100%.
         </p>
       </section>
     </main>

@@ -18,6 +18,10 @@ export type ReadingStats = {
   nt: GroupProgress;
   groups: GroupProgress[];
   booksTouched: number;
+  /** Whole books an admin has marked as already read. */
+  completedBooks: string[];
+  /** Every one of the 66 books covered — worth a badge. */
+  wholeBible: boolean;
 };
 
 const TOTAL = BOOKS.reduce((n, b) => n + b.chapters, 0);
@@ -35,23 +39,39 @@ export async function loadReadingStats(
 ): Promise<ReadingStats> {
   const year = todayISO.slice(0, 4);
 
-  const days = await prisma.readingDay.findMany({
-    where: {
-      plan: { isPublished: true },
-      day: {
-        gte: toDateColumn(`${year}-01-01`),
-        lte: toDateColumn(todayISO),
+  // Everything the published plan has taken the household through so far —
+  // the whole run of it up to today, not just this calendar year — plus any
+  // books an admin marked as already read. Extras (Christmas, Easter) are
+  // left out so a one-off can't inflate the figure.
+  const [days, completions] = await Promise.all([
+    prisma.readingDay.findMany({
+      where: {
+        plan: { isPublished: true },
+        isExtra: false,
+        day: { lte: toDateColumn(todayISO) },
       },
-    },
-    select: { passage: true, day: true },
-  });
+      select: { passage: true, day: true },
+    }),
+    prisma.bookCompletion.findMany({ select: { bookName: true } }),
+  ]);
 
+  const byName = new Map(BOOKS.map((b) => [b.name, b]));
   const seen = new Set<string>();
+
   for (const d of days) {
     if (fromDateColumn(d.day) > todayISO) continue;
     for (const ref of parsePassage(d.passage)) {
       seen.add(`${ref.book}|${ref.chapter}`);
     }
+  }
+
+  // A completed book counts every chapter as read.
+  const completedBooks: string[] = [];
+  for (const { bookName } of completions) {
+    const book = byName.get(bookName);
+    if (!book) continue;
+    completedBooks.push(bookName);
+    for (let c = 1; c <= book.chapters; c++) seen.add(`${bookName}|${c}`);
   }
 
   const countFor = (predicate: (bookName: string) => boolean) => {
@@ -69,8 +89,6 @@ export async function loadReadingStats(
       percent: chapters ? Math.round((read / chapters) * 100) : 0,
     };
   };
-
-  const byName = new Map(BOOKS.map((b) => [b.name, b]));
 
   const groupNames: Group[] = [
     "Pentateuch",
@@ -96,5 +114,12 @@ export async function loadReadingStats(
       ...countFor((n) => byName.get(n)!.group === g),
     })),
     booksTouched: new Set([...seen].map((k) => k.split("|")[0])).size,
+    completedBooks,
+    wholeBible: BOOKS.every((b) => {
+      for (let c = 1; c <= b.chapters; c++) {
+        if (!seen.has(`${b.name}|${c}`)) return false;
+      }
+      return true;
+    }),
   };
 }

@@ -8,10 +8,12 @@ import { generateReadingTasks } from "@/lib/bible/generate";
 import { parsePassage } from "@/lib/bible/books";
 import {
   buildPlan,
-  decodeSelection,
+  decodeSegments,
   MAX_DAYS,
+  type Extra,
   type Pace,
 } from "@/lib/bible/plan-builder";
+import { BOOK_BY_NAME } from "@/lib/bible/books";
 
 export type ImportState = {
   error: string | null;
@@ -139,24 +141,44 @@ export async function generatePlan(
   const name = String(formData.get("name") ?? "").trim().slice(0, 80);
   if (name.length < 2) return { ...emptyGenerate, error: "Name the plan." };
 
-  const selection = decodeSelection(String(formData.get("selection") ?? ""));
+  const segments = decodeSegments(String(formData.get("segments") ?? ""));
   const startISO = String(formData.get("start") ?? "");
-  const weekdays = String(formData.get("weekdays") ?? "")
-    .split(",")
-    .map((d) => Number(d))
-    .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
 
-  const pace: Pace =
-    String(formData.get("paceKind") ?? "chapters") === "finish"
-      ? { kind: "finish", endISO: String(formData.get("finish") ?? "") }
-      : { kind: "chapters", perDay: Number(formData.get("perDay") ?? 0) };
+  let pace: Pace;
+  if (String(formData.get("paceKind") ?? "weekly") === "finish") {
+    pace = {
+      kind: "finish",
+      endISO: String(formData.get("finish") ?? ""),
+      weekdays: String(formData.get("weekdays") ?? "")
+        .split(",")
+        .map((d) => Number(d))
+        .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6),
+    };
+  } else {
+    // perWeekday arrives as "0:1,1:2,2:2,..." — weekday to chapters.
+    const perWeekday: Record<number, number> = {};
+    for (const pair of String(formData.get("perWeekday") ?? "").split(",")) {
+      const [d, n] = pair.split(":").map(Number);
+      if (Number.isInteger(d) && d >= 0 && d <= 6 && n > 0) perWeekday[d] = n;
+    }
+    pace = { kind: "weekly", perWeekday };
+  }
+
+  const extras: Extra[] = [];
+  for (const line of String(formData.get("extras") ?? "").split("\n")) {
+    const [iso, ...rest] = line.split("|");
+    const passage = rest.join("|").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso) && passage) {
+      extras.push({ iso, passage });
+    }
+  }
 
   const built = buildPlan({
-    selection,
+    segments,
     startISO,
-    weekdays,
     pace,
     keepBooksWhole: formData.get("whole") === "on",
+    extras,
   });
 
   if (built.error) return { ...emptyGenerate, error: built.error };
@@ -174,6 +196,7 @@ export async function generatePlan(
         create: built.days.map((d) => ({
           day: toDateColumn(d.iso),
           passage: d.passage.slice(0, 120),
+          isExtra: d.isExtra,
         })),
       },
     },
@@ -189,6 +212,58 @@ export async function generatePlan(
     endISO: built.endISO,
     leftover: built.leftover,
   };
+}
+
+// ---------------------------------------------------------------
+// Where the household is up to
+//
+// Marking whole books read seeds the coverage percentage with reading done
+// before this app existed, so the figure reflects reality rather than only
+// what's been scheduled here.
+// ---------------------------------------------------------------
+
+export async function setBookRead(
+  bookName: string,
+  read: boolean,
+): Promise<void> {
+  await requireAdmin();
+  if (!BOOK_BY_NAME.has(bookName)) return;
+
+  if (read) {
+    await prisma.bookCompletion.upsert({
+      where: { bookName },
+      update: {},
+      create: { bookName },
+    });
+  } else {
+    await prisma.bookCompletion.deleteMany({ where: { bookName } });
+  }
+
+  revalidatePath("/admin/bible");
+  revalidatePath("/bible");
+}
+
+export async function setBooksRead(
+  bookNames: string[],
+  read: boolean,
+): Promise<void> {
+  await requireAdmin();
+  const valid = bookNames.filter((b) => BOOK_BY_NAME.has(b));
+  if (valid.length === 0) return;
+
+  if (read) {
+    await prisma.bookCompletion.createMany({
+      data: valid.map((bookName) => ({ bookName })),
+      skipDuplicates: true,
+    });
+  } else {
+    await prisma.bookCompletion.deleteMany({
+      where: { bookName: { in: valid } },
+    });
+  }
+
+  revalidatePath("/admin/bible");
+  revalidatePath("/bible");
 }
 
 function normalizeDate(value: string): string | null {

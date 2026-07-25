@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.12.0";
+export const APP_VERSION = "0.13.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -17,11 +17,23 @@ export const MIGRATIONS = [
   "7_event_recurrence",
   "8_game_time",
   "9_reading_plans",
+  "10_reading_extras_and_completions",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.13.0",
+    summary: [
+      "Renamed to Kairos",
+      "Plan generator: chapters-per-weekday, and a reorderable reading list",
+      "Extra one-off readings (Christmas, Easter) that don't count towards coverage",
+      "Mark books already read so the coverage percentage reflects where you are",
+      "Whole-Bible badge; reading cards label days relative to the one in focus",
+      "Fixed: normal pages no longer show admin controls",
+    ],
+  },
   {
     version: "0.12.0",
     summary: [

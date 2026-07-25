@@ -5,22 +5,25 @@ import { useEffect, useRef, useState } from "react";
 export type ReadingCard = {
   iso: string;
   passage: string;
+  /** Full date, e.g. "Sunday, July 26, 2026". */
   label: string;
-  relative: string;
 };
 
 /**
- * The day's reading as a deck, with today in the middle.
- *
- * Position is laid out rather than scrolled to. Every card sits at the
- * centre of the stage and is pushed sideways by its distance from the
- * selection, so the selected card is centred by the CSS itself — there is no
- * scroll offset to compute and nothing that can be measured before the fonts
- * have settled. The first paint is already correct.
- *
- * The earlier version centred by setting scrollLeft after mount, which put
- * today hard against the left edge whenever the measurement ran early.
+ * A relative day name for an offset in days. Used two ways: the header names
+ * the focused card relative to the real today; each card names itself
+ * relative to whichever card is focused, so the left of the deck reads
+ * "Yesterday, 2 days ago" and the right reads "Tomorrow, In 2 days",
+ * recomputed every time the focus moves.
  */
+function relativeLabel(offset: number): string {
+  if (offset === 0) return "Today";
+  if (offset === 1) return "Tomorrow";
+  if (offset === -1) return "Yesterday";
+  if (offset > 1) return `In ${offset} days`;
+  return `${Math.abs(offset)} days ago`;
+}
+
 export function ReadingCards({
   cards,
   todayIndex,
@@ -36,14 +39,13 @@ export function ReadingCards({
   const move = (delta: number) =>
     setActive((i) => Math.min(cards.length - 1, Math.max(0, i + delta)));
 
-  // Swipe. Pointer events cover touch, pen, and a mouse drag in one path.
   const swipeFrom = useRef<number | null>(null);
 
   const current = cards[active];
   if (!current) return null;
 
-  // Cards further out than this are not rendered: they would be off stage
-  // anyway, and keeping the count fixed keeps the transition cheap.
+  // Only the focused card and its immediate neighbours are rendered fully;
+  // one more each side peeks in to hint the deck continues.
   const NEIGHBOURS = 2;
 
   const arrow =
@@ -53,8 +55,10 @@ export function ReadingCards({
     <section>
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
         <div>
+          {/* The header is the anchor to the real today — this is what makes
+              "Back to today" meaningful. */}
           <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-            {current.relative}
+            {relativeLabel(active - todayIndex)}
           </p>
           <p className="tabular font-display text-lg font-semibold">
             {current.label}
@@ -91,8 +95,6 @@ export function ReadingCards({
           </svg>
         </button>
 
-        {/* The stage. Overflow is hidden so the neighbours fade off the
-            edges instead of widening the page. */}
         <div
           role="group"
           aria-label="Reading days"
@@ -119,21 +121,21 @@ export function ReadingCards({
           }}
           style={
             {
-              // One card width drives everything else. The step is a little
-              // under a full width so neighbours overlap slightly and read
-              // as a deck rather than a row.
-              "--card": "min(21rem, 74vw)",
-              "--step": "calc(var(--card) * 0.86)",
+              // A narrower card and a near-full step keep both immediate
+              // neighbours clear of the centre, so yesterday's reading can be
+              // read in full rather than tucked behind today.
+              "--card": "min(16rem, 78vw)",
+              "--step": "calc(var(--card) * 0.9)",
             } as React.CSSProperties
           }
-          className="relative h-56 flex-1 touch-pan-y select-none overflow-hidden outline-none"
+          className="relative h-52 flex-1 touch-pan-y select-none overflow-hidden outline-none"
         >
           {cards.map((card, i) => {
             const offset = i - active;
             if (Math.abs(offset) > NEIGHBOURS) return null;
 
             const isActive = offset === 0;
-            const isToday = i === todayIndex;
+            const distance = Math.abs(offset);
 
             return (
               <button
@@ -142,17 +144,17 @@ export function ReadingCards({
                 onClick={() => setActive(i)}
                 tabIndex={isActive ? 0 : -1}
                 aria-current={isActive ? "true" : undefined}
-                aria-hidden={Math.abs(offset) > 1 ? true : undefined}
+                aria-hidden={distance > 1 ? true : undefined}
                 style={{
                   width: "var(--card)",
                   transform: `translate(calc(-50% + var(--step) * ${offset}), -50%) scale(${
                     isActive ? 1 : 0.82
                   })`,
-                  zIndex: 10 - Math.abs(offset),
-                  opacity: isActive ? 1 : Math.abs(offset) === 1 ? 0.5 : 0.22,
+                  zIndex: 10 - distance,
+                  opacity: isActive ? 1 : distance === 1 ? 0.7 : 0.25,
                 }}
                 className={[
-                  "absolute left-1/2 top-1/2 flex h-44 flex-col justify-center rounded-2xl border p-6 text-left",
+                  "absolute left-1/2 top-1/2 flex h-44 flex-col justify-center rounded-2xl border p-5 text-left",
                   "transition-all duration-300 ease-out",
                   isActive
                     ? "border-accent bg-surface shadow-md"
@@ -161,16 +163,16 @@ export function ReadingCards({
               >
                 <span
                   className={`tabular text-xs uppercase tracking-widest ${
-                    isToday ? "text-accent" : "text-muted"
+                    isActive ? "text-accent" : "text-muted"
                   }`}
                 >
-                  {card.relative}
+                  {relativeLabel(offset)}
                 </span>
 
                 <span
                   className={[
                     "font-display mt-2 break-words font-semibold leading-tight transition-all duration-300",
-                    isActive ? "text-3xl" : "text-xl",
+                    isActive ? "text-3xl" : "text-lg",
                   ].join(" ")}
                 >
                   {card.passage}
