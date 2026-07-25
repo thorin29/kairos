@@ -10,20 +10,19 @@ import {
 
 const HORIZON_DAYS = 14;
 
-// Anchored on a Sunday so weeks group Sun–Sat, matching the app's day
-// numbering. An interval of N means the chore runs one week in every N; the
-// phase is shared by every day in the same week, so co-assignees on the same
-// week always land together.
-const WEEK_EPOCH_MS = Date.parse("2024-01-07T00:00:00Z"); // a Sunday
-
-function weekInPhase(iso: string, intervalWeeks: number): boolean {
+// An interval of N means the chore runs one week in every N, counted from the
+// assignment's own start date — so picking a start date picks the starting
+// week. Every day in the same 7-day step from the anchor shares a phase, and
+// co-assignees share a start date, so they always land together.
+function weekInPhase(iso: string, intervalWeeks: number, anchorISO: string): boolean {
   const n = Math.max(1, Math.floor(intervalWeeks || 1));
   if (n === 1) return true;
   const days = Math.floor(
-    (Date.parse(`${iso}T00:00:00Z`) - WEEK_EPOCH_MS) / 86_400_000,
+    (Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${anchorISO}T00:00:00Z`)) /
+      86_400_000,
   );
-  const week = Math.floor(days / 7);
-  return (((week % n) + n) % n) === 0;
+  if (days < 0) return false;
+  return Math.floor(days / 7) % n === 0;
 }
 
 /**
@@ -85,7 +84,8 @@ export async function generateChores(
       if (a.dayOfWeek !== dow) continue;
       if (fromDateColumn(a.effectiveFrom) > iso) continue;
       if (a.effectiveTo && fromDateColumn(a.effectiveTo) < iso) continue;
-      if (!weekInPhase(iso, a.chore.intervalWeeks)) continue;
+      if (!weekInPhase(iso, a.chore.intervalWeeks, fromDateColumn(a.effectiveFrom)))
+        continue;
 
       expected.set(`${a.id}|${iso}`, {
         userId: a.userId,

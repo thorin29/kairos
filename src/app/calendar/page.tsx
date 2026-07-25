@@ -165,21 +165,29 @@ export default async function CalendarPage({
         >
           Everyone
         </Link>
-        {people.map((p) => (
-          <Link
-            key={p.id}
-            href={link({ view, date, who: p.id })}
-            className={`${chip} ${userId === p.id ? active : idle}`}
-          >
-            <Avatar
-              name={p.displayName ?? p.name}
-              color={p.color}
-              avatarPath={p.avatarPath}
-              size="sm"
-            />
-            {p.displayName ?? p.name}
-          </Link>
-        ))}
+        {people.map((p) => {
+          const selected = userId === p.id;
+          return (
+            <Link
+              key={p.id}
+              href={link({ view, date, who: p.id })}
+              className="inline-flex items-center gap-2 rounded-full border py-1 pl-1 pr-3.5 text-xs font-semibold transition-all hover:brightness-95"
+              style={{
+                backgroundColor: `${p.color}${selected ? "40" : "24"}`,
+                borderColor: `${p.color}${selected ? "" : "80"}`,
+                color: "var(--color-ink)",
+              }}
+            >
+              <Avatar
+                name={p.displayName ?? p.name}
+                color={p.color}
+                avatarPath={p.avatarPath}
+                size="md"
+              />
+              {p.displayName ?? p.name}
+            </Link>
+          );
+        })}
       </div>
 
       <p className="mb-4 text-xs text-muted">

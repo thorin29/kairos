@@ -229,6 +229,7 @@ export async function addCollaborativeChore(input: {
   userIds: string[];
   dayOfWeek: number;
   intervalWeeks: number;
+  startISO?: string;
 }): Promise<{ error: string | null }> {
   if (!(await isAdmin())) {
     return { error: "Only a parent can change this. Switch profiles first." };
@@ -238,6 +239,10 @@ export async function addCollaborativeChore(input: {
   const userIds = [...new Set(input.userIds)].filter(Boolean);
   const dayOfWeek = input.dayOfWeek;
   const intervalWeeks = Math.max(1, Math.min(8, Math.floor(input.intervalWeeks || 1)));
+  const startISO =
+    input.startISO && /^\d{4}-\d{2}-\d{2}$/.test(input.startISO)
+      ? input.startISO
+      : todayISO();
 
   if (title.length < 2) return { error: "Give the chore a name." };
   if (userIds.length < 2) return { error: "Pick at least two people." };
@@ -256,7 +261,7 @@ export async function addCollaborativeChore(input: {
     },
   });
 
-  const effectiveFrom = toDateColumn(todayISO());
+  const effectiveFrom = toDateColumn(startISO);
   for (const userId of userIds) {
     await prisma.choreAssignment.upsert({
       where: { choreId_userId_dayOfWeek: { choreId: chore.id, userId, dayOfWeek } },

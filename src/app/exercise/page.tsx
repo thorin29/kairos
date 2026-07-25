@@ -13,7 +13,7 @@ export default async function ExercisePage() {
 
   return (
     <>
-      <AppHeader title="Exercise" subtitle={formatLong(today)} active="exercise" />
+      <AppHeader title="Workouts" subtitle={formatLong(today)} active="exercise" />
 
       <main className="mx-auto max-w-3xl px-6 py-6">
         {cards.length === 0 ? (

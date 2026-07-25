@@ -73,7 +73,7 @@ const NAV: {
   {
     key: "exercise",
     href: "/exercise",
-    label: "Exercise",
+    label: "Workouts",
     color: "#dc2626",
     icon: <DumbbellIcon className="h-6 w-6" />,
   },

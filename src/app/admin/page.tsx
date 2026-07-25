@@ -43,7 +43,7 @@ const TILES: Tile[] = [
   },
   {
     href: "/admin/exercise",
-    label: "Exercise",
+    label: "Workouts",
     blurb: "Routines, movements, and per-person weekly assignment",
     icon: <DumbbellIcon className="h-7 w-7" />,
     ready: true,
@@ -84,17 +84,17 @@ const TILES: Tile[] = [
     ready: true,
   },
   {
-    href: "/about",
-    label: "About",
-    blurb: "Version and database check",
-    icon: <LockIcon className="h-7 w-7" />,
-    ready: true,
-  },
-  {
     href: "/summary",
     label: "Summary",
     blurb: "Household totals — the shared page everyone sees",
     icon: <TrophyIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/about",
+    label: "About",
+    blurb: "Version and database check",
+    icon: <LockIcon className="h-7 w-7" />,
     ready: true,
   },
 ];

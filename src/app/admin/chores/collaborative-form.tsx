@@ -19,6 +19,7 @@ export function CollaborativeForm({ people }: { people: Person[] }) {
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [dayOfWeek, setDayOfWeek] = useState(6); // Saturday
   const [intervalWeeks, setIntervalWeeks] = useState(1);
+  const [startISO, setStartISO] = useState(() => new Date().toISOString().slice(0, 10));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -38,6 +39,7 @@ export function CollaborativeForm({ people }: { people: Person[] }) {
         userIds: [...chosen],
         dayOfWeek,
         intervalWeeks,
+        startISO,
       });
       if (result.error) {
         setError(result.error);
@@ -128,6 +130,16 @@ export function CollaborativeForm({ people }: { people: Person[] }) {
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Starting</label>
+          <input
+            type="date"
+            value={startISO}
+            onChange={(e) => setStartISO(e.target.value)}
+            className={`tabular ${field}`}
+          />
         </div>
 
         <button

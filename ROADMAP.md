@@ -155,7 +155,7 @@ all live in the database, never in this repository.
 - [ ] Terms and class schedules managed by an admin
 - [ ] Read-only metrics page
 
-## Exercise
+## Workouts
 
 - [x] Per-person routines, assigned by weekday, generated into daily tasks
 - [x] Admin-defined routines of movements with target sets, reps, and weight

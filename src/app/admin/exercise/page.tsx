@@ -13,7 +13,7 @@ export default async function AdminExercisePage() {
 
       <header className="mb-8 mt-5 border-b border-hairline pb-5">
         <h1 className="font-display text-3xl font-semibold tracking-tight">
-          Exercise
+          Workouts
         </h1>
         <p className="mt-2 max-w-xl text-muted">
           Build routines of movements, then assign each to a person on the days

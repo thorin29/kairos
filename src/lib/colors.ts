@@ -26,7 +26,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   WORK:        "Work",
   APPOINTMENT: "Appointments",
   CHORE:       "Chores",
-  EXERCISE:    "Exercise",
+  EXERCISE:    "Workouts",
   BIBLE:       "Bible Reading",
   OTHER:       "Tasks",
 };
