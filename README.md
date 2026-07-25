@@ -11,22 +11,26 @@ schedule.
 **[Roadmap](ROADMAP.md)** — everything planned, and what is already built.
 **[Architecture](ARCHITECTURE.md)** — how it works and why.
 
-> **Status:** early development. The data model and deployment pipeline are in
-> place. Feature modules are landing one at a time — see the roadmap below.
+> **Status:** in active use. The core modules — chores, Bible reading,
+> workouts, game time, groceries, calendar, and the summary — are built. A few
+> are still to come; see the roadmap below.
 
 ## What it does
 
 - **Overview at a glance.** Each person's day summarized by category, with
   completion shown as a percentage or a simple done/not-done state.
 - **Chores.** A weekly pattern that varies by day, editable by a parent, that
-  generates each day's list automatically.
+  generates each day's list automatically. Shared chores anyone can claim,
+  and collaborative chores several people split, on a frequency you choose.
 - **Bible reading.** Generate a plan of any length; the app divides the text so
-  nothing is read twice, with per-weekday chapter counts you control.
-- **School.** Assignments and tests, added by a student or a parent. Classes
-  with fixed times appear on the calendar; independent work shows as tasks.
-  Built for homeschool and hybrid schedules.
-- **Exercise.** Log what you actually did, with room for a flexible per-person
-  routine.
+  nothing is read twice, with per-weekday chapter counts you control, and
+  tracks how far the household has actually come.
+- **Workouts.** Per-person routines of movements assigned by weekday, with the
+  sets, reps, and weight you actually did logged against each one.
+- **Game time.** A daily screen-time allowance per person, with weekly tokens
+  that buy extra minutes.
+- **Groceries.** A shared shopping list that learns the items you buy and their
+  icons, filtered by the store you're heading to.
 - **Work and appointments.** Shifts, lessons, practices, and visits on a week
   grid with an hourly gutter, color-coded by person or by category.
 - **Subscribed calendars.** Point it at any public ICS feed and those events
@@ -36,17 +40,28 @@ schedule.
 
 ## Roadmap
 
+The full, detailed roadmap lives in **[ROADMAP.md](ROADMAP.md)**. At a glance:
+
+Built:
+
 - [x] Data model, migrations, container pipeline
 - [x] First-run setup and household management
-- [ ] Overview dashboard with per-category completion
-- [ ] Chore templates and daily generation
-- [ ] Week and month calendar views
-- [ ] Bible reading plan generator
+- [x] Overview dashboard with per-category completion
+- [x] Chores — weekly patterns, shared and collaborative, daily generation
+- [x] Bible reading plan generator with progress tracking
+- [x] Workouts — routines assigned by weekday, logged with sets and reps
+- [x] Game time — daily limits and weekly tokens
+- [x] Groceries — a learning shared shopping list, filtered by store
+- [x] Week and month calendar views
+- [x] ICS calendar subscriptions
+- [x] Weekly streaks and completion summary
+
+Planned:
+
 - [ ] School assignments and class schedules
-- [ ] Exercise logging
-- [ ] ICS calendar subscriptions
 - [ ] Weather panel and forecast
-- [ ] Weekly streaks and completion summary
+- [ ] Installable phone app (PWA), with grocery lists in the aisle
+- [ ] Smooth drag-and-drop reordering
 
 ## Requirements
 
