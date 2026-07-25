@@ -6,6 +6,7 @@ import {
   ChoresIcon,
   GamepadIcon,
   TrophyIcon,
+  BasketIcon,
 } from "@/components/icons";
 
 export type Section =
@@ -14,6 +15,7 @@ export type Section =
   | "bible"
   | "chores"
   | "games"
+  | "groceries"
   | "summary";
 
 /**
@@ -65,6 +67,13 @@ const NAV: {
     label: "Game time",
     color: "#059669",
     icon: <GamepadIcon className="h-6 w-6" />,
+  },
+  {
+    key: "groceries",
+    href: "/groceries",
+    label: "Groceries",
+    color: "#0d9488",
+    icon: <BasketIcon className="h-6 w-6" />,
   },
   {
     key: "summary",
