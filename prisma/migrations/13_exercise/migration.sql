@@ -69,11 +69,3 @@ ALTER TABLE "ExerciseLog" ADD CONSTRAINT "ExerciseLog_userId_fkey"
     FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ExerciseLog" ADD CONSTRAINT "ExerciseLog_exerciseId_fkey"
     FOREIGN KEY ("exerciseId") REFERENCES "RoutineExercise"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- Generated tasks (chores and now exercise) carry the assignment id in
--- generatedFrom; one task per assignment per day. This makes generation
--- idempotent for tasks that aren't keyed by a chore. Hand-added tasks have a
--- NULL generatedFrom and Postgres treats NULLs as distinct, so they're exempt.
-CREATE UNIQUE INDEX "Task_generatedFrom_dueDate_key"
-    ON "Task"("generatedFrom", "dueDate")
-    WHERE "generatedFrom" IS NOT NULL;
