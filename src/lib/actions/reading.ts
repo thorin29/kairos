@@ -254,6 +254,36 @@ export async function setChapterRead(
   revalidatePath("/bible");
 }
 
+/**
+ * Replace a book's hand-marked chapters with exactly this set — the whole
+ * book's manual marks are deleted and rewritten. Lets the editor stage changes
+ * and commit them in one go on Save, rather than saving every tap.
+ */
+export async function setBookChapters(
+  bookName: string,
+  chapters: number[],
+): Promise<void> {
+  await requireAdmin();
+  const book = BOOK_BY_NAME.get(bookName);
+  if (!book) return;
+
+  const valid = [...new Set(chapters)].filter(
+    (c) => Number.isInteger(c) && c >= 1 && c <= book.chapters,
+  );
+
+  await prisma.chapterCompletion.deleteMany({ where: { bookName } });
+  if (valid.length > 0) {
+    await prisma.chapterCompletion.createMany({
+      data: valid.map((chapter) => ({ bookName, chapter })),
+      skipDuplicates: true,
+    });
+  }
+
+  revalidatePath("/admin/bible");
+  revalidatePath("/admin/bible/progress");
+  revalidatePath("/bible");
+}
+
 /** Mark or clear a whole book at once. */
 export async function setBookRead(
   bookName: string,
