@@ -42,8 +42,9 @@ model User {
   choreAssignments ChoreAssignment[]
   calendars       ExternalCalendar[]
   groceryItems    ShoppingItem[]    @relation("GroceryAssignee")
-  routineAssignments RoutineAssignment[] @relation("ExerciseAssignee")
-  exerciseLogs       ExerciseLog[]       @relation("ExerciseLogger")
+  workoutExercises Exercise[]        @relation("WorkoutExercises")
+  workoutSchedules WorkoutSchedule[] @relation("WorkoutSchedules")
+  workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -421,61 +422,111 @@ model ShoppingItem {
 // generated into daily tasks, with a log of what was actually done.
 // ---------------------------------------------------------------
 
-model ExerciseRoutine {
-  id        String  @id @default(cuid())
-  name      String
-  notes     String?
-  isActive  Boolean @default(true)
-  sortOrder Int     @default(0)
-  createdAt DateTime @default(now())
-
-  exercises   RoutineExercise[]
-  assignments RoutineAssignment[]
+enum WorkoutCategory {
+  WEIGHTS
+  RUNNING
+  ROWING
+  SPORT
+  STRETCHING
+  HIIT
+  ISOMETRIC
 }
 
-model RoutineExercise {
-  id        String  @id @default(cuid())
-  routineId String
-  routine   ExerciseRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  name      String
-  sets      Int     @default(3)
-  reps      String  @default("10") // "10", "8-12", "AMRAP"
-  weight    String? // a target hint: "bodyweight", "20kg"
-  sortOrder Int     @default(0)
-
-  logs ExerciseLog[]
-
-  @@index([routineId])
+enum WorkoutImplement {
+  BARBELL
+  DUMBBELL
+  KETTLEBELL
+  BODYWEIGHT
+  NONE
 }
 
-model RoutineAssignment {
+// The headline number an exercise is graphed on — everything else logged is
+// detail. Bench is graphed on WEIGHT; a run on DISTANCE; a row on METERS.
+enum WorkoutMetric {
+  WEIGHT
+  DISTANCE
+  METERS
+  DURATION
+  REPS
+}
+
+// A person's own definition of a thing they do. Built once, reused: it drives
+// what the log form asks for and whether the exercise gets a line on a graph.
+model Exercise {
   id        String  @id @default(cuid())
-  routineId String
-  routine   ExerciseRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
   userId    String
-  user      User    @relation("ExerciseAssignee", fields: [userId], references: [id], onDelete: Cascade)
-  dayOfWeek Int     // 0 = Sunday .. 6 = Saturday
+  user      User    @relation("WorkoutExercises", fields: [userId], references: [id], onDelete: Cascade)
+  category  WorkoutCategory
+  name      String
+  implement WorkoutImplement?
+  unit      String        // "lb", "kg", "mi", "km", "m", "min", "sec", "rep"
+  metric    WorkoutMetric  @default(WEIGHT)
+  tracked   Boolean @default(true) // graph this one?
   isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
   createdAt DateTime @default(now())
 
-  @@unique([routineId, userId, dayOfWeek])
-  @@index([dayOfWeek, isActive])
+  schedules WorkoutSchedule[]
+  sets      SessionSet[]
+
+  @@index([userId, category, isActive])
 }
 
-// What was actually done: one row per movement per person per day.
-model ExerciseLog {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation("ExerciseLogger", fields: [userId], references: [id], onDelete: Cascade)
+// "On Mondays, expect Bench." A weekday recurrence that shapes the daily
+// prompt. It can be paused (with a nudge to resume) or given an end date
+// (with a nudge to make a new plan before it lapses).
+model WorkoutSchedule {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation("WorkoutSchedules", fields: [userId], references: [id], onDelete: Cascade)
+  exerciseId    String
+  exercise      Exercise  @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  dayOfWeek     Int       // 0 = Sunday .. 6 = Saturday
+  isActive      Boolean   @default(true)
+  isPaused      Boolean   @default(false)
+  effectiveFrom DateTime  @db.Date
+  endDate       DateTime? @db.Date
+  createdAt     DateTime  @default(now())
+
+  @@unique([exerciseId, dayOfWeek])
+  @@index([userId, dayOfWeek, isActive])
+}
+
+// One workout on a date. Saying "yes, I worked out" creates it; logging its
+// detail fills in the sets. Marking it unfinished is fine.
+model WorkoutSession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("WorkoutSessions", fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime @db.Date
+  durationMin Int?
+  finished    Boolean  @default(true)
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  sets SessionSet[]
+
+  @@index([userId, date])
+}
+
+// What was actually done, one row per exercise per set. A uniform shape holds
+// a barbell set, a run, a row, or a plank — only some columns are used.
+model SessionSet {
+  id         String  @id @default(cuid())
+  sessionId  String
+  session    WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   exerciseId String
-  exercise   RoutineExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  day        DateTime @db.Date
-  sets       Int?
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  setNumber  Int     @default(1)
   reps       Int?
   weight     Float?
+  distance   Float?
+  meters     Float?
+  seconds    Int?
+  unit       String? // snapshot so changing the definition never rewrites history
+  finished   Boolean @default(true)
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 
-  @@unique([userId, exerciseId, day])
-  @@index([exerciseId, userId, day])
+  @@unique([sessionId, exerciseId, setNumber])
+  @@index([exerciseId])
 }

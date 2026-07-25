@@ -157,12 +157,24 @@ all live in the database, never in this repository.
 
 ## Workouts
 
-- [x] Per-person routines, assigned by weekday, generated into daily tasks
-- [x] Admin-defined routines of movements with target sets, reps, and weight
-- [x] Log what was actually done, with sets, reps, and weight
-- [x] A last-time hint on each movement so progress is visible
-- [ ] A fuller read-only metrics page — weight over time per movement
-- [ ] Logging from a phone (arrives with the PWA)
+A personal training log, not an assigned routine: each person defines their
+own exercises, optionally schedules them, and records what they did.
+
+- [x] Per-person exercise definitions with unit, implement, and a tracked flag
+- [x] Weightlifting end to end — basics as one-tap adds that drop off once used
+- [x] Schedule an exercise by weekday, or just log it once
+- [x] Pause a plan or give it an end date, with reminders to resume or renew
+- [x] Binary "worked out today?" on the dashboard; logging completes it
+- [x] Log the weight and reps actually done; unfinished is fine
+- [x] Progress graph — a coloured line per tracked lift, with a legend and
+      show/hide toggles
+- [x] Measurement system in admin, with per-exercise unit override
+- [ ] Running and rowing (single-metric graphs)
+- [ ] Sport, stretching, isometric
+- [ ] HIIT / Crossfit — user-defined workouts with a result
+- [ ] Multiple sets per exercise, and estimated one-rep max
+- [ ] Concept2 and other device imports
+- [ ] Read-only progress overview across the household in admin
 
 ## Game time
 

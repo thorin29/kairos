@@ -1,28 +1,34 @@
 import { AppHeader } from "@/components/app-header";
-import { generateExercise } from "@/lib/exercise/generate";
-import { loadWorkoutDay } from "@/lib/queries/exercise";
+import { generateWorkoutTasks } from "@/lib/workouts/generate";
+import { loadWorkoutsBoard } from "@/lib/queries/workouts";
 import { todayISO, formatLong } from "@/lib/dates";
-import { WorkoutBoard } from "./workout-board";
+import { WorkoutCard } from "./workout-card";
 
 export const dynamic = "force-dynamic";
 
-export default async function ExercisePage() {
+export default async function WorkoutsPage() {
   const today = todayISO();
-  await generateExercise(today);
-  const cards = await loadWorkoutDay(today);
+  await generateWorkoutTasks(today);
+  const board = await loadWorkoutsBoard(today);
 
   return (
     <>
       <AppHeader title="Workouts" subtitle={formatLong(today)} active="exercise" />
 
-      <main className="mx-auto max-w-3xl px-6 py-6">
-        {cards.length === 0 ? (
+      <main className="mx-auto max-w-3xl space-y-5 px-6 py-6">
+        {board.people.length === 0 ? (
           <p className="rounded-2xl border border-hairline bg-surface p-6 text-sm text-muted">
-            No workouts scheduled for today. A parent can build routines and
-            assign them from the admin area.
+            Add people to the household to start tracking workouts.
           </p>
         ) : (
-          <WorkoutBoard cards={cards} />
+          board.people.map((p) => (
+            <WorkoutCard
+              key={p.user.id}
+              person={p}
+              unitSystem={board.unitSystem}
+              todayISO={today}
+            />
+          ))
         )}
       </main>
     </>
