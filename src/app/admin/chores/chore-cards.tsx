@@ -5,10 +5,16 @@ import { DAY_SHORT } from "@/lib/days";
 import { reassignChore } from "@/lib/actions/chores";
 import { reorderPeople } from "@/lib/actions/people";
 import { Card } from "@/components/ui";
-import { GripIcon, SwitchIcon } from "@/components/icons";
+import { GripIcon, PeopleIcon, SwitchIcon } from "@/components/icons";
 import { RemoveAssignmentButton } from "./row-actions";
 
-type Item = { id: string; chore: string; dayOfWeek: number };
+type Item = {
+  id: string;
+  chore: string;
+  dayOfWeek: number;
+  isCollaborative: boolean;
+  intervalWeeks: number;
+};
 type PersonCard = { id: string; name: string; color: string; items: Item[] };
 type Person = { id: string; name: string; color: string };
 
@@ -126,7 +132,22 @@ export function ChoreCards({
                       <span className="tabular w-10 shrink-0 text-xs font-medium text-muted">
                         {DAY_SHORT[a.dayOfWeek]}
                       </span>
-                      <span className="min-w-0 flex-1 text-sm">{a.chore}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="text-sm">{a.chore}</span>
+                        {(a.isCollaborative || a.intervalWeeks > 1) && (
+                          <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+                            {a.isCollaborative && (
+                              <span className="inline-flex items-center gap-1 text-accent">
+                                <PeopleIcon className="h-3.5 w-3.5" />
+                                shared
+                              </span>
+                            )}
+                            {a.intervalWeeks > 1 && (
+                              <span>every {a.intervalWeeks} weeks</span>
+                            )}
+                          </span>
+                        )}
+                      </span>
                       <button
                         type="button"
                         aria-label={`Move ${a.chore}`}

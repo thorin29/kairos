@@ -10,6 +10,22 @@ import {
 
 const HORIZON_DAYS = 14;
 
+// Anchored on a Sunday so weeks group Sun–Sat, matching the app's day
+// numbering. An interval of N means the chore runs one week in every N; the
+// phase is shared by every day in the same week, so co-assignees on the same
+// week always land together.
+const WEEK_EPOCH_MS = Date.parse("2024-01-07T00:00:00Z"); // a Sunday
+
+function weekInPhase(iso: string, intervalWeeks: number): boolean {
+  const n = Math.max(1, Math.floor(intervalWeeks || 1));
+  if (n === 1) return true;
+  const days = Math.floor(
+    (Date.parse(`${iso}T00:00:00Z`) - WEEK_EPOCH_MS) / 86_400_000,
+  );
+  const week = Math.floor(days / 7);
+  return (((week % n) + n) % n) === 0;
+}
+
 /**
  * Brings generated chore tasks in line with the current assignments for a
  * window of days.
@@ -44,7 +60,7 @@ export async function generateChores(
 
   const assignments = await prisma.choreAssignment.findMany({
     where: { isActive: true, chore: { isActive: true } },
-    include: { chore: { select: { title: true, sortOrder: true } } },
+    include: { chore: { select: { title: true, sortOrder: true, intervalWeeks: true } } },
   });
 
   // What the schedule says should exist across the window.
@@ -69,6 +85,7 @@ export async function generateChores(
       if (a.dayOfWeek !== dow) continue;
       if (fromDateColumn(a.effectiveFrom) > iso) continue;
       if (a.effectiveTo && fromDateColumn(a.effectiveTo) < iso) continue;
+      if (!weekInPhase(iso, a.chore.intervalWeeks)) continue;
 
       expected.set(`${a.id}|${iso}`, {
         userId: a.userId,

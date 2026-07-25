@@ -72,7 +72,15 @@ all live in the database, never in this repository.
       fixed number of days after each completion
 - [x] Pause and resume shared chores for the season
 - [x] Cumulative missed count per person
+- [x] Rename a chore in place from the master list
+- [x] Move an assignment to another person or day from its card
+- [x] Reorder the household by dragging the chore cards
+- [x] Collaborative chores — one chore shared by several people, each doing
+      their part, with a weekly / every-other-week / every-N-weeks frequency
+- [ ] Smooth animated card reordering with a dedicated drag library (dnd-kit)
 - [ ] Rotation helper — assign one chore across several people in sequence
+- [ ] Gate a collaborative chore as complete only once everyone has done it,
+      surfaced in a household view
 
 ## Bible reading
 
