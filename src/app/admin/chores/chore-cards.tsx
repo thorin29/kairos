@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { DAY_SHORT } from "@/lib/days";
 import { reassignChore } from "@/lib/actions/chores";
 import { reorderPeople } from "@/lib/actions/people";
@@ -33,30 +33,40 @@ export function ChoreCards({
 
   const byId = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
 
-  // Fall back to the incoming order for any id not yet in local state (e.g. a
-  // person added since mount), and drop ids that no longer exist.
-  const ordered = useMemo(() => {
-    const known = new Set(cards.map((c) => c.id));
-    const kept = order.filter((id) => known.has(id));
+  // The current order, normalised against the cards we actually have: drop ids
+  // for people who left, append any who arrived since mount.
+  const ids = useMemo(() => {
+    const kept = order.filter((id) => byId.has(id));
     for (const c of cards) if (!kept.includes(c.id)) kept.push(c.id);
-    return kept.map((id) => byId.get(id)!).filter(Boolean);
+    return kept;
   }, [order, cards, byId]);
 
-  const drop = (targetId: string) => {
-    if (!dragId || dragId === targetId) {
-      setDragId(null);
-      return;
-    }
-    setOrder(() => {
-      const ids = ordered.map((c) => c.id);
-      const from = ids.indexOf(dragId);
-      const to = ids.indexOf(targetId);
-      if (from === -1 || to === -1) return ids;
-      ids.splice(from, 1);
-      ids.splice(to, 0, dragId);
-      startTransition(() => reorderPeople(ids));
-      return ids;
+  // Latest order for persistence, without threading it through the updater.
+  const idsRef = useRef(ids);
+  idsRef.current = ids;
+
+  const ordered = ids.map((id) => byId.get(id)!);
+
+  // Live reorder: as the dragged card passes over another, the others shift to
+  // make room. Returning the same reference when nothing moves lets React skip
+  // the render.
+  const hoverOver = (overId: string) => {
+    if (!dragId || dragId === overId) return;
+    setOrder((prev) => {
+      const cur = prev.filter((id) => byId.has(id));
+      for (const c of cards) if (!cur.includes(c.id)) cur.push(c.id);
+      const from = cur.indexOf(dragId);
+      const to = cur.indexOf(overId);
+      if (from === -1 || to === -1 || from === to) return prev;
+      const next = [...cur];
+      next.splice(from, 1);
+      next.splice(to, 0, dragId);
+      return next;
     });
+  };
+
+  const endDrag = () => {
+    if (dragId) startTransition(() => reorderPeople(idsRef.current));
     setDragId(null);
   };
 
@@ -75,10 +85,17 @@ export function ChoreCards({
             key={p.id}
             draggable
             onDragStart={() => setDragId(p.id)}
+            onDragEnter={() => hoverOver(p.id)}
             onDragOver={(e) => e.preventDefault()}
-            onDrop={() => drop(p.id)}
-            onDragEnd={() => setDragId(null)}
-            className={dragId === p.id ? "opacity-40" : ""}
+            onDrop={(e) => {
+              e.preventDefault();
+              endDrag();
+            }}
+            onDragEnd={endDrag}
+            className={[
+              "transition-transform duration-150",
+              dragId === p.id ? "scale-[0.98] opacity-40" : "",
+            ].join(" ")}
           >
             <Card className="p-5">
               <div className="mb-3 flex items-center gap-2.5">
@@ -169,9 +186,7 @@ export function ChoreCards({
             <label className="mb-1.5 block text-sm font-medium">Who does it</label>
             <select
               value={editing.userId}
-              onChange={(e) =>
-                setEditing({ ...editing, userId: e.target.value })
-              }
+              onChange={(e) => setEditing({ ...editing, userId: e.target.value })}
               className="mb-4 h-11 w-full rounded-full border border-hairline bg-ground/40 px-4 outline-none focus:border-accent"
             >
               {people.map((person) => (
