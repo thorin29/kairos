@@ -7,8 +7,9 @@ import { DAY_SHORT } from "@/lib/days";
 import { AddChoreForm } from "./add-chore-form";
 import { PoolChores } from "./pool-chores";
 import { AssignForm } from "./assign-form";
-import { DeleteChoreButton } from "./row-actions";
 import { ChoreCards } from "./chore-cards";
+import { MasterList } from "./master-list";
+import { CollaborativeForm } from "./collaborative-form";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
 import { AlertIcon } from "@/components/icons";
@@ -37,7 +38,13 @@ export default async function ChoresPage() {
       .flatMap((c) =>
         c.assignments
           .filter((a) => a.userId === p.id)
-          .map((a) => ({ id: a.id, chore: c.title, dayOfWeek: a.dayOfWeek })),
+          .map((a) => ({
+            id: a.id,
+            chore: c.title,
+            dayOfWeek: a.dayOfWeek,
+            isCollaborative: c.isCollaborative,
+            intervalWeeks: c.intervalWeeks,
+          })),
       )
       .sort((a, b) => a.dayOfWeek - b.dayOfWeek),
   }));
@@ -74,6 +81,13 @@ export default async function ChoresPage() {
           )}
 
           <section>
+            <SectionHeading>Collaborative chore</SectionHeading>
+            <Card className="p-5">
+              <CollaborativeForm people={people} />
+            </Card>
+          </section>
+
+          <section>
             <SectionHeading>Shared chores</SectionHeading>
             <PoolChores chores={poolChores} />
           </section>
@@ -88,8 +102,7 @@ export default async function ChoresPage() {
                   assigned
                 </p>
                 <p className="mt-1 text-sm text-amber-800">
-                  {unassigned.map((c) => c.title).join(", ")} — these never
-                  appear on anyone&rsquo;s list.
+                  {unassigned.map((c) => c.title).join(", ")} — {unassigned.length === 1 ? "this never appears" : "these never\n                  appear"} on anyone&rsquo;s list.
                 </p>
               </div>
             </Card>
@@ -144,22 +157,14 @@ export default async function ChoresPage() {
             <Card className="p-5">
               <AddChoreForm />
               {summary.length > 0 && (
-                <ul className="mt-5 flex flex-wrap gap-2 border-t border-hairline pt-5">
-                  {summary.map((c) => (
-                    <li
-                      key={c.id}
-                      className="inline-flex items-center gap-1 rounded-full bg-ground py-1 pl-4 pr-1 text-sm"
-                    >
-                      {c.title}
-                      {c.unassigned && (
-                        <span className="ml-1 text-xs text-muted">
-                          unassigned
-                        </span>
-                      )}
-                      <DeleteChoreButton id={c.id} title={c.title} />
-                    </li>
-                  ))}
-                </ul>
+                <MasterList
+                  chores={summary.map((c) => ({
+                    id: c.id,
+                    title: c.title,
+                    unassigned: c.unassigned,
+                    isCollaborative: c.isCollaborative,
+                  }))}
+                />
               )}
             </Card>
           </section>

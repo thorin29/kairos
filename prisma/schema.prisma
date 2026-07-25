@@ -211,6 +211,12 @@ model Chore {
   isPool       Boolean @default(false)
   intervalDays Int?
 
+  // A collaborative chore is assigned to several people who each do their
+  // part; the flag just labels it as shared work. intervalWeeks lets an
+  // assigned chore recur less often than weekly — 2 is every other week.
+  isCollaborative Boolean @default(false)
+  intervalWeeks   Int     @default(1)
+
   // Seasonal chores stop rather than pile up. Resuming puts one out
   // immediately rather than waiting a full interval.
   isPaused Boolean @default(false)

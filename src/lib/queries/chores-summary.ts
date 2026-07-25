@@ -15,6 +15,8 @@ export type ChoreSummary = {
   /** Gaps in days between consecutive occurrences, wrapping the week. */
   gaps: number[];
   unassigned: boolean;
+  isCollaborative: boolean;
+  intervalWeeks: number;
 };
 
 /**
@@ -109,6 +111,8 @@ export async function loadChoreSummary(): Promise<ChoreSummary[]> {
       assignments,
       gaps,
       unassigned: assignments.length === 0,
+      isCollaborative: c.isCollaborative,
+      intervalWeeks: c.intervalWeeks,
     };
   });
 }

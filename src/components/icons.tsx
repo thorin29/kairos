@@ -283,3 +283,11 @@ export function GripIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+export function PencilIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M13.5 6.5l4 4M4 20l1-4L16 5a1.8 1.8 0 0 1 2.5 0l.5.5a1.8 1.8 0 0 1 0 2.5L8 19l-4 1Z" />
+    </svg>
+  );
+}
