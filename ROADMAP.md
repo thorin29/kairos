@@ -165,6 +165,25 @@ all live in the database, never in this repository.
 - [ ] Award a token for winning the week
 - [ ] Timer rather than manual logging
 
+## Groceries
+
+- [x] Shared shopping list, added to from the dashboard by anyone
+- [x] Stores to shop at (Costco, the grocery store), extendable by an admin
+- [x] Filter the list by store — "I'm at Costco" shows just Costco's items
+- [x] A learning catalog: adding an item remembers it with an icon, and the
+      common ones surface first as quick picks
+- [x] Icons guessed from the item name, remembered and admin-editable
+- [x] Assign an item to a person, and check items off into a cart
+- [x] Admin: manage stores and the remembered catalog, seed an initial list
+- [ ] Per-person cart: "I'm going to Costco" pulls that store's items into
+      one person's run, and checking off updates the shared list
+- [ ] Quantities and notes on an item (2 dozen, the good kind)
+- [ ] Non-grocery stores handled the same way (clothing, hardware)
+- [ ] Suggest a store for a typed item from its catalog default
+- [ ] Recurring staples that re-add themselves on a cadence
+- [ ] Installable on a phone as a PWA, so a shopper has the list in the aisle
+- [ ] Optional native Android wrapper if a PWA proves too limiting
+
 ## Scoring and gamification
 
 - [x] Running totals: assigned, chores, completed, missed

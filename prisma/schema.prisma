@@ -41,6 +41,7 @@ model User {
   events          Event[]
   choreAssignments ChoreAssignment[]
   calendars       ExternalCalendar[]
+  groceryItems    ShoppingItem[]    @relation("GroceryAssignee")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -356,4 +357,53 @@ model WeatherCache {
   fetchedAt   DateTime @default(now())
   provider    String
   lastError   String?
+}
+
+// ---------------------------------------------------------------
+// Groceries — a shared shopping list that learns which items the
+// household buys, filtered by the store you're shopping at.
+// ---------------------------------------------------------------
+
+model Store {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  icon      String  @default("🛒")
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  catalog GroceryItem[]
+  items   ShoppingItem[]
+}
+
+// The remembered catalog. Adding a needed item finds or creates its entry,
+// bumps the use count, and reuses the icon, so common things surface first
+// and don't need typing or re-picking an icon each time.
+model GroceryItem {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  icon           String   @default("📦")
+  defaultStoreId String?
+  defaultStore   Store?   @relation(fields: [defaultStoreId], references: [id], onDelete: SetNull)
+  useCount       Int      @default(0)
+  isActive       Boolean  @default(true)
+  lastUsedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+}
+
+// One line currently on the list. Name and icon are snapshotted so editing the
+// catalog later doesn't rewrite history on the list.
+model ShoppingItem {
+  id           String    @id @default(cuid())
+  name         String
+  icon         String    @default("📦")
+  storeId      String
+  store        Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  assignedToId String?
+  assignedTo   User?     @relation("GroceryAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  note         String?
+  boughtAt     DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([storeId])
 }

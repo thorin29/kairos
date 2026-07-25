@@ -12,6 +12,7 @@ import {
   DumbbellIcon,
   SchoolIcon,
   GamepadIcon,
+  BasketIcon,
   LockIcon,
 } from "@/components/icons";
 
@@ -59,6 +60,13 @@ const TILES: Tile[] = [
     label: "Game time",
     blurb: "Daily limits and weekly tokens",
     icon: <GamepadIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/admin/groceries",
+    label: "Groceries",
+    blurb: "Stores and the catalog the shopping list remembers",
+    icon: <BasketIcon className="h-7 w-7" />,
     ready: true,
   },
   {
