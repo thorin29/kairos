@@ -42,6 +42,8 @@ model User {
   choreAssignments ChoreAssignment[]
   calendars       ExternalCalendar[]
   groceryItems    ShoppingItem[]    @relation("GroceryAssignee")
+  routineAssignments RoutineAssignment[] @relation("ExerciseAssignee")
+  exerciseLogs       ExerciseLog[]       @relation("ExerciseLogger")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -406,4 +408,68 @@ model ShoppingItem {
   createdAt    DateTime  @default(now())
 
   @@index([storeId])
+}
+
+// ---------------------------------------------------------------
+// Exercise — routines of movements, assigned to people by weekday,
+// generated into daily tasks, with a log of what was actually done.
+// ---------------------------------------------------------------
+
+model ExerciseRoutine {
+  id        String  @id @default(cuid())
+  name      String
+  notes     String?
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+  createdAt DateTime @default(now())
+
+  exercises   RoutineExercise[]
+  assignments RoutineAssignment[]
+}
+
+model RoutineExercise {
+  id        String  @id @default(cuid())
+  routineId String
+  routine   ExerciseRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  name      String
+  sets      Int     @default(3)
+  reps      String  @default("10") // "10", "8-12", "AMRAP"
+  weight    String? // a target hint: "bodyweight", "20kg"
+  sortOrder Int     @default(0)
+
+  logs ExerciseLog[]
+
+  @@index([routineId])
+}
+
+model RoutineAssignment {
+  id        String  @id @default(cuid())
+  routineId String
+  routine   ExerciseRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation("ExerciseAssignee", fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek Int     // 0 = Sunday .. 6 = Saturday
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([routineId, userId, dayOfWeek])
+  @@index([dayOfWeek, isActive])
+}
+
+// What was actually done: one row per movement per person per day.
+model ExerciseLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation("ExerciseLogger", fields: [userId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise   RoutineExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  day        DateTime @db.Date
+  sets       Int?
+  reps       Int?
+  weight     Float?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, exerciseId, day])
+  @@index([exerciseId, userId, day])
 }

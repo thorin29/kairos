@@ -12,7 +12,7 @@ import {
   DumbbellIcon,
   SchoolIcon,
   GamepadIcon,
-  BasketIcon,
+  CartIcon,
   LockIcon,
 } from "@/components/icons";
 
@@ -44,9 +44,9 @@ const TILES: Tile[] = [
   {
     href: "/admin/exercise",
     label: "Exercise",
-    blurb: "Routines and per-person programmes",
+    blurb: "Routines, movements, and per-person weekly assignment",
     icon: <DumbbellIcon className="h-7 w-7" />,
-    ready: false,
+    ready: true,
   },
   {
     href: "/admin/school",
@@ -66,7 +66,7 @@ const TILES: Tile[] = [
     href: "/admin/groceries",
     label: "Groceries",
     blurb: "Stores and the catalog the shopping list remembers",
-    icon: <BasketIcon className="h-7 w-7" />,
+    icon: <CartIcon className="h-7 w-7" />,
     ready: true,
   },
   {

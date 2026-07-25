@@ -17,6 +17,7 @@ import { loadGameStatus } from "@/lib/queries/games";
 import { GameTimeCard } from "@/components/game-time-card";
 import { PersonWeek } from "@/components/person-week";
 import { generateChores } from "@/lib/chores/generate";
+import { generateExercise } from "@/lib/exercise/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { TaskRow } from "@/components/task-row";
@@ -60,6 +61,7 @@ export default async function PersonPage({
   // Self-healing: if this page is opened before the dashboard, today's
   // chores still get created.
   await generateChores(today);
+  await generateExercise(today);
   await generatePoolChores(today);
   await generateReadingTasks(today);
 
