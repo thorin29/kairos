@@ -1,13 +1,11 @@
 -- Exercise: admin-defined routines, assigned to people by weekday, generated
 -- into daily tasks like chores — plus a place to log what was actually done.
 --
--- A Routine is a named workout with an ordered list of movements (sets, reps,
--- a weight hint). A RoutineAssignment puts a routine on a person's given
--- weekday. The generator turns active assignments into daily EXERCISE tasks,
--- reconciling the same way chores do. An ExerciseLog records the real sets,
--- reps, and weight for one movement on one day, so progress can be seen.
+-- Written to be safely re-runnable: an earlier version of this migration
+-- created these tables before failing on a later statement, so every object
+-- here is guarded so it applies whether or not it already exists.
 
-CREATE TABLE "ExerciseRoutine" (
+CREATE TABLE IF NOT EXISTS "ExerciseRoutine" (
     "id"        TEXT NOT NULL,
     "name"      TEXT NOT NULL,
     "notes"     TEXT,
@@ -17,7 +15,7 @@ CREATE TABLE "ExerciseRoutine" (
     CONSTRAINT "ExerciseRoutine_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "RoutineExercise" (
+CREATE TABLE IF NOT EXISTS "RoutineExercise" (
     "id"        TEXT NOT NULL,
     "routineId" TEXT NOT NULL,
     "name"      TEXT NOT NULL,
@@ -27,11 +25,12 @@ CREATE TABLE "RoutineExercise" (
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT "RoutineExercise_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "RoutineExercise_routineId_idx" ON "RoutineExercise"("routineId");
+CREATE INDEX IF NOT EXISTS "RoutineExercise_routineId_idx" ON "RoutineExercise"("routineId");
+ALTER TABLE "RoutineExercise" DROP CONSTRAINT IF EXISTS "RoutineExercise_routineId_fkey";
 ALTER TABLE "RoutineExercise" ADD CONSTRAINT "RoutineExercise_routineId_fkey"
     FOREIGN KEY ("routineId") REFERENCES "ExerciseRoutine"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-CREATE TABLE "RoutineAssignment" (
+CREATE TABLE IF NOT EXISTS "RoutineAssignment" (
     "id"        TEXT NOT NULL,
     "routineId" TEXT NOT NULL,
     "userId"    TEXT NOT NULL,
@@ -40,16 +39,18 @@ CREATE TABLE "RoutineAssignment" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "RoutineAssignment_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "RoutineAssignment_routineId_userId_dayOfWeek_key"
+CREATE UNIQUE INDEX IF NOT EXISTS "RoutineAssignment_routineId_userId_dayOfWeek_key"
     ON "RoutineAssignment"("routineId", "userId", "dayOfWeek");
-CREATE INDEX "RoutineAssignment_dayOfWeek_isActive_idx"
+CREATE INDEX IF NOT EXISTS "RoutineAssignment_dayOfWeek_isActive_idx"
     ON "RoutineAssignment"("dayOfWeek", "isActive");
+ALTER TABLE "RoutineAssignment" DROP CONSTRAINT IF EXISTS "RoutineAssignment_routineId_fkey";
 ALTER TABLE "RoutineAssignment" ADD CONSTRAINT "RoutineAssignment_routineId_fkey"
     FOREIGN KEY ("routineId") REFERENCES "ExerciseRoutine"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "RoutineAssignment" DROP CONSTRAINT IF EXISTS "RoutineAssignment_userId_fkey";
 ALTER TABLE "RoutineAssignment" ADD CONSTRAINT "RoutineAssignment_userId_fkey"
     FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-CREATE TABLE "ExerciseLog" (
+CREATE TABLE IF NOT EXISTS "ExerciseLog" (
     "id"         TEXT NOT NULL,
     "userId"     TEXT NOT NULL,
     "exerciseId" TEXT NOT NULL,
@@ -61,11 +62,13 @@ CREATE TABLE "ExerciseLog" (
     "updatedAt"  TIMESTAMP(3) NOT NULL,
     CONSTRAINT "ExerciseLog_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "ExerciseLog_userId_exerciseId_day_key"
+CREATE UNIQUE INDEX IF NOT EXISTS "ExerciseLog_userId_exerciseId_day_key"
     ON "ExerciseLog"("userId", "exerciseId", "day");
-CREATE INDEX "ExerciseLog_exerciseId_userId_day_idx"
+CREATE INDEX IF NOT EXISTS "ExerciseLog_exerciseId_userId_day_idx"
     ON "ExerciseLog"("exerciseId", "userId", "day");
+ALTER TABLE "ExerciseLog" DROP CONSTRAINT IF EXISTS "ExerciseLog_userId_fkey";
 ALTER TABLE "ExerciseLog" ADD CONSTRAINT "ExerciseLog_userId_fkey"
     FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ExerciseLog" DROP CONSTRAINT IF EXISTS "ExerciseLog_exerciseId_fkey";
 ALTER TABLE "ExerciseLog" ADD CONSTRAINT "ExerciseLog_exerciseId_fkey"
     FOREIGN KEY ("exerciseId") REFERENCES "RoutineExercise"("id") ON DELETE CASCADE ON UPDATE CASCADE;
