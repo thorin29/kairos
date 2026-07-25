@@ -149,11 +149,12 @@ all live in the database, never in this repository.
 
 ## Exercise
 
-- [ ] Per-person routines, the most flexible category
-- [ ] Log what was actually done, with sets, reps, and weight
-- [ ] Admin-defined programmes
-- [ ] Read-only metrics page
-- [ ] Logging from a phone
+- [x] Per-person routines, assigned by weekday, generated into daily tasks
+- [x] Admin-defined routines of movements with target sets, reps, and weight
+- [x] Log what was actually done, with sets, reps, and weight
+- [x] A last-time hint on each movement so progress is visible
+- [ ] A fuller read-only metrics page — weight over time per movement
+- [ ] Logging from a phone (arrives with the PWA)
 
 ## Game time
 
