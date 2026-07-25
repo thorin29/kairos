@@ -1,21 +1,27 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { addChore, type ChoreActionState } from "@/lib/actions/chores";
 import { PlusIcon } from "@/components/icons";
+import { EFFORT_LEVELS } from "@/lib/chores/effort";
 
 const initial: ChoreActionState = { error: null };
 
 export function AddChoreForm() {
   const [state, formAction, pending] = useActionState(addChore, initial);
   const formRef = useRef<HTMLFormElement>(null);
+  const [effort, setEffort] = useState(2);
 
   useEffect(() => {
-    if (!pending && !state.error) formRef.current?.reset();
+    if (!pending && !state.error) {
+      formRef.current?.reset();
+      setEffort(2);
+    }
   }, [state, pending]);
 
   return (
     <form ref={formRef} action={formAction}>
+      <input type="hidden" name="effort" value={effort} />
       <div className="flex flex-wrap items-center gap-3">
         <input
           name="title"
@@ -23,8 +29,31 @@ export function AddChoreForm() {
           maxLength={80}
           placeholder="Vacuum the living room"
           aria-label="New chore"
-          className="h-11 min-w-[16rem] flex-1 rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent"
+          className="h-11 min-w-[14rem] flex-1 rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent"
         />
+
+        <div className="inline-flex rounded-full border border-hairline p-0.5">
+          {EFFORT_LEVELS.map((lvl) => {
+            const on = effort === lvl.value;
+            return (
+              <button
+                key={lvl.value}
+                type="button"
+                onClick={() => setEffort(lvl.value)}
+                title={`Effort: ${lvl.label}`}
+                className="inline-flex h-9 items-center rounded-full px-3 text-sm font-medium transition-colors"
+                style={
+                  on
+                    ? { backgroundColor: lvl.color, color: "#fff" }
+                    : { color: "var(--color-muted)" }
+                }
+              >
+                {lvl.label}
+              </button>
+            );
+          })}
+        </div>
+
         <button
           type="submit"
           disabled={pending}

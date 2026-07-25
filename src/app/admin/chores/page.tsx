@@ -9,6 +9,7 @@ import { PoolChores } from "./pool-chores";
 import { AssignForm } from "./assign-form";
 import { ChoreCards } from "./chore-cards";
 import { MasterList } from "./master-list";
+import { EffortTable, type BalanceRow } from "./effort-table";
 import { CollaborativeForm } from "./collaborative-form";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
@@ -48,6 +49,32 @@ export default async function ChoresPage() {
       )
       .sort((a, b) => a.dayOfWeek - b.dayOfWeek),
   }));
+
+  // Admin-only effort balance: per person, effort summed by weekday and week,
+  // recomputed each render so it tracks as chores are moved around.
+  const balanceRows: BalanceRow[] = people
+    .map((p) => {
+      const days = Array(7).fill(0) as number[];
+      const counts = Array(7).fill(0) as number[];
+      for (const c of summary) {
+        for (const a of c.assignments) {
+          if (a.userId !== p.id) continue;
+          days[a.dayOfWeek] += c.effort;
+          counts[a.dayOfWeek] += 1;
+        }
+      }
+      return {
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        days,
+        counts,
+        weekEffort: days.reduce((n, v) => n + v, 0),
+        weekCount: counts.reduce((n, v) => n + v, 0),
+      };
+    })
+    .filter((r) => r.weekCount > 0)
+    .sort((a, b) => b.weekEffort - a.weekEffort);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
@@ -109,7 +136,17 @@ export default async function ChoresPage() {
           )}
 
           <section>
-            <SectionHeading>Who has what</SectionHeading>
+            <SectionHeading>Effort balance</SectionHeading>
+            <p className="mb-3 max-w-2xl text-sm text-muted">
+              Chore effort by person, per day and for the week &mdash; the
+              highest each day and for the week are highlighted, so you can even
+              things out. Only you see this; it isn&rsquo;t shown to anyone else.
+            </p>
+            <EffortTable rows={balanceRows} />
+          </section>
+
+          <section>
+            <SectionHeading>Assigned chores</SectionHeading>
             <ChoreCards cards={byPerson} people={people} />
           </section>
 
@@ -163,6 +200,7 @@ export default async function ChoresPage() {
                     title: c.title,
                     unassigned: c.unassigned,
                     isCollaborative: c.isCollaborative,
+                    effort: c.effort,
                   }))}
                 />
               )}

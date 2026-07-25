@@ -22,11 +22,28 @@ export async function addChore(
   const existing = await prisma.chore.findUnique({ where: { title } });
   if (existing) return { error: `"${title}" is already on the list.` };
 
+  const effort = clampEffort(Number(formData.get("effort")));
   const count = await prisma.chore.count();
-  await prisma.chore.create({ data: { title, sortOrder: count } });
+  await prisma.chore.create({ data: { title, sortOrder: count, effort } });
 
+  revalidatePath("/admin/chores");
   revalidatePath("/chores");
   return { error: null };
+}
+
+/** Keep an effort value to 1–3, defaulting to 2 (average). */
+function clampEffort(value: number): number {
+  return value === 1 || value === 3 ? value : 2;
+}
+
+/** Change a chore's admin-only effort weight. */
+export async function setChoreEffort(id: string, effort: number): Promise<void> {
+  await requireAdmin();
+  await prisma.chore.update({
+    where: { id },
+    data: { effort: clampEffort(effort) },
+  });
+  revalidatePath("/admin/chores");
 }
 
 export async function deleteChore(id: string): Promise<void> {
@@ -230,6 +247,7 @@ export async function addCollaborativeChore(input: {
   dayOfWeek: number;
   intervalWeeks: number;
   startISO?: string;
+  effort?: number;
 }): Promise<{ error: string | null }> {
   if (!(await isAdmin())) {
     return { error: "Only a parent can change this. Switch profiles first." };
@@ -252,11 +270,12 @@ export async function addCollaborativeChore(input: {
 
   const chore = await prisma.chore.upsert({
     where: { title },
-    update: { isCollaborative: true, intervalWeeks, isActive: true, isPool: false },
+    update: { isCollaborative: true, intervalWeeks, isActive: true, isPool: false, effort: clampEffort(input.effort ?? 2) },
     create: {
       title,
       isCollaborative: true,
       intervalWeeks,
+      effort: clampEffort(input.effort ?? 2),
       sortOrder: await prisma.chore.count(),
     },
   });

@@ -218,6 +218,10 @@ model Chore {
   isCollaborative Boolean @default(false)
   intervalWeeks   Int     @default(1)
 
+  // Effort weight, admin-only: 1 easy, 2 average, 3 hard. Used to see whether
+  // the week's chores are balanced across the family; never shown to users.
+  effort Int @default(2)
+
   // Seasonal chores stop rather than pile up. Resuming puts one out
   // immediately rather than waiting a full interval.
   isPaused Boolean @default(false)
