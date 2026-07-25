@@ -3,6 +3,12 @@ import { prisma } from "@/lib/prisma";
 
 export const SCORING_START = "scoringStart";
 
+/** Read any stored setting by key. */
+export async function getSetting(key: string): Promise<string | null> {
+  const row = await prisma.appSetting.findUnique({ where: { key } });
+  return row?.value ?? null;
+}
+
 /**
  * Scores count only from this day forward. Nothing is deleted when it moves
  * — the tasks and their history stay intact, they just stop counting. That

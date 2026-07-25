@@ -1,11 +1,11 @@
 import { AdminBack } from "@/components/admin-back";
-import { loadExerciseAdmin } from "@/lib/queries/exercise";
-import { ExerciseAdmin } from "./exercise-admin";
+import { loadWorkoutAdmin } from "@/lib/queries/workouts";
+import { WorkoutAdmin } from "./workout-admin";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminExercisePage() {
-  const { routines, roster, assignments } = await loadExerciseAdmin();
+export default async function AdminWorkoutsPage() {
+  const { unitSystem, people } = await loadWorkoutAdmin();
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -16,13 +16,12 @@ export default async function AdminExercisePage() {
           Workouts
         </h1>
         <p className="mt-2 max-w-xl text-muted">
-          Build routines of movements, then assign each to a person on the days
-          they train. Assigned routines appear as a daily workout to log and
-          check off, and count on that person&rsquo;s card.
+          People build and log their own workouts on the Workouts page. Here you
+          set the measurement system and can see who&rsquo;s tracking what.
         </p>
       </header>
 
-      <ExerciseAdmin routines={routines} roster={roster} assignments={assignments} />
+      <WorkoutAdmin unitSystem={unitSystem} people={people} />
     </main>
   );
 }

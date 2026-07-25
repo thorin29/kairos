@@ -6,7 +6,7 @@ import { PersonCard } from "@/components/person-card";
 import { AppHeader } from "@/components/app-header";
 import { AddTaskForm } from "@/components/add-task-form";
 import { generateChores } from "@/lib/chores/generate";
-import { generateExercise } from "@/lib/exercise/generate";
+import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { AlertIcon } from "@/components/icons";
@@ -34,7 +34,7 @@ export default async function Home({
     // Idempotent: fills in any chore days not yet materialized. Cheap enough
     // to run on load, which avoids needing a scheduler.
     await generateChores(today);
-    await generateExercise(today);
+    await generateWorkoutTasks(today);
     await generatePoolChores(today);
     await generateReadingTasks(today);
     people = await loadDay(today);
