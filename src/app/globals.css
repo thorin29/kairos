@@ -50,3 +50,18 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* A single soft hop when a book chip is hovered, as a "you're selecting this"
+   cue on the family-progress grid. Plays once on hover rather than looping. */
+@keyframes book-pop {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(-4px); }
+  70% { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
+}
+.book-pop {
+  transition: box-shadow 0.15s ease;
+}
+.book-pop:hover {
+  animation: book-pop 0.35s ease;
+}
