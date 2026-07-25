@@ -111,6 +111,10 @@ all live in the database, never in this repository.
 - [ ] Admin bulk-complete: mark everything read through a chosen date, for
       everyone
 - [ ] Admin override for a single day across the whole household
+- [x] Mark reading read by chapter, not only whole books — a book part way
+      through (Psalms) can be ticked as far as it's been read
+- [x] Plan progress marks its chapters automatically as the days pass,
+      independently of whether anyone ticked their own daily box
 - [x] Badge for a complete Bible (household level)
 - [ ] A count of full passes through the whole Bible
 

@@ -217,48 +217,84 @@ export async function generatePlan(
 // ---------------------------------------------------------------
 // Where the household is up to
 //
-// Marking whole books read seeds the coverage percentage with reading done
-// before this app existed, so the figure reflects reality rather than only
-// what's been scheduled here.
+// Marking chapters read seeds the coverage percentage with reading done
+// before, or outside, this installation's plan — so the figure reflects
+// reality rather than only what's been scheduled here. It's independent of
+// whether anyone ticked their daily box: the assumption is everyone reads
+// everything and catches up if they fall behind.
 // ---------------------------------------------------------------
 
-export async function setBookRead(
+/** Every chapter of a book, as "Book|chapter" strings won't help here. */
+function chaptersOf(bookName: string): number[] {
+  const book = BOOK_BY_NAME.get(bookName);
+  if (!book) return [];
+  return Array.from({ length: book.chapters }, (_, i) => i + 1);
+}
+
+export async function setChapterRead(
   bookName: string,
+  chapter: number,
   read: boolean,
 ): Promise<void> {
   await requireAdmin();
-  if (!BOOK_BY_NAME.has(bookName)) return;
+  const book = BOOK_BY_NAME.get(bookName);
+  if (!book || chapter < 1 || chapter > book.chapters) return;
 
   if (read) {
-    await prisma.bookCompletion.upsert({
-      where: { bookName },
+    await prisma.chapterCompletion.upsert({
+      where: { bookName_chapter: { bookName, chapter } },
       update: {},
-      create: { bookName },
+      create: { bookName, chapter },
     });
   } else {
-    await prisma.bookCompletion.deleteMany({ where: { bookName } });
+    await prisma.chapterCompletion.deleteMany({ where: { bookName, chapter } });
   }
 
   revalidatePath("/admin/bible");
   revalidatePath("/bible");
 }
 
+/** Mark or clear a whole book at once. */
+export async function setBookRead(
+  bookName: string,
+  read: boolean,
+): Promise<void> {
+  await requireAdmin();
+  const chapters = chaptersOf(bookName);
+  if (chapters.length === 0) return;
+
+  if (read) {
+    await prisma.chapterCompletion.createMany({
+      data: chapters.map((chapter) => ({ bookName, chapter })),
+      skipDuplicates: true,
+    });
+  } else {
+    await prisma.chapterCompletion.deleteMany({ where: { bookName } });
+  }
+
+  revalidatePath("/admin/bible");
+  revalidatePath("/bible");
+}
+
+/** Mark or clear several whole books — Old or New Testament in one go. */
 export async function setBooksRead(
   bookNames: string[],
   read: boolean,
 ): Promise<void> {
   await requireAdmin();
-  const valid = bookNames.filter((b) => BOOK_BY_NAME.has(b));
-  if (valid.length === 0) return;
+  const rows = bookNames.flatMap((bookName) =>
+    chaptersOf(bookName).map((chapter) => ({ bookName, chapter })),
+  );
+  if (rows.length === 0) return;
 
   if (read) {
-    await prisma.bookCompletion.createMany({
-      data: valid.map((bookName) => ({ bookName })),
+    await prisma.chapterCompletion.createMany({
+      data: rows,
       skipDuplicates: true,
     });
   } else {
-    await prisma.bookCompletion.deleteMany({
-      where: { bookName: { in: valid } },
+    await prisma.chapterCompletion.deleteMany({
+      where: { bookName: { in: bookNames.filter((b) => BOOK_BY_NAME.has(b)) } },
     });
   }
 

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.13.0";
+export const APP_VERSION = "0.13.1";
 
 export const MIGRATIONS = [
   "0_init",
@@ -18,11 +18,21 @@ export const MIGRATIONS = [
   "8_game_time",
   "9_reading_plans",
   "10_reading_extras_and_completions",
+  "11_chapter_completions",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.13.1",
+    summary: [
+      "Check off reading by chapter, not just whole books — open a book to tick chapters",
+      "Plan progress fills the check-off in automatically as the days pass",
+      "Reading cards label each day by its real date again, fixed as you scroll",
+      "Admin is reached from an admin person's card; the header gear is gone",
+    ],
+  },
   {
     version: "0.13.0",
     summary: [

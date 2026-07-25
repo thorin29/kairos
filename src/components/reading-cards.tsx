@@ -10,11 +10,10 @@ export type ReadingCard = {
 };
 
 /**
- * A relative day name for an offset in days. Used two ways: the header names
- * the focused card relative to the real today; each card names itself
- * relative to whichever card is focused, so the left of the deck reads
- * "Yesterday, 2 days ago" and the right reads "Tomorrow, In 2 days",
- * recomputed every time the focus moves.
+ * A relative day name for an offset in days. Each card is named by its own
+ * distance from the real today, so the labels stay glued to their dates:
+ * scroll right and the "Today" card slides off to the left while "Tomorrow"
+ * takes the centre. They only change when the actual day rolls over.
  */
 function relativeLabel(offset: number): string {
   if (offset === 0) return "Today";
@@ -166,7 +165,7 @@ export function ReadingCards({
                     isActive ? "text-accent" : "text-muted"
                   }`}
                 >
-                  {relativeLabel(offset)}
+                  {relativeLabel(i - todayIndex)}
                 </span>
 
                 <span

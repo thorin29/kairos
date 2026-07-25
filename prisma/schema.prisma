@@ -282,13 +282,16 @@ model ReadingDay {
   @@index([planId, day])
 }
 
-// What a household had already read before this installation existed, marked
-// by an admin so the coverage percentage starts from where they really are
-// rather than from an empty database. One row per completed book.
-model BookCompletion {
-  bookName    String   @id
-  note        String?
+// What a household has already read, marked by an admin, at chapter
+// granularity so a book they're part way through can be ticked off as far as
+// they've read. This is the manual baseline; the published plan's coverage is
+// counted separately from its scheduled days.
+model ChapterCompletion {
+  bookName    String
+  chapter     Int
   completedAt DateTime @default(now())
+
+  @@id([bookName, chapter])
 }
 
 // ---------------------------------------------------------------
