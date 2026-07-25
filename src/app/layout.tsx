@@ -23,7 +23,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Family Dashboard",
+  title: "Kairos",
   description: "Chores, school, and schedules for the whole house",
 };
 

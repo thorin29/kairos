@@ -5,12 +5,17 @@ import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
 import { ImportForm } from "./import-form";
 import { PlanActions } from "./plan-actions";
+import { BookProgress } from "./book-progress";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminBiblePage() {
   const today = todayISO();
   const plans = await listPlans();
+
+  const completedBooks = (
+    await prisma.bookCompletion.findMany({ select: { bookName: true } })
+  ).map((b) => b.bookName);
 
   const published = plans.find((p) => p.isPublished);
 
@@ -105,6 +110,17 @@ export default async function AdminBiblePage() {
           </p>
         </section>
       )}
+
+      <section className="mb-10">
+        <SectionHeading>Where you&rsquo;re up to</SectionHeading>
+        <p className="mb-3 max-w-xl text-sm text-muted">
+          Mark the books your household has already read &mdash; before this app,
+          or in a plan that isn&rsquo;t loaded here. The reading percentages count
+          these straight away, so the figures reflect where you really are rather
+          than only what&rsquo;s been scheduled here.
+        </p>
+        <BookProgress initial={completedBooks} />
+      </section>
 
       <section className="mb-10">
         <SectionHeading>Build a new plan</SectionHeading>

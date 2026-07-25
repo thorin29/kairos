@@ -30,7 +30,7 @@ export default async function GeneratePlanPage() {
   const coverage = await loadCoverage(published?.id);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
+    <main className="mx-auto max-w-5xl px-6 py-8">
       <AdminBack />
 
       <header className="mb-8 mt-5 border-b border-hairline pb-5">

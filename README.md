@@ -1,6 +1,6 @@
-# Family Dashboard
+# Kairos
 
-A self-hosted dashboard for running a household: daily chores, school
+Kairos is a self-hosted dashboard for running a household: daily chores, school
 assignments, Bible reading plans, workouts, work shifts, and appointments —
 all rolled up into a single screen that shows who has finished what today.
 
@@ -70,6 +70,10 @@ CREATE DATABASE familydashboard OWNER famdash;
 ```
 
 ### 2. Run the container
+
+The container name, database name, and image path below are just identifiers —
+call them whatever you like. They don't have to match the product name; the app
+only cares about `DATABASE_URL` pointing at the right database.
 
 ```bash
 docker run -d \

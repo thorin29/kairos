@@ -91,20 +91,28 @@ all live in the database, never in this repository.
 - [x] Carry on from where the published plan leaves off, so a book already
       read isn't scheduled twice
 - [x] Keep books whole — a day's reading never runs across two books
+- [x] Reorder the reading — books read top to bottom of a list you arrange,
+      not fixed to canonical order
+- [x] Extra one-off readings pinned to a date (Christmas, Easter) that don't
+      count towards coverage
 - [ ] Balance by verse count rather than chapter count so days stay even
-- [ ] Per-weekday chapter counts, including a lighter Sunday as an option
+- [x] Per-weekday chapter counts, including a lighter Sunday as an option
 - [ ] Guarantee no passage is scheduled twice within a plan
 - [ ] Preset plans generated from book lists (canonical, historical,
       chronological, New Testament only) — generated here, not copied from
       published plans
 - [ ] Importer: file upload, preview-before-commit, documented grammar
 - [ ] Export a plan for editing and re-import
-- [ ] **Reading eras** — statistics accumulate until an admin resets, rather
-      than resetting each January
+- [x] Coverage counts the whole run of the published plan, not just the
+      current calendar year, and books can be marked already-read so the
+      percentage reflects where the household actually is
+- [ ] **Reading eras** — statistics accumulate across successive plans and
+      reset only when an admin says so
 - [ ] Admin bulk-complete: mark everything read through a chosen date, for
       everyone
 - [ ] Admin override for a single day across the whole household
-- [ ] Badge for a complete Bible, with a count of full passes
+- [x] Badge for a complete Bible (household level)
+- [ ] A count of full passes through the whole Bible
 
 ## Calendar
 

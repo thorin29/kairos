@@ -8,7 +8,8 @@ import { AddTaskForm } from "@/components/add-task-form";
 import { generateChores } from "@/lib/chores/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
-import { AlertIcon } from "@/components/icons";
+import { AlertIcon, GearIcon } from "@/components/icons";
+import Link from "next/link";
 import { OpenTasks } from "@/components/open-tasks";
 import { DaySchedule } from "@/components/day-schedule";
 import { loadDaySchedule } from "@/lib/queries/calendar";
@@ -76,6 +77,18 @@ export default async function Home({
             {totalOverdue} overdue
           </p>
         )}
+        {/* The one way into the admin area. A child sees a gear and a PIN
+            prompt; a parent unlocks and manages from there. Deliberately the
+            only admin entry on a normal page — every other page is just for
+            looking. */}
+        <Link
+          href="/admin"
+          aria-label="Admin"
+          title="Admin"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface text-muted shadow-sm transition-all hover:-translate-y-0.5 hover:text-accent hover:shadow-md"
+        >
+          <GearIcon className="h-5 w-5" />
+        </Link>
       </AppHeader>
 
       <main className="mx-auto max-w-6xl px-6 py-6">
