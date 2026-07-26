@@ -4,12 +4,15 @@ import { Avatar } from "@/components/avatar";
 // The "for all" symbol, standing in for a profile photo on the Everyone badge.
 const FOR_ALL = "\u2200";
 
-/**
- * One shared badge layout so every filter is identical: a 64px circle with a
- * small name pill tucked against its lower edge, nudged slightly right. The
- * only differences between a person and Everyone are what's in the circle and
- * the pill's colour — never the size or position, so bottoms always line up.
- */
+// Every badge is the same fixed width so the row is evenly spaced no matter how
+// long the names are; the font steps down a little for longer names so they
+// still fit the same pill.
+function fontFor(label: string): string {
+  if (label.length <= 8) return "text-xs";
+  if (label.length <= 11) return "text-[0.7rem]";
+  return "text-[0.6rem]";
+}
+
 function Badge({
   href,
   selected,
@@ -27,7 +30,9 @@ function Badge({
     <Link
       href={href}
       aria-current={selected ? "true" : undefined}
-      className="hover-bounce group relative inline-block outline-none"
+      className={`hover-bounce group relative flex w-20 flex-col items-center outline-none transition-[filter,opacity] ${
+        selected ? "" : "opacity-70 grayscale"
+      }`}
     >
       <span
         className={`block transition-transform ${
@@ -37,9 +42,9 @@ function Badge({
         {children}
       </span>
       <span
-        className={`absolute -bottom-1 left-[calc(50%-0.75rem)] z-10 whitespace-nowrap rounded-full px-3 py-0.5 text-xs font-semibold text-white shadow-sm ${
-          selected ? "ring-2 ring-white/70" : ""
-        }`}
+        className={`absolute -bottom-1 left-1/2 z-10 w-[4.75rem] -translate-x-1/2 truncate rounded-full px-2 py-0.5 text-center font-semibold text-white shadow-sm ${fontFor(
+          label,
+        )} ${selected ? "ring-2 ring-white/70" : ""}`}
         style={{ backgroundColor: pillColor }}
       >
         {label}
