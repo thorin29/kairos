@@ -65,13 +65,15 @@ export async function updateProfile(
       Buffer.from(await photo.arrayBuffer()),
     );
     avatarPath = filename;
-  } else if (removePhoto) {
-    avatarPath = null;
   } else if (icon) {
+    // A chosen icon wins over removePhoto: picking an icon also clears any
+    // existing photo, and the form sends removePhoto alongside it.
     if (!AVATAR_ICONS[icon]) {
       return { error: "That icon isn't available.", saved: false };
     }
     avatarPath = `${ICON_PREFIX}${icon}`;
+  } else if (removePhoto) {
+    avatarPath = null;
   }
 
   await prisma.user.update({
