@@ -35,7 +35,7 @@ export function Avatar({
       <img
         src={avatarUrl(avatarPath)}
         alt=""
-        className={`${shell} object-cover`}
+        className={`${sizes[size]} block shrink-0 overflow-hidden rounded-full object-cover select-none`}
         style={ring}
       />
     );
