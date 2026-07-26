@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 
+// The "for all" symbol, standing in for a profile photo on the Everyone badge.
+const FOR_ALL = "\u2200";
+
+const RING_SELECTED =
+  "ring-2 ring-accent ring-offset-2 ring-offset-[var(--color-ground)]";
+
 /**
- * A filter badge: a large profile circle with a small name pill tucked under
- * its bottom-right corner, tinted to the person's colour. Built to be reused
- * anywhere a person filter is wanted, not just the calendar.
+ * A filter badge: a large profile circle with a small, dark name pill sitting
+ * in front of its lower edge — white text, sized to the whole name. Built to
+ * be reused anywhere a person filter is wanted, not just the calendar.
  */
 export function PersonFilterBadge({
   href,
@@ -23,25 +29,19 @@ export function PersonFilterBadge({
     <Link
       href={href}
       aria-current={selected ? "true" : undefined}
-      className="hover-bounce relative block rounded-2xl pb-4 pl-1 pr-6 pt-1 outline-none"
+      className="hover-bounce group relative flex flex-col items-center outline-none"
     >
       <span
-        className={`inline-block rounded-full ${
-          selected
-            ? "ring-2 ring-accent ring-offset-2 ring-offset-[var(--color-ground)]"
-            : ""
+        className={`inline-block rounded-full transition-transform ${
+          selected ? `${RING_SELECTED} scale-105` : "group-hover:scale-105"
         }`}
       >
         <Avatar name={name} color={color} avatarPath={avatarPath} size="lg" />
       </span>
 
       <span
-        className="absolute bottom-1 right-0 max-w-[7rem] truncate rounded-full border px-2.5 py-0.5 text-[0.7rem] font-semibold shadow-sm"
-        style={{
-          backgroundColor: `${color}${selected ? "59" : "33"}`,
-          borderColor: selected ? color : `${color}99`,
-          color: "var(--color-ink)",
-        }}
+        className="relative z-10 -mt-3 whitespace-nowrap rounded-full border border-white/20 px-3 py-0.5 text-xs font-semibold text-white shadow-sm"
+        style={{ backgroundColor: color }}
       >
         {name}
       </span>
@@ -61,23 +61,21 @@ export function AllFilterBadge({
     <Link
       href={href}
       aria-current={selected ? "true" : undefined}
-      className="hover-bounce relative block rounded-2xl pb-4 pl-1 pr-6 pt-1 outline-none"
+      className="hover-bounce group relative flex flex-col items-center outline-none"
     >
       <span
-        className={`flex h-16 w-16 items-center justify-center rounded-full border border-dashed bg-ground font-display text-sm font-semibold text-muted ${
-          selected ? "ring-2 ring-accent ring-offset-2 ring-offset-[var(--color-ground)] border-accent text-accent" : "border-hairline"
+        className={`flex h-16 w-16 items-center justify-center rounded-full border border-dashed bg-ground transition-transform ${
+          selected
+            ? `${RING_SELECTED} scale-105 border-accent`
+            : "border-hairline group-hover:scale-105"
         }`}
       >
-        All
+        <span className="font-display text-3xl leading-none text-muted">
+          {FOR_ALL}
+        </span>
       </span>
 
-      <span
-        className={`absolute bottom-1 right-0 rounded-full border px-2.5 py-0.5 text-[0.7rem] font-semibold shadow-sm ${
-          selected
-            ? "border-accent bg-accent text-white"
-            : "border-hairline bg-surface text-muted"
-        }`}
-      >
+      <span className="relative z-10 -mt-3 whitespace-nowrap rounded-full border border-white/20 bg-accent px-3 py-0.5 text-xs font-semibold text-white shadow-sm">
         Everyone
       </span>
     </Link>
