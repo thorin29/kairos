@@ -137,7 +137,9 @@ async function birthdayEvents(
  */
 /** Filter by one person, several people, or (undefined) everyone. An empty
  *  array means "nobody selected" and matches no rows. */
-function idFilter(userId?: string | string[]): { userId?: unknown } {
+function idFilter(
+  userId?: string | string[],
+): { userId?: string | { in: string[] } } {
   if (userId === undefined) return {};
   if (Array.isArray(userId)) return { userId: { in: userId } };
   return { userId };
