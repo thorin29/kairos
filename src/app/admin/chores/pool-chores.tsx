@@ -3,13 +3,13 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import {
   addPoolChore,
-  setChoreEffort,
   setChorePaused,
   type ChoreActionState,
 } from "@/lib/actions/chores";
 import { Card } from "@/components/ui";
 import { PlusIcon } from "@/components/icons";
-import { EFFORT_LEVELS, effortMeta, nextEffort } from "@/lib/chores/effort";
+import { EFFORT_VALUES, EFFORT_DEFAULT, effortColor } from "@/lib/chores/effort";
+import { EffortControl } from "./effort-control";
 import { DeleteChoreButton } from "./row-actions";
 
 const initial: ChoreActionState = { error: null };
@@ -22,18 +22,19 @@ export type PoolChore = {
   nextDueISO: string | null;
   outstanding: boolean;
   effort: number;
+  effortLocked: boolean;
 };
 
 export function PoolChores({ chores }: { chores: PoolChore[] }) {
   const [state, formAction, pending] = useActionState(addPoolChore, initial);
   const [busy, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-  const [effort, setEffort] = useState(2);
+  const [effort, setEffort] = useState(EFFORT_DEFAULT);
 
   useEffect(() => {
     if (!pending && !state.error) {
       formRef.current?.reset();
-      setEffort(2);
+      setEffort(EFFORT_DEFAULT);
     }
   }, [state, pending]);
 
@@ -78,17 +79,18 @@ export function PoolChores({ chores }: { chores: PoolChore[] }) {
             <div>
               <label className="mb-1.5 block text-sm font-medium">Effort</label>
               <div className="inline-flex h-11 items-center rounded-full border border-hairline p-0.5">
-                {EFFORT_LEVELS.map((lvl) => {
-                  const on = effort === lvl.value;
+                {EFFORT_VALUES.map((v) => {
+                  const on = effort === v;
                   return (
                     <button
-                      key={lvl.value}
+                      key={v}
                       type="button"
-                      onClick={() => setEffort(lvl.value)}
-                      className="inline-flex h-9 items-center rounded-full px-3 text-sm font-medium transition-colors"
-                      style={on ? { backgroundColor: lvl.color, color: "#fff" } : { color: "var(--color-muted)" }}
+                      onClick={() => setEffort(v)}
+                      title={`Effort ${v} of 5`}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-colors"
+                      style={on ? { backgroundColor: effortColor(v), color: "#fff" } : { color: "var(--color-muted)" }}
                     >
-                      {lvl.label}
+                      {v}
                     </button>
                   );
                 })}
@@ -122,22 +124,9 @@ export function PoolChores({ chores }: { chores: PoolChore[] }) {
       {chores.length > 0 && (
         <Card className={`divide-y divide-hairline ${busy ? "opacity-60" : ""}`}>
           {chores.map((c) => {
-            const meta = effortMeta(c.effort);
             return (
               <div key={c.id} className="flex flex-wrap items-center gap-3 p-4">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() =>
-                    startTransition(() => void setChoreEffort(c.id, nextEffort(c.effort)))
-                  }
-                  title={`Effort: ${meta.label} — click to change`}
-                  aria-label={`Effort ${meta.label}`}
-                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.7rem] font-bold text-white disabled:opacity-50"
-                  style={{ backgroundColor: meta.color }}
-                >
-                  {meta.short}
-                </button>
+                <EffortControl id={c.id} value={c.effort} locked={c.effortLocked} />
 
                 <div className="min-w-[11rem] flex-1">
                   <p className="text-sm font-medium">

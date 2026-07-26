@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { addCollaborativeChore } from "@/lib/actions/chores";
 import { PlusIcon } from "@/components/icons";
 import { DAY_NAMES } from "@/lib/days";
-import { EFFORT_LEVELS } from "@/lib/chores/effort";
+import { EFFORT_VALUES, EFFORT_DEFAULT, effortColor } from "@/lib/chores/effort";
 
 type Person = { id: string; name: string; color: string };
 
@@ -21,7 +21,7 @@ export function CollaborativeForm({ people }: { people: Person[] }) {
   const [dayOfWeek, setDayOfWeek] = useState(6); // Saturday
   const [intervalWeeks, setIntervalWeeks] = useState(1);
   const [startISO, setStartISO] = useState(() => new Date().toISOString().slice(0, 10));
-  const [effort, setEffort] = useState(2);
+  const [effort, setEffort] = useState(EFFORT_DEFAULT);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -148,17 +148,18 @@ export function CollaborativeForm({ people }: { people: Person[] }) {
         <div>
           <label className="mb-1.5 block text-sm font-medium">Effort</label>
           <div className="inline-flex h-11 items-center rounded-full border border-hairline p-0.5">
-            {EFFORT_LEVELS.map((lvl) => {
-              const on = effort === lvl.value;
+            {EFFORT_VALUES.map((v) => {
+              const on = effort === v;
               return (
                 <button
-                  key={lvl.value}
+                  key={v}
                   type="button"
-                  onClick={() => setEffort(lvl.value)}
-                  className="inline-flex h-9 items-center rounded-full px-3 text-sm font-medium transition-colors"
-                  style={on ? { backgroundColor: lvl.color, color: "#fff" } : { color: "var(--color-muted)" }}
+                  onClick={() => setEffort(v)}
+                  title={`Effort ${v} of 5`}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-colors"
+                  style={on ? { backgroundColor: effortColor(v), color: "#fff" } : { color: "var(--color-muted)" }}
                 >
-                  {lvl.label}
+                  {v}
                 </button>
               );
             })}

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { clampEffort } from "@/lib/chores/effort";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { generateChores } from "@/lib/chores/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
@@ -31,18 +32,22 @@ export async function addChore(
   return { error: null };
 }
 
-/** Keep an effort value to 1–3, defaulting to 2 (average). */
-function clampEffort(value: number): number {
-  return value === 1 || value === 3 ? value : 2;
-}
-
 /** Change a chore's admin-only effort weight. */
 export async function setChoreEffort(id: string, effort: number): Promise<void> {
   await requireAdmin();
+  const chore = await prisma.chore.findUnique({ where: { id }, select: { effortLocked: true } });
+  if (chore?.effortLocked) return; // locked: ignore stray changes
   await prisma.chore.update({
     where: { id },
     data: { effort: clampEffort(effort) },
   });
+  revalidatePath("/admin/chores");
+}
+
+/** Lock or unlock a chore's effort so it isn't changed by accident. */
+export async function setChoreEffortLocked(id: string, locked: boolean): Promise<void> {
+  await requireAdmin();
+  await prisma.chore.update({ where: { id }, data: { effortLocked: locked } });
   revalidatePath("/admin/chores");
 }
 
@@ -272,12 +277,12 @@ export async function addCollaborativeChore(input: {
 
   const chore = await prisma.chore.upsert({
     where: { title },
-    update: { isCollaborative: true, intervalWeeks, isActive: true, isPool: false, effort: clampEffort(input.effort ?? 2) },
+    update: { isCollaborative: true, intervalWeeks, isActive: true, isPool: false, effort: clampEffort(input.effort ?? 3) },
     create: {
       title,
       isCollaborative: true,
       intervalWeeks,
-      effort: clampEffort(input.effort ?? 2),
+      effort: clampEffort(input.effort ?? 3),
       sortOrder: await prisma.chore.count(),
     },
   });

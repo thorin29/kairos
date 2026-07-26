@@ -1,8 +1,8 @@
 import { AppHeader } from "@/components/app-header";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { loadWorkoutsBoard } from "@/lib/queries/workouts";
-import { todayISO, formatLong } from "@/lib/dates";
-import { WorkoutCard } from "./workout-card";
+import { todayISO, formatLong, dayOfWeek } from "@/lib/dates";
+import { WorkoutsGrid } from "./workouts-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -15,20 +15,23 @@ export default async function WorkoutsPage() {
     <>
       <AppHeader title="Workouts" subtitle={formatLong(today)} active="exercise" />
 
-      <main className="mx-auto max-w-3xl space-y-5 px-6 py-6">
+      <main className="mx-auto max-w-5xl px-6 py-6">
         {board.people.length === 0 ? (
           <p className="rounded-2xl border border-hairline bg-surface p-6 text-sm text-muted">
             Add people to the household to start tracking workouts.
           </p>
         ) : (
-          board.people.map((p) => (
-            <WorkoutCard
-              key={p.user.id}
-              person={p}
+          <>
+            <p className="mb-4 text-sm text-muted">
+              Tap a card to open the plan and log a session.
+            </p>
+            <WorkoutsGrid
+              people={board.people}
               unitSystem={board.unitSystem}
               todayISO={today}
+              todayDow={dayOfWeek(today)}
             />
-          ))
+          </>
         )}
       </main>
     </>

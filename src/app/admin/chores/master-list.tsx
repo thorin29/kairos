@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { renameChore, setChoreEffort } from "@/lib/actions/chores";
+import { renameChore } from "@/lib/actions/chores";
 import { PencilIcon, PeopleIcon } from "@/components/icons";
-import { effortMeta, nextEffort } from "@/lib/chores/effort";
+import { EffortControl } from "./effort-control";
 import { DeleteChoreButton } from "./row-actions";
 
 type ChoreRow = {
@@ -12,6 +12,7 @@ type ChoreRow = {
   unassigned: boolean;
   isCollaborative: boolean;
   effort: number;
+  effortLocked: boolean;
 };
 
 export function MasterList({ chores }: { chores: ChoreRow[] }) {
@@ -65,16 +66,7 @@ function ChoreChip({ chore }: { chore: ChoreRow }) {
 
   return (
     <li className="inline-flex items-center gap-1 rounded-full bg-ground py-1 pl-2 pr-1 text-sm">
-      <button
-        type="button"
-        onClick={() => startTransition(() => setChoreEffort(chore.id, nextEffort(chore.effort)))}
-        title={`Effort: ${effortMeta(chore.effort).label} — click to change`}
-        aria-label={`Effort ${effortMeta(chore.effort).label}`}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[0.7rem] font-bold text-white"
-        style={{ backgroundColor: effortMeta(chore.effort).color }}
-      >
-        {effortMeta(chore.effort).short}
-      </button>
+      <EffortControl id={chore.id} value={chore.effort} locked={chore.effortLocked} />
       {chore.isCollaborative && (
         <PeopleIcon className="h-3.5 w-3.5 text-accent" />
       )}
