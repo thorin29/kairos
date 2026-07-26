@@ -8,9 +8,9 @@ const RING_SELECTED =
   "ring-2 ring-accent ring-offset-2 ring-offset-[var(--color-ground)]";
 
 /**
- * A filter badge: a large profile circle with a small, dark name pill sitting
- * in front of its lower edge — white text, sized to the whole name. Built to
- * be reused anywhere a person filter is wanted, not just the calendar.
+ * A filter badge: a large profile circle with a small, dark name pill tucked
+ * in front of its bottom-right corner — white text, sized to the whole name.
+ * Reusable anywhere a person filter is wanted, not just the calendar.
  */
 export function PersonFilterBadge({
   href,
@@ -29,7 +29,7 @@ export function PersonFilterBadge({
     <Link
       href={href}
       aria-current={selected ? "true" : undefined}
-      className="hover-bounce group relative flex flex-col items-center outline-none"
+      className="hover-bounce group relative block pb-4 pl-1 pr-6 pt-1 outline-none"
     >
       <span
         className={`inline-block rounded-full transition-transform ${
@@ -40,7 +40,7 @@ export function PersonFilterBadge({
       </span>
 
       <span
-        className="relative z-10 -mt-3 whitespace-nowrap rounded-full border border-white/20 px-3 py-0.5 text-xs font-semibold text-white shadow-sm"
+        className="absolute bottom-0 right-0 z-10 whitespace-nowrap rounded-full border border-white/20 px-3 py-0.5 text-xs font-semibold text-white shadow-sm"
         style={{ backgroundColor: color }}
       >
         {name}
@@ -61,7 +61,7 @@ export function AllFilterBadge({
     <Link
       href={href}
       aria-current={selected ? "true" : undefined}
-      className="hover-bounce group relative flex flex-col items-center outline-none"
+      className="hover-bounce group relative block pb-4 pl-1 pr-6 pt-1 outline-none"
     >
       <span
         className={`flex h-16 w-16 items-center justify-center rounded-full border border-dashed bg-ground transition-transform ${
@@ -75,7 +75,7 @@ export function AllFilterBadge({
         </span>
       </span>
 
-      <span className="relative z-10 -mt-3 whitespace-nowrap rounded-full border border-white/20 bg-accent px-3 py-0.5 text-xs font-semibold text-white shadow-sm">
+      <span className="absolute bottom-0 right-0 z-10 whitespace-nowrap rounded-full border border-white/20 bg-accent px-3 py-0.5 text-xs font-semibold text-white shadow-sm">
         Everyone
       </span>
     </Link>

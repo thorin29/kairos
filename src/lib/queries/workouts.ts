@@ -48,6 +48,8 @@ export type PersonWorkout = {
   exercises: ExerciseDef[];
   weightSeries: GraphSeries[];
   today: { scheduled: TodayExercise[]; workedOut: boolean };
+  plan: { day: number; workouts: { id: string; name: string }[] }[];
+  todayPlanned: { id: string; name: string }[];
   reminders: Reminder[];
 };
 
@@ -72,7 +74,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
   const cards: PersonWorkout[] = [];
 
   for (const person of people) {
-    const [exercises, schedules, weightSets, task, todaySession] = await Promise.all([
+    const [exercises, schedules, weightSets, task, todaySession, plannedRows] = await Promise.all([
       prisma.exercise.findMany({
         where: { userId: person.id, isActive: true },
         orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
@@ -104,6 +106,11 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       prisma.workoutSession.findFirst({
         where: { userId: person.id, date: today },
         select: { sets: { select: { exerciseId: true, weight: true, reps: true } } },
+      }),
+      prisma.plannedWorkout.findMany({
+        where: { userId: person.id },
+        orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
+        select: { id: true, dayOfWeek: true, name: true },
       }),
     ]);
 
@@ -224,6 +231,15 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       }
     }
 
+    const pRows = plannedRows as unknown as { id: string; dayOfWeek: number; name: string }[];
+    const plan = Array.from({ length: 7 }, (_, day) => ({
+      day,
+      workouts: pRows
+        .filter((w) => w.dayOfWeek === day)
+        .map((w) => ({ id: w.id, name: w.name })),
+    }));
+    const todayPlanned = plan[dow]?.workouts ?? [];
+
     cards.push({
       user: {
         id: person.id,
@@ -235,6 +251,8 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       exercises: defs,
       weightSeries,
       today: { scheduled, workedOut },
+      plan,
+      todayPlanned,
       reminders,
     });
   }

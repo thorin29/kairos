@@ -298,3 +298,55 @@ export async function markWorkedOut(
   }
   refresh();
 }
+
+// --- workout plan (named workouts per weekday) ---------------------------
+
+export async function addPlannedWorkout(
+  userId: string,
+  dayOfWeek: number,
+  name: string,
+): Promise<void> {
+  const clean = name.trim().slice(0, 40);
+  if (!userId || clean.length < 1 || dayOfWeek < 0 || dayOfWeek > 6) return;
+
+  const count = await prisma.plannedWorkout.count({ where: { userId, dayOfWeek } });
+  await prisma.plannedWorkout.create({
+    data: { userId, dayOfWeek, name: clean, sortOrder: count },
+  });
+  await generateWorkoutTasks();
+  refresh();
+}
+
+export async function removePlannedWorkout(id: string): Promise<void> {
+  await prisma.plannedWorkout.delete({ where: { id } }).catch(() => {});
+  await generateWorkoutTasks();
+  refresh();
+}
+
+/** Copy a day's named workouts onto another day, skipping ones already there. */
+export async function copyDayPlan(
+  userId: string,
+  fromDay: number,
+  toDay: number,
+): Promise<void> {
+  if (!userId || fromDay === toDay) return;
+
+  const [source, existing] = await Promise.all([
+    prisma.plannedWorkout.findMany({
+      where: { userId, dayOfWeek: fromDay },
+      orderBy: { sortOrder: "asc" },
+    }),
+    prisma.plannedWorkout.findMany({ where: { userId, dayOfWeek: toDay } }),
+  ]);
+
+  const have = new Set(existing.map((w) => w.name.toLowerCase()));
+  let order = existing.length;
+  for (const w of source) {
+    if (have.has(w.name.toLowerCase())) continue;
+    await prisma.plannedWorkout.create({
+      data: { userId, dayOfWeek: toDay, name: w.name, sortOrder: order++ },
+    });
+  }
+  await generateWorkoutTasks();
+  refresh();
+}

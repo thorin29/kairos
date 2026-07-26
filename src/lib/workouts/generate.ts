@@ -20,21 +20,29 @@ export async function generateWorkoutTasks(
 ): Promise<{ created: number; removed: number }> {
   const toISO = addDays(fromISO, days - 1);
 
-  const schedules = await prisma.workoutSchedule.findMany({
-    where: {
-      isActive: true,
-      isPaused: false,
-      exercise: { isActive: true },
-      effectiveFrom: { lte: toDateColumn(toISO) },
-      OR: [{ endDate: null }, { endDate: { gte: toDateColumn(fromISO) } }],
-    },
-    select: {
-      userId: true,
-      dayOfWeek: true,
-      effectiveFrom: true,
-      endDate: true,
-    },
-  });
+  const [schedules, planned] = await Promise.all([
+    prisma.workoutSchedule.findMany({
+      where: {
+        isActive: true,
+        isPaused: false,
+        exercise: { isActive: true },
+        effectiveFrom: { lte: toDateColumn(toISO) },
+        OR: [{ endDate: null }, { endDate: { gte: toDateColumn(fromISO) } }],
+      },
+      select: {
+        userId: true,
+        dayOfWeek: true,
+        effectiveFrom: true,
+        endDate: true,
+      },
+    }),
+    prisma.plannedWorkout.findMany({ select: { userId: true, dayOfWeek: true } }),
+  ]);
+
+  // A person trains on a weekday if they have a planned workout for it, or a
+  // scheduled exercise still in its date window.
+  const trains = new Set<string>();
+  for (const w of planned) trains.add(`${w.userId}|${w.dayOfWeek}`);
 
   const expected = new Map<
     string,
@@ -56,6 +64,19 @@ export async function generateWorkoutTasks(
         title: "Workout",
         dueDate: toDateColumn(iso),
         generatedFrom: `workout:${s.userId}`,
+      });
+    }
+
+    for (const key of trains) {
+      const sep = key.lastIndexOf("|");
+      const userId = key.slice(0, sep);
+      if (Number(key.slice(sep + 1)) !== dow) continue;
+      expected.set(`${userId}|${iso}`, {
+        userId,
+        category: Category.EXERCISE,
+        title: "Workout",
+        dueDate: toDateColumn(iso),
+        generatedFrom: `workout:${userId}`,
       });
     }
   }

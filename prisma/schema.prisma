@@ -45,6 +45,7 @@ model User {
   workoutExercises Exercise[]        @relation("WorkoutExercises")
   workoutSchedules WorkoutSchedule[] @relation("WorkoutSchedules")
   workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
+  plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -218,9 +219,11 @@ model Chore {
   isCollaborative Boolean @default(false)
   intervalWeeks   Int     @default(1)
 
-  // Effort weight, admin-only: 1 easy, 2 average, 3 hard. Used to see whether
-  // the week's chores are balanced across the family; never shown to users.
-  effort Int @default(2)
+  // Effort weight, admin-only, on a 1-5 scale. Used to see whether the week's
+  // chores are balanced across the family; never shown to users. Can be locked
+  // so it isn't changed by accident.
+  effort       Int     @default(3)
+  effortLocked Boolean @default(false)
 
   // Seasonal chores stop rather than pile up. Resuming puts one out
   // immediately rather than waiting a full interval.
@@ -498,6 +501,21 @@ model WorkoutSchedule {
 
 // One workout on a date. Saying "yes, I worked out" creates it; logging its
 // detail fills in the sets. Marking it unfinished is fine.
+// A named workout on a weekday — the building block of a person's weekly plan.
+// A day with any of these is a training day; "leg day" and "chest" can both
+// sit on the same day. Details (muscle groups, HIIT specifics) come later.
+model PlannedWorkout {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("PlannedWorkouts", fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek Int      // 0 = Sunday .. 6 = Saturday
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([userId, dayOfWeek])
+}
+
 model WorkoutSession {
   id          String   @id @default(cuid())
   userId      String

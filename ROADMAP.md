@@ -163,6 +163,8 @@ own exercises, optionally schedules them, and records what they did.
 - [x] Per-person exercise definitions with unit, implement, and a tracked flag
 - [x] Weightlifting end to end — basics as one-tap adds that drop off once used
 - [x] Schedule an exercise by weekday, or just log it once
+- [x] Weekly workout plan: named workouts per day, several per day, copy a day
+- [x] Dashboard-style layout with a tap-to-open full view per person
 - [x] Pause a plan or give it an end date, with reminders to resume or renew
 - [x] Binary "worked out today?" on the dashboard; logging completes it
 - [x] Log the weight and reps actually done; unfinished is fine
@@ -172,6 +174,9 @@ own exercises, optionally schedules them, and records what they did.
 - [ ] Running and rowing (single-metric graphs)
 - [ ] Sport, stretching, isometric
 - [ ] HIIT / Crossfit — user-defined workouts with a result
+- [ ] Major muscle groups on weightlifting workouts
+- [ ] A pool of HIIT / Crossfit workouts (timed, intervals, stations) to draw
+      from when building a plan
 - [ ] Multiple sets per exercise, and estimated one-rep max
 - [ ] Concept2 and other device imports
 - [ ] Read-only progress overview across the household in admin
@@ -210,7 +215,7 @@ own exercises, optionally schedules them, and records what they did.
 - [x] Running totals: assigned, chores, completed, missed
 - [x] Scoring start date so a testing period can be excluded
 - [x] Summary page with leader and tie handling
-- [x] Admin-only chore effort weighting (easy / average / hard) and a
+- [x] Admin-only chore effort weighting on a 1-5 scale (lockable) and a
       per-person balance table, so workloads can be evened out by hand
 - [ ] Streaks
 - [ ] Weekly winner, by streak, completion count, or first finished

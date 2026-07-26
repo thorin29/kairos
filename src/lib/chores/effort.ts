@@ -1,24 +1,27 @@
-/** Admin-only chore effort weighting. Dependency-free, safe anywhere. */
+/** Admin-only chore effort weighting on a 1-5 scale. Dependency-free. */
 
-export type EffortLevel = {
-  value: number;
-  label: string;
-  short: string;
-  color: string;
-};
+export const EFFORT_MIN = 1;
+export const EFFORT_MAX = 5;
+export const EFFORT_DEFAULT = 3;
 
-export const EFFORT_LEVELS: EffortLevel[] = [
-  { value: 1, label: "Easy", short: "E", color: "#16a34a" },
-  { value: 2, label: "Average", short: "A", color: "#d97706" },
-  { value: 3, label: "Hard", short: "H", color: "#dc2626" },
-];
+export const EFFORT_VALUES = [1, 2, 3, 4, 5];
 
-export function effortMeta(value: number): EffortLevel {
-  return EFFORT_LEVELS.find((l) => l.value === value) ?? EFFORT_LEVELS[1];
+export function clampEffort(value: number): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return EFFORT_DEFAULT;
+  return Math.min(EFFORT_MAX, Math.max(EFFORT_MIN, n));
 }
 
-/** The next level, wrapping — for a click-to-cycle badge. */
-export function nextEffort(value: number): number {
-  const i = EFFORT_LEVELS.findIndex((l) => l.value === value);
-  return EFFORT_LEVELS[(i + 1) % EFFORT_LEVELS.length].value;
+// Green (light) through amber to red (hard), so a heavy chore reads at a
+// glance.
+const EFFORT_COLORS: Record<number, string> = {
+  1: "#16a34a",
+  2: "#65a30d",
+  3: "#d97706",
+  4: "#ea580c",
+  5: "#dc2626",
+};
+
+export function effortColor(value: number): string {
+  return EFFORT_COLORS[clampEffort(value)] ?? EFFORT_COLORS[3];
 }

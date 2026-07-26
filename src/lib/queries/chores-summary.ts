@@ -18,6 +18,7 @@ export type ChoreSummary = {
   isCollaborative: boolean;
   intervalWeeks: number;
   effort: number;
+  effortLocked: boolean;
 };
 
 /**
@@ -34,6 +35,7 @@ export type PoolChoreRow = {
   nextDueISO: string | null;
   outstanding: boolean;
   effort: number;
+  effortLocked: boolean;
 };
 
 /** Shared chores, with where each one currently stands. */
@@ -69,6 +71,7 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
       nextDueISO,
       outstanding,
       effort: c.effort,
+      effortLocked: c.effortLocked,
     };
   });
 }
@@ -117,6 +120,7 @@ export async function loadChoreSummary(): Promise<ChoreSummary[]> {
       isCollaborative: c.isCollaborative,
       intervalWeeks: c.intervalWeeks,
       effort: c.effort,
+      effortLocked: c.effortLocked,
     };
   });
 }

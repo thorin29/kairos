@@ -201,6 +201,7 @@ export default async function ChoresPage() {
                     unassigned: c.unassigned,
                     isCollaborative: c.isCollaborative,
                     effort: c.effort,
+                    effortLocked: c.effortLocked,
                   }))}
                 />
               )}
