@@ -165,6 +165,8 @@ own exercises, optionally schedules them, and records what they did.
 - [x] Schedule an exercise by weekday, or just log it once
 - [x] Weekly workout plan: named workouts per day, several per day, copy a day
 - [x] Dashboard-style layout with a tap-to-open full view per person
+- [x] Card flow: log the plan, log a new workout, or take a rest/skip day
+- [x] Rest/skip marks the day done but is set aside from scoring
 - [x] Pause a plan or give it an end date, with reminders to resume or renew
 - [x] Binary "worked out today?" on the dashboard; logging completes it
 - [x] Log the weight and reps actually done; unfinished is fine

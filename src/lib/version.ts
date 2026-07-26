@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.20.0";
+export const APP_VERSION = "0.21.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -26,11 +26,21 @@ export const MIGRATIONS = [
   "16_chore_effort",
   "17_effort_scale",
   "18_planned_workouts",
+  "19_rest_day",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.21.0",
+    summary: [
+      "Tapping a workout card now asks: log the plan, log new, or rest/skip",
+      "No plan yet? The card leads with creating one first",
+      "Cards show what each person is doing today; rest/skip won't count later",
+      "Calendar name tags line up with the circle; fixed the gear icon",
+    ],
+  },
   {
     version: "0.20.0",
     summary: [

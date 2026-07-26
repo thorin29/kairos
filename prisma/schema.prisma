@@ -523,6 +523,9 @@ model WorkoutSession {
   date        DateTime @db.Date
   durationMin Int?
   finished    Boolean  @default(true)
+  // A deliberate rest/skip day: marks the day handled without counting toward
+  // scoring later.
+  isRest      Boolean  @default(false)
   notes       String?
   createdAt   DateTime @default(now())
 
