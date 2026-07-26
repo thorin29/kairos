@@ -25,7 +25,7 @@ import { DaySchedule } from "@/components/day-schedule";
 import { MonthGrid } from "@/components/month-grid";
 import { AddEventForm } from "./add-event-form";
 import { SectionHeading, ButtonLink } from "@/components/ui";
-import { Avatar } from "@/components/avatar";
+import { PersonFilterBadge, AllFilterBadge } from "@/components/person-filter";
 import { LockIcon } from "@/components/icons";
 import { isAdmin } from "@/lib/session";
 import { DeleteEventButton } from "@/components/event-actions";
@@ -158,36 +158,18 @@ export default async function CalendarPage({
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Link
-          href={link({ view, date })}
-          className={`${chip} ${userId ? idle : active}`}
-        >
-          Everyone
-        </Link>
-        {people.map((p) => {
-          const selected = userId === p.id;
-          return (
-            <Link
-              key={p.id}
-              href={link({ view, date, who: p.id })}
-              className="inline-flex items-center gap-2 rounded-full border py-1 pl-1 pr-3.5 text-xs font-semibold transition-all hover:brightness-95"
-              style={{
-                backgroundColor: `${p.color}${selected ? "40" : "24"}`,
-                borderColor: `${p.color}${selected ? "" : "80"}`,
-                color: "var(--color-ink)",
-              }}
-            >
-              <Avatar
-                name={p.displayName ?? p.name}
-                color={p.color}
-                avatarPath={p.avatarPath}
-                size="md"
-              />
-              {p.displayName ?? p.name}
-            </Link>
-          );
-        })}
+      <div className="mb-4 flex flex-wrap items-start gap-3">
+        {people.map((p) => (
+          <PersonFilterBadge
+            key={p.id}
+            href={link({ view, date, who: p.id })}
+            name={p.displayName ?? p.name}
+            color={p.color}
+            avatarPath={p.avatarPath}
+            selected={userId === p.id}
+          />
+        ))}
+        <AllFilterBadge href={link({ view, date })} selected={!userId} />
       </div>
 
       <p className="mb-4 text-xs text-muted">

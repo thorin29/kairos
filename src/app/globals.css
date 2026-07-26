@@ -79,3 +79,9 @@ summary {
 button:disabled {
   cursor: not-allowed;
 }
+
+/* Reusable one-shot hover bounce, shared with the book-progress grid, for
+   things like the calendar's person filters. */
+.hover-bounce:hover {
+  animation: book-pop 0.35s ease;
+}
