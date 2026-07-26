@@ -34,7 +34,7 @@ function Badge({
     <Link
       href={href}
       aria-current={selected ? "true" : undefined}
-      className={`hover-bounce group relative w-[6.75rem] shrink-0 outline-none transition-[filter,opacity] ${
+      className={`hover-bounce group relative w-24 shrink-0 outline-none transition-[filter,opacity] ${
         selected ? "" : "opacity-70 grayscale"
       }`}
     >
@@ -48,7 +48,7 @@ function Badge({
       {/* left-6 (24px) + px-2 (8px) puts the text's left edge at 32px — the
           center of the 64px circle. */}
       <span
-        className={`absolute -bottom-1 left-6 z-10 max-w-[4.75rem] truncate rounded-full px-2 py-0.5 text-left font-semibold text-white shadow-sm ${fontFor(
+        className={`absolute -bottom-2 left-6 z-10 max-w-[4.5rem] truncate rounded-full px-2 py-0.5 text-left font-semibold text-white shadow-sm ${fontFor(
           label,
         )} ${selected ? "ring-2 ring-white/70" : ""}`}
         style={{ backgroundColor: pillColor }}
