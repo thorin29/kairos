@@ -1,13 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import {
   addPoolChore,
+  setChoreEffort,
   setChorePaused,
   type ChoreActionState,
 } from "@/lib/actions/chores";
 import { Card } from "@/components/ui";
 import { PlusIcon } from "@/components/icons";
+import { EFFORT_LEVELS, effortMeta, nextEffort } from "@/lib/chores/effort";
 import { DeleteChoreButton } from "./row-actions";
 
 const initial: ChoreActionState = { error: null };
@@ -19,23 +21,29 @@ export type PoolChore = {
   isPaused: boolean;
   nextDueISO: string | null;
   outstanding: boolean;
+  effort: number;
 };
 
 export function PoolChores({ chores }: { chores: PoolChore[] }) {
   const [state, formAction, pending] = useActionState(addPoolChore, initial);
   const [busy, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const [effort, setEffort] = useState(2);
 
   useEffect(() => {
-    if (!pending && !state.error) formRef.current?.reset();
+    if (!pending && !state.error) {
+      formRef.current?.reset();
+      setEffort(2);
+    }
   }, [state, pending]);
 
   return (
     <div className="space-y-4">
       <Card className="p-5">
         <form ref={formRef} action={formAction}>
+          <input type="hidden" name="effort" value={effort} />
           <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[16rem] flex-1">
+            <div className="min-w-[14rem] flex-1">
               <label htmlFor="pool-title" className="mb-1.5 block text-sm font-medium">
                 Shared chore
               </label>
@@ -50,10 +58,7 @@ export function PoolChores({ chores }: { chores: PoolChore[] }) {
             </div>
 
             <div>
-              <label
-                htmlFor="intervalDays"
-                className="mb-1.5 block text-sm font-medium"
-              >
+              <label htmlFor="intervalDays" className="mb-1.5 block text-sm font-medium">
                 Comes back after
               </label>
               <div className="flex items-center gap-2">
@@ -67,6 +72,26 @@ export function PoolChores({ chores }: { chores: PoolChore[] }) {
                   className="tabular h-11 w-24 rounded-full border border-hairline px-5 outline-none focus:border-accent"
                 />
                 <span className="text-sm text-muted">days</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Effort</label>
+              <div className="inline-flex h-11 items-center rounded-full border border-hairline p-0.5">
+                {EFFORT_LEVELS.map((lvl) => {
+                  const on = effort === lvl.value;
+                  return (
+                    <button
+                      key={lvl.value}
+                      type="button"
+                      onClick={() => setEffort(lvl.value)}
+                      className="inline-flex h-9 items-center rounded-full px-3 text-sm font-medium transition-colors"
+                      style={on ? { backgroundColor: lvl.color, color: "#fff" } : { color: "var(--color-muted)" }}
+                    >
+                      {lvl.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -96,47 +121,64 @@ export function PoolChores({ chores }: { chores: PoolChore[] }) {
 
       {chores.length > 0 && (
         <Card className={`divide-y divide-hairline ${busy ? "opacity-60" : ""}`}>
-          {chores.map((c) => (
-            <div key={c.id} className="flex flex-wrap items-center gap-3 p-4">
-              <div className="min-w-[12rem] flex-1">
-                <p className="text-sm font-medium">
-                  {c.title}
-                  {c.isPaused && (
-                    <span className="ml-2 rounded-full bg-ground px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-muted">
-                      paused
-                    </span>
-                  )}
-                </p>
-                <p className="tabular mt-0.5 text-xs text-muted">
-                  every {c.intervalDays} days after it&rsquo;s done
-                  {c.isPaused
-                    ? " · nothing scheduled"
-                    : c.outstanding
-                      ? " · out now"
-                      : c.nextDueISO
-                        ? ` · next ${c.nextDueISO}`
-                        : ""}
-                </p>
+          {chores.map((c) => {
+            const meta = effortMeta(c.effort);
+            return (
+              <div key={c.id} className="flex flex-wrap items-center gap-3 p-4">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    startTransition(() => void setChoreEffort(c.id, nextEffort(c.effort)))
+                  }
+                  title={`Effort: ${meta.label} — click to change`}
+                  aria-label={`Effort ${meta.label}`}
+                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.7rem] font-bold text-white disabled:opacity-50"
+                  style={{ backgroundColor: meta.color }}
+                >
+                  {meta.short}
+                </button>
+
+                <div className="min-w-[11rem] flex-1">
+                  <p className="text-sm font-medium">
+                    {c.title}
+                    {c.isPaused && (
+                      <span className="ml-2 rounded-full bg-ground px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-muted">
+                        paused
+                      </span>
+                    )}
+                  </p>
+                  <p className="tabular mt-0.5 text-xs text-muted">
+                    every {c.intervalDays} days after it&rsquo;s done
+                    {c.isPaused
+                      ? " · nothing scheduled"
+                      : c.outstanding
+                        ? " · out now"
+                        : c.nextDueISO
+                          ? ` · next ${c.nextDueISO}`
+                          : ""}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    startTransition(() => void setChorePaused(c.id, !c.isPaused))
+                  }
+                  className={`inline-flex h-9 items-center rounded-full border px-4 text-xs font-medium transition-colors disabled:opacity-50 ${
+                    c.isPaused
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-hairline text-muted hover:border-accent hover:text-accent"
+                  }`}
+                >
+                  {c.isPaused ? "Resume" : "Pause"}
+                </button>
+
+                <DeleteChoreButton id={c.id} title={c.title} />
               </div>
-
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() =>
-                  startTransition(() => void setChorePaused(c.id, !c.isPaused))
-                }
-                className={`inline-flex h-9 items-center rounded-full border px-4 text-xs font-medium transition-colors disabled:opacity-50 ${
-                  c.isPaused
-                    ? "border-accent bg-accent/10 text-accent"
-                    : "border-hairline text-muted hover:border-accent hover:text-accent"
-                }`}
-              >
-                {c.isPaused ? "Resume" : "Pause"}
-              </button>
-
-              <DeleteChoreButton id={c.id} title={c.title} />
-            </div>
-          ))}
+            );
+          })}
         </Card>
       )}
     </div>

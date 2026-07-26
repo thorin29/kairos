@@ -130,13 +130,15 @@ export async function addPoolChore(
   const existing = await prisma.chore.findUnique({ where: { title } });
   if (existing) return { error: `"${title}" is already on the list.` };
 
+  const effort = clampEffort(Number(formData.get("effort")));
   const count = await prisma.chore.count();
   await prisma.chore.create({
-    data: { title, isPool: true, intervalDays, sortOrder: count },
+    data: { title, isPool: true, intervalDays, sortOrder: count, effort },
   });
 
   await generatePoolChores();
 
+  revalidatePath("/admin/chores");
   revalidatePath("/chores");
   revalidatePath("/");
   return { error: null };
