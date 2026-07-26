@@ -37,7 +37,7 @@ function Badge({
         {children}
       </span>
       <span
-        className={`absolute -bottom-1 left-[56%] z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-0.5 text-xs font-semibold text-white shadow-sm ${
+        className={`absolute -bottom-1 left-[calc(50%-0.75rem)] z-10 whitespace-nowrap rounded-full px-3 py-0.5 text-xs font-semibold text-white shadow-sm ${
           selected ? "ring-2 ring-white/70" : ""
         }`}
         style={{ backgroundColor: pillColor }}
