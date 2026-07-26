@@ -33,6 +33,7 @@ export type PoolChoreRow = {
   isPaused: boolean;
   nextDueISO: string | null;
   outstanding: boolean;
+  effort: number;
 };
 
 /** Shared chores, with where each one currently stands. */
@@ -67,6 +68,7 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
       isPaused: c.isPaused,
       nextDueISO,
       outstanding,
+      effort: c.effort,
     };
   });
 }
