@@ -65,13 +65,15 @@ export async function loadWeek(
  */
 async function birthdayEvents(
   days: string[],
-  userId?: string,
+  userId?: string | string[],
 ): Promise<GridEvent[]> {
   const people = await prisma.user.findMany({
     where: {
       isActive: true,
       birthday: { not: null },
-      ...(userId ? { id: userId } : {}),
+      ...(userId
+        ? { id: Array.isArray(userId) ? { in: userId } : userId }
+        : {}),
     },
     select: {
       id: true,
@@ -133,9 +135,17 @@ async function birthdayEvents(
  * synthesized for whatever range is being viewed: match on month and day,
  * and the birth year gives the age being turned.
  */
+/** Filter by one person, several people, or (undefined) everyone. An empty
+ *  array means "nobody selected" and matches no rows. */
+function idFilter(userId?: string | string[]): { userId?: unknown } {
+  if (userId === undefined) return {};
+  if (Array.isArray(userId)) return { userId: { in: userId } };
+  return { userId };
+}
+
 export async function loadRange(
   days: string[],
-  userId?: string,
+  userId?: string | string[],
 ): Promise<WeekData> {
   const rangeStart = toDateColumn(days[0]);
   const rangeEnd = new Date(
@@ -144,7 +154,7 @@ export async function loadRange(
 
   const events = await prisma.event.findMany({
     where: {
-      ...(userId ? { userId } : {}),
+      ...idFilter(userId),
       OR: [
         // Ordinary events overlapping the window.
         { startsAt: { lt: rangeEnd }, endsAt: { gte: rangeStart } },
@@ -279,11 +289,11 @@ export async function loadWeekTasks(
 
 export async function loadTasksForDays(
   days: string[],
-  userId?: string,
+  userId?: string | string[],
 ): Promise<DayTask[]> {
   const rows = await prisma.task.findMany({
     where: {
-      ...(userId ? { userId } : {}),
+      ...idFilter(userId),
       isOpen: false,
       dueDate: {
         gte: toDateColumn(days[0]),
@@ -303,9 +313,8 @@ export async function loadTasksForDays(
     dayISO: fromDateColumn(t.dueDate),
     status: t.status as string,
     ownerName: t.user.displayName ?? t.user.name,
-    color: userId
-      ? (CATEGORY_COLORS[t.category as keyof typeof CATEGORY_COLORS] ??
-        "#64748b")
-      : t.user.color,
+    // Always the owner's colour, so you can tell whose event it is even when
+    // several people are shown at once.
+    color: t.user.color,
   }));
 }
