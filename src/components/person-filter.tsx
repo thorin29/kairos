@@ -29,10 +29,10 @@ export function PersonFilterBadge({
     <Link
       href={href}
       aria-current={selected ? "true" : undefined}
-      className="hover-bounce group relative block pb-4 pl-1 pr-6 pt-1 outline-none"
+      className="hover-bounce group relative inline-block outline-none"
     >
       <span
-        className={`inline-block rounded-full transition-transform ${
+        className={`block rounded-full transition-transform ${
           selected ? `${RING_SELECTED} scale-105` : "group-hover:scale-105"
         }`}
       >
@@ -40,7 +40,7 @@ export function PersonFilterBadge({
       </span>
 
       <span
-        className="absolute bottom-0 right-0 z-10 whitespace-nowrap rounded-full border border-white/20 px-3 py-0.5 text-xs font-semibold text-white shadow-sm"
+        className="absolute bottom-0 left-[58%] z-10 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/20 px-3 py-0.5 text-xs font-semibold text-white shadow-sm"
         style={{ backgroundColor: color }}
       >
         {name}
@@ -61,7 +61,7 @@ export function AllFilterBadge({
     <Link
       href={href}
       aria-current={selected ? "true" : undefined}
-      className="hover-bounce group relative block pb-4 pl-1 pr-6 pt-1 outline-none"
+      className="hover-bounce group relative inline-block outline-none"
     >
       <span
         className={`flex h-16 w-16 items-center justify-center rounded-full border border-dashed bg-ground transition-transform ${
@@ -75,7 +75,7 @@ export function AllFilterBadge({
         </span>
       </span>
 
-      <span className="absolute bottom-0 right-0 z-10 whitespace-nowrap rounded-full border border-white/20 bg-accent px-3 py-0.5 text-xs font-semibold text-white shadow-sm">
+      <span className="absolute bottom-0 left-[58%] z-10 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/20 bg-accent px-3 py-0.5 text-xs font-semibold text-white shadow-sm">
         Everyone
       </span>
     </Link>

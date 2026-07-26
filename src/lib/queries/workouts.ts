@@ -47,7 +47,7 @@ export type PersonWorkout = {
   categories: WorkoutCategory[];
   exercises: ExerciseDef[];
   weightSeries: GraphSeries[];
-  today: { scheduled: TodayExercise[]; workedOut: boolean };
+  today: { scheduled: TodayExercise[]; workedOut: boolean; rested: boolean };
   plan: { day: number; workouts: { id: string; name: string }[] }[];
   todayPlanned: { id: string; name: string }[];
   reminders: Reminder[];
@@ -105,7 +105,10 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       }),
       prisma.workoutSession.findFirst({
         where: { userId: person.id, date: today },
-        select: { sets: { select: { exerciseId: true, weight: true, reps: true } } },
+        select: {
+          isRest: true,
+          sets: { select: { exerciseId: true, weight: true, reps: true } },
+        },
       }),
       prisma.plannedWorkout.findMany({
         where: { userId: person.id },
@@ -207,7 +210,8 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         };
       });
 
-    const workedOut = task?.status === "COMPLETE";
+    const rested = ((todaySession as unknown as { isRest?: boolean } | null)?.isRest) ?? false;
+    const workedOut = task?.status === "COMPLETE" && !rested;
 
     // Reminders
     const reminders: Reminder[] = [];
@@ -250,7 +254,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       categories,
       exercises: defs,
       weightSeries,
-      today: { scheduled, workedOut },
+      today: { scheduled, workedOut, rested },
       plan,
       todayPlanned,
       reminders,

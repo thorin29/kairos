@@ -209,6 +209,7 @@ export async function logSession(input: {
     where: { id: sessionId },
     data: {
       finished: input.finished ?? true,
+      isRest: false,
       ...(input.notes !== undefined ? { notes: input.notes.slice(0, 300) } : {}),
     },
   });
@@ -348,5 +349,26 @@ export async function copyDayPlan(
     });
   }
   await generateWorkoutTasks();
+  refresh();
+}
+
+/** A deliberate rest/skip day: mark the day handled, but flag it so it won't
+ *  count toward scoring later. */
+export async function restDay(userId: string, dateISO: string): Promise<void> {
+  if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
+  const date = toDateColumn(dateISO);
+
+  const existing = await prisma.workoutSession.findFirst({ where: { userId, date } });
+  if (existing) {
+    await prisma.workoutSession.update({
+      where: { id: existing.id },
+      data: { isRest: true, finished: false },
+    });
+  } else {
+    await prisma.workoutSession.create({
+      data: { userId, date, isRest: true, finished: false },
+    });
+  }
+  await completeWorkoutTask(userId, dateISO);
   refresh();
 }
