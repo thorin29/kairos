@@ -205,7 +205,7 @@ export default async function CalendarPage({
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-start gap-3">
+      <div className="mb-4 flex flex-wrap items-start gap-x-1 gap-y-3">
         {people.map((p) => (
           <PersonFilterBadge
             key={p.id}
