@@ -192,6 +192,24 @@ own exercises, optionally schedules them, and records what they did.
 - [x] Over-allowance recorded rather than blocked
 - [ ] Award a token for winning the week
 - [ ] Timer rather than manual logging
+- [ ] Pull console/PC time automatically instead of logging it by hand
+      (researched Jul 2026):
+  - [ ] Steam — official Steam Web API (`IPlayerService/GetOwnedGames` gives
+        `playtime_forever` and `playtime_2weeks` per game). Needs a free API
+        key and the child's game-details set to public. No per-day history, so
+        poll on a schedule and store the deltas. The one sanctioned, stable
+        option.
+  - [ ] Xbox per-game playtime — no official consumer API (Microsoft's XSAPI
+        is for in-title dev use). Only via unofficial third parties like
+        OpenXBL (xbl.io) or the xbox-webapi-python library; may break anytime.
+  - [ ] Total screen time per child across Xbox + Windows PC — Microsoft
+        Family Safety already tracks this (we have a family account), but there
+        is no official API. An unofficial, reverse-engineered library
+        (`pyfamilysafety`, as used by a Home Assistant integration) reads
+        screen time / app usage read-only. Best coverage, but undocumented and
+        breakable, and needs parent-account credentials stored securely.
+  - [ ] Decide route(s), weigh the ToS / privacy / credential-storage risk of
+        the unofficial ones before building
 
 ## Groceries
 
