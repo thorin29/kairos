@@ -5,7 +5,7 @@ import { DAY_SHORT } from "@/lib/days";
 import { reassignChore } from "@/lib/actions/chores";
 import { reorderPeople } from "@/lib/actions/people";
 import { Card } from "@/components/ui";
-import { GripIcon, PeopleIcon, SwitchIcon } from "@/components/icons";
+import { GripIcon, PeopleIcon, RefreshIcon, SwitchIcon } from "@/components/icons";
 import { RemoveAssignmentButton } from "./row-actions";
 
 type Item = {
@@ -13,6 +13,7 @@ type Item = {
   chore: string;
   dayOfWeek: number;
   isCollaborative: boolean;
+  isAnytime: boolean;
   intervalWeeks: number;
 };
 type PersonCard = { id: string; name: string; color: string; items: Item[] };
@@ -129,12 +130,16 @@ export function ChoreCards({
                 <ul className="divide-y divide-hairline">
                   {p.items.map((a) => (
                     <li key={a.id} className="flex items-center gap-3 py-2">
-                      <span className="tabular w-10 shrink-0 text-xs font-medium text-muted">
-                        {DAY_SHORT[a.dayOfWeek]}
+                      <span className="tabular flex w-10 shrink-0 justify-center text-xs font-medium text-muted">
+                        {a.isAnytime ? (
+                          <RefreshIcon className="h-4 w-4 text-accent" />
+                        ) : (
+                          DAY_SHORT[a.dayOfWeek]
+                        )}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="text-sm">{a.chore}</span>
-                        {(a.isCollaborative || a.intervalWeeks > 1) && (
+                        {(a.isCollaborative || a.isAnytime || a.intervalWeeks > 1) && (
                           <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
                             {a.isCollaborative && (
                               <span className="inline-flex items-center gap-1 text-accent">
@@ -142,31 +147,40 @@ export function ChoreCards({
                                 shared
                               </span>
                             )}
+                            {a.isAnytime && (
+                              <span className="inline-flex items-center gap-1 text-accent">
+                                anytime
+                              </span>
+                            )}
                             {a.intervalWeeks > 1 && (
-                              <span>every {a.intervalWeeks} weeks</span>
+                              <span>
+                                every {a.intervalWeeks} weeks
+                              </span>
                             )}
                           </span>
                         )}
                       </span>
-                      <button
-                        type="button"
-                        aria-label={`Move ${a.chore}`}
-                        title="Move to another person or day"
-                        onClick={() =>
-                          setEditing({
-                            assignmentId: a.id,
-                            chore: a.chore,
-                            userId: p.id,
-                            dayOfWeek: a.dayOfWeek,
-                          })
-                        }
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-accent/10 hover:text-accent"
-                      >
-                        <SwitchIcon className="h-4 w-4" />
-                      </button>
+                      {!a.isAnytime && (
+                        <button
+                          type="button"
+                          aria-label={`Move ${a.chore}`}
+                          title="Move to another person or day"
+                          onClick={() =>
+                            setEditing({
+                              assignmentId: a.id,
+                              chore: a.chore,
+                              userId: p.id,
+                              dayOfWeek: a.dayOfWeek,
+                            })
+                          }
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-accent/10 hover:text-accent"
+                        >
+                          <SwitchIcon className="h-4 w-4" />
+                        </button>
+                      )}
                       <RemoveAssignmentButton
                         id={a.id}
-                        label={`${a.chore} on ${DAY_SHORT[a.dayOfWeek]}`}
+                        label={a.isAnytime ? a.chore : `${a.chore} on ${DAY_SHORT[a.dayOfWeek]}`}
                       />
                     </li>
                   ))}

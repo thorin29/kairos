@@ -10,6 +10,7 @@ import { AssignForm } from "./assign-form";
 import { ChoreCards } from "./chore-cards";
 import { MasterList } from "./master-list";
 import { EffortTable, type BalanceRow } from "./effort-table";
+import { MasterEffortLock } from "./master-effort-lock";
 import { CollaborativeForm } from "./collaborative-form";
 import { AnytimeForm } from "./anytime-form";
 import { AdminBack } from "@/components/admin-back";
@@ -30,6 +31,8 @@ export default async function ChoresPage() {
   ]);
 
   const unassigned = summary.filter((c) => c.unassigned);
+  const allEffortLocked =
+    summary.every((c) => c.effortLocked) && poolChores.every((c) => c.effortLocked);
 
   // Per person, so a parent can see one child's whole week at a glance.
   const byPerson = people.map((p) => ({
@@ -37,7 +40,6 @@ export default async function ChoresPage() {
     name: p.name,
     color: p.color,
     items: summary
-      .filter((c) => !c.isAnytime)
       .flatMap((c) =>
         c.assignments
           .filter((a) => a.userId === p.id)
@@ -46,10 +48,17 @@ export default async function ChoresPage() {
             chore: c.title,
             dayOfWeek: a.dayOfWeek,
             isCollaborative: c.isCollaborative,
+            isAnytime: c.isAnytime,
             intervalWeeks: c.intervalWeeks,
           })),
       )
-      .sort((a, b) => a.dayOfWeek - b.dayOfWeek),
+      .sort((a, b) =>
+        a.isAnytime === b.isAnytime
+          ? a.dayOfWeek - b.dayOfWeek
+          : a.isAnytime
+            ? 1
+            : -1,
+      ),
   }));
 
   // Admin-only effort balance: per person, effort summed by weekday and week,
@@ -58,12 +67,20 @@ export default async function ChoresPage() {
     .map((p) => {
       const days = Array(7).fill(0) as number[];
       const counts = Array(7).fill(0) as number[];
+      let anytimeEffort = 0;
+      let anytimeCount = 0;
       for (const c of summary) {
-        if (c.isAnytime) continue;
         for (const a of c.assignments) {
           if (a.userId !== p.id) continue;
-          days[a.dayOfWeek] += c.effort;
-          counts[a.dayOfWeek] += 1;
+          if (c.isAnytime) {
+            // A per-week share of a multi-week chore, so the weekly table is
+            // comparable: effort 4 every 2 weeks counts as 2 per week.
+            anytimeEffort += c.effort / Math.max(1, c.intervalWeeks);
+            anytimeCount += 1;
+          } else {
+            days[a.dayOfWeek] += c.effort;
+            counts[a.dayOfWeek] += 1;
+          }
         }
       }
       return {
@@ -72,8 +89,9 @@ export default async function ChoresPage() {
         color: p.color,
         days,
         counts,
-        weekEffort: days.reduce((n, v) => n + v, 0),
-        weekCount: counts.reduce((n, v) => n + v, 0),
+        weekEffort:
+          Math.round((days.reduce((n, v) => n + v, 0) + anytimeEffort) * 10) / 10,
+        weekCount: counts.reduce((n, v) => n + v, 0) + anytimeCount,
       };
     })
     .filter((r) => r.weekCount > 0)
@@ -148,11 +166,15 @@ export default async function ChoresPage() {
           )}
 
           <section>
-            <SectionHeading>Effort balance</SectionHeading>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <SectionHeading>Effort balance</SectionHeading>
+              <MasterEffortLock allLocked={allEffortLocked} />
+            </div>
             <p className="mb-3 max-w-2xl text-sm text-muted">
-              Chore effort by person, per day and for the week &mdash; the
-              highest each day and for the week are highlighted, so you can even
-              things out. Only you see this; it isn&rsquo;t shown to anyone else.
+              Chore effort by person, per day and for the week &mdash; anytime
+              chores count as a per-week share of their effort. The highest each
+              day and for the week are highlighted, so you can even things out.
+              Only you see this; it isn&rsquo;t shown to anyone else.
             </p>
             <EffortTable rows={balanceRows} />
           </section>
