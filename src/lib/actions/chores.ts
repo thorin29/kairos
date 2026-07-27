@@ -52,6 +52,13 @@ export async function setChoreEffortLocked(id: string, locked: boolean): Promise
   revalidatePath("/admin/chores");
 }
 
+/** Lock or unlock every chore's effort at once. */
+export async function setAllEffortLocked(locked: boolean): Promise<void> {
+  await requireAdmin();
+  await prisma.chore.updateMany({ data: { effortLocked: locked } });
+  revalidatePath("/admin/chores");
+}
+
 export async function deleteChore(id: string): Promise<void> {
   await requireAdmin();
 

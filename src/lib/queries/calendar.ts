@@ -1,7 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, localParts, toDateColumn, weekDays } from "@/lib/dates";
-import { CATEGORY_COLORS } from "@/lib/colors";
 import { householdTz } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
 
@@ -29,15 +28,6 @@ export type WeekData = {
   days: string[];
   timed: GridEvent[];
   allDay: GridEvent[];
-};
-
-const KIND_TO_CATEGORY: Record<string, keyof typeof CATEGORY_COLORS> = {
-  CLASS: "SCHOOL",
-  WORK: "WORK",
-  APPOINTMENT: "APPOINTMENT",
-  BIRTHDAY: "OTHER",
-  EXTERNAL: "OTHER",
-  OTHER: "OTHER",
 };
 
 /**
@@ -114,7 +104,7 @@ async function birthdayEvents(
         endMin: 1440,
         timeLabel: "All day",
         allDay: true,
-        color: userId ? CATEGORY_COLORS.OTHER : p.color,
+        color: p.color,
         ownerName: who,
         kind: "BIRTHDAY",
         calendarName: null,
@@ -207,9 +197,9 @@ export async function loadRange(
 
     if (!days.includes(start.iso) && !days.includes(end.iso)) return;
 
-    const color = userId
-      ? CATEGORY_COLORS[KIND_TO_CATEGORY[e.kind] ?? "OTHER"]
-      : e.user.color;
+    // Always the owner's colour, so events stay recognisable no matter which
+    // people are filtered in or out.
+    const color = e.user.color;
 
     const suffix = e.rrule ? `-${start.iso}` : "";
 
