@@ -7,9 +7,8 @@ import {
 import { loadChoreMetrics } from "@/lib/queries/chore-metrics";
 import { DAY_SHORT } from "@/lib/days";
 import { formatShort, todayISO } from "@/lib/dates";
-import { Card, SectionHeading, ButtonLink } from "@/components/ui";
+import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
-import { LockIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -58,12 +57,7 @@ export default async function ChoresOverviewPage() {
         title="Chores"
         subtitle="Who has what, and how this week is going"
         active="chores"
-      >
-        <ButtonLink href="/admin/chores" variant="outlined" size="sm">
-          <LockIcon className="h-4 w-4" />
-          Edit
-        </ButtonLink>
-      </AppHeader>
+       />
 
       <main className="mx-auto max-w-5xl px-6 py-6">
 
@@ -157,7 +151,7 @@ export default async function ChoresOverviewPage() {
 
       {poolChores.length > 0 && (
         <section>
-          <SectionHeading>Shared chores</SectionHeading>
+          <SectionHeading>Up for grabs</SectionHeading>
           <Card className="divide-y divide-hairline">
             {poolChores.map((c) => (
               <div key={c.id} className="flex flex-wrap items-center gap-3 p-4">

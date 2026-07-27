@@ -2,9 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
 import { loadGameStatus } from "@/lib/queries/games";
 import { todayISO } from "@/lib/dates";
-import { Card, SectionHeading, ButtonLink } from "@/components/ui";
+import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
-import { LockIcon, TokenIcon } from "@/components/icons";
+import { TokenIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -30,12 +30,7 @@ export default async function GamesPage() {
         title="Game time"
         subtitle="Today's allowance and this week's tokens"
         active="games"
-      >
-        <ButtonLink href="/admin/games" variant="outlined" size="sm">
-          <LockIcon className="h-4 w-4" />
-          Edit limits
-        </ButtonLink>
-      </AppHeader>
+       />
 
       <main className="mx-auto max-w-4xl px-6 py-6">
 

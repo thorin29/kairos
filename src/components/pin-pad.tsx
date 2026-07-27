@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { unlockAdmin, type UnlockState } from "@/lib/actions/session";
 
@@ -17,6 +17,7 @@ export function PinPad({ next = "/admin" }: { next?: string }) {
   const router = useRouter();
   const [pin, setPin] = useState("");
   const [state, formAction, pending] = useActionState(unlockAdmin, initial);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state.ok) router.push(next);
@@ -26,13 +27,30 @@ export function PinPad({ next = "/admin" }: { next?: string }) {
     if (state.error) setPin("");
   }, [state.error]);
 
+  // Let a real keyboard drive the pad too — handy on a laptop or a tablet with
+  // a keyboard attached.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key >= "0" && e.key <= "9") {
+        setPin((p) => (p.length < 8 ? p + e.key : p));
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        setPin((p) => p.slice(0, -1));
+      } else if (e.key === "Enter") {
+        formRef.current?.requestSubmit();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const press = (d: string) => setPin((p) => (p.length < 8 ? p + d : p));
 
   const key =
     "flex h-16 items-center justify-center rounded-2xl border border-hairline bg-surface font-display text-2xl font-medium transition-colors hover:border-accent hover:text-accent active:bg-accent/10";
 
   return (
-    <form action={formAction} className="mx-auto max-w-xs">
+    <form ref={formRef} action={formAction} className="mx-auto max-w-xs">
       <input type="hidden" name="pin" value={pin} />
 
       <div
