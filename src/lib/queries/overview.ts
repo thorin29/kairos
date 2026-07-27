@@ -51,6 +51,7 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
         category: true,
         status: true,
         dueDate: true,
+        lateAfter: true,
         choreId: true,
         isOpen: true,
       },
@@ -77,7 +78,9 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
         (t) => t.status === TaskStatus.COMPLETE,
       ).length;
       const overdue = counted.filter(
-        (t) => t.status === TaskStatus.PENDING && t.dueDate < day,
+        (t) =>
+          t.status === TaskStatus.PENDING &&
+          (t.lateAfter ? day > t.lateAfter : t.dueDate < day),
       ).length;
 
       return {

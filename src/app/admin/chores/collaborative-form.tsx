@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { addCollaborativeChore } from "@/lib/actions/chores";
 import { PlusIcon } from "@/components/icons";
 import { DAY_NAMES } from "@/lib/days";
-import { EFFORT_VALUES, EFFORT_DEFAULT, effortColor } from "@/lib/chores/effort";
 
 type Person = { id: string; name: string; color: string };
 
@@ -15,13 +14,18 @@ const FREQUENCIES = [
   { weeks: 4, label: "Every 4 weeks" },
 ];
 
-export function CollaborativeForm({ people }: { people: Person[] }) {
-  const [title, setTitle] = useState("");
+export function CollaborativeForm({
+  chores,
+  people,
+}: {
+  chores: { id: string; title: string }[];
+  people: Person[];
+}) {
+  const [choreId, setChoreId] = useState("");
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [dayOfWeek, setDayOfWeek] = useState(6); // Saturday
   const [intervalWeeks, setIntervalWeeks] = useState(1);
   const [startISO, setStartISO] = useState(() => new Date().toISOString().slice(0, 10));
-  const [effort, setEffort] = useState(EFFORT_DEFAULT);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -37,17 +41,16 @@ export function CollaborativeForm({ people }: { people: Person[] }) {
     setError(null);
     startTransition(async () => {
       const result = await addCollaborativeChore({
-        title,
+        choreId,
         userIds: [...chosen],
         dayOfWeek,
         intervalWeeks,
         startISO,
-        effort,
       });
       if (result.error) {
         setError(result.error);
       } else {
-        setTitle("");
+        setChoreId("");
         setChosen(new Set());
         setIntervalWeeks(1);
       }
@@ -67,12 +70,18 @@ export function CollaborativeForm({ people }: { people: Person[] }) {
 
       <div>
         <label className="mb-1.5 block text-sm font-medium">Chore</label>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. Tidy the playroom"
+        <select
+          value={choreId}
+          onChange={(e) => setChoreId(e.target.value)}
           className={`${field} w-full sm:max-w-sm`}
-        />
+        >
+          <option value="">Choose a chore</option>
+          {chores.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.title}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>
@@ -143,27 +152,6 @@ export function CollaborativeForm({ people }: { people: Person[] }) {
             onChange={(e) => setStartISO(e.target.value)}
             className={`tabular ${field}`}
           />
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">Effort</label>
-          <div className="inline-flex h-11 items-center rounded-full border border-hairline p-0.5">
-            {EFFORT_VALUES.map((v) => {
-              const on = effort === v;
-              return (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setEffort(v)}
-                  title={`Effort ${v} of 5`}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-colors"
-                  style={on ? { backgroundColor: effortColor(v), color: "#fff" } : { color: "var(--color-muted)" }}
-                >
-                  {v}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         <button

@@ -11,6 +11,7 @@ import { ChoreCards } from "./chore-cards";
 import { MasterList } from "./master-list";
 import { EffortTable, type BalanceRow } from "./effort-table";
 import { CollaborativeForm } from "./collaborative-form";
+import { AnytimeForm } from "./anytime-form";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
 import { AlertIcon } from "@/components/icons";
@@ -36,6 +37,7 @@ export default async function ChoresPage() {
     name: p.name,
     color: p.color,
     items: summary
+      .filter((c) => !c.isAnytime)
       .flatMap((c) =>
         c.assignments
           .filter((a) => a.userId === p.id)
@@ -57,6 +59,7 @@ export default async function ChoresPage() {
       const days = Array(7).fill(0) as number[];
       const counts = Array(7).fill(0) as number[];
       for (const c of summary) {
+        if (c.isAnytime) continue;
         for (const a of c.assignments) {
           if (a.userId !== p.id) continue;
           days[a.dayOfWeek] += c.effort;
@@ -107,16 +110,25 @@ export default async function ChoresPage() {
             </section>
           )}
 
+          {summary.length > 0 && (
+            <section>
+              <SectionHeading>Do anytime</SectionHeading>
+              <Card className="p-5">
+                <AnytimeForm chores={summary} people={people} />
+              </Card>
+            </section>
+          )}
+
           <section>
             <SectionHeading>Collaborative chore</SectionHeading>
             <Card className="p-5">
-              <CollaborativeForm people={people} />
+              <CollaborativeForm chores={summary} people={people} />
             </Card>
           </section>
 
           <section>
             <SectionHeading>Shared chores</SectionHeading>
-            <PoolChores chores={poolChores} />
+            <PoolChores chores={poolChores} available={summary} />
           </section>
 
           {unassigned.length > 0 && (
@@ -154,7 +166,7 @@ export default async function ChoresPage() {
             <SectionHeading>Time to catch up</SectionHeading>
             <Card className="divide-y divide-hairline">
               {summary
-                .filter((c) => !c.unassigned)
+                .filter((c) => !c.unassigned && !c.isAnytime)
                 .map((c) => (
                   <div key={c.id} className="flex flex-wrap gap-3 p-4">
                     <span className="min-w-[10rem] flex-1 text-sm font-medium">
@@ -200,6 +212,7 @@ export default async function ChoresPage() {
                     title: c.title,
                     unassigned: c.unassigned,
                     isCollaborative: c.isCollaborative,
+                    isAnytime: c.isAnytime,
                     effort: c.effort,
                     effortLocked: c.effortLocked,
                   }))}

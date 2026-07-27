@@ -17,6 +17,7 @@ import { loadGameStatus } from "@/lib/queries/games";
 import { GameTimeCard } from "@/components/game-time-card";
 import { PersonWeek } from "@/components/person-week";
 import { generateChores } from "@/lib/chores/generate";
+import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
@@ -64,6 +65,7 @@ export default async function PersonPage({
   await generateWorkoutTasks(today);
   await generatePoolChores(today);
   await generateReadingTasks(today);
+  await generateAnytimeChores(today);
 
   const tasks = await loadPersonDay(id, today);
 
@@ -78,7 +80,11 @@ export default async function PersonPage({
     status: t.status as string,
     dueDateISO: fromDateColumn(t.dueDate),
     isOverdue:
-      fromDateColumn(t.dueDate) < today && t.status === "PENDING" && !t.stale,
+      (t.lateAfter
+        ? today > fromDateColumn(t.lateAfter)
+        : fromDateColumn(t.dueDate) < today) &&
+      t.status === "PENDING" &&
+      !t.stale,
     stale: t.stale,
     locked: Boolean(t.choreId),
   }));

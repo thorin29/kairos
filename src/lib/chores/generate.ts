@@ -58,7 +58,7 @@ export async function generateChores(
   const toISO = addDays(fromISO, days - 1);
 
   const assignments = await prisma.choreAssignment.findMany({
-    where: { isActive: true, chore: { isActive: true } },
+    where: { isActive: true, chore: { isActive: true, isAnytime: false, isPool: false } },
     include: { chore: { select: { title: true, sortOrder: true, intervalWeeks: true } } },
   });
 
@@ -105,8 +105,10 @@ export async function generateChores(
       choreId: { not: null },
       // Shared chores have no assignment behind them and run on their own
       // completion cycle, so they must stay out of this reconciliation or
-      // they'd be treated as orphans and deleted.
+      // they'd be treated as orphans and deleted. "Do anytime" chores run on
+      // their own period cycle and are reconciled separately.
       generatedFrom: { not: null },
+      chore: { isAnytime: false, isPool: false },
       dueDate: { gte: toDateColumn(fromISO), lte: toDateColumn(toISO) },
     },
     select: {

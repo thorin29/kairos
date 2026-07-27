@@ -6,6 +6,7 @@ import { PersonCard } from "@/components/person-card";
 import { AppHeader } from "@/components/app-header";
 import { AddTaskForm } from "@/components/add-task-form";
 import { generateChores } from "@/lib/chores/generate";
+import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
@@ -37,6 +38,7 @@ export default async function Home({
     await generateWorkoutTasks(today);
     await generatePoolChores(today);
     await generateReadingTasks(today);
+    await generateAnytimeChores(today);
     people = await loadDay(today);
   } catch (e) {
     return (
