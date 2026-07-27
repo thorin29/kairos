@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { AdminLock } from "@/components/admin-lock";
+import { isAdmin, adminPinSet } from "@/lib/session";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -33,16 +34,20 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({
+// The layout reads the admin lock state (cookie + DB) on each request.
+export const dynamic = "force-dynamic";
+
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const [unlocked, pinSet] = await Promise.all([isAdmin(), adminPinSet()]);
   return (
     <html lang="en">
       <body
         className={`${bricolage.variable} ${plexSans.variable} ${plexMono.variable} min-h-dvh bg-ground text-ink antialiased`}
       >
         {children}
-        <AdminLock />
+        <AdminLock unlocked={unlocked} pinSet={pinSet} />
       </body>
     </html>
   );

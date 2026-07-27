@@ -93,7 +93,20 @@ export async function currentAdmin(): Promise<AdminUser | null> {
 }
 
 export async function isAdmin(): Promise<boolean> {
+  // An optional PIN: with none set, admin isn't gated at all.
+  if (!(await adminPinSet())) return true;
   return (await currentAdmin()) !== null;
+}
+
+/**
+ * Whether a PIN currently guards admin. When none is set, the lock is just a
+ * shortcut into admin; when one is, it prompts for the PIN first.
+ */
+export async function adminPinSet(): Promise<boolean> {
+  const count = await prisma.user.count({
+    where: { role: "ADMIN", isActive: true, pinHash: { not: null } },
+  });
+  return count > 0;
 }
 
 /**
@@ -103,8 +116,29 @@ export async function isAdmin(): Promise<boolean> {
  */
 export async function requireAdmin(): Promise<AdminUser> {
   const admin = await currentAdmin();
-  if (!admin) {
-    throw new Error("That's a parent-only action. Unlock admin first.");
+  if (admin) return admin;
+
+  // With no PIN set, admin is open — act as the first admin (or, failing
+  // that, the first person) so guarded actions still run.
+  if (!(await adminPinSet())) {
+    const first =
+      (await prisma.user.findFirst({
+        where: { role: "ADMIN", isActive: true },
+        orderBy: { createdAt: "asc" },
+      })) ??
+      (await prisma.user.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: "asc" },
+      }));
+    if (first) {
+      return {
+        id: first.id,
+        name: first.displayName ?? first.name,
+        color: first.color,
+        avatarPath: first.avatarPath,
+      };
+    }
   }
-  return admin;
+
+  throw new Error("That's a parent-only action. Unlock admin first.");
 }

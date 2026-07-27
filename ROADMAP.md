@@ -284,3 +284,9 @@ own exercises, optionally schedules them, and records what they did.
 - [ ] Phone layout for the week grid
 - [ ] Phone layout throughout — the top bar behaves differently on narrow
       screens and each page needs checking on a handset
+
+## Onboarding
+- [ ] First-run setup wizard for a brand-new Kairos: create the first person
+      (the admin), optionally set a shared admin PIN (PIN is optional), and add
+      the rest of the household — so a fresh install has a guided path instead
+      of dropping you into an empty dashboard

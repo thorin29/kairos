@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ArrowLeftIcon, HomeIcon } from "@/components/icons";
+import { LockButton } from "@/app/admin/lock-button";
 
 /**
  * Admin sub-pages are reached from the admin hub, so "back" means the hub —
  * but leaving for the dashboard is just as common, and one button can't be
- * both.
+ * both. The lock ends the admin session from wherever you are.
  */
 export function AdminBack() {
   const base =
@@ -17,7 +18,7 @@ export function AdminBack() {
         className={`${base} border-accent bg-accent/10 text-accent`}
       >
         <ArrowLeftIcon className="h-4 w-4" />
-        Admin
+        Admin Menu
       </Link>
       <Link
         href="/"
@@ -26,6 +27,9 @@ export function AdminBack() {
         <HomeIcon className="h-4 w-4" />
         Dashboard
       </Link>
+      <span className="ml-auto">
+        <LockButton />
+      </span>
     </div>
   );
 }
