@@ -157,6 +157,16 @@ export function LockIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+export function UnlockIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <rect x="4" y="10" width="16" height="11" rx="2" />
+      {/* Open shackle: swung up and to the side. */}
+      <path d="M8 10V7a4 4 0 0 1 7.5-2" />
+    </svg>
+  );
+}
+
 export function GamepadIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>
