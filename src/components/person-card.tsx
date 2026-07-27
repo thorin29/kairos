@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CATEGORY_LABELS } from "@/lib/colors";
-import { Avatar } from "@/components/avatar";
+import { PersonAvatar } from "@/components/person-filter";
 import type { PersonSummary } from "@/lib/queries/overview";
 import { CompletionBar } from "./completion-bar";
 
@@ -8,19 +8,15 @@ export function PersonCard({ person }: { person: PersonSummary }) {
   return (
     <Link
       href={`/person/${person.id}`}
-      className="group flex flex-col rounded-xl border border-hairline bg-surface p-5 transition-colors hover:border-accent"
+      className="hover-bounce group flex flex-col rounded-xl border border-hairline bg-surface p-5 transition-colors hover:border-accent"
     >
-      <div className="flex items-center gap-3">
-        <Avatar
+      <div className="flex items-start justify-between gap-3">
+        <PersonAvatar
           name={person.name}
           color={person.color}
           avatarPath={person.avatarPath}
-          size="sm"
         />
-        <h2 className="font-display text-xl font-semibold tracking-tight">
-          {person.name}
-        </h2>
-        <span className="tabular ml-auto text-lg font-medium">
+        <span className="tabular text-lg font-medium">
           {person.percent === null ? (
             <span className="text-base text-muted">&mdash;</span>
           ) : (
@@ -30,10 +26,10 @@ export function PersonCard({ person }: { person: PersonSummary }) {
       </div>
 
       {person.total === 0 ? (
-        <p className="mt-4 text-sm text-muted">Nothing scheduled today.</p>
+        <p className="mt-3 text-sm text-muted">Nothing scheduled today.</p>
       ) : (
         <>
-          <ul className="mt-4 space-y-3">
+          <ul className="mt-3 space-y-3">
             {person.categories.map((c) => (
               <li key={c.category}>
                 <div className="mb-1.5 flex items-baseline justify-between text-sm">

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Avatar } from "@/components/avatar";
+import { PersonAvatar } from "@/components/person-filter";
 import { CheckIcon } from "@/components/icons";
 import { restDay } from "@/lib/actions/workouts";
 import { PlanBuilder } from "./plan-builder";
@@ -46,16 +47,18 @@ export function WorkoutsGrid({
               setOpenId(p.user.id);
               setStep("menu");
             }}
-            className="hover-bounce flex flex-col items-center gap-3 rounded-2xl border border-hairline bg-surface p-5 text-center outline-none transition-shadow hover:shadow-md"
+            className="hover-bounce group flex flex-col rounded-xl border border-hairline bg-surface p-5 text-left outline-none transition-colors hover:border-accent"
           >
-            <Avatar
-              name={p.user.name}
-              color={p.user.color}
-              avatarPath={p.user.avatarPath}
-              size="lg"
-            />
-            <span className="font-display text-lg font-semibold">{p.user.name}</span>
-            <TileStatus person={p} />
+            <div className="flex items-start justify-between gap-3">
+              <PersonAvatar
+                name={p.user.name}
+                color={p.user.color}
+                avatarPath={p.user.avatarPath}
+              />
+            </div>
+            <div className="mt-2">
+              <TileStatus person={p} />
+            </div>
           </button>
         ))}
       </div>
@@ -200,7 +203,7 @@ function TileStatus({ person }: { person: PersonWorkout }) {
   }
   if (person.todayPlanned.length > 0) {
     return (
-      <span className="flex flex-wrap justify-center gap-1">
+      <span className="flex flex-wrap gap-1">
         {person.todayPlanned.map((w) => (
           <span key={w.id} className="rounded-full bg-ground px-2.5 py-0.5 text-xs font-medium">
             {w.name}
