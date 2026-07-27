@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.22.3";
+export const APP_VERSION = "0.22.4";
 
 export const MIGRATIONS = [
   "0_init",
@@ -32,6 +32,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.22.4",
+    summary: [
+      "Avatars now use one fixed circle whether a photo, icon, or letter — no more shifting when a photo is added",
+      "Calendar name tags stay locked in place regardless of avatar type",
+      "Profile page no longer jumps when you pick an image",
+    ],
+  },
   {
     version: "0.22.3",
     summary: [

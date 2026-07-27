@@ -12,10 +12,10 @@ function fontFor(label: string): string {
 }
 
 /**
- * Every badge is the same fixed width, so the circles are evenly spaced no
- * matter the name lengths. Within that slot the circle sits at the left and
- * the name pill's text begins at the circle's center, extending right — the
- * "shifted right" look, kept uniform so pills never touch their neighbour.
+ * Every badge is a fixed 64px-tall, 96px-wide slot, so circles are evenly
+ * spaced and — crucially — the name pill's position is locked to the slot, not
+ * to whatever is inside the circle. A photo, an icon, and an initial all sit
+ * identically, so switching between them never nudges the pill.
  */
 function Badge({
   href,
@@ -34,19 +34,21 @@ function Badge({
     <Link
       href={href}
       aria-current={selected ? "true" : undefined}
-      className={`hover-bounce group relative w-24 shrink-0 outline-none transition-[filter,opacity] ${
+      className={`hover-bounce group relative block h-16 w-24 shrink-0 outline-none transition-[filter,opacity] ${
         selected ? "" : "opacity-70 grayscale"
       }`}
     >
+      {/* Block, fixed 64px, so there is no text-baseline gap and scaling stays
+          centered on the circle. */}
       <span
-        className={`inline-block transition-transform ${
+        className={`block h-16 w-16 transition-transform ${
           selected ? "scale-105" : "group-hover:scale-105"
         }`}
       >
         {children}
       </span>
-      {/* left-6 (24px) + px-2 (8px) puts the text's left edge at 32px — the
-          center of the 64px circle. */}
+      {/* left-6 (24px) + px-2 (8px) puts the name's left edge at 32px — the
+          center of the 64px circle. -bottom-2 hangs it low like a name tag. */}
       <span
         className={`absolute -bottom-2 left-6 z-10 max-w-[4.5rem] truncate rounded-full px-2 py-0.5 text-left font-semibold text-white shadow-sm ${fontFor(
           label,

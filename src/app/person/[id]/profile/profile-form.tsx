@@ -117,7 +117,7 @@ export function ProfileForm({
       <Card className="p-5">
         <p className="text-sm font-medium">Picture</p>
 
-        <div className="mt-4 flex flex-wrap items-center gap-4">
+        <div className="mt-4 flex items-center gap-4">
           <span
             className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full text-4xl"
             style={{
@@ -144,7 +144,7 @@ export function ProfileForm({
             )}
           </span>
 
-          <div className="space-y-2">
+          <div className="min-w-0 flex-1 space-y-2">
             <input
               type="file"
               name="photo"
@@ -159,18 +159,19 @@ export function ProfileForm({
               className="block w-full text-sm file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border-0 file:bg-accent/10 file:px-4 file:text-sm file:font-medium file:text-accent"
             />
             <p className="text-xs text-muted">JPG, PNG, WebP or GIF, up to 5 MB.</p>
-            {preview && (
-              <button
-                type="button"
-                onClick={() => {
-                  setPreview(null);
-                  setRemovePhoto(true);
-                }}
-                className="text-xs text-muted underline underline-offset-4 hover:text-red-700"
-              >
-                Remove photo
-              </button>
-            )}
+            <button
+              type="button"
+              disabled={!preview}
+              onClick={() => {
+                setPreview(null);
+                setRemovePhoto(true);
+              }}
+              className={`text-xs underline underline-offset-4 ${
+                preview ? "text-muted hover:text-red-700" : "invisible"
+              }`}
+            >
+              Remove photo
+            </button>
           </div>
         </div>
 
