@@ -43,6 +43,7 @@ export default async function ChoresOverviewPage() {
     label: p.displayName ?? p.name,
     stats: metrics.find((m) => m.userId === p.id),
     week: summary
+      .filter((c) => !c.isAnytime)
       .flatMap((c) =>
         c.assignments
           .filter((a) => a.userId === p.id)

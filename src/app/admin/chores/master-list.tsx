@@ -11,6 +11,7 @@ type ChoreRow = {
   title: string;
   unassigned: boolean;
   isCollaborative: boolean;
+  isAnytime: boolean;
   effort: number;
   effortLocked: boolean;
 };
@@ -71,7 +72,10 @@ function ChoreChip({ chore }: { chore: ChoreRow }) {
         <PeopleIcon className="h-3.5 w-3.5 text-accent" />
       )}
       <span className="pl-0.5">{chore.title}</span>
-      {chore.unassigned && (
+      {chore.isAnytime && (
+        <span className="ml-1 text-xs text-accent">anytime</span>
+      )}
+      {chore.unassigned && !chore.isAnytime && (
         <span className="ml-1 text-xs text-muted">unassigned</span>
       )}
       <button

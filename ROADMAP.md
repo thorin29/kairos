@@ -72,6 +72,10 @@ all live in the database, never in this repository.
       fixed number of days after each completion
 - [x] Pause and resume shared chores for the season
 - [x] Cumulative missed count per person
+- [x] "Do anytime" chores: assigned but not tied to a weekday, done any day
+      within a one-or-more-week period, late only at period end, then reset
+- [x] Collaborative, shared, and anytime chores pick from the master list
+      rather than free text
 - [x] Rename a chore in place from the master list
 - [x] Move an assignment to another person or day from its card
 - [x] Reorder the household by dragging the chore cards

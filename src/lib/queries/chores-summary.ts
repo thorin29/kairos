@@ -16,6 +16,7 @@ export type ChoreSummary = {
   gaps: number[];
   unassigned: boolean;
   isCollaborative: boolean;
+  isAnytime: boolean;
   intervalWeeks: number;
   effort: number;
   effortLocked: boolean;
@@ -118,6 +119,7 @@ export async function loadChoreSummary(): Promise<ChoreSummary[]> {
       gaps,
       unassigned: assignments.length === 0,
       isCollaborative: c.isCollaborative,
+      isAnytime: c.isAnytime,
       intervalWeeks: c.intervalWeeks,
       effort: c.effort,
       effortLocked: c.effortLocked,

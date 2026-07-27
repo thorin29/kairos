@@ -8,7 +8,6 @@ import {
 } from "@/lib/actions/chores";
 import { Card } from "@/components/ui";
 import { PlusIcon } from "@/components/icons";
-import { EFFORT_VALUES, EFFORT_DEFAULT, effortColor } from "@/lib/chores/effort";
 import { EffortControl } from "./effort-control";
 import { DeleteChoreButton } from "./row-actions";
 
@@ -25,16 +24,20 @@ export type PoolChore = {
   effortLocked: boolean;
 };
 
-export function PoolChores({ chores }: { chores: PoolChore[] }) {
+export function PoolChores({
+  chores,
+  available,
+}: {
+  chores: PoolChore[];
+  available: { id: string; title: string }[];
+}) {
   const [state, formAction, pending] = useActionState(addPoolChore, initial);
   const [busy, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
-  const [effort, setEffort] = useState(EFFORT_DEFAULT);
 
   useEffect(() => {
     if (!pending && !state.error) {
       formRef.current?.reset();
-      setEffort(EFFORT_DEFAULT);
     }
   }, [state, pending]);
 
@@ -42,20 +45,24 @@ export function PoolChores({ chores }: { chores: PoolChore[] }) {
     <div className="space-y-4">
       <Card className="p-5">
         <form ref={formRef} action={formAction}>
-          <input type="hidden" name="effort" value={effort} />
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[14rem] flex-1">
-              <label htmlFor="pool-title" className="mb-1.5 block text-sm font-medium">
+              <label htmlFor="pool-chore" className="mb-1.5 block text-sm font-medium">
                 Shared chore
               </label>
-              <input
-                id="pool-title"
-                name="title"
+              <select
+                id="pool-chore"
+                name="choreId"
                 required
-                maxLength={80}
-                placeholder="Mow the lawn"
-                className="h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent"
-              />
+                className="h-11 w-full rounded-full border border-hairline bg-surface px-4 outline-none focus:border-accent"
+              >
+                <option value="">Choose a chore</option>
+                {available.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -76,26 +83,6 @@ export function PoolChores({ chores }: { chores: PoolChore[] }) {
               </div>
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-sm font-medium">Effort</label>
-              <div className="inline-flex h-11 items-center rounded-full border border-hairline p-0.5">
-                {EFFORT_VALUES.map((v) => {
-                  const on = effort === v;
-                  return (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setEffort(v)}
-                      title={`Effort ${v} of 5`}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-colors"
-                      style={on ? { backgroundColor: effortColor(v), color: "#fff" } : { color: "var(--color-muted)" }}
-                    >
-                      {v}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
             <button
               type="submit"

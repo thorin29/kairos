@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { clampEffort } from "@/lib/chores/effort";
+import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { generateChores } from "@/lib/chores/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
@@ -86,12 +87,19 @@ export async function assignChore(
   });
   if (existing) return { error: "That's already assigned." };
 
+  // A regular weekly assignment: make sure the chore isn't stuck in another
+  // mode that would keep it out of the weekly generator.
+  await prisma.chore
+    .update({ where: { id: choreId }, data: { isAnytime: false, isPool: false } })
+    .catch(() => null);
+
   await prisma.choreAssignment.create({
     data: { choreId, userId, dayOfWeek, effectiveFrom: toDateColumn(todayISO()) },
   });
 
   await generateChores();
 
+  revalidatePath("/admin/chores");
   revalidatePath("/chores");
   revalidatePath("/");
   return { error: null };
@@ -124,22 +132,30 @@ export async function addPoolChore(
 ): Promise<ChoreActionState> {
   if (!(await isAdmin())) return { error: "Only a parent can change this. Switch profiles first." };
 
-  const title = String(formData.get("title") ?? "").trim().slice(0, 80);
+  const choreId = String(formData.get("choreId") ?? "");
   const intervalDays = Number(formData.get("intervalDays") ?? 0);
 
-  if (title.length < 2) return { error: "Give the chore a name." };
+  if (!choreId) return { error: "Pick a chore." };
   if (!Number.isInteger(intervalDays) || intervalDays < 1 || intervalDays > 365) {
     return { error: "Set how many days between rounds, from 1 to 365." };
   }
 
-  const existing = await prisma.chore.findUnique({ where: { title } });
-  if (existing) return { error: `"${title}" is already on the list.` };
+  const chore = await prisma.chore
+    .update({
+      where: { id: choreId },
+      data: {
+        isPool: true,
+        intervalDays,
+        isActive: true,
+        isCollaborative: false,
+        isAnytime: false,
+      },
+    })
+    .catch(() => null);
+  if (!chore) return { error: "That chore no longer exists." };
 
-  const effort = clampEffort(Number(formData.get("effort")));
-  const count = await prisma.chore.count();
-  await prisma.chore.create({
-    data: { title, isPool: true, intervalDays, sortOrder: count, effort },
-  });
+  // A shared chore belongs to nobody, so clear any person assignments it had.
+  await prisma.choreAssignment.deleteMany({ where: { choreId } });
 
   await generatePoolChores();
 
@@ -249,18 +265,16 @@ export async function renameChore(id: string, title: string): Promise<void> {
  * as collaborative and intervalWeeks sets how often it recurs.
  */
 export async function addCollaborativeChore(input: {
-  title: string;
+  choreId: string;
   userIds: string[];
   dayOfWeek: number;
   intervalWeeks: number;
   startISO?: string;
-  effort?: number;
 }): Promise<{ error: string | null }> {
   if (!(await isAdmin())) {
     return { error: "Only a parent can change this. Switch profiles first." };
   }
 
-  const title = input.title.trim().slice(0, 80);
   const userIds = [...new Set(input.userIds)].filter(Boolean);
   const dayOfWeek = input.dayOfWeek;
   const intervalWeeks = Math.max(1, Math.min(8, Math.floor(input.intervalWeeks || 1)));
@@ -269,34 +283,83 @@ export async function addCollaborativeChore(input: {
       ? input.startISO
       : todayISO();
 
-  if (title.length < 2) return { error: "Give the chore a name." };
+  if (!input.choreId) return { error: "Pick a chore." };
   if (userIds.length < 2) return { error: "Pick at least two people." };
   if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
     return { error: "Pick a day." };
   }
 
-  const chore = await prisma.chore.upsert({
-    where: { title },
-    update: { isCollaborative: true, intervalWeeks, isActive: true, isPool: false, effort: clampEffort(input.effort ?? 3) },
-    create: {
-      title,
-      isCollaborative: true,
-      intervalWeeks,
-      effort: clampEffort(input.effort ?? 3),
-      sortOrder: await prisma.chore.count(),
-    },
-  });
+  const chore = await prisma.chore
+    .update({
+      where: { id: input.choreId },
+      data: {
+        isCollaborative: true,
+        intervalWeeks,
+        isActive: true,
+        isPool: false,
+        isAnytime: false,
+      },
+    })
+    .catch(() => null);
+  if (!chore) return { error: "That chore no longer exists." };
 
   const effectiveFrom = toDateColumn(startISO);
   for (const userId of userIds) {
     await prisma.choreAssignment.upsert({
       where: { choreId_userId_dayOfWeek: { choreId: chore.id, userId, dayOfWeek } },
-      update: { isActive: true },
+      update: { isActive: true, effectiveFrom },
       create: { choreId: chore.id, userId, dayOfWeek, effectiveFrom },
     });
   }
 
   await generateChores();
+
+  revalidatePath("/admin/chores");
+  revalidatePath("/chores");
+  revalidatePath("/");
+  return { error: null };
+}
+
+/**
+ * A "do anytime" chore: assigned to one person, sits on their list for the
+ * whole period (intervalWeeks), done any day, late only at period end.
+ */
+export async function assignAnytimeChore(input: {
+  choreId: string;
+  userId: string;
+  intervalWeeks: number;
+}): Promise<{ error: string | null }> {
+  if (!(await isAdmin())) {
+    return { error: "Only a parent can change this. Switch profiles first." };
+  }
+  if (!input.choreId) return { error: "Pick a chore." };
+  if (!input.userId) return { error: "Pick a person." };
+  const intervalWeeks = Math.max(1, Math.min(8, Math.floor(input.intervalWeeks || 1)));
+
+  const chore = await prisma.chore
+    .update({
+      where: { id: input.choreId },
+      data: {
+        isAnytime: true,
+        intervalWeeks,
+        isActive: true,
+        isPool: false,
+        isCollaborative: false,
+      },
+    })
+    .catch(() => null);
+  if (!chore) return { error: "That chore no longer exists." };
+
+  const effectiveFrom = toDateColumn(todayISO());
+  await prisma.choreAssignment.upsert({
+    where: {
+      choreId_userId_dayOfWeek: { choreId: input.choreId, userId: input.userId, dayOfWeek: 1 },
+    },
+    update: { isActive: true, effectiveFrom },
+    create: { choreId: input.choreId, userId: input.userId, dayOfWeek: 1, effectiveFrom },
+  });
+
+  await generateAnytimeChores();
 
   revalidatePath("/admin/chores");
   revalidatePath("/chores");

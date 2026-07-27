@@ -83,6 +83,10 @@ model Task {
 
   // Date only, no timezone. A chore is due "Tuesday", not "Tuesday 00:00 UTC".
   dueDate     DateTime   @db.Date
+  // For "do anytime" chores: the task shows from its dueDate but isn't late
+  // until after this date (the end of its period). Null for ordinary tasks,
+  // which are late the day after dueDate.
+  lateAfter   DateTime?  @db.Date
   status      TaskStatus @default(PENDING)
   completedAt DateTime?
 
@@ -218,6 +222,10 @@ model Chore {
   // assigned chore recur less often than weekly — 2 is every other week.
   isCollaborative Boolean @default(false)
   intervalWeeks   Int     @default(1)
+
+  // A "do anytime" chore: assigned to a person, sits on their list for the
+  // whole period (intervalWeeks long), done any day, only late at period end.
+  isAnytime Boolean @default(false)
 
   // Effort weight, admin-only, on a 1-5 scale. Used to see whether the week's
   // chores are balanced across the family; never shown to users. Can be locked
