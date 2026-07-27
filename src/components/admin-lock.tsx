@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LockIcon, UnlockIcon } from "@/components/icons";
@@ -39,6 +39,13 @@ export function AdminLock({
 }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+
+  // This component lives in the root layout and never unmounts, so its state
+  // survives navigation. Close the overlay whenever the route changes or admin
+  // becomes unlocked, or it can reappear on a later page.
+  useEffect(() => {
+    setOpen(false);
+  }, [path, unlocked]);
 
   if (
     path.startsWith("/admin") ||

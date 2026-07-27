@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.24.3";
+export const APP_VERSION = "0.24.4";
 
 export const MIGRATIONS = [
   "0_init",
@@ -33,6 +33,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.24.4",
+    summary: [
+      "Fixed the PIN overlay lingering and reappearing after unlocking",
+      "Lock admin now returns to the matching dashboard (chore admin \u2192 chores, etc.)",
+    ],
+  },
   {
     version: "0.24.3",
     summary: [
