@@ -145,7 +145,7 @@ export default async function ChoresPage() {
           </section>
 
           <section>
-            <SectionHeading>Shared chores</SectionHeading>
+            <SectionHeading>Up for grabs</SectionHeading>
             <PoolChores chores={poolChores} available={summary} />
           </section>
 
@@ -185,6 +185,26 @@ export default async function ChoresPage() {
           </section>
 
           <section>
+            <SectionHeading>Master chore list</SectionHeading>
+            <Card className="p-5">
+              <AddChoreForm />
+              {summary.length > 0 && (
+                <MasterList
+                  chores={summary.map((c) => ({
+                    id: c.id,
+                    title: c.title,
+                    unassigned: c.unassigned,
+                    isCollaborative: c.isCollaborative,
+                    isAnytime: c.isAnytime,
+                    effort: c.effort,
+                    effortLocked: c.effortLocked,
+                  }))}
+                />
+              )}
+            </Card>
+          </section>
+
+          <section>
             <SectionHeading>Time to catch up</SectionHeading>
             <Card className="divide-y divide-hairline">
               {summary
@@ -221,26 +241,6 @@ export default async function ChoresPage() {
               A chore stays open until the same chore comes due again. The
               number after each slot is how many days that is.
             </p>
-          </section>
-
-          <section>
-            <SectionHeading>Master chore list</SectionHeading>
-            <Card className="p-5">
-              <AddChoreForm />
-              {summary.length > 0 && (
-                <MasterList
-                  chores={summary.map((c) => ({
-                    id: c.id,
-                    title: c.title,
-                    unassigned: c.unassigned,
-                    isCollaborative: c.isCollaborative,
-                    isAnytime: c.isAnytime,
-                    effort: c.effort,
-                    effortLocked: c.effortLocked,
-                  }))}
-                />
-              )}
-            </Card>
           </section>
         </div>
       )}

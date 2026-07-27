@@ -48,7 +48,7 @@ export function PoolChores({
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[14rem] flex-1">
               <label htmlFor="pool-chore" className="mb-1.5 block text-sm font-medium">
-                Shared chore
+                Up for grabs chore
               </label>
               <select
                 id="pool-chore"

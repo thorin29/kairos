@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { AdminLock } from "@/components/admin-lock";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -41,6 +42,7 @@ export default function RootLayout({
         className={`${bricolage.variable} ${plexSans.variable} ${plexMono.variable} min-h-dvh bg-ground text-ink antialiased`}
       >
         {children}
+        <AdminLock />
       </body>
     </html>
   );
