@@ -219,6 +219,7 @@ export default async function CalendarPage({
         <AllFilterBadge
           href={link({ view, date, who: everyoneWho })}
           selected={allSelected}
+          count={people.length}
         />
       </div>
 

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.22.4";
+export const APP_VERSION = "0.23.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -32,6 +32,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.23.0",
+    summary: [
+      "The calendar avatar (circle + name tag) now used on the dashboard cards",
+      "Dashboard cards show the name only in the avatar, and bounce on hover",
+      "Workouts cards now share the dashboard card layout and avatars",
+      "Everyone filter shows a little person per family member instead of a symbol",
+    ],
+  },
   {
     version: "0.22.4",
     summary: [
