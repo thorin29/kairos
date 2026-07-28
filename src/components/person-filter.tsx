@@ -60,13 +60,13 @@ export function PersonAvatar({
 }
 
 // A plain little person silhouette — deliberately basic.
-function PersonGlyph({ size }: { size: number }) {
+function PersonGlyph({ size, color }: { size: number; color: string }) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="var(--color-accent)"
+      fill={color}
       aria-hidden
     >
       <circle cx="12" cy="8" r="4.2" />
@@ -80,17 +80,17 @@ const MAX_PEOPLE_GLYPHS = 6;
 
 /** The Everyone circle: one little person per family member, shrinking as the
  *  family grows, laid out to fill the same 64px circle. */
-function EveryoneCircle({ count }: { count: number }) {
+function FamilyCircle({ count, color }: { count: number; color: string }) {
   const n = Math.max(1, Math.min(count, MAX_PEOPLE_GLYPHS));
   const size = n <= 1 ? 30 : n === 2 ? 22 : n === 3 ? 16 : 13;
   return (
     <span
       className="flex h-16 w-16 items-center justify-center rounded-full bg-ground"
-      style={{ outline: "2.5px dashed var(--color-accent)", outlineOffset: "0px" }}
+      style={{ outline: `2.5px dashed ${color}`, outlineOffset: "0px" }}
     >
       <span className="flex max-w-[42px] flex-wrap items-center justify-center gap-[1.5px]">
         {Array.from({ length: n }).map((_, i) => (
-          <PersonGlyph key={i} size={size} />
+          <PersonGlyph key={i} size={size} color={color} />
         ))}
       </span>
     </span>
@@ -125,14 +125,16 @@ export function PersonFilterBadge({
   );
 }
 
-export function AllFilterBadge({
+export function FamilyFilterBadge({
   href,
   selected,
   count,
+  color,
 }: {
   href: string;
   selected: boolean;
   count: number;
+  color: string;
 }) {
   return (
     <Link
@@ -142,8 +144,8 @@ export function AllFilterBadge({
         selected ? "" : "opacity-70 grayscale"
       }`}
     >
-      <AvatarBadge label="Everyone" pillColor="var(--color-accent)" selected={selected}>
-        <EveryoneCircle count={count} />
+      <AvatarBadge label="Family" pillColor={color} selected={selected}>
+        <FamilyCircle count={count} color={color} />
       </AvatarBadge>
     </Link>
   );

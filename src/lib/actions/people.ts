@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { Role } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { nextColor } from "@/lib/palette";
+import { nextColor, FAMILY_PALETTE } from "@/lib/palette";
+import { setSetting, FAMILY_COLOR } from "@/lib/settings";
 import {
   isAdmin,
   requireAdmin,
@@ -151,4 +152,19 @@ export async function reorderPeople(orderedIds: string[]): Promise<void> {
   revalidatePath("/");
   revalidatePath("/setup");
   revalidatePath("/chores");
+}
+
+/** Set the shared Family calendar colour (birthdays and family events). */
+export async function setFamilyColor(
+  color: string,
+): Promise<{ error: string | null }> {
+  await requireAdmin();
+  if (!(FAMILY_PALETTE as readonly string[]).includes(color)) {
+    return { error: "Pick a colour from the options." };
+  }
+  await setSetting(FAMILY_COLOR, color);
+  revalidatePath("/setup");
+  revalidatePath("/calendar");
+  revalidatePath("/", "layout");
+  return { error: null };
 }

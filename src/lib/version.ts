@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.25.2";
+export const APP_VERSION = "0.26.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -34,6 +34,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.26.0",
+    summary: [
+      "Birthdays now always show on the calendar, whatever the filter",
+      "Birthdays read \"<name>'s Birthday\" (no age) and use the Family color",
+      "The calendar's \"Everyone\" filter is now \"Family\", with its own color",
+      "Set the Family color in the Household admin page",
+    ],
+  },
   {
     version: "0.25.2",
     summary: [
