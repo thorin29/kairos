@@ -28,6 +28,9 @@ export default async function SetupPage() {
   const scoringStart = await getScoringStart();
   const hasAdmin = people.some((p) => p.role === "ADMIN");
   const pinSet = await adminPinSet();
+  const adminCount = people.filter(
+    (p) => p.role === "ADMIN" && p.isActive,
+  ).length;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -58,7 +61,13 @@ export default async function SetupPage() {
               />
               <span className="font-medium">{p.name}</span>
               <span className="ml-auto flex items-center gap-2">
-                <AdminToggle userId={p.id} isAdmin={p.role === "ADMIN"} />
+                <AdminToggle
+                  userId={p.id}
+                  name={p.displayName ?? p.name}
+                  isAdmin={p.role === "ADMIN"}
+                  pinSet={pinSet}
+                  isOnlyAdmin={p.role === "ADMIN" && adminCount === 1}
+                />
                 <RemovePersonButton id={p.id} name={p.name} />
               </span>
             </li>

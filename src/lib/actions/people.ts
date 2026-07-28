@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { Role } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { nextColor } from "@/lib/palette";
-import { isAdmin, requireAdmin } from "@/lib/session";
+import {
+  isAdmin,
+  requireAdmin,
+  adminPinSet,
+  verifyAdminPin,
+} from "@/lib/session";
 
 export type ActionState = { error: string | null };
 
@@ -54,12 +59,31 @@ export async function addPerson(
   return { error: null };
 }
 
-export async function removePerson(id: string): Promise<void> {
+export async function removePerson(
+  id: string,
+): Promise<{ error: string | null }> {
   await requireAdmin();
+
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) return { error: null };
+
+  // Removing the last admin would strand the household with none.
+  if (user.role === Role.ADMIN) {
+    const adminCount = await prisma.user.count({
+      where: { role: Role.ADMIN, isActive: true },
+    });
+    if (adminCount <= 1) {
+      return {
+        error:
+          "There must always be at least one admin. Make someone else an admin first.",
+      };
+    }
+  }
 
   await prisma.user.delete({ where: { id } });
   revalidatePath("/setup");
   revalidatePath("/");
+  return { error: null };
 }
 
 
@@ -72,18 +96,28 @@ export async function removePerson(id: string): Promise<void> {
 export async function setUserAdmin(input: {
   userId: string;
   makeAdmin: boolean;
+  pin?: string;
 }): Promise<{ error: string | null }> {
   await requireAdmin();
+
+  // Changing who can administer is a protected action: when a PIN is set, it
+  // must be entered here too, in either direction.
+  if (await adminPinSet()) {
+    if (!(await verifyAdminPin((input.pin ?? "").trim()))) {
+      return { error: "That PIN doesn't match." };
+    }
+  }
 
   const user = await prisma.user.findUnique({ where: { id: input.userId } });
   if (!user) return { error: "That person no longer exists." };
 
+  // There must always be at least one admin, PIN or not.
   if (!input.makeAdmin && user.role === Role.ADMIN) {
     const adminCount = await prisma.user.count({
       where: { role: Role.ADMIN, isActive: true },
     });
     if (adminCount <= 1) {
-      return { error: "Keep at least one admin." };
+      return { error: "There must always be at least one admin." };
     }
   }
 
