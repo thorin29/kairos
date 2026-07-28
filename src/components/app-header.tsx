@@ -111,6 +111,15 @@ export function AppHeader({
     // the whole top of the app jumping.
     <header className="sticky top-0 z-30 border-b border-hairline bg-ground/90 backdrop-blur">
       <div className="mx-auto flex h-20 max-w-6xl items-center gap-3 px-4 sm:gap-4 sm:px-6">
+        <Link href="/" aria-label="Kairos home" className="shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="Kairos"
+            className="h-9 w-9 rounded-lg sm:h-10 sm:w-10"
+          />
+        </Link>
+
         <h1 className="font-display min-w-0 flex-1 truncate text-xl font-semibold tracking-tight sm:hidden">
           {title}
         </h1>
