@@ -85,6 +85,9 @@ export function AdminPinControls({ pinSet }: { pinSet: boolean }) {
           autoComplete="off"
           value={newPin}
           onChange={(e) => setNewPin(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+          }}
           placeholder={pinSet ? "New PIN" : "New PIN (4\u20138 digits)"}
           className={field}
         />
