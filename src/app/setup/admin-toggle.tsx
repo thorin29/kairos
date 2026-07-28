@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { setUserAdmin } from "@/lib/actions/people";
+import { PinEntry } from "@/components/pin-entry";
 
 export function AdminToggle({
   userId,
@@ -86,18 +87,10 @@ export function AdminToggle({
 
             {pinSet && (
               <div className="mt-4">
-                <label className="mb-1.5 block text-sm font-medium">
+                <label className="mb-2 block text-sm font-medium">
                   Enter the admin PIN to confirm
                 </label>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  autoFocus
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  className="h-11 w-40 rounded-full border border-hairline bg-surface px-4 outline-none focus:border-accent"
-                />
+                <PinEntry value={pin} onChange={setPin} onSubmit={confirm} />
               </div>
             )}
 
