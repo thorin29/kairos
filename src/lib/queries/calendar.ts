@@ -132,6 +132,13 @@ function idFilter(
   return { userId };
 }
 
+/** Person events matching the filter, plus family events always. */
+function ownerFilter(userId?: string | string[]): object {
+  if (userId === undefined) return {};
+  const inClause = Array.isArray(userId) ? { in: userId } : userId;
+  return { OR: [{ userId: inClause }, { isFamily: true }] };
+}
+
 export async function loadRange(
   days: string[],
   userId?: string | string[],
@@ -141,14 +148,20 @@ export async function loadRange(
     toDateColumn(days[days.length - 1]).getTime() + 2 * 86_400_000,
   );
 
+  const familyColor = await getFamilyColor();
+
   const events = await prisma.event.findMany({
     where: {
-      ...idFilter(userId),
-      OR: [
-        // Ordinary events overlapping the window.
-        { startsAt: { lt: rangeEnd }, endsAt: { gte: rangeStart } },
-        // Repeating ones may have started long before it.
-        { rrule: { not: null }, startsAt: { lt: rangeEnd } },
+      AND: [
+        ownerFilter(userId),
+        {
+          OR: [
+            // Ordinary events overlapping the window.
+            { startsAt: { lt: rangeEnd }, endsAt: { gte: rangeStart } },
+            // Repeating ones may have started long before it.
+            { rrule: { not: null }, startsAt: { lt: rangeEnd } },
+          ],
+        },
       ],
     },
     orderBy: { startsAt: "asc" },
@@ -196,7 +209,7 @@ export async function loadRange(
 
     // Always the owner's colour, so events stay recognisable no matter which
     // people are filtered in or out.
-    const color = e.user.color;
+    const color = e.isFamily ? familyColor : (e.user?.color ?? familyColor);
 
     const suffix = e.rrule ? `-${start.iso}` : "";
 
@@ -205,7 +218,9 @@ export async function loadRange(
       title: e.title,
       location: e.location,
       color,
-      ownerName: e.user.displayName ?? e.user.name,
+      ownerName: e.isFamily
+        ? "Family"
+        : (e.user?.displayName ?? e.user?.name ?? "Family"),
       kind: e.kind as string,
       calendarName: e.externalCalendar?.name ?? null,
       eventId: e.id,
@@ -240,7 +255,7 @@ export async function loadRange(
     });
   }
 
-  allDay.push(...(await birthdayEvents(days, await getFamilyColor())));
+  allDay.push(...(await birthdayEvents(days, familyColor)));
 
   return { days, timed, allDay };
 }

@@ -27,7 +27,8 @@ export async function addEvent(
   _prev: EventState,
   formData: FormData,
 ): Promise<EventState> {
-  const userId = String(formData.get("userId") ?? "");
+  const owner = String(formData.get("userId") ?? "");
+  const isFamily = owner === "family";
   const title = String(formData.get("title") ?? "").trim().slice(0, 120);
   const rawKind = String(formData.get("kind") ?? "");
   const date = String(formData.get("date") ?? "");
@@ -39,7 +40,7 @@ export async function addEvent(
   const interval = Number(formData.get("interval") ?? 1);
   const until = String(formData.get("until") ?? "").trim();
 
-  if (!userId) return { error: "Pick whose event this is.", saved: false };
+  if (!owner) return { error: "Pick whose event this is.", saved: false };
   if (title.length < 2) return { error: "Give the event a name.", saved: false };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return { error: "Pick a date.", saved: false };
@@ -93,7 +94,8 @@ export async function addEvent(
 
   await prisma.event.create({
     data: {
-      userId,
+      userId: isFamily ? null : owner,
+      isFamily,
       kind,
       title,
       location: location || null,
@@ -106,7 +108,7 @@ export async function addEvent(
 
   revalidatePath("/calendar");
   revalidatePath("/");
-  revalidatePath(`/person/${userId}`);
+  if (!isFamily) revalidatePath(`/person/${owner}`);
   return { error: null, saved: true };
 }
 

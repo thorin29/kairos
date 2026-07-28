@@ -96,6 +96,7 @@ export function AddEventForm({
             </label>
             <select id="ev-user" name="userId" required className={field}>
               <option value="">Choose</option>
+              <option value="family">Family (shared)</option>
               {people.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
