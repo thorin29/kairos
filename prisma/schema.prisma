@@ -144,9 +144,12 @@ enum EventKind {
 }
 
 model Event {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String  @id @default(cuid())
+  // Null when the event belongs to the shared "Family" identity rather than a
+  // specific person (isFamily is true in that case).
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isFamily Boolean @default(false)
 
   kind     EventKind
   title    String
