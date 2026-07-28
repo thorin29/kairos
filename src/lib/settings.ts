@@ -1,12 +1,22 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_FAMILY_COLOR } from "@/lib/palette";
 
 export const SCORING_START = "scoringStart";
+export const FAMILY_COLOR = "familyColor";
 
 /** Read any stored setting by key. */
 export async function getSetting(key: string): Promise<string | null> {
   const row = await prisma.appSetting.findUnique({ where: { key } });
   return row?.value ?? null;
+}
+
+/** The colour of the shared Family calendar identity (birthdays, etc.). */
+export async function getFamilyColor(): Promise<string> {
+  const row = await prisma.appSetting.findUnique({
+    where: { key: FAMILY_COLOR },
+  });
+  return row?.value ?? DEFAULT_FAMILY_COLOR;
 }
 
 /**

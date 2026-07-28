@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, localParts, toDateColumn, weekDays } from "@/lib/dates";
+import { getFamilyColor } from "@/lib/settings";
 import { householdTz } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
 
@@ -55,15 +56,13 @@ export async function loadWeek(
  */
 async function birthdayEvents(
   days: string[],
-  userId?: string | string[],
+  familyColor: string,
 ): Promise<GridEvent[]> {
+  // Birthdays are family-wide: always shown, never filtered out.
   const people = await prisma.user.findMany({
     where: {
       isActive: true,
       birthday: { not: null },
-      ...(userId
-        ? { id: Array.isArray(userId) ? { in: userId } : userId }
-        : {}),
     },
     select: {
       id: true,
@@ -81,7 +80,7 @@ async function birthdayEvents(
 
   for (const p of people) {
     const born = fromDateColumn(p.birthday!);
-    const [bornYear, month, day] = born.split("-");
+    const [, month, day] = born.split("-");
 
     // Only the years the range actually touches, so a month view spanning a
     // new year still lands both.
@@ -91,20 +90,18 @@ async function birthdayEvents(
       const iso = `${year}-${month}-${day}`;
       if (!inRange.has(iso)) continue;
 
-      const turning = Number(year) - Number(bornYear);
       const who = p.displayName ?? p.name;
 
       events.push({
         id: `birthday-${p.id}-${year}`,
-        title:
-          turning > 0 ? `${who} turns ${turning}` : `${who}'s birthday`,
+        title: `${who}'s Birthday`,
         location: null,
         dayISO: iso,
         startMin: 0,
         endMin: 1440,
         timeLabel: "All day",
         allDay: true,
-        color: p.color,
+        color: familyColor,
         ownerName: who,
         kind: "BIRTHDAY",
         calendarName: null,
@@ -243,7 +240,7 @@ export async function loadRange(
     });
   }
 
-  allDay.push(...(await birthdayEvents(days, userId)));
+  allDay.push(...(await birthdayEvents(days, await getFamilyColor())));
 
   return { days, timed, allDay };
 }

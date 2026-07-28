@@ -25,8 +25,9 @@ import { DaySchedule } from "@/components/day-schedule";
 import { MonthGrid } from "@/components/month-grid";
 import { AddEventForm } from "./add-event-form";
 import { SectionHeading } from "@/components/ui";
-import { PersonFilterBadge, AllFilterBadge } from "@/components/person-filter";
+import { PersonFilterBadge, FamilyFilterBadge } from "@/components/person-filter";
 import { isAdmin } from "@/lib/session";
+import { getFamilyColor } from "@/lib/settings";
 import { DeleteEventButton } from "@/components/event-actions";
 import { canDeleteEvent } from "@/lib/can-delete-event";
 
@@ -107,6 +108,7 @@ export default async function CalendarPage({
 
   // Resolve the current selection against the real roster, and build helpers to
   // toggle people in and out of it via the URL.
+  const familyColor = await getFamilyColor();
   const allIds = people.map((p) => p.id);
   const selectedSet = new Set<string>(
     !who || who === "all"
@@ -142,7 +144,7 @@ export default async function CalendarPage({
   const caption = noneSelected
     ? "No calendars are selected."
     : allSelected
-      ? "Everyone's schedules."
+      ? "The whole family's schedules."
       : `${joinNames(selectedNames)}'s ${selectedNames.length > 1 ? "schedules" : "schedule"}.`;
 
   const heading =
@@ -210,10 +212,11 @@ export default async function CalendarPage({
             selected={selectedSet.has(p.id)}
           />
         ))}
-        <AllFilterBadge
+        <FamilyFilterBadge
           href={link({ view, date, who: everyoneWho })}
           selected={allSelected}
           count={people.length}
+          color={familyColor}
         />
       </div>
 

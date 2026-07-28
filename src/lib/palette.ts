@@ -20,3 +20,21 @@ export function nextColor(taken: string[]): string {
     PERSON_PALETTE[taken.length % PERSON_PALETTE.length]
   );
 }
+
+/**
+ * Colour options for the shared "Family" calendar identity (birthdays, and —
+ * later — family events and holidays). The first is the default and matches
+ * the app accent.
+ */
+export const FAMILY_PALETTE = [
+  "#0f5c63", // teal (accent, default)
+  "#334155", // slate
+  "#b91c1c", // red
+  "#a16207", // gold
+  "#6d28d9", // purple
+  "#be185d", // pink
+  "#15803d", // green
+  "#1d4ed8", // blue
+] as const;
+
+export const DEFAULT_FAMILY_COLOR = FAMILY_PALETTE[0];
