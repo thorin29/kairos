@@ -13,8 +13,14 @@ export default async function UnlockPage() {
       <BackLink />
 
       <header className="mb-8 mt-8 text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.png"
+          alt="Kairos"
+          className="mx-auto mb-4 h-20 w-20 rounded-2xl"
+        />
         <h1 className="font-display text-3xl font-semibold tracking-tight">
-          Parent PIN
+          Admin PIN
         </h1>
         <p className="mt-2 text-sm text-muted">
           Unlocks the admin area for a few hours.

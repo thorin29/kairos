@@ -143,6 +143,12 @@ all live in the database, never in this repository.
 - [ ] Expand recurrence rules from subscribed feeds
 - [ ] Edit an existing event
 - [ ] Split events crossing midnight across both days
+- [ ] Family-owned subscribed calendars: let a subscribed (ICS) calendar
+      belong to the shared Family identity so its whole feed inherits the
+      Family color — needs isFamily on ExternalCalendar plus feed-form and
+      sync changes (Phase 2b of the Family calendar work)
+- [ ] Make the Family filter an independently togg(le)able owner, and add
+      holidays as a second Family-category source
 
 ## Work
 
