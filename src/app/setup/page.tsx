@@ -3,11 +3,12 @@ import { AddPersonForm } from "./add-person-form";
 import { RemovePersonButton } from "./remove-person-button";
 import { BackLink } from "@/components/back-link";
 import { AdminBack } from "@/components/admin-back";
-import { ChangePinForm } from "./change-pin-form";
+import { AdminPinControls } from "./admin-pin-controls";
+import { AdminToggle } from "./admin-toggle";
 import { ScoringStartForm } from "./scoring-start-form";
 import { getScoringStart } from "@/lib/settings";
 import { SectionHeading } from "@/components/ui";
-import { isAdmin } from "@/lib/session";
+import { isAdmin, adminPinSet } from "@/lib/session";
 import { ParentOnly } from "@/components/parent-only";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ export default async function SetupPage() {
   }
   const scoringStart = await getScoringStart();
   const hasAdmin = people.some((p) => p.role === "ADMIN");
+  const pinSet = await adminPinSet();
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -40,7 +42,7 @@ export default async function SetupPage() {
         </h1>
         <p className="mt-3 text-muted">
           {people.length === 0
-            ? "Start with a parent account. You can add everyone else next, and change any of this later."
+            ? "Start with the first person — they become the admin. You can add everyone else next, and change any of this later."
             : "Add everyone who needs chores, schoolwork, or a schedule."}
         </p>
       </header>
@@ -55,10 +57,8 @@ export default async function SetupPage() {
                 style={{ backgroundColor: p.color }}
               />
               <span className="font-medium">{p.name}</span>
-              <span className="text-xs uppercase tracking-wide text-muted">
-                {p.role === "ADMIN" ? "Parent" : "Child"}
-              </span>
-              <span className="ml-auto">
+              <span className="ml-auto flex items-center gap-2">
+                <AdminToggle userId={p.id} isAdmin={p.role === "ADMIN"} />
                 <RemovePersonButton id={p.id} name={p.name} />
               </span>
             </li>
@@ -73,23 +73,13 @@ export default async function SetupPage() {
       {hasAdmin && (
         <>
           <section className="mt-10">
-            <SectionHeading>Parent PINs</SectionHeading>
-            <div className="space-y-4">
-              {people
-                .filter((p) => p.role === "ADMIN")
-                .map((p) => (
-                  <div
-                    key={p.id}
-                    className="rounded-2xl border border-hairline bg-surface p-5"
-                  >
-                    <ChangePinForm
-                      userId={p.id}
-                      name={p.displayName ?? p.name}
-                      hasPin={Boolean(p.pinHash)}
-                    />
-                  </div>
-                ))}
-            </div>
+            <SectionHeading>Admin PIN</SectionHeading>
+            <p className="mb-3 max-w-xl text-sm text-muted">
+              One shared PIN unlocks admin for whoever needs it. It&rsquo;s
+              optional &mdash; leave it off in a single-adult home and the lock
+              simply opens admin.
+            </p>
+            <AdminPinControls pinSet={pinSet} />
           </section>
 
           <section className="mt-10">

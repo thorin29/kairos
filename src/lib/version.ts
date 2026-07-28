@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.24.4";
+export const APP_VERSION = "0.25.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -28,11 +28,21 @@ export const MIGRATIONS = [
   "18_planned_workouts",
   "19_rest_day",
   "20_anytime_chores",
+  "21_shared_admin_pin",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.25.0",
+    summary: [
+      "One shared admin PIN instead of a PIN per parent (your current PIN is kept)",
+      "Admin is now a per-person toggle on the household page; the first person is the admin",
+      "Turn the PIN on or off, or change it, from the household page (off needs the current PIN)",
+      "With no PIN set, admin is simply open (single-adult homes)",
+    ],
+  },
   {
     version: "0.24.4",
     summary: [

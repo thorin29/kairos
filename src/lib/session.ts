@@ -2,20 +2,23 @@ import "server-only";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getSetting, setSetting, clearSetting } from "@/lib/settings";
+import { hashPin, verifyPin } from "@/lib/auth";
 
 const COOKIE = "fd_admin";
 const UNLOCK_HOURS = 8;
 const SECRET_KEY = "sessionSecret";
+const ADMIN_PIN_KEY = "adminPinHash";
 
 /**
- * There is no per-person sign-in. The dashboard is a shared household
- * screen: everyone sees everything and checks off their own work without
- * identifying themselves, which is the whole point of a wall tablet.
+ * There is no per-person sign-in. The dashboard is a shared household screen:
+ * everyone sees everything and checks off their own work without identifying
+ * themselves, which is the whole point of a wall tablet.
  *
- * The only thing behind a lock is administration — the chore schedule,
- * reading plans, the household list. A parent enters their PIN once and the
- * unlock lasts a few hours, then lapses on its own so an unattended tablet
- * doesn't stay open.
+ * The only thing behind a lock is administration. A single shared PIN guards
+ * it — any admin uses the same PIN — and the PIN is optional: with none set,
+ * admin is simply open. An unlock lasts a few hours, then lapses on its own so
+ * an unattended tablet doesn't stay open.
  */
 async function secret(): Promise<string> {
   const existing = await prisma.appSetting.findUnique({
@@ -41,9 +44,20 @@ function safeEqual(a: string, b: string): boolean {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-export async function startAdminSession(userId: string): Promise<void> {
+/** The shared admin PIN hash, or null when admin isn't gated. */
+async function adminPinHash(): Promise<string | null> {
+  return getSetting(ADMIN_PIN_KEY);
+}
+
+export async function adminPinSet(): Promise<boolean> {
+  return (await adminPinHash()) !== null;
+}
+
+/** Start (or refresh) an unlock. The session isn't tied to a person — the PIN
+ *  is shared — so the cookie carries only an expiry and its signature. */
+export async function startAdminSession(): Promise<void> {
   const expires = Date.now() + UNLOCK_HOURS * 3_600_000;
-  const payload = `${userId}.${expires}`;
+  const payload = String(expires);
 
   const store = await cookies();
   store.set(COOKIE, `${payload}.${sign(payload, await secret())}`, {
@@ -59,6 +73,26 @@ export async function endAdminSession(): Promise<void> {
   store.delete(COOKIE);
 }
 
+async function hasValidUnlockCookie(): Promise<boolean> {
+  const store = await cookies();
+  const raw = store.get(COOKIE)?.value;
+  if (!raw) return false;
+
+  const parts = raw.split(".");
+  if (parts.length !== 2) return false;
+
+  const [expires, signature] = parts;
+  if (!safeEqual(signature, sign(expires, await secret()))) return false;
+  if (Number(expires) < Date.now()) return false;
+  return true;
+}
+
+export async function isAdmin(): Promise<boolean> {
+  // Optional PIN: with none set, admin isn't gated at all.
+  if (!(await adminPinSet())) return true;
+  return hasValidUnlockCookie();
+}
+
 export type AdminUser = {
   id: string;
   name: string;
@@ -66,79 +100,62 @@ export type AdminUser = {
   avatarPath: string | null;
 };
 
-/** The parent who unlocked, or null if the lock is on. */
-export async function currentAdmin(): Promise<AdminUser | null> {
-  const store = await cookies();
-  const raw = store.get(COOKIE)?.value;
-  if (!raw) return null;
-
-  const parts = raw.split(".");
-  if (parts.length !== 3) return null;
-
-  const [userId, expires, signature] = parts;
-  if (!safeEqual(signature, sign(`${userId}.${expires}`, await secret()))) {
-    return null;
-  }
-  if (Number(expires) < Date.now()) return null;
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || !user.isActive || user.role !== "ADMIN") return null;
-
+/** A representative admin for display. With a shared PIN there's no single
+ *  "who unlocked", so this is the first admin (or, failing that, the first
+ *  person) — enough to label the admin area. */
+async function representativeAdmin(): Promise<AdminUser | null> {
+  const first =
+    (await prisma.user.findFirst({
+      where: { role: "ADMIN", isActive: true },
+      orderBy: { createdAt: "asc" },
+    })) ??
+    (await prisma.user.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: "asc" },
+    }));
+  if (!first) return null;
   return {
-    id: user.id,
-    name: user.displayName ?? user.name,
-    color: user.color,
-    avatarPath: user.avatarPath,
+    id: first.id,
+    name: first.displayName ?? first.name,
+    color: first.color,
+    avatarPath: first.avatarPath,
   };
 }
 
-export async function isAdmin(): Promise<boolean> {
-  // An optional PIN: with none set, admin isn't gated at all.
-  if (!(await adminPinSet())) return true;
-  return (await currentAdmin()) !== null;
+/** A representative admin when admin is unlocked (or open), else null. */
+export async function currentAdmin(): Promise<AdminUser | null> {
+  if (!(await isAdmin())) return null;
+  return representativeAdmin();
 }
 
 /**
- * Whether a PIN currently guards admin. When none is set, the lock is just a
- * shortcut into admin; when one is, it prompts for the PIN first.
- */
-export async function adminPinSet(): Promise<boolean> {
-  const count = await prisma.user.count({
-    where: { role: "ADMIN", isActive: true, pinHash: { not: null } },
-  });
-  return count > 0;
-}
-
-/**
- * Guard for actions only a parent may take. Throwing rather than returning
- * an error keeps callers honest: forgetting the check makes the action
- * impossible to run, not silently open.
+ * Guard for actions only an admin may take. Throwing rather than returning an
+ * error keeps callers honest: forgetting the check makes the action impossible
+ * to run, not silently open.
  */
 export async function requireAdmin(): Promise<AdminUser> {
-  const admin = await currentAdmin();
-  if (admin) return admin;
-
-  // With no PIN set, admin is open — act as the first admin (or, failing
-  // that, the first person) so guarded actions still run.
-  if (!(await adminPinSet())) {
-    const first =
-      (await prisma.user.findFirst({
-        where: { role: "ADMIN", isActive: true },
-        orderBy: { createdAt: "asc" },
-      })) ??
-      (await prisma.user.findFirst({
-        where: { isActive: true },
-        orderBy: { createdAt: "asc" },
-      }));
-    if (first) {
-      return {
-        id: first.id,
-        name: first.displayName ?? first.name,
-        color: first.color,
-        avatarPath: first.avatarPath,
-      };
-    }
+  if (!(await isAdmin())) {
+    throw new Error("That's a parent-only action. Unlock admin first.");
   }
+  const admin = await representativeAdmin();
+  if (!admin) throw new Error("No admin account exists yet.");
+  return admin;
+}
 
-  throw new Error("That's a parent-only action. Unlock admin first.");
+/** Check a PIN against the shared admin PIN. */
+export async function verifyAdminPin(pin: string): Promise<boolean> {
+  const hash = await adminPinHash();
+  if (!hash) return false;
+  return verifyPin(pin, hash);
+}
+
+/** Set (or change) the shared admin PIN. */
+export async function saveAdminPin(pin: string): Promise<void> {
+  await setSetting(ADMIN_PIN_KEY, hashPin(pin));
+}
+
+/** Remove the shared admin PIN and end the current unlock. */
+export async function clearAdminPin(): Promise<void> {
+  await clearSetting(ADMIN_PIN_KEY);
+  await endAdminSession();
 }
