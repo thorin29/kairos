@@ -12,8 +12,9 @@ export function RemovePersonButton({ id, name }: { id: string; name: string }) {
       disabled={pending}
       onClick={() => {
         if (confirm(`Remove ${name}? Their tasks and events go too.`)) {
-          startTransition(() => {
-            void removePerson(id);
+          startTransition(async () => {
+            const result = await removePerson(id);
+            if (result?.error) alert(result.error);
           });
         }
       }}

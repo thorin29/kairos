@@ -5,41 +5,128 @@ import { setUserAdmin } from "@/lib/actions/people";
 
 export function AdminToggle({
   userId,
+  name,
   isAdmin,
+  pinSet,
+  isOnlyAdmin,
 }: {
   userId: string;
+  name: string;
   isAdmin: boolean;
+  pinSet: boolean;
+  isOnlyAdmin: boolean;
 }) {
   const [on, setOn] = useState(isAdmin);
+  const [open, setOpen] = useState(false);
+  const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const toggle = () => {
+  // The sole admin can't be demoted here at all — promote someone else first.
+  const locked = on && isOnlyAdmin;
+
+  const confirm = () => {
     setError(null);
     const next = !on;
     start(async () => {
-      const r = await setUserAdmin({ userId, makeAdmin: next });
+      const r = await setUserAdmin({ userId, makeAdmin: next, pin });
       if (r.error) setError(r.error);
-      else setOn(next);
+      else {
+        setOn(next);
+        setOpen(false);
+        setPin("");
+      }
     });
   };
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      disabled={pending}
-      title={
-        error ??
-        (on ? "Admin \u2014 tap to make a member" : "Member \u2014 tap to make an admin")
-      }
-      className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold transition-colors disabled:opacity-50 ${
-        on
-          ? "border-accent bg-accent/10 text-accent"
-          : "border-hairline text-muted hover:border-accent hover:text-accent"
-      }`}
-    >
-      {on ? "Admin" : "Member"}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          if (locked) return;
+          setError(null);
+          setPin("");
+          setOpen(true);
+        }}
+        disabled={locked}
+        title={
+          locked
+            ? "At least one admin is required"
+            : on
+              ? "Admin \u2014 tap to change"
+              : "Member \u2014 tap to change"
+        }
+        className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+          on
+            ? "border-accent bg-accent/10 text-accent"
+            : "border-hairline text-muted hover:border-accent hover:text-accent"
+        }`}
+      >
+        {on ? "Admin" : "Member"}
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl border border-hairline bg-ground p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-display text-xl font-semibold">
+              {on ? `Remove admin from ${name}?` : `Make ${name} an admin?`}
+            </h2>
+            <p className="mt-2 text-sm text-muted">
+              {on
+                ? `${name} will no longer be able to open the admin area.`
+                : `${name} will be able to open the admin area and manage the household.`}
+            </p>
+
+            {pinSet && (
+              <div className="mt-4">
+                <label className="mb-1.5 block text-sm font-medium">
+                  Enter the admin PIN to confirm
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  autoFocus
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
+                  className="h-11 w-40 rounded-full border border-hairline bg-surface px-4 outline-none focus:border-accent"
+                />
+              </div>
+            )}
+
+            {error && (
+              <p role="alert" className="mt-3 text-sm font-medium text-red-700">
+                {error}
+              </p>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="h-10 rounded-full px-4 text-sm font-medium text-muted transition-colors hover:text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirm}
+                disabled={pending}
+                className="h-10 rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
+              >
+                {pending ? "Saving\u2026" : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
