@@ -99,6 +99,12 @@ export function AdminLock({
             className="w-full max-w-xs rounded-3xl border border-hairline bg-ground p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="Kairos"
+              className="mx-auto mb-3 h-14 w-14 rounded-xl"
+            />
             <h2 className="mb-1 text-center font-display text-xl font-semibold">
               Admin PIN
             </h2>
