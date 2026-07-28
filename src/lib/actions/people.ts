@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { Role } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { hashPin } from "@/lib/auth";
 import { nextColor } from "@/lib/palette";
 import { isAdmin, requireAdmin } from "@/lib/session";
 
@@ -18,23 +17,21 @@ export async function addPerson(
   formData: FormData,
 ): Promise<ActionState> {
   // First run has no accounts, so nobody can be signed in yet. Once anyone
-  // exists, adding people is a parent action.
+  // exists, adding people is an admin action.
   const anyone = await prisma.user.count();
   if (anyone > 0 && !(await isAdmin())) {
-    return { error: "Only a parent can change this. Switch profiles first." };
+    return { error: "Only an admin can change this. Unlock admin first." };
   }
 
   const name = cleanName(formData.get("name"));
-  const role = formData.get("role") === "ADMIN" ? Role.ADMIN : Role.MEMBER;
-  const pin = String(formData.get("pin") ?? "").trim();
-
   if (name.length < 2) {
     return { error: "Enter a name with at least two characters." };
   }
 
-  if (role === Role.ADMIN && !/^\d{4,8}$/.test(pin)) {
-    return { error: "Parents need a PIN of 4 to 8 digits." };
-  }
+  // The very first person is the admin. After that, admin is an explicit
+  // choice, and the PIN (if any) is shared and set separately.
+  const makeAdmin = anyone === 0 || formData.get("role") === "ADMIN";
+  const role = makeAdmin ? Role.ADMIN : Role.MEMBER;
 
   const existing = await prisma.user.findFirst({ where: { name } });
   if (existing) {
@@ -47,7 +44,6 @@ export async function addPerson(
     data: {
       name,
       role,
-      pinHash: pin ? hashPin(pin) : null,
       color: nextColor(others.map((o) => o.color)),
       sortOrder: others.length,
     },
@@ -66,43 +62,39 @@ export async function removePerson(id: string): Promise<void> {
   revalidatePath("/");
 }
 
-export type PinState = { error: string | null; saved: boolean };
 
 /**
  * Only parents hold PINs, and only inside the unlocked admin area — so the
  * old PIN isn't asked for again. Losing every PIN means editing the User
  * row directly in Postgres, which is the intended escape hatch.
  */
-export async function changePin(
-  _prev: PinState,
-  formData: FormData,
-): Promise<PinState> {
+/** Make a person an admin, or drop them back to a member. */
+export async function setUserAdmin(input: {
+  userId: string;
+  makeAdmin: boolean;
+}): Promise<{ error: string | null }> {
   await requireAdmin();
 
-  const userId = String(formData.get("userId") ?? "");
-  const pin = String(formData.get("pin") ?? "").trim();
-  const confirm = String(formData.get("confirm") ?? "").trim();
+  const user = await prisma.user.findUnique({ where: { id: input.userId } });
+  if (!user) return { error: "That person no longer exists." };
 
-  if (!/^\d{4,8}$/.test(pin)) {
-    return { error: "A PIN is 4 to 8 digits.", saved: false };
-  }
-  if (pin !== confirm) {
-    return { error: "The two PINs don't match.", saved: false };
-  }
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) return { error: "That person no longer exists.", saved: false };
-  if (user.role !== Role.ADMIN) {
-    return { error: "Only parent accounts use a PIN.", saved: false };
+  if (!input.makeAdmin && user.role === Role.ADMIN) {
+    const adminCount = await prisma.user.count({
+      where: { role: Role.ADMIN, isActive: true },
+    });
+    if (adminCount <= 1) {
+      return { error: "Keep at least one admin." };
+    }
   }
 
   await prisma.user.update({
-    where: { id: userId },
-    data: { pinHash: hashPin(pin) },
+    where: { id: input.userId },
+    data: { role: input.makeAdmin ? Role.ADMIN : Role.MEMBER },
   });
 
   revalidatePath("/setup");
-  return { error: null, saved: true };
+  revalidatePath("/", "layout");
+  return { error: null };
 }
 
 /**

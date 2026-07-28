@@ -7,11 +7,14 @@ const initial: ActionState = { error: null };
 
 export function AddPersonForm({ isFirst }: { isFirst: boolean }) {
   const [state, formAction, pending] = useActionState(addPerson, initial);
-  const [role, setRole] = useState(isFirst ? "ADMIN" : "MEMBER");
+  const [role, setRole] = useState("MEMBER");
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (!pending && !state.error) formRef.current?.reset();
+    if (!pending && !state.error) {
+      formRef.current?.reset();
+      setRole("MEMBER");
+    }
   }, [state, pending]);
 
   return (
@@ -35,59 +38,44 @@ export function AddPersonForm({ isFirst }: { isFirst: boolean }) {
         </p>
       </div>
 
-      <fieldset>
-        <legend className="block text-sm font-medium">Role</legend>
-        <div className="mt-1.5 flex gap-2">
-          {[
-            { value: "ADMIN", label: "Parent" },
-            { value: "MEMBER", label: "Child" },
-          ].map((opt) => (
-            <label
-              key={opt.value}
-              className={`cursor-pointer rounded-md border px-4 py-2 text-sm ${
-                role === opt.value
-                  ? "border-accent bg-accent/5 font-medium text-accent"
-                  : "border-hairline bg-surface text-muted"
-              }`}
-            >
-              <input
-                type="radio"
-                name="role"
-                value={opt.value}
-                checked={role === opt.value}
-                onChange={() => setRole(opt.value)}
-                className="sr-only"
-              />
-              {opt.label}
-            </label>
-          ))}
-        </div>
-        <p className="mt-1.5 text-xs text-muted">
-          Parents can assign tasks to anyone and edit chore lists, reading
-          plans, and schedules.
+      {isFirst ? (
+        <p className="text-sm text-muted">
+          The first person is the household admin. You can set a shared admin
+          PIN and add more admins after this.
         </p>
-      </fieldset>
-
-      {role === "ADMIN" && (
-        <div>
-          <label htmlFor="pin" className="block text-sm font-medium">
-            PIN
-          </label>
-          <input
-            id="pin"
-            name="pin"
-            inputMode="numeric"
-            pattern="\d{4,8}"
-            maxLength={8}
-            required
-            autoComplete="off"
-            placeholder="4 to 8 digits"
-            className="tabular mt-1.5 w-40 rounded-md border border-hairline bg-surface px-3 py-2 text-base outline-none focus:border-accent"
-          />
+      ) : (
+        <fieldset>
+          <legend className="block text-sm font-medium">Access</legend>
+          <div className="mt-1.5 flex gap-2">
+            {[
+              { value: "MEMBER", label: "Member" },
+              { value: "ADMIN", label: "Admin" },
+            ].map((opt) => (
+              <label
+                key={opt.value}
+                className={`cursor-pointer rounded-md border px-4 py-2 text-sm ${
+                  role === opt.value
+                    ? "border-accent bg-accent/5 font-medium text-accent"
+                    : "border-hairline bg-surface text-muted"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="role"
+                  value={opt.value}
+                  checked={role === opt.value}
+                  onChange={() => setRole(opt.value)}
+                  className="sr-only"
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
           <p className="mt-1.5 text-xs text-muted">
-            Asked for before parent-only actions.
+            Admins can open the admin area to assign tasks and edit chore lists,
+            reading plans, and schedules. You can change this any time.
           </p>
-        </div>
+        </fieldset>
       )}
 
       {state.error && (

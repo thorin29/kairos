@@ -290,3 +290,17 @@ own exercises, optionally schedules them, and records what they did.
       (the admin), optionally set a shared admin PIN (PIN is optional), and add
       the rest of the household — so a fresh install has a guided path instead
       of dropping you into an empty dashboard
+
+## Security hardening
+- [ ] Brute-force protection: PIN attempts are currently unlimited — nothing
+      rate-limits or locks out after repeated wrong guesses. Low stakes for a
+      kids-vs-parents LAN threat model, but a real gap.
+- [ ] Threat model / internet exposure: the PIN scheme is for a local network
+      only ("swap for a real password flow before exposing this to the
+      internet"). If Kairos is ever reachable from outside the house, PINs
+      aren't enough — that needs real auth + HTTPS. A conscious decision.
+- [ ] Session lifetime / auto-lock: confirm how long an unlock lasts and
+      whether it should auto-lock after inactivity (a shared wall tablet argues
+      for a shortish timeout).
+- [ ] Cookie signing secret: confirm the admin session is signed with a secret
+      from the environment, not a weak default.
