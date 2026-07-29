@@ -167,6 +167,14 @@ export function UnlockIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+export function MoonIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5Z" />
+    </svg>
+  );
+}
+
 export function GamepadIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>

@@ -166,6 +166,15 @@ all live in the database, never in this repository.
 - [ ] Read-only metrics page
 
 ## Workouts
+- [ ] Workout card zoom/pop-out: clicking a card animates it growing over the
+      others into the expanded view (currently it opens as a larger card
+      without the zoom animation)
+- [ ] Create custom workouts from the card (HIIT / CrossFit builders)
+- [ ] Admin: delete any person's workouts — pick a user in the workouts admin,
+      see their logged workouts in a list, delete individually
+- [ ] Workout plans: optional end date (plan expiry); no end date is fine too
+- [ ] Admin: pause a person's workouts for a set period (vacations) — no plan
+      tasks generated while paused
 
 A personal training log, not an assigned routine: each person defines their
 own exercises, optionally schedules them, and records what they did.
