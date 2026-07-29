@@ -166,9 +166,13 @@ all live in the database, never in this repository.
 - [ ] Read-only metrics page
 
 ## Workouts
-- [ ] Workout card zoom/pop-out: clicking a card animates it growing over the
-      others into the expanded view (currently it opens as a larger card
-      without the zoom animation)
+- [x] Workout card pop-out: the opened panel scales up and pulls into focus
+      from the tapped side, with the resting card's action icons held softly
+      out of focus (v0.29.0)
+- [ ] Better card animation: the *actual card* pops out — the tapped tile lifts
+      from its slot and grows into the centre of the screen as it expands,
+      rather than a separate panel fading in over it (shared-element / FLIP
+      transition from the card's real position to the enlarged view)
 - [ ] Create custom workouts from the card (HIIT / CrossFit builders)
 - [ ] Admin: delete any person's workouts — pick a user in the workouts admin,
       see their logged workouts in a list, delete individually
