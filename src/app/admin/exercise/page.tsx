@@ -1,11 +1,15 @@
 import { AdminBack } from "@/components/admin-back";
-import { loadWorkoutAdmin } from "@/lib/queries/workouts";
+import { loadWorkoutAdmin, loadExercisePool } from "@/lib/queries/workouts";
 import { WorkoutAdmin } from "./workout-admin";
+import { ExercisePool } from "./exercise-pool";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminWorkoutsPage() {
-  const { unitSystem, people } = await loadWorkoutAdmin();
+  const [{ unitSystem, people }, pool] = await Promise.all([
+    loadWorkoutAdmin(),
+    loadExercisePool(),
+  ]);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -16,12 +20,15 @@ export default async function AdminWorkoutsPage() {
           Workouts
         </h1>
         <p className="mt-2 max-w-xl text-muted">
-          People build and log their own workouts on the Workouts page. Here you
-          set the measurement system and can see who&rsquo;s tracking what.
+          Build the shared exercise pool people choose from, set the measurement
+          system, and open a person to manage their records.
         </p>
       </header>
 
-      <WorkoutAdmin unitSystem={unitSystem} people={people} />
+      <div className="space-y-10">
+        <ExercisePool pool={pool} />
+        <WorkoutAdmin unitSystem={unitSystem} people={people} />
+      </div>
     </main>
   );
 }

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.32.0";
+export const APP_VERSION = "0.34.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -31,11 +31,25 @@ export const MIGRATIONS = [
   "21_shared_admin_pin",
   "22_family_events",
   "23_multi_workout_sessions",
+  "24_exercise_pool",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.34.0",
+    summary: [
+      "New shared exercise pool: admins build one household-wide library of movements on the Workouts page, with weights grouped by muscle (Chest, Back, Legs…)",
+      "Groundwork for picking exercises from the pool when planning and for comparing the same movement across people",
+    ],
+  },
+  {
+    version: "0.33.0",
+    summary: [
+      "Admin can open a person from the Workouts page to see and delete their exercises, weekly plan, and logged workouts — for clearing out test or mistaken records",
+    ],
+  },
   {
     version: "0.32.0",
     summary: [

@@ -8,6 +8,7 @@ import {
   UNIT_SYSTEM_KEY,
   type Implement,
   type Metric,
+  type MuscleGroup,
   type UnitSystem,
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
@@ -452,4 +453,140 @@ function workoutResult(s: SessShape): string {
   if (x.reps != null) return `${x.reps} reps`;
   if (x.weight != null) return `${fmtNum(x.weight)} ${x.unit ?? ""}`.trim();
   return "";
+}
+
+// --- admin: one person's workout records (for cleanup) --------------------
+
+export type PersonRecordExercise = {
+  id: string;
+  name: string;
+  category: WorkoutCategory;
+  tracked: boolean;
+  days: number[];
+};
+
+export type PersonRecordSession = {
+  id: string;
+  dateISO: string;
+  label: string;
+  result: string;
+  isRest: boolean;
+};
+
+export type PersonWorkoutRecords = {
+  user: { id: string; name: string; color: string } | null;
+  exercises: PersonRecordExercise[];
+  planned: { id: string; dayOfWeek: number; name: string }[];
+  sessions: PersonRecordSession[];
+};
+
+export async function loadPersonWorkoutRecords(
+  userId: string,
+): Promise<PersonWorkoutRecords> {
+  const [user, exercises, schedules, planned, sessions] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, displayName: true, color: true },
+    }),
+    prisma.exercise.findMany({
+      where: { userId, isActive: true },
+      orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
+      select: { id: true, name: true, category: true, tracked: true },
+    }),
+    prisma.workoutSchedule.findMany({
+      where: { userId },
+      select: { exerciseId: true, dayOfWeek: true },
+    }),
+    prisma.plannedWorkout.findMany({
+      where: { userId },
+      orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
+      select: { id: true, dayOfWeek: true, name: true },
+    }),
+    prisma.workoutSession.findMany({
+      where: { userId },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: 40,
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        isRest: true,
+        date: true,
+        sets: {
+          select: {
+            exerciseId: true,
+            weight: true,
+            reps: true,
+            distance: true,
+            meters: true,
+            seconds: true,
+            unit: true,
+            exercise: { select: { name: true } },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const daysByExercise = new Map<string, number[]>();
+  for (const s of schedules) {
+    const arr = daysByExercise.get(s.exerciseId) ?? [];
+    arr.push(s.dayOfWeek);
+    daysByExercise.set(s.exerciseId, arr);
+  }
+
+  const exRows = exercises as unknown as {
+    id: string; name: string; category: string; tracked: boolean;
+  }[];
+  const sessRows = (sessions ?? []) as unknown as (SessShape & { date: Date })[];
+
+  return {
+    user: user
+      ? { id: user.id, name: user.displayName ?? user.name, color: user.color }
+      : null,
+    exercises: exRows.map((e) => ({
+      id: e.id,
+      name: e.name,
+      category: e.category as WorkoutCategory,
+      tracked: e.tracked,
+      days: (daysByExercise.get(e.id) ?? []).sort((a, b) => a - b),
+    })),
+    planned: planned as unknown as { id: string; dayOfWeek: number; name: string }[],
+    sessions: sessRows.map((s) => ({
+      id: s.id,
+      dateISO: fromDateColumn(s.date),
+      label: s.isRest ? "Rest day" : workoutLabel(s),
+      result: s.isRest ? "" : workoutResult(s),
+      isRest: s.isRest,
+    })),
+  };
+}
+
+// --- admin: the exercise pool --------------------------------------------
+
+export type PoolEntry = {
+  id: string;
+  category: WorkoutCategory;
+  name: string;
+  muscleGroup: MuscleGroup | null;
+  isActive: boolean;
+};
+
+export async function loadExercisePool(): Promise<PoolEntry[]> {
+  const rows = await prisma.poolExercise.findMany({
+    orderBy: [
+      { category: "asc" },
+      { muscleGroup: "asc" },
+      { sortOrder: "asc" },
+      { name: "asc" },
+    ],
+    select: {
+      id: true,
+      category: true,
+      name: true,
+      muscleGroup: true,
+      isActive: true,
+    },
+  });
+  return rows as unknown as PoolEntry[];
 }

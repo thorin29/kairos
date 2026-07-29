@@ -80,3 +80,43 @@ export const LINE_COLORS = [
   "#047857",
   "#db2777",
 ];
+
+// Built-in weights sub-categories, for organising the pool of lifts.
+export type MuscleGroup =
+  | "CHEST"
+  | "BACK"
+  | "SHOULDERS"
+  | "LEGS"
+  | "ARMS"
+  | "CORE"
+  | "FULL_BODY";
+
+export const MUSCLE_GROUPS: MuscleGroup[] = [
+  "CHEST",
+  "BACK",
+  "SHOULDERS",
+  "LEGS",
+  "ARMS",
+  "CORE",
+  "FULL_BODY",
+];
+
+export const MUSCLE_GROUP_LABEL: Record<MuscleGroup, string> = {
+  CHEST: "Chest",
+  BACK: "Back",
+  SHOULDERS: "Shoulders",
+  LEGS: "Legs",
+  ARMS: "Arms",
+  CORE: "Core",
+  FULL_BODY: "Full body",
+};
+
+// Categories that hold a pool of named movements (the metric-only ones —
+// running, rowing, rucking — don't need a sub-pool).
+export const POOL_CATEGORIES: WorkoutCategory[] = [
+  "WEIGHTS",
+  "HIIT",
+  "SPORT",
+  "STRETCHING",
+  "ISOMETRIC",
+];

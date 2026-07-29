@@ -1,10 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Card, SectionHeading } from "@/components/ui";
 import { setUnitSystem } from "@/lib/actions/workouts";
 import type { UnitSystem } from "@/lib/workouts/catalog";
 import type { WorkoutAdminRow } from "@/lib/queries/workouts";
+
+function ChevronRight() {
+  return (
+    <span aria-hidden className="shrink-0 text-base leading-none text-muted">
+      &rsaquo;
+    </span>
+  );
+}
 
 export function WorkoutAdmin({
   unitSystem,
@@ -54,7 +63,11 @@ export function WorkoutAdmin({
         <SectionHeading>Who&rsquo;s tracking</SectionHeading>
         <Card className="divide-y divide-hairline">
           {people.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 p-4">
+            <Link
+              key={p.id}
+              href={`/admin/exercise/${p.id}`}
+              className="flex items-center gap-3 p-4 transition-colors hover:bg-black/5"
+            >
               <span
                 aria-hidden
                 className="h-6 w-1.5 rounded-full"
@@ -65,12 +78,17 @@ export function WorkoutAdmin({
                 {p.exerciseCount} exercise{p.exerciseCount === 1 ? "" : "s"}
                 {p.trackedCount > 0 ? ` · ${p.trackedCount} graphed` : ""}
               </span>
-            </div>
+              <ChevronRight />
+            </Link>
           ))}
           {people.length === 0 && (
             <p className="p-5 text-sm text-muted">No people yet.</p>
           )}
         </Card>
+        <p className="mt-2 text-xs text-muted">
+          Tap a person to see and delete their exercises, plans, and logged
+          workouts.
+        </p>
       </section>
     </div>
   );
