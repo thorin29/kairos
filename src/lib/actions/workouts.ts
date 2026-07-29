@@ -7,6 +7,8 @@ import { setSetting } from "@/lib/settings";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import {
+  CATEGORY_LABEL,
+  MUSCLE_GROUP_LABEL,
   UNIT_SYSTEM_KEY,
   type Implement,
   type Metric,
@@ -383,6 +385,68 @@ export async function removePlannedWorkout(id: string): Promise<void> {
   refresh();
 }
 
+/**
+ * Create a structured planned workout from the shared pool: a category
+ * (weights carry a muscle group), plus the chosen pool movements and, per
+ * movement, whether a metric should be logged on completion and which one.
+ * Metric-only categories (run/row/ruck) carry no movements — the day itself
+ * is the workout and the metric is implied.
+ */
+export async function addPlannedWorkoutFromPool(
+  userId: string,
+  dayOfWeek: number,
+  input: {
+    category: WorkoutCategory;
+    muscleGroup?: MuscleGroup | null;
+    name?: string;
+    exercises: {
+      poolExerciseId: string;
+      tracked: boolean;
+      metric?: Metric | null;
+    }[];
+  },
+): Promise<void> {
+  if (!userId || dayOfWeek < 0 || dayOfWeek > 6) return;
+
+  const label = (
+    input.name?.trim() ||
+    (input.muscleGroup
+      ? MUSCLE_GROUP_LABEL[input.muscleGroup]
+      : CATEGORY_LABEL[input.category])
+  ).slice(0, 40);
+
+  // De-dupe within this workout; the [plannedWorkoutId, poolExerciseId] unique
+  // is the backstop.
+  const seen = new Set<string>();
+  const rows = input.exercises.filter((e) => {
+    if (!e.poolExerciseId || seen.has(e.poolExerciseId)) return false;
+    seen.add(e.poolExerciseId);
+    return true;
+  });
+
+  const count = await prisma.plannedWorkout.count({ where: { userId, dayOfWeek } });
+  await prisma.plannedWorkout.create({
+    data: {
+      userId,
+      dayOfWeek,
+      name: label,
+      sortOrder: count,
+      category: input.category,
+      muscleGroup: input.muscleGroup ?? null,
+      exercises: {
+        create: rows.map((e, i) => ({
+          poolExerciseId: e.poolExerciseId,
+          tracked: e.tracked,
+          metric: e.metric ?? null,
+          sortOrder: i,
+        })),
+      },
+    },
+  });
+  await generateWorkoutTasks();
+  refresh();
+}
+
 /** Copy a day's named workouts onto another day, skipping ones already there. */
 export async function copyDayPlan(
   userId: string,
@@ -445,60 +509,50 @@ export async function restDay(userId: string, dateISO: string): Promise<void> {
 export async function logCustomWorkout(input: {
   userId: string;
   dateISO: string;
-  name: string;
-  category: WorkoutCategory;
+  poolExerciseId?: string | null; // a movement from the shared pool
+  category?: WorkoutCategory | null; // used for metric-only logs (a run, a row)
   metric: Metric;
   value: number;
   unit: string;
   load?: number | null;
-  tracked?: boolean;
   notes?: string;
 }): Promise<void> {
-  const name = input.name.trim().slice(0, 60);
-  if (!input.userId || name.length < 1) return;
+  if (!input.userId) return;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
   if (!Number.isFinite(input.value) || input.value <= 0) return;
+
+  // Resolve what was done: a named pool movement, or a metric-only activity
+  // that takes its identity from the category (running, rowing, rucking).
+  let name: string;
+  let category: WorkoutCategory;
+  let poolExerciseId: string | null = null;
+  if (input.poolExerciseId) {
+    const pool = await prisma.poolExercise.findUnique({
+      where: { id: input.poolExerciseId },
+      select: { name: true, category: true },
+    });
+    if (!pool) return;
+    name = pool.name;
+    category = pool.category as WorkoutCategory;
+    poolExerciseId = input.poolExerciseId;
+  } else if (input.category) {
+    category = input.category;
+    name = CATEGORY_LABEL[input.category];
+  } else {
+    return;
+  }
 
   const unit = input.unit.trim().slice(0, 8);
   const date = toDateColumn(input.dateISO);
 
-  const existing = await prisma.exercise.findFirst({
-    where: {
-      userId: input.userId,
-      category: input.category,
-      isActive: true,
-      name: { equals: name, mode: "insensitive" },
-    },
-  });
-
-  let exerciseId: string;
-  if (existing) {
-    exerciseId = existing.id;
-  } else {
-    const count = await prisma.exercise.count({ where: { userId: input.userId } });
-    const created = await prisma.exercise.create({
-      data: {
-        userId: input.userId,
-        name,
-        category: input.category,
-        implement: input.category === "WEIGHTS" ? "NONE" : null,
-        unit: unit || "rep",
-        metric: input.metric,
-        tracked: input.tracked ?? false,
-        sortOrder: count,
-      },
-    });
-    exerciseId = created.id;
-  }
-
-  // Each custom log is its own named session, so a day can hold several — a
-  // lift and a run, hockey and a ride, or the same thing done twice.
+  // Each log is its own named session, so a day can hold several — a lift and a
+  // run, hockey and a ride, or the same thing done twice.
   const session = await prisma.workoutSession.create({
     data: {
       userId: input.userId,
       date,
       name,
-      category: input.category,
+      category,
       finished: true,
       isRest: false,
       notes: input.notes?.slice(0, 300) || null,
@@ -507,7 +561,7 @@ export async function logCustomWorkout(input: {
 
   const set: {
     sessionId: string;
-    exerciseId: string;
+    poolExerciseId: string | null;
     setNumber: number;
     unit: string | null;
     finished: boolean;
@@ -518,7 +572,7 @@ export async function logCustomWorkout(input: {
     seconds?: number;
   } = {
     sessionId: session.id,
-    exerciseId,
+    poolExerciseId,
     setNumber: 1,
     unit: unit || null,
     finished: true,

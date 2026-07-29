@@ -183,9 +183,17 @@ all live in the database, never in this repository.
 - [x] Admin-owned, categorized exercise pool (like the chore master list), with
       weights grouped by muscle — built and managed on the Workouts admin page
       (v0.34.0)
-- [ ] Structured plan builder — pick category → (weights: muscle group) → choose
+- [~] Pool-driven logging — the "Log workout" flow now picks the exercise from
+      the pool and records the set against it (v0.35.0). Still to do: fold the
+      legacy "Log weights" surface into it, and the scheduled-plan path below.
+- [x] Structured plan builder — pick category → (weights: muscle group) → choose
       pool exercises → per-exercise "log a metric?" toggle → add another workout
-      to the day; people pick from the pool instead of free-typing
+      to the day; people pick from the pool instead of free-typing (v0.36.0).
+      Stores PlannedExercise rows (poolExerciseId + tracked + metric) — the
+      backbone the completion flow below reads
+- [ ] Unified log sheet — one "Log workout" button on the card (no gear, no
+      binary "worked out"): today's scheduled workouts shown first to complete
+      with their metrics, then a "log something else" one-off from the pool
 - [ ] Complete-with-metrics — checking a planned workout off pops a form with
       just the exercises marked to track; fill in, complete; recurs weekly
 - [ ] HIIT/CrossFit builder: choose a type (AMRAP / max sets / for time) and

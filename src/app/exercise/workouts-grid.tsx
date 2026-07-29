@@ -18,9 +18,12 @@ import {
 } from "@/lib/actions/workouts";
 import { PlanBuilder } from "./plan-builder";
 import { WorkoutCard } from "./workout-card";
-import type { PersonWorkout } from "@/lib/queries/workouts";
+import type { PersonWorkout, PoolEntry } from "@/lib/queries/workouts";
 import {
   CATEGORY_LABEL,
+  MUSCLE_GROUPS,
+  MUSCLE_GROUP_LABEL,
+  POOL_CATEGORIES,
   type Metric,
   type UnitSystem,
   type WorkoutCategory,
@@ -31,11 +34,13 @@ type Step = "menu" | "plan" | "log" | "custom" | "history";
 export function WorkoutsGrid({
   people,
   unitSystem,
+  pool,
   todayISO,
   todayDow,
 }: {
   people: PersonWorkout[];
   unitSystem: UnitSystem;
+  pool: PoolEntry[];
   todayISO: string;
   todayDow: number;
 }) {
@@ -210,7 +215,7 @@ export function WorkoutsGrid({
                     />
                     <ActionButton
                       icon={PlusIcon}
-                      label="Add workout"
+                      label="Log workout"
                       onClick={() => setStep("custom")}
                     />
                     <ActionButton
@@ -242,6 +247,7 @@ export function WorkoutsGrid({
                     userId={open.user.id}
                     plan={open.plan}
                     todayDow={todayDow}
+                    pool={pool}
                   />
                 </div>
               )}
@@ -261,15 +267,16 @@ export function WorkoutsGrid({
                 <div className="mt-4">
                   <BackLink onClick={() => setStep("menu")} />
                   <h3 className="mb-1 font-display text-lg font-semibold">
-                    Add a workout
+                    Log a workout
                   </h3>
                   <p className="mb-3 text-sm text-muted">
-                    A run, a ride, hockey, a HIIT circuit. Pick the type and log
-                    today&rsquo;s result — you can add more than one a day.
+                    Pick the type, choose the exercise from the pool, and record
+                    today&rsquo;s result. You can log more than one a day.
                   </p>
                   <CustomWorkoutForm
                     userId={open.user.id}
                     unitSystem={unitSystem}
+                    pool={pool}
                     todayISO={todayISO}
                     onDone={() => setStep("menu")}
                   />
@@ -433,18 +440,6 @@ const CATEGORY_CFG: Record<WorkoutCategory, CatCfg> = {
   ISOMETRIC: { choices: ["DURATION", "REPS"] },
 };
 
-// Order shown in the picker.
-const CUSTOM_CATEGORIES: WorkoutCategory[] = [
-  "HIIT",
-  "RUNNING",
-  "ROWING",
-  "RUCKING",
-  "SPORT",
-  "STRETCHING",
-  "ISOMETRIC",
-  "WEIGHTS",
-];
-
 const METRIC_LABEL: Record<Metric, string> = {
   DURATION: "Time",
   REPS: "Reps / rounds",
@@ -485,33 +480,54 @@ function fmtHistoryDate(iso: string): string {
   });
 }
 
+// Order shown in the log picker. Pool categories get an exercise dropdown;
+// running/rowing/rucking are metric-only.
+const LOG_CATEGORIES: WorkoutCategory[] = [
+  "WEIGHTS",
+  "HIIT",
+  "RUNNING",
+  "ROWING",
+  "RUCKING",
+  "SPORT",
+  "STRETCHING",
+  "ISOMETRIC",
+];
+
 function CustomWorkoutForm({
   userId,
   unitSystem,
+  pool,
   todayISO,
   onDone,
 }: {
   userId: string;
   unitSystem: UnitSystem;
+  pool: PoolEntry[];
   todayISO: string;
   onDone: () => void;
 }) {
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState<WorkoutCategory>("HIIT");
-  const [metric, setMetric] = useState<Metric>("DURATION");
+  const [category, setCategory] = useState<WorkoutCategory>("WEIGHTS");
+  const [poolId, setPoolId] = useState("");
+  const [metric, setMetric] = useState<Metric>("WEIGHT");
   const [amount, setAmount] = useState(""); // reps / distance / meters / weight
-  const [min, setMin] = useState(""); // for time
-  const [sec, setSec] = useState(""); // for time
+  const [min, setMin] = useState("");
+  const [sec, setSec] = useState("");
+  const [hours, setHours] = useState(""); // sport
   const [load, setLoad] = useState(""); // ruck load
-  const [tracked, setTracked] = useState(false);
   const [notes, setNotes] = useState("");
   const [pending, startTransition] = useTransition();
 
   const cfg = CATEGORY_CFG[category];
+  const isPoolCat = POOL_CATEGORIES.includes(category);
+  const isSport = category === "SPORT";
+  const options = pool.filter((p) => p.category === category && p.isActive);
+  const poolMissing = isPoolCat && options.length === 0;
 
   const changeCategory = (c: WorkoutCategory) => {
     setCategory(c);
     setMetric(defaultMetric(CATEGORY_CFG[c]));
+    const opts = pool.filter((p) => p.category === c && p.isActive);
+    setPoolId(opts[0]?.id ?? "");
   };
 
   const num = (s: string) => {
@@ -519,49 +535,53 @@ function CustomWorkoutForm({
     return Number.isFinite(n) && n > 0 ? n : 0;
   };
   const numeric = (v: string) => v.replace(/[^\d.]/g, "");
-  const value = metric === "DURATION" ? num(min) * 60 + num(sec) : num(amount);
-  const unit = unitFor(metric, unitSystem);
+  const value = isSport
+    ? Math.round(num(hours) * 3600)
+    : metric === "DURATION"
+      ? num(min) * 60 + num(sec)
+      : num(amount);
+  const unit = isSport ? "h" : unitFor(metric, unitSystem);
   const loadUnit = unitSystem === "metric" ? "kg" : "lb";
-  const canSave = value > 0 && !pending;
+  const canSave = value > 0 && !pending && (!isPoolCat || !!poolId);
 
   const save = () => {
     if (!canSave) return;
-    const finalName = name.trim() || CATEGORY_LABEL[category];
     startTransition(async () => {
       await logCustomWorkout({
         userId,
         dateISO: todayISO,
-        name: finalName,
-        category,
+        poolExerciseId: isPoolCat ? poolId : null,
+        category: isPoolCat ? null : category,
         metric,
         value,
         unit,
         load: cfg.load ? num(load) || null : null,
-        tracked,
         notes: notes.trim() || undefined,
       });
       onDone();
     });
   };
 
+  const showRecordChoice = !!cfg.choices && !isSport;
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <div className={cfg.choices ? "" : "col-span-2"}>
+        <div className={showRecordChoice ? "" : "col-span-2"}>
           <label className={CAPTION}>Type</label>
           <select
             value={category}
             onChange={(e) => changeCategory(e.target.value as WorkoutCategory)}
             className={FIELD}
           >
-            {CUSTOM_CATEGORIES.map((c) => (
+            {LOG_CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {CATEGORY_LABEL[c]}
               </option>
             ))}
           </select>
         </div>
-        {cfg.choices && (
+        {showRecordChoice && (
           <div>
             <label className={CAPTION}>Record</label>
             <select
@@ -569,7 +589,7 @@ function CustomWorkoutForm({
               onChange={(e) => setMetric(e.target.value as Metric)}
               className={FIELD}
             >
-              {cfg.choices.map((m) => (
+              {cfg.choices!.map((m) => (
                 <option key={m} value={m}>
                   {METRIC_LABEL[m]}
                 </option>
@@ -579,19 +599,61 @@ function CustomWorkoutForm({
         )}
       </div>
 
-      <div>
-        <label className={CAPTION}>Name (optional)</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={`e.g. ${category === "HIIT" ? "Murph" : CATEGORY_LABEL[category]}`}
-          className={FIELD}
-        />
-      </div>
+      {isPoolCat && (
+        <div>
+          <label className={CAPTION}>Exercise</label>
+          {poolMissing ? (
+            <p className="rounded-xl border border-hairline bg-ground/40 px-3 py-2 text-sm text-muted">
+              No {CATEGORY_LABEL[category].toLowerCase()} exercises in the pool
+              yet — add them in the Workouts admin.
+            </p>
+          ) : (
+            <select
+              value={poolId}
+              onChange={(e) => setPoolId(e.target.value)}
+              className={FIELD}
+            >
+              {category === "WEIGHTS"
+                ? [...MUSCLE_GROUPS, null].map((mg) => {
+                    const items = options.filter((o) => o.muscleGroup === mg);
+                    if (items.length === 0) return null;
+                    return (
+                      <optgroup
+                        key={mg ?? "other"}
+                        label={mg ? MUSCLE_GROUP_LABEL[mg] : "Other"}
+                      >
+                        {items.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })
+                : options.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+            </select>
+          )}
+        </div>
+      )}
 
       <div>
         <label className={CAPTION}>Result</label>
-        {metric === "DURATION" ? (
+        {isSport ? (
+          <div className="flex items-center gap-2">
+            <input
+              value={hours}
+              onChange={(e) => setHours(numeric(e.target.value))}
+              inputMode="decimal"
+              placeholder="0"
+              className={`${FIELD} w-24 text-center`}
+            />
+            <span className="text-sm text-muted">hours</span>
+          </div>
+        ) : metric === "DURATION" ? (
           <div className="flex items-center gap-2">
             <input
               value={min}
@@ -640,16 +702,6 @@ function CustomWorkoutForm({
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={tracked}
-          onChange={(e) => setTracked(e.target.checked)}
-          className="h-4 w-4 accent-accent"
-        />
-        Add to my progress graph
-      </label>
-
       <div>
         <label className={CAPTION}>Notes (optional)</label>
         <input
@@ -666,7 +718,7 @@ function CustomWorkoutForm({
         disabled={!canSave}
         className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white disabled:opacity-40"
       >
-        {pending ? "Adding…" : "Add workout"}
+        {pending ? "Logging…" : "Log workout"}
       </button>
     </div>
   );

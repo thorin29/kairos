@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.34.0";
+export const APP_VERSION = "0.36.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -32,11 +32,28 @@ export const MIGRATIONS = [
   "22_family_events",
   "23_multi_workout_sessions",
   "24_exercise_pool",
+  "25_session_pool_ref",
+  "26_planned_pool",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.36.0",
+    summary: [
+      "Planning a workout now pulls from the shared pool instead of free-typing: pick a category, choose the movements, and mark which ones to log a number for",
+      "Weights plans pick a muscle group first; run/row/ruck days need no movements — the day itself is the workout",
+      "Each planned movement carries a per-exercise \"log a metric?\" setting, ready for one-tap completion next",
+    ],
+  },
+  {
+    version: "0.35.0",
+    summary: [
+      "Logging a workout now pulls the exercise from the shared pool — pick a type, then choose the movement (Sport → Hockey practice, weights grouped by muscle)",
+      "Logged sets are recorded against the pool movement, so the same exercise can line up across people for comparison later",
+    ],
+  },
   {
     version: "0.34.0",
     summary: [

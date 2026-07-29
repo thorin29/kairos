@@ -1,6 +1,6 @@
 import { AppHeader } from "@/components/app-header";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
-import { loadWorkoutsBoard } from "@/lib/queries/workouts";
+import { loadWorkoutsBoard, loadExercisePool } from "@/lib/queries/workouts";
 import { todayISO, formatLong, dayOfWeek } from "@/lib/dates";
 import { WorkoutsGrid } from "./workouts-grid";
 
@@ -9,7 +9,10 @@ export const dynamic = "force-dynamic";
 export default async function WorkoutsPage() {
   const today = todayISO();
   await generateWorkoutTasks(today);
-  const board = await loadWorkoutsBoard(today);
+  const [board, pool] = await Promise.all([
+    loadWorkoutsBoard(today),
+    loadExercisePool(),
+  ]);
 
   return (
     <>
@@ -28,6 +31,7 @@ export default async function WorkoutsPage() {
             <WorkoutsGrid
               people={board.people}
               unitSystem={board.unitSystem}
+              pool={pool}
               todayISO={today}
               todayDow={dayOfWeek(today)}
             />
