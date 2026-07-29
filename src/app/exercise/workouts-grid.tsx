@@ -8,9 +8,14 @@ import {
   CalendarPlusIcon,
   DumbbellIcon,
   MoonIcon,
-  TrophyIcon,
+  PlusIcon,
+  TrashIcon,
 } from "@/components/icons";
-import { logCustomWorkout, restDay } from "@/lib/actions/workouts";
+import {
+  deleteWorkoutSession,
+  logCustomWorkout,
+  restDay,
+} from "@/lib/actions/workouts";
 import { PlanBuilder } from "./plan-builder";
 import { WorkoutCard } from "./workout-card";
 import type { PersonWorkout } from "@/lib/queries/workouts";
@@ -138,6 +143,36 @@ export function WorkoutsGrid({
                     </p>
                     {open.today.rested ? (
                       <p className="mt-1 text-lg font-semibold">Rest day taken</p>
+                    ) : open.todayWorkouts.length > 0 ? (
+                      <ul className="mt-2 space-y-1.5">
+                        {open.todayWorkouts.map((w) => (
+                          <li
+                            key={w.id}
+                            className="flex items-center gap-2 rounded-xl border border-hairline bg-ground/40 px-3 py-2"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold">
+                                {w.label}
+                              </p>
+                              {w.result && (
+                                <p className="truncate text-xs text-muted">
+                                  {w.result}
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              aria-label={`Remove ${w.label}`}
+                              onClick={() =>
+                                startTransition(() => deleteWorkoutSession(w.id))
+                              }
+                              className="flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-black/5 hover:text-red-700"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     ) : open.today.workedOut ? (
                       <p className="mt-1 text-lg font-semibold text-accent">
                         Worked out
@@ -169,13 +204,13 @@ export function WorkoutsGrid({
                     />
                     <ActionButton
                       icon={DumbbellIcon}
-                      label="Log workout"
+                      label="Log weights"
                       onClick={() => setStep("log")}
                       primary={hasPlan}
                     />
                     <ActionButton
-                      icon={TrophyIcon}
-                      label="Custom workout"
+                      icon={PlusIcon}
+                      label="Add workout"
                       onClick={() => setStep("custom")}
                     />
                     <ActionButton
@@ -216,11 +251,11 @@ export function WorkoutsGrid({
                 <div className="mt-4">
                   <BackLink onClick={() => setStep("menu")} />
                   <h3 className="mb-1 font-display text-lg font-semibold">
-                    Custom workout
+                    Add a workout
                   </h3>
                   <p className="mb-3 text-sm text-muted">
-                    A one-off — a HIIT circuit, a run, a game. Name it, pick what
-                    to record, and log today&rsquo;s result.
+                    A run, a ride, hockey, a HIIT circuit. Pick the type and log
+                    today&rsquo;s result — you can add more than one a day.
                   </p>
                   <CustomWorkoutForm
                     userId={open.user.id}
@@ -325,24 +360,44 @@ function BackLink({ onClick }: { onClick: () => void }) {
   );
 }
 
-const METRIC_OPTIONS: { value: Metric; label: string }[] = [
-  { value: "REPS", label: "Reps / rounds" },
-  { value: "DURATION", label: "Time" },
-  { value: "DISTANCE", label: "Distance" },
-  { value: "METERS", label: "Meters" },
-  { value: "WEIGHT", label: "Weight" },
-];
+// What each workout type records, and whether it carries a load. Running,
+// rowing, rucking and weights imply their metric; the rest let you choose
+// between time and reps/rounds.
+type CatCfg = { locked?: Metric; choices?: Metric[]; load?: boolean };
+const CATEGORY_CFG: Record<WorkoutCategory, CatCfg> = {
+  RUNNING: { locked: "DISTANCE" },
+  ROWING: { locked: "METERS" },
+  RUCKING: { locked: "DISTANCE", load: true },
+  WEIGHTS: { locked: "WEIGHT" },
+  HIIT: { choices: ["DURATION", "REPS"] },
+  SPORT: { choices: ["DURATION", "REPS"] },
+  STRETCHING: { choices: ["DURATION", "REPS"] },
+  ISOMETRIC: { choices: ["DURATION", "REPS"] },
+};
 
-// Everything the schema supports, offered for an ad-hoc workout.
+// Order shown in the picker.
 const CUSTOM_CATEGORIES: WorkoutCategory[] = [
   "HIIT",
   "RUNNING",
   "ROWING",
+  "RUCKING",
   "SPORT",
   "STRETCHING",
   "ISOMETRIC",
   "WEIGHTS",
 ];
+
+const METRIC_LABEL: Record<Metric, string> = {
+  DURATION: "Time",
+  REPS: "Reps / rounds",
+  DISTANCE: "Distance",
+  METERS: "Meters",
+  WEIGHT: "Weight",
+};
+
+function defaultMetric(cfg: CatCfg): Metric {
+  return cfg.locked ?? cfg.choices?.[0] ?? "REPS";
+}
 
 function unitFor(metric: Metric, system: UnitSystem): string {
   switch (metric) {
@@ -376,34 +431,45 @@ function CustomWorkoutForm({
 }) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState<WorkoutCategory>("HIIT");
-  const [metric, setMetric] = useState<Metric>("REPS");
+  const [metric, setMetric] = useState<Metric>("DURATION");
   const [amount, setAmount] = useState(""); // reps / distance / meters / weight
   const [min, setMin] = useState(""); // for time
   const [sec, setSec] = useState(""); // for time
+  const [load, setLoad] = useState(""); // ruck load
   const [tracked, setTracked] = useState(false);
   const [notes, setNotes] = useState("");
   const [pending, startTransition] = useTransition();
+
+  const cfg = CATEGORY_CFG[category];
+
+  const changeCategory = (c: WorkoutCategory) => {
+    setCategory(c);
+    setMetric(defaultMetric(CATEGORY_CFG[c]));
+  };
 
   const num = (s: string) => {
     const n = Number(s);
     return Number.isFinite(n) && n > 0 ? n : 0;
   };
-  const value = metric === "DURATION" ? num(min) * 60 + num(sec) : num(amount);
-  const canSave = name.trim().length > 0 && value > 0 && !pending;
-  const unit = unitFor(metric, unitSystem);
   const numeric = (v: string) => v.replace(/[^\d.]/g, "");
+  const value = metric === "DURATION" ? num(min) * 60 + num(sec) : num(amount);
+  const unit = unitFor(metric, unitSystem);
+  const loadUnit = unitSystem === "metric" ? "kg" : "lb";
+  const canSave = value > 0 && !pending;
 
   const save = () => {
     if (!canSave) return;
+    const finalName = name.trim() || CATEGORY_LABEL[category];
     startTransition(async () => {
       await logCustomWorkout({
         userId,
         dateISO: todayISO,
-        name: name.trim(),
+        name: finalName,
         category,
         metric,
         value,
         unit,
+        load: cfg.load ? num(load) || null : null,
         tracked,
         notes: notes.trim() || undefined,
       });
@@ -413,22 +479,12 @@ function CustomWorkoutForm({
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className={CAPTION}>Name</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Murph, Morning HIIT, pickup game"
-          className={FIELD}
-        />
-      </div>
-
       <div className="grid grid-cols-2 gap-3">
-        <div>
+        <div className={cfg.choices ? "" : "col-span-2"}>
           <label className={CAPTION}>Type</label>
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value as WorkoutCategory)}
+            onChange={(e) => changeCategory(e.target.value as WorkoutCategory)}
             className={FIELD}
           >
             {CUSTOM_CATEGORIES.map((c) => (
@@ -438,20 +494,32 @@ function CustomWorkoutForm({
             ))}
           </select>
         </div>
-        <div>
-          <label className={CAPTION}>Record</label>
-          <select
-            value={metric}
-            onChange={(e) => setMetric(e.target.value as Metric)}
-            className={FIELD}
-          >
-            {METRIC_OPTIONS.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {cfg.choices && (
+          <div>
+            <label className={CAPTION}>Record</label>
+            <select
+              value={metric}
+              onChange={(e) => setMetric(e.target.value as Metric)}
+              className={FIELD}
+            >
+              {cfg.choices.map((m) => (
+                <option key={m} value={m}>
+                  {METRIC_LABEL[m]}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className={CAPTION}>Name (optional)</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={`e.g. ${category === "HIIT" ? "Murph" : CATEGORY_LABEL[category]}`}
+          className={FIELD}
+        />
       </div>
 
       <div>
@@ -489,6 +557,22 @@ function CustomWorkoutForm({
         )}
       </div>
 
+      {cfg.load && (
+        <div>
+          <label className={CAPTION}>Load (optional)</label>
+          <div className="flex items-center gap-2">
+            <input
+              value={load}
+              onChange={(e) => setLoad(numeric(e.target.value))}
+              inputMode="decimal"
+              placeholder="0"
+              className={`${FIELD} w-28 text-center`}
+            />
+            <span className="text-sm text-muted">{loadUnit}</span>
+          </div>
+        </div>
+      )}
+
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -515,7 +599,7 @@ function CustomWorkoutForm({
         disabled={!canSave}
         className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white disabled:opacity-40"
       >
-        {pending ? "Logging…" : "Log workout"}
+        {pending ? "Adding…" : "Add workout"}
       </button>
     </div>
   );

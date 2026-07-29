@@ -448,6 +448,7 @@ enum WorkoutCategory {
   STRETCHING
   HIIT
   ISOMETRIC
+  RUCKING
 }
 
 enum WorkoutImplement {
@@ -532,6 +533,12 @@ model WorkoutSession {
   userId      String
   user        User     @relation("WorkoutSessions", fields: [userId], references: [id], onDelete: Cascade)
   date        DateTime @db.Date
+  // A day can hold more than one workout — a lift and a run, hockey and a
+  // ride. Each session is one of them: an optional name and category label it
+  // in the day's list. Null name/category is a plain "worked out" session or
+  // legacy pre-naming data.
+  name        String?
+  category    WorkoutCategory?
   durationMin Int?
   finished    Boolean  @default(true)
   // A deliberate rest/skip day: marks the day handled without counting toward

@@ -280,21 +280,25 @@ export async function markWorkedOut(
     await findOrCreateSession(userId, dateISO);
     await completeWorkoutTask(userId, dateISO);
   } else {
-    const session = await prisma.workoutSession.findFirst({
-      where: { userId, date },
-      include: { _count: { select: { sets: true } } },
+    // Remove only empty placeholder sessions (a quick "worked out" with no
+    // detail); never delete a logged workout. Reset the day only if nothing
+    // real is left.
+    await prisma.workoutSession.deleteMany({
+      where: { userId, date, isRest: false, sets: { none: {} } },
     });
-    if (session && session._count.sets === 0) {
-      await prisma.workoutSession.delete({ where: { id: session.id } });
-    }
-    const task = await prisma.task.findFirst({
-      where: { userId, category: "EXERCISE", dueDate: date },
+    const remaining = await prisma.workoutSession.count({
+      where: { userId, date, isRest: false },
     });
-    if (task) {
-      await prisma.task.update({
-        where: { id: task.id },
-        data: { status: "PENDING", completedAt: null },
+    if (remaining === 0) {
+      const task = await prisma.task.findFirst({
+        where: { userId, category: "EXERCISE", dueDate: date },
       });
+      if (task) {
+        await prisma.task.update({
+          where: { id: task.id },
+          data: { status: "PENDING", completedAt: null },
+        });
+      }
     }
   }
   refresh();
@@ -391,6 +395,7 @@ export async function logCustomWorkout(input: {
   metric: Metric;
   value: number;
   unit: string;
+  load?: number | null;
   tracked?: boolean;
   notes?: string;
 }): Promise<void> {
@@ -400,6 +405,7 @@ export async function logCustomWorkout(input: {
   if (!Number.isFinite(input.value) || input.value <= 0) return;
 
   const unit = input.unit.trim().slice(0, 8);
+  const date = toDateColumn(input.dateISO);
 
   const existing = await prisma.exercise.findFirst({
     where: {
@@ -430,30 +436,91 @@ export async function logCustomWorkout(input: {
     exerciseId = created.id;
   }
 
-  const entry: LogEntry = { exerciseId, unit: unit || null };
+  // Each custom log is its own named session, so a day can hold several — a
+  // lift and a run, hockey and a ride, or the same thing done twice.
+  const session = await prisma.workoutSession.create({
+    data: {
+      userId: input.userId,
+      date,
+      name,
+      category: input.category,
+      finished: true,
+      isRest: false,
+      notes: input.notes?.slice(0, 300) || null,
+    },
+  });
+
+  const set: {
+    sessionId: string;
+    exerciseId: string;
+    setNumber: number;
+    unit: string | null;
+    finished: boolean;
+    weight?: number;
+    reps?: number;
+    distance?: number;
+    meters?: number;
+    seconds?: number;
+  } = {
+    sessionId: session.id,
+    exerciseId,
+    setNumber: 1,
+    unit: unit || null,
+    finished: true,
+  };
   switch (input.metric) {
     case "WEIGHT":
-      entry.weight = input.value;
+      set.weight = input.value;
       break;
     case "REPS":
-      entry.reps = Math.round(input.value);
+      set.reps = Math.round(input.value);
       break;
     case "DISTANCE":
-      entry.distance = input.value;
+      set.distance = input.value;
       break;
     case "METERS":
-      entry.meters = input.value;
+      set.meters = input.value;
       break;
     case "DURATION":
-      entry.seconds = Math.round(input.value);
+      set.seconds = Math.round(input.value);
       break;
   }
+  // A carried load (e.g. a ruck) rides alongside the distance in the weight
+  // column, so it shows in the summary without needing its own metric.
+  if (input.load != null && input.load > 0 && set.weight == null) {
+    set.weight = input.load;
+  }
 
-  await logSession({
-    userId: input.userId,
-    dateISO: input.dateISO,
-    entries: [entry],
-    finished: true,
-    notes: input.notes,
+  await prisma.sessionSet.create({ data: set });
+  await completeWorkoutTask(input.userId, input.dateISO);
+  refresh();
+}
+
+/** Delete one logged workout. If it was the day's last, the day drops back to
+ *  "not logged yet". Rest days and other workouts on the day are untouched. */
+export async function deleteWorkoutSession(sessionId: string): Promise<void> {
+  if (!sessionId) return;
+  const session = await prisma.workoutSession.findUnique({
+    where: { id: sessionId },
+    select: { userId: true, date: true },
   });
+  if (!session) return;
+
+  await prisma.workoutSession.delete({ where: { id: sessionId } });
+
+  const remaining = await prisma.workoutSession.count({
+    where: { userId: session.userId, date: session.date, isRest: false },
+  });
+  if (remaining === 0) {
+    const task = await prisma.task.findFirst({
+      where: { userId: session.userId, category: "EXERCISE", dueDate: session.date },
+    });
+    if (task) {
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { status: "PENDING", completedAt: null },
+      });
+    }
+  }
+  refresh();
 }

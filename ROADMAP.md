@@ -173,7 +173,17 @@ all live in the database, never in this repository.
       from its slot and grows into the centre of the screen as it expands,
       rather than a separate panel fading in over it (shared-element / FLIP
       transition from the card's real position to the enlarged view)
-- [ ] Create custom workouts from the card (HIIT / CrossFit builders)
+- [x] Add a workout from the card — one-off log; the type drives the metric
+      (running→distance, rowing→meters, rucking→distance+load, weights, HIIT),
+      and names default to the type (v0.30.0)
+- [x] Log more than one workout a day — each is its own named session, shown in
+      a per-day list you can remove from; added the Rucking type (v0.31.0)
+- [ ] Admin-owned, categorized exercise/movement pool (like the chore master
+      list); people select from it instead of defining their own — the
+      groundwork for comparing metrics between people
+- [ ] HIIT/CrossFit builder: choose a type (AMRAP / max sets / for time) and
+      pull movements from the HIIT pool into one named workout with a result
+- [ ] Comparative graphs across people for the same pool exercise or workout
 - [ ] Admin: delete any person's workouts — pick a user in the workouts admin,
       see their logged workouts in a list, delete individually
 - [ ] Workout plans: optional end date (plan expiry); no end date is fine too
