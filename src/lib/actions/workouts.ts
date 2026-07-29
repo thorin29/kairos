@@ -372,3 +372,88 @@ export async function restDay(userId: string, dateISO: string): Promise<void> {
   await completeWorkoutTask(userId, dateISO);
   refresh();
 }
+
+// --- one-off custom workout ---------------------------------------------
+
+/**
+ * Log a custom, one-off workout straight from the card: name it, say what kind
+ * it is and what to record, and drop today's result in. Reuses an existing
+ * definition of the same name and category if there is one (so logging "Murph"
+ * each week doesn't pile up duplicates), otherwise creates it — kept off the
+ * progress graph unless `tracked`. The result is written as a single-set
+ * session for the day, completing "worked out today" like any other log.
+ */
+export async function logCustomWorkout(input: {
+  userId: string;
+  dateISO: string;
+  name: string;
+  category: WorkoutCategory;
+  metric: Metric;
+  value: number;
+  unit: string;
+  tracked?: boolean;
+  notes?: string;
+}): Promise<void> {
+  const name = input.name.trim().slice(0, 60);
+  if (!input.userId || name.length < 1) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
+  if (!Number.isFinite(input.value) || input.value <= 0) return;
+
+  const unit = input.unit.trim().slice(0, 8);
+
+  const existing = await prisma.exercise.findFirst({
+    where: {
+      userId: input.userId,
+      category: input.category,
+      isActive: true,
+      name: { equals: name, mode: "insensitive" },
+    },
+  });
+
+  let exerciseId: string;
+  if (existing) {
+    exerciseId = existing.id;
+  } else {
+    const count = await prisma.exercise.count({ where: { userId: input.userId } });
+    const created = await prisma.exercise.create({
+      data: {
+        userId: input.userId,
+        name,
+        category: input.category,
+        implement: input.category === "WEIGHTS" ? "NONE" : null,
+        unit: unit || "rep",
+        metric: input.metric,
+        tracked: input.tracked ?? false,
+        sortOrder: count,
+      },
+    });
+    exerciseId = created.id;
+  }
+
+  const entry: LogEntry = { exerciseId, unit: unit || null };
+  switch (input.metric) {
+    case "WEIGHT":
+      entry.weight = input.value;
+      break;
+    case "REPS":
+      entry.reps = Math.round(input.value);
+      break;
+    case "DISTANCE":
+      entry.distance = input.value;
+      break;
+    case "METERS":
+      entry.meters = input.value;
+      break;
+    case "DURATION":
+      entry.seconds = Math.round(input.value);
+      break;
+  }
+
+  await logSession({
+    userId: input.userId,
+    dateISO: input.dateISO,
+    entries: [entry],
+    finished: true,
+    notes: input.notes,
+  });
+}

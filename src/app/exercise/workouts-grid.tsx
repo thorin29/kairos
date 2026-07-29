@@ -8,14 +8,20 @@ import {
   CalendarPlusIcon,
   DumbbellIcon,
   MoonIcon,
+  TrophyIcon,
 } from "@/components/icons";
-import { restDay } from "@/lib/actions/workouts";
+import { logCustomWorkout, restDay } from "@/lib/actions/workouts";
 import { PlanBuilder } from "./plan-builder";
 import { WorkoutCard } from "./workout-card";
 import type { PersonWorkout } from "@/lib/queries/workouts";
-import type { UnitSystem } from "@/lib/workouts/catalog";
+import {
+  CATEGORY_LABEL,
+  type Metric,
+  type UnitSystem,
+  type WorkoutCategory,
+} from "@/lib/workouts/catalog";
 
-type Step = "menu" | "plan" | "log";
+type Step = "menu" | "plan" | "log" | "custom";
 
 export function WorkoutsGrid({
   people,
@@ -154,7 +160,7 @@ export function WorkoutsGrid({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <ActionButton
                       icon={CalendarPlusIcon}
                       label={hasPlan ? "Edit plan" : "Create plan"}
@@ -166,6 +172,11 @@ export function WorkoutsGrid({
                       label="Log workout"
                       onClick={() => setStep("log")}
                       primary={hasPlan}
+                    />
+                    <ActionButton
+                      icon={TrophyIcon}
+                      label="Custom workout"
+                      onClick={() => setStep("custom")}
                     />
                     <ActionButton
                       icon={MoonIcon}
@@ -197,6 +208,25 @@ export function WorkoutsGrid({
                     person={open}
                     unitSystem={unitSystem}
                     todayISO={todayISO}
+                  />
+                </div>
+              )}
+
+              {step === "custom" && (
+                <div className="mt-4">
+                  <BackLink onClick={() => setStep("menu")} />
+                  <h3 className="mb-1 font-display text-lg font-semibold">
+                    Custom workout
+                  </h3>
+                  <p className="mb-3 text-sm text-muted">
+                    A one-off — a HIIT circuit, a run, a game. Name it, pick what
+                    to record, and log today&rsquo;s result.
+                  </p>
+                  <CustomWorkoutForm
+                    userId={open.user.id}
+                    unitSystem={unitSystem}
+                    todayISO={todayISO}
+                    onDone={() => setStep("menu")}
                   />
                 </div>
               )}
@@ -292,5 +322,201 @@ function BackLink({ onClick }: { onClick: () => void }) {
     >
       &lsaquo; Back
     </button>
+  );
+}
+
+const METRIC_OPTIONS: { value: Metric; label: string }[] = [
+  { value: "REPS", label: "Reps / rounds" },
+  { value: "DURATION", label: "Time" },
+  { value: "DISTANCE", label: "Distance" },
+  { value: "METERS", label: "Meters" },
+  { value: "WEIGHT", label: "Weight" },
+];
+
+// Everything the schema supports, offered for an ad-hoc workout.
+const CUSTOM_CATEGORIES: WorkoutCategory[] = [
+  "HIIT",
+  "RUNNING",
+  "ROWING",
+  "SPORT",
+  "STRETCHING",
+  "ISOMETRIC",
+  "WEIGHTS",
+];
+
+function unitFor(metric: Metric, system: UnitSystem): string {
+  switch (metric) {
+    case "WEIGHT":
+      return system === "metric" ? "kg" : "lb";
+    case "DISTANCE":
+      return system === "metric" ? "km" : "mi";
+    case "METERS":
+      return "m";
+    case "REPS":
+      return "rep";
+    case "DURATION":
+      return "";
+  }
+}
+
+const CAPTION = "mb-1 block text-xs font-semibold uppercase tracking-widest text-muted";
+const FIELD =
+  "h-9 w-full rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent";
+
+function CustomWorkoutForm({
+  userId,
+  unitSystem,
+  todayISO,
+  onDone,
+}: {
+  userId: string;
+  unitSystem: UnitSystem;
+  todayISO: string;
+  onDone: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState<WorkoutCategory>("HIIT");
+  const [metric, setMetric] = useState<Metric>("REPS");
+  const [amount, setAmount] = useState(""); // reps / distance / meters / weight
+  const [min, setMin] = useState(""); // for time
+  const [sec, setSec] = useState(""); // for time
+  const [tracked, setTracked] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  const num = (s: string) => {
+    const n = Number(s);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const value = metric === "DURATION" ? num(min) * 60 + num(sec) : num(amount);
+  const canSave = name.trim().length > 0 && value > 0 && !pending;
+  const unit = unitFor(metric, unitSystem);
+  const numeric = (v: string) => v.replace(/[^\d.]/g, "");
+
+  const save = () => {
+    if (!canSave) return;
+    startTransition(async () => {
+      await logCustomWorkout({
+        userId,
+        dateISO: todayISO,
+        name: name.trim(),
+        category,
+        metric,
+        value,
+        unit,
+        tracked,
+        notes: notes.trim() || undefined,
+      });
+      onDone();
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className={CAPTION}>Name</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Murph, Morning HIIT, pickup game"
+          className={FIELD}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={CAPTION}>Type</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as WorkoutCategory)}
+            className={FIELD}
+          >
+            {CUSTOM_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {CATEGORY_LABEL[c]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={CAPTION}>Record</label>
+          <select
+            value={metric}
+            onChange={(e) => setMetric(e.target.value as Metric)}
+            className={FIELD}
+          >
+            {METRIC_OPTIONS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className={CAPTION}>Result</label>
+        {metric === "DURATION" ? (
+          <div className="flex items-center gap-2">
+            <input
+              value={min}
+              onChange={(e) => setMin(numeric(e.target.value))}
+              inputMode="numeric"
+              placeholder="0"
+              className={`${FIELD} w-20 text-center`}
+            />
+            <span className="text-sm text-muted">min</span>
+            <input
+              value={sec}
+              onChange={(e) => setSec(numeric(e.target.value))}
+              inputMode="numeric"
+              placeholder="00"
+              className={`${FIELD} w-20 text-center`}
+            />
+            <span className="text-sm text-muted">sec</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              value={amount}
+              onChange={(e) => setAmount(numeric(e.target.value))}
+              inputMode="decimal"
+              placeholder="0"
+              className={`${FIELD} w-28 text-center`}
+            />
+            {unit && <span className="text-sm text-muted">{unit}</span>}
+          </div>
+        )}
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={tracked}
+          onChange={(e) => setTracked(e.target.checked)}
+          className="h-4 w-4 accent-accent"
+        />
+        Add to my progress graph
+      </label>
+
+      <div>
+        <label className={CAPTION}>Notes (optional)</label>
+        <input
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Rounds, splits, how it felt…"
+          className={FIELD}
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={save}
+        disabled={!canSave}
+        className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+      >
+        {pending ? "Logging…" : "Log workout"}
+      </button>
+    </div>
   );
 }
