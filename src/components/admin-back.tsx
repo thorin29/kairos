@@ -4,9 +4,9 @@ import { LockButton } from "@/app/admin/lock-button";
 import { CloseAdminButton } from "@/app/admin/close-admin-button";
 
 /**
- * Admin sub-pages are reached from the admin hub. "Admin Menu" goes back to
- * the hub; "Close admin" leaves for the matching dashboard while staying
- * unlocked; "Lock admin" does the same but locks on the way out.
+ * "Admin Menu" goes back to the hub. On the right, "Close admin" leaves for the
+ * matching dashboard while staying unlocked, and "Lock admin" does the same but
+ * locks on the way out.
  */
 export function AdminBack() {
   return (
@@ -18,10 +18,10 @@ export function AdminBack() {
         <ArrowLeftIcon className="h-4 w-4" />
         Admin Menu
       </Link>
-      <CloseAdminButton />
-      <span className="ml-auto">
+      <div className="ml-auto flex items-center gap-2">
+        <CloseAdminButton />
         <LockButton />
-      </span>
+      </div>
     </div>
   );
 }
