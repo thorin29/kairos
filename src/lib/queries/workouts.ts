@@ -49,6 +49,14 @@ export type TodayWorkout = {
   result: string;
 };
 
+export type HistoryEntry = {
+  id: string;
+  dateISO: string;
+  label: string;
+  result: string;
+  isRest: boolean;
+};
+
 export type PersonWorkout = {
   user: { id: string; name: string; color: string; avatarPath: string | null };
   categories: WorkoutCategory[];
@@ -56,6 +64,7 @@ export type PersonWorkout = {
   weightSeries: GraphSeries[];
   today: { scheduled: TodayExercise[]; workedOut: boolean; rested: boolean };
   todayWorkouts: TodayWorkout[];
+  history: HistoryEntry[];
   plan: { day: number; workouts: { id: string; name: string }[] }[];
   todayPlanned: { id: string; name: string }[];
   reminders: Reminder[];
@@ -82,7 +91,8 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
   const cards: PersonWorkout[] = [];
 
   for (const person of people) {
-    const [exercises, schedules, weightSets, task, todaySessions, plannedRows] = await Promise.all([
+    const [exercises, schedules, weightSets, task, todaySessions, plannedRows, recentSessions] =
+      await Promise.all([
       prisma.exercise.findMany({
         where: { userId: person.id, isActive: true },
         orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
@@ -137,6 +147,30 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         where: { userId: person.id },
         orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
         select: { id: true, dayOfWeek: true, name: true },
+      }),
+      prisma.workoutSession.findMany({
+        where: { userId: person.id, date: { lt: today } },
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+        take: 30,
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          isRest: true,
+          date: true,
+          sets: {
+            select: {
+              exerciseId: true,
+              weight: true,
+              reps: true,
+              distance: true,
+              meters: true,
+              seconds: true,
+              unit: true,
+              exercise: { select: { name: true } },
+            },
+          },
+        },
       }),
     ]);
 
@@ -244,6 +278,15 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       .filter((s) => !s.isRest && (s.sets.length > 0 || (s.name?.trim().length ?? 0) > 0))
       .map((s) => ({ id: s.id, label: workoutLabel(s), result: workoutResult(s) }));
 
+    const recent = (recentSessions ?? []) as unknown as (SessShape & { date: Date })[];
+    const history: HistoryEntry[] = recent.map((s) => ({
+      id: s.id,
+      dateISO: fromDateColumn(s.date),
+      label: s.isRest ? "Rest day" : workoutLabel(s),
+      result: s.isRest ? "" : workoutResult(s),
+      isRest: s.isRest,
+    }));
+
     // Reminders
     const reminders: Reminder[] = [];
     for (const d of defs) {
@@ -287,6 +330,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       weightSeries,
       today: { scheduled, workedOut, rested },
       todayWorkouts,
+      history,
       plan,
       todayPlanned,
       reminders,
