@@ -58,6 +58,25 @@ export type HistoryEntry = {
   isRest: boolean;
 };
 
+export type PlanExercise = {
+  id: string;
+  poolExerciseId: string;
+  name: string;
+  muscleGroup: MuscleGroup | null;
+  tracked: boolean;
+  metric: Metric | null;
+};
+
+export type PlanWorkout = {
+  id: string;
+  name: string;
+  category: WorkoutCategory | null;
+  muscleGroup: MuscleGroup | null;
+  exercises: PlanExercise[];
+};
+
+export type PlanDay = { day: number; workouts: PlanWorkout[] };
+
 export type PersonWorkout = {
   user: { id: string; name: string; color: string; avatarPath: string | null };
   categories: WorkoutCategory[];
@@ -66,7 +85,7 @@ export type PersonWorkout = {
   today: { scheduled: TodayExercise[]; workedOut: boolean; rested: boolean };
   todayWorkouts: TodayWorkout[];
   history: HistoryEntry[];
-  plan: { day: number; workouts: { id: string; name: string }[] }[];
+  plan: PlanDay[];
   todayPlanned: { id: string; name: string }[];
   reminders: Reminder[];
 };
@@ -147,7 +166,23 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       prisma.plannedWorkout.findMany({
         where: { userId: person.id },
         orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
-        select: { id: true, dayOfWeek: true, name: true },
+        select: {
+          id: true,
+          dayOfWeek: true,
+          name: true,
+          category: true,
+          muscleGroup: true,
+          exercises: {
+            orderBy: { sortOrder: "asc" },
+            select: {
+              id: true,
+              poolExerciseId: true,
+              tracked: true,
+              metric: true,
+              poolExercise: { select: { name: true, muscleGroup: true } },
+            },
+          },
+        },
       }),
       prisma.workoutSession.findMany({
         where: { userId: person.id, date: { lt: today } },
@@ -310,12 +345,38 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       }
     }
 
-    const pRows = plannedRows as unknown as { id: string; dayOfWeek: number; name: string }[];
+    const pRows = plannedRows as unknown as {
+      id: string;
+      dayOfWeek: number;
+      name: string;
+      category: WorkoutCategory | null;
+      muscleGroup: MuscleGroup | null;
+      exercises: {
+        id: string;
+        poolExerciseId: string;
+        tracked: boolean;
+        metric: Metric | null;
+        poolExercise: { name: string; muscleGroup: MuscleGroup | null } | null;
+      }[];
+    }[];
     const plan = Array.from({ length: 7 }, (_, day) => ({
       day,
       workouts: pRows
         .filter((w) => w.dayOfWeek === day)
-        .map((w) => ({ id: w.id, name: w.name })),
+        .map((w) => ({
+          id: w.id,
+          name: w.name,
+          category: w.category,
+          muscleGroup: w.muscleGroup,
+          exercises: w.exercises.map((e) => ({
+            id: e.id,
+            poolExerciseId: e.poolExerciseId,
+            name: e.poolExercise?.name ?? "—",
+            muscleGroup: e.poolExercise?.muscleGroup ?? null,
+            tracked: e.tracked,
+            metric: e.metric,
+          })),
+        })),
     }));
     const todayPlanned = plan[dow]?.workouts ?? [];
 

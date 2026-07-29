@@ -1,30 +1,57 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { DAY_NAMES } from "@/lib/days";
 import {
-  addPlannedWorkout,
+  addPlannedWorkoutFromPool,
   copyDayPlan,
   removePlannedWorkout,
 } from "@/lib/actions/workouts";
-import { PlusIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon } from "@/components/icons";
+import type { PlanDay, PlanWorkout, PoolEntry } from "@/lib/queries/workouts";
+import {
+  CATEGORY_LABEL,
+  METRIC_LABEL_SHORT,
+  METRIC_ONLY_CATEGORIES,
+  MUSCLE_GROUPS,
+  MUSCLE_GROUP_LABEL,
+  defaultMetricFor,
+  metricChoicesFor,
+  type Metric,
+  type MuscleGroup,
+  type WorkoutCategory,
+} from "@/lib/workouts/catalog";
 
-type Day = { day: number; workouts: { id: string; name: string }[] };
+// Order the builder offers categories in — pool-backed first, then the
+// metric-only ones (a run/row/ruck day is just the day).
+const PLAN_CATEGORIES: WorkoutCategory[] = [
+  "WEIGHTS",
+  "HIIT",
+  "ISOMETRIC",
+  "STRETCHING",
+  "SPORT",
+  "RUNNING",
+  "ROWING",
+  "RUCKING",
+];
 
 export function PlanBuilder({
   userId,
   plan,
   todayDow,
+  pool,
 }: {
   userId: string;
-  plan: Day[];
+  plan: PlanDay[];
   todayDow: number;
+  pool: PoolEntry[];
 }) {
   return (
     <div className="space-y-2">
       <p className="text-sm text-muted">
-        Add a workout to a day to make it a training day &mdash; a day can hold
-        more than one, like legs and chest. Empty days are rest days.
+        Build a training day from your movement pool &mdash; pick a category,
+        choose the exercises, and mark which ones you want to log a number for.
+        A day can hold more than one workout; empty days are rest days.
       </p>
       {plan.map((d) => (
         <DayRow
@@ -33,6 +60,7 @@ export function PlanBuilder({
           day={d.day}
           workouts={d.workouts}
           plan={plan}
+          pool={pool}
           isToday={d.day === todayDow}
         />
       ))}
@@ -45,30 +73,27 @@ function DayRow({
   day,
   workouts,
   plan,
+  pool,
   isToday,
 }: {
   userId: string;
   day: number;
-  workouts: { id: string; name: string }[];
-  plan: Day[];
+  workouts: PlanWorkout[];
+  plan: PlanDay[];
+  pool: PoolEntry[];
   isToday: boolean;
 }) {
-  const [name, setName] = useState("");
+  const [adding, setAdding] = useState(false);
   const [, startTransition] = useTransition();
-
-  const add = () => {
-    const clean = name.trim();
-    if (!clean) return;
-    setName("");
-    startTransition(() => addPlannedWorkout(userId, day, clean));
-  };
 
   const copyFrom = (from: number) => {
     if (from === day) return;
     startTransition(() => copyDayPlan(userId, from, day));
   };
 
-  const otherDaysWithWork = plan.filter((p) => p.day !== day && p.workouts.length > 0);
+  const otherDaysWithWork = plan.filter(
+    (p) => p.day !== day && p.workouts.length > 0,
+  );
 
   return (
     <div
@@ -79,7 +104,9 @@ function DayRow({
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-sm font-semibold">
           {DAY_NAMES[day]}
-          {isToday && <span className="ml-2 text-xs font-normal text-accent">today</span>}
+          {isToday && (
+            <span className="ml-2 text-xs font-normal text-accent">today</span>
+          )}
         </span>
         {otherDaysWithWork.length > 0 && (
           <select
@@ -99,46 +126,306 @@ function DayRow({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="space-y-1.5">
         {workouts.map((w) => (
-          <span
+          <div
             key={w.id}
-            className="inline-flex items-center gap-1 rounded-full bg-surface py-1 pl-3 pr-1 text-sm shadow-sm"
+            className="flex items-start gap-2 rounded-lg bg-surface px-3 py-2 shadow-sm"
           >
-            {w.name}
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">{w.name}</div>
+              {w.exercises.length > 0 ? (
+                <div className="mt-0.5 text-xs text-muted">
+                  {w.exercises
+                    .map((e) => (e.tracked ? e.name : `${e.name} (no log)`))
+                    .join(" · ")}
+                </div>
+              ) : (
+                <div className="mt-0.5 text-xs text-muted">
+                  {w.category
+                    ? `Log ${METRIC_LABEL_SHORT[
+                        defaultMetricFor(w.category)
+                      ].toLowerCase()} on completion`
+                    : "Legacy workout"}
+                </div>
+              )}
+            </div>
             <button
               type="button"
               aria-label={`Remove ${w.name}`}
-              onClick={() => startTransition(() => removePlannedWorkout(w.id))}
-              className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-red-700"
+              onClick={() =>
+                startTransition(() => removePlannedWorkout(w.id))
+              }
+              className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-red-700"
             >
-              ✕
+              <TrashIcon className="h-3.5 w-3.5" />
             </button>
-          </span>
+          </div>
         ))}
 
-        <span className="inline-flex items-center gap-1">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                add();
-              }
-            }}
-            placeholder="Add workout"
-            className="h-8 w-32 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
-          />
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-hairline px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
+        >
+          <PlusIcon className="h-4 w-4" />
+          Add workout
+        </button>
+      </div>
+
+      {adding && (
+        <AddWorkoutModal
+          userId={userId}
+          day={day}
+          pool={pool}
+          onClose={() => setAdding(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+type Picked = { tracked: boolean; metric: Metric };
+
+function AddWorkoutModal({
+  userId,
+  day,
+  pool,
+  onClose,
+}: {
+  userId: string;
+  day: number;
+  pool: PoolEntry[];
+  onClose: () => void;
+}) {
+  const [category, setCategory] = useState<WorkoutCategory>("WEIGHTS");
+  const [muscle, setMuscle] = useState<MuscleGroup>("CHEST");
+  const [picked, setPicked] = useState<Record<string, Picked>>({});
+  const [saving, startSave] = useTransition();
+
+  const metricOnly = METRIC_ONLY_CATEGORIES.includes(category);
+  const isWeights = category === "WEIGHTS";
+  const choices = metricChoicesFor(category);
+  const defMetric = defaultMetricFor(category);
+
+  const options = useMemo(
+    () =>
+      pool.filter(
+        (p) =>
+          p.isActive &&
+          p.category === category &&
+          (!isWeights || p.muscleGroup === muscle),
+      ),
+    [pool, category, isWeights, muscle],
+  );
+
+  const toggle = (id: string) =>
+    setPicked((prev) => {
+      const next = { ...prev };
+      if (next[id]) delete next[id];
+      else next[id] = { tracked: true, metric: defMetric };
+      return next;
+    });
+
+  const setTracked = (id: string, tracked: boolean) =>
+    setPicked((prev) => ({ ...prev, [id]: { ...prev[id], tracked } }));
+
+  const setMetric = (id: string, metric: Metric) =>
+    setPicked((prev) => ({ ...prev, [id]: { ...prev[id], metric } }));
+
+  const chosen = Object.entries(picked);
+  const canSave = metricOnly || chosen.length > 0;
+
+  const save = () => {
+    if (!canSave) return;
+    startSave(async () => {
+      await addPlannedWorkoutFromPool(userId, day, {
+        category,
+        muscleGroup: isWeights ? muscle : null,
+        exercises: metricOnly
+          ? []
+          : chosen.map(([poolExerciseId, p]) => ({
+              poolExerciseId,
+              tracked: p.tracked,
+              metric: p.metric,
+            })),
+      });
+      onClose();
+    });
+  };
+
+  // Reset the picks whenever the pool subset changes underneath us.
+  const changeCategory = (c: WorkoutCategory) => {
+    setCategory(c);
+    setPicked({});
+  };
+  const changeMuscle = (m: MuscleGroup) => {
+    setMuscle(m);
+    setPicked({});
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[85vh] w-full max-w-md flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
+          <h3 className="text-base font-semibold">
+            Add to {DAY_NAMES[day]}
+          </h3>
           <button
             type="button"
-            onClick={add}
-            aria-label="Add workout"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-white"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground"
           >
-            <PlusIcon className="h-4 w-4" />
+            ✕
           </button>
-        </span>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-widest text-muted">
+              Category
+            </label>
+            <select
+              value={category}
+              onChange={(e) =>
+                changeCategory(e.target.value as WorkoutCategory)
+              }
+              className="h-10 w-full rounded-xl border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+            >
+              {PLAN_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {CATEGORY_LABEL[c]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {isWeights && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-widest text-muted">
+                Muscle group
+              </label>
+              <select
+                value={muscle}
+                onChange={(e) => changeMuscle(e.target.value as MuscleGroup)}
+                className="h-10 w-full rounded-xl border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+              >
+                {MUSCLE_GROUPS.map((m) => (
+                  <option key={m} value={m}>
+                    {MUSCLE_GROUP_LABEL[m]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {metricOnly ? (
+            <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
+              Adds a {CATEGORY_LABEL[category].toLowerCase()} day. You&rsquo;ll
+              log {METRIC_LABEL_SHORT[defMetric].toLowerCase()} when you
+              complete it.
+            </p>
+          ) : options.length === 0 ? (
+            <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
+              No {isWeights ? MUSCLE_GROUP_LABEL[muscle].toLowerCase() + " " : ""}
+              {CATEGORY_LABEL[category].toLowerCase()} movements in the pool yet.
+              Add some under Admin &rarr; Workouts &rarr; Exercise pool.
+            </p>
+          ) : (
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-widest text-muted">
+                Exercises
+              </label>
+              <div className="space-y-1.5">
+                {options.map((o) => {
+                  const p = picked[o.id];
+                  const on = !!p;
+                  return (
+                    <div
+                      key={o.id}
+                      className={`rounded-xl border p-2.5 ${
+                        on
+                          ? "border-accent bg-accent/5"
+                          : "border-hairline bg-ground/30"
+                      }`}
+                    >
+                      <label className="flex cursor-pointer items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          onChange={() => toggle(o.id)}
+                          className="h-4 w-4 accent-accent"
+                        />
+                        <span className="text-sm font-medium">{o.name}</span>
+                      </label>
+
+                      {on && (
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-7">
+                          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted">
+                            <input
+                              type="checkbox"
+                              checked={p.tracked}
+                              onChange={(e) =>
+                                setTracked(o.id, e.target.checked)
+                              }
+                              className="h-3.5 w-3.5 accent-accent"
+                            />
+                            Log a metric
+                          </label>
+                          {p.tracked && choices.length > 1 && (
+                            <select
+                              value={p.metric}
+                              onChange={(e) =>
+                                setMetric(o.id, e.target.value as Metric)
+                              }
+                              className="h-7 rounded-full border border-hairline bg-surface px-2 text-xs outline-none focus:border-accent"
+                            >
+                              {choices.map((m) => (
+                                <option key={m} value={m}>
+                                  {METRIC_LABEL_SHORT[m]}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          {p.tracked && choices.length === 1 && (
+                            <span className="text-xs text-muted">
+                              {METRIC_LABEL_SHORT[choices[0]]}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-hairline px-4 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full px-4 py-2 text-sm text-muted hover:bg-ground"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!canSave || saving}
+            onClick={save}
+            className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+          >
+            {saving ? "Adding…" : "Add workout"}
+          </button>
+        </div>
       </div>
     </div>
   );

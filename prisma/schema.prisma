@@ -494,6 +494,9 @@ model PoolExercise {
   sortOrder   Int             @default(0)
   createdAt   DateTime        @default(now())
 
+  sets    SessionSet[]
+  planned PlannedExercise[]
+
   @@unique([category, name])
   @@index([category, muscleGroup, isActive])
 }
@@ -546,15 +549,36 @@ model WorkoutSchedule {
 // A day with any of these is a training day; "leg day" and "chest" can both
 // sit on the same day. Details (muscle groups, HIIT specifics) come later.
 model PlannedWorkout {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation("PlannedWorkouts", fields: [userId], references: [id], onDelete: Cascade)
-  dayOfWeek Int      // 0 = Sunday .. 6 = Saturday
-  name      String
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation("PlannedWorkouts", fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int // 0 = Sunday .. 6 = Saturday
+  name        String
+  category    WorkoutCategory?
+  muscleGroup MuscleGroup?
+  sortOrder   Int              @default(0)
+  createdAt   DateTime         @default(now())
+
+  exercises PlannedExercise[]
 
   @@index([userId, dayOfWeek])
+}
+
+// A pool movement placed inside a planned workout, with whether the person
+// wants to log a metric for it when they complete that day, and which one.
+model PlannedExercise {
+  id               String         @id @default(cuid())
+  plannedWorkoutId String
+  plannedWorkout   PlannedWorkout @relation(fields: [plannedWorkoutId], references: [id], onDelete: Cascade)
+  poolExerciseId   String
+  poolExercise     PoolExercise   @relation(fields: [poolExerciseId], references: [id], onDelete: Cascade)
+  tracked          Boolean        @default(true)
+  metric           WorkoutMetric?
+  sortOrder        Int            @default(0)
+  createdAt        DateTime       @default(now())
+
+  @@unique([plannedWorkoutId, poolExerciseId])
+  @@index([poolExerciseId])
 }
 
 model WorkoutSession {
@@ -587,8 +611,14 @@ model SessionSet {
   id         String  @id @default(cuid())
   sessionId  String
   session    WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  exerciseId String
-  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  // A set points at either a legacy per-person Exercise or a shared PoolExercise
+  // (the pool is what makes the same movement comparable across people). Newer
+  // pool-driven logs use poolExerciseId; metric-only logs (a run) use neither
+  // and take their identity from the session's category.
+  exerciseId String?
+  exercise   Exercise? @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  poolExerciseId String?
+  poolExercise   PoolExercise? @relation(fields: [poolExerciseId], references: [id], onDelete: SetNull)
   setNumber  Int     @default(1)
   reps       Int?
   weight     Float?
@@ -601,4 +631,5 @@ model SessionSet {
 
   @@unique([sessionId, exerciseId, setNumber])
   @@index([exerciseId])
+  @@index([poolExerciseId])
 }

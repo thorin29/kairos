@@ -120,3 +120,49 @@ export const POOL_CATEGORIES: WorkoutCategory[] = [
   "STRETCHING",
   "ISOMETRIC",
 ];
+
+// Metric-only categories: no named movements, just a number when you finish.
+export const METRIC_ONLY_CATEGORIES: WorkoutCategory[] = [
+  "RUNNING",
+  "ROWING",
+  "RUCKING",
+];
+
+// The metric a category records by default, and (where the user gets a say)
+// the choices offered. Shared by the one-off logger and the plan builder so
+// the two never drift.
+export function defaultMetricFor(category: WorkoutCategory): Metric {
+  switch (category) {
+    case "WEIGHTS":
+      return "WEIGHT";
+    case "RUNNING":
+    case "RUCKING":
+      return "DISTANCE";
+    case "ROWING":
+      return "METERS";
+    default:
+      return "DURATION"; // SPORT / HIIT / STRETCHING / ISOMETRIC
+  }
+}
+
+export function metricChoicesFor(category: WorkoutCategory): Metric[] {
+  switch (category) {
+    case "WEIGHTS":
+      return ["WEIGHT"];
+    case "RUNNING":
+    case "RUCKING":
+      return ["DISTANCE"];
+    case "ROWING":
+      return ["METERS"];
+    default:
+      return ["DURATION", "REPS"];
+  }
+}
+
+export const METRIC_LABEL_SHORT: Record<Metric, string> = {
+  WEIGHT: "Weight",
+  DISTANCE: "Distance",
+  METERS: "Meters",
+  DURATION: "Time",
+  REPS: "Reps / rounds",
+};
