@@ -13,7 +13,8 @@ export type WorkoutCategory =
   | "SPORT"
   | "STRETCHING"
   | "HIIT"
-  | "ISOMETRIC";
+  | "ISOMETRIC"
+  | "RUCKING";
 
 export type Implement =
   | "BARBELL"
@@ -32,6 +33,7 @@ export const CATEGORY_LABEL: Record<WorkoutCategory, string> = {
   STRETCHING: "Stretching",
   HIIT: "HIIT",
   ISOMETRIC: "Isometric",
+  RUCKING: "Rucking",
 };
 
 export const IMPLEMENT_LABEL: Record<Implement, string> = {

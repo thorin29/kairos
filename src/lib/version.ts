@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.30.0";
+export const APP_VERSION = "0.31.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -30,11 +30,20 @@ export const MIGRATIONS = [
   "20_anytime_chores",
   "21_shared_admin_pin",
   "22_family_events",
+  "23_multi_workout_sessions",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.31.0",
+    summary: [
+      "Log more than one workout a day — a lift and a run, hockey and a ride; each shows in the day's list and can be removed",
+      "Adding a workout now picks the metric from the type: running is distance, rowing is meters, rucking is distance with an optional load",
+      "New Rucking workout type; a workout's name defaults to its type if you leave it blank",
+    ],
+  },
   {
     version: "0.30.0",
     summary: [

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
 import { getSetting } from "@/lib/settings";
 import {
+  CATEGORY_LABEL,
   LINE_COLORS,
   UNIT_SYSTEM_KEY,
   type Implement,
@@ -42,12 +43,19 @@ export type TodayExercise = {
 
 export type Reminder = { kind: "paused" | "ending" | "ended"; text: string };
 
+export type TodayWorkout = {
+  id: string;
+  label: string;
+  result: string;
+};
+
 export type PersonWorkout = {
   user: { id: string; name: string; color: string; avatarPath: string | null };
   categories: WorkoutCategory[];
   exercises: ExerciseDef[];
   weightSeries: GraphSeries[];
   today: { scheduled: TodayExercise[]; workedOut: boolean; rested: boolean };
+  todayWorkouts: TodayWorkout[];
   plan: { day: number; workouts: { id: string; name: string }[] }[];
   todayPlanned: { id: string; name: string }[];
   reminders: Reminder[];
@@ -74,7 +82,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
   const cards: PersonWorkout[] = [];
 
   for (const person of people) {
-    const [exercises, schedules, weightSets, task, todaySession, plannedRows] = await Promise.all([
+    const [exercises, schedules, weightSets, task, todaySessions, plannedRows] = await Promise.all([
       prisma.exercise.findMany({
         where: { userId: person.id, isActive: true },
         orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
@@ -103,11 +111,26 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         where: { userId: person.id, category: "EXERCISE", dueDate: today },
         select: { status: true },
       }),
-      prisma.workoutSession.findFirst({
+      prisma.workoutSession.findMany({
         where: { userId: person.id, date: today },
+        orderBy: { createdAt: "asc" },
         select: {
+          id: true,
+          name: true,
+          category: true,
           isRest: true,
-          sets: { select: { exerciseId: true, weight: true, reps: true } },
+          sets: {
+            select: {
+              exerciseId: true,
+              weight: true,
+              reps: true,
+              distance: true,
+              meters: true,
+              seconds: true,
+              unit: true,
+              exercise: { select: { name: true } },
+            },
+          },
         },
       }),
       prisma.plannedWorkout.findMany({
@@ -124,9 +147,10 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     const wSets = weightSets as unknown as {
       exerciseId: string; weight: number | null; session: { date: Date };
     }[];
-    const tSets = (todaySession?.sets ?? []) as unknown as {
-      exerciseId: string; weight: number | null; reps: number | null;
-    }[];
+    const sessions = (todaySessions ?? []) as unknown as SessShape[];
+    // Prefill for the scheduled-lift prompt: what's already logged today for
+    // each exercise, gathered across every session on the day.
+    const tSets = sessions.flatMap((s) => s.sets);
 
     // schedule lookup per exercise
     const schedByExercise = new Map<string, { days: number[]; paused: boolean; endDate: string | null }>();
@@ -210,8 +234,15 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         };
       });
 
-    const rested = ((todaySession as unknown as { isRest?: boolean } | null)?.isRest) ?? false;
+    const hasRealWorkout = sessions.some(
+      (s) => !s.isRest && (s.sets.length > 0 || (s.name?.trim().length ?? 0) > 0),
+    );
+    const rested = sessions.some((s) => s.isRest) && !hasRealWorkout;
     const workedOut = task?.status === "COMPLETE" && !rested;
+
+    const todayWorkouts: TodayWorkout[] = sessions
+      .filter((s) => !s.isRest && (s.sets.length > 0 || (s.name?.trim().length ?? 0) > 0))
+      .map((s) => ({ id: s.id, label: workoutLabel(s), result: workoutResult(s) }));
 
     // Reminders
     const reminders: Reminder[] = [];
@@ -255,6 +286,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       exercises: defs,
       weightSeries,
       today: { scheduled, workedOut, rested },
+      todayWorkouts,
       plan,
       todayPlanned,
       reminders,
@@ -309,4 +341,71 @@ export async function loadWorkoutAdmin(): Promise<{
       trackedCount: u.workoutExercises.filter((e) => e.tracked).length,
     })),
   };
+}
+
+// --- today's workout list: labels and result summaries -------------------
+
+type SetShape = {
+  exerciseId: string;
+  weight: number | null;
+  reps: number | null;
+  distance: number | null;
+  meters: number | null;
+  seconds: number | null;
+  unit: string | null;
+  exercise: { name: string } | null;
+};
+
+type SessShape = {
+  id: string;
+  name: string | null;
+  category: string | null;
+  isRest: boolean;
+  sets: SetShape[];
+};
+
+function fmtNum(n: number): string {
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
+}
+
+function fmtDuration(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** What to call a workout in the day's list. */
+function workoutLabel(s: SessShape): string {
+  if (s.name && s.name.trim()) return s.name.trim();
+  if (s.category) return CATEGORY_LABEL[s.category as WorkoutCategory] ?? "Workout";
+  if (s.sets.some((x) => x.weight != null)) return "Weights";
+  if (s.sets.length > 0) return "Workout";
+  return "Worked out";
+}
+
+/** A short human summary of what was recorded. */
+function workoutResult(s: SessShape): string {
+  const sets = s.sets;
+  if (sets.length === 0) return "";
+  if (sets.length > 1) {
+    const names = [
+      ...new Set(sets.map((x) => x.exercise?.name).filter((n): n is string => !!n)),
+    ];
+    if (names.length === 0) return `${sets.length} exercises`;
+    const shown = names.slice(0, 3).join(", ");
+    return names.length > 3 ? `${shown} +${names.length - 3}` : shown;
+  }
+  const x = sets[0];
+  if (x.weight != null && x.reps != null) {
+    return `${fmtNum(x.weight)}${x.unit ?? ""} × ${x.reps}`;
+  }
+  if (x.distance != null) {
+    const base = `${fmtNum(x.distance)} ${x.unit ?? ""}`.trim();
+    return x.weight != null ? `${base} · ${fmtNum(x.weight)} load` : base;
+  }
+  if (x.meters != null) return `${fmtNum(x.meters)} m`;
+  if (x.seconds != null) return fmtDuration(x.seconds);
+  if (x.reps != null) return `${x.reps} reps`;
+  if (x.weight != null) return `${fmtNum(x.weight)} ${x.unit ?? ""}`.trim();
+  return "";
 }
