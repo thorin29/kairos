@@ -26,7 +26,7 @@ import {
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
 
-type Step = "menu" | "plan" | "log" | "custom";
+type Step = "menu" | "plan" | "log" | "custom" | "history";
 
 export function WorkoutsGrid({
   people,
@@ -219,6 +219,16 @@ export function WorkoutsGrid({
                       onClick={rest}
                     />
                   </div>
+
+                  {open.history.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setStep("history")}
+                      className="text-sm font-medium text-muted underline-offset-2 hover:text-ink hover:underline"
+                    >
+                      Recent workouts →
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -263,6 +273,54 @@ export function WorkoutsGrid({
                     todayISO={todayISO}
                     onDone={() => setStep("menu")}
                   />
+                </div>
+              )}
+
+              {step === "history" && (
+                <div className="mt-4">
+                  <BackLink onClick={() => setStep("menu")} />
+                  <h3 className="mb-1 font-display text-lg font-semibold">
+                    Recent workouts
+                  </h3>
+                  <p className="mb-3 text-sm text-muted">
+                    Logged a mistake? Remove it here.
+                  </p>
+                  {open.history.length === 0 ? (
+                    <p className="text-sm text-muted">No past workouts.</p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {open.history.map((h) => (
+                        <li
+                          key={h.id}
+                          className="flex items-center gap-2 rounded-xl border border-hairline bg-ground/40 px-3 py-2"
+                        >
+                          <span className="w-16 shrink-0 text-xs font-medium text-muted">
+                            {fmtHistoryDate(h.dateISO)}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold">
+                              {h.label}
+                            </p>
+                            {h.result && (
+                              <p className="truncate text-xs text-muted">
+                                {h.result}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            aria-label={`Delete ${h.label} on ${h.dateISO}`}
+                            onClick={() =>
+                              startTransition(() => deleteWorkoutSession(h.id))
+                            }
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-black/5 hover:text-red-700"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
             </div>
@@ -417,6 +475,15 @@ function unitFor(metric: Metric, system: UnitSystem): string {
 const CAPTION = "mb-1 block text-xs font-semibold uppercase tracking-widest text-muted";
 const FIELD =
   "h-9 w-full rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent";
+
+/** YYYY-MM-DD → "Jul 21", parsed locally to avoid an off-by-one. */
+function fmtHistoryDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
 
 function CustomWorkoutForm({
   userId,

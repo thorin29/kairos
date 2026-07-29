@@ -178,6 +178,8 @@ all live in the database, never in this repository.
       and names default to the type (v0.30.0)
 - [x] Log more than one workout a day — each is its own named session, shown in
       a per-day list you can remove from; added the Rucking type (v0.31.0)
+- [x] Delete a logged workout — from the day's list, or from a "Recent workouts"
+      list for past days, in case something was logged by mistake (v0.32.0)
 - [ ] Admin-owned, categorized exercise/movement pool (like the chore master
       list); people select from it instead of defining their own — the
       groundwork for comparing metrics between people
