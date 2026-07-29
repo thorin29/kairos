@@ -30,7 +30,20 @@ export function WorkoutsGrid({
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("menu");
+  // Which side of the screen the opened card was tapped on, so the pop-out
+  // grows outward from roughly where it sat rather than always from centre.
+  const [origin, setOrigin] = useState("center top");
   const [, startTransition] = useTransition();
+
+  const openFrom = (id: string, el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    const mid = r.left + r.width / 2;
+    const third = window.innerWidth / 3;
+    const x = mid < third ? "left" : mid > third * 2 ? "right" : "center";
+    setOrigin(`${x} top`);
+    setOpenId(id);
+    setStep("menu");
+  };
 
   const open = people.find((p) => p.user.id === openId) ?? null;
   const hasPlan = open ? open.plan.some((d) => d.workouts.length > 0) : false;
@@ -45,15 +58,11 @@ export function WorkoutsGrid({
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {people.map((p) => {
-          const planned = p.plan.some((d) => d.workouts.length > 0);
           return (
             <button
               key={p.user.id}
               type="button"
-              onClick={() => {
-                setOpenId(p.user.id);
-                setStep("menu");
-              }}
+              onClick={(e) => openFrom(p.user.id, e.currentTarget)}
               className="hover-bounce group flex flex-col rounded-xl border border-hairline bg-surface p-5 text-left outline-none transition-colors hover:border-accent"
             >
               <div className="flex items-start justify-between gap-3">
@@ -66,14 +75,13 @@ export function WorkoutsGrid({
               <div className="mt-2">
                 <TileStatus person={p} />
               </div>
-              {/* Preview of the actions — active once the card is opened. */}
+              {/* Preview of the actions — icons only and softly out of focus at
+                  rest; they come sharp (and gain their labels) once the card is
+                  tapped open. */}
               <div className="mt-4 flex gap-2" aria-hidden>
-                <ActionChip
-                  icon={CalendarPlusIcon}
-                  label={planned ? "Edit plan" : "Plan"}
-                />
-                <ActionChip icon={DumbbellIcon} label="Log" />
-                <ActionChip icon={MoonIcon} label="Rest" />
+                <ActionChip icon={CalendarPlusIcon} />
+                <ActionChip icon={DumbbellIcon} />
+                <ActionChip icon={MoonIcon} />
               </div>
             </button>
           );
@@ -82,7 +90,7 @@ export function WorkoutsGrid({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6"
+          className="animate-backdrop-fade fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6"
           role="dialog"
           aria-modal="true"
           aria-label={`${open.user.name}'s workouts`}
@@ -90,7 +98,8 @@ export function WorkoutsGrid({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="my-4 w-full max-w-xl"
+            style={{ transformOrigin: origin }}
+            className="animate-card-zoom my-4 w-full max-w-xl"
           >
             <div className="rounded-2xl border border-hairline bg-surface p-6 shadow-xl">
               <div className="flex items-start justify-between gap-3">
@@ -235,12 +244,13 @@ function TileStatus({ person }: { person: PersonWorkout }) {
 
 type IconType = ({ className }: { className?: string }) => React.ReactElement;
 
-// Decorative on the card (not clickable until the card is opened).
-function ActionChip({ icon: Icon, label }: { icon: IconType; label: string }) {
+// Decorative on the card (not clickable until the card is opened). Icons only,
+// held a touch out of focus at rest so the tap-to-open zoom reads as pulling
+// them sharp; they crisp up on hover as a "you can open this" cue.
+function ActionChip({ icon: Icon }: { icon: IconType }) {
   return (
-    <span className="flex flex-1 flex-col items-center gap-1 rounded-xl border border-hairline/70 py-2 text-muted">
+    <span className="flex flex-1 items-center justify-center rounded-xl border border-hairline/70 py-2.5 text-muted opacity-60 blur-[1px] transition duration-200 group-hover:opacity-100 group-hover:blur-0">
       <Icon className="h-5 w-5" />
-      <span className="text-[0.65rem] font-medium">{label}</span>
     </span>
   );
 }

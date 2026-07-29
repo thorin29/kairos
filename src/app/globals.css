@@ -85,3 +85,31 @@ button:disabled {
 .hover-bounce:hover {
   animation: book-pop 0.35s ease;
 }
+
+/* Card pop-out: the opened panel grows into place while pulling into focus,
+   so a resting card (small, its action icons softly blurred) reads as coming
+   sharp as it enlarges. transform-origin is set inline from the tapped card's
+   side of the screen, so the growth leans out from where it was tapped. The
+   reduced-motion block above clamps both to near-zero for anyone who opts out. */
+@keyframes card-zoom-focus {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+.animate-card-zoom {
+  animation: card-zoom-focus 0.22s ease-out;
+}
+@keyframes backdrop-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-backdrop-fade {
+  animation: backdrop-fade 0.18s ease-out;
+}
