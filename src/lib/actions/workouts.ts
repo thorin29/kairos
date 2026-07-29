@@ -10,6 +10,7 @@ import {
   UNIT_SYSTEM_KEY,
   type Implement,
   type Metric,
+  type MuscleGroup,
   type UnitSystem,
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
@@ -78,6 +79,60 @@ export async function updateExercise(
 
 export async function removeExercise(id: string): Promise<void> {
   await prisma.exercise.update({ where: { id }, data: { isActive: false } });
+  refresh();
+}
+
+/** Admin cleanup: permanently delete an exercise definition and everything
+ *  under it (its schedule and any logged sets). For erroneous/test records. */
+export async function adminDeleteExercise(id: string): Promise<void> {
+  await requireAdmin();
+  if (!id) return;
+  await prisma.exercise.delete({ where: { id } }).catch(() => {});
+  await generateWorkoutTasks();
+  refresh();
+}
+
+// --- exercise pool (admin-managed, household-wide) -----------------------
+
+/** Add a movement to the shared pool. Muscle group applies to weights only;
+ *  duplicates (same category + name) are silently ignored. */
+export async function addPoolExercise(input: {
+  category: WorkoutCategory;
+  name: string;
+  muscleGroup?: MuscleGroup | null;
+}): Promise<void> {
+  await requireAdmin();
+  const name = input.name.trim().slice(0, 60);
+  if (!name) return;
+  const muscleGroup =
+    input.category === "WEIGHTS" ? input.muscleGroup ?? null : null;
+  const count = await prisma.poolExercise.count({
+    where: { category: input.category },
+  });
+  await prisma.poolExercise
+    .create({
+      data: { category: input.category, name, muscleGroup, sortOrder: count },
+    })
+    .catch(() => {});
+  refresh();
+}
+
+export async function deletePoolExercise(id: string): Promise<void> {
+  await requireAdmin();
+  if (!id) return;
+  await prisma.poolExercise.delete({ where: { id } }).catch(() => {});
+  refresh();
+}
+
+export async function setPoolExerciseActive(
+  id: string,
+  isActive: boolean,
+): Promise<void> {
+  await requireAdmin();
+  if (!id) return;
+  await prisma.poolExercise
+    .update({ where: { id }, data: { isActive } })
+    .catch(() => {});
   refresh();
 }
 

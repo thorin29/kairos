@@ -180,14 +180,20 @@ all live in the database, never in this repository.
       a per-day list you can remove from; added the Rucking type (v0.31.0)
 - [x] Delete a logged workout — from the day's list, or from a "Recent workouts"
       list for past days, in case something was logged by mistake (v0.32.0)
-- [ ] Admin-owned, categorized exercise/movement pool (like the chore master
-      list); people select from it instead of defining their own — the
-      groundwork for comparing metrics between people
+- [x] Admin-owned, categorized exercise pool (like the chore master list), with
+      weights grouped by muscle — built and managed on the Workouts admin page
+      (v0.34.0)
+- [ ] Structured plan builder — pick category → (weights: muscle group) → choose
+      pool exercises → per-exercise "log a metric?" toggle → add another workout
+      to the day; people pick from the pool instead of free-typing
+- [ ] Complete-with-metrics — checking a planned workout off pops a form with
+      just the exercises marked to track; fill in, complete; recurs weekly
 - [ ] HIIT/CrossFit builder: choose a type (AMRAP / max sets / for time) and
       pull movements from the HIIT pool into one named workout with a result
 - [ ] Comparative graphs across people for the same pool exercise or workout
-- [ ] Admin: delete any person's workouts — pick a user in the workouts admin,
-      see their logged workouts in a list, delete individually
+- [x] Admin: open a person from the Workouts page to see their exercises, plan,
+      and logged workouts, and delete any individually — for clearing test or
+      mistaken records (v0.33.0)
 - [ ] Workout plans: optional end date (plan expiry); no end date is fine too
 - [ ] Admin: pause a person's workouts for a set period (vacations) — no plan
       tasks generated while paused

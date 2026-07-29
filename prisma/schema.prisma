@@ -469,6 +469,35 @@ enum WorkoutMetric {
   REPS
 }
 
+// A built-in sub-category for weights, so the pool of lifts can be organised
+// the way people think about a session ("chest day"). Weights only.
+enum MuscleGroup {
+  CHEST
+  BACK
+  SHOULDERS
+  LEGS
+  ARMS
+  CORE
+  FULL_BODY
+}
+
+// The household exercise pool: a shared, admin-managed library of movements,
+// categorised, with a muscle-group sub-category for weights. People pick from
+// this pool when planning and logging, so the same "Bench Press" is one shared
+// thing everyone can be compared on — unlike the per-person Exercise below.
+model PoolExercise {
+  id          String          @id @default(cuid())
+  category    WorkoutCategory
+  name        String
+  muscleGroup MuscleGroup?
+  isActive    Boolean         @default(true)
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+
+  @@unique([category, name])
+  @@index([category, muscleGroup, isActive])
+}
+
 // A person's own definition of a thing they do. Built once, reused: it drives
 // what the log form asks for and whether the exercise gets a line on a graph.
 model Exercise {
