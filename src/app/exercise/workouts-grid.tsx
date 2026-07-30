@@ -17,7 +17,8 @@ import {
   restDay,
 } from "@/lib/actions/workouts";
 import { PlanBuilder } from "./plan-builder";
-import { WorkoutCard } from "./workout-card";
+import { TodayPlan } from "./workout-card";
+import { LineChart } from "@/components/line-chart";
 import type { PersonWorkout, PoolEntry } from "@/lib/queries/workouts";
 import {
   CATEGORY_LABEL,
@@ -29,7 +30,7 @@ import {
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
 
-type Step = "menu" | "plan" | "log" | "custom" | "history";
+type Step = "menu" | "plan" | "log" | "history";
 
 export function WorkoutsGrid({
   people,
@@ -200,24 +201,21 @@ export function WorkoutsGrid({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <ActionButton
-                      icon={CalendarPlusIcon}
-                      label={hasPlan ? "Edit plan" : "Create plan"}
-                      onClick={() => setStep("plan")}
-                      primary={!hasPlan}
-                    />
-                    <ActionButton
-                      icon={DumbbellIcon}
-                      label="Log weights"
-                      onClick={() => setStep("log")}
-                      primary={hasPlan}
-                    />
-                    <ActionButton
-                      icon={PlusIcon}
-                      label="Log workout"
-                      onClick={() => setStep("custom")}
-                    />
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <ActionButton
+                        icon={CalendarPlusIcon}
+                        label={hasPlan ? "Edit plan" : "Create plan"}
+                        onClick={() => setStep("plan")}
+                        primary={!hasPlan}
+                      />
+                      <ActionButton
+                        icon={DumbbellIcon}
+                        label="Log workout"
+                        onClick={() => setStep("log")}
+                        primary={hasPlan}
+                      />
+                    </div>
                     <ActionButton
                       icon={MoonIcon}
                       label="Rest / skip"
@@ -253,33 +251,48 @@ export function WorkoutsGrid({
               )}
 
               {step === "log" && (
-                <div className="mt-4">
+                <div className="mt-4 space-y-6">
                   <BackLink onClick={() => setStep("menu")} />
-                  <WorkoutCard
-                    person={open}
-                    unitSystem={unitSystem}
-                    todayISO={todayISO}
-                  />
-                </div>
-              )}
-
-              {step === "custom" && (
-                <div className="mt-4">
-                  <BackLink onClick={() => setStep("menu")} />
-                  <h3 className="mb-1 font-display text-lg font-semibold">
-                    Log a workout
+                  <h3 className="font-display text-lg font-semibold">
+                    Log workout
                   </h3>
-                  <p className="mb-3 text-sm text-muted">
-                    Pick the type, choose the exercise from the pool, and record
-                    today&rsquo;s result. You can log more than one a day.
-                  </p>
-                  <CustomWorkoutForm
-                    userId={open.user.id}
-                    unitSystem={unitSystem}
-                    pool={pool}
+
+                  {open.weightSeries.length > 0 && (
+                    <LineChart
+                      series={open.weightSeries.map((s) => ({
+                        id: s.exerciseId,
+                        name: s.name,
+                        color: s.color,
+                        unit: s.unit,
+                        points: s.points,
+                      }))}
+                    />
+                  )}
+
+                  <TodayPlan
+                    person={open}
                     todayISO={todayISO}
-                    onDone={() => setStep("menu")}
+                    todayDow={todayDow}
+                    unitSystem={unitSystem}
                   />
+
+                  <div className="border-t border-hairline pt-5">
+                    <h4 className="mb-1 font-display text-sm font-semibold">
+                      Log something else
+                    </h4>
+                    <p className="mb-3 text-sm text-muted">
+                      A one-off from the pool &mdash; a run, hockey, an extra
+                      lift. Pick the type, choose the movement, drop in the
+                      result.
+                    </p>
+                    <CustomWorkoutForm
+                      userId={open.user.id}
+                      unitSystem={unitSystem}
+                      pool={pool}
+                      todayISO={todayISO}
+                      onDone={() => setStep("menu")}
+                    />
+                  </div>
                 </div>
               )}
 

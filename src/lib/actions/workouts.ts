@@ -496,6 +496,93 @@ export async function restDay(userId: string, dateISO: string): Promise<void> {
   refresh();
 }
 
+/**
+ * Complete a scheduled (planned) workout for the day. Writes one named session
+ * for the plan with a pool-referenced set per logged metric, then marks the
+ * day's workout task done. Untracked movements need no number — completing the
+ * workout with no entries still counts the day as worked out.
+ */
+export async function completePlannedWorkout(input: {
+  userId: string;
+  dateISO: string;
+  plannedWorkoutId: string;
+  entries: {
+    poolExerciseId: string | null;
+    metric: Metric;
+    value: number;
+    unit: string;
+  }[];
+}): Promise<void> {
+  if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
+
+  const plan = (await prisma.plannedWorkout.findUnique({
+    where: { id: input.plannedWorkoutId },
+    select: { name: true, category: true, userId: true },
+  })) as unknown as {
+    name: string;
+    category: WorkoutCategory | null;
+    userId: string;
+  } | null;
+  if (!plan || plan.userId !== input.userId) return;
+
+  const date = toDateColumn(input.dateISO);
+  const session = await prisma.workoutSession.create({
+    data: {
+      userId: input.userId,
+      date,
+      name: plan.name,
+      category: plan.category,
+      finished: true,
+      isRest: false,
+    },
+  });
+
+  let setNumber = 0;
+  for (const e of input.entries) {
+    if (!Number.isFinite(e.value) || e.value <= 0) continue;
+    setNumber++;
+    const set: {
+      sessionId: string;
+      poolExerciseId: string | null;
+      setNumber: number;
+      unit: string | null;
+      finished: boolean;
+      weight?: number;
+      reps?: number;
+      distance?: number;
+      meters?: number;
+      seconds?: number;
+    } = {
+      sessionId: session.id,
+      poolExerciseId: e.poolExerciseId,
+      setNumber,
+      unit: e.unit || null,
+      finished: true,
+    };
+    switch (e.metric) {
+      case "WEIGHT":
+        set.weight = e.value;
+        break;
+      case "REPS":
+        set.reps = Math.round(e.value);
+        break;
+      case "DISTANCE":
+        set.distance = e.value;
+        break;
+      case "METERS":
+        set.meters = e.value;
+        break;
+      case "DURATION":
+        set.seconds = Math.round(e.value);
+        break;
+    }
+    await prisma.sessionSet.create({ data: set });
+  }
+
+  await completeWorkoutTask(input.userId, input.dateISO);
+  refresh();
+}
+
 // --- one-off custom workout ---------------------------------------------
 
 /**
