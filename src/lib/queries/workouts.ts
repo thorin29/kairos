@@ -132,17 +132,15 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       prisma.sessionSet.findMany({
         where: {
           weight: { not: null },
-          exercise: {
-            userId: person.id,
-            category: "WEIGHTS",
-            tracked: true,
-            isActive: true,
-          },
+          poolExerciseId: { not: null },
+          session: { userId: person.id },
+          poolExercise: { category: "WEIGHTS" },
         },
         select: {
-          exerciseId: true,
+          poolExerciseId: true,
           weight: true,
           session: { select: { date: true } },
+          poolExercise: { select: { name: true, muscleGroup: true } },
         },
       }),
       prisma.task.findFirst({
@@ -223,7 +221,10 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       category: string; metric: string; tracked: boolean;
     }[];
     const wSets = weightSets as unknown as {
-      exerciseId: string; weight: number | null; session: { date: Date };
+      poolExerciseId: string;
+      weight: number | null;
+      session: { date: Date };
+      poolExercise: { name: string; muscleGroup: MuscleGroup | null } | null;
     }[];
     const sessions = (todaySessions ?? []) as unknown as SessShape[];
     // Prefill for the scheduled-lift prompt: what's already logged today for
@@ -258,36 +259,54 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
 
     const categories = [...new Set(defs.map((d) => d.category))];
 
-    // Graph series: max weight per exercise per day, in date order.
-    const nameById = new Map(exRows.map((e) => [e.id, e.name]));
-    const unitById = new Map(exRows.map((e) => [e.id, e.unit]));
-    const perExerciseDay = new Map<string, Map<string, number>>();
+    // Per-person progress: max weight per pool movement per day. Scoped to
+    // today's planned movements when there's a plan (so the card shows where
+    // you're at for today's lifts); otherwise every movement they've logged.
+    const movMeta = new Map<string, { name: string; muscleGroup: MuscleGroup | null }>();
+    const perMovementDay = new Map<string, Map<string, number>>();
     for (const set of wSets) {
-      if (set.weight == null) continue;
+      if (set.weight == null || !set.poolExercise) continue;
+      const id = set.poolExerciseId;
+      if (!movMeta.has(id)) {
+        movMeta.set(id, {
+          name: set.poolExercise.name,
+          muscleGroup: set.poolExercise.muscleGroup,
+        });
+      }
       const d = fromDateColumn(set.session.date);
-      const m = perExerciseDay.get(set.exerciseId) ?? new Map<string, number>();
+      const m = perMovementDay.get(id) ?? new Map<string, number>();
       m.set(d, Math.max(m.get(d) ?? 0, set.weight));
-      perExerciseDay.set(set.exerciseId, m);
+      perMovementDay.set(id, m);
     }
 
-    const trackedWeights = defs.filter((d) => d.category === "WEIGHTS" && d.tracked);
-    const weightSeries: GraphSeries[] = trackedWeights
-      .map((d, i) => {
-        const days = perExerciseDay.get(d.id);
-        const points = days
-          ? [...days.entries()]
-              .map(([date, value]) => ({ date, value }))
-              .sort((a, b) => (a.date < b.date ? -1 : 1))
-          : [];
-        return {
-          exerciseId: d.id,
-          name: nameById.get(d.id) ?? d.name,
-          unit: unitById.get(d.id) ?? d.unit,
-          color: LINE_COLORS[i % LINE_COLORS.length],
-          points,
-        };
-      })
+    const allSeries: GraphSeries[] = [...movMeta.entries()]
+      .sort((a, b) => a[1].name.localeCompare(b[1].name))
+      .map(([id, meta], i) => ({
+        exerciseId: id, // pool movement id — the legend/series key
+        name: meta.name,
+        unit: meta.muscleGroup ? weightUnits[meta.muscleGroup] : "",
+        color: LINE_COLORS[i % LINE_COLORS.length],
+        points: [...perMovementDay.get(id)!.entries()]
+          .map(([date, value]) => ({ date, value }))
+          .sort((a, b) => (a.date < b.date ? -1 : 1)),
+      }))
       .filter((s) => s.points.length > 0);
+
+    const todayPoolIds = new Set<string>();
+    for (const w of plannedRows as unknown as {
+      dayOfWeek: number;
+      exercises: { poolExerciseId: string }[];
+    }[]) {
+      if (w.dayOfWeek === dow) {
+        for (const e of w.exercises) todayPoolIds.add(e.poolExerciseId);
+      }
+    }
+
+    let weightSeries: GraphSeries[] = allSeries;
+    if (todayPoolIds.size > 0) {
+      const scoped = allSeries.filter((s) => todayPoolIds.has(s.exerciseId));
+      if (scoped.length > 0) weightSeries = scoped;
+    }
 
     // Today's prompt
     const loggedByExercise = new Map(

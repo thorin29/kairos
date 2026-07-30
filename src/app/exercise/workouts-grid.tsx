@@ -201,6 +201,18 @@ export function WorkoutsGrid({
                     )}
                   </div>
 
+                  {open.weightSeries.length > 0 && (
+                    <LineChart
+                      series={open.weightSeries.map((s) => ({
+                        id: s.exerciseId,
+                        name: s.name,
+                        color: s.color,
+                        unit: s.unit,
+                        points: s.points,
+                      }))}
+                    />
+                  )}
+
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <ActionButton
@@ -256,18 +268,6 @@ export function WorkoutsGrid({
                   <h3 className="font-display text-lg font-semibold">
                     Log workout
                   </h3>
-
-                  {open.weightSeries.length > 0 && (
-                    <LineChart
-                      series={open.weightSeries.map((s) => ({
-                        id: s.exerciseId,
-                        name: s.name,
-                        color: s.color,
-                        unit: s.unit,
-                        points: s.points,
-                      }))}
-                    />
-                  )}
 
                   <TodayPlan
                     person={open}

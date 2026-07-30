@@ -205,8 +205,8 @@ all live in the database, never in this repository.
       measurement system removed (v0.39.0)
 - [x] Admin cleanup: person drill-down shows only logged workouts; pool creation
       labelled "Muscle group" with a per-group unit switch (v0.39.0)
-- [ ] Per-person progress graph on the opened card (above the buttons), pool-based
-      and reflecting today's planned muscle group/exercises (#8) — next
+- [x] Per-person progress graph on the opened card (above the buttons), pool-based
+      and reflecting today's planned muscle group/exercises (v0.40.0)
 - [ ] Chart point hover tooltip is a native title for now; richer hover popup later
 - [x] Comparative graphs across people for the same pool exercise or workout
       (v0.38.0) — Compare section on the Workouts page, a line per person of
