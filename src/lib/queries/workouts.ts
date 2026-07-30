@@ -971,3 +971,61 @@ export async function loadHiitWorkouts(): Promise<HiitWorkoutRow[]> {
     })),
   }));
 }
+
+export type BoardHiitWorkout = {
+  id: string;
+  name: string;
+  type: WorkoutType;
+  ownerId: string | null; // null = shared pool
+  movements: HiitMovementRow[];
+};
+
+/**
+ * For the logging dropdown: the shared/approved pool plus every person's own
+ * workouts. The grid narrows to shared + the open person's own.
+ */
+export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
+  const rows = (await prisma.hiitWorkout.findMany({
+    where: { OR: [{ ownerId: null, approved: true }, { ownerId: { not: null } }] },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      ownerId: true,
+      movements: {
+        orderBy: { position: "asc" },
+        select: {
+          poolExerciseId: true,
+          reps: true,
+          position: true,
+          poolExercise: { select: { name: true } },
+        },
+      },
+    },
+  })) as unknown as {
+    id: string;
+    name: string;
+    type: WorkoutType;
+    ownerId: string | null;
+    movements: {
+      poolExerciseId: string;
+      reps: number | null;
+      position: number;
+      poolExercise: { name: string } | null;
+    }[];
+  }[];
+
+  return rows.map((w) => ({
+    id: w.id,
+    name: w.name,
+    type: w.type,
+    ownerId: w.ownerId,
+    movements: w.movements.map((m) => ({
+      poolExerciseId: m.poolExerciseId,
+      name: m.poolExercise?.name ?? "—",
+      reps: m.reps,
+      position: m.position,
+    })),
+  }));
+}

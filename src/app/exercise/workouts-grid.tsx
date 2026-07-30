@@ -15,12 +15,17 @@ import {
   deleteWorkoutSession,
   logCustomWorkout,
   logHiitWorkout,
+  createAndLogHiitWorkout,
   restDay,
 } from "@/lib/actions/workouts";
 import { PlanBuilder } from "./plan-builder";
 import { TodayPlan } from "./workout-card";
 import { LineChart } from "@/components/line-chart";
-import type { PersonWorkout, PoolEntry } from "@/lib/queries/workouts";
+import type {
+  PersonWorkout,
+  PoolEntry,
+  BoardHiitWorkout,
+} from "@/lib/queries/workouts";
 import {
   CATEGORY_LABEL,
   MUSCLE_GROUPS,
@@ -41,12 +46,14 @@ export function WorkoutsGrid({
   people,
   unitSystem,
   pool,
+  hiitWorkouts,
   todayISO,
   todayDow,
 }: {
   people: PersonWorkout[];
   unitSystem: UnitSystem;
   pool: PoolEntry[];
+  hiitWorkouts: BoardHiitWorkout[];
   todayISO: string;
   todayDow: number;
 }) {
@@ -286,6 +293,7 @@ export function WorkoutsGrid({
                       userId={open.user.id}
                       unitSystem={unitSystem}
                       pool={pool}
+                      hiitWorkouts={hiitWorkouts}
                       todayISO={todayISO}
                       onDone={() => setStep("menu")}
                     />
@@ -507,12 +515,14 @@ function CustomWorkoutForm({
   userId,
   unitSystem,
   pool,
+  hiitWorkouts,
   todayISO,
   onDone,
 }: {
   userId: string;
   unitSystem: UnitSystem;
   pool: PoolEntry[];
+  hiitWorkouts: BoardHiitWorkout[];
   todayISO: string;
   onDone: () => void;
 }) {
@@ -620,6 +630,9 @@ function CustomWorkoutForm({
       {isHiit ? (
         <HiitBuilder
           pool={pool}
+          workouts={hiitWorkouts.filter(
+            (w) => w.ownerId === null || w.ownerId === userId,
+          )}
           userId={userId}
           todayISO={todayISO}
           onDone={onDone}
@@ -755,37 +768,46 @@ function CustomWorkoutForm({
 
 function HiitBuilder({
   pool,
+  workouts,
   userId,
   todayISO,
   onDone,
 }: {
   pool: PoolEntry[];
+  workouts: BoardHiitWorkout[];
   userId: string;
   todayISO: string;
   onDone: () => void;
 }) {
+  // "new" builds a fresh workout (saved to this person's pool); otherwise an
+  // existing named workout is picked and just its result is logged.
+  const [sel, setSel] = useState("new");
   const [name, setName] = useState("");
-  const [type, setType] = useState<WorkoutType>("AMRAP");
+  const [type, setType] = useState<WorkoutType>("FOR_TIME");
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [count, setCount] = useState(""); // AMRAP rounds / MAX_SETS reps
+  const [count, setCount] = useState("");
   const [min, setMin] = useState("");
   const [sec, setSec] = useState("");
   const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const movements = pool.filter((p) => p.category === "HIIT" && p.isActive);
+  const mine = workouts.filter((w) => w.ownerId === userId);
+  const shared = workouts.filter((w) => w.ownerId === null);
+
+  const isNew = sel === "new";
+  const active = workouts.find((w) => w.id === sel) ?? null;
+  const activeType: WorkoutType = isNew ? type : (active?.type ?? "FOR_TIME");
+  const result = hiitResult(activeType);
+
   const onlyNum = (v: string) => v.replace(/[^\d.]/g, "");
-  const num = (s: string) => {
-    const n = Number(s);
+  const num = (v: string) => {
+    const n = Number(v);
     return Number.isFinite(n) && n > 0 ? n : 0;
   };
-
-  const movements = pool.filter((p) => p.category === "HIIT" && p.isActive);
-  const result = hiitResult(type);
   const value =
-    hiitResult(type).metric === "DURATION"
-      ? num(min) * 60 + num(sec)
-      : num(count);
-  const canSave = value > 0 && !pending;
+    result.metric === "DURATION" ? num(min) * 60 + num(sec) : num(count);
 
   const toggle = (id: string) =>
     setPicked((prev) => {
@@ -795,82 +817,152 @@ function HiitBuilder({
       return next;
     });
 
+  const canSave =
+    value > 0 &&
+    !pending &&
+    (isNew ? name.trim().length >= 2 && picked.size > 0 : !!active);
+
   const save = () => {
     if (!canSave) return;
+    setError(null);
     startTransition(async () => {
-      await logHiitWorkout({
-        userId,
-        dateISO: todayISO,
-        name: name.trim() || undefined,
-        workoutType: type,
-        movementPoolIds: [...picked],
-        value,
-        notes: notes.trim() || undefined,
-      });
+      if (isNew) {
+        const res = await createAndLogHiitWorkout({
+          userId,
+          dateISO: todayISO,
+          name: name.trim(),
+          type,
+          movements: [...picked].map((poolExerciseId) => ({ poolExerciseId })),
+          value,
+          notes: notes.trim() || undefined,
+        });
+        if (res.error) {
+          setError(res.error);
+          return;
+        }
+      } else if (active) {
+        await logHiitWorkout({
+          userId,
+          dateISO: todayISO,
+          hiitWorkoutId: active.id,
+          value,
+          notes: notes.trim() || undefined,
+        });
+      }
       onDone();
     });
   };
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={CAPTION}>Name (optional)</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Cindy"
-            className={`${FIELD} px-4`}
-          />
-        </div>
-        <div>
-          <label className={CAPTION}>Type</label>
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value as WorkoutType)}
-            className={FIELD}
-          >
-            {WORKOUT_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {WORKOUT_TYPE_LABEL[t]}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div>
+        <label className={CAPTION}>Workout</label>
+        <select
+          value={sel}
+          onChange={(e) => setSel(e.target.value)}
+          className={`${FIELD} w-full`}
+        >
+          <option value="new">+ New workout</option>
+          {mine.length > 0 && (
+            <optgroup label="Yours">
+              {mine.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {shared.length > 0 && (
+            <optgroup label="Shared">
+              {shared.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
       </div>
 
-      <div>
-        <label className={CAPTION}>Movements (from the HIIT pool)</label>
-        {movements.length === 0 ? (
-          <p className="rounded-xl border border-hairline bg-ground/40 px-3 py-2 text-sm text-muted">
-            No HIIT movements in the pool yet — add them in the Workouts admin.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {movements.map((m) => {
-              const on = picked.has(m.id);
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => toggle(m.id)}
-                  className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                    on
-                      ? "border-accent bg-accent/10 text-accent"
-                      : "border-hairline text-muted hover:border-accent"
-                  }`}
-                >
-                  {m.name}
-                </button>
-              );
-            })}
+      {isNew ? (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={CAPTION}>Name</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Cindy"
+                className={`${FIELD} w-full px-4`}
+              />
+            </div>
+            <div>
+              <label className={CAPTION}>Type</label>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value as WorkoutType)}
+                className={`${FIELD} w-full`}
+              >
+                {WORKOUT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {WORKOUT_TYPE_LABEL[t]}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        )}
-      </div>
+
+          <div>
+            <label className={CAPTION}>Movements (from the HIIT pool)</label>
+            {movements.length === 0 ? (
+              <p className="rounded-xl border border-hairline bg-ground/40 px-3 py-2 text-sm text-muted">
+                No HIIT movements in the pool yet — add them in the Workouts
+                admin.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {movements.map((m) => {
+                  const on = picked.has(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => toggle(m.id)}
+                      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                        on
+                          ? "border-accent bg-accent/10 text-accent"
+                          : "border-hairline text-muted hover:border-accent"
+                      }`}
+                    >
+                      {m.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        active && (
+          <div className="rounded-xl border border-hairline bg-ground/30 p-3 text-sm">
+            <span className="font-semibold">
+              {WORKOUT_TYPE_LABEL[active.type]}
+            </span>
+            {active.movements.length > 0 && (
+              <span className="text-muted">
+                {" · "}
+                {active.movements
+                  .map((m) => (m.reps ? `${m.reps} ${m.name}` : m.name))
+                  .join(", ")}
+              </span>
+            )}
+          </div>
+        )
+      )}
 
       <div>
         <label className={CAPTION}>{result.label}</label>
-        {hiitResult(type).metric === "DURATION" ? (
+        {result.metric === "DURATION" ? (
           <div className="flex items-center gap-2">
             <input
               value={min}
@@ -899,7 +991,7 @@ function HiitBuilder({
               className={`${FIELD} w-28 text-center`}
             />
             <span className="text-sm text-muted">
-              {type === "AMRAP" ? "rounds" : "reps"}
+              {activeType === "AMRAP" ? "rounds" : "reps"}
             </span>
           </div>
         )}
@@ -914,6 +1006,8 @@ function HiitBuilder({
           className={FIELD}
         />
       </div>
+
+      {error && <p className="text-sm text-red-700">{error}</p>}
 
       <button
         type="button"

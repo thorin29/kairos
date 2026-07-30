@@ -211,7 +211,7 @@ all live in the database, never in this repository.
       movements, of a type (For time / For reps / AMRAP / Stations / Timed
       stations / Pyramid):
       - [x] Phase 1: admin builder + shared pool (v0.44.0)
-      - [ ] Phase 2: pick a named workout by name when logging ("log something
+      - [x] Phase 2: pick a named workout by name when logging ("log something
             else" dropdown with a "New workout" option on top); log each type's
             result
       - [ ] Phase 3: pick a named HIIT workout in the weekly plan
