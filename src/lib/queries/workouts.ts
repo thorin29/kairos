@@ -6,6 +6,8 @@ import {
   CATEGORY_LABEL,
   LINE_COLORS,
   UNIT_SYSTEM_KEY,
+  defaultMetricFor,
+  metricUnit,
   type Implement,
   type Metric,
   type MuscleGroup,
@@ -650,4 +652,176 @@ export async function loadExercisePool(): Promise<PoolEntry[]> {
     },
   });
   return rows as unknown as PoolEntry[];
+}
+
+// --- cross-person comparison --------------------------------------------
+
+export type CompareSeries = {
+  id: string;
+  name: string;
+  color: string;
+  unit: string;
+  points: { date: string; value: number }[];
+};
+
+export type MovementComparison = {
+  poolExerciseId: string;
+  name: string;
+  category: WorkoutCategory;
+  muscleGroup: MuscleGroup | null;
+  metric: Metric;
+  unit: string;
+  series: CompareSeries[];
+};
+
+/**
+ * One entry per pool movement that anyone has logged, each carrying a line per
+ * person: their best value per day for that movement. This is what the pool
+ * buys us — because every set points at a shared movement, the same lift lines
+ * up across people. Duration is charted in minutes; everything else in its own
+ * unit. Movements with no logged data are left out.
+ */
+export async function loadMovementComparisons(): Promise<MovementComparison[]> {
+  const [people, unitRaw, sets] = await Promise.all([
+    prisma.user.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, name: true, displayName: true, color: true },
+    }),
+    getSetting(UNIT_SYSTEM_KEY),
+    prisma.sessionSet.findMany({
+      where: { poolExerciseId: { not: null } },
+      select: {
+        poolExerciseId: true,
+        weight: true,
+        reps: true,
+        distance: true,
+        meters: true,
+        seconds: true,
+        session: { select: { userId: true, date: true } },
+        poolExercise: {
+          select: { name: true, category: true, muscleGroup: true },
+        },
+      },
+    }),
+  ]);
+
+  const unitSystem: UnitSystem = unitRaw === "metric" ? "metric" : "imperial";
+
+  const rows = sets as unknown as {
+    poolExerciseId: string;
+    weight: number | null;
+    reps: number | null;
+    distance: number | null;
+    meters: number | null;
+    seconds: number | null;
+    session: { userId: string; date: Date };
+    poolExercise: {
+      name: string;
+      category: WorkoutCategory;
+      muscleGroup: MuscleGroup | null;
+    } | null;
+  }[];
+
+  const nameById = new Map<string, string>(
+    people.map((p) => [p.id, p.displayName ?? p.name]),
+  );
+  const colorById = new Map<string, string>(
+    people.map((p) => [p.id, p.color]),
+  );
+  const orderById = new Map<string, number>(
+    people.map((p, i) => [p.id, i]),
+  );
+
+  const valueOf = (
+    r: (typeof rows)[number],
+    metric: Metric,
+  ): number | null => {
+    switch (metric) {
+      case "WEIGHT":
+        return r.weight;
+      case "REPS":
+        return r.reps;
+      case "DISTANCE":
+        return r.distance;
+      case "METERS":
+        return r.meters;
+      case "DURATION":
+        return r.seconds != null ? r.seconds / 60 : null;
+    }
+  };
+
+  // poolExerciseId -> { meta, userId -> (dateISO -> best value) }
+  const byMovement = new Map<
+    string,
+    {
+      name: string;
+      category: WorkoutCategory;
+      muscleGroup: MuscleGroup | null;
+      metric: Metric;
+      perUser: Map<string, Map<string, number>>;
+    }
+  >();
+
+  for (const r of rows) {
+    if (!r.poolExercise) continue;
+    const metric = defaultMetricFor(r.poolExercise.category);
+    const value = valueOf(r, metric);
+    if (value == null) continue;
+
+    let m = byMovement.get(r.poolExerciseId);
+    if (!m) {
+      m = {
+        name: r.poolExercise.name,
+        category: r.poolExercise.category,
+        muscleGroup: r.poolExercise.muscleGroup,
+        metric,
+        perUser: new Map(),
+      };
+      byMovement.set(r.poolExerciseId, m);
+    }
+
+    const uid = r.session.userId;
+    const day = fromDateColumn(r.session.date);
+    const perDay = m.perUser.get(uid) ?? new Map<string, number>();
+    perDay.set(day, Math.max(perDay.get(day) ?? 0, value));
+    m.perUser.set(uid, perDay);
+  }
+
+  const out: MovementComparison[] = [];
+  for (const [poolExerciseId, m] of byMovement) {
+    const series: CompareSeries[] = [...m.perUser.entries()]
+      .filter(([uid]) => orderById.has(uid))
+      .sort((a, b) => (orderById.get(a[0]) ?? 0) - (orderById.get(b[0]) ?? 0))
+      .map(([uid, days]) => ({
+        id: uid,
+        name: nameById.get(uid) ?? "Unknown",
+        color: colorById.get(uid) ?? "#0f5c63",
+        unit: metricUnit(m.metric, unitSystem),
+        points: [...days.entries()]
+          .map(([date, value]) => ({ date, value }))
+          .sort((a, b) => (a.date < b.date ? -1 : 1)),
+      }))
+      .filter((s) => s.points.length > 0);
+
+    if (series.length === 0) continue;
+
+    out.push({
+      poolExerciseId,
+      name: m.name,
+      category: m.category,
+      muscleGroup: m.muscleGroup,
+      metric: m.metric,
+      unit: metricUnit(m.metric, unitSystem),
+      series,
+    });
+  }
+
+  out.sort((a, b) =>
+    a.category === b.category
+      ? a.name.localeCompare(b.name)
+      : CATEGORY_LABEL[a.category].localeCompare(CATEGORY_LABEL[b.category]),
+  );
+
+  return out;
 }

@@ -1,17 +1,23 @@
 import { AppHeader } from "@/components/app-header";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
-import { loadWorkoutsBoard, loadExercisePool } from "@/lib/queries/workouts";
+import {
+  loadWorkoutsBoard,
+  loadExercisePool,
+  loadMovementComparisons,
+} from "@/lib/queries/workouts";
 import { todayISO, formatLong, dayOfWeek } from "@/lib/dates";
 import { WorkoutsGrid } from "./workouts-grid";
+import { CompareView } from "./compare-view";
 
 export const dynamic = "force-dynamic";
 
 export default async function WorkoutsPage() {
   const today = todayISO();
   await generateWorkoutTasks(today);
-  const [board, pool] = await Promise.all([
+  const [board, pool, comparisons] = await Promise.all([
     loadWorkoutsBoard(today),
     loadExercisePool(),
+    loadMovementComparisons(),
   ]);
 
   return (
@@ -35,6 +41,12 @@ export default async function WorkoutsPage() {
               todayISO={today}
               todayDow={dayOfWeek(today)}
             />
+
+            {comparisons.length > 0 && (
+              <div className="mt-8">
+                <CompareView movements={comparisons} />
+              </div>
+            )}
           </>
         )}
       </main>

@@ -201,7 +201,9 @@ all live in the database, never in this repository.
       day done (v0.37.0)
 - [ ] HIIT/CrossFit builder: choose a type (AMRAP / max sets / for time) and
       pull movements from the HIIT pool into one named workout with a result
-- [ ] Comparative graphs across people for the same pool exercise or workout
+- [x] Comparative graphs across people for the same pool exercise or workout
+      (v0.38.0) — Compare section on the Workouts page, a line per person of
+      best-per-day for a chosen pool movement
 - [x] Admin: open a person from the Workouts page to see their exercises, plan,
       and logged workouts, and delete any individually — for clearing test or
       mistaken records (v0.33.0)
