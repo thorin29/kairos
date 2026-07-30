@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { completePlannedWorkout } from "@/lib/actions/workouts";
+import { completePlannedWorkout, logHiitWorkout } from "@/lib/actions/workouts";
 import { CheckIcon } from "@/components/icons";
 import {
   METRIC_LABEL_SHORT,
+  WORKOUT_TYPE_LABEL,
   defaultMetricFor,
+  hiitResult,
   metricUnit,
   type Metric,
   type UnitSystem,
@@ -86,6 +88,7 @@ function PlanRow({
   const [pending, startTransition] = useTransition();
 
   const category: WorkoutCategory = workout.category ?? "WEIGHTS";
+  const hiit = workout.hiit;
   const trackedExercises = workout.exercises.filter((e) => e.tracked);
   const untracked = workout.exercises.filter((e) => !e.tracked);
   const metricOnly = workout.exercises.length === 0;
@@ -97,6 +100,26 @@ function PlanRow({
     setValues((prev) => ({ ...prev, [key]: v.replace(/[^\d.]/g, "") }));
 
   const complete = () => {
+    // A named HIIT workout logs a single result via logHiitWorkout.
+    if (hiit) {
+      const r = hiitResult(hiit.type);
+      const value =
+        r.metric === "DURATION"
+          ? (Number(values["_min"] || 0) * 60 + Number(values["_sec"] || 0))
+          : Number(values["_count"] || 0);
+      if (!(value > 0)) return;
+      startTransition(async () => {
+        await logHiitWorkout({
+          userId,
+          dateISO: todayISO,
+          hiitWorkoutId: hiit.id,
+          value,
+        });
+        setOpen(false);
+      });
+      return;
+    }
+
     const entries: {
       poolExerciseId: string | null;
       metric: Metric;
@@ -158,7 +181,15 @@ function PlanRow({
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold">{workout.name}</div>
-          {workout.exercises.length > 0 ? (
+          {hiit ? (
+            <div className="mt-0.5 text-xs text-muted">
+              {WORKOUT_TYPE_LABEL[hiit.type]}
+              {hiit.movements.length > 0 &&
+                ` · ${hiit.movements
+                  .map((m) => (m.reps ? `${m.reps} ${m.name}` : m.name))
+                  .join(", ")}`}
+            </div>
+          ) : workout.exercises.length > 0 ? (
             <div className="mt-0.5 text-xs text-muted">
               {workout.exercises.map((e) => e.name).join(" · ")}
             </div>
@@ -179,7 +210,46 @@ function PlanRow({
 
       {open && (
         <div className="mt-3 space-y-2 border-t border-hairline pt-3">
-          {metricOnly ? (
+          {hiit ? (
+            <div>
+              <span className="mb-1 block text-sm font-medium">
+                {hiitResult(hiit.type).label}
+              </span>
+              {hiitResult(hiit.type).metric === "DURATION" ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    inputMode="numeric"
+                    value={values["_min"] ?? ""}
+                    onChange={(e) => setVal("_min", e.target.value)}
+                    placeholder="0"
+                    className="tabular h-9 w-16 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                  />
+                  <span className="text-xs text-muted">min</span>
+                  <input
+                    inputMode="numeric"
+                    value={values["_sec"] ?? ""}
+                    onChange={(e) => setVal("_sec", e.target.value)}
+                    placeholder="00"
+                    className="tabular h-9 w-16 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                  />
+                  <span className="text-xs text-muted">sec</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    inputMode="numeric"
+                    value={values["_count"] ?? ""}
+                    onChange={(e) => setVal("_count", e.target.value)}
+                    placeholder="0"
+                    className="tabular h-9 w-20 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                  />
+                  <span className="text-xs text-muted">
+                    {hiit.type === "AMRAP" ? "rounds" : "reps"}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : metricOnly ? (
             <MetricField
               label={workout.name}
               metric={soloMetric}

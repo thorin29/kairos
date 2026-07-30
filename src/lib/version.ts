@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.45.0";
+export const APP_VERSION = "0.46.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -38,11 +38,19 @@ export const MIGRATIONS = [
   "28_workout_type",
   "29_event_types",
   "30_hiit_workouts",
+  "31_planned_hiit",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.46.0",
+    summary: [
+      "Weekly plan: add a named HIIT/CrossFit workout to a day (pick from yours or the shared pool); it carries week to week",
+      "On that day it shows up in Today's plan to complete \u2014 log its result and it's done, just like a scheduled lift",
+    ],
+  },
   {
     version: "0.45.0",
     summary: [

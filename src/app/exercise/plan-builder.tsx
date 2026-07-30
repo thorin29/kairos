@@ -3,19 +3,26 @@
 import { useMemo, useState, useTransition } from "react";
 import { DAY_NAMES } from "@/lib/days";
 import {
+  addPlannedHiitWorkout,
   addPlannedRestDay,
   addPlannedWorkoutFromPool,
   copyDayPlan,
   removePlannedWorkout,
 } from "@/lib/actions/workouts";
 import { PlusIcon, TrashIcon } from "@/components/icons";
-import type { PlanDay, PlanWorkout, PoolEntry } from "@/lib/queries/workouts";
+import type {
+  PlanDay,
+  PlanWorkout,
+  PoolEntry,
+  BoardHiitWorkout,
+} from "@/lib/queries/workouts";
 import {
   CATEGORY_LABEL,
   METRIC_LABEL_SHORT,
   METRIC_ONLY_CATEGORIES,
   MUSCLE_GROUPS,
   MUSCLE_GROUP_LABEL,
+  WORKOUT_TYPE_LABEL,
   defaultMetricFor,
   metricChoicesFor,
   type Metric,
@@ -41,11 +48,13 @@ export function PlanBuilder({
   plan,
   todayDow,
   pool,
+  hiitWorkouts,
 }: {
   userId: string;
   plan: PlanDay[];
   todayDow: number;
   pool: PoolEntry[];
+  hiitWorkouts: BoardHiitWorkout[];
 }) {
   return (
     <div className="space-y-2">
@@ -62,6 +71,7 @@ export function PlanBuilder({
           workouts={d.workouts}
           plan={plan}
           pool={pool}
+          hiitWorkouts={hiitWorkouts}
           isToday={d.day === todayDow}
         />
       ))}
@@ -75,6 +85,7 @@ function DayRow({
   workouts,
   plan,
   pool,
+  hiitWorkouts,
   isToday,
 }: {
   userId: string;
@@ -82,6 +93,7 @@ function DayRow({
   workouts: PlanWorkout[];
   plan: PlanDay[];
   pool: PoolEntry[];
+  hiitWorkouts: BoardHiitWorkout[];
   isToday: boolean;
 }) {
   const [adding, setAdding] = useState(false);
@@ -135,7 +147,15 @@ function DayRow({
           >
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium">{w.name}</div>
-              {w.isRest ? null : w.exercises.length > 0 ? (
+              {w.hiit ? (
+                <div className="mt-0.5 text-xs text-muted">
+                  {WORKOUT_TYPE_LABEL[w.hiit.type]}
+                  {w.hiit.movements.length > 0 &&
+                    ` · ${w.hiit.movements
+                      .map((m) => (m.reps ? `${m.reps} ${m.name}` : m.name))
+                      .join(", ")}`}
+                </div>
+              ) : w.isRest ? null : w.exercises.length > 0 ? (
                 <div className="mt-0.5 text-xs text-muted">
                   {w.exercises
                     .map((e) => (e.tracked ? e.name : `${e.name} (no log)`))
@@ -179,6 +199,7 @@ function DayRow({
           userId={userId}
           day={day}
           pool={pool}
+          hiitWorkouts={hiitWorkouts}
           onClose={() => setAdding(false)}
         />
       )}
@@ -192,23 +213,30 @@ function AddWorkoutModal({
   userId,
   day,
   pool,
+  hiitWorkouts,
   onClose,
 }: {
   userId: string;
   day: number;
   pool: PoolEntry[];
+  hiitWorkouts: BoardHiitWorkout[];
   onClose: () => void;
 }) {
   const [category, setCategory] = useState<WorkoutCategory>("WEIGHTS");
   const [muscle, setMuscle] = useState<MuscleGroup>("CHEST");
   const [picked, setPicked] = useState<Record<string, Picked>>({});
+  const [hiitId, setHiitId] = useState("");
   const [rest, setRest] = useState(false);
   const [saving, startSave] = useTransition();
 
   const metricOnly = METRIC_ONLY_CATEGORIES.includes(category);
   const isWeights = category === "WEIGHTS";
+  const isHiit = category === "HIIT";
   const choices = metricChoicesFor(category);
   const defMetric = defaultMetricFor(category);
+
+  const mine = hiitWorkouts.filter((w) => w.ownerId === userId);
+  const shared = hiitWorkouts.filter((w) => w.ownerId === null);
 
   const options = useMemo(
     () =>
@@ -236,13 +264,19 @@ function AddWorkoutModal({
     setPicked((prev) => ({ ...prev, [id]: { ...prev[id], metric } }));
 
   const chosen = Object.entries(picked);
-  const canSave = rest || metricOnly || chosen.length > 0;
+  const canSave = rest
+    ? true
+    : isHiit
+      ? !!hiitId
+      : metricOnly || chosen.length > 0;
 
   const save = () => {
     if (!canSave) return;
     startSave(async () => {
       if (rest) {
         await addPlannedRestDay(userId, day);
+      } else if (isHiit) {
+        await addPlannedHiitWorkout(userId, day, hiitId);
       } else {
         await addPlannedWorkoutFromPool(userId, day, {
           category,
@@ -264,6 +298,7 @@ function AddWorkoutModal({
   const changeCategory = (c: WorkoutCategory) => {
     setCategory(c);
     setPicked({});
+    setHiitId("");
   };
   const changeMuscle = (m: MuscleGroup) => {
     setMuscle(m);
@@ -344,6 +379,44 @@ function AddWorkoutModal({
               Marks {DAY_NAMES[day]} as a planned rest day — no workout is
               expected and no prompt is created.
             </p>
+          ) : isHiit ? (
+            hiitWorkouts.length === 0 ? (
+              <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
+                No HIIT/CrossFit workouts yet. Build one in the Workouts admin,
+                or log one from &ldquo;Log something else&rdquo; to add your own.
+              </p>
+            ) : (
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-widest text-muted">
+                  Workout
+                </label>
+                <select
+                  value={hiitId}
+                  onChange={(e) => setHiitId(e.target.value)}
+                  className="h-10 w-full rounded-xl border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+                >
+                  <option value="">Pick a workout…</option>
+                  {mine.length > 0 && (
+                    <optgroup label="Yours">
+                      {mine.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {shared.length > 0 && (
+                    <optgroup label="Shared">
+                      {shared.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+            )
           ) : metricOnly ? (
             <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
               Adds a {CATEGORY_LABEL[category].toLowerCase()} day. You&rsquo;ll

@@ -214,7 +214,7 @@ all live in the database, never in this repository.
       - [x] Phase 2: pick a named workout by name when logging ("log something
             else" dropdown with a "New workout" option on top); log each type's
             result
-      - [ ] Phase 3: pick a named HIIT workout in the weekly plan
+      - [x] Phase 3: pick a named HIIT workout in the weekly plan (v0.46.0)
       - [ ] Phase 4: per-user pool + share → admin-approval workflow; each
             person's own HIIT workouts visible/editable under them in admin
 - [x] Weights units set per muscle group in the pool (lb/kg each); global

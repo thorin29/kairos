@@ -547,6 +547,7 @@ model HiitWorkout {
   createdAt    DateTime     @default(now())
 
   movements HiitWorkoutMovement[]
+  planned   PlannedWorkout[]
 
   @@index([ownerId])
   @@index([approved])
@@ -622,6 +623,8 @@ model PlannedWorkout {
   category    WorkoutCategory?
   muscleGroup MuscleGroup?
   isRest      Boolean          @default(false)
+  hiitWorkoutId String?
+  hiitWorkout   HiitWorkout?   @relation(fields: [hiitWorkoutId], references: [id], onDelete: SetNull)
   sortOrder   Int              @default(0)
   createdAt   DateTime         @default(now())
 
