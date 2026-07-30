@@ -262,6 +262,10 @@ export function WorkoutsGrid({
                     plan={open.plan}
                     todayDow={todayDow}
                     pool={pool}
+                    hiitWorkouts={hiitWorkouts.filter(
+                      (w) =>
+                        w.ownerId === null || w.ownerId === open.user.id,
+                    )}
                   />
                 </div>
               )}

@@ -483,6 +483,32 @@ export async function copyDayPlan(
 
 /** A deliberate rest/skip day: mark the day handled, but flag it so it won't
  *  count toward scoring later. */
+export async function addPlannedHiitWorkout(
+  userId: string,
+  dayOfWeek: number,
+  hiitWorkoutId: string,
+): Promise<void> {
+  if (!userId || dayOfWeek < 0 || dayOfWeek > 6 || !hiitWorkoutId) return;
+  const w = await prisma.hiitWorkout.findUnique({
+    where: { id: hiitWorkoutId },
+    select: { name: true },
+  });
+  if (!w) return;
+  const count = await prisma.plannedWorkout.count({ where: { userId, dayOfWeek } });
+  await prisma.plannedWorkout.create({
+    data: {
+      userId,
+      dayOfWeek,
+      name: w.name.slice(0, 40),
+      category: "HIIT",
+      hiitWorkoutId,
+      sortOrder: count,
+    },
+  });
+  await generateWorkoutTasks();
+  refresh();
+}
+
 export async function addPlannedRestDay(
   userId: string,
   dayOfWeek: number,

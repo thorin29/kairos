@@ -82,6 +82,11 @@ export type PlanWorkout = {
   category: WorkoutCategory | null;
   muscleGroup: MuscleGroup | null;
   isRest: boolean;
+  hiit: {
+    id: string;
+    type: WorkoutType;
+    movements: { name: string; reps: number | null }[];
+  } | null;
   exercises: PlanExercise[];
 };
 
@@ -183,6 +188,16 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           category: true,
           muscleGroup: true,
           isRest: true,
+          hiitWorkoutId: true,
+          hiitWorkout: {
+            select: {
+              type: true,
+              movements: {
+                orderBy: { position: "asc" },
+                select: { reps: true, poolExercise: { select: { name: true } } },
+              },
+            },
+          },
           exercises: {
             orderBy: { sortOrder: "asc" },
             select: {
@@ -385,6 +400,11 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       category: WorkoutCategory | null;
       muscleGroup: MuscleGroup | null;
       isRest: boolean;
+      hiitWorkoutId: string | null;
+      hiitWorkout: {
+        type: WorkoutType;
+        movements: { reps: number | null; poolExercise: { name: string } | null }[];
+      } | null;
       exercises: {
         id: string;
         poolExerciseId: string;
@@ -403,6 +423,17 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           category: w.category,
           muscleGroup: w.muscleGroup,
           isRest: w.isRest,
+          hiit:
+            w.hiitWorkoutId && w.hiitWorkout
+              ? {
+                  id: w.hiitWorkoutId,
+                  type: w.hiitWorkout.type,
+                  movements: w.hiitWorkout.movements.map((m) => ({
+                    name: m.poolExercise?.name ?? "—",
+                    reps: m.reps,
+                  })),
+                }
+              : null,
           exercises: w.exercises.map((e) => {
             const mg = e.poolExercise?.muscleGroup ?? null;
             return {
