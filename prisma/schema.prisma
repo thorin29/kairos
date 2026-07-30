@@ -143,6 +143,18 @@ enum EventKind {
   OTHER
 }
 
+// Admin-managed custom event types (e.g. "Hockey game") with their own colour.
+// An event can point at one; when it does, that colour wins on the calendar.
+model EventType {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  events Event[]
+}
+
 model Event {
   id     String  @id @default(cuid())
   // Null when the event belongs to the shared "Family" identity rather than a
@@ -152,6 +164,8 @@ model Event {
   isFamily Boolean @default(false)
 
   kind     EventKind
+  eventTypeId String?
+  eventType   EventType? @relation(fields: [eventTypeId], references: [id], onDelete: SetNull)
   title    String
   location String?
   notes    String?
@@ -177,6 +191,7 @@ model Event {
   @@unique([externalCalendarId, externalUid])
   @@index([userId, startsAt])
   @@index([startsAt, endsAt])
+  @@index([eventTypeId])
 }
 
 model ExternalCalendar {

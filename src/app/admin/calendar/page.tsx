@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { AdminBack } from "@/components/admin-back";
 import { SectionHeading } from "@/components/ui";
+import { loadEventTypes } from "@/lib/queries/calendar";
 import { Subscriptions } from "./subscriptions";
+import { EventTypes } from "./event-types";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCalendarPage() {
-  const [calendars, people] = await Promise.all([
+  const [calendars, people, eventTypes] = await Promise.all([
     prisma.externalCalendar.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -19,6 +21,7 @@ export default async function AdminCalendarPage() {
       orderBy: { sortOrder: "asc" },
       select: { id: true, name: true, displayName: true, color: true },
     }),
+    loadEventTypes(),
   ]);
 
   const subscriptions = calendars.map((c) => ({
@@ -56,6 +59,15 @@ export default async function AdminCalendarPage() {
           color: p.color,
         }))}
       />
+
+      <div className="mt-10">
+        <SectionHeading>Event types</SectionHeading>
+        <p className="mb-3 max-w-xl text-sm text-muted">
+          Custom types anyone can pick when adding an event — a hockey game, a
+          medical appointment — each with its own colour on the calendar.
+        </p>
+        <EventTypes types={eventTypes} />
+      </div>
     </main>
   );
 }

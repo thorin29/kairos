@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Role } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { nextColor, FAMILY_PALETTE } from "@/lib/palette";
+import { nextColor, FAMILY_PALETTE, isHexColor } from "@/lib/palette";
 import { setSetting, FAMILY_COLOR } from "@/lib/settings";
 import {
   isAdmin,
@@ -159,8 +159,8 @@ export async function setFamilyColor(
   color: string,
 ): Promise<{ error: string | null }> {
   await requireAdmin();
-  if (!(FAMILY_PALETTE as readonly string[]).includes(color)) {
-    return { error: "Pick a colour from the options." };
+  if (!(FAMILY_PALETTE as readonly string[]).includes(color) && !isHexColor(color)) {
+    return { error: "Pick a colour, or enter a valid hex value." };
   }
   await setSetting(FAMILY_COLOR, color);
   revalidatePath("/setup");

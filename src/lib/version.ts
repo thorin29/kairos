@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.42.0";
+export const APP_VERSION = "0.43.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -36,11 +36,20 @@ export const MIGRATIONS = [
   "26_planned_pool",
   "27_planned_rest",
   "28_workout_type",
+  "29_event_types",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.43.0",
+    summary: [
+      "Calendar: \"Kind\" is now \"Type\", and parents can add custom event types from Admin \u2192 Calendar (e.g. Hockey game, Medical appointment), each with its own colour",
+      "Events given a custom type show in that type's colour on the calendar",
+      "The Family calendar colour now accepts any custom colour, not just the presets",
+    ],
+  },
   {
     version: "0.42.0",
     summary: [

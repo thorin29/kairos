@@ -6,8 +6,43 @@ import { prisma } from "@/lib/prisma";
 import { householdTz, toDateColumn, zonedToUtc } from "@/lib/dates";
 import { buildRule } from "@/lib/calendar/recur";
 import { isAdmin } from "@/lib/session";
+import { isHexColor } from "@/lib/palette";
 
 export type EventState = { error: string | null; saved: boolean };
+
+/** Create a custom event type (admin). */
+export async function addEventType(
+  name: string,
+  color: string,
+): Promise<{ error: string | null }> {
+  if (!(await isAdmin())) return { error: "Only a parent can do that." };
+  const clean = name.trim().slice(0, 40);
+  if (clean.length < 2) return { error: "Give the type a name." };
+  if (!isHexColor(color)) return { error: "Pick a colour." };
+
+  const exists = await prisma.eventType.findUnique({
+    where: { name: clean },
+    select: { id: true },
+  });
+  if (exists) return { error: "That type already exists." };
+
+  const count = await prisma.eventType.count();
+  await prisma.eventType.create({
+    data: { name: clean, color, sortOrder: count },
+  });
+  revalidatePath("/calendar");
+  revalidatePath("/admin/calendar");
+  return { error: null };
+}
+
+/** Delete a custom event type; its events fall back to their kind colour. */
+export async function deleteEventType(id: string): Promise<{ error: string | null }> {
+  if (!(await isAdmin())) return { error: "Only a parent can do that." };
+  await prisma.eventType.delete({ where: { id } }).catch(() => {});
+  revalidatePath("/calendar");
+  revalidatePath("/admin/calendar");
+  return { error: null };
+}
 
 const KINDS = [
   "CLASS",
@@ -49,6 +84,16 @@ export async function addEvent(
   const kind = (KINDS as readonly string[]).includes(rawKind)
     ? (rawKind as EventKind)
     : EventKind.OTHER;
+
+  const rawTypeId = String(formData.get("eventTypeId") ?? "").trim();
+  let eventTypeId: string | null = null;
+  if (rawTypeId) {
+    const t = await prisma.eventType.findUnique({
+      where: { id: rawTypeId },
+      select: { id: true },
+    });
+    eventTypeId = t?.id ?? null;
+  }
 
   let startsAt: Date;
   let endsAt: Date;
@@ -97,6 +142,7 @@ export async function addEvent(
       userId: isFamily ? null : owner,
       isFamily,
       kind,
+      eventTypeId,
       title,
       location: location || null,
       startsAt,

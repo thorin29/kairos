@@ -38,3 +38,8 @@ export const FAMILY_PALETTE = [
 ] as const;
 
 export const DEFAULT_FAMILY_COLOR = FAMILY_PALETTE[0];
+
+/** A valid 6-digit hex colour like #1d4ed8 — for custom colour inputs. */
+export function isHexColor(s: string): boolean {
+  return /^#[0-9a-fA-F]{6}$/.test(s.trim());
+}

@@ -33,6 +33,17 @@ export function FamilyColorPicker({ current }: { current: string }) {
           style={{ backgroundColor: c }}
         />
       ))}
+      <label className="ml-1 inline-flex items-center gap-2 text-xs text-muted">
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => pick(e.target.value)}
+          disabled={pending}
+          aria-label="Custom family color"
+          className="h-9 w-11 cursor-pointer rounded-lg border border-hairline bg-surface p-1"
+        />
+        custom
+      </label>
     </div>
   );
 }
