@@ -6,6 +6,13 @@
 export type UnitSystem = "imperial" | "metric";
 export const UNIT_SYSTEM_KEY = "unitSystem";
 
+// Weights units are set per muscle group in the pool (not a global system).
+export type WeightUnit = "lb" | "kg";
+export const DEFAULT_WEIGHT_UNIT: WeightUnit = "lb";
+export function weightUnitKey(mg: MuscleGroup): string {
+  return `weightUnit.${mg}`;
+}
+
 export type WorkoutCategory =
   | "WEIGHTS"
   | "RUNNING"

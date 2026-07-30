@@ -520,7 +520,9 @@ function CustomWorkoutForm({
   onDone: () => void;
 }) {
   const [category, setCategory] = useState<WorkoutCategory>("WEIGHTS");
-  const [poolId, setPoolId] = useState("");
+  const [poolId, setPoolId] = useState(
+    () => pool.find((p) => p.category === "WEIGHTS" && p.isActive)?.id ?? "",
+  );
   const [metric, setMetric] = useState<Metric>("WEIGHT");
   const [amount, setAmount] = useState(""); // reps / distance / meters / weight
   const [min, setMin] = useState("");
@@ -553,7 +555,12 @@ function CustomWorkoutForm({
     : metric === "DURATION"
       ? num(min) * 60 + num(sec)
       : num(amount);
-  const unit = isSport ? "h" : unitFor(metric, unitSystem);
+  const selected = options.find((o) => o.id === poolId);
+  const unit = isSport
+    ? "h"
+    : metric === "WEIGHT" && selected?.unit
+      ? selected.unit
+      : unitFor(metric, unitSystem);
   const loadUnit = unitSystem === "metric" ? "kg" : "lb";
   const canSave = value > 0 && !pending && (!isPoolCat || !!poolId);
 

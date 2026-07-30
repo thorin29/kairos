@@ -9,11 +9,11 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import {
   CATEGORY_LABEL,
   MUSCLE_GROUP_LABEL,
-  UNIT_SYSTEM_KEY,
+  weightUnitKey,
   type Implement,
   type Metric,
   type MuscleGroup,
-  type UnitSystem,
+  type WeightUnit,
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
 
@@ -25,9 +25,12 @@ function refresh() {
 
 // --- admin ---------------------------------------------------------------
 
-export async function setUnitSystem(system: UnitSystem): Promise<void> {
+export async function setWeightUnit(
+  muscleGroup: MuscleGroup,
+  unit: WeightUnit,
+): Promise<void> {
   await requireAdmin();
-  await setSetting(UNIT_SYSTEM_KEY, system === "metric" ? "metric" : "imperial");
+  await setSetting(weightUnitKey(muscleGroup), unit === "kg" ? "kg" : "lb");
   refresh();
 }
 

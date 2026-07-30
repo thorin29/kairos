@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.38.0";
+export const APP_VERSION = "0.39.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -39,6 +39,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.39.0",
+    summary: [
+      "Weights units are now set per muscle group in the pool (lb or kg each), replacing the single global measurement system",
+      "Fixed the one-off \"Log something else\" button staying greyed out — it now works the moment you've picked an exercise and entered a result",
+      "Logging a planned lift now labels the field \"today's max\" so it's clear what the number is",
+      "Progress charts: the legend shows just each person's name and colour; hover a point to see the value and date",
+      "Admin: the pool creation form says \"Muscle group\", each group has a lb/kg switch, and opening a person now shows just their logged workouts (with a count on the list) instead of the empty exercise/plan sections",
+    ],
+  },
   {
     version: "0.38.0",
     summary: [
