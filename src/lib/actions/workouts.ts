@@ -763,43 +763,21 @@ export async function logCustomWorkout(input: {
   refresh();
 }
 
-/**
- * Log a HIIT / CrossFit workout: a named piece of a chosen type (AMRAP / for
- * time / max sets), built from HIIT-pool movements, with one result. The
- * movements form the composition (kept in notes) and the result is stored as a
- * single set — rounds/reps as reps, a time as seconds — so it reads back as
- * e.g. "AMRAP · 12 rounds" or "For time · 8:32".
- */
-export async function logHiitWorkout(input: {
+/** Shared writer: one HIIT session (name + type + result), movements in notes. */
+async function writeHiitSession(input: {
   userId: string;
   dateISO: string;
-  name?: string;
-  workoutType: WorkoutType;
-  movementPoolIds: string[];
-  value: number; // rounds / seconds / reps depending on type
+  name: string;
+  type: WorkoutType;
+  movementNames: string[];
+  value: number;
   notes?: string;
 }): Promise<void> {
-  if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
-  if (!Number.isFinite(input.value) || input.value <= 0) return;
-
-  const { metric } = hiitResult(input.workoutType);
-
-  let movementNames: string[] = [];
-  if (input.movementPoolIds.length > 0) {
-    const rows = await prisma.poolExercise.findMany({
-      where: { id: { in: input.movementPoolIds } },
-      select: { name: true },
-    });
-    movementNames = rows.map((r) => r.name);
-  }
-
-  const name = (
-    input.name?.trim() || WORKOUT_TYPE_LABEL[input.workoutType]
-  ).slice(0, 60);
+  const { metric } = hiitResult(input.type);
   const notes =
-    [movementNames.join(", "), input.notes?.trim() || ""]
+    [input.movementNames.join(", "), input.notes?.trim() || ""]
       .filter(Boolean)
-      .join(" — ")
+      .join(" \u2014 ")
       .slice(0, 300) || null;
 
   const date = toDateColumn(input.dateISO);
@@ -807,9 +785,9 @@ export async function logHiitWorkout(input: {
     data: {
       userId: input.userId,
       date,
-      name,
+      name: input.name.slice(0, 60),
       category: "HIIT",
-      workoutType: input.workoutType,
+      workoutType: input.type,
       finished: true,
       isRest: false,
       notes,
@@ -837,6 +815,116 @@ export async function logHiitWorkout(input: {
   await prisma.sessionSet.create({ data: set });
   await completeWorkoutTask(input.userId, input.dateISO);
   refresh();
+}
+
+/** Log a result against an existing named HIIT/CrossFit workout. */
+export async function logHiitWorkout(input: {
+  userId: string;
+  dateISO: string;
+  hiitWorkoutId: string;
+  value: number;
+  notes?: string;
+}): Promise<void> {
+  if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
+  if (!Number.isFinite(input.value) || input.value <= 0) return;
+
+  const w = (await prisma.hiitWorkout.findUnique({
+    where: { id: input.hiitWorkoutId },
+    select: {
+      name: true,
+      type: true,
+      movements: {
+        orderBy: { position: "asc" },
+        select: { reps: true, poolExercise: { select: { name: true } } },
+      },
+    },
+  })) as unknown as {
+    name: string;
+    type: WorkoutType;
+    movements: { reps: number | null; poolExercise: { name: string } | null }[];
+  } | null;
+  if (!w) return;
+
+  const movementNames = w.movements
+    .map((m) =>
+      m.reps
+        ? `${m.reps} ${m.poolExercise?.name ?? ""}`.trim()
+        : (m.poolExercise?.name ?? ""),
+    )
+    .filter(Boolean);
+
+  await writeHiitSession({
+    userId: input.userId,
+    dateISO: input.dateISO,
+    name: w.name,
+    type: w.type,
+    movementNames,
+    value: input.value,
+    notes: input.notes,
+  });
+}
+
+/**
+ * Create a new HIIT/CrossFit workout in the person's own pool (unapproved
+ * until shared) and log a result for it in one step.
+ */
+export async function createAndLogHiitWorkout(input: {
+  userId: string;
+  dateISO: string;
+  name: string;
+  type: WorkoutType;
+  capSec?: number | null;
+  pyramidStart?: number | null;
+  pyramidEnd?: number | null;
+  pyramidStep?: number | null;
+  movements: { poolExerciseId: string; reps?: number | null }[];
+  value: number;
+  notes?: string;
+}): Promise<{ error: string | null }> {
+  if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) {
+    return { error: "Something went wrong." };
+  }
+  const name = input.name.trim().slice(0, 60);
+  if (name.length < 2) return { error: "Name the workout." };
+  const movements = input.movements.filter((m) => m.poolExerciseId);
+  if (movements.length === 0) return { error: "Add at least one movement." };
+  if (!Number.isFinite(input.value) || input.value <= 0) {
+    return { error: "Enter a result." };
+  }
+
+  const count = await prisma.hiitWorkout.count({
+    where: { ownerId: input.userId },
+  });
+  const created = await prisma.hiitWorkout.create({
+    data: {
+      name,
+      type: input.type,
+      ownerId: input.userId,
+      approved: false,
+      capSec: input.capSec ?? null,
+      pyramidStart: input.pyramidStart ?? null,
+      pyramidEnd: input.pyramidEnd ?? null,
+      pyramidStep: input.pyramidStep ?? null,
+      sortOrder: count,
+      movements: {
+        create: movements.map((m, i) => ({
+          poolExerciseId: m.poolExerciseId,
+          reps: m.reps ?? null,
+          position: i,
+        })),
+      },
+    },
+    select: { id: true },
+  });
+
+  await logHiitWorkout({
+    userId: input.userId,
+    dateISO: input.dateISO,
+    hiitWorkoutId: created.id,
+    value: input.value,
+    notes: input.notes,
+  });
+  return { error: null };
 }
 
 /** Delete one logged workout. If it was the day's last, the day drops back to
