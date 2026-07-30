@@ -31,7 +31,9 @@ export function TodayPlan({
   todayDow: number;
   unitSystem: UnitSystem;
 }) {
-  const todays = person.plan[todayDow]?.workouts ?? [];
+  const todays = (person.plan[todayDow]?.workouts ?? []).filter(
+    (w) => !w.isRest,
+  );
   const doneLabels = new Set(
     person.todayWorkouts.map((w) => w.label.trim().toLowerCase()),
   );

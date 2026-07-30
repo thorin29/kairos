@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.40.0";
+export const APP_VERSION = "0.41.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -34,11 +34,19 @@ export const MIGRATIONS = [
   "24_exercise_pool",
   "25_session_pool_ref",
   "26_planned_pool",
+  "27_planned_rest",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.41.0",
+    summary: [
+      "Plans can now include a rest day: pick \"Rest day\" from the category dropdown to schedule a weekday as rest (no workout prompt is created for it)",
+      "The opened person card is a little wider and now matches the layout of the tile — same avatar and a matching row of Plan / Log / Rest actions, so the icons line up as it zooms open",
+    ],
+  },
   {
     version: "0.40.0",
     summary: [

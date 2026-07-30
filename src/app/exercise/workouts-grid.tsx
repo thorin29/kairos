@@ -95,7 +95,7 @@ export function WorkoutsGrid({
               {/* Preview of the actions — icons only and softly out of focus at
                   rest; they come sharp (and gain their labels) once the card is
                   tapped open. */}
-              <div className="mt-4 flex gap-2" aria-hidden>
+              <div className="mt-4 grid grid-cols-3 gap-3" aria-hidden>
                 <ActionChip icon={CalendarPlusIcon} />
                 <ActionChip icon={DumbbellIcon} />
                 <ActionChip icon={MoonIcon} />
@@ -116,21 +116,15 @@ export function WorkoutsGrid({
           <div
             onClick={(e) => e.stopPropagation()}
             style={{ transformOrigin: origin }}
-            className="animate-card-zoom my-4 w-full max-w-xl"
+            className="animate-card-zoom my-4 w-full max-w-2xl"
           >
             <div className="rounded-2xl border border-hairline bg-surface p-6 shadow-xl">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <Avatar
-                    name={open.user.name}
-                    color={open.user.color}
-                    avatarPath={open.user.avatarPath}
-                    size="md"
-                  />
-                  <p className="font-display text-xl font-semibold">
-                    {open.user.name}
-                  </p>
-                </div>
+                <PersonAvatar
+                  name={open.user.name}
+                  color={open.user.color}
+                  avatarPath={open.user.avatarPath}
+                />
                 <button
                   type="button"
                   onClick={close}
@@ -213,21 +207,19 @@ export function WorkoutsGrid({
                     />
                   )}
 
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <ActionButton
-                        icon={CalendarPlusIcon}
-                        label={hasPlan ? "Edit plan" : "Create plan"}
-                        onClick={() => setStep("plan")}
-                        primary={!hasPlan}
-                      />
-                      <ActionButton
-                        icon={DumbbellIcon}
-                        label="Log workout"
-                        onClick={() => setStep("log")}
-                        primary={hasPlan}
-                      />
-                    </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <ActionButton
+                      icon={CalendarPlusIcon}
+                      label={hasPlan ? "Edit plan" : "Create plan"}
+                      onClick={() => setStep("plan")}
+                      primary={!hasPlan}
+                    />
+                    <ActionButton
+                      icon={DumbbellIcon}
+                      label="Log workout"
+                      onClick={() => setStep("log")}
+                      primary={hasPlan}
+                    />
                     <ActionButton
                       icon={MoonIcon}
                       label="Rest / skip"

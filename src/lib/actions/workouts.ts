@@ -480,6 +480,23 @@ export async function copyDayPlan(
 
 /** A deliberate rest/skip day: mark the day handled, but flag it so it won't
  *  count toward scoring later. */
+export async function addPlannedRestDay(
+  userId: string,
+  dayOfWeek: number,
+): Promise<void> {
+  if (!userId || dayOfWeek < 0 || dayOfWeek > 6) return;
+  const existing = await prisma.plannedWorkout.findFirst({
+    where: { userId, dayOfWeek, isRest: true },
+  });
+  if (existing) return; // one rest marker per day is enough
+  const count = await prisma.plannedWorkout.count({ where: { userId, dayOfWeek } });
+  await prisma.plannedWorkout.create({
+    data: { userId, dayOfWeek, name: "Rest day", isRest: true, sortOrder: count },
+  });
+  await generateWorkoutTasks();
+  refresh();
+}
+
 export async function restDay(userId: string, dateISO: string): Promise<void> {
   if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
   const date = toDateColumn(dateISO);
