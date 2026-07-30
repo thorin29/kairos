@@ -538,6 +538,7 @@ model HiitWorkout {
   ownerId      String?
   owner        User?        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   approved     Boolean      @default(true)
+  shareRequested Boolean    @default(false)
   capSec       Int? // AMRAP time cap / timed-station duration
   pyramidStart Int?
   pyramidEnd   Int?

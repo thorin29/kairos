@@ -16,6 +16,7 @@ import {
   logCustomWorkout,
   logHiitWorkout,
   createAndLogHiitWorkout,
+  requestShareHiitWorkout,
   restDay,
 } from "@/lib/actions/workouts";
 import { PlanBuilder } from "./plan-builder";
@@ -795,6 +796,7 @@ function HiitBuilder({
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [sharing, startShare] = useTransition();
 
   const movements = pool.filter((p) => p.category === "HIIT" && p.isActive);
   const mine = workouts.filter((w) => w.ownerId === userId);
@@ -959,6 +961,26 @@ function HiitBuilder({
                   .map((m) => (m.reps ? `${m.reps} ${m.name}` : m.name))
                   .join(", ")}
               </span>
+            )}
+            {active.ownerId === userId && !active.approved && (
+              <div className="mt-2 border-t border-hairline pt-2">
+                {active.shareRequested ? (
+                  <span className="text-xs text-muted">
+                    Share requested — waiting for a parent to approve.
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={sharing}
+                    onClick={() =>
+                      startShare(() => requestShareHiitWorkout(active.id))
+                    }
+                    className="text-xs font-semibold text-accent hover:underline disabled:opacity-50"
+                  >
+                    Share with the family
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )
