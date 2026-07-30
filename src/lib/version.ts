@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.47.0";
+export const APP_VERSION = "0.48.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -40,11 +40,20 @@ export const MIGRATIONS = [
   "30_hiit_workouts",
   "31_planned_hiit",
   "32_hiit_share",
+  "33_hiit_movement_metrics",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.48.0",
+    summary: [
+      "New HIIT type: Tabata (20s on / 10s off × 8)",
+      "Building a HIIT workout: drag movements up and down to reorder, and the input adapts to the movement — a run asks for distance, a barbell/kettlebell/dumbbell movement asks for reps and weight, everything else asks for reps",
+      "Exercise pool items can now be renamed — tap the pencil",
+    ],
+  },
   {
     version: "0.47.0",
     summary: [

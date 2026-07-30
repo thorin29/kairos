@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Card, SectionHeading } from "@/components/ui";
-import { PlusIcon, TrashIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon, GripIcon } from "@/components/icons";
 import { addHiitWorkout, deleteHiitWorkout } from "@/lib/actions/workouts";
 import {
   WORKOUT_TYPES,
   WORKOUT_TYPE_LABEL,
   WORKOUT_TYPE_HINT,
   hiitConfig,
+  inferHiitInput,
+  formatHiitMovement,
   type WorkoutType,
 } from "@/lib/workouts/catalog";
 import type { PoolEntry, HiitWorkoutRow } from "@/lib/queries/workouts";
@@ -18,7 +20,13 @@ const FIELD =
 const CAPTION =
   "mb-1 block text-xs font-semibold uppercase tracking-widest text-muted";
 
-type PickedMovement = { poolExerciseId: string; reps: string };
+type PickedMovement = {
+  key: number;
+  poolExerciseId: string;
+  reps: string;
+  distance: string;
+  weight: string;
+};
 
 export function HiitWorkouts({
   movements,
@@ -35,11 +43,15 @@ export function HiitWorkouts({
   const [pStep, setPStep] = useState("1");
   const [picked, setPicked] = useState<PickedMovement[]>([]);
   const [addSel, setAddSel] = useState("");
+  const [dragKey, setDragKey] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const keyRef = useRef(0);
 
   const cfg = hiitConfig(type);
   const available = movements.filter((m) => m.isActive);
+  const nameOf = (id: string) =>
+    movements.find((m) => m.id === id)?.name ?? "";
 
   const num = (s: string) => {
     const n = Number(s);
@@ -48,8 +60,32 @@ export function HiitWorkouts({
 
   const addMovement = () => {
     if (!addSel) return;
-    setPicked((p) => [...p, { poolExerciseId: addSel, reps: "" }]);
+    setPicked((p) => [
+      ...p,
+      { key: keyRef.current++, poolExerciseId: addSel, reps: "", distance: "", weight: "" },
+    ]);
     setAddSel("");
+  };
+
+  const setField = (key: number, field: "reps" | "distance" | "weight", v: string) =>
+    setPicked((p) =>
+      p.map((m) =>
+        m.key === key ? { ...m, [field]: v.replace(/[^\d.]/g, "") } : m,
+      ),
+    );
+
+  // Live drag reorder (matches the chore reorder pattern).
+  const onDragOver = (overKey: number) => {
+    if (dragKey === null || dragKey === overKey) return;
+    setPicked((p) => {
+      const from = p.findIndex((m) => m.key === dragKey);
+      const to = p.findIndex((m) => m.key === overKey);
+      if (from === -1 || to === -1) return p;
+      const next = [...p];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
   };
 
   const reset = () => {
@@ -81,10 +117,15 @@ export function HiitWorkouts({
         pyramidStart: cfg.pyramid ? num(pStart) : null,
         pyramidEnd: cfg.pyramid ? num(pEnd) : null,
         pyramidStep: cfg.pyramid ? num(pStep) : null,
-        movements: picked.map((m) => ({
-          poolExerciseId: m.poolExerciseId,
-          reps: num(m.reps),
-        })),
+        movements: picked.map((m) => {
+          const kind = inferHiitInput(nameOf(m.poolExerciseId));
+          return {
+            poolExerciseId: m.poolExerciseId,
+            reps: kind === "DISTANCE" ? null : num(m.reps),
+            distance: kind === "DISTANCE" ? num(m.distance) : null,
+            weight: kind === "REPS_WEIGHT" ? num(m.weight) : null,
+          };
+        }),
       });
       if (res.error) setError(res.error);
       else reset();
@@ -129,7 +170,7 @@ export function HiitWorkouts({
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Cindy"
+                placeholder="e.g. Murph"
                 className={`${FIELD} w-full px-4`}
               />
             </div>
@@ -190,39 +231,84 @@ export function HiitWorkouts({
             <label className={CAPTION}>Movements</label>
             {picked.length > 0 && (
               <div className="mb-2 space-y-1.5">
-                {picked.map((m, i) => {
-                  const mv = movements.find((x) => x.id === m.poolExerciseId);
+                {picked.map((m) => {
+                  const mvName = nameOf(m.poolExerciseId);
+                  const kind = inferHiitInput(mvName);
                   return (
                     <div
-                      key={i}
-                      className="flex items-center gap-2 rounded-xl border border-hairline bg-ground/30 px-3 py-2"
+                      key={m.key}
+                      draggable
+                      onDragStart={() => setDragKey(m.key)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        onDragOver(m.key);
+                      }}
+                      onDragEnd={() => setDragKey(null)}
+                      className={`flex items-center gap-2 rounded-xl border bg-ground/30 px-2 py-2 ${
+                        dragKey === m.key
+                          ? "border-accent opacity-60"
+                          : "border-hairline"
+                      }`}
                     >
-                      <span className="w-5 shrink-0 text-xs text-muted">
-                        {i + 1}.
+                      <span
+                        className="shrink-0 cursor-grab text-muted"
+                        title="Drag to reorder"
+                      >
+                        <GripIcon className="h-4 w-4" />
                       </span>
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                        {mv?.name ?? "—"}
+                        {mvName || "—"}
                       </span>
-                      <input
-                        value={m.reps}
-                        onChange={(e) =>
-                          setPicked((p) =>
-                            p.map((x, j) =>
-                              j === i
-                                ? { ...x, reps: e.target.value.replace(/[^\d]/g, "") }
-                                : x,
-                            ),
-                          )
-                        }
-                        inputMode="numeric"
-                        placeholder="reps"
-                        className="h-8 w-16 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
-                      />
+
+                      {kind === "DISTANCE" ? (
+                        <div className="flex shrink-0 items-center gap-1">
+                          <input
+                            value={m.distance}
+                            onChange={(e) =>
+                              setField(m.key, "distance", e.target.value)
+                            }
+                            inputMode="decimal"
+                            placeholder="dist"
+                            className="h-8 w-16 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                          />
+                          <span className="text-xs text-muted">mi</span>
+                        </div>
+                      ) : kind === "REPS_WEIGHT" ? (
+                        <div className="flex shrink-0 items-center gap-1">
+                          <input
+                            value={m.reps}
+                            onChange={(e) => setField(m.key, "reps", e.target.value)}
+                            inputMode="numeric"
+                            placeholder="reps"
+                            className="h-8 w-14 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                          />
+                          <span className="text-xs text-muted">×</span>
+                          <input
+                            value={m.weight}
+                            onChange={(e) =>
+                              setField(m.key, "weight", e.target.value)
+                            }
+                            inputMode="decimal"
+                            placeholder="wt"
+                            className="h-8 w-14 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                          />
+                          <span className="text-xs text-muted">lb</span>
+                        </div>
+                      ) : (
+                        <input
+                          value={m.reps}
+                          onChange={(e) => setField(m.key, "reps", e.target.value)}
+                          inputMode="numeric"
+                          placeholder="reps"
+                          className="h-8 w-16 shrink-0 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                        />
+                      )}
+
                       <button
                         type="button"
                         aria-label="Remove movement"
                         onClick={() =>
-                          setPicked((p) => p.filter((_, j) => j !== i))
+                          setPicked((p) => p.filter((x) => x.key !== m.key))
                         }
                         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted hover:bg-red-50 hover:text-red-700"
                       >
@@ -292,9 +378,7 @@ function WorkoutRow({ workout }: { workout: HiitWorkoutRow }) {
           {WORKOUT_TYPE_LABEL[workout.type]} ·{" "}
           {workout.movements.length === 0
             ? "no movements"
-            : workout.movements
-                .map((m) => (m.reps ? `${m.reps} ${m.name}` : m.name))
-                .join(", ")}
+            : workout.movements.map((m) => formatHiitMovement(m)).join(", ")}
         </p>
       </div>
       <button

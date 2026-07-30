@@ -126,7 +126,8 @@ export type WorkoutType =
   | "FOR_REPS"
   | "STATIONS"
   | "TIMED_STATIONS"
-  | "PYRAMID";
+  | "PYRAMID"
+  | "TABATA";
 
 // Types offered in the builder, in a sensible order. MAX_SETS is kept in the
 // enum for older logged data but isn't offered for new workouts (FOR_REPS
@@ -135,6 +136,7 @@ export const WORKOUT_TYPES: WorkoutType[] = [
   "FOR_TIME",
   "FOR_REPS",
   "AMRAP",
+  "TABATA",
   "STATIONS",
   "TIMED_STATIONS",
   "PYRAMID",
@@ -148,6 +150,7 @@ export const WORKOUT_TYPE_LABEL: Record<WorkoutType, string> = {
   STATIONS: "Stations",
   TIMED_STATIONS: "Timed stations",
   PYRAMID: "Pyramid",
+  TABATA: "Tabata",
 };
 
 // A one-line hint describing how each type works, shown in the builder.
@@ -159,6 +162,7 @@ export const WORKOUT_TYPE_HINT: Record<WorkoutType, string> = {
   STATIONS: "A set number of reps at each station.",
   TIMED_STATIONS: "A fixed time at each station.",
   PYRAMID: "Reps climb then fall (or count up/down).",
+  TABATA: "20s work / 10s rest \u00d7 8 rounds (4 min).",
 };
 
 // The metric each type records for its single result, and the field label.
@@ -173,6 +177,7 @@ export function hiitResult(type: WorkoutType): { metric: Metric; label: string }
     case "MAX_SETS":
     case "FOR_REPS":
     case "TIMED_STATIONS":
+    case "TABATA":
       return { metric: "REPS", label: "Total reps" };
   }
 }
@@ -193,6 +198,33 @@ export function hiitConfig(type: WorkoutType): {
     default:
       return { cap: false, capLabel: "", pyramid: false };
   }
+}
+
+// Infer, from a movement's name, what to record for it in a HIIT workout:
+// running-type movements take a distance; weighted equipment takes reps and a
+// weight; everything else is plain reps.
+export type HiitInput = "REPS" | "DISTANCE" | "REPS_WEIGHT";
+export function inferHiitInput(name: string): HiitInput {
+  const n = name.toLowerCase();
+  if (/\b(runs?|running|sprints?|jogs?|jogging)\b/.test(n)) return "DISTANCE";
+  if (/(kettlebell|barbell|dumbbell|\bclubs?\b|weighted|weights?)/.test(n)) {
+    return "REPS_WEIGHT";
+  }
+  return "REPS";
+}
+
+// One movement's line in a workout, e.g. "1 mi Run" or "21 Thruster @ 95 lb".
+export type HiitMoveLite = {
+  name: string;
+  reps: number | null;
+  distance: number | null;
+  weight: number | null;
+};
+export function formatHiitMovement(m: HiitMoveLite): string {
+  if (m.distance != null) return `${m.distance} mi ${m.name}`;
+  const reps = m.reps != null ? `${m.reps} ` : "";
+  const wt = m.weight != null ? ` @ ${m.weight} lb` : "";
+  return `${reps}${m.name}${wt}`;
 }
 
 // Categories that hold a pool of named movements (the metric-only ones —

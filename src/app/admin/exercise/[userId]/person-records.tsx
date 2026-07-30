@@ -9,7 +9,7 @@ import {
   approveHiitWorkout,
   renameHiitWorkout,
 } from "@/lib/actions/workouts";
-import { WORKOUT_TYPE_LABEL } from "@/lib/workouts/catalog";
+import { WORKOUT_TYPE_LABEL, formatHiitMovement } from "@/lib/workouts/catalog";
 import type {
   PersonWorkoutRecords,
   PersonHiitWorkout,
@@ -135,7 +135,7 @@ function HiitRow({ workout }: { workout: PersonHiitWorkout }) {
               : " · personal"}
           {workout.movements.length > 0 &&
             ` · ${workout.movements
-              .map((m) => (m.reps ? `${m.reps} ${m.name}` : m.name))
+              .map((m) => formatHiitMovement(m))
               .join(", ")}`}
         </p>
       </div>

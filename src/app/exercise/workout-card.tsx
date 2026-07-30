@@ -6,6 +6,7 @@ import { CheckIcon } from "@/components/icons";
 import {
   METRIC_LABEL_SHORT,
   WORKOUT_TYPE_LABEL,
+  formatHiitMovement,
   defaultMetricFor,
   hiitResult,
   metricUnit,
@@ -186,7 +187,7 @@ function PlanRow({
               {WORKOUT_TYPE_LABEL[hiit.type]}
               {hiit.movements.length > 0 &&
                 ` · ${hiit.movements
-                  .map((m) => (m.reps ? `${m.reps} ${m.name}` : m.name))
+                  .map((m) => formatHiitMovement(m))
                   .join(", ")}`}
             </div>
           ) : workout.exercises.length > 0 ? (

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Card, SectionHeading } from "@/components/ui";
-import { PlusIcon, TrashIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon, PencilIcon } from "@/components/icons";
 import {
   CATEGORY_LABEL,
   MUSCLE_GROUPS,
@@ -15,6 +15,7 @@ import {
 import {
   addPoolExercise,
   deletePoolExercise,
+  renamePoolExercise,
   setPoolExerciseActive,
   setWeightUnit,
 } from "@/lib/actions/workouts";
@@ -243,15 +244,48 @@ function WeightUnitToggle({
 
 function PoolRow({ entry }: { entry: PoolEntry }) {
   const [pending, startTransition] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(entry.name);
+
+  const saveName = () => {
+    const clean = name.trim();
+    setEditing(false);
+    if (clean.length >= 2 && clean !== entry.name) {
+      startTransition(() => renamePoolExercise(entry.id, clean));
+    } else {
+      setName(entry.name);
+    }
+  };
+
   return (
     <div className="flex items-center gap-3 p-3.5">
-      <span
-        className={`min-w-0 flex-1 truncate text-sm font-medium ${
-          entry.isActive ? "" : "text-muted line-through"
-        }`}
+      {editing ? (
+        <input
+          value={name}
+          autoFocus
+          onChange={(e) => setName(e.target.value)}
+          onBlur={saveName}
+          onKeyDown={(e) => e.key === "Enter" && saveName()}
+          className="h-8 min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-2 text-sm outline-none focus:border-accent"
+        />
+      ) : (
+        <span
+          className={`min-w-0 flex-1 truncate text-sm font-medium ${
+            entry.isActive ? "" : "text-muted line-through"
+          }`}
+        >
+          {entry.name}
+        </span>
+      )}
+      <button
+        type="button"
+        aria-label={`Rename ${entry.name}`}
+        disabled={pending}
+        onClick={() => setEditing(true)}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-ground hover:text-ink disabled:opacity-40"
       >
-        {entry.name}
-      </span>
+        <PencilIcon className="h-4 w-4" />
+      </button>
       <button
         type="button"
         disabled={pending}

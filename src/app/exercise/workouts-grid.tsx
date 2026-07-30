@@ -34,6 +34,7 @@ import {
   POOL_CATEGORIES,
   WORKOUT_TYPES,
   WORKOUT_TYPE_LABEL,
+  formatHiitMovement,
   hiitResult,
   type Metric,
   type UnitSystem,
@@ -898,7 +899,7 @@ function HiitBuilder({
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Cindy"
+                placeholder="e.g. Murph"
                 className={`${FIELD} w-full px-4`}
               />
             </div>
@@ -958,7 +959,7 @@ function HiitBuilder({
               <span className="text-muted">
                 {" · "}
                 {active.movements
-                  .map((m) => (m.reps ? `${m.reps} ${m.name}` : m.name))
+                  .map((m) => formatHiitMovement(m))
                   .join(", ")}
               </span>
             )}

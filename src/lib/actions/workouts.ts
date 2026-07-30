@@ -10,6 +10,7 @@ import {
   CATEGORY_LABEL,
   MUSCLE_GROUP_LABEL,
   WORKOUT_TYPE_LABEL,
+  formatHiitMovement,
   hiitResult,
   weightUnitKey,
   type Implement,
@@ -121,6 +122,19 @@ export async function addPoolExercise(input: {
     .create({
       data: { category: input.category, name, muscleGroup, sortOrder: count },
     })
+    .catch(() => {});
+  refresh();
+}
+
+export async function renamePoolExercise(
+  id: string,
+  name: string,
+): Promise<void> {
+  await requireAdmin();
+  const clean = name.trim().slice(0, 60);
+  if (clean.length < 2) return;
+  await prisma.poolExercise
+    .update({ where: { id }, data: { name: clean } })
     .catch(() => {});
   refresh();
 }
@@ -640,7 +654,12 @@ export async function addHiitWorkout(input: {
   pyramidEnd?: number | null;
   pyramidStep?: number | null;
   notes?: string | null;
-  movements: { poolExerciseId: string; reps?: number | null }[];
+  movements: {
+    poolExerciseId: string;
+    reps?: number | null;
+    distance?: number | null;
+    weight?: number | null;
+  }[];
 }): Promise<{ error: string | null }> {
   await requireAdmin();
   const name = input.name.trim().slice(0, 60);
@@ -665,6 +684,8 @@ export async function addHiitWorkout(input: {
         create: movements.map((m, i) => ({
           poolExerciseId: m.poolExerciseId,
           reps: m.reps ?? null,
+          distance: m.distance ?? null,
+          weight: m.weight ?? null,
           position: i,
         })),
       },
@@ -908,23 +929,36 @@ export async function logHiitWorkout(input: {
       type: true,
       movements: {
         orderBy: { position: "asc" },
-        select: { reps: true, poolExercise: { select: { name: true } } },
+        select: {
+          reps: true,
+          distance: true,
+          weight: true,
+          poolExercise: { select: { name: true } },
+        },
       },
     },
   })) as unknown as {
     name: string;
     type: WorkoutType;
-    movements: { reps: number | null; poolExercise: { name: string } | null }[];
+    movements: {
+      reps: number | null;
+      distance: number | null;
+      weight: number | null;
+      poolExercise: { name: string } | null;
+    }[];
   } | null;
   if (!w) return;
 
   const movementNames = w.movements
+    .filter((m) => m.poolExercise)
     .map((m) =>
-      m.reps
-        ? `${m.reps} ${m.poolExercise?.name ?? ""}`.trim()
-        : (m.poolExercise?.name ?? ""),
-    )
-    .filter(Boolean);
+      formatHiitMovement({
+        name: m.poolExercise!.name,
+        reps: m.reps,
+        distance: m.distance,
+        weight: m.weight,
+      }),
+    );
 
   await writeHiitSession({
     userId: input.userId,

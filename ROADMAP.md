@@ -218,6 +218,9 @@ all live in the database, never in this repository.
       - [x] Phase 4: per-user pool + share → admin-approval workflow; each
             person's own HIIT workouts visible/editable under them in admin
             (v0.47.0) — HIIT/CrossFit workouts complete
+- [x] HIIT extras — Tabata type; drag-reorder movements while building; movement
+      input auto-detects (run → distance, weighted → reps+weight); rename pool
+      items with a pencil (v0.48.0)
 - [x] Weights units set per muscle group in the pool (lb/kg each); global
       measurement system removed (v0.39.0)
 - [x] Admin cleanup: person drill-down shows only logged workouts; pool creation
