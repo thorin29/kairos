@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.41.0";
+export const APP_VERSION = "0.42.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -35,11 +35,19 @@ export const MIGRATIONS = [
   "25_session_pool_ref",
   "26_planned_pool",
   "27_planned_rest",
+  "28_workout_type",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.42.0",
+    summary: [
+      "HIIT / CrossFit builder: from \"Log something else\", pick HIIT to name a workout, choose a type (AMRAP / for time / max sets), pull movements from the HIIT pool, and log one result",
+      "Results read back naturally — \"AMRAP · 12 rounds\", \"For time · 8:32\", \"Max sets · 60\" — in today's list and history",
+    ],
+  },
   {
     version: "0.41.0",
     summary: [

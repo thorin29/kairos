@@ -9,12 +9,15 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import {
   CATEGORY_LABEL,
   MUSCLE_GROUP_LABEL,
+  WORKOUT_TYPE_LABEL,
+  hiitResult,
   weightUnitKey,
   type Implement,
   type Metric,
   type MuscleGroup,
   type WeightUnit,
   type WorkoutCategory,
+  type WorkoutType,
 } from "@/lib/workouts/catalog";
 
 function refresh() {
@@ -706,6 +709,82 @@ export async function logCustomWorkout(input: {
   if (input.load != null && input.load > 0 && set.weight == null) {
     set.weight = input.load;
   }
+
+  await prisma.sessionSet.create({ data: set });
+  await completeWorkoutTask(input.userId, input.dateISO);
+  refresh();
+}
+
+/**
+ * Log a HIIT / CrossFit workout: a named piece of a chosen type (AMRAP / for
+ * time / max sets), built from HIIT-pool movements, with one result. The
+ * movements form the composition (kept in notes) and the result is stored as a
+ * single set — rounds/reps as reps, a time as seconds — so it reads back as
+ * e.g. "AMRAP · 12 rounds" or "For time · 8:32".
+ */
+export async function logHiitWorkout(input: {
+  userId: string;
+  dateISO: string;
+  name?: string;
+  workoutType: WorkoutType;
+  movementPoolIds: string[];
+  value: number; // rounds / seconds / reps depending on type
+  notes?: string;
+}): Promise<void> {
+  if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
+  if (!Number.isFinite(input.value) || input.value <= 0) return;
+
+  const { metric } = hiitResult(input.workoutType);
+
+  let movementNames: string[] = [];
+  if (input.movementPoolIds.length > 0) {
+    const rows = await prisma.poolExercise.findMany({
+      where: { id: { in: input.movementPoolIds } },
+      select: { name: true },
+    });
+    movementNames = rows.map((r) => r.name);
+  }
+
+  const name = (
+    input.name?.trim() || WORKOUT_TYPE_LABEL[input.workoutType]
+  ).slice(0, 60);
+  const notes =
+    [movementNames.join(", "), input.notes?.trim() || ""]
+      .filter(Boolean)
+      .join(" — ")
+      .slice(0, 300) || null;
+
+  const date = toDateColumn(input.dateISO);
+  const session = await prisma.workoutSession.create({
+    data: {
+      userId: input.userId,
+      date,
+      name,
+      category: "HIIT",
+      workoutType: input.workoutType,
+      finished: true,
+      isRest: false,
+      notes,
+    },
+  });
+
+  const set: {
+    sessionId: string;
+    poolExerciseId: string | null;
+    setNumber: number;
+    unit: string | null;
+    finished: boolean;
+    reps?: number;
+    seconds?: number;
+  } = {
+    sessionId: session.id,
+    poolExerciseId: null,
+    setNumber: 1,
+    unit: null,
+    finished: true,
+  };
+  if (metric === "DURATION") set.seconds = Math.round(input.value);
+  else set.reps = Math.round(input.value);
 
   await prisma.sessionSet.create({ data: set });
   await completeWorkoutTask(input.userId, input.dateISO);

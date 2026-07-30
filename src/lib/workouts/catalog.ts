@@ -118,6 +118,29 @@ export const MUSCLE_GROUP_LABEL: Record<MuscleGroup, string> = {
   FULL_BODY: "Full body",
 };
 
+// HIIT / CrossFit workout types and how each one's single result reads.
+export type WorkoutType = "AMRAP" | "FOR_TIME" | "MAX_SETS";
+
+export const WORKOUT_TYPES: WorkoutType[] = ["AMRAP", "FOR_TIME", "MAX_SETS"];
+
+export const WORKOUT_TYPE_LABEL: Record<WorkoutType, string> = {
+  AMRAP: "AMRAP",
+  FOR_TIME: "For time",
+  MAX_SETS: "Max sets",
+};
+
+// The metric each type records, and the label for its result field.
+export function hiitResult(type: WorkoutType): { metric: Metric; label: string } {
+  switch (type) {
+    case "FOR_TIME":
+      return { metric: "DURATION", label: "Time" };
+    case "AMRAP":
+      return { metric: "REPS", label: "Rounds" };
+    case "MAX_SETS":
+      return { metric: "REPS", label: "Sets / reps" };
+  }
+}
+
 // Categories that hold a pool of named movements (the metric-only ones —
 // running, rowing, rucking — don't need a sub-pool).
 export const POOL_CATEGORIES: WorkoutCategory[] = [

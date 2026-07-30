@@ -461,6 +461,12 @@ enum WorkoutImplement {
 
 // The headline number an exercise is graphed on — everything else logged is
 // detail. Bench is graphed on WEIGHT; a run on DISTANCE; a row on METERS.
+enum WorkoutType {
+  AMRAP
+  FOR_TIME
+  MAX_SETS
+}
+
 enum WorkoutMetric {
   WEIGHT
   DISTANCE
@@ -593,6 +599,7 @@ model WorkoutSession {
   // legacy pre-naming data.
   name        String?
   category    WorkoutCategory?
+  workoutType WorkoutType?
   durationMin Int?
   finished    Boolean  @default(true)
   // A deliberate rest/skip day: marks the day handled without counting toward

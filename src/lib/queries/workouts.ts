@@ -8,6 +8,7 @@ import {
   MUSCLE_GROUPS,
   UNIT_SYSTEM_KEY,
   DEFAULT_WEIGHT_UNIT,
+  WORKOUT_TYPE_LABEL,
   defaultMetricFor,
   metricUnit,
   weightUnitKey,
@@ -17,6 +18,7 @@ import {
   type UnitSystem,
   type WeightUnit,
   type WorkoutCategory,
+  type WorkoutType,
 } from "@/lib/workouts/catalog";
 
 export type GraphSeries = {
@@ -155,6 +157,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           id: true,
           name: true,
           category: true,
+          workoutType: true,
           isRest: true,
           sets: {
             select: {
@@ -200,6 +203,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           id: true,
           name: true,
           category: true,
+          workoutType: true,
           isRest: true,
           date: true,
           sets: {
@@ -507,6 +511,7 @@ type SessShape = {
   id: string;
   name: string | null;
   category: string | null;
+  workoutType: WorkoutType | null;
   isRest: boolean;
   sets: SetShape[];
 };
@@ -533,6 +538,18 @@ function workoutLabel(s: SessShape): string {
 /** A short human summary of what was recorded. */
 function workoutResult(s: SessShape): string {
   const sets = s.sets;
+  if (s.workoutType) {
+    const one = sets[0];
+    const tl = WORKOUT_TYPE_LABEL[s.workoutType];
+    if (!one) return tl;
+    if (s.workoutType === "FOR_TIME" && one.seconds != null) {
+      return `${tl} · ${fmtDuration(one.seconds)}`;
+    }
+    if (one.reps != null) {
+      return `${tl} · ${one.reps}${s.workoutType === "AMRAP" ? " rounds" : ""}`;
+    }
+    return tl;
+  }
   if (sets.length === 0) return "";
   if (sets.length > 1) {
     const names = [
