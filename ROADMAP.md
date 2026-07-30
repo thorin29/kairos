@@ -143,6 +143,10 @@ all live in the database, never in this repository.
 - [ ] Expand recurrence rules from subscribed feeds
 - [ ] Edit an existing event
 - [ ] Split events crossing midnight across both days
+- [x] Custom event types — parents add named types (with a colour) from Admin →
+      Calendar; the event form's "Type" lists them and events take the type
+      colour (v0.43.0)
+- [x] Family calendar colour accepts any custom hex, not just presets (v0.43.0)
 - [ ] Family-owned subscribed calendars: let a subscribed (ICS) calendar
       belong to the shared Family identity so its whole feed inherits the
       Family color — needs isFamily on ExternalCalendar plus feed-form and

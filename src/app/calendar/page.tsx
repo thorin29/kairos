@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import {
   loadRange,
   loadTasksForDays,
+  loadEventTypes,
   type DayTask,
   type GridEvent,
 } from "@/lib/queries/calendar";
@@ -254,6 +255,7 @@ export default async function CalendarPage({
             id: p.id,
             name: p.displayName ?? p.name,
           }))}
+          types={await loadEventTypes()}
           defaultDate={view === "month" ? today : date}
         />
       </section>

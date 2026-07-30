@@ -29,9 +29,11 @@ const REPEATS = [
 
 export function AddEventForm({
   people,
+  types,
   defaultDate,
 }: {
   people: { id: string; name: string }[];
+  types: { id: string; name: string; color: string }[];
   defaultDate: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -44,11 +46,17 @@ export function AddEventForm({
   // both rather than making you set them again.
   const chooseKind = (value: string) => {
     setKind(value);
+    // Built-in birthday is annual and all-day by definition; custom types
+    // (value "type:<id>") carry no such rule.
     if (value === "BIRTHDAY") {
       setAllDay(true);
       setRepeat("YEARLY");
     }
   };
+
+  const isCustomType = kind.startsWith("type:");
+  const kindForSubmit = isCustomType ? "OTHER" : kind;
+  const eventTypeId = isCustomType ? kind.slice(5) : "";
 
   const effectiveRepeat = repeat === "CUSTOM" ? customFreq : repeat;
   const [state, formAction, pending] = useActionState(addEvent, initial);
@@ -107,11 +115,10 @@ export function AddEventForm({
 
           <div>
             <label htmlFor="ev-kind" className="mb-1.5 block text-sm font-medium">
-              Kind
+              Type
             </label>
             <select
               id="ev-kind"
-              name="kind"
               value={kind}
               onChange={(e) => chooseKind(e.target.value)}
               className={field}
@@ -121,7 +128,18 @@ export function AddEventForm({
                   {k.label}
                 </option>
               ))}
+              {types.length > 0 && (
+                <optgroup label="Custom">
+                  {types.map((t) => (
+                    <option key={t.id} value={`type:${t.id}`}>
+                      {t.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
+            <input type="hidden" name="kind" value={kindForSubmit} />
+            <input type="hidden" name="eventTypeId" value={eventTypeId} />
           </div>
 
           <div>

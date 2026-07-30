@@ -31,6 +31,21 @@ export type WeekData = {
   allDay: GridEvent[];
 };
 
+export type EventTypeRow = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+/** Admin-managed custom event types, in display order. */
+export async function loadEventTypes(): Promise<EventTypeRow[]> {
+  const rows = await prisma.eventType.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, color: true },
+  });
+  return rows as unknown as EventTypeRow[];
+}
+
 /**
  * Colour follows the spec: everyone on screen means colour by person, so
  * each child's blocks match their profile. Filter to one person and colour
@@ -168,6 +183,7 @@ export async function loadRange(
     include: {
       user: { select: { name: true, displayName: true, color: true } },
       externalCalendar: { select: { name: true } },
+      eventType: { select: { name: true, color: true } },
     },
   });
 
@@ -207,9 +223,16 @@ export async function loadRange(
 
     if (!days.includes(start.iso) && !days.includes(end.iso)) return;
 
-    // Always the owner's colour, so events stay recognisable no matter which
-    // people are filtered in or out.
-    const color = e.isFamily ? familyColor : (e.user?.color ?? familyColor);
+    // A custom event type sets its own colour (a "Hockey game" is that colour
+    // for everyone); otherwise it's the owner's colour, or the family colour
+    // for shared events.
+    const eventType = (e as { eventType?: { name: string; color: string } | null })
+      .eventType;
+    const color = eventType?.color
+      ? eventType.color
+      : e.isFamily
+        ? familyColor
+        : (e.user?.color ?? familyColor);
 
     const suffix = e.rrule ? `-${start.iso}` : "";
 
@@ -221,7 +244,7 @@ export async function loadRange(
       ownerName: e.isFamily
         ? "Family"
         : (e.user?.displayName ?? e.user?.name ?? "Family"),
-      kind: e.kind as string,
+      kind: eventType?.name ?? (e.kind as string),
       calendarName: e.externalCalendar?.name ?? null,
       eventId: e.id,
       recurring: Boolean(e.rrule),
