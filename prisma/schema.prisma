@@ -485,6 +485,7 @@ enum WorkoutType {
   STATIONS
   TIMED_STATIONS
   PYRAMID
+  TABATA
 }
 
 enum WorkoutMetric {
