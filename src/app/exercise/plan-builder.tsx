@@ -23,6 +23,7 @@ import {
   MUSCLE_GROUPS,
   MUSCLE_GROUP_LABEL,
   WORKOUT_TYPE_LABEL,
+  formatHiitMovement,
   defaultMetricFor,
   metricChoicesFor,
   type Metric,
@@ -152,7 +153,7 @@ function DayRow({
                   {WORKOUT_TYPE_LABEL[w.hiit.type]}
                   {w.hiit.movements.length > 0 &&
                     ` · ${w.hiit.movements
-                      .map((m) => (m.reps ? `${m.reps} ${m.name}` : m.name))
+                      .map((m) => formatHiitMovement(m))
                       .join(", ")}`}
                 </div>
               ) : w.isRest ? null : w.exercises.length > 0 ? (

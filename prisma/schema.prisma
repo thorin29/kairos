@@ -561,6 +561,8 @@ model HiitWorkoutMovement {
   poolExerciseId String
   poolExercise   PoolExercise @relation(fields: [poolExerciseId], references: [id], onDelete: Cascade)
   reps           Int?
+  distance       Float?
+  weight         Float?
   position       Int          @default(0)
   createdAt      DateTime     @default(now())
 

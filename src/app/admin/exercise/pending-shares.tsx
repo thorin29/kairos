@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { Card, SectionHeading } from "@/components/ui";
 import { CheckIcon } from "@/components/icons";
 import { approveHiitWorkout, dismissHiitShare } from "@/lib/actions/workouts";
-import { WORKOUT_TYPE_LABEL } from "@/lib/workouts/catalog";
+import { WORKOUT_TYPE_LABEL, formatHiitMovement } from "@/lib/workouts/catalog";
 import type { PendingHiitShare } from "@/lib/queries/workouts";
 
 export function PendingShares({ shares }: { shares: PendingHiitShare[] }) {
@@ -39,7 +39,7 @@ function ShareRow({ share }: { share: PendingHiitShare }) {
           {WORKOUT_TYPE_LABEL[share.type]}
           {share.movements.length > 0 &&
             ` · ${share.movements
-              .map((m) => (m.reps ? `${m.reps} ${m.name}` : m.name))
+              .map((m) => formatHiitMovement(m))
               .join(", ")}`}
         </p>
       </div>

@@ -85,7 +85,12 @@ export type PlanWorkout = {
   hiit: {
     id: string;
     type: WorkoutType;
-    movements: { name: string; reps: number | null }[];
+    movements: {
+      name: string;
+      reps: number | null;
+      distance: number | null;
+      weight: number | null;
+    }[];
   } | null;
   exercises: PlanExercise[];
 };
@@ -194,7 +199,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
               type: true,
               movements: {
                 orderBy: { position: "asc" },
-                select: { reps: true, poolExercise: { select: { name: true } } },
+                select: { reps: true, distance: true, weight: true, poolExercise: { select: { name: true } } },
               },
             },
           },
@@ -403,7 +408,12 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       hiitWorkoutId: string | null;
       hiitWorkout: {
         type: WorkoutType;
-        movements: { reps: number | null; poolExercise: { name: string } | null }[];
+        movements: {
+        reps: number | null;
+        distance: number | null;
+        weight: number | null;
+        poolExercise: { name: string } | null;
+      }[];
       } | null;
       exercises: {
         id: string;
@@ -431,6 +441,8 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
                   movements: w.hiitWorkout.movements.map((m) => ({
                     name: m.poolExercise?.name ?? "—",
                     reps: m.reps,
+                    distance: m.distance,
+                    weight: m.weight,
                   })),
                 }
               : null,
@@ -629,7 +641,12 @@ export type PersonHiitWorkout = {
   type: WorkoutType;
   approved: boolean;
   shareRequested: boolean;
-  movements: { name: string; reps: number | null }[];
+  movements: {
+    name: string;
+    reps: number | null;
+    distance: number | null;
+    weight: number | null;
+  }[];
 };
 
 export type PendingHiitShare = {
@@ -637,7 +654,12 @@ export type PendingHiitShare = {
   name: string;
   type: WorkoutType;
   ownerName: string;
-  movements: { name: string; reps: number | null }[];
+  movements: {
+    name: string;
+    reps: number | null;
+    distance: number | null;
+    weight: number | null;
+  }[];
 };
 
 export type PersonWorkoutRecords = {
@@ -706,7 +728,7 @@ export async function loadPersonWorkoutRecords(
           shareRequested: true,
           movements: {
             orderBy: { position: "asc" },
-            select: { reps: true, poolExercise: { select: { name: true } } },
+            select: { reps: true, distance: true, weight: true, poolExercise: { select: { name: true } } },
           },
         },
       }),
@@ -749,7 +771,12 @@ export async function loadPersonWorkoutRecords(
       type: WorkoutType;
       approved: boolean;
       shareRequested: boolean;
-      movements: { reps: number | null; poolExercise: { name: string } | null }[];
+      movements: {
+        reps: number | null;
+        distance: number | null;
+        weight: number | null;
+        poolExercise: { name: string } | null;
+      }[];
     }[]).map((w) => ({
       id: w.id,
       name: w.name,
@@ -759,6 +786,8 @@ export async function loadPersonWorkoutRecords(
       movements: w.movements.map((m) => ({
         name: m.poolExercise?.name ?? "—",
         reps: m.reps,
+        distance: m.distance,
+        weight: m.weight,
       })),
     })),
   };
@@ -776,7 +805,7 @@ export async function loadPendingHiitShares(): Promise<PendingHiitShare[]> {
       owner: { select: { name: true, displayName: true } },
       movements: {
         orderBy: { position: "asc" },
-        select: { reps: true, poolExercise: { select: { name: true } } },
+        select: { reps: true, distance: true, weight: true, poolExercise: { select: { name: true } } },
       },
     },
   })) as unknown as {
@@ -784,7 +813,12 @@ export async function loadPendingHiitShares(): Promise<PendingHiitShare[]> {
     name: string;
     type: WorkoutType;
     owner: { name: string; displayName: string | null } | null;
-    movements: { reps: number | null; poolExercise: { name: string } | null }[];
+    movements: {
+      reps: number | null;
+      distance: number | null;
+      weight: number | null;
+      poolExercise: { name: string } | null;
+    }[];
   }[];
 
   return rows.map((w) => ({
@@ -795,6 +829,8 @@ export async function loadPendingHiitShares(): Promise<PendingHiitShare[]> {
     movements: w.movements.map((m) => ({
       name: m.poolExercise?.name ?? "—",
       reps: m.reps,
+      distance: m.distance,
+      weight: m.weight,
     })),
   }));
 }
@@ -1020,6 +1056,8 @@ export type HiitMovementRow = {
   poolExerciseId: string;
   name: string;
   reps: number | null;
+  distance: number | null;
+  weight: number | null;
   position: number;
 };
 
@@ -1052,6 +1090,8 @@ export async function loadHiitWorkouts(): Promise<HiitWorkoutRow[]> {
         select: {
           poolExerciseId: true,
           reps: true,
+          distance: true,
+          weight: true,
           position: true,
           poolExercise: { select: { name: true } },
         },
@@ -1068,6 +1108,8 @@ export async function loadHiitWorkouts(): Promise<HiitWorkoutRow[]> {
     movements: {
       poolExerciseId: string;
       reps: number | null;
+      distance: number | null;
+      weight: number | null;
       position: number;
       poolExercise: { name: string } | null;
     }[];
@@ -1085,6 +1127,8 @@ export async function loadHiitWorkouts(): Promise<HiitWorkoutRow[]> {
       poolExerciseId: m.poolExerciseId,
       name: m.poolExercise?.name ?? "—",
       reps: m.reps,
+      distance: m.distance,
+      weight: m.weight,
       position: m.position,
     })),
   }));
@@ -1120,6 +1164,8 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
         select: {
           poolExerciseId: true,
           reps: true,
+          distance: true,
+          weight: true,
           position: true,
           poolExercise: { select: { name: true } },
         },
@@ -1135,6 +1181,8 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
     movements: {
       poolExerciseId: string;
       reps: number | null;
+      distance: number | null;
+      weight: number | null;
       position: number;
       poolExercise: { name: string } | null;
     }[];
@@ -1151,6 +1199,8 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
       poolExerciseId: m.poolExerciseId,
       name: m.poolExercise?.name ?? "—",
       reps: m.reps,
+      distance: m.distance,
+      weight: m.weight,
       position: m.position,
     })),
   }));
