@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.46.0";
+export const APP_VERSION = "0.47.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -39,11 +39,20 @@ export const MIGRATIONS = [
   "29_event_types",
   "30_hiit_workouts",
   "31_planned_hiit",
+  "32_hiit_share",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.47.0",
+    summary: [
+      "Share your own HIIT/CrossFit workout: pick it when logging and tap \"Share with the family\" \u2014 it goes to a parent to approve",
+      "Admin \u2192 Workouts shows pending share requests to approve (adds it to the shared pool for everyone) or dismiss",
+      "Each person's own HIIT workouts now appear under their name in admin, where you can rename, share, or delete them",
+    ],
+  },
   {
     version: "0.46.0",
     summary: [

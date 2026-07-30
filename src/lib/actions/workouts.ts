@@ -680,6 +680,53 @@ export async function deleteHiitWorkout(id: string): Promise<void> {
   refresh();
 }
 
+/** A person asks that their own workout be shared (goes to admin to approve). */
+export async function requestShareHiitWorkout(id: string): Promise<void> {
+  if (!id) return;
+  await prisma.hiitWorkout
+    .updateMany({
+      where: { id, ownerId: { not: null }, approved: false },
+      data: { shareRequested: true },
+    })
+    .catch(() => {});
+  refresh();
+}
+
+/** Admin approves a share: the workout joins the shared pool for everyone. */
+export async function approveHiitWorkout(id: string): Promise<void> {
+  await requireAdmin();
+  await prisma.hiitWorkout
+    .update({
+      where: { id },
+      data: { ownerId: null, approved: true, shareRequested: false },
+    })
+    .catch(() => {});
+  refresh();
+}
+
+/** Admin dismisses a share request; the workout stays personal. */
+export async function dismissHiitShare(id: string): Promise<void> {
+  await requireAdmin();
+  await prisma.hiitWorkout
+    .updateMany({ where: { id }, data: { shareRequested: false } })
+    .catch(() => {});
+  refresh();
+}
+
+/** Admin renames a workout. */
+export async function renameHiitWorkout(
+  id: string,
+  name: string,
+): Promise<void> {
+  await requireAdmin();
+  const clean = name.trim().slice(0, 60);
+  if (clean.length < 2) return;
+  await prisma.hiitWorkout
+    .update({ where: { id }, data: { name: clean } })
+    .catch(() => {});
+  refresh();
+}
+
 // --- one-off custom workout ---------------------------------------------
 
 /**

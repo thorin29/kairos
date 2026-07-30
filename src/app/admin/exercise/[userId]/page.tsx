@@ -39,8 +39,8 @@ export default async function PersonWorkoutsPage({
             {data.user.name}&rsquo;s workouts
           </h1>
           <p className="mt-1 text-muted">
-            See and remove this person&rsquo;s exercises, plans, and logged
-            workouts. Deleting is permanent.
+            Review their HIIT workouts (approve to share, rename, or delete) and
+            their logged workouts. Deleting is permanent.
           </p>
         </div>
       </header>

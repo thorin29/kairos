@@ -623,60 +623,94 @@ export type PersonRecordSession = {
   isRest: boolean;
 };
 
+export type PersonHiitWorkout = {
+  id: string;
+  name: string;
+  type: WorkoutType;
+  approved: boolean;
+  shareRequested: boolean;
+  movements: { name: string; reps: number | null }[];
+};
+
+export type PendingHiitShare = {
+  id: string;
+  name: string;
+  type: WorkoutType;
+  ownerName: string;
+  movements: { name: string; reps: number | null }[];
+};
+
 export type PersonWorkoutRecords = {
   user: { id: string; name: string; color: string } | null;
   exercises: PersonRecordExercise[];
   planned: { id: string; dayOfWeek: number; name: string }[];
   sessions: PersonRecordSession[];
+  hiitWorkouts: PersonHiitWorkout[];
 };
 
 export async function loadPersonWorkoutRecords(
   userId: string,
 ): Promise<PersonWorkoutRecords> {
-  const [user, exercises, schedules, planned, sessions] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, name: true, displayName: true, color: true },
-    }),
-    prisma.exercise.findMany({
-      where: { userId, isActive: true },
-      orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
-      select: { id: true, name: true, category: true, tracked: true },
-    }),
-    prisma.workoutSchedule.findMany({
-      where: { userId },
-      select: { exerciseId: true, dayOfWeek: true },
-    }),
-    prisma.plannedWorkout.findMany({
-      where: { userId },
-      orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
-      select: { id: true, dayOfWeek: true, name: true },
-    }),
-    prisma.workoutSession.findMany({
-      where: { userId },
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      take: 40,
-      select: {
-        id: true,
-        name: true,
-        category: true,
-        isRest: true,
-        date: true,
-        sets: {
-          select: {
-            exerciseId: true,
-            weight: true,
-            reps: true,
-            distance: true,
-            meters: true,
-            seconds: true,
-            unit: true,
-            exercise: { select: { name: true } },
+  const [user, exercises, schedules, planned, sessions, hiitRows] =
+    await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true, displayName: true, color: true },
+      }),
+      prisma.exercise.findMany({
+        where: { userId, isActive: true },
+        orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
+        select: { id: true, name: true, category: true, tracked: true },
+      }),
+      prisma.workoutSchedule.findMany({
+        where: { userId },
+        select: { exerciseId: true, dayOfWeek: true },
+      }),
+      prisma.plannedWorkout.findMany({
+        where: { userId },
+        orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
+        select: { id: true, dayOfWeek: true, name: true },
+      }),
+      prisma.workoutSession.findMany({
+        where: { userId },
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+        take: 40,
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          isRest: true,
+          date: true,
+          sets: {
+            select: {
+              exerciseId: true,
+              weight: true,
+              reps: true,
+              distance: true,
+              meters: true,
+              seconds: true,
+              unit: true,
+              exercise: { select: { name: true } },
+            },
           },
         },
-      },
-    }),
-  ]);
+      }),
+      prisma.hiitWorkout.findMany({
+        where: { ownerId: userId },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          approved: true,
+          shareRequested: true,
+          movements: {
+            orderBy: { position: "asc" },
+            select: { reps: true, poolExercise: { select: { name: true } } },
+          },
+        },
+      }),
+    ]);
 
   const daysByExercise = new Map<string, number[]>();
   for (const s of schedules) {
@@ -709,7 +743,60 @@ export async function loadPersonWorkoutRecords(
       result: s.isRest ? "" : workoutResult(s),
       isRest: s.isRest,
     })),
+    hiitWorkouts: (hiitRows as unknown as {
+      id: string;
+      name: string;
+      type: WorkoutType;
+      approved: boolean;
+      shareRequested: boolean;
+      movements: { reps: number | null; poolExercise: { name: string } | null }[];
+    }[]).map((w) => ({
+      id: w.id,
+      name: w.name,
+      type: w.type,
+      approved: w.approved,
+      shareRequested: w.shareRequested,
+      movements: w.movements.map((m) => ({
+        name: m.poolExercise?.name ?? "—",
+        reps: m.reps,
+      })),
+    })),
   };
+}
+
+/** Workouts a person has asked to share, awaiting admin approval. */
+export async function loadPendingHiitShares(): Promise<PendingHiitShare[]> {
+  const rows = (await prisma.hiitWorkout.findMany({
+    where: { shareRequested: true, approved: false, ownerId: { not: null } },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      owner: { select: { name: true, displayName: true } },
+      movements: {
+        orderBy: { position: "asc" },
+        select: { reps: true, poolExercise: { select: { name: true } } },
+      },
+    },
+  })) as unknown as {
+    id: string;
+    name: string;
+    type: WorkoutType;
+    owner: { name: string; displayName: string | null } | null;
+    movements: { reps: number | null; poolExercise: { name: string } | null }[];
+  }[];
+
+  return rows.map((w) => ({
+    id: w.id,
+    name: w.name,
+    type: w.type,
+    ownerName: w.owner?.displayName ?? w.owner?.name ?? "Someone",
+    movements: w.movements.map((m) => ({
+      name: m.poolExercise?.name ?? "—",
+      reps: m.reps,
+    })),
+  }));
 }
 
 // --- admin: the exercise pool --------------------------------------------
@@ -1008,6 +1095,8 @@ export type BoardHiitWorkout = {
   name: string;
   type: WorkoutType;
   ownerId: string | null; // null = shared pool
+  approved: boolean;
+  shareRequested: boolean;
   movements: HiitMovementRow[];
 };
 
@@ -1024,6 +1113,8 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
       name: true,
       type: true,
       ownerId: true,
+      approved: true,
+      shareRequested: true,
       movements: {
         orderBy: { position: "asc" },
         select: {
@@ -1039,6 +1130,8 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
     name: string;
     type: WorkoutType;
     ownerId: string | null;
+    approved: boolean;
+    shareRequested: boolean;
     movements: {
       poolExerciseId: string;
       reps: number | null;
@@ -1052,6 +1145,8 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
     name: w.name,
     type: w.type,
     ownerId: w.ownerId,
+    approved: w.approved,
+    shareRequested: w.shareRequested,
     movements: w.movements.map((m) => ({
       poolExerciseId: m.poolExerciseId,
       name: m.poolExercise?.name ?? "—",

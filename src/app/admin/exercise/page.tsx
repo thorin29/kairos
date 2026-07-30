@@ -4,20 +4,24 @@ import {
   loadExercisePool,
   loadWeightUnits,
   loadHiitWorkouts,
+  loadPendingHiitShares,
 } from "@/lib/queries/workouts";
 import { WorkoutAdmin } from "./workout-admin";
 import { ExercisePool } from "./exercise-pool";
 import { HiitWorkouts } from "./hiit-workouts";
+import { PendingShares } from "./pending-shares";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminWorkoutsPage() {
-  const [{ people }, pool, weightUnits, hiitWorkouts] = await Promise.all([
-    loadWorkoutAdmin(),
-    loadExercisePool(),
-    loadWeightUnits(),
-    loadHiitWorkouts(),
-  ]);
+  const [{ people }, pool, weightUnits, hiitWorkouts, pendingShares] =
+    await Promise.all([
+      loadWorkoutAdmin(),
+      loadExercisePool(),
+      loadWeightUnits(),
+      loadHiitWorkouts(),
+      loadPendingHiitShares(),
+    ]);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -35,6 +39,7 @@ export default async function AdminWorkoutsPage() {
 
       <div className="space-y-10">
         <ExercisePool pool={pool} weightUnits={weightUnits} />
+        {pendingShares.length > 0 && <PendingShares shares={pendingShares} />}
         <HiitWorkouts
           movements={pool.filter((p) => p.category === "HIIT")}
           workouts={hiitWorkouts}
