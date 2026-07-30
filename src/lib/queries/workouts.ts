@@ -79,6 +79,7 @@ export type PlanWorkout = {
   name: string;
   category: WorkoutCategory | null;
   muscleGroup: MuscleGroup | null;
+  isRest: boolean;
   exercises: PlanExercise[];
 };
 
@@ -178,6 +179,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           name: true,
           category: true,
           muscleGroup: true,
+          isRest: true,
           exercises: {
             orderBy: { sortOrder: "asc" },
             select: {
@@ -378,6 +380,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       name: string;
       category: WorkoutCategory | null;
       muscleGroup: MuscleGroup | null;
+      isRest: boolean;
       exercises: {
         id: string;
         poolExerciseId: string;
@@ -395,6 +398,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           name: w.name,
           category: w.category,
           muscleGroup: w.muscleGroup,
+          isRest: w.isRest,
           exercises: w.exercises.map((e) => {
             const mg = e.poolExercise?.muscleGroup ?? null;
             return {
@@ -409,7 +413,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           }),
         })),
     }));
-    const todayPlanned = plan[dow]?.workouts ?? [];
+    const todayPlanned = (plan[dow]?.workouts ?? []).filter((w) => !w.isRest);
 
     cards.push({
       user: {

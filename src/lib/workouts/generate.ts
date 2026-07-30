@@ -36,7 +36,10 @@ export async function generateWorkoutTasks(
         endDate: true,
       },
     }),
-    prisma.plannedWorkout.findMany({ select: { userId: true, dayOfWeek: true } }),
+    prisma.plannedWorkout.findMany({
+      where: { isRest: false },
+      select: { userId: true, dayOfWeek: true },
+    }),
   ]);
 
   // A person trains on a weekday if they have a planned workout for it, or a

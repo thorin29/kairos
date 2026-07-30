@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { DAY_NAMES } from "@/lib/days";
 import {
+  addPlannedRestDay,
   addPlannedWorkoutFromPool,
   copyDayPlan,
   removePlannedWorkout,
@@ -134,7 +135,7 @@ function DayRow({
           >
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium">{w.name}</div>
-              {w.exercises.length > 0 ? (
+              {w.isRest ? null : w.exercises.length > 0 ? (
                 <div className="mt-0.5 text-xs text-muted">
                   {w.exercises
                     .map((e) => (e.tracked ? e.name : `${e.name} (no log)`))
@@ -201,6 +202,7 @@ function AddWorkoutModal({
   const [category, setCategory] = useState<WorkoutCategory>("WEIGHTS");
   const [muscle, setMuscle] = useState<MuscleGroup>("CHEST");
   const [picked, setPicked] = useState<Record<string, Picked>>({});
+  const [rest, setRest] = useState(false);
   const [saving, startSave] = useTransition();
 
   const metricOnly = METRIC_ONLY_CATEGORIES.includes(category);
@@ -234,22 +236,26 @@ function AddWorkoutModal({
     setPicked((prev) => ({ ...prev, [id]: { ...prev[id], metric } }));
 
   const chosen = Object.entries(picked);
-  const canSave = metricOnly || chosen.length > 0;
+  const canSave = rest || metricOnly || chosen.length > 0;
 
   const save = () => {
     if (!canSave) return;
     startSave(async () => {
-      await addPlannedWorkoutFromPool(userId, day, {
-        category,
-        muscleGroup: isWeights ? muscle : null,
-        exercises: metricOnly
-          ? []
-          : chosen.map(([poolExerciseId, p]) => ({
-              poolExerciseId,
-              tracked: p.tracked,
-              metric: p.metric,
-            })),
-      });
+      if (rest) {
+        await addPlannedRestDay(userId, day);
+      } else {
+        await addPlannedWorkoutFromPool(userId, day, {
+          category,
+          muscleGroup: isWeights ? muscle : null,
+          exercises: metricOnly
+            ? []
+            : chosen.map(([poolExerciseId, p]) => ({
+                poolExerciseId,
+                tracked: p.tracked,
+                metric: p.metric,
+              })),
+        });
+      }
       onClose();
     });
   };
@@ -293,12 +299,19 @@ function AddWorkoutModal({
               Category
             </label>
             <select
-              value={category}
-              onChange={(e) =>
-                changeCategory(e.target.value as WorkoutCategory)
-              }
+              value={rest ? "REST" : category}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "REST") {
+                  setRest(true);
+                } else {
+                  setRest(false);
+                  changeCategory(v as WorkoutCategory);
+                }
+              }}
               className="h-10 w-full rounded-xl border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
             >
+              <option value="REST">Rest day</option>
               {PLAN_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
                   {CATEGORY_LABEL[c]}
@@ -307,7 +320,7 @@ function AddWorkoutModal({
             </select>
           </div>
 
-          {isWeights && (
+          {!rest && isWeights && (
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-widest text-muted">
                 Muscle group
@@ -326,7 +339,12 @@ function AddWorkoutModal({
             </div>
           )}
 
-          {metricOnly ? (
+          {rest ? (
+            <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
+              Marks {DAY_NAMES[day]} as a planned rest day — no workout is
+              expected and no prompt is created.
+            </p>
+          ) : metricOnly ? (
             <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
               Adds a {CATEGORY_LABEL[category].toLowerCase()} day. You&rsquo;ll
               log {METRIC_LABEL_SHORT[defMetric].toLowerCase()} when you
