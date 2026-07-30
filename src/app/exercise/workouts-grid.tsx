@@ -14,6 +14,7 @@ import {
 import {
   deleteWorkoutSession,
   logCustomWorkout,
+  logHiitWorkout,
   restDay,
 } from "@/lib/actions/workouts";
 import { PlanBuilder } from "./plan-builder";
@@ -25,9 +26,13 @@ import {
   MUSCLE_GROUPS,
   MUSCLE_GROUP_LABEL,
   POOL_CATEGORIES,
+  WORKOUT_TYPES,
+  WORKOUT_TYPE_LABEL,
+  hiitResult,
   type Metric,
   type UnitSystem,
   type WorkoutCategory,
+  type WorkoutType,
 } from "@/lib/workouts/catalog";
 
 type Step = "menu" | "plan" | "log" | "history";
@@ -527,6 +532,7 @@ function CustomWorkoutForm({
   const cfg = CATEGORY_CFG[category];
   const isPoolCat = POOL_CATEGORIES.includes(category);
   const isSport = category === "SPORT";
+  const isHiit = category === "HIIT";
   const options = pool.filter((p) => p.category === category && p.isActive);
   const poolMissing = isPoolCat && options.length === 0;
 
@@ -574,7 +580,7 @@ function CustomWorkoutForm({
     });
   };
 
-  const showRecordChoice = !!cfg.choices && !isSport;
+  const showRecordChoice = !!cfg.choices && !isSport && !isHiit;
 
   return (
     <div className="space-y-4">
@@ -611,6 +617,15 @@ function CustomWorkoutForm({
         )}
       </div>
 
+      {isHiit ? (
+        <HiitBuilder
+          pool={pool}
+          userId={userId}
+          todayISO={todayISO}
+          onDone={onDone}
+        />
+      ) : (
+        <>
       {isPoolCat && (
         <div>
           <label className={CAPTION}>Exercise</label>
@@ -720,6 +735,180 @@ function CustomWorkoutForm({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Rounds, splits, how it felt…"
+          className={FIELD}
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={save}
+        disabled={!canSave}
+        className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+      >
+        {pending ? "Logging…" : "Log workout"}
+      </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function HiitBuilder({
+  pool,
+  userId,
+  todayISO,
+  onDone,
+}: {
+  pool: PoolEntry[];
+  userId: string;
+  todayISO: string;
+  onDone: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [type, setType] = useState<WorkoutType>("AMRAP");
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [count, setCount] = useState(""); // AMRAP rounds / MAX_SETS reps
+  const [min, setMin] = useState("");
+  const [sec, setSec] = useState("");
+  const [notes, setNotes] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  const onlyNum = (v: string) => v.replace(/[^\d.]/g, "");
+  const num = (s: string) => {
+    const n = Number(s);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+
+  const movements = pool.filter((p) => p.category === "HIIT" && p.isActive);
+  const result = hiitResult(type);
+  const value =
+    type === "FOR_TIME" ? num(min) * 60 + num(sec) : num(count);
+  const canSave = value > 0 && !pending;
+
+  const toggle = (id: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const save = () => {
+    if (!canSave) return;
+    startTransition(async () => {
+      await logHiitWorkout({
+        userId,
+        dateISO: todayISO,
+        name: name.trim() || undefined,
+        workoutType: type,
+        movementPoolIds: [...picked],
+        value,
+        notes: notes.trim() || undefined,
+      });
+      onDone();
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={CAPTION}>Name (optional)</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Cindy"
+            className={`${FIELD} px-4`}
+          />
+        </div>
+        <div>
+          <label className={CAPTION}>Type</label>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as WorkoutType)}
+            className={FIELD}
+          >
+            {WORKOUT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {WORKOUT_TYPE_LABEL[t]}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className={CAPTION}>Movements (from the HIIT pool)</label>
+        {movements.length === 0 ? (
+          <p className="rounded-xl border border-hairline bg-ground/40 px-3 py-2 text-sm text-muted">
+            No HIIT movements in the pool yet — add them in the Workouts admin.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {movements.map((m) => {
+              const on = picked.has(m.id);
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => toggle(m.id)}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    on
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-hairline text-muted hover:border-accent"
+                  }`}
+                >
+                  {m.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className={CAPTION}>{result.label}</label>
+        {type === "FOR_TIME" ? (
+          <div className="flex items-center gap-2">
+            <input
+              value={min}
+              onChange={(e) => setMin(onlyNum(e.target.value))}
+              inputMode="numeric"
+              placeholder="0"
+              className={`${FIELD} w-20 text-center`}
+            />
+            <span className="text-sm text-muted">min</span>
+            <input
+              value={sec}
+              onChange={(e) => setSec(onlyNum(e.target.value))}
+              inputMode="numeric"
+              placeholder="00"
+              className={`${FIELD} w-20 text-center`}
+            />
+            <span className="text-sm text-muted">sec</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              value={count}
+              onChange={(e) => setCount(onlyNum(e.target.value))}
+              inputMode="numeric"
+              placeholder="0"
+              className={`${FIELD} w-28 text-center`}
+            />
+            <span className="text-sm text-muted">
+              {type === "AMRAP" ? "rounds" : "reps"}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className={CAPTION}>Notes (optional)</label>
+        <input
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Scaling, splits, how it felt…"
           className={FIELD}
         />
       </div>

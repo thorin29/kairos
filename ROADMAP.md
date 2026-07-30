@@ -203,9 +203,9 @@ all live in the database, never in this repository.
       dropdown; no workout prompt is generated for it (v0.41.0)
 - [x] Opened card matches the tile layout (avatar + 3-across Plan/Log/Rest),
       slightly wider (v0.41.0)
-- [ ] HIIT/CrossFit builder: choose a type (AMRAP / max sets / for time) and
+- [x] HIIT/CrossFit builder: choose a type (AMRAP / max sets / for time) and
       pull movements from the HIIT pool into one named workout with a result
-      — the last workout item, next up
+      (v0.42.0) — the workouts module is now feature-complete
 - [x] Weights units set per muscle group in the pool (lb/kg each); global
       measurement system removed (v0.39.0)
 - [x] Admin cleanup: person drill-down shows only logged workouts; pool creation
