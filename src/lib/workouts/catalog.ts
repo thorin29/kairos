@@ -166,3 +166,20 @@ export const METRIC_LABEL_SHORT: Record<Metric, string> = {
   DURATION: "Time",
   REPS: "Reps / rounds",
 };
+
+// The unit shown next to a metric input. Duration is entered in minutes on the
+// completion form (converted to seconds on save).
+export function metricUnit(metric: Metric, system: UnitSystem): string {
+  switch (metric) {
+    case "WEIGHT":
+      return system === "metric" ? "kg" : "lb";
+    case "DISTANCE":
+      return system === "metric" ? "km" : "mi";
+    case "METERS":
+      return "m";
+    case "REPS":
+      return "reps";
+    case "DURATION":
+      return "min";
+  }
+}
