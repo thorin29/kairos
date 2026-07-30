@@ -119,25 +119,79 @@ export const MUSCLE_GROUP_LABEL: Record<MuscleGroup, string> = {
 };
 
 // HIIT / CrossFit workout types and how each one's single result reads.
-export type WorkoutType = "AMRAP" | "FOR_TIME" | "MAX_SETS";
+export type WorkoutType =
+  | "AMRAP"
+  | "FOR_TIME"
+  | "MAX_SETS"
+  | "FOR_REPS"
+  | "STATIONS"
+  | "TIMED_STATIONS"
+  | "PYRAMID";
 
-export const WORKOUT_TYPES: WorkoutType[] = ["AMRAP", "FOR_TIME", "MAX_SETS"];
+// Types offered in the builder, in a sensible order. MAX_SETS is kept in the
+// enum for older logged data but isn't offered for new workouts (FOR_REPS
+// replaces it).
+export const WORKOUT_TYPES: WorkoutType[] = [
+  "FOR_TIME",
+  "FOR_REPS",
+  "AMRAP",
+  "STATIONS",
+  "TIMED_STATIONS",
+  "PYRAMID",
+];
 
 export const WORKOUT_TYPE_LABEL: Record<WorkoutType, string> = {
   AMRAP: "AMRAP",
   FOR_TIME: "For time",
   MAX_SETS: "Max sets",
+  FOR_REPS: "For reps",
+  STATIONS: "Stations",
+  TIMED_STATIONS: "Timed stations",
+  PYRAMID: "Pyramid",
 };
 
-// The metric each type records, and the label for its result field.
+// A one-line hint describing how each type works, shown in the builder.
+export const WORKOUT_TYPE_HINT: Record<WorkoutType, string> = {
+  AMRAP: "As many rounds as possible within a time cap.",
+  FOR_TIME: "Complete the work as fast as you can.",
+  MAX_SETS: "As many sets/reps as possible.",
+  FOR_REPS: "Total reps completed.",
+  STATIONS: "A set number of reps at each station.",
+  TIMED_STATIONS: "A fixed time at each station.",
+  PYRAMID: "Reps climb then fall (or count up/down).",
+};
+
+// The metric each type records for its single result, and the field label.
 export function hiitResult(type: WorkoutType): { metric: Metric; label: string } {
   switch (type) {
     case "FOR_TIME":
+    case "STATIONS":
+    case "PYRAMID":
       return { metric: "DURATION", label: "Time" };
     case "AMRAP":
       return { metric: "REPS", label: "Rounds" };
     case "MAX_SETS":
-      return { metric: "REPS", label: "Sets / reps" };
+    case "FOR_REPS":
+    case "TIMED_STATIONS":
+      return { metric: "REPS", label: "Total reps" };
+  }
+}
+
+// Which type-level config a workout of this type needs.
+export function hiitConfig(type: WorkoutType): {
+  cap: boolean; // AMRAP time cap / timed-station duration
+  capLabel: string;
+  pyramid: boolean;
+} {
+  switch (type) {
+    case "AMRAP":
+      return { cap: true, capLabel: "Time cap (min)", pyramid: false };
+    case "TIMED_STATIONS":
+      return { cap: true, capLabel: "Seconds per station", pyramid: false };
+    case "PYRAMID":
+      return { cap: false, capLabel: "", pyramid: true };
+    default:
+      return { cap: false, capLabel: "", pyramid: false };
   }
 }
 

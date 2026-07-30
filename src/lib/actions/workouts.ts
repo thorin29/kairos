@@ -606,6 +606,54 @@ export async function completePlannedWorkout(input: {
   refresh();
 }
 
+export async function addHiitWorkout(input: {
+  name: string;
+  type: WorkoutType;
+  capSec?: number | null;
+  pyramidStart?: number | null;
+  pyramidEnd?: number | null;
+  pyramidStep?: number | null;
+  notes?: string | null;
+  movements: { poolExerciseId: string; reps?: number | null }[];
+}): Promise<{ error: string | null }> {
+  await requireAdmin();
+  const name = input.name.trim().slice(0, 60);
+  if (name.length < 2) return { error: "Give the workout a name." };
+  const movements = input.movements.filter((m) => m.poolExerciseId);
+  if (movements.length === 0) return { error: "Add at least one movement." };
+
+  const count = await prisma.hiitWorkout.count({ where: { ownerId: null } });
+  await prisma.hiitWorkout.create({
+    data: {
+      name,
+      type: input.type,
+      ownerId: null,
+      approved: true,
+      capSec: input.capSec ?? null,
+      pyramidStart: input.pyramidStart ?? null,
+      pyramidEnd: input.pyramidEnd ?? null,
+      pyramidStep: input.pyramidStep ?? null,
+      notes: input.notes?.trim() || null,
+      sortOrder: count,
+      movements: {
+        create: movements.map((m, i) => ({
+          poolExerciseId: m.poolExerciseId,
+          reps: m.reps ?? null,
+          position: i,
+        })),
+      },
+    },
+  });
+  refresh();
+  return { error: null };
+}
+
+export async function deleteHiitWorkout(id: string): Promise<void> {
+  await requireAdmin();
+  await prisma.hiitWorkout.delete({ where: { id } }).catch(() => {});
+  refresh();
+}
+
 // --- one-off custom workout ---------------------------------------------
 
 /**

@@ -46,6 +46,7 @@ model User {
   workoutSchedules WorkoutSchedule[] @relation("WorkoutSchedules")
   workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
+  hiitWorkouts     HiitWorkout[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -480,6 +481,10 @@ enum WorkoutType {
   AMRAP
   FOR_TIME
   MAX_SETS
+  FOR_REPS
+  STATIONS
+  TIMED_STATIONS
+  PYRAMID
 }
 
 enum WorkoutMetric {
@@ -517,9 +522,48 @@ model PoolExercise {
 
   sets    SessionSet[]
   planned PlannedExercise[]
+  hiitMovements HiitWorkoutMovement[]
 
   @@unique([category, name])
   @@index([category, muscleGroup, isActive])
+}
+
+// A named HIIT/CrossFit workout (e.g. "Cindy") of a given type, built from
+// HIIT-pool movements. ownerId null means the shared household pool; a set
+// ownerId means it's that person's own, pending share/approval.
+model HiitWorkout {
+  id           String       @id @default(cuid())
+  name         String
+  type         WorkoutType
+  ownerId      String?
+  owner        User?        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  approved     Boolean      @default(true)
+  capSec       Int? // AMRAP time cap / timed-station duration
+  pyramidStart Int?
+  pyramidEnd   Int?
+  pyramidStep  Int?         @default(1)
+  notes        String?
+  sortOrder    Int          @default(0)
+  createdAt    DateTime     @default(now())
+
+  movements HiitWorkoutMovement[]
+
+  @@index([ownerId])
+  @@index([approved])
+}
+
+model HiitWorkoutMovement {
+  id             String       @id @default(cuid())
+  hiitWorkoutId  String
+  hiitWorkout    HiitWorkout  @relation(fields: [hiitWorkoutId], references: [id], onDelete: Cascade)
+  poolExerciseId String
+  poolExercise   PoolExercise @relation(fields: [poolExerciseId], references: [id], onDelete: Cascade)
+  reps           Int?
+  position       Int          @default(0)
+  createdAt      DateTime     @default(now())
+
+  @@index([hiitWorkoutId])
+  @@index([poolExerciseId])
 }
 
 // A person's own definition of a thing they do. Built once, reused: it drives

@@ -895,3 +895,79 @@ export async function loadMovementComparisons(): Promise<MovementComparison[]> {
 
   return out;
 }
+
+// --- HIIT / CrossFit named workouts -------------------------------------
+
+export type HiitMovementRow = {
+  poolExerciseId: string;
+  name: string;
+  reps: number | null;
+  position: number;
+};
+
+export type HiitWorkoutRow = {
+  id: string;
+  name: string;
+  type: WorkoutType;
+  capSec: number | null;
+  pyramidStart: number | null;
+  pyramidEnd: number | null;
+  pyramidStep: number | null;
+  movements: HiitMovementRow[];
+};
+
+/** The shared, approved HIIT/CrossFit workout pool, with their movements. */
+export async function loadHiitWorkouts(): Promise<HiitWorkoutRow[]> {
+  const rows = (await prisma.hiitWorkout.findMany({
+    where: { ownerId: null, approved: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      capSec: true,
+      pyramidStart: true,
+      pyramidEnd: true,
+      pyramidStep: true,
+      movements: {
+        orderBy: { position: "asc" },
+        select: {
+          poolExerciseId: true,
+          reps: true,
+          position: true,
+          poolExercise: { select: { name: true } },
+        },
+      },
+    },
+  })) as unknown as {
+    id: string;
+    name: string;
+    type: WorkoutType;
+    capSec: number | null;
+    pyramidStart: number | null;
+    pyramidEnd: number | null;
+    pyramidStep: number | null;
+    movements: {
+      poolExerciseId: string;
+      reps: number | null;
+      position: number;
+      poolExercise: { name: string } | null;
+    }[];
+  }[];
+
+  return rows.map((w) => ({
+    id: w.id,
+    name: w.name,
+    type: w.type,
+    capSec: w.capSec,
+    pyramidStart: w.pyramidStart,
+    pyramidEnd: w.pyramidEnd,
+    pyramidStep: w.pyramidStep,
+    movements: w.movements.map((m) => ({
+      poolExerciseId: m.poolExerciseId,
+      name: m.poolExercise?.name ?? "—",
+      reps: m.reps,
+      position: m.position,
+    })),
+  }));
+}
