@@ -9,19 +9,27 @@ import {
   MUSCLE_GROUP_LABEL,
   POOL_CATEGORIES,
   type MuscleGroup,
+  type WeightUnit,
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
 import {
   addPoolExercise,
   deletePoolExercise,
   setPoolExerciseActive,
+  setWeightUnit,
 } from "@/lib/actions/workouts";
-import type { PoolEntry } from "@/lib/queries/workouts";
+import type { PoolEntry, WeightUnits } from "@/lib/queries/workouts";
 
 const FIELD =
   "h-10 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent";
 
-export function ExercisePool({ pool }: { pool: PoolEntry[] }) {
+export function ExercisePool({
+  pool,
+  weightUnits,
+}: {
+  pool: PoolEntry[];
+  weightUnits: WeightUnits;
+}) {
   const [category, setCategory] = useState<WorkoutCategory>("WEIGHTS");
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>("CHEST");
   const [name, setName] = useState("");
@@ -46,7 +54,8 @@ export function ExercisePool({ pool }: { pool: PoolEntry[] }) {
       <SectionHeading>Exercise pool</SectionHeading>
       <p className="mb-3 text-sm text-muted">
         The shared library everyone picks from — so the same movement is one
-        thing across the household. Weights are grouped by muscle.
+        thing across the household. Weights are grouped by muscle group, and
+        each group logs in its own unit (lb or kg).
       </p>
 
       <Card className="mb-4 p-5">
@@ -71,7 +80,7 @@ export function ExercisePool({ pool }: { pool: PoolEntry[] }) {
           {isWeights && (
             <label className="flex flex-col gap-1">
               <span className="text-xs font-semibold uppercase tracking-widest text-muted">
-                Muscle
+                Muscle group
               </span>
               <select
                 value={muscleGroup}
@@ -126,6 +135,7 @@ export function ExercisePool({ pool }: { pool: PoolEntry[] }) {
                 key={c}
                 category={c}
                 entries={pool.filter((p) => p.category === c)}
+                weightUnits={weightUnits}
               />
             ),
           )}
@@ -138,26 +148,36 @@ export function ExercisePool({ pool }: { pool: PoolEntry[] }) {
 function PoolCategory({
   category,
   entries,
+  weightUnits,
 }: {
   category: WorkoutCategory;
   entries: PoolEntry[];
+  weightUnits: WeightUnits;
 }) {
-  // Weights break out by muscle group; everything else is a flat list.
-  const groups: { key: string; label: string | null; items: PoolEntry[] }[] =
+  // Weights break out by muscle group (each with its own unit); everything
+  // else is a flat list.
+  const groups: {
+    key: string;
+    label: string | null;
+    mg: MuscleGroup | null;
+    items: PoolEntry[];
+  }[] =
     category === "WEIGHTS"
       ? [
           ...MUSCLE_GROUPS.map((m) => ({
             key: m,
             label: MUSCLE_GROUP_LABEL[m],
+            mg: m,
             items: entries.filter((e) => e.muscleGroup === m),
           })),
           {
             key: "none",
             label: "Other",
+            mg: null,
             items: entries.filter((e) => !e.muscleGroup),
           },
         ].filter((g) => g.items.length > 0)
-      : [{ key: "all", label: null, items: entries }];
+      : [{ key: "all", label: null, mg: null, items: entries }];
 
   return (
     <div>
@@ -168,9 +188,17 @@ function PoolCategory({
         {groups.map((g) => (
           <div key={g.key}>
             {g.label && (
-              <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted">
-                {g.label}
-              </p>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+                  {g.label}
+                </p>
+                {g.mg && (
+                  <WeightUnitToggle
+                    muscleGroup={g.mg}
+                    unit={weightUnits[g.mg]}
+                  />
+                )}
+              </div>
             )}
             <Card className="divide-y divide-hairline">
               {g.items.map((e) => (
@@ -180,6 +208,35 @@ function PoolCategory({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function WeightUnitToggle({
+  muscleGroup,
+  unit,
+}: {
+  muscleGroup: MuscleGroup;
+  unit: WeightUnit;
+}) {
+  const [pending, startTransition] = useTransition();
+  return (
+    <div className="inline-flex overflow-hidden rounded-full border border-hairline text-xs font-semibold">
+      {(["lb", "kg"] as WeightUnit[]).map((u) => (
+        <button
+          key={u}
+          type="button"
+          disabled={pending}
+          onClick={() =>
+            startTransition(() => setWeightUnit(muscleGroup, u))
+          }
+          className={`px-2.5 py-1 transition-colors disabled:opacity-50 ${
+            unit === u ? "bg-accent text-white" : "text-muted hover:text-accent"
+          }`}
+        >
+          {u}
+        </button>
+      ))}
     </div>
   );
 }

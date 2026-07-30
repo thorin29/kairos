@@ -102,23 +102,31 @@ function PlanRow({
       unit: string;
     }[] = [];
 
-    const push = (poolExerciseId: string | null, metric: Metric, raw: string) => {
+    const push = (
+      poolExerciseId: string | null,
+      metric: Metric,
+      raw: string,
+      unit: string,
+    ) => {
       const num = Number(raw);
       if (!raw || !Number.isFinite(num) || num <= 0) return;
       const value = metric === "DURATION" ? num * 60 : num;
-      entries.push({
-        poolExerciseId,
-        metric,
-        value,
-        unit: metric === "DURATION" ? "" : metricUnit(metric, unitSystem),
-      });
+      entries.push({ poolExerciseId, metric, value, unit });
     };
 
+    const resolveUnit = (m: Metric, exUnit?: string): string =>
+      m === "DURATION"
+        ? ""
+        : m === "WEIGHT" && exUnit
+          ? exUnit
+          : metricUnit(m, unitSystem);
+
     if (metricOnly) {
-      push(null, soloMetric, values["_solo"] ?? "");
+      push(null, soloMetric, values["_solo"] ?? "", resolveUnit(soloMetric));
     } else {
       for (const e of trackedExercises) {
-        push(e.poolExerciseId, metricFor(e.metric), values[e.id] ?? "");
+        const m = metricFor(e.metric);
+        push(e.poolExerciseId, m, values[e.id] ?? "", resolveUnit(m, e.unit));
       }
     }
 
@@ -181,12 +189,17 @@ function PlanRow({
             <>
               {trackedExercises.map((e) => {
                 const m = metricFor(e.metric);
+                const unit =
+                  m === "WEIGHT"
+                    ? e.unit || metricUnit(m, unitSystem)
+                    : metricUnit(m, unitSystem);
                 return (
                   <MetricField
                     key={e.id}
                     label={e.name}
                     metric={m}
-                    unit={metricUnit(m, unitSystem)}
+                    unit={unit}
+                    hint={m === "WEIGHT" ? "today's max" : undefined}
                     value={values[e.id] ?? ""}
                     onChange={(v) => setVal(e.id, v)}
                   />
@@ -226,22 +239,27 @@ function MetricField({
   unit,
   value,
   onChange,
+  hint,
 }: {
   label: string;
   metric: Metric;
   unit: string;
   value: string;
   onChange: (v: string) => void;
+  hint?: string;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="min-w-[8rem] flex-1 text-sm font-medium">{label}</span>
+      <span className="min-w-[8rem] flex-1 text-sm font-medium">
+        {label}
+        {hint && <span className="ml-1 text-xs font-normal text-muted">({hint})</span>}
+      </span>
       <label className="flex items-center gap-1.5 text-xs text-muted">
         <input
           inputMode="decimal"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={METRIC_LABEL_SHORT[metric].toLowerCase()}
+          placeholder={hint ?? METRIC_LABEL_SHORT[metric].toLowerCase()}
           className="tabular h-9 w-20 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
         />
         {unit}

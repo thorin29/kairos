@@ -5,13 +5,17 @@ import { getSetting } from "@/lib/settings";
 import {
   CATEGORY_LABEL,
   LINE_COLORS,
+  MUSCLE_GROUPS,
   UNIT_SYSTEM_KEY,
+  DEFAULT_WEIGHT_UNIT,
   defaultMetricFor,
   metricUnit,
+  weightUnitKey,
   type Implement,
   type Metric,
   type MuscleGroup,
   type UnitSystem,
+  type WeightUnit,
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
 
@@ -67,6 +71,7 @@ export type PlanExercise = {
   muscleGroup: MuscleGroup | null;
   tracked: boolean;
   metric: Metric | null;
+  unit: string;
 };
 
 export type PlanWorkout = {
@@ -101,13 +106,14 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
   const dow = dayOfWeek(todayISO);
   const today = toDateColumn(todayISO);
 
-  const [people, unitRaw] = await Promise.all([
+  const [people, unitRaw, weightUnits] = await Promise.all([
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
       select: { id: true, name: true, displayName: true, color: true, avatarPath: true },
     }),
     getSetting(UNIT_SYSTEM_KEY),
+    loadWeightUnits(),
   ]);
 
   const cards: PersonWorkout[] = [];
@@ -370,14 +376,18 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           name: w.name,
           category: w.category,
           muscleGroup: w.muscleGroup,
-          exercises: w.exercises.map((e) => ({
-            id: e.id,
-            poolExerciseId: e.poolExerciseId,
-            name: e.poolExercise?.name ?? "—",
-            muscleGroup: e.poolExercise?.muscleGroup ?? null,
-            tracked: e.tracked,
-            metric: e.metric,
-          })),
+          exercises: w.exercises.map((e) => {
+            const mg = e.poolExercise?.muscleGroup ?? null;
+            return {
+              id: e.id,
+              poolExerciseId: e.poolExerciseId,
+              name: e.poolExercise?.name ?? "—",
+              muscleGroup: mg,
+              tracked: e.tracked,
+              metric: e.metric,
+              unit: mg ? weightUnits[mg] : "",
+            };
+          }),
         })),
     }));
     const todayPlanned = plan[dow]?.workouts ?? [];
@@ -412,41 +422,47 @@ export async function loadWorkoutUnitSystem(): Promise<UnitSystem> {
   return raw === "metric" ? "metric" : "imperial";
 }
 
+export type WeightUnits = Record<MuscleGroup, WeightUnit>;
+
+/** The per-muscle-group weight unit (lb/kg), set in the pool admin. */
+export async function loadWeightUnits(): Promise<WeightUnits> {
+  const pairs = await Promise.all(
+    MUSCLE_GROUPS.map(async (mg) => {
+      const v = await getSetting(weightUnitKey(mg));
+      return [mg, v === "kg" ? "kg" : DEFAULT_WEIGHT_UNIT] as const;
+    }),
+  );
+  return Object.fromEntries(pairs) as WeightUnits;
+}
+
 export type WorkoutAdminRow = {
   id: string;
   name: string;
   color: string;
-  exerciseCount: number;
-  trackedCount: number;
+  loggedCount: number;
 };
 
 export async function loadWorkoutAdmin(): Promise<{
-  unitSystem: UnitSystem;
   people: WorkoutAdminRow[];
 }> {
-  const [unitSystem, users] = await Promise.all([
-    loadWorkoutUnitSystem(),
-    prisma.user.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-      select: {
-        id: true,
-        name: true,
-        displayName: true,
-        color: true,
-        workoutExercises: { where: { isActive: true }, select: { tracked: true } },
-      },
-    }),
-  ]);
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      id: true,
+      name: true,
+      displayName: true,
+      color: true,
+      workoutSessions: { where: { isRest: false }, select: { id: true } },
+    },
+  });
 
   return {
-    unitSystem,
     people: users.map((u) => ({
       id: u.id,
       name: u.displayName ?? u.name,
       color: u.color,
-      exerciseCount: u.workoutExercises.length,
-      trackedCount: u.workoutExercises.filter((e) => e.tracked).length,
+      loggedCount: u.workoutSessions.length,
     })),
   };
 }
@@ -633,25 +649,36 @@ export type PoolEntry = {
   name: string;
   muscleGroup: MuscleGroup | null;
   isActive: boolean;
+  unit: string; // weights: the muscle group's lb/kg; otherwise ""
 };
 
 export async function loadExercisePool(): Promise<PoolEntry[]> {
-  const rows = await prisma.poolExercise.findMany({
-    orderBy: [
-      { category: "asc" },
-      { muscleGroup: "asc" },
-      { sortOrder: "asc" },
-      { name: "asc" },
-    ],
-    select: {
-      id: true,
-      category: true,
-      name: true,
-      muscleGroup: true,
-      isActive: true,
-    },
-  });
-  return rows as unknown as PoolEntry[];
+  const [rows, weightUnits] = await Promise.all([
+    prisma.poolExercise.findMany({
+      orderBy: [
+        { category: "asc" },
+        { muscleGroup: "asc" },
+        { sortOrder: "asc" },
+        { name: "asc" },
+      ],
+      select: {
+        id: true,
+        category: true,
+        name: true,
+        muscleGroup: true,
+        isActive: true,
+      },
+    }),
+    loadWeightUnits(),
+  ]);
+  const list = rows as unknown as Omit<PoolEntry, "unit">[];
+  return list.map((p) => ({
+    ...p,
+    unit:
+      p.category === "WEIGHTS" && p.muscleGroup
+        ? weightUnits[p.muscleGroup]
+        : "",
+  }));
 }
 
 // --- cross-person comparison --------------------------------------------
@@ -682,7 +709,7 @@ export type MovementComparison = {
  * unit. Movements with no logged data are left out.
  */
 export async function loadMovementComparisons(): Promise<MovementComparison[]> {
-  const [people, unitRaw, sets] = await Promise.all([
+  const [people, unitRaw, sets, weightUnits] = await Promise.all([
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -704,9 +731,12 @@ export async function loadMovementComparisons(): Promise<MovementComparison[]> {
         },
       },
     }),
+    loadWeightUnits(),
   ]);
 
   const unitSystem: UnitSystem = unitRaw === "metric" ? "metric" : "imperial";
+  const unitForMovement = (metric: Metric, mg: MuscleGroup | null): string =>
+    metric === "WEIGHT" && mg ? weightUnits[mg] : metricUnit(metric, unitSystem);
 
   const rows = sets as unknown as {
     poolExerciseId: string;
@@ -797,7 +827,7 @@ export async function loadMovementComparisons(): Promise<MovementComparison[]> {
         id: uid,
         name: nameById.get(uid) ?? "Unknown",
         color: colorById.get(uid) ?? "#0f5c63",
-        unit: metricUnit(m.metric, unitSystem),
+        unit: unitForMovement(m.metric, m.muscleGroup),
         points: [...days.entries()]
           .map(([date, value]) => ({ date, value }))
           .sort((a, b) => (a.date < b.date ? -1 : 1)),
@@ -812,7 +842,7 @@ export async function loadMovementComparisons(): Promise<MovementComparison[]> {
       category: m.category,
       muscleGroup: m.muscleGroup,
       metric: m.metric,
-      unit: metricUnit(m.metric, unitSystem),
+      unit: unitForMovement(m.metric, m.muscleGroup),
       series,
     });
   }

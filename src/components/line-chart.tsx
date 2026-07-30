@@ -135,7 +135,12 @@ export function LineChart({ series }: { series: Series[] }) {
                   cy={y(p.value)}
                   r={3}
                   fill={s.color}
-                />
+                >
+                  <title>
+                    {s.name}: {p.value}
+                    {s.unit} · {fmtDate(Date.parse(`${p.date}T00:00:00Z`))}
+                  </title>
+                </circle>
               ))}
             </g>
           );
@@ -145,7 +150,6 @@ export function LineChart({ series }: { series: Series[] }) {
       <div className="mt-2 flex flex-wrap gap-1.5">
         {series.map((s) => {
           const off = hidden.has(s.id);
-          const last = s.points[s.points.length - 1];
           return (
             <button
               key={s.id}
@@ -158,12 +162,6 @@ export function LineChart({ series }: { series: Series[] }) {
             >
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
               {s.name}
-              {last && !off && (
-                <span className="tabular text-muted">
-                  {last.value}
-                  {s.unit}
-                </span>
-              )}
             </button>
           );
         })}

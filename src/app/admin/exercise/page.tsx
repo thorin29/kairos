@@ -1,14 +1,19 @@
 import { AdminBack } from "@/components/admin-back";
-import { loadWorkoutAdmin, loadExercisePool } from "@/lib/queries/workouts";
+import {
+  loadWorkoutAdmin,
+  loadExercisePool,
+  loadWeightUnits,
+} from "@/lib/queries/workouts";
 import { WorkoutAdmin } from "./workout-admin";
 import { ExercisePool } from "./exercise-pool";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminWorkoutsPage() {
-  const [{ unitSystem, people }, pool] = await Promise.all([
+  const [{ people }, pool, weightUnits] = await Promise.all([
     loadWorkoutAdmin(),
     loadExercisePool(),
+    loadWeightUnits(),
   ]);
 
   return (
@@ -20,14 +25,14 @@ export default async function AdminWorkoutsPage() {
           Workouts
         </h1>
         <p className="mt-2 max-w-xl text-muted">
-          Build the shared exercise pool people choose from, set the measurement
-          system, and open a person to manage their records.
+          Build the shared exercise pool people choose from, set the weight unit
+          per muscle group, and open a person to manage their logged workouts.
         </p>
       </header>
 
       <div className="space-y-10">
-        <ExercisePool pool={pool} />
-        <WorkoutAdmin unitSystem={unitSystem} people={people} />
+        <ExercisePool pool={pool} weightUnits={weightUnits} />
+        <WorkoutAdmin people={people} />
       </div>
     </main>
   );

@@ -201,6 +201,13 @@ all live in the database, never in this repository.
       day done (v0.37.0)
 - [ ] HIIT/CrossFit builder: choose a type (AMRAP / max sets / for time) and
       pull movements from the HIIT pool into one named workout with a result
+- [x] Weights units set per muscle group in the pool (lb/kg each); global
+      measurement system removed (v0.39.0)
+- [x] Admin cleanup: person drill-down shows only logged workouts; pool creation
+      labelled "Muscle group" with a per-group unit switch (v0.39.0)
+- [ ] Per-person progress graph on the opened card (above the buttons), pool-based
+      and reflecting today's planned muscle group/exercises (#8) — next
+- [ ] Chart point hover tooltip is a native title for now; richer hover popup later
 - [x] Comparative graphs across people for the same pool exercise or workout
       (v0.38.0) — Compare section on the Workouts page, a line per person of
       best-per-day for a chosen pool movement
