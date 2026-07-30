@@ -3,17 +3,20 @@ import {
   loadWorkoutAdmin,
   loadExercisePool,
   loadWeightUnits,
+  loadHiitWorkouts,
 } from "@/lib/queries/workouts";
 import { WorkoutAdmin } from "./workout-admin";
 import { ExercisePool } from "./exercise-pool";
+import { HiitWorkouts } from "./hiit-workouts";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminWorkoutsPage() {
-  const [{ people }, pool, weightUnits] = await Promise.all([
+  const [{ people }, pool, weightUnits, hiitWorkouts] = await Promise.all([
     loadWorkoutAdmin(),
     loadExercisePool(),
     loadWeightUnits(),
+    loadHiitWorkouts(),
   ]);
 
   return (
@@ -32,6 +35,10 @@ export default async function AdminWorkoutsPage() {
 
       <div className="space-y-10">
         <ExercisePool pool={pool} weightUnits={weightUnits} />
+        <HiitWorkouts
+          movements={pool.filter((p) => p.category === "HIIT")}
+          workouts={hiitWorkouts}
+        />
         <WorkoutAdmin people={people} />
       </div>
     </main>

@@ -782,7 +782,9 @@ function HiitBuilder({
   const movements = pool.filter((p) => p.category === "HIIT" && p.isActive);
   const result = hiitResult(type);
   const value =
-    type === "FOR_TIME" ? num(min) * 60 + num(sec) : num(count);
+    hiitResult(type).metric === "DURATION"
+      ? num(min) * 60 + num(sec)
+      : num(count);
   const canSave = value > 0 && !pending;
 
   const toggle = (id: string) =>
@@ -868,7 +870,7 @@ function HiitBuilder({
 
       <div>
         <label className={CAPTION}>{result.label}</label>
-        {type === "FOR_TIME" ? (
+        {hiitResult(type).metric === "DURATION" ? (
           <div className="flex items-center gap-2">
             <input
               value={min}

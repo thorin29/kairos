@@ -207,9 +207,16 @@ all live in the database, never in this repository.
       dropdown; no workout prompt is generated for it (v0.41.0)
 - [x] Opened card matches the tile layout (avatar + 3-across Plan/Log/Rest),
       slightly wider (v0.41.0)
-- [x] HIIT/CrossFit builder: choose a type (AMRAP / max sets / for time) and
-      pull movements from the HIIT pool into one named workout with a result
-      (v0.42.0) — the workouts module is now feature-complete
+- [~] HIIT/CrossFit named workouts — a pool of named workouts built from HIIT
+      movements, of a type (For time / For reps / AMRAP / Stations / Timed
+      stations / Pyramid):
+      - [x] Phase 1: admin builder + shared pool (v0.44.0)
+      - [ ] Phase 2: pick a named workout by name when logging ("log something
+            else" dropdown with a "New workout" option on top); log each type's
+            result
+      - [ ] Phase 3: pick a named HIIT workout in the weekly plan
+      - [ ] Phase 4: per-user pool + share → admin-approval workflow; each
+            person's own HIIT workouts visible/editable under them in admin
 - [x] Weights units set per muscle group in the pool (lb/kg each); global
       measurement system removed (v0.39.0)
 - [x] Admin cleanup: person drill-down shows only logged workouts; pool creation
