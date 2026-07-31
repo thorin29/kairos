@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireInteractive } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { setSetting } from "@/lib/settings";
@@ -51,6 +52,7 @@ export async function addExercise(
     tracked?: boolean;
   },
 ): Promise<void> {
+  await requireInteractive();
   const name = input.name.trim().slice(0, 60);
   if (!userId || name.length < 1) return;
 
@@ -74,6 +76,7 @@ export async function updateExercise(
   id: string,
   data: { name?: string; unit?: string; tracked?: boolean; implement?: Implement | null },
 ): Promise<void> {
+  await requireInteractive();
   await prisma.exercise.update({
     where: { id },
     data: {
@@ -87,6 +90,7 @@ export async function updateExercise(
 }
 
 export async function removeExercise(id: string): Promise<void> {
+  await requireInteractive();
   await prisma.exercise.update({ where: { id }, data: { isActive: false } });
   refresh();
 }
@@ -168,6 +172,7 @@ export async function setScheduleDays(
   startISO?: string,
   endISO?: string | null,
 ): Promise<void> {
+  await requireInteractive();
   const days = [...new Set(weekdays)].filter((d) => d >= 0 && d <= 6);
   const effectiveFrom = toDateColumn(
     startISO && /^\d{4}-\d{2}-\d{2}$/.test(startISO) ? startISO : todayISO(),
@@ -203,6 +208,7 @@ export async function pauseExercise(
   exerciseId: string,
   paused: boolean,
 ): Promise<void> {
+  await requireInteractive();
   await prisma.workoutSchedule.updateMany({
     where: { exerciseId },
     data: { isPaused: paused },
@@ -215,6 +221,7 @@ export async function setExerciseEnd(
   exerciseId: string,
   endISO: string | null,
 ): Promise<void> {
+  await requireInteractive();
   const endDate =
     endISO && /^\d{4}-\d{2}-\d{2}$/.test(endISO) ? toDateColumn(endISO) : null;
   await prisma.workoutSchedule.updateMany({
@@ -278,6 +285,7 @@ export async function logSession(input: {
   finished?: boolean;
   notes?: string;
 }): Promise<void> {
+  await requireInteractive();
   if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
 
   const sessionId = await findOrCreateSession(input.userId, input.dateISO);
@@ -350,6 +358,7 @@ export async function markWorkedOut(
   dateISO: string,
   worked: boolean,
 ): Promise<void> {
+  await requireInteractive();
   if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
   const date = toDateColumn(dateISO);
 
@@ -388,6 +397,7 @@ export async function addPlannedWorkout(
   dayOfWeek: number,
   name: string,
 ): Promise<void> {
+  await requireInteractive();
   const clean = name.trim().slice(0, 40);
   if (!userId || clean.length < 1 || dayOfWeek < 0 || dayOfWeek > 6) return;
 
@@ -400,6 +410,7 @@ export async function addPlannedWorkout(
 }
 
 export async function removePlannedWorkout(id: string): Promise<void> {
+  await requireInteractive();
   await prisma.plannedWorkout.delete({ where: { id } }).catch(() => {});
   await generateWorkoutTasks();
   refresh();
@@ -426,6 +437,7 @@ export async function addPlannedWorkoutFromPool(
     }[];
   },
 ): Promise<void> {
+  await requireInteractive();
   if (!userId || dayOfWeek < 0 || dayOfWeek > 6) return;
 
   const label = (
@@ -473,6 +485,7 @@ export async function copyDayPlan(
   fromDay: number,
   toDay: number,
 ): Promise<void> {
+  await requireInteractive();
   if (!userId || fromDay === toDay) return;
 
   const [source, existing] = await Promise.all([
@@ -502,6 +515,7 @@ export async function addPlannedHiitWorkout(
   dayOfWeek: number,
   hiitWorkoutId: string,
 ): Promise<void> {
+  await requireInteractive();
   if (!userId || dayOfWeek < 0 || dayOfWeek > 6 || !hiitWorkoutId) return;
   const w = await prisma.hiitWorkout.findUnique({
     where: { id: hiitWorkoutId },
@@ -527,6 +541,7 @@ export async function addPlannedRestDay(
   userId: string,
   dayOfWeek: number,
 ): Promise<void> {
+  await requireInteractive();
   if (!userId || dayOfWeek < 0 || dayOfWeek > 6) return;
   const existing = await prisma.plannedWorkout.findFirst({
     where: { userId, dayOfWeek, isRest: true },
@@ -541,6 +556,7 @@ export async function addPlannedRestDay(
 }
 
 export async function restDay(userId: string, dateISO: string): Promise<void> {
+  await requireInteractive();
   if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
   const date = toDateColumn(dateISO);
 
@@ -576,6 +592,7 @@ export async function completePlannedWorkout(input: {
     unit: string;
   }[];
 }): Promise<void> {
+  await requireInteractive();
   if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
 
   const plan = (await prisma.plannedWorkout.findUnique({
@@ -703,6 +720,7 @@ export async function deleteHiitWorkout(id: string): Promise<void> {
 
 /** A person asks that their own workout be shared (goes to admin to approve). */
 export async function requestShareHiitWorkout(id: string): Promise<void> {
+  await requireInteractive();
   if (!id) return;
   await prisma.hiitWorkout
     .updateMany({
@@ -769,6 +787,7 @@ export async function logCustomWorkout(input: {
   load?: number | null;
   notes?: string;
 }): Promise<void> {
+  await requireInteractive();
   if (!input.userId) return;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
   if (!Number.isFinite(input.value) || input.value <= 0) return;
@@ -919,6 +938,7 @@ export async function logHiitWorkout(input: {
   value: number;
   notes?: string;
 }): Promise<void> {
+  await requireInteractive();
   if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
   if (!Number.isFinite(input.value) || input.value <= 0) return;
 
@@ -988,6 +1008,7 @@ export async function createAndLogHiitWorkout(input: {
   value: number;
   notes?: string;
 }): Promise<{ error: string | null }> {
+  await requireInteractive();
   if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) {
     return { error: "Something went wrong." };
   }
@@ -1037,6 +1058,7 @@ export async function createAndLogHiitWorkout(input: {
 /** Delete one logged workout. If it was the day's last, the day drops back to
  *  "not logged yet". Rest days and other workouts on the day are untouched. */
 export async function deleteWorkoutSession(sessionId: string): Promise<void> {
+  await requireInteractive();
   if (!sessionId) return;
   const session = await prisma.workoutSession.findUnique({
     where: { id: sessionId },

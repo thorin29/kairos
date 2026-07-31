@@ -94,12 +94,18 @@ all live in the database, never in this repository.
       (needs the DB); middleware only forwards the path.
 - [x] **Profile edits are admin-or-self once sign-in is required** (open on the
       shared tablet otherwise).
-- [ ] **Guard the remaining mutating actions.** Page access is gated, but
-      server actions (chores, tasks, groceries, workouts…) still run open in the
-      shared model. A `requireInteractive()` helper exists; the sweep to apply
-      it — so those writes need a session once gating is on — is the last step
-      before Kairos could stand in front of a public domain without Authelia.
-      Until then, keep Authelia in front (defence in depth).
+- [x] **Mutating actions guarded.** The shared-screen writes (tasks, groceries,
+      events, workouts, reading, calendars, plays) now call `requireInteractive()`
+      — a no-op while sign-in is off, a session requirement once it's on. The
+      shared tablet still works because it's itself signed in as an admin.
+      Admin-only actions keep their stricter PIN guard. With this, page access
+      *and* writes are gated, so Kairos is much closer to standing on its own —
+      though keeping Authelia in front remains the sound default (defence in
+      depth, and it carries 2FA).
+- [ ] **Per-resource ownership** (finer than session-level): e.g. on a personal
+      device, only log your own workout. Not needed for the shared tablet, where
+      acting for the whole household is the point. Revisit with the phone app.
+- [ ] Kairos-side TOTP for the eventual app API path that bypasses Authelia.
 - [ ] **"Act as me" step-up** on the shared tablet — attribute a single action
       to a person (tap avatar, optional personal PIN) without turning the
       tablet into a private session. First consumer: the grocery "I'm going

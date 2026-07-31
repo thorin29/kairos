@@ -39,7 +39,11 @@ export async function addPerson(
   const makeAdmin = anyone === 0 || formData.get("role") === "ADMIN";
   const role = makeAdmin ? Role.ADMIN : Role.MEMBER;
 
-  const existing = await prisma.user.findFirst({ where: { name } });
+  // Login matches names case-insensitively, so uniqueness must too — otherwise
+  // "Marco" and "marco" could both exist and make a login ambiguous.
+  const existing = await prisma.user.findFirst({
+    where: { name: { equals: name, mode: "insensitive" } },
+  });
   if (existing) {
     return { error: `${name} is already on the list.` };
   }

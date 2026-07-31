@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireInteractive } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO, weekDays } from "@/lib/dates";
 import { isAdmin, requireAdmin } from "@/lib/session";
@@ -17,6 +18,7 @@ export async function logPlay(
   minutes: number,
   useToken: boolean,
 ): Promise<PlayState> {
+  await requireInteractive();
   if (!Number.isInteger(minutes) || minutes < 1 || minutes > 600) {
     return { error: "That isn't a sensible number of minutes." };
   }
@@ -58,6 +60,7 @@ export async function logPlay(
 
 /** Mis-taps happen; undoing one shouldn't need a parent. */
 export async function removeSession(id: string): Promise<void> {
+  await requireInteractive();
   const session = await prisma.gameSession.findUnique({ where: { id } });
   if (!session) return;
 
