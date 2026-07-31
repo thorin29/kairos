@@ -24,6 +24,9 @@ all live in the database, never in this repository.
 - [ ] **Installable Android app** — a real APK rather than a home-screen
       shortcut, so it can be allowed on a child device with a time limit and
       work where general internet access is blocked
+- [ ] Push notifications for the app. (Email delivery now exists via SMTP, so
+      the notifier concept is proven end-to-end; push to devices is a separate
+      transport still to build.)
 
 ## Dashboard
 
@@ -66,6 +69,13 @@ all live in the database, never in this repository.
 - [x] **Stateless personal sessions**, signed with the shared app secret,
       separate from the admin unlock. `credentialVersion` in the cookie means a
       reset or a disable invalidates every existing session.
+- [x] **Emailed invites (optional).** A person can be given an email in
+      Household → Accounts; sending an invite then also emails the link, with
+      the copy link kept as a backup. SMTP is configured in Admin → Email (env
+      var **or** GUI, env wins), with a test button that surfaces the real SMTP
+      error — tuned for Proton Bridge (STARTTLS, self-signed cert, TLS 1.2).
+- [x] **Sign in by name or email.** Email is optional; a child without one
+      still signs in by name.
 - Auth direction settled (see the two-turn scoping): first-party accounts are
   the base, built regardless; delegating to the household's own Authelia via
   OIDC is a possible *additional* login method later (the Immich pattern —

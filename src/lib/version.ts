@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.52.1";
+export const APP_VERSION = "0.53.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -43,11 +43,21 @@ export const MIGRATIONS = [
   "33_hiit_movement_metrics",
   "34_sport_events",
   "35_accounts",
+  "36_user_email",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.53.0",
+    summary: [
+      "Invites can now be emailed: set a person's email in Household \\u2192 Accounts and sending an invite also emails them the link (the copy link stays as a backup)",
+      "New Admin \\u2192 Email page to configure an SMTP server (Proton Bridge: STARTTLS, accept self-signed cert, TLS 1.2), with a \\\"Send test email\\\" button that reports the real error",
+      "Any SMTP field can instead be set as a container environment variable, which overrides the GUI \\u2014 the page lists which ones are",
+      "Sign-in now accepts a name or an email; email is optional (kids without one still sign in by name)",
+    ],
+  },
   {
     version: "0.52.1",
     summary: [

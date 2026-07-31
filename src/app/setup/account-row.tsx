@@ -7,6 +7,7 @@ import {
   createInviteAction,
   revokeInviteAction,
   disableLoginAction,
+  setUserEmailAction,
 } from "@/lib/actions/accounts";
 import type { AccountState } from "@/lib/accounts";
 
@@ -21,7 +22,13 @@ export function AccountRow({ account }: { account: AccountState }) {
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
+  const [emailedTo, setEmailedTo] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const linkRef = useRef<HTMLInputElement>(null);
+
+  const [email, setEmail] = useState(account.email ?? "");
+  const [emailStatus, setEmailStatus] = useState<string | null>(null);
+  const dirty = email.trim() !== (account.email ?? "");
 
   const name = account.displayName ?? account.name;
 
@@ -29,10 +36,21 @@ export function AccountRow({ account }: { account: AccountState }) {
     startTransition(async () => {
       setCopied(false);
       setCopyFailed(false);
+      setEmailedTo(null);
+      setEmailError(null);
       const res = await createInviteAction(account.userId);
       if (res.token) {
         setLink(`${window.location.origin}/join?token=${res.token}`);
       }
+      setEmailedTo(res.emailedTo ?? null);
+      setEmailError(res.emailError ?? null);
+    });
+
+  const saveEmail = () =>
+    startTransition(async () => {
+      setEmailStatus(null);
+      const res = await setUserEmailAction(account.userId, email);
+      setEmailStatus(res.error ?? "Saved");
     });
 
   const revoke = () =>
@@ -168,8 +186,51 @@ export function AccountRow({ account }: { account: AccountState }) {
         </span>
       </div>
 
+      <div className="mt-2 flex items-center gap-2">
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setEmailStatus(null);
+          }}
+          placeholder="email (optional) — where an invite is sent"
+          autoComplete="off"
+          autoCapitalize="none"
+          className="h-9 min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+        />
+        <button
+          type="button"
+          onClick={saveEmail}
+          disabled={pending || !dirty}
+          className={`${btn} shrink-0 bg-ink/5 text-ink hover:bg-ink/10`}
+        >
+          Save
+        </button>
+        {emailStatus && (
+          <span
+            className={`shrink-0 text-xs ${
+              emailStatus === "Saved" ? "text-emerald-700" : "text-red-700"
+            }`}
+          >
+            {emailStatus}
+          </span>
+        )}
+      </div>
+
       {link && (
         <div className="mt-3 rounded-xl border border-accent/30 bg-accent/5 p-3">
+          {emailedTo && (
+            <p className="mb-2 text-xs font-medium text-emerald-700">
+              Invite emailed to {emailedTo}. The link below is a backup.
+            </p>
+          )}
+          {emailError && (
+            <p className="mb-2 text-xs font-medium text-amber-700">
+              Couldn&rsquo;t email the invite ({emailError}). Share the link
+              below instead.
+            </p>
+          )}
           <p className="mb-2 text-xs font-medium text-accent">
             One-time invite link — copy it now, it won&rsquo;t be shown again.
           </p>

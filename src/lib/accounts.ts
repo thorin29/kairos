@@ -20,6 +20,7 @@ export type AccountState = {
   userId: string;
   name: string;
   displayName: string | null;
+  email: string | null;
   color: string;
   avatarPath: string | null;
   role: "ADMIN" | "MEMBER";
@@ -38,6 +39,7 @@ export async function listAccounts(): Promise<AccountState[]> {
       id: true,
       name: true,
       displayName: true,
+      email: true,
       color: true,
       avatarPath: true,
       role: true,
@@ -55,6 +57,7 @@ export async function listAccounts(): Promise<AccountState[]> {
     userId: p.id,
     name: p.name,
     displayName: p.displayName,
+    email: p.email,
     color: p.color,
     avatarPath: p.avatarPath,
     role: p.role,
@@ -64,23 +67,55 @@ export async function listAccounts(): Promise<AccountState[]> {
   }));
 }
 
-/** Verify a login. Name match is case-insensitive; the password is checked
- *  only against active people who actually have a credential. */
+/** Verify a login. The identifier matches either name or email
+ *  (case-insensitive), and only active people who actually have a credential. */
 export async function authenticate(
-  name: string,
+  identifier: string,
   password: string,
 ): Promise<{ id: string; credentialVersion: number } | null> {
+  const id = identifier.trim();
+  if (!id) return null;
+
   const user = await prisma.user.findFirst({
     where: {
       isActive: true,
-      name: { equals: name, mode: "insensitive" },
       passwordHash: { not: null },
+      OR: [
+        { name: { equals: id, mode: "insensitive" } },
+        { email: { equals: id, mode: "insensitive" } },
+      ],
     },
     select: { id: true, passwordHash: true, credentialVersion: true },
   });
   if (!user?.passwordHash) return null;
   if (!verifyPassword(password, user.passwordHash)) return null;
   return { id: user.id, credentialVersion: user.credentialVersion };
+}
+
+/** The email an invite should go to, if any. */
+export async function userEmail(userId: string): Promise<string | null> {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true, displayName: true },
+  });
+  return u?.email ?? null;
+}
+
+/** Set or clear a person's email. Pass an empty string to clear it. */
+export async function setUserEmail(
+  userId: string,
+  email: string,
+): Promise<{ error: string | null }> {
+  const value = email.trim() || null;
+  if (value) {
+    const clash = await prisma.user.findFirst({
+      where: { email: { equals: value, mode: "insensitive" }, id: { not: userId } },
+      select: { id: true },
+    });
+    if (clash) return { error: "Another person already uses that email." };
+  }
+  await prisma.user.update({ where: { id: userId }, data: { email: value } });
+  return { error: null };
 }
 
 /** Issue a fresh invite for a person, replacing any prior one. Returns the raw
