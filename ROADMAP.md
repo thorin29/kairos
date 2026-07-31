@@ -212,6 +212,16 @@ all live in the database, never in this repository.
 - [x] Link SPORT calendar events to workouts: an event type flagged "sport
       workout" auto-logs a SPORT workout for that person on the event's day,
       recurring practices included (v0.51.0) — calendar epic complete
+- [x] Calendar UX (v0.56.0): drag the day/week grid to pick a time range that
+      pre-fills the new-event form; person-filter avatars moved below the grid;
+      the calendar page shows only calendar items (to-do lists removed).
+- [ ] **Rework sport-event completion (needs a design decision).** Today a
+      sport event *auto-logs* the workout. Instead: don't auto-log — show an
+      "did you do it?" prompt on that person's dashboard card, which they
+      confirm (logs the SPORT session) or decline (remembered, no nag). Also let
+      an event carry *multiple* people (schema: an event↔user join), each of whom
+      gets their own prompt. Open question is how a decline is stored per person
+      per day.
 - [x] Custom event types — parents add named types (with a colour) from Admin →
       Calendar; the event form's "Type" lists them and events take the type
       colour (v0.43.0)

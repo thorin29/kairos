@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.55.0";
+export const APP_VERSION = "0.56.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -49,6 +49,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.56.0",
+    summary: [
+      "Calendar: drag across the day or week grid to pick a time range \\u2014 it highlights as you go, and letting go opens the new-event form pre-filled with that start and end (mouse/trackpad; a tap still adds an event on touch)",
+      "Calendar: the person filter avatars moved to the bottom, below the calendar",
+      "Calendar page now shows only calendar items \\u2014 the to-do / chore lists were removed (chores live on the Chores page)",
+      "Dashboard: open and up-for-grabs chores now sit directly under the person cards instead of at the bottom",
+    ],
+  },
   {
     version: "0.55.0",
     summary: [
