@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.49.0";
+export const APP_VERSION = "0.50.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -46,6 +46,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.50.0",
+    summary: [
+      "Day view is now a time grid like the week, with tap-to-add and the same scrolling",
+      "A now-line tracks the current time on the day and week grids (colour set in Admin \u2192 Calendar)",
+      "Grids open on the morning's earliest event and follow the clock into the afternoon so evening events come into view; scroll freely and it eases back after a configurable pause",
+    ],
+  },
   {
     version: "0.49.0",
     summary: [

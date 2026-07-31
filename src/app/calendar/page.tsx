@@ -22,6 +22,7 @@ import {
   weekDays,
 } from "@/lib/dates";
 import { CalendarView } from "@/components/calendar-view";
+import { WeekGrid } from "@/components/week-grid";
 import { DaySchedule } from "@/components/day-schedule";
 import { MonthGrid } from "@/components/month-grid";
 import { AddEventProvider, AddEventButton } from "./add-event-form";
@@ -29,6 +30,7 @@ import { SectionHeading } from "@/components/ui";
 import { PersonFilterBadge, FamilyFilterBadge } from "@/components/person-filter";
 import { isAdmin } from "@/lib/session";
 import { getFamilyColor } from "@/lib/settings";
+import { getCalendarPrefs } from "@/lib/settings";
 import { DeleteEventButton } from "@/components/event-actions";
 import { canDeleteEvent } from "@/lib/can-delete-event";
 
@@ -110,6 +112,7 @@ export default async function CalendarPage({
   // Resolve the current selection against the real roster, and build helpers to
   // toggle people in and out of it via the URL.
   const familyColor = await getFamilyColor();
+  const calPrefs = await getCalendarPrefs();
   const allIds = people.map((p) => p.id);
   const selectedSet = new Set<string>(
     !who || who === "all"
@@ -237,11 +240,21 @@ export default async function CalendarPage({
           tasks={tasks}
           todayISO={today}
           admin={admin}
+          nowColor={calPrefs.nowColor}
+          resetSec={calPrefs.scrollResetSec}
         />
       )}
 
       {view === "day" && (
-        <DayPanel date={date} range={range} tasks={tasks} admin={admin} />
+        <DayPanel
+          date={date}
+          range={range}
+          tasks={tasks}
+          admin={admin}
+          todayISO={today}
+          nowColor={calPrefs.nowColor}
+          resetSec={calPrefs.scrollResetSec}
+        />
       )}
 
       {view === "month" && (
@@ -265,62 +278,76 @@ function DayPanel({
   range,
   tasks,
   admin,
+  todayISO,
+  nowColor,
+  resetSec,
 }: {
   date: string;
   range: { timed: GridEvent[]; allDay: GridEvent[] };
   tasks: DayTask[];
   admin: boolean;
+  todayISO: string;
+  nowColor: string;
+  resetSec: number;
 }) {
   const dayTasks = tasks.filter((t) => t.dayISO === date);
+  const dayEvents = [...range.allDay, ...range.timed]
+    .filter((e) => e.dayISO === date)
+    .sort(
+      (a, b) => Number(b.allDay) - Number(a.allDay) || a.startMin - b.startMin,
+    );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div>
-        <SectionHeading>To do</SectionHeading>
-        <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
-          {dayTasks.length === 0 ? (
-            <p className="px-5 py-4 text-sm text-muted">Nothing due.</p>
-          ) : (
-            <ul className="divide-y divide-hairline">
-              {dayTasks.map((t) => (
-                <li key={t.id} className="flex items-start gap-3 px-5 py-3">
-                  <span
-                    aria-hidden
-                    className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: t.color }}
-                  />
-                  <div className="min-w-0">
-                    <p
-                      className={`text-sm ${
-                        t.status === "COMPLETE" ? "text-muted line-through" : ""
-                      }`}
-                    >
-                      {t.title}
-                    </p>
-                    <p className="text-xs text-muted">{t.ownerName}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+    <div className="space-y-4">
+      <WeekGrid
+        days={[date]}
+        timed={range.timed}
+        allDay={range.allDay}
+        todayISO={todayISO}
+        nowColor={nowColor}
+        resetSec={resetSec}
+      />
 
-      <div>
-        <SectionHeading>Schedule</SectionHeading>
-        <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
-          {range.allDay.length + range.timed.length === 0 ? (
-            <p className="px-5 py-4 text-sm text-muted">Nothing scheduled.</p>
-          ) : (
-            <ul className="divide-y divide-hairline">
-              {[...range.allDay, ...range.timed]
-                .filter((e) => e.dayISO === date)
-                .sort(
-                  (a, b) =>
-                    Number(b.allDay) - Number(a.allDay) ||
-                    a.startMin - b.startMin,
-                )
-                .map((e) => (
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div>
+          <SectionHeading>To do</SectionHeading>
+          <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+            {dayTasks.length === 0 ? (
+              <p className="px-5 py-4 text-sm text-muted">Nothing due.</p>
+            ) : (
+              <ul className="divide-y divide-hairline">
+                {dayTasks.map((t) => (
+                  <li key={t.id} className="flex items-start gap-3 px-5 py-3">
+                    <span
+                      aria-hidden
+                      className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: t.color }}
+                    />
+                    <div className="min-w-0">
+                      <p
+                        className={`text-sm ${
+                          t.status === "COMPLETE" ? "text-muted line-through" : ""
+                        }`}
+                      >
+                        {t.title}
+                      </p>
+                      <p className="text-xs text-muted">{t.ownerName}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <SectionHeading>Schedule</SectionHeading>
+          <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+            {dayEvents.length === 0 ? (
+              <p className="px-5 py-4 text-sm text-muted">Nothing scheduled.</p>
+            ) : (
+              <ul className="divide-y divide-hairline">
+                {dayEvents.map((e) => (
                   <li key={e.id} className="flex items-start gap-3 px-5 py-3">
                     <span
                       aria-hidden
@@ -339,13 +366,12 @@ function DayPanel({
                         {e.calendarName ? ` · ${e.calendarName}` : ""}
                       </p>
                     </div>
-                    {canDeleteEvent(e, admin) && (
-                      <DeleteEventButton event={e} />
-                    )}
+                    {canDeleteEvent(e, admin) && <DeleteEventButton event={e} />}
                   </li>
                 ))}
-            </ul>
-          )}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </div>

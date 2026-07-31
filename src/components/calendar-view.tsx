@@ -16,6 +16,8 @@ export function CalendarView({
   tasks,
   todayISO,
   admin = false,
+  nowColor,
+  resetSec,
 }: {
   days: string[];
   timed: GridEvent[];
@@ -23,6 +25,8 @@ export function CalendarView({
   tasks: DayTask[];
   todayISO: string;
   admin?: boolean;
+  nowColor?: string;
+  resetSec?: number;
 }) {
   const [selected, setSelected] = useState<string | null>(
     days.includes(todayISO) ? todayISO : null,
@@ -49,6 +53,8 @@ export function CalendarView({
         todayISO={todayISO}
         onSelectDay={(iso) => setSelected(iso === selected ? null : iso)}
         selectedDay={selected}
+        nowColor={nowColor}
+        resetSec={resetSec}
       />
 
       {selected && (

@@ -7,6 +7,11 @@ import { householdTz, toDateColumn, zonedToUtc } from "@/lib/dates";
 import { buildRule } from "@/lib/calendar/recur";
 import { isAdmin } from "@/lib/session";
 import { isHexColor } from "@/lib/palette";
+import {
+  setSetting,
+  CAL_NOW_COLOR,
+  CAL_RESET_SEC,
+} from "@/lib/settings";
 
 export type EventState = { error: string | null; saved: boolean };
 
@@ -30,6 +35,21 @@ export async function addEventType(
   await prisma.eventType.create({
     data: { name: clean, color, sortOrder: count },
   });
+  revalidatePath("/calendar");
+  revalidatePath("/admin/calendar");
+  return { error: null };
+}
+
+/** Set the calendar now-line colour and manual-scroll reset (admin). */
+export async function setCalendarPrefs(
+  nowColor: string,
+  scrollResetSec: number,
+): Promise<{ error: string | null }> {
+  if (!(await isAdmin())) return { error: "Only a parent can do that." };
+  if (!isHexColor(nowColor)) return { error: "Pick a colour." };
+  const sec = Math.max(0, Math.min(3600, Math.round(scrollResetSec)));
+  await setSetting(CAL_NOW_COLOR, nowColor);
+  await setSetting(CAL_RESET_SEC, String(sec));
   revalidatePath("/calendar");
   revalidatePath("/admin/calendar");
   return { error: null };
