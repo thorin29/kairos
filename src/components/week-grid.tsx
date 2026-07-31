@@ -56,6 +56,55 @@ export function WeekGrid({
 
   const [nowMin, setNowMin] = useState<number | null>(null);
 
+  // Drag-to-select a time range (mouse/pen). Touch is left alone so the grid
+  // still scrolls with a finger; a touch tap falls through to click-to-add.
+  const [sel, setSel] = useState<{ day: string; a: number; b: number } | null>(
+    null,
+  );
+  const dragging = useRef(false);
+  const suppressClick = useRef(false);
+
+  const yToMin = (el: HTMLElement, clientY: number) => {
+    const rect = el.getBoundingClientRect();
+    const raw = ((clientY - rect.top) / HOUR_PX) * 60;
+    return clamp(Math.round(raw / 15) * 15, 0, 24 * 60);
+  };
+
+  const onColDown = (iso: string, e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "touch") return;
+    const min = yToMin(e.currentTarget, e.clientY);
+    dragging.current = true;
+    setSel({ day: iso, a: min, b: min });
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onColMove = (iso: string, e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging.current) return;
+    const min = yToMin(e.currentTarget, e.clientY);
+    setSel((s) => (s && s.day === iso ? { ...s, b: min } : s));
+  };
+
+  const onColUp = (iso: string, e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* pointer already released */
+    }
+    const s = sel;
+    setSel(null);
+    if (!s) return;
+    const lo = Math.min(s.a, s.b);
+    const hi = Math.max(s.a, s.b);
+    if (hi - lo >= 15) {
+      // A real drag: open pre-filled with the range, and swallow the click
+      // the browser fires right after.
+      suppressClick.current = true;
+      openAt({ date: iso, start: minutesToHHMM(lo), end: minutesToHHMM(hi) });
+    }
+  };
+
   const gridTemplateColumns = `3.5rem repeat(${days.length}, minmax(0,1fr))`;
   const todayInView = days.includes(todayISO);
 
@@ -116,6 +165,10 @@ export function WeekGrid({
   const byDay = (iso: string) => timed.filter((e) => e.dayISO === iso);
 
   const createAt = (iso: string, e: React.MouseEvent<HTMLDivElement>) => {
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const min = Math.round((((e.clientY - rect.top) / HOUR_PX) * 60) / 15) * 15;
     openAt({ date: iso, start: minutesToHHMM(min) });
@@ -221,14 +274,33 @@ export function WeekGrid({
               <div
                 key={iso}
                 onClick={(e) => createAt(iso, e)}
-                title="Tap to add an event"
-                className={`relative cursor-pointer border-l border-hairline ${
+                onPointerDown={(e) => onColDown(iso, e)}
+                onPointerMove={(e) => onColMove(iso, e)}
+                onPointerUp={(e) => onColUp(iso, e)}
+                title="Tap to add an event, or drag to pick a time range"
+                className={`relative cursor-pointer select-none border-l border-hairline ${
                   selectedDay === iso ? "bg-accent/5" : ""
                 }`}
               >
                 {Array.from({ length: 24 }, (_, h) => (
                   <HourCell key={h} />
                 ))}
+
+                {sel?.day === iso &&
+                  (() => {
+                    const lo = Math.min(sel.a, sel.b);
+                    const hi = Math.max(sel.a, sel.b);
+                    return (
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-x-0.5 z-[5] rounded-md border border-accent/60 bg-accent/25"
+                        style={{
+                          top: (lo / 60) * HOUR_PX,
+                          height: Math.max(((hi - lo) / 60) * HOUR_PX, 2),
+                        }}
+                      />
+                    );
+                  })()}
 
                 {events.map((e) => {
                   const lane = lanes.get(e.id) ?? { index: 0, of: 1 };

@@ -3,9 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
 import {
   loadRange,
-  loadTasksForDays,
   loadEventTypes,
-  type DayTask,
   type GridEvent,
 } from "@/lib/queries/calendar";
 import { syncStaleCalendars } from "@/lib/calendar/sync";
@@ -84,9 +82,8 @@ export default async function CalendarPage({
   await syncStaleCalendars();
   const admin = await isAdmin();
 
-  const [range, tasks, people] = await Promise.all([
+  const [range, people] = await Promise.all([
     loadRange(days, filterIds),
-    loadTasksForDays(days, filterIds),
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -211,33 +208,15 @@ export default async function CalendarPage({
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-start gap-x-1 gap-y-3">
-        {people.map((p) => (
-          <PersonFilterBadge
-            key={p.id}
-            href={link({ view, date, who: toggleWho(p.id) })}
-            name={p.displayName ?? p.name}
-            color={p.color}
-            avatarPath={p.avatarPath}
-            selected={selectedSet.has(p.id)}
-          />
-        ))}
-        <FamilyFilterBadge
-          href={link({ view, date, who: everyoneWho })}
-          selected={allSelected}
-          count={people.length}
-          color={familyColor}
-        />
+      <div className="mb-4">
+        <p className="text-xs text-muted">{caption}</p>
       </div>
-
-      <p className="mb-4 text-xs text-muted">{caption}</p>
 
       {view === "week" && (
         <CalendarView
           days={days}
           timed={range.timed}
           allDay={range.allDay}
-          tasks={tasks}
           todayISO={today}
           admin={admin}
           nowColor={calPrefs.nowColor}
@@ -249,7 +228,6 @@ export default async function CalendarPage({
         <DayPanel
           date={date}
           range={range}
-          tasks={tasks}
           admin={admin}
           todayISO={today}
           nowColor={calPrefs.nowColor}
@@ -267,6 +245,30 @@ export default async function CalendarPage({
         />
       )}
 
+      <div className="mt-6 border-t border-hairline pt-5">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
+          Show
+        </p>
+        <div className="flex flex-wrap items-start gap-x-1 gap-y-3">
+          {people.map((p) => (
+            <PersonFilterBadge
+              key={p.id}
+              href={link({ view, date, who: toggleWho(p.id) })}
+              name={p.displayName ?? p.name}
+              color={p.color}
+              avatarPath={p.avatarPath}
+              selected={selectedSet.has(p.id)}
+            />
+          ))}
+          <FamilyFilterBadge
+            href={link({ view, date, who: everyoneWho })}
+            selected={allSelected}
+            count={people.length}
+            color={familyColor}
+          />
+        </div>
+      </div>
+
     </main>
       </AddEventProvider>
     </>
@@ -276,7 +278,6 @@ export default async function CalendarPage({
 function DayPanel({
   date,
   range,
-  tasks,
   admin,
   todayISO,
   nowColor,
@@ -284,13 +285,11 @@ function DayPanel({
 }: {
   date: string;
   range: { timed: GridEvent[]; allDay: GridEvent[] };
-  tasks: DayTask[];
   admin: boolean;
   todayISO: string;
   nowColor: string;
   resetSec: number;
 }) {
-  const dayTasks = tasks.filter((t) => t.dayISO === date);
   const dayEvents = [...range.allDay, ...range.timed]
     .filter((e) => e.dayISO === date)
     .sort(
@@ -308,70 +307,37 @@ function DayPanel({
         resetSec={resetSec}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div>
-          <SectionHeading>To do</SectionHeading>
-          <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
-            {dayTasks.length === 0 ? (
-              <p className="px-5 py-4 text-sm text-muted">Nothing due.</p>
-            ) : (
-              <ul className="divide-y divide-hairline">
-                {dayTasks.map((t) => (
-                  <li key={t.id} className="flex items-start gap-3 px-5 py-3">
-                    <span
-                      aria-hidden
-                      className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: t.color }}
-                    />
-                    <div className="min-w-0">
-                      <p
-                        className={`text-sm ${
-                          t.status === "COMPLETE" ? "text-muted line-through" : ""
-                        }`}
-                      >
-                        {t.title}
-                      </p>
-                      <p className="text-xs text-muted">{t.ownerName}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <SectionHeading>Schedule</SectionHeading>
-          <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
-            {dayEvents.length === 0 ? (
-              <p className="px-5 py-4 text-sm text-muted">Nothing scheduled.</p>
-            ) : (
-              <ul className="divide-y divide-hairline">
-                {dayEvents.map((e) => (
-                  <li key={e.id} className="flex items-start gap-3 px-5 py-3">
-                    <span
-                      aria-hidden
-                      className="mt-0.5 h-9 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: e.color }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{e.title}</p>
-                      <p className="tabular truncate text-xs text-muted">
-                        {e.timeLabel}
-                        {e.location ? ` · ${e.location}` : ""}
-                      </p>
-                      <p className="truncate text-xs text-muted">
-                        {e.ownerName}
-                        {e.recurring ? " · repeats" : ""}
-                        {e.calendarName ? ` · ${e.calendarName}` : ""}
-                      </p>
-                    </div>
-                    {canDeleteEvent(e, admin) && <DeleteEventButton event={e} />}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+      <div>
+        <SectionHeading>Schedule</SectionHeading>
+        <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+          {dayEvents.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-muted">Nothing scheduled.</p>
+          ) : (
+            <ul className="divide-y divide-hairline">
+              {dayEvents.map((e) => (
+                <li key={e.id} className="flex items-start gap-3 px-5 py-3">
+                  <span
+                    aria-hidden
+                    className="mt-0.5 h-9 w-1.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: e.color }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{e.title}</p>
+                    <p className="tabular truncate text-xs text-muted">
+                      {e.timeLabel}
+                      {e.location ? ` · ${e.location}` : ""}
+                    </p>
+                    <p className="truncate text-xs text-muted">
+                      {e.ownerName}
+                      {e.recurring ? " · repeats" : ""}
+                      {e.calendarName ? ` · ${e.calendarName}` : ""}
+                    </p>
+                  </div>
+                  {canDeleteEvent(e, admin) && <DeleteEventButton event={e} />}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

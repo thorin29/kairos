@@ -104,6 +104,12 @@ export default async function Home({
         ))}
       </div>
 
+      {!personal && (
+        <div className="mt-8">
+          <OpenTasks tasks={openTasks} people={roster} />
+        </div>
+      )}
+
       <div className="mt-10">
         <DaySchedule
           events={[...todaySchedule.allDay, ...todaySchedule.timed]}
@@ -123,13 +129,9 @@ export default async function Home({
       </div>
 
       {!personal && (
-        <>
-          <OpenTasks tasks={openTasks} people={roster} />
-
-          <div className="mt-8">
-            <AddTaskForm people={roster} defaultDate={today} />
-          </div>
-        </>
+        <div className="mt-8">
+          <AddTaskForm people={roster} defaultDate={today} />
+        </div>
       )}
 
     </main>

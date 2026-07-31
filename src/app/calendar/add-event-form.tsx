@@ -42,7 +42,7 @@ function addHour(hhmm: string): string {
 
 // --- shared open mechanism ------------------------------------------------
 
-type Prefill = { date?: string; start?: string };
+type Prefill = { date?: string; start?: string; end?: string };
 const AddEventContext = createContext<{ openAt: (p?: Prefill) => void }>({
   openAt: () => {},
 });
@@ -82,6 +82,7 @@ export function AddEventProvider({
           types={types}
           date={prefill.date ?? defaultDate}
           start={prefill.start ?? "16:00"}
+          end={prefill.end}
           onClose={() => setOpen(false)}
         />
       )}
@@ -112,12 +113,14 @@ function EventModal({
   types,
   date,
   start,
+  end,
   onClose,
 }: {
   people: { id: string; name: string }[];
   types: { id: string; name: string; color: string }[];
   date: string;
   start: string;
+  end?: string;
   onClose: () => void;
 }) {
   const [allDay, setAllDay] = useState(false);
@@ -283,7 +286,7 @@ function EventModal({
                     id="ev-end"
                     name="end"
                     type="time"
-                    defaultValue={addHour(start)}
+                    defaultValue={end ?? addHour(start)}
                     className={`tabular ${field}`}
                   />
                 </div>
