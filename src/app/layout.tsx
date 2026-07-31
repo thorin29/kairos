@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import "./globals.css";
 import { AdminLock } from "@/components/admin-lock";
 import { UserBadge } from "@/components/user-badge";
 import { isAdmin, adminPinSet } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
+import { loginRequired, isPublicPath } from "@/lib/gate";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -42,11 +45,20 @@ export const dynamic = "force-dynamic";
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [unlocked, pinSet, me] = await Promise.all([
+  const [unlocked, pinSet, me, gate, path] = await Promise.all([
     isAdmin(),
     adminPinSet(),
     currentUser(),
+    loginRequired(),
+    headers().then((h) => h.get("x-pathname") ?? "/"),
   ]);
+
+  // When login is required, every page but the public ones needs a session.
+  // The gate is here (not middleware) because deciding it needs the database.
+  if (gate && !me && !isPublicPath(path)) {
+    redirect(`/login?next=${encodeURIComponent(path)}`);
+  }
+
   return (
     <html lang="en">
       <body

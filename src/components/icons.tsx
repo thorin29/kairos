@@ -318,3 +318,12 @@ export function MailIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+export function DeviceIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <rect x="5" y="2.5" width="14" height="19" rx="2.5" />
+      <path d="M10.5 18.5h3" />
+    </svg>
+  );
+}

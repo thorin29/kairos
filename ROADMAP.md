@@ -84,6 +84,22 @@ all live in the database, never in this repository.
 - [ ] **Device modes** — a device is shared/kiosk (the wall tablet, no login)
       or personal (a phone, signed in). Nothing is gated behind login yet; this
       is the next phase.
+- [x] **Device modes shipped.** Admin → Device toggles this screen between
+      Shared (whole household) and Personal (the signed-in person), stored per
+      device in a signed cookie. Default is shared, so existing installs are
+      unchanged.
+- [x] **Login-gating shipped (page level).** A "Require sign-in" switch (off by
+      default; can't be enabled until someone has a login) makes every page
+      redirect to /login without a session. The gate lives in the root layout
+      (needs the DB); middleware only forwards the path.
+- [x] **Profile edits are admin-or-self once sign-in is required** (open on the
+      shared tablet otherwise).
+- [ ] **Guard the remaining mutating actions.** Page access is gated, but
+      server actions (chores, tasks, groceries, workouts…) still run open in the
+      shared model. A `requireInteractive()` helper exists; the sweep to apply
+      it — so those writes need a session once gating is on — is the last step
+      before Kairos could stand in front of a public domain without Authelia.
+      Until then, keep Authelia in front (defence in depth).
 - [ ] **"Act as me" step-up** on the shared tablet — attribute a single action
       to a person (tap avatar, optional personal PIN) without turning the
       tablet into a private session. First consumer: the grocery "I'm going

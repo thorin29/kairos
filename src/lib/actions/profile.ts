@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { AVATAR_ICONS, ICON_PREFIX, isIcon } from "@/lib/avatars";
 import { toDateColumn } from "@/lib/dates";
+import { requireAdminOrSelf } from "@/lib/gate";
 
 const UPLOADS = path.join(process.env.DATA_DIR || "/app/data", "uploads");
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -25,6 +26,11 @@ export async function updateProfile(
   formData: FormData,
 ): Promise<ProfileState> {
   const id = String(formData.get("id") ?? "");
+
+  // Open on the shared tablet as before; once login is required, you can only
+  // edit your own profile (an admin can edit anyone).
+  await requireAdminOrSelf(id);
+
   const displayName = String(formData.get("displayName") ?? "").trim().slice(0, 40);
   const color = String(formData.get("color") ?? "").trim();
   const icon = String(formData.get("icon") ?? "").trim();
