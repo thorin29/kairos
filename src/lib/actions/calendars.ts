@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireInteractive } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { syncCalendar, syncStaleCalendars } from "@/lib/calendar/sync";
 import { isAdmin, requireAdmin } from "@/lib/session";
@@ -82,6 +83,7 @@ export async function removeCalendar(id: string): Promise<void> {
 }
 
 export async function refreshCalendars(): Promise<void> {
+  await requireInteractive();
   await syncStaleCalendars(true);
   revalidatePath("/calendar");
 }

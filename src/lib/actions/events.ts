@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireInteractive } from "@/lib/gate";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { householdTz, toDateColumn, zonedToUtc } from "@/lib/dates";
@@ -107,6 +108,7 @@ export async function addEvent(
   _prev: EventState,
   formData: FormData,
 ): Promise<EventState> {
+  await requireInteractive();
   const owner = String(formData.get("userId") ?? "");
   const isFamily = owner === "family";
   const title = String(formData.get("title") ?? "").trim().slice(0, 120);
@@ -206,6 +208,7 @@ export async function addEvent(
 export type DeleteState = { error: string | null };
 
 export async function deleteEvent(id: string): Promise<DeleteState> {
+  await requireInteractive();
   const event = await prisma.event.findUnique({ where: { id } });
   if (!event) return { error: null };
 

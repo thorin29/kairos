@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireInteractive } from "@/lib/gate";
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
@@ -11,6 +12,7 @@ export async function addTask(
   _prev: TaskActionState,
   formData: FormData,
 ): Promise<TaskActionState> {
+  await requireInteractive();
   const userId = String(formData.get("userId") ?? "");
   const title = String(formData.get("title") ?? "").trim().slice(0, 120);
   const rawCategory = String(formData.get("category") ?? "");
@@ -42,6 +44,7 @@ export async function addTask(
 }
 
 export async function toggleTask(id: string): Promise<void> {
+  await requireInteractive();
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return;
 
@@ -64,6 +67,7 @@ export async function toggleTask(id: string): Promise<void> {
  * its slot, but stops counting toward the original person until claimed.
  */
 export async function releaseTask(id: string): Promise<void> {
+  await requireInteractive();
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task || task.status === TaskStatus.COMPLETE) return;
 
@@ -82,6 +86,7 @@ export async function claimTask(
   id: string,
   userId: string,
 ): Promise<ClaimState> {
+  await requireInteractive();
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return { error: "That task is gone." };
   if (!task.isOpen) return { error: "Someone already picked that up." };
@@ -114,6 +119,7 @@ export async function claimTask(
 }
 
 export async function deleteTask(id: string): Promise<void> {
+  await requireInteractive();
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return;
   await prisma.task.delete({ where: { id } });

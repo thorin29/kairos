@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireInteractive } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { isAdmin, requireAdmin } from "@/lib/session";
@@ -410,6 +411,7 @@ export type PlanPreview = {
 };
 
 export async function listPlans(): Promise<PlanPreview[]> {
+  await requireInteractive();
   const plans = await prisma.readingPlan.findMany({
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { days: true } } },

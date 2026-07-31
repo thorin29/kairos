@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireInteractive } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { guessIcon, normalizeName } from "@/lib/groceries/catalog";
@@ -21,6 +22,7 @@ export async function addItem(input: {
   storeId: string;
   assignedToId?: string | null;
 }): Promise<void> {
+  await requireInteractive();
   const name = normalizeName(input.name);
   if (!name || !input.storeId) return;
 
@@ -58,6 +60,7 @@ export async function addFromCatalog(
   catalogId: string,
   storeId?: string,
 ): Promise<void> {
+  await requireInteractive();
   const item = await prisma.groceryItem.findUnique({ where: { id: catalogId } });
   if (!item) return;
 
@@ -77,6 +80,7 @@ export async function addFromCatalog(
 }
 
 export async function setBought(itemId: string, bought: boolean): Promise<void> {
+  await requireInteractive();
   await prisma.shoppingItem.update({
     where: { id: itemId },
     data: { boughtAt: bought ? new Date() : null },
@@ -88,6 +92,7 @@ export async function assignItem(
   itemId: string,
   userId: string | null,
 ): Promise<void> {
+  await requireInteractive();
   await prisma.shoppingItem.update({
     where: { id: itemId },
     data: { assignedToId: userId },
@@ -96,12 +101,14 @@ export async function assignItem(
 }
 
 export async function removeItem(itemId: string): Promise<void> {
+  await requireInteractive();
   await prisma.shoppingItem.deleteMany({ where: { id: itemId } });
   refresh();
 }
 
 /** Clear everything already bought — optionally just for one store. */
 export async function clearBought(storeId?: string): Promise<void> {
+  await requireInteractive();
   await prisma.shoppingItem.deleteMany({
     where: { boughtAt: { not: null }, ...(storeId ? { storeId } : {}) },
   });
