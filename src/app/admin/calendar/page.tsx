@@ -2,8 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { AdminBack } from "@/components/admin-back";
 import { SectionHeading } from "@/components/ui";
 import { loadEventTypes } from "@/lib/queries/calendar";
+import { getCalendarPrefs } from "@/lib/settings";
 import { Subscriptions } from "./subscriptions";
 import { EventTypes } from "./event-types";
+import { DisplayPrefs } from "./display-prefs";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,7 @@ export default async function AdminCalendarPage() {
     }),
     loadEventTypes(),
   ]);
+  const calPrefs = await getCalendarPrefs();
 
   const subscriptions = calendars.map((c) => ({
     id: c.id,
@@ -67,6 +70,17 @@ export default async function AdminCalendarPage() {
           medical appointment — each with its own colour on the calendar.
         </p>
         <EventTypes types={eventTypes} />
+      </div>
+
+      <div className="mt-10">
+        <SectionHeading>Calendar display</SectionHeading>
+        <p className="mb-3 max-w-xl text-sm text-muted">
+          The now-line marks the current time on the day and week grids.
+        </p>
+        <DisplayPrefs
+          nowColor={calPrefs.nowColor}
+          resetSec={calPrefs.scrollResetSec}
+        />
       </div>
     </main>
   );

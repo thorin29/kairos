@@ -4,6 +4,23 @@ import { DEFAULT_FAMILY_COLOR } from "@/lib/palette";
 
 export const SCORING_START = "scoringStart";
 export const FAMILY_COLOR = "familyColor";
+export const CAL_NOW_COLOR = "calendar.nowColor";
+export const CAL_RESET_SEC = "calendar.scrollResetSec";
+
+export type CalendarPrefs = { nowColor: string; scrollResetSec: number };
+
+/** Now-line colour and the inactivity reset for manual scrolling. */
+export async function getCalendarPrefs(): Promise<CalendarPrefs> {
+  const [c, r] = await Promise.all([
+    getSetting(CAL_NOW_COLOR),
+    getSetting(CAL_RESET_SEC),
+  ]);
+  const sec = r != null ? parseInt(r, 10) : 60;
+  return {
+    nowColor: c ?? "#ef4444",
+    scrollResetSec: Number.isFinite(sec) ? sec : 60,
+  };
+}
 
 /** Read any stored setting by key. */
 export async function getSetting(key: string): Promise<string | null> {

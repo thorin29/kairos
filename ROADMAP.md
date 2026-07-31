@@ -146,9 +146,10 @@ all live in the database, never in this repository.
 - [x] Calendar add-event UX: pop-up overlay instead of a bottom form, opened
       from a + at the top; tap a day/time slot to prefill (v0.49.0)
 - [x] Custom event types are editable (rename + recolour) in admin (v0.49.0)
-- [ ] Calendar view mechanics: auto-scroll to the earliest event and shift up
-      around midday; a now-line that moves every 15 min (admin-chosen colour);
-      keep manual up/down scroll with a configurable inactivity reset
+- [x] Calendar view mechanics: day view is a time grid too; now-line tracks
+      the current time (admin colour); grids anchor to the earliest event and
+      follow the clock into the afternoon; manual scroll eases back after a
+      configurable pause (v0.50.0)
 - [ ] Link SPORT calendar events to workouts (e.g. a "Hockey Practice" event
       auto-logs a sport workout for that person)
 - [x] Custom event types — parents add named types (with a colour) from Admin →

@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { GridEvent } from "@/lib/queries/calendar";
 import { DAY_SHORT } from "@/lib/days";
 import { useAddEvent } from "@/app/calendar/add-event-form";
 
 const HOUR_PX = 56;
-const COLUMNS = "grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]";
 
 function minutesToHHMM(min: number): string {
   const clamped = Math.max(0, Math.min(23 * 60 + 45, min));
@@ -15,18 +14,21 @@ function minutesToHHMM(min: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.max(lo, Math.min(hi, v));
+
 /**
- * Outlook-style week: hour gutter down the left, a column per day, blocks
- * positioned by minutes from midnight.
+ * Outlook-style time grid: an hour gutter down the left and a column per day
+ * (one day or a whole week). Blocks are positioned by minutes from midnight.
  *
- * The day header and the all-day band sit *inside* the scroll container and
- * stick to the top, with a heavier rule beneath them so the frozen rows read
- * as a separate plane from the grid that scrolls under them. Keeping them outside it made them a different width to
- * the body whenever a scrollbar appeared, so the dates drifted out of line
- * with their columns.
- *
- * The grid renders all 24 hours but scrolls to the earliest event on mount,
- * so a 7am practice is visible without hiding a midnight shift.
+ * Scrolling behaviour:
+ *  - On mount (and after inactivity) it anchors to a sensible spot: the day's
+ *    earliest event in the morning, then follows the clock into the afternoon
+ *    so evening events come into view.
+ *  - A now-line tracks the current time (updates each minute) in whatever
+ *    colour the admin chose.
+ *  - Manual scrolling always works; after `resetSec` of no scrolling it eases
+ *    back to the anchor. resetSec of 0 turns the reset off.
  */
 export function WeekGrid({
   days,
@@ -35,60 +37,113 @@ export function WeekGrid({
   todayISO,
   onSelectDay,
   selectedDay,
+  nowColor = "#ef4444",
+  resetSec = 60,
 }: {
   days: string[];
   timed: GridEvent[];
   allDay: GridEvent[];
   todayISO: string;
-  onSelectDay: (iso: string) => void;
-  selectedDay: string | null;
+  onSelectDay?: (iso: string) => void;
+  selectedDay?: string | null;
+  nowColor?: string;
+  resetSec?: number;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
+  const programmatic = useRef(false);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { openAt } = useAddEvent();
 
-  // Tap an empty part of a day column → open the add-event overlay at that day
-  // and time (rounded to 15 minutes), still editable.
-  const createAt = (iso: string, e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const min = Math.round(((e.clientY - rect.top) / HOUR_PX) * 60 / 15) * 15;
-    openAt({ date: iso, start: minutesToHHMM(min) });
-  };
+  const [nowMin, setNowMin] = useState<number | null>(null);
 
+  const gridTemplateColumns = `3.5rem repeat(${days.length}, minmax(0,1fr))`;
+  const todayInView = days.includes(todayISO);
+
+  // Current time, refreshed each minute (client-only to avoid SSR mismatch).
   useEffect(() => {
-    if (!scroller.current) return;
+    const upd = () => {
+      const d = new Date();
+      setNowMin(d.getHours() * 60 + d.getMinutes());
+    };
+    upd();
+    const id = setInterval(upd, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const anchorTop = (): number => {
+    const el = scroller.current;
+    const visibleMin = el ? (el.clientHeight / HOUR_PX) * 60 : 600;
     const earliest = timed.length
       ? Math.min(...timed.map((e) => e.startMin))
       : 8 * 60;
-    scroller.current.scrollTop = Math.max(0, ((earliest - 60) / 60) * HOUR_PX);
+    // Morning: earliest event near the top. Afternoon (today only): follow the
+    // clock so later/evening events scroll into view.
+    const base =
+      todayInView && nowMin != null
+        ? clamp(nowMin - 120, earliest - 60, 24 * 60 - visibleMin)
+        : earliest - 60;
+    return Math.max(0, (base / 60) * HOUR_PX);
+  };
+
+  const scrollToAnchor = (smooth: boolean) => {
+    const el = scroller.current;
+    if (!el) return;
+    programmatic.current = true;
+    el.scrollTo({ top: anchorTop(), behavior: smooth ? "smooth" : "auto" });
+    // Ignore scroll events from our own (possibly animated) scroll.
+    window.setTimeout(() => (programmatic.current = false), smooth ? 800 : 60);
+  };
+
+  // Anchor on mount and whenever the day's events change.
+  useEffect(() => {
+    scrollToAnchor(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timed]);
 
+  const onScroll = () => {
+    if (programmatic.current || resetSec <= 0) return;
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => scrollToAnchor(true), resetSec * 1000);
+  };
+
+  useEffect(
+    () => () => {
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+    },
+    [],
+  );
+
   const byDay = (iso: string) => timed.filter((e) => e.dayISO === iso);
+
+  const createAt = (iso: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const min = Math.round((((e.clientY - rect.top) / HOUR_PX) * 60) / 15) * 15;
+    openAt({ date: iso, start: minutesToHHMM(min) });
+  };
+
+  const nowY = nowMin != null ? (nowMin / 60) * HOUR_PX : null;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
       <div
         ref={scroller}
+        onScroll={onScroll}
         className="max-h-[36rem] overflow-y-auto"
         style={{ scrollbarGutter: "stable" }}
       >
         {/* Frozen header. Same container, same width, so columns line up. */}
         <div className="sticky top-0 z-20 shadow-[0_1px_0_0_var(--color-ink)]">
-          <div className={`grid ${COLUMNS} border-b-2 border-ink/25 bg-shade`}>
+          <div
+            className="grid border-b-2 border-ink/25 bg-shade"
+            style={{ gridTemplateColumns }}
+          >
             <div />
             {days.map((iso) => {
               const d = new Date(`${iso}T00:00:00Z`);
               const isToday = iso === todayISO;
               const isSelected = selectedDay === iso;
-
-              return (
-                <button
-                  key={iso}
-                  type="button"
-                  onClick={() => onSelectDay(iso)}
-                  className={`border-l border-ink/15 px-1 py-2.5 text-center transition-colors ${
-                    isSelected ? "bg-accent/15" : "hover:bg-shade-soft"
-                  }`}
-                >
+              const inner = (
+                <>
                   <span className="block text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
                     {DAY_SHORT[d.getUTCDay()]}
                   </span>
@@ -99,14 +154,34 @@ export function WeekGrid({
                   >
                     {d.getUTCDate()}
                   </span>
+                </>
+              );
+              return onSelectDay ? (
+                <button
+                  key={iso}
+                  type="button"
+                  onClick={() => onSelectDay(iso)}
+                  className={`border-l border-ink/15 px-1 py-2.5 text-center transition-colors ${
+                    isSelected ? "bg-accent/15" : "hover:bg-shade-soft"
+                  }`}
+                >
+                  {inner}
                 </button>
+              ) : (
+                <div
+                  key={iso}
+                  className="border-l border-ink/15 px-1 py-2.5 text-center"
+                >
+                  {inner}
+                </div>
               );
             })}
           </div>
 
           {allDay.length > 0 && (
             <div
-              className={`grid ${COLUMNS} border-b border-ink/20 bg-shade-soft`}
+              className="grid border-b border-ink/20 bg-shade-soft"
+              style={{ gridTemplateColumns }}
             >
               <div className="px-2 py-2 text-right text-[0.6rem] uppercase tracking-wide text-muted">
                 All day
@@ -131,7 +206,7 @@ export function WeekGrid({
           )}
         </div>
 
-        <div className={`relative grid ${COLUMNS}`}>
+        <div className="relative grid" style={{ gridTemplateColumns }}>
           <div>
             {Array.from({ length: 24 }, (_, h) => (
               <HourCell key={h} label={hourLabel(h)} />
@@ -194,6 +269,24 @@ export function WeekGrid({
               </div>
             );
           })}
+
+          {/* Now-line, spanning the day columns (not the hour gutter). */}
+          {todayInView && nowY != null && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute z-10 flex items-center"
+              style={{ top: nowY - 1, left: "3.5rem", right: 0 }}
+            >
+              <span
+                className="-ml-1 h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: nowColor }}
+              />
+              <span
+                className="h-0.5 flex-1"
+                style={{ backgroundColor: nowColor }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
