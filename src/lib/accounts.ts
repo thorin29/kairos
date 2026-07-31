@@ -67,6 +67,14 @@ export async function listAccounts(): Promise<AccountState[]> {
   }));
 }
 
+/** How many active people have a password set — used to prevent turning on
+ *  required login before anyone can actually log in. */
+export async function loginableCount(): Promise<number> {
+  return prisma.user.count({
+    where: { isActive: true, passwordHash: { not: null } },
+  });
+}
+
 /** Verify a login. The identifier matches either name or email
  *  (case-insensitive), and only active people who actually have a credential. */
 export async function authenticate(

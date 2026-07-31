@@ -15,6 +15,7 @@ import {
   CartIcon,
   LockIcon,
   MailIcon,
+  DeviceIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +83,13 @@ const TILES: Tile[] = [
     label: "Email",
     blurb: "SMTP server for sending invites, with a test button",
     icon: <MailIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/admin/device",
+    label: "Device",
+    blurb: "Shared or personal mode for this screen; require sign-in",
+    icon: <DeviceIcon className="h-7 w-7" />,
     ready: true,
   },
   {

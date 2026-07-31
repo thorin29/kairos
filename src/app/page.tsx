@@ -14,6 +14,8 @@ import { AlertIcon } from "@/components/icons";
 import { OpenTasks } from "@/components/open-tasks";
 import { DaySchedule } from "@/components/day-schedule";
 import { loadDaySchedule } from "@/lib/queries/calendar";
+import { deviceMode } from "@/lib/device";
+import { currentUser } from "@/lib/user-session";
 
 export const dynamic = "force-dynamic";
 
@@ -61,13 +63,19 @@ export default async function Home({
 
   if (people.length === 0) redirect("/setup");
 
+  // Personal mode (a phone) shows just the signed-in person; shared mode (the
+  // wall tablet, and the default) shows the whole household as before.
+  const me = await currentUser();
+  const personal = (await deviceMode()) === "personal" && !!me;
+  const shown = personal && me ? people.filter((p) => p.id === me.id) : people;
+
   const roster = await prisma.user.findMany({
     where: { isActive: true },
     orderBy: { sortOrder: "asc" },
     select: { id: true, name: true, color: true },
   });
 
-  const totalOverdue = people.reduce((n, p) => n + p.overdue, 0);
+  const totalOverdue = shown.reduce((n, p) => n + p.overdue, 0);
   const openTasks = await loadOpenTasks(today);
   const todaySchedule = await loadDaySchedule(scheduleDay);
 
@@ -84,8 +92,14 @@ export default async function Home({
 
       <main className="mx-auto max-w-6xl px-6 py-6">
 
+      {personal && me && (
+        <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-ink/5 px-3 py-1 text-sm text-muted">
+          Personal view — {me.displayName ?? me.name}
+        </p>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {people.map((p) => (
+        {shown.map((p) => (
           <PersonCard key={p.id} person={p} />
         ))}
       </div>
@@ -108,11 +122,15 @@ export default async function Home({
         />
       </div>
 
-      <OpenTasks tasks={openTasks} people={roster} />
+      {!personal && (
+        <>
+          <OpenTasks tasks={openTasks} people={roster} />
 
-      <div className="mt-8">
-        <AddTaskForm people={roster} defaultDate={today} />
-      </div>
+          <div className="mt-8">
+            <AddTaskForm people={roster} defaultDate={today} />
+          </div>
+        </>
+      )}
 
     </main>
     </>

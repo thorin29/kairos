@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.53.1";
+export const APP_VERSION = "0.54.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -49,6 +49,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.54.0",
+    summary: [
+      "Device modes: Admin \\u2192 Device sets this screen to Shared (the whole household, for the wall tablet) or Personal (just the signed-in person, for a phone). Remembered per device",
+      "Require sign-in: a switch in Admin \\u2192 Device that makes every page need a personal login \\u2014 off by default, and it can't be turned on until at least one person has a login",
+      "Personal mode shows only your card and hides the household add-task and open-chores sections",
+      "Once sign-in is required, editing a profile is limited to that person or an admin (open as before when it isn't)",
+    ],
+  },
   {
     version: "0.53.1",
     summary: [
