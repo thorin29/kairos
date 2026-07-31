@@ -24,7 +24,7 @@ import {
 import { CalendarView } from "@/components/calendar-view";
 import { DaySchedule } from "@/components/day-schedule";
 import { MonthGrid } from "@/components/month-grid";
-import { AddEventForm } from "./add-event-form";
+import { AddEventProvider, AddEventButton } from "./add-event-form";
 import { SectionHeading } from "@/components/ui";
 import { PersonFilterBadge, FamilyFilterBadge } from "@/components/person-filter";
 import { isAdmin } from "@/lib/session";
@@ -163,10 +163,16 @@ export default async function CalendarPage({
     <>
       <AppHeader title="Calendar" subtitle={heading} active="calendar" />
 
+      <AddEventProvider
+        people={people.map((p) => ({ id: p.id, name: p.displayName ?? p.name }))}
+        types={await loadEventTypes()}
+        defaultDate={view === "month" ? today : date}
+      >
       <main className="mx-auto max-w-6xl px-6 py-6">
 
 
-      <div className="mb-5 flex flex-wrap items-center justify-end gap-2">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+        <AddEventButton />
         <div className="flex flex-wrap items-center gap-2">
           <div className="mr-1 inline-flex rounded-full border border-hairline p-0.5">
             {VIEWS.map((v) => (
@@ -248,19 +254,8 @@ export default async function CalendarPage({
         />
       )}
 
-      <section className="mt-10">
-        <SectionHeading>Add your own event</SectionHeading>
-        <AddEventForm
-          people={people.map((p) => ({
-            id: p.id,
-            name: p.displayName ?? p.name,
-          }))}
-          types={await loadEventTypes()}
-          defaultDate={view === "month" ? today : date}
-        />
-      </section>
-
     </main>
+      </AddEventProvider>
     </>
   );
 }
