@@ -150,8 +150,9 @@ all live in the database, never in this repository.
       the current time (admin colour); grids anchor to the earliest event and
       follow the clock into the afternoon; manual scroll eases back after a
       configurable pause (v0.50.0)
-- [ ] Link SPORT calendar events to workouts (e.g. a "Hockey Practice" event
-      auto-logs a sport workout for that person)
+- [x] Link SPORT calendar events to workouts: an event type flagged "sport
+      workout" auto-logs a SPORT workout for that person on the event's day,
+      recurring practices included (v0.51.0) — calendar epic complete
 - [x] Custom event types — parents add named types (with a colour) from Admin →
       Calendar; the event form's "Type" lists them and events take the type
       colour (v0.43.0)

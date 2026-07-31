@@ -1,6 +1,15 @@
 import { Category } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { addDays, dayOfWeek, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
+import {
+  addDays,
+  dayOfWeek,
+  fromDateColumn,
+  householdTz,
+  localParts,
+  toDateColumn,
+  todayISO,
+} from "@/lib/dates";
+import { occurrencesIn } from "@/lib/calendar/recur";
 
 const HORIZON_DAYS = 14;
 
@@ -117,4 +126,87 @@ export async function generateWorkoutTasks(
   }
 
   return { created, removed };
+}
+
+/**
+ * Sport calendar events → workouts. For a given day, any person whose event is
+ * of a type flagged "sport workout" (including a recurring practice landing on
+ * that day) gets a SPORT workout logged, once, linked to the event so it's
+ * idempotent. It counts as their workout for the day; if they skipped it, the
+ * logged session can be deleted like any other. Runs for the current day.
+ */
+export async function reconcileSportWorkouts(
+  dateISO: string = todayISO(),
+): Promise<number> {
+  const tz = householdTz();
+
+  const events = await prisma.event.findMany({
+    where: {
+      userId: { not: null },
+      eventType: { is: { sportWorkout: true } },
+    },
+    select: { id: true, userId: true, title: true, startsAt: true, rrule: true },
+  });
+  if (events.length === 0) return 0;
+
+  const due = events.filter((e) =>
+    e.rrule
+      ? occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz).length > 0
+      : localParts(e.startsAt).iso === dateISO,
+  );
+  if (due.length === 0) return 0;
+
+  const date = toDateColumn(dateISO);
+  const existing = await prisma.workoutSession.findMany({
+    where: { date, sourceEventId: { in: due.map((e) => e.id) } },
+    select: { userId: true, sourceEventId: true },
+  });
+  const have = new Set(existing.map((s) => `${s.userId}|${s.sourceEventId}`));
+
+  const toCreate = due.filter(
+    (e) => e.userId && !have.has(`${e.userId}|${e.id}`),
+  );
+  if (toCreate.length === 0) return 0;
+
+  await prisma.workoutSession.createMany({
+    data: toCreate.map((e) => ({
+      userId: e.userId as string,
+      date,
+      name: (e.title || "Sport").slice(0, 60),
+      category: "SPORT",
+      finished: true,
+      isRest: false,
+      sourceEventId: e.id,
+    })),
+  });
+
+  // Mark each affected person's "Worked out?" prompt for the day complete.
+  const users = [...new Set(toCreate.map((e) => e.userId as string))];
+  for (const userId of users) {
+    const t = await prisma.task.findFirst({
+      where: { userId, category: Category.EXERCISE, dueDate: date },
+    });
+    if (t) {
+      if (t.status !== "COMPLETE") {
+        await prisma.task.update({
+          where: { id: t.id },
+          data: { status: "COMPLETE", completedAt: new Date() },
+        });
+      }
+    } else {
+      await prisma.task.create({
+        data: {
+          userId,
+          category: Category.EXERCISE,
+          title: "Workout",
+          dueDate: date,
+          status: "COMPLETE",
+          completedAt: new Date(),
+          generatedFrom: `workout:${userId}`,
+        },
+      });
+    }
+  }
+
+  return toCreate.length;
 }

@@ -1,5 +1,8 @@
 import { AppHeader } from "@/components/app-header";
-import { generateWorkoutTasks } from "@/lib/workouts/generate";
+import {
+  generateWorkoutTasks,
+  reconcileSportWorkouts,
+} from "@/lib/workouts/generate";
 import {
   loadWorkoutsBoard,
   loadExercisePool,
@@ -15,6 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function WorkoutsPage() {
   const today = todayISO();
   await generateWorkoutTasks(today);
+  await reconcileSportWorkouts(today);
   const [board, pool, comparisons, hiitWorkouts] = await Promise.all([
     loadWorkoutsBoard(today),
     loadExercisePool(),

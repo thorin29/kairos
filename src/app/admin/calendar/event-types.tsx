@@ -14,15 +14,19 @@ import type { EventTypeRow } from "@/lib/queries/calendar";
 export function EventTypes({ types }: { types: EventTypeRow[] }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState<string>(FAMILY_PALETTE[2]);
+  const [sport, setSport] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const add = () => {
     setError(null);
     start(async () => {
-      const res = await addEventType(name, color);
+      const res = await addEventType(name, color, sport);
       if (res.error) setError(res.error);
-      else setName("");
+      else {
+        setName("");
+        setSport(false);
+      }
     });
   };
 
@@ -66,6 +70,15 @@ export function EventTypes({ types }: { types: EventTypeRow[] }) {
             Add
           </button>
         </div>
+        <label className="mt-3 flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={sport}
+            onChange={(e) => setSport(e.target.checked)}
+            className="h-4 w-4 accent-[var(--color-accent)]"
+          />
+          Counts as a sport workout (auto-logs a workout on the event&rsquo;s day)
+        </label>
         {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
       </Card>
 
@@ -92,12 +105,13 @@ function TypeRow({ type }: { type: EventTypeRow }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(type.name);
   const [color, setColor] = useState<string>(type.color);
+  const [sport, setSport] = useState(type.sportWorkout);
   const [error, setError] = useState<string | null>(null);
 
   const save = () => {
     setError(null);
     start(async () => {
-      const res = await updateEventType(type.id, name, color);
+      const res = await updateEventType(type.id, name, color, sport);
       if (res.error) setError(res.error);
       else setEditing(false);
     });
@@ -121,6 +135,15 @@ function TypeRow({ type }: { type: EventTypeRow }) {
           className="h-9 min-w-0 flex-1 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
         />
         {error && <span className="w-full text-xs text-red-700">{error}</span>}
+        <label className="flex w-full items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={sport}
+            onChange={(e) => setSport(e.target.checked)}
+            className="h-4 w-4 accent-[var(--color-accent)]"
+          />
+          Counts as a sport workout
+        </label>
         <button
           type="button"
           onClick={save}
@@ -134,6 +157,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
           onClick={() => {
             setName(type.name);
             setColor(type.color);
+            setSport(type.sportWorkout);
             setError(null);
             setEditing(false);
           }}
@@ -154,6 +178,11 @@ function TypeRow({ type }: { type: EventTypeRow }) {
       />
       <span className="min-w-0 flex-1 truncate text-sm font-medium">
         {type.name}
+        {type.sportWorkout && (
+          <span className="ml-2 rounded-full bg-accent/10 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-accent">
+            Sport
+          </span>
+        )}
       </span>
       <button
         type="button"

@@ -35,13 +35,14 @@ export type EventTypeRow = {
   id: string;
   name: string;
   color: string;
+  sportWorkout: boolean;
 };
 
 /** Admin-managed custom event types, in display order. */
 export async function loadEventTypes(): Promise<EventTypeRow[]> {
   const rows = await prisma.eventType.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, color: true },
+    select: { id: true, name: true, color: true, sportWorkout: true },
   });
   return rows as unknown as EventTypeRow[];
 }

@@ -19,6 +19,7 @@ export type EventState = { error: string | null; saved: boolean };
 export async function addEventType(
   name: string,
   color: string,
+  sportWorkout = false,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   const clean = name.trim().slice(0, 40);
@@ -33,7 +34,7 @@ export async function addEventType(
 
   const count = await prisma.eventType.count();
   await prisma.eventType.create({
-    data: { name: clean, color, sortOrder: count },
+    data: { name: clean, color, sportWorkout, sortOrder: count },
   });
   revalidatePath("/calendar");
   revalidatePath("/admin/calendar");
@@ -60,6 +61,7 @@ export async function updateEventType(
   id: string,
   name: string,
   color: string,
+  sportWorkout = false,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   const clean = name.trim().slice(0, 40);
@@ -71,7 +73,7 @@ export async function updateEventType(
   });
   if (clash) return { error: "That name is taken." };
   await prisma.eventType
-    .update({ where: { id }, data: { name: clean, color } })
+    .update({ where: { id }, data: { name: clean, color, sportWorkout } })
     .catch(() => {});
   revalidatePath("/calendar");
   revalidatePath("/admin/calendar");
