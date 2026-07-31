@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/avatar";
 import { LinkIcon, TrashIcon, CheckIcon } from "@/components/icons";
 import {
@@ -20,12 +20,15 @@ export function AccountRow({ account }: { account: AccountState }) {
   const [pending, startTransition] = useTransition();
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const linkRef = useRef<HTMLInputElement>(null);
 
   const name = account.displayName ?? account.name;
 
   const invite = () =>
     startTransition(async () => {
       setCopied(false);
+      setCopyFailed(false);
       const res = await createInviteAction(account.userId);
       if (res.token) {
         setLink(`${window.location.origin}/join?token=${res.token}`);
@@ -46,12 +49,41 @@ export function AccountRow({ account }: { account: AccountState }) {
 
   const copy = async () => {
     if (!link) return;
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-    } catch {
-      /* clipboard blocked; the link is visible to copy by hand */
+    setCopyFailed(false);
+
+    // The async Clipboard API only exists in a secure context (HTTPS or
+    // localhost). Over plain HTTP on the LAN it's undefined, so guard for it
+    // and fall through to the legacy path rather than throwing.
+    if (window.isSecureContext && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(link);
+        setCopied(true);
+        return;
+      } catch {
+        /* fall through */
+      }
     }
+
+    // Legacy path: select the field and ask the document to copy. Works on
+    // plain-HTTP LAN where the Clipboard API isn't available.
+    const el = linkRef.current;
+    if (el) {
+      el.focus();
+      el.select();
+      el.setSelectionRange(0, link.length);
+      try {
+        if (document.execCommand("copy")) {
+          setCopied(true);
+          return;
+        }
+      } catch {
+        /* fall through */
+      }
+    }
+
+    // Nothing automatic worked (some locked-down mobile browsers). The link is
+    // now selected, so it can be copied by hand.
+    setCopyFailed(true);
   };
 
   const status = account.hasPassword
@@ -142,9 +174,13 @@ export function AccountRow({ account }: { account: AccountState }) {
             One-time invite link — copy it now, it won&rsquo;t be shown again.
           </p>
           <div className="flex items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-lg bg-surface px-3 py-2 font-mono text-xs">
-              {link}
-            </code>
+            <input
+              ref={linkRef}
+              readOnly
+              value={link}
+              onFocus={(e) => e.currentTarget.select()}
+              className="min-w-0 flex-1 truncate rounded-lg bg-surface px-3 py-2 font-mono text-xs outline-none focus:ring-2 focus:ring-accent/40"
+            />
             <button
               type="button"
               onClick={copy}
@@ -160,6 +196,12 @@ export function AccountRow({ account }: { account: AccountState }) {
               )}
             </button>
           </div>
+          {copyFailed && (
+            <p className="mt-2 text-xs text-muted">
+              Couldn&rsquo;t copy automatically &mdash; the link is selected, so
+              press &#8984;/Ctrl-C, or long-press it to copy.
+            </p>
+          )}
         </div>
       )}
     </li>
