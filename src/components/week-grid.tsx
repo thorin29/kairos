@@ -3,9 +3,17 @@
 import { useEffect, useRef } from "react";
 import type { GridEvent } from "@/lib/queries/calendar";
 import { DAY_SHORT } from "@/lib/days";
+import { useAddEvent } from "@/app/calendar/add-event-form";
 
 const HOUR_PX = 56;
 const COLUMNS = "grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]";
+
+function minutesToHHMM(min: number): string {
+  const clamped = Math.max(0, Math.min(23 * 60 + 45, min));
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
 
 /**
  * Outlook-style week: hour gutter down the left, a column per day, blocks
@@ -36,6 +44,15 @@ export function WeekGrid({
   selectedDay: string | null;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
+  const { openAt } = useAddEvent();
+
+  // Tap an empty part of a day column → open the add-event overlay at that day
+  // and time (rounded to 15 minutes), still editable.
+  const createAt = (iso: string, e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const min = Math.round(((e.clientY - rect.top) / HOUR_PX) * 60 / 15) * 15;
+    openAt({ date: iso, start: minutesToHHMM(min) });
+  };
 
   useEffect(() => {
     if (!scroller.current) return;
@@ -128,7 +145,9 @@ export function WeekGrid({
             return (
               <div
                 key={iso}
-                className={`relative border-l border-hairline ${
+                onClick={(e) => createAt(iso, e)}
+                title="Tap to add an event"
+                className={`relative cursor-pointer border-l border-hairline ${
                   selectedDay === iso ? "bg-accent/5" : ""
                 }`}
               >
@@ -148,6 +167,7 @@ export function WeekGrid({
                   return (
                     <div
                       key={e.id}
+                      onClick={(ev) => ev.stopPropagation()}
                       title={`${e.title}\n${e.timeLabel}${
                         e.location ? `\n${e.location}` : ""
                       }\n${e.ownerName}`}

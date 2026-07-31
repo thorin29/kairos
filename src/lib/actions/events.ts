@@ -35,6 +35,29 @@ export async function addEventType(
   return { error: null };
 }
 
+/** Rename / recolour a custom event type (admin). */
+export async function updateEventType(
+  id: string,
+  name: string,
+  color: string,
+): Promise<{ error: string | null }> {
+  if (!(await isAdmin())) return { error: "Only a parent can do that." };
+  const clean = name.trim().slice(0, 40);
+  if (clean.length < 2) return { error: "Give the type a name." };
+  if (!isHexColor(color)) return { error: "Pick a colour." };
+  const clash = await prisma.eventType.findFirst({
+    where: { name: clean, id: { not: id } },
+    select: { id: true },
+  });
+  if (clash) return { error: "That name is taken." };
+  await prisma.eventType
+    .update({ where: { id }, data: { name: clean, color } })
+    .catch(() => {});
+  revalidatePath("/calendar");
+  revalidatePath("/admin/calendar");
+  return { error: null };
+}
+
 /** Delete a custom event type; its events fall back to their kind colour. */
 export async function deleteEventType(id: string): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
