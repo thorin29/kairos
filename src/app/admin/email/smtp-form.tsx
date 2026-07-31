@@ -96,7 +96,7 @@ export function SmtpForm({ initial }: { initial: SmtpFormValues }) {
           <input
             value={host}
             onChange={(e) => setHost(e.target.value)}
-            placeholder="10.29.29.200"
+            placeholder="smtp.example.com"
             className={field}
           />
         </div>
@@ -132,7 +132,7 @@ export function SmtpForm({ initial }: { initial: SmtpFormValues }) {
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="off"
             autoCapitalize="none"
-            placeholder="marcolish@protonmail.com"
+            placeholder="you@example.com"
             className={field}
           />
         </div>
@@ -159,7 +159,7 @@ export function SmtpForm({ initial }: { initial: SmtpFormValues }) {
           <input
             value={fromAddress}
             onChange={(e) => setFromAddress(e.target.value)}
-            placeholder="admin@example.com"
+            placeholder="kairos@example.com"
             className={field}
           />
         </div>
