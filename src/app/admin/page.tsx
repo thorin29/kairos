@@ -14,6 +14,7 @@ import {
   GamepadIcon,
   CartIcon,
   LockIcon,
+  MailIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,13 @@ const TILES: Tile[] = [
     label: "Household",
     blurb: "People, roles, PINs, scoring start date",
     icon: <PeopleIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/admin/email",
+    label: "Email",
+    blurb: "SMTP server for sending invites, with a test button",
+    icon: <MailIcon className="h-7 w-7" />,
     ready: true,
   },
   {

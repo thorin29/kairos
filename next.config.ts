@@ -6,8 +6,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
 
   // The pg driver and the Prisma adapter use native Node APIs and must not
-  // be bundled by the server compiler.
-  serverExternalPackages: ["pg", "@prisma/adapter-pg"],
+  // be bundled by the server compiler. nodemailer uses dynamic requires that
+  // the bundler can't follow, so it's external too.
+  serverExternalPackages: ["pg", "@prisma/adapter-pg", "nodemailer"],
 
   experimental: {
     // Profile photos post through a server action, and the default cap is

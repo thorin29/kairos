@@ -22,12 +22,12 @@ export function LoginForm({ next = "/" }: { next?: string }) {
   return (
     <form action={formAction} className="space-y-4">
       <div>
-        <label htmlFor="name" className="mb-1.5 block text-sm font-medium">
-          Name
+        <label htmlFor="identifier" className="mb-1.5 block text-sm font-medium">
+          Name or email
         </label>
         <input
-          id="name"
-          name="name"
+          id="identifier"
+          name="identifier"
           type="text"
           autoComplete="username"
           autoCapitalize="none"

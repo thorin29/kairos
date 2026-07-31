@@ -26,6 +26,10 @@ model User {
   role        Role    @default(MEMBER)
   pinHash     String? // only set for ADMIN accounts while we're local-only
 
+  // Optional email: the address invites are sent to, and a second sign-in
+  // identifier (login accepts name or email). Null for anyone without one.
+  email       String? @unique
+
   // First-party login credential. Null means this person is a wall-tablet-only
   // profile with no personal sign-in (e.g. a young child) — the default. A
   // password is set only by redeeming an admin-issued invite; there is no
