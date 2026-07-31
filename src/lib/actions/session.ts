@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { rateLimit, rateLimitReset } from "@/lib/rate-limit";
 import {
   adminPinSet,
   clearAdminPin,
@@ -31,10 +32,22 @@ export async function unlockAdmin(
   if (!/^\d{4,8}$/.test(pin)) {
     return { error: "Enter your 4 to 8 digit PIN.", ok: false };
   }
+
+  // One shared PIN, so one shared window — enough to blunt a kid working
+  // through combinations without locking a parent out for long.
+  const limit = rateLimit("admin-pin", 10, 10 * 60_000);
+  if (!limit.ok) {
+    return {
+      error: `Too many attempts. Try again in ${limit.retryAfterSec}s.`,
+      ok: false,
+    };
+  }
+
   if (!(await verifyAdminPin(pin))) {
     return { error: "That PIN doesn't match.", ok: false };
   }
 
+  rateLimitReset("admin-pin");
   await startAdminSession();
   revalidatePath("/", "layout");
   return { error: null, ok: true };

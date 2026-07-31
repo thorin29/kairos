@@ -25,6 +25,16 @@ model User {
   displayName String?
   role        Role    @default(MEMBER)
   pinHash     String? // only set for ADMIN accounts while we're local-only
+
+  // First-party login credential. Null means this person is a wall-tablet-only
+  // profile with no personal sign-in (e.g. a young child) — the default. A
+  // password is set only by redeeming an admin-issued invite; there is no
+  // self-signup. Login identity is `name` (unique), so no email is needed.
+  passwordHash      String?
+  // Embedded in the personal session cookie. Bumping it invalidates every
+  // existing session for this person (password reset, admin disabling login).
+  credentialVersion Int     @default(0)
+
   avatarPath  String? // uploaded image, stored under appdata
 
   // Date only — a birthday is a calendar day, never an instant, and it has
@@ -47,6 +57,7 @@ model User {
   workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   hiitWorkouts     HiitWorkout[]
+  invites          Invite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -389,6 +400,21 @@ model AppSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// A one-time invitation to set up a personal login for an existing person.
+// The raw token is shown to the admin once and never stored; only its hash
+// lives here. Redeeming it sets the person's password and deletes the invite.
+// This is the only path to a loginable account — there is no self-signup.
+model Invite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ---------------------------------------------------------------
