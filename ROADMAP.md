@@ -55,6 +55,33 @@ all live in the database, never in this repository.
 - [x] Read-only metrics pages separate from the editors behind the lock
 - [x] Shared pages reached from the admin hub offer a way back to it while
       the unlock is live
+- [x] **First-party personal accounts (foundation).** A person's profile can
+      carry an optional password credential; with none they stay a
+      wall-tablet-only profile, so the shared screen is unchanged. Login is by
+      the existing unique name — no email, since re-inviting is the reset path.
+- [x] **Invite-only, admin-issued.** No self-signup route exists. A parent
+      issues a one-time, hashed, expiring invite from Household → Accounts and
+      hands over the link; the person redeems it to set their own password.
+      Disable clears the credential and voids sessions.
+- [x] **Stateless personal sessions**, signed with the shared app secret,
+      separate from the admin unlock. `credentialVersion` in the cookie means a
+      reset or a disable invalidates every existing session.
+- Auth direction settled (see the two-turn scoping): first-party accounts are
+  the base, built regardless; delegating to the household's own Authelia via
+  OIDC is a possible *additional* login method later (the Immich pattern —
+  one user table, OIDC layered on, auto-register off to keep invite-only). Not
+  social OAuth: it fights the no-email-for-kids and blocked-browser cases.
+- [ ] **Device modes** — a device is shared/kiosk (the wall tablet, no login)
+      or personal (a phone, signed in). Nothing is gated behind login yet; this
+      is the next phase.
+- [ ] **"Act as me" step-up** on the shared tablet — attribute a single action
+      to a person (tap avatar, optional personal PIN) without turning the
+      tablet into a private session. First consumer: the grocery "I'm going
+      shopping → pull my cart" flow.
+- [ ] **Personal / focused views** on a signed-in device, plus a summary page
+      that's one tap away rather than front-and-centre.
+- [ ] Admin is still a separate axis (the shared PIN). Later: let a personal
+      account carry the admin capability so a parent's login grants it directly.
 - [ ] Audit trail of admin changes
 
 ## Chores
@@ -379,15 +406,23 @@ own exercises, optionally schedules them, and records what they did.
       of dropping you into an empty dashboard
 
 ## Security hardening
-- [ ] Brute-force protection: PIN attempts are currently unlimited — nothing
-      rate-limits or locks out after repeated wrong guesses. Low stakes for a
-      kids-vs-parents LAN threat model, but a real gap.
-- [ ] Threat model / internet exposure: the PIN scheme is for a local network
-      only ("swap for a real password flow before exposing this to the
-      internet"). If Kairos is ever reachable from outside the house, PINs
-      aren't enough — that needs real auth + HTTPS. A conscious decision.
-- [ ] Session lifetime / auto-lock: confirm how long an unlock lasts and
-      whether it should auto-lock after inactivity (a shared wall tablet argues
-      for a shortish timeout).
-- [ ] Cookie signing secret: confirm the admin session is signed with a secret
-      from the environment, not a weak default.
+- [x] Brute-force protection: wrong admin-PIN and wrong login-password attempts
+      are now rate-limited (in-memory fixed window, best-effort for a single
+      container). Blunts a kid working through combinations.
+- [x] Cookie signing secret: confirmed. Both the admin unlock and personal
+      sessions are HMAC-signed with a 32-byte secret generated on first use and
+      kept in `AppSetting` (`sessionSecret`), not a weak default — a fresh
+      install mints its own.
+- [ ] Threat model / internet exposure: the first-party password flow is now
+      the "real auth" the PIN scheme was deferring, so exposing Kairos past the
+      LAN is closer to reasonable — but it still wants HTTPS (have it via
+      Cloudflared) plus a decision on what's reachable. The phone app forces
+      this: an allowlisted APK on a child's device must reach Kairos over the
+      tunnel. Revisit when device modes land.
+- [ ] Session lifetime / auto-lock: the admin unlock still lasts a few hours;
+      confirm whether a shared wall tablet should auto-lock after inactivity.
+      (Personal sessions are deliberately long — a phone should stay signed in.)
+- [ ] Per-device session revocation: personal sessions are stateless, so
+      "sign out everywhere" is currently all-or-nothing via `credentialVersion`.
+      A Session table would allow listing and revoking individual devices —
+      worth it once the phone app is real.

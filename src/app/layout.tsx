@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { AdminLock } from "@/components/admin-lock";
+import { UserBadge } from "@/components/user-badge";
 import { isAdmin, adminPinSet } from "@/lib/session";
+import { currentUser } from "@/lib/user-session";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -40,7 +42,11 @@ export const dynamic = "force-dynamic";
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [unlocked, pinSet] = await Promise.all([isAdmin(), adminPinSet()]);
+  const [unlocked, pinSet, me] = await Promise.all([
+    isAdmin(),
+    adminPinSet(),
+    currentUser(),
+  ]);
   return (
     <html lang="en">
       <body
@@ -48,6 +54,13 @@ export default async function RootLayout({
       >
         {children}
         <AdminLock unlocked={unlocked} pinSet={pinSet} />
+        {me && (
+          <UserBadge
+            name={me.displayName ?? me.name}
+            color={me.color}
+            avatarPath={me.avatarPath}
+          />
+        )}
       </body>
     </html>
   );

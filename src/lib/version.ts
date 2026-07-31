@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.51.0";
+export const APP_VERSION = "0.52.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -42,11 +42,21 @@ export const MIGRATIONS = [
   "32_hiit_share",
   "33_hiit_movement_metrics",
   "34_sport_events",
+  "35_accounts",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.52.0",
+    summary: [
+      "Personal accounts: a parent can give someone a login for their own phone from Household \\u2192 Accounts \\u2014 send a one-time invite link and they set their own password",
+      "No self-signup: an account only works after a parent invites it; re-sending an invite is also how a password is reset, and Disable turns a login off",
+      "Sign in at /login; a small badge in the bottom-left shows who's signed in, with sign-out. The shared tablet still needs no login and nothing is gated behind it yet",
+      "Hardening: repeated wrong admin PIN or password attempts are now rate-limited",
+    ],
+  },
   {
     version: "0.51.0",
     summary: [
