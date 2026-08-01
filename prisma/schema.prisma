@@ -62,6 +62,7 @@ model User {
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   hiitWorkouts     HiitWorkout[]
   invites          Invite[]
+  sportSkips       SportSkip[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -201,6 +202,7 @@ model Event {
   externalUid        String? // ICS UID, for dedupe across refetches
 
   task Task?
+  sportSkips SportSkip[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -404,6 +406,22 @@ model AppSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// A sport-workout calendar event's per-person, per-day "no". Its absence
+// (with no logged session for that occurrence) is what shows the prompt; keyed
+// on the occurrence date so every day and every person is independent.
+model SportSkip {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, userId, date])
+  @@index([userId, date])
 }
 
 // A one-time invitation to set up a personal login for an existing person.

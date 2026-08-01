@@ -24,13 +24,9 @@ import { WeekGrid } from "@/components/week-grid";
 import { DaySchedule } from "@/components/day-schedule";
 import { MonthGrid } from "@/components/month-grid";
 import { AddEventProvider, AddEventButton } from "./add-event-form";
-import { SectionHeading } from "@/components/ui";
 import { PersonFilterBadge, FamilyFilterBadge } from "@/components/person-filter";
-import { isAdmin } from "@/lib/session";
 import { getFamilyColor } from "@/lib/settings";
 import { getCalendarPrefs } from "@/lib/settings";
-import { DeleteEventButton } from "@/components/event-actions";
-import { canDeleteEvent } from "@/lib/can-delete-event";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +76,6 @@ export default async function CalendarPage({
         : addMonths(startOfMonth(date), n);
 
   await syncStaleCalendars();
-  const admin = await isAdmin();
 
   const [range, people] = await Promise.all([
     loadRange(days, filterIds),
@@ -218,7 +213,6 @@ export default async function CalendarPage({
           timed={range.timed}
           allDay={range.allDay}
           todayISO={today}
-          admin={admin}
           nowColor={calPrefs.nowColor}
           resetSec={calPrefs.scrollResetSec}
         />
@@ -228,7 +222,6 @@ export default async function CalendarPage({
         <DayPanel
           date={date}
           range={range}
-          admin={admin}
           todayISO={today}
           nowColor={calPrefs.nowColor}
           resetSec={calPrefs.scrollResetSec}
@@ -278,68 +271,24 @@ export default async function CalendarPage({
 function DayPanel({
   date,
   range,
-  admin,
   todayISO,
   nowColor,
   resetSec,
 }: {
   date: string;
   range: { timed: GridEvent[]; allDay: GridEvent[] };
-  admin: boolean;
   todayISO: string;
   nowColor: string;
   resetSec: number;
 }) {
-  const dayEvents = [...range.allDay, ...range.timed]
-    .filter((e) => e.dayISO === date)
-    .sort(
-      (a, b) => Number(b.allDay) - Number(a.allDay) || a.startMin - b.startMin,
-    );
-
   return (
-    <div className="space-y-4">
-      <WeekGrid
-        days={[date]}
-        timed={range.timed}
-        allDay={range.allDay}
-        todayISO={todayISO}
-        nowColor={nowColor}
-        resetSec={resetSec}
-      />
-
-      <div>
-        <SectionHeading>Schedule</SectionHeading>
-        <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
-          {dayEvents.length === 0 ? (
-            <p className="px-5 py-4 text-sm text-muted">Nothing scheduled.</p>
-          ) : (
-            <ul className="divide-y divide-hairline">
-              {dayEvents.map((e) => (
-                <li key={e.id} className="flex items-start gap-3 px-5 py-3">
-                  <span
-                    aria-hidden
-                    className="mt-0.5 h-9 w-1.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: e.color }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{e.title}</p>
-                    <p className="tabular truncate text-xs text-muted">
-                      {e.timeLabel}
-                      {e.location ? ` · ${e.location}` : ""}
-                    </p>
-                    <p className="truncate text-xs text-muted">
-                      {e.ownerName}
-                      {e.recurring ? " · repeats" : ""}
-                      {e.calendarName ? ` · ${e.calendarName}` : ""}
-                    </p>
-                  </div>
-                  {canDeleteEvent(e, admin) && <DeleteEventButton event={e} />}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+    <WeekGrid
+      days={[date]}
+      timed={range.timed}
+      allDay={range.allDay}
+      todayISO={todayISO}
+      nowColor={nowColor}
+      resetSec={resetSec}
+    />
   );
 }

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.56.0";
+export const APP_VERSION = "0.57.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -44,11 +44,20 @@ export const MIGRATIONS = [
   "34_sport_events",
   "35_accounts",
   "36_user_email",
+  "37_sport_skip",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.57.0",
+    summary: [
+      "Sport calendar events no longer auto-log a workout \u2014 instead the person gets a \"did you do it?\" prompt on their dashboard card. Yes logs the workout; No is remembered for that day only",
+      "Each occurrence is its own prompt per person: on a recurring practice, one person confirming and another declining don't affect each other, and a decline never carries to future days",
+      "Calendar page: removed the redundant day/schedule list that repeated below the calendar grid",
+    ],
+  },
   {
     version: "0.56.0",
     summary: [
