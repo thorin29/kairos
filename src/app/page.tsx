@@ -16,6 +16,7 @@ import { DaySchedule } from "@/components/day-schedule";
 import { loadDaySchedule } from "@/lib/queries/calendar";
 import { deviceMode } from "@/lib/device";
 import { currentUser } from "@/lib/user-session";
+import { pendingSportPrompts, type SportPrompt } from "@/lib/workouts/generate";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,14 @@ export default async function Home({
   });
 
   const totalOverdue = shown.reduce((n, p) => n + p.overdue, 0);
+
+  const sportPrompts = await pendingSportPrompts(today);
+  const promptsByUser = new Map<string, SportPrompt[]>();
+  for (const p of sportPrompts) {
+    const arr = promptsByUser.get(p.userId);
+    if (arr) arr.push(p);
+    else promptsByUser.set(p.userId, [p]);
+  }
   const openTasks = await loadOpenTasks(today);
   const todaySchedule = await loadDaySchedule(scheduleDay);
 
@@ -100,7 +109,12 @@ export default async function Home({
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((p) => (
-          <PersonCard key={p.id} person={p} />
+          <PersonCard
+            key={p.id}
+            person={p}
+            prompts={promptsByUser.get(p.id) ?? []}
+            dateISO={today}
+          />
         ))}
       </div>
 

@@ -129,15 +129,22 @@ export async function generateWorkoutTasks(
 }
 
 /**
- * Sport calendar events → workouts. For a given day, any person whose event is
- * of a type flagged "sport workout" (including a recurring practice landing on
- * that day) gets a SPORT workout logged, once, linked to the event so it's
- * idempotent. It counts as their workout for the day; if they skipped it, the
- * logged session can be deleted like any other. Runs for the current day.
+ * Sport calendar events → dashboard prompts. For a given day, any person whose
+ * event is of a type flagged "sport workout" (recurring practices included)
+ * gets a "did you do it?" prompt — unless they've already logged it (a
+ * WorkoutSession linked by sourceEventId) or declined it (a SportSkip). Keyed
+ * on the occurrence date, so each day and each person is independent. Nothing
+ * is written here; confirming or declining happens through the sport actions.
  */
-export async function reconcileSportWorkouts(
+export type SportPrompt = {
+  eventId: string;
+  userId: string;
+  title: string;
+};
+
+export async function pendingSportPrompts(
   dateISO: string = todayISO(),
-): Promise<number> {
+): Promise<SportPrompt[]> {
   const tz = householdTz();
 
   const events = await prisma.event.findMany({
@@ -147,66 +154,38 @@ export async function reconcileSportWorkouts(
     },
     select: { id: true, userId: true, title: true, startsAt: true, rrule: true },
   });
-  if (events.length === 0) return 0;
+  if (events.length === 0) return [];
 
   const due = events.filter((e) =>
     e.rrule
       ? occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz).length > 0
       : localParts(e.startsAt).iso === dateISO,
   );
-  if (due.length === 0) return 0;
+  if (due.length === 0) return [];
 
   const date = toDateColumn(dateISO);
-  const existing = await prisma.workoutSession.findMany({
-    where: { date, sourceEventId: { in: due.map((e) => e.id) } },
-    select: { userId: true, sourceEventId: true },
-  });
-  const have = new Set(existing.map((s) => `${s.userId}|${s.sourceEventId}`));
+  const ids = due.map((e) => e.id);
 
-  const toCreate = due.filter(
-    (e) => e.userId && !have.has(`${e.userId}|${e.id}`),
-  );
-  if (toCreate.length === 0) return 0;
+  const [done, skipped] = await Promise.all([
+    prisma.workoutSession.findMany({
+      where: { date, sourceEventId: { in: ids } },
+      select: { userId: true, sourceEventId: true },
+    }),
+    prisma.sportSkip.findMany({
+      where: { date, eventId: { in: ids } },
+      select: { userId: true, eventId: true },
+    }),
+  ]);
+  const doneSet = new Set(done.map((s) => `${s.userId}|${s.sourceEventId}`));
+  const skipSet = new Set(skipped.map((s) => `${s.userId}|${s.eventId}`));
 
-  await prisma.workoutSession.createMany({
-    data: toCreate.map((e) => ({
-      userId: e.userId as string,
-      date,
-      name: (e.title || "Sport").slice(0, 60),
-      category: "SPORT",
-      finished: true,
-      isRest: false,
-      sourceEventId: e.id,
-    })),
-  });
-
-  // Mark each affected person's "Worked out?" prompt for the day complete.
-  const users = [...new Set(toCreate.map((e) => e.userId as string))];
-  for (const userId of users) {
-    const t = await prisma.task.findFirst({
-      where: { userId, category: Category.EXERCISE, dueDate: date },
-    });
-    if (t) {
-      if (t.status !== "COMPLETE") {
-        await prisma.task.update({
-          where: { id: t.id },
-          data: { status: "COMPLETE", completedAt: new Date() },
-        });
-      }
-    } else {
-      await prisma.task.create({
-        data: {
-          userId,
-          category: Category.EXERCISE,
-          title: "Workout",
-          dueDate: date,
-          status: "COMPLETE",
-          completedAt: new Date(),
-          generatedFrom: `workout:${userId}`,
-        },
-      });
+  const prompts: SportPrompt[] = [];
+  for (const e of due) {
+    const userId = e.userId as string;
+    const key = `${userId}|${e.id}`;
+    if (!doneSet.has(key) && !skipSet.has(key)) {
+      prompts.push({ eventId: e.id, userId, title: e.title || "Sport" });
     }
   }
-
-  return toCreate.length;
+  return prompts;
 }
