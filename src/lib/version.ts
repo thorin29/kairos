@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.64.0";
+export const APP_VERSION = "0.65.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -54,6 +54,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.65.0",
+    summary: [
+      "Fixed: tapping or clicking an empty spot on the calendar no longer creates an event. A new event now starts only when you drag across a time range (the tap just clears any highlighted event)",
+      "Editing a repeating event with \u201call events in the series\u201d chosen now lets you change how it repeats and when it ends, or stop it repeating altogether",
+    ],
+  },
   {
     version: "0.64.0",
     summary: [

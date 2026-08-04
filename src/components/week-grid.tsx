@@ -195,13 +195,12 @@ export function WeekGrid({
   const SELECTED_RING =
     "0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-ink)";
 
-  // Drag-to-select a time range (mouse/pen). Touch is left alone so the grid
-  // still scrolls with a finger; a touch tap falls through to click-to-add.
+  // Drag-to-select a time range (mouse/pen). A plain tap no longer creates an
+  // event — only a real drag does — so a stray touch can't open the form.
   const [sel, setSel] = useState<{ day: string; a: number; b: number } | null>(
     null,
   );
   const dragging = useRef(false);
-  const suppressClick = useRef(false);
 
   const yToMin = (el: HTMLElement, clientY: number) => {
     const rect = el.getBoundingClientRect();
@@ -237,9 +236,7 @@ export function WeekGrid({
     const lo = Math.min(s.a, s.b);
     const hi = Math.max(s.a, s.b);
     if (hi - lo >= 15) {
-      // A real drag: open pre-filled with the range, and swallow the click
-      // the browser fires right after.
-      suppressClick.current = true;
+      // A real drag opens the add form pre-filled with the selected range.
       openAt({ date: iso, start: minutesToHHMM(lo), end: minutesToHHMM(hi) });
     }
   };
@@ -311,17 +308,6 @@ export function WeekGrid({
   );
 
   const byDay = (iso: string) => timed.filter((e) => e.dayISO === iso);
-
-  const createAt = (iso: string, e: React.MouseEvent<HTMLDivElement>) => {
-    if (suppressClick.current) {
-      suppressClick.current = false;
-      return;
-    }
-    setSelectedId(null);
-    const rect = e.currentTarget.getBoundingClientRect();
-    const min = Math.round((((e.clientY - rect.top) / HOUR_PX) * 60) / 15) * 15;
-    openAt({ date: iso, start: minutesToHHMM(min) });
-  };
 
   const nowY = nowMin != null ? (nowMin / 60) * HOUR_PX : null;
 
@@ -431,11 +417,11 @@ export function WeekGrid({
             return (
               <div
                 key={iso}
-                onClick={(e) => createAt(iso, e)}
+                onClick={() => setSelectedId(null)}
                 onPointerDown={(e) => onColDown(iso, e)}
                 onPointerMove={(e) => onColMove(iso, e)}
                 onPointerUp={(e) => onColUp(iso, e)}
-                title="Tap to add an event, or drag to pick a time range"
+                title="Drag to pick a time range for a new event"
                 className={`relative cursor-pointer select-none border-l border-hairline ${
                   selectedDay === iso ? "bg-accent/5" : ""
                 }`}

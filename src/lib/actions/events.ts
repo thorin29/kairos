@@ -356,6 +356,39 @@ export async function updateEvent(
     shadeDay,
   };
 
+  // A whole-series edit may also change the repeat pattern/end rule. Rebuild the
+  // rule from the form (anchored to the kept start date); "Does not repeat"
+  // turns it into a one-off. Single and non-recurring edits leave the rule be.
+  let newRrule: string | null | undefined = undefined;
+  if (seriesEdit) {
+    const repeat = String(formData.get("repeat") ?? "NONE");
+    const interval = Number(formData.get("interval") ?? 1);
+    const until = String(formData.get("until") ?? "").trim();
+    const count = Number(formData.get("count") ?? 0);
+    if ((FREQS as readonly string[]).includes(repeat)) {
+      if (!Number.isInteger(interval) || interval < 1 || interval > 52) {
+        return { error: "Repeat every 1 to 52.", saved: false };
+      }
+      if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) {
+        return { error: "That end date isn't valid.", saved: false };
+      }
+      if (until && until < dateForRow) {
+        return { error: "The repeat ends before it starts.", saved: false };
+      }
+      if (count && (!Number.isInteger(count) || count < 1 || count > 999)) {
+        return { error: "Repeat 1 to 999 times.", saved: false };
+      }
+      newRrule = buildRule(
+        repeat as "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY",
+        interval,
+        until || null,
+        count > 0 ? count : null,
+      );
+    } else {
+      newRrule = null;
+    }
+  }
+
   if (singleEdit) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(occurrenceISO)) {
       return { error: "Couldn't tell which occurrence to edit.", saved: false };
@@ -379,9 +412,13 @@ export async function updateEvent(
       });
     }
   } else {
-    // Series or non-recurring: update in place, leaving any recurrence rule and
-    // the guest list untouched.
-    await prisma.event.update({ where: { id }, data: fields });
+    // Series or non-recurring: update in place. The recurrence rule changes
+    // only on a series edit; a non-recurring edit leaves it (and the guest
+    // list) untouched.
+    await prisma.event.update({
+      where: { id },
+      data: newRrule !== undefined ? { ...fields, rrule: newRrule } : fields,
+    });
   }
 
   revalidatePath("/calendar");
@@ -397,6 +434,7 @@ export type EventCopyData = {
   location: string;
   allDay: boolean;
   shadeDay: boolean;
+  rrule: string | null;
   start: string;
   end: string;
   date: string;
@@ -424,6 +462,7 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
       location: true,
       allDay: true,
       shadeDay: true,
+      rrule: true,
       startsAt: true,
       endsAt: true,
     },
@@ -439,6 +478,7 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
     location: e.location ?? "",
     allDay: e.allDay,
     shadeDay: (e as { shadeDay?: boolean }).shadeDay ?? true,
+    rrule: e.rrule ?? null,
     start: hhmm(s.minutes),
     end: hhmm(en.minutes),
     date: s.iso,
