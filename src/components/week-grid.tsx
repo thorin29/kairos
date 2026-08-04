@@ -41,7 +41,6 @@ export function WeekGrid({
   selectedDay,
   nowColor = "#ef4444",
   resetSec = 60,
-  washAllDay = true,
 }: {
   days: string[];
   timed: GridEvent[];
@@ -51,7 +50,6 @@ export function WeekGrid({
   selectedDay?: string | null;
   nowColor?: string;
   resetSec?: number;
-  washAllDay?: boolean;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const programmatic = useRef(false);
@@ -404,19 +402,10 @@ export function WeekGrid({
           {days.map((iso) => {
             const events = byDay(iso);
             const lanes = assignLanes(events);
-            // Any all-day event washes its day column in a light tint when the
-            // admin has the feature on. A shared/vacation or birthday event
-            // (family colour) wins the tint; otherwise the first all-day event's
-            // own colour is used.
-            const dayAllDay = washAllDay
-              ? allDay.filter((e) => e.dayISO === iso)
-              : [];
-            const washEv =
-              dayAllDay.find((e) => e.isFamily || e.kind === "BIRTHDAY") ??
-              dayAllDay[0];
-            const wash = washEv
-              ? `color-mix(in srgb, ${washEv.color} 12%, transparent)`
-              : undefined;
+            // Each all-day event marked to shade tints the day behind the hours.
+            // Several on one day divide the column into side-by-side colour
+            // bands, so two shared birthdays can each show, or neither.
+            const shaded = allDay.filter((e) => e.dayISO === iso && e.shade);
 
             return (
               <div
@@ -426,11 +415,27 @@ export function WeekGrid({
                 onPointerMove={(e) => onColMove(iso, e)}
                 onPointerUp={(e) => onColUp(iso, e)}
                 title="Tap to add an event, or drag to pick a time range"
-                style={wash ? { backgroundColor: wash } : undefined}
                 className={`relative cursor-pointer select-none border-l border-hairline ${
-                  selectedDay === iso && !wash ? "bg-accent/5" : ""
+                  selectedDay === iso ? "bg-accent/5" : ""
                 }`}
               >
+                {shaded.length > 0 && (
+                  <div
+                    className="pointer-events-none absolute inset-0 flex"
+                    aria-hidden
+                  >
+                    {shaded.map((e) => (
+                      <div
+                        key={e.id}
+                        className="flex-1"
+                        style={{
+                          backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
                 {Array.from({ length: 24 }, (_, h) => (
                   <HourCell key={h} />
                 ))}

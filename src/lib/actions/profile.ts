@@ -35,6 +35,7 @@ export async function updateProfile(
   const color = String(formData.get("color") ?? "").trim();
   const icon = String(formData.get("icon") ?? "").trim();
   const birthday = String(formData.get("birthday") ?? "").trim();
+  const shadeBirthday = formData.get("shadeBirthday") === "on";
   const removePhoto = formData.get("removePhoto") === "1";
   const photo = formData.get("photo");
 
@@ -89,6 +90,7 @@ export async function updateProfile(
       color,
       avatarPath,
       birthday: birthday ? toDateColumn(birthday) : null,
+      shadeBirthday,
     },
   });
 

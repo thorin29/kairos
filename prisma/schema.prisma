@@ -44,6 +44,8 @@ model User {
   // Date only — a birthday is a calendar day, never an instant, and it has
   // no year-relative meaning that a timestamp would capture.
   birthday DateTime? @db.Date
+  // Whether this person's birthday tints its whole day column on the calendar.
+  shadeBirthday Boolean @default(true)
   color       String  @default("#64748b") // this person's color in the all-users calendar
   sortOrder   Int     @default(0)
   isActive    Boolean @default(true)
@@ -194,6 +196,8 @@ model Event {
   startsAt DateTime
   endsAt   DateTime
   allDay   Boolean  @default(false)
+  // Whether an all-day event tints its whole day column on the calendar.
+  shadeDay Boolean  @default(true)
 
   // RFC 5545 RRULE for repeating classes and shifts.
   rrule       String?

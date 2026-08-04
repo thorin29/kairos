@@ -12,7 +12,6 @@ import {
   setSetting,
   CAL_NOW_COLOR,
   CAL_RESET_SEC,
-  CAL_ALLDAY_WASH,
 } from "@/lib/settings";
 
 export type EventState = { error: string | null; saved: boolean };
@@ -61,14 +60,12 @@ export async function addEventType(
 export async function setCalendarPrefs(
   nowColor: string,
   scrollResetSec: number,
-  allDayWash: boolean,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   if (!isHexColor(nowColor)) return { error: "Pick a colour." };
   const sec = Math.max(0, Math.min(3600, Math.round(scrollResetSec)));
   await setSetting(CAL_NOW_COLOR, nowColor);
   await setSetting(CAL_RESET_SEC, String(sec));
-  await setSetting(CAL_ALLDAY_WASH, allDayWash ? "1" : "0");
   revalidatePath("/calendar");
   revalidatePath("/admin/calendar");
   return { error: null };
@@ -139,6 +136,9 @@ export async function addEvent(
   const start = String(formData.get("start") ?? "");
   const end = String(formData.get("end") ?? "");
   const allDay = formData.get("allDay") === "on";
+  // Only all-day events shade; a timed event keeps the default so a later
+  // switch to all-day still tints.
+  const shadeDay = allDay ? formData.get("shadeDay") === "on" : true;
   const location = String(formData.get("location") ?? "").trim().slice(0, 200);
   const repeat = String(formData.get("repeat") ?? "NONE");
   const interval = Number(formData.get("interval") ?? 1);
@@ -217,6 +217,7 @@ export async function addEvent(
       startsAt,
       endsAt,
       allDay,
+      shadeDay,
       rrule,
     },
     select: { id: true },
@@ -251,6 +252,7 @@ export type EventCopyData = {
   kind: string;
   location: string;
   allDay: boolean;
+  shadeDay: boolean;
   start: string;
   end: string;
   date: string;
@@ -277,6 +279,7 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
       kind: true,
       location: true,
       allDay: true,
+      shadeDay: true,
       startsAt: true,
       endsAt: true,
     },
@@ -291,6 +294,7 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
     kind: e.eventTypeId ? `type:${e.eventTypeId}` : (e.kind as string),
     location: e.location ?? "",
     allDay: e.allDay,
+    shadeDay: (e as { shadeDay?: boolean }).shadeDay ?? true,
     start: hhmm(s.minutes),
     end: hhmm(en.minutes),
     date: s.iso,
