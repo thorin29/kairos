@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { addEvent, updateEvent, type EventState } from "@/lib/actions/events";
+import { parseRule } from "@/lib/calendar/recur";
 import { PlusIcon } from "@/components/icons";
 
 const initial: EventState = { error: null, saved: false };
@@ -80,6 +81,7 @@ type Prefill = {
   location?: string;
   allDay?: boolean;
   shadeDay?: boolean;
+  rrule?: string | null;
 };
 export type EditTarget = {
   eventId: string;
@@ -153,6 +155,7 @@ export function AddEventProvider({
           location={prefill.location}
           allDayInit={prefill.allDay}
           shadeDayInit={prefill.shadeDay}
+          rruleInit={prefill.rrule}
           onClose={() => setOpen(false)}
         />
       )}
@@ -191,6 +194,7 @@ function EventModal({
   location,
   allDayInit,
   shadeDayInit,
+  rruleInit,
   onClose,
 }: {
   people: { id: string; name: string }[];
@@ -211,13 +215,21 @@ function EventModal({
   location?: string;
   allDayInit?: boolean;
   shadeDayInit?: boolean;
+  rruleInit?: string | null;
   onClose: () => void;
 }) {
   const [allDay, setAllDay] = useState(allDayInit ?? false);
   const [kind, setKind] = useState(kindInit ?? "APPOINTMENT");
-  const [repeat, setRepeat] = useState("NONE");
-  const [customFreq, setCustomFreq] = useState("WEEKLY");
-  const [endMode, setEndMode] = useState<"never" | "until" | "count">("never");
+  // When editing a repeating event, pre-fill the repeat controls from its rule
+  // so a series edit can change the pattern (ignored when adding or copying).
+  const editRec = editing?.recurring ? parseRule(rruleInit ?? null) : null;
+  const [repeat, setRepeat] = useState<string>(
+    editRec ? (editRec.interval > 1 ? "CUSTOM" : editRec.freq) : "NONE",
+  );
+  const [customFreq, setCustomFreq] = useState<string>(editRec?.freq ?? "WEEKLY");
+  const [endMode, setEndMode] = useState<"never" | "until" | "count">(
+    editRec?.until ? "until" : editRec?.count ? "count" : "never",
+  );
   // For a recurring event, an edit applies to just this occurrence or the
   // whole series. Default to the single occurrence — the safer, smaller change.
   const [scope, setScope] = useState<"single" | "series">("single");
@@ -491,7 +503,7 @@ function EventModal({
             )}
           </div>
 
-          {!editing && (
+          {(!editing || (editing.recurring && scope === "series")) && (
             <>
               <input type="hidden" name="repeat" value={effectiveRepeat} />
 
@@ -536,6 +548,7 @@ function EventModal({
                         id="ev-until"
                         name="until"
                         type="date"
+                        defaultValue={editRec?.until ?? ""}
                         aria-label="Repeat until date"
                         className={`tabular ${field} mt-2`}
                       />
@@ -546,7 +559,7 @@ function EventModal({
                         type="number"
                         min={1}
                         max={999}
-                        defaultValue={10}
+                        defaultValue={editRec?.count ?? 10}
                         aria-label="Number of occurrences"
                         placeholder="times"
                         className={`tabular ${field} mt-2`}
@@ -567,7 +580,7 @@ function EventModal({
                     type="number"
                     min={1}
                     max={52}
-                    defaultValue={2}
+                    defaultValue={editRec?.interval ?? 2}
                     className={`tabular ${field}`}
                   />
                 </div>
