@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.61.0";
+export const APP_VERSION = "0.62.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -47,11 +47,20 @@ export const MIGRATIONS = [
   "37_sport_skip",
   "38_event_participant",
   "39_event_duration",
+  "40_shade_day",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.62.0",
+    summary: [
+      "Day shading is now decided per event instead of by one global switch: the add-event form has a \u201cShade this day\u201d box for all-day events, and each person\u2019s profile has a \u201cshade this birthday\u201d toggle \u2014 so you can shade immediate family birthdays every year and leave extended family unshaded",
+      "When more than one all-day event on the same day is set to shade, the day splits into side-by-side colour bands \u2014 so two shared birthdays can both show, or you can shade just one, or neither",
+      "The old global all-day shading switch in Admin \u2192 Calendar has been removed in favour of this per-event control",
+    ],
+  },
   {
     version: "0.61.0",
     summary: [

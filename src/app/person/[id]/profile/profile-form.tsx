@@ -18,6 +18,7 @@ export function ProfileForm({
     color: string;
     avatarPath: string | null;
     birthdayISO: string | null;
+    shadeBirthday: boolean;
   };
 }) {
   const [state, formAction, pending] = useActionState(updateProfile, initial);
@@ -76,9 +77,18 @@ export function ProfileForm({
           className="tabular mt-2 h-11 rounded-full border border-hairline px-5 outline-none focus:border-accent"
         />
         <p className="mt-2 text-xs text-muted">
-          Optional. Nothing uses this yet &mdash; it&rsquo;s here so the
-          dashboard can mark the day later.
+          Optional. Shown as an all-day event on the calendar each year.
         </p>
+
+        <label className="mt-4 flex items-center gap-2.5 text-sm">
+          <input
+            type="checkbox"
+            name="shadeBirthday"
+            defaultChecked={person.shadeBirthday}
+            className="h-5 w-5 accent-[var(--color-accent)]"
+          />
+          Shade the whole day on the calendar for this birthday
+        </label>
       </Card>
 
       <Card className="p-5">

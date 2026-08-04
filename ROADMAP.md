@@ -226,8 +226,10 @@ all live in the database, never in this repository.
       prompt. Empty picker falls back to the owner, so older events are
       unchanged. Prompts remain per-person, per-occurrence.
 - [x] All-day events shade their whole day column in a light tint of their
-      colour, including birthdays; an Admin → Calendar switch turns the shading
-      on or off (v0.61.0)
+      colour, decided per event: a "Shade this day" box on the add-event form
+      and a per-person "shade this birthday" toggle. Several shaded events on one
+      day split the column into side-by-side colour bands (v0.62.0, replacing the
+      global switch from v0.61.0)
 - [x] Adding an event takes a duration (15 min–3 hr, or a custom end time), and
       a custom event type can carry a default length (e.g. hockey = 90 min) set
       in Admin → Calendar that fills in automatically when the type is picked

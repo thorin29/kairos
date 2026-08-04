@@ -79,6 +79,7 @@ type Prefill = {
   kind?: string;
   location?: string;
   allDay?: boolean;
+  shadeDay?: boolean;
 };
 const AddEventContext = createContext<{ openAt: (p?: Prefill) => void }>({
   openAt: () => {},
@@ -131,6 +132,7 @@ export function AddEventProvider({
           kindInit={prefill.kind}
           location={prefill.location}
           allDayInit={prefill.allDay}
+          shadeDayInit={prefill.shadeDay}
           onClose={() => setOpen(false)}
         />
       )}
@@ -167,6 +169,7 @@ function EventModal({
   kindInit,
   location,
   allDayInit,
+  shadeDayInit,
   onClose,
 }: {
   people: { id: string; name: string }[];
@@ -185,6 +188,7 @@ function EventModal({
   kindInit?: string;
   location?: string;
   allDayInit?: boolean;
+  shadeDayInit?: boolean;
   onClose: () => void;
 }) {
   const [allDay, setAllDay] = useState(allDayInit ?? false);
@@ -540,6 +544,18 @@ function EventModal({
             />
             All day
           </label>
+
+          {allDay && (
+            <label className="flex items-center gap-2.5 text-sm">
+              <input
+                type="checkbox"
+                name="shadeDay"
+                defaultChecked={shadeDayInit ?? true}
+                className="h-5 w-5 accent-[var(--color-accent)]"
+              />
+              Shade this day on the calendar
+            </label>
+          )}
 
           {state.error && (
             <p role="alert" className="text-sm font-medium text-red-700">
