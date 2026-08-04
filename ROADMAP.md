@@ -225,6 +225,12 @@ all live in the database, never in this repository.
       "who's going?" picker for sport types, and each participant gets their own
       prompt. Empty picker falls back to the owner, so older events are
       unchanged. Prompts remain per-person, per-occurrence.
+- [x] Calendar events are interactive: a tap highlights one; a long-press
+      (tablet) or right-click (desktop) opens an action menu. Two-finger scroll
+      frees a single finger to select, so the grid no longer scrolls under one
+      finger. The menu's actions are Copy (opens the add form pre-filled as a
+      duplicate to re-place) and Delete; an Edit entry is stubbed for the next
+      phase (v0.60.0)
 - [x] All-day Family events wash their whole day column in a light tint of the
       family colour — the pill still sits at the top in the all-day row, only
       the hours behind it are painted; birthdays don't trigger it. Same release

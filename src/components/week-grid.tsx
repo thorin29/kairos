@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import type { GridEvent } from "@/lib/queries/calendar";
 import { DAY_SHORT } from "@/lib/days";
 import { useAddEvent } from "@/app/calendar/add-event-form";
+import { EventMenu, type MenuItem } from "@/components/event-menu";
+import { eventCopyData, deleteEvent } from "@/lib/actions/events";
 
 const HOUR_PX = 56;
 
@@ -55,6 +57,122 @@ export function WeekGrid({
   const { openAt } = useAddEvent();
 
   const [nowMin, setNowMin] = useState<number | null>(null);
+
+  // Tap highlights an event; long-press (touch) or right-click (desktop) opens
+  // its action menu.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{ ev: GridEvent; x: number; y: number } | null>(
+    null,
+  );
+
+  // Two-finger scroll: native one-finger panning is switched off (touch-action
+  // none) and a two-finger drag moves the grid by hand, so a single finger is
+  // free to land on an event. Loses momentum flick, fine on a grid this short.
+  const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pan = useRef<{ startMid: number; startScroll: number } | null>(null);
+
+  // Long-press bookkeeping (touch only).
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pressMoved = useRef(false);
+
+  const cancelPress = () => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  };
+
+  const openMenu = (ev: GridEvent, x: number, y: number) => {
+    setSelectedId(ev.id);
+    setMenu({ ev, x, y });
+  };
+
+  const midY = () => {
+    const ps = [...pointers.current.values()];
+    if (ps.length === 0) return 0;
+    return ps.reduce((s, p) => s + p.y, 0) / ps.length;
+  };
+
+  const onScrollerDown = (e: React.PointerEvent) => {
+    if (e.pointerType !== "touch") return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 2) {
+      // A second finger means "scroll", not "act on an event".
+      cancelPress();
+      setSel(null);
+      dragging.current = false;
+      pan.current = {
+        startMid: midY(),
+        startScroll: scroller.current?.scrollTop ?? 0,
+      };
+    }
+  };
+
+  const onScrollerMove = (e: React.PointerEvent) => {
+    if (e.pointerType !== "touch") return;
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pan.current && pointers.current.size >= 2 && scroller.current) {
+      scroller.current.scrollTop =
+        pan.current.startScroll - (midY() - pan.current.startMid);
+      e.preventDefault();
+    }
+  };
+
+  const onScrollerUp = (e: React.PointerEvent) => {
+    if (e.pointerType !== "touch") return;
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pan.current = null;
+  };
+
+  // A tap on an event highlights it; a long hold opens its menu.
+  const onEventDown = (ev: GridEvent, e: React.PointerEvent) => {
+    if (e.pointerType !== "touch") return;
+    pressMoved.current = false;
+    pressStart.current = { x: e.clientX, y: e.clientY };
+    const gx = e.clientX;
+    const gy = e.clientY;
+    cancelPress();
+    pressTimer.current = setTimeout(() => {
+      if (!pressMoved.current && pointers.current.size < 2) openMenu(ev, gx, gy);
+    }, 500);
+  };
+
+  const onEventMove = (e: React.PointerEvent) => {
+    if (!pressTimer.current) return;
+    const dx = e.clientX - pressStart.current.x;
+    const dy = e.clientY - pressStart.current.y;
+    if (Math.hypot(dx, dy) > 10) {
+      pressMoved.current = true;
+      cancelPress();
+    }
+  };
+
+  const copyEvent = async (ev: GridEvent) => {
+    const data = await eventCopyData(ev.eventId);
+    if (!data) return;
+    // Default the duplicate to the day the copied occurrence sits on.
+    openAt({ ...data, date: ev.dayISO });
+  };
+
+  const removeEvent = async (ev: GridEvent) => {
+    const msg = ev.recurring
+      ? `Delete "${ev.title}" and every repeat of it?`
+      : `Delete "${ev.title}"?`;
+    if (!confirm(msg)) return;
+    const res = await deleteEvent(ev.eventId);
+    if (res.error) alert(res.error);
+  };
+
+  const menuItems = (ev: GridEvent): MenuItem[] => [
+    { label: "Edit", disabled: true, hint: "soon" },
+    { label: "Copy", onSelect: () => copyEvent(ev) },
+    { label: "Delete", danger: true, onSelect: () => removeEvent(ev) },
+  ];
+
+  const SELECTED_RING =
+    "0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-ink)";
 
   // Drag-to-select a time range (mouse/pen). Touch is left alone so the grid
   // still scrolls with a finger; a touch tap falls through to click-to-add.
@@ -178,6 +296,7 @@ export function WeekGrid({
       suppressClick.current = false;
       return;
     }
+    setSelectedId(null);
     const rect = e.currentTarget.getBoundingClientRect();
     const min = Math.round((((e.clientY - rect.top) / HOUR_PX) * 60) / 15) * 15;
     openAt({ date: iso, start: minutesToHHMM(min) });
@@ -186,12 +305,17 @@ export function WeekGrid({
   const nowY = nowMin != null ? (nowMin / 60) * HOUR_PX : null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+    <>
+      <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
       <div
         ref={scroller}
         onScroll={onScroll}
+        onPointerDown={onScrollerDown}
+        onPointerMove={onScrollerMove}
+        onPointerUp={onScrollerUp}
+        onPointerCancel={onScrollerUp}
         className="max-h-[36rem] overflow-y-auto"
-        style={{ scrollbarGutter: "stable" }}
+        style={{ scrollbarGutter: "stable", touchAction: "none" }}
       >
         {/* Frozen header. Same container, same width, so columns line up. */}
         <div className="sticky top-0 z-20 shadow-[0_1px_0_0_var(--color-ink)]">
@@ -330,21 +454,37 @@ export function WeekGrid({
                     18,
                   );
                   const width = 100 / lane.of;
+                  const selected = selectedId === e.id;
 
                   return (
                     <div
                       key={e.id}
-                      onClick={(ev) => ev.stopPropagation()}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setSelectedId(e.id);
+                      }}
+                      onContextMenu={(ev) => {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        openMenu(e, ev.clientX, ev.clientY);
+                      }}
+                      onPointerDown={(ev) => onEventDown(e, ev)}
+                      onPointerMove={onEventMove}
+                      onPointerUp={cancelPress}
+                      onPointerCancel={cancelPress}
                       title={`${e.title}\n${e.timeLabel}${
                         e.location ? `\n${e.location}` : ""
                       }\n${e.ownerName}`}
-                      className="absolute overflow-hidden rounded-md px-1.5 py-1 text-[0.7rem] leading-tight text-white shadow-sm"
+                      className={`absolute cursor-pointer overflow-hidden rounded-md px-1.5 py-1 text-[0.7rem] leading-tight text-white ${
+                        selected ? "z-[6]" : "shadow-sm"
+                      }`}
                       style={{
                         top,
                         height,
                         left: `calc(${lane.index * width}% + 2px)`,
                         width: `calc(${width}% - 4px)`,
                         backgroundColor: e.color,
+                        boxShadow: selected ? SELECTED_RING : undefined,
                       }}
                     >
                       <span className="block truncate font-medium">
@@ -382,6 +522,16 @@ export function WeekGrid({
         </div>
       </div>
     </div>
+
+      {menu && (
+        <EventMenu
+          x={menu.x}
+          y={menu.y}
+          items={menuItems(menu.ev)}
+          onClose={() => setMenu(null)}
+        />
+      )}
+    </>
   );
 }
 

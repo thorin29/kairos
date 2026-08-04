@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireInteractive } from "@/lib/gate";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { householdTz, toDateColumn, zonedToUtc } from "@/lib/dates";
+import { householdTz, localParts, toDateColumn, zonedToUtc } from "@/lib/dates";
 import { buildRule } from "@/lib/calendar/recur";
 import { isAdmin } from "@/lib/session";
 import { isHexColor } from "@/lib/palette";
@@ -221,6 +221,58 @@ export async function addEvent(
   revalidatePath("/");
   if (!isFamily) revalidatePath(`/person/${owner}`);
   return { error: null, saved: true };
+}
+
+export type EventCopyData = {
+  title: string;
+  userId: string;
+  kind: string;
+  location: string;
+  allDay: boolean;
+  start: string;
+  end: string;
+  date: string;
+};
+
+const hhmm = (min: number): string =>
+  `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+
+/**
+ * The fields needed to pre-fill the add-event form as a copy of an existing
+ * event. GridEvent doesn't carry the owner id or the event-type id, so a copy
+ * reads them off the base row here. Times come back as wall-clock in the
+ * household timezone; the caller supplies the day the copy should land on.
+ */
+export async function eventCopyData(id: string): Promise<EventCopyData | null> {
+  await requireInteractive();
+  const e = await prisma.event.findUnique({
+    where: { id },
+    select: {
+      title: true,
+      userId: true,
+      isFamily: true,
+      eventTypeId: true,
+      kind: true,
+      location: true,
+      allDay: true,
+      startsAt: true,
+      endsAt: true,
+    },
+  });
+  if (!e) return null;
+
+  const s = localParts(e.startsAt);
+  const en = localParts(e.endsAt);
+  return {
+    title: e.title,
+    userId: e.isFamily ? "family" : (e.userId ?? ""),
+    kind: e.eventTypeId ? `type:${e.eventTypeId}` : (e.kind as string),
+    location: e.location ?? "",
+    allDay: e.allDay,
+    start: hhmm(s.minutes),
+    end: hhmm(en.minutes),
+    date: s.iso,
+  };
 }
 
 export type DeleteState = { error: string | null };

@@ -42,7 +42,18 @@ function addHour(hhmm: string): string {
 
 // --- shared open mechanism ------------------------------------------------
 
-type Prefill = { date?: string; start?: string; end?: string };
+type Prefill = {
+  date?: string;
+  start?: string;
+  end?: string;
+  // Copy: seed the remaining fields from an existing event so the overlay opens
+  // as a duplicate the user can re-place.
+  title?: string;
+  userId?: string;
+  kind?: string;
+  location?: string;
+  allDay?: boolean;
+};
 const AddEventContext = createContext<{ openAt: (p?: Prefill) => void }>({
   openAt: () => {},
 });
@@ -83,6 +94,11 @@ export function AddEventProvider({
           date={prefill.date ?? defaultDate}
           start={prefill.start ?? "16:00"}
           end={prefill.end}
+          title={prefill.title}
+          userId={prefill.userId}
+          kindInit={prefill.kind}
+          location={prefill.location}
+          allDayInit={prefill.allDay}
           onClose={() => setOpen(false)}
         />
       )}
@@ -114,6 +130,11 @@ function EventModal({
   date,
   start,
   end,
+  title,
+  userId,
+  kindInit,
+  location,
+  allDayInit,
   onClose,
 }: {
   people: { id: string; name: string }[];
@@ -121,10 +142,15 @@ function EventModal({
   date: string;
   start: string;
   end?: string;
+  title?: string;
+  userId?: string;
+  kindInit?: string;
+  location?: string;
+  allDayInit?: boolean;
   onClose: () => void;
 }) {
-  const [allDay, setAllDay] = useState(false);
-  const [kind, setKind] = useState("APPOINTMENT");
+  const [allDay, setAllDay] = useState(allDayInit ?? false);
+  const [kind, setKind] = useState(kindInit ?? "APPOINTMENT");
   const [repeat, setRepeat] = useState("NONE");
   const [customFreq, setCustomFreq] = useState("WEEKLY");
 
@@ -191,6 +217,7 @@ function EventModal({
                 required
                 maxLength={120}
                 autoFocus
+                defaultValue={title ?? ""}
                 placeholder="Orthodontist, piano lesson, shift…"
                 className={field}
               />
@@ -200,7 +227,13 @@ function EventModal({
               <label htmlFor="ev-user" className="mb-1.5 block text-sm font-medium">
                 Whose
               </label>
-              <select id="ev-user" name="userId" required className={field}>
+              <select
+                id="ev-user"
+                name="userId"
+                required
+                defaultValue={userId ?? ""}
+                className={field}
+              >
                 <option value="">Choose</option>
                 <option value="family">Family (shared)</option>
                 {people.map((p) => (
@@ -290,6 +323,7 @@ function EventModal({
                 id="ev-location"
                 name="location"
                 maxLength={200}
+                defaultValue={location ?? ""}
                 placeholder="Optional"
                 className={field}
               />
