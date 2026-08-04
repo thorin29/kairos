@@ -204,8 +204,10 @@ all live in the database, never in this repository.
       For a repeating event you choose "this event only" (a detached override on
       that date) or "all events in the series"; single overrides render in place
       of the skipped occurrence and can themselves be re-edited or deleted
-      (v0.63.0). Not yet: changing the repeat pattern itself in the editor, and
-      "expire after N occurrences" on the add form
+      (v0.63.0). Not yet: changing the repeat pattern itself in the editor
+- [x] A repeating event can end after a number of occurrences, not only on a
+      date — the add form's "Ends" option offers Never / On a date / After N
+      times (v0.64.0)
 - [ ] Split events crossing midnight across both days
 - [x] Calendar add-event UX: pop-up overlay instead of a bottom form, opened
       from a + at the top; tap a day/time slot to prefill (v0.49.0)

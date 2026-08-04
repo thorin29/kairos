@@ -59,10 +59,14 @@ export function buildRule(
   freq: Recurrence["freq"],
   interval: number,
   until: string | null,
+  count: number | null = null,
 ): string {
   const parts = [`FREQ=${freq}`];
   if (interval > 1) parts.push(`INTERVAL=${interval}`);
+  // UNTIL and COUNT are mutually exclusive in iCalendar; callers pass at most
+  // one, and UNTIL wins if somehow both arrive.
   if (until) parts.push(`UNTIL=${until.replace(/-/g, "")}`);
+  else if (count && count > 0) parts.push(`COUNT=${count}`);
   return parts.join(";");
 }
 

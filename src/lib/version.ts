@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.63.0";
+export const APP_VERSION = "0.64.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -54,6 +54,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.64.0",
+    summary: [
+      "A repeating event can now end after a set number of times, not just on a date: the add-event form's \u201cEnds\u201d option offers Never, On a date, or After a number of times",
+    ],
+  },
   {
     version: "0.63.0",
     summary: [
