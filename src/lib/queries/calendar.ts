@@ -38,13 +38,20 @@ export type EventTypeRow = {
   name: string;
   color: string;
   sportWorkout: boolean;
+  defaultMinutes: number | null;
 };
 
 /** Admin-managed custom event types, in display order. */
 export async function loadEventTypes(): Promise<EventTypeRow[]> {
   const rows = await prisma.eventType.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, color: true, sportWorkout: true },
+    select: {
+      id: true,
+      name: true,
+      color: true,
+      sportWorkout: true,
+      defaultMinutes: true,
+    },
   });
   return rows as unknown as EventTypeRow[];
 }
@@ -120,8 +127,8 @@ async function birthdayEvents(
         timeLabel: "All day",
         allDay: true,
         color: familyColor,
-        // Birthdays are family-wide but not a "Family filter" event, so they
-        // don't wash the day column the way a shared all-day event does.
+        // Not a "Family filter" event, so isFamily stays false; the day-column
+        // wash keys off the BIRTHDAY kind instead, so birthdays still tint.
         isFamily: false,
         ownerName: who,
         kind: "BIRTHDAY",

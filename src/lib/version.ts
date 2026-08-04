@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.60.0";
+export const APP_VERSION = "0.61.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -46,11 +46,20 @@ export const MIGRATIONS = [
   "36_user_email",
   "37_sport_skip",
   "38_event_participant",
+  "39_event_duration",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.61.0",
+    summary: [
+      "Birthdays now shade their day too, and there's a new switch in Admin \u2192 Calendar to turn the all-day shading on or off \u2014 when on, any all-day event (a vacation, a birthday, a day off) tints its whole day column in a light wash of its colour",
+      "Adding an event now has a Duration picker (15 min up to 3 hours, or a custom end time) instead of only an end time",
+      "Custom event types can be given a default length in Admin \u2192 Calendar (e.g. hockey practice = 90 min), and picking that type when adding an event fills the duration in automatically",
+    ],
+  },
   {
     version: "0.60.0",
     summary: [

@@ -15,17 +15,24 @@ export function EventTypes({ types }: { types: EventTypeRow[] }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState<string>(FAMILY_PALETTE[2]);
   const [sport, setSport] = useState(false);
+  const [dur, setDur] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const add = () => {
     setError(null);
     start(async () => {
-      const res = await addEventType(name, color, sport);
+      const res = await addEventType(
+        name,
+        color,
+        sport,
+        dur ? Number(dur) : null,
+      );
       if (res.error) setError(res.error);
       else {
         setName("");
         setSport(false);
+        setDur("");
       }
     });
   };
@@ -57,6 +64,24 @@ export function EventTypes({ types }: { types: EventTypeRow[] }) {
               onChange={(e) => setColor(e.target.value)}
               aria-label="Type colour"
               className="h-10 w-14 cursor-pointer rounded-lg border border-hairline bg-surface p-1"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted">
+              Default length
+            </span>
+            <input
+              type="number"
+              min={5}
+              max={600}
+              step={5}
+              value={dur}
+              onChange={(e) => setDur(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && add()}
+              placeholder="mins"
+              aria-label="Default duration in minutes"
+              className="h-10 w-24 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
             />
           </label>
 
@@ -106,12 +131,21 @@ function TypeRow({ type }: { type: EventTypeRow }) {
   const [name, setName] = useState(type.name);
   const [color, setColor] = useState<string>(type.color);
   const [sport, setSport] = useState(type.sportWorkout);
+  const [dur, setDur] = useState(
+    type.defaultMinutes != null ? String(type.defaultMinutes) : "",
+  );
   const [error, setError] = useState<string | null>(null);
 
   const save = () => {
     setError(null);
     start(async () => {
-      const res = await updateEventType(type.id, name, color, sport);
+      const res = await updateEventType(
+        type.id,
+        name,
+        color,
+        sport,
+        dur ? Number(dur) : null,
+      );
       if (res.error) setError(res.error);
       else setEditing(false);
     });
@@ -144,6 +178,20 @@ function TypeRow({ type }: { type: EventTypeRow }) {
           />
           Counts as a sport workout
         </label>
+        <label className="flex w-full items-center gap-2 text-sm">
+          <span className="text-muted">Default length</span>
+          <input
+            type="number"
+            min={5}
+            max={600}
+            step={5}
+            value={dur}
+            onChange={(e) => setDur(e.target.value)}
+            placeholder="mins"
+            aria-label="Default duration in minutes"
+            className="h-9 w-24 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+          />
+        </label>
         <button
           type="button"
           onClick={save}
@@ -158,6 +206,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
             setName(type.name);
             setColor(type.color);
             setSport(type.sportWorkout);
+            setDur(type.defaultMinutes != null ? String(type.defaultMinutes) : "");
             setError(null);
             setEditing(false);
           }}
@@ -181,6 +230,11 @@ function TypeRow({ type }: { type: EventTypeRow }) {
         {type.sportWorkout && (
           <span className="ml-2 rounded-full bg-accent/10 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-accent">
             Sport
+          </span>
+        )}
+        {type.defaultMinutes != null && (
+          <span className="ml-2 rounded-full bg-shade px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-muted">
+            {type.defaultMinutes} min
           </span>
         )}
       </span>

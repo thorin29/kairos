@@ -12,20 +12,29 @@ import {
   setSetting,
   CAL_NOW_COLOR,
   CAL_RESET_SEC,
+  CAL_ALLDAY_WASH,
 } from "@/lib/settings";
 
 export type EventState = { error: string | null; saved: boolean };
+
+/** Clamp a default-duration input to a sane range, or null to leave it unset. */
+function normalizeMinutes(m: number | null): number | null {
+  if (m == null || !Number.isFinite(m) || m <= 0) return null;
+  return Math.max(5, Math.min(600, Math.round(m)));
+}
 
 /** Create a custom event type (admin). */
 export async function addEventType(
   name: string,
   color: string,
   sportWorkout = false,
+  defaultMinutes: number | null = null,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   const clean = name.trim().slice(0, 40);
   if (clean.length < 2) return { error: "Give the type a name." };
   if (!isHexColor(color)) return { error: "Pick a colour." };
+  const mins = normalizeMinutes(defaultMinutes);
 
   const exists = await prisma.eventType.findUnique({
     where: { name: clean },
@@ -35,7 +44,13 @@ export async function addEventType(
 
   const count = await prisma.eventType.count();
   await prisma.eventType.create({
-    data: { name: clean, color, sportWorkout, sortOrder: count },
+    data: {
+      name: clean,
+      color,
+      sportWorkout,
+      defaultMinutes: mins,
+      sortOrder: count,
+    },
   });
   revalidatePath("/calendar");
   revalidatePath("/admin/calendar");
@@ -46,12 +61,14 @@ export async function addEventType(
 export async function setCalendarPrefs(
   nowColor: string,
   scrollResetSec: number,
+  allDayWash: boolean,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   if (!isHexColor(nowColor)) return { error: "Pick a colour." };
   const sec = Math.max(0, Math.min(3600, Math.round(scrollResetSec)));
   await setSetting(CAL_NOW_COLOR, nowColor);
   await setSetting(CAL_RESET_SEC, String(sec));
+  await setSetting(CAL_ALLDAY_WASH, allDayWash ? "1" : "0");
   revalidatePath("/calendar");
   revalidatePath("/admin/calendar");
   return { error: null };
@@ -63,18 +80,23 @@ export async function updateEventType(
   name: string,
   color: string,
   sportWorkout = false,
+  defaultMinutes: number | null = null,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   const clean = name.trim().slice(0, 40);
   if (clean.length < 2) return { error: "Give the type a name." };
   if (!isHexColor(color)) return { error: "Pick a colour." };
+  const mins = normalizeMinutes(defaultMinutes);
   const clash = await prisma.eventType.findFirst({
     where: { name: clean, id: { not: id } },
     select: { id: true },
   });
   if (clash) return { error: "That name is taken." };
   await prisma.eventType
-    .update({ where: { id }, data: { name: clean, color, sportWorkout } })
+    .update({
+      where: { id },
+      data: { name: clean, color, sportWorkout, defaultMinutes: mins },
+    })
     .catch(() => {});
   revalidatePath("/calendar");
   revalidatePath("/admin/calendar");
