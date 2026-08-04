@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.57.0";
+export const APP_VERSION = "0.58.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -45,11 +45,20 @@ export const MIGRATIONS = [
   "35_accounts",
   "36_user_email",
   "37_sport_skip",
+  "38_event_participant",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.58.0",
+    summary: [
+      "A sport-workout event can now include several people: when the event type is a sport workout, the form shows a \"who's going?\" picker, and each person checked gets their own \"did you do it?\" prompt",
+      "Each person answers independently per occurrence \u2014 one completing and another declining never affect each other or future days",
+      "Leaving the picker empty keeps the old behaviour: just the person the event is for is asked",
+    ],
+  },
   {
     version: "0.57.0",
     summary: [

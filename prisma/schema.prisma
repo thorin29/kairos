@@ -63,6 +63,7 @@ model User {
   hiitWorkouts     HiitWorkout[]
   invites          Invite[]
   sportSkips       SportSkip[]
+  eventParticipations EventParticipant[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -203,6 +204,7 @@ model Event {
 
   task Task?
   sportSkips SportSkip[]
+  participants EventParticipant[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -406,6 +408,19 @@ model AppSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// A person attending an event beyond its owner. For sport-workout events this
+// is the set who each get a completion prompt; empty means "just the owner".
+model EventParticipant {
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId])
 }
 
 // A sport-workout calendar event's per-person, per-day "no". Its absence
