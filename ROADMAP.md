@@ -225,6 +225,11 @@ all live in the database, never in this repository.
       "who's going?" picker for sport types, and each participant gets their own
       prompt. Empty picker falls back to the owner, so older events are
       unchanged. Prompts remain per-person, per-occurrence.
+- [x] All-day Family events wash their whole day column in a light tint of the
+      family colour — the pill still sits at the top in the all-day row, only
+      the hours behind it are painted; birthdays don't trigger it. Same release
+      fixed the afternoon grid anchor, which silently never followed the clock
+      on load because it ran before the current time was known (v0.59.0)
 - [x] Custom event types — parents add named types (with a colour) from Admin →
       Calendar; the event form's "Type" lists them and events take the type
       colour (v0.43.0)
