@@ -80,7 +80,6 @@ export default async function AdminCalendarPage() {
         <DisplayPrefs
           nowColor={calPrefs.nowColor}
           resetSec={calPrefs.scrollResetSec}
-          allDayWash={calPrefs.allDayWash}
         />
       </div>
     </main>

@@ -23,25 +23,21 @@ const RESETS = [
 export function DisplayPrefs({
   nowColor,
   resetSec,
-  allDayWash,
 }: {
   nowColor: string;
   resetSec: number;
-  allDayWash: boolean;
 }) {
   const [color, setColor] = useState(nowColor);
   const [sec, setSec] = useState(resetSec);
-  const [wash, setWash] = useState(allDayWash);
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();
 
-  const save = (nextColor: string, nextSec: number, nextWash: boolean) => {
+  const save = (nextColor: string, nextSec: number) => {
     setColor(nextColor);
     setSec(nextSec);
-    setWash(nextWash);
     setSaved(false);
     start(async () => {
-      await setCalendarPrefs(nextColor, nextSec, nextWash);
+      await setCalendarPrefs(nextColor, nextSec);
       setSaved(true);
     });
   };
@@ -57,7 +53,7 @@ export function DisplayPrefs({
             <button
               key={c.value}
               type="button"
-              onClick={() => save(c.value, sec, wash)}
+              onClick={() => save(c.value, sec)}
               aria-label={c.label}
               aria-pressed={color.toLowerCase() === c.value}
               className={`h-9 w-9 rounded-full border transition-transform ${
@@ -80,7 +76,7 @@ export function DisplayPrefs({
             <button
               key={r.value}
               type="button"
-              onClick={() => save(color, r.value, wash)}
+              onClick={() => save(color, r.value)}
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                 sec === r.value
                   ? "border-accent bg-accent/10 text-accent"
@@ -95,27 +91,6 @@ export function DisplayPrefs({
           After you scroll the day or week grid, it eases back to the default
           view this long after you stop.
         </p>
-      </div>
-
-      <div className="mt-4 border-t border-hairline pt-4">
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={wash}
-            onChange={(e) => save(color, sec, e.target.checked)}
-            className="mt-0.5 h-5 w-5 accent-[var(--color-accent)]"
-          />
-          <span>
-            <span className="block text-sm font-medium">
-              Shade the day behind all-day events
-            </span>
-            <span className="mt-0.5 block text-xs text-muted">
-              An all-day event (a vacation, a birthday, a day off) tints its
-              whole day column in a light wash of its colour. The event still
-              sits at the top.
-            </span>
-          </span>
-        </label>
       </div>
 
       {pending && <p className="mt-3 text-sm text-muted">Saving…</p>}
