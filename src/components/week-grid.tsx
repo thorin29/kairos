@@ -54,7 +54,7 @@ export function WeekGrid({
   const scroller = useRef<HTMLDivElement>(null);
   const programmatic = useRef(false);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { openAt } = useAddEvent();
+  const { openAt, openEdit } = useAddEvent();
 
   const [nowMin, setNowMin] = useState<number | null>(null);
 
@@ -156,6 +156,19 @@ export function WeekGrid({
     openAt({ ...data, date: ev.dayISO });
   };
 
+  const editEvent = async (ev: GridEvent) => {
+    const data = await eventCopyData(ev.eventId);
+    if (!data) return;
+    openEdit(
+      { ...data, date: ev.dayISO },
+      {
+        eventId: ev.eventId,
+        occurrenceISO: ev.dayISO,
+        recurring: ev.recurring,
+      },
+    );
+  };
+
   const removeEvent = async (ev: GridEvent) => {
     const msg = ev.recurring
       ? `Delete "${ev.title}" and every repeat of it?`
@@ -165,11 +178,19 @@ export function WeekGrid({
     if (res.error) alert(res.error);
   };
 
-  const menuItems = (ev: GridEvent): MenuItem[] => [
-    { label: "Edit", disabled: true, hint: "soon" },
-    { label: "Copy", onSelect: () => copyEvent(ev) },
-    { label: "Delete", danger: true, onSelect: () => removeEvent(ev) },
-  ];
+  const menuItems = (ev: GridEvent): MenuItem[] => {
+    // Birthdays generated from a profile have no event row to act on.
+    if (!ev.eventId) {
+      return [{ label: "Edit on the profile", disabled: true, hint: "birthday" }];
+    }
+    return [
+      ev.external
+        ? { label: "Edit", disabled: true, hint: "subscribed" }
+        : { label: "Edit", onSelect: () => editEvent(ev) },
+      { label: "Copy", onSelect: () => copyEvent(ev) },
+      { label: "Delete", danger: true, onSelect: () => removeEvent(ev) },
+    ];
+  };
 
   const SELECTED_RING =
     "0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-ink)";

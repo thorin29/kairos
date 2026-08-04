@@ -246,6 +246,145 @@ export async function addEvent(
   return { error: null, saved: true };
 }
 
+export async function updateEvent(
+  _prev: EventState,
+  formData: FormData,
+): Promise<EventState> {
+  await requireInteractive();
+
+  const id = String(formData.get("eventId") ?? "");
+  const scope = String(formData.get("scope") ?? "series");
+  const occurrenceISO = String(formData.get("occurrenceISO") ?? "");
+
+  const target = await prisma.event.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      rrule: true,
+      externalCalendarId: true,
+      kind: true,
+      startsAt: true,
+    },
+  });
+  if (!target) return { error: "That event no longer exists.", saved: false };
+  if (target.externalCalendarId) {
+    return { error: "Subscribed events can't be edited here.", saved: false };
+  }
+
+  const recurring = Boolean(target.rrule);
+  const singleEdit = recurring && scope === "single";
+  const seriesEdit = recurring && scope === "series";
+
+  // Changing a whole series or a birthday reaches beyond the day in view.
+  if ((seriesEdit || target.kind === "BIRTHDAY") && !(await isAdmin())) {
+    return {
+      error: "Only a parent can edit a repeating event or a birthday.",
+      saved: false,
+    };
+  }
+
+  const owner = String(formData.get("userId") ?? "");
+  const isFamily = owner === "family";
+  const title = String(formData.get("title") ?? "").trim().slice(0, 120);
+  const rawKind = String(formData.get("kind") ?? "");
+  const formDate = String(formData.get("date") ?? "");
+  const start = String(formData.get("start") ?? "");
+  const end = String(formData.get("end") ?? "");
+  const allDay = formData.get("allDay") === "on";
+  const shadeDay = allDay ? formData.get("shadeDay") === "on" : true;
+  const location = String(formData.get("location") ?? "").trim().slice(0, 200);
+
+  if (!owner) return { error: "Pick whose event this is.", saved: false };
+  if (title.length < 2) return { error: "Give the event a name.", saved: false };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(formDate)) {
+    return { error: "Pick a date.", saved: false };
+  }
+
+  const kind = (KINDS as readonly string[]).includes(rawKind)
+    ? (rawKind as EventKind)
+    : EventKind.OTHER;
+
+  const rawTypeId = String(formData.get("eventTypeId") ?? "").trim();
+  let eventTypeId: string | null = null;
+  if (rawTypeId) {
+    const t = await prisma.eventType.findUnique({
+      where: { id: rawTypeId },
+      select: { id: true },
+    });
+    eventTypeId = t?.id ?? null;
+  }
+
+  // A whole-series edit keeps the series anchored to its original start date and
+  // only changes the time of day; single and one-off edits use the form's date.
+  const dateForRow = seriesEdit ? localParts(target.startsAt).iso : formDate;
+
+  let startsAt: Date;
+  let endsAt: Date;
+  if (allDay) {
+    startsAt = toDateColumn(dateForRow);
+    endsAt = new Date(startsAt.getTime() + 86_400_000);
+  } else {
+    if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) {
+      return { error: "Set a start and end time.", saved: false };
+    }
+    const tz = householdTz();
+    const [y, mo, d] = dateForRow.split("-").map(Number);
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    startsAt = zonedToUtc(y, mo, d, sh, sm, 0, tz);
+    endsAt = zonedToUtc(y, mo, d, eh, em, 0, tz);
+    if (endsAt <= startsAt) {
+      return { error: "The end time is before the start.", saved: false };
+    }
+  }
+
+  const fields = {
+    userId: isFamily ? null : owner,
+    isFamily,
+    kind,
+    eventTypeId,
+    title,
+    location: location || null,
+    startsAt,
+    endsAt,
+    allDay,
+    shadeDay,
+  };
+
+  if (singleEdit) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(occurrenceISO)) {
+      return { error: "Couldn't tell which occurrence to edit.", saved: false };
+    }
+    const overrideDate = toDateColumn(occurrenceISO);
+    // Re-editing the same occurrence updates its existing override.
+    const existing = await prisma.event.findFirst({
+      where: { recurrenceId: id, recurrenceDate: overrideDate },
+      select: { id: true },
+    });
+    if (existing) {
+      await prisma.event.update({ where: { id: existing.id }, data: fields });
+    } else {
+      await prisma.event.create({
+        data: {
+          ...fields,
+          rrule: null,
+          recurrenceId: id,
+          recurrenceDate: overrideDate,
+        },
+      });
+    }
+  } else {
+    // Series or non-recurring: update in place, leaving any recurrence rule and
+    // the guest list untouched.
+    await prisma.event.update({ where: { id }, data: fields });
+  }
+
+  revalidatePath("/calendar");
+  revalidatePath("/");
+  if (!isFamily) revalidatePath(`/person/${owner}`);
+  return { error: null, saved: true };
+}
+
 export type EventCopyData = {
   title: string;
   userId: string;
@@ -324,6 +463,11 @@ export async function deleteEvent(id: string): Promise<DeleteState> {
     }
   }
 
+  // A single-occurrence edit leaves detached child overrides; clear them so a
+  // deleted series doesn't leave orphaned one-offs behind.
+  if (event.rrule) {
+    await prisma.event.deleteMany({ where: { recurrenceId: id } });
+  }
   await prisma.event.delete({ where: { id } });
 
   revalidatePath("/calendar");

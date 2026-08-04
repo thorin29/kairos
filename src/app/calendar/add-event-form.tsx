@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { addEvent, type EventState } from "@/lib/actions/events";
+import { addEvent, updateEvent, type EventState } from "@/lib/actions/events";
 import { PlusIcon } from "@/components/icons";
 
 const initial: EventState = { error: null, saved: false };
@@ -81,8 +81,18 @@ type Prefill = {
   allDay?: boolean;
   shadeDay?: boolean;
 };
-const AddEventContext = createContext<{ openAt: (p?: Prefill) => void }>({
+export type EditTarget = {
+  eventId: string;
+  occurrenceISO: string;
+  recurring: boolean;
+};
+
+const AddEventContext = createContext<{
+  openAt: (p?: Prefill) => void;
+  openEdit: (p: Prefill, target: EditTarget) => void;
+}>({
   openAt: () => {},
+  openEdit: () => {},
 });
 
 export function useAddEvent() {
@@ -108,22 +118,32 @@ export function AddEventProvider({
 }) {
   const [open, setOpen] = useState(false);
   const [prefill, setPrefill] = useState<Prefill>({});
+  const [editing, setEditing] = useState<EditTarget | null>(null);
   const [openId, setOpenId] = useState(0);
 
   const openAt = (p?: Prefill) => {
     setPrefill(p ?? {});
+    setEditing(null);
+    setOpenId((n) => n + 1);
+    setOpen(true);
+  };
+
+  const openEdit = (p: Prefill, target: EditTarget) => {
+    setPrefill(p);
+    setEditing(target);
     setOpenId((n) => n + 1);
     setOpen(true);
   };
 
   return (
-    <AddEventContext.Provider value={{ openAt }}>
+    <AddEventContext.Provider value={{ openAt, openEdit }}>
       {children}
       {open && (
         <EventModal
           key={openId}
           people={people}
           types={types}
+          editing={editing}
           date={prefill.date ?? defaultDate}
           start={prefill.start ?? "16:00"}
           end={prefill.end}
@@ -161,6 +181,7 @@ export function AddEventButton() {
 function EventModal({
   people,
   types,
+  editing,
   date,
   start,
   end,
@@ -180,6 +201,7 @@ function EventModal({
     sportWorkout: boolean;
     defaultMinutes: number | null;
   }[];
+  editing?: EditTarget | null;
   date: string;
   start: string;
   end?: string;
@@ -195,6 +217,9 @@ function EventModal({
   const [kind, setKind] = useState(kindInit ?? "APPOINTMENT");
   const [repeat, setRepeat] = useState("NONE");
   const [customFreq, setCustomFreq] = useState("WEEKLY");
+  // For a recurring event, an edit applies to just this occurrence or the
+  // whole series. Default to the single occurrence — the safer, smaller change.
+  const [scope, setScope] = useState<"single" | "series">("single");
 
   const [startTime, setStartTime] = useState(start);
   const [endTime, setEndTime] = useState(end ?? addHour(start));
@@ -239,7 +264,10 @@ function EventModal({
       ?.sportWorkout ?? false;
   const effectiveRepeat = repeat === "CUSTOM" ? customFreq : repeat;
 
-  const [state, formAction, pending] = useActionState(addEvent, initial);
+  const [state, formAction, pending] = useActionState(
+    editing ? updateEvent : addEvent,
+    initial,
+  );
 
   // Close once the server confirms the save.
   useEffect(() => {
@@ -263,7 +291,9 @@ function EventModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold">Add event</h2>
+          <h2 className="font-display text-lg font-semibold">
+            {editing ? "Edit event" : "Add event"}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -460,13 +490,15 @@ function EventModal({
             )}
           </div>
 
-          <input type="hidden" name="repeat" value={effectiveRepeat} />
+          {!editing && (
+            <>
+              <input type="hidden" name="repeat" value={effectiveRepeat} />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="ev-repeat" className="mb-1.5 block text-sm font-medium">
-                Repeats
-              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="ev-repeat" className="mb-1.5 block text-sm font-medium">
+                    Repeats
+                  </label>
               <select
                 id="ev-repeat"
                 value={repeat}
@@ -532,7 +564,58 @@ function EventModal({
                 </div>
               </>
             )}
-          </div>
+              </div>
+            </>
+          )}
+
+          {editing && (
+            <>
+              <input type="hidden" name="eventId" value={editing.eventId} />
+              <input
+                type="hidden"
+                name="occurrenceISO"
+                value={editing.occurrenceISO}
+              />
+              <input
+                type="hidden"
+                name="scope"
+                value={editing.recurring ? scope : "series"}
+              />
+              {editing.recurring && (
+                <div className="rounded-xl border border-hairline p-3">
+                  <p className="mb-2 text-sm font-medium">Apply changes to</p>
+                  <div className="flex flex-col gap-2 text-sm">
+                    <label className="flex items-center gap-2.5">
+                      <input
+                        type="radio"
+                        name="scopeChoice"
+                        checked={scope === "single"}
+                        onChange={() => setScope("single")}
+                        className="h-4 w-4 accent-[var(--color-accent)]"
+                      />
+                      This event only
+                    </label>
+                    <label className="flex items-center gap-2.5">
+                      <input
+                        type="radio"
+                        name="scopeChoice"
+                        checked={scope === "series"}
+                        onChange={() => setScope("series")}
+                        className="h-4 w-4 accent-[var(--color-accent)]"
+                      />
+                      All events in the series
+                    </label>
+                  </div>
+                  {scope === "series" && (
+                    <p className="mt-2 text-xs text-muted">
+                      Series edits keep each occurrence on its own date and change
+                      the time and details.
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
           <label className="flex items-center gap-2.5 text-sm">
             <input
@@ -569,7 +652,13 @@ function EventModal({
               disabled={pending}
               className="inline-flex h-11 items-center rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
             >
-              {pending ? "Adding\u2026" : "Add event"}
+              {pending
+                ? editing
+                  ? "Saving\u2026"
+                  : "Adding\u2026"
+                : editing
+                  ? "Save changes"
+                  : "Add event"}
             </button>
             <button
               type="button"
