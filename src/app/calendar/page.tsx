@@ -215,6 +215,7 @@ export default async function CalendarPage({
           todayISO={today}
           nowColor={calPrefs.nowColor}
           resetSec={calPrefs.scrollResetSec}
+          washAllDay={calPrefs.allDayWash}
         />
       )}
 
@@ -225,6 +226,7 @@ export default async function CalendarPage({
           todayISO={today}
           nowColor={calPrefs.nowColor}
           resetSec={calPrefs.scrollResetSec}
+          washAllDay={calPrefs.allDayWash}
         />
       )}
 
@@ -274,12 +276,14 @@ function DayPanel({
   todayISO,
   nowColor,
   resetSec,
+  washAllDay,
 }: {
   date: string;
   range: { timed: GridEvent[]; allDay: GridEvent[] };
   todayISO: string;
   nowColor: string;
   resetSec: number;
+  washAllDay: boolean;
 }) {
   return (
     <WeekGrid
@@ -289,6 +293,7 @@ function DayPanel({
       todayISO={todayISO}
       nowColor={nowColor}
       resetSec={resetSec}
+      washAllDay={washAllDay}
     />
   );
 }

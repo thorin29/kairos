@@ -40,6 +40,32 @@ function addHour(hhmm: string): string {
   return `${String(nh).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
 }
 
+const DURATIONS = [15, 30, 45, 60, 90, 120, 150, 180];
+
+function addMinutes(hhmm: string, min: number): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  if (!Number.isFinite(h)) return hhmm;
+  const total = ((h * 60 + m + min) % 1440 + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(
+    total % 60,
+  ).padStart(2, "0")}`;
+}
+
+function minutesBetween(a: string, b: string): number {
+  const [ah, am] = a.split(":").map(Number);
+  const [bh, bm] = b.split(":").map(Number);
+  if (![ah, am, bh, bm].every(Number.isFinite)) return 60;
+  return (bh * 60 + bm - (ah * 60 + am) + 1440) % 1440;
+}
+
+function fmtDuration(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} hr`;
+  return `${h} hr ${m} min`;
+}
+
 // --- shared open mechanism ------------------------------------------------
 
 type Prefill = {
@@ -69,7 +95,13 @@ export function AddEventProvider({
   children,
 }: {
   people: { id: string; name: string }[];
-  types: { id: string; name: string; color: string; sportWorkout: boolean }[];
+  types: {
+    id: string;
+    name: string;
+    color: string;
+    sportWorkout: boolean;
+    defaultMinutes: number | null;
+  }[];
   defaultDate: string;
   children: React.ReactNode;
 }) {
@@ -138,7 +170,13 @@ function EventModal({
   onClose,
 }: {
   people: { id: string; name: string }[];
-  types: { id: string; name: string; color: string; sportWorkout: boolean }[];
+  types: {
+    id: string;
+    name: string;
+    color: string;
+    sportWorkout: boolean;
+    defaultMinutes: number | null;
+  }[];
   date: string;
   start: string;
   end?: string;
@@ -154,11 +192,38 @@ function EventModal({
   const [repeat, setRepeat] = useState("NONE");
   const [customFreq, setCustomFreq] = useState("WEEKLY");
 
+  const [startTime, setStartTime] = useState(start);
+  const [endTime, setEndTime] = useState(end ?? addHour(start));
+  // Duration drives the end time via presets; "custom" hands control back to a
+  // plain end-time field (also how a copied event with an odd length shows up).
+  const [durMin, setDurMin] = useState<number | "custom">(() => {
+    const d = minutesBetween(start, end ?? addHour(start));
+    return DURATIONS.includes(d) ? d : "custom";
+  });
+
+  const applyDuration = (m: number | "custom") => {
+    setDurMin(m);
+    if (m !== "custom") setEndTime(addMinutes(startTime, m));
+  };
+
+  const onStartChange = (v: string) => {
+    setStartTime(v);
+    if (durMin !== "custom") setEndTime(addMinutes(v, durMin));
+  };
+
   const chooseKind = (value: string) => {
     setKind(value);
     if (value === "BIRTHDAY") {
       setAllDay(true);
       setRepeat("YEARLY");
+    }
+    if (value.startsWith("type:")) {
+      const t = types.find((x) => `type:${x.id}` === value);
+      if (t?.defaultMinutes) {
+        const m = t.defaultMinutes;
+        setDurMin(DURATIONS.includes(m) ? m : "custom");
+        setEndTime(addMinutes(startTime, m));
+      }
     }
   };
 
@@ -339,22 +404,54 @@ function EventModal({
                     id="ev-start"
                     name="start"
                     type="time"
-                    defaultValue={start}
+                    value={startTime}
+                    onChange={(e) => onStartChange(e.target.value)}
                     className={`tabular ${field}`}
                   />
                 </div>
                 <div>
-                  <label htmlFor="ev-end" className="mb-1.5 block text-sm font-medium">
-                    Ends
+                  <label htmlFor="ev-duration" className="mb-1.5 block text-sm font-medium">
+                    Duration
                   </label>
-                  <input
-                    id="ev-end"
-                    name="end"
-                    type="time"
-                    defaultValue={end ?? addHour(start)}
-                    className={`tabular ${field}`}
-                  />
+                  <select
+                    id="ev-duration"
+                    value={String(durMin)}
+                    onChange={(e) =>
+                      applyDuration(
+                        e.target.value === "custom"
+                          ? "custom"
+                          : Number(e.target.value),
+                      )
+                    }
+                    className={field}
+                  >
+                    {DURATIONS.map((m) => (
+                      <option key={m} value={m}>
+                        {fmtDuration(m)}
+                      </option>
+                    ))}
+                    <option value="custom">Custom end time…</option>
+                  </select>
                 </div>
+
+                {durMin === "custom" && (
+                  <div>
+                    <label htmlFor="ev-end" className="mb-1.5 block text-sm font-medium">
+                      Ends
+                    </label>
+                    <input
+                      id="ev-end"
+                      name="end"
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className={`tabular ${field}`}
+                    />
+                  </div>
+                )}
+                {durMin !== "custom" && (
+                  <input type="hidden" name="end" value={endTime} />
+                )}
               </>
             )}
           </div>

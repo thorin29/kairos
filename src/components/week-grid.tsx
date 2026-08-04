@@ -41,6 +41,7 @@ export function WeekGrid({
   selectedDay,
   nowColor = "#ef4444",
   resetSec = 60,
+  washAllDay = true,
 }: {
   days: string[];
   timed: GridEvent[];
@@ -50,6 +51,7 @@ export function WeekGrid({
   selectedDay?: string | null;
   nowColor?: string;
   resetSec?: number;
+  washAllDay?: boolean;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const programmatic = useRef(false);
@@ -402,15 +404,18 @@ export function WeekGrid({
           {days.map((iso) => {
             const events = byDay(iso);
             const lanes = assignLanes(events);
-            // A shared all-day event (a vacation, say) washes its whole day
-            // column in a light tint of the family colour. The event pill still
-            // sits at the top in the all-day row; this only paints behind the
-            // hours. color-mix keeps it robust to any custom hex.
-            const familyAllDay = allDay.find(
-              (e) => e.dayISO === iso && e.isFamily,
-            );
-            const wash = familyAllDay
-              ? `color-mix(in srgb, ${familyAllDay.color} 12%, transparent)`
+            // Any all-day event washes its day column in a light tint when the
+            // admin has the feature on. A shared/vacation or birthday event
+            // (family colour) wins the tint; otherwise the first all-day event's
+            // own colour is used.
+            const dayAllDay = washAllDay
+              ? allDay.filter((e) => e.dayISO === iso)
+              : [];
+            const washEv =
+              dayAllDay.find((e) => e.isFamily || e.kind === "BIRTHDAY") ??
+              dayAllDay[0];
+            const wash = washEv
+              ? `color-mix(in srgb, ${washEv.color} 12%, transparent)`
               : undefined;
 
             return (
