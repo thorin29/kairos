@@ -201,7 +201,10 @@ model Event {
 
   // RFC 5545 RRULE for repeating classes and shifts.
   rrule       String?
-  recurrenceId String? // instance of a series, for single-occurrence edits
+  recurrenceId String? // parent series id, for single-occurrence edits
+  // The original occurrence date this override replaces, so the parent series
+  // skips that date. The child's own startsAt may differ (a moved occurrence).
+  recurrenceDate DateTime? @db.Date
 
   externalCalendarId String?
   externalCalendar   ExternalCalendar? @relation(fields: [externalCalendarId], references: [id], onDelete: Cascade)

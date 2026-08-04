@@ -209,6 +209,26 @@ export async function loadRange(
 
   const tz = householdTz();
 
+  // Single-occurrence edits detach a child event marked with the original date
+  // it overrides. Gather those dates per parent so the series skips them; the
+  // child itself renders as an ordinary event (fetched above by overlap), even
+  // if it was moved to a different day.
+  const overrideRows = await prisma.event.findMany({
+    where: {
+      recurrenceId: { not: null },
+      recurrenceDate: { not: null, gte: rangeStart, lt: rangeEnd },
+    },
+    select: { recurrenceId: true, recurrenceDate: true },
+  });
+  const skipDates = new Map<string, Set<string>>();
+  for (const r of overrideRows) {
+    if (!r.recurrenceId || !r.recurrenceDate) continue;
+    const iso = fromDateColumn(r.recurrenceDate);
+    const set = skipDates.get(r.recurrenceId) ?? new Set<string>();
+    set.add(iso);
+    skipDates.set(r.recurrenceId, set);
+  }
+
   for (const e of events) {
     // A repeating event contributes one entry per occurrence in range;
     // everything else contributes itself.
@@ -223,9 +243,13 @@ export async function loadRange(
           )
         : [e.startsAt];
 
+    const skip = e.rrule ? skipDates.get(e.id) : undefined;
+
     const durationMs = e.endsAt.getTime() - e.startsAt.getTime();
 
     for (const occurrenceStart of starts) {
+      // Occurrence replaced by a single-occurrence edit — the child renders it.
+      if (skip && skip.has(localParts(occurrenceStart).iso)) continue;
       addOccurrence(e, occurrenceStart, durationMs);
     }
   }

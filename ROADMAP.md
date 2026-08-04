@@ -200,7 +200,12 @@ all live in the database, never in this repository.
 - [x] Selected day shows tasks on the left and schedule on the right
 - [x] Deletion rules: parents only for repeating events and birthdays
 - [ ] Expand recurrence rules from subscribed feeds
-- [ ] Edit an existing event
+- [x] Edit an existing event — from the event menu (long-press / right-click).
+      For a repeating event you choose "this event only" (a detached override on
+      that date) or "all events in the series"; single overrides render in place
+      of the skipped occurrence and can themselves be re-edited or deleted
+      (v0.63.0). Not yet: changing the repeat pattern itself in the editor, and
+      "expire after N occurrences" on the add form
 - [ ] Split events crossing midnight across both days
 - [x] Calendar add-event UX: pop-up overlay instead of a bottom form, opened
       from a + at the top; tap a day/time slot to prefill (v0.49.0)
