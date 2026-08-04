@@ -217,6 +217,7 @@ function EventModal({
   const [kind, setKind] = useState(kindInit ?? "APPOINTMENT");
   const [repeat, setRepeat] = useState("NONE");
   const [customFreq, setCustomFreq] = useState("WEEKLY");
+  const [endMode, setEndMode] = useState<"never" | "until" | "count">("never");
   // For a recurring event, an edit applies to just this occurrence or the
   // whole series. Default to the single occurrence — the safer, smaller change.
   const [scope, setScope] = useState<"single" | "series">("single");
@@ -513,22 +514,46 @@ function EventModal({
               </select>
             </div>
 
-            {repeat !== "NONE" && (
-              <div>
-                <label htmlFor="ev-until" className="mb-1.5 block text-sm font-medium">
-                  Repeat until
-                </label>
-                <input
-                  id="ev-until"
-                  name="until"
-                  type="date"
-                  className={`tabular ${field}`}
-                />
-                <p className="mt-1.5 text-xs text-muted">
-                  Leave empty to repeat indefinitely.
-                </p>
-              </div>
-            )}
+                {repeat !== "NONE" && (
+                  <div>
+                    <label htmlFor="ev-endmode" className="mb-1.5 block text-sm font-medium">
+                      Ends
+                    </label>
+                    <select
+                      id="ev-endmode"
+                      value={endMode}
+                      onChange={(e) =>
+                        setEndMode(e.target.value as "never" | "until" | "count")
+                      }
+                      className={field}
+                    >
+                      <option value="never">Never</option>
+                      <option value="until">On a date</option>
+                      <option value="count">After a number of times</option>
+                    </select>
+                    {endMode === "until" && (
+                      <input
+                        id="ev-until"
+                        name="until"
+                        type="date"
+                        aria-label="Repeat until date"
+                        className={`tabular ${field} mt-2`}
+                      />
+                    )}
+                    {endMode === "count" && (
+                      <input
+                        name="count"
+                        type="number"
+                        min={1}
+                        max={999}
+                        defaultValue={10}
+                        aria-label="Number of occurrences"
+                        placeholder="times"
+                        className={`tabular ${field} mt-2`}
+                      />
+                    )}
+                  </div>
+                )}
 
             {repeat === "CUSTOM" && (
               <>

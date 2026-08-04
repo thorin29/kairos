@@ -143,6 +143,7 @@ export async function addEvent(
   const repeat = String(formData.get("repeat") ?? "NONE");
   const interval = Number(formData.get("interval") ?? 1);
   const until = String(formData.get("until") ?? "").trim();
+  const count = Number(formData.get("count") ?? 0);
 
   if (!owner) return { error: "Pick whose event this is.", saved: false };
   if (title.length < 2) return { error: "Give the event a name.", saved: false };
@@ -199,10 +200,14 @@ export async function addEvent(
     if (until && until < date) {
       return { error: "The repeat ends before it starts.", saved: false };
     }
+    if (count && (!Number.isInteger(count) || count < 1 || count > 999)) {
+      return { error: "Repeat 1 to 999 times.", saved: false };
+    }
     rrule = buildRule(
       repeat as "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY",
       interval,
       until || null,
+      count > 0 ? count : null,
     );
   }
 
