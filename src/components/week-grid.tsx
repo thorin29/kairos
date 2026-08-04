@@ -143,11 +143,20 @@ export function WeekGrid({
     window.setTimeout(() => (programmatic.current = false), smooth ? 800 : 60);
   };
 
-  // Anchor on mount and whenever the day's events change.
+  // The afternoon-follow anchor reads the clock, but nowMin is null on the
+  // first render (a separate effect sets it just after mount). Anchoring only
+  // on [timed] therefore always took the morning branch and never followed the
+  // clock. Gate the first anchor on the clock being known — or anchor at once
+  // when today isn't in view, where the clock is irrelevant — and re-anchor
+  // when the events change. clockReady flips false→true exactly once, so the
+  // per-minute nowMin ticks don't re-anchor and yank a manual scroll back.
+  const clockReady = !todayInView || nowMin != null;
+
   useEffect(() => {
+    if (!clockReady) return;
     scrollToAnchor(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timed]);
+  }, [timed, clockReady]);
 
   const onScroll = () => {
     if (programmatic.current || resetSec <= 0) return;
@@ -269,6 +278,16 @@ export function WeekGrid({
           {days.map((iso) => {
             const events = byDay(iso);
             const lanes = assignLanes(events);
+            // A shared all-day event (a vacation, say) washes its whole day
+            // column in a light tint of the family colour. The event pill still
+            // sits at the top in the all-day row; this only paints behind the
+            // hours. color-mix keeps it robust to any custom hex.
+            const familyAllDay = allDay.find(
+              (e) => e.dayISO === iso && e.isFamily,
+            );
+            const wash = familyAllDay
+              ? `color-mix(in srgb, ${familyAllDay.color} 12%, transparent)`
+              : undefined;
 
             return (
               <div
@@ -278,8 +297,9 @@ export function WeekGrid({
                 onPointerMove={(e) => onColMove(iso, e)}
                 onPointerUp={(e) => onColUp(iso, e)}
                 title="Tap to add an event, or drag to pick a time range"
+                style={wash ? { backgroundColor: wash } : undefined}
                 className={`relative cursor-pointer select-none border-l border-hairline ${
-                  selectedDay === iso ? "bg-accent/5" : ""
+                  selectedDay === iso && !wash ? "bg-accent/5" : ""
                 }`}
               >
                 {Array.from({ length: 24 }, (_, h) => (

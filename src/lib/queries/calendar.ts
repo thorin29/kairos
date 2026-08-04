@@ -16,6 +16,8 @@ export type GridEvent = {
   timeLabel: string;
   allDay: boolean;
   color: string;
+  /** True for shared "Family" events (not per-person, not birthdays). */
+  isFamily: boolean;
   ownerName: string;
   kind: string;
   calendarName: string | null;
@@ -118,6 +120,9 @@ async function birthdayEvents(
         timeLabel: "All day",
         allDay: true,
         color: familyColor,
+        // Birthdays are family-wide but not a "Family filter" event, so they
+        // don't wash the day column the way a shared all-day event does.
+        isFamily: false,
         ownerName: who,
         kind: "BIRTHDAY",
         calendarName: null,
@@ -242,6 +247,7 @@ export async function loadRange(
       title: e.title,
       location: e.location,
       color,
+      isFamily: e.isFamily,
       ownerName: e.isFamily
         ? "Family"
         : (e.user?.displayName ?? e.user?.name ?? "Family"),
