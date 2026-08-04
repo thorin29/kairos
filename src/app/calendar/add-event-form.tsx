@@ -58,7 +58,7 @@ export function AddEventProvider({
   children,
 }: {
   people: { id: string; name: string }[];
-  types: { id: string; name: string; color: string }[];
+  types: { id: string; name: string; color: string; sportWorkout: boolean }[];
   defaultDate: string;
   children: React.ReactNode;
 }) {
@@ -117,7 +117,7 @@ function EventModal({
   onClose,
 }: {
   people: { id: string; name: string }[];
-  types: { id: string; name: string; color: string }[];
+  types: { id: string; name: string; color: string; sportWorkout: boolean }[];
   date: string;
   start: string;
   end?: string;
@@ -139,6 +139,9 @@ function EventModal({
   const isCustomType = kind.startsWith("type:");
   const kindForSubmit = isCustomType ? "OTHER" : kind;
   const eventTypeId = isCustomType ? kind.slice(5) : "";
+  const isSport =
+    (eventTypeId ? types.find((t) => t.id === eventTypeId) : undefined)
+      ?.sportWorkout ?? false;
   const effectiveRepeat = repeat === "CUSTOM" ? customFreq : repeat;
 
   const [state, formAction, pending] = useActionState(addEvent, initial);
@@ -236,6 +239,34 @@ function EventModal({
               <input type="hidden" name="kind" value={kindForSubmit} />
               <input type="hidden" name="eventTypeId" value={eventTypeId} />
             </div>
+
+            {isSport && (
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-sm font-medium">
+                  Who&rsquo;s going?
+                </label>
+                <p className="mb-2 text-xs text-muted">
+                  Everyone checked gets asked if they did it. Leave empty to just
+                  ask whoever it&rsquo;s for.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {people.map((p) => (
+                    <label
+                      key={p.id}
+                      className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-hairline px-3 py-1.5 text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10"
+                    >
+                      <input
+                        type="checkbox"
+                        name="participants"
+                        value={p.id}
+                        className="h-4 w-4"
+                      />
+                      {p.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <label htmlFor="ev-date" className="mb-1.5 block text-sm font-medium">

@@ -184,7 +184,7 @@ export async function addEvent(
     );
   }
 
-  await prisma.event.create({
+  const created = await prisma.event.create({
     data: {
       userId: isFamily ? null : owner,
       isFamily,
@@ -197,7 +197,25 @@ export async function addEvent(
       allDay,
       rrule,
     },
+    select: { id: true },
   });
+
+  // People attending (beyond the owner) — for a sport event these each get a
+  // completion prompt. Ignore "family" and the empty owner sentinel.
+  const participantIds = [
+    ...new Set(
+      formData
+        .getAll("participants")
+        .map(String)
+        .filter((id) => id && id !== "family"),
+    ),
+  ];
+  if (participantIds.length) {
+    await prisma.eventParticipant.createMany({
+      data: participantIds.map((userId) => ({ eventId: created.id, userId })),
+      skipDuplicates: true,
+    });
+  }
 
   revalidatePath("/calendar");
   revalidatePath("/");

@@ -220,9 +220,11 @@ all live in the database, never in this repository.
       do it?"). Yes logs the SPORT session; No is a per-person, per-occurrence
       SportSkip so it never nags again or touches another person/day. Recurrence
       is handled by keying on the occurrence date.
-- [ ] Sport-event completion, part 2: let an event carry multiple people (an
-      event↔user join + multi-select in the event form), each getting their own
-      prompt. The prompt derivation already keys per person, so this is additive.
+- [x] Sport-event completion, part 2 (v0.58.0): a sport-workout event can carry
+      multiple people via an EventParticipant join; the event form shows a
+      "who's going?" picker for sport types, and each participant gets their own
+      prompt. Empty picker falls back to the owner, so older events are
+      unchanged. Prompts remain per-person, per-occurrence.
 - [x] Custom event types — parents add named types (with a colour) from Admin →
       Calendar; the event form's "Type" lists them and events take the type
       colour (v0.43.0)

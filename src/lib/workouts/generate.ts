@@ -149,10 +149,16 @@ export async function pendingSportPrompts(
 
   const events = await prisma.event.findMany({
     where: {
-      userId: { not: null },
       eventType: { is: { sportWorkout: true } },
     },
-    select: { id: true, userId: true, title: true, startsAt: true, rrule: true },
+    select: {
+      id: true,
+      userId: true,
+      title: true,
+      startsAt: true,
+      rrule: true,
+      participants: { select: { userId: true } },
+    },
   });
   if (events.length === 0) return [];
 
@@ -181,10 +187,18 @@ export async function pendingSportPrompts(
 
   const prompts: SportPrompt[] = [];
   for (const e of due) {
-    const userId = e.userId as string;
-    const key = `${userId}|${e.id}`;
-    if (!doneSet.has(key) && !skipSet.has(key)) {
-      prompts.push({ eventId: e.id, userId, title: e.title || "Sport" });
+    // Whoever's going gets asked; with no one listed, it falls back to the
+    // owner, so existing single-person events are unchanged.
+    const targets = e.participants.length
+      ? e.participants.map((p) => p.userId)
+      : e.userId
+        ? [e.userId]
+        : [];
+    for (const userId of targets) {
+      const key = `${userId}|${e.id}`;
+      if (!doneSet.has(key) && !skipSet.has(key)) {
+        prompts.push({ eventId: e.id, userId, title: e.title || "Sport" });
+      }
     }
   }
   return prompts;
