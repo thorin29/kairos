@@ -437,11 +437,15 @@ own exercises, optionally schedules them, and records what they did.
 
 ## Pauses and vacations
 
-- [ ] Pause with a date range, a type, and a name
-- [ ] Generates a multi-day all-day calendar event
-- [ ] No chores due during the pause; they resume the day after
-- [ ] Paused days leave the scoring denominator rather than counting as
-      misses, including for weeks and months that only partly overlap
+- [x] Pause with a date range, a type, and a name (Admin → Chores) (v0.66.0)
+- [x] Generates a multi-day all-day calendar event that shades its days
+      (multi-day all-day events now span every day, not just the first) (v0.66.0)
+- [x] No chores due during the pause; they resume the day after (v0.66.0)
+- [x] Paused days leave the scoring denominator rather than counting as misses —
+      falls out for free, since scoring counts actual task rows and a paused day
+      generates none, so partial weeks/months are handled without special code
+      (v0.66.0). Note: applies to scheduled chores; anytime/pool chores and any
+      hand-added one-off tasks on paused days aren't auto-suppressed
 
 ## Tasks and appointments
 

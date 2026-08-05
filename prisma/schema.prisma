@@ -781,3 +781,24 @@ model SessionSet {
   @@index([exerciseId])
   @@index([poolExerciseId])
 }
+
+enum PauseType {
+  VACATION
+  OTHER
+}
+
+// A household-wide pause (a vacation, say). No chores are generated for the
+// days it covers, so those days also drop out of scoring; chores resume the
+// day after it ends. Creating one puts a multi-day all-day event on the
+// calendar (tracked by eventId) so the break is visible and shades its days.
+model Pause {
+  id        String    @id @default(cuid())
+  name      String
+  type      PauseType @default(VACATION)
+  startDate DateTime  @db.Date
+  endDate   DateTime  @db.Date
+  eventId   String? // the generated all-day calendar event, removed with the pause
+  createdAt DateTime  @default(now())
+
+  @@index([startDate, endDate])
+}
