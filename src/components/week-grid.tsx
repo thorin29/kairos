@@ -41,6 +41,7 @@ export function WeekGrid({
   selectedDay,
   nowColor = "#ef4444",
   resetSec = 60,
+  blockMinutes = 30,
 }: {
   days: string[];
   timed: GridEvent[];
@@ -50,6 +51,7 @@ export function WeekGrid({
   selectedDay?: string | null;
   nowColor?: string;
   resetSec?: number;
+  blockMinutes?: number;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const programmatic = useRef(false);
@@ -61,7 +63,14 @@ export function WeekGrid({
   // Tap highlights an event; long-press (touch) or right-click (desktop) opens
   // its action menu.
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [menu, setMenu] = useState<{ ev: GridEvent; x: number; y: number } | null>(
+  const [menu, setMenu] = useState<{
+    items: MenuItem[];
+    x: number;
+    y: number;
+  } | null>(null);
+  // A highlighted time block: dropped by a tap/click, extendable by a mouse
+  // drag, turned into an event from its right-click / long-press menu.
+  const [block, setBlock] = useState<{ day: string; a: number; b: number } | null>(
     null,
   );
 
@@ -83,9 +92,39 @@ export function WeekGrid({
     }
   };
 
-  const openMenu = (ev: GridEvent, x: number, y: number) => {
+  const openMenu = (items: MenuItem[], x: number, y: number) =>
+    setMenu({ items, x, y });
+
+  const openEventMenu = (ev: GridEvent, x: number, y: number) => {
     setSelectedId(ev.id);
-    setMenu({ ev, x, y });
+    setBlock(null);
+    openMenu(menuItems(ev), x, y);
+  };
+
+  const openNewMenu = (
+    b: { day: string; a: number; b: number },
+    x: number,
+    y: number,
+  ) => {
+    const lo = Math.min(b.a, b.b);
+    const hi = Math.max(lo + 15, Math.max(b.a, b.b));
+    openMenu(
+      [
+        {
+          label: "New appointment",
+          onSelect: () => {
+            openAt({
+              date: b.day,
+              start: minutesToHHMM(lo),
+              end: minutesToHHMM(hi),
+            });
+            setBlock(null);
+          },
+        },
+      ],
+      x,
+      y,
+    );
   };
 
   const midY = () => {
@@ -100,7 +139,7 @@ export function WeekGrid({
     if (pointers.current.size === 2) {
       // A second finger means "scroll", not "act on an event".
       cancelPress();
-      setSel(null);
+      setBlock(null);
       dragging.current = false;
       pan.current = {
         startMid: midY(),
@@ -135,7 +174,8 @@ export function WeekGrid({
     const gy = e.clientY;
     cancelPress();
     pressTimer.current = setTimeout(() => {
-      if (!pressMoved.current && pointers.current.size < 2) openMenu(ev, gx, gy);
+      if (!pressMoved.current && pointers.current.size < 2)
+        openEventMenu(ev, gx, gy);
     }, 500);
   };
 
@@ -159,8 +199,10 @@ export function WeekGrid({
   const editEvent = async (ev: GridEvent) => {
     const data = await eventCopyData(ev.eventId);
     if (!data) return;
+    // Recurring: edit the occurrence that was clicked. Non-recurring (incl. a
+    // multi-day all-day event shown on a middle day): keep its real start date.
     openEdit(
-      { ...data, date: ev.dayISO },
+      { ...data, date: ev.recurring ? ev.dayISO : data.date },
       {
         eventId: ev.eventId,
         occurrenceISO: ev.dayISO,
@@ -195,15 +237,8 @@ export function WeekGrid({
   const SELECTED_RING =
     "0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-ink)";
 
-  // Drag-to-select a time range. It only starts on a double-click/tap-and-drag,
-  // so a single click/tap is free to select an event or clear the selection —
-  // and no selection line appears unless you actually drag.
-  const [sel, setSel] = useState<{ day: string; a: number; b: number } | null>(
-    null,
-  );
   const dragging = useRef(false);
   const dragStart = useRef<{ day: string; min: number } | null>(null);
-  const lastDown = useRef<{ t: number; x: number; y: number } | null>(null);
 
   const yToMin = (el: HTMLElement, clientY: number) => {
     const rect = el.getBoundingClientRect();
@@ -212,52 +247,83 @@ export function WeekGrid({
   };
 
   const onColDown = (iso: string, e: React.PointerEvent<HTMLDivElement>) => {
-    const now = e.timeStamp;
-    const prev = lastDown.current;
-    const isDouble =
-      prev != null &&
-      now - prev.t < 400 &&
-      Math.abs(e.clientX - prev.x) < 24 &&
-      Math.abs(e.clientY - prev.y) < 24;
-    lastDown.current = { t: now, x: e.clientX, y: e.clientY };
+    setSelectedId(null);
+    const start = yToMin(e.currentTarget, e.clientY);
+    const b = { day: iso, a: start, b: clamp(start + blockMinutes, 0, 24 * 60) };
+    setBlock(b);
 
-    if (!isDouble) return; // first click/tap: leave it for select/deselect
+    if (e.pointerType === "touch") {
+      // Long-press = set the block and open its "new appointment" menu.
+      pressMoved.current = false;
+      pressStart.current = { x: e.clientX, y: e.clientY };
+      const gx = e.clientX;
+      const gy = e.clientY;
+      cancelPress();
+      pressTimer.current = setTimeout(() => {
+        if (!pressMoved.current && pointers.current.size < 2)
+          openNewMenu(b, gx, gy);
+      }, 500);
+      return;
+    }
 
+    // Mouse/pen: allow dragging to lengthen the block.
     dragging.current = true;
-    dragStart.current = { day: iso, min: yToMin(e.currentTarget, e.clientY) };
-    if (e.pointerType !== "touch")
-      e.currentTarget.setPointerCapture(e.pointerId);
+    dragStart.current = { day: iso, min: start };
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const onColMove = (iso: string, e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) return;
-    const min = yToMin(e.currentTarget, e.clientY);
-    const start = dragStart.current;
-    setSel((s) => {
-      if (s && s.day === iso) return { ...s, b: min };
-      if (start && start.day === iso) return { day: iso, a: start.min, b: min };
-      return s;
-    });
+    if (dragging.current) {
+      const st = dragStart.current;
+      if (!st || st.day !== iso) return;
+      const min = yToMin(e.currentTarget, e.clientY);
+      // Ignore jitter so a plain click keeps the default-length block.
+      if (Math.abs(min - st.min) < 15) return;
+      setBlock({ day: iso, a: st.min, b: min });
+      return;
+    }
+    if (pressTimer.current) {
+      const dx = e.clientX - pressStart.current.x;
+      const dy = e.clientY - pressStart.current.y;
+      if (Math.hypot(dx, dy) > 10) {
+        pressMoved.current = true;
+        cancelPress();
+      }
+    }
   };
 
-  const onColUp = (iso: string, e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) return;
-    dragging.current = false;
-    dragStart.current = null;
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      /* pointer already released */
+  const onColUp = (_iso: string, e: React.PointerEvent<HTMLDivElement>) => {
+    cancelPress();
+    if (dragging.current) {
+      dragging.current = false;
+      dragStart.current = null;
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        /* pointer already released */
+      }
     }
-    const s = sel;
-    setSel(null);
-    if (!s) return;
-    const lo = Math.min(s.a, s.b);
-    const hi = Math.max(s.a, s.b);
-    if (hi - lo >= 15) {
-      // A real drag opens the add form pre-filled with the selected range.
-      openAt({ date: iso, start: minutesToHHMM(lo), end: minutesToHHMM(hi) });
-    }
+  };
+
+  const onColContextMenu = (
+    iso: string,
+    e: React.MouseEvent<HTMLDivElement>,
+  ) => {
+    e.preventDefault();
+    const cur =
+      block && block.day === iso
+        ? block
+        : (() => {
+            const start = yToMin(e.currentTarget, e.clientY);
+            const b = {
+              day: iso,
+              a: start,
+              b: clamp(start + blockMinutes, 0, 24 * 60),
+            };
+            setBlock(b);
+            return b;
+          })();
+    openNewMenu(cur, e.clientX, e.clientY);
   };
 
   const gridTemplateColumns = `3.5rem repeat(${days.length}, minmax(0,1fr))`;
@@ -283,11 +349,13 @@ export function WeekGrid({
     // Morning start (7am) for weeks other than the current one, so jumping
     // ahead shows the start of the day rather than only the afternoon.
     const MORNING = 7 * 60;
-    // Today's week follows the clock into the afternoon; other weeks anchor to
-    // the morning (or earlier if something starts before it).
+    // Today's week keeps the now-line in view (anchored ~2h above it) so the
+    // current time is always the reference the reset snaps back to, regardless
+    // of when the day's events happen to start. Other weeks anchor to the
+    // morning (or earlier if something starts before it).
     const base =
       todayInView && nowMin != null
-        ? clamp(nowMin - 120, earliest - 60, 24 * 60 - visibleMin)
+        ? clamp(nowMin - 120, 0, 24 * 60 - visibleMin)
         : Math.min(earliest - 60, MORNING);
     return Math.max(0, (base / 60) * HOUR_PX);
   };
@@ -408,9 +476,30 @@ export function WeekGrid({
                     .map((e) => (
                       <span
                         key={e.id}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          setBlock(null);
+                          setSelectedId(e.id);
+                        }}
+                        onContextMenu={(ev) => {
+                          ev.preventDefault();
+                          ev.stopPropagation();
+                          openEventMenu(e, ev.clientX, ev.clientY);
+                        }}
+                        onPointerDown={(ev) => {
+                          ev.stopPropagation();
+                          onEventDown(e, ev);
+                        }}
+                        onPointerMove={onEventMove}
+                        onPointerUp={cancelPress}
+                        onPointerCancel={cancelPress}
                         title={`${e.title}${e.location ? ` · ${e.location}` : ""}`}
-                        className="mb-1 block truncate rounded px-1.5 py-1 text-[0.7rem] font-medium text-white"
-                        style={{ backgroundColor: e.color }}
+                        className="mb-1 block cursor-pointer select-none truncate rounded px-1.5 py-1 text-[0.7rem] font-medium text-white"
+                        style={{
+                          backgroundColor: e.color,
+                          boxShadow:
+                            selectedId === e.id ? SELECTED_RING : undefined,
+                        }}
                       >
                         {e.title}
                       </span>
@@ -442,11 +531,11 @@ export function WeekGrid({
             return (
               <div
                 key={iso}
-                onClick={() => setSelectedId(null)}
                 onPointerDown={(e) => onColDown(iso, e)}
                 onPointerMove={(e) => onColMove(iso, e)}
                 onPointerUp={(e) => onColUp(iso, e)}
-                title="Double-click and drag to block out a new event"
+                onContextMenu={(e) => onColContextMenu(iso, e)}
+                title="Tap for a block, then right-click / long-press to add"
                 className={`relative cursor-pointer select-none border-l border-hairline ${
                   selectedDay === iso ? "bg-accent/5" : ""
                 }`}
@@ -472,10 +561,10 @@ export function WeekGrid({
                   <HourCell key={h} />
                 ))}
 
-                {sel?.day === iso &&
+                {block?.day === iso &&
                   (() => {
-                    const lo = Math.min(sel.a, sel.b);
-                    const hi = Math.max(sel.a, sel.b);
+                    const lo = Math.min(block.a, block.b);
+                    const hi = Math.max(block.a, block.b);
                     return (
                       <div
                         aria-hidden
@@ -503,14 +592,18 @@ export function WeekGrid({
                       key={e.id}
                       onClick={(ev) => {
                         ev.stopPropagation();
+                        setBlock(null);
                         setSelectedId(e.id);
                       }}
                       onContextMenu={(ev) => {
                         ev.preventDefault();
                         ev.stopPropagation();
-                        openMenu(e, ev.clientX, ev.clientY);
+                        openEventMenu(e, ev.clientX, ev.clientY);
                       }}
-                      onPointerDown={(ev) => onEventDown(e, ev)}
+                      onPointerDown={(ev) => {
+                          ev.stopPropagation();
+                          onEventDown(e, ev);
+                        }}
                       onPointerMove={onEventMove}
                       onPointerUp={cancelPress}
                       onPointerCancel={cancelPress}
@@ -524,7 +617,7 @@ export function WeekGrid({
                         top,
                         height,
                         left: `calc(${lane.index * width}% + 2px)`,
-                        width: `calc(${width}% - 4px)`,
+                        width: `calc(${width}% - 8px)`,
                         backgroundColor: e.color,
                         boxShadow: selected ? SELECTED_RING : undefined,
                       }}
@@ -569,7 +662,7 @@ export function WeekGrid({
         <EventMenu
           x={menu.x}
           y={menu.y}
-          items={menuItems(menu.ev)}
+          items={menu.items}
           onClose={() => setMenu(null)}
         />
       )}
@@ -585,11 +678,11 @@ function HourCell({ label }: { label?: string }) {
   return (
     <div
       style={{ height: HOUR_PX }}
-      className="relative border-b border-hairline"
+      className="relative border-b border-ink/15"
     >
       <div
         style={{ height: HOUR_PX / 2 }}
-        className="border-b border-dashed border-hairline"
+        className="border-b border-dashed border-ink/10"
         aria-hidden
       />
       {label && (

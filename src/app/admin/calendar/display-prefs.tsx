@@ -20,24 +20,35 @@ const RESETS = [
   { value: 300, label: "5 min" },
 ];
 
+const BLOCKS = [
+  { value: 15, label: "15 min" },
+  { value: 30, label: "30 min" },
+  { value: 45, label: "45 min" },
+  { value: 60, label: "1 hr" },
+];
+
 export function DisplayPrefs({
   nowColor,
   resetSec,
+  blockMinutes,
 }: {
   nowColor: string;
   resetSec: number;
+  blockMinutes: number;
 }) {
   const [color, setColor] = useState(nowColor);
   const [sec, setSec] = useState(resetSec);
+  const [block, setBlock] = useState(blockMinutes);
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();
 
-  const save = (nextColor: string, nextSec: number) => {
+  const save = (nextColor: string, nextSec: number, nextBlock: number) => {
     setColor(nextColor);
     setSec(nextSec);
+    setBlock(nextBlock);
     setSaved(false);
     start(async () => {
-      await setCalendarPrefs(nextColor, nextSec);
+      await setCalendarPrefs(nextColor, nextSec, nextBlock);
       setSaved(true);
     });
   };
@@ -53,7 +64,7 @@ export function DisplayPrefs({
             <button
               key={c.value}
               type="button"
-              onClick={() => save(c.value, sec)}
+              onClick={() => save(c.value, sec, block)}
               aria-label={c.label}
               aria-pressed={color.toLowerCase() === c.value}
               className={`h-9 w-9 rounded-full border transition-transform ${
@@ -76,7 +87,7 @@ export function DisplayPrefs({
             <button
               key={r.value}
               type="button"
-              onClick={() => save(color, r.value)}
+              onClick={() => save(color, r.value, block)}
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                 sec === r.value
                   ? "border-accent bg-accent/10 text-accent"
@@ -90,6 +101,32 @@ export function DisplayPrefs({
         <p className="mt-2 text-xs text-muted">
           After you scroll the day or week grid, it eases back to the default
           view this long after you stop.
+        </p>
+      </div>
+
+      <div className="mt-4 border-t border-hairline pt-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
+          Default new-event block
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {BLOCKS.map((b) => (
+            <button
+              key={b.value}
+              type="button"
+              onClick={() => save(color, sec, b.value)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                block === b.value
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-hairline text-muted hover:border-accent"
+              }`}
+            >
+              {b.label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          Tapping an empty spot on the calendar highlights a block this long;
+          right-click (or long-press) it to start a new event.
         </p>
       </div>
 

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.67.0";
+export const APP_VERSION = "0.68.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -55,6 +55,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.68.0",
+    summary: [
+      "Adding an event is simpler: tap or click an empty spot and a block of time highlights (30 min by default, set it in Admin → Calendar), then right-click or long-press it and choose \u201cNew appointment.\u201d On a mouse you can drag to make the block longer",
+      "All-day events (birthdays, vacations) can now be right-clicked or long-pressed to edit, copy, or delete",
+      "Fixed a vacation longer than a week vanishing from the middle weeks — a multi-day event now shows across every week it covers",
+      "Fixed this week opening in the afternoon: the current time line stays in view and is what the grid snaps back to",
+      "Fixed a long-press highlighting the menu text; hour lines are darker so they read under the day shading; and events have a little more room on the right",
+    ],
+  },
   {
     version: "0.67.0",
     summary: [

@@ -262,8 +262,6 @@ export async function loadRange(
     const start = localParts(startsAt);
     const end = localParts(new Date(startsAt.getTime() + durationMs));
 
-    if (!days.includes(start.iso) && !days.includes(end.iso)) return;
-
     // A custom event type sets its own colour (a "Hockey game" is that colour
     // for everyone); otherwise it's the owner's colour, or the family colour
     // for shared events.
@@ -319,6 +317,7 @@ export async function loadRange(
 
     // An event running past midnight is clipped to its starting day rather
     // than split, which keeps the grid readable for late finishes.
+    if (!days.includes(start.iso) && !days.includes(end.iso)) return;
     const endMin =
       end.iso === start.iso ? end.minutes : 1440;
 

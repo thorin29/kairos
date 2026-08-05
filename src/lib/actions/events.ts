@@ -12,6 +12,7 @@ import {
   setSetting,
   CAL_NOW_COLOR,
   CAL_RESET_SEC,
+  CAL_BLOCK_MINUTES,
 } from "@/lib/settings";
 
 export type EventState = { error: string | null; saved: boolean };
@@ -60,12 +61,15 @@ export async function addEventType(
 export async function setCalendarPrefs(
   nowColor: string,
   scrollResetSec: number,
+  blockMinutes: number,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   if (!isHexColor(nowColor)) return { error: "Pick a colour." };
   const sec = Math.max(0, Math.min(3600, Math.round(scrollResetSec)));
+  const block = Math.max(5, Math.min(240, Math.round(blockMinutes) || 30));
   await setSetting(CAL_NOW_COLOR, nowColor);
   await setSetting(CAL_RESET_SEC, String(sec));
+  await setSetting(CAL_BLOCK_MINUTES, String(block));
   revalidatePath("/calendar");
   revalidatePath("/admin/calendar");
   return { error: null };
@@ -269,6 +273,8 @@ export async function updateEvent(
       externalCalendarId: true,
       kind: true,
       startsAt: true,
+      endsAt: true,
+      allDay: true,
     },
   });
   if (!target) return { error: "That event no longer exists.", saved: false };
@@ -327,7 +333,12 @@ export async function updateEvent(
   let endsAt: Date;
   if (allDay) {
     startsAt = toDateColumn(dateForRow);
-    endsAt = new Date(startsAt.getTime() + 86_400_000);
+    // Keep a multi-day span (a vacation edited from a middle day stays its full
+    // length and just shifts); a single-day event keeps its one day.
+    const originalMs = target.endsAt.getTime() - target.startsAt.getTime();
+    const spanMs =
+      target.allDay && originalMs > 86_400_000 ? originalMs : 86_400_000;
+    endsAt = new Date(startsAt.getTime() + spanMs);
   } else {
     if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) {
       return { error: "Set a start and end time.", saved: false };

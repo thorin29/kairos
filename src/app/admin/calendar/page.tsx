@@ -80,6 +80,7 @@ export default async function AdminCalendarPage() {
         <DisplayPrefs
           nowColor={calPrefs.nowColor}
           resetSec={calPrefs.scrollResetSec}
+          blockMinutes={calPrefs.blockMinutes}
         />
       </div>
     </main>

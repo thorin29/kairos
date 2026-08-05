@@ -6,22 +6,28 @@ export const SCORING_START = "scoringStart";
 export const FAMILY_COLOR = "familyColor";
 export const CAL_NOW_COLOR = "calendar.nowColor";
 export const CAL_RESET_SEC = "calendar.scrollResetSec";
+export const CAL_BLOCK_MINUTES = "calendar.blockMinutes";
 
 export type CalendarPrefs = {
   nowColor: string;
   scrollResetSec: number;
+  blockMinutes: number;
 };
 
-/** Now-line colour and the inactivity reset for manual scrolling. */
+/** Now-line colour, the inactivity reset for manual scrolling, and the default
+ *  length of the block a tap/click drops on the grid. */
 export async function getCalendarPrefs(): Promise<CalendarPrefs> {
-  const [c, r] = await Promise.all([
+  const [c, r, b] = await Promise.all([
     getSetting(CAL_NOW_COLOR),
     getSetting(CAL_RESET_SEC),
+    getSetting(CAL_BLOCK_MINUTES),
   ]);
   const sec = r != null ? parseInt(r, 10) : 60;
+  const block = b != null ? parseInt(b, 10) : 30;
   return {
     nowColor: c ?? "#ef4444",
     scrollResetSec: Number.isFinite(sec) ? sec : 60,
+    blockMinutes: Number.isFinite(block) && block > 0 ? block : 30,
   };
 }
 
