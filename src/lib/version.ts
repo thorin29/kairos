@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.70.0";
+export const APP_VERSION = "0.71.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -55,6 +55,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.71.0",
+    summary: [
+      "Day view now shows a column for each person side by side, headed by their name pill, so you can see everyone's day at once",
+      "All-day events (like a vacation) span across the top of all the columns, and shared \u201cFamily\u201d timed events span across every person's column",
+      "Tapping a spot in someone's column and adding a new appointment fills in that person as the owner",
+    ],
+  },
   {
     version: "0.70.0",
     summary: [

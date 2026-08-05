@@ -18,6 +18,8 @@ export type GridEvent = {
   color: string;
   /** True for shared "Family" events (not per-person, not birthdays). */
   isFamily: boolean;
+  /** The owner's user id, or null for shared/family events. */
+  ownerId: string | null;
   /** Whether this all-day event tints its day column. */
   shade: boolean;
   ownerName: string;
@@ -133,6 +135,7 @@ async function birthdayEvents(
         // Not a "Family filter" event, so isFamily stays false; the day-column
         // wash keys off the BIRTHDAY kind instead, so birthdays still tint.
         isFamily: false,
+        ownerId: p.id,
         shade: (p as { shadeBirthday?: boolean }).shadeBirthday ?? true,
         ownerName: who,
         kind: "BIRTHDAY",
@@ -281,6 +284,7 @@ export async function loadRange(
       location: e.location,
       color,
       isFamily: e.isFamily,
+      ownerId: e.isFamily ? null : (e.userId ?? null),
       shade: (e as { shadeDay?: boolean }).shadeDay ?? true,
       ownerName: e.isFamily
         ? "Family"

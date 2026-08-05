@@ -78,8 +78,11 @@ export default async function CalendarPage({
 
   await syncStaleCalendars();
 
+  // The day view shows a column per person (everyone side by side), so it loads
+  // the whole household regardless of the filter; week/month respect the filter.
+  const rangeFilterIds = view === "day" ? undefined : filterIds;
   const [range, people] = await Promise.all([
-    loadRange(days, filterIds),
+    loadRange(days, rangeFilterIds),
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -247,6 +250,11 @@ export default async function CalendarPage({
                 nowColor={calPrefs.nowColor}
                 resetSec={calPrefs.scrollResetSec}
                 blockMinutes={calPrefs.blockMinutes}
+                people={people.map((p) => ({
+                  id: p.id,
+                  name: p.displayName ?? p.name,
+                  color: p.color,
+                }))}
               />
             )}
 
@@ -276,6 +284,7 @@ function DayPanel({
   nowColor,
   resetSec,
   blockMinutes,
+  people,
 }: {
   date: string;
   range: { timed: GridEvent[]; allDay: GridEvent[] };
@@ -283,6 +292,7 @@ function DayPanel({
   nowColor: string;
   resetSec: number;
   blockMinutes: number;
+  people: { id: string; name: string; color: string }[];
 }) {
   return (
     <WeekGrid
@@ -293,6 +303,7 @@ function DayPanel({
       nowColor={nowColor}
       resetSec={resetSec}
       blockMinutes={blockMinutes}
+      personColumns={people}
     />
   );
 }

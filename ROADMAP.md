@@ -257,9 +257,11 @@ all live in the database, never in this repository.
       month navigator, and the person/family filters live in a left side panel;
       the schedule area is wider/taller. Grid clicks floor into the clicked
       half-hour; drags lengthen in 15-min steps from a fixed start
-- [ ] Day view: a column per person side by side (heading = the person's name
-      pill), so everyone's day is visible at once. Week view keeps overlapping
-      lanes for now
+- [x] Day view: a column per person side by side (heading = the person's name
+      pill), so everyone's day is visible at once. All-day events span the top of
+      every column; shared "Family" timed events span across all columns; adding
+      from a person's column fills them in as owner. Week view keeps overlapping
+      lanes (v0.71.0)
 - [x] All-day Family events wash their whole day column in a light tint of the
       family colour — the pill still sits at the top in the all-day row, only
       the hours behind it are painted; birthdays don't trigger it. Same release
