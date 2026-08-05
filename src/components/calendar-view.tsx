@@ -10,6 +10,7 @@ export function CalendarView({
   todayISO,
   nowColor,
   resetSec,
+  blockMinutes,
 }: {
   days: string[];
   timed: GridEvent[];
@@ -18,6 +19,7 @@ export function CalendarView({
   admin?: boolean;
   nowColor?: string;
   resetSec?: number;
+  blockMinutes?: number;
 }) {
   return (
     <WeekGrid
@@ -27,6 +29,7 @@ export function CalendarView({
       todayISO={todayISO}
       nowColor={nowColor}
       resetSec={resetSec}
+      blockMinutes={blockMinutes}
     />
   );
 }

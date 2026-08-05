@@ -248,6 +248,11 @@ all live in the database, never in this repository.
       finger. The menu's actions are Copy (opens the add form pre-filled as a
       duplicate to re-place) and Delete; an Edit entry is stubbed for the next
       phase (v0.60.0)
+- [x] New-event UX (v0.68.0): a tap/click drops a default-length block (set in
+      Admin → Calendar, 30 min default), a mouse drag lengthens it, and its
+      right-click / long-press menu has "New appointment". All-day events are
+      right-clickable too (edit/copy/delete), and a multi-day all-day event keeps
+      its length when edited
 - [x] All-day Family events wash their whole day column in a light tint of the
       family colour — the pill still sits at the top in the all-day row, only
       the hours behind it are painted; birthdays don't trigger it. Same release

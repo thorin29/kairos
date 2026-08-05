@@ -53,7 +53,7 @@ export function EventMenu({
 
   return (
     <div
-      className="fixed inset-0 z-[60]"
+      className="fixed inset-0 z-[60] select-none"
       onClick={dismiss}
       onContextMenu={(e) => {
         e.preventDefault();
