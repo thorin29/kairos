@@ -253,6 +253,13 @@ all live in the database, never in this repository.
       right-click / long-press menu has "New appointment". All-day events are
       right-clickable too (edit/copy/delete), and a multi-day all-day event keeps
       its length when edited
+- [x] Sidebar calendar layout (v0.70.0): a "New event" button, a page-able mini
+      month navigator, and the person/family filters live in a left side panel;
+      the schedule area is wider/taller. Grid clicks floor into the clicked
+      half-hour; drags lengthen in 15-min steps from a fixed start
+- [ ] Day view: a column per person side by side (heading = the person's name
+      pill), so everyone's day is visible at once. Week view keeps overlapping
+      lanes for now
 - [x] All-day Family events wash their whole day column in a light tint of the
       family colour — the pill still sits at the top in the all-day row, only
       the hours behind it are painted; birthdays don't trigger it. Same release

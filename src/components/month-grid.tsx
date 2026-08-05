@@ -29,7 +29,7 @@ export function MonthGrid({
 }) {
   const rows = Math.max(1, Math.ceil(days.length / 7));
   return (
-    <div className="flex h-[42rem] flex-col overflow-hidden rounded-2xl border border-hairline bg-surface">
+    <div className="flex h-[46rem] flex-col overflow-hidden rounded-2xl border border-hairline bg-surface">
       <div className="grid grid-cols-7 border-b border-hairline">
         {DAY_SHORT.map((d) => (
           <div
