@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { AdminBack } from "@/components/admin-back";
-import { SectionHeading } from "@/components/ui";
+import { Card, SectionHeading } from "@/components/ui";
 import { loadEventTypes } from "@/lib/queries/calendar";
 import { getCalendarPrefs } from "@/lib/settings";
 import { Subscriptions } from "./subscriptions";
 import { EventTypes } from "./event-types";
 import { DisplayPrefs } from "./display-prefs";
+import { PauseForm } from "./pause-form";
+import { loadPauses } from "@/lib/actions/pauses";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,7 @@ export default async function AdminCalendarPage() {
     loadEventTypes(),
   ]);
   const calPrefs = await getCalendarPrefs();
+  const pauses = await loadPauses();
 
   const subscriptions = calendars.map((c) => ({
     id: c.id,
@@ -82,6 +85,13 @@ export default async function AdminCalendarPage() {
           resetSec={calPrefs.scrollResetSec}
           blockMinutes={calPrefs.blockMinutes}
         />
+      </div>
+
+      <div className="mt-10">
+        <SectionHeading>Vacations &amp; pauses</SectionHeading>
+        <Card className="p-5">
+          <PauseForm pauses={pauses} />
+        </Card>
       </div>
     </main>
   );
