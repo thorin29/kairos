@@ -238,11 +238,8 @@ export default async function CalendarPage({
         />
       )}
 
-      <div className="mt-6 border-t border-hairline pt-5">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
-          Show
-        </p>
-        <div className="flex flex-wrap items-start gap-x-1 gap-y-3">
+      <div className="mt-4">
+        <div className="flex flex-wrap items-start gap-x-1 gap-y-2">
           {people.map((p) => (
             <PersonFilterBadge
               key={p.id}
@@ -251,6 +248,7 @@ export default async function CalendarPage({
               color={p.color}
               avatarPath={p.avatarPath}
               selected={selectedSet.has(p.id)}
+              compact
             />
           ))}
           <FamilyFilterBadge
@@ -258,6 +256,7 @@ export default async function CalendarPage({
             selected={allSelected}
             count={people.length}
             color={familyColor}
+            compact
           />
         </div>
       </div>

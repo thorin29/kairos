@@ -27,8 +27,9 @@ export function MonthGrid({
   todayISO: string;
   hrefForDay: (iso: string) => string;
 }) {
+  const rows = Math.max(1, Math.ceil(days.length / 7));
   return (
-    <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+    <div className="flex h-[42rem] flex-col overflow-hidden rounded-2xl border border-hairline bg-surface">
       <div className="grid grid-cols-7 border-b border-hairline">
         {DAY_SHORT.map((d) => (
           <div
@@ -40,7 +41,10 @@ export function MonthGrid({
         ))}
       </div>
 
-      <div className="grid grid-cols-7">
+      <div
+        className="grid flex-1 grid-cols-7"
+        style={{ gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}
+      >
         {days.map((iso, i) => {
           const dayEvents = events.filter((e) => e.dayISO === iso);
           const outside = !isSameMonth(iso, monthISO);
@@ -52,7 +56,7 @@ export function MonthGrid({
             <Link
               key={iso}
               href={hrefForDay(iso)}
-              className={`min-h-[6.5rem] border-b border-l border-hairline p-1.5 transition-colors hover:bg-ground ${
+              className={`flex flex-col overflow-hidden border-b border-l border-hairline p-1.5 transition-colors hover:bg-ground ${
                 i % 7 === 0 ? "border-l-0" : ""
               } ${outside ? "bg-ground/40" : ""}`}
             >
