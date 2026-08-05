@@ -243,10 +243,14 @@ export function WeekGrid({
   const yToMin = (el: HTMLElement, clientY: number) => {
     const rect = el.getBoundingClientRect();
     const raw = ((clientY - rect.top) / HOUR_PX) * 60;
-    return clamp(Math.round(raw / 15) * 15, 0, 24 * 60);
+    // Snap to the top or bottom of the hour (:00 / :30).
+    return clamp(Math.round(raw / 30) * 30, 0, 24 * 60);
   };
 
   const onColDown = (iso: string, e: React.PointerEvent<HTMLDivElement>) => {
+    // Only the primary button starts a block; a right-click keeps the block the
+    // user dragged and lets the context menu act on it.
+    if (e.button !== 0) return;
     setSelectedId(null);
     const start = yToMin(e.currentTarget, e.clientY);
     const b = { day: iso, a: start, b: clamp(start + blockMinutes, 0, 24 * 60) };

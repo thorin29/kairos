@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.68.0";
+export const APP_VERSION = "0.69.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -55,6 +55,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.69.0",
+    summary: [
+      "Right-clicking a time block you dragged now keeps that block instead of snapping back to the default length",
+      "Grid taps and clicks now snap to the hour or half-hour (:00 / :30) instead of quarter-hours",
+      "Vacations & pauses moved from Admin → Chores to Admin → Calendar, where scheduling lives",
+    ],
+  },
   {
     version: "0.68.0",
     summary: [

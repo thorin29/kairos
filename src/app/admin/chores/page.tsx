@@ -13,8 +13,6 @@ import { EffortTable, type BalanceRow } from "./effort-table";
 import { MasterEffortLock } from "./master-effort-lock";
 import { CollaborativeForm } from "./collaborative-form";
 import { AnytimeForm } from "./anytime-form";
-import { PauseForm } from "./pause-form";
-import { loadPauses } from "@/lib/actions/pauses";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
 import { AlertIcon } from "@/components/icons";
@@ -22,7 +20,7 @@ import { AlertIcon } from "@/components/icons";
 export const dynamic = "force-dynamic";
 
 export default async function ChoresPage() {
-  const [summary, poolChores, people, pauses] = await Promise.all([
+  const [summary, poolChores, people] = await Promise.all([
     loadChoreSummary(),
     loadPoolChores(),
     prisma.user.findMany({
@@ -30,7 +28,6 @@ export default async function ChoresPage() {
       orderBy: { sortOrder: "asc" },
       select: { id: true, name: true, color: true },
     }),
-    loadPauses(),
   ]);
 
   const unassigned = summary.filter((c) => c.unassigned);
@@ -150,13 +147,6 @@ export default async function ChoresPage() {
           <section>
             <SectionHeading>Up for grabs</SectionHeading>
             <PoolChores chores={poolChores} available={summary} />
-          </section>
-
-          <section>
-            <SectionHeading>Vacations &amp; pauses</SectionHeading>
-            <Card className="p-5">
-              <PauseForm pauses={pauses} />
-            </Card>
           </section>
 
           {unassigned.length > 0 && (

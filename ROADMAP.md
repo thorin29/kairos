@@ -442,7 +442,7 @@ own exercises, optionally schedules them, and records what they did.
 
 ## Pauses and vacations
 
-- [x] Pause with a date range, a type, and a name (Admin → Chores) (v0.66.0)
+- [x] Pause with a date range, a type, and a name (Admin → Calendar) (v0.66.0)
 - [x] Generates a multi-day all-day calendar event that shades its days
       (multi-day all-day events now span every day, not just the first) (v0.66.0)
 - [x] No chores due during the pause; they resume the day after (v0.66.0)
