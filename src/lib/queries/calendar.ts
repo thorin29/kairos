@@ -295,14 +295,25 @@ export async function loadRange(
     };
 
     if (e.allDay) {
-      allDay.push({
-        ...base,
-        dayISO: start.iso,
-        startMin: 0,
-        endMin: 1440,
-        timeLabel: "All day",
-        allDay: true,
-      });
+      // An all-day event covers every day from its start through the day before
+      // its exclusive end (a one-day event stays on its single day). Each day
+      // gets its own entry so a multi-day event (a vacation) shows and shades
+      // across its whole span.
+      const lastISO = localParts(
+        new Date(startsAt.getTime() + durationMs - 1),
+      ).iso;
+      for (const d of days) {
+        if (d < start.iso || d > lastISO) continue;
+        allDay.push({
+          ...base,
+          id: `${base.id}-${d}`,
+          dayISO: d,
+          startMin: 0,
+          endMin: 1440,
+          timeLabel: "All day",
+          allDay: true,
+        });
+      }
       return;
     }
 

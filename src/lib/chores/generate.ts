@@ -62,6 +62,26 @@ export async function generateChores(
     include: { chore: { select: { title: true, sortOrder: true, intervalWeeks: true } } },
   });
 
+  // Household pauses (vacations) suppress chores for every day they cover, so
+  // those days generate nothing and drop out of scoring; chores resume the day
+  // after a pause ends.
+  const pauses = await prisma.pause.findMany({
+    where: {
+      startDate: { lte: toDateColumn(toISO) },
+      endDate: { gte: toDateColumn(fromISO) },
+    },
+    select: { startDate: true, endDate: true },
+  });
+  const pausedDates = new Set<string>();
+  for (const p of pauses) {
+    let d = fromDateColumn(p.startDate);
+    const end = fromDateColumn(p.endDate);
+    while (d <= end) {
+      pausedDates.add(d);
+      d = addDays(d, 1);
+    }
+  }
+
   // What the schedule says should exist across the window.
   const expected = new Map<
     string,
@@ -78,6 +98,7 @@ export async function generateChores(
 
   for (let i = 0; i < days; i++) {
     const iso = addDays(fromISO, i);
+    if (pausedDates.has(iso)) continue;
     const dow = dayOfWeek(iso);
 
     for (const a of assignments) {

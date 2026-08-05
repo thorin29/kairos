@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.65.0";
+export const APP_VERSION = "0.66.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -49,11 +49,20 @@ export const MIGRATIONS = [
   "39_event_duration",
   "40_shade_day",
   "41_recurrence_override",
+  "42_pause",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.66.0",
+    summary: [
+      "New in Admin → Chores: pause the household for a vacation or break. Give it a name and a date range and no chores are due for those days — they start again the day after it ends",
+      "A pause drops a shaded multi-day event on the calendar so the break is visible, and its days don't count against anyone's score",
+      "Multi-day all-day events now show across every day they span, not just the first",
+    ],
+  },
   {
     version: "0.65.0",
     summary: [
