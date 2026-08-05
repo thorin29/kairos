@@ -164,8 +164,20 @@ export function AddEventProvider({
 }
 
 /** The top-of-calendar "+" trigger. */
-export function AddEventButton() {
+export function AddEventButton({ wide = false }: { wide?: boolean }) {
   const { openAt } = useAddEvent();
+  if (wide) {
+    return (
+      <button
+        type="button"
+        onClick={() => openAt()}
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-accent px-4 font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-110"
+      >
+        <PlusIcon className="h-5 w-5" />
+        New event
+      </button>
+    );
+  }
   return (
     <button
       type="button"

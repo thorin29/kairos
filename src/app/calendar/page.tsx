@@ -23,6 +23,7 @@ import { CalendarView } from "@/components/calendar-view";
 import { WeekGrid } from "@/components/week-grid";
 import { DaySchedule } from "@/components/day-schedule";
 import { MonthGrid } from "@/components/month-grid";
+import { MiniMonth } from "@/components/mini-month";
 import { AddEventProvider, AddEventButton } from "./add-event-form";
 import { PersonFilterBadge, FamilyFilterBadge } from "@/components/person-filter";
 import { getFamilyColor } from "@/lib/settings";
@@ -115,7 +116,6 @@ export default async function CalendarPage({
   );
   const orderedSelected = allIds.filter((id) => selectedSet.has(id));
   const allSelected = allIds.length > 0 && orderedSelected.length === allIds.length;
-  const noneSelected = orderedSelected.length === 0;
 
   const encodeWho = (ids: string[]): string | undefined =>
     ids.length === allIds.length ? undefined : ids.length === 0 ? "none" : ids.join(",");
@@ -127,21 +127,6 @@ export default async function CalendarPage({
     return encodeWho(allIds.filter((i) => next.has(i)));
   };
   const everyoneWho = allSelected ? "none" : undefined;
-
-  const selectedNames = people
-    .filter((p) => selectedSet.has(p.id))
-    .map((p) => p.displayName ?? p.name);
-  const joinNames = (names: string[]): string =>
-    names.length <= 1
-      ? (names[0] ?? "")
-      : names.length === 2
-        ? `${names[0]} and ${names[1]}`
-        : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-  const caption = noneSelected
-    ? "No calendars are selected."
-    : allSelected
-      ? "The whole family's schedules."
-      : `${joinNames(selectedNames)}'s ${selectedNames.length > 1 ? "schedules" : "schedule"}.`;
 
   const heading =
     view === "day"
@@ -163,107 +148,122 @@ export default async function CalendarPage({
         types={await loadEventTypes()}
         defaultDate={view === "month" ? today : date}
       >
-      <main className="mx-auto max-w-6xl px-6 py-6">
+      <main className="mx-auto max-w-[92rem] px-6 py-6">
+        <div className="flex flex-col gap-6 lg:flex-row">
+          <aside className="flex flex-col gap-5 lg:w-60 lg:shrink-0">
+            <AddEventButton wide />
 
-
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-        <AddEventButton />
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="mr-1 inline-flex rounded-full border border-hairline p-0.5">
-            {VIEWS.map((v) => (
-              <Link
-                key={v.key}
-                href={link({ view: v.key, date, who: whoEncoded })}
-                className={`inline-flex h-9 items-center rounded-full px-4 text-sm font-medium transition-colors ${
-                  view === v.key
-                    ? "bg-accent text-white"
-                    : "text-muted hover:text-accent"
-                }`}
-              >
-                {v.label}
-              </Link>
-            ))}
-          </div>
-
-          <Link
-            href={link({ view, date: step(-1), who: whoEncoded })}
-            className={`${chip} ${idle}`}
-          >
-            &larr;
-          </Link>
-          <Link href={link({ view, who: whoEncoded })} className={`${chip} ${idle}`}>
-            Today
-          </Link>
-          <Link
-            href={link({ view, date: step(1), who: whoEncoded })}
-            className={`${chip} ${idle}`}
-          >
-            &rarr;
-          </Link>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <p className="text-xs text-muted">{caption}</p>
-      </div>
-
-      {view === "week" && (
-        <CalendarView
-          days={days}
-          timed={range.timed}
-          allDay={range.allDay}
-          todayISO={today}
-          nowColor={calPrefs.nowColor}
-          resetSec={calPrefs.scrollResetSec}
-          blockMinutes={calPrefs.blockMinutes}
-        />
-      )}
-
-      {view === "day" && (
-        <DayPanel
-          date={date}
-          range={range}
-          todayISO={today}
-          nowColor={calPrefs.nowColor}
-          resetSec={calPrefs.scrollResetSec}
-          blockMinutes={calPrefs.blockMinutes}
-        />
-      )}
-
-      {view === "month" && (
-        <MonthGrid
-          days={days}
-          monthISO={startOfMonth(date)}
-          events={[...range.allDay, ...range.timed]}
-          todayISO={today}
-          hrefForDay={(iso) => link({ view: "day", date: iso, who: whoEncoded })}
-        />
-      )}
-
-      <div className="mt-4">
-        <div className="flex flex-wrap items-start gap-x-1 gap-y-2">
-          {people.map((p) => (
-            <PersonFilterBadge
-              key={p.id}
-              href={link({ view, date, who: toggleWho(p.id) })}
-              name={p.displayName ?? p.name}
-              color={p.color}
-              avatarPath={p.avatarPath}
-              selected={selectedSet.has(p.id)}
-              compact
+            <MiniMonth
+              monthISO={startOfMonth(date)}
+              todayISO={today}
+              selectedDays={days}
+              dayHref={(iso) => link({ view, date: iso, who: whoEncoded })}
+              prevHref={link({
+                view,
+                date: addMonths(startOfMonth(date), -1),
+                who: whoEncoded,
+              })}
+              nextHref={link({
+                view,
+                date: addMonths(startOfMonth(date), 1),
+                who: whoEncoded,
+              })}
             />
-          ))}
-          <FamilyFilterBadge
-            href={link({ view, date, who: everyoneWho })}
-            selected={allSelected}
-            count={people.length}
-            color={familyColor}
-            compact
-          />
-        </div>
-      </div>
 
-    </main>
+            <div className="flex flex-wrap gap-x-1 gap-y-2 lg:border-t lg:border-hairline lg:pt-4">
+              {people.map((p) => (
+                <PersonFilterBadge
+                  key={p.id}
+                  href={link({ view, date, who: toggleWho(p.id) })}
+                  name={p.displayName ?? p.name}
+                  color={p.color}
+                  avatarPath={p.avatarPath}
+                  selected={selectedSet.has(p.id)}
+                  compact
+                />
+              ))}
+              <FamilyFilterBadge
+                href={link({ view, date, who: everyoneWho })}
+                selected={allSelected}
+                count={people.length}
+                color={familyColor}
+                compact
+              />
+            </div>
+          </aside>
+
+          <div className="min-w-0 flex-1">
+            <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+              <div className="mr-auto inline-flex rounded-full border border-hairline p-0.5">
+                {VIEWS.map((v) => (
+                  <Link
+                    key={v.key}
+                    href={link({ view: v.key, date, who: whoEncoded })}
+                    className={`inline-flex h-9 items-center rounded-full px-4 text-sm font-medium transition-colors ${
+                      view === v.key
+                        ? "bg-accent text-white"
+                        : "text-muted hover:text-accent"
+                    }`}
+                  >
+                    {v.label}
+                  </Link>
+                ))}
+              </div>
+
+              <Link
+                href={link({ view, date: step(-1), who: whoEncoded })}
+                className={`${chip} ${idle}`}
+              >
+                &larr;
+              </Link>
+              <Link href={link({ view, who: whoEncoded })} className={`${chip} ${idle}`}>
+                Today
+              </Link>
+              <Link
+                href={link({ view, date: step(1), who: whoEncoded })}
+                className={`${chip} ${idle}`}
+              >
+                &rarr;
+              </Link>
+            </div>
+
+            {view === "week" && (
+              <CalendarView
+                days={days}
+                timed={range.timed}
+                allDay={range.allDay}
+                todayISO={today}
+                nowColor={calPrefs.nowColor}
+                resetSec={calPrefs.scrollResetSec}
+                blockMinutes={calPrefs.blockMinutes}
+              />
+            )}
+
+            {view === "day" && (
+              <DayPanel
+                date={date}
+                range={range}
+                todayISO={today}
+                nowColor={calPrefs.nowColor}
+                resetSec={calPrefs.scrollResetSec}
+                blockMinutes={calPrefs.blockMinutes}
+              />
+            )}
+
+            {view === "month" && (
+              <MonthGrid
+                days={days}
+                monthISO={startOfMonth(date)}
+                events={[...range.allDay, ...range.timed]}
+                todayISO={today}
+                hrefForDay={(iso) =>
+                  link({ view: "day", date: iso, who: whoEncoded })
+                }
+              />
+            )}
+          </div>
+        </div>
+      </main>
       </AddEventProvider>
     </>
   );

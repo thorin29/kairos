@@ -240,11 +240,20 @@ export function WeekGrid({
   const dragging = useRef(false);
   const dragStart = useRef<{ day: string; min: number } | null>(null);
 
-  const yToMin = (el: HTMLElement, clientY: number) => {
+  // Block starts snap DOWN into the half-hour you clicked (click at 2:46 →
+  // 2:30), so you always get the block you're pointing at.
+  const snapStart = (el: HTMLElement, clientY: number) => {
     const rect = el.getBoundingClientRect();
     const raw = ((clientY - rect.top) / HOUR_PX) * 60;
-    // Snap to the top or bottom of the hour (:00 / :30).
-    return clamp(Math.round(raw / 30) * 30, 0, 24 * 60);
+    return clamp(Math.floor(raw / 30) * 30, 0, 24 * 60 - 30);
+  };
+
+  // Drag ends snap to 15-min increments for finer control while the start stays
+  // on the half-hour.
+  const snapEdge = (el: HTMLElement, clientY: number) => {
+    const rect = el.getBoundingClientRect();
+    const raw = ((clientY - rect.top) / HOUR_PX) * 60;
+    return clamp(Math.round(raw / 15) * 15, 0, 24 * 60);
   };
 
   const onColDown = (iso: string, e: React.PointerEvent<HTMLDivElement>) => {
@@ -252,7 +261,7 @@ export function WeekGrid({
     // user dragged and lets the context menu act on it.
     if (e.button !== 0) return;
     setSelectedId(null);
-    const start = yToMin(e.currentTarget, e.clientY);
+    const start = snapStart(e.currentTarget, e.clientY);
     const b = { day: iso, a: start, b: clamp(start + blockMinutes, 0, 24 * 60) };
     setBlock(b);
 
@@ -280,10 +289,10 @@ export function WeekGrid({
     if (dragging.current) {
       const st = dragStart.current;
       if (!st || st.day !== iso) return;
-      const min = yToMin(e.currentTarget, e.clientY);
-      // Ignore jitter so a plain click keeps the default-length block.
-      if (Math.abs(min - st.min) < 15) return;
-      setBlock({ day: iso, a: st.min, b: min });
+      const end = snapEdge(e.currentTarget, e.clientY);
+      // Drag only lengthens the block (15-min steps); the start stays put.
+      const b = end > st.min + blockMinutes ? end : st.min + blockMinutes;
+      setBlock({ day: iso, a: st.min, b });
       return;
     }
     if (pressTimer.current) {
@@ -318,7 +327,7 @@ export function WeekGrid({
       block && block.day === iso
         ? block
         : (() => {
-            const start = yToMin(e.currentTarget, e.clientY);
+            const start = snapStart(e.currentTarget, e.clientY);
             const b = {
               day: iso,
               a: start,
@@ -415,7 +424,7 @@ export function WeekGrid({
         onPointerMove={onScrollerMove}
         onPointerUp={onScrollerUp}
         onPointerCancel={onScrollerUp}
-        className="h-[42rem] overflow-y-auto"
+        className="h-[46rem] overflow-y-auto"
         style={{ scrollbarGutter: "stable", touchAction: "none" }}
       >
         {/* Frozen header. Same container, same width, so columns line up. */}
