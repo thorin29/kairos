@@ -195,12 +195,15 @@ export function WeekGrid({
   const SELECTED_RING =
     "0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-ink)";
 
-  // Drag-to-select a time range (mouse/pen). A plain tap no longer creates an
-  // event — only a real drag does — so a stray touch can't open the form.
+  // Drag-to-select a time range. It only starts on a double-click/tap-and-drag,
+  // so a single click/tap is free to select an event or clear the selection —
+  // and no selection line appears unless you actually drag.
   const [sel, setSel] = useState<{ day: string; a: number; b: number } | null>(
     null,
   );
   const dragging = useRef(false);
+  const dragStart = useRef<{ day: string; min: number } | null>(null);
+  const lastDown = useRef<{ t: number; x: number; y: number } | null>(null);
 
   const yToMin = (el: HTMLElement, clientY: number) => {
     const rect = el.getBoundingClientRect();
@@ -209,22 +212,38 @@ export function WeekGrid({
   };
 
   const onColDown = (iso: string, e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === "touch") return;
-    const min = yToMin(e.currentTarget, e.clientY);
+    const now = e.timeStamp;
+    const prev = lastDown.current;
+    const isDouble =
+      prev != null &&
+      now - prev.t < 400 &&
+      Math.abs(e.clientX - prev.x) < 24 &&
+      Math.abs(e.clientY - prev.y) < 24;
+    lastDown.current = { t: now, x: e.clientX, y: e.clientY };
+
+    if (!isDouble) return; // first click/tap: leave it for select/deselect
+
     dragging.current = true;
-    setSel({ day: iso, a: min, b: min });
-    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStart.current = { day: iso, min: yToMin(e.currentTarget, e.clientY) };
+    if (e.pointerType !== "touch")
+      e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const onColMove = (iso: string, e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragging.current) return;
     const min = yToMin(e.currentTarget, e.clientY);
-    setSel((s) => (s && s.day === iso ? { ...s, b: min } : s));
+    const start = dragStart.current;
+    setSel((s) => {
+      if (s && s.day === iso) return { ...s, b: min };
+      if (start && start.day === iso) return { day: iso, a: start.min, b: min };
+      return s;
+    });
   };
 
   const onColUp = (iso: string, e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragging.current) return;
     dragging.current = false;
+    dragStart.current = null;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
@@ -261,12 +280,15 @@ export function WeekGrid({
     const earliest = timed.length
       ? Math.min(...timed.map((e) => e.startMin))
       : 8 * 60;
-    // Morning: earliest event near the top. Afternoon (today only): follow the
-    // clock so later/evening events scroll into view.
+    // Morning start (7am) for weeks other than the current one, so jumping
+    // ahead shows the start of the day rather than only the afternoon.
+    const MORNING = 7 * 60;
+    // Today's week follows the clock into the afternoon; other weeks anchor to
+    // the morning (or earlier if something starts before it).
     const base =
       todayInView && nowMin != null
         ? clamp(nowMin - 120, earliest - 60, 24 * 60 - visibleMin)
-        : earliest - 60;
+        : Math.min(earliest - 60, MORNING);
     return Math.max(0, (base / 60) * HOUR_PX);
   };
 
@@ -321,7 +343,7 @@ export function WeekGrid({
         onPointerMove={onScrollerMove}
         onPointerUp={onScrollerUp}
         onPointerCancel={onScrollerUp}
-        className="max-h-[36rem] overflow-y-auto"
+        className="h-[42rem] overflow-y-auto"
         style={{ scrollbarGutter: "stable", touchAction: "none" }}
       >
         {/* Frozen header. Same container, same width, so columns line up. */}
@@ -409,10 +431,13 @@ export function WeekGrid({
           {days.map((iso) => {
             const events = byDay(iso);
             const lanes = assignLanes(events);
+            const isToday = iso === todayISO;
             // Each all-day event marked to shade tints the day behind the hours.
             // Several on one day divide the column into side-by-side colour
-            // bands, so two shared birthdays can each show, or neither.
+            // bands. Today's bands are a touch darker so the current day still
+            // stands out when it's shaded (e.g. a vacation over today).
             const shaded = allDay.filter((e) => e.dayISO === iso && e.shade);
+            const shadePct = isToday ? 22 : 12;
 
             return (
               <div
@@ -421,7 +446,7 @@ export function WeekGrid({
                 onPointerDown={(e) => onColDown(iso, e)}
                 onPointerMove={(e) => onColMove(iso, e)}
                 onPointerUp={(e) => onColUp(iso, e)}
-                title="Drag to pick a time range for a new event"
+                title="Double-click and drag to block out a new event"
                 className={`relative cursor-pointer select-none border-l border-hairline ${
                   selectedDay === iso ? "bg-accent/5" : ""
                 }`}
@@ -436,7 +461,7 @@ export function WeekGrid({
                         key={e.id}
                         className="flex-1"
                         style={{
-                          backgroundColor: `color-mix(in srgb, ${e.color} 12%, transparent)`,
+                          backgroundColor: `color-mix(in srgb, ${e.color} ${shadePct}%, transparent)`,
                         }}
                       />
                     ))}

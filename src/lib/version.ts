@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.66.0";
+export const APP_VERSION = "0.67.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -55,6 +55,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.67.0",
+    summary: [
+      "New events are now started with a double-click (or double-tap) and drag, so a single click is free to pick an event and no stray selection line flashes on a plain click",
+      "On a shaded day, today is drawn a little darker so the current day still stands out during a vacation",
+      "Jumping to another week now opens at the morning instead of the afternoon, so you see the start of the day first",
+      "Past vacations drop off the Admin → Chores list once they're over (they stay on the calendar); day, week, and month views are now the same height with a bit more room for hours; and the calendar filters are smaller with the divider and \u201cShow\u201d label removed",
+    ],
+  },
   {
     version: "0.66.0",
     summary: [

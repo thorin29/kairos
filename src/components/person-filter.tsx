@@ -2,7 +2,11 @@ import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 
 // Longer names step the font down a touch so the pill never outgrows its slot.
-function fontFor(label: string): string {
+function fontFor(label: string, compact = false): string {
+  if (compact) {
+    if (label.length <= 8) return "text-[0.65rem]";
+    return "text-[0.55rem]";
+  }
   if (label.length <= 8) return "text-xs";
   if (label.length <= 11) return "text-[0.7rem]";
   return "text-[0.6rem]";
@@ -19,21 +23,31 @@ export function AvatarBadge({
   label,
   pillColor,
   selected = false,
+  compact = false,
   children,
 }: {
   label: string;
   pillColor: string;
   selected?: boolean;
+  compact?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <span className="relative block h-[4.75rem] w-24 shrink-0">
-      <span className="block h-16 w-16">{children}</span>
-      {/* left-6 (24px) + px-2 (8px) → text starts at 32px, the circle's center. */}
+    <span
+      className={`relative block shrink-0 ${
+        compact ? "h-[3.9rem] w-20" : "h-[4.75rem] w-24"
+      }`}
+    >
+      <span className={compact ? "block h-12 w-12" : "block h-16 w-16"}>
+        {children}
+      </span>
+      {/* Pill tucked to the circle's lower edge, its left roughly at the centre. */}
       <span
-        className={`absolute bottom-0 left-6 z-10 max-w-[4.5rem] truncate rounded-full px-2 py-0.5 text-left font-semibold text-white shadow-sm ${fontFor(
-          label,
-        )} ${selected ? "ring-2 ring-white/70" : ""}`}
+        className={`absolute bottom-0 z-10 truncate rounded-full text-left font-semibold text-white shadow-sm ${
+          compact
+            ? "left-5 max-w-[3.4rem] px-1.5 py-0.5"
+            : "left-6 max-w-[4.5rem] px-2 py-0.5"
+        } ${fontFor(label, compact)} ${selected ? "ring-2 ring-white/70" : ""}`}
         style={{ backgroundColor: pillColor }}
       >
         {label}
@@ -80,15 +94,30 @@ const MAX_PEOPLE_GLYPHS = 6;
 
 /** The Everyone circle: one little person per family member, shrinking as the
  *  family grows, laid out to fill the same 64px circle. */
-function FamilyCircle({ count, color }: { count: number; color: string }) {
+function FamilyCircle({
+  count,
+  color,
+  compact = false,
+}: {
+  count: number;
+  color: string;
+  compact?: boolean;
+}) {
   const n = Math.max(1, Math.min(count, MAX_PEOPLE_GLYPHS));
-  const size = n <= 1 ? 30 : n === 2 ? 22 : n === 3 ? 16 : 13;
+  const base = n <= 1 ? 30 : n === 2 ? 22 : n === 3 ? 16 : 13;
+  const size = compact ? Math.round(base * 0.75) : base;
   return (
     <span
-      className="flex h-16 w-16 items-center justify-center rounded-full bg-ground"
+      className={`flex items-center justify-center rounded-full bg-ground ${
+        compact ? "h-12 w-12" : "h-16 w-16"
+      }`}
       style={{ outline: `2.5px dashed ${color}`, outlineOffset: "0px" }}
     >
-      <span className="flex max-w-[42px] flex-wrap items-center justify-center gap-[1.5px]">
+      <span
+        className={`flex flex-wrap items-center justify-center gap-[1.5px] ${
+          compact ? "max-w-[32px]" : "max-w-[42px]"
+        }`}
+      >
         {Array.from({ length: n }).map((_, i) => (
           <PersonGlyph key={i} size={size} color={color} />
         ))}
@@ -103,12 +132,14 @@ export function PersonFilterBadge({
   color,
   avatarPath,
   selected,
+  compact = false,
 }: {
   href: string;
   name: string;
   color: string;
   avatarPath: string | null;
   selected: boolean;
+  compact?: boolean;
 }) {
   return (
     <Link
@@ -118,8 +149,18 @@ export function PersonFilterBadge({
         selected ? "" : "opacity-70 grayscale"
       }`}
     >
-      <AvatarBadge label={name} pillColor={color} selected={selected}>
-        <Avatar name={name} color={color} avatarPath={avatarPath} size="lg" />
+      <AvatarBadge
+        label={name}
+        pillColor={color}
+        selected={selected}
+        compact={compact}
+      >
+        <Avatar
+          name={name}
+          color={color}
+          avatarPath={avatarPath}
+          size={compact ? "md" : "lg"}
+        />
       </AvatarBadge>
     </Link>
   );
@@ -130,11 +171,13 @@ export function FamilyFilterBadge({
   selected,
   count,
   color,
+  compact = false,
 }: {
   href: string;
   selected: boolean;
   count: number;
   color: string;
+  compact?: boolean;
 }) {
   return (
     <Link
@@ -144,8 +187,13 @@ export function FamilyFilterBadge({
         selected ? "" : "opacity-70 grayscale"
       }`}
     >
-      <AvatarBadge label="Family" pillColor={color} selected={selected}>
-        <FamilyCircle count={count} color={color} />
+      <AvatarBadge
+        label="Family"
+        pillColor={color}
+        selected={selected}
+        compact={compact}
+      >
+        <FamilyCircle count={count} color={color} compact={compact} />
       </AvatarBadge>
     </Link>
   );

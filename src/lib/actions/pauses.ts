@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { EventKind, PauseType } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { addDays, fromDateColumn, toDateColumn } from "@/lib/dates";
+import { addDays, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
 import { isAdmin } from "@/lib/session";
 import { generateChores } from "@/lib/chores/generate";
 
@@ -15,8 +15,11 @@ export type PauseRow = {
   endISO: string;
 };
 
+/** Active and upcoming pauses only. Past ones stop showing in admin (the list
+ *  would grow forever) but their calendar event stays for posterity. */
 export async function loadPauses(): Promise<PauseRow[]> {
   const rows = await prisma.pause.findMany({
+    where: { endDate: { gte: toDateColumn(todayISO()) } },
     orderBy: { startDate: "asc" },
   });
   return rows.map((p) => ({
