@@ -42,6 +42,7 @@ export function WeekGrid({
   nowColor = "#ef4444",
   resetSec = 60,
   blockMinutes = 30,
+  personColumns,
 }: {
   days: string[];
   timed: GridEvent[];
@@ -52,7 +53,26 @@ export function WeekGrid({
   nowColor?: string;
   resetSec?: number;
   blockMinutes?: number;
+  /** Day view only: render a column per person instead of per day. Family
+   *  (shared) timed events span every column; all-day events span the top. */
+  personColumns?: {
+    id: string;
+    name: string;
+    color: string;
+  }[];
 }) {
+  // In person mode the single date is days[0] and the columns are people.
+  const personMode = !!personColumns && personColumns.length > 0 && days.length === 1;
+  const singleISO = days[0];
+  const cols = personMode ? personColumns!.map((p) => p.id) : days;
+  // Events belonging to a column: by day normally, by owner in person mode
+  // (shared/family timed events are handled separately as full-width spans).
+  const colEvents = (key: string) =>
+    personMode
+      ? timed.filter((e) => e.ownerId === key && !e.isFamily)
+      : timed.filter((e) => e.dayISO === key);
+  // Family/shared timed events span all person columns.
+  const familySpan = personMode ? timed.filter((e) => e.isFamily) : [];
   const scroller = useRef<HTMLDivElement>(null);
   const programmatic = useRef(false);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,11 +133,20 @@ export function WeekGrid({
         {
           label: "New appointment",
           onSelect: () => {
-            openAt({
-              date: b.day,
-              start: minutesToHHMM(lo),
-              end: minutesToHHMM(hi),
-            });
+            openAt(
+              personMode
+                ? {
+                    date: singleISO,
+                    start: minutesToHHMM(lo),
+                    end: minutesToHHMM(hi),
+                    userId: b.day,
+                  }
+                : {
+                    date: b.day,
+                    start: minutesToHHMM(lo),
+                    end: minutesToHHMM(hi),
+                  },
+            );
             setBlock(null);
           },
         },
@@ -237,6 +266,89 @@ export function WeekGrid({
   const SELECTED_RING =
     "0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-ink)";
 
+  const allDayChip = (e: GridEvent) => (
+    <span
+      key={e.id}
+      onClick={(ev) => {
+        ev.stopPropagation();
+        setBlock(null);
+        setSelectedId(e.id);
+      }}
+      onContextMenu={(ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        openEventMenu(e, ev.clientX, ev.clientY);
+      }}
+      onPointerDown={(ev) => {
+        ev.stopPropagation();
+        onEventDown(e, ev);
+      }}
+      onPointerMove={onEventMove}
+      onPointerUp={cancelPress}
+      onPointerCancel={cancelPress}
+      title={`${e.title}${e.location ? ` · ${e.location}` : ""}`}
+      className="mb-1 block cursor-pointer select-none truncate rounded px-1.5 py-1 text-[0.7rem] font-medium text-white"
+      style={{
+        backgroundColor: e.color,
+        boxShadow: selectedId === e.id ? SELECTED_RING : undefined,
+      }}
+    >
+      {e.title}
+    </span>
+  );
+
+  // A positioned timed-event block (used in day/week columns and, in person
+  // mode, for the family events that span all columns).
+  const timedBlock = (e: GridEvent, lane: { index: number; of: number }) => {
+    const top = (e.startMin / 60) * HOUR_PX;
+    const height = Math.max(((e.endMin - e.startMin) / 60) * HOUR_PX - 2, 18);
+    const width = 100 / lane.of;
+    const selected = selectedId === e.id;
+    return (
+      <div
+        key={e.id}
+        onClick={(ev) => {
+          ev.stopPropagation();
+          setBlock(null);
+          setSelectedId(e.id);
+        }}
+        onContextMenu={(ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          openEventMenu(e, ev.clientX, ev.clientY);
+        }}
+        onPointerDown={(ev) => {
+          ev.stopPropagation();
+          onEventDown(e, ev);
+        }}
+        onPointerMove={onEventMove}
+        onPointerUp={cancelPress}
+        onPointerCancel={cancelPress}
+        title={`${e.title}\n${e.timeLabel}${
+          e.location ? `\n${e.location}` : ""
+        }\n${e.ownerName}`}
+        className={`pointer-events-auto absolute cursor-pointer overflow-hidden rounded-md px-1.5 py-1 text-[0.7rem] leading-tight text-white ${
+          selected ? "z-[6]" : "shadow-sm"
+        }`}
+        style={{
+          top,
+          height,
+          left: `calc(${lane.index * width}% + 2px)`,
+          width: `calc(${width}% - 8px)`,
+          backgroundColor: e.color,
+          boxShadow: selected ? SELECTED_RING : undefined,
+        }}
+      >
+        <span className="block truncate font-medium">{e.title}</span>
+        {height > 34 && (
+          <span className="tabular block truncate opacity-90">
+            {e.timeLabel}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   const dragging = useRef(false);
   const dragStart = useRef<{ day: string; min: number } | null>(null);
 
@@ -339,7 +451,7 @@ export function WeekGrid({
     openNewMenu(cur, e.clientX, e.clientY);
   };
 
-  const gridTemplateColumns = `3.5rem repeat(${days.length}, minmax(0,1fr))`;
+  const gridTemplateColumns = `3.5rem repeat(${cols.length}, minmax(0,1fr))`;
   const todayInView = days.includes(todayISO);
 
   // Current time, refreshed each minute (client-only to avoid SSR mismatch).
@@ -410,8 +522,6 @@ export function WeekGrid({
     [],
   );
 
-  const byDay = (iso: string) => timed.filter((e) => e.dayISO === iso);
-
   const nowY = nowMin != null ? (nowMin / 60) * HOUR_PX : null;
 
   return (
@@ -434,7 +544,21 @@ export function WeekGrid({
             style={{ gridTemplateColumns }}
           >
             <div />
-            {days.map((iso) => {
+            {personMode
+              ? personColumns!.map((p) => (
+                  <div
+                    key={p.id}
+                    className="border-l border-ink/15 px-1 py-3 text-center"
+                  >
+                    <span
+                      className="inline-block max-w-full truncate rounded-full px-2.5 py-1 text-xs font-semibold text-white"
+                      style={{ backgroundColor: p.color }}
+                    >
+                      {p.name}
+                    </span>
+                  </div>
+                ))
+              : days.map((iso) => {
               const d = new Date(`${iso}T00:00:00Z`);
               const isToday = iso === todayISO;
               const isSelected = selectedDay === iso;
@@ -482,43 +606,22 @@ export function WeekGrid({
               <div className="px-2 py-2 text-right text-[0.6rem] uppercase tracking-wide text-muted">
                 All day
               </div>
-              {days.map((iso) => (
-                <div key={iso} className="border-l border-ink/10 p-1">
-                  {allDay
-                    .filter((e) => e.dayISO === iso)
-                    .map((e) => (
-                      <span
-                        key={e.id}
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          setBlock(null);
-                          setSelectedId(e.id);
-                        }}
-                        onContextMenu={(ev) => {
-                          ev.preventDefault();
-                          ev.stopPropagation();
-                          openEventMenu(e, ev.clientX, ev.clientY);
-                        }}
-                        onPointerDown={(ev) => {
-                          ev.stopPropagation();
-                          onEventDown(e, ev);
-                        }}
-                        onPointerMove={onEventMove}
-                        onPointerUp={cancelPress}
-                        onPointerCancel={cancelPress}
-                        title={`${e.title}${e.location ? ` · ${e.location}` : ""}`}
-                        className="mb-1 block cursor-pointer select-none truncate rounded px-1.5 py-1 text-[0.7rem] font-medium text-white"
-                        style={{
-                          backgroundColor: e.color,
-                          boxShadow:
-                            selectedId === e.id ? SELECTED_RING : undefined,
-                        }}
-                      >
-                        {e.title}
-                      </span>
-                    ))}
+              {personMode ? (
+                <div
+                  className="border-l border-ink/10 p-1"
+                  style={{ gridColumn: `span ${cols.length}` }}
+                >
+                  {allDay.map(allDayChip)}
                 </div>
-              ))}
+              ) : (
+                days.map((iso) => (
+                  <div key={iso} className="border-l border-ink/10 p-1">
+                    {allDay
+                      .filter((e) => e.dayISO === iso)
+                      .map(allDayChip)}
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
@@ -530,27 +633,28 @@ export function WeekGrid({
             ))}
           </div>
 
-          {days.map((iso) => {
-            const events = byDay(iso);
+          {cols.map((key) => {
+            const events = colEvents(key);
             const lanes = assignLanes(events);
-            const isToday = iso === todayISO;
-            // Each all-day event marked to shade tints the day behind the hours.
-            // Several on one day divide the column into side-by-side colour
-            // bands. Today's bands are a touch darker so the current day still
-            // stands out when it's shaded (e.g. a vacation over today).
-            const shaded = allDay.filter((e) => e.dayISO === iso && e.shade);
+            const isToday = personMode ? singleISO === todayISO : key === todayISO;
+            // Shaded all-day events tint behind the hours. In person mode a
+            // shared/vacation shade applies to everyone, so every column shows
+            // it; by day it's the shaded events on that day.
+            const shaded = personMode
+              ? allDay.filter((e) => e.shade)
+              : allDay.filter((e) => e.dayISO === key && e.shade);
             const shadePct = isToday ? 22 : 12;
 
             return (
               <div
-                key={iso}
-                onPointerDown={(e) => onColDown(iso, e)}
-                onPointerMove={(e) => onColMove(iso, e)}
-                onPointerUp={(e) => onColUp(iso, e)}
-                onContextMenu={(e) => onColContextMenu(iso, e)}
+                key={key}
+                onPointerDown={(e) => onColDown(key, e)}
+                onPointerMove={(e) => onColMove(key, e)}
+                onPointerUp={(e) => onColUp(key, e)}
+                onContextMenu={(e) => onColContextMenu(key, e)}
                 title="Tap for a block, then right-click / long-press to add"
                 className={`relative cursor-pointer select-none border-l border-hairline ${
-                  selectedDay === iso ? "bg-accent/5" : ""
+                  selectedDay === key ? "bg-accent/5" : ""
                 }`}
               >
                 {shaded.length > 0 && (
@@ -574,7 +678,7 @@ export function WeekGrid({
                   <HourCell key={h} />
                 ))}
 
-                {block?.day === iso &&
+                {block?.day === key &&
                   (() => {
                     const lo = Math.min(block.a, block.b);
                     const hi = Math.max(block.a, block.b);
@@ -590,65 +694,31 @@ export function WeekGrid({
                     );
                   })()}
 
-                {events.map((e) => {
-                  const lane = lanes.get(e.id) ?? { index: 0, of: 1 };
-                  const top = (e.startMin / 60) * HOUR_PX;
-                  const height = Math.max(
-                    ((e.endMin - e.startMin) / 60) * HOUR_PX - 2,
-                    18,
-                  );
-                  const width = 100 / lane.of;
-                  const selected = selectedId === e.id;
-
-                  return (
-                    <div
-                      key={e.id}
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        setBlock(null);
-                        setSelectedId(e.id);
-                      }}
-                      onContextMenu={(ev) => {
-                        ev.preventDefault();
-                        ev.stopPropagation();
-                        openEventMenu(e, ev.clientX, ev.clientY);
-                      }}
-                      onPointerDown={(ev) => {
-                          ev.stopPropagation();
-                          onEventDown(e, ev);
-                        }}
-                      onPointerMove={onEventMove}
-                      onPointerUp={cancelPress}
-                      onPointerCancel={cancelPress}
-                      title={`${e.title}\n${e.timeLabel}${
-                        e.location ? `\n${e.location}` : ""
-                      }\n${e.ownerName}`}
-                      className={`absolute cursor-pointer overflow-hidden rounded-md px-1.5 py-1 text-[0.7rem] leading-tight text-white ${
-                        selected ? "z-[6]" : "shadow-sm"
-                      }`}
-                      style={{
-                        top,
-                        height,
-                        left: `calc(${lane.index * width}% + 2px)`,
-                        width: `calc(${width}% - 8px)`,
-                        backgroundColor: e.color,
-                        boxShadow: selected ? SELECTED_RING : undefined,
-                      }}
-                    >
-                      <span className="block truncate font-medium">
-                        {e.title}
-                      </span>
-                      {height > 34 && (
-                        <span className="tabular block truncate opacity-90">
-                          {e.timeLabel}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                {events.map((e) =>
+                  timedBlock(e, lanes.get(e.id) ?? { index: 0, of: 1 }),
+                )}
               </div>
             );
           })}
+
+          {/* Family (shared) timed events span every person column. */}
+          {personMode &&
+            familySpan.length > 0 &&
+            (() => {
+              const lanes = assignLanes(familySpan);
+              return (
+                <div
+                  className="pointer-events-none absolute inset-y-0 z-[7]"
+                  style={{ left: "3.5rem", right: 0 }}
+                >
+                  <div className="relative h-full">
+                    {familySpan.map((e) =>
+                      timedBlock(e, lanes.get(e.id) ?? { index: 0, of: 1 }),
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
           {/* Now-line, spanning the day columns (not the hour gutter). */}
           {todayInView && nowY != null && (
