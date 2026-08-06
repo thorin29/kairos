@@ -17,6 +17,7 @@ import { loadDaySchedule } from "@/lib/queries/calendar";
 import { deviceMode } from "@/lib/device";
 import { currentUser } from "@/lib/user-session";
 import { pendingSportPrompts, type SportPrompt } from "@/lib/workouts/generate";
+import { clearPausedTasks } from "@/lib/queries/pauses";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,9 @@ export default async function Home({
     await generatePoolChores(today);
     await generateReadingTasks(today);
     await generateAnytimeChores(today);
+    // Sweep any scheduled task that lands on a paused (vacation) day, including
+    // days already past within the break that the generators don't revisit.
+    await clearPausedTasks(today);
     people = await loadDay(today);
   } catch (e) {
     return (

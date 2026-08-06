@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadWorkoutPlanNames } from "@/lib/queries/workouts";
+import { loadActivePause } from "@/lib/queries/pauses";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import {
   addDays,
@@ -27,7 +28,7 @@ import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
 import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
-import { LockIcon } from "@/components/icons";
+import { LockIcon, MoonIcon } from "@/components/icons";
 import { CATEGORY_COLORS } from "@/lib/colors";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +72,7 @@ export default async function PersonPage({
 
   const tasks = await loadPersonDay(id, today);
   const workoutNames = await loadWorkoutPlanNames(id);
+  const activePause = await loadActivePause(today);
 
   const days = weekDays(weekAnchor);
   const weekRange = await loadRange(days, id);
@@ -173,6 +175,21 @@ export default async function PersonPage({
           )}
         </div>
       </div>
+
+      {activePause && (
+        <div className="mb-8 flex items-start gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-5 py-4">
+          <MoonIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+          <div>
+            <p className="font-display text-sm font-semibold text-accent">
+              Paused for {activePause.name}
+            </p>
+            <p className="mt-0.5 text-sm text-muted">
+              Chores and workouts are off while you&rsquo;re away. They pick
+              back up the day after the break ends.
+            </p>
+          </div>
+        </div>
+      )}
 
       {overdue.length > 0 && (
         <section className="mb-8">

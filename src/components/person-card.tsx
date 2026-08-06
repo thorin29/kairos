@@ -42,9 +42,17 @@ export function PersonCard({
           </span>
         </div>
 
-        {person.total === 0 ? (
+        {person.paused ? (
+          <p className="mt-3 text-sm text-muted">
+            <span className="font-medium text-accent">Paused</span> for{" "}
+            {person.paused}.
+            {person.total === 0 && " Nothing due while you're away."}
+          </p>
+        ) : person.total === 0 ? (
           <p className="mt-3 text-sm text-muted">Nothing scheduled today.</p>
-        ) : (
+        ) : null}
+
+        {person.total > 0 && (
           <>
             <ul className="mt-3 space-y-3">
               {person.categories.map((c) => (

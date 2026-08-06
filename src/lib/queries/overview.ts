@@ -2,6 +2,10 @@ import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { isStale, loadStaleContext } from "@/lib/chores/stale";
+import {
+  loadActivePause,
+  PAUSABLE_CATEGORIES,
+} from "@/lib/queries/pauses";
 
 export type CategorySummary = {
   category: Category;
@@ -23,6 +27,8 @@ export type PersonSummary = {
   complete: number;
   overdue: number;
   percent: number | null;
+  /** Name of the active household pause, when one covers today. */
+  paused: string | null;
 };
 
 /**
@@ -33,6 +39,8 @@ export type PersonSummary = {
 export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
   const day = toDateColumn(dayISO);
   const stale = await loadStaleContext(dayISO);
+  const activePause = await loadActivePause(dayISO);
+  const pausedName = activePause?.name ?? null;
 
   const [people, allTasks] = await Promise.all([
     prisma.user.findMany({
@@ -67,8 +75,15 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
     (t) => !t.isOpen && !isStale(t, dayISO, stale),
   );
 
+  // While a household pause is on, scheduled work (chores, reading, workouts)
+  // steps aside for everyone — including anything already overdue — so the day
+  // reads clean. Hand-added tasks and appointments still stand.
+  const visible = pausedName
+    ? tasks.filter((t) => !PAUSABLE_CATEGORIES.includes(t.category))
+    : tasks;
+
   return people.map((person) => {
-    const mine = tasks.filter((t) => t.userId === person.id);
+    const mine = visible.filter((t) => t.userId === person.id);
 
     const categories = Object.values(Category).map((category) => {
       const inCat = mine.filter((t) => t.category === category);
@@ -109,6 +124,7 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
       complete,
       overdue,
       percent: total ? Math.round((complete / total) * 100) : null,
+      paused: pausedName,
     };
   });
 }
@@ -127,6 +143,7 @@ export type OpenTask = {
 /** Chores handed back to the household and waiting for someone to claim. */
 export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
   const stale = await loadStaleContext(dayISO);
+  const activePause = await loadActivePause(dayISO);
   const day = toDateColumn(dayISO);
 
   const rows = await prisma.task.findMany({
@@ -144,6 +161,7 @@ export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
 
   return rows
     .filter((t) => !isStale(t, dayISO, stale))
+    .filter((t) => !(activePause && PAUSABLE_CATEGORIES.includes(t.category)))
     .map((t) => ({
       id: t.id,
       title: t.title,
@@ -159,6 +177,7 @@ export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
 export async function loadPersonDay(userId: string, dayISO: string) {
   const day = toDateColumn(dayISO);
   const stale = await loadStaleContext(dayISO);
+  const activePause = await loadActivePause(dayISO);
 
   const rows = await prisma.task.findMany({
     where: {
@@ -172,5 +191,9 @@ export async function loadPersonDay(userId: string, dayISO: string) {
     orderBy: [{ dueDate: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
   });
 
-  return rows.map((t) => ({ ...t, stale: isStale(t, dayISO, stale) }));
+  const visible = activePause
+    ? rows.filter((t) => !PAUSABLE_CATEGORIES.includes(t.category))
+    : rows;
+
+  return visible.map((t) => ({ ...t, stale: isStale(t, dayISO, stale) }));
 }

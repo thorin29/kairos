@@ -495,6 +495,13 @@ own exercises, optionally schedules them, and records what they did.
 - [x] A pause also pauses anytime and pool (shared) chores, not just scheduled
       ones — the current-period anytime task steps aside and shared chores defer
       past the break, both resuming the day after (v0.77.0)
+- [x] Past-due chores and workout prompts already sitting on a card when a pause
+      is set are cleared too, not just the days still ahead — the forward-only
+      generators never revisited past days, so a sweep handles them (v0.78.0)
+- [x] Each person's dashboard card and page show a "Paused for <trip>" note
+      while a break is on, so a clean card reads as intentional (v0.78.0)
+- [x] Bible reading intentionally keeps going through a break — it is not part
+      of what a household pause silences
 - [x] Paused banner at the top of the Chores page while a pause is active,
       mirroring the workout card's paused note (v0.77.0)
 - [ ] Per-person pause: pause one person's workouts and chores for a date range
