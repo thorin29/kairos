@@ -284,9 +284,12 @@ export function WorkoutsGrid({
                   </h3>
 
                   <TodayPlan
-                    person={open}
-                    todayISO={todayISO}
-                    todayDow={todayDow}
+                    userId={open.user.id}
+                    dateISO={todayISO}
+                    workouts={open.plan[todayDow]?.workouts ?? []}
+                    doneLabels={open.todayWorkouts.map((w) => w.label)}
+                    paused={open.today.paused}
+                    rested={open.today.rested}
                     unitSystem={unitSystem}
                   />
 
@@ -304,7 +307,7 @@ export function WorkoutsGrid({
                       unitSystem={unitSystem}
                       pool={pool}
                       hiitWorkouts={hiitWorkouts}
-                      todayISO={todayISO}
+                      dateISO={todayISO}
                       onDone={() => setStep("menu")}
                     />
                   </div>
@@ -526,19 +529,19 @@ const LOG_CATEGORIES: WorkoutCategory[] = [
   "ISOMETRIC",
 ];
 
-function CustomWorkoutForm({
+export function CustomWorkoutForm({
   userId,
   unitSystem,
   pool,
   hiitWorkouts,
-  todayISO,
+  dateISO,
   onDone,
 }: {
   userId: string;
   unitSystem: UnitSystem;
   pool: PoolEntry[];
   hiitWorkouts: BoardHiitWorkout[];
-  todayISO: string;
+  dateISO: string;
   onDone: () => void;
 }) {
   const [category, setCategory] = useState<WorkoutCategory>("WEIGHTS");
@@ -592,7 +595,7 @@ function CustomWorkoutForm({
     startTransition(async () => {
       await logCustomWorkout({
         userId,
-        dateISO: todayISO,
+        dateISO,
         poolExerciseId: isPoolCat ? poolId : null,
         category: isPoolCat ? null : category,
         metric,
@@ -649,7 +652,7 @@ function CustomWorkoutForm({
             (w) => w.ownerId === null || w.ownerId === userId,
           )}
           userId={userId}
-          todayISO={todayISO}
+          dateISO={dateISO}
           onDone={onDone}
         />
       ) : (
@@ -785,13 +788,13 @@ function HiitBuilder({
   pool,
   workouts,
   userId,
-  todayISO,
+  dateISO,
   onDone,
 }: {
   pool: PoolEntry[];
   workouts: BoardHiitWorkout[];
   userId: string;
-  todayISO: string;
+  dateISO: string;
   onDone: () => void;
 }) {
   // "new" builds a fresh workout (saved to this person's pool); otherwise an
@@ -845,7 +848,7 @@ function HiitBuilder({
       if (isNew) {
         const res = await createAndLogHiitWorkout({
           userId,
-          dateISO: todayISO,
+          dateISO,
           name: name.trim(),
           type,
           movements: [...picked].map((poolExerciseId) => ({ poolExerciseId })),
@@ -859,7 +862,7 @@ function HiitBuilder({
       } else if (active) {
         await logHiitWorkout({
           userId,
-          dateISO: todayISO,
+          dateISO,
           hiitWorkoutId: active.id,
           value,
           notes: notes.trim() || undefined,

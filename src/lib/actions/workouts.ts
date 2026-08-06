@@ -269,6 +269,8 @@ async function completeWorkoutTask(userId: string, dateISO: string): Promise<voi
       },
     });
   }
+  // A workout can be logged from a person's dashboard now, so refresh it.
+  revalidatePath(`/person/${userId}`);
 }
 
 async function findOrCreateSession(userId: string, dateISO: string): Promise<string> {
