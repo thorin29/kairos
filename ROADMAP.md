@@ -377,6 +377,11 @@ all live in the database, never in this repository.
 - [x] Admin: open a person from the Workouts page to see their exercises, plan,
       and logged workouts, and delete any individually — for clearing test or
       mistaken records (v0.33.0)
+- [x] Browse workouts — a button on the workout card lists the named workouts
+      (HIIT and other multi-part sessions, with type and movements), shared
+      library plus the person's own; simple single pool movements are excluded.
+      Read-only browse for now; a home for future named types (iso, stretching)
+      as they're modelled (v0.80.0)
 - [x] Workout on the dashboard opens the log step — tapping a workout on a
       person's dashboard opens the same log pop-up as the Workouts page (complete
       the scheduled plan workout with its metrics, or log a one-off), scoped to

@@ -7,6 +7,7 @@ import {
   CheckIcon,
   CalendarPlusIcon,
   DumbbellIcon,
+  BookIcon,
   MoonIcon,
   PlusIcon,
   TrashIcon,
@@ -42,7 +43,7 @@ import {
   type WorkoutType,
 } from "@/lib/workouts/catalog";
 
-type Step = "menu" | "plan" | "log" | "history";
+type Step = "menu" | "plan" | "log" | "history" | "browse";
 
 export function WorkoutsGrid({
   people,
@@ -78,6 +79,12 @@ export function WorkoutsGrid({
 
   const open = people.find((p) => p.user.id === openId) ?? null;
   const hasPlan = open ? open.plan.some((d) => d.workouts.length > 0) : false;
+  // Named workouts available to this person: the shared library plus their own.
+  const browsable = open
+    ? hiitWorkouts.filter(
+        (w) => w.ownerId === null || w.ownerId === open.user.id,
+      )
+    : [];
 
   const close = () => setOpenId(null);
   const rest = () => {
@@ -245,6 +252,15 @@ export function WorkoutsGrid({
                     />
                   </div>
 
+                  <button
+                    type="button"
+                    onClick={() => setStep("browse")}
+                    className="flex w-full items-center justify-center gap-2 rounded-full border border-hairline px-4 py-2.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+                  >
+                    <BookIcon className="h-4 w-4" />
+                    Browse workouts
+                  </button>
+
                   {open.history.length > 0 && (
                     <button
                       type="button"
@@ -311,6 +327,54 @@ export function WorkoutsGrid({
                       onDone={() => setStep("menu")}
                     />
                   </div>
+                </div>
+              )}
+
+              {step === "browse" && (
+                <div className="mt-4">
+                  <BackLink onClick={() => setStep("menu")} />
+                  <h3 className="mb-1 font-display text-lg font-semibold">
+                    Browse workouts
+                  </h3>
+                  <p className="mb-3 text-sm text-muted">
+                    Named workouts &mdash; HIIT and other multi-part sessions.
+                    Single pool movements (push-ups and the like) aren&rsquo;t
+                    listed here.
+                  </p>
+                  {browsable.length === 0 ? (
+                    <p className="text-sm text-muted">
+                      No named workouts yet. Build one from a plan&rsquo;s HIIT
+                      slot.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {browsable.map((w) => (
+                        <li
+                          key={w.id}
+                          className="rounded-xl border border-hairline bg-ground/30 p-3"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold">
+                              {w.name}
+                            </span>
+                            <span className="rounded-full bg-ground px-2 py-0.5 text-xs font-medium text-muted">
+                              {WORKOUT_TYPE_LABEL[w.type]}
+                            </span>
+                            {w.ownerId && (
+                              <span className="text-xs text-muted">yours</span>
+                            )}
+                          </div>
+                          {w.movements.length > 0 && (
+                            <p className="mt-1 text-xs text-muted">
+                              {w.movements
+                                .map((m) => formatHiitMovement(m))
+                                .join(", ")}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
 
