@@ -377,6 +377,16 @@ all live in the database, never in this repository.
 - [x] Admin: open a person from the Workouts page to see their exercises, plan,
       and logged workouts, and delete any individually — for clearing test or
       mistaken records (v0.33.0)
+- [x] Named workout on the dashboard prompt — a workout task reads the day's
+      top planned workout name (e.g. "Leg day") instead of a bare "Workout",
+      derived at read time so it renames carried-over prompts too and follows
+      plan edits; "Workouts" stays as the category line. Plan-less schedule days
+      keep the plain label (v0.75.0)
+- [x] Configurable workout expiry — missed workouts expire like chores, on a
+      household-wide window set in Admin → Workouts: 0 days (retire the day
+      after due) up to "Until next due", which holds it until the same weekday
+      comes round again (pure succession). Defaults to "Until next due"
+      (v0.75.0)
 - [ ] Workout plans: optional end date (plan expiry); no end date is fine too
 - [ ] Admin: pause a person's workouts for a set period (vacations) — no plan
       tasks generated while paused

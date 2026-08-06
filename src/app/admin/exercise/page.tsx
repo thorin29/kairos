@@ -10,17 +10,20 @@ import { WorkoutAdmin } from "./workout-admin";
 import { ExercisePool } from "./exercise-pool";
 import { HiitWorkouts } from "./hiit-workouts";
 import { PendingShares } from "./pending-shares";
+import { WorkoutExpiry } from "./workout-expiry";
+import { getWorkoutOverdueDays } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminWorkoutsPage() {
-  const [{ people }, pool, weightUnits, hiitWorkouts, pendingShares] =
+  const [{ people }, pool, weightUnits, hiitWorkouts, pendingShares, overdueDays] =
     await Promise.all([
       loadWorkoutAdmin(),
       loadExercisePool(),
       loadWeightUnits(),
       loadHiitWorkouts(),
       loadPendingHiitShares(),
+      getWorkoutOverdueDays(),
     ]);
 
   return (
@@ -38,6 +41,7 @@ export default async function AdminWorkoutsPage() {
       </header>
 
       <div className="space-y-10">
+        <WorkoutExpiry days={overdueDays} />
         <ExercisePool pool={pool} weightUnits={weightUnits} />
         {pendingShares.length > 0 && <PendingShares shares={pendingShares} />}
         <HiitWorkouts

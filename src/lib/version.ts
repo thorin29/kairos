@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.74.0";
+export const APP_VERSION = "0.75.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -56,6 +56,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.75.0",
+    summary: [
+      "A workout on the dashboard now shows the name of the day\u2019s workout from the plan (e.g. \u201cLeg day\u201d) instead of a plain \u201cWorkout\u201d, with \u201cWorkouts\u201d still underneath as the category. Days set up with only a single scheduled exercise, and no named plan, keep the plain label",
+      "Missed workouts now expire like chores do. Set how long one stays overdue in Admin \u2192 Workouts \u2014 anywhere from the day after it was due up to \u201cUntil next due\u201d, which keeps it until the same weekday\u2019s workout comes round again. Defaults to \u201cUntil next due\u201d. An expired workout greys out, stops counting, and drops off \u201cCarried over\u201d",
+    ],
+  },
   {
     version: "0.74.0",
     summary: [

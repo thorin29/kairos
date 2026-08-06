@@ -65,7 +65,7 @@ export async function loadScores(todayISO: string): Promise<PersonScore[]> {
         isOpen: false,
         dueDate: since ? { lt: today, ...since } : { lt: today },
       },
-      select: { userId: true, choreId: true, status: true, dueDate: true },
+      select: { userId: true, category: true, choreId: true, status: true, dueDate: true },
     }),
     ]);
 

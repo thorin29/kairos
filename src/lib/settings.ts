@@ -7,6 +7,11 @@ export const FAMILY_COLOR = "familyColor";
 export const CAL_NOW_COLOR = "calendar.nowColor";
 export const CAL_RESET_SEC = "calendar.scrollResetSec";
 export const CAL_BLOCK_MINUTES = "calendar.blockMinutes";
+export const WORKOUT_OVERDUE_DAYS = "workout.overdueDays";
+
+/** Longest a workout prompt can stay overdue before it expires. */
+export const WORKOUT_OVERDUE_MAX = 6;
+export const WORKOUT_OVERDUE_DEFAULT = 6;
 
 export type CalendarPrefs = {
   nowColor: string;
@@ -29,6 +34,23 @@ export async function getCalendarPrefs(): Promise<CalendarPrefs> {
     scrollResetSec: Number.isFinite(sec) ? sec : 60,
     blockMinutes: Number.isFinite(block) && block > 0 ? block : 30,
   };
+}
+
+/**
+ * How many days a workout prompt keeps showing as overdue before it expires
+ * (greys out, stops counting, drops off "Carried over"). Clamped to
+ * 0..WORKOUT_OVERDUE_MAX; the max is the day before the same weekday's workout
+ * comes round again, so at the top of the range a missed workout lives exactly
+ * until it's due again — pure succession. Defaults to that top value.
+ */
+export async function getWorkoutOverdueDays(): Promise<number> {
+  const row = await prisma.appSetting.findUnique({
+    where: { key: WORKOUT_OVERDUE_DAYS },
+  });
+  if (row?.value == null) return WORKOUT_OVERDUE_DEFAULT;
+  const n = parseInt(row.value, 10);
+  if (!Number.isFinite(n)) return WORKOUT_OVERDUE_DEFAULT;
+  return Math.max(0, Math.min(WORKOUT_OVERDUE_MAX, n));
 }
 
 /** Read any stored setting by key. */

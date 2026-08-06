@@ -115,6 +115,32 @@ export type WorkoutsBoard = {
   unitSystem: UnitSystem;
 };
 
+/**
+ * The top named workout on each weekday for one person, so a workout prompt on
+ * the dashboard can read "Leg day" instead of a bare "Workout". Keyed by
+ * weekday (0 = Sunday) and taken from the plan at read time, so it names the
+ * carried-over prompts already sitting there and follows any plan edit without
+ * a rewrite. "Top" is the first non-rest workout of the day by sort order.
+ * Days with only a legacy per-exercise schedule (no named plan) are absent, and
+ * the caller keeps the plain "Workout" label for those.
+ */
+export async function loadWorkoutPlanNames(
+  userId: string,
+): Promise<Map<number, string>> {
+  const planned = await prisma.plannedWorkout.findMany({
+    where: { userId, isRest: false },
+    orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
+    select: { dayOfWeek: true, name: true },
+  });
+
+  const byDay = new Map<number, string>();
+  for (const p of planned) {
+    const name = p.name.trim();
+    if (name && !byDay.has(p.dayOfWeek)) byDay.set(p.dayOfWeek, name);
+  }
+  return byDay;
+}
+
 export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard> {
   const dow = dayOfWeek(todayISO);
   const today = toDateColumn(todayISO);

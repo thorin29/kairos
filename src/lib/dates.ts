@@ -58,6 +58,13 @@ export function dayOfWeek(iso: string): number {
   return new Date(`${iso}T00:00:00.000Z`).getUTCDay();
 }
 
+/** Whole days from one calendar day to another; positive when `toISO` is later. */
+export function daysBetween(fromISO: string, toISO: string): number {
+  const a = new Date(`${fromISO}T00:00:00.000Z`).getTime();
+  const b = new Date(`${toISO}T00:00:00.000Z`).getTime();
+  return Math.round((b - a) / 86_400_000);
+}
+
 /** Sunday of the week containing the given day. Weeks run Sunday–Saturday. */
 export function startOfWeek(iso: string): string {
   return addDays(iso, -dayOfWeek(iso));
