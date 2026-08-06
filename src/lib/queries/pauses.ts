@@ -1,6 +1,17 @@
 import "server-only";
+import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { addDays, fromDateColumn, toDateColumn } from "@/lib/dates";
+
+/**
+ * Categories the app schedules for you that a household pause silences —
+ * chores and workout prompts. Bible reading keeps going through a break, and
+ * hand-added one-offs (appointments, tasks) are left alone.
+ */
+export const PAUSABLE_CATEGORIES: Category[] = [
+  Category.CHORE,
+  Category.EXERCISE,
+];
 
 /**
  * The set of ISO days covered by a household pause (vacation) within a window.
@@ -35,6 +46,30 @@ export async function loadPausedDates(
 }
 
 export type ActivePause = { name: string; startISO: string; endISO: string };
+
+/**
+ * Delete pending scheduled tasks (chores, reading, workouts) that fall on a
+ * paused day — including days already in the past within the break, which the
+ * generators' forward-only reconciliation never revisits. Completed rows are
+ * left untouched so the record stands, and hand-added tasks are never touched.
+ * Idempotent: safe to run on every load.
+ */
+export async function clearPausedTasks(dayISO: string): Promise<number> {
+  const paused = await loadPausedDates(addDays(dayISO, -120), addDays(dayISO, 30));
+  if (paused.size === 0) return 0;
+
+  const dates = [...paused].map((iso) => toDateColumn(iso));
+  const res = await prisma.task.deleteMany({
+    where: {
+      status: TaskStatus.PENDING,
+      category: { in: PAUSABLE_CATEGORIES },
+      dueDate: { in: dates },
+      // Only sweep generated rows — a hand-added task keeps its place.
+      OR: [{ generatedFrom: { not: null } }, { choreId: { not: null } }],
+    },
+  });
+  return res.count;
+}
 
 /**
  * The pause covering a given day, if any — for the "we're on a break" banners.
