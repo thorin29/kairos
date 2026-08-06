@@ -9,7 +9,8 @@ import {
   useState,
 } from "react";
 import { addEvent, updateEvent, type EventState } from "@/lib/actions/events";
-import { parseRule } from "@/lib/calendar/recur";
+import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
+import { dayOfWeek } from "@/lib/dates";
 import { PlusIcon } from "@/components/icons";
 
 const initial: EventState = { error: null, saved: false };
@@ -22,7 +23,17 @@ const KINDS = [
   { value: "CLASS", label: "Class" },
   { value: "WORK", label: "Work shift" },
   { value: "BIRTHDAY", label: "Birthday" },
-  { value: "OTHER", label: "Other" },
+];
+
+const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
 ];
 
 const REPEATS = [
@@ -242,6 +253,22 @@ function EventModal({
   const [endMode, setEndMode] = useState<"never" | "until" | "count">(
     editRec?.until ? "until" : editRec?.count ? "count" : "never",
   );
+  // Weekly-only: which weekdays the event lands on. Defaults to the start
+  // date's own weekday, so a plain weekly event behaves exactly as before.
+  const [byday, setByday] = useState<string[]>(() =>
+    editRec?.byday && editRec.byday.length > 0
+      ? [...editRec.byday]
+      : [WEEKDAY_TOKENS[dayOfWeek(date)]],
+  );
+  const toggleDay = (token: string) =>
+    setByday((prev) =>
+      prev.includes(token)
+        ? // Never let the last day be turned off — a weekly event needs one.
+          prev.length > 1
+          ? prev.filter((d) => d !== token)
+          : prev
+        : [...prev, token],
+    );
   // For a recurring event, an edit applies to just this occurrence or the
   // whole series. Default to the single occurrence — the safer, smaller change.
   const [scope, setScope] = useState<"single" | "series">("single");
@@ -514,6 +541,11 @@ function EventModal({
           {(!editing || (editing.recurring && scope === "series")) && (
             <>
               <input type="hidden" name="repeat" value={effectiveRepeat} />
+              <input
+                type="hidden"
+                name="byday"
+                value={repeat === "WEEKLY" ? byday.join(",") : ""}
+              />
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -575,6 +607,36 @@ function EventModal({
                     )}
                   </div>
                 )}
+
+            {repeat === "WEEKLY" && (
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-sm font-medium">
+                  On these days
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {WEEKDAY_TOKENS.map((tok, i) => {
+                    const on = byday.includes(tok);
+                    return (
+                      <button
+                        key={tok}
+                        type="button"
+                        onClick={() => toggleDay(tok)}
+                        aria-pressed={on}
+                        aria-label={DAY_NAMES[i]}
+                        title={DAY_NAMES[i]}
+                        className={`h-10 w-10 rounded-full border text-sm font-medium transition-colors ${
+                          on
+                            ? "border-accent bg-accent text-white"
+                            : "border-hairline text-muted hover:border-accent hover:text-accent"
+                        }`}
+                      >
+                        {DAY_LETTERS[i]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {repeat === "CUSTOM" && (
               <>

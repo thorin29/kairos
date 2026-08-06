@@ -196,10 +196,15 @@ all live in the database, never in this repository.
 - [x] Colour by person when everyone is shown, by category when filtered
 - [x] Subscribed ICS feeds, one subscription per person with its own name
 - [x] Manual events: appointments, classes, work shifts, birthdays
-- [x] Recurrence — daily, weekly, monthly, annual, custom interval, end date
+- [x] Recurrence — daily, weekly, monthly, annual, custom interval, end date.
+      A weekly event can also repeat on several chosen weekdays at once
+      (Monday + Wednesday), defaulting to the start day's weekday (v0.74.0)
 - [x] Selected day shows tasks on the left and schedule on the right
 - [x] Deletion rules: parents only for repeating events and birthdays
-- [ ] Expand recurrence rules from subscribed feeds
+- [~] Expand recurrence rules from subscribed feeds — not needed: the public
+      feeds in use list every occurrence with real dates rather than a repeat
+      rule, so nothing to expand. (The weekday-repeat work landed on manually
+      added events instead — see the Recurrence line above.)
 - [x] Edit an existing event — from the event menu (long-press / right-click).
       For a repeating event you choose "this event only" (a detached override on
       that date) or "all events in the series"; single overrides render in place
@@ -277,7 +282,13 @@ all live in the database, never in this repository.
       colour (v0.43.0). Admin can rename, recolour (full colour picker), or
       delete any custom type. The event form now lists custom types inline in
       the Type dropdown alongside the built-in kinds, with no separate "Custom"
-      heading (v0.73.0)
+      heading (v0.73.0). "Other" was dropped from the built-in list — add it as
+      a custom type if ever needed (v0.74.0)
+- [ ] Built-in event kinds (Appointment, Class, Work shift, Birthday) stay
+      coloured by person by design, so they can't be recoloured or renamed like
+      custom types. Possible future option: let an admin give a built-in kind
+      its own colour, or set it to the family colour, without touching the
+      per-person colouring elsewhere
 - [x] Family calendar colour accepts any custom hex, not just presets (v0.43.0)
 - [x] Family-owned subscribed calendars: a subscribed (ICS) feed can belong to
       the shared Family identity ("Family (shared)" in the subscribe form)

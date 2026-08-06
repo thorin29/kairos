@@ -148,6 +148,10 @@ export async function addEvent(
   const interval = Number(formData.get("interval") ?? 1);
   const until = String(formData.get("until") ?? "").trim();
   const count = Number(formData.get("count") ?? 0);
+  const byday = String(formData.get("byday") ?? "")
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean);
 
   if (!owner) return { error: "Pick whose event this is.", saved: false };
   if (title.length < 2) return { error: "Give the event a name.", saved: false };
@@ -212,6 +216,7 @@ export async function addEvent(
       interval,
       until || null,
       count > 0 ? count : null,
+      byday.length > 0 ? byday : null,
     );
   }
 
@@ -376,6 +381,10 @@ export async function updateEvent(
     const interval = Number(formData.get("interval") ?? 1);
     const until = String(formData.get("until") ?? "").trim();
     const count = Number(formData.get("count") ?? 0);
+    const byday = String(formData.get("byday") ?? "")
+      .split(",")
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
     if ((FREQS as readonly string[]).includes(repeat)) {
       if (!Number.isInteger(interval) || interval < 1 || interval > 52) {
         return { error: "Repeat every 1 to 52.", saved: false };
@@ -394,6 +403,7 @@ export async function updateEvent(
         interval,
         until || null,
         count > 0 ? count : null,
+        byday.length > 0 ? byday : null,
       );
     } else {
       newRrule = null;
