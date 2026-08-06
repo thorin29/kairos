@@ -225,8 +225,11 @@ model Event {
 
 model ExternalCalendar {
   id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Null when the feed belongs to the shared "Family" identity rather than a
+  // specific person (isFamily is true in that case), mirroring Event.
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isFamily      Boolean   @default(false)
   name          String
   url           String // webcal/ICS
   color         String?

@@ -68,6 +68,7 @@ export async function syncCalendar(id: string): Promise<SyncResult> {
       for (const e of fresh) {
         const data = {
           userId: calendar.userId,
+          isFamily: calendar.isFamily,
           kind: EventKind.EXTERNAL,
           title: e.summary,
           location: e.location,

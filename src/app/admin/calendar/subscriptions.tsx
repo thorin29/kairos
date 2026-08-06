@@ -83,6 +83,7 @@ export function Subscriptions({
             </label>
             <select id="userId" name="userId" required className={`${field} w-full`}>
               <option value="">Choose</option>
+              <option value="family">Family (shared)</option>
               {people.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -104,7 +105,8 @@ export function Subscriptions({
         <p className="mt-3 text-xs text-muted">
           Siblings can share a feed &mdash; subscribe once for each of them and
           give each subscription its own name. Events take the owner&rsquo;s
-          colour.
+          colour. A feed set to <em>Family (shared)</em> shows for everyone in
+          the family colour.
         </p>
 
         {state.error && (

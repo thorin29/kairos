@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.72.0";
+export const APP_VERSION = "0.73.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -50,11 +50,19 @@ export const MIGRATIONS = [
   "40_shade_day",
   "41_recurrence_override",
   "42_pause",
+  "43_family_calendar",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.73.0",
+    summary: [
+      "A subscribed calendar can now belong to the whole family instead of one person \u2014 pick \u201cFamily (shared)\u201d when adding a feed, and its events show for everyone in the family colour (good for a town or school-wide calendar). Feeds owned by a person still take that person's colour",
+      "When adding an event, custom types (like a hockey game or a dentist appointment) now sit in the same Type list as the built-in ones instead of under a separate \u201cCustom\u201d heading",
+    ],
+  },
   {
     version: "0.72.0",
     summary: [
