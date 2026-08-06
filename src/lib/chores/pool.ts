@@ -2,6 +2,7 @@ import "server-only";
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { addDays, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
+import { loadPausedDates } from "@/lib/queries/pauses";
 
 /**
  * Shared chores run on a completion cycle rather than a weekly slot.
@@ -21,6 +22,31 @@ export async function generatePoolChores(
   });
 
   if (chores.length === 0) return 0;
+
+  // Household pauses (vacations) suppress shared chores too. Clear any pending
+  // instance that lands on a paused day so it leaves the card, and defer the
+  // next one until the break is over (below). A break covering "now" also
+  // stops a fresh one going out today.
+  const pausedDates = await loadPausedDates(
+    addDays(dayISO, -60),
+    addDays(dayISO, 30),
+  );
+  if (pausedDates.size > 0) {
+    const poolIds = chores.map((c) => c.id);
+    const pending = await prisma.task.findMany({
+      where: {
+        choreId: { in: poolIds },
+        status: { not: TaskStatus.COMPLETE },
+      },
+      select: { id: true, dueDate: true },
+    });
+    const drop = pending
+      .filter((t) => pausedDates.has(fromDateColumn(t.dueDate)))
+      .map((t) => t.id);
+    if (drop.length > 0) {
+      await prisma.task.deleteMany({ where: { id: { in: drop } } });
+    }
+  }
 
   // Unclaimed instances need an owner because a task row always has one.
   // Parking them on an admin keeps the schema simple; isOpen is what
@@ -65,6 +91,11 @@ export async function generatePoolChores(
       // Not due yet.
       if (dueISO > dayISO) continue;
     }
+
+    // A break defers the next instance until the day after it ends, so a
+    // shared chore never comes due mid-vacation.
+    while (pausedDates.has(dueISO)) dueISO = addDays(dueISO, 1);
+    if (dueISO > dayISO) continue;
 
     await prisma.task.create({
       data: {

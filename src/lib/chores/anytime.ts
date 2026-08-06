@@ -1,6 +1,7 @@
-import { Category } from "@/generated/prisma/client";
+import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
+import { loadPausedDates } from "@/lib/queries/pauses";
 
 // Periods are anchored to a fixed Monday so every "do anytime" assignment of
 // the same chore lines up on the same period boundaries (which keeps the
@@ -81,6 +82,24 @@ export async function generateAnytimeChores(
   }
 
   if (rows.length === 0) return { created: 0 };
+
+  // On a household pause (vacation) the current period's "do anytime" task
+  // steps aside: remove it so nothing shows on a break, and let it come back
+  // the day the pause ends (same period, if it's still running). Only this
+  // period's rows are touched, so past misses stay in the record.
+  const todayPaused = (await loadPausedDates(fromISO, fromISO)).has(fromISO);
+  if (todayPaused) {
+    for (const r of rows) {
+      await prisma.task.deleteMany({
+        where: {
+          generatedFrom: r.generatedFrom,
+          dueDate: r.dueDate,
+          status: TaskStatus.PENDING,
+        },
+      });
+    }
+    return { created: 0 };
+  }
 
   // The (choreId, userId, dueDate) unique constraint makes this idempotent:
   // re-running never duplicates the current period's task.
