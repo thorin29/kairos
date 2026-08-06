@@ -102,7 +102,12 @@ export type PersonWorkout = {
   categories: WorkoutCategory[];
   exercises: ExerciseDef[];
   weightSeries: GraphSeries[];
-  today: { scheduled: TodayExercise[]; workedOut: boolean; rested: boolean };
+  today: {
+    scheduled: TodayExercise[];
+    workedOut: boolean;
+    rested: boolean;
+    paused: string | null;
+  };
   todayWorkouts: TodayWorkout[];
   history: HistoryEntry[];
   plan: PlanDay[];
@@ -144,6 +149,16 @@ export async function loadWorkoutPlanNames(
 export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard> {
   const dow = dayOfWeek(todayISO);
   const today = toDateColumn(todayISO);
+
+  // A household pause (vacation) covering today pauses everyone's workout for
+  // the day: the plan prompt steps aside and a note takes its place, but the
+  // "log something else" path stays open so a session can still be recorded.
+  const activePause = await prisma.pause.findFirst({
+    where: { startDate: { lte: today }, endDate: { gte: today } },
+    orderBy: { startDate: "asc" },
+    select: { name: true },
+  });
+  const pausedName = activePause?.name ?? null;
 
   const [people, unitRaw, weightUnits] = await Promise.all([
     prisma.user.findMany({
@@ -404,6 +419,12 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
 
     // Reminders
     const reminders: Reminder[] = [];
+    if (pausedName) {
+      reminders.push({
+        kind: "paused",
+        text: `Workouts are paused for ${pausedName}. Log anything you do to keep track.`,
+      });
+    }
     for (const d of defs) {
       if (d.paused) {
         reminders.push({ kind: "paused", text: `${d.name} is paused — resume when you're back to it.` });
@@ -498,11 +519,16 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       categories,
       exercises: defs,
       weightSeries,
-      today: { scheduled, workedOut, rested },
+      today: {
+        scheduled: pausedName ? [] : scheduled,
+        workedOut,
+        rested,
+        paused: pausedName,
+      },
       todayWorkouts,
       history,
       plan,
-      todayPlanned,
+      todayPlanned: pausedName ? [] : todayPlanned,
       reminders,
     });
   }

@@ -29,7 +29,7 @@ export async function generateWorkoutTasks(
 ): Promise<{ created: number; removed: number }> {
   const toISO = addDays(fromISO, days - 1);
 
-  const [schedules, planned] = await Promise.all([
+  const [schedules, planned, pauses] = await Promise.all([
     prisma.workoutSchedule.findMany({
       where: {
         isActive: true,
@@ -49,7 +49,28 @@ export async function generateWorkoutTasks(
       where: { isRest: false },
       select: { userId: true, dayOfWeek: true },
     }),
+    // Household pauses (vacations) suppress workouts for everyone on the days
+    // they cover — no prompt is generated, so nothing shows as due or overdue.
+    // People can still log a session for the record; workouts resume the day
+    // after the pause ends.
+    prisma.pause.findMany({
+      where: {
+        startDate: { lte: toDateColumn(toISO) },
+        endDate: { gte: toDateColumn(fromISO) },
+      },
+      select: { startDate: true, endDate: true },
+    }),
   ]);
+
+  const pausedDates = new Set<string>();
+  for (const p of pauses) {
+    let d = fromDateColumn(p.startDate);
+    const end = fromDateColumn(p.endDate);
+    while (d <= end) {
+      pausedDates.add(d);
+      d = addDays(d, 1);
+    }
+  }
 
   // A person trains on a weekday if they have a planned workout for it, or a
   // scheduled exercise still in its date window.
@@ -63,6 +84,7 @@ export async function generateWorkoutTasks(
 
   for (let i = 0; i < days; i++) {
     const iso = addDays(fromISO, i);
+    if (pausedDates.has(iso)) continue;
     const dow = dayOfWeek(iso);
 
     for (const s of schedules) {
