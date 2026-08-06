@@ -40,7 +40,7 @@ export async function loadChoreMetrics(
         status: TaskStatus.PENDING,
         dueDate: { lt: toDateColumn(todayISO) },
       },
-      select: { userId: true, choreId: true, status: true, dueDate: true },
+      select: { userId: true, category: true, choreId: true, status: true, dueDate: true },
     }),
   ]);
 

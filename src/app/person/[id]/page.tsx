@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
 import { loadPersonDay } from "@/lib/queries/overview";
+import { loadWorkoutPlanNames } from "@/lib/queries/workouts";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import {
   addDays,
+  dayOfWeek,
   formatLong,
   fromDateColumn,
   startOfWeek,
@@ -68,26 +70,38 @@ export default async function PersonPage({
   await generateAnytimeChores(today);
 
   const tasks = await loadPersonDay(id, today);
+  const workoutNames = await loadWorkoutPlanNames(id);
 
   const days = weekDays(weekAnchor);
   const weekRange = await loadRange(days, id);
   const [gameStatus] = await loadGameStatus(today, id);
 
-  const rows = tasks.map((t) => ({
-    id: t.id,
-    title: t.title,
-    category: t.category as keyof typeof CATEGORY_LABELS,
-    status: t.status as string,
-    dueDateISO: fromDateColumn(t.dueDate),
-    isOverdue:
-      (t.lateAfter
-        ? today > fromDateColumn(t.lateAfter)
-        : fromDateColumn(t.dueDate) < today) &&
-      t.status === "PENDING" &&
-      !t.stale,
-    stale: t.stale,
-    locked: Boolean(t.choreId),
-  }));
+  const rows = tasks.map((t) => {
+    const dueISO = fromDateColumn(t.dueDate);
+    // Name a workout prompt after the day's top planned workout; other tasks
+    // keep their own title, and a plan-less workout day stays "Workout".
+    const isWorkoutPrompt =
+      t.category === "EXERCISE" && (t.generatedFrom ?? "").startsWith("workout:");
+    const title = isWorkoutPrompt
+      ? (workoutNames.get(dayOfWeek(dueISO)) ?? t.title)
+      : t.title;
+
+    return {
+      id: t.id,
+      title,
+      category: t.category as keyof typeof CATEGORY_LABELS,
+      status: t.status as string,
+      dueDateISO: dueISO,
+      isOverdue:
+        (t.lateAfter
+          ? today > fromDateColumn(t.lateAfter)
+          : dueISO < today) &&
+        t.status === "PENDING" &&
+        !t.stale,
+      stale: t.stale,
+      locked: Boolean(t.choreId),
+    };
+  });
 
   const counted = rows.filter((r) => r.status !== "SKIPPED" && !r.stale);
   const done = counted.filter((r) => r.status === "COMPLETE").length;

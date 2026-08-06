@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireInteractive } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
-import { setSetting } from "@/lib/settings";
+import { setSetting, WORKOUT_OVERDUE_DAYS, WORKOUT_OVERDUE_MAX } from "@/lib/settings";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import {
@@ -26,6 +26,18 @@ function refresh() {
   revalidatePath("/exercise");
   revalidatePath("/admin/exercise");
   revalidatePath("/");
+}
+
+/**
+ * How many days a missed workout keeps showing as overdue before it expires.
+ * Clamped to 0..WORKOUT_OVERDUE_MAX; at the top of the range it lives until the
+ * same weekday's workout comes due again. Household-wide.
+ */
+export async function setWorkoutOverdueDays(days: number): Promise<void> {
+  await requireAdmin();
+  const n = Math.max(0, Math.min(WORKOUT_OVERDUE_MAX, Math.round(days)));
+  await setSetting(WORKOUT_OVERDUE_DAYS, String(n));
+  refresh();
 }
 
 // --- admin ---------------------------------------------------------------
