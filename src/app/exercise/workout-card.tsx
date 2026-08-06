@@ -34,9 +34,9 @@ export function TodayPlan({
   todayDow: number;
   unitSystem: UnitSystem;
 }) {
-  const todays = (person.plan[todayDow]?.workouts ?? []).filter(
-    (w) => !w.isRest,
-  );
+  const todays = person.today.paused
+    ? []
+    : (person.plan[todayDow]?.workouts ?? []).filter((w) => !w.isRest);
   const doneLabels = new Set(
     person.todayWorkouts.map((w) => w.label.trim().toLowerCase()),
   );
@@ -45,7 +45,12 @@ export function TodayPlan({
     <div>
       <p className="mb-2 font-display text-sm font-semibold">Today&rsquo;s plan</p>
 
-      {person.today.rested ? (
+      {person.today.paused ? (
+        <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
+          Workouts are paused for {person.today.paused}. Nothing&rsquo;s due
+          today &mdash; log something below if you want to keep track.
+        </p>
+      ) : person.today.rested ? (
         <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
           Rest day taken.
         </p>

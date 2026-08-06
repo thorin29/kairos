@@ -388,8 +388,10 @@ all live in the database, never in this repository.
       comes round again (pure succession). Defaults to "Until next due"
       (v0.75.0)
 - [ ] Workout plans: optional end date (plan expiry); no end date is fine too
-- [ ] Admin: pause a person's workouts for a set period (vacations) — no plan
-      tasks generated while paused
+- [x] Household pause (vacation) also pauses workouts — no workout prompts
+      generated for anyone on covered days, so nothing shows as due or overdue;
+      logging stays open for the record, and workouts resume the day after the
+      break (v0.76.0)
 
 A personal training log, not an assigned routine: each person defines their
 own exercises, optionally schedules them, and records what they did.

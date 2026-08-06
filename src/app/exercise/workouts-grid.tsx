@@ -191,6 +191,10 @@ export function WorkoutsGrid({
                       <p className="mt-1 text-lg font-semibold text-accent">
                         Worked out
                       </p>
+                    ) : open.today.paused ? (
+                      <p className="mt-1 text-lg font-semibold">
+                        Paused for {open.today.paused}
+                      </p>
                     ) : open.todayPlanned.length > 0 ? (
                       <p className="mt-1 flex flex-wrap gap-1.5">
                         {open.todayPlanned.map((w) => (
@@ -372,6 +376,11 @@ function TileStatus({ person }: { person: PersonWorkout }) {
         <CheckIcon className="h-3.5 w-3.5" />
         Worked out today
       </span>
+    );
+  }
+  if (person.today.paused) {
+    return (
+      <span className="text-xs text-muted">Paused &mdash; {person.today.paused}</span>
     );
   }
   if (person.todayPlanned.length > 0) {
