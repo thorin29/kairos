@@ -69,7 +69,7 @@ export function WeekGrid({
   // (shared/family timed events are handled separately as full-width spans).
   const colEvents = (key: string) =>
     personMode
-      ? timed.filter((e) => e.ownerId === key && !e.isFamily)
+      ? timed.filter((e) => e.memberIds.includes(key) && !e.isFamily)
       : timed.filter((e) => e.dayISO === key);
   // Family/shared timed events span all person columns.
   const familySpan = personMode ? timed.filter((e) => e.isFamily) : [];
