@@ -78,11 +78,12 @@ export default async function CalendarPage({
 
   await syncStaleCalendars();
 
-  // The day view shows a column per person (everyone side by side), so it loads
-  // the whole household regardless of the filter; week/month respect the filter.
-  const rangeFilterIds = view === "day" ? undefined : filterIds;
+  // Every view respects the person/family filter. In the day view the filter
+  // decides which person columns appear, so you can line two people up to
+  // compare; loadRange is filtered to match so a person's column only pulls
+  // their own (and shared) events.
   const [range, people] = await Promise.all([
-    loadRange(days, rangeFilterIds),
+    loadRange(days, filterIds),
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -250,11 +251,13 @@ export default async function CalendarPage({
                 nowColor={calPrefs.nowColor}
                 resetSec={calPrefs.scrollResetSec}
                 blockMinutes={calPrefs.blockMinutes}
-                people={people.map((p) => ({
-                  id: p.id,
-                  name: p.displayName ?? p.name,
-                  color: p.color,
-                }))}
+                people={people
+                  .filter((p) => selectedSet.has(p.id))
+                  .map((p) => ({
+                    id: p.id,
+                    name: p.displayName ?? p.name,
+                    color: p.color,
+                  }))}
               />
             )}
 
@@ -294,6 +297,14 @@ function DayPanel({
   blockMinutes: number;
   people: { id: string; name: string; color: string }[];
 }) {
+  if (people.length === 0) {
+    return (
+      <div className="rounded-xl border border-hairline px-5 py-10 text-center text-sm text-muted">
+        Select at least one person to see the day.
+      </div>
+    );
+  }
+
   return (
     <WeekGrid
       days={[date]}

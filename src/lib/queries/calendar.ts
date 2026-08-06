@@ -20,6 +20,11 @@ export type GridEvent = {
   isFamily: boolean;
   /** The owner's user id, or null for shared/family events. */
   ownerId: string | null;
+  /** Every person this event belongs in a column for: the owner plus any
+   *  participants. Empty for family/shared events (they span all columns).
+   *  Drives per-person day columns, so a shared event shows in each member's
+   *  column and dropping one member removes only their copy. */
+  memberIds: string[];
   /** Whether this all-day event tints its day column. */
   shade: boolean;
   ownerName: string;
@@ -136,6 +141,10 @@ async function birthdayEvents(
         // wash keys off the BIRTHDAY kind instead, so birthdays still tint.
         isFamily: false,
         ownerId: p.id,
+        // Birthdays are all-day and family-wide; all-day events span the top
+        // of the day view rather than sitting in a person column, so members
+        // are irrelevant here.
+        memberIds: [],
         shade: (p as { shadeBirthday?: boolean }).shadeBirthday ?? true,
         ownerName: who,
         kind: "BIRTHDAY",
@@ -167,11 +176,19 @@ function idFilter(
   return { userId };
 }
 
-/** Person events matching the filter, plus family events always. */
+/** Person events matching the filter, plus family events always. A person's
+ *  filter also catches events they merely participate in (a shared workout
+ *  owned by someone else), so those still land in their day column. */
 function ownerFilter(userId?: string | string[]): object {
   if (userId === undefined) return {};
   const inClause = Array.isArray(userId) ? { in: userId } : userId;
-  return { OR: [{ userId: inClause }, { isFamily: true }] };
+  return {
+    OR: [
+      { userId: inClause },
+      { isFamily: true },
+      { participants: { some: { userId: inClause } } },
+    ],
+  };
 }
 
 export async function loadRange(
@@ -204,6 +221,7 @@ export async function loadRange(
       user: { select: { name: true, displayName: true, color: true } },
       externalCalendar: { select: { name: true } },
       eventType: { select: { name: true, color: true } },
+      participants: { select: { userId: true } },
     },
   });
 
@@ -278,6 +296,16 @@ export async function loadRange(
 
     const suffix = e.rrule ? `-${start.iso}` : "";
 
+    // Everyone whose column this event belongs in: the owner plus participants.
+    // Family/shared events span all columns, so they carry no members.
+    const participantIds =
+      (e as { participants?: { userId: string }[] }).participants?.map(
+        (p) => p.userId,
+      ) ?? [];
+    const memberIds = e.isFamily
+      ? []
+      : Array.from(new Set([...(e.userId ? [e.userId] : []), ...participantIds]));
+
     const base = {
       id: `${e.id}${suffix}`,
       title: e.title,
@@ -285,6 +313,7 @@ export async function loadRange(
       color,
       isFamily: e.isFamily,
       ownerId: e.isFamily ? null : (e.userId ?? null),
+      memberIds,
       shade: (e as { shadeDay?: boolean }).shadeDay ?? true,
       ownerName: e.isFamily
         ? "Family"
@@ -319,20 +348,29 @@ export async function loadRange(
       return;
     }
 
-    // An event running past midnight is clipped to its starting day rather
-    // than split, which keeps the grid readable for late finishes.
-    if (!days.includes(start.iso) && !days.includes(end.iso)) return;
-    const endMin =
-      end.iso === start.iso ? end.minutes : 1440;
+    // An event running past midnight is split into one segment per day it
+    // touches, so the tail shows on the next day instead of being cut off.
+    // Each segment is clipped to its own day; the label keeps the true span.
+    // The last day occupied is the day holding the final instant (an event
+    // ending at exactly midnight belongs to the day before, not the next).
+    const lastISO = localParts(
+      new Date(startsAt.getTime() + durationMs - 1),
+    ).iso;
 
-    timed.push({
-      ...base,
-      dayISO: start.iso,
-      startMin: start.minutes,
-      endMin: Math.max(endMin, start.minutes + 20),
-      timeLabel: `${start.label} – ${end.label}`,
-      allDay: false,
-    });
+    for (const d of days) {
+      if (d < start.iso || d > lastISO) continue;
+      const segStart = d === start.iso ? start.minutes : 0;
+      const segEnd = d === end.iso ? end.minutes : 1440;
+      timed.push({
+        ...base,
+        id: `${base.id}-${d}`,
+        dayISO: d,
+        startMin: segStart,
+        endMin: Math.max(segEnd, segStart + 20),
+        timeLabel: `${start.label} – ${end.label}`,
+        allDay: false,
+      });
+    }
   }
 
   allDay.push(...(await birthdayEvents(days, familyColor)));

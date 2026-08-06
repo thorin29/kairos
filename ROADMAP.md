@@ -209,7 +209,9 @@ all live in the database, never in this repository.
 - [x] A repeating event can end after a number of occurrences, not only on a
       date — the add form's "Ends" option offers Never / On a date / After N
       times (v0.64.0)
-- [ ] Split events crossing midnight across both days
+- [x] Split events crossing midnight across both days — a timed event is cut at
+      each midnight it crosses and drawn as a segment on every day it touches, so
+      a late finish shows on the next day instead of being clipped (v0.72.0)
 - [x] Calendar add-event UX: pop-up overlay instead of a bottom form, opened
       from a + at the top; tap a day/time slot to prefill (v0.49.0)
 - [x] Custom event types are editable (rename + recolour) in admin (v0.49.0)
@@ -261,7 +263,10 @@ all live in the database, never in this repository.
       pill), so everyone's day is visible at once. All-day events span the top of
       every column; shared "Family" timed events span across all columns; adding
       from a person's column fills them in as owner. Week view keeps overlapping
-      lanes (v0.71.0)
+      lanes (v0.71.0). The person/family filter now drives which columns show,
+      and columns resize to fill the width, so two people can be lined up to
+      compare; a multi-person event appears in each member's column, so dropping
+      one member removes only their copy (v0.72.0)
 - [x] All-day Family events wash their whole day column in a light tint of the
       family colour — the pill still sits at the top in the all-day row, only
       the hours behind it are painted; birthdays don't trigger it. Same release

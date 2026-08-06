@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.71.0";
+export const APP_VERSION = "0.72.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -55,6 +55,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.72.0",
+    summary: [
+      "The person/family filter now applies to the day view too: it shows a column only for each selected person, and the columns resize to fill the space \u2014 so you can line two people up side by side to compare their days",
+      "An event shared by several people (a workout, a shared appointment) now appears in each of their columns, so deselecting one person still leaves it in the other's \u2014 dropping a person removes their copy without hiding the whole event",
+      "An event that runs past midnight is now split across the two days instead of being cut off at midnight, so the tail end shows on the next day",
+    ],
+  },
   {
     version: "0.71.0",
     summary: [
