@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.73.0";
+export const APP_VERSION = "0.74.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -56,6 +56,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.74.0",
+    summary: [
+      "A weekly event can now repeat on several days of the week \u2014 pick \u201cWeekly\u201d and tap the days (e.g. Monday and Wednesday for a twice-a-week practice). It defaults to the day the event starts on",
+      "Removed \u201cOther\u201d from the event type list; if you ever need it, add it as a custom type in Admin \u2192 Calendar",
+    ],
+  },
   {
     version: "0.73.0",
     summary: [
