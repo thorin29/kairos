@@ -377,6 +377,11 @@ all live in the database, never in this repository.
 - [x] Admin: open a person from the Workouts page to see their exercises, plan,
       and logged workouts, and delete any individually — for clearing test or
       mistaken records (v0.33.0)
+- [x] Workout on the dashboard opens the log step — tapping a workout on a
+      person's dashboard opens the same log pop-up as the Workouts page (complete
+      the scheduled plan workout with its metrics, or log a one-off), scoped to
+      that prompt's own day so a carried-over workout logs against the day it
+      belonged to. Replaces the plain checkbox (v0.79.0)
 - [x] Named workout on the dashboard prompt — a workout task reads the day's
       top planned workout name (e.g. "Leg day") instead of a bare "Workout",
       derived at read time so it renames carried-over prompts too and follows

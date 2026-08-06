@@ -3,7 +3,13 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
 import { loadPersonDay } from "@/lib/queries/overview";
-import { loadWorkoutPlanNames } from "@/lib/queries/workouts";
+import {
+  loadWorkoutPlanNames,
+  loadWorkoutsBoard,
+  loadExercisePool,
+  loadHiitWorkoutsForBoard,
+} from "@/lib/queries/workouts";
+import { WorkoutLauncher } from "./workout-launcher";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import {
@@ -74,6 +80,40 @@ export default async function PersonPage({
   const workoutNames = await loadWorkoutPlanNames(id);
   const activePause = await loadActivePause(today);
 
+  // Workout board data so a workout on the dashboard opens the same log step
+  // as the Workouts page, scoped to each prompt's own day.
+  const [board, pool, hiitWorkouts] = await Promise.all([
+    loadWorkoutsBoard(today),
+    loadExercisePool(),
+    loadHiitWorkoutsForBoard(),
+  ]);
+  const boardPerson = board.people.find((p) => p.user.id === id) ?? null;
+  const unitSystem = board.unitSystem;
+
+  // For a workout prompt on day D: the plan for D's weekday, plus what's already
+  // logged that day (today from live sessions, earlier days from history).
+  function workoutDay(dateISO: string) {
+    const dow = dayOfWeek(dateISO);
+    const workouts = (boardPerson?.plan[dow]?.workouts ?? []).filter(
+      (w) => !w.isRest,
+    );
+    if (dateISO === today) {
+      return {
+        workouts,
+        doneLabels: boardPerson?.todayWorkouts.map((w) => w.label) ?? [],
+        rested: boardPerson?.today.rested ?? false,
+        paused: boardPerson?.today.paused ?? null,
+      };
+    }
+    const hist = boardPerson?.history.filter((h) => h.dateISO === dateISO) ?? [];
+    return {
+      workouts,
+      doneLabels: hist.filter((h) => !h.isRest).map((h) => h.label),
+      rested: hist.some((h) => h.isRest),
+      paused: null,
+    };
+  }
+
   const days = weekDays(weekAnchor);
   const weekRange = await loadRange(days, id);
   const [gameStatus] = await loadGameStatus(today, id);
@@ -102,6 +142,7 @@ export default async function PersonPage({
         !t.stale,
       stale: t.stale,
       locked: Boolean(t.choreId),
+      isWorkout: isWorkoutPrompt,
     };
   });
 
@@ -120,6 +161,31 @@ export default async function PersonPage({
     category,
     items: todayRows.filter((r) => r.category === category),
   })).filter((g) => g.items.length > 0);
+
+  // Workout prompts open the log step; everything else is a plain checklist row.
+  const renderRow = (t: (typeof rows)[number]) => {
+    if (t.isWorkout) {
+      const wd = workoutDay(t.dueDateISO);
+      return (
+        <WorkoutLauncher
+          key={t.id}
+          userId={id}
+          dateISO={t.dueDateISO}
+          title={t.title}
+          done={t.status === "COMPLETE"}
+          overdue={t.isOverdue}
+          workouts={wd.workouts}
+          doneLabels={wd.doneLabels}
+          rested={wd.rested}
+          paused={wd.paused}
+          pool={pool}
+          hiitWorkouts={hiitWorkouts}
+          unitSystem={unitSystem}
+        />
+      );
+    }
+    return <TaskRow key={t.id} task={t} />;
+  };
 
   return (
     <>
@@ -197,9 +263,7 @@ export default async function PersonPage({
             Carried over
           </h2>
           <Card className="divide-y divide-hairline border-red-200">
-            {overdue.map((t) => (
-              <TaskRow key={t.id} task={t} />
-            ))}
+            {overdue.map(renderRow)}
           </Card>
         </section>
       )}
@@ -217,9 +281,7 @@ export default async function PersonPage({
                 <SectionHeading>{CATEGORY_LABELS[g.category]}</SectionHeading>
               </div>
               <Card className="divide-y divide-hairline">
-                {g.items.map((t) => (
-                  <TaskRow key={t.id} task={t} />
-                ))}
+                {g.items.map(renderRow)}
               </Card>
             </section>
           ))}

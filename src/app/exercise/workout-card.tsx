@@ -14,49 +14,53 @@ import {
   type UnitSystem,
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
-import type { PersonWorkout, PlanWorkout } from "@/lib/queries/workouts";
+import type { PlanWorkout } from "@/lib/queries/workouts";
 
 /**
- * Today's scheduled workouts, each completable straight from the plan: tapping
+ * A day's scheduled workouts, each completable straight from the plan: tapping
  * one asks only for the metrics it was set to track (pulled from the pool), and
- * completing it logs the session and marks the day done. Replaces the old
- * "mark done" toggle and the per-person "add a lift" panel — everything logs
- * against the shared pool now.
+ * completing it logs the session against `dateISO` and marks that day done.
+ * Date-driven so it serves both today (on the board) and a carried-over day
+ * opened from someone's dashboard.
  */
 export function TodayPlan({
-  person,
-  todayISO,
-  todayDow,
+  userId,
+  dateISO,
+  workouts,
+  doneLabels,
+  paused,
+  rested,
   unitSystem,
+  heading = "Today\u2019s plan",
 }: {
-  person: PersonWorkout;
-  todayISO: string;
-  todayDow: number;
+  userId: string;
+  dateISO: string;
+  workouts: PlanWorkout[];
+  doneLabels: string[];
+  paused: string | null;
+  rested: boolean;
   unitSystem: UnitSystem;
+  heading?: string;
 }) {
-  const todays = person.today.paused
-    ? []
-    : (person.plan[todayDow]?.workouts ?? []).filter((w) => !w.isRest);
-  const doneLabels = new Set(
-    person.todayWorkouts.map((w) => w.label.trim().toLowerCase()),
-  );
+  const todays = paused ? [] : workouts.filter((w) => !w.isRest);
+  const done = new Set(doneLabels.map((l) => l.trim().toLowerCase()));
 
   return (
     <div>
-      <p className="mb-2 font-display text-sm font-semibold">Today&rsquo;s plan</p>
+      <p className="mb-2 font-display text-sm font-semibold">{heading}</p>
 
-      {person.today.paused ? (
+      {paused ? (
         <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
-          Workouts are paused for {person.today.paused}. Nothing&rsquo;s due
-          today &mdash; log something below if you want to keep track.
+          Workouts are paused for {paused}. Nothing&rsquo;s due &mdash; log
+          something below if you want to keep track.
         </p>
-      ) : person.today.rested ? (
+      ) : rested ? (
         <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
           Rest day taken.
         </p>
       ) : todays.length === 0 ? (
         <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
-          Nothing scheduled today. Log something else below.
+          Nothing scheduled. Log something else below.
         </p>
       ) : (
         <div className="space-y-2">
@@ -64,10 +68,10 @@ export function TodayPlan({
             <PlanRow
               key={w.id}
               workout={w}
-              userId={person.user.id}
-              todayISO={todayISO}
+              userId={userId}
+              dateISO={dateISO}
               unitSystem={unitSystem}
-              done={doneLabels.has(w.name.trim().toLowerCase())}
+              done={done.has(w.name.trim().toLowerCase())}
             />
           ))}
         </div>
@@ -79,13 +83,13 @@ export function TodayPlan({
 function PlanRow({
   workout,
   userId,
-  todayISO,
+  dateISO,
   unitSystem,
   done,
 }: {
   workout: PlanWorkout;
   userId: string;
-  todayISO: string;
+  dateISO: string;
   unitSystem: UnitSystem;
   done: boolean;
 }) {
@@ -117,7 +121,7 @@ function PlanRow({
       startTransition(async () => {
         await logHiitWorkout({
           userId,
-          dateISO: todayISO,
+          dateISO,
           hiitWorkoutId: hiit.id,
           value,
         });
@@ -164,7 +168,7 @@ function PlanRow({
     startTransition(async () => {
       await completePlannedWorkout({
         userId,
-        dateISO: todayISO,
+        dateISO,
         plannedWorkoutId: workout.id,
         entries,
       });
