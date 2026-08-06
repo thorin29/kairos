@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.76.0";
+export const APP_VERSION = "0.77.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -56,6 +56,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.77.0",
+    summary: [
+      "A vacation pause now covers every kind of chore, not just the scheduled weekday ones. \u201cDo anytime\u201d chores and shared (pool) chores step aside for the break too \u2014 nothing shows as due while you\u2019re away, and they pick back up the day after the pause ends",
+      "The Chores page shows a note at the top while a pause is on, so it\u2019s clear why the board is quiet \u2014 the same idea as the paused note on the workout cards",
+    ],
+  },
   {
     version: "0.76.0",
     summary: [

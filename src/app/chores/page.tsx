@@ -5,10 +5,12 @@ import {
   loadPoolChores,
 } from "@/lib/queries/chores-summary";
 import { loadChoreMetrics } from "@/lib/queries/chore-metrics";
+import { loadActivePause } from "@/lib/queries/pauses";
 import { DAY_SHORT } from "@/lib/days";
 import { formatShort, todayISO } from "@/lib/dates";
 import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
+import { MoonIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +22,7 @@ export const dynamic = "force-dynamic";
 export default async function ChoresOverviewPage() {
   const today = todayISO();
 
-  const [metrics, summary, poolChores, people] = await Promise.all([
+  const [metrics, summary, poolChores, people, activePause] = await Promise.all([
     loadChoreMetrics(today),
     loadChoreSummary(),
     loadPoolChores(),
@@ -35,6 +37,7 @@ export default async function ChoresOverviewPage() {
         avatarPath: true,
       },
     }),
+    loadActivePause(today),
   ]);
 
   const byPerson = people.map((p) => ({
@@ -60,6 +63,21 @@ export default async function ChoresOverviewPage() {
        />
 
       <main className="mx-auto max-w-5xl px-6 py-6">
+
+      {activePause && (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-5 py-4">
+          <MoonIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+          <div>
+            <p className="font-display text-sm font-semibold text-accent">
+              Chores are paused for {activePause.name}
+            </p>
+            <p className="mt-0.5 text-sm text-muted">
+              Nothing&rsquo;s due while you&rsquo;re away. Chores pick back up
+              the day after the break ends.
+            </p>
+          </div>
+        </div>
+      )}
 
 
       <section className="mb-10">

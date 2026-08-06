@@ -489,8 +489,18 @@ own exercises, optionally schedules them, and records what they did.
 - [x] Paused days leave the scoring denominator rather than counting as misses —
       falls out for free, since scoring counts actual task rows and a paused day
       generates none, so partial weeks/months are handled without special code
-      (v0.66.0). Note: applies to scheduled chores; anytime/pool chores and any
-      hand-added one-off tasks on paused days aren't auto-suppressed
+      (v0.66.0)
+- [x] A pause also pauses workouts — no workout prompts on covered days for
+      anyone (v0.76.0)
+- [x] A pause also pauses anytime and pool (shared) chores, not just scheduled
+      ones — the current-period anytime task steps aside and shared chores defer
+      past the break, both resuming the day after (v0.77.0)
+- [x] Paused banner at the top of the Chores page while a pause is active,
+      mirroring the workout card's paused note (v0.77.0)
+- [ ] Per-person pause: pause one person's workouts and chores for a date range
+      (e.g. one kid away at camp) while the rest of the household carries on —
+      the household pause stays the all-of-us case
+- [ ] Auto-suppress hand-added one-off tasks that fall on paused days too
 
 ## Tasks and appointments
 
