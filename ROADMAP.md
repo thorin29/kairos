@@ -274,12 +274,15 @@ all live in the database, never in this repository.
       on load because it ran before the current time was known (v0.59.0)
 - [x] Custom event types — parents add named types (with a colour) from Admin →
       Calendar; the event form's "Type" lists them and events take the type
-      colour (v0.43.0)
+      colour (v0.43.0). Admin can rename, recolour (full colour picker), or
+      delete any custom type. The event form now lists custom types inline in
+      the Type dropdown alongside the built-in kinds, with no separate "Custom"
+      heading (v0.73.0)
 - [x] Family calendar colour accepts any custom hex, not just presets (v0.43.0)
-- [ ] Family-owned subscribed calendars: let a subscribed (ICS) calendar
-      belong to the shared Family identity so its whole feed inherits the
-      Family color — needs isFamily on ExternalCalendar plus feed-form and
-      sync changes (Phase 2b of the Family calendar work)
+- [x] Family-owned subscribed calendars: a subscribed (ICS) feed can belong to
+      the shared Family identity ("Family (shared)" in the subscribe form)
+      instead of a person, so its whole feed shows for everyone in the family
+      colour; person-owned feeds still take the owner's colour (v0.73.0)
 - [ ] Make the Family filter an independently togg(le)able owner, and add
       holidays as a second Family-category source
 

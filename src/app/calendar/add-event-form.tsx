@@ -383,15 +383,11 @@ function EventModal({
                     {k.label}
                   </option>
                 ))}
-                {types.length > 0 && (
-                  <optgroup label="Custom">
-                    {types.map((t) => (
-                      <option key={t.id} value={`type:${t.id}`}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
+                {types.map((t) => (
+                  <option key={t.id} value={`type:${t.id}`}>
+                    {t.name}
+                  </option>
+                ))}
               </select>
               <input type="hidden" name="kind" value={kindForSubmit} />
               <input type="hidden" name="eventTypeId" value={eventTypeId} />

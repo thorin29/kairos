@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
 import { loadEventTypes } from "@/lib/queries/calendar";
-import { getCalendarPrefs } from "@/lib/settings";
+import { getCalendarPrefs, getFamilyColor } from "@/lib/settings";
 import { Subscriptions } from "./subscriptions";
 import { EventTypes } from "./event-types";
 import { DisplayPrefs } from "./display-prefs";
@@ -29,13 +29,16 @@ export default async function AdminCalendarPage() {
   ]);
   const calPrefs = await getCalendarPrefs();
   const pauses = await loadPauses();
+  const familyColor = await getFamilyColor();
 
   const subscriptions = calendars.map((c) => ({
     id: c.id,
     name: c.name,
     url: c.url,
-    ownerName: c.user.displayName ?? c.user.name,
-    ownerColor: c.user.color,
+    ownerName: c.isFamily
+      ? "Family"
+      : (c.user?.displayName ?? c.user?.name ?? "Family"),
+    ownerColor: c.isFamily ? familyColor : (c.user?.color ?? familyColor),
     eventCount: c._count.events,
     lastFetchedAt: c.lastFetchedAt?.toISOString() ?? null,
     lastError: c.lastError,

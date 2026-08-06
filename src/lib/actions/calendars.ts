@@ -21,11 +21,14 @@ export async function addCalendar(
     return { error: "Only a parent can change this. Switch profiles first.", saved: false };
   }
 
-  const userId = String(formData.get("userId") ?? "");
+  // "family" is the shared identity; anything else is a person id.
+  const owner = String(formData.get("userId") ?? "");
+  const isFamily = owner === "family";
+  const userId = isFamily ? null : owner;
   const name = String(formData.get("name") ?? "").trim().slice(0, 60);
   const rawUrl = String(formData.get("url") ?? "").trim();
 
-  if (!userId) return { error: "Pick whose calendar this is.", saved: false };
+  if (!owner) return { error: "Pick whose calendar this is.", saved: false };
   if (name.length < 2) return { error: "Give it a display name.", saved: false };
 
   const url = rawUrl.replace(/^webcal:\/\//i, "https://");
@@ -40,14 +43,19 @@ export async function addCalendar(
   }
 
   const existing = await prisma.externalCalendar.findFirst({
-    where: { userId, url },
+    where: isFamily ? { isFamily: true, url } : { userId, url },
   });
   if (existing) {
-    return { error: "They're already subscribed to that feed.", saved: false };
+    return {
+      error: isFamily
+        ? "The family is already subscribed to that feed."
+        : "They're already subscribed to that feed.",
+      saved: false,
+    };
   }
 
   const created = await prisma.externalCalendar.create({
-    data: { userId, name, url },
+    data: { userId, isFamily, name, url },
   });
 
   // Pull it straight away so the calendar isn't empty after adding.
