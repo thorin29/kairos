@@ -739,6 +739,7 @@ export async function updateHiitWorkout(
     pyramidEnd?: number | null;
     pyramidStep?: number | null;
     heroWod?: boolean;
+    notes?: string | null;
     movements: {
       poolExerciseId: string;
       reps?: number | null;
@@ -763,6 +764,7 @@ export async function updateHiitWorkout(
       pyramidEnd: input.pyramidEnd ?? null,
       pyramidStep: input.pyramidStep ?? null,
       ...(input.heroWod !== undefined ? { heroWod: input.heroWod } : {}),
+      notes: input.notes?.trim() || null,
       // Replace the movement list wholesale — simplest correct edit.
       movements: {
         deleteMany: {},

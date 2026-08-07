@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.82.0";
+export const APP_VERSION = "0.83.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -57,6 +57,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.83.0",
+    summary: [
+      "Runs can be logged in meters as well as miles — handy for track work (400s, 800s). Pick Distance or Meters when logging a run",
+      "Named (HIIT/CrossFit) workouts now have an Instructions field. Type out how the workout goes when building it in admin, and Browse shows those instructions instead of the raw movement list",
+      "Browse workouts now splits into two tabs — Workouts and Hero WODs — so you can jump straight to the benchmarks",
+    ],
+  },
   {
     version: "0.82.0",
     summary: [

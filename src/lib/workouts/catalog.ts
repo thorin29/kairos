@@ -266,6 +266,7 @@ export function metricChoicesFor(category: WorkoutCategory): Metric[] {
     case "WEIGHTS":
       return ["WEIGHT"];
     case "RUNNING":
+      return ["DISTANCE", "METERS"];
     case "RUCKING":
       return ["DISTANCE"];
     case "ROWING":

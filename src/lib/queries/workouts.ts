@@ -1122,6 +1122,7 @@ export type HiitWorkoutRow = {
   pyramidEnd: number | null;
   pyramidStep: number | null;
   heroWod: boolean;
+  instructions: string | null;
   movements: HiitMovementRow[];
 };
 
@@ -1139,6 +1140,7 @@ export async function loadHiitWorkouts(): Promise<HiitWorkoutRow[]> {
       pyramidEnd: true,
       pyramidStep: true,
       heroWod: true,
+      notes: true,
       movements: {
         orderBy: { position: "asc" },
         select: {
@@ -1160,6 +1162,7 @@ export async function loadHiitWorkouts(): Promise<HiitWorkoutRow[]> {
     pyramidEnd: number | null;
     pyramidStep: number | null;
     heroWod: boolean;
+    notes: string | null;
     movements: {
       poolExerciseId: string;
       reps: number | null;
@@ -1179,6 +1182,7 @@ export async function loadHiitWorkouts(): Promise<HiitWorkoutRow[]> {
     pyramidEnd: w.pyramidEnd,
     pyramidStep: w.pyramidStep,
     heroWod: w.heroWod,
+    instructions: w.notes,
     movements: w.movements.map((m) => ({
       poolExerciseId: m.poolExerciseId,
       name: m.poolExercise?.name ?? "—",
@@ -1198,6 +1202,7 @@ export type BoardHiitWorkout = {
   approved: boolean;
   shareRequested: boolean;
   heroWod: boolean;
+  instructions: string | null;
   movements: HiitMovementRow[];
 };
 
@@ -1217,6 +1222,7 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
       approved: true,
       shareRequested: true,
       heroWod: true,
+      notes: true,
       movements: {
         orderBy: { position: "asc" },
         select: {
@@ -1237,6 +1243,7 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
     approved: boolean;
     shareRequested: boolean;
     heroWod: boolean;
+    notes: string | null;
     movements: {
       poolExerciseId: string;
       reps: number | null;
@@ -1255,6 +1262,7 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
     approved: w.approved,
     shareRequested: w.shareRequested,
     heroWod: w.heroWod,
+    instructions: w.notes,
     movements: w.movements.map((m) => ({
       poolExerciseId: m.poolExerciseId,
       name: m.poolExercise?.name ?? "—",

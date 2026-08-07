@@ -11,6 +11,7 @@ import {
   MoonIcon,
   PlusIcon,
   TrashIcon,
+  TrophyIcon,
 } from "@/components/icons";
 import {
   deleteWorkoutSession,
@@ -62,6 +63,9 @@ export function WorkoutsGrid({
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("menu");
+  const [browseFilter, setBrowseFilter] = useState<"regular" | "hero">(
+    "regular",
+  );
   // Which side of the screen the opened card was tapped on, so the pop-out
   // grows outward from roughly where it sat rather than always from centre.
   const [origin, setOrigin] = useState("center top");
@@ -333,55 +337,86 @@ export function WorkoutsGrid({
               {step === "browse" && (
                 <div className="mt-4">
                   <BackLink onClick={() => setStep("menu")} />
-                  <h3 className="mb-1 font-display text-lg font-semibold">
+                  <h3 className="mb-3 font-display text-lg font-semibold">
                     Browse workouts
                   </h3>
-                  <p className="mb-3 text-sm text-muted">
-                    Named workouts &mdash; HIIT and other multi-part sessions.
-                    Single pool movements (push-ups and the like) aren&rsquo;t
-                    listed here.
-                  </p>
-                  {browsable.length === 0 ? (
-                    <p className="text-sm text-muted">
-                      No named workouts yet. Build one from a plan&rsquo;s HIIT
-                      slot.
-                    </p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {browsable.map((w) => (
-                        <li
-                          key={w.id}
-                          className="rounded-xl border border-hairline bg-ground/30 p-3"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold">
-                              {w.name}
-                            </span>
-                            <span className="rounded-full bg-ground px-2 py-0.5 text-xs font-medium text-muted">
-                              {WORKOUT_TYPE_LABEL[w.type]}
-                            </span>
-                            {w.heroWod && (
-                              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
-                                Hero WOD
+
+                  <div className="mb-4 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBrowseFilter("regular")}
+                      aria-pressed={browseFilter === "regular"}
+                      className={`flex flex-1 items-center justify-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors ${
+                        browseFilter === "regular"
+                          ? "border-accent bg-accent/10 text-accent"
+                          : "border-hairline text-muted hover:border-accent"
+                      }`}
+                    >
+                      <DumbbellIcon className="h-4 w-4" />
+                      Workouts
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBrowseFilter("hero")}
+                      aria-pressed={browseFilter === "hero"}
+                      className={`flex flex-1 items-center justify-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors ${
+                        browseFilter === "hero"
+                          ? "border-accent bg-accent/10 text-accent"
+                          : "border-hairline text-muted hover:border-accent"
+                      }`}
+                    >
+                      <TrophyIcon className="h-4 w-4" />
+                      Hero WODs
+                    </button>
+                  </div>
+
+                  {(() => {
+                    const list = browsable.filter((w) =>
+                      browseFilter === "hero" ? w.heroWod : !w.heroWod,
+                    );
+                    if (list.length === 0) {
+                      return (
+                        <p className="text-sm text-muted">
+                          {browseFilter === "hero"
+                            ? "No Hero WODs yet."
+                            : "No named workouts yet. Build one in the Workouts admin."}
+                        </p>
+                      );
+                    }
+                    return (
+                      <ul className="space-y-2">
+                        {list.map((w) => (
+                          <li
+                            key={w.id}
+                            className="rounded-xl border border-hairline bg-ground/30 p-3"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold">
+                                {w.name}
                               </span>
-                            )}
-                            {w.ownerId && (
-                              <span className="text-xs text-muted">
-                                Personal
+                              <span className="rounded-full bg-ground px-2 py-0.5 text-xs font-medium text-muted">
+                                {WORKOUT_TYPE_LABEL[w.type]}
                               </span>
-                            )}
-                          </div>
-                          {w.movements.length > 0 && (
-                            <p className="mt-1 text-xs text-muted">
-                              {w.movements
-                                .map((m) => formatHiitMovement(m))
-                                .join(", ")}
+                              {w.ownerId && (
+                                <span className="text-xs text-muted">
+                                  Personal
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 whitespace-pre-line text-xs text-muted">
+                              {w.instructions?.trim()
+                                ? w.instructions
+                                : w.movements.length > 0
+                                  ? w.movements
+                                      .map((m) => formatHiitMovement(m))
+                                      .join(", ")
+                                  : "No details yet."}
                             </p>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -537,7 +572,7 @@ function BackLink({ onClick }: { onClick: () => void }) {
 // between time and reps/rounds.
 type CatCfg = { locked?: Metric; choices?: Metric[]; load?: boolean };
 const CATEGORY_CFG: Record<WorkoutCategory, CatCfg> = {
-  RUNNING: { locked: "DISTANCE" },
+  RUNNING: { choices: ["DISTANCE", "METERS"] },
   ROWING: { locked: "METERS" },
   RUCKING: { locked: "DISTANCE", load: true },
   WEIGHTS: { locked: "WEIGHT" },
