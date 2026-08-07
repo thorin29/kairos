@@ -77,6 +77,22 @@ model User {
 // scoreboard are all queries against this one table.
 // ---------------------------------------------------------------
 
+enum SchoolWorkType {
+  HOMEWORK
+  ASSIGNMENT
+  TEST
+  PROJECT
+}
+
+model SchoolWork {
+  id        String         @id @default(cuid())
+  taskId    String         @unique
+  task      Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  type      SchoolWorkType @default(ASSIGNMENT)
+  subject   String?
+  createdAt DateTime       @default(now())
+}
+
 enum Category {
   CHORE
   EXERCISE
@@ -136,6 +152,9 @@ model Task {
   // Optional link to a timed calendar block (a class, a shift, an appointment)
   eventId String? @unique
   event   Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  // School module detail (assignment/test type + subject), when category=SCHOOL.
+  schoolWork SchoolWork?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

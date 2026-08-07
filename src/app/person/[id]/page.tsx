@@ -11,6 +11,7 @@ import {
 } from "@/lib/queries/workouts";
 import { WorkoutLauncher } from "./workout-launcher";
 import { loadActivePause } from "@/lib/queries/pauses";
+import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import {
   addDays,
@@ -32,6 +33,7 @@ import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
+import { AddSchoolWork } from "@/components/add-school-work";
 import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
 import { LockIcon, MoonIcon } from "@/components/icons";
@@ -128,12 +130,20 @@ export default async function PersonPage({
       ? (workoutNames.get(dayOfWeek(dueISO)) ?? t.title)
       : t.title;
 
+    // School items show their subject and type (e.g. "Math · Test").
+    const sw = t.schoolWork;
+    const subtitle =
+      t.category === "SCHOOL" && sw
+        ? [sw.subject, SCHOOL_TYPE_LABEL[sw.type]].filter(Boolean).join(" · ")
+        : undefined;
+
     return {
       id: t.id,
       title,
       category: t.category as keyof typeof CATEGORY_LABELS,
       status: t.status as string,
       dueDateISO: dueISO,
+      subtitle,
       isOverdue:
         (t.lateAfter
           ? today > fromDateColumn(t.lateAfter)
@@ -146,7 +156,10 @@ export default async function PersonPage({
     };
   });
 
-  const counted = rows.filter((r) => r.status !== "SKIPPED" && !r.stale);
+  // School is tracked but not scored yet — keep it out of the header percent.
+  const counted = rows.filter(
+    (r) => r.status !== "SKIPPED" && !r.stale && r.category !== "SCHOOL",
+  );
   const done = counted.filter((r) => r.status === "COMPLETE").length;
   const percent = counted.length
     ? Math.round((done / counted.length) * 100)
@@ -328,12 +341,13 @@ export default async function PersonPage({
         />
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 flex flex-wrap gap-3">
         <AddTaskForm
           people={[{ id: person.id, name: person.name, color: person.color }]}
           defaultUserId={person.id}
           defaultDate={today}
         />
+        <AddSchoolWork userId={person.id} defaultDate={today} />
       </div>
     </main>
     </>
