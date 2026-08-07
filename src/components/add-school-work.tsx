@@ -15,13 +15,18 @@ const FIELD =
 export function AddSchoolWork({
   userId,
   people,
+  classesByUser,
   defaultDate,
 }: {
   userId?: string;
   people?: { id: string; name: string }[];
+  classesByUser?: Record<string, { id: string; name: string }[]>;
   defaultDate: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(
+    userId ?? people?.[0]?.id ?? "",
+  );
   const [state, formAction, pending] = useActionState(addSchoolWork, initial);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -31,6 +36,9 @@ export function AddSchoolWork({
       if (state === initial) return;
     }
   }, [state, pending]);
+
+  const classOpts =
+    classesByUser?.[people ? selectedUser : (userId ?? "")] ?? [];
 
   if (!open) {
     return (
@@ -75,12 +83,35 @@ export function AddSchoolWork({
             <select
               id="sw-user"
               name="userId"
-              defaultValue={userId ?? people[0]?.id}
+              value={selectedUser}
+              onChange={(e) => setSelectedUser(e.target.value)}
               className={FIELD}
             >
               {people.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {classOpts.length > 0 && (
+          <div>
+            <label htmlFor="sw-class" className="block text-sm font-medium">
+              Class
+            </label>
+            <select
+              key={selectedUser}
+              id="sw-class"
+              name="classId"
+              defaultValue=""
+              className={FIELD}
+            >
+              <option value="">No class</option>
+              {classOpts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </select>

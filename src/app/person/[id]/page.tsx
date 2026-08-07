@@ -12,6 +12,7 @@ import {
 import { WorkoutLauncher } from "./workout-launcher";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
+import { loadClassOptions } from "@/lib/queries/school";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import {
   addDays,
@@ -81,6 +82,7 @@ export default async function PersonPage({
   const tasks = await loadPersonDay(id, today);
   const workoutNames = await loadWorkoutPlanNames(id);
   const activePause = await loadActivePause(today);
+  const classOptions = await loadClassOptions();
 
   // Workout board data so a workout on the dashboard opens the same log step
   // as the Workouts page, scoped to each prompt's own day.
@@ -130,11 +132,13 @@ export default async function PersonPage({
       ? (workoutNames.get(dayOfWeek(dueISO)) ?? t.title)
       : t.title;
 
-    // School items show their subject and type (e.g. "Math · Test").
+    // School items show their class or subject and type (e.g. "Biology · Test").
     const sw = t.schoolWork;
     const subtitle =
       t.category === "SCHOOL" && sw
-        ? [sw.subject, SCHOOL_TYPE_LABEL[sw.type]].filter(Boolean).join(" · ")
+        ? [sw.class?.name ?? sw.subject, SCHOOL_TYPE_LABEL[sw.type]]
+            .filter(Boolean)
+            .join(" · ")
         : undefined;
 
     return {
@@ -347,7 +351,11 @@ export default async function PersonPage({
           defaultUserId={person.id}
           defaultDate={today}
         />
-        <AddSchoolWork userId={person.id} defaultDate={today} />
+        <AddSchoolWork
+          userId={person.id}
+          classesByUser={classOptions}
+          defaultDate={today}
+        />
       </div>
     </main>
     </>

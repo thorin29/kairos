@@ -100,27 +100,61 @@ export default async function SchoolPage() {
                       </ul>
                     )}
 
-                    {person.items.length > 0 && (
-                      <ul className="mt-4 space-y-3 border-t border-hairline pt-4">
-                        {person.items.map((it) => (
-                          <li key={it.id} className="text-sm">
-                            <p className="font-medium">{it.title}</p>
-                            <p className="mt-0.5 text-xs text-muted">
-                              {[it.subject, SCHOOL_TYPE_LABEL[it.type]]
-                                .filter(Boolean)
-                                .join(" · ")}
-                              <span
-                                className={`tabular ml-2 ${
-                                  it.overdue ? "font-medium text-red-700" : ""
-                                }`}
-                              >
-                                due {formatShort(it.dueISO)}
-                              </span>
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    {person.items.length > 0 &&
+                      (() => {
+                        const groups = new Map<
+                          string,
+                          {
+                            color: string | null;
+                            items: typeof person.items;
+                          }
+                        >();
+                        for (const it of person.items) {
+                          const key = it.className ?? "Other work";
+                          if (!groups.has(key))
+                            groups.set(key, { color: it.classColor, items: [] });
+                          groups.get(key)!.items.push(it);
+                        }
+                        return (
+                          <div className="mt-4 space-y-3 border-t border-hairline pt-4">
+                            {[...groups.entries()].map(([name, g]) => (
+                              <div key={name}>
+                                <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-muted">
+                                  <span
+                                    className="h-2 w-2 rounded-full"
+                                    style={{
+                                      backgroundColor:
+                                        g.color ?? "var(--color-hairline)",
+                                    }}
+                                  />
+                                  {name}
+                                </p>
+                                <ul className="space-y-1.5">
+                                  {g.items.map((it) => (
+                                    <li key={it.id} className="text-sm">
+                                      <span className="font-medium">
+                                        {it.title}
+                                      </span>
+                                      <span className="ml-2 text-xs text-muted">
+                                        {SCHOOL_TYPE_LABEL[it.type]}
+                                        <span
+                                          className={`tabular ml-2 ${
+                                            it.overdue
+                                              ? "font-medium text-red-700"
+                                              : ""
+                                          }`}
+                                        >
+                                          due {formatShort(it.dueISO)}
+                                        </span>
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                   </Card>
                 );
               })}

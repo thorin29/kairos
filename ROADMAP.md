@@ -316,7 +316,8 @@ all live in the database, never in this repository.
 - [x] Classes with fixed times on the calendar — a class with meeting days and a
       time generates a recurring CLASS event automatically (v0.86.0)
 - [x] Terms and class schedules managed by an admin (Admin → School) (v0.86.0)
-- [ ] Assignments grouped under a class (Phase 2b)
+- [x] Assignments grouped under a class — optional class link on each item, a
+      class picker in the add form, grouped display on the School page (v0.87.0)
 - [ ] Editing a class in place (rather than delete/re-add)
 - [ ] Shared class event for two students as one calendar block (participants)
 - [ ] Read-only metrics page (Phase 3)
