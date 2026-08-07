@@ -4,6 +4,7 @@ import {
   CalendarIcon,
   BookIcon,
   ChoresIcon,
+  SchoolIcon,
   GamepadIcon,
   TrophyIcon,
   CartIcon,
@@ -15,6 +16,7 @@ export type Section =
   | "calendar"
   | "bible"
   | "chores"
+  | "school"
   | "games"
   | "exercise"
   | "groceries"
@@ -62,6 +64,13 @@ const NAV: {
     label: "Bible reading",
     color: "#7c3aed",
     icon: <BookIcon className="h-6 w-6" />,
+  },
+  {
+    key: "school",
+    href: "/school",
+    label: "School",
+    color: "#4f46e5",
+    icon: <SchoolIcon className="h-6 w-6" />,
   },
   {
     key: "games",

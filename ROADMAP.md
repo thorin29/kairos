@@ -309,6 +309,8 @@ all live in the database, never in this repository.
 - [x] Assignments and tests added by a student or a parent (v0.84.0)
 - [x] Prompt on the daily page to add upcoming work (v0.84.0)
 - [x] Admin School page to see and manage everyone's work (v0.84.0)
+- [x] School section page + top-nav icon — shared read-only view of everyone's
+      open assignments and tests, built to host classes/terms next (v0.85.0)
 - [x] Tracked but unscored for now — School stays out of the score until the
       scoring rework (v0.84.0)
 - [ ] Classes with fixed times on the calendar (CLASS event kind exists; a
