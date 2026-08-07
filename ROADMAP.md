@@ -377,6 +377,9 @@ all live in the database, never in this repository.
 - [x] Admin: open a person from the Workouts page to see their exercises, plan,
       and logged workouts, and delete any individually — for clearing test or
       mistaken records (v0.33.0)
+- [x] Hero WOD flag on named workouts — a checkbox when building a workout and a
+      toggle on existing ones (Admin → Workouts); flagged workouts show a badge
+      in Browse. The genre tag anticipated when Kalsu was added (v0.81.0)
 - [x] Browse workouts — a button on the workout card lists the named workouts
       (HIIT and other multi-part sessions, with type and movements), shared
       library plus the person's own; simple single pool movements are excluded.

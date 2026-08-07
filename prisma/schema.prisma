@@ -620,6 +620,7 @@ model HiitWorkout {
   pyramidEnd   Int?
   pyramidStep  Int?         @default(1)
   notes        String?
+  heroWod      Boolean      @default(false)
   sortOrder    Int          @default(0)
   createdAt    DateTime     @default(now())
 

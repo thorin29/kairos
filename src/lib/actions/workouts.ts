@@ -684,6 +684,7 @@ export async function addHiitWorkout(input: {
   pyramidStart?: number | null;
   pyramidEnd?: number | null;
   pyramidStep?: number | null;
+  heroWod?: boolean;
   notes?: string | null;
   movements: {
     poolExerciseId: string;
@@ -709,6 +710,7 @@ export async function addHiitWorkout(input: {
       pyramidStart: input.pyramidStart ?? null,
       pyramidEnd: input.pyramidEnd ?? null,
       pyramidStep: input.pyramidStep ?? null,
+      heroWod: input.heroWod ?? false,
       notes: input.notes?.trim() || null,
       sortOrder: count,
       movements: {
@@ -724,6 +726,15 @@ export async function addHiitWorkout(input: {
   });
   refresh();
   return { error: null };
+}
+
+/** Flag or unflag a named workout as a Hero WOD. */
+export async function setHeroWod(id: string, heroWod: boolean): Promise<void> {
+  await requireAdmin();
+  await prisma.hiitWorkout
+    .update({ where: { id }, data: { heroWod } })
+    .catch(() => {});
+  refresh();
 }
 
 export async function deleteHiitWorkout(id: string): Promise<void> {

@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { Card, SectionHeading } from "@/components/ui";
 import { PlusIcon, TrashIcon, GripIcon } from "@/components/icons";
-import { addHiitWorkout, deleteHiitWorkout } from "@/lib/actions/workouts";
+import { addHiitWorkout, deleteHiitWorkout, setHeroWod } from "@/lib/actions/workouts";
 import {
   WORKOUT_TYPES,
   WORKOUT_TYPE_LABEL,
@@ -41,6 +41,7 @@ export function HiitWorkouts({
   const [pStart, setPStart] = useState("");
   const [pEnd, setPEnd] = useState("");
   const [pStep, setPStep] = useState("1");
+  const [hero, setHero] = useState(false);
   const [picked, setPicked] = useState<PickedMovement[]>([]);
   const [addSel, setAddSel] = useState("");
   const [dragKey, setDragKey] = useState<number | null>(null);
@@ -94,6 +95,7 @@ export function HiitWorkouts({
     setPStart("");
     setPEnd("");
     setPStep("1");
+    setHero(false);
     setPicked([]);
   };
 
@@ -117,6 +119,7 @@ export function HiitWorkouts({
         pyramidStart: cfg.pyramid ? num(pStart) : null,
         pyramidEnd: cfg.pyramid ? num(pEnd) : null,
         pyramidStep: cfg.pyramid ? num(pStep) : null,
+        heroWod: hero,
         movements: picked.map((m) => {
           const kind = inferHiitInput(nameOf(m.poolExerciseId));
           return {
@@ -346,6 +349,21 @@ export function HiitWorkouts({
 
           {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
 
+          <label className="mt-4 flex items-center gap-2.5 text-sm">
+            <input
+              type="checkbox"
+              checked={hero}
+              onChange={(e) => setHero(e.target.checked)}
+              className="h-4 w-4 rounded border-hairline accent-accent"
+            />
+            <span>
+              Hero WOD
+              <span className="ml-1.5 text-xs text-muted">
+                (a CrossFit benchmark named for the fallen)
+              </span>
+            </span>
+          </label>
+
           <button
             type="button"
             onClick={save}
@@ -370,10 +388,18 @@ export function HiitWorkouts({
 
 function WorkoutRow({ workout }: { workout: HiitWorkoutRow }) {
   const [pending, start] = useTransition();
+  const [hero, setHero] = useState(workout.heroWod);
   return (
     <div className="flex items-center gap-3 p-4">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">{workout.name}</p>
+        <p className="flex items-center gap-2 truncate text-sm font-semibold">
+          {workout.name}
+          {hero && (
+            <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+              Hero WOD
+            </span>
+          )}
+        </p>
         <p className="truncate text-xs text-muted">
           {WORKOUT_TYPE_LABEL[workout.type]} ·{" "}
           {workout.movements.length === 0
@@ -381,6 +407,20 @@ function WorkoutRow({ workout }: { workout: HiitWorkoutRow }) {
             : workout.movements.map((m) => formatHiitMovement(m)).join(", ")}
         </p>
       </div>
+      <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted">
+        <input
+          type="checkbox"
+          checked={hero}
+          disabled={pending}
+          onChange={(e) => {
+            const next = e.target.checked;
+            setHero(next);
+            start(() => void setHeroWod(workout.id, next));
+          }}
+          className="h-4 w-4 rounded border-hairline accent-accent"
+        />
+        Hero WOD
+      </label>
       <button
         type="button"
         aria-label={`Delete ${workout.name}`}
