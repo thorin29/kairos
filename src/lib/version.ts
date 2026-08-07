@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.83.0";
+export const APP_VERSION = "0.84.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -52,11 +52,19 @@ export const MIGRATIONS = [
   "42_pause",
   "43_family_calendar",
   "44_hero_wod",
+  "45_school_work",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.84.0",
+    summary: [
+      "School, phase one: assignments and tests. A student can add their own from their day (\u201cAdd assignment or test\u201d), and a parent can add for anyone from the new Admin \u2192 School page. Each has a subject, a type (homework / assignment / test / project), and a due date",
+      "School work shows on the daily page and as a School line on the dashboard card, but is tracked-only for now \u2014 it stays out of the score until scoring is reworked. Timed classes still live on the calendar",
+    ],
+  },
   {
     version: "0.83.0",
     summary: [

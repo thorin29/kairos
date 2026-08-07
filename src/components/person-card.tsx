@@ -46,13 +46,14 @@ export function PersonCard({
           <p className="mt-3 text-sm text-muted">
             <span className="font-medium text-accent">Paused</span> for{" "}
             {person.paused}.
-            {person.total === 0 && " Nothing due while you're away."}
+            {person.categories.length === 0 &&
+              " Nothing due while you're away."}
           </p>
-        ) : person.total === 0 ? (
+        ) : person.categories.length === 0 ? (
           <p className="mt-3 text-sm text-muted">Nothing scheduled today.</p>
         ) : null}
 
-        {person.total > 0 && (
+        {person.categories.length > 0 && (
           <>
             <ul className="mt-3 space-y-3">
               {person.categories.map((c) => (
@@ -76,9 +77,11 @@ export function PersonCard({
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-xs text-muted">
-              {person.complete} of {person.total} done
-            </p>
+            {person.total > 0 && (
+              <p className="mt-4 text-xs text-muted">
+                {person.complete} of {person.total} done
+              </p>
+            )}
           </>
         )}
       </div>

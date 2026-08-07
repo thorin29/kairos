@@ -109,9 +109,12 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
       };
     });
 
-    const total = categories.reduce((n, c) => n + c.total, 0);
-    const complete = categories.reduce((n, c) => n + c.complete, 0);
-    const overdue = categories.reduce((n, c) => n + c.overdue, 0);
+    // School is tracked but not scored yet — its category line still shows,
+    // but it stays out of the overall total/percent until scoring is reworked.
+    const scored = categories.filter((c) => c.category !== Category.SCHOOL);
+    const total = scored.reduce((n, c) => n + c.total, 0);
+    const complete = scored.reduce((n, c) => n + c.complete, 0);
+    const overdue = scored.reduce((n, c) => n + c.overdue, 0);
 
     return {
       id: person.id,
@@ -189,6 +192,7 @@ export async function loadPersonDay(userId: string, dayISO: string) {
       ],
     },
     orderBy: [{ dueDate: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
+    include: { schoolWork: { select: { type: true, subject: true } } },
   });
 
   const visible = activePause

@@ -14,6 +14,8 @@ type Row = {
   dueDateISO: string;
   isOverdue: boolean;
   stale?: boolean;
+  /** Overrides the category label line (e.g. "Math · Test" for school). */
+  subtitle?: string;
   /** Generated from a chore: only a parent can remove it, from Chores. */
   locked?: boolean;
 };
@@ -44,7 +46,7 @@ export function TaskRow({ task }: { task: Row }) {
           {task.title}
         </p>
         <p className="mt-0.5 text-xs text-muted">
-          {CATEGORY_LABELS[task.category]}
+          {task.subtitle ?? CATEGORY_LABELS[task.category]}
           {task.stale && <span className="ml-2">expired</span>}
           {task.isOverdue && (
             <span className="tabular ml-2 font-medium text-red-700">

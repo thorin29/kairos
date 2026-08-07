@@ -1,4 +1,4 @@
-import { TaskStatus } from "@/generated/prisma/client";
+import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
 import { isStale, loadStaleContext } from "@/lib/chores/stale";
@@ -38,7 +38,11 @@ export async function loadScores(todayISO: string): Promise<PersonScore[]> {
     }),
     prisma.task.groupBy({
       by: ["userId"],
-      where: { isOpen: false, ...(since ? { dueDate: since } : {}) },
+      where: {
+        isOpen: false,
+        category: { not: Category.SCHOOL },
+        ...(since ? { dueDate: since } : {}),
+      },
       _count: { _all: true },
     }),
     prisma.task.groupBy({
@@ -54,6 +58,7 @@ export async function loadScores(todayISO: string): Promise<PersonScore[]> {
       by: ["userId"],
       where: {
         status: TaskStatus.COMPLETE,
+        category: { not: Category.SCHOOL },
         ...(since ? { dueDate: since } : {}),
       },
       _count: { _all: true },

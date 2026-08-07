@@ -305,12 +305,17 @@ all live in the database, never in this repository.
 
 ## School
 
-- [ ] Classes with fixed times on the calendar
-- [ ] Independent work as tasks with due dates but no time
-- [ ] Assignments and tests added by a student or a parent
-- [ ] Prompt on the daily page to add upcoming work
-- [ ] Terms and class schedules managed by an admin
-- [ ] Read-only metrics page
+- [x] Independent work as tasks with due dates but no time (v0.84.0)
+- [x] Assignments and tests added by a student or a parent (v0.84.0)
+- [x] Prompt on the daily page to add upcoming work (v0.84.0)
+- [x] Admin School page to see and manage everyone's work (v0.84.0)
+- [x] Tracked but unscored for now — School stays out of the score until the
+      scoring rework (v0.84.0)
+- [ ] Classes with fixed times on the calendar (CLASS event kind exists; a
+      managed Class/Term model is Phase 2)
+- [ ] Terms and class schedules managed by an admin (Phase 2)
+- [ ] Read-only metrics page (Phase 3)
+- [ ] School's own weekly score (part of the scoring rework)
 
 ## Workouts
 - [x] Workout card pop-out: the opened panel scales up and pulls into focus
