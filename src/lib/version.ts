@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.85.0";
+export const APP_VERSION = "0.86.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -53,11 +53,19 @@ export const MIGRATIONS = [
   "43_family_calendar",
   "44_hero_wod",
   "45_school_work",
+  "46_school_classes",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.86.0",
+    summary: [
+      "School, phase 2a: terms and classes. In Admin \u2192 School you can set up terms (a name and date range) and add classes per student. Give a class weekdays and a time and it becomes a recurring class block on the calendar automatically, running to the end of its term",
+      "Classes show on the School page under each student, and independent (no-time) classes are supported too \u2014 just leave the meeting days blank",
+    ],
+  },
   {
     version: "0.85.0",
     summary: [

@@ -2,9 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { requireInteractive } from "@/lib/gate";
+import { requireAdmin } from "@/lib/session";
 import { Category, SchoolWorkType } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { toDateColumn, todayISO } from "@/lib/dates";
+import {
+  fromDateColumn,
+  householdTz,
+  toDateColumn,
+  todayISO,
+  zonedToUtc,
+} from "@/lib/dates";
+import { buildRule } from "@/lib/calendar/recur";
 
 export type SchoolActionState = { error: string | null };
 
@@ -67,4 +75,170 @@ export async function deleteSchoolWork(taskId: string): Promise<void> {
   revalidatePath("/");
   if (task) revalidatePath(`/person/${task.userId}`);
   revalidatePath("/admin/school");
+}
+
+// --- terms & classes (admin) ---------------------------------------------
+
+const WEEKDAY_TOKENS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+
+function schoolStructureRevalidate() {
+  revalidatePath("/admin/school");
+  revalidatePath("/school");
+  revalidatePath("/calendar");
+  revalidatePath("/");
+}
+
+export async function addTerm(
+  _prev: SchoolActionState,
+  formData: FormData,
+): Promise<SchoolActionState> {
+  await requireAdmin();
+  const name = String(formData.get("name") ?? "")
+    .trim()
+    .slice(0, 60);
+  const start = String(formData.get("startDate") ?? "");
+  const end = String(formData.get("endDate") ?? "");
+  if (name.length < 2) return { error: "Give the term a name." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+    return { error: "Set start and end dates." };
+  }
+  if (end < start) return { error: "The term ends before it starts." };
+
+  const count = await prisma.term.count();
+  await prisma.term.create({
+    data: {
+      name,
+      startDate: toDateColumn(start),
+      endDate: toDateColumn(end),
+      sortOrder: count,
+    },
+  });
+  schoolStructureRevalidate();
+  return { error: null };
+}
+
+export async function deleteTerm(id: string): Promise<void> {
+  await requireAdmin();
+  // Classes keep existing; their termId is set null by the FK.
+  await prisma.term.delete({ where: { id } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+/**
+ * A class's meeting time is a recurring CLASS event owned by the student:
+ * weekly on the chosen weekdays, at the chosen time, until the term ends.
+ * Returns the event id, or null when the class has no scheduled meeting.
+ */
+async function makeMeetingEvent(input: {
+  userId: string;
+  name: string;
+  byday: string[];
+  start: string;
+  end: string;
+  anchorISO: string;
+  untilISO: string | null;
+}): Promise<string | null> {
+  const { userId, name, byday, start, end, anchorISO, untilISO } = input;
+  if (byday.length === 0) return null;
+  if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return null;
+
+  const rrule = buildRule("WEEKLY", 1, untilISO, null, byday);
+  const tz = householdTz();
+  const [y, mo, d] = anchorISO.split("-").map(Number);
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const startsAt = zonedToUtc(y, mo, d, sh, sm, 0, tz);
+  const endsAt = zonedToUtc(y, mo, d, eh, em, 0, tz);
+  if (endsAt <= startsAt) return null;
+
+  const ev = await prisma.event.create({
+    data: {
+      userId,
+      kind: "CLASS",
+      title: name,
+      startsAt,
+      endsAt,
+      allDay: false,
+      rrule,
+    },
+    select: { id: true },
+  });
+  return ev.id;
+}
+
+export async function addClass(
+  _prev: SchoolActionState,
+  formData: FormData,
+): Promise<SchoolActionState> {
+  await requireAdmin();
+  const userId = String(formData.get("userId") ?? "");
+  const name = String(formData.get("name") ?? "")
+    .trim()
+    .slice(0, 60);
+  const color = String(formData.get("color") ?? "").trim() || null;
+  let termId = String(formData.get("termId") ?? "").trim() || null;
+  const start = String(formData.get("start") ?? "");
+  const end = String(formData.get("end") ?? "");
+  const byday = String(formData.get("byday") ?? "")
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter((d) => WEEKDAY_TOKENS.includes(d));
+
+  if (!userId) return { error: "Pick whose class this is." };
+  if (name.length < 2) return { error: "Give the class a name." };
+
+  const hasMeeting = byday.length > 0;
+  if (hasMeeting && (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end))) {
+    return { error: "Set a meeting start and end time." };
+  }
+  if (hasMeeting && end <= start) {
+    return { error: "The class ends before it starts." };
+  }
+
+  let anchorISO = todayISO();
+  let untilISO: string | null = null;
+  if (termId) {
+    const term = await prisma.term.findUnique({
+      where: { id: termId },
+      select: { startDate: true, endDate: true },
+    });
+    if (term) {
+      anchorISO = fromDateColumn(term.startDate);
+      untilISO = fromDateColumn(term.endDate);
+    } else {
+      termId = null;
+    }
+  }
+
+  const eventId = hasMeeting
+    ? await makeMeetingEvent({
+        userId,
+        name,
+        byday,
+        start,
+        end,
+        anchorISO,
+        untilISO,
+      })
+    : null;
+
+  const count = await prisma.schoolClass.count({ where: { userId } });
+  await prisma.schoolClass.create({
+    data: { name, userId, termId, color, eventId, sortOrder: count },
+  });
+  schoolStructureRevalidate();
+  return { error: null };
+}
+
+export async function deleteClass(id: string): Promise<void> {
+  await requireAdmin();
+  const cls = await prisma.schoolClass.findUnique({
+    where: { id },
+    select: { eventId: true },
+  });
+  await prisma.schoolClass.delete({ where: { id } }).catch(() => {});
+  if (cls?.eventId) {
+    await prisma.event.delete({ where: { id: cls.eventId } }).catch(() => {});
+  }
+  schoolStructureRevalidate();
 }

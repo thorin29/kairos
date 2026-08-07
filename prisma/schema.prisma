@@ -53,6 +53,7 @@ model User {
   gameProfile     GameProfile?
   gameSessions    GameSession[]
   tasks           Task[]         @relation("TaskOwner")
+  schoolClasses   SchoolClass[]
   createdTasks    Task[]         @relation("TaskCreator")
   events          Event[]
   choreAssignments ChoreAssignment[]
@@ -76,6 +77,34 @@ model User {
 // Percent complete, overdue rollover, streaks, and the weekly
 // scoreboard are all queries against this one table.
 // ---------------------------------------------------------------
+
+model Term {
+  id        String        @id @default(cuid())
+  name      String
+  startDate DateTime      @db.Date
+  endDate   DateTime      @db.Date
+  sortOrder Int           @default(0)
+  createdAt DateTime      @default(now())
+  classes   SchoolClass[]
+}
+
+model SchoolClass {
+  id      String  @id @default(cuid())
+  name    String
+  userId  String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  termId  String?
+  term    Term?   @relation(fields: [termId], references: [id], onDelete: SetNull)
+  color   String?
+  // Optional recurring CLASS event that is this class's meeting time.
+  eventId String? @unique
+  event   Event?  @relation("ClassMeeting", fields: [eventId], references: [id], onDelete: SetNull)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([termId])
+}
 
 enum SchoolWorkType {
   HOMEWORK
@@ -232,6 +261,7 @@ model Event {
   task Task?
   sportSkips SportSkip[]
   participants EventParticipant[]
+  schoolClass SchoolClass? @relation("ClassMeeting")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

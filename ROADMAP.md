@@ -313,9 +313,12 @@ all live in the database, never in this repository.
       open assignments and tests, built to host classes/terms next (v0.85.0)
 - [x] Tracked but unscored for now — School stays out of the score until the
       scoring rework (v0.84.0)
-- [ ] Classes with fixed times on the calendar (CLASS event kind exists; a
-      managed Class/Term model is Phase 2)
-- [ ] Terms and class schedules managed by an admin (Phase 2)
+- [x] Classes with fixed times on the calendar — a class with meeting days and a
+      time generates a recurring CLASS event automatically (v0.86.0)
+- [x] Terms and class schedules managed by an admin (Admin → School) (v0.86.0)
+- [ ] Assignments grouped under a class (Phase 2b)
+- [ ] Editing a class in place (rather than delete/re-add)
+- [ ] Shared class event for two students as one calendar block (participants)
 - [ ] Read-only metrics page (Phase 3)
 - [ ] School's own weekly score (part of the scoring rework)
 
