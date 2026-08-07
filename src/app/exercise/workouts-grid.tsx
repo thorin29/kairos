@@ -360,6 +360,11 @@ export function WorkoutsGrid({
                             <span className="rounded-full bg-ground px-2 py-0.5 text-xs font-medium text-muted">
                               {WORKOUT_TYPE_LABEL[w.type]}
                             </span>
+                            {w.heroWod && (
+                              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                                Hero WOD
+                              </span>
+                            )}
                             {w.ownerId && (
                               <span className="text-xs text-muted">yours</span>
                             )}

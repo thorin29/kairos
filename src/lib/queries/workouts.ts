@@ -1121,6 +1121,7 @@ export type HiitWorkoutRow = {
   pyramidStart: number | null;
   pyramidEnd: number | null;
   pyramidStep: number | null;
+  heroWod: boolean;
   movements: HiitMovementRow[];
 };
 
@@ -1137,6 +1138,7 @@ export async function loadHiitWorkouts(): Promise<HiitWorkoutRow[]> {
       pyramidStart: true,
       pyramidEnd: true,
       pyramidStep: true,
+      heroWod: true,
       movements: {
         orderBy: { position: "asc" },
         select: {
@@ -1157,6 +1159,7 @@ export async function loadHiitWorkouts(): Promise<HiitWorkoutRow[]> {
     pyramidStart: number | null;
     pyramidEnd: number | null;
     pyramidStep: number | null;
+    heroWod: boolean;
     movements: {
       poolExerciseId: string;
       reps: number | null;
@@ -1175,6 +1178,7 @@ export async function loadHiitWorkouts(): Promise<HiitWorkoutRow[]> {
     pyramidStart: w.pyramidStart,
     pyramidEnd: w.pyramidEnd,
     pyramidStep: w.pyramidStep,
+    heroWod: w.heroWod,
     movements: w.movements.map((m) => ({
       poolExerciseId: m.poolExerciseId,
       name: m.poolExercise?.name ?? "—",
@@ -1193,6 +1197,7 @@ export type BoardHiitWorkout = {
   ownerId: string | null; // null = shared pool
   approved: boolean;
   shareRequested: boolean;
+  heroWod: boolean;
   movements: HiitMovementRow[];
 };
 
@@ -1211,6 +1216,7 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
       ownerId: true,
       approved: true,
       shareRequested: true,
+      heroWod: true,
       movements: {
         orderBy: { position: "asc" },
         select: {
@@ -1230,6 +1236,7 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
     ownerId: string | null;
     approved: boolean;
     shareRequested: boolean;
+    heroWod: boolean;
     movements: {
       poolExerciseId: string;
       reps: number | null;
@@ -1247,6 +1254,7 @@ export async function loadHiitWorkoutsForBoard(): Promise<BoardHiitWorkout[]> {
     ownerId: w.ownerId,
     approved: w.approved,
     shareRequested: w.shareRequested,
+    heroWod: w.heroWod,
     movements: w.movements.map((m) => ({
       poolExerciseId: m.poolExerciseId,
       name: m.poolExercise?.name ?? "—",
