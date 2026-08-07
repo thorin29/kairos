@@ -38,6 +38,7 @@ export async function addSchoolWork(
       .slice(0, 60) || null;
   const rawType = String(formData.get("type") ?? "");
   const dueDate = String(formData.get("dueDate") ?? "") || todayISO();
+  const rawClassId = String(formData.get("classId") ?? "").trim() || null;
 
   if (!userId) return { error: "Pick who this is for." };
   if (title.length < 2) return { error: "Give the assignment a name." };
@@ -48,13 +49,23 @@ export async function addSchoolWork(
     ? (rawType as SchoolWorkType)
     : "ASSIGNMENT";
 
+  // Only accept a class that belongs to this student.
+  let classId: string | null = null;
+  if (rawClassId) {
+    const cls = await prisma.schoolClass.findFirst({
+      where: { id: rawClassId, userId },
+      select: { id: true },
+    });
+    classId = cls?.id ?? null;
+  }
+
   await prisma.task.create({
     data: {
       userId,
       title,
       category: Category.SCHOOL,
       dueDate: toDateColumn(dueDate),
-      schoolWork: { create: { type, subject } },
+      schoolWork: { create: { type, subject, classId } },
     },
   });
 

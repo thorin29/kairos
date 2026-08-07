@@ -1,6 +1,10 @@
 import { AdminBack } from "@/components/admin-back";
 import { SectionHeading } from "@/components/ui";
-import { loadSchoolAdmin, loadSchoolStructure } from "@/lib/queries/school";
+import {
+  loadSchoolAdmin,
+  loadSchoolStructure,
+  loadClassOptions,
+} from "@/lib/queries/school";
 import { todayISO } from "@/lib/dates";
 import { SchoolAdmin } from "./school-admin";
 import { SchoolStructure } from "./school-structure";
@@ -8,9 +12,10 @@ import { SchoolStructure } from "./school-structure";
 export const dynamic = "force-dynamic";
 
 export default async function AdminSchoolPage() {
-  const [people, structure] = await Promise.all([
+  const [people, structure, classOptions] = await Promise.all([
     loadSchoolAdmin(),
     loadSchoolStructure(),
+    loadClassOptions(),
   ]);
   const today = todayISO();
 
@@ -43,7 +48,11 @@ export default async function AdminSchoolPage() {
       <section>
         <SectionHeading>Open work</SectionHeading>
         <div className="mt-3">
-          <SchoolAdmin people={people} today={today} />
+          <SchoolAdmin
+            people={people}
+            classesByUser={classOptions}
+            today={today}
+          />
         </div>
       </section>
     </main>

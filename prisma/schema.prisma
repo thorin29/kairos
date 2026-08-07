@@ -101,6 +101,7 @@ model SchoolClass {
   event   Event?  @relation("ClassMeeting", fields: [eventId], references: [id], onDelete: SetNull)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
+  work      SchoolWork[]
 
   @@index([userId])
   @@index([termId])
@@ -119,7 +120,11 @@ model SchoolWork {
   task      Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
   type      SchoolWorkType @default(ASSIGNMENT)
   subject   String?
+  classId   String?
+  class     SchoolClass?   @relation(fields: [classId], references: [id], onDelete: SetNull)
   createdAt DateTime       @default(now())
+
+  @@index([classId])
 }
 
 enum Category {

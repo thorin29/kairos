@@ -192,7 +192,15 @@ export async function loadPersonDay(userId: string, dayISO: string) {
       ],
     },
     orderBy: [{ dueDate: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
-    include: { schoolWork: { select: { type: true, subject: true } } },
+    include: {
+      schoolWork: {
+        select: {
+          type: true,
+          subject: true,
+          class: { select: { name: true } },
+        },
+      },
+    },
   });
 
   const visible = activePause

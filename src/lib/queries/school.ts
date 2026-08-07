@@ -8,6 +8,8 @@ export type SchoolItem = {
   title: string;
   type: SchoolWorkType;
   subject: string | null;
+  className: string | null;
+  classColor: string | null;
   dueISO: string;
   status: string;
   overdue: boolean;
@@ -55,7 +57,13 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
         title: true,
         dueDate: true,
         status: true,
-        schoolWork: { select: { type: true, subject: true } },
+        schoolWork: {
+          select: {
+            type: true,
+            subject: true,
+            class: { select: { name: true, color: true } },
+          },
+        },
       },
     }),
   ]);
@@ -69,6 +77,8 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
       title: t.title,
       type: t.schoolWork.type,
       subject: t.schoolWork.subject,
+      className: t.schoolWork.class?.name ?? null,
+      classColor: t.schoolWork.class?.color ?? null,
       dueISO,
       status: t.status as string,
       overdue: dueISO < today,
@@ -217,4 +227,21 @@ export async function loadSchoolStructure(): Promise<{
       classes: byUser.get(p.id) ?? [],
     })),
   };
+}
+
+export type ClassOption = { id: string; name: string; color: string | null };
+
+/** Class options per student, for the assignment "class" picker. */
+export async function loadClassOptions(): Promise<
+  Record<string, ClassOption[]>
+> {
+  const classes = await prisma.schoolClass.findMany({
+    orderBy: [{ sortOrder: "asc" }],
+    select: { id: true, name: true, color: true, userId: true },
+  });
+  const map: Record<string, ClassOption[]> = {};
+  for (const c of classes) {
+    (map[c.userId] ??= []).push({ id: c.id, name: c.name, color: c.color });
+  }
+  return map;
 }

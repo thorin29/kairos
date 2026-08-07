@@ -11,16 +11,22 @@ import type { PersonSchool } from "@/lib/queries/school";
 
 export function SchoolAdmin({
   people,
+  classesByUser,
   today,
 }: {
   people: PersonSchool[];
+  classesByUser: Record<string, { id: string; name: string }[]>;
   today: string;
 }) {
   const pickList = people.map((p) => ({ id: p.id, name: p.name }));
 
   return (
     <div className="space-y-8">
-      <AddSchoolWork people={pickList} defaultDate={today} />
+      <AddSchoolWork
+        people={pickList}
+        classesByUser={classesByUser}
+        defaultDate={today}
+      />
 
       {people.map((person) => (
         <section key={person.id}>
@@ -63,7 +69,7 @@ function ItemRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{item.title}</p>
         <p className="mt-0.5 text-xs text-muted">
-          {[item.subject, SCHOOL_TYPE_LABEL[item.type]]
+          {[item.className ?? item.subject, SCHOOL_TYPE_LABEL[item.type]]
             .filter(Boolean)
             .join(" · ")}
           <span

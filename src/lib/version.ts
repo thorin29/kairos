@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.86.0";
+export const APP_VERSION = "0.87.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -54,11 +54,18 @@ export const MIGRATIONS = [
   "44_hero_wod",
   "45_school_work",
   "46_school_classes",
+  "47_school_work_class",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.87.0",
+    summary: [
+      "School, phase 2b: assignments and tests can be filed under a class. When adding one, pick the class (or leave it as a free-text subject as before). On the School page each person\u2019s work is grouped by class, with anything unfiled under \u201cOther work\u201d",
+    ],
+  },
   {
     version: "0.86.0",
     summary: [
