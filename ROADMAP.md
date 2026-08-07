@@ -377,6 +377,10 @@ all live in the database, never in this repository.
 - [x] Admin: open a person from the Workouts page to see their exercises, plan,
       and logged workouts, and delete any individually — for clearing test or
       mistaken records (v0.33.0)
+- [x] Full edit for named (HIIT/CrossFit) workouts — Edit loads a workout into
+      the builder for changes to name, type, cap/pyramid, movements, and the
+      Hero WOD flag (Admin → Workouts). Log picker groups named workouts as
+      Personal / Shared / Hero WOD; HIIT category reads "HIIT/CrossFit" (v0.82.0)
 - [x] Hero WOD flag on named workouts — a checkbox when building a workout and a
       toggle on existing ones (Admin → Workouts); flagged workouts show a badge
       in Browse. The genre tag anticipated when Kalsu was added (v0.81.0)

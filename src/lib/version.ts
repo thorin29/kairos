@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.81.0";
+export const APP_VERSION = "0.82.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -57,6 +57,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.82.0",
+    summary: [
+      "Named (HIIT/CrossFit) workouts can now be fully edited from Admin \u2192 Workouts \u2014 name, type, cap/pyramid, movements, and the Hero WOD flag \u2014 not just deleted. Hit Edit on any workout to load it into the builder",
+      "In the log picker, named workouts are grouped as Personal, Shared, and Hero WOD (Hero WODs now have their own section). The HIIT category now reads \u201cHIIT/CrossFit\u201d when choosing a type",
+    ],
+  },
   {
     version: "0.81.0",
     summary: [

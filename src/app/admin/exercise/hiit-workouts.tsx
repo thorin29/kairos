@@ -3,7 +3,12 @@
 import { useRef, useState, useTransition } from "react";
 import { Card, SectionHeading } from "@/components/ui";
 import { PlusIcon, TrashIcon, GripIcon } from "@/components/icons";
-import { addHiitWorkout, deleteHiitWorkout, setHeroWod } from "@/lib/actions/workouts";
+import {
+  addHiitWorkout,
+  updateHiitWorkout,
+  deleteHiitWorkout,
+  setHeroWod,
+} from "@/lib/actions/workouts";
 import {
   WORKOUT_TYPES,
   WORKOUT_TYPE_LABEL,
@@ -43,6 +48,7 @@ export function HiitWorkouts({
   const [pStep, setPStep] = useState("1");
   const [hero, setHero] = useState(false);
   const [picked, setPicked] = useState<PickedMovement[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [addSel, setAddSel] = useState("");
   const [dragKey, setDragKey] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +103,43 @@ export function HiitWorkouts({
     setPStep("1");
     setHero(false);
     setPicked([]);
+    setEditingId(null);
+    setError(null);
+  };
+
+  // Load an existing workout into the form for a full edit.
+  const startEdit = (w: HiitWorkoutRow) => {
+    setError(null);
+    setEditingId(w.id);
+    setType(w.type);
+    setName(w.name);
+    setHero(w.heroWod);
+    setCap(
+      w.type === "AMRAP"
+        ? w.capSec != null
+          ? String(Math.round(w.capSec / 60))
+          : ""
+        : w.type === "TIMED_STATIONS"
+          ? w.capSec != null
+            ? String(w.capSec)
+            : ""
+          : "",
+    );
+    setPStart(w.pyramidStart != null ? String(w.pyramidStart) : "");
+    setPEnd(w.pyramidEnd != null ? String(w.pyramidEnd) : "");
+    setPStep(w.pyramidStep != null ? String(w.pyramidStep) : "1");
+    setPicked(
+      w.movements.map((m) => ({
+        key: keyRef.current++,
+        poolExerciseId: m.poolExerciseId,
+        reps: m.reps != null ? String(m.reps) : "",
+        distance: m.distance != null ? String(m.distance) : "",
+        weight: m.weight != null ? String(m.weight) : "",
+      })),
+    );
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const save = () => {
@@ -112,7 +155,7 @@ export function HiitWorkouts({
           : null;
 
     start(async () => {
-      const res = await addHiitWorkout({
+      const payload = {
         name,
         type,
         capSec,
@@ -129,7 +172,10 @@ export function HiitWorkouts({
             weight: kind === "REPS_WEIGHT" ? num(m.weight) : null,
           };
         }),
-      });
+      };
+      const res = editingId
+        ? await updateHiitWorkout(editingId, payload)
+        : await addHiitWorkout(payload);
       if (res.error) setError(res.error);
       else reset();
     });
@@ -139,7 +185,7 @@ export function HiitWorkouts({
     <section>
       <SectionHeading>HIIT / CrossFit workouts</SectionHeading>
       <p className="mb-3 max-w-xl text-sm text-muted">
-        Build named workouts (like &ldquo;Cindy&rdquo;) from your HIIT movement
+        Build named workouts (like &ldquo;Murph&rdquo;) from your HIIT movement
         pool. They&rsquo;ll be pickable by name when planning and logging.
       </p>
 
@@ -152,6 +198,20 @@ export function HiitWorkouts({
         </Card>
       ) : (
         <Card className="mb-4 p-5">
+          {editingId && (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-accent/10 px-3 py-2">
+              <span className="text-sm font-medium text-accent">
+                Editing workout
+              </span>
+              <button
+                type="button"
+                onClick={reset}
+                className="text-sm font-medium text-muted underline-offset-2 hover:text-ink hover:underline"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className={CAPTION}>Type</label>
@@ -370,7 +430,11 @@ export function HiitWorkouts({
             disabled={pending || name.trim().length < 2 || picked.length === 0}
             className="mt-4 w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white disabled:opacity-40"
           >
-            {pending ? "Saving…" : "Save workout"}
+            {pending
+              ? "Saving…"
+              : editingId
+                ? "Update workout"
+                : "Save workout"}
           </button>
         </Card>
       )}
@@ -378,7 +442,12 @@ export function HiitWorkouts({
       {workouts.length > 0 && (
         <Card className="divide-y divide-hairline">
           {workouts.map((w) => (
-            <WorkoutRow key={w.id} workout={w} />
+            <WorkoutRow
+              key={w.id}
+              workout={w}
+              editing={editingId === w.id}
+              onEdit={() => startEdit(w)}
+            />
           ))}
         </Card>
       )}
@@ -386,11 +455,21 @@ export function HiitWorkouts({
   );
 }
 
-function WorkoutRow({ workout }: { workout: HiitWorkoutRow }) {
+function WorkoutRow({
+  workout,
+  editing,
+  onEdit,
+}: {
+  workout: HiitWorkoutRow;
+  editing: boolean;
+  onEdit: () => void;
+}) {
   const [pending, start] = useTransition();
   const [hero, setHero] = useState(workout.heroWod);
   return (
-    <div className="flex items-center gap-3 p-4">
+    <div
+      className={`flex items-center gap-3 p-4 ${editing ? "bg-accent/5" : ""}`}
+    >
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-2 truncate text-sm font-semibold">
           {workout.name}
@@ -421,6 +500,13 @@ function WorkoutRow({ workout }: { workout: HiitWorkoutRow }) {
         />
         Hero WOD
       </label>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+      >
+        Edit
+      </button>
       <button
         type="button"
         aria-label={`Delete ${workout.name}`}
