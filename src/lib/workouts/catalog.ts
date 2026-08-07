@@ -38,7 +38,7 @@ export const CATEGORY_LABEL: Record<WorkoutCategory, string> = {
   ROWING: "Rowing",
   SPORT: "Sport",
   STRETCHING: "Stretching",
-  HIIT: "HIIT",
+  HIIT: "HIIT/CrossFit",
   ISOMETRIC: "Isometric",
   RUCKING: "Rucking",
 };

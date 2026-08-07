@@ -728,6 +728,58 @@ export async function addHiitWorkout(input: {
   return { error: null };
 }
 
+/** Full edit of a named (HIIT/CrossFit) workout, movements included. */
+export async function updateHiitWorkout(
+  id: string,
+  input: {
+    name: string;
+    type: WorkoutType;
+    capSec?: number | null;
+    pyramidStart?: number | null;
+    pyramidEnd?: number | null;
+    pyramidStep?: number | null;
+    heroWod?: boolean;
+    movements: {
+      poolExerciseId: string;
+      reps?: number | null;
+      distance?: number | null;
+      weight?: number | null;
+    }[];
+  },
+): Promise<{ error: string | null }> {
+  await requireAdmin();
+  const name = input.name.trim().slice(0, 60);
+  if (name.length < 2) return { error: "Give the workout a name." };
+  const movements = input.movements.filter((m) => m.poolExerciseId);
+  if (movements.length === 0) return { error: "Add at least one movement." };
+
+  await prisma.hiitWorkout.update({
+    where: { id },
+    data: {
+      name,
+      type: input.type,
+      capSec: input.capSec ?? null,
+      pyramidStart: input.pyramidStart ?? null,
+      pyramidEnd: input.pyramidEnd ?? null,
+      pyramidStep: input.pyramidStep ?? null,
+      ...(input.heroWod !== undefined ? { heroWod: input.heroWod } : {}),
+      // Replace the movement list wholesale — simplest correct edit.
+      movements: {
+        deleteMany: {},
+        create: movements.map((m, i) => ({
+          poolExerciseId: m.poolExerciseId,
+          reps: m.reps ?? null,
+          distance: m.distance ?? null,
+          weight: m.weight ?? null,
+          position: i,
+        })),
+      },
+    },
+  });
+  refresh();
+  return { error: null };
+}
+
 /** Flag or unflag a named workout as a Hero WOD. */
 export async function setHeroWod(id: string, heroWod: boolean): Promise<void> {
   await requireAdmin();

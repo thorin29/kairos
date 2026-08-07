@@ -366,7 +366,9 @@ export function WorkoutsGrid({
                               </span>
                             )}
                             {w.ownerId && (
-                              <span className="text-xs text-muted">yours</span>
+                              <span className="text-xs text-muted">
+                                Personal
+                              </span>
                             )}
                           </div>
                           {w.movements.length > 0 && (
@@ -881,8 +883,9 @@ function HiitBuilder({
   const [sharing, startShare] = useTransition();
 
   const movements = pool.filter((p) => p.category === "HIIT" && p.isActive);
-  const mine = workouts.filter((w) => w.ownerId === userId);
-  const shared = workouts.filter((w) => w.ownerId === null);
+  const hero = workouts.filter((w) => w.heroWod);
+  const mine = workouts.filter((w) => w.ownerId === userId && !w.heroWod);
+  const shared = workouts.filter((w) => w.ownerId === null && !w.heroWod);
 
   const isNew = sel === "new";
   const active = workouts.find((w) => w.id === sel) ?? null;
@@ -952,7 +955,7 @@ function HiitBuilder({
         >
           <option value="new">+ New workout</option>
           {mine.length > 0 && (
-            <optgroup label="Yours">
+            <optgroup label="Personal">
               {mine.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}
@@ -963,6 +966,15 @@ function HiitBuilder({
           {shared.length > 0 && (
             <optgroup label="Shared">
               {shared.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {hero.length > 0 && (
+            <optgroup label="Hero WOD">
+              {hero.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}
                 </option>
