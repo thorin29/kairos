@@ -53,9 +53,9 @@ const TILES: Tile[] = [
   {
     href: "/admin/school",
     label: "School",
-    blurb: "Classes, terms, and assignment templates",
+    blurb: "Assignments and tests; classes and terms coming",
     icon: <SchoolIcon className="h-7 w-7" />,
-    ready: false,
+    ready: true,
   },
   {
     href: "/admin/games",

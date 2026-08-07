@@ -17,6 +17,7 @@ export type PersonSchool = {
   id: string;
   name: string;
   color: string;
+  avatarPath: string | null;
   pending: number;
   overdue: number;
   items: SchoolItem[];
@@ -33,7 +34,13 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, displayName: true, color: true },
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        color: true,
+        avatarPath: true,
+      },
     }),
     prisma.task.findMany({
       where: {
@@ -77,6 +84,7 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
       id: p.id,
       name: p.displayName ?? p.name,
       color: p.color,
+      avatarPath: p.avatarPath,
       pending: items.length,
       overdue: items.filter((i) => i.overdue).length,
       items,
