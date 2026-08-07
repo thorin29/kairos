@@ -377,6 +377,9 @@ all live in the database, never in this repository.
 - [x] Admin: open a person from the Workouts page to see their exercises, plan,
       and logged workouts, and delete any individually — for clearing test or
       mistaken records (v0.33.0)
+- [x] Running logs in meters or miles (track work), an Instructions field on
+      named workouts (shown in Browse instead of the movement list), and Browse
+      split into Workouts / Hero WODs tabs (v0.83.0)
 - [x] Full edit for named (HIIT/CrossFit) workouts — Edit loads a workout into
       the builder for changes to name, type, cap/pyramid, movements, and the
       Hero WOD flag (Admin → Workouts). Log picker groups named workouts as

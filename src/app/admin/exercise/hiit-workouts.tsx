@@ -47,6 +47,7 @@ export function HiitWorkouts({
   const [pEnd, setPEnd] = useState("");
   const [pStep, setPStep] = useState("1");
   const [hero, setHero] = useState(false);
+  const [instructions, setInstructions] = useState("");
   const [picked, setPicked] = useState<PickedMovement[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [addSel, setAddSel] = useState("");
@@ -102,6 +103,7 @@ export function HiitWorkouts({
     setPEnd("");
     setPStep("1");
     setHero(false);
+    setInstructions("");
     setPicked([]);
     setEditingId(null);
     setError(null);
@@ -114,6 +116,7 @@ export function HiitWorkouts({
     setType(w.type);
     setName(w.name);
     setHero(w.heroWod);
+    setInstructions(w.instructions ?? "");
     setCap(
       w.type === "AMRAP"
         ? w.capSec != null
@@ -163,6 +166,7 @@ export function HiitWorkouts({
         pyramidEnd: cfg.pyramid ? num(pEnd) : null,
         pyramidStep: cfg.pyramid ? num(pStep) : null,
         heroWod: hero,
+        notes: instructions.trim() || null,
         movements: picked.map((m) => {
           const kind = inferHiitInput(nameOf(m.poolExerciseId));
           return {
@@ -408,6 +412,23 @@ export function HiitWorkouts({
           </div>
 
           {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
+
+          <div className="mt-4">
+            <label className={CAPTION}>Instructions</label>
+            <textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              rows={3}
+              placeholder={
+                "How the workout goes — e.g. 100 thrusters for time, 5 burpees at the top of every minute."
+              }
+              className="w-full rounded-2xl border border-hairline bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+            <p className="mt-1 text-xs text-muted">
+              Shown in Browse instead of the movement list. Type out the
+              workout however you&rsquo;d describe it.
+            </p>
+          </div>
 
           <label className="mt-4 flex items-center gap-2.5 text-sm">
             <input
