@@ -194,6 +194,10 @@ export async function saveClass(
     .split(",")
     .map((s) => s.trim().toUpperCase())
     .filter((d) => WEEKDAY_TOKENS.includes(d));
+  const sharedRaw = String(formData.get("sharedWith") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   if (name.length < 2) return { error: "Give the class a name." };
 
@@ -248,6 +252,28 @@ export async function saveClass(
   } else if (!evData && existingEventId) {
     await prisma.event.delete({ where: { id: existingEventId } }).catch(() => {});
     eventId = null;
+  }
+
+  // Share the meeting with other students by adding them as participants, so it
+  // shows as one block on everyone's calendar. Only meaningful with a meeting.
+  if (eventId) {
+    const shared = sharedRaw.filter((uid) => uid !== userId);
+    const valid =
+      shared.length > 0
+        ? (
+            await prisma.user.findMany({
+              where: { id: { in: shared }, isActive: true },
+              select: { id: true },
+            })
+          ).map((u) => u.id)
+        : [];
+    await prisma.eventParticipant.deleteMany({ where: { eventId } });
+    if (valid.length > 0) {
+      await prisma.eventParticipant.createMany({
+        data: valid.map((uid) => ({ eventId, userId: uid })),
+        skipDuplicates: true,
+      });
+    }
   }
 
   if (id) {

@@ -172,6 +172,7 @@ export type ClassRow = {
   meetingDays: string[];
   meetingStart: string;
   meetingEnd: string;
+  sharedWith: string[];
 };
 
 export type PersonClasses = {
@@ -207,7 +208,14 @@ export async function loadSchoolStructure(): Promise<{
         color: true,
         termId: true,
         userId: true,
-        event: { select: { rrule: true, startsAt: true, endsAt: true } },
+        event: {
+          select: {
+            rrule: true,
+            startsAt: true,
+            endsAt: true,
+            participants: { select: { userId: true } },
+          },
+        },
       },
     }),
   ]);
@@ -226,6 +234,7 @@ export async function loadSchoolStructure(): Promise<{
       meetingDays: parsed.days,
       meetingStart: parsed.start,
       meetingEnd: parsed.end,
+      sharedWith: c.event?.participants.map((p) => p.userId) ?? [],
     };
     const list = byUser.get(c.userId) ?? [];
     list.push(row);
