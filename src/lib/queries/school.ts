@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { fromDateColumn, localParts, todayISO } from "@/lib/dates";
+import { fromDateColumn, localParts, toDateColumn, todayISO } from "@/lib/dates";
 import type { SchoolWorkType } from "@/generated/prisma/client";
 
 export type SchoolItem = {
@@ -244,4 +244,105 @@ export async function loadClassOptions(): Promise<
     (map[c.userId] ??= []).push({ id: c.id, name: c.name, color: c.color });
   }
   return map;
+}
+
+// --- metrics (Phase 3) ---------------------------------------------------
+
+export type SchoolClassStat = {
+  key: string;
+  color: string | null;
+  total: number;
+  completed: number;
+};
+
+export type SchoolMetrics = {
+  userId: string;
+  total: number;
+  completed: number;
+  onTime: number;
+  overdue: number;
+  byClass: SchoolClassStat[];
+};
+
+/**
+ * Read-only completion stats for school work, optionally scoped to a term's
+ * date range (by due date). Tracked, not scored — this is the honest picture
+ * of what got done, per student and per class.
+ */
+export async function loadSchoolMetrics(
+  range: { startISO: string; endISO: string } | null,
+): Promise<SchoolMetrics[]> {
+  const today = todayISO();
+  const rows = await prisma.task.findMany({
+    where: {
+      category: "SCHOOL",
+      schoolWork: { isNot: null },
+      ...(range
+        ? {
+            dueDate: {
+              gte: toDateColumn(range.startISO),
+              lte: toDateColumn(range.endISO),
+            },
+          }
+        : {}),
+    },
+    select: {
+      userId: true,
+      status: true,
+      dueDate: true,
+      completedAt: true,
+      schoolWork: {
+        select: {
+          subject: true,
+          class: { select: { name: true, color: true } },
+        },
+      },
+    },
+  });
+
+  const byUser = new Map<string, SchoolMetrics>();
+  const classes = new Map<string, Map<string, SchoolClassStat>>();
+
+  const get = (userId: string) => {
+    let row = byUser.get(userId);
+    if (!row) {
+      row = { userId, total: 0, completed: 0, onTime: 0, overdue: 0, byClass: [] };
+      byUser.set(userId, row);
+      classes.set(userId, new Map());
+    }
+    return row;
+  };
+
+  for (const t of rows) {
+    if (!t.schoolWork) continue;
+    const row = get(t.userId);
+    const dueISO = fromDateColumn(t.dueDate);
+    const done = t.status === "COMPLETE";
+    row.total += 1;
+    if (done) {
+      row.completed += 1;
+      const doneISO = t.completedAt
+        ? localParts(t.completedAt).iso
+        : dueISO;
+      if (doneISO <= dueISO) row.onTime += 1;
+    } else if (dueISO < today) {
+      row.overdue += 1;
+    }
+
+    const label = t.schoolWork.class?.name ?? t.schoolWork.subject ?? "Other";
+    const color = t.schoolWork.class?.color ?? null;
+    const cmap = classes.get(t.userId)!;
+    const c = cmap.get(label) ?? { key: label, color, total: 0, completed: 0 };
+    c.total += 1;
+    if (done) c.completed += 1;
+    cmap.set(label, c);
+  }
+
+  for (const [userId, cmap] of classes) {
+    byUser.get(userId)!.byClass = [...cmap.values()].sort((a, b) =>
+      a.key.localeCompare(b.key),
+    );
+  }
+
+  return [...byUser.values()];
 }

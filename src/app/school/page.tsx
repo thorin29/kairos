@@ -1,33 +1,59 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
-import { Card } from "@/components/ui";
-import { loadSchoolAdmin, loadSchoolStructure } from "@/lib/queries/school";
+import { Card, SectionHeading } from "@/components/ui";
+import {
+  loadSchoolAdmin,
+  loadSchoolStructure,
+  loadSchoolMetrics,
+} from "@/lib/queries/school";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { todayISO, formatLong, formatShort } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
-export default async function SchoolPage() {
+export default async function SchoolPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ term?: string }>;
+}) {
   const today = todayISO();
+  const { term: rawTerm } = await searchParams;
+
   const [people, structure] = await Promise.all([
     loadSchoolAdmin(),
     loadSchoolStructure(),
   ]);
+  const terms = structure.terms;
+
+  // Which term scopes the progress numbers: an explicit choice, else the term
+  // covering today, else all time.
+  const current = terms.find((t) => t.startISO <= today && today <= t.endISO);
+  const selected =
+    rawTerm === "all"
+      ? null
+      : rawTerm
+        ? (terms.find((t) => t.id === rawTerm) ?? null)
+        : (current ?? null);
+
+  const metrics = await loadSchoolMetrics(
+    selected ? { startISO: selected.startISO, endISO: selected.endISO } : null,
+  );
+  const statsByUser = new Map(metrics.map((m) => [m.userId, m]));
+
   const classesByPerson = new Map(
     structure.people.map((p) => [p.id, p.classes]),
   );
   const anyWork =
     people.some((p) => p.items.length > 0) ||
     structure.people.some((p) => p.classes.length > 0);
+  const anyStats = metrics.some((m) => m.total > 0);
 
   return (
     <>
       <AppHeader title="School" subtitle={formatLong(today)} active="school" />
 
       <main className="mx-auto max-w-4xl px-6 py-6">
-        {/* Phase 2 will add a term header and each person's classes above this.
-            For now the page is the shared view of open assignments and tests. */}
         <p className="mb-6 max-w-2xl text-sm text-muted">
           Open assignments and tests. Add your own from your day; a parent can
           add for anyone from the admin panel. Timed classes show on the
@@ -69,7 +95,7 @@ export default async function SchoolPage() {
                           ? "all caught up"
                           : `${person.pending} open${
                               person.overdue > 0
-                                ? ` · ${person.overdue} late`
+                                ? ` \u00b7 ${person.overdue} late`
                                 : ""
                             }`}
                       </span>
@@ -104,10 +130,7 @@ export default async function SchoolPage() {
                       (() => {
                         const groups = new Map<
                           string,
-                          {
-                            color: string | null;
-                            items: typeof person.items;
-                          }
+                          { color: string | null; items: typeof person.items }
                         >();
                         for (const it of person.items) {
                           const key = it.className ?? "Other work";
@@ -160,7 +183,124 @@ export default async function SchoolPage() {
               })}
           </div>
         )}
+
+        <section className="mt-10">
+          <SectionHeading>Progress</SectionHeading>
+
+          {terms.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {terms.map((t) => (
+                <TermPill
+                  key={t.id}
+                  href={`/school?term=${t.id}`}
+                  label={t.name}
+                  active={selected?.id === t.id}
+                />
+              ))}
+              <TermPill
+                href="/school?term=all"
+                label="All time"
+                active={selected === null}
+              />
+            </div>
+          )}
+
+          <p className="mt-2 text-xs text-muted">
+            {selected
+              ? `${selected.name} \u00b7 ${selected.startISO} \u2013 ${selected.endISO}`
+              : "All time"}
+            . Tracked, not scored.
+          </p>
+
+          {!anyStats ? (
+            <Card className="mt-3 p-6 text-sm text-muted">
+              No completed or due work in this range yet.
+            </Card>
+          ) : (
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              {structure.people.map((p) => {
+                const s = statsByUser.get(p.id);
+                if (!s || s.total === 0) return null;
+                const pct = Math.round((s.completed / s.total) * 100);
+                return (
+                  <Card key={p.id} className="p-5">
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        name={p.name}
+                        color={p.color}
+                        avatarPath={p.avatarPath}
+                        size="sm"
+                      />
+                      <span className="font-display font-semibold">
+                        {p.name}
+                      </span>
+                      <span className="tabular ml-auto text-lg font-medium">
+                        {pct}%
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-muted">
+                      {s.completed} of {s.total} done &middot; {s.onTime} on
+                      time
+                      {s.overdue > 0 && (
+                        <span className="ml-1 font-medium text-red-700">
+                          {" "}
+                          &middot; {s.overdue} overdue
+                        </span>
+                      )}
+                    </p>
+
+                    {s.byClass.length > 0 && (
+                      <ul className="mt-3 space-y-1.5 border-t border-hairline pt-3">
+                        {s.byClass.map((c) => (
+                          <li
+                            key={c.key}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full"
+                              style={{
+                                backgroundColor:
+                                  c.color ?? "var(--color-hairline)",
+                              }}
+                            />
+                            <span className="flex-1 truncate">{c.key}</span>
+                            <span className="tabular text-xs text-muted">
+                              {c.completed}/{c.total}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </main>
     </>
+  );
+}
+
+function TermPill({
+  href,
+  label,
+  active,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+        active
+          ? "border-accent bg-accent/10 text-accent"
+          : "border-hairline text-muted hover:border-accent"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }

@@ -320,7 +320,8 @@ all live in the database, never in this repository.
       class picker in the add form, grouped display on the School page (v0.87.0)
 - [ ] Editing a class in place (rather than delete/re-add)
 - [ ] Shared class event for two students as one calendar block (participants)
-- [ ] Read-only metrics page (Phase 3)
+- [x] Read-only metrics page — per-student completion, on-time, and overdue,
+      broken down by class, scoped to a selectable term or all time (v0.88.0)
 - [ ] School's own weekly score (part of the scoring rework)
 
 ## Workouts
