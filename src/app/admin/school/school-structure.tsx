@@ -138,28 +138,42 @@ function Classes({
   const [state, action, pending] = useActionState(saveClass, initial);
   const ref = useRef<HTMLFormElement>(null);
   const [editing, setEditing] = useState<
-    (ClassRow & { userName: string }) | null
+    (ClassRow & { ownerId: string; userName: string }) | null
   >(null);
+  const [owner, setOwner] = useState(people[0]?.id ?? "");
   const [days, setDays] = useState<string[]>([]);
+  const [shared, setShared] = useState<string[]>([]);
 
   useEffect(() => {
     if (!pending && !state.error && state !== initial) {
       ref.current?.reset();
       setDays([]);
+      setShared([]);
+      setOwner(people[0]?.id ?? "");
       setEditing(null);
     }
-  }, [state, pending]);
+  }, [state, pending, people]);
 
-  const startEdit = (c: ClassRow, userName: string) => {
-    setEditing({ ...c, userName });
+  const startEdit = (c: ClassRow, ownerId: string, userName: string) => {
+    setEditing({ ...c, ownerId, userName });
     setDays(c.meetingDays);
+    setShared(c.sharedWith);
     if (typeof window !== "undefined")
       window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const cancel = () => {
     setEditing(null);
     setDays([]);
+    setShared([]);
+    setOwner(people[0]?.id ?? "");
   };
+
+  const ownerId = editing ? editing.ownerId : owner;
+  const shareOptions = people.filter((p) => p.id !== ownerId);
+  const toggleShared = (uid: string) =>
+    setShared((cur) =>
+      cur.includes(uid) ? cur.filter((x) => x !== uid) : [...cur, uid],
+    );
 
   const toggle = (d: string) =>
     setDays((cur) =>
@@ -180,6 +194,11 @@ function Classes({
       >
         {editing && <input type="hidden" name="id" value={editing.id} />}
         <input type="hidden" name="byday" value={days.join(",")} />
+        <input
+          type="hidden"
+          name="sharedWith"
+          value={shared.filter((id) => id !== ownerId).join(",")}
+        />
 
         {editing && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-lg bg-accent/10 px-3 py-2">
@@ -200,7 +219,12 @@ function Classes({
           {!editing && (
             <div>
               <label className="block text-sm font-medium">Student</label>
-              <select name="userId" defaultValue={people[0]?.id} className={FIELD}>
+              <select
+                name="userId"
+                value={owner}
+                onChange={(e) => setOwner(e.target.value)}
+                className={FIELD}
+              >
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -298,6 +322,33 @@ function Classes({
           </div>
         )}
 
+        {days.length > 0 && shareOptions.length > 0 && (
+          <div className="mt-3">
+            <label className="block text-sm font-medium">Shared with</label>
+            <p className="mb-1.5 text-xs text-muted">
+              Other students who attend &mdash; the meeting shows as one block on
+              their calendars too.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {shareOptions.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => toggleShared(p.id)}
+                  aria-pressed={shared.includes(p.id)}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    shared.includes(p.id)
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-hairline text-muted hover:border-accent"
+                  }`}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {state.error && <p className="mt-2 text-sm text-red-700">{state.error}</p>}
         <button
           type="submit"
@@ -333,7 +384,10 @@ function Classes({
                     cls={c}
                     editing={editing?.id === c.id}
                     termName={terms.find((t) => t.id === c.termId)?.name ?? null}
-                    onEdit={() => startEdit(c, person.name)}
+                    sharedNames={c.sharedWith
+                      .map((id) => people.find((p) => p.id === id)?.name)
+                      .filter((n): n is string => Boolean(n))}
+                    onEdit={() => startEdit(c, person.id, person.name)}
                   />
                 ))}
               </Card>
@@ -348,11 +402,13 @@ function ClassRowView({
   cls,
   editing,
   termName,
+  sharedNames,
   onEdit,
 }: {
   cls: ClassRow;
   editing: boolean;
   termName: string | null;
+  sharedNames: string[];
   onEdit: () => void;
 }) {
   const [pending, start] = useTransition();
@@ -369,7 +425,11 @@ function ClassRowView({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{cls.name}</p>
         <p className="truncate text-xs text-muted">
-          {[cls.meeting ?? "No set time", termName]
+          {[
+            cls.meeting ?? "No set time",
+            termName,
+            sharedNames.length > 0 ? `with ${sharedNames.join(", ")}` : null,
+          ]
             .filter(Boolean)
             .join(" \u00b7 ")}
         </p>

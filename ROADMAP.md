@@ -320,7 +320,9 @@ all live in the database, never in this repository.
       class picker in the add form, grouped display on the School page (v0.87.0)
 - [x] Editing a class in place — change name, term, colour, or meeting schedule;
       the linked calendar event is updated, created, or removed to match (v0.89.0)
-- [ ] Shared class event for two students as one calendar block (participants)
+- [x] Shared class event for two+ students as one calendar block — a class
+      meeting can add other students as participants; it renders once across
+      their columns instead of duplicating per student (v0.90.0)
 - [x] Read-only metrics page — per-student completion, on-time, and overdue,
       broken down by class, scoped to a selectable term or all time (v0.88.0)
 - [ ] School's own weekly score (part of the scoring rework)
