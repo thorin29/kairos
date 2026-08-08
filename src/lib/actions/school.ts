@@ -136,11 +136,10 @@ export async function deleteTerm(id: string): Promise<void> {
 }
 
 /**
- * A class's meeting time is a recurring CLASS event owned by the student:
- * weekly on the chosen weekdays, at the chosen time, until the term ends.
- * Returns the event id, or null when the class has no scheduled meeting.
+ * The event fields for a class's meeting: weekly on the chosen weekdays, at the
+ * chosen time, until the term ends. Returns null when there's no valid meeting.
  */
-async function makeMeetingEvent(input: {
+function meetingEventData(input: {
   userId: string;
   name: string;
   byday: string[];
@@ -148,7 +147,7 @@ async function makeMeetingEvent(input: {
   end: string;
   anchorISO: string;
   untilISO: string | null;
-}): Promise<string | null> {
+}) {
   const { userId, name, byday, start, end, anchorISO, untilISO } = input;
   if (byday.length === 0) return null;
   if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return null;
@@ -162,27 +161,28 @@ async function makeMeetingEvent(input: {
   const endsAt = zonedToUtc(y, mo, d, eh, em, 0, tz);
   if (endsAt <= startsAt) return null;
 
-  const ev = await prisma.event.create({
-    data: {
-      userId,
-      kind: "CLASS",
-      title: name,
-      startsAt,
-      endsAt,
-      allDay: false,
-      rrule,
-    },
-    select: { id: true },
-  });
-  return ev.id;
+  return {
+    userId,
+    kind: "CLASS" as const,
+    title: name,
+    startsAt,
+    endsAt,
+    allDay: false,
+    rrule,
+  };
 }
 
-export async function addClass(
+/**
+ * Create or edit a class. When `id` is present it's an edit: name, term, colour,
+ * and meeting schedule can all change, and the linked CLASS calendar event is
+ * created, updated, or removed to match.
+ */
+export async function saveClass(
   _prev: SchoolActionState,
   formData: FormData,
 ): Promise<SchoolActionState> {
   await requireAdmin();
-  const userId = String(formData.get("userId") ?? "");
+  const id = String(formData.get("id") ?? "").trim() || null;
   const name = String(formData.get("name") ?? "")
     .trim()
     .slice(0, 60);
@@ -195,8 +195,21 @@ export async function addClass(
     .map((s) => s.trim().toUpperCase())
     .filter((d) => WEEKDAY_TOKENS.includes(d));
 
-  if (!userId) return { error: "Pick whose class this is." };
   if (name.length < 2) return { error: "Give the class a name." };
+
+  // The owner: from the form on create, from the existing row on edit.
+  let userId = String(formData.get("userId") ?? "");
+  let existingEventId: string | null = null;
+  if (id) {
+    const existing = await prisma.schoolClass.findUnique({
+      where: { id },
+      select: { userId: true, eventId: true },
+    });
+    if (!existing) return { error: "That class no longer exists." };
+    userId = existing.userId;
+    existingEventId = existing.eventId;
+  }
+  if (!userId) return { error: "Pick whose class this is." };
 
   const hasMeeting = byday.length > 0;
   if (hasMeeting && (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end))) {
@@ -221,22 +234,34 @@ export async function addClass(
     }
   }
 
-  const eventId = hasMeeting
-    ? await makeMeetingEvent({
-        userId,
-        name,
-        byday,
-        start,
-        end,
-        anchorISO,
-        untilISO,
-      })
+  const evData = hasMeeting
+    ? meetingEventData({ userId, name, byday, start, end, anchorISO, untilISO })
     : null;
 
-  const count = await prisma.schoolClass.count({ where: { userId } });
-  await prisma.schoolClass.create({
-    data: { name, userId, termId, color, eventId, sortOrder: count },
-  });
+  // Reconcile the meeting event.
+  let eventId = existingEventId;
+  if (evData && existingEventId) {
+    await prisma.event.update({ where: { id: existingEventId }, data: evData });
+  } else if (evData && !existingEventId) {
+    const ev = await prisma.event.create({ data: evData, select: { id: true } });
+    eventId = ev.id;
+  } else if (!evData && existingEventId) {
+    await prisma.event.delete({ where: { id: existingEventId } }).catch(() => {});
+    eventId = null;
+  }
+
+  if (id) {
+    await prisma.schoolClass.update({
+      where: { id },
+      data: { name, termId, color, eventId },
+    });
+  } else {
+    const count = await prisma.schoolClass.count({ where: { userId } });
+    await prisma.schoolClass.create({
+      data: { name, userId, termId, color, eventId, sortOrder: count },
+    });
+  }
+
   schoolStructureRevalidate();
   return { error: null };
 }

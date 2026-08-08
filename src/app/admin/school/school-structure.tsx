@@ -4,11 +4,11 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import {
   addTerm,
   deleteTerm,
-  addClass,
+  saveClass,
   deleteClass,
   type SchoolActionState,
 } from "@/lib/actions/school";
-import type { TermRow, PersonClasses } from "@/lib/queries/school";
+import type { TermRow, PersonClasses, ClassRow } from "@/lib/queries/school";
 import { Card } from "@/components/ui";
 import { TrashIcon } from "@/components/icons";
 
@@ -135,19 +135,36 @@ function Classes({
   terms: TermRow[];
   people: PersonClasses[];
 }) {
-  const [state, action, pending] = useActionState(addClass, initial);
+  const [state, action, pending] = useActionState(saveClass, initial);
   const ref = useRef<HTMLFormElement>(null);
+  const [editing, setEditing] = useState<
+    (ClassRow & { userName: string }) | null
+  >(null);
   const [days, setDays] = useState<string[]>([]);
 
   useEffect(() => {
     if (!pending && !state.error && state !== initial) {
       ref.current?.reset();
       setDays([]);
+      setEditing(null);
     }
   }, [state, pending]);
 
+  const startEdit = (c: ClassRow, userName: string) => {
+    setEditing({ ...c, userName });
+    setDays(c.meetingDays);
+    if (typeof window !== "undefined")
+      window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const cancel = () => {
+    setEditing(null);
+    setDays([]);
+  };
+
   const toggle = (d: string) =>
-    setDays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]));
+    setDays((cur) =>
+      cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d],
+    );
 
   return (
     <section>
@@ -155,26 +172,61 @@ function Classes({
         Classes
       </h3>
 
-      <form ref={ref} action={action} className="mb-4 rounded-xl border border-hairline bg-surface p-4">
+      <form
+        key={editing?.id ?? "new"}
+        ref={ref}
+        action={action}
+        className="mb-4 rounded-xl border border-hairline bg-surface p-4"
+      >
+        {editing && <input type="hidden" name="id" value={editing.id} />}
         <input type="hidden" name="byday" value={days.join(",")} />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium">Student</label>
-            <select name="userId" defaultValue={people[0]?.id} className={FIELD}>
-              {people.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+
+        {editing && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg bg-accent/10 px-3 py-2">
+            <span className="text-sm font-medium text-accent">
+              Editing {editing.userName}&rsquo;s class
+            </span>
+            <button
+              type="button"
+              onClick={cancel}
+              className="text-sm font-medium text-muted underline-offset-2 hover:text-ink hover:underline"
+            >
+              Cancel
+            </button>
           </div>
+        )}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {!editing && (
+            <div>
+              <label className="block text-sm font-medium">Student</label>
+              <select name="userId" defaultValue={people[0]?.id} className={FIELD}>
+                {people.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium">Class</label>
-            <input name="name" required maxLength={60} placeholder="Biology" className={FIELD} />
+            <input
+              name="name"
+              required
+              maxLength={60}
+              defaultValue={editing?.name ?? ""}
+              placeholder="Biology"
+              className={FIELD}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium">Term</label>
-            <select name="termId" defaultValue="" className={FIELD}>
+            <select
+              name="termId"
+              defaultValue={editing?.termId ?? ""}
+              className={FIELD}
+            >
               <option value="">No term</option>
               {terms.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -185,7 +237,11 @@ function Classes({
           </div>
           <div>
             <label className="block text-sm font-medium">Colour</label>
-            <select name="color" defaultValue="" className={FIELD}>
+            <select
+              name="color"
+              defaultValue={editing?.color ?? ""}
+              className={FIELD}
+            >
               {COLORS.map(([hex, label]) => (
                 <option key={label} value={hex}>
                   {label}
@@ -223,11 +279,21 @@ function Classes({
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium">Start time</label>
-              <input name="start" type="time" className={`tabular ${FIELD}`} />
+              <input
+                name="start"
+                type="time"
+                defaultValue={editing?.meetingStart || ""}
+                className={`tabular ${FIELD}`}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium">End time</label>
-              <input name="end" type="time" className={`tabular ${FIELD}`} />
+              <input
+                name="end"
+                type="time"
+                defaultValue={editing?.meetingEnd || ""}
+                className={`tabular ${FIELD}`}
+              />
             </div>
           </div>
         )}
@@ -238,7 +304,11 @@ function Classes({
           disabled={pending}
           className="mt-3 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-          {pending ? "Adding\u2026" : "Add class"}
+          {pending
+            ? "Saving\u2026"
+            : editing
+              ? "Update class"
+              : "Add class"}
         </button>
       </form>
 
@@ -248,23 +318,24 @@ function Classes({
           .map((person) => (
             <div key={person.id}>
               <div className="mb-2 flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: person.color }} />
-                <span className="font-display text-sm font-semibold">{person.name}</span>
+                <span
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: person.color }}
+                />
+                <span className="font-display text-sm font-semibold">
+                  {person.name}
+                </span>
               </div>
               <Card className="divide-y divide-hairline">
-                {person.classes.map((c) => {
-                  const term = terms.find((t) => t.id === c.termId);
-                  return (
-                    <ClassRowView
-                      key={c.id}
-                      id={c.id}
-                      name={c.name}
-                      color={c.color}
-                      meeting={c.meeting}
-                      termName={term?.name ?? null}
-                    />
-                  );
-                })}
+                {person.classes.map((c) => (
+                  <ClassRowView
+                    key={c.id}
+                    cls={c}
+                    editing={editing?.id === c.id}
+                    termName={terms.find((t) => t.id === c.termId)?.name ?? null}
+                    onEdit={() => startEdit(c, person.name)}
+                  />
+                ))}
               </Card>
             </div>
           ))}
@@ -274,38 +345,49 @@ function Classes({
 }
 
 function ClassRowView({
-  id,
-  name,
-  color,
-  meeting,
+  cls,
+  editing,
   termName,
+  onEdit,
 }: {
-  id: string;
-  name: string;
-  color: string | null;
-  meeting: string | null;
+  cls: ClassRow;
+  editing: boolean;
   termName: string | null;
+  onEdit: () => void;
 }) {
   const [pending, start] = useTransition();
   return (
-    <div className={`flex items-center gap-3 p-4 ${pending ? "opacity-50" : ""}`}>
+    <div
+      className={`flex items-center gap-3 p-4 ${editing ? "bg-accent/5" : ""} ${
+        pending ? "opacity-50" : ""
+      }`}
+    >
       <span
         className="h-3 w-3 shrink-0 rounded-full"
-        style={{ backgroundColor: color ?? "var(--color-hairline)" }}
+        style={{ backgroundColor: cls.color ?? "var(--color-hairline)" }}
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{name}</p>
+        <p className="truncate text-sm font-medium">{cls.name}</p>
         <p className="truncate text-xs text-muted">
-          {[meeting ?? "No set time", termName].filter(Boolean).join(" \u00b7 ")}
+          {[cls.meeting ?? "No set time", termName]
+            .filter(Boolean)
+            .join(" \u00b7 ")}
         </p>
       </div>
       <button
         type="button"
-        aria-label={`Delete ${name}`}
+        onClick={onEdit}
+        className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+      >
+        Edit
+      </button>
+      <button
+        type="button"
+        aria-label={`Delete ${cls.name}`}
         disabled={pending}
         onClick={() => {
-          if (confirm(`Delete "${name}"? Its calendar meeting is removed too.`))
-            start(() => void deleteClass(id));
+          if (confirm(`Delete "${cls.name}"? Its calendar meeting is removed too.`))
+            start(() => void deleteClass(cls.id));
         }}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-red-50 hover:text-red-700"
       >

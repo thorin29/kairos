@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.88.0";
+export const APP_VERSION = "0.89.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -60,6 +60,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.89.0",
+    summary: [
+      "Classes can be edited in place now, instead of delete-and-re-add. Hit Edit on a class to change its name, term, colour, or meeting schedule \u2014 the class\u2019s calendar block is updated, created, or removed to match (e.g. clearing the meeting days turns it into independent work and removes the calendar event)",
+    ],
+  },
   {
     version: "0.88.0",
     summary: [

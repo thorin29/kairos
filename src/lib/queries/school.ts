@@ -123,24 +123,37 @@ function clock(minutes: number): string {
   return `${h}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
-function meetingSummary(
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function parseMeeting(
   rrule: string | null,
   startsAt: Date,
   endsAt: Date,
-): string | null {
-  if (!rrule) return null;
-  const m = /BYDAY=([A-Z,]+)/.exec(rrule);
+): {
+  summary: string | null;
+  days: string[];
+  start: string;
+  end: string;
+} {
+  const m = rrule ? /BYDAY=([A-Z,]+)/.exec(rrule) : null;
   const days = m
     ? m[1]
         .split(",")
         .filter((d) => d in DAY_LABEL)
         .sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b))
-        .map((d) => DAY_LABEL[d])
     : [];
-  const s = localParts(startsAt).minutes;
-  const e = localParts(endsAt).minutes;
-  const when = `${clock(s)}\u2013${clock(e)}`;
-  return days.length > 0 ? `${days.join(", ")} \u00b7 ${when}` : when;
+  const sMin = localParts(startsAt).minutes;
+  const eMin = localParts(endsAt).minutes;
+  const start = `${pad2(Math.floor(sMin / 60))}:${pad2(sMin % 60)}`;
+  const end = `${pad2(Math.floor(eMin / 60))}:${pad2(eMin % 60)}`;
+  const summary = rrule
+    ? days.length > 0
+      ? `${days.map((d) => DAY_LABEL[d]).join(", ")} \u00b7 ${clock(sMin)}\u2013${clock(eMin)}`
+      : `${clock(sMin)}\u2013${clock(eMin)}`
+    : null;
+  return { summary, days, start, end };
 }
 
 export type TermRow = {
@@ -156,6 +169,9 @@ export type ClassRow = {
   color: string | null;
   termId: string | null;
   meeting: string | null;
+  meetingDays: string[];
+  meetingStart: string;
+  meetingEnd: string;
 };
 
 export type PersonClasses = {
@@ -198,14 +214,18 @@ export async function loadSchoolStructure(): Promise<{
 
   const byUser = new Map<string, ClassRow[]>();
   for (const c of classes) {
+    const parsed = c.event
+      ? parseMeeting(c.event.rrule, c.event.startsAt, c.event.endsAt)
+      : { summary: null, days: [] as string[], start: "", end: "" };
     const row: ClassRow = {
       id: c.id,
       name: c.name,
       color: c.color,
       termId: c.termId,
-      meeting: c.event
-        ? meetingSummary(c.event.rrule, c.event.startsAt, c.event.endsAt)
-        : null,
+      meeting: parsed.summary,
+      meetingDays: parsed.days,
+      meetingStart: parsed.start,
+      meetingEnd: parsed.end,
     };
     const list = byUser.get(c.userId) ?? [];
     list.push(row);
