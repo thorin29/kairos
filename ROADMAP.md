@@ -318,7 +318,8 @@ all live in the database, never in this repository.
 - [x] Terms and class schedules managed by an admin (Admin → School) (v0.86.0)
 - [x] Assignments grouped under a class — optional class link on each item, a
       class picker in the add form, grouped display on the School page (v0.87.0)
-- [ ] Editing a class in place (rather than delete/re-add)
+- [x] Editing a class in place — change name, term, colour, or meeting schedule;
+      the linked calendar event is updated, created, or removed to match (v0.89.0)
 - [ ] Shared class event for two students as one calendar block (participants)
 - [x] Read-only metrics page — per-student completion, on-time, and overdue,
       broken down by class, scoped to a selectable term or all time (v0.88.0)
