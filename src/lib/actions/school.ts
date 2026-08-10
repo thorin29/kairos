@@ -39,12 +39,25 @@ export async function addSchoolWork(
   const rawType = String(formData.get("type") ?? "");
   const dueDate = String(formData.get("dueDate") ?? "") || todayISO();
   const rawClassId = String(formData.get("classId") ?? "").trim() || null;
+  const dateSpecific = formData.get("dateSpecific") != null;
+  const rawStart = String(formData.get("startDate") ?? "");
 
   if (!userId) return { error: "Pick who this is for." };
   if (title.length < 2) return { error: "Give the assignment a name." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
     return { error: "That date isn't valid." };
   }
+
+  // A window item can be worked from its start date (default today, or a chosen
+  // future date) until it's done; a date-specific one has no window.
+  let startDate: string | null = null;
+  if (!dateSpecific) {
+    startDate = /^\d{4}-\d{2}-\d{2}$/.test(rawStart) ? rawStart : todayISO();
+    if (startDate > dueDate) {
+      return { error: "The start date is after the due date." };
+    }
+  }
+
   const type: SchoolWorkType = (TYPES as readonly string[]).includes(rawType)
     ? (rawType as SchoolWorkType)
     : "ASSIGNMENT";
@@ -65,7 +78,15 @@ export async function addSchoolWork(
       title,
       category: Category.SCHOOL,
       dueDate: toDateColumn(dueDate),
-      schoolWork: { create: { type, subject, classId } },
+      schoolWork: {
+        create: {
+          type,
+          subject,
+          classId,
+          dateSpecific,
+          startDate: startDate ? toDateColumn(startDate) : null,
+        },
+      },
     },
   });
 

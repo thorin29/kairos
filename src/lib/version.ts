@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.90.0";
+export const APP_VERSION = "0.91.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -55,11 +55,19 @@ export const MIGRATIONS = [
   "45_school_work",
   "46_school_classes",
   "47_school_work_class",
+  "48_school_window",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.91.0",
+    summary: [
+      "School work now comes in two flavours. By default an assignment or project is a \u201cwindow\u201d: it shows on the dashboard and School tab every day from its start date until it\u2019s checked off, so a week-long project stays put as a reminder. Tick \u201cDue on a specific date (e.g. a test)\u201d and it only appears on the due date",
+      "Window work has a start date \u2014 defaults to today, or set it ahead for work assigned early (known now, starts later). Overdue school work keeps showing until it\u2019s done either way",
+    ],
+  },
   {
     version: "0.90.0",
     summary: [

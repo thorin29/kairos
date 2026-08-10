@@ -18,6 +18,7 @@ import {
   addDays,
   dayOfWeek,
   formatLong,
+  formatShort,
   fromDateColumn,
   startOfWeek,
   todayISO,
@@ -132,11 +133,17 @@ export default async function PersonPage({
       ? (workoutNames.get(dayOfWeek(dueISO)) ?? t.title)
       : t.title;
 
-    // School items show their class or subject and type (e.g. "Biology · Test").
+    // School items show their class or subject, type, and when they're due
+    // (e.g. "Biology · Test · due 5/9") — handy while a window item sits as a
+    // reminder before its due date.
     const sw = t.schoolWork;
     const subtitle =
       t.category === "SCHOOL" && sw
-        ? [sw.class?.name ?? sw.subject, SCHOOL_TYPE_LABEL[sw.type]]
+        ? [
+            sw.class?.name ?? sw.subject,
+            SCHOOL_TYPE_LABEL[sw.type],
+            `due ${formatShort(dueISO)}`,
+          ]
             .filter(Boolean)
             .join(" · ")
         : undefined;
