@@ -120,6 +120,10 @@ model SchoolWork {
   task      Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
   type      SchoolWorkType @default(ASSIGNMENT)
   subject   String?
+  // Window (homework/project) vs date-specific (test): a window item shows from
+  // startDate until done; a date-specific one only on its due date.
+  dateSpecific Boolean   @default(false)
+  startDate    DateTime? @db.Date
   classId   String?
   class     SchoolClass?   @relation(fields: [classId], references: [id], onDelete: SetNull)
   createdAt DateTime       @default(now())

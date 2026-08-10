@@ -52,6 +52,12 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
         OR: [
           { dueDate: day },
           { dueDate: { lt: day }, status: TaskStatus.PENDING },
+          // Window school work shows from its start date until it's done.
+          {
+            category: Category.SCHOOL,
+            status: TaskStatus.PENDING,
+            schoolWork: { dateSpecific: false, startDate: { lte: day } },
+          },
         ],
       },
       select: {
@@ -189,6 +195,11 @@ export async function loadPersonDay(userId: string, dayISO: string) {
       OR: [
         { dueDate: day },
         { dueDate: { lt: day }, status: TaskStatus.PENDING },
+        {
+          category: Category.SCHOOL,
+          status: TaskStatus.PENDING,
+          schoolWork: { dateSpecific: false, startDate: { lte: day } },
+        },
       ],
     },
     orderBy: [{ dueDate: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
@@ -197,6 +208,7 @@ export async function loadPersonDay(userId: string, dayISO: string) {
         select: {
           type: true,
           subject: true,
+          dateSpecific: true,
           class: { select: { name: true } },
         },
       },

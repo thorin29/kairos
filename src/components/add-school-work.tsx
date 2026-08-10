@@ -27,13 +27,14 @@ export function AddSchoolWork({
   const [selectedUser, setSelectedUser] = useState(
     userId ?? people?.[0]?.id ?? "",
   );
+  const [dateSpecific, setDateSpecific] = useState(false);
   const [state, formAction, pending] = useActionState(addSchoolWork, initial);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (!pending && !state.error) {
+    if (!pending && state !== initial && !state.error) {
       formRef.current?.reset();
-      if (state === initial) return;
+      setDateSpecific(false);
     }
   }, [state, pending]);
 
@@ -162,6 +163,42 @@ export function AddSchoolWork({
           />
         </div>
       </div>
+
+      <label className="mt-4 flex items-start gap-2.5 text-sm">
+        <input
+          type="checkbox"
+          name="dateSpecific"
+          checked={dateSpecific}
+          onChange={(e) => setDateSpecific(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-hairline accent-accent"
+        />
+        <span>
+          Due on a specific date (e.g. a test)
+          <span className="mt-0.5 block text-xs text-muted">
+            {dateSpecific
+              ? "Shows only on the due date."
+              : "Shows every day from its start until it\u2019s done."}
+          </span>
+        </span>
+      </label>
+
+      {!dateSpecific && (
+        <div className="mt-3 max-w-[12rem]">
+          <label htmlFor="sw-start" className="block text-sm font-medium">
+            Starts
+          </label>
+          <input
+            id="sw-start"
+            name="startDate"
+            type="date"
+            defaultValue={defaultDate}
+            className={`tabular ${FIELD}`}
+          />
+          <p className="mt-1 text-xs text-muted">
+            Today for most; set ahead for work assigned early.
+          </p>
+        </div>
+      )}
 
       {state.error && (
         <p role="alert" className="mt-3 text-sm font-medium text-red-700">

@@ -325,6 +325,10 @@ all live in the database, never in this repository.
       their columns instead of duplicating per student (v0.90.0)
 - [x] Read-only metrics page — per-student completion, on-time, and overdue,
       broken down by class, scoped to a selectable term or all time (v0.88.0)
+- [x] Window vs date-specific school work — window items (homework/projects)
+      show from a start date (default today, settable ahead) until done;
+      date-specific items (tests) only on the due date; overdue work persists
+      either way (v0.91.0)
 - [ ] School's own weekly score (part of the scoring rework)
 
 ## Workouts
