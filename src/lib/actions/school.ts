@@ -204,9 +204,52 @@ export async function saveClass(
 ): Promise<SchoolActionState> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "").trim() || null;
-  const name = String(formData.get("name") ?? "")
+
+  // The class name comes from the Subject pool now (like chores pick from the
+  // master list). Either an existing subject is chosen, or a new one is typed
+  // and added to the pool on the fly. A raw `name` is still accepted as a
+  // fallback so older callers keep working.
+  const subjectIdRaw = String(formData.get("subjectId") ?? "").trim() || null;
+  const newSubject = String(formData.get("newSubject") ?? "")
     .trim()
     .slice(0, 60);
+  const rawName = String(formData.get("name") ?? "")
+    .trim()
+    .slice(0, 60);
+
+  let subjectId: string | null = null;
+  let name = rawName;
+  if (newSubject) {
+    const subj = await prisma.subject.upsert({
+      where: { name: newSubject },
+      update: {},
+      create: { name: newSubject },
+      select: { id: true, name: true },
+    });
+    subjectId = subj.id;
+    name = subj.name;
+  } else if (subjectIdRaw) {
+    const subj = await prisma.subject.findUnique({
+      where: { id: subjectIdRaw },
+      select: { id: true, name: true },
+    });
+    if (subj) {
+      subjectId = subj.id;
+      name = subj.name;
+    }
+  }
+
+  const classTypeIdRaw =
+    String(formData.get("classTypeId") ?? "").trim() || null;
+  let classTypeId: string | null = null;
+  if (classTypeIdRaw) {
+    const ct = await prisma.classType.findUnique({
+      where: { id: classTypeIdRaw },
+      select: { id: true },
+    });
+    classTypeId = ct?.id ?? null;
+  }
+
   const color = String(formData.get("color") ?? "").trim() || null;
   let termId = String(formData.get("termId") ?? "").trim() || null;
   const start = String(formData.get("start") ?? "");
@@ -220,7 +263,7 @@ export async function saveClass(
     .map((s) => s.trim())
     .filter(Boolean);
 
-  if (name.length < 2) return { error: "Give the class a name." };
+  if (name.length < 2) return { error: "Pick a subject for the class." };
 
   // The owner: from the form on create, from the existing row on edit.
   let userId = String(formData.get("userId") ?? "");
@@ -300,12 +343,21 @@ export async function saveClass(
   if (id) {
     await prisma.schoolClass.update({
       where: { id },
-      data: { name, termId, color, eventId },
+      data: { name, termId, subjectId, classTypeId, color, eventId },
     });
   } else {
     const count = await prisma.schoolClass.count({ where: { userId } });
     await prisma.schoolClass.create({
-      data: { name, userId, termId, color, eventId, sortOrder: count },
+      data: {
+        name,
+        userId,
+        termId,
+        subjectId,
+        classTypeId,
+        color,
+        eventId,
+        sortOrder: count,
+      },
     });
   }
 
@@ -323,5 +375,95 @@ export async function deleteClass(id: string): Promise<void> {
   if (cls?.eventId) {
     await prisma.event.delete({ where: { id: cls.eventId } }).catch(() => {});
   }
+  schoolStructureRevalidate();
+}
+
+// --- subject & class-type pools (admin) ----------------------------------
+
+/**
+ * Add a subject to the reusable pool. Names are unique and case-insensitively
+ * de-duplicated, so "Math" can't be added twice, mirroring how the chore
+ * master list behaves.
+ */
+export async function addSubject(
+  _prev: SchoolActionState,
+  formData: FormData,
+): Promise<SchoolActionState> {
+  await requireAdmin();
+  const name = String(formData.get("name") ?? "")
+    .trim()
+    .slice(0, 60);
+  if (name.length < 2) return { error: "Give the subject a name." };
+
+  const existing = await prisma.subject.findFirst({
+    where: { name: { equals: name, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (existing) return { error: "That subject already exists." };
+
+  const count = await prisma.subject.count();
+  await prisma.subject.create({ data: { name, sortOrder: count } });
+  schoolStructureRevalidate();
+  return { error: null };
+}
+
+export async function renameSubject(id: string, name: string): Promise<void> {
+  await requireAdmin();
+  const clean = name.trim().slice(0, 60);
+  if (clean.length < 2) return;
+  // Renaming the pool entry renames every class currently using it, so the
+  // name stays the single source of truth.
+  await prisma.$transaction([
+    prisma.subject.update({ where: { id }, data: { name: clean } }),
+    prisma.schoolClass.updateMany({
+      where: { subjectId: id },
+      data: { name: clean },
+    }),
+  ]).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+export async function deleteSubject(id: string): Promise<void> {
+  await requireAdmin();
+  // Classes keep their name; only the pool link is cleared by the FK.
+  await prisma.subject.delete({ where: { id } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+export async function addClassType(
+  _prev: SchoolActionState,
+  formData: FormData,
+): Promise<SchoolActionState> {
+  await requireAdmin();
+  const name = String(formData.get("name") ?? "")
+    .trim()
+    .slice(0, 40);
+  if (name.length < 2) return { error: "Give the class type a name." };
+
+  const existing = await prisma.classType.findFirst({
+    where: { name: { equals: name, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (existing) return { error: "That class type already exists." };
+
+  const count = await prisma.classType.count();
+  await prisma.classType.create({ data: { name, sortOrder: count } });
+  schoolStructureRevalidate();
+  return { error: null };
+}
+
+export async function renameClassType(id: string, name: string): Promise<void> {
+  await requireAdmin();
+  const clean = name.trim().slice(0, 40);
+  if (clean.length < 2) return;
+  await prisma.classType.update({ where: { id }, data: { name: clean } }).catch(
+    () => {},
+  );
+  schoolStructureRevalidate();
+}
+
+export async function deleteClassType(id: string): Promise<void> {
+  await requireAdmin();
+  await prisma.classType.delete({ where: { id } }).catch(() => {});
   schoolStructureRevalidate();
 }

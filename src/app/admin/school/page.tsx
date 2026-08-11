@@ -40,6 +40,8 @@ export default async function AdminSchoolPage() {
           <SchoolStructure
             terms={structure.terms}
             people={structure.people}
+            subjects={structure.subjects}
+            classTypes={structure.classTypes}
             today={today}
           />
         </div>

@@ -168,6 +168,9 @@ export type ClassRow = {
   name: string;
   color: string | null;
   termId: string | null;
+  subjectId: string | null;
+  classTypeId: string | null;
+  classTypeName: string | null;
   meeting: string | null;
   meetingDays: string[];
   meetingStart: string;
@@ -183,11 +186,16 @@ export type PersonClasses = {
   classes: ClassRow[];
 };
 
+export type SubjectRow = { id: string; name: string };
+export type ClassTypeRow = { id: string; name: string };
+
 export async function loadSchoolStructure(): Promise<{
   terms: TermRow[];
   people: PersonClasses[];
+  subjects: SubjectRow[];
+  classTypes: ClassTypeRow[];
 }> {
-  const [terms, people, classes] = await Promise.all([
+  const [terms, people, classes, subjects, classTypes] = await Promise.all([
     prisma.term.findMany({ orderBy: [{ startDate: "asc" }] }),
     prisma.user.findMany({
       where: { isActive: true },
@@ -208,6 +216,9 @@ export async function loadSchoolStructure(): Promise<{
         color: true,
         termId: true,
         userId: true,
+        subjectId: true,
+        classTypeId: true,
+        classType: { select: { name: true } },
         event: {
           select: {
             rrule: true,
@@ -217,6 +228,16 @@ export async function loadSchoolStructure(): Promise<{
           },
         },
       },
+    }),
+    prisma.subject.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
+    prisma.classType.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -230,6 +251,9 @@ export async function loadSchoolStructure(): Promise<{
       name: c.name,
       color: c.color,
       termId: c.termId,
+      subjectId: c.subjectId ?? null,
+      classTypeId: c.classTypeId ?? null,
+      classTypeName: c.classType?.name ?? null,
       meeting: parsed.summary,
       meetingDays: parsed.days,
       meetingStart: parsed.start,
@@ -255,6 +279,8 @@ export async function loadSchoolStructure(): Promise<{
       avatarPath: p.avatarPath,
       classes: byUser.get(p.id) ?? [],
     })),
+    subjects,
+    classTypes,
   };
 }
 
