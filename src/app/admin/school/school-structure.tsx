@@ -6,9 +6,21 @@ import {
   deleteTerm,
   saveClass,
   deleteClass,
+  addSubject,
+  renameSubject,
+  deleteSubject,
+  addClassType,
+  renameClassType,
+  deleteClassType,
   type SchoolActionState,
 } from "@/lib/actions/school";
-import type { TermRow, PersonClasses, ClassRow } from "@/lib/queries/school";
+import type {
+  TermRow,
+  PersonClasses,
+  ClassRow,
+  SubjectRow,
+  ClassTypeRow,
+} from "@/lib/queries/school";
 import { Card } from "@/components/ui";
 import { TrashIcon } from "@/components/icons";
 
@@ -39,16 +51,210 @@ const COLORS: [string, string][] = [
 export function SchoolStructure({
   terms,
   people,
+  subjects,
+  classTypes,
   today,
 }: {
   terms: TermRow[];
   people: PersonClasses[];
+  subjects: SubjectRow[];
+  classTypes: ClassTypeRow[];
   today: string;
 }) {
   return (
     <div className="space-y-10">
       <Terms terms={terms} today={today} />
-      <Classes terms={terms} people={people} />
+      <Pools subjects={subjects} classTypes={classTypes} />
+      <Classes
+        terms={terms}
+        people={people}
+        subjects={subjects}
+        classTypes={classTypes}
+      />
+    </div>
+  );
+}
+
+/** The two reusable pools — subjects (class names) and class types — side by
+ *  side, each an add form over a rename/delete list, mirroring the chore
+ *  master list. */
+function Pools({
+  subjects,
+  classTypes,
+}: {
+  subjects: SubjectRow[];
+  classTypes: ClassTypeRow[];
+}) {
+  return (
+    <section className="grid gap-6 sm:grid-cols-2">
+      <PoolColumn
+        title="Subjects"
+        blurb="The reusable pool a class picks its name from."
+        placeholder="Biology"
+        rows={subjects}
+        addAction={addSubject}
+        onRename={renameSubject}
+        onDelete={deleteSubject}
+        deleteConfirm={(n) =>
+          `Delete subject "${n}"? Classes keep their name; only the pool link is cleared.`
+        }
+      />
+      <PoolColumn
+        title="Class types"
+        blurb={"Homeschool, Church, Dual credit\u2026 \u2014 a label on each class."}
+        placeholder="Co-op"
+        rows={classTypes}
+        addAction={addClassType}
+        onRename={renameClassType}
+        onDelete={deleteClassType}
+        deleteConfirm={(n) => `Delete class type "${n}"?`}
+      />
+    </section>
+  );
+}
+
+function PoolColumn({
+  title,
+  blurb,
+  placeholder,
+  rows,
+  addAction,
+  onRename,
+  onDelete,
+  deleteConfirm,
+}: {
+  title: string;
+  blurb: string;
+  placeholder: string;
+  rows: { id: string; name: string }[];
+  addAction: (
+    prev: SchoolActionState,
+    fd: FormData,
+  ) => Promise<SchoolActionState>;
+  onRename: (id: string, name: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  deleteConfirm: (name: string) => string;
+}) {
+  const [state, action, pending] = useActionState(addAction, initial);
+  const ref = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (!pending && !state.error && state !== initial) ref.current?.reset();
+  }, [state, pending]);
+
+  return (
+    <div>
+      <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-widest text-muted">
+        {title}
+      </h3>
+      <p className="mb-2 text-xs text-muted">{blurb}</p>
+
+      {rows.length > 0 && (
+        <Card className="mb-3 divide-y divide-hairline">
+          {rows.map((r) => (
+            <PoolRowView
+              key={r.id}
+              row={r}
+              onRename={onRename}
+              onDelete={onDelete}
+              deleteConfirm={deleteConfirm}
+            />
+          ))}
+        </Card>
+      )}
+
+      <form
+        ref={ref}
+        action={action}
+        className="rounded-xl border border-hairline bg-surface p-4"
+      >
+        <label className="block text-sm font-medium">Add</label>
+        <input
+          name="name"
+          required
+          maxLength={60}
+          placeholder={placeholder}
+          className={FIELD}
+        />
+        {state.error && (
+          <p className="mt-2 text-sm text-red-700">{state.error}</p>
+        )}
+        <button
+          type="submit"
+          disabled={pending}
+          className="mt-3 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {pending ? "Adding\u2026" : "Add"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function PoolRowView({
+  row,
+  onRename,
+  onDelete,
+  deleteConfirm,
+}: {
+  row: { id: string; name: string };
+  onRename: (id: string, name: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  deleteConfirm: (name: string) => string;
+}) {
+  const [pending, start] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(row.name);
+
+  const save = () => {
+    const clean = value.trim();
+    setEditing(false);
+    if (clean.length >= 2 && clean !== row.name)
+      start(() => void onRename(row.id, clean));
+  };
+
+  return (
+    <div className={`flex items-center gap-2 p-3 ${pending ? "opacity-50" : ""}`}>
+      {editing ? (
+        <input
+          autoFocus
+          value={value}
+          maxLength={60}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            if (e.key === "Escape") {
+              setValue(row.name);
+              setEditing(false);
+            }
+          }}
+          className="flex-1 rounded-md border border-hairline bg-surface px-2 py-1 text-sm outline-none focus:border-accent"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setValue(row.name);
+            setEditing(true);
+          }}
+          className="flex-1 truncate text-left text-sm font-medium hover:text-accent"
+          title="Rename"
+        >
+          {row.name}
+        </button>
+      )}
+      <button
+        type="button"
+        aria-label={`Delete ${row.name}`}
+        disabled={pending}
+        onClick={() => {
+          if (confirm(deleteConfirm(row.name)))
+            start(() => void onDelete(row.id));
+        }}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-red-50 hover:text-red-700"
+      >
+        <TrashIcon className="h-4 w-4" />
+      </button>
     </div>
   );
 }
@@ -131,9 +337,13 @@ function TermRowView({ term }: { term: TermRow }) {
 function Classes({
   terms,
   people,
+  subjects,
+  classTypes,
 }: {
   terms: TermRow[];
   people: PersonClasses[];
+  subjects: SubjectRow[];
+  classTypes: ClassTypeRow[];
 }) {
   const [state, action, pending] = useActionState(saveClass, initial);
   const ref = useRef<HTMLFormElement>(null);
@@ -143,6 +353,8 @@ function Classes({
   const [owner, setOwner] = useState(people[0]?.id ?? "");
   const [days, setDays] = useState<string[]>([]);
   const [shared, setShared] = useState<string[]>([]);
+  // "" is the "add a new subject" sentinel; any other value is a pool id.
+  const [subjectId, setSubjectId] = useState<string>("");
 
   useEffect(() => {
     if (!pending && !state.error && state !== initial) {
@@ -150,6 +362,7 @@ function Classes({
       setDays([]);
       setShared([]);
       setOwner(people[0]?.id ?? "");
+      setSubjectId("");
       setEditing(null);
     }
   }, [state, pending, people]);
@@ -158,6 +371,15 @@ function Classes({
     setEditing({ ...c, ownerId, userName });
     setDays(c.meetingDays);
     setShared(c.sharedWith);
+    // Prefer the linked subject; fall back to matching the class name to a pool
+    // entry, so a legacy class still opens with its subject selected.
+    const matched =
+      c.subjectId ??
+      subjects.find(
+        (s) => s.name.toLowerCase() === c.name.toLowerCase(),
+      )?.id ??
+      "";
+    setSubjectId(matched);
     if (typeof window !== "undefined")
       window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -166,6 +388,7 @@ function Classes({
     setDays([]);
     setShared([]);
     setOwner(people[0]?.id ?? "");
+    setSubjectId("");
   };
 
   const ownerId = editing ? editing.ownerId : owner;
@@ -234,15 +457,45 @@ function Classes({
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium">Class</label>
-            <input
-              name="name"
-              required
-              maxLength={60}
-              defaultValue={editing?.name ?? ""}
-              placeholder="Biology"
+            <label className="block text-sm font-medium">Subject</label>
+            <select
+              name="subjectId"
+              value={subjectId}
+              onChange={(e) => setSubjectId(e.target.value)}
               className={FIELD}
-            />
+            >
+              <option value="">+ Add a new subject…</option>
+              {subjects.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            {subjectId === "" && (
+              <input
+                name="newSubject"
+                required
+                maxLength={60}
+                autoFocus
+                placeholder="New subject name (e.g. Biology)"
+                className={`${FIELD} mt-2`}
+              />
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Type</label>
+            <select
+              name="classTypeId"
+              defaultValue={editing?.classTypeId ?? ""}
+              className={FIELD}
+            >
+              <option value="">No type</option>
+              {classTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium">Term</label>
@@ -427,6 +680,7 @@ function ClassRowView({
         <p className="truncate text-xs text-muted">
           {[
             cls.meeting ?? "No set time",
+            cls.classTypeName,
             termName,
             sharedNames.length > 0 ? `with ${sharedNames.join(", ")}` : null,
           ]

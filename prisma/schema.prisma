@@ -88,6 +88,29 @@ model Term {
   classes   SchoolClass[]
 }
 
+// A reusable class name, managed like the chore master list. A class picks its
+// name from this pool, so the same subject can be reused term to term (and
+// ticked off when spinning up a new semester).
+model Subject {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  sortOrder Int           @default(0)
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  classes   SchoolClass[]
+}
+
+// The kind of a class (Homeschool, Church, Dual credit…), admin-managed. A
+// label on a class for now; drives nothing functional yet.
+model ClassType {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  sortOrder Int           @default(0)
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  classes   SchoolClass[]
+}
+
 model SchoolClass {
   id      String  @id @default(cuid())
   name    String
@@ -95,6 +118,12 @@ model SchoolClass {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   termId  String?
   term    Term?   @relation(fields: [termId], references: [id], onDelete: SetNull)
+  // The pool subject this class's name comes from. Null for legacy classes not
+  // yet mapped; name stays the source of truth for display and the meeting event.
+  subjectId   String?
+  subject     Subject?   @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  classTypeId String?
+  classType   ClassType? @relation(fields: [classTypeId], references: [id], onDelete: SetNull)
   color   String?
   // Optional recurring CLASS event that is this class's meeting time.
   eventId String? @unique
@@ -105,6 +134,8 @@ model SchoolClass {
 
   @@index([userId])
   @@index([termId])
+  @@index([subjectId])
+  @@index([classTypeId])
 }
 
 enum SchoolWorkType {

@@ -329,6 +329,29 @@ all live in the database, never in this repository.
       show from a start date (default today, settable ahead) until done;
       date-specific items (tests) only on the due date; overdue work persists
       either way (v0.91.0)
+- [x] Subject pool — a class takes its name from a reusable Subject pool managed
+      in Admin → School (like the chore master list); pick one or type a new one
+      inline. Renaming a subject renames its classes; existing names/subjects
+      seeded into the pool on migration (v0.92.0)
+- [x] Class type — an admin-managed pool (Homeschool, Church, Dual credit…)
+      shown as a label on each class; groundwork for filtering and the prompts
+      below (v0.92.0)
+- [ ] Multi-user class membership — promote shared classes from owner+event-
+      participants to real members, so per-student work links to a class the
+      student is actually in and a class can carry work for several students
+      (the backbone of the two features below)
+- [ ] Semester rollover — when a term's end date passes with no newer term, an
+      admin reminder resurfaces at a settable interval, opening a "new semester"
+      form: set the next term's dates and tick which prior classes to recreate
+- [ ] School work on the calendar — an optional due time on work; work due on a
+      day its class meets rides the class's calendar block as a per-member badge
+      icon that drops off on completion (so one class + two kids' homework stays
+      one block, not three); other work shows as its own marker. All behind a
+      school filter, in one shared colour, with a distinct glyph per work type
+- [ ] Post-class prompt — after a class meeting ends, each member is asked on
+      their card whether they attended (recorded) and whether work was assigned
+      (any type → adds the item). Per-class, default on with an admin off switch;
+      lingers until answered
 - [ ] School's own weekly score (part of the scoring rework)
 
 ## Workouts

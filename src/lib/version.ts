@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.91.0";
+export const APP_VERSION = "0.92.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -56,11 +56,19 @@ export const MIGRATIONS = [
   "46_school_classes",
   "47_school_work_class",
   "48_school_window",
+  "49_school_subjects_types",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.92.0",
+    summary: [
+      "Classes now take their name from a reusable Subject pool, managed in Admin \u2192 School like the chore master list \u2014 pick a subject when adding a class, or type a new one and it\u2019s added to the pool. Renaming a subject renames every class using it. Existing class names and subjects were seeded into the pool automatically",
+      "Classes can be given a Type (Homeschool, Church, Dual credit\u2026), also a managed pool in Admin \u2192 School and seeded with those three to start. It\u2019s a label for now, shown on the class line \u2014 the groundwork for the term-rollover and post-class prompts coming next",
+    ],
+  },
   {
     version: "0.91.0",
     summary: [
