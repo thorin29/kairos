@@ -182,7 +182,12 @@ export function EventDetail({
             {isSchoolWork && event.schoolType && (
               <div className="flex items-center gap-2 text-muted">
                 <SchoolIcon className="h-4 w-4 shrink-0" />
-                <span>{SCHOOL_TYPE_LABEL[event.schoolType] ?? "Work"} due</span>
+                <span>
+                  {(SCHOOL_TYPE_LABEL as Record<string, string>)[
+                    event.schoolType
+                  ] ?? "Work"}{" "}
+                  due
+                </span>
               </div>
             )}
           </div>
@@ -293,7 +298,9 @@ function ClassDue({
             <span className="text-muted">
               {" \u2014 "}
               {it.student}
-              {it.type ? ` \u00b7 ${SCHOOL_TYPE_LABEL[it.type] ?? it.type}` : ""}
+              {it.type
+                ? ` \u00b7 ${(SCHOOL_TYPE_LABEL as Record<string, string>)[it.type] ?? it.type}`
+                : ""}
             </span>
           </li>
         ))}
