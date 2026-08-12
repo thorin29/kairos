@@ -4,7 +4,6 @@ import { fromDateColumn, localParts, toDateColumn, weekDays } from "@/lib/dates"
 import { getFamilyColor } from "@/lib/settings";
 import { householdTz } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
-import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { CATEGORY_COLORS } from "@/lib/colors";
 
 export type GridEvent = {
@@ -39,6 +38,9 @@ export type GridEvent = {
   /** Set on synthesized school-work due markers; the work type, for the glyph
    *  and colour. Null/absent on ordinary events. */
   schoolType?: string | null;
+  /** On a class meeting block: one entry per student in the class with pending
+   *  work due that day, for the little "work is due" badges. Absent otherwise. */
+  schoolBadges?: { userId: string; type: string }[];
 };
 
 export type WeekData = {
@@ -382,7 +384,7 @@ export async function loadRange(
   allDay.push(...(await birthdayEvents(days, familyColor)));
 
   if (includeSchoolWork) {
-    const marks = await schoolWorkEvents(days, userId);
+    const marks = await applySchoolWork(days, userId, timed);
     for (const m of marks) {
       if (m.allDay) allDay.push(m);
       else timed.push(m);
@@ -405,15 +407,21 @@ function minuteLabel(min: number): string {
 }
 
 /**
- * Pending school work (assignments, tests, homework, projects) placed on the
- * calendar by due date — a timed block when it has a due time, an all-day chip
- * otherwise. One shared colour for everyone, so a parent can scan a day for how
- * much work is piling up. Behind the calendar's "School work" filter; not shown
- * on the dashboard schedule strip. Respects the person filter.
+ * Pending school work placed on the calendar by due date. Work due on a day
+ * its class meets rides that class's meeting block as a small per-student badge
+ * (one icon per student with work due, dropping off as each is completed),
+ * rather than stacking separate blocks on the same time. Everything else — no
+ * class, or a class that doesn't meet that day — shows as its own marker
+ * (timed if it has a due time, else an all-day chip). One shared colour;
+ * respects the person filter; behind the calendar's "School work" filter.
+ *
+ * Mutates `timedEvents` to attach badges to class blocks, and returns the
+ * standalone markers to append.
  */
-async function schoolWorkEvents(
+async function applySchoolWork(
   days: string[],
-  userId?: string | string[],
+  userId: string | string[] | undefined,
+  timedEvents: GridEvent[],
 ): Promise<GridEvent[]> {
   const rangeStart = toDateColumn(days[0]);
   const rangeEndExclusive = new Date(
@@ -442,12 +450,35 @@ async function schoolWorkEvents(
       userId: true,
       dueDate: true,
       user: { select: { name: true, displayName: true } },
-      schoolWork: { select: { type: true, dueMinutes: true } },
+      schoolWork: {
+        select: {
+          type: true,
+          dueMinutes: true,
+          class: { select: { eventId: true } },
+        },
+      },
     },
   });
 
+  // Index the class meeting blocks already on the grid by event + day, so a
+  // work item due on a meeting day can ride that block instead of stacking.
+  const classBlocks = new Map<string, GridEvent>();
+  for (const ev of timedEvents) {
+    if (ev.kind === "CLASS") classBlocks.set(`${ev.eventId}|${ev.dayISO}`, ev);
+  }
+
+  // When a student has several items on one class block, show one badge with
+  // the "highest" type (a test outranks a project, an assignment, homework).
+  const rank: Record<string, number> = {
+    TEST: 0,
+    PROJECT: 1,
+    ASSIGNMENT: 2,
+    HOMEWORK: 3,
+  };
+  const badges = new Map<string, Map<string, string>>();
+
   const color = CATEGORY_COLORS.SCHOOL;
-  const out: GridEvent[] = [];
+  const markers: GridEvent[] = [];
 
   for (const t of tasks) {
     const dueISO = fromDateColumn(t.dueDate);
@@ -455,10 +486,27 @@ async function schoolWorkEvents(
     const sw = t.schoolWork;
     if (!sw) continue;
 
-    const typeLabel = SCHOOL_TYPE_LABEL[sw.type] ?? "Work";
+    const classEventId = sw.class?.eventId ?? null;
+    const key = classEventId ? `${classEventId}|${dueISO}` : null;
+
+    // Rides the class block if that class actually meets that day.
+    if (key && classBlocks.has(key)) {
+      let perStudent = badges.get(key);
+      if (!perStudent) {
+        perStudent = new Map<string, string>();
+        badges.set(key, perStudent);
+      }
+      const existing = perStudent.get(t.userId);
+      if (existing === undefined || rank[sw.type] < rank[existing]) {
+        perStudent.set(t.userId, sw.type);
+      }
+      continue;
+    }
+
+    // Otherwise it's a standalone marker.
     const ownerName = t.user?.displayName ?? t.user?.name ?? "";
-    const base = {
-      title: `${typeLabel}: ${t.title}`,
+    const markerBase = {
+      title: t.title,
       location: null,
       color,
       isFamily: false,
@@ -475,8 +523,8 @@ async function schoolWorkEvents(
     };
 
     if (sw.dueMinutes == null) {
-      out.push({
-        ...base,
+      markers.push({
+        ...markerBase,
         id: `sw-${t.id}`,
         dayISO: dueISO,
         startMin: 0,
@@ -486,8 +534,8 @@ async function schoolWorkEvents(
       });
     } else {
       const start = Math.max(0, Math.min(1439, sw.dueMinutes));
-      out.push({
-        ...base,
+      markers.push({
+        ...markerBase,
         id: `sw-${t.id}`,
         dayISO: dueISO,
         startMin: start,
@@ -498,7 +546,16 @@ async function schoolWorkEvents(
     }
   }
 
-  return out;
+  // Attach the per-student badges to their class blocks.
+  for (const [key, perStudent] of badges) {
+    const block = classBlocks.get(key);
+    if (!block) continue;
+    block.schoolBadges = Array.from(perStudent.entries()).map(
+      ([uid, type]) => ({ userId: uid, type }),
+    );
+  }
+
+  return markers;
 }
 
 /** Everything on one day, for the dashboard strip and the day view. */
