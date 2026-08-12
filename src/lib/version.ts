@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.92.0";
+export const APP_VERSION = "0.93.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -57,11 +57,19 @@ export const MIGRATIONS = [
   "47_school_work_class",
   "48_school_window",
   "49_school_subjects_types",
+  "50_class_members",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.93.0",
+    summary: [
+      "Classes now have real membership: the owner and everyone it\u2019s shared with are members, and any member can file their own assignments and tests under a shared class \u2014 not just the class owner. Shared classes now appear on each member\u2019s card on the School page",
+      "A class can be shared even if it has no meeting time (a co-op or independent work with several students), from the \u201cShared with\u201d picker in Admin \u2192 School. Existing shared classes were carried over automatically",
+    ],
+  },
   {
     version: "0.92.0",
     summary: [

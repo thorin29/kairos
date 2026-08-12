@@ -336,10 +336,11 @@ all live in the database, never in this repository.
 - [x] Class type — an admin-managed pool (Homeschool, Church, Dual credit…)
       shown as a label on each class; groundwork for filtering and the prompts
       below (v0.92.0)
-- [ ] Multi-user class membership — promote shared classes from owner+event-
-      participants to real members, so per-student work links to a class the
-      student is actually in and a class can carry work for several students
-      (the backbone of the two features below)
+- [x] Multi-user class membership — shared classes are now real membership
+      (owner + shared students are members); any member can file work under a
+      shared class, shared classes show on each member's School card, and a
+      class can be shared with no meeting time. Backfilled from existing owners
+      and participants (v0.93.0)
 - [ ] Semester rollover — when a term's end date passes with no newer term, an
       admin reminder resurfaces at a settable interval, opening a "new semester"
       form: set the next term's dates and tick which prior classes to recreate

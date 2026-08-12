@@ -575,12 +575,13 @@ function Classes({
           </div>
         )}
 
-        {days.length > 0 && shareOptions.length > 0 && (
+        {shareOptions.length > 0 && (
           <div className="mt-3">
             <label className="block text-sm font-medium">Shared with</label>
             <p className="mb-1.5 text-xs text-muted">
-              Other students who attend &mdash; the meeting shows as one block on
-              their calendars too.
+              Other students in this class. If it meets, the block shows on their
+              calendars too &mdash; either way they can file their own work under
+              it.
             </p>
             <div className="flex flex-wrap gap-1.5">
               {shareOptions.map((p) => (

@@ -219,12 +219,12 @@ export async function loadSchoolStructure(): Promise<{
         subjectId: true,
         classTypeId: true,
         classType: { select: { name: true } },
+        members: { select: { userId: true } },
         event: {
           select: {
             rrule: true,
             startsAt: true,
             endsAt: true,
-            participants: { select: { userId: true } },
           },
         },
       },
@@ -258,7 +258,9 @@ export async function loadSchoolStructure(): Promise<{
       meetingDays: parsed.days,
       meetingStart: parsed.start,
       meetingEnd: parsed.end,
-      sharedWith: c.event?.participants.map((p) => p.userId) ?? [],
+      sharedWith: c.members
+        .map((m) => m.userId)
+        .filter((uid) => uid !== c.userId),
     };
     const list = byUser.get(c.userId) ?? [];
     list.push(row);
@@ -286,17 +288,30 @@ export async function loadSchoolStructure(): Promise<{
 
 export type ClassOption = { id: string; name: string; color: string | null };
 
-/** Class options per student, for the assignment "class" picker. */
+/** Class options per student, for the assignment "class" picker. A shared
+ *  class shows up for every member, not just the owner, so anyone in it can
+ *  file work under it. */
 export async function loadClassOptions(): Promise<
   Record<string, ClassOption[]>
 > {
   const classes = await prisma.schoolClass.findMany({
     orderBy: [{ sortOrder: "asc" }],
-    select: { id: true, name: true, color: true, userId: true },
+    select: {
+      id: true,
+      name: true,
+      color: true,
+      userId: true,
+      members: { select: { userId: true } },
+    },
   });
   const map: Record<string, ClassOption[]> = {};
   for (const c of classes) {
-    (map[c.userId] ??= []).push({ id: c.id, name: c.name, color: c.color });
+    const memberIds =
+      c.members.length > 0 ? c.members.map((m) => m.userId) : [c.userId];
+    const option = { id: c.id, name: c.name, color: c.color };
+    for (const uid of memberIds) {
+      (map[uid] ??= []).push(option);
+    }
   }
   return map;
 }
