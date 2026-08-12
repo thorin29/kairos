@@ -1,6 +1,18 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { fromDateColumn, localParts, toDateColumn, todayISO } from "@/lib/dates";
+import {
+  addDays,
+  daysBetween,
+  fromDateColumn,
+  localParts,
+  toDateColumn,
+  todayISO,
+} from "@/lib/dates";
+import {
+  getSetting,
+  getRolloverIntervalDays,
+  SCHOOL_ROLLOVER_SNOOZE,
+} from "@/lib/settings";
 import type { SchoolWorkType } from "@/generated/prisma/client";
 
 export type SchoolItem = {
@@ -415,4 +427,115 @@ export async function loadSchoolMetrics(
   }
 
   return [...byUser.values()];
+}
+
+// --- semester rollover ----------------------------------------------------
+
+export type RolloverCandidate = {
+  id: string;
+  name: string;
+  ownerName: string;
+  memberNames: string[];
+  meeting: string | null;
+  typeName: string | null;
+};
+
+export type RolloverState = {
+  needed: boolean;
+  intervalDays: number;
+  fromTerm: {
+    id: string;
+    name: string;
+    startISO: string;
+    endISO: string;
+  } | null;
+  suggestedStartISO: string;
+  suggestedEndISO: string;
+  candidates: RolloverCandidate[];
+};
+
+/**
+ * Whether it's time to start a new semester, plus the material for the prompt.
+ * "Time" means the most recently-ending term is already over and nothing newer
+ * covers today or the future — and the admin hasn't snoozed the reminder past
+ * today. Reuse candidates are the classes from that just-ended term.
+ */
+export async function loadRolloverState(today: string): Promise<RolloverState> {
+  const [terms, intervalDays, snoozeUntil] = await Promise.all([
+    prisma.term.findMany({ orderBy: [{ endDate: "desc" }] }),
+    getRolloverIntervalDays(),
+    getSetting(SCHOOL_ROLLOVER_SNOOZE),
+  ]);
+
+  const base: RolloverState = {
+    needed: false,
+    intervalDays,
+    fromTerm: null,
+    suggestedStartISO: "",
+    suggestedEndISO: "",
+    candidates: [],
+  };
+  if (terms.length === 0) return base;
+
+  const latest = terms[0];
+  const latestStartISO = fromDateColumn(latest.startDate);
+  const latestEndISO = fromDateColumn(latest.endDate);
+  const over = latestEndISO < today;
+  const snoozed = !!snoozeUntil && today < snoozeUntil;
+  const needed = over && !snoozed;
+
+  // Suggest the next term running the day after the last one ended, for the
+  // same length — the admin can adjust before creating it.
+  const suggestedStartISO = addDays(latestEndISO, 1);
+  const durationDays = Math.max(1, daysBetween(latestStartISO, latestEndISO));
+  const suggestedEndISO = addDays(suggestedStartISO, durationDays);
+
+  const classes = await prisma.schoolClass.findMany({
+    where: { termId: latest.id },
+    orderBy: [{ sortOrder: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      userId: true,
+      classType: { select: { name: true } },
+      user: { select: { name: true, displayName: true } },
+      members: {
+        select: {
+          userId: true,
+          user: { select: { name: true, displayName: true } },
+        },
+      },
+      event: { select: { rrule: true, startsAt: true, endsAt: true } },
+    },
+  });
+
+  const candidates: RolloverCandidate[] = classes.map((c) => {
+    const parsed = c.event
+      ? parseMeeting(c.event.rrule, c.event.startsAt, c.event.endsAt)
+      : null;
+    const ownerName = c.user.displayName ?? c.user.name;
+    const memberNames = c.members.map((m) => m.user.displayName ?? m.user.name);
+    return {
+      id: c.id,
+      name: c.name,
+      ownerName,
+      memberNames: memberNames.length > 0 ? memberNames : [ownerName],
+      meeting: parsed?.summary ?? null,
+      typeName: c.classType?.name ?? null,
+    };
+  });
+
+  return {
+    needed,
+    intervalDays,
+    fromTerm: {
+      id: latest.id,
+      name: latest.name,
+      startISO: latestStartISO,
+      endISO: latestEndISO,
+    },
+    suggestedStartISO,
+    suggestedEndISO,
+    candidates,
+  };
 }

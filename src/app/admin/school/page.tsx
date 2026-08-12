@@ -4,20 +4,23 @@ import {
   loadSchoolAdmin,
   loadSchoolStructure,
   loadClassOptions,
+  loadRolloverState,
 } from "@/lib/queries/school";
 import { todayISO } from "@/lib/dates";
 import { SchoolAdmin } from "./school-admin";
 import { SchoolStructure } from "./school-structure";
+import { RolloverBanner } from "./rollover-banner";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSchoolPage() {
-  const [people, structure, classOptions] = await Promise.all([
+  const today = todayISO();
+  const [people, structure, classOptions, rollover] = await Promise.all([
     loadSchoolAdmin(),
     loadSchoolStructure(),
     loadClassOptions(),
+    loadRolloverState(today),
   ]);
-  const today = todayISO();
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -33,6 +36,8 @@ export default async function AdminSchoolPage() {
           work is tracked but stays out of the score for now.
         </p>
       </header>
+
+      {rollover.needed && <RolloverBanner state={rollover} />}
 
       <section className="mb-12">
         <SectionHeading>Terms &amp; classes</SectionHeading>

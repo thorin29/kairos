@@ -6,13 +6,24 @@ import { requireAdmin } from "@/lib/session";
 import { Category, SchoolWorkType } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
+  addDays,
   fromDateColumn,
   householdTz,
+  localParts,
   toDateColumn,
   todayISO,
   zonedToUtc,
 } from "@/lib/dates";
 import { buildRule } from "@/lib/calendar/recur";
+import {
+  getRolloverIntervalDays,
+  setSetting,
+  clearSetting,
+  SCHOOL_ROLLOVER_INTERVAL,
+  SCHOOL_ROLLOVER_SNOOZE,
+  ROLLOVER_INTERVAL_DEFAULT,
+  ROLLOVER_INTERVAL_MAX,
+} from "@/lib/settings";
 
 export type SchoolActionState = { error: string | null };
 
@@ -483,5 +494,166 @@ export async function renameClassType(id: string, name: string): Promise<void> {
 export async function deleteClassType(id: string): Promise<void> {
   await requireAdmin();
   await prisma.classType.delete({ where: { id } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+// --- semester rollover ----------------------------------------------------
+
+/** Pull a class's weekly meeting back into byday + start/end times, so it can
+ *  be rebuilt anchored to a new term. Null if the class has no meeting. */
+function meetingFromEvent(
+  ev: { rrule: string | null; startsAt: Date; endsAt: Date } | null,
+): { byday: string[]; start: string; end: string } | null {
+  if (!ev || !ev.rrule) return null;
+  const m = /BYDAY=([^;]+)/i.exec(ev.rrule);
+  const byday = m
+    ? m[1]
+        .split(",")
+        .map((s) => s.trim().toUpperCase())
+        .filter((d) => WEEKDAY_TOKENS.includes(d))
+    : [];
+  if (byday.length === 0) return null;
+  const toHM = (d: Date) => {
+    const min = localParts(d).minutes;
+    const h = Math.floor(min / 60);
+    const mm = min % 60;
+    return `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+  };
+  return { byday, start: toHM(ev.startsAt), end: toHM(ev.endsAt) };
+}
+
+/** Create the next term and, for each ticked class, recreate it in that term —
+ *  same subject, type, colour, owner, members and weekly meeting (re-anchored
+ *  to the new term's dates). */
+export async function createNextSemester(
+  _prev: SchoolActionState,
+  formData: FormData,
+): Promise<SchoolActionState> {
+  await requireAdmin();
+  const name = String(formData.get("name") ?? "")
+    .trim()
+    .slice(0, 60);
+  const start = String(formData.get("startDate") ?? "");
+  const end = String(formData.get("endDate") ?? "");
+  if (name.length < 2) return { error: "Give the new semester a name." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+    return { error: "Set start and end dates." };
+  }
+  if (end < start) return { error: "The term ends before it starts." };
+
+  const reuseIds = formData
+    .getAll("reuse")
+    .map((v) => String(v))
+    .filter(Boolean);
+
+  const count = await prisma.term.count();
+  const term = await prisma.term.create({
+    data: {
+      name,
+      startDate: toDateColumn(start),
+      endDate: toDateColumn(end),
+      sortOrder: count,
+    },
+    select: { id: true },
+  });
+
+  if (reuseIds.length > 0) {
+    const sources = await prisma.schoolClass.findMany({
+      where: { id: { in: reuseIds } },
+      select: {
+        name: true,
+        subjectId: true,
+        classTypeId: true,
+        color: true,
+        userId: true,
+        members: { select: { userId: true } },
+        event: { select: { rrule: true, startsAt: true, endsAt: true } },
+      },
+    });
+
+    for (const src of sources) {
+      const meeting = meetingFromEvent(src.event);
+      const evData = meeting
+        ? meetingEventData({
+            userId: src.userId,
+            name: src.name,
+            byday: meeting.byday,
+            start: meeting.start,
+            end: meeting.end,
+            anchorISO: start,
+            untilISO: end,
+          })
+        : null;
+
+      let eventId: string | null = null;
+      if (evData) {
+        const ev = await prisma.event.create({
+          data: evData,
+          select: { id: true },
+        });
+        eventId = ev.id;
+      }
+
+      const cnt = await prisma.schoolClass.count({
+        where: { userId: src.userId },
+      });
+      const created = await prisma.schoolClass.create({
+        data: {
+          name: src.name,
+          userId: src.userId,
+          termId: term.id,
+          subjectId: src.subjectId,
+          classTypeId: src.classTypeId,
+          color: src.color,
+          eventId,
+          sortOrder: cnt,
+        },
+        select: { id: true },
+      });
+
+      const memberIds = Array.from(
+        new Set([src.userId, ...src.members.map((m) => m.userId)]),
+      );
+      await prisma.classMember.createMany({
+        data: memberIds.map((uid) => ({ classId: created.id, userId: uid })),
+        skipDuplicates: true,
+      });
+
+      // Non-owner members ride the meeting event so it renders as one block.
+      if (eventId) {
+        const others = memberIds.filter((uid) => uid !== src.userId);
+        if (others.length > 0) {
+          await prisma.eventParticipant.createMany({
+            data: others.map((uid) => ({ eventId: eventId!, userId: uid })),
+            skipDuplicates: true,
+          });
+        }
+      }
+    }
+  }
+
+  // A newer term now exists, so the reminder condition clears on its own; drop
+  // any snooze too.
+  await clearSetting(SCHOOL_ROLLOVER_SNOOZE);
+  schoolStructureRevalidate();
+  return { error: null };
+}
+
+/** Push the "start a new semester" reminder out by the reminder interval. */
+export async function snoozeRollover(): Promise<void> {
+  await requireAdmin();
+  const days = await getRolloverIntervalDays();
+  await setSetting(SCHOOL_ROLLOVER_SNOOZE, addDays(todayISO(), days));
+  schoolStructureRevalidate();
+}
+
+/** How often the reminder resurfaces once a term has ended. */
+export async function setRolloverInterval(days: number): Promise<void> {
+  await requireAdmin();
+  const clamped = Math.min(
+    ROLLOVER_INTERVAL_MAX,
+    Math.max(1, Math.round(days || ROLLOVER_INTERVAL_DEFAULT)),
+  );
+  await setSetting(SCHOOL_ROLLOVER_INTERVAL, String(clamped));
   schoolStructureRevalidate();
 }
