@@ -4,16 +4,19 @@ import { PersonAvatar } from "@/components/person-filter";
 import type { PersonSummary } from "@/lib/queries/overview";
 import { CompletionBar } from "./completion-bar";
 import { SportPrompts } from "./sport-prompts";
+import { RolloverReminder } from "./rollover-reminder";
 
 type Prompt = { eventId: string; userId: string; title: string };
 
 export function PersonCard({
   person,
   prompts = [],
+  rollover = null,
   dateISO,
 }: {
   person: PersonSummary;
   prompts?: Prompt[];
+  rollover?: { fromTermName: string | null } | null;
   dateISO: string;
 }) {
   return (
@@ -86,9 +89,12 @@ export function PersonCard({
         )}
       </div>
 
-      {prompts.length > 0 && (
-        <div className="relative z-[1] mt-4">
-          <SportPrompts prompts={prompts} dateISO={dateISO} />
+      {(prompts.length > 0 || rollover) && (
+        <div className="relative z-[1] mt-4 space-y-3">
+          {rollover && <RolloverReminder fromTermName={rollover.fromTermName} />}
+          {prompts.length > 0 && (
+            <SportPrompts prompts={prompts} dateISO={dateISO} />
+          )}
         </div>
       )}
     </div>

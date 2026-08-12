@@ -13,6 +13,7 @@ const SECTION: Record<string, string> = {
   "/calendar": "/admin/calendar",
   "/exercise": "/admin/exercise",
   "/bible": "/admin/bible",
+  "/school": "/admin/school",
   "/games": "/admin/games",
   "/groceries": "/admin/groceries",
   "/summary": "/admin",
