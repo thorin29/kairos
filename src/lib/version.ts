@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.95.0";
+export const APP_VERSION = "0.96.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -64,6 +64,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.96.0",
+    summary: [
+      "School work on the calendar now uses a small icon per type \u2014 a lined page for homework, a clipboard for assignments, a checked page for tests, a folder for projects",
+      "Work due on a day its class meets now rides the class\u2019s calendar block as a badge: one icon per student with something due, so a class plus two students\u2019 homework stays one block instead of three. Each icon drops off as that student finishes. Work with no class (or due on a non-meeting day) still shows as its own marker. All behind the \u201cSchool work\u201d filter",
+    ],
+  },
   {
     version: "0.95.0",
     summary: [

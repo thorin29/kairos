@@ -5,6 +5,7 @@ import type { GridEvent } from "@/lib/queries/calendar";
 import { DAY_SHORT } from "@/lib/days";
 import { useAddEvent } from "@/app/calendar/add-event-form";
 import { EventMenu, type MenuItem } from "@/components/event-menu";
+import { SchoolTypeIcon } from "@/components/icons";
 import { eventCopyData, deleteEvent } from "@/lib/actions/events";
 
 const HOUR_PX = 56;
@@ -293,7 +294,14 @@ export function WeekGrid({
         boxShadow: selectedId === e.id ? SELECTED_RING : undefined,
       }}
     >
-      {e.title}
+      {e.schoolType ? (
+        <span className="flex items-center gap-1">
+          <SchoolTypeIcon type={e.schoolType} className="h-3 w-3 shrink-0" />
+          <span className="truncate">{e.title}</span>
+        </span>
+      ) : (
+        e.title
+      )}
     </span>
   );
 
@@ -339,10 +347,28 @@ export function WeekGrid({
           boxShadow: selected ? SELECTED_RING : undefined,
         }}
       >
-        <span className="block truncate font-medium">{e.title}</span>
+        {e.schoolType ? (
+          <span className="flex items-center gap-1 font-medium">
+            <SchoolTypeIcon type={e.schoolType} className="h-3 w-3 shrink-0" />
+            <span className="block truncate">{e.title}</span>
+          </span>
+        ) : (
+          <span className="block truncate font-medium">{e.title}</span>
+        )}
         {height > 34 && (
           <span className="tabular block truncate opacity-90">
             {e.timeLabel}
+          </span>
+        )}
+        {e.schoolBadges && e.schoolBadges.length > 0 && (
+          <span className="mt-0.5 flex flex-wrap gap-0.5">
+            {e.schoolBadges.map((b) => (
+              <SchoolTypeIcon
+                key={b.userId}
+                type={b.type}
+                className="h-3 w-3"
+              />
+            ))}
           </span>
         )}
       </div>

@@ -350,10 +350,14 @@ all live in the database, never in this repository.
       pending assignments/tests/homework/projects on the calendar by due date,
       one shared colour, timed when a due time is set else all-day, off by
       default (v0.95.0)
-- [ ] School work on the calendar (badges) — per-type icons, and work due on a
-      day its class meets rides the class block as a per-student badge that
-      drops off on completion (consolidates a class + its due work into one
-      block instead of several)
+- [x] School work on the calendar (badges) — per-type icons (homework,
+      assignment, test, project); work due on a day its class meets rides the
+      class block as one badge per student with work due, dropping off on
+      completion; other work shows as its own marker (v0.96.0)
+- [ ] Calendar item detail overlay — clicking a calendar item opens an overlay
+      with more detail, including every assignment due on/for it. The badge
+      icons only signal that something is due; the overlay is where the specifics
+      (which student, which items, due when) are listed. (To be specified.)
 - [ ] Post-class prompt — after a class meeting ends, each member is asked on
       their card whether they attended (recorded) and whether work was assigned
       (any type → adds the item). Per-class, default on with an admin off switch;

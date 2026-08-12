@@ -327,3 +327,65 @@ export function DeviceIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+// --- school work types ----------------------------------------------------
+// Distinct glyphs so a due item reads at a glance: a lined page (homework), a
+// clipboard (assignment), a checked page (test), a folder (project).
+
+export function HomeworkIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+      <path d="M14 3v4h4" />
+      <path d="M8 12h8M8 16h5" />
+    </svg>
+  );
+}
+
+export function AssignmentIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+      <path d="M9 4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V4.5Z" />
+      <path d="M8.5 12h7M8.5 16h4" />
+    </svg>
+  );
+}
+
+export function TestIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+      <path d="m8.5 12 2.5 2.5L16 9" />
+    </svg>
+  );
+}
+
+export function ProjectIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M4 6h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
+/** Picks the glyph for a school-work type. Unknown types fall back to the
+ *  assignment glyph. */
+export function SchoolTypeIcon({
+  type,
+  className = "h-4 w-4",
+}: {
+  type: string;
+  className?: string;
+}) {
+  switch (type) {
+    case "TEST":
+      return <TestIcon className={className} />;
+    case "PROJECT":
+      return <ProjectIcon className={className} />;
+    case "HOMEWORK":
+      return <HomeworkIcon className={className} />;
+    default:
+      return <AssignmentIcon className={className} />;
+  }
+}
