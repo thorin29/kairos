@@ -5,6 +5,7 @@ import type { GridEvent } from "@/lib/queries/calendar";
 import { DAY_SHORT } from "@/lib/days";
 import { useAddEvent } from "@/app/calendar/add-event-form";
 import { EventMenu, type MenuItem } from "@/components/event-menu";
+import { EventDetail } from "@/components/event-detail";
 import { SchoolTypeIcon } from "@/components/icons";
 import { eventCopyData, deleteEvent } from "@/lib/actions/events";
 
@@ -84,6 +85,10 @@ export function WeekGrid({
   // Tap highlights an event; long-press (touch) or right-click (desktop) opens
   // its action menu.
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<{
+    event: GridEvent;
+    anchor: DOMRect;
+  } | null>(null);
   const [menu, setMenu] = useState<{
     items: MenuItem[];
     x: number;
@@ -116,10 +121,12 @@ export function WeekGrid({
   const openMenu = (items: MenuItem[], x: number, y: number) =>
     setMenu({ items, x, y });
 
-  const openEventMenu = (ev: GridEvent, x: number, y: number) => {
+  // A single click on an event opens its detail popup beside the block.
+  const openDetail = (ev: GridEvent, el: HTMLElement) => {
     setSelectedId(ev.id);
     setBlock(null);
-    openMenu(menuItems(ev), x, y);
+    setMenu(null);
+    setDetail({ event: ev, anchor: el.getBoundingClientRect() });
   };
 
   const openNewMenu = (
@@ -195,30 +202,6 @@ export function WeekGrid({
     if (pointers.current.size < 2) pan.current = null;
   };
 
-  // A tap on an event highlights it; a long hold opens its menu.
-  const onEventDown = (ev: GridEvent, e: React.PointerEvent) => {
-    if (e.pointerType !== "touch") return;
-    pressMoved.current = false;
-    pressStart.current = { x: e.clientX, y: e.clientY };
-    const gx = e.clientX;
-    const gy = e.clientY;
-    cancelPress();
-    pressTimer.current = setTimeout(() => {
-      if (!pressMoved.current && pointers.current.size < 2)
-        openEventMenu(ev, gx, gy);
-    }, 500);
-  };
-
-  const onEventMove = (e: React.PointerEvent) => {
-    if (!pressTimer.current) return;
-    const dx = e.clientX - pressStart.current.x;
-    const dy = e.clientY - pressStart.current.y;
-    if (Math.hypot(dx, dy) > 10) {
-      pressMoved.current = true;
-      cancelPress();
-    }
-  };
-
   const copyEvent = async (ev: GridEvent) => {
     const data = await eventCopyData(ev.eventId);
     if (!data) return;
@@ -241,29 +224,6 @@ export function WeekGrid({
     );
   };
 
-  const removeEvent = async (ev: GridEvent) => {
-    const msg = ev.recurring
-      ? `Delete "${ev.title}" and every repeat of it?`
-      : `Delete "${ev.title}"?`;
-    if (!confirm(msg)) return;
-    const res = await deleteEvent(ev.eventId);
-    if (res.error) alert(res.error);
-  };
-
-  const menuItems = (ev: GridEvent): MenuItem[] => {
-    // Birthdays generated from a profile have no event row to act on.
-    if (!ev.eventId) {
-      return [{ label: "Edit on the profile", disabled: true, hint: "birthday" }];
-    }
-    return [
-      ev.external
-        ? { label: "Edit", disabled: true, hint: "subscribed" }
-        : { label: "Edit", onSelect: () => editEvent(ev) },
-      { label: "Copy", onSelect: () => copyEvent(ev) },
-      { label: "Delete", danger: true, onSelect: () => removeEvent(ev) },
-    ];
-  };
-
   const SELECTED_RING =
     "0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-ink)";
 
@@ -272,21 +232,10 @@ export function WeekGrid({
       key={e.id}
       onClick={(ev) => {
         ev.stopPropagation();
-        setBlock(null);
-        setSelectedId(e.id);
+        openDetail(e, ev.currentTarget);
       }}
-      onContextMenu={(ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openEventMenu(e, ev.clientX, ev.clientY);
-      }}
-      onPointerDown={(ev) => {
-        ev.stopPropagation();
-        onEventDown(e, ev);
-      }}
-      onPointerMove={onEventMove}
-      onPointerUp={cancelPress}
-      onPointerCancel={cancelPress}
+      onContextMenu={(ev) => ev.preventDefault()}
+      onPointerDown={(ev) => ev.stopPropagation()}
       title={`${e.title}${e.location ? ` · ${e.location}` : ""}`}
       className="mb-1 block cursor-pointer select-none truncate rounded px-1.5 py-1 text-[0.7rem] font-medium text-white"
       style={{
@@ -317,21 +266,10 @@ export function WeekGrid({
         key={e.id}
         onClick={(ev) => {
           ev.stopPropagation();
-          setBlock(null);
-          setSelectedId(e.id);
+          openDetail(e, ev.currentTarget);
         }}
-        onContextMenu={(ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          openEventMenu(e, ev.clientX, ev.clientY);
-        }}
-        onPointerDown={(ev) => {
-          ev.stopPropagation();
-          onEventDown(e, ev);
-        }}
-        onPointerMove={onEventMove}
-        onPointerUp={cancelPress}
-        onPointerCancel={cancelPress}
+        onContextMenu={(ev) => ev.preventDefault()}
+        onPointerDown={(ev) => ev.stopPropagation()}
         title={`${e.title}\n${e.timeLabel}${
           e.location ? `\n${e.location}` : ""
         }\n${e.ownerName}`}
@@ -773,6 +711,25 @@ export function WeekGrid({
           y={menu.y}
           items={menu.items}
           onClose={() => setMenu(null)}
+        />
+      )}
+
+      {detail && (
+        <EventDetail
+          event={detail.event}
+          anchor={detail.anchor}
+          onClose={() => setDetail(null)}
+          onEdit={() => {
+            const ev = detail.event;
+            setDetail(null);
+            void editEvent(ev);
+          }}
+          onDuplicate={() => {
+            const ev = detail.event;
+            setDetail(null);
+            void copyEvent(ev);
+          }}
+          onDelete={() => deleteEvent(detail.event.eventId)}
         />
       )}
     </>

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.97.0";
+export const APP_VERSION = "0.98.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -65,6 +65,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.98.0",
+    summary: [
+      "Clicking a calendar event now opens a detail popup beside it (on whichever side has room), replacing right-click and long-press. It shows the category, who it belongs to, the time and how it repeats, with edit, duplicate, delete and close buttons",
+      "Delete now asks to confirm inside the popup instead of removing right away. Duplicate opens the new-event form pre-filled from the event",
+      "A class meeting\u2019s popup lists the work due that day \u2014 who has something and what it is, by name",
+      "Subscribed (read-only) calendar events, birthdays and school-work markers open as read-only detail, without edit or delete",
+    ],
+  },
   {
     version: "0.97.0",
     summary: [

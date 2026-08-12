@@ -34,6 +34,9 @@ export type GridEvent = {
   /** The underlying row, without the per-occurrence suffix. */
   eventId: string;
   recurring: boolean;
+  /** A short human recurrence label ("Weekly", "Yearly"…) or null for one-offs,
+   *  for the event detail popup. */
+  recurLabel?: string | null;
   external: boolean;
   /** Set on synthesized school-work due markers; the work type, for the glyph
    *  and colour. Null/absent on ordinary events. */
@@ -159,6 +162,7 @@ async function birthdayEvents(
         // Derived from the profile, not a stored row: nothing to delete.
         eventId: "",
         recurring: true,
+        recurLabel: "Yearly",
         external: false,
       });
     }
@@ -330,6 +334,7 @@ export async function loadRange(
       calendarName: e.externalCalendar?.name ?? null,
       eventId: e.id,
       recurring: Boolean(e.rrule),
+      recurLabel: recurLabelOf(e.rrule),
       external: Boolean(e.externalCalendarId),
     };
 
@@ -404,6 +409,24 @@ function minuteLabel(min: number): string {
     minute: "2-digit",
     timeZone: "UTC",
   }).format(d);
+}
+
+/** A short human recurrence label from an rrule's FREQ, or null for one-offs. */
+function recurLabelOf(rrule: string | null): string | null {
+  if (!rrule) return null;
+  const m = /FREQ=([A-Z]+)/.exec(rrule);
+  switch (m?.[1]) {
+    case "DAILY":
+      return "Daily";
+    case "WEEKLY":
+      return "Weekly";
+    case "MONTHLY":
+      return "Monthly";
+    case "YEARLY":
+      return "Yearly";
+    default:
+      return "Repeats";
+  }
 }
 
 /**
@@ -518,6 +541,7 @@ async function applySchoolWork(
       calendarName: null,
       eventId: t.id,
       recurring: false,
+      recurLabel: null,
       external: false,
       schoolType: sw.type as string,
     };
