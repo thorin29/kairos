@@ -271,6 +271,7 @@ export async function saveClass(
   }
 
   const color = String(formData.get("color") ?? "").trim() || null;
+  const promptHomework = formData.get("promptHomework") != null;
   let termId = String(formData.get("termId") ?? "").trim() || null;
   const start = String(formData.get("start") ?? "");
   const end = String(formData.get("end") ?? "");
@@ -368,7 +369,7 @@ export async function saveClass(
   if (id) {
     await prisma.schoolClass.update({
       where: { id },
-      data: { name, termId, subjectId, classTypeId, color, eventId },
+      data: { name, termId, subjectId, classTypeId, color, eventId, promptHomework },
     });
   } else {
     const count = await prisma.schoolClass.count({ where: { userId } });
@@ -381,6 +382,7 @@ export async function saveClass(
         classTypeId,
         color,
         eventId,
+        promptHomework,
         sortOrder: count,
       },
       select: { id: true },
@@ -665,4 +667,70 @@ export async function setRolloverInterval(days: number): Promise<void> {
   );
   await setSetting(SCHOOL_ROLLOVER_INTERVAL, String(clamped));
   schoolStructureRevalidate();
+}
+
+/**
+ * Record a member's answer to a post-class prompt: whether they attended, and
+ * any work they reported. Attendance and work are independent — you can miss a
+ * class and still have work, or attend with nothing assigned. The check-in is
+ * what stops the prompt asking again; reported work becomes ordinary school
+ * work linked to the class.
+ */
+export async function answerClassPrompt(input: {
+  classId: string;
+  userId: string;
+  dateISO: string;
+  attended: boolean;
+  work?: { title: string; type: string; dueDate: string } | null;
+}): Promise<{ error: string | null }> {
+  await requireInteractive();
+  const { classId, userId, dateISO, attended } = input;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return { error: "Bad date." };
+
+  // Guard: only a member of this class can answer its prompt.
+  const member = await prisma.classMember.findFirst({
+    where: { classId, userId },
+    select: { classId: true },
+  });
+  if (!member) return { error: "Not in this class." };
+
+  const date = toDateColumn(dateISO);
+  await prisma.classCheckin.upsert({
+    where: { classId_userId_date: { classId, userId, date } },
+    update: { attended },
+    create: { classId, userId, date, attended },
+  });
+
+  const w = input.work;
+  if (w) {
+    const title = w.title.trim().slice(0, 120);
+    if (title.length >= 2 && /^\d{4}-\d{2}-\d{2}$/.test(w.dueDate)) {
+      const type: SchoolWorkType = (TYPES as readonly string[]).includes(w.type)
+        ? (w.type as SchoolWorkType)
+        : "HOMEWORK";
+      // A test shows only on its due date; other work runs from the class day
+      // (when it was assigned) until done.
+      const isTest = type === "TEST";
+      await prisma.task.create({
+        data: {
+          userId,
+          title,
+          category: Category.SCHOOL,
+          dueDate: toDateColumn(w.dueDate),
+          schoolWork: {
+            create: {
+              type,
+              classId,
+              dateSpecific: isTest,
+              startDate: isTest ? null : date,
+            },
+          },
+        },
+      });
+    }
+  }
+
+  revalidatePath("/", "layout");
+  revalidatePath(`/person/${userId}`);
+  return { error: null };
 }

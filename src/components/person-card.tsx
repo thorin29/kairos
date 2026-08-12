@@ -5,6 +5,7 @@ import type { PersonSummary } from "@/lib/queries/overview";
 import { CompletionBar } from "./completion-bar";
 import { SportPrompts } from "./sport-prompts";
 import { RolloverReminder } from "./rollover-reminder";
+import { ClassPrompts, type ClassPromptItem } from "./class-prompts";
 
 type Prompt = { eventId: string; userId: string; title: string };
 
@@ -12,11 +13,13 @@ export function PersonCard({
   person,
   prompts = [],
   rollover = null,
+  classPrompts = [],
   dateISO,
 }: {
   person: PersonSummary;
   prompts?: Prompt[];
   rollover?: { fromTermName: string | null } | null;
+  classPrompts?: ClassPromptItem[];
   dateISO: string;
 }) {
   return (
@@ -89,9 +92,12 @@ export function PersonCard({
         )}
       </div>
 
-      {(prompts.length > 0 || rollover) && (
+      {(prompts.length > 0 || rollover || classPrompts.length > 0) && (
         <div className="relative z-[1] mt-4 space-y-3">
           {rollover && <RolloverReminder fromTermName={rollover.fromTermName} />}
+          {classPrompts.length > 0 && (
+            <ClassPrompts prompts={classPrompts} today={dateISO} />
+          )}
           {prompts.length > 0 && (
             <SportPrompts prompts={prompts} dateISO={dateISO} />
           )}

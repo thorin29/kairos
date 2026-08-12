@@ -12,10 +12,12 @@ import type { PersonSchool } from "@/lib/queries/school";
 export function SchoolAdmin({
   people,
   classesByUser,
+  subjects,
   today,
 }: {
   people: PersonSchool[];
   classesByUser: Record<string, { id: string; name: string }[]>;
+  subjects: string[];
   today: string;
 }) {
   const pickList = people.map((p) => ({ id: p.id, name: p.name }));
@@ -25,6 +27,7 @@ export function SchoolAdmin({
       <AddSchoolWork
         people={pickList}
         classesByUser={classesByUser}
+        subjects={subjects}
         defaultDate={today}
       />
 

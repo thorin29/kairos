@@ -4,10 +4,12 @@ import {
   addDays,
   daysBetween,
   fromDateColumn,
+  householdTz,
   localParts,
   toDateColumn,
   todayISO,
 } from "@/lib/dates";
+import { occurrencesIn } from "@/lib/calendar/recur";
 import {
   getSetting,
   getRolloverIntervalDays,
@@ -183,6 +185,7 @@ export type ClassRow = {
   subjectId: string | null;
   classTypeId: string | null;
   classTypeName: string | null;
+  promptHomework: boolean;
   meeting: string | null;
   meetingDays: string[];
   meetingStart: string;
@@ -231,6 +234,7 @@ export async function loadSchoolStructure(): Promise<{
         subjectId: true,
         classTypeId: true,
         classType: { select: { name: true } },
+        promptHomework: true,
         members: { select: { userId: true } },
         event: {
           select: {
@@ -266,6 +270,7 @@ export async function loadSchoolStructure(): Promise<{
       subjectId: c.subjectId ?? null,
       classTypeId: c.classTypeId ?? null,
       classTypeName: c.classType?.name ?? null,
+      promptHomework: c.promptHomework,
       meeting: parsed.summary,
       meetingDays: parsed.days,
       meetingStart: parsed.start,
@@ -538,4 +543,109 @@ export async function loadRolloverState(today: string): Promise<RolloverState> {
     suggestedEndISO,
     candidates,
   };
+}
+
+/** Active subject names from the pool, for the assignment form's subject
+ *  picker. */
+export async function loadSubjectNames(): Promise<string[]> {
+  const rows = await prisma.subject.findMany({
+    where: { isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { name: true },
+  });
+  return rows.map((r) => r.name);
+}
+
+// --- post-class prompt ----------------------------------------------------
+
+export type ClassPrompt = {
+  classId: string;
+  userId: string;
+  className: string;
+  dateISO: string;
+};
+
+// How far back an unanswered prompt lingers. A safety net for "didn't check
+// the tablet for a few days"; beyond this the occasion has passed.
+const CLASS_PROMPT_LOOKBACK_DAYS = 14;
+
+/**
+ * The pending "after class" prompts: for each class opted in, each member is
+ * asked — once per meeting — whether they attended and whether work was
+ * assigned. A prompt appears only after that meeting's end time has passed, and
+ * lingers until answered (a ClassCheckin). To stay manageable, only the most
+ * recent unanswered meeting per class per member surfaces at a time; answering
+ * it reveals the next, if any remain in the window.
+ */
+export async function pendingClassPrompts(
+  today: string = todayISO(),
+): Promise<ClassPrompt[]> {
+  const tz = householdTz();
+  const now = Date.now();
+  const fromISO = addDays(today, -CLASS_PROMPT_LOOKBACK_DAYS);
+
+  const classes = await prisma.schoolClass.findMany({
+    where: { promptHomework: true, eventId: { not: null } },
+    select: {
+      id: true,
+      name: true,
+      members: { select: { userId: true } },
+      event: { select: { startsAt: true, endsAt: true, rrule: true } },
+    },
+  });
+  if (classes.length === 0) return [];
+
+  // Ended meeting dates per class, newest first.
+  const endedByClass = new Map<string, string[]>();
+  for (const c of classes) {
+    if (!c.event) continue;
+    const durationMs =
+      c.event.endsAt.getTime() - c.event.startsAt.getTime();
+    const starts = c.event.rrule
+      ? occurrencesIn(c.event.startsAt, c.event.rrule, fromISO, today, tz)
+      : [c.event.startsAt];
+    const ended: string[] = [];
+    for (const s of starts) {
+      const iso = localParts(s).iso;
+      if (iso < fromISO || iso > today) continue;
+      if (s.getTime() + durationMs <= now) ended.push(iso);
+    }
+    if (ended.length > 0) {
+      ended.sort((a, b) => (a < b ? 1 : -1));
+      endedByClass.set(c.id, ended);
+    }
+  }
+  if (endedByClass.size === 0) return [];
+
+  const classIds = [...endedByClass.keys()];
+  const checkins = await prisma.classCheckin.findMany({
+    where: {
+      classId: { in: classIds },
+      date: { gte: toDateColumn(fromISO), lte: toDateColumn(today) },
+    },
+    select: { classId: true, userId: true, date: true },
+  });
+  const answered = new Set(
+    checkins.map((c) => `${c.classId}|${c.userId}|${fromDateColumn(c.date)}`),
+  );
+
+  const prompts: ClassPrompt[] = [];
+  for (const c of classes) {
+    const dates = endedByClass.get(c.id);
+    if (!dates) continue;
+    for (const m of c.members) {
+      const d = dates.find(
+        (dt) => !answered.has(`${c.id}|${m.userId}|${dt}`),
+      );
+      if (d) {
+        prompts.push({
+          classId: c.id,
+          userId: m.userId,
+          className: c.name,
+          dateISO: d,
+        });
+      }
+    }
+  }
+  return prompts;
 }
