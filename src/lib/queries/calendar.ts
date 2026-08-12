@@ -5,7 +5,7 @@ import { getFamilyColor } from "@/lib/settings";
 import { householdTz } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
 import { CATEGORY_COLORS } from "@/lib/colors";
-import { HOLIDAY_COLOR, holidayEntries } from "@/lib/holidays";
+import { getHolidayColor, holidayEntries } from "@/lib/holidays";
 
 export type GridEvent = {
   id: string;
@@ -176,6 +176,8 @@ async function birthdayEvents(
  *  years the range touches. Read-only (no stored row), one shared colour. */
 async function holidayEvents(days: string[]): Promise<GridEvent[]> {
   const entries = await holidayEntries(days);
+  if (entries.length === 0) return [];
+  const color = await getHolidayColor();
   return entries.map((h) => ({
     id: `holiday-${h.key}-${h.iso}`,
     title: h.label,
@@ -185,7 +187,7 @@ async function holidayEvents(days: string[]): Promise<GridEvent[]> {
     endMin: 1440,
     timeLabel: "All day",
     allDay: true,
-    color: HOLIDAY_COLOR,
+    color,
     isFamily: false,
     ownerId: "",
     memberIds: [],

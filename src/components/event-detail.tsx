@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { GridEvent } from "@/lib/queries/calendar";
 import { classDueItems } from "@/lib/actions/school";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
@@ -97,7 +98,9 @@ export function EventDetail({
     KIND_LABEL[event.kind] ?? event.calendarName ?? event.kind ?? "Event";
   const CategoryIcon = isClass ? SchoolIcon : CalendarIcon;
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-[60]" onClick={onClose}>
       <div
         ref={ref}
@@ -250,7 +253,8 @@ export function EventDetail({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

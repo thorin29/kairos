@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { HolidayRow, HolidayGroup } from "@/lib/holidays";
-import { saveHolidays } from "@/lib/actions/holidays";
+import { saveHolidays, setHolidayColor } from "@/lib/actions/holidays";
 import { Card } from "@/components/ui";
 
 const GROUP_ORDER: HolidayGroup[] = [
@@ -14,10 +14,17 @@ const GROUP_ORDER: HolidayGroup[] = [
 ];
 
 /** Per-holiday on/off toggles, grouped, saving the whole set on each change. */
-export function Holidays({ rows }: { rows: HolidayRow[] }) {
+export function Holidays({
+  rows,
+  color,
+}: {
+  rows: HolidayRow[];
+  color: string;
+}) {
   const [enabled, setEnabled] = useState<Set<string>>(
     () => new Set(rows.filter((r) => r.enabled).map((r) => r.key)),
   );
+  const [swatch, setSwatch] = useState(color);
   const [, start] = useTransition();
 
   const toggle = (key: string) => {
@@ -54,6 +61,22 @@ export function Holidays({ rows }: { rows: HolidayRow[] }) {
         end. Turn on exactly the ones you want; they show as all-day items in a
         shared colour.
       </p>
+
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium">Holiday colour</span>
+        <input
+          type="color"
+          value={swatch}
+          onChange={(e) => {
+            const c = e.target.value;
+            setSwatch(c);
+            start(() => void setHolidayColor(c));
+          }}
+          aria-label="Holiday colour"
+          className="h-8 w-12 cursor-pointer rounded border border-hairline bg-surface p-0.5"
+        />
+        <span className="tabular text-xs text-muted">{swatch}</span>
+      </div>
 
       {groups.map(({ group, items }) => {
         const keys = items.map((i) => i.key);

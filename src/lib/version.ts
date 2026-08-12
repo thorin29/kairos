@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.99.0";
+export const APP_VERSION = "0.99.1";
 
 export const MIGRATIONS = [
   "0_init",
@@ -65,6 +65,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.99.1",
+    summary: [
+      "The event detail popup now works in month view too \u2014 click a chip to open it (edit, duplicate, delete, class due-items) instead of jumping to the day",
+      "Holidays are now listed in the order they occur through the year within each category, and the shared holiday colour is editable in Admin \u2192 Calendar \u2192 Holidays",
+      "Trimmed the suggested extra holidays to Cinco de Mayo, Palm Sunday and Patriot Day",
+    ],
+  },
   {
     version: "0.99.0",
     summary: [

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { GridEvent } from "@/lib/queries/calendar";
-import { SchoolTypeIcon } from "@/components/icons";
+import { MonthChip } from "@/components/month-chip";
 import { DAY_SHORT } from "@/lib/days";
 import { isSameMonth } from "@/lib/dates";
 
@@ -74,34 +74,7 @@ export function MonthGrid({
               </span>
 
               {chips.map((e) => (
-                <span
-                  key={e.id}
-                  className="mb-0.5 flex items-center gap-0.5 truncate rounded px-1 py-0.5 text-[0.65rem] font-medium text-white"
-                  style={{ backgroundColor: e.color }}
-                >
-                  {e.schoolType && (
-                    <SchoolTypeIcon
-                      type={e.schoolType}
-                      className="h-2.5 w-2.5 shrink-0"
-                    />
-                  )}
-                  <span className="truncate">
-                    {e.allDay
-                      ? e.title
-                      : `${e.timeLabel.split(" – ")[0]} ${e.title}`}
-                  </span>
-                  {e.schoolBadges && e.schoolBadges.length > 0 && (
-                    <span className="ml-auto flex shrink-0 gap-0.5">
-                      {e.schoolBadges.map((b) => (
-                        <SchoolTypeIcon
-                          key={b.userId}
-                          type={b.type}
-                          className="h-2.5 w-2.5"
-                        />
-                      ))}
-                    </span>
-                  )}
-                </span>
+                <MonthChip key={e.id} event={e} />
               ))}
 
               {extra > 0 && (
