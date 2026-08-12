@@ -354,10 +354,27 @@ all live in the database, never in this repository.
       assignment, test, project); work due on a day its class meets rides the
       class block as one badge per student with work due, dropping off on
       completion; other work shows as its own marker (v0.96.0)
-- [ ] Calendar item detail overlay — clicking a calendar item opens an overlay
-      with more detail, including every assignment due on/for it. The badge
-      icons only signal that something is due; the overlay is where the specifics
-      (which student, which items, due when) are listed. (To be specified.)
+- [x] Calendar item detail overlay — one click on an event opens a detail popup
+      beside it (edit / duplicate / delete-with-confirm / close), showing
+      category, owner, time and recurrence; a class meeting lists the work due
+      that day by name and student; subscribed/birthday/school-work items are
+      read-only. Replaces right-click and long-press (v0.98.0)
+- [ ] Detail popup in month view — month chips currently jump to the day; give
+      them the same click-to-open detail popup as week/day
+- [ ] Event background images — an optional background image on an event and its
+      detail popup, chosen by kind/category, with a sensible default. Needs
+      artwork created (monochrome-friendly, ~1200×400, low-contrast so white
+      text stays legible). First set to create:
+        - birthday
+        - holiday: Christmas, Thanksgiving, Easter, Halloween, New Year,
+          Valentine's Day, Independence Day, St. Patrick's Day
+        - hockey (game), hockey (practice)
+        - class / school
+        - church
+        - appointment (generic)
+        - vacation / trip
+        - default (fallback)
+      Then wire storage + a per-kind (and optional per-event) picker.
 - [x] Post-class prompt — after a class meeting ends, each member is asked on
       their card whether they attended (recorded) and whether work was assigned
       (any type → adds the item, linked to the class). Per-class, default on with

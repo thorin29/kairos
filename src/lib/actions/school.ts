@@ -734,3 +734,48 @@ export async function answerClassPrompt(input: {
   revalidatePath(`/person/${userId}`);
   return { error: null };
 }
+
+/**
+ * The pending work due on a class's meeting day, for the calendar event detail
+ * popup: who has something due and what it is. Read-only; keyed on the class's
+ * meeting event and the occurrence date.
+ */
+export async function classDueItems(
+  eventId: string,
+  dateISO: string,
+): Promise<{
+  className: string;
+  items: { student: string; title: string; type: string }[];
+} | null> {
+  await requireInteractive();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return null;
+  const cls = await prisma.schoolClass.findFirst({
+    where: { eventId },
+    select: { id: true, name: true },
+  });
+  if (!cls) return null;
+
+  const tasks = await prisma.task.findMany({
+    where: {
+      category: Category.SCHOOL,
+      status: "PENDING",
+      dueDate: toDateColumn(dateISO),
+      schoolWork: { is: { classId: cls.id } },
+    },
+    orderBy: [{ userId: "asc" }],
+    select: {
+      title: true,
+      user: { select: { name: true, displayName: true } },
+      schoolWork: { select: { type: true } },
+    },
+  });
+
+  return {
+    className: cls.name,
+    items: tasks.map((t) => ({
+      student: t.user.displayName ?? t.user.name,
+      title: t.title,
+      type: t.schoolWork?.type ?? "",
+    })),
+  };
+}
