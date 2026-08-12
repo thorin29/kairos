@@ -8,6 +8,10 @@ export const CAL_NOW_COLOR = "calendar.nowColor";
 export const CAL_RESET_SEC = "calendar.scrollResetSec";
 export const CAL_BLOCK_MINUTES = "calendar.blockMinutes";
 export const WORKOUT_OVERDUE_DAYS = "workout.overdueDays";
+export const SCHOOL_ROLLOVER_INTERVAL = "school.rolloverIntervalDays";
+export const SCHOOL_ROLLOVER_SNOOZE = "school.rolloverSnoozeUntil";
+export const ROLLOVER_INTERVAL_DEFAULT = 7;
+export const ROLLOVER_INTERVAL_MAX = 90;
 
 /** Longest a workout prompt can stay overdue before it expires. */
 export const WORKOUT_OVERDUE_MAX = 6;
@@ -77,6 +81,15 @@ export async function getScoringStart(): Promise<string | null> {
     where: { key: SCORING_START },
   });
   return row?.value ?? null;
+}
+
+/** How often the "start a new semester" reminder resurfaces once a term has
+ *  ended and nothing newer is set up. Clamped to a sane range. */
+export async function getRolloverIntervalDays(): Promise<number> {
+  const raw = await getSetting(SCHOOL_ROLLOVER_INTERVAL);
+  const n = Number.parseInt(raw ?? "", 10);
+  if (!Number.isFinite(n)) return ROLLOVER_INTERVAL_DEFAULT;
+  return Math.min(ROLLOVER_INTERVAL_MAX, Math.max(1, n));
 }
 
 export async function setSetting(key: string, value: string): Promise<void> {

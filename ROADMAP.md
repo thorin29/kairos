@@ -341,9 +341,11 @@ all live in the database, never in this repository.
       shared class, shared classes show on each member's School card, and a
       class can be shared with no meeting time. Backfilled from existing owners
       and participants (v0.93.0)
-- [ ] Semester rollover — when a term's end date passes with no newer term, an
-      admin reminder resurfaces at a settable interval, opening a "new semester"
-      form: set the next term's dates and tick which prior classes to recreate
+- [x] Semester rollover — when a term's end date passes with no newer term, an
+      admin reminder in Admin → School opens a "new semester" form: name and
+      date the next term (pre-filled to follow the last), and tick which prior
+      classes to recreate (subject, type, colour, students, meeting carried over
+      and re-anchored). Snooze + settable reminder interval (v0.94.0)
 - [ ] School work on the calendar — an optional due time on work; work due on a
       day its class meets rides the class's calendar block as a per-member badge
       icon that drops off on completion (so one class + two kids' homework stays

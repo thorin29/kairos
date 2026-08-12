@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.93.0";
+export const APP_VERSION = "0.94.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -63,6 +63,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.94.0",
+    summary: [
+      "Semester rollover: once a term has ended and nothing newer is set up, Admin \u2192 School shows a \u201cstart a new semester\u201d prompt \u2014 name the new term, set its dates (pre-filled to follow the last one), and tick which classes to carry over. Reused classes come back with the same subject, type, colour, students and weekly meeting, re-anchored to the new term",
+      "The reminder can be snoozed with \u201cRemind me later,\u201d and how often it comes back is adjustable (default every 7 days)",
+    ],
+  },
   {
     version: "0.93.0",
     summary: [
