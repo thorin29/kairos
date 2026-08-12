@@ -9,7 +9,19 @@ import { getSetting, setSetting } from "@/lib/settings";
  */
 
 export const HOLIDAY_SETTING = "holidays.enabled";
-export const HOLIDAY_COLOR = "#b45309";
+export const HOLIDAY_COLOR_SETTING = "holidays.color";
+export const HOLIDAY_COLOR_DEFAULT = "#b45309";
+
+/** The shared colour for all holiday items, admin-editable. */
+export async function getHolidayColor(): Promise<string> {
+  const raw = await getSetting(HOLIDAY_COLOR_SETTING);
+  return raw && /^#[0-9a-fA-F]{6}$/.test(raw) ? raw : HOLIDAY_COLOR_DEFAULT;
+}
+
+export async function setHolidayColorValue(color: string): Promise<void> {
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
+  await setSetting(HOLIDAY_COLOR_SETTING, color);
+}
 
 export type HolidayGroup =
   | "Federal"
@@ -102,14 +114,22 @@ export const HOLIDAYS: HolidayDef[] = [
 
   // Suggested extras that fit the set — off by default, toggle on if wanted.
   { key: "cinco_de_mayo", label: "Cinco de Mayo", group: "Observance", defaultOn: false, date: fixed(5, 5) },
-  { key: "ash_wednesday", label: "Ash Wednesday", group: "Religious", defaultOn: false, date: (y) => shiftDays(easterSunday(y), -46) },
   { key: "palm_sunday", label: "Palm Sunday", group: "Religious", defaultOn: false, date: (y) => shiftDays(easterSunday(y), -7) },
-  { key: "lbj_day", label: "LBJ Day", group: "Texas", defaultOn: false, date: fixed(8, 27) },
-  { key: "cesar_chavez", label: "Cesar Chavez Day", group: "Texas", defaultOn: false, date: fixed(3, 31) },
   { key: "patriot_day", label: "Patriot Day (9/11)", group: "Observance", defaultOn: false, date: fixed(9, 11) },
-  { key: "tax_day", label: "Tax Day", group: "Observance", defaultOn: false, date: fixed(4, 15) },
-  { key: "grandparents_day", label: "Grandparents Day", group: "Observance", defaultOn: false, date: (y) => shiftDays(nthWeekday(y, 9, 1, 1), 6) },
 ];
+
+// Keep the list in the order holidays occur through the year, so each category
+// reads top-to-bottom by date. Movable holidays are placed by their date in a
+// reference year, which is stable enough for a display order.
+const REF_YEAR = 2027;
+HOLIDAYS.sort((a, b) => {
+  const da = a.date(REF_YEAR);
+  const db = b.date(REF_YEAR);
+  return (
+    da.getUTCMonth() * 100 + da.getUTCDate() -
+    (db.getUTCMonth() * 100 + db.getUTCDate())
+  );
+});
 
 function isoOf(date: Date): string {
   return date.toISOString().slice(0, 10);

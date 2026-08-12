@@ -8,7 +8,7 @@ import { EventTypes } from "./event-types";
 import { DisplayPrefs } from "./display-prefs";
 import { PauseForm } from "./pause-form";
 import { Holidays } from "./holidays";
-import { loadHolidayList } from "@/lib/holidays";
+import { loadHolidayList, getHolidayColor } from "@/lib/holidays";
 import { loadPauses } from "@/lib/actions/pauses";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,7 @@ export default async function AdminCalendarPage() {
   const pauses = await loadPauses();
   const familyColor = await getFamilyColor();
   const holidays = await loadHolidayList();
+  const holidayColor = await getHolidayColor();
 
   const subscriptions = calendars.map((c) => ({
     id: c.id,
@@ -95,7 +96,7 @@ export default async function AdminCalendarPage() {
 
       <div className="mt-10">
         <SectionHeading>Holidays</SectionHeading>
-        <Holidays rows={holidays} />
+        <Holidays rows={holidays} color={holidayColor} />
       </div>
 
       <div className="mt-10">

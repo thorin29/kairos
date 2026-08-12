@@ -359,8 +359,8 @@ all live in the database, never in this repository.
       category, owner, time and recurrence; a class meeting lists the work due
       that day by name and student; subscribed/birthday/school-work items are
       read-only. Replaces right-click and long-press (v0.98.0)
-- [ ] Detail popup in month view — month chips currently jump to the day; give
-      them the same click-to-open detail popup as week/day
+- [x] Detail popup in month view — month chips open the same click-to-open
+      detail popup as week/day (v0.99.1)
 - [ ] Event background images — an optional background image on an event and its
       detail popup, chosen by kind/category, with a sensible default. Needs
       artwork created (monochrome-friendly, ~1200×400, low-contrast so white
@@ -386,8 +386,8 @@ all live in the database, never in this repository.
 - [x] Built-in US/Texas holidays — computed from rules for any year (no feed, no
       year-end cutoff), toggled per-holiday in Admin → Calendar → Holidays,
       shown as shared-colour all-day items. Marco's list on by default (v0.99.0)
-- [ ] Detail popup in month view — month chips currently jump to the day; give
-      them the same click-to-open detail popup as week/day
+- [x] Detail popup in month view — month chips open the same click-to-open
+      detail popup as week/day (v0.99.1)
 - [ ] Event background images — optional per-kind background art on the event
       block and detail popup, with a dark scrim so text stays legible and a
       default fallback. Plumbing first (placeholder), artwork dropped in later
