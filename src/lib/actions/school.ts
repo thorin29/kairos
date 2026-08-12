@@ -318,28 +318,33 @@ export async function saveClass(
     eventId = null;
   }
 
-  // Share the meeting with other students by adding them as participants, so it
-  // shows as one block on everyone's calendar. Only meaningful with a meeting.
+  // Students sharing this class, validated against the active roster. Kept
+  // independent of whether the class has a meeting time, so a no-time class
+  // (a co-op, independent homeschool work) can still have several members.
+  const sharedWanted = sharedRaw.filter((uid) => uid !== userId);
+  const validShared =
+    sharedWanted.length > 0
+      ? (
+          await prisma.user.findMany({
+            where: { id: { in: sharedWanted }, isActive: true },
+            select: { id: true },
+          })
+        ).map((u) => u.id)
+      : [];
+
+  // The meeting event's participants only exist to render a shared class as one
+  // block on the calendar, so they're set only when there's a meeting event.
   if (eventId) {
-    const shared = sharedRaw.filter((uid) => uid !== userId);
-    const valid =
-      shared.length > 0
-        ? (
-            await prisma.user.findMany({
-              where: { id: { in: shared }, isActive: true },
-              select: { id: true },
-            })
-          ).map((u) => u.id)
-        : [];
     await prisma.eventParticipant.deleteMany({ where: { eventId } });
-    if (valid.length > 0) {
+    if (validShared.length > 0) {
       await prisma.eventParticipant.createMany({
-        data: valid.map((uid) => ({ eventId, userId: uid })),
+        data: validShared.map((uid) => ({ eventId, userId: uid })),
         skipDuplicates: true,
       });
     }
   }
 
+  let classId = id;
   if (id) {
     await prisma.schoolClass.update({
       where: { id },
@@ -347,7 +352,7 @@ export async function saveClass(
     });
   } else {
     const count = await prisma.schoolClass.count({ where: { userId } });
-    await prisma.schoolClass.create({
+    const created = await prisma.schoolClass.create({
       data: {
         name,
         userId,
@@ -358,6 +363,19 @@ export async function saveClass(
         eventId,
         sortOrder: count,
       },
+      select: { id: true },
+    });
+    classId = created.id;
+  }
+
+  // Reconcile membership: the owner plus any shared students. This is the
+  // source of truth for whose work can be filed under the class.
+  if (classId) {
+    const memberIds = Array.from(new Set([userId, ...validShared]));
+    await prisma.classMember.deleteMany({ where: { classId } });
+    await prisma.classMember.createMany({
+      data: memberIds.map((uid) => ({ classId: classId!, userId: uid })),
+      skipDuplicates: true,
     });
   }
 

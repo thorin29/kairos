@@ -6,6 +6,7 @@ import {
   loadSchoolAdmin,
   loadSchoolStructure,
   loadSchoolMetrics,
+  type ClassRow,
 } from "@/lib/queries/school";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { todayISO, formatLong, formatShort } from "@/lib/dates";
@@ -41,12 +42,19 @@ export default async function SchoolPage({
   );
   const statsByUser = new Map(metrics.map((m) => [m.userId, m]));
 
-  const classesByPerson = new Map(
-    structure.people.map((p) => [p.id, p.classes]),
-  );
+  // A class shows under every student in it — the owner and anyone it's shared
+  // with — so shared classes appear on each member's card.
+  const classesByPerson = new Map<string, ClassRow[]>();
+  for (const p of structure.people) classesByPerson.set(p.id, []);
+  for (const p of structure.people) {
+    for (const c of p.classes) {
+      classesByPerson.get(p.id)?.push(c);
+      for (const uid of c.sharedWith) classesByPerson.get(uid)?.push(c);
+    }
+  }
   const anyWork =
     people.some((p) => p.items.length > 0) ||
-    structure.people.some((p) => p.classes.length > 0);
+    [...classesByPerson.values()].some((cs) => cs.length > 0);
   const anyStats = metrics.some((m) => m.total > 0);
 
   return (

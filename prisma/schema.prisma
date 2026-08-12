@@ -67,6 +67,7 @@ model User {
   invites          Invite[]
   sportSkips       SportSkip[]
   eventParticipations EventParticipant[]
+  classMemberships ClassMember[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -131,11 +132,29 @@ model SchoolClass {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   work      SchoolWork[]
+  members   ClassMember[]
 
   @@index([userId])
   @@index([termId])
   @@index([subjectId])
   @@index([classTypeId])
+}
+
+// A student in a class. The class owner (SchoolClass.userId) is also a member,
+// so this join is the single source of truth for "who's in this class" —
+// which drives whose work can be filed under it and, later, who gets a
+// post-class prompt. Separate from the meeting event's EventParticipant, which
+// only exists to render a shared class as one calendar block.
+model ClassMember {
+  id      String      @id @default(cuid())
+  classId String
+  class   SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@unique([classId, userId])
+  @@index([userId])
 }
 
 enum SchoolWorkType {
