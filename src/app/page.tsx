@@ -17,6 +17,7 @@ import { loadDaySchedule } from "@/lib/queries/calendar";
 import { deviceMode } from "@/lib/device";
 import { currentUser } from "@/lib/user-session";
 import { pendingSportPrompts, type SportPrompt } from "@/lib/workouts/generate";
+import { loadRolloverState } from "@/lib/queries/school";
 import { clearPausedTasks } from "@/lib/queries/pauses";
 
 export const dynamic = "force-dynamic";
@@ -92,6 +93,22 @@ export default async function Home({
   const openTasks = await loadOpenTasks(today);
   const todaySchedule = await loadDaySchedule(scheduleDay);
 
+  // The "start a new semester" reminder rides each admin's card. It's the same
+  // household-wide state as the Admin → School banner, so whichever admin acts
+  // on it (or snoozes it) clears it for both.
+  const rollover = await loadRolloverState(today);
+  const adminIds = rollover.needed
+    ? new Set(
+        (
+          await prisma.user.findMany({
+            where: { role: "ADMIN", isActive: true },
+            select: { id: true },
+          })
+        ).map((u) => u.id),
+      )
+    : new Set<string>();
+  const rolloverReminder = { fromTermName: rollover.fromTerm?.name ?? null };
+
   return (
     <>
       <AppHeader title="Today" subtitle={formatLong(today)} active="home">
@@ -117,6 +134,7 @@ export default async function Home({
             key={p.id}
             person={p}
             prompts={promptsByUser.get(p.id) ?? []}
+            rollover={adminIds.has(p.id) ? rolloverReminder : null}
             dateISO={today}
           />
         ))}
