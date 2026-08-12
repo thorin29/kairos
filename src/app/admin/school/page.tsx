@@ -58,6 +58,7 @@ export default async function AdminSchoolPage() {
           <SchoolAdmin
             people={people}
             classesByUser={classOptions}
+            subjects={structure.subjects.map((s) => s.name)}
             today={today}
           />
         </div>

@@ -16,11 +16,13 @@ export function AddSchoolWork({
   userId,
   people,
   classesByUser,
+  subjects = [],
   defaultDate,
 }: {
   userId?: string;
   people?: { id: string; name: string }[];
   classesByUser?: Record<string, { id: string; name: string }[]>;
+  subjects?: string[];
   defaultDate: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -28,6 +30,10 @@ export function AddSchoolWork({
     userId ?? people?.[0]?.id ?? "",
   );
   const [dateSpecific, setDateSpecific] = useState(false);
+  // Subject comes from the pool; "__other__" reveals a free-text box for a
+  // one-off not in the pool.
+  const [subject, setSubject] = useState("");
+  const [subjectOther, setSubjectOther] = useState(false);
   const [state, formAction, pending] = useActionState(addSchoolWork, initial);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -35,6 +41,8 @@ export function AddSchoolWork({
     if (!pending && state !== initial && !state.error) {
       formRef.current?.reset();
       setDateSpecific(false);
+      setSubject("");
+      setSubjectOther(false);
     }
   }, [state, pending]);
 
@@ -123,13 +131,40 @@ export function AddSchoolWork({
           <label htmlFor="sw-subject" className="block text-sm font-medium">
             Subject
           </label>
-          <input
-            id="sw-subject"
-            name="subject"
-            maxLength={60}
-            placeholder="Math, History…"
-            className={FIELD}
-          />
+          {/* The submitted value: whichever the pool select or the Other box holds. */}
+          <input type="hidden" name="subject" value={subject} />
+          {subjects.length > 0 && !subjectOther ? (
+            <select
+              id="sw-subject"
+              value={subject}
+              onChange={(e) => {
+                if (e.target.value === "__other__") {
+                  setSubjectOther(true);
+                  setSubject("");
+                } else {
+                  setSubject(e.target.value);
+                }
+              }}
+              className={FIELD}
+            >
+              <option value="">No subject</option>
+              {subjects.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+              <option value="__other__">Other…</option>
+            </select>
+          ) : (
+            <input
+              id="sw-subject"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value.slice(0, 60))}
+              maxLength={60}
+              placeholder="Math, History…"
+              className={FIELD}
+            />
+          )}
         </div>
 
         <div>
@@ -188,11 +223,11 @@ export function AddSchoolWork({
           className="mt-0.5 h-4 w-4 rounded border-hairline accent-accent"
         />
         <span>
-          Due on a specific date (e.g. a test)
+          Show only on the due date
           <span className="mt-0.5 block text-xs text-muted">
             {dateSpecific
-              ? "Shows only on the due date."
-              : "Shows every day from its start until it\u2019s done."}
+              ? "On \u2014 for a one-off like a test: it appears just on its due date."
+              : "Off \u2014 for ongoing work (homework, projects): it appears every day from its start date until you mark it done."}
           </span>
         </span>
       </label>

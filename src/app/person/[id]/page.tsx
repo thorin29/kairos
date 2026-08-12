@@ -12,7 +12,7 @@ import {
 import { WorkoutLauncher } from "./workout-launcher";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
-import { loadClassOptions } from "@/lib/queries/school";
+import { loadClassOptions, loadSubjectNames } from "@/lib/queries/school";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import {
   addDays,
@@ -84,6 +84,7 @@ export default async function PersonPage({
   const workoutNames = await loadWorkoutPlanNames(id);
   const activePause = await loadActivePause(today);
   const classOptions = await loadClassOptions();
+  const subjectNames = await loadSubjectNames();
 
   // Workout board data so a workout on the dashboard opens the same log step
   // as the Workouts page, scoped to each prompt's own day.
@@ -361,6 +362,7 @@ export default async function PersonPage({
         <AddSchoolWork
           userId={person.id}
           classesByUser={classOptions}
+          subjects={subjectNames}
           defaultDate={today}
         />
       </div>

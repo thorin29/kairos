@@ -358,10 +358,11 @@ all live in the database, never in this repository.
       with more detail, including every assignment due on/for it. The badge
       icons only signal that something is due; the overlay is where the specifics
       (which student, which items, due when) are listed. (To be specified.)
-- [ ] Post-class prompt — after a class meeting ends, each member is asked on
+- [x] Post-class prompt — after a class meeting ends, each member is asked on
       their card whether they attended (recorded) and whether work was assigned
-      (any type → adds the item). Per-class, default on with an admin off switch;
-      lingers until answered
+      (any type → adds the item, linked to the class). Per-class, default on with
+      an admin off switch; waits until the meeting ends and lingers until
+      answered (most recent unanswered meeting first, 14-day window) (v0.97.0)
 - [ ] School's own weekly score (part of the scoring rework)
 
 ## Workouts

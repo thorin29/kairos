@@ -603,6 +603,23 @@ function Classes({
           </div>
         )}
 
+        <label className="mt-3 flex items-start gap-2.5 text-sm">
+          <input
+            type="checkbox"
+            name="promptHomework"
+            defaultChecked={editing?.promptHomework ?? true}
+            className="mt-0.5 h-4 w-4 rounded border-hairline accent-accent"
+          />
+          <span>
+            Ask about homework after class
+            <span className="mt-0.5 block text-xs text-muted">
+              After a meeting ends, each student gets a quick attendance and
+              &ldquo;work assigned?&rdquo; check on their dashboard. Turn off for
+              classes that never have homework.
+            </span>
+          </span>
+        </label>
+
         {state.error && <p className="mt-2 text-sm text-red-700">{state.error}</p>}
         <button
           type="submit"

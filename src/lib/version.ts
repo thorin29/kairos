@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.96.0";
+export const APP_VERSION = "0.97.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -59,11 +59,20 @@ export const MIGRATIONS = [
   "49_school_subjects_types",
   "50_class_members",
   "51_school_due_time",
+  "52_class_prompts",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.97.0",
+    summary: [
+      "Post-class prompt: after a class meeting ends, each student gets a quick check on their dashboard \u2014 did you attend, and was work assigned? If so, name it, pick a type and due date, and it\u2019s added as school work linked to the class. Attendance and work are asked separately (you can miss class and still have work). It\u2019s on by default per class, with an off switch in Admin \u2192 School for classes that never have homework, and it waits until the class has actually ended",
+      "The assignment form\u2019s Subject field now picks from your subject pool (with an \u201cOther\u201d option for one-offs), instead of a plain text box",
+      "Clearer wording on the \u201cshow only on the due date\u201d option when adding work, so it\u2019s obvious what checking it does",
+    ],
+  },
   {
     version: "0.96.0",
     summary: [

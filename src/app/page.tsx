@@ -17,7 +17,7 @@ import { loadDaySchedule } from "@/lib/queries/calendar";
 import { deviceMode } from "@/lib/device";
 import { currentUser } from "@/lib/user-session";
 import { pendingSportPrompts, type SportPrompt } from "@/lib/workouts/generate";
-import { loadRolloverState } from "@/lib/queries/school";
+import { loadRolloverState, pendingClassPrompts } from "@/lib/queries/school";
 import { clearPausedTasks } from "@/lib/queries/pauses";
 
 export const dynamic = "force-dynamic";
@@ -109,6 +109,15 @@ export default async function Home({
     : new Set<string>();
   const rolloverReminder = { fromTermName: rollover.fromTerm?.name ?? null };
 
+  // Post-class prompts, grouped onto each student's card.
+  const classPrompts = await pendingClassPrompts(today);
+  const classPromptsByUser = new Map<string, typeof classPrompts>();
+  for (const cp of classPrompts) {
+    const arr = classPromptsByUser.get(cp.userId);
+    if (arr) arr.push(cp);
+    else classPromptsByUser.set(cp.userId, [cp]);
+  }
+
   return (
     <>
       <AppHeader title="Today" subtitle={formatLong(today)} active="home">
@@ -135,6 +144,7 @@ export default async function Home({
             person={p}
             prompts={promptsByUser.get(p.id) ?? []}
             rollover={adminIds.has(p.id) ? rolloverReminder : null}
+            classPrompts={classPromptsByUser.get(p.id) ?? []}
             dateISO={today}
           />
         ))}
