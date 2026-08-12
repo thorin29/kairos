@@ -5,6 +5,7 @@ import { getFamilyColor } from "@/lib/settings";
 import { householdTz } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
 import { CATEGORY_COLORS } from "@/lib/colors";
+import { HOLIDAY_COLOR, holidayEntries } from "@/lib/holidays";
 
 export type GridEvent = {
   id: string;
@@ -169,6 +170,34 @@ async function birthdayEvents(
   }
 
   return events;
+}
+
+/** Enabled US/Texas holidays as family-wide all-day items, computed for the
+ *  years the range touches. Read-only (no stored row), one shared colour. */
+async function holidayEvents(days: string[]): Promise<GridEvent[]> {
+  const entries = await holidayEntries(days);
+  return entries.map((h) => ({
+    id: `holiday-${h.key}-${h.iso}`,
+    title: h.label,
+    location: null,
+    dayISO: h.iso,
+    startMin: 0,
+    endMin: 1440,
+    timeLabel: "All day",
+    allDay: true,
+    color: HOLIDAY_COLOR,
+    isFamily: false,
+    ownerId: "",
+    memberIds: [],
+    shade: false,
+    ownerName: "Holiday",
+    kind: "HOLIDAY",
+    calendarName: null,
+    eventId: "",
+    recurring: true,
+    recurLabel: "Yearly",
+    external: false,
+  }));
 }
 
 /**
@@ -387,6 +416,7 @@ export async function loadRange(
   }
 
   allDay.push(...(await birthdayEvents(days, familyColor)));
+  allDay.push(...(await holidayEvents(days)));
 
   if (includeSchoolWork) {
     const marks = await applySchoolWork(days, userId, timed);
