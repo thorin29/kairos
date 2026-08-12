@@ -162,6 +162,21 @@ export function AddSchoolWork({
             className={`tabular ${FIELD}`}
           />
         </div>
+
+        <div>
+          <label htmlFor="sw-due-time" className="block text-sm font-medium">
+            Due time <span className="text-muted">(optional)</span>
+          </label>
+          <input
+            id="sw-due-time"
+            name="dueTime"
+            type="time"
+            className={`tabular ${FIELD}`}
+          />
+          <p className="mt-1 text-xs text-muted">
+            Sets where it sits on the calendar; leave blank for all-day.
+          </p>
+        </div>
       </div>
 
       <label className="mt-4 flex items-start gap-2.5 text-sm">

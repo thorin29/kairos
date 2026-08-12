@@ -4,6 +4,8 @@ import { fromDateColumn, localParts, toDateColumn, weekDays } from "@/lib/dates"
 import { getFamilyColor } from "@/lib/settings";
 import { householdTz } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
+import { SCHOOL_TYPE_LABEL } from "@/lib/school";
+import { CATEGORY_COLORS } from "@/lib/colors";
 
 export type GridEvent = {
   id: string;
@@ -34,6 +36,9 @@ export type GridEvent = {
   eventId: string;
   recurring: boolean;
   external: boolean;
+  /** Set on synthesized school-work due markers; the work type, for the glyph
+   *  and colour. Null/absent on ordinary events. */
+  schoolType?: string | null;
 };
 
 export type WeekData = {
@@ -194,6 +199,7 @@ function ownerFilter(userId?: string | string[]): object {
 export async function loadRange(
   days: string[],
   userId?: string | string[],
+  includeSchoolWork = false,
 ): Promise<WeekData> {
   const rangeStart = toDateColumn(days[0]);
   const rangeEnd = new Date(
@@ -375,7 +381,124 @@ export async function loadRange(
 
   allDay.push(...(await birthdayEvents(days, familyColor)));
 
+  if (includeSchoolWork) {
+    const marks = await schoolWorkEvents(days, userId);
+    for (const m of marks) {
+      if (m.allDay) allDay.push(m);
+      else timed.push(m);
+    }
+  }
+
   return { days, timed, allDay };
+}
+
+/** Format minutes-from-midnight as a clock label (e.g. 870 → "2:30 PM"). */
+function minuteLabel(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  const d = new Date(Date.UTC(2000, 0, 1, h, m));
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+/**
+ * Pending school work (assignments, tests, homework, projects) placed on the
+ * calendar by due date — a timed block when it has a due time, an all-day chip
+ * otherwise. One shared colour for everyone, so a parent can scan a day for how
+ * much work is piling up. Behind the calendar's "School work" filter; not shown
+ * on the dashboard schedule strip. Respects the person filter.
+ */
+async function schoolWorkEvents(
+  days: string[],
+  userId?: string | string[],
+): Promise<GridEvent[]> {
+  const rangeStart = toDateColumn(days[0]);
+  const rangeEndExclusive = new Date(
+    toDateColumn(days[days.length - 1]).getTime() + 86_400_000,
+  );
+  const daySet = new Set(days);
+
+  const userWhere =
+    userId === undefined
+      ? {}
+      : Array.isArray(userId)
+        ? { userId: { in: userId } }
+        : { userId };
+
+  const tasks = await prisma.task.findMany({
+    where: {
+      category: "SCHOOL",
+      status: "PENDING",
+      dueDate: { gte: rangeStart, lt: rangeEndExclusive },
+      schoolWork: { isNot: null },
+      ...userWhere,
+    },
+    select: {
+      id: true,
+      title: true,
+      userId: true,
+      dueDate: true,
+      user: { select: { name: true, displayName: true } },
+      schoolWork: { select: { type: true, dueMinutes: true } },
+    },
+  });
+
+  const color = CATEGORY_COLORS.SCHOOL;
+  const out: GridEvent[] = [];
+
+  for (const t of tasks) {
+    const dueISO = fromDateColumn(t.dueDate);
+    if (!daySet.has(dueISO)) continue;
+    const sw = t.schoolWork;
+    if (!sw) continue;
+
+    const typeLabel = SCHOOL_TYPE_LABEL[sw.type] ?? "Work";
+    const ownerName = t.user?.displayName ?? t.user?.name ?? "";
+    const base = {
+      title: `${typeLabel}: ${t.title}`,
+      location: null,
+      color,
+      isFamily: false,
+      ownerId: t.userId,
+      memberIds: [t.userId],
+      shade: false,
+      ownerName,
+      kind: "SCHOOLWORK",
+      calendarName: null,
+      eventId: t.id,
+      recurring: false,
+      external: false,
+      schoolType: sw.type as string,
+    };
+
+    if (sw.dueMinutes == null) {
+      out.push({
+        ...base,
+        id: `sw-${t.id}`,
+        dayISO: dueISO,
+        startMin: 0,
+        endMin: 1440,
+        timeLabel: "Due",
+        allDay: true,
+      });
+    } else {
+      const start = Math.max(0, Math.min(1439, sw.dueMinutes));
+      out.push({
+        ...base,
+        id: `sw-${t.id}`,
+        dayISO: dueISO,
+        startMin: start,
+        endMin: Math.min(1440, start + 30),
+        timeLabel: `Due ${minuteLabel(start)}`,
+        allDay: false,
+      });
+    }
+  }
+
+  return out;
 }
 
 /** Everything on one day, for the dashboard strip and the day view. */

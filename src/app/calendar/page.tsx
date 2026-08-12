@@ -26,6 +26,8 @@ import { MonthGrid } from "@/components/month-grid";
 import { MiniMonth } from "@/components/mini-month";
 import { AddEventProvider, AddEventButton } from "./add-event-form";
 import { PersonFilterBadge, FamilyFilterBadge } from "@/components/person-filter";
+import { SchoolIcon } from "@/components/icons";
+import { CATEGORY_COLORS } from "@/lib/colors";
 import { getFamilyColor } from "@/lib/settings";
 import { getCalendarPrefs } from "@/lib/settings";
 
@@ -42,9 +44,15 @@ const VIEWS: { key: View; label: string }[] = [
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; date?: string; who?: string }>;
+  searchParams: Promise<{
+    view?: string;
+    date?: string;
+    who?: string;
+    sw?: string;
+  }>;
 }) {
-  const { view: rawView, date: rawDate, who } = await searchParams;
+  const { view: rawView, date: rawDate, who, sw } = await searchParams;
+  const showSchoolWork = sw === "1";
 
   const today = todayISO();
   const view: View =
@@ -83,7 +91,7 @@ export default async function CalendarPage({
   // compare; loadRange is filtered to match so a person's column only pulls
   // their own (and shared) events.
   const [range, people] = await Promise.all([
-    loadRange(days, filterIds),
+    loadRange(days, filterIds, showSchoolWork),
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -97,11 +105,20 @@ export default async function CalendarPage({
     }),
   ]);
 
-  const link = (p: { view?: View; date?: string; who?: string }) => {
+  const link = (p: {
+    view?: View;
+    date?: string;
+    who?: string;
+    sw?: string;
+  }) => {
     const q = new URLSearchParams();
     if (p.view && p.view !== "week") q.set("view", p.view);
     if (p.date) q.set("date", p.date);
     if (p.who) q.set("who", p.who);
+    // Preserve the School-work filter across navigation; an explicit sw on the
+    // call overrides (the toggle passes "0" to turn it off).
+    const swVal = p.sw !== undefined ? p.sw : showSchoolWork ? "1" : undefined;
+    if (swVal === "1") q.set("sw", "1");
     const s = q.toString();
     return s ? `/calendar?${s}` : "/calendar";
   };
@@ -194,6 +211,30 @@ export default async function CalendarPage({
                 compact
               />
             </div>
+
+            <Link
+              href={link({
+                view,
+                date,
+                who: whoEncoded,
+                sw: showSchoolWork ? "0" : "1",
+              })}
+              className={`inline-flex h-9 items-center gap-2 self-start rounded-full border px-3.5 text-sm font-medium transition-colors ${
+                showSchoolWork
+                  ? "border-transparent text-white"
+                  : "border-hairline text-muted hover:border-accent hover:text-accent"
+              }`}
+              style={
+                showSchoolWork
+                  ? { backgroundColor: CATEGORY_COLORS.SCHOOL }
+                  : undefined
+              }
+              aria-pressed={showSchoolWork}
+              title="Show assignments and tests by due date"
+            >
+              <SchoolIcon className="h-4 w-4" />
+              School work
+            </Link>
           </aside>
 
           <div className="min-w-0 flex-1">

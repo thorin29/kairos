@@ -346,11 +346,14 @@ all live in the database, never in this repository.
       date the next term (pre-filled to follow the last), and tick which prior
       classes to recreate (subject, type, colour, students, meeting carried over
       and re-anchored). Snooze + settable reminder interval (v0.94.0)
-- [ ] School work on the calendar — an optional due time on work; work due on a
-      day its class meets rides the class's calendar block as a per-member badge
-      icon that drops off on completion (so one class + two kids' homework stays
-      one block, not three); other work shows as its own marker. All behind a
-      school filter, in one shared colour, with a distinct glyph per work type
+- [x] School work on the calendar (markers) — a "School work" filter places
+      pending assignments/tests/homework/projects on the calendar by due date,
+      one shared colour, timed when a due time is set else all-day, off by
+      default (v0.95.0)
+- [ ] School work on the calendar (badges) — per-type icons, and work due on a
+      day its class meets rides the class block as a per-student badge that
+      drops off on completion (consolidates a class + its due work into one
+      block instead of several)
 - [ ] Post-class prompt — after a class meeting ends, each member is asked on
       their card whether they attended (recorded) and whether work was assigned
       (any type → adds the item). Per-class, default on with an admin off switch;
