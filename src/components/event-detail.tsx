@@ -19,6 +19,7 @@ const KIND_LABEL: Record<string, string> = {
   BIRTHDAY: "Birthday",
   EXTERNAL: "Subscribed",
   OTHER: "Event",
+  HOLIDAY: "Holiday",
   SCHOOLWORK: "School work",
 };
 
@@ -196,7 +197,7 @@ export function EventDetail({
             <ClassDue eventId={event.eventId} dayISO={event.dayISO} />
           )}
 
-          {readOnly && noEventRow && !isSchoolWork && (
+          {event.kind === "BIRTHDAY" && (
             <p className="mt-3 text-xs text-muted">
               Birthdays are edited on the person&rsquo;s profile.
             </p>

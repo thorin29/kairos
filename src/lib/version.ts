@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.98.0";
+export const APP_VERSION = "0.99.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -65,6 +65,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.99.0",
+    summary: [
+      "Built-in US & Texas holidays \u2014 no subscription needed. They\u2019re computed for every year (so they never stop at year\u2019s end) and show as all-day items in a shared colour. Turn exactly the ones you want on or off in Admin \u2192 Calendar \u2192 Holidays, grouped by Federal / Texas / Religious / Observance / Seasonal",
+      "Marco\u2019s full list is on by default; a few fitting extras (Cinco de Mayo, Ash Wednesday, Palm Sunday, LBJ Day, Cesar Chavez Day, Patriot Day, Tax Day, Grandparents Day) are available to toggle on",
+    ],
+  },
   {
     version: "0.98.0",
     summary: [

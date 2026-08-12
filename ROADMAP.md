@@ -382,6 +382,18 @@ all live in the database, never in this repository.
       answered (most recent unanswered meeting first, 14-day window) (v0.97.0)
 - [ ] School's own weekly score (part of the scoring rework)
 
+## Calendar &amp; holidays
+- [x] Built-in US/Texas holidays — computed from rules for any year (no feed, no
+      year-end cutoff), toggled per-holiday in Admin → Calendar → Holidays,
+      shown as shared-colour all-day items. Marco's list on by default (v0.99.0)
+- [ ] Detail popup in month view — month chips currently jump to the day; give
+      them the same click-to-open detail popup as week/day
+- [ ] Event background images — optional per-kind background art on the event
+      block and detail popup, with a dark scrim so text stays legible and a
+      default fallback. Plumbing first (placeholder), artwork dropped in later
+- [ ] Weather on the calendar/dashboard — daily conditions and temps
+- [ ] Moon phases displayed on the calendar
+
 ## Workouts
 - [x] Workout card pop-out: the opened panel scales up and pulls into focus
       from the tapped side, with the resting card's action icons held softly
