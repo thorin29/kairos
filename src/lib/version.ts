@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.94.1";
+export const APP_VERSION = "0.95.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -58,11 +58,20 @@ export const MIGRATIONS = [
   "48_school_window",
   "49_school_subjects_types",
   "50_class_members",
+  "51_school_due_time",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.95.0",
+    summary: [
+      "School work on the calendar: a new \u201cSchool work\u201d filter (in the calendar sidebar) drops every pending assignment, test, homework and project onto the calendar by due date, in one shared colour, so a parent can see at a glance how loaded a day is. It\u2019s off by default, keeping the scheduling grid clean until you want the overload view",
+      "Assignments can now carry an optional due time \u2014 with one, the item sits as a timed block at that time; without one, it\u2019s an all-day chip",
+      "Fixed: a student who shares a class (but isn\u2019t its owner) can now file work under it, matching the shared-class picker added in 0.93.0",
+    ],
+  },
   {
     version: "0.94.1",
     summary: [

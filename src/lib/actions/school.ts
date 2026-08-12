@@ -52,6 +52,13 @@ export async function addSchoolWork(
   const rawClassId = String(formData.get("classId") ?? "").trim() || null;
   const dateSpecific = formData.get("dateSpecific") != null;
   const rawStart = String(formData.get("startDate") ?? "");
+  // Optional due time, "HH:MM" → minutes from midnight. Blank leaves it null.
+  const rawDueTime = String(formData.get("dueTime") ?? "").trim();
+  let dueMinutes: number | null = null;
+  if (/^\d{2}:\d{2}$/.test(rawDueTime)) {
+    const [dh, dm] = rawDueTime.split(":").map(Number);
+    if (dh >= 0 && dh < 24 && dm >= 0 && dm < 60) dueMinutes = dh * 60 + dm;
+  }
 
   if (!userId) return { error: "Pick who this is for." };
   if (title.length < 2) return { error: "Give the assignment a name." };
@@ -73,14 +80,15 @@ export async function addSchoolWork(
     ? (rawType as SchoolWorkType)
     : "ASSIGNMENT";
 
-  // Only accept a class that belongs to this student.
+  // Only accept a class this student is actually in — the owner or a shared
+  // member (membership, not just ownership, so shared classes work).
   let classId: string | null = null;
   if (rawClassId) {
-    const cls = await prisma.schoolClass.findFirst({
-      where: { id: rawClassId, userId },
-      select: { id: true },
+    const member = await prisma.classMember.findFirst({
+      where: { classId: rawClassId, userId },
+      select: { classId: true },
     });
-    classId = cls?.id ?? null;
+    classId = member?.classId ?? null;
   }
 
   await prisma.task.create({
@@ -96,6 +104,7 @@ export async function addSchoolWork(
           classId,
           dateSpecific,
           startDate: startDate ? toDateColumn(startDate) : null,
+          dueMinutes,
         },
       },
     },
