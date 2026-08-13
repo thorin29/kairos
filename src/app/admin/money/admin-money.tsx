@@ -168,6 +168,12 @@ export function AdminMoney({
             )}
           </h2>
           <div className="flex items-center gap-2">
+            <a
+              href="/admin/money/import"
+              className="inline-flex items-center gap-1.5 rounded-md border border-hairline px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+            >
+              Import CSV
+            </a>
             <button
               type="button"
               onClick={() => setStartFunds(true)}

@@ -77,6 +77,24 @@ export function formatDollars(cents: number): string {
 }
 
 /**
+ * Best-guess a deposit category from free text (an Actual payee or note) so an
+ * import lands rows in the right bucket where it can. Anything with no clear
+ * match becomes OTHER, and the original text is kept as the row's detail — the
+ * admin can always change the category in the review grid.
+ */
+export function guessCategory(text: string | null | undefined): DepositCategory {
+  const t = (text ?? "").toLowerCase();
+  if (/\bbirthday\b|\bb-?day\b/.test(t)) return "BIRTHDAY";
+  if (/\bgift\b|\bpresent\b/.test(t)) return "GIFT";
+  if (/\bholiday\b|christmas|xmas|easter|hanukkah|thanksgiving/.test(t))
+    return "HOLIDAY";
+  if (/\bearn|\bjob\b|\bchore|\bwork\b|allowance|wage|paid\b|pay\b/.test(t))
+    return "EARNINGS";
+  if (/\bbible\b|reading|scripture|memoriz/.test(t)) return "BIBLE";
+  return "OTHER";
+}
+
+/**
  * A typed dollars-and-cents string to whole cents. Tolerates a leading "$",
  * thousands commas, and surrounding space. Returns null for anything that
  * isn't a clean money value, so a bad amount is caught rather than rounded

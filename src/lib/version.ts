@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.101.0";
+export const APP_VERSION = "0.102.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -67,6 +67,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.102.0",
+    summary: [
+      "Money part three \u2014 import a person\u2019s history from a CSV. In Admin \u2192 Money \u2192 Import CSV, pick who it\u2019s for and paste or upload an export from Actual",
+      "Kairos reads Date and Amount (a single signed amount, or Outflow/Inflow), plus optional Payee and Notes; the Account column and blank columns are ignored. Negative amounts become payments, positive ones deposits",
+      "Every row lands in a review grid first: dates, amounts, details, and a category drop-down on deposits are all editable, and a payee that doesn\u2019t match a Kairos category is kept as details with the category set to Other. Imported rows are saved already approved",
+      "Reconcile as you go: enter the expected ending balance and, if the import doesn\u2019t land there, add a one-line adjustment so the balance matches exactly",
+    ],
+  },
   {
     version: "0.101.0",
     summary: [
