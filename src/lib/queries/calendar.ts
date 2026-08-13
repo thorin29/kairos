@@ -254,6 +254,9 @@ export async function loadRange(
     where: {
       AND: [
         ownerFilter(userId),
+        // Tombstones for a deleted single occurrence never render; they only
+        // exist so the parent series skips their date.
+        { cancelled: false },
         {
           OR: [
             // Ordinary events overlapping the window.

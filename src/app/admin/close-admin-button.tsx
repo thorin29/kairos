@@ -10,6 +10,7 @@ const DASHBOARDS = new Set([
   "bible",
   "games",
   "groceries",
+  "money",
 ]);
 
 /** Leaves the admin panel for the matching dashboard without locking, so the

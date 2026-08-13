@@ -349,6 +349,11 @@ model Event {
   // skips that date. The child's own startsAt may differ (a moved occurrence).
   recurrenceDate DateTime? @db.Date
 
+  // A cancelled single occurrence of a repeating series: a child override with
+  // this set to true removes just that date from the parent (the expander
+  // skips it) and never renders itself.
+  cancelled Boolean @default(false)
+
   externalCalendarId String?
   externalCalendar   ExternalCalendar? @relation(fields: [externalCalendarId], references: [id], onDelete: Cascade)
   externalUid        String? // ICS UID, for dedupe across refetches
@@ -378,6 +383,9 @@ model ExternalCalendar {
   url           String // webcal/ICS
   color         String?
   isActive      Boolean   @default(true)
+  // When on, every event from this feed auto-logs a sport workout on its day
+  // for the feed's owner (helpful for a hockey or game schedule).
+  sportWorkout  Boolean   @default(false)
   lastFetchedAt DateTime?
   lastError     String?
 

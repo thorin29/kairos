@@ -77,7 +77,9 @@ export function MonthChip({ event }: { event: GridEvent }) {
             setAnchor(null);
             void copyEvent();
           }}
-          onDelete={() => deleteEvent(event.eventId)}
+          onDelete={(scope) =>
+            deleteEvent(event.eventId, scope, event.dayISO)
+          }
         />
       )}
     </>

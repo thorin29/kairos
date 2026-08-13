@@ -27,6 +27,7 @@ export async function addCalendar(
   const userId = isFamily ? null : owner;
   const name = String(formData.get("name") ?? "").trim().slice(0, 60);
   const rawUrl = String(formData.get("url") ?? "").trim();
+  const sportWorkout = formData.get("sportWorkout") != null;
 
   if (!owner) return { error: "Pick whose calendar this is.", saved: false };
   if (name.length < 2) return { error: "Give it a display name.", saved: false };
@@ -55,7 +56,7 @@ export async function addCalendar(
   }
 
   const created = await prisma.externalCalendar.create({
-    data: { userId, isFamily, name, url },
+    data: { userId, isFamily, name, url, sportWorkout },
   });
 
   // Pull it straight away so the calendar isn't empty after adding.
@@ -88,6 +89,19 @@ export async function removeCalendar(id: string): Promise<void> {
   // Events cascade with the subscription.
   await prisma.externalCalendar.delete({ where: { id } });
   revalidatePath("/calendar");
+}
+
+export async function setCalendarSport(
+  id: string,
+  sportWorkout: boolean,
+): Promise<void> {
+  await requireAdmin();
+  await prisma.externalCalendar.update({
+    where: { id },
+    data: { sportWorkout },
+  });
+  revalidatePath("/calendar");
+  revalidatePath("/");
 }
 
 export async function refreshCalendars(): Promise<void> {

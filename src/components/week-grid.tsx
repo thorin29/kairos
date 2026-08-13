@@ -733,7 +733,9 @@ export function WeekGrid({
             setDetail(null);
             void copyEvent(ev);
           }}
-          onDelete={() => deleteEvent(detail.event.eventId)}
+          onDelete={(scope) =>
+            deleteEvent(detail.event.eventId, scope, detail.event.dayISO)
+          }
         />
       )}
     </>
