@@ -51,8 +51,9 @@ export type Standing = {
 export async function loadStandings(
   fromISO: string,
   toISO: string,
+  opts: { ignoreScoringStart?: boolean } = {},
 ): Promise<Standing[]> {
-  const startISO = await getScoringStart();
+  const startISO = opts.ignoreScoringStart ? null : await getScoringStart();
   const effectiveFrom = startISO && startISO > fromISO ? startISO : fromISO;
 
   // A reset dated after the window means nothing in range counts yet.

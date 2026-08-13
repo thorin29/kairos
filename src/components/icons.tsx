@@ -408,3 +408,21 @@ export function UploadIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+export function FlameIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M12 3c1 2.5 3.5 4 3.5 7a3.5 3.5 0 0 1-7 0c0-1 .3-1.7.8-2.3C9 10 9 11.5 10 12c-.3-3 2-4.5 2-9Z" />
+      <path d="M12 21a6 6 0 0 0 6-6c0-3-2-5-3.2-6.6" />
+      <path d="M12 21a6 6 0 0 1-6-6c0-1.8.7-3.2 1.6-4.4" />
+    </svg>
+  );
+}
+
+export function StarIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.14 1 5.86L12 17l-5.25 2.75 1-5.86L3.5 9.7l5.9-.9L12 3.5Z" />
+    </svg>
+  );
+}
