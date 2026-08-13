@@ -69,6 +69,8 @@ model User {
   eventParticipations EventParticipant[]
   classMemberships ClassMember[]
   classCheckins    ClassCheckin[]
+  moneyEntries     MoneyEntry[]      @relation("MoneyOwner")
+  approvedMoney    MoneyEntry[]      @relation("MoneyApprover")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -941,4 +943,84 @@ model Pause {
   createdAt DateTime  @default(now())
 
   @@index([startDate, endDate])
+}
+
+// ---------------------------------------------------------------------------
+// Money
+//
+// A personal ledger for the people who keep one — birthday money, gifts,
+// earnings, Bible-reading rewards. One row per movement; a person appears on
+// the Money page only if they have at least one row. Balances are summed at
+// read time from every row (pending included), so approval is a verification
+// mark, never a gate on the number.
+// ---------------------------------------------------------------------------
+
+enum MoneyDirection {
+  DEPOSIT // money in  (+)
+  PAYMENT // money out (-)
+}
+
+// The fixed deposit category pool. Payments carry none (they use free text).
+enum MoneyCategory {
+  BIRTHDAY
+  GIFT
+  HOLIDAY
+  EARNINGS
+  BIBLE
+  OTHER
+}
+
+enum MoneyStatus {
+  PENDING
+  APPROVED
+}
+
+// How a row came to be. Drives the label the table shows and keeps the
+// automated Bible rewards idempotent (see periodKey).
+enum MoneyKind {
+  MANUAL // added through the overlay
+  STARTING // the "starting funds" baseline
+  BIBLE_REWARD // per-person monthly reading reward (Phase 2)
+  BIBLE_BONUS // group completion top-up (Phase 2)
+  IMPORT // brought in from a CSV (Phase 3)
+}
+
+model MoneyEntry {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("MoneyOwner", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Date only — a transaction lands on a day, not an instant. Defaults to the
+  // day it was entered, but the person can back-date it.
+  date DateTime @db.Date
+
+  direction MoneyDirection
+  // Only meaningful for deposits; null for payments.
+  category  MoneyCategory?
+  // Free text: extra detail on a deposit, or the whole description of a payment.
+  detail    String?
+
+  // Always a positive magnitude in whole cents; direction supplies the sign.
+  // Integer cents avoids float drift on a running balance.
+  amountCents Int
+
+  status MoneyStatus @default(PENDING)
+  kind   MoneyKind   @default(MANUAL)
+
+  // "YYYY-MM" for reward/bonus rows, so a month can never be paid twice.
+  // Null for everything else.
+  periodKey String?
+
+  createdById  String?
+  approvedById String?
+  approvedBy   User?     @relation("MoneyApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@index([status])
+  // One reward and one bonus per person per month, at most.
+  @@unique([userId, kind, periodKey])
 }

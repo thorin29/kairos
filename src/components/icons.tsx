@@ -389,3 +389,12 @@ export function SchoolTypeIcon({
       return <AssignmentIcon className={className} />;
   }
 }
+
+export function DollarIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <line x1="12" y1="2" x2="12" y2="22" />
+      <path d="M17 5.5H9.75a3.25 3.25 0 0 0 0 6.5h4.5a3.25 3.25 0 0 1 0 6.5H6.5" />
+    </svg>
+  );
+}

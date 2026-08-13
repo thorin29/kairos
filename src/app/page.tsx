@@ -18,6 +18,7 @@ import { deviceMode } from "@/lib/device";
 import { currentUser } from "@/lib/user-session";
 import { pendingSportPrompts, type SportPrompt } from "@/lib/workouts/generate";
 import { loadRolloverState, pendingClassPrompts } from "@/lib/queries/school";
+import { pendingMoneyCount } from "@/lib/queries/money";
 import { clearPausedTasks } from "@/lib/queries/pauses";
 
 export const dynamic = "force-dynamic";
@@ -109,6 +110,21 @@ export default async function Home({
     : new Set<string>();
   const rolloverReminder = { fromTermName: rollover.fromTerm?.name ?? null };
 
+  // Transactions waiting on an admin ride every admin's card too, cleared for
+  // all at once when approved.
+  const moneyPending = await pendingMoneyCount();
+  const moneyAdminIds =
+    moneyPending > 0
+      ? new Set(
+          (
+            await prisma.user.findMany({
+              where: { role: "ADMIN", isActive: true },
+              select: { id: true },
+            })
+          ).map((u) => u.id),
+        )
+      : new Set<string>();
+
   // Post-class prompts, grouped onto each student's card.
   const classPrompts = await pendingClassPrompts(today);
   const classPromptsByUser = new Map<string, typeof classPrompts>();
@@ -144,6 +160,7 @@ export default async function Home({
             person={p}
             prompts={promptsByUser.get(p.id) ?? []}
             rollover={adminIds.has(p.id) ? rolloverReminder : null}
+            moneyPending={moneyAdminIds.has(p.id) ? moneyPending : 0}
             classPrompts={classPromptsByUser.get(p.id) ?? []}
             dateISO={today}
           />
