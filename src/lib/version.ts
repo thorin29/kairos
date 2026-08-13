@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.105.0";
+export const APP_VERSION = "0.106.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -63,11 +63,21 @@ export const MIGRATIONS = [
   "53_money_entries",
   "54_bible_rewards",
   "55_calendar_sport_and_cancel",
+  "56_task_weight",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.106.0",
+    summary: [
+      "Scoring rework, part one \u2014 the scoreboard is now a fair \u201cwhat you finished vs. what you were handed\u201d score instead of a raw count. Everyone can reach 100%, so being given more or harder work can\u2019t sink you; heavier chores (by their effort weight) simply count for more of your own total",
+      "The Summary page now shows a month-in-progress leader (the month\u2019s winner is crowned at month end), a this-week board with a per-category breakdown (Chores, Workouts, Bible, School, Tasks), and back/forward arrows to look at past months",
+      "School now counts toward scores \u2014 with no school work assigned it changes nothing, but assignments and tests will start to matter as the term begins. Workouts, Bible reading and school stay flat (the point is doing them); only chores, and any admin-weighted one-off task, carry effort",
+      "Admin \u2192 Setup: the \u201ccount scores from\u201d date box is replaced by a single \u201cReset from today\u201d button (with a confirm). It starts everyone even from today and clears the overdue-chore backlog, while leaving every schedule, assignment, workout, streak, badge, reward and the money ledger untouched \u2014 a clean family reset after testing or an unplanned break",
+    ],
+  },
   {
     version: "0.105.0",
     summary: [

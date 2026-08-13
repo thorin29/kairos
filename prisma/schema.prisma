@@ -250,6 +250,11 @@ model Task {
   status      TaskStatus @default(PENDING)
   completedAt DateTime?
 
+  // Optional effort weight for a hand-added task (1..5). Chores carry their
+  // own effort on the Chore row; this is only for one-offs an admin wants to
+  // weight. Null scores as the default of 1 — most tasks are just "do it".
+  weight Int?
+
   // Never rewrite dueDate to roll a task forward — overdue is a display
   // rule (dueDate <= today AND status = PENDING), so history stays intact.
 
