@@ -6,7 +6,7 @@ import { AdminBack } from "@/components/admin-back";
 import { AdminPinControls } from "./admin-pin-controls";
 import { AdminToggle } from "./admin-toggle";
 import { FamilyColorPicker } from "./family-color-picker";
-import { ScoringStartForm } from "./scoring-start-form";
+import { ResetScoringButton } from "./reset-scoring-button";
 import { getScoringStart } from "@/lib/settings";
 import { listAccounts } from "@/lib/accounts";
 import { AccountRow } from "./account-row";
@@ -124,7 +124,7 @@ export default async function SetupPage() {
 
           <section className="mt-10">
             <SectionHeading>Scoring</SectionHeading>
-            <ScoringStartForm current={scoringStart} />
+            <ResetScoringButton current={scoringStart} />
           </section>
 
           <p className="mt-6 text-sm text-muted">

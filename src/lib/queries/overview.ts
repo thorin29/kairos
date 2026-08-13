@@ -115,9 +115,9 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
       };
     });
 
-    // School is tracked but not scored yet — its category line still shows,
-    // but it stays out of the overall total/percent until scoring is reworked.
-    const scored = categories.filter((c) => c.category !== Category.SCHOOL);
+    // School now counts toward the score (the scoring rework turned it on).
+    // With no school work assigned it simply contributes nothing.
+    const scored = categories;
     const total = scored.reduce((n, c) => n + c.total, 0);
     const complete = scored.reduce((n, c) => n + c.complete, 0);
     const overdue = scored.reduce((n, c) => n + c.overdue, 0);
