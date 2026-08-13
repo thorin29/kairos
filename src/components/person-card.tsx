@@ -15,6 +15,7 @@ export function PersonCard({
   prompts = [],
   rollover = null,
   moneyPending = 0,
+  moneyBibleRewards = 0,
   classPrompts = [],
   dateISO,
 }: {
@@ -22,6 +23,7 @@ export function PersonCard({
   prompts?: Prompt[];
   rollover?: { fromTermName: string | null } | null;
   moneyPending?: number;
+  moneyBibleRewards?: number;
   classPrompts?: ClassPromptItem[];
   dateISO: string;
 }) {
@@ -98,10 +100,13 @@ export function PersonCard({
       {(prompts.length > 0 ||
         rollover ||
         moneyPending > 0 ||
+        moneyBibleRewards > 0 ||
         classPrompts.length > 0) && (
         <div className="relative z-[1] mt-4 space-y-3">
           {rollover && <RolloverReminder fromTermName={rollover.fromTermName} />}
-          {moneyPending > 0 && <MoneyReminder count={moneyPending} />}
+          {(moneyPending > 0 || moneyBibleRewards > 0) && (
+            <MoneyReminder count={moneyPending} bibleRewards={moneyBibleRewards} />
+          )}
           {classPrompts.length > 0 && (
             <ClassPrompts prompts={classPrompts} today={dateISO} />
           )}

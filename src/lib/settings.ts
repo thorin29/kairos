@@ -10,6 +10,10 @@ export const CAL_BLOCK_MINUTES = "calendar.blockMinutes";
 export const WORKOUT_OVERDUE_DAYS = "workout.overdueDays";
 export const SCHOOL_ROLLOVER_INTERVAL = "school.rolloverIntervalDays";
 export const SCHOOL_ROLLOVER_SNOOZE = "school.rolloverSnoozeUntil";
+export const BIBLE_BONUS_CENTS = "money.bibleBonusCents";
+export const BIBLE_GRACE_DAYS = "money.bibleGraceDays";
+export const BIBLE_GRACE_DEFAULT = 3;
+export const BIBLE_GRACE_MAX = 31;
 export const ROLLOVER_INTERVAL_DEFAULT = 7;
 export const ROLLOVER_INTERVAL_MAX = 90;
 
@@ -90,6 +94,24 @@ export async function getRolloverIntervalDays(): Promise<number> {
   const n = Number.parseInt(raw ?? "", 10);
   if (!Number.isFinite(n)) return ROLLOVER_INTERVAL_DEFAULT;
   return Math.min(ROLLOVER_INTERVAL_MAX, Math.max(1, n));
+}
+
+/** The household-wide group-completion bonus (whole cents) added on top of
+ *  each person's base Bible reward when everyone opted-in finishes within
+ *  grace. */
+export async function getBibleBonusCents(): Promise<number> {
+  const raw = await getSetting(BIBLE_BONUS_CENTS);
+  const n = Number.parseInt(raw ?? "", 10);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+/** Days after a month ends during which finishing still counts toward the
+ *  group bonus. Clamped to a sane range. */
+export async function getBibleGraceDays(): Promise<number> {
+  const raw = await getSetting(BIBLE_GRACE_DAYS);
+  const n = Number.parseInt(raw ?? "", 10);
+  if (!Number.isFinite(n)) return BIBLE_GRACE_DEFAULT;
+  return Math.min(BIBLE_GRACE_MAX, Math.max(0, n));
 }
 
 export async function setSetting(key: string, value: string): Promise<void> {

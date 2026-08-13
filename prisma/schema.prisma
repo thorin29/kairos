@@ -50,6 +50,12 @@ model User {
   sortOrder   Int     @default(0)
   isActive    Boolean @default(true)
 
+  // Money: whether this person earns a reward for finishing a month's Bible
+  // reading, and how much (in whole cents). Off by default; the household-wide
+  // group bonus and grace period live in AppSetting.
+  bibleRewardEnabled Boolean @default(false)
+  bibleRewardCents   Int     @default(0)
+
   gameProfile     GameProfile?
   gameSessions    GameSession[]
   tasks           Task[]         @relation("TaskOwner")

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.100.0";
+export const APP_VERSION = "0.101.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -61,11 +61,21 @@ export const MIGRATIONS = [
   "51_school_due_time",
   "52_class_prompts",
   "53_money_entries",
+  "54_bible_rewards",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.101.0",
+    summary: [
+      "Money part two \u2014 automated Bible-reading rewards. In Admin \u2192 Money, tick who earns money for finishing a month\u2019s reading and set each person\u2019s amount, plus a household group bonus and a grace period",
+      "When someone finishes every Bible reading due in a month, an approval appears on each admin\u2019s dashboard card and in Admin \u2192 Money. Approve it and an auto-approved reward lands on their ledger. If everyone who\u2019s ticked finishes within the grace period after the month ends, one \u201cApprove all + bonus\u201d grants base plus bonus to all of them at once",
+      "Bible reading never pauses, so a vacation doesn\u2019t shrink what a month needs; rewards can still be granted late (up to six months back), just without the group bonus once the grace window has passed",
+      "Setting starting funds moved to Admin \u2192 Money (admin-only) and is now approved automatically",
+    ],
+  },
   {
     version: "0.100.0",
     summary: [

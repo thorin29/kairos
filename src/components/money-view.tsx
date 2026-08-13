@@ -3,7 +3,6 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import {
   addMoneyEntry,
-  setStartingFunds,
   type MoneyActionState,
 } from "@/lib/actions/money";
 import {
@@ -29,7 +28,6 @@ export function MoneyView({
   selectedName,
   today,
   rows,
-  hasStarting,
   emptyMode = false,
 }: {
   roster: { id: string; name: string }[];
@@ -38,10 +36,9 @@ export function MoneyView({
   balanceCents?: number;
   today: string;
   rows: MoneyRow[];
-  hasStarting: boolean;
   emptyMode?: boolean;
 }) {
-  const [overlay, setOverlay] = useState<null | "add" | "start">(null);
+  const [overlay, setOverlay] = useState<null | "add">(null);
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -75,17 +72,6 @@ export function MoneyView({
           <PlusIcon className="h-4 w-4" />
           Add transaction
         </button>
-
-        {(emptyMode || (selectedId && !hasStarting)) && (
-          <button
-            type="button"
-            onClick={() => setOverlay("start")}
-            className="inline-flex items-center gap-1.5 rounded-md border border-hairline px-3 py-2 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
-          >
-            <DollarIcon className="h-4 w-4" />
-            Set starting funds
-          </button>
-        )}
 
         {!emptyMode && (
           <div className="ml-auto flex items-center gap-2">
@@ -187,15 +173,6 @@ export function MoneyView({
         <AddOverlay
           roster={roster}
           defaultUser={selectedId ?? roster[0]?.id ?? ""}
-          today={today}
-          onClose={() => setOverlay(null)}
-        />
-      )}
-      {overlay === "start" && (
-        <StartingOverlay
-          roster={roster}
-          defaultUser={selectedId ?? roster[0]?.id ?? ""}
-          fixedName={emptyMode ? null : selectedName}
           today={today}
           onClose={() => setOverlay(null)}
         />
@@ -364,105 +341,6 @@ function AddOverlay({
         {state.error && (
           <p className="text-sm text-red-600">{state.error}</p>
         )}
-
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
-        >
-          {pending ? "Saving\u2026" : "Submit"}
-        </button>
-      </form>
-    </Modal>
-  );
-}
-
-function StartingOverlay({
-  roster,
-  defaultUser,
-  fixedName,
-  today,
-  onClose,
-}: {
-  roster: { id: string; name: string }[];
-  defaultUser: string;
-  fixedName: string | null;
-  today: string;
-  onClose: () => void;
-}) {
-  const [state, action, pending] = useActionState(setStartingFunds, initial);
-  const done = useRef(false);
-
-  useEffect(() => {
-    if (!pending && state.ok && !done.current) {
-      done.current = true;
-      onClose();
-    }
-  }, [pending, state, onClose]);
-
-  return (
-    <Modal title="Set starting funds" onClose={onClose}>
-      <form action={action} className="space-y-4">
-        <p className="text-sm text-muted">
-          The balance already in hand before this ledger begins. Shown as a
-          &ldquo;Starting funds&rdquo; line.
-        </p>
-
-        {fixedName ? (
-          <>
-            <input type="hidden" name="userId" value={defaultUser} />
-            <p className="text-sm">
-              For <span className="font-medium">{fixedName}</span>
-            </p>
-          </>
-        ) : (
-          <div>
-            <label htmlFor="s-user" className={LABEL}>
-              For
-            </label>
-            <select
-              id="s-user"
-              name="userId"
-              defaultValue={defaultUser}
-              className={FIELD}
-            >
-              {roster.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="s-date" className={LABEL}>
-              As of
-            </label>
-            <input
-              id="s-date"
-              type="date"
-              name="date"
-              defaultValue={today}
-              className={FIELD}
-            />
-          </div>
-          <div>
-            <label htmlFor="s-amount" className={LABEL}>
-              Amount (USD)
-            </label>
-            <input
-              id="s-amount"
-              name="amount"
-              inputMode="decimal"
-              placeholder="0.00"
-              className={FIELD}
-            />
-          </div>
-        </div>
-
-        {state.error && <p className="text-sm text-red-600">{state.error}</p>}
 
         <button
           type="submit"
