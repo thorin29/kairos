@@ -76,6 +76,15 @@ export function formatDollars(cents: number): string {
   return sign + (Math.abs(cents) / 100).toFixed(2);
 }
 
+/** Comma-grouped, two decimals, no dollar sign — e.g. "1,605.81" — for the
+ *  amounts beside each name in the side rail. Negative shows a leading minus. */
+export function formatAmountGrouped(cents: number): string {
+  return (cents / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 /**
  * Best-guess a deposit category from free text (an Actual payee or note) so an
  * import lands rows in the right bucket where it can. Anything with no clear
