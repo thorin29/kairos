@@ -27,7 +27,6 @@ export default async function MoneyPage({
   });
 
   const selected = participants.find((p) => p.id === selectedId) ?? null;
-  const hasStarting = rows.some((r) => r.kind === "STARTING");
   const today = todayISO();
 
   return (
@@ -53,7 +52,6 @@ export default async function MoneyPage({
                 balanceCents={0}
                 today={today}
                 rows={[]}
-                hasStarting={false}
                 emptyMode
               />
             </div>
@@ -113,7 +111,6 @@ export default async function MoneyPage({
                 balanceCents={selected?.balanceCents ?? 0}
                 today={today}
                 rows={rows}
-                hasStarting={hasStarting}
               />
             </section>
           </div>

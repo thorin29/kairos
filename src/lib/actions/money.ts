@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireInteractive } from "@/lib/gate";
-import { requireAdmin, isAdmin } from "@/lib/session";
+import { requireAdmin, currentAdmin, isAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import {
@@ -102,7 +102,9 @@ export async function setStartingFunds(
   _prev: MoneyActionState,
   fd: FormData,
 ): Promise<MoneyActionState> {
-  await requireInteractive();
+  if (!(await isAdmin())) {
+    return { error: "Only an admin can set starting funds." };
+  }
 
   const userId = String(fd.get("userId") ?? "").trim();
   if (!userId) return { error: "Pick who this is for." };
@@ -118,6 +120,7 @@ export async function setStartingFunds(
     return { error: "Starting funds are already set for this person." };
   }
 
+  const admin = await currentAdmin();
   await prisma.moneyEntry.create({
     data: {
       userId,
@@ -127,7 +130,9 @@ export async function setStartingFunds(
       detail: null,
       amountCents,
       kind: "STARTING",
-      status: "PENDING",
+      status: "APPROVED",
+      approvedById: admin?.id ?? null,
+      approvedAt: new Date(),
     },
   });
 

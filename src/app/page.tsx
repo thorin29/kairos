@@ -19,6 +19,7 @@ import { currentUser } from "@/lib/user-session";
 import { pendingSportPrompts, type SportPrompt } from "@/lib/workouts/generate";
 import { loadRolloverState, pendingClassPrompts } from "@/lib/queries/school";
 import { pendingMoneyCount } from "@/lib/queries/money";
+import { pendingBibleRewards } from "@/lib/bible-rewards";
 import { clearPausedTasks } from "@/lib/queries/pauses";
 
 export const dynamic = "force-dynamic";
@@ -111,10 +112,11 @@ export default async function Home({
   const rolloverReminder = { fromTermName: rollover.fromTerm?.name ?? null };
 
   // Transactions waiting on an admin ride every admin's card too, cleared for
-  // all at once when approved.
+  // all at once when approved. Bible-reading rewards ready to grant do the same.
   const moneyPending = await pendingMoneyCount();
+  const bibleRewardsReady = (await pendingBibleRewards(today)).count;
   const moneyAdminIds =
-    moneyPending > 0
+    moneyPending > 0 || bibleRewardsReady > 0
       ? new Set(
           (
             await prisma.user.findMany({
@@ -161,6 +163,7 @@ export default async function Home({
             prompts={promptsByUser.get(p.id) ?? []}
             rollover={adminIds.has(p.id) ? rolloverReminder : null}
             moneyPending={moneyAdminIds.has(p.id) ? moneyPending : 0}
+            moneyBibleRewards={moneyAdminIds.has(p.id) ? bibleRewardsReady : 0}
             classPrompts={classPromptsByUser.get(p.id) ?? []}
             dateISO={today}
           />
