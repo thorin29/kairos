@@ -30,7 +30,7 @@ import {
   rowLabel,
   signedCents,
 } from "@/lib/money";
-import { formatShort } from "@/lib/dates";
+import { formatShortYear } from "@/lib/dates";
 import { CheckIcon, PencilIcon, TrashIcon, DollarIcon, BookIcon } from "@/components/icons";
 import type { AdminMoneyRow } from "@/lib/queries/money";
 import type { RewardConfig, RewardMonth } from "@/lib/bible-rewards";
@@ -210,7 +210,7 @@ export function AdminMoney({
                   {r.userName}
                 </span>
                 <span className="tabular w-14 shrink-0 text-sm text-muted">
-                  {formatShort(r.date)}
+                  {formatShortYear(r.date)}
                 </span>
                 <span
                   className="min-w-0 flex-1 truncate text-sm"
@@ -279,7 +279,7 @@ export function AdminMoney({
                   >
                     <td className="px-3 py-2.5 font-medium">{r.userName}</td>
                     <td className="tabular whitespace-nowrap px-3 py-2.5 text-muted">
-                      {formatShort(r.date)}
+                      {formatShortYear(r.date)}
                     </td>
                     <td
                       className="max-w-[16rem] truncate px-3 py-2.5"

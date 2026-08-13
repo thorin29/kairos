@@ -114,6 +114,26 @@ export async function balancesRecord(): Promise<Record<string, number>> {
   return out;
 }
 
+/** The payment descriptions used most often, for a quick-pick above the
+ *  details field. Tallied in JS (rather than groupBy) so it stays simple and
+ *  dodges the stale-client typing issues groupBy _count hits in the sandbox. */
+export async function frequentPaymentLabels(limit = 10): Promise<string[]> {
+  const rows = await prisma.moneyEntry.findMany({
+    where: { direction: "PAYMENT", detail: { not: null } },
+    select: { detail: true },
+  });
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    const d = (r.detail ?? "").trim();
+    if (!d) continue;
+    counts.set(d, (counts.get(d) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([label]) => label);
+}
+
 /** Count of rows still awaiting approval — drives the admin dashboard flag. */
 export async function pendingMoneyCount(): Promise<number> {
   return prisma.moneyEntry.count({ where: { status: "PENDING" } });

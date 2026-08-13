@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
-import { loadMoneyPage } from "@/lib/queries/money";
+import { loadMoneyPage, frequentPaymentLabels } from "@/lib/queries/money";
 import { todayISO } from "@/lib/dates";
 import { formatDollars, formatAmountGrouped } from "@/lib/money";
 import { MoneyView } from "@/components/money-view";
@@ -25,6 +25,7 @@ export default async function MoneyPage({
     orderBy: { sortOrder: "asc" },
     select: { id: true, name: true },
   });
+  const frequentPayments = await frequentPaymentLabels();
 
   const selected = participants.find((p) => p.id === selectedId) ?? null;
   const today = todayISO();
@@ -51,6 +52,7 @@ export default async function MoneyPage({
                 selectedName={null}
                 balanceCents={0}
                 today={today}
+                frequentPayments={frequentPayments}
                 rows={[]}
                 emptyMode
               />
@@ -123,6 +125,7 @@ export default async function MoneyPage({
                 selectedName={selected?.name ?? null}
                 balanceCents={selected?.balanceCents ?? 0}
                 today={today}
+                frequentPayments={frequentPayments}
                 rows={rows}
               />
             </section>
