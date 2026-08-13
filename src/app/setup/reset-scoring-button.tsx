@@ -9,24 +9,24 @@ export function ResetScoringButton({ current }: { current: string | null }) {
 
   const confirmText =
     "Start fresh from today?\n\n" +
-    "This clears the overdue-chore backlog and counts scores from today " +
-    "forward. Streaks, badges, rewards, schedules and assignments are all " +
-    "kept — nothing is deleted. This can't be undone.";
+    "This counts scores from today forward, clears the overdue-chore backlog, " +
+    "and starts streaks and badges over. Schedules, assignments and the money " +
+    "ledger are all kept — nothing is deleted. This can't be undone.";
 
   return (
     <div className="rounded-2xl border border-hairline bg-surface p-5">
       <p className="text-sm font-medium">Reset scoring</p>
       <p className="mt-2 text-sm text-muted">
         {current
-          ? `Scores currently count from ${formatLong(current)}.`
-          : "Scores currently count everything so far."}
+          ? `Scores, streaks and badges currently count from ${formatLong(current)}.`
+          : "Scores, streaks and badges currently count everything so far."}
       </p>
       <p className="mt-2 max-w-xl text-sm text-muted">
-        Starts everyone even from today and clears out overdue chores, without
-        changing any schedules, assignments or workouts. Streaks, badges,
-        rewards and the money ledger all carry over &mdash; nothing is deleted.
-        Good for after a testing period, or a fresh start following an unplanned
-        break.
+        Starts everyone even from today: scores begin fresh, the overdue-chore
+        backlog is cleared, and streaks and badges start over. Schedules,
+        assignments, workouts and the money ledger are untouched &mdash; nothing
+        is deleted. Good for after a testing period, or a fresh start following
+        an unplanned break.
       </p>
 
       <button

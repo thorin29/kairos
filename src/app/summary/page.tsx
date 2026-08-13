@@ -1,4 +1,5 @@
-import { loadStandings, rankStandings, type Standing } from "@/lib/queries/standings";
+import { loadStandings, type Standing } from "@/lib/queries/standings";
+import { loadBonuses, type PersonBonus } from "@/lib/queries/bonus";
 import { loadAchievements, type PersonAchievements } from "@/lib/queries/achievements";
 import { getScoringStart } from "@/lib/settings";
 import {
@@ -46,25 +47,37 @@ export default async function SummaryPage({
   const week = weekDays(today);
   const weekStart = week[0];
 
-  // The live board respects the scoring window (a reset freshens it). Past
-  // months are history: shown from raw completions, which is where the
-  // trophies live and why a reset never erases them.
-  const [monthStandings, weekStandings, achievements, since] = await Promise.all([
-    loadStandings(monthStart, monthEnd, { ignoreScoringStart: !isCurrentMonth }),
-    isCurrentMonth ? loadStandings(weekStart, today) : Promise.resolve([]),
-    loadAchievements(),
-    getScoringStart(),
-  ]);
+  // One fresh-start line governs everything: the live board, past months, and
+  // the achievements. A reset moves it, so scores, streaks and badges all
+  // clear together from that point.
+  const [monthStandings, weekStandings, monthBonus, weekBonus, achievements, since] =
+    await Promise.all([
+      loadStandings(monthStart, monthEnd),
+      isCurrentMonth ? loadStandings(weekStart, today) : Promise.resolve([]),
+      loadBonuses(monthStart, monthEnd),
+      isCurrentMonth ? loadBonuses(weekStart, today) : Promise.resolve(new Map()),
+      loadAchievements(),
+      getScoringStart(),
+    ]);
 
-  const monthRanked = rankStandings(monthStandings);
-  const weekRanked = rankStandings(weekStandings);
+  const monthRanked = rankWithBonus(monthStandings, monthBonus);
+  const weekRanked = rankWithBonus(weekStandings, weekBonus);
 
   const streaks = new Map(achievements.map((a) => [a.id, a.currentStreak]));
 
+  // The leader is the top score, then the most initiative bonus among those
+  // tied on it — which is what separates a board sitting at 100%.
   const topScore = monthRanked.find((s) => s.percent != null);
-  const winners = topScore
+  const topTier = topScore
     ? monthRanked.filter((s) => s.percent === topScore.percent)
     : [];
+  const topBonus = topTier.reduce(
+    (m, s) => Math.max(m, monthBonus.get(s.id)?.total ?? 0),
+    0,
+  );
+  const winners = topTier.filter(
+    (s) => (monthBonus.get(s.id)?.total ?? 0) === topBonus,
+  );
 
   const prevMonth = addMonths(monthStart, -1).slice(0, 7);
   const nextMonth = addMonths(monthStart, 1).slice(0, 7);
@@ -115,17 +128,21 @@ export default async function SummaryPage({
                   : `Winner of ${formatMonth(monthStart)}`}
             </p>
             <div className="flex flex-wrap items-center gap-5">
-              {winners.map((s) => (
-                <div key={s.id} className="flex items-center gap-3">
-                  <Avatar name={s.name} color={s.color} avatarPath={s.avatarPath} size="lg" />
-                  <div>
-                    <p className="font-display text-xl font-semibold">{s.name}</p>
-                    <p className="tabular text-sm text-muted">
-                      {pct(s.percent)} of their work done
-                    </p>
+              {winners.map((s) => {
+                const b = monthBonus.get(s.id)?.total ?? 0;
+                return (
+                  <div key={s.id} className="flex items-center gap-3">
+                    <Avatar name={s.name} color={s.color} avatarPath={s.avatarPath} size="lg" />
+                    <div>
+                      <p className="font-display text-xl font-semibold">{s.name}</p>
+                      <p className="tabular text-sm text-muted">
+                        {pct(s.percent)} of their work done
+                        {b > 0 && <span className="text-orange-600"> &middot; +{b} bonus</span>}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             {isCurrentMonth && (
               <p className="mt-4 text-xs text-muted">
@@ -142,17 +159,25 @@ export default async function SummaryPage({
         )}
 
         {/* Month standings table */}
-        <StandingsTable rows={monthRanked} />
+        <StandingsTable rows={monthRanked} bonus={monthBonus} />
 
         {/* This week */}
         {isCurrentMonth && (
           <>
             <SectionHeading>This week</SectionHeading>
-            <StandingsTable rows={weekRanked} streaks={streaks} showGroups />
+            <StandingsTable
+              rows={weekRanked}
+              bonus={weekBonus}
+              streaks={streaks}
+              showGroups
+            />
             <p className="mt-3 text-xs text-muted">
               Week runs Sunday&ndash;Saturday. A category shows a dash until
               something in it is assigned. Missing a chore (letting it expire)
-              dips the score; being late but catching up doesn&rsquo;t.
+              dips the score; being late but catching up doesn&rsquo;t. A{" "}
+              <span className="text-orange-600">+bonus</span> is initiative
+              points &mdash; getting ahead on a chore, or grabbing a shared one
+              quickly.
             </p>
           </>
         )}
@@ -169,24 +194,29 @@ export default async function SummaryPage({
 
 function StandingsTable({
   rows,
+  bonus,
   streaks,
   showGroups = false,
 }: {
   rows: Standing[];
+  bonus?: Map<string, PersonBonus>;
   streaks?: Map<string, number>;
   showGroups?: boolean;
 }) {
+  const anyBonus = rows.some((s) => (bonus?.get(s.id)?.total ?? 0) > 0);
   return (
     <Card className="mb-8 divide-y divide-hairline">
       <div className="flex items-center gap-3 px-5 py-2.5 text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
         <span className="flex-1">Person</span>
         <span className="w-16 text-right">Done</span>
         <span className="w-16 text-right">Assigned</span>
+        {anyBonus && <span className="w-14 text-right">Bonus</span>}
         <span className="w-14 text-right">Score</span>
       </div>
 
       {rows.map((s) => {
         const streak = streaks?.get(s.id) ?? 0;
+        const b = bonus?.get(s.id)?.total ?? 0;
         return (
           <div key={s.id} className="px-5 py-3">
             <div className="flex items-center gap-3">
@@ -209,6 +239,15 @@ function StandingsTable({
               <span className="tabular w-16 text-right text-sm text-muted">
                 {s.assigned}
               </span>
+              {anyBonus && (
+                <span
+                  className={`tabular w-14 text-right text-sm ${
+                    b > 0 ? "font-medium text-orange-600" : "text-muted"
+                  }`}
+                >
+                  {b > 0 ? `+${b}` : "\u2013"}
+                </span>
+              )}
               <span
                 className={`tabular w-14 text-right text-sm font-semibold ${
                   s.percent == null
@@ -237,6 +276,20 @@ function StandingsTable({
         );
       })}
     </Card>
+  );
+}
+
+/** Rank by the fairness score, then by initiative bonus among those tied on
+ *  it, then by raw effort done — bonuses are what separate a board at 100%. */
+function rankWithBonus(
+  standings: Standing[],
+  bonus: Map<string, PersonBonus>,
+): Standing[] {
+  return [...standings].sort(
+    (a, b) =>
+      (b.percent ?? -1) - (a.percent ?? -1) ||
+      (bonus.get(b.id)?.total ?? 0) - (bonus.get(a.id)?.total ?? 0) ||
+      b.complete - a.complete,
   );
 }
 

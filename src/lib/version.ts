@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.107.0";
+export const APP_VERSION = "0.108.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -69,6 +69,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.108.0",
+    summary: [
+      "Scoring rework, part three \u2014 initiative bonuses. On your own page, a \u201cGet ahead\u201d list now offers upcoming chores you can knock out early for a small bonus. You\u2019re only offered ones you\u2019re next up for, so you can\u2019t jump ahead of someone whose turn comes first",
+      "Getting a chore done before its due date earns a slight, effort-scaled bump (a heavier chore is worth a touch more), flat no matter how early. The chore still counts toward its own week \u2014 the bonus is on top, in the week you actually did it",
+      "Grabbing a shared, up-for-grabs chore quickly earns a promptness bonus: full the day it\u2019s available (or before), half a day later, nothing after that. Sooner is better",
+      "The Summary board shows each person\u2019s bonus points, and they\u2019re the tiebreak that separates a family sitting at 100% \u2014 same fairness score, whoever showed the most initiative leads",
+      "Reset now also clears streaks and badges. It was keeping them across a reset; since a testing period leaves inflated streaks and badges behind, \u201cReset from today\u201d now starts scores, streaks and badges over together. The money ledger, schedules and assignments are still untouched",
+    ],
+  },
   {
     version: "0.107.0",
     summary: [

@@ -12,6 +12,7 @@ import {
 } from "@/lib/dates";
 import { isStale, loadStaleContext, type StaleInput } from "@/lib/chores/stale";
 import { loadStandings, rankStandings } from "@/lib/queries/standings";
+import { getScoringStart } from "@/lib/settings";
 import {
   computeStreaks,
   earnedMilestones,
@@ -40,10 +41,16 @@ const MONTH_LOOKBACK = 24;
  * history — never the scoring window. That's deliberate: a reset moves the
  * scoreboard's start but leaves what actually happened intact, so streaks,
  * perfect weeks and past crowns all survive it.
+ *
+ * ...except the fresh-start line does apply: a reset moves it to today, and
+ * from that point streaks, perfect weeks/months and past crowns all start
+ * over — so a testing period can be wiped along with the scores it produced.
  */
 export async function loadAchievements(): Promise<PersonAchievements[]> {
   const today = todayISO();
   const thisMonth = startOfMonth(today);
+  const startISO = await getScoringStart();
+  const dueFloor = startISO ? { gte: toDateColumn(startISO) } : {};
 
   const [people, tasks, ctx] = await Promise.all([
     prisma.user.findMany({
@@ -58,7 +65,7 @@ export async function loadAchievements(): Promise<PersonAchievements[]> {
       },
     }),
     prisma.task.findMany({
-      where: { dueDate: { lte: toDateColumn(today) } },
+      where: { dueDate: { lte: toDateColumn(today), ...dueFloor } },
       select: {
         userId: true,
         category: true,
@@ -177,9 +184,11 @@ export async function loadPersonStreak(
   userId: string,
 ): Promise<{ current: number; longest: number }> {
   const today = todayISO();
+  const startISO = await getScoringStart();
+  const dueFloor = startISO ? { gte: toDateColumn(startISO) } : {};
   const [tasks, ctx] = await Promise.all([
     prisma.task.findMany({
-      where: { userId, dueDate: { lte: toDateColumn(today) } },
+      where: { userId, dueDate: { lte: toDateColumn(today), ...dueFloor } },
       select: {
         userId: true,
         category: true,
@@ -224,7 +233,7 @@ async function tallyMonthlyWins(
     const monthStart = addMonths(thisMonth, -i);
     const monthEnd = addDays(addMonths(monthStart, 1), -1);
     const ranked = rankStandings(
-      await loadStandings(monthStart, monthEnd, { ignoreScoringStart: true }),
+      await loadStandings(monthStart, monthEnd),
     );
     const top = ranked.find((s) => s.percent != null);
     if (!top || top.percent == null) continue;

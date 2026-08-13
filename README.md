@@ -56,11 +56,10 @@ Built:
 - [x] ICS calendar subscriptions
 - [x] School — assignments, tests, subjects and class schedules
 - [x] Fair, effort-weighted scoring — per-category and combined, with streaks,
-      badges and a monthly winner
+      badges, monthly winners and get-ahead bonuses
 
 Planned:
 
-- [ ] Get ahead — do upcoming chores early for a small bonus
 - [ ] Weather panel and forecast
 - [ ] Installable phone app (PWA), with grocery lists in the aisle
 - [ ] Smooth drag-and-drop reordering
