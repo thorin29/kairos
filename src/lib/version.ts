@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.102.0";
+export const APP_VERSION = "0.103.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -67,6 +67,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.103.0",
+    summary: [
+      "Money page side menu now shows each person\u2019s balance to the right of their name",
+      "The lock on the Money page now opens straight into Admin \u2192 Money, and locking admin there returns you to the Money page (both previously went to the wrong place)",
+      "CSV import: the file picker is now a clear \u201cChoose file\u201d button that shows the chosen filename, instead of plain clickable text",
+    ],
+  },
   {
     version: "0.102.0",
     summary: [

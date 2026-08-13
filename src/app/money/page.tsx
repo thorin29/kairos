@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
 import { loadMoneyPage } from "@/lib/queries/money";
 import { todayISO } from "@/lib/dates";
-import { formatDollars } from "@/lib/money";
+import { formatDollars, formatAmountGrouped } from "@/lib/money";
 import { MoneyView } from "@/components/money-view";
 import { DollarIcon } from "@/components/icons";
 
@@ -67,17 +67,30 @@ export default async function MoneyPage({
                     <li key={p.id}>
                       <Link
                         href={`/money?user=${p.id}`}
-                        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                        className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                           active
                             ? "bg-accent/10 text-accent"
                             : "text-foreground hover:bg-ink/5"
                         }`}
                       >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ background: p.color }}
+                          />
+                          <span className="truncate font-medium">{p.name}</span>
+                        </span>
                         <span
-                          className="h-2.5 w-2.5 shrink-0 rounded-full"
-                          style={{ background: p.color }}
-                        />
-                        <span className="whitespace-nowrap">{p.name}</span>
+                          className={`tabular shrink-0 text-sm ${
+                            p.balanceCents < 0
+                              ? "text-red-600"
+                              : active
+                                ? "text-accent"
+                                : "text-muted"
+                          }`}
+                        >
+                          {formatAmountGrouped(p.balanceCents)}
+                        </span>
                       </Link>
                     </li>
                   );

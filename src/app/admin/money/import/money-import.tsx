@@ -12,6 +12,7 @@ import {
   guessCategory,
   parseAmountToCents,
 } from "@/lib/money";
+import { UploadIcon } from "@/components/icons";
 
 type GridRow = {
   key: number;
@@ -102,6 +103,7 @@ export function MoneyImport({
 }) {
   const [userId, setUserId] = useState(roster[0]?.id ?? "");
   const [raw, setRaw] = useState("");
+  const [fileName, setFileName] = useState<string | null>(null);
   const [rows, setRows] = useState<GridRow[] | null>(null);
   const [parseNote, setParseNote] = useState<string | null>(null);
   const [expected, setExpected] = useState("");
@@ -234,6 +236,7 @@ export function MoneyImport({
         setRows(null);
         setRaw("");
         setExpected("");
+        setFileName(null);
       }
     });
   }
@@ -273,19 +276,29 @@ export function MoneyImport({
               ))}
             </select>
           </div>
-          <label className="text-sm text-muted">
-            <span className="mr-2">or choose a file</span>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                file.text().then((t) => setRaw(t));
-              }}
-              className="text-xs"
-            />
-          </label>
+          <div>
+            <label className="block text-sm font-medium">CSV file</label>
+            <div className="mt-1.5 flex items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-hairline bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent">
+                <UploadIcon className="h-4 w-4" />
+                Choose file
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setFileName(file.name);
+                    file.text().then((t) => setRaw(t));
+                  }}
+                  className="sr-only"
+                />
+              </label>
+              <span className="truncate text-sm text-muted">
+                {fileName ?? "No file chosen"}
+              </span>
+            </div>
+          </div>
         </div>
 
         <textarea

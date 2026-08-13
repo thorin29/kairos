@@ -398,3 +398,13 @@ export function DollarIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+export function UploadIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M17 8l-5-5-5 5" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  );
+}

@@ -12,6 +12,7 @@ const DASHBOARDS = new Set([
   "bible",
   "games",
   "groceries",
+  "money",
 ]);
 
 export function LockButton() {
