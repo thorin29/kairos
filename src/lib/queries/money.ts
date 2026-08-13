@@ -105,6 +105,15 @@ export async function loadMoneyPage(selectedUserId?: string): Promise<{
   return { participants, selectedId, rows };
 }
 
+/** Every participant's current balance keyed by user id — used by the CSV
+ *  import screen to show a projected balance as rows are reviewed. */
+export async function balancesRecord(): Promise<Record<string, number>> {
+  const bal = await balancesByUser();
+  const out: Record<string, number> = {};
+  for (const [id, cents] of bal) out[id] = cents;
+  return out;
+}
+
 /** Count of rows still awaiting approval — drives the admin dashboard flag. */
 export async function pendingMoneyCount(): Promise<number> {
   return prisma.moneyEntry.count({ where: { status: "PENDING" } });
