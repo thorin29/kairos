@@ -9,6 +9,7 @@ import {
   TrophyIcon,
   CartIcon,
   DumbbellIcon,
+  DollarIcon,
 } from "@/components/icons";
 
 export type Section =
@@ -20,6 +21,7 @@ export type Section =
   | "games"
   | "exercise"
   | "groceries"
+  | "money"
   | "summary";
 
 /**
@@ -92,6 +94,13 @@ const NAV: {
     label: "Groceries",
     color: "#0d9488",
     icon: <CartIcon className="h-6 w-6" />,
+  },
+  {
+    key: "money",
+    href: "/money",
+    label: "Money",
+    color: "#15803d",
+    icon: <DollarIcon className="h-6 w-6" />,
   },
   {
     key: "summary",

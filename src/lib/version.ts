@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.99.2";
+export const APP_VERSION = "0.100.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -60,11 +60,21 @@ export const MIGRATIONS = [
   "50_class_members",
   "51_school_due_time",
   "52_class_prompts",
+  "53_money_entries",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.100.0",
+    summary: [
+      "New Money section (first of three parts): a personal ledger for whoever keeps one \u2014 birthday money, gifts, earnings. Names of people with money run down the left; pick one to see their running balance and transactions. Balances count every transaction the moment it's entered, so approving is a verification mark, not what moves the number",
+      "Add a deposit (birthday, gift, holiday, earnings, Bible reading, other \u2014 with optional notes) or a payment (a note and an amount). Deposits show green, payments show red with a minus and no dollar sign. Set a \u201cstarting funds\u201d baseline for anyone new to the ledger",
+      "The search icon filters a person's rows live by category, note, or amount. Every entry files as pending and lands on each admin's dashboard card to approve; Admin \u2192 Money has the approval queue (with Approve all), plus edit and delete for any row",
+      "Still to come: automated Bible-reading rewards, then per-person CSV import from Actual",
+    ],
+  },
   {
     version: "0.99.2",
     summary: [

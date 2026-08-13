@@ -16,6 +16,7 @@ import {
   LockIcon,
   MailIcon,
   DeviceIcon,
+  DollarIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,13 @@ const TILES: Tile[] = [
     label: "Groceries",
     blurb: "Stores and the catalog the shopping list remembers",
     icon: <CartIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/admin/money",
+    label: "Money",
+    blurb: "Approve transactions, edit rows, and reconcile balances",
+    icon: <DollarIcon className="h-7 w-7" />,
     ready: true,
   },
   {
