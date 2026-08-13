@@ -361,20 +361,11 @@ all live in the database, never in this repository.
       read-only. Replaces right-click and long-press (v0.98.0)
 - [x] Detail popup in month view — month chips open the same click-to-open
       detail popup as week/day (v0.99.1)
-- [ ] Event background images — an optional background image on an event and its
-      detail popup, chosen by kind/category, with a sensible default. Needs
-      artwork created (monochrome-friendly, ~1200×400, low-contrast so white
-      text stays legible). First set to create:
-        - birthday
-        - holiday: Christmas, Thanksgiving, Easter, Halloween, New Year,
-          Valentine's Day, Independence Day, St. Patrick's Day
-        - hockey (game), hockey (practice)
-        - class / school
-        - church
-        - appointment (generic)
-        - vacation / trip
-        - default (fallback)
-      Then wire storage + a per-kind (and optional per-event) picker.
+- [x] Event background images — per-kind/holiday background art on the event
+      block and detail popup, dark scrim for legibility, graceful when a file is
+      missing. Drop JPGs into public/event-bg/ (see README there) (v0.99.2)
+- [ ] Per-event / game-vs-practice background images and an upload picker
+      (current plumbing keys off kind/holiday and reads from public/event-bg/)
 - [x] Post-class prompt — after a class meeting ends, each member is asked on
       their card whether they attended (recorded) and whether work was assigned
       (any type → adds the item, linked to the class). Per-class, default on with
@@ -388,9 +379,9 @@ all live in the database, never in this repository.
       shown as shared-colour all-day items. Marco's list on by default (v0.99.0)
 - [x] Detail popup in month view — month chips open the same click-to-open
       detail popup as week/day (v0.99.1)
-- [ ] Event background images — optional per-kind background art on the event
-      block and detail popup, with a dark scrim so text stays legible and a
-      default fallback. Plumbing first (placeholder), artwork dropped in later
+- [x] Event background images — per-kind/holiday background art on the event
+      block and detail popup, dark scrim for legibility, graceful when a file is
+      missing. Plumbing shipped; drop JPGs into public/event-bg/ (v0.99.2)
 - [ ] Weather on the calendar/dashboard — daily conditions and temps
 - [ ] Moon phases displayed on the calendar
 

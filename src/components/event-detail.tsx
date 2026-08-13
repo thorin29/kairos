@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { GridEvent } from "@/lib/queries/calendar";
 import { classDueItems } from "@/lib/actions/school";
+import { bgUrl } from "@/lib/event-bg";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import {
   PencilIcon,
@@ -75,6 +76,7 @@ export function EventDetail({
   );
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [banner, setBanner] = useState(!!event.bgKey);
   const [error, setError] = useState<string | null>(null);
 
   const isSchoolWork = event.kind === "SCHOOLWORK";
@@ -114,6 +116,20 @@ export function EventDetail({
         }}
         className="absolute flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xl"
       >
+        {banner && event.bgKey && (
+          <div className="relative h-20 w-full shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={bgUrl(event.bgKey)}
+              alt=""
+              aria-hidden
+              onError={() => setBanner(false)}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <span className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/45" />
+          </div>
+        )}
+
         {/* Action bar */}
         <div className="flex items-center justify-end gap-0.5 px-2 pt-2">
           {!readOnly && (

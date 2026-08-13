@@ -6,6 +6,7 @@ import { DAY_SHORT } from "@/lib/days";
 import { useAddEvent } from "@/app/calendar/add-event-form";
 import { EventMenu, type MenuItem } from "@/components/event-menu";
 import { EventDetail } from "@/components/event-detail";
+import { EventBackground } from "@/components/event-background";
 import { SchoolTypeIcon } from "@/components/icons";
 import { eventCopyData, deleteEvent } from "@/lib/actions/events";
 
@@ -285,6 +286,8 @@ export function WeekGrid({
           boxShadow: selected ? SELECTED_RING : undefined,
         }}
       >
+        {e.bgKey && <EventBackground bgKey={e.bgKey} />}
+        <div className="relative z-[1]">
         {e.schoolType ? (
           <span className="flex items-center gap-1 font-medium">
             <SchoolTypeIcon type={e.schoolType} className="h-3 w-3 shrink-0" />
@@ -309,6 +312,7 @@ export function WeekGrid({
             ))}
           </span>
         )}
+        </div>
       </div>
     );
   };

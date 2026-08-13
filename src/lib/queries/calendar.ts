@@ -6,6 +6,7 @@ import { householdTz } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
 import { CATEGORY_COLORS } from "@/lib/colors";
 import { getHolidayColor, holidayEntries } from "@/lib/holidays";
+import { bgKeyForKind, bgKeyForHoliday } from "@/lib/event-bg";
 
 export type GridEvent = {
   id: string;
@@ -45,6 +46,8 @@ export type GridEvent = {
   /** On a class meeting block: one entry per student in the class with pending
    *  work due that day, for the little "work is due" badges. Absent otherwise. */
   schoolBadges?: { userId: string; type: string }[];
+  /** Background-image key (see lib/event-bg). Null/absent = colour only. */
+  bgKey?: string | null;
 };
 
 export type WeekData = {
@@ -159,6 +162,7 @@ async function birthdayEvents(
         shade: (p as { shadeBirthday?: boolean }).shadeBirthday ?? true,
         ownerName: who,
         kind: "BIRTHDAY",
+        bgKey: "birthday",
         calendarName: null,
         // Derived from the profile, not a stored row: nothing to delete.
         eventId: "",
@@ -194,6 +198,7 @@ async function holidayEvents(days: string[]): Promise<GridEvent[]> {
     shade: false,
     ownerName: "Holiday",
     kind: "HOLIDAY",
+    bgKey: bgKeyForHoliday(h.key),
     calendarName: null,
     eventId: "",
     recurring: true,
@@ -362,6 +367,7 @@ export async function loadRange(
         ? "Family"
         : (e.user?.displayName ?? e.user?.name ?? "Family"),
       kind: eventType?.name ?? (e.kind as string),
+      bgKey: bgKeyForKind(eventType?.name ?? (e.kind as string)),
       calendarName: e.externalCalendar?.name ?? null,
       eventId: e.id,
       recurring: Boolean(e.rrule),

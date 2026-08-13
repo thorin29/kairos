@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.99.1";
+export const APP_VERSION = "0.99.2";
 
 export const MIGRATIONS = [
   "0_init",
@@ -65,6 +65,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.99.2",
+    summary: [
+      "Background image support for calendar items \u2014 events, birthdays and holidays can show a background image (behind the block on the calendar and as a banner in the detail popup), chosen by kind/holiday with a dark scrim so text stays readable",
+      "It\u2019s wired and ready but ships with no art: drop JPGs into public/event-bg/ (see the README there for the exact filenames) and they appear. Missing images just show the item\u2019s colour, so nothing breaks in the meantime",
+    ],
+  },
   {
     version: "0.99.1",
     summary: [
