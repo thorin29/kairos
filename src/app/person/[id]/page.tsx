@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadPersonStreak } from "@/lib/queries/achievements";
+import { loadGetAhead } from "@/lib/queries/get-ahead";
+import { GetAheadRow } from "@/components/get-ahead-row";
 import {
   loadWorkoutPlanNames,
   loadWorkoutsBoard,
@@ -87,6 +89,7 @@ export default async function PersonPage({
   const classOptions = await loadClassOptions();
   const subjectNames = await loadSubjectNames();
   const streak = await loadPersonStreak(id);
+  const getAhead = await loadGetAhead(id, today);
 
   // Workout board data so a workout on the dashboard opens the same log step
   // as the Workouts page, scoped to each prompt's own day.
@@ -346,6 +349,22 @@ export default async function PersonPage({
           <p className="mt-2 text-xs text-muted">
             Someone else has these now, or they came around again. They no
             longer count either way.
+          </p>
+        </section>
+      )}
+
+      {getAhead.length > 0 && (
+        <section className="mt-8">
+          <SectionHeading>Get ahead</SectionHeading>
+          <Card className="divide-y divide-hairline">
+            {getAhead.map((c) => (
+              <GetAheadRow key={c.taskId} chore={c} />
+            ))}
+          </Card>
+          <p className="mt-2 text-xs text-muted">
+            Jump on an upcoming chore for a small bonus &mdash; only ones
+            you&rsquo;re next up for. It still counts toward its own week; the
+            bonus is on top, this week.
           </p>
         </section>
       )}

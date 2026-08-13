@@ -575,17 +575,21 @@ own exercises, optionally schedules them, and records what they did.
 - [x] Streaks: one perfect-day streak across all assigned work (chores,
       workouts, Bible, school, tasks). It breaks only when something actually
       expires unfinished — being late but catching up never breaks it, and a
-      rest day with nothing due is neutral. Read from raw history, so a reset
-      leaves it intact (v0.107.0)
+      rest day with nothing due is neutral. Counts from the current scoring
+      window, so a reset starts it over (v0.107.0, reset behaviour v0.108.0)
 - [x] Weekly leader indicator (live) and a monthly winner crowned at month end,
       with tie handling for co-winners (v0.107.0)
 - [x] Badges: perfect week, perfect month, monthly win, and streak milestones
-      (7 / 30 / 100 days); the whole-Bible badge already existed. All derived
-      from raw history, so a reset never clears them (v0.107.0)
-- [ ] Get ahead: do an upcoming scheduled chore early for a slight,
-      effort-scaled bonus (you can only get ahead when you're next up for that
-      chore), plus a promptness bonus on up-for-grabs chores — sooner is worth
-      more (next)
+      (7 / 30 / 100 days); the whole-Bible badge already existed. Derived from
+      completions within the current scoring window, so a reset clears them for
+      a clean start (v0.107.0, reset behaviour v0.108.0)
+- [x] Get ahead: do an upcoming scheduled chore early for a slight,
+      effort-scaled bonus — flat however early, and you can only get ahead when
+      you're next up for that chore (no jumping someone's turn). Plus a
+      promptness bonus on up-for-grabs shared chores: full the day it's
+      available or before, half a day later, nothing after. Bonuses are the
+      tiebreak that separates a board sitting at 100% (v0.108.0)
+- [ ] Admin control to tune the bonus sizes (they ship as sensible constants)
 - [ ] Year-end reward, then the year is archived
 
 ## Pauses and vacations
