@@ -93,6 +93,17 @@ export function formatShort(iso: string): string {
   }).format(new Date(`${iso}T00:00:00.000Z`));
 }
 
+/** Like formatShort but with a two-digit year (e.g. "3/15/26") — for ledgers
+ *  where rows span years and older lines need the year to make sense. */
+export function formatShortYear(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "numeric",
+    day: "numeric",
+    year: "2-digit",
+  }).format(new Date(`${iso}T00:00:00.000Z`));
+}
+
 export function householdTz(): string {
   return HOUSEHOLD_TZ;
 }

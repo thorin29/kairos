@@ -12,7 +12,7 @@ import {
   rowLabel,
   signedCents,
 } from "@/lib/money";
-import { formatShort } from "@/lib/dates";
+import { formatShortYear } from "@/lib/dates";
 import { PlusIcon, CheckIcon, DollarIcon } from "@/components/icons";
 import type { MoneyRow } from "@/lib/queries/money";
 
@@ -27,6 +27,7 @@ export function MoneyView({
   selectedId,
   selectedName,
   today,
+  frequentPayments,
   rows,
   emptyMode = false,
 }: {
@@ -35,6 +36,7 @@ export function MoneyView({
   selectedName: string | null;
   balanceCents?: number;
   today: string;
+  frequentPayments: string[];
   rows: MoneyRow[];
   emptyMode?: boolean;
 }) {
@@ -47,7 +49,7 @@ export function MoneyView({
     if (!q) return rows;
     return rows.filter((r) => {
       const hay = [
-        formatShort(r.date),
+        formatShortYear(r.date),
         rowLabel(r),
         categoryLabel(r.category),
         r.detail ?? "",
@@ -137,7 +139,7 @@ export function MoneyView({
                       className="border-b border-hairline last:border-0"
                     >
                       <td className="tabular whitespace-nowrap px-4 py-2.5 text-muted">
-                        {formatShort(r.date)}
+                        {formatShortYear(r.date)}
                       </td>
                       <td className="max-w-[22rem] truncate px-4 py-2.5">
                         <span title={rowLabel(r)}>{rowLabel(r)}</span>
@@ -173,6 +175,7 @@ export function MoneyView({
         <AddOverlay
           roster={roster}
           defaultUser={selectedId ?? roster[0]?.id ?? ""}
+          frequentPayments={frequentPayments}
           today={today}
           onClose={() => setOverlay(null)}
         />
@@ -219,15 +222,18 @@ function AddOverlay({
   roster,
   defaultUser,
   today,
+  frequentPayments,
   onClose,
 }: {
   roster: { id: string; name: string }[];
   defaultUser: string;
   today: string;
+  frequentPayments: string[];
   onClose: () => void;
 }) {
   const [state, action, pending] = useActionState(addMoneyEntry, initial);
   const [direction, setDirection] = useState<"DEPOSIT" | "PAYMENT">("DEPOSIT");
+  const [detail, setDetail] = useState("");
   const done = useRef(false);
 
   useEffect(() => {
@@ -308,6 +314,29 @@ function AddOverlay({
           </div>
         )}
 
+        {direction === "PAYMENT" && frequentPayments.length > 0 && (
+          <div>
+            <label htmlFor="m-freq" className={LABEL}>
+              Frequently used
+            </label>
+            <select
+              id="m-freq"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) setDetail(e.target.value);
+              }}
+              className={FIELD}
+            >
+              <option value="">Pick a common payment…</option>
+              {frequentPayments.map((label) => (
+                <option key={label} value={label}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div>
           <label htmlFor="m-detail" className={LABEL}>
             {direction === "DEPOSIT" ? "Details (optional)" : "Details"}
@@ -315,6 +344,8 @@ function AddOverlay({
           <input
             id="m-detail"
             name="detail"
+            value={detail}
+            onChange={(e) => setDetail(e.target.value)}
             maxLength={200}
             placeholder={
               direction === "DEPOSIT"

@@ -6,10 +6,12 @@ import {
   loadSchoolAdmin,
   loadSchoolStructure,
   loadSchoolMetrics,
+  loadClassOptions,
   type ClassRow,
 } from "@/lib/queries/school";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { todayISO, formatLong, formatShort } from "@/lib/dates";
+import { AddSchoolWork } from "@/components/add-school-work";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,7 @@ export default async function SchoolPage({
     loadSchoolAdmin(),
     loadSchoolStructure(),
   ]);
+  const classOptions = await loadClassOptions();
   const terms = structure.terms;
 
   // Which term scopes the progress numbers: an explicit choice, else the term
@@ -67,6 +70,15 @@ export default async function SchoolPage({
           add for anyone from the admin panel. Timed classes show on the
           calendar.
         </p>
+
+        <div className="mb-8">
+          <AddSchoolWork
+            people={people.map((p) => ({ id: p.id, name: p.name }))}
+            classesByUser={classOptions}
+            subjects={structure.subjects.map((s) => s.name)}
+            defaultDate={today}
+          />
+        </div>
 
         {!anyWork ? (
           <Card className="p-6 text-sm text-muted">
