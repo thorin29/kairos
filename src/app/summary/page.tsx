@@ -1,4 +1,5 @@
 import { loadStandings, rankStandings, type Standing } from "@/lib/queries/standings";
+import { loadAchievements, type PersonAchievements } from "@/lib/queries/achievements";
 import { getScoringStart } from "@/lib/settings";
 import {
   addDays,
@@ -12,6 +13,8 @@ import {
 import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
+import type { ReactNode } from "react";
+import { TrophyIcon, FlameIcon, StarIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -43,18 +46,24 @@ export default async function SummaryPage({
   const week = weekDays(today);
   const weekStart = week[0];
 
-  const [monthStandings, weekStandings, since] = await Promise.all([
-    loadStandings(monthStart, monthEnd),
+  // The live board respects the scoring window (a reset freshens it). Past
+  // months are history: shown from raw completions, which is where the
+  // trophies live and why a reset never erases them.
+  const [monthStandings, weekStandings, achievements, since] = await Promise.all([
+    loadStandings(monthStart, monthEnd, { ignoreScoringStart: !isCurrentMonth }),
     isCurrentMonth ? loadStandings(weekStart, today) : Promise.resolve([]),
+    loadAchievements(),
     getScoringStart(),
   ]);
 
   const monthRanked = rankStandings(monthStandings);
   const weekRanked = rankStandings(weekStandings);
 
-  const monthLeader = monthRanked.find((s) => s.percent != null);
-  const contenders = monthLeader
-    ? monthRanked.filter((s) => s.percent === monthLeader.percent)
+  const streaks = new Map(achievements.map((a) => [a.id, a.currentStreak]));
+
+  const topScore = monthRanked.find((s) => s.percent != null);
+  const winners = topScore
+    ? monthRanked.filter((s) => s.percent === topScore.percent)
     : [];
 
   const prevMonth = addMonths(monthStart, -1).slice(0, 7);
@@ -72,7 +81,7 @@ export default async function SummaryPage({
       />
 
       <main className="mx-auto max-w-3xl px-6 py-6">
-        {/* Month crown race */}
+        {/* Month header + nav */}
         <div className="mb-3 flex items-center justify-between gap-3">
           <SectionHeading>
             {isCurrentMonth ? "This month so far" : formatMonth(monthStart)}
@@ -93,13 +102,20 @@ export default async function SummaryPage({
           </div>
         </div>
 
-        {monthLeader ? (
+        {winners.length > 0 ? (
           <Card className="mb-8 p-5">
-            <p className="mb-3 text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
-              {contenders.length > 1 ? "Tied for the lead" : "Leading the month"}
+            <p className="mb-3 flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
+              {!isCurrentMonth && <TrophyIcon className="h-3.5 w-3.5" />}
+              {isCurrentMonth
+                ? winners.length > 1
+                  ? "Tied for the lead"
+                  : "Leading the month"
+                : winners.length > 1
+                  ? `Winners of ${formatMonth(monthStart)}`
+                  : `Winner of ${formatMonth(monthStart)}`}
             </p>
             <div className="flex flex-wrap items-center gap-5">
-              {contenders.map((s) => (
+              {winners.map((s) => (
                 <div key={s.id} className="flex items-center gap-3">
                   <Avatar name={s.name} color={s.color} avatarPath={s.avatarPath} size="lg" />
                   <div>
@@ -111,10 +127,13 @@ export default async function SummaryPage({
                 </div>
               ))}
             </div>
-            <p className="mt-4 text-xs text-muted">
-              The month&rsquo;s winner is crowned at month end. Everyone can reach
-              100% &mdash; being handed more or harder work can&rsquo;t sink you.
-            </p>
+            {isCurrentMonth && (
+              <p className="mt-4 text-xs text-muted">
+                The month&rsquo;s winner is crowned at month end. Everyone can
+                reach 100% &mdash; being handed more or harder work can&rsquo;t
+                sink you.
+              </p>
+            )}
           </Card>
         ) : (
           <Card className="mb-8 p-5 text-sm text-muted">
@@ -129,7 +148,7 @@ export default async function SummaryPage({
         {isCurrentMonth && (
           <>
             <SectionHeading>This week</SectionHeading>
-            <StandingsTable rows={weekRanked} showGroups />
+            <StandingsTable rows={weekRanked} streaks={streaks} showGroups />
             <p className="mt-3 text-xs text-muted">
               Week runs Sunday&ndash;Saturday. A category shows a dash until
               something in it is assigned. Missing a chore (letting it expire)
@@ -137,6 +156,12 @@ export default async function SummaryPage({
             </p>
           </>
         )}
+
+        {/* Streaks & badges */}
+        <div className="mt-10">
+          <SectionHeading>Streaks &amp; badges</SectionHeading>
+          <BadgesShelf people={achievements} />
+        </div>
       </main>
     </>
   );
@@ -144,9 +169,11 @@ export default async function SummaryPage({
 
 function StandingsTable({
   rows,
+  streaks,
   showGroups = false,
 }: {
   rows: Standing[];
+  streaks?: Map<string, number>;
   showGroups?: boolean;
 }) {
   return (
@@ -158,45 +185,151 @@ function StandingsTable({
         <span className="w-14 text-right">Score</span>
       </div>
 
-      {rows.map((s) => (
-        <div key={s.id} className="px-5 py-3">
-          <div className="flex items-center gap-3">
-            <span className="flex min-w-0 flex-1 items-center gap-2.5">
-              <Avatar name={s.name} color={s.color} avatarPath={s.avatarPath} size="sm" />
-              <span className="truncate text-sm font-medium">{s.name}</span>
+      {rows.map((s) => {
+        const streak = streaks?.get(s.id) ?? 0;
+        return (
+          <div key={s.id} className="px-5 py-3">
+            <div className="flex items-center gap-3">
+              <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                <Avatar name={s.name} color={s.color} avatarPath={s.avatarPath} size="sm" />
+                <span className="truncate text-sm font-medium">{s.name}</span>
+                {streak > 0 && (
+                  <span
+                    className="tabular inline-flex items-center gap-0.5 text-xs font-medium text-orange-600"
+                    title={`${streak}-day streak`}
+                  >
+                    <FlameIcon className="h-3.5 w-3.5" />
+                    {streak}
+                  </span>
+                )}
+              </span>
+              <span className="tabular w-16 text-right text-sm text-muted">
+                {s.complete}
+              </span>
+              <span className="tabular w-16 text-right text-sm text-muted">
+                {s.assigned}
+              </span>
+              <span
+                className={`tabular w-14 text-right text-sm font-semibold ${
+                  s.percent == null
+                    ? "text-muted"
+                    : s.percent >= 100
+                      ? "text-emerald-700"
+                      : ""
+                }`}
+              >
+                {pct(s.percent)}
+              </span>
+            </div>
+
+            {showGroups && (
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 pl-[2.375rem]">
+                {s.groups
+                  .filter((g) => g.assigned > 0)
+                  .map((g) => (
+                    <span key={g.key} className="tabular text-xs text-muted">
+                      {g.label} <span className="font-medium">{pct(g.percent)}</span>
+                    </span>
+                  ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </Card>
+  );
+}
+
+function BadgeChip({
+  icon,
+  label,
+}: {
+  icon: ReactNode;
+  label: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface px-2.5 py-1 text-xs text-ink">
+      {icon}
+      {label}
+    </span>
+  );
+}
+
+function BadgesShelf({ people }: { people: PersonAchievements[] }) {
+  return (
+    <Card className="divide-y divide-hairline">
+      {people.map((p) => {
+        const chips: ReactNode[] = [];
+        if (p.monthlyWins > 0) {
+          chips.push(
+            <BadgeChip
+              key="wins"
+              icon={<TrophyIcon className="h-3.5 w-3.5 text-amber-500" />}
+              label={`${p.monthlyWins} monthly ${p.monthlyWins === 1 ? "win" : "wins"}`}
+            />,
+          );
+        }
+        if (p.perfectMonths > 0) {
+          chips.push(
+            <BadgeChip
+              key="pm"
+              icon={<StarIcon className="h-3.5 w-3.5 text-emerald-600" />}
+              label={`${p.perfectMonths} perfect ${p.perfectMonths === 1 ? "month" : "months"}`}
+            />,
+          );
+        }
+        if (p.perfectWeeks > 0) {
+          chips.push(
+            <BadgeChip
+              key="pw"
+              icon={<StarIcon className="h-3.5 w-3.5 text-sky-600" />}
+              label={`${p.perfectWeeks} perfect ${p.perfectWeeks === 1 ? "week" : "weeks"}`}
+            />,
+          );
+        }
+        for (const mstone of p.milestones) {
+          chips.push(
+            <BadgeChip
+              key={`ms-${mstone}`}
+              icon={<FlameIcon className="h-3.5 w-3.5 text-orange-600" />}
+              label={`${mstone}-day streak`}
+            />,
+          );
+        }
+
+        return (
+          <div key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
+            <span className="flex min-w-0 items-center gap-2.5">
+              <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} size="sm" />
+              <span className="truncate text-sm font-medium">{p.name}</span>
             </span>
-            <span className="tabular w-16 text-right text-sm text-muted">
-              {s.complete}
-            </span>
-            <span className="tabular w-16 text-right text-sm text-muted">
-              {s.assigned}
-            </span>
-            <span
-              className={`tabular w-14 text-right text-sm font-semibold ${
-                s.percent == null
-                  ? "text-muted"
-                  : s.percent >= 100
-                    ? "text-emerald-700"
-                    : ""
-              }`}
-            >
-              {pct(s.percent)}
+
+            {p.currentStreak > 0 && (
+              <span
+                className="tabular inline-flex items-center gap-1 text-sm font-medium text-orange-600"
+                title={
+                  p.longestStreak > p.currentStreak
+                    ? `Best: ${p.longestStreak} days`
+                    : undefined
+                }
+              >
+                <FlameIcon className="h-4 w-4" />
+                {p.currentStreak}-day streak
+              </span>
+            )}
+
+            <span className="flex flex-1 flex-wrap justify-end gap-1.5">
+              {chips.length > 0 ? (
+                chips
+              ) : p.currentStreak === 0 ? (
+                <span className="text-xs text-muted">
+                  No badges yet &mdash; a perfect week earns the first.
+                </span>
+              ) : null}
             </span>
           </div>
-
-          {showGroups && (
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 pl-[2.375rem]">
-              {s.groups
-                .filter((g) => g.assigned > 0)
-                .map((g) => (
-                  <span key={g.key} className="tabular text-xs text-muted">
-                    {g.label} <span className="font-medium">{pct(g.percent)}</span>
-                  </span>
-                ))}
-            </div>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </Card>
   );
 }

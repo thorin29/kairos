@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.106.0";
+export const APP_VERSION = "0.107.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -69,6 +69,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.107.0",
+    summary: [
+      "Scoring rework, part two \u2014 streaks. Each person now has a single \u201cperfect day\u201d streak across everything they\u2019re assigned (chores, workouts, Bible, school, tasks). It only breaks when something actually expires unfinished; being late but catching up never breaks it, and a rest day with nothing due is neutral. A flame with the day count shows on the Summary board and on each person\u2019s own page",
+      "Monthly winners \u2014 the Summary now crowns the winner of a finished month (with a trophy, and co-winners on a tie). Page back with the arrows to see past months; the live month still shows who\u2019s currently leading",
+      "Badges \u2014 a new \u201cStreaks & badges\u201d shelf: perfect weeks, perfect months, monthly wins, and streak milestones at 7, 30 and 100 days",
+      "Streaks, badges and past winners are worked out from what actually happened, all the way back \u2014 so a scoring reset freshens the live board without ever clearing them",
+      "Past months on the Summary now read from full history too, so paging back always shows what really happened that month regardless of where the current scoring window starts",
+    ],
+  },
   {
     version: "0.106.0",
     summary: [

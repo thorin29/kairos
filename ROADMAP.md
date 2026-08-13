@@ -371,7 +371,8 @@ all live in the database, never in this repository.
       (any type → adds the item, linked to the class). Per-class, default on with
       an admin off switch; waits until the meeting ends and lingers until
       answered (most recent unanswered meeting first, 14-day window) (v0.97.0)
-- [ ] School's own weekly score (part of the scoring rework)
+- [x] School counts toward scores, with its own per-category weekly line —
+      each assignment or test done on time, no difficulty weighting (v0.106.0)
 
 ## Calendar &amp; holidays
 - [x] Built-in US/Texas holidays — computed from rules for any year (no feed, no
@@ -566,12 +567,26 @@ own exercises, optionally schedules them, and records what they did.
 - [x] Summary page with leader and tie handling
 - [x] Admin-only chore effort weighting on a 1-5 scale (lockable) and a
       per-person balance table, so workloads can be evened out by hand
-- [ ] Streaks
-- [ ] Weekly winner, by streak, completion count, or first finished
-- [ ] Badges, including Bible completions
-- [ ] Weighted, fair scoring: because chores differ in count and effort, work
-      out a score (using the effort weights) that gives everyone an equal
-      chance to win regardless of who was handed more or harder chores
+- [x] Weighted, fair scoring: a per-person completion ratio — effort finished
+      over effort assigned — so everyone can reach 100% and being handed more or
+      harder work can't sink them. Chores carry their 1-5 effort; workouts,
+      Bible and school are flat; a one-off task can take an admin weight. Shown
+      per category and combined, week-to-date and month-to-date (v0.106.0)
+- [x] Streaks: one perfect-day streak across all assigned work (chores,
+      workouts, Bible, school, tasks). It breaks only when something actually
+      expires unfinished — being late but catching up never breaks it, and a
+      rest day with nothing due is neutral. Read from raw history, so a reset
+      leaves it intact (v0.107.0)
+- [x] Weekly leader indicator (live) and a monthly winner crowned at month end,
+      with tie handling for co-winners (v0.107.0)
+- [x] Badges: perfect week, perfect month, monthly win, and streak milestones
+      (7 / 30 / 100 days); the whole-Bible badge already existed. All derived
+      from raw history, so a reset never clears them (v0.107.0)
+- [ ] Get ahead: do an upcoming scheduled chore early for a slight,
+      effort-scaled bonus (you can only get ahead when you're next up for that
+      chore), plus a promptness bonus on up-for-grabs chores — sooner is worth
+      more (next)
+- [ ] Year-end reward, then the year is archived
 
 ## Pauses and vacations
 
