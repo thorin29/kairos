@@ -68,7 +68,9 @@ export function EventDetail({
   onClose: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
-  onDelete: () => Promise<{ error?: string | null } | void>;
+  onDelete: (
+    scope: "all" | "future" | "one",
+  ) => Promise<{ error?: string | null } | void>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number; maxH: number }>(
@@ -84,11 +86,13 @@ export function EventDetail({
   const readOnly = event.external || noEventRow;
   const isClass = event.kind === "CLASS";
 
-  // Re-place once we know the real height.
+  // Re-place once we know the real height, and again whenever the delete
+  // confirm box opens or swaps size — otherwise a popup anchored near the
+  // bottom would grow its options off the bottom of the screen.
   useLayoutEffect(() => {
     const h = ref.current?.offsetHeight ?? 320;
     setPos(place(anchor, h));
-  }, [anchor]);
+  }, [anchor, confirming]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -229,42 +233,97 @@ export function EventDetail({
 
           {confirming && (
             <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3">
-              <p className="text-sm font-medium text-red-800">
-                {event.recurring
-                  ? "Delete this event and all its repeats?"
-                  : "Delete this event?"}
-              </p>
-              {error && (
-                <p className="mt-1 text-xs text-red-700">{error}</p>
-              )}
-              <div className="mt-2 flex gap-2">
-                <button
-                  type="button"
-                  disabled={deleting}
-                  onClick={async () => {
-                    setDeleting(true);
-                    setError(null);
-                    const res = await onDelete();
-                    if (res && res.error) {
-                      setError(res.error);
-                      setDeleting(false);
-                    } else {
-                      onClose();
-                    }
-                  }}
-                  className="inline-flex h-8 flex-1 items-center justify-center rounded-full bg-red-600 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-                >
-                  {deleting ? "Deleting\u2026" : "Delete"}
-                </button>
-                <button
-                  type="button"
-                  disabled={deleting}
-                  onClick={() => setConfirming(false)}
-                  className="inline-flex h-8 flex-1 items-center justify-center rounded-full border border-hairline text-xs font-medium text-muted transition-colors hover:text-ink disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </div>
+              {(() => {
+                const runDelete = async (
+                  scope: "all" | "future" | "one",
+                ) => {
+                  setDeleting(true);
+                  setError(null);
+                  const res = await onDelete(scope);
+                  if (res && res.error) {
+                    setError(res.error);
+                    setDeleting(false);
+                  } else {
+                    onClose();
+                  }
+                };
+
+                if (event.recurring) {
+                  return (
+                    <>
+                      <p className="text-sm font-medium text-red-800">
+                        This event repeats. What should be deleted?
+                      </p>
+                      {error && (
+                        <p className="mt-1 text-xs text-red-700">{error}</p>
+                      )}
+                      <div className="mt-2 space-y-2">
+                        <button
+                          type="button"
+                          disabled={deleting}
+                          onClick={() => runDelete("one")}
+                          className="inline-flex h-9 w-full items-center justify-center rounded-full bg-red-600 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                        >
+                          This event only
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deleting}
+                          onClick={() => runDelete("future")}
+                          className="inline-flex h-9 w-full items-center justify-center rounded-full bg-red-600 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                        >
+                          This and all future events
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deleting}
+                          onClick={() => runDelete("all")}
+                          className="inline-flex h-9 w-full items-center justify-center rounded-full bg-red-600 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                        >
+                          All events in the series
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deleting}
+                          onClick={() => setConfirming(false)}
+                          className="inline-flex h-9 w-full items-center justify-center rounded-full border border-hairline text-xs font-medium text-muted transition-colors hover:text-ink disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  );
+                }
+
+                return (
+                  <>
+                    <p className="text-sm font-medium text-red-800">
+                      Delete this event?
+                    </p>
+                    {error && (
+                      <p className="mt-1 text-xs text-red-700">{error}</p>
+                    )}
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        disabled={deleting}
+                        onClick={() => runDelete("all")}
+                        className="inline-flex h-8 flex-1 items-center justify-center rounded-full bg-red-600 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {deleting ? "Deleting\u2026" : "Delete"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={deleting}
+                        onClick={() => setConfirming(false)}
+                        className="inline-flex h-8 flex-1 items-center justify-center rounded-full border border-hairline text-xs font-medium text-muted transition-colors hover:text-ink disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>

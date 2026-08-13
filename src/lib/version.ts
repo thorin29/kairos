@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.103.0";
+export const APP_VERSION = "0.104.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -62,11 +62,21 @@ export const MIGRATIONS = [
   "52_class_prompts",
   "53_money_entries",
   "54_bible_rewards",
+  "55_calendar_sport_and_cancel",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.104.0",
+    summary: [
+      "Calendar feeds can now be marked \u201cCounts as a sport workout\u201d in Admin \u2192 Calendar. Every event from that feed auto-logs a sport workout on its day for the feed\u2019s owner and ticks that day\u2019s exercise \u2014 handy for a hockey or game schedule",
+      "Deleting a repeating event now asks whether to remove just that occurrence, this and all future events, or the whole series",
+      "The event delete confirmation no longer opens off the bottom of the screen for events near the bottom of the window \u2014 the popup repositions to stay in view",
+      "Locking or closing admin from the Money page now returns you to the Money page instead of the home screen",
+    ],
+  },
   {
     version: "0.103.0",
     summary: [
@@ -121,7 +131,7 @@ export const CHANGES: Change[] = [
     version: "0.99.0",
     summary: [
       "Built-in US & Texas holidays \u2014 no subscription needed. They\u2019re computed for every year (so they never stop at year\u2019s end) and show as all-day items in a shared colour. Turn exactly the ones you want on or off in Admin \u2192 Calendar \u2192 Holidays, grouped by Federal / Texas / Religious / Observance / Seasonal",
-      "Marco\u2019s full list is on by default; a few fitting extras (Cinco de Mayo, Ash Wednesday, Palm Sunday, LBJ Day, Cesar Chavez Day, Patriot Day, Tax Day, Grandparents Day) are available to toggle on",
+      "The full list is on by default; a few fitting extras (Cinco de Mayo, Ash Wednesday, Palm Sunday, LBJ Day, Cesar Chavez Day, Patriot Day, Tax Day, Grandparents Day) are available to toggle on",
     ],
   },
   {

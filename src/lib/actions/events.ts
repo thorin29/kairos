@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireInteractive } from "@/lib/gate";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { householdTz, localParts, toDateColumn, zonedToUtc } from "@/lib/dates";
-import { buildRule } from "@/lib/calendar/recur";
+import { householdTz, localParts, toDateColumn, zonedToUtc, addDays } from "@/lib/dates";
+import { buildRule, parseRule } from "@/lib/calendar/recur";
 import { isAdmin } from "@/lib/session";
 import { isHexColor } from "@/lib/palette";
 import {
@@ -506,9 +506,14 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
   };
 }
 
+export type DeleteScope = "all" | "future" | "one";
 export type DeleteState = { error: string | null };
 
-export async function deleteEvent(id: string): Promise<DeleteState> {
+export async function deleteEvent(
+  id: string,
+  scope: DeleteScope = "all",
+  occurrenceISO?: string,
+): Promise<DeleteState> {
   await requireInteractive();
   const event = await prisma.event.findUnique({ where: { id } });
   if (!event) return { error: null };
@@ -529,15 +534,75 @@ export async function deleteEvent(id: string): Promise<DeleteState> {
     }
   }
 
-  // A single-occurrence edit leaves detached child overrides; clear them so a
-  // deleted series doesn't leave orphaned one-offs behind.
-  if (event.rrule) {
-    await prisma.event.deleteMany({ where: { recurrenceId: id } });
-  }
-  await prisma.event.delete({ where: { id } });
+  const validOccurrence =
+    !!occurrenceISO && /^\d{4}-\d{2}-\d{2}$/.test(occurrenceISO);
+  const parentStartISO = event.startsAt.toISOString().slice(0, 10);
 
-  revalidatePath("/calendar");
-  revalidatePath("/");
-  revalidatePath(`/person/${event.userId}`);
-  return { error: null };
+  const done = () => {
+    revalidatePath("/calendar");
+    revalidatePath("/");
+    revalidatePath(`/person/${event.userId}`);
+    return { error: null };
+  };
+
+  // Whole series (the default), a non-repeating event, or a scope we can't
+  // pin to a date: remove everything.
+  if (!event.rrule || scope === "all" || !validOccurrence) {
+    if (event.rrule) {
+      await prisma.event.deleteMany({ where: { recurrenceId: id } });
+    }
+    await prisma.event.delete({ where: { id } });
+    return done();
+  }
+
+  if (scope === "future") {
+    const untilISO = addDays(occurrenceISO!, -1);
+    // Truncating before the first occurrence leaves nothing — delete it all
+    // rather than orphan an invisible parent.
+    if (untilISO < parentStartISO) {
+      await prisma.event.deleteMany({ where: { recurrenceId: id } });
+      await prisma.event.delete({ where: { id } });
+      return done();
+    }
+    const r = parseRule(event.rrule);
+    if (!r) {
+      await prisma.event.deleteMany({ where: { recurrenceId: id } });
+      await prisma.event.delete({ where: { id } });
+      return done();
+    }
+    const newRule = buildRule(r.freq, r.interval, untilISO, null, r.byday);
+    // Drop detached overrides (moves) and tombstones on/after the cut date.
+    await prisma.event.deleteMany({
+      where: {
+        recurrenceId: id,
+        recurrenceDate: { gte: toDateColumn(occurrenceISO!) },
+      },
+    });
+    await prisma.event.update({ where: { id }, data: { rrule: newRule } });
+    return done();
+  }
+
+  // scope === "one": drop just this date. Replace any existing override for
+  // the date with a non-rendering tombstone whose recurrenceDate makes the
+  // parent skip it.
+  const occDate = toDateColumn(occurrenceISO!);
+  await prisma.event.deleteMany({
+    where: { recurrenceId: id, recurrenceDate: occDate },
+  });
+  const at = new Date(`${occurrenceISO!}T00:00:00.000Z`);
+  await prisma.event.create({
+    data: {
+      userId: event.userId,
+      isFamily: event.isFamily,
+      kind: event.kind,
+      title: event.title,
+      startsAt: at,
+      endsAt: at,
+      allDay: event.allDay,
+      cancelled: true,
+      recurrenceId: id,
+      recurrenceDate: occDate,
+    },
+  });
+  return done();
 }

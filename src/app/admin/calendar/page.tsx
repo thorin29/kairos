@@ -44,6 +44,7 @@ export default async function AdminCalendarPage() {
       : (c.user?.displayName ?? c.user?.name ?? "Family"),
     ownerColor: c.isFamily ? familyColor : (c.user?.color ?? familyColor),
     eventCount: c._count.events,
+    sportWorkout: c.sportWorkout,
     lastFetchedAt: c.lastFetchedAt?.toISOString() ?? null,
     lastError: c.lastError,
   }));

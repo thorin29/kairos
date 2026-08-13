@@ -21,6 +21,7 @@ import { loadRolloverState, pendingClassPrompts } from "@/lib/queries/school";
 import { pendingMoneyCount } from "@/lib/queries/money";
 import { pendingBibleRewards } from "@/lib/bible-rewards";
 import { clearPausedTasks } from "@/lib/queries/pauses";
+import { autoLogSportFeeds } from "@/lib/calendar/sport-feeds";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,8 @@ export default async function Home({
     // Sweep any scheduled task that lands on a paused (vacation) day, including
     // days already past within the break that the generators don't revisit.
     await clearPausedTasks(today);
+    // Auto-log workouts for events from feeds flagged as sport workouts.
+    await autoLogSportFeeds(today);
     people = await loadDay(today);
   } catch (e) {
     return (

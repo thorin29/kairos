@@ -6,6 +6,7 @@ import {
   refreshCalendars,
   removeCalendar,
   renameCalendar,
+  setCalendarSport,
   type CalendarState,
 } from "@/lib/actions/calendars";
 import { Card } from "@/components/ui";
@@ -28,6 +29,7 @@ export type Subscription = {
   ownerName: string;
   ownerColor: string;
   eventCount: number;
+  sportWorkout: boolean;
   lastFetchedAt: string | null;
   lastError: string | null;
 };
@@ -100,6 +102,12 @@ export function Subscriptions({
             <CalendarPlusIcon className="h-4 w-4" />
             {pending ? "Adding\u2026" : "Subscribe"}
           </button>
+
+          <label className="flex w-full items-center gap-2 text-sm text-muted">
+            <input type="checkbox" name="sportWorkout" className="h-4 w-4" />
+            Counts as a sport workout (auto-logs a workout on the event&rsquo;s
+            day)
+          </label>
         </form>
 
         <p className="mt-3 text-xs text-muted">
@@ -164,6 +172,20 @@ export function Subscriptions({
                     {s.lastError}
                   </p>
                 )}
+                <label className="mt-1.5 flex items-center gap-2 text-xs text-muted">
+                  <input
+                    type="checkbox"
+                    checked={s.sportWorkout}
+                    disabled={busy}
+                    onChange={(e) =>
+                      startTransition(
+                        () => void setCalendarSport(s.id, e.target.checked),
+                      )
+                    }
+                    className="h-3.5 w-3.5"
+                  />
+                  Counts as a sport workout
+                </label>
               </div>
 
               <button
