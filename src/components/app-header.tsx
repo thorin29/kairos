@@ -105,7 +105,7 @@ const NAV: {
   {
     key: "summary",
     href: "/summary",
-    label: "Summary",
+    label: "Characters",
     color: "#db2777",
     icon: <TrophyIcon className="h-6 w-6" />,
   },

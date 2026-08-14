@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
 import { loadPersonDay } from "@/lib/queries/overview";
-import { loadPersonStreak } from "@/lib/queries/achievements";
+import { loadPersonProgress } from "@/lib/queries/progression";
 import { loadGetAhead } from "@/lib/queries/get-ahead";
 import { GetAheadRow } from "@/components/get-ahead-row";
 import {
@@ -41,7 +41,7 @@ import { AddTaskForm } from "@/components/add-task-form";
 import { AddSchoolWork } from "@/components/add-school-work";
 import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
-import { LockIcon, MoonIcon, FlameIcon } from "@/components/icons";
+import { LockIcon, MoonIcon, FlameIcon, StarIcon } from "@/components/icons";
 import { CATEGORY_COLORS } from "@/lib/colors";
 
 export const dynamic = "force-dynamic";
@@ -88,7 +88,7 @@ export default async function PersonPage({
   const activePause = await loadActivePause(today);
   const classOptions = await loadClassOptions();
   const subjectNames = await loadSubjectNames();
-  const streak = await loadPersonStreak(id);
+  const progress = await loadPersonProgress(id);
   const getAhead = await loadGetAhead(id, today);
 
   // Workout board data so a workout on the dashboard opens the same log step
@@ -256,17 +256,27 @@ export default async function PersonPage({
           </Link>
         )}
 
-        {streak.current > 0 && (
-          <span
-            className="tabular inline-flex h-11 items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-4 text-sm font-medium text-orange-700"
-            title={
-              streak.longest > streak.current
-                ? `Best streak: ${streak.longest} days`
-                : "Days in a row with everything done"
-            }
-          >
-            <FlameIcon className="h-4 w-4" />
-            {streak.current}-day streak
+        {progress && (
+          <span className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-sm">
+            <StarIcon className="h-4 w-4 text-accent" />
+            <span className="font-medium">Level {progress.level.level}</span>
+            <span className="text-muted">{progress.className}</span>
+            <span className="tabular text-muted">
+              &middot; Season {progress.season.tier}/{progress.season.maxTier}
+            </span>
+            {progress.currentStreak > 0 && (
+              <span
+                className="tabular inline-flex items-center gap-1 font-medium text-orange-600"
+                title={
+                  progress.longestStreak > progress.currentStreak
+                    ? `Best streak: ${progress.longestStreak} days`
+                    : "Days in a row with everything done"
+                }
+              >
+                <FlameIcon className="h-4 w-4" />
+                {progress.currentStreak}
+              </span>
+            )}
           </span>
         )}
 

@@ -590,6 +590,30 @@ own exercises, optionally schedules them, and records what they did.
       available or before, half a day later, nothing after. Bonuses are the
       tiebreak that separates a board sitting at 100% (v0.108.0)
 - [ ] Admin control to tune the bonus sizes (they ship as sensible constants)
+
+### Seasons (RPG progression)
+
+Kid feedback: they'd rather level up themselves than compete against each
+other. So the competitive scoreboard became a personal-progression RPG, with
+the fairness engine above as the quiet fuel. No one is ranked against anyone.
+
+- [x] Character level and XP that only ever climb; per-category stats (Chores,
+      Strength, Wisdom, Scholar, Life) that level independently, giving an
+      emergent class (Athlete, Scholar, Sage, Homesteader, All-Rounder). The
+      Summary is now per-kid character cards, not a leaderboard (v0.109.0)
+- [x] Season tier ladder (10 tiers) that refills each month: your own completed
+      work carries everyone to "season complete"; the top tiers come from
+      initiative, so going beyond reads as a higher tier, not an over-100%
+      score. Monthly rollover refills the season; levels and stats persist;
+      a hard reset starts the whole RPG over (v0.109.0)
+- [x] Personal bests (best week yet), mastery titles earned by repetition
+      ("Master of Dishes"); the head-to-head monthly winner retired (v0.109.0)
+- [ ] Family co-op meter: one shared bar the whole household fills toward a
+      family reward — nobody can be behind anyone (needs storage)
+- [ ] Season tier rewards: cosmetic unlocks (avatar flair) and real payouts
+      (game-time tokens, money via the ledger), auto-granted at a tier (storage)
+- [ ] Reward voting: kids propose the family reward and when, everyone votes,
+      an admin approves (storage)
 - [ ] Year-end reward, then the year is archived
 
 ## Pauses and vacations

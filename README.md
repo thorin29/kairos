@@ -55,8 +55,9 @@ Built:
 - [x] Week and month calendar views
 - [x] ICS calendar subscriptions
 - [x] School — assignments, tests, subjects and class schedules
-- [x] Fair, effort-weighted scoring — per-category and combined, with streaks,
-      badges, monthly winners and get-ahead bonuses
+- [x] Seasons — a personal-progression RPG: character levels, per-category
+      stats and class, a monthly season ladder, streaks, badges and mastery
+      titles, all fuelled by fair, effort-weighted completion (nobody ranked)
 
 Planned:
 

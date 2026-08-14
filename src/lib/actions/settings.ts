@@ -15,10 +15,10 @@ import { isAdmin } from "@/lib/session";
  *
  * It does two things and only two things:
  *   1. Moves the scoring-start pointer to today. Everything derived from that
- *      window — the fairness scores, and the streaks, perfect weeks and past
- *      crowns that read from the same line — starts over from now, so a
- *      testing period is wiped along with the scores it produced. Nothing is
- *      deleted: the task history stays, it just stops counting.
+ *      window — the fairness scores, and the character levels, stats, streaks,
+ *      badges and season that read from the same line — starts over from now,
+ *      so a testing period is wiped along with the progression it produced.
+ *      Nothing is deleted: the task history stays, it just stops counting.
  *   2. Excuses every still-pending chore dated before today. They become
  *      "skipped" — out of the score and off the overdue/up-for-grabs lists —
  *      exactly as a paused day's chores are. Future and today's chores, and

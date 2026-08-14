@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.108.0";
+export const APP_VERSION = "0.109.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -69,6 +69,17 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.109.0",
+    summary: [
+      "Seasons \u2014 the scoreboard becomes an RPG. The Summary is now \u201cCharacters\u201d: each person has their own character card, and no one is ranked against anyone. You level up yourself, not past your siblings",
+      "Character level and per-category stats (Chores, Strength, Wisdom, Scholar, Life) climb from doing your work and never drop. Your stat spread gives you a class \u2014 Athlete, Scholar, Sage, Homesteader, or All-Rounder \u2014 so everyone becomes a different character",
+      "Each month is a season: a 10-tier ladder that refills fresh. Doing all of your own work completes your season (reachable by everyone, whatever their load); the top couple of tiers come from getting ahead and grabbing shared chores \u2014 so going above and beyond reads as a higher tier, never an odd over-100% score",
+      "Streaks, perfect weeks, streak milestones and a new personal best (\u201cbest week yet\u201d) live on each card, plus playful mastery titles you earn by repetition \u2014 \u201cMaster of Dishes \u00d780\u201d. The head-to-head \u201cmonthly winner\u201d is retired",
+      "Your own page now shows your level, class, season tier and streak at a glance",
+      "Admin \u2192 Setup: \u201cReset\u201d now wipes character levels and stats too, alongside scores, streaks, badges and the season \u2014 a true \u201cnew game\u201d for clearing a testing period. The money ledger, schedules and assignments stay untouched",
+    ],
+  },
   {
     version: "0.108.0",
     summary: [
