@@ -612,12 +612,20 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       at the loaded workload, with completion-rate and length what-if knobs and
       a recommended length; season length made configurable (calendar month or
       fixed multi-week) so a lighter workload can run longer (v0.110.0)
+- [x] Account types: Child vs Parent, kept separate from the admin permission,
+      set in Setup — the foundation the kid-focused co-op features scope to
+      (v0.111.0)
 - [ ] Family co-op meter: one shared bar the whole household fills toward a
-      family reward — nobody can be behind anyone (needs storage)
-- [ ] Season tier rewards: cosmetic unlocks (avatar flair) and real payouts
-      (game-time tokens, money via the ledger), auto-granted at a tier (storage)
-- [ ] Reward voting: kids propose the family reward and when, everyone votes,
-      an admin approves (storage)
+      family reward — nobody can be behind anyone. Unlocks only when every child
+      clears a participation floor (an admin dial with a planner-fed
+      recommendation, not a baked-in number) (needs storage)
+- [ ] Season tier rewards: cosmetic unlocks only for the individual track —
+      avatar flair and evolving companions, no money (storage)
+- [ ] Reward voting: kids propose the family (co-op) reward and when, everyone
+      votes, an admin approves (storage)
+- [ ] Companions: original collectible creatures that evolve with your level
+      and take an element from your stat spread (art via ChatGPT/Grok, storage
+      for the collection) — with co-op raids as a later opt-in side game
 - [ ] Year-end reward, then the year is archived
 
 ## Pauses and vacations

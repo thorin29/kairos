@@ -5,6 +5,7 @@ import { BackLink } from "@/components/back-link";
 import { AdminBack } from "@/components/admin-back";
 import { AdminPinControls } from "./admin-pin-controls";
 import { AdminToggle } from "./admin-toggle";
+import { KindToggle } from "./kind-toggle";
 import { FamilyColorPicker } from "./family-color-picker";
 import { ResetScoringButton } from "./reset-scoring-button";
 import { getScoringStart } from "@/lib/settings";
@@ -67,6 +68,11 @@ export default async function SetupPage() {
               />
               <span className="font-medium">{p.name}</span>
               <span className="ml-auto flex items-center gap-2">
+                <KindToggle
+                  userId={p.id}
+                  isParent={p.kind === "PARENT"}
+                  lockedParent={p.role === "ADMIN"}
+                />
                 <AdminToggle
                   userId={p.id}
                   name={p.displayName ?? p.name}
