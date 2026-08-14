@@ -1,4 +1,5 @@
 import { loadProgression, type PersonProgress } from "@/lib/queries/progression";
+import { loadCoop } from "@/lib/queries/coop";
 import { getScoringStart } from "@/lib/settings";
 import { formatLong, todayISO } from "@/lib/dates";
 import { currentSeasonWindow } from "@/lib/season";
@@ -7,6 +8,7 @@ import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
 import { Card, SectionHeading } from "@/components/ui";
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { FlameIcon, StarIcon, TrophyIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -23,10 +25,11 @@ function Bar({ pct, tone = "accent" }: { pct: number; tone?: "accent" | "orange"
 
 export default async function SummaryPage() {
   const today = todayISO();
-  const [people, since, seasonWin] = await Promise.all([
-    loadProgression(),
+  const people = await loadProgression();
+  const [since, seasonWin, coop] = await Promise.all([
     getScoringStart(),
     currentSeasonWindow(today),
+    loadCoop(people),
   ]);
   const season = seasonWin.label;
 
@@ -44,6 +47,28 @@ export default async function SummaryPage() {
         <div className="mb-4">
           <SectionHeading>Season &middot; {season}</SectionHeading>
         </div>
+
+        <Link
+          href="/coop"
+          className="mb-5 flex items-center gap-3 rounded-2xl border border-hairline bg-surface p-4 transition-colors hover:border-accent"
+        >
+          <TrophyIcon className="h-6 w-6 text-amber-500" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">Family goal</span>
+            <span className="block text-xs text-muted">
+              {coop.granted
+                ? `Earned: ${coop.granted.title}`
+                : coop.selected
+                  ? `Working toward: ${coop.selected.title}`
+                  : "Propose and vote on a family reward"}
+            </span>
+          </span>
+          {coop.childrenTotal > 0 && (
+            <span className="tabular shrink-0 text-xs text-muted">
+              {coop.childrenMeeting}/{coop.childrenTotal} kids
+            </span>
+          )}
+        </Link>
 
         <div className="space-y-5">
           {people.map((p) => (

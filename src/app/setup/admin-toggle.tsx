@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { setUserAdmin } from "@/lib/actions/people";
 import { PinEntry } from "@/components/pin-entry";
+import { Segmented } from "./segmented";
 
 export function AdminToggle({
   userId,
@@ -42,30 +43,21 @@ export function AdminToggle({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => {
+      <Segmented
+        options={[
+          { value: "MEMBER", label: "Member" },
+          { value: "ADMIN", label: "Admin" },
+        ]}
+        value={on ? "ADMIN" : "MEMBER"}
+        // The sole admin can't be demoted — lock the Member option.
+        disabledValues={locked ? ["MEMBER"] : []}
+        onSelect={() => {
           if (locked) return;
           setError(null);
           setPin("");
           setOpen(true);
         }}
-        disabled={locked}
-        title={
-          locked
-            ? "At least one admin is required"
-            : on
-              ? "Admin \u2014 tap to change"
-              : "Member \u2014 tap to change"
-        }
-        className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-          on
-            ? "border-accent bg-accent/10 text-accent"
-            : "border-hairline text-muted hover:border-accent hover:text-accent"
-        }`}
-      >
-        {on ? "Admin" : "Member"}
-      </button>
+      />
 
       {open && (
         <div
