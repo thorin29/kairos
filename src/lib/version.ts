@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.110.0";
+export const APP_VERSION = "0.111.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -64,11 +64,20 @@ export const MIGRATIONS = [
   "54_bible_rewards",
   "55_calendar_sport_and_cancel",
   "56_task_weight",
+  "57_account_kind",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.111.0",
+    summary: [
+      "Account types \u2014 each person is now a Child or a Parent, kept separate from the admin permission. Not every parent needs to be an admin, and a child is never one. Existing admins became parents automatically; everyone else starts as a child, and you can flip anyone in Setup",
+      "Setup shows a Child/Parent toggle next to each person, and the \u201cAdd person\u201d form lets you pick the type. Making someone an admin makes them a parent too",
+      "This is the groundwork for the kid-focused features coming next \u2014 the family co-op reward and its participation gate will measure the children",
+    ],
+  },
   {
     version: "0.110.0",
     summary: [

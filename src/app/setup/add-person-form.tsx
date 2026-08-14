@@ -8,12 +8,14 @@ const initial: ActionState = { error: null };
 export function AddPersonForm({ isFirst }: { isFirst: boolean }) {
   const [state, formAction, pending] = useActionState(addPerson, initial);
   const [role, setRole] = useState("MEMBER");
+  const [kind, setKind] = useState("CHILD");
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!pending && !state.error) {
       formRef.current?.reset();
       setRole("MEMBER");
+      setKind("CHILD");
     }
   }, [state, pending]);
 
@@ -40,42 +42,77 @@ export function AddPersonForm({ isFirst }: { isFirst: boolean }) {
 
       {isFirst ? (
         <p className="text-sm text-muted">
-          The first person is the household admin. You can set a shared admin
-          PIN and add more admins after this.
+          The first person is the household admin, and a parent. You can set a
+          shared admin PIN and add more admins after this.
         </p>
       ) : (
-        <fieldset>
-          <legend className="block text-sm font-medium">Access</legend>
-          <div className="mt-1.5 flex gap-2">
-            {[
-              { value: "MEMBER", label: "Member" },
-              { value: "ADMIN", label: "Admin" },
-            ].map((opt) => (
-              <label
-                key={opt.value}
-                className={`cursor-pointer rounded-md border px-4 py-2 text-sm ${
-                  role === opt.value
-                    ? "border-accent bg-accent/5 font-medium text-accent"
-                    : "border-hairline bg-surface text-muted"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="role"
-                  value={opt.value}
-                  checked={role === opt.value}
-                  onChange={() => setRole(opt.value)}
-                  className="sr-only"
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
-          <p className="mt-1.5 text-xs text-muted">
-            Admins can open the admin area to assign tasks and edit chore lists,
-            reading plans, and schedules. You can change this any time.
-          </p>
-        </fieldset>
+        <>
+          <fieldset>
+            <legend className="block text-sm font-medium">Type</legend>
+            <div className="mt-1.5 flex gap-2">
+              {[
+                { value: "CHILD", label: "Child" },
+                { value: "PARENT", label: "Parent" },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`cursor-pointer rounded-md border px-4 py-2 text-sm ${
+                    kind === opt.value
+                      ? "border-accent bg-accent/5 font-medium text-accent"
+                      : "border-hairline bg-surface text-muted"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="kind"
+                    value={opt.value}
+                    checked={kind === opt.value}
+                    onChange={() => setKind(opt.value)}
+                    className="sr-only"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-muted">
+              Just a label for now &mdash; family rewards and other kid-focused
+              features will use it. Admins are always parents.
+            </p>
+          </fieldset>
+
+          <fieldset>
+            <legend className="block text-sm font-medium">Access</legend>
+            <div className="mt-1.5 flex gap-2">
+              {[
+                { value: "MEMBER", label: "Member" },
+                { value: "ADMIN", label: "Admin" },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`cursor-pointer rounded-md border px-4 py-2 text-sm ${
+                    role === opt.value
+                      ? "border-accent bg-accent/5 font-medium text-accent"
+                      : "border-hairline bg-surface text-muted"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="role"
+                    value={opt.value}
+                    checked={role === opt.value}
+                    onChange={() => setRole(opt.value)}
+                    className="sr-only"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-muted">
+              Admins can open the admin area to assign tasks and edit chore
+              lists, reading plans, and schedules. You can change this any time.
+            </p>
+          </fieldset>
+        </>
       )}
 
       {state.error && (

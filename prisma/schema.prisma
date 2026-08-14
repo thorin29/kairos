@@ -19,11 +19,20 @@ enum Role {
   MEMBER
 }
 
+// Account kind, separate from the admin permission above. A child is never an
+// admin; a parent may or may not be. The kid-focused features (companions, the
+// co-op participation gate) scope to CHILD accounts.
+enum AccountKind {
+  CHILD
+  PARENT
+}
+
 model User {
   id          String  @id @default(cuid())
   name        String  @unique // short name used on the dashboard
   displayName String?
   role        Role    @default(MEMBER)
+  kind        AccountKind @default(CHILD)
   pinHash     String? // only set for ADMIN accounts while we're local-only
 
   // Optional email: the address invites are sent to, and a second sign-in

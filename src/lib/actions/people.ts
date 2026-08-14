@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Role } from "@/generated/prisma/client";
+import { Role, AccountKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { nextColor, FAMILY_PALETTE, isHexColor } from "@/lib/palette";
 import { setSetting, FAMILY_COLOR } from "@/lib/settings";
@@ -38,6 +38,11 @@ export async function addPerson(
   // choice, and the PIN (if any) is shared and set separately.
   const makeAdmin = anyone === 0 || formData.get("role") === "ADMIN";
   const role = makeAdmin ? Role.ADMIN : Role.MEMBER;
+  // Admins are always parents; otherwise honour the choice, defaulting to child.
+  const kind =
+    makeAdmin || formData.get("kind") === "PARENT"
+      ? AccountKind.PARENT
+      : AccountKind.CHILD;
 
   // Login matches names case-insensitively, so uniqueness must too — otherwise
   // "Marco" and "marco" could both exist and make a login ambiguous.
@@ -54,6 +59,7 @@ export async function addPerson(
     data: {
       name,
       role,
+      kind,
       color: nextColor(others.map((o) => o.color)),
       sortOrder: others.length,
     },
@@ -128,7 +134,39 @@ export async function setUserAdmin(input: {
 
   await prisma.user.update({
     where: { id: input.userId },
-    data: { role: input.makeAdmin ? Role.ADMIN : Role.MEMBER },
+    data: {
+      role: input.makeAdmin ? Role.ADMIN : Role.MEMBER,
+      // An admin is always a parent; demoting doesn't change kind.
+      ...(input.makeAdmin ? { kind: AccountKind.PARENT } : {}),
+    },
+  });
+
+  revalidatePath("/setup");
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
+/**
+ * Set whether a person is a Child or a Parent — the account kind, separate from
+ * the admin permission. Admins are always parents, so an admin can't be flipped
+ * to Child without dropping admin first.
+ */
+export async function setUserKind(input: {
+  userId: string;
+  kind: "CHILD" | "PARENT";
+}): Promise<{ error: string | null }> {
+  await requireAdmin();
+
+  const user = await prisma.user.findUnique({ where: { id: input.userId } });
+  if (!user) return { error: "That person no longer exists." };
+
+  if (input.kind === "CHILD" && user.role === Role.ADMIN) {
+    return { error: "An admin is a parent. Remove admin first to make them a child." };
+  }
+
+  await prisma.user.update({
+    where: { id: input.userId },
+    data: { kind: input.kind === "PARENT" ? AccountKind.PARENT : AccountKind.CHILD },
   });
 
   revalidatePath("/setup");
