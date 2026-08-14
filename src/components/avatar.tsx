@@ -1,6 +1,7 @@
 import { avatarUrl, iconGlyph, initialOf, isIcon } from "@/lib/avatars";
 
 const sizes = {
+  xs: "h-6 w-6 text-[0.6rem]",
   sm: "h-9 w-9 text-base",
   md: "h-12 w-12 text-xl",
   lg: "h-16 w-16 text-3xl",

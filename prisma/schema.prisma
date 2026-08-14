@@ -86,6 +86,8 @@ model User {
   classCheckins    ClassCheckin[]
   moneyEntries     MoneyEntry[]      @relation("MoneyOwner")
   approvedMoney    MoneyEntry[]      @relation("MoneyApprover")
+  coopProposals    CoopProposal[]
+  coopVotes        CoopVote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1051,4 +1053,40 @@ model MoneyEntry {
   @@index([status])
   // One reward and one bonus per person per month, at most.
   @@unique([userId, kind, periodKey])
+}
+
+// ---- Family co-op -----------------------------------------------------------
+
+enum CoopStatus {
+  PROPOSED // suggested, collecting votes
+  SELECTED // the admin-chosen reward for this season
+  GRANTED  // handed out once the participation gate was met
+}
+
+// A proposed family (co-op) reward for a season. Anyone can propose; everyone
+// votes; an admin selects one and grants it once every child clears the floor.
+model CoopProposal {
+  id           String     @id @default(cuid())
+  seasonKey    String // the season window's start date, so proposals are per-season
+  title        String
+  detail       String? // optional "what / when"
+  proposedById String
+  proposedBy   User       @relation(fields: [proposedById], references: [id], onDelete: Cascade)
+  status       CoopStatus @default(PROPOSED)
+  votes        CoopVote[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([seasonKey])
+}
+
+model CoopVote {
+  id         String       @id @default(cuid())
+  proposalId String
+  proposal   CoopProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime     @default(now())
+
+  @@unique([proposalId, userId])
 }

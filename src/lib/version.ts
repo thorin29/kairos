@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.111.0";
+export const APP_VERSION = "0.112.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -65,11 +65,21 @@ export const MIGRATIONS = [
   "55_calendar_sport_and_cancel",
   "56_task_weight",
   "57_account_kind",
+  "58_coop",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.112.0",
+    summary: [
+      "Family goal (co-op) \u2014 a shared seasonal reward the kids earn together. From the Characters page, open Family goal to propose rewards, vote (tap your face on an idea), and watch the meter: it fills as each child reaches the participation tier, and unlocks only when every kid gets there. No one can be \u201cbehind\u201d a sibling",
+      "A parent picks which idea becomes the season\u2019s reward and grants it once the whole meter is filled. The reward is a real-world family thing you honor \u2014 no money involved",
+      "Admins set the participation floor (the season tier every child must reach) with a slider; tier 8 is a full season, so the default of 6 leaves headroom for the youngest. The Season planner shows what\u2019s reachable",
+      "Clearer Setup toggles \u2014 Child/Parent and Member/Admin are now segmented controls showing both options with the current one highlighted, instead of a pill that silently flipped when tapped",
+    ],
+  },
   {
     version: "0.111.0",
     summary: [

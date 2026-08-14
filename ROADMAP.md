@@ -615,17 +615,21 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] Account types: Child vs Parent, kept separate from the admin permission,
       set in Setup — the foundation the kid-focused co-op features scope to
       (v0.111.0)
-- [ ] Family co-op meter: one shared bar the whole household fills toward a
-      family reward — nobody can be behind anyone. Unlocks only when every child
-      clears a participation floor (an admin dial with a planner-fed
-      recommendation, not a baked-in number) (needs storage)
+- [x] Family co-op meter: one shared bar the household fills toward a family
+      reward, unlocking only when every child reaches an admin-set participation
+      floor (a slider with a Season-planner-fed recommendation) — nobody behind
+      anyone. Reward voting: anyone proposes, everyone votes (tap-your-face
+      kiosk poll), a parent selects the season's reward and grants it once the
+      meter fills. No money — the reward is the real-world family thing you
+      honor (v0.112.0)
 - [ ] Season tier rewards: cosmetic unlocks only for the individual track —
       avatar flair and evolving companions, no money (storage)
-- [ ] Reward voting: kids propose the family (co-op) reward and when, everyone
-      votes, an admin approves (storage)
-- [ ] Companions: original collectible creatures that evolve with your level
-      and take an element from your stat spread (art via ChatGPT/Grok, storage
-      for the collection) — with co-op raids as a later opt-in side game
+- [ ] Companions: original collectible creatures across style "eras" (Modern,
+      '80s toon, arcade pixel, vintage rubber-hose B&W), drawn from random eggs;
+      the skill-blend colour lives on the card frame so it works across every
+      style; active companion tints live, collected ones minted; duplicates give
+      shinies and essence toward a chosen one (art via ChatGPT/Nano Banana/
+      Scenario, storage for the collection) — co-op raids a later opt-in game
 - [ ] Year-end reward, then the year is archived
 
 ## Pauses and vacations

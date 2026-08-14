@@ -30,6 +30,17 @@ export const SEASON_ANCHOR = "season.anchor";
 export const SEASON_WEEKS_DEFAULT = 4;
 export const SEASON_WEEKS_MAX = 26;
 
+// The season tier every child must reach for the family co-op reward to unlock.
+export const SEASON_COOP_FLOOR = "season.coopFloor";
+export const SEASON_COOP_FLOOR_DEFAULT = 6;
+
+export async function getCoopFloor(): Promise<number> {
+  const raw = await getSetting(SEASON_COOP_FLOOR);
+  const n = Number.parseInt(raw ?? "", 10);
+  if (!Number.isFinite(n)) return SEASON_COOP_FLOOR_DEFAULT;
+  return Math.min(10, Math.max(1, n));
+}
+
 export type CalendarPrefs = {
   nowColor: string;
   scrollResetSec: number;
