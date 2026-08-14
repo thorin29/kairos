@@ -608,6 +608,10 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       a hard reset starts the whole RPG over (v0.109.0)
 - [x] Personal bests (best week yet), mastery titles earned by repetition
       ("Master of Dishes"); the head-to-head monthly winner retired (v0.109.0)
+- [x] Season planner: a read-only admin projection of how fast everyone levels
+      at the loaded workload, with completion-rate and length what-if knobs and
+      a recommended length; season length made configurable (calendar month or
+      fixed multi-week) so a lighter workload can run longer (v0.110.0)
 - [ ] Family co-op meter: one shared bar the whole household fills toward a
       family reward — nobody can be behind anyone (needs storage)
 - [ ] Season tier rewards: cosmetic unlocks (avatar flair) and real payouts

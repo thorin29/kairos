@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.109.0";
+export const APP_VERSION = "0.110.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -69,6 +69,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.110.0",
+    summary: [
+      "Season planner (Admin \u2192 Season planner) \u2014 a projection of how fast everyone would level at the workload you\u2019ve actually loaded into Kairos. It reads the real schedule (chores, workouts, Bible, and this week\u2019s school) and shows each person\u2019s earnable XP per week and where their level lands over 4, 6, 8 and 13 weeks",
+      "What-if knobs: a completion-rate slider (it\u2019s a ceiling assuming everything gets done, so dial it down for a realistic band) and a season-length slider. It recommends a length that gets even your slowest-levelling kid to a satisfying level",
+      "Season length is now configurable \u2014 keep the calendar month, or run fixed multi-week seasons (up to 26 weeks) if a lighter workload needs longer to reach a full ladder. Only the season tier ladder is affected; character levels and stats are never touched",
+      "School is flagged as an estimate in the projection, since it changes week to week; chores, workouts and Bible are the steady backbone",
+    ],
+  },
   {
     version: "0.109.0",
     summary: [

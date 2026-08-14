@@ -17,6 +17,7 @@ import {
   MailIcon,
   DeviceIcon,
   DollarIcon,
+  StarIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -109,9 +110,16 @@ const TILES: Tile[] = [
   },
   {
     href: "/summary",
-    label: "Summary",
-    blurb: "Household totals — the shared page everyone sees",
+    label: "Characters",
+    blurb: "Everyone's character cards — the shared page",
     icon: <TrophyIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/admin/season",
+    label: "Season planner",
+    blurb: "Project leveling at the loaded workload; set season length",
+    icon: <StarIcon className="h-7 w-7" />,
     ready: true,
   },
   {

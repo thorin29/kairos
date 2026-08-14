@@ -1,6 +1,7 @@
 import { loadProgression, type PersonProgress } from "@/lib/queries/progression";
 import { getScoringStart } from "@/lib/settings";
-import { formatLong, formatMonth, startOfMonth, todayISO } from "@/lib/dates";
+import { formatLong, todayISO } from "@/lib/dates";
+import { currentSeasonWindow } from "@/lib/season";
 import { SEASON_MAX_TIER } from "@/lib/scoring/progression";
 import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
@@ -22,8 +23,12 @@ function Bar({ pct, tone = "accent" }: { pct: number; tone?: "accent" | "orange"
 
 export default async function SummaryPage() {
   const today = todayISO();
-  const [people, since] = await Promise.all([loadProgression(), getScoringStart()]);
-  const season = formatMonth(startOfMonth(today));
+  const [people, since, seasonWin] = await Promise.all([
+    loadProgression(),
+    getScoringStart(),
+    currentSeasonWindow(today),
+  ]);
+  const season = seasonWin.label;
 
   return (
     <>

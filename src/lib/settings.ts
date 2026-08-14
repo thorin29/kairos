@@ -21,6 +21,15 @@ export const ROLLOVER_INTERVAL_MAX = 90;
 export const WORKOUT_OVERDUE_MAX = 6;
 export const WORKOUT_OVERDUE_DEFAULT = 6;
 
+// Season length. "month" follows the calendar month (the original behaviour);
+// "weeks" runs fixed N-week seasons from an anchor date, so a household with a
+// lighter workload can run longer seasons to reach a fuller ladder.
+export const SEASON_MODE = "season.mode";
+export const SEASON_WEEKS = "season.weeks";
+export const SEASON_ANCHOR = "season.anchor";
+export const SEASON_WEEKS_DEFAULT = 4;
+export const SEASON_WEEKS_MAX = 26;
+
 export type CalendarPrefs = {
   nowColor: string;
   scrollResetSec: number;
@@ -112,6 +121,26 @@ export async function getBibleGraceDays(): Promise<number> {
   const n = Number.parseInt(raw ?? "", 10);
   if (!Number.isFinite(n)) return BIBLE_GRACE_DEFAULT;
   return Math.min(BIBLE_GRACE_MAX, Math.max(0, n));
+}
+
+export type SeasonConfig = {
+  mode: "month" | "weeks";
+  weeks: number;
+  anchor: string | null;
+};
+
+/** How long a season runs. Defaults to the calendar month. */
+export async function getSeasonConfig(): Promise<SeasonConfig> {
+  const [modeRaw, weeksRaw, anchor] = await Promise.all([
+    getSetting(SEASON_MODE),
+    getSetting(SEASON_WEEKS),
+    getSetting(SEASON_ANCHOR),
+  ]);
+  const mode = modeRaw === "weeks" ? "weeks" : "month";
+  let weeks = Number.parseInt(weeksRaw ?? "", 10);
+  if (!Number.isFinite(weeks)) weeks = SEASON_WEEKS_DEFAULT;
+  weeks = Math.min(SEASON_WEEKS_MAX, Math.max(1, weeks));
+  return { mode, weeks, anchor: anchor ?? null };
 }
 
 export async function setSetting(key: string, value: string): Promise<void> {
