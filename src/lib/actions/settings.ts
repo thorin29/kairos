@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { SCORING_START } from "@/lib/settings";
+import { SCORING_START, SEASON_MODE, SEASON_WEEKS, SEASON_ANCHOR, SEASON_WEEKS_MAX, setSetting } from "@/lib/settings";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { isAdmin } from "@/lib/session";
 
@@ -59,5 +59,36 @@ export async function resetScoring(): Promise<{ error: string | null }> {
   revalidatePath("/setup");
   revalidatePath("/summary");
   revalidatePath("/chores");
+  return { error: null };
+}
+
+/**
+ * Set how long a season runs. "month" follows the calendar; "weeks" runs fixed
+ * N-week seasons anchored to today, so a lighter workload can run a longer
+ * season and still reach a fuller ladder. Only the season tier ladder is
+ * affected — character levels and stats are untouched.
+ */
+export async function setSeasonLength(
+  mode: "month" | "weeks",
+  weeks: number,
+): Promise<{ error: string | null }> {
+  if (!(await isAdmin())) {
+    return { error: "Only a parent can change this. Switch profiles first." };
+  }
+
+  if (mode === "weeks") {
+    const n = Math.min(SEASON_WEEKS_MAX, Math.max(1, Math.round(weeks)));
+    await Promise.all([
+      setSetting(SEASON_MODE, "weeks"),
+      setSetting(SEASON_WEEKS, String(n)),
+      // Anchor the season to today so the new length takes effect from now.
+      setSetting(SEASON_ANCHOR, todayISO()),
+    ]);
+  } else {
+    await setSetting(SEASON_MODE, "month");
+  }
+
+  revalidatePath("/summary");
+  revalidatePath("/admin/season");
   return { error: null };
 }

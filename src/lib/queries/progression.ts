@@ -3,13 +3,13 @@ import { TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   fromDateColumn,
-  startOfMonth,
   startOfWeek,
   addDays,
   toDateColumn,
   todayISO,
 } from "@/lib/dates";
 import { getScoringStart } from "@/lib/settings";
+import { currentSeasonWindow } from "@/lib/season";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
 import { loadBonuses } from "@/lib/queries/bonus";
 import { isStale, loadStaleContext, type StaleInput } from "@/lib/chores/stale";
@@ -67,7 +67,8 @@ export async function loadProgression(
   userId?: string,
 ): Promise<PersonProgress[]> {
   const today = todayISO();
-  const monthStart = startOfMonth(today);
+  const seasonWin = await currentSeasonWindow(today);
+  const seasonStart = seasonWin.startISO;
   const startISO = await getScoringStart();
   const dueFloor = startISO ? { gte: toDateColumn(startISO) } : {};
 
@@ -96,7 +97,7 @@ export async function loadProgression(
       },
     }),
     loadStaleContext(today),
-    loadBonuses(monthStart, today),
+    loadBonuses(seasonStart, today),
     loadBonuses(startISO ?? EPOCH, today),
   ]);
 
@@ -159,7 +160,7 @@ export async function loadProgression(
     if (complete) wk.complete += effort;
     a.weeks.set(weekISO, wk);
 
-    if (dayISO >= monthStart) {
+    if (dayISO >= seasonStart) {
       a.month.assigned += effort;
       if (complete) a.month.complete += effort;
     }
