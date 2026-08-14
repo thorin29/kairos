@@ -1,388 +1,190 @@
-import { loadStandings, type Standing } from "@/lib/queries/standings";
-import { loadBonuses, type PersonBonus } from "@/lib/queries/bonus";
-import { loadAchievements, type PersonAchievements } from "@/lib/queries/achievements";
+import { loadProgression, type PersonProgress } from "@/lib/queries/progression";
 import { getScoringStart } from "@/lib/settings";
-import {
-  addDays,
-  addMonths,
-  formatLong,
-  formatMonth,
-  startOfMonth,
-  todayISO,
-  weekDays,
-} from "@/lib/dates";
+import { formatLong, formatMonth, startOfMonth, todayISO } from "@/lib/dates";
+import { SEASON_MAX_TIER } from "@/lib/scoring/progression";
 import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
-import { Card, SectionHeading, ButtonLink } from "@/components/ui";
+import { Card, SectionHeading } from "@/components/ui";
 import type { ReactNode } from "react";
-import { TrophyIcon, FlameIcon, StarIcon } from "@/components/icons";
+import { FlameIcon, StarIcon, TrophyIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
-function pct(v: number | null): string {
-  return v == null ? "\u2013" : `${v}%`;
+function Bar({ pct, tone = "accent" }: { pct: number; tone?: "accent" | "orange" | "emerald" }) {
+  const fill =
+    tone === "orange" ? "bg-orange-500" : tone === "emerald" ? "bg-emerald-500" : "bg-accent";
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-hairline">
+      <div className={`h-full rounded-full ${fill}`} style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
+    </div>
+  );
 }
 
-export default async function SummaryPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ m?: string }>;
-}) {
-  const { m } = await searchParams;
+export default async function SummaryPage() {
   const today = todayISO();
-  const thisMonth = startOfMonth(today);
-
-  // Which month is on screen. Never past the current one.
-  const requested = /^\d{4}-\d{2}$/.test(m ?? "")
-    ? startOfMonth(`${m}-01`)
-    : thisMonth;
-  const monthStart = requested > thisMonth ? thisMonth : requested;
-  const isCurrentMonth = monthStart === thisMonth;
-
-  // Month-to-date for the live month; the whole month once it's past.
-  const monthEnd = isCurrentMonth ? today : addDays(addMonths(monthStart, 1), -1);
-
-  // The live week only makes sense on the current month; week-to-date so a
-  // day still ahead doesn't drag the ratio down before it's even due.
-  const week = weekDays(today);
-  const weekStart = week[0];
-
-  // One fresh-start line governs everything: the live board, past months, and
-  // the achievements. A reset moves it, so scores, streaks and badges all
-  // clear together from that point.
-  const [monthStandings, weekStandings, monthBonus, weekBonus, achievements, since] =
-    await Promise.all([
-      loadStandings(monthStart, monthEnd),
-      isCurrentMonth ? loadStandings(weekStart, today) : Promise.resolve([]),
-      loadBonuses(monthStart, monthEnd),
-      isCurrentMonth ? loadBonuses(weekStart, today) : Promise.resolve(new Map()),
-      loadAchievements(),
-      getScoringStart(),
-    ]);
-
-  const monthRanked = rankWithBonus(monthStandings, monthBonus);
-  const weekRanked = rankWithBonus(weekStandings, weekBonus);
-
-  const streaks = new Map(achievements.map((a) => [a.id, a.currentStreak]));
-
-  // The leader is the top score, then the most initiative bonus among those
-  // tied on it — which is what separates a board sitting at 100%.
-  const topScore = monthRanked.find((s) => s.percent != null);
-  const topTier = topScore
-    ? monthRanked.filter((s) => s.percent === topScore.percent)
-    : [];
-  const topBonus = topTier.reduce(
-    (m, s) => Math.max(m, monthBonus.get(s.id)?.total ?? 0),
-    0,
-  );
-  const winners = topTier.filter(
-    (s) => (monthBonus.get(s.id)?.total ?? 0) === topBonus,
-  );
-
-  const prevMonth = addMonths(monthStart, -1).slice(0, 7);
-  const nextMonth = addMonths(monthStart, 1).slice(0, 7);
-  const canGoNext = monthStart < thisMonth;
+  const [people, since] = await Promise.all([loadProgression(), getScoringStart()]);
+  const season = formatMonth(startOfMonth(today));
 
   return (
     <>
       <AppHeader
-        title="Summary"
+        title="Characters"
         subtitle={
-          since ? `Counting from ${formatLong(since)}` : "Counting everything so far"
+          since ? `Since ${formatLong(since)}` : `Season · ${season}`
         }
         active="summary"
       />
 
       <main className="mx-auto max-w-3xl px-6 py-6">
-        {/* Month header + nav */}
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <SectionHeading>
-            {isCurrentMonth ? "This month so far" : formatMonth(monthStart)}
-          </SectionHeading>
-          <div className="flex items-center gap-1.5">
-            <ButtonLink href={`/summary?m=${prevMonth}`} variant="text" size="sm">
-              &larr;
-            </ButtonLink>
-            {canGoNext ? (
-              <ButtonLink href={`/summary?m=${nextMonth}`} variant="text" size="sm">
-                &rarr;
-              </ButtonLink>
-            ) : (
-              <span className="inline-flex h-9 items-center justify-center px-3.5 text-sm text-muted/30">
-                &rarr;
-              </span>
-            )}
-          </div>
+        <div className="mb-4">
+          <SectionHeading>Season &middot; {season}</SectionHeading>
         </div>
 
-        {winners.length > 0 ? (
-          <Card className="mb-8 p-5">
-            <p className="mb-3 flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
-              {!isCurrentMonth && <TrophyIcon className="h-3.5 w-3.5" />}
-              {isCurrentMonth
-                ? winners.length > 1
-                  ? "Tied for the lead"
-                  : "Leading the month"
-                : winners.length > 1
-                  ? `Winners of ${formatMonth(monthStart)}`
-                  : `Winner of ${formatMonth(monthStart)}`}
-            </p>
-            <div className="flex flex-wrap items-center gap-5">
-              {winners.map((s) => {
-                const b = monthBonus.get(s.id)?.total ?? 0;
-                return (
-                  <div key={s.id} className="flex items-center gap-3">
-                    <Avatar name={s.name} color={s.color} avatarPath={s.avatarPath} size="lg" />
-                    <div>
-                      <p className="font-display text-xl font-semibold">{s.name}</p>
-                      <p className="tabular text-sm text-muted">
-                        {pct(s.percent)} of their work done
-                        {b > 0 && <span className="text-orange-600"> &middot; +{b} bonus</span>}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {isCurrentMonth && (
-              <p className="mt-4 text-xs text-muted">
-                The month&rsquo;s winner is crowned at month end. Everyone can
-                reach 100% &mdash; being handed more or harder work can&rsquo;t
-                sink you.
-              </p>
-            )}
-          </Card>
-        ) : (
-          <Card className="mb-8 p-5 text-sm text-muted">
-            Nothing scored{isCurrentMonth ? " yet this month" : " this month"}.
-          </Card>
-        )}
-
-        {/* Month standings table */}
-        <StandingsTable rows={monthRanked} bonus={monthBonus} />
-
-        {/* This week */}
-        {isCurrentMonth && (
-          <>
-            <SectionHeading>This week</SectionHeading>
-            <StandingsTable
-              rows={weekRanked}
-              bonus={weekBonus}
-              streaks={streaks}
-              showGroups
-            />
-            <p className="mt-3 text-xs text-muted">
-              Week runs Sunday&ndash;Saturday. A category shows a dash until
-              something in it is assigned. Missing a chore (letting it expire)
-              dips the score; being late but catching up doesn&rsquo;t. A{" "}
-              <span className="text-orange-600">+bonus</span> is initiative
-              points &mdash; getting ahead on a chore, or grabbing a shared one
-              quickly.
-            </p>
-          </>
-        )}
-
-        {/* Streaks & badges */}
-        <div className="mt-10">
-          <SectionHeading>Streaks &amp; badges</SectionHeading>
-          <BadgesShelf people={achievements} />
+        <div className="space-y-5">
+          {people.map((p) => (
+            <PersonCard key={p.id} p={p} />
+          ))}
         </div>
+
+        <p className="mt-6 text-xs text-muted">
+          Everyone levels up their own character &mdash; no one&rsquo;s ranked
+          against anyone. Doing all your own work completes your season; the top
+          tiers come from getting ahead and grabbing shared chores. Levels and
+          stats never drop.
+        </p>
       </main>
     </>
   );
 }
 
-function StandingsTable({
-  rows,
-  bonus,
-  streaks,
-  showGroups = false,
-}: {
-  rows: Standing[];
-  bonus?: Map<string, PersonBonus>;
-  streaks?: Map<string, number>;
-  showGroups?: boolean;
-}) {
-  const anyBonus = rows.some((s) => (bonus?.get(s.id)?.total ?? 0) > 0);
+function PersonCard({ p }: { p: PersonProgress }) {
+  const chips: { key: string; icon: ReactNode; label: string }[] = [];
+  if (p.season.complete) {
+    chips.push({
+      key: "season",
+      icon: <TrophyIcon className="h-3.5 w-3.5 text-amber-500" />,
+      label: "Season complete",
+    });
+  }
+  if (p.perfectWeeks > 0) {
+    chips.push({
+      key: "pw",
+      icon: <StarIcon className="h-3.5 w-3.5 text-sky-600" />,
+      label: `${p.perfectWeeks} perfect ${p.perfectWeeks === 1 ? "week" : "weeks"}`,
+    });
+  }
+  for (const m of p.milestones) {
+    chips.push({
+      key: `ms-${m}`,
+      icon: <FlameIcon className="h-3.5 w-3.5 text-orange-600" />,
+      label: `${m}-day streak`,
+    });
+  }
+  if (p.bestWeekPct != null) {
+    chips.push({
+      key: "best",
+      icon: <StarIcon className="h-3.5 w-3.5 text-emerald-600" />,
+      label: `Best week ${p.bestWeekPct}%`,
+    });
+  }
+
   return (
-    <Card className="mb-8 divide-y divide-hairline">
-      <div className="flex items-center gap-3 px-5 py-2.5 text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
-        <span className="flex-1">Person</span>
-        <span className="w-16 text-right">Done</span>
-        <span className="w-16 text-right">Assigned</span>
-        {anyBonus && <span className="w-14 text-right">Bonus</span>}
-        <span className="w-14 text-right">Score</span>
+    <Card className="p-5">
+      {/* Header: avatar, class, level */}
+      <div className="flex items-center gap-4">
+        <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} size="lg" />
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-lg font-semibold leading-tight">{p.name}</p>
+          <p className="text-sm text-muted">{p.className}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
+            Level
+          </p>
+          <p className="font-display text-3xl font-semibold leading-none">{p.level.level}</p>
+        </div>
       </div>
 
-      {rows.map((s) => {
-        const streak = streaks?.get(s.id) ?? 0;
-        const b = bonus?.get(s.id)?.total ?? 0;
-        return (
-          <div key={s.id} className="px-5 py-3">
-            <div className="flex items-center gap-3">
-              <span className="flex min-w-0 flex-1 items-center gap-2.5">
-                <Avatar name={s.name} color={s.color} avatarPath={s.avatarPath} size="sm" />
-                <span className="truncate text-sm font-medium">{s.name}</span>
-                {streak > 0 && (
-                  <span
-                    className="tabular inline-flex items-center gap-0.5 text-xs font-medium text-orange-600"
-                    title={`${streak}-day streak`}
-                  >
-                    <FlameIcon className="h-3.5 w-3.5" />
-                    {streak}
-                  </span>
-                )}
-              </span>
-              <span className="tabular w-16 text-right text-sm text-muted">
-                {s.complete}
-              </span>
-              <span className="tabular w-16 text-right text-sm text-muted">
-                {s.assigned}
-              </span>
-              {anyBonus && (
-                <span
-                  className={`tabular w-14 text-right text-sm ${
-                    b > 0 ? "font-medium text-orange-600" : "text-muted"
-                  }`}
-                >
-                  {b > 0 ? `+${b}` : "\u2013"}
-                </span>
-              )}
-              <span
-                className={`tabular w-14 text-right text-sm font-semibold ${
-                  s.percent == null
-                    ? "text-muted"
-                    : s.percent >= 100
-                      ? "text-emerald-700"
-                      : ""
-                }`}
-              >
-                {pct(s.percent)}
-              </span>
+      {/* Character XP bar */}
+      <div className="mt-3">
+        <Bar pct={p.level.pct} />
+        <p className="tabular mt-1 text-xs text-muted">
+          {p.level.span - p.level.intoLevel} XP to level {p.level.level + 1}
+        </p>
+      </div>
+
+      {/* Season tier */}
+      <div className="mt-4 rounded-xl border border-hairline p-3">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-sm font-medium">
+            Season &middot; Tier {p.season.tier}
+            <span className="text-muted"> / {SEASON_MAX_TIER}</span>
+          </span>
+          {p.season.complete ? (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+              <TrophyIcon className="h-3.5 w-3.5" />
+              {p.season.tier >= SEASON_MAX_TIER ? "Maxed" : "Complete"}
+            </span>
+          ) : (
+            <span className="text-xs text-muted">your own work fills this</span>
+          )}
+        </div>
+        <Bar pct={p.season.pct} tone={p.season.complete ? "emerald" : "accent"} />
+      </div>
+
+      {/* Stats */}
+      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
+        {p.stats.map((s) => (
+          <div key={s.key}>
+            <div className="flex items-baseline justify-between">
+              <span className="text-xs text-muted">{s.label}</span>
+              <span className="tabular text-xs font-medium">Lv {s.level}</span>
             </div>
-
-            {showGroups && (
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 pl-[2.375rem]">
-                {s.groups
-                  .filter((g) => g.assigned > 0)
-                  .map((g) => (
-                    <span key={g.key} className="tabular text-xs text-muted">
-                      {g.label} <span className="font-medium">{pct(g.percent)}</span>
-                    </span>
-                  ))}
-              </div>
-            )}
+            <div className="mt-1">
+              <Bar pct={s.pct} />
+            </div>
           </div>
-        );
-      })}
-    </Card>
-  );
-}
+        ))}
+      </div>
 
-/** Rank by the fairness score, then by initiative bonus among those tied on
- *  it, then by raw effort done — bonuses are what separate a board at 100%. */
-function rankWithBonus(
-  standings: Standing[],
-  bonus: Map<string, PersonBonus>,
-): Standing[] {
-  return [...standings].sort(
-    (a, b) =>
-      (b.percent ?? -1) - (a.percent ?? -1) ||
-      (bonus.get(b.id)?.total ?? 0) - (bonus.get(a.id)?.total ?? 0) ||
-      b.complete - a.complete,
-  );
-}
+      {/* Streak + chips */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {p.currentStreak > 0 && (
+          <span
+            className="tabular inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700"
+            title={p.longestStreak > p.currentStreak ? `Best: ${p.longestStreak} days` : undefined}
+          >
+            <FlameIcon className="h-3.5 w-3.5" />
+            {p.currentStreak}-day streak
+          </span>
+        )}
+        {chips.map((c) => (
+          <span
+            key={c.key}
+            className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface px-2.5 py-1 text-xs text-ink"
+          >
+            {c.icon}
+            {c.label}
+          </span>
+        ))}
+      </div>
 
-function BadgeChip({
-  icon,
-  label,
-}: {
-  icon: ReactNode;
-  label: string;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface px-2.5 py-1 text-xs text-ink">
-      {icon}
-      {label}
-    </span>
-  );
-}
-
-function BadgesShelf({ people }: { people: PersonAchievements[] }) {
-  return (
-    <Card className="divide-y divide-hairline">
-      {people.map((p) => {
-        const chips: ReactNode[] = [];
-        if (p.monthlyWins > 0) {
-          chips.push(
-            <BadgeChip
-              key="wins"
-              icon={<TrophyIcon className="h-3.5 w-3.5 text-amber-500" />}
-              label={`${p.monthlyWins} monthly ${p.monthlyWins === 1 ? "win" : "wins"}`}
-            />,
-          );
-        }
-        if (p.perfectMonths > 0) {
-          chips.push(
-            <BadgeChip
-              key="pm"
-              icon={<StarIcon className="h-3.5 w-3.5 text-emerald-600" />}
-              label={`${p.perfectMonths} perfect ${p.perfectMonths === 1 ? "month" : "months"}`}
-            />,
-          );
-        }
-        if (p.perfectWeeks > 0) {
-          chips.push(
-            <BadgeChip
-              key="pw"
-              icon={<StarIcon className="h-3.5 w-3.5 text-sky-600" />}
-              label={`${p.perfectWeeks} perfect ${p.perfectWeeks === 1 ? "week" : "weeks"}`}
-            />,
-          );
-        }
-        for (const mstone of p.milestones) {
-          chips.push(
-            <BadgeChip
-              key={`ms-${mstone}`}
-              icon={<FlameIcon className="h-3.5 w-3.5 text-orange-600" />}
-              label={`${mstone}-day streak`}
-            />,
-          );
-        }
-
-        return (
-          <div key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
-            <span className="flex min-w-0 items-center gap-2.5">
-              <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} size="sm" />
-              <span className="truncate text-sm font-medium">{p.name}</span>
-            </span>
-
-            {p.currentStreak > 0 && (
-              <span
-                className="tabular inline-flex items-center gap-1 text-sm font-medium text-orange-600"
-                title={
-                  p.longestStreak > p.currentStreak
-                    ? `Best: ${p.longestStreak} days`
-                    : undefined
-                }
-              >
-                <FlameIcon className="h-4 w-4" />
-                {p.currentStreak}-day streak
+      {/* Mastery titles */}
+      {p.masteries.length > 0 && (
+        <div className="mt-3 border-t border-hairline pt-3">
+          <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
+            Mastery
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+            {p.masteries.map((m) => (
+              <span key={m.chore} className="tabular text-xs text-muted">
+                <span className="font-medium text-ink">{m.title}</span> of {m.chore}{" "}
+                <span className="text-muted">&times;{m.count}</span>
               </span>
-            )}
-
-            <span className="flex flex-1 flex-wrap justify-end gap-1.5">
-              {chips.length > 0 ? (
-                chips
-              ) : p.currentStreak === 0 ? (
-                <span className="text-xs text-muted">
-                  No badges yet &mdash; a perfect week earns the first.
-                </span>
-              ) : null}
-            </span>
+            ))}
           </div>
-        );
-      })}
+        </div>
+      )}
     </Card>
   );
 }

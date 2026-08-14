@@ -8,25 +8,26 @@ export function ResetScoringButton({ current }: { current: string | null }) {
   const [pending, startTransition] = useTransition();
 
   const confirmText =
-    "Start fresh from today?\n\n" +
-    "This counts scores from today forward, clears the overdue-chore backlog, " +
-    "and starts streaks and badges over. Schedules, assignments and the money " +
-    "ledger are all kept — nothing is deleted. This can't be undone.";
+    "Start a new game from today?\n\n" +
+    "This resets everything the scoreboard tracks — scores, character levels, " +
+    "stats, streaks, badges and the season — and clears the overdue-chore " +
+    "backlog. Schedules, assignments and the money ledger are kept; nothing " +
+    "is deleted. This can't be undone.";
 
   return (
     <div className="rounded-2xl border border-hairline bg-surface p-5">
-      <p className="text-sm font-medium">Reset scoring</p>
+      <p className="text-sm font-medium">Reset progression</p>
       <p className="mt-2 text-sm text-muted">
         {current
-          ? `Scores, streaks and badges currently count from ${formatLong(current)}.`
-          : "Scores, streaks and badges currently count everything so far."}
+          ? `Scores, levels, streaks and badges currently count from ${formatLong(current)}.`
+          : "Scores, levels, streaks and badges currently count everything so far."}
       </p>
       <p className="mt-2 max-w-xl text-sm text-muted">
-        Starts everyone even from today: scores begin fresh, the overdue-chore
-        backlog is cleared, and streaks and badges start over. Schedules,
-        assignments, workouts and the money ledger are untouched &mdash; nothing
-        is deleted. Good for after a testing period, or a fresh start following
-        an unplanned break.
+        A clean slate from today: scores, character levels, stats, streaks,
+        badges and the season all start over, and the overdue-chore backlog is
+        cleared. Schedules, assignments, workouts and the money ledger are
+        untouched &mdash; nothing is deleted. Use it once to wipe a testing
+        period, or for a true fresh start.
       </p>
 
       <button
