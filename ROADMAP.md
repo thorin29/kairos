@@ -173,6 +173,12 @@ all live in the database, never in this repository.
       chronological, New Testament only) — generated here, not copied from
       published plans
 - [ ] Importer: file upload, preview-before-commit, documented grammar
+- [ ] Memory verses: assign verses to memorise, track progress, and count them
+      toward the Wisdom stat (reciting/marking one done nudges you above the
+      reading baseline)
+- [ ] Personal reading plan creation: a person can build and follow their own
+      reading plan alongside the shared family plan, so reading beyond the
+      family minimum is possible and shows up as above-baseline Wisdom
 - [ ] Export a plan for editing and re-import
 - [x] Coverage counts the whole run of the published plan, not just the
       current calendar year, and books can be marked already-read so the

@@ -163,19 +163,70 @@ export const STAT_ORDER: StatKey[] = [
 
 /** The class label for a spread of stat XP. One stat clearly out front names
  *  the build; an even spread is an All-Rounder. */
-export function classFromStats(xpByStat: Record<StatKey, number>): string {
-  const entries = STAT_ORDER.map((k) => [k, xpByStat[k] ?? 0] as const);
-  const total = entries.reduce((n, [, xp]) => n + xp, 0);
-  if (total === 0) return "Newcomer";
+/**
+ * The family baseline per stat — the average XP everyone has in each area.
+ * Universal work (everyone reads the Bible the same amount) piles up here, so
+ * it becomes the floor everyone stands on rather than anyone's signature.
+ */
+export function computeBaseline(
+  all: Record<StatKey, number>[],
+): Record<StatKey, number> {
+  const base: Record<StatKey, number> = {
+    CHORE: 0,
+    EXERCISE: 0,
+    BIBLE: 0,
+    SCHOOL: 0,
+    TASK: 0,
+  };
+  if (all.length === 0) return base;
+  for (const s of all) for (const k of STAT_ORDER) base[k] += s[k] ?? 0;
+  for (const k of STAT_ORDER) base[k] /= all.length;
+  return base;
+}
+
+/**
+ * Your signature: how much you do *above* the family baseline in each area.
+ * This is what actually differentiates people who are assigned similar work —
+ * doing the daily minimum everyone does contributes nothing; rising above the
+ * norm (extra workouts, extra chores, reading past the plan) is what defines
+ * your class and your companion's colour.
+ */
+export function signatureOf(
+  statXp: Record<StatKey, number>,
+  baseline: Record<StatKey, number>,
+): Record<StatKey, number> {
+  const sig: Record<StatKey, number> = {
+    CHORE: 0,
+    EXERCISE: 0,
+    BIBLE: 0,
+    SCHOOL: 0,
+    TASK: 0,
+  };
+  for (const k of STAT_ORDER) sig[k] = Math.max(0, (statXp[k] ?? 0) - (baseline[k] ?? 0));
+  return sig;
+}
+
+/**
+ * The class from a signature. No activity at all → Newcomer; activity but no
+ * area clearly above the family norm → All-Rounder (honest: two kids who do
+ * everything identically are both All-Rounders, and their random companions are
+ * what set them apart). One area clearly ahead names the class.
+ */
+export function classFromSignature(
+  sig: Record<StatKey, number>,
+  rawTotal: number,
+): string {
+  if (rawTotal <= 0) return "Newcomer";
+  const total = STAT_ORDER.reduce((n, k) => n + sig[k], 0);
+  if (total <= 0) return "All-Rounder";
 
   let topKey: StatKey = "CHORE";
   let topXp = -1;
-  for (const [k, xp] of entries) {
-    if (xp > topXp) {
-      topXp = xp;
+  for (const k of STAT_ORDER) {
+    if (sig[k] > topXp) {
+      topXp = sig[k];
       topKey = k;
     }
   }
-  const share = topXp / total;
-  return share >= 0.45 ? STAT_META[topKey].className : "All-Rounder";
+  return topXp / total >= 0.45 ? STAT_META[topKey].className : "All-Rounder";
 }
