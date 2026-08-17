@@ -213,6 +213,10 @@ model SchoolWork {
   task      Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
   type      SchoolWorkType @default(ASSIGNMENT)
   subject   String?
+  // Test result, optional. score out of scoreMax (defaults to 100 so a plain
+  // percentage works). Only tests use these; feeds the Scholar stat.
+  score     Int?
+  scoreMax  Int?
   // Window (homework/project) vs date-specific (test): a window item shows from
   // startDate until done; a date-specific one only on its due date.
   dateSpecific Boolean   @default(false)

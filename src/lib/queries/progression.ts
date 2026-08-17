@@ -17,6 +17,7 @@ import { isStale, loadStaleContext, type StaleInput } from "@/lib/chores/stale";
 import { computeStreaks, earnedMilestones, type DayClass } from "@/lib/scoring/streaks";
 import {
   XP_PER_EFFORT,
+  TEST_SCORE_BONUS_XP,
   levelFromXp,
   seasonTier,
   masteryRank,
@@ -97,6 +98,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         title: true,
         dueDate: true,
         chore: { select: { effort: true } },
+        schoolWork: { select: { type: true, score: true, scoreMax: true } },
       },
     }),
     loadStaleContext(today),
@@ -145,6 +147,13 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     if (complete) {
       a.xp += effort * XP_PER_EFFORT;
       a.statXp[stat] += effort * XP_PER_EFFORT;
+      // A scored test lifts Scholar in proportion to how well it went.
+      const sw = t.schoolWork;
+      if (sw?.type === "TEST" && sw.score != null && sw.scoreMax) {
+        const bonus = Math.round((sw.score / sw.scoreMax) * TEST_SCORE_BONUS_XP);
+        a.xp += bonus;
+        a.statXp[stat] += bonus;
+      }
       if (t.choreId) {
         const m = a.mastery.get(t.choreId) ?? { chore: t.title, count: 0 };
         m.count += 1;

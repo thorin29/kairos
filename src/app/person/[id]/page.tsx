@@ -171,6 +171,10 @@ export default async function PersonPage({
       stale: t.stale,
       locked: Boolean(t.choreId),
       isWorkout: isWorkoutPrompt,
+      test:
+        t.category === "SCHOOL" && sw?.type === "TEST"
+          ? { score: sw.score ?? null, scoreMax: sw.scoreMax ?? 100 }
+          : undefined,
     };
   });
 

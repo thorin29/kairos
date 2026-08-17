@@ -17,6 +17,10 @@
  *  work is flat, so most completions are 10 XP and a heavy chore is more. */
 export const XP_PER_EFFORT = 10;
 
+/** Extra Scholar XP a perfect test earns on top of the base completion; scaled
+ *  by the score, so doing well (not just finishing) lifts School. */
+export const TEST_SCORE_BONUS_XP = 20;
+
 // ---- Character level curve --------------------------------------------------
 // Fast early levels for momentum, then a gentle classic RPG ramp.
 
