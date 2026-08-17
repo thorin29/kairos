@@ -113,3 +113,27 @@ button:disabled {
 .animate-backdrop-fade {
   animation: backdrop-fade 0.18s ease-out;
 }
+
+/* Companion moods — gentle, non-punishing idle animation */
+@keyframes companion-thrive {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8%) scale(1.02); }
+}
+@keyframes companion-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3%); }
+}
+@keyframes companion-nap {
+  0%, 100% { transform: rotate(-1.5deg); }
+  50% { transform: rotate(1.5deg); }
+}
+@keyframes companion-zzz {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.8); }
+  30% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(10px, -22px) scale(1.1); }
+}
+.companion-thrive { animation: companion-thrive 1.4s ease-in-out infinite; }
+.companion-idle { animation: companion-idle 3.2s ease-in-out infinite; }
+.companion-nap { animation: companion-nap 3.6s ease-in-out infinite; transform-origin: bottom center; }
+.companion-zzz { animation: companion-zzz 2.6s ease-in-out infinite; }
+.pixelated { image-rendering: pixelated; image-rendering: crisp-edges; }

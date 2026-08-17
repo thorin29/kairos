@@ -40,6 +40,7 @@ import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
 import { AddSchoolWork } from "@/components/add-school-work";
 import { Card, SectionHeading } from "@/components/ui";
+import { Companion } from "@/components/companion";
 import { Avatar } from "@/components/avatar";
 import { LockIcon, MoonIcon, FlameIcon, StarIcon } from "@/components/icons";
 import { CATEGORY_COLORS } from "@/lib/colors";
@@ -295,6 +296,17 @@ export default async function PersonPage({
           )}
         </div>
       </div>
+
+      {progress && (
+        <div className="mb-8 flex justify-center">
+          <Companion
+            species={progress.companionSpecies}
+            colorHex={progress.companionColor}
+            level={progress.level.level}
+            streak={progress.currentStreak}
+          />
+        </div>
+      )}
 
       {activePause && (
         <div className="mb-8 flex items-start gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-5 py-4">

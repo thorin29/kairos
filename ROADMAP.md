@@ -622,6 +622,13 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       kiosk poll), a parent selects the season's reward and grants it once the
       meter fills. No money — the reward is the real-world family thing you
       honor (v0.112.0)
+- [x] Companions (engine, first creature): a starter companion that evolves
+      through three stages with your character level, its card glowing with your
+      skill-blend colour, with a gentle non-punishing mood. Built end-to-end
+      against one creature (Coincroc); the roster is a config list (v0.113.0)
+- [ ] Companion collection: random-egg hatching across the style eras, a large
+      roster, rarity, duplicates giving shinies + essence toward a chosen one,
+      collected creatures minted with their colour as keepsakes (needs storage)
 - [ ] Season tier rewards: cosmetic unlocks only for the individual track —
       avatar flair and evolving companions, no money (storage)
 - [ ] Companions: original collectible creatures across style "eras" (Modern,
