@@ -209,6 +209,8 @@ export async function loadPersonDay(userId: string, dayISO: string) {
           type: true,
           subject: true,
           dateSpecific: true,
+          score: true,
+          scoreMax: true,
           class: { select: { name: true } },
         },
       },

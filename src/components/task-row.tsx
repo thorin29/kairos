@@ -5,6 +5,7 @@ import { deleteTask, releaseTask, toggleTask } from "@/lib/actions/tasks";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import { formatShort } from "@/lib/dates";
 import { ReleaseIcon, TrashIcon } from "@/components/icons";
+import { TestScore } from "@/components/test-score";
 
 type Row = {
   id: string;
@@ -18,6 +19,8 @@ type Row = {
   subtitle?: string;
   /** Generated from a chore: only a parent can remove it, from Chores. */
   locked?: boolean;
+  /** Present for tests — enables the score control. */
+  test?: { score: number | null; scoreMax: number };
 };
 
 export function TaskRow({ task }: { task: Row }) {
@@ -55,6 +58,14 @@ export function TaskRow({ task }: { task: Row }) {
           )}
         </p>
       </div>
+
+      {task.test && (done || task.test.score != null) && (
+        <TestScore
+          taskId={task.id}
+          score={task.test.score}
+          scoreMax={task.test.scoreMax}
+        />
+      )}
 
       {task.locked && !done && !task.stale && (
         <button

@@ -779,3 +779,41 @@ export async function classDueItems(
     })),
   };
 }
+
+/**
+ * Record (or clear) a test's score. score out of scoreMax; scoreMax defaults to
+ * 100 so a plain percentage works. Feeds the Scholar stat — doing well pushes
+ * School above the family baseline. Pass score null to clear it.
+ */
+export async function setTestScore(input: {
+  taskId: string;
+  score: number | null;
+  scoreMax?: number;
+}): Promise<{ error: string | null }> {
+  await requireInteractive();
+
+  const sw = await prisma.schoolWork.findUnique({
+    where: { taskId: input.taskId },
+    select: { id: true, type: true },
+  });
+  if (!sw) return { error: "That school item no longer exists." };
+  if (sw.type !== "TEST") return { error: "Only tests take a score." };
+
+  if (input.score == null) {
+    await prisma.schoolWork.update({
+      where: { id: sw.id },
+      data: { score: null, scoreMax: null },
+    });
+  } else {
+    const max = Math.round(input.scoreMax ?? 100);
+    const scoreMax = Math.min(1000, Math.max(1, Number.isFinite(max) ? max : 100));
+    const score = Math.min(scoreMax, Math.max(0, Math.round(input.score)));
+    await prisma.schoolWork.update({
+      where: { id: sw.id },
+      data: { score, scoreMax },
+    });
+  }
+
+  revalidatePath("/", "layout");
+  return { error: null };
+}

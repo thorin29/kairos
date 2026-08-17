@@ -632,6 +632,15 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       through three stages with your character level, its card glowing with your
       skill-blend colour, with a gentle non-punishing mood. Built end-to-end
       against one creature (Coincroc); the roster is a config list (v0.113.0)
+- [x] Class and companion colour from your "signature" — what you do above the
+      family baseline in each area — so universal work (daily Bible) is the
+      floor everyone shares and only going beyond the norm differentiates you
+      (v0.114.0)
+- [x] Test scores: mark a test done, enter a score out of a total; a higher
+      score feeds the Scholar stat, so doing well (not just finishing) lifts
+      School toward being your focus (v0.115.0)
+- [ ] More quality signals feeding the signature: workout intensity/volume
+      into Strength, reading beyond the plan into Wisdom
 - [ ] Companion collection: random-egg hatching across the style eras, a large
       roster, rarity, duplicates giving shinies + essence toward a chosen one,
       collected creatures minted with their colour as keepsakes (needs storage)

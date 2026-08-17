@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.114.0";
+export const APP_VERSION = "0.115.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -66,11 +66,20 @@ export const MIGRATIONS = [
   "56_task_weight",
   "57_account_kind",
   "58_coop",
+  "59_test_score",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.115.0",
+    summary: [
+      "Test scores \u2014 when a test is marked done, there's now an \u201cAdd score\u201d button on it. Enter the score out of a total (defaults to 100, so a plain percentage works), and it shows the result and percentage",
+      "Scores feed the Scholar stat: a higher score pours more into School, so doing *well* on tests \u2014 not just finishing them \u2014 is what pushes School toward being your focus. It pairs with the new signature system, where an area only stands out when you go beyond the family norm",
+      "Only tests take a score; homework, assignments and projects stay simple done/not-done",
+    ],
+  },
   {
     version: "0.114.0",
     summary: [
