@@ -10,6 +10,7 @@ import {
 } from "@/lib/dates";
 import { getScoringStart } from "@/lib/settings";
 import { currentSeasonWindow } from "@/lib/season";
+import { blendPalette, DEFAULT_COMPANION } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
 import { loadBonuses } from "@/lib/queries/bonus";
 import { isStale, loadStaleContext, type StaleInput } from "@/lib/chores/stale";
@@ -51,6 +52,9 @@ export type PersonProgress = {
   perfectWeeks: number;
   bestWeekPct: number | null;
   masteries: MasteryTitle[];
+  /** The starter companion, tinted by this person's skill blend. */
+  companionSpecies: string;
+  companionColor: string;
 };
 
 const EPOCH = "2000-01-01";
@@ -234,6 +238,8 @@ export async function loadProgression(
       perfectWeeks,
       bestWeekPct,
       masteries,
+      companionSpecies: DEFAULT_COMPANION,
+      companionColor: blendPalette(a.statXp),
     };
   });
 }

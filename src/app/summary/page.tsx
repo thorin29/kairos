@@ -10,6 +10,7 @@ import { Card, SectionHeading } from "@/components/ui";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { FlameIcon, StarIcon, TrophyIcon } from "@/components/icons";
+import { Companion } from "@/components/companion";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +128,13 @@ function PersonCard({ p }: { p: PersonProgress }) {
           <p className="font-display text-lg font-semibold leading-tight">{p.name}</p>
           <p className="text-sm text-muted">{p.className}</p>
         </div>
+        <Companion
+          species={p.companionSpecies}
+          colorHex={p.companionColor}
+          level={p.level.level}
+          streak={p.currentStreak}
+          size="sm"
+        />
         <div className="text-right">
           <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
             Level

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.112.0";
+export const APP_VERSION = "0.113.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -71,6 +71,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.113.0",
+    summary: [
+      "Companions (first creature!) \u2014 everyone now has a companion that grows with them. It appears on your own page and on your character card, and evolves through three stages as your character levels up (hatchling \u2192 juvenile \u2192 adult)",
+      "Its card glows with your personal colour \u2014 a smooth blend of where your XP actually goes (chores, strength, wisdom, scholar, life), so no two people\u2019s look quite the same, and it shifts a little as your habits shift",
+      "It has a gentle mood: bouncy when you\u2019re on a streak, napping when the streak\u2019s asleep \u2014 it always perks back up, never a punishment",
+      "This is the mechanism built end-to-end against one creature (Coincroc, arcade-pixel era). The roster is a simple list, so more creatures \u2014 and the egg-hatching collection, shinies, and colour-fingerprint keepsakes \u2014 drop in as the art arrives",
+    ],
+  },
   {
     version: "0.112.0",
     summary: [
