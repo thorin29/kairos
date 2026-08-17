@@ -81,7 +81,9 @@ export default async function SummaryPage() {
           Everyone levels up their own character &mdash; no one&rsquo;s ranked
           against anyone. Doing all your own work completes your season; the top
           tiers come from getting ahead and grabbing shared chores. Levels and
-          stats never drop.
+          stats never drop. Your class and your companion&rsquo;s colour come
+          from what you do <em>more</em> of than the family average, so an area
+          becomes your focus only when you go beyond the shared minimum.
         </p>
       </main>
     </>

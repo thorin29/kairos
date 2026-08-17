@@ -20,7 +20,9 @@ import {
   levelFromXp,
   seasonTier,
   masteryRank,
-  classFromStats,
+  computeBaseline,
+  signatureOf,
+  classFromSignature,
   STAT_ORDER,
   STAT_META,
   type LevelState,
@@ -67,9 +69,7 @@ const EPOCH = "2000-01-01";
  * All of it counts from the scoring-start line, so a hard reset starts the
  * whole RPG over; a plain month rollover only refills the season tier.
  */
-export async function loadProgression(
-  userId?: string,
-): Promise<PersonProgress[]> {
+export async function loadProgression(): Promise<PersonProgress[]> {
   const today = todayISO();
   const seasonWin = await currentSeasonWindow(today);
   const seasonStart = seasonWin.startISO;
@@ -78,7 +78,7 @@ export async function loadProgression(
 
   const [people, tasks, ctx, seasonBonus, lifetimeBonus] = await Promise.all([
     prisma.user.findMany({
-      where: { isActive: true, ...(userId ? { id: userId } : {}) },
+      where: { isActive: true },
       orderBy: { sortOrder: "asc" },
       select: { id: true, name: true, displayName: true, color: true, avatarPath: true },
     }),
@@ -87,7 +87,6 @@ export async function loadProgression(
         isOpen: false,
         status: { not: TaskStatus.SKIPPED },
         dueDate: { lte: toDateColumn(today), ...dueFloor },
-        ...(userId ? { userId } : {}),
       },
       select: {
         userId: true,
@@ -170,6 +169,10 @@ export async function loadProgression(
     }
   }
 
+  // The family baseline per stat, so class and colour reflect what each person
+  // does *above* the shared norm — universal work cancels out.
+  const baseline = computeBaseline(people.map((p) => acc.get(p.id)!.statXp));
+
   return people.map((person) => {
     const name = person.displayName ?? person.name;
     const a = acc.get(person.id)!;
@@ -228,7 +231,10 @@ export async function loadProgression(
       name,
       color: person.color,
       avatarPath: person.avatarPath,
-      className: classFromStats(a.statXp),
+      className: classFromSignature(
+        signatureOf(a.statXp, baseline),
+        STAT_ORDER.reduce((n, k) => n + a.statXp[k], 0),
+      ),
       level,
       stats,
       season,
@@ -239,7 +245,7 @@ export async function loadProgression(
       bestWeekPct,
       masteries,
       companionSpecies: DEFAULT_COMPANION,
-      companionColor: blendPalette(a.statXp),
+      companionColor: blendPalette(signatureOf(a.statXp, baseline)),
     };
   });
 }
@@ -248,6 +254,6 @@ export async function loadProgression(
 export async function loadPersonProgress(
   userId: string,
 ): Promise<PersonProgress | null> {
-  const rows = await loadProgression(userId);
-  return rows[0] ?? null;
+  const rows = await loadProgression();
+  return rows.find((p) => p.id === userId) ?? null;
 }

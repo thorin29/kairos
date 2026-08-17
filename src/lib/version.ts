@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.113.0";
+export const APP_VERSION = "0.114.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -71,6 +71,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.114.0",
+    summary: [
+      "Your class and your companion\u2019s colour now come from your \u201csignature\u201d \u2014 what you do *above* the family average in each area \u2014 instead of your raw totals. So work everyone does equally (like the daily Bible reading) no longer makes everyone the same class; it\u2019s the floor everyone stands on",
+      "What sets you apart is rising above the norm: extra workouts, extra or heavier chores, reading past the plan. An area only becomes your focus if you do more of it than the family typically does",
+      "Two people who do everything identically are now honestly All-Rounders (not both \u201cSage\u201d), and their different companions are what make them distinct \u2014 which is the point of the collection. Your per-area stat levels still climb from all your work, as before",
+    ],
+  },
   {
     version: "0.113.0",
     summary: [
