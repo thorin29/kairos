@@ -72,6 +72,9 @@ export async function generatePoolChores(
 
     if (!latest) {
       dueISO = dayISO;
+    } else if (chore.alwaysOpen) {
+      // Perpetual: a fresh instance is available the moment the last is done.
+      dueISO = dayISO;
     } else {
       const interval = chore.intervalDays ?? 7;
       const finishedOn = latest.completedAt

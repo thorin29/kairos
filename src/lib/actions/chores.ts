@@ -140,10 +140,11 @@ export async function addPoolChore(
   if (!(await isAdmin())) return { error: "Only a parent can change this. Switch profiles first." };
 
   const choreId = String(formData.get("choreId") ?? "");
-  const intervalDays = Number(formData.get("intervalDays") ?? 0);
+  const alwaysOpen = formData.get("alwaysOpen") === "on";
+  const intervalDays = alwaysOpen ? 1 : Number(formData.get("intervalDays") ?? 0);
 
   if (!choreId) return { error: "Pick a chore." };
-  if (!Number.isInteger(intervalDays) || intervalDays < 1 || intervalDays > 365) {
+  if (!alwaysOpen && (!Number.isInteger(intervalDays) || intervalDays < 1 || intervalDays > 365)) {
     return { error: "Set how many days between rounds, from 1 to 365." };
   }
 
@@ -152,6 +153,7 @@ export async function addPoolChore(
       where: { id: choreId },
       data: {
         isPool: true,
+        alwaysOpen,
         intervalDays,
         isActive: true,
         isCollaborative: false,

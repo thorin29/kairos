@@ -81,6 +81,10 @@ export function PoolChores({
                 />
                 <span className="text-sm text-muted">days</span>
               </div>
+              <label className="mt-2 flex items-center gap-2 text-sm text-muted">
+                <input type="checkbox" name="alwaysOpen" className="accent-[var(--color-accent)]" />
+                Always open (no schedule) &mdash; e.g. take out the garbage
+              </label>
             </div>
 
 

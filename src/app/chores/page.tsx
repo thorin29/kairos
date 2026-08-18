@@ -3,10 +3,9 @@ import { AppHeader } from "@/components/app-header";
 import {
   loadChoreSummary,
   loadPoolChores,
+  loadSharedChoreTally,
 } from "@/lib/queries/chores-summary";
 import { loadChoreMetrics } from "@/lib/queries/chore-metrics";
-import { loadOpenTasks } from "@/lib/queries/overview";
-import { OpenTasks } from "@/components/open-tasks";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { DAY_SHORT } from "@/lib/days";
 import { formatShort, todayISO } from "@/lib/dates";
@@ -24,7 +23,7 @@ export const dynamic = "force-dynamic";
 export default async function ChoresOverviewPage() {
   const today = todayISO();
 
-  const [metrics, summary, poolChores, people, activePause, openTasks] = await Promise.all([
+  const [metrics, summary, poolChores, people, activePause, sharedTally] = await Promise.all([
     loadChoreMetrics(today),
     loadChoreSummary(),
     loadPoolChores(),
@@ -40,7 +39,7 @@ export default async function ChoresOverviewPage() {
       },
     }),
     loadActivePause(today),
-    loadOpenTasks(today),
+    loadSharedChoreTally(),
   ]);
 
   const byPerson = people.map((p) => ({
@@ -132,19 +131,6 @@ export default async function ChoresOverviewPage() {
         </p>
       </section>
 
-      {openTasks.length > 0 && (
-        <div className="mb-10">
-          <OpenTasks
-            tasks={openTasks}
-            people={people.map((p) => ({
-              id: p.id,
-              name: p.displayName ?? p.name,
-              color: p.color,
-            }))}
-          />
-        </div>
-      )}
-
       <section className="mb-10">
         <SectionHeading>Weekly rotation</SectionHeading>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -185,7 +171,25 @@ export default async function ChoresOverviewPage() {
 
       {poolChores.length > 0 && (
         <section>
-          <SectionHeading>Shared chore schedule</SectionHeading>
+          <SectionHeading>Shared chores</SectionHeading>
+          {sharedTally.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {sharedTally.map((t) => (
+                <span
+                  key={t.name}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-3 py-1 text-xs"
+                >
+                  <span
+                    aria-hidden
+                    className="h-2 w-2 rounded-full"
+                    style={{ background: t.color }}
+                  />
+                  {t.name}
+                  <span className="tabular font-semibold">{t.count}</span>
+                </span>
+              ))}
+            </div>
+          )}
           <Card className="divide-y divide-hairline">
             {poolChores.map((c) => (
               <div key={c.id} className="flex flex-wrap items-center gap-3 p-4">
@@ -198,14 +202,16 @@ export default async function ChoresOverviewPage() {
                   )}
                 </span>
                 <span className="tabular text-xs text-muted">
-                  every {c.intervalDays} days
+                  {c.alwaysOpen ? "always open" : `every ${c.intervalDays} days`}
                   {c.isPaused
                     ? ""
                     : c.outstanding
                       ? " · up for grabs now"
-                      : c.nextDueISO
-                        ? ` · next ${formatShort(c.nextDueISO)}`
-                        : ""}
+                      : c.claimedByName
+                        ? ` · ${c.claimedByName} is on it`
+                        : c.nextDueISO
+                          ? ` · next ${formatShort(c.nextDueISO)}`
+                          : ""}
                 </span>
               </div>
             ))}
