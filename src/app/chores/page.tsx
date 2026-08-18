@@ -5,6 +5,8 @@ import {
   loadPoolChores,
 } from "@/lib/queries/chores-summary";
 import { loadChoreMetrics } from "@/lib/queries/chore-metrics";
+import { loadOpenTasks } from "@/lib/queries/overview";
+import { OpenTasks } from "@/components/open-tasks";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { DAY_SHORT } from "@/lib/days";
 import { formatShort, todayISO } from "@/lib/dates";
@@ -22,7 +24,7 @@ export const dynamic = "force-dynamic";
 export default async function ChoresOverviewPage() {
   const today = todayISO();
 
-  const [metrics, summary, poolChores, people, activePause] = await Promise.all([
+  const [metrics, summary, poolChores, people, activePause, openTasks] = await Promise.all([
     loadChoreMetrics(today),
     loadChoreSummary(),
     loadPoolChores(),
@@ -38,6 +40,7 @@ export default async function ChoresOverviewPage() {
       },
     }),
     loadActivePause(today),
+    loadOpenTasks(today),
   ]);
 
   const byPerson = people.map((p) => ({
@@ -129,6 +132,19 @@ export default async function ChoresOverviewPage() {
         </p>
       </section>
 
+      {openTasks.length > 0 && (
+        <div className="mb-10">
+          <OpenTasks
+            tasks={openTasks}
+            people={people.map((p) => ({
+              id: p.id,
+              name: p.displayName ?? p.name,
+              color: p.color,
+            }))}
+          />
+        </div>
+      )}
+
       <section className="mb-10">
         <SectionHeading>Weekly rotation</SectionHeading>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -169,7 +185,7 @@ export default async function ChoresOverviewPage() {
 
       {poolChores.length > 0 && (
         <section>
-          <SectionHeading>Up for grabs</SectionHeading>
+          <SectionHeading>Shared chore schedule</SectionHeading>
           <Card className="divide-y divide-hairline">
             {poolChores.map((c) => (
               <div key={c.id} className="flex flex-wrap items-center gap-3 p-4">

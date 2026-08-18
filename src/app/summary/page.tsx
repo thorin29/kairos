@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { FlameIcon, StarIcon, TrophyIcon } from "@/components/icons";
 import { Companion } from "@/components/companion";
+import { DayLogCard } from "@/components/day-log-card";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,9 @@ export default async function SummaryPage() {
 
         <div className="space-y-5">
           {people.map((p) => (
-            <PersonCard key={p.id} p={p} />
+            <DayLogCard key={p.id} userId={p.id} name={p.name}>
+              <PersonCard p={p} />
+            </DayLogCard>
           ))}
         </div>
 

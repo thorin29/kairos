@@ -173,6 +173,19 @@ all live in the database, never in this repository.
       chronological, New Testament only) — generated here, not copied from
       published plans
 - [ ] Importer: file upload, preview-before-commit, documented grammar
+- [x] "Up for grabs" is claimable on the Chores page (tap who did it), above
+      the weekly rotation (v0.119.0)
+- [x] Tap a person's card on Characters for a popup of what they completed that
+      day, with day-to-day scrolling (v0.119.0)
+- [ ] Honor-system perpetual chore (e.g. dog water): open, repeatable, super
+      easy, on the honor system; shows who did it on the summary at day's end
+- [ ] Calendar events: start & end time with a clean time picker; in week view
+      place the longer event on the left of each day
+- [ ] Cycle-based workouts: choose specific rest days, N-day rotations off the
+      weekly grid
+- [ ] Personal Bible reading plan (alongside the family plan)
+- [ ] Leisure book reading: add a book (name + length), log pages daily, never
+      overdue, unobtrusive (a gentle reminder, not a checklist item)
 - [ ] Past sport event auto-logs as a workout for the selected users
 - [ ] Recurrent classes: ask if they end at semester end and tie to that
       semester; if none exists, prompt to create one
