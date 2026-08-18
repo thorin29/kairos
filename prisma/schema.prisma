@@ -439,6 +439,7 @@ model Chore {
   // motivating case: it depends on how fast the grass grew, not on it
   // being Saturday.
   isPool       Boolean @default(false)
+  alwaysOpen   Boolean @default(false) // perpetual up-for-grabs; regenerates on completion
   intervalDays Int?
 
   // A collaborative chore is assigned to several people who each do their

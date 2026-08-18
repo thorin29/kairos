@@ -35,6 +35,8 @@ export type PoolChoreRow = {
   isPaused: boolean;
   nextDueISO: string | null;
   outstanding: boolean;
+  claimedByName: string | null;
+  alwaysOpen: boolean;
   effort: number;
   effortLocked: boolean;
 };
@@ -45,14 +47,24 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
     where: { isActive: true, isPool: true },
     orderBy: { title: "asc" },
     include: {
-      tasks: { orderBy: { dueDate: "desc" }, take: 1 },
+      tasks: {
+        orderBy: { dueDate: "desc" },
+        take: 1,
+        include: { user: { select: { name: true, displayName: true } } },
+      },
     },
   });
 
   return chores.map((c) => {
     const latest = c.tasks[0];
     const interval = c.intervalDays ?? 7;
-    const outstanding = Boolean(latest && latest.status !== "COMPLETE");
+    const pending = Boolean(latest && latest.status !== "COMPLETE");
+    // "Up for grabs" only if nobody has claimed it yet.
+    const outstanding = pending && Boolean(latest?.isOpen);
+    const claimedByName =
+      pending && latest && !latest.isOpen
+        ? (latest.user.displayName ?? latest.user.name)
+        : null;
 
     let nextDueISO: string | null = null;
     if (latest && latest.status === "COMPLETE") {
@@ -71,6 +83,8 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
       isPaused: c.isPaused,
       nextDueISO,
       outstanding,
+      claimedByName,
+      alwaysOpen: c.alwaysOpen,
       effort: c.effort,
       effortLocked: c.effortLocked,
     };
@@ -125,4 +139,32 @@ export async function loadChoreSummary(): Promise<ChoreSummary[]> {
       effortLocked: c.effortLocked,
     };
   });
+}
+
+export type SharedTallyRow = { name: string; color: string; count: number };
+
+/** Who has completed shared (pool) chores, by count — for the chores page.
+ *  Counts since the current scoring start so it matches the season. */
+export async function loadSharedChoreTally(): Promise<SharedTallyRow[]> {
+  const { getScoringStart } = await import("@/lib/settings");
+  const { toDateColumn } = await import("@/lib/dates");
+  const start = await getScoringStart();
+  const rows = await prisma.task.findMany({
+    where: {
+      status: "COMPLETE",
+      chore: { is: { isPool: true } },
+      ...(start ? { dueDate: { gte: toDateColumn(start) } } : {}),
+    },
+    select: { user: { select: { name: true, displayName: true, color: true } } },
+  });
+  const counts = new Map<string, { color: string; count: number }>();
+  for (const r of rows) {
+    const name = r.user.displayName ?? r.user.name;
+    const cur = counts.get(name) ?? { color: r.user.color, count: 0 };
+    cur.count += 1;
+    counts.set(name, cur);
+  }
+  return [...counts.entries()]
+    .map(([name, v]) => ({ name, color: v.color, count: v.count }))
+    .sort((a, b) => b.count - a.count);
 }

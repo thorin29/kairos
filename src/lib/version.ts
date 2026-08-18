@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.119.0";
+export const APP_VERSION = "0.120.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -68,11 +68,20 @@ export const MIGRATIONS = [
   "58_coop",
   "59_test_score",
   "60_companions",
+  "61_always_open",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.120.0",
+    summary: [
+      "Fixed \u201cup for grabs now\u201d on the Chores page \u2014 it was showing that even for shared chores someone had already claimed. Now it only says up for grabs when nobody has taken it; once claimed it reads \u201c<name> is on it,\u201d matching the dashboard where you actually grab it",
+      "The Chores page now shows a tally of who has done the shared chores, by count \u2014 and the claim buttons stay on the home dashboard where they belong",
+      "New \u201calways open\u201d shared chore (e.g. take out the garbage): perpetually up for grabs, with no schedule \u2014 the moment someone does it, a fresh one is available again. Set it with the \u201cAlways open\u201d checkbox when making a chore shared",
+    ],
+  },
   {
     version: "0.119.0",
     summary: [

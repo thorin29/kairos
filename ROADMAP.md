@@ -177,8 +177,11 @@ all live in the database, never in this repository.
       the weekly rotation (v0.119.0)
 - [x] Tap a person's card on Characters for a popup of what they completed that
       day, with day-to-day scrolling (v0.119.0)
-- [ ] Honor-system perpetual chore (e.g. dog water): open, repeatable, super
-      easy, on the honor system; shows who did it on the summary at day's end
+- [x] "Always open" shared chore (e.g. take out the garbage): perpetually up
+      for grabs, regenerates the instant it's done; Chores page shows a per-user
+      tally of who's done the shared chores (v0.120.0)
+- [ ] Honor-system perpetual chore (dog water, multiple times a day): builds on
+      "always open" but countable per day; who did it shows on the summary
 - [ ] Calendar events: start & end time with a clean time picker; in week view
       place the longer event on the left of each day
 - [ ] Cycle-based workouts: choose specific rest days, N-day rotations off the
