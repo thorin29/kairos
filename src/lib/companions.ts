@@ -21,30 +21,42 @@ export type CompanionSpecies = {
   assetBase: string;
 };
 
-/** The roster. Add creatures here as the art arrives — it's just rows. */
+/** The roster. Add creatures here as the art arrives — it's just rows.
+ *  (era/rarity are my best guesses — easy to retune.) */
 export const COMPANIONS: Record<string, CompanionSpecies> = {
-  sprout_pup: {
-    id: "sprout_pup",
-    name: "Sprout Pup",
-    era: "MODERN",
-    rarity: "common",
-    assetBase: "/companions/sprout_pup",
-  },
-  coincroc: {
-    id: "coincroc",
-    name: "Coincroc",
-    era: "ARCADE",
-    rarity: "uncommon",
-    assetBase: "/companions/coincroc",
-  },
-  emberkit: {
-    id: "emberkit",
-    name: "Emberkit",
-    era: "TOON",
-    rarity: "uncommon",
-    assetBase: "/companions/emberkit",
-  },
+  // Modern
+  sprout_pup: c("sprout_pup", "Sprout Pup", "MODERN", "common"),
+  pixapup: c("pixapup", "Pixapup", "MODERN", "common"),
+  chompix: c("chompix", "Chompix", "MODERN", "common"),
+  bytehog: c("bytehog", "Bytehog", "MODERN", "common"),
+  pebblet: c("pebblet", "Pebblet", "MODERN", "common"),
+  hopscotch: c("hopscotch", "Hopscotch", "MODERN", "common"),
+  blinky: c("blinky", "Blinky", "MODERN", "common"),
+  fuzzle: c("fuzzle", "Fuzzle", "MODERN", "common"),
+  snugglet: c("snugglet", "Snugglet", "MODERN", "common"),
+  puddin: c("puddin", "Puddin'", "MODERN", "common"),
+  dewdrop: c("dewdrop", "Dewdrop", "MODERN", "uncommon"),
+  tumble: c("tumble", "Tumble", "MODERN", "uncommon"),
+  pixiepuff: c("pixiepuff", "Pixiepuff", "MODERN", "uncommon"),
+  // Arcade
+  coincroc: c("coincroc", "Coincroc", "ARCADE", "uncommon"),
+  bitwing: c("bitwing", "Bitwing", "ARCADE", "rare"),
+  glitchkit: c("glitchkit", "Glitchkit", "ARCADE", "rare"),
+  // Toon
+  emberkit: c("emberkit", "Emberkit", "TOON", "uncommon"),
+  // Vintage
+  waddles: c("waddles", "Waddles", "VINTAGE", "uncommon"),
+  mossback: c("mossback", "Mossback", "VINTAGE", "uncommon"),
 };
+
+function c(
+  id: string,
+  name: string,
+  era: CompanionEra,
+  rarity: CompanionSpecies["rarity"],
+): CompanionSpecies {
+  return { id, name, era, rarity, assetBase: `/companions/${id}` };
+}
 
 /** Egg skins, mapped to the era or rarity pool they hatch from. Purely
  *  cosmetic variety — extra eggs per era are welcome. */
@@ -67,7 +79,11 @@ export const EGGS: Record<string, EggSkin> = {
 /** Which species a new person starts with — picked deterministically from a
  *  stable hash of their id so, with a real roster, no two people share a
  *  starter by default (no more everyone-has-Coincroc). */
-const STARTER_POOL = ["sprout_pup", "coincroc", "emberkit"];
+const STARTER_POOL = [
+  "sprout_pup", "pixapup", "chompix", "bytehog", "pebblet", "hopscotch",
+  "blinky", "fuzzle", "snugglet", "puddin", "dewdrop", "tumble", "pixiepuff",
+  "coincroc", "emberkit", "waddles", "mossback",
+];
 export function starterCompanion(userId: string): string {
   let h = 0;
   for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0;
