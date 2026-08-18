@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.116.0";
+export const APP_VERSION = "0.117.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -72,6 +72,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.117.0",
+    summary: [
+      "Fixed the rest-day bug: logging a rest day was quietly marking the day\u2019s workout as done, which earned Strength XP and could make someone an \u201cAthlete\u201d with no real workouts. A rest day now counts for nothing \u2014 it\u2019s just a noted day off, no points, no effect on completion",
+      "The roster grew from 3 to 19 creatures across the eras (foxes, cats, a frog, turtle, rabbit, owl, sheep, axolotl, hedgehogs, a penguin, red panda, hamster, husky, cardinal, and more), so starters are far more varied and there\u2019s a real pool ready for egg-hatching",
+    ],
+  },
   {
     version: "0.116.0",
     summary: [

@@ -273,6 +273,33 @@ async function completeWorkoutTask(userId: string, dateISO: string): Promise<voi
   revalidatePath(`/person/${userId}`);
 }
 
+/** A rest day marks the day's workout task SKIPPED — excused, so it scores
+ *  nothing and doesn't count against completion. Just a handled day. */
+async function skipWorkoutTask(userId: string, dateISO: string): Promise<void> {
+  const due = toDateColumn(dateISO);
+  const existing = await prisma.task.findFirst({
+    where: { userId, category: "EXERCISE", dueDate: due },
+  });
+  if (existing) {
+    await prisma.task.update({
+      where: { id: existing.id },
+      data: { status: "SKIPPED", completedAt: null },
+    });
+  } else {
+    await prisma.task.create({
+      data: {
+        userId,
+        category: "EXERCISE",
+        title: "Rest day",
+        dueDate: due,
+        status: "SKIPPED",
+        generatedFrom: `workout:${userId}`,
+      },
+    });
+  }
+  revalidatePath(`/person/${userId}`);
+}
+
 async function findOrCreateSession(userId: string, dateISO: string): Promise<string> {
   const date = toDateColumn(dateISO);
   const found = await prisma.workoutSession.findFirst({ where: { userId, date } });
@@ -585,7 +612,7 @@ export async function restDay(userId: string, dateISO: string): Promise<void> {
       data: { userId, date, isRest: true, finished: false },
     });
   }
-  await completeWorkoutTask(userId, dateISO);
+  await skipWorkoutTask(userId, dateISO);
   refresh();
 }
 

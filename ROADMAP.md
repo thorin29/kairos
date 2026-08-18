@@ -173,6 +173,11 @@ all live in the database, never in this repository.
       chronological, New Testament only) — generated here, not copied from
       published plans
 - [ ] Importer: file upload, preview-before-commit, documented grammar
+- [ ] Past sport event auto-logs as a workout for the selected users
+- [ ] Recurrent classes: ask if they end at semester end and tie to that
+      semester; if none exists, prompt to create one
+- [ ] Editing a recurrent event prompts "this occurrence" vs "the whole series"
+      (mirroring the delete prompt), instead of silently editing one occurrence
 - [ ] Memory verses: assign verses to memorise, track progress, and count them
       toward the Wisdom stat (reciting/marking one done nudges you above the
       reading baseline)
