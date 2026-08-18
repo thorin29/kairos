@@ -23,14 +23,56 @@ export type CompanionSpecies = {
 
 /** The roster. Add creatures here as the art arrives — it's just rows. */
 export const COMPANIONS: Record<string, CompanionSpecies> = {
+  sprout_pup: {
+    id: "sprout_pup",
+    name: "Sprout Pup",
+    era: "MODERN",
+    rarity: "common",
+    assetBase: "/companions/sprout_pup",
+  },
   coincroc: {
     id: "coincroc",
     name: "Coincroc",
     era: "ARCADE",
-    rarity: "rare",
+    rarity: "uncommon",
     assetBase: "/companions/coincroc",
   },
+  emberkit: {
+    id: "emberkit",
+    name: "Emberkit",
+    era: "TOON",
+    rarity: "uncommon",
+    assetBase: "/companions/emberkit",
+  },
 };
+
+/** Egg skins, mapped to the era or rarity pool they hatch from. Purely
+ *  cosmetic variety — extra eggs per era are welcome. */
+export type EggSkin = {
+  id: string;
+  asset: string;
+  era?: CompanionEra;
+  minRarity?: CompanionSpecies["rarity"];
+};
+export const EGGS: Record<string, EggSkin> = {
+  modern: { id: "modern", asset: "/companions/eggs/modern.png", era: "MODERN" },
+  arcade: { id: "arcade", asset: "/companions/eggs/arcade.png", era: "ARCADE" },
+  toon: { id: "toon", asset: "/companions/eggs/toon.png", era: "TOON" },
+  vintage: { id: "vintage", asset: "/companions/eggs/vintage.png", era: "VINTAGE" },
+  military: { id: "military", asset: "/companions/eggs/military.png", era: "VINTAGE" },
+  rare: { id: "rare", asset: "/companions/eggs/rare.png", minRarity: "rare" },
+  mystery: { id: "mystery", asset: "/companions/eggs/mystery.png" },
+};
+
+/** Which species a new person starts with — picked deterministically from a
+ *  stable hash of their id so, with a real roster, no two people share a
+ *  starter by default (no more everyone-has-Coincroc). */
+const STARTER_POOL = ["sprout_pup", "coincroc", "emberkit"];
+export function starterCompanion(userId: string): string {
+  let h = 0;
+  for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0;
+  return STARTER_POOL[h % STARTER_POOL.length] ?? DEFAULT_COMPANION;
+}
 
 export const DEFAULT_COMPANION = "coincroc";
 

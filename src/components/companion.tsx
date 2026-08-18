@@ -6,9 +6,9 @@ import {
   stageForLevel,
   stageAsset,
   moodForStreak,
-  levelsToNextStage,
   STAGE_NAMES,
 } from "@/lib/companions";
+import { XpBar } from "@/components/xp-bar";
 
 /**
  * A person's companion: the creature sprite at its current evolution stage,
@@ -23,18 +23,21 @@ export function Companion({
   level,
   streak,
   size = "md",
+  pct,
+  shares,
 }: {
   species?: string;
   colorHex: string;
   level: number;
   streak: number;
   size?: "sm" | "md";
+  pct?: number;
+  shares?: Record<string, number>;
 }) {
   const sp = COMPANIONS[species] ?? COMPANIONS[DEFAULT_COMPANION];
   const stage = stageForLevel(level);
   const mood = moodForStreak(streak);
   const asset = stageAsset(species, stage);
-  const toNext = levelsToNextStage(level);
 
   const anim =
     mood === "thriving" ? "companion-thrive" : mood === "sleepy" ? "companion-nap" : "companion-idle";
@@ -66,12 +69,14 @@ export function Companion({
       />
 
       {size !== "sm" && (
-        <div className="mt-1 text-center">
-          <p className="text-sm font-semibold">{sp.name}</p>
-          <p className="tabular text-xs text-muted">
-            {STAGE_NAMES[stage]} &middot; Lv {level}
-            {toNext != null && <> &middot; evolves in {toNext}</>}
+        <div className="mt-1.5 flex flex-col items-center gap-1.5">
+          <p className="text-sm font-semibold">
+            {sp.name}{" "}
+            <span className="font-normal text-muted">
+              &middot; {STAGE_NAMES[stage]} &middot; Lv {level}
+            </span>
           </p>
+          {pct != null && shares && <XpBar pct={pct} shares={shares} />}
         </div>
       )}
     </div>

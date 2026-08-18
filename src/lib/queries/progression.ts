@@ -10,7 +10,7 @@ import {
 } from "@/lib/dates";
 import { getScoringStart } from "@/lib/settings";
 import { currentSeasonWindow } from "@/lib/season";
-import { blendPalette, DEFAULT_COMPANION } from "@/lib/companions";
+import { blendPalette, starterCompanion } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
 import { loadBonuses } from "@/lib/queries/bonus";
 import { isStale, loadStaleContext, type StaleInput } from "@/lib/chores/stale";
@@ -58,6 +58,8 @@ export type PersonProgress = {
   /** The starter companion, tinted by this person's skill blend. */
   companionSpecies: string;
   companionColor: string;
+  /** Proportional XP by domain, for the pixel XP bar (sums to ~1, or all 0). */
+  statShares: Record<StatKey, number>;
 };
 
 const EPOCH = "2000-01-01";
@@ -242,7 +244,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
       avatarPath: person.avatarPath,
       className: classFromSignature(
         signatureOf(a.statXp, baseline),
-        STAT_ORDER.reduce((n, k) => n + a.statXp[k], 0),
+        a.statXp,
       ),
       level,
       stats,
@@ -253,8 +255,14 @@ export async function loadProgression(): Promise<PersonProgress[]> {
       perfectWeeks,
       bestWeekPct,
       masteries,
-      companionSpecies: DEFAULT_COMPANION,
+      companionSpecies: starterCompanion(person.id),
       companionColor: blendPalette(signatureOf(a.statXp, baseline)),
+      statShares: (() => {
+        const t = STAT_ORDER.reduce((n, k) => n + a.statXp[k], 0);
+        const s = {} as Record<StatKey, number>;
+        for (const k of STAT_ORDER) s[k] = t > 0 ? a.statXp[k] / t : 0;
+        return s;
+      })(),
     };
   });
 }
