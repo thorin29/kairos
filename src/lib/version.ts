@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.118.0";
+export const APP_VERSION = "0.119.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -73,6 +73,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.119.0",
+    summary: [
+      "Fixed \u201cUp for grabs\u201d on the Chores page \u2014 shared/released chores now show tap-to-claim buttons (pick who did it) right at the top, above the weekly rotation, instead of a read-only list you couldn\u2019t click. The cadence reference moved down to \u201cShared chore schedule\u201d",
+      "Tap anyone\u2019s card on the Characters page to see exactly what they completed that day \u2014 with arrows to scroll back through previous days. Handy for checking who actually did what (and for spotting things like a rest day that shouldn\u2019t have counted)",
+    ],
+  },
   {
     version: "0.118.0",
     summary: [
