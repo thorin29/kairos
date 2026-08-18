@@ -53,6 +53,10 @@ export async function resetScoring(): Promise<{ error: string | null }> {
       },
       data: { status: TaskStatus.SKIPPED, isOpen: false },
     }),
+    // Everyone starts over: clear the companion collection and incubation, so
+    // each person begins as a fresh egg.
+    prisma.companion.deleteMany({}),
+    prisma.companionState.deleteMany({}),
   ]);
 
   revalidatePath("/");

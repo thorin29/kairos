@@ -131,10 +131,8 @@ function PersonCard({ p }: { p: PersonProgress }) {
           <p className="text-sm text-muted">{p.className}</p>
         </div>
         <Companion
-          species={p.companionSpecies}
+          companion={p.companion}
           colorHex={p.companionColor}
-          level={p.level.level}
-          streak={p.currentStreak}
           size="sm"
         />
         <div className="text-right">

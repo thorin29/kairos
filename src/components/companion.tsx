@@ -1,49 +1,42 @@
 "use client";
 
-import {
-  COMPANIONS,
-  DEFAULT_COMPANION,
-  stageForLevel,
-  stageAsset,
-  moodForStreak,
-  STAGE_NAMES,
-} from "@/lib/companions";
+import { COMPANIONS, stageAsset, STAGE_NAMES } from "@/lib/companions";
 import { XpBar } from "@/components/xp-bar";
 
+const MYSTERY_EGG = "/companions/eggs/mystery.png";
+
+export type CompanionView = {
+  active: boolean;
+  species: string | null;
+  stage: number;
+  shiny: boolean;
+  incubationPct: number;
+  eggReady: boolean;
+};
+
 /**
- * A person's companion: the creature sprite at its current evolution stage,
- * inside a card whose glow is tinted by that person's skill-blend colour (the
- * fingerprint lives on the frame so it works across every art era). The idle
- * animation is a gentle mood — bouncy when thriving, napping when the streak's
- * asleep — never punishing.
+ * A person's companion card. While it's an egg, the sprite is the egg and a
+ * little meter shows incubation; once hatched, it's the creature at its current
+ * evolution stage. The card glow is the skill-blend fingerprint either way.
  */
 export function Companion({
-  species = DEFAULT_COMPANION,
+  companion,
   colorHex,
-  level,
-  streak,
   size = "md",
   pct,
   shares,
 }: {
-  species?: string;
+  companion: CompanionView;
   colorHex: string;
-  level: number;
-  streak: number;
   size?: "sm" | "md";
   pct?: number;
   shares?: Record<string, number>;
 }) {
-  const sp = COMPANIONS[species] ?? COMPANIONS[DEFAULT_COMPANION];
-  const stage = stageForLevel(level);
-  const mood = moodForStreak(streak);
-  const asset = stageAsset(species, stage);
+  const sp = companion.species ? COMPANIONS[companion.species] : null;
+  const asset =
+    companion.active && sp ? stageAsset(sp.id, companion.stage) : MYSTERY_EGG;
 
-  const anim =
-    mood === "thriving" ? "companion-thrive" : mood === "sleepy" ? "companion-nap" : "companion-idle";
-
-  const box =
-    size === "sm" ? "h-14 w-24 shrink-0" : "h-36 w-full max-w-[16rem]";
+  const box = size === "sm" ? "h-14 w-24 shrink-0" : "h-36 w-full max-w-[16rem]";
   const imgBox = size === "sm" ? "h-9" : "h-24";
 
   return (
@@ -55,28 +48,46 @@ export function Companion({
         boxShadow: `0 0 22px ${colorHex}33`,
       }}
     >
-      {/* sleepy Zzz */}
-      {mood === "sleepy" && size !== "sm" && (
-        <span className="companion-zzz absolute right-6 top-3 text-sm font-bold text-muted">z</span>
+      {companion.shiny && (
+        <span className="absolute right-2 top-1.5 text-sm" title="Shiny">
+          &#10022;
+        </span>
       )}
 
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={asset}
-        alt={`${sp.name} (${STAGE_NAMES[stage]})`}
-        className={`${imgBox} ${anim} pixelated max-w-full w-auto object-contain`}
+        alt={companion.active && sp ? sp.name : "Incubating egg"}
+        className={`${imgBox} ${companion.active ? "companion-idle" : companion.eggReady ? "companion-thrive" : ""} pixelated max-w-full w-auto object-contain`}
         draggable={false}
       />
 
       {size !== "sm" && (
         <div className="mt-1.5 flex flex-col items-center gap-1.5">
-          <p className="text-sm font-semibold">
-            {sp.name}{" "}
-            <span className="font-normal text-muted">
-              &middot; {STAGE_NAMES[stage]} &middot; Lv {level}
-            </span>
-          </p>
-          {pct != null && shares && <XpBar pct={pct} shares={shares} />}
+          {companion.active && sp ? (
+            <>
+              <p className="text-sm font-semibold">
+                {sp.name}{" "}
+                <span className="font-normal text-muted">
+                  &middot; {STAGE_NAMES[companion.stage]}
+                </span>
+              </p>
+              {pct != null && shares && <XpBar pct={pct} shares={shares} />}
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold">
+                {companion.eggReady ? "Ready to hatch!" : "Egg"}
+              </p>
+              <div className="h-2 w-32 overflow-hidden rounded-full bg-hairline">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${companion.incubationPct}%`, background: colorHex }}
+                />
+              </div>
+              <p className="tabular text-xs text-muted">{companion.incubationPct}% incubated</p>
+            </>
+          )}
         </div>
       )}
     </div>
