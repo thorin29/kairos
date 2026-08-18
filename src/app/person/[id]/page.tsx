@@ -41,6 +41,7 @@ import { AddTaskForm } from "@/components/add-task-form";
 import { AddSchoolWork } from "@/components/add-school-work";
 import { Card, SectionHeading } from "@/components/ui";
 import { Companion } from "@/components/companion";
+import { HatchControls } from "@/components/hatch-controls";
 import { Avatar } from "@/components/avatar";
 import { LockIcon, MoonIcon, FlameIcon, StarIcon } from "@/components/icons";
 import { CATEGORY_COLORS } from "@/lib/colors";
@@ -302,15 +303,16 @@ export default async function PersonPage({
       </div>
 
       {progress && (
-        <div className="mb-8 flex justify-center">
+        <div className="mb-8 flex flex-col items-center">
           <Companion
-            species={progress.companionSpecies}
+            companion={progress.companion}
             colorHex={progress.companionColor}
-            level={progress.level.level}
-            streak={progress.currentStreak}
             pct={progress.level.pct}
             shares={progress.statShares}
           />
+          {progress.companion.eggReady && (
+            <HatchControls userId={person.id} hasActive={progress.companion.active} />
+          )}
         </div>
       )}
 

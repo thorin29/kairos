@@ -10,7 +10,7 @@ import {
 } from "@/lib/dates";
 import { getScoringStart } from "@/lib/settings";
 import { currentSeasonWindow } from "@/lib/season";
-import { blendPalette, starterCompanion } from "@/lib/companions";
+import { blendPalette, eggCostFor, stageForTenure, EGGS_PER_SEASON_CAP } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
 import { loadBonuses } from "@/lib/queries/bonus";
 import { isStale, loadStaleContext, type StaleInput } from "@/lib/chores/stale";
@@ -55,11 +55,21 @@ export type PersonProgress = {
   perfectWeeks: number;
   bestWeekPct: number | null;
   masteries: MasteryTitle[];
-  /** The starter companion, tinted by this person's skill blend. */
-  companionSpecies: string;
+  /** The companion display: an incubating egg, or the active creature. Colour
+   *  is the skill-blend fingerprint on the card frame either way. */
   companionColor: string;
+  companion: {
+    active: boolean;
+    species: string | null;
+    stage: number;
+    shiny: boolean;
+    incubationPct: number;
+    eggReady: boolean;
+  };
   /** Proportional XP by domain, for the pixel XP bar (sums to ~1, or all 0). */
   statShares: Record<StatKey, number>;
+  /** All-time XP, for the hatch action. */
+  lifetimeXp: number;
 };
 
 const EPOCH = "2000-01-01";
@@ -79,7 +89,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
   const startISO = await getScoringStart();
   const dueFloor = startISO ? { gte: toDateColumn(startISO) } : {};
 
-  const [people, tasks, ctx, seasonBonus, lifetimeBonus] = await Promise.all([
+  const [people, tasks, ctx, seasonBonus, lifetimeBonus, compStates, activeComps] = await Promise.all([
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -106,7 +116,24 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     loadStaleContext(today),
     loadBonuses(seasonStart, today),
     loadBonuses(startISO ?? EPOCH, today),
+    prisma.companionState.findMany(),
+    prisma.companion.findMany({ where: { isActive: true } }),
   ]);
+
+  type StateRow = {
+    userId: string;
+    incubationBaseXp: number;
+    eggsHatched: number;
+    seasonKey: string | null;
+    eggsThisSeason: number;
+  };
+  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number };
+  const stateByUser = new Map(
+    (compStates as StateRow[]).map((s) => [s.userId, s]),
+  );
+  const activeByUser = new Map(
+    (activeComps as ActiveRow[]).map((c) => [c.userId, c]),
+  );
 
   type Acc = {
     xp: number;
@@ -255,14 +282,45 @@ export async function loadProgression(): Promise<PersonProgress[]> {
       perfectWeeks,
       bestWeekPct,
       masteries,
-      companionSpecies: starterCompanion(person.id),
       companionColor: blendPalette(signatureOf(a.statXp, baseline)),
+      companion: (() => {
+        const st = stateByUser.get(person.id);
+        const baseXp = st?.incubationBaseXp ?? 0;
+        const eggsHatched = st?.eggsHatched ?? 0;
+        const cost = eggCostFor(eggsHatched);
+        const progress = Math.max(0, totalXp - baseXp);
+        const incubationPct = Math.min(100, Math.round((progress / cost) * 100));
+        const eggsThisSeason =
+          st && st.seasonKey === seasonWin.startISO ? st.eggsThisSeason : 0;
+        const eggReady = progress >= cost && eggsThisSeason < EGGS_PER_SEASON_CAP;
+        const active = activeByUser.get(person.id);
+        if (active) {
+          const tenure = Math.max(0, totalXp - active.activeSinceXp);
+          return {
+            active: true,
+            species: active.species,
+            stage: stageForTenure(tenure),
+            shiny: active.shiny,
+            incubationPct,
+            eggReady,
+          };
+        }
+        return {
+          active: false,
+          species: null,
+          stage: 0,
+          shiny: false,
+          incubationPct,
+          eggReady,
+        };
+      })(),
       statShares: (() => {
         const t = STAT_ORDER.reduce((n, k) => n + a.statXp[k], 0);
         const s = {} as Record<StatKey, number>;
         for (const k of STAT_ORDER) s[k] = t > 0 ? a.statXp[k] / t : 0;
         return s;
       })(),
+      lifetimeXp: totalXp,
     };
   });
 }

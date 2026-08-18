@@ -649,9 +649,20 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] Companion starter variety + roster (3 creatures across eras) so people
       don't all share one; class bug fixed (no false "Athlete"); pixel XP bar
       showing level progress grouped by domain colour (v0.116.0)
-- [ ] Companion collection: random-egg hatching across the style eras, a large
-      roster, rarity, duplicates giving shinies + essence toward a chosen one,
-      collected creatures minted with their colour as keepsakes (needs storage)
+- [x] Companion collection (incubate → hatch → choose): everyone starts as an
+      egg that fills from XP and hatches; pick a new (never-duplicate) creature
+      or deepen the current one (shiny); rarity scales with season tier; active
+      companion evolves on its own tenure; reset starts everyone over as an egg
+      (v0.118.0)
+- [ ] Collection gallery: a page showing all creatures owned + the silhouettes
+      still to find; minted keepsakes with their frozen colour
+- [ ] Lighter collect mechanic for a 50+ roster: streak/token/coin currency to
+      earn or buy eggs; essence banked from would-be duplicates toward a chosen
+      creature; egg-era selection
+- [ ] Calibrate incubation XP and rarity odds against the Season planner once
+      all events are locked in (levels/odds driven by real workload)
+- [ ] New eras' art as it arrives: Dragon (7 wyrmlets), WW2 (1940s), Imaginary,
+      Vintage; plus remaining Modern/'80s creatures
 - [ ] Season tier rewards: cosmetic unlocks only for the individual track —
       avatar flair and evolving companions, no money (storage)
 - [ ] Companions: original collectible creatures across style "eras" (Modern,

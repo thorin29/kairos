@@ -10,7 +10,14 @@
  * everything here stays the same.
  */
 
-export type CompanionEra = "MODERN" | "TOON" | "ARCADE" | "VINTAGE";
+export type CompanionEra =
+  | "MODERN"
+  | "TOON"
+  | "ARCADE"
+  | "DRAGON"
+  | "VINTAGE"
+  | "WW2"
+  | "IMAGINARY";
 
 export type CompanionSpecies = {
   id: string;
@@ -24,29 +31,28 @@ export type CompanionSpecies = {
 /** The roster. Add creatures here as the art arrives — it's just rows.
  *  (era/rarity are my best guesses — easy to retune.) */
 export const COMPANIONS: Record<string, CompanionSpecies> = {
-  // Modern
+  // Modern · common
   sprout_pup: c("sprout_pup", "Sprout Pup", "MODERN", "common"),
-  pixapup: c("pixapup", "Pixapup", "MODERN", "common"),
-  chompix: c("chompix", "Chompix", "MODERN", "common"),
-  bytehog: c("bytehog", "Bytehog", "MODERN", "common"),
   pebblet: c("pebblet", "Pebblet", "MODERN", "common"),
-  hopscotch: c("hopscotch", "Hopscotch", "MODERN", "common"),
-  blinky: c("blinky", "Blinky", "MODERN", "common"),
   fuzzle: c("fuzzle", "Fuzzle", "MODERN", "common"),
-  snugglet: c("snugglet", "Snugglet", "MODERN", "common"),
+  blinky: c("blinky", "Blinky", "MODERN", "common"),
+  hopscotch: c("hopscotch", "Hopscotch", "MODERN", "common"),
+  dewdrop: c("dewdrop", "Dewdrop", "MODERN", "common"),
+  mossback: c("mossback", "Mossback", "MODERN", "common"),
   puddin: c("puddin", "Puddin'", "MODERN", "common"),
-  dewdrop: c("dewdrop", "Dewdrop", "MODERN", "uncommon"),
-  tumble: c("tumble", "Tumble", "MODERN", "uncommon"),
-  pixiepuff: c("pixiepuff", "Pixiepuff", "MODERN", "uncommon"),
-  // Arcade
-  coincroc: c("coincroc", "Coincroc", "ARCADE", "uncommon"),
+  tumble: c("tumble", "Tumble", "MODERN", "common"),
+  snugglet: c("snugglet", "Snugglet", "MODERN", "common"),
+  waddles: c("waddles", "Waddles", "MODERN", "common"),
+  // '80s / '90s Toon · uncommon
+  emberkit: c("emberkit", "Emberkit", "TOON", "uncommon"),
+  // Arcade · rare
+  coincroc: c("coincroc", "Coincroc", "ARCADE", "rare"),
   bitwing: c("bitwing", "Bitwing", "ARCADE", "rare"),
   glitchkit: c("glitchkit", "Glitchkit", "ARCADE", "rare"),
-  // Toon
-  emberkit: c("emberkit", "Emberkit", "TOON", "uncommon"),
-  // Vintage
-  waddles: c("waddles", "Waddles", "VINTAGE", "uncommon"),
-  mossback: c("mossback", "Mossback", "VINTAGE", "uncommon"),
+  pixiepuff: c("pixiepuff", "Pixiepuff", "ARCADE", "rare"),
+  bytehog: c("bytehog", "Bytehog", "ARCADE", "rare"),
+  chompix: c("chompix", "Chompix", "ARCADE", "rare"),
+  pixapup: c("pixapup", "Pixapup", "ARCADE", "rare"),
 };
 
 function c(
@@ -154,4 +160,90 @@ export function blendPalette(xpByStat: Record<string, number>): string {
   }
   const hex = (n: number) => Math.round(n).toString(16).padStart(2, "0");
   return `#${hex(r)}${hex(g)}${hex(b)}`;
+}
+
+// ---- Incubation & hatching -------------------------------------------------
+// Everyone starts as an egg. The egg fills from lifetime XP; the first hatches
+// quickly so nobody's pet-less long, then each takes ~1–2 weeks of steady work.
+// A per-season cap keeps a 50+ roster a long haul. These are placeholders to be
+// calibrated against the Season planner once all events are locked in.
+export const FIRST_EGG_XP = 80;
+export const EGG_XP = 250;
+export const EGGS_PER_SEASON_CAP = 2;
+
+/** XP needed for the Nth egg (0-indexed): the first is cheap. */
+export function eggCostFor(eggsHatched: number): number {
+  return eggsHatched === 0 ? FIRST_EGG_XP : EGG_XP;
+}
+
+// Active companion evolves on its OWN tenure (work done while it's your buddy),
+// not your all-time level — so raising each one feels real.
+export const TENURE_STAGE_XP = [0, 150, 500];
+export function stageForTenure(tenureXp: number): number {
+  if (tenureXp >= TENURE_STAGE_XP[2]) return 2;
+  if (tenureXp >= TENURE_STAGE_XP[1]) return 1;
+  return 0;
+}
+
+type Rarity = CompanionSpecies["rarity"];
+
+/** Rarity odds shift with how high you climbed your season (tier 1–10). Higher
+ *  tiers raise the shot at rare/legendary — same work, better pulls for going
+ *  above and beyond. */
+export function rarityWeights(tier: number): Record<Rarity, number> {
+  const t = Math.max(0, Math.min(10, tier)) / 10; // 0..1
+  return {
+    common: 70 - 30 * t,
+    uncommon: 22 + 6 * t,
+    rare: 7 + 16 * t,
+    legendary: 1 + 8 * t,
+  };
+}
+
+/**
+ * Draw a species the person does NOT already own (no duplicates, ever),
+ * weighted by rarity for their tier. Falls back across rarities if a tier is
+ * exhausted. Returns null only when the whole roster is collected.
+ */
+export function pickHatch(
+  owned: string[],
+  tier: number,
+  rand: () => number = Math.random,
+): string | null {
+  const ownedSet = new Set(owned);
+  const pool = Object.values(COMPANIONS).filter((s) => !ownedSet.has(s.id));
+  if (pool.length === 0) return null;
+
+  const weights = rarityWeights(tier);
+  const order: Rarity[] = ["legendary", "rare", "uncommon", "common"];
+  // Weighted pick of a rarity that still has unowned members.
+  const available = order.filter((r) => pool.some((s) => s.rarity === r));
+  const total = available.reduce((n, r) => n + weights[r], 0);
+  let roll = rand() * total;
+  let chosen: Rarity = available[available.length - 1];
+  for (const r of available) {
+    roll -= weights[r];
+    if (roll <= 0) {
+      chosen = r;
+      break;
+    }
+  }
+  const tierPool = pool.filter((s) => s.rarity === chosen);
+  const bag = tierPool.length ? tierPool : pool;
+  return bag[Math.floor(rand() * bag.length)]!.id;
+}
+
+/** The egg skin to show while incubating / at hatch, matched to a creature's
+ *  era. */
+export function eggSkinForEra(era: CompanionEra): string {
+  const map: Record<CompanionEra, string> = {
+    MODERN: "modern",
+    TOON: "toon",
+    ARCADE: "arcade",
+    DRAGON: "rare",
+    VINTAGE: "vintage",
+    WW2: "military",
+    IMAGINARY: "mystery",
+  };
+  return `/companions/eggs/${map[era] ?? "mystery"}.png`;
 }

@@ -88,6 +88,8 @@ model User {
   approvedMoney    MoneyEntry[]      @relation("MoneyApprover")
   coopProposals    CoopProposal[]
   coopVotes        CoopVote[]
+  companions       Companion[]
+  companionState   CompanionState?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1093,4 +1095,32 @@ model CoopVote {
   createdAt  DateTime     @default(now())
 
   @@unique([proposalId, userId])
+}
+
+// ---- Companion collection ---------------------------------------------------
+
+// A creature a person has hatched. Unique per (user, species) — no duplicates.
+model Companion {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  species       String
+  shiny         Boolean  @default(false)
+  isActive      Boolean  @default(false)
+  activeSinceXp Int      @default(0) // lifetime XP when it became active (drives tenure)
+  mintedStage   Int? // frozen stage when it was retired to the shelf
+  acquiredAt    DateTime @default(now())
+
+  @@unique([userId, species])
+  @@index([userId])
+}
+
+// Per-person incubation progress and the season egg cap.
+model CompanionState {
+  userId           String @id
+  user             User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incubationBaseXp Int    @default(0) // lifetime XP banked at the last hatch
+  eggsHatched      Int    @default(0)
+  seasonKey        String?
+  eggsThisSeason   Int    @default(0)
 }

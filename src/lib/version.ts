@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.117.0";
+export const APP_VERSION = "0.118.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -67,11 +67,21 @@ export const MIGRATIONS = [
   "57_account_kind",
   "58_coop",
   "59_test_score",
+  "60_companions",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.118.0",
+    summary: [
+      "Companions are now a real collection! Everyone starts as an egg that incubates from your XP \u2014 the first hatches quickly, then each takes a week or two of steady work, capped at 2 per season so the roster stays a long haul",
+      "When an egg is ready, you choose: hatch a brand-new companion (always one you don\u2019t already own \u2014 no duplicates) or deepen the one you have (it turns shiny). How high you climbed your season nudges the odds toward rarer creatures",
+      "Your active companion now evolves on its OWN tenure \u2014 the work you do while it\u2019s your buddy \u2014 not your all-time level, so raising each one feels earned. Retired companions are kept on your shelf",
+      "The roster is corrected to its eras (Modern = common, \u201980s = uncommon, Arcade = rare) with 19 creatures so far. Reset now clears companions, so everyone genuinely starts over as an egg",
+    ],
+  },
   {
     version: "0.117.0",
     summary: [
