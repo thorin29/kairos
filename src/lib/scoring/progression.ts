@@ -210,17 +210,23 @@ export function signatureOf(
   return sig;
 }
 
+/** Minimum signature XP before any area is called your class — stops a single
+ *  completion (or a one-person household) from typing you on noise. */
+export const MIN_SIGNATURE_XP = 30;
+
 /**
- * The class from a signature. No activity at all → Newcomer; activity but no
- * area clearly above the family norm → All-Rounder (honest: two kids who do
- * everything identically are both All-Rounders, and their random companions are
- * what set them apart). One area clearly ahead names the class.
+ * The class from a signature. Guards, in order: no activity at all → Newcomer;
+ * no area meaningfully above the family norm → All-Rounder; never name a class
+ * for an area you have zero real XP in (so "Athlete" can't appear with no
+ * workouts); and the leading area must clear a minimum gap, not a sliver.
  */
 export function classFromSignature(
   sig: Record<StatKey, number>,
-  rawTotal: number,
+  statXp: Record<StatKey, number>,
 ): string {
+  const rawTotal = STAT_ORDER.reduce((n, k) => n + (statXp[k] ?? 0), 0);
   if (rawTotal <= 0) return "Newcomer";
+
   const total = STAT_ORDER.reduce((n, k) => n + sig[k], 0);
   if (total <= 0) return "All-Rounder";
 
@@ -232,5 +238,7 @@ export function classFromSignature(
       topKey = k;
     }
   }
+  if (topXp <= 0 || (statXp[topKey] ?? 0) <= 0) return "All-Rounder";
+  if (topXp < MIN_SIGNATURE_XP) return "All-Rounder";
   return topXp / total >= 0.45 ? STAT_META[topKey].className : "All-Rounder";
 }

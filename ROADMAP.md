@@ -641,6 +641,9 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       School toward being your focus (v0.115.0)
 - [ ] More quality signals feeding the signature: workout intensity/volume
       into Strength, reading beyond the plan into Wisdom
+- [x] Companion starter variety + roster (3 creatures across eras) so people
+      don't all share one; class bug fixed (no false "Athlete"); pixel XP bar
+      showing level progress grouped by domain colour (v0.116.0)
 - [ ] Companion collection: random-egg hatching across the style eras, a large
       roster, rarity, duplicates giving shinies + essence toward a chosen one,
       collected creatures minted with their colour as keepsakes (needs storage)

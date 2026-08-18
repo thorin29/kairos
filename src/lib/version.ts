@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.115.0";
+export const APP_VERSION = "0.116.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -72,6 +72,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.116.0",
+    summary: [
+      "Companion variety \u2014 everyone no longer starts with the same creature. There are now three (Sprout Pup, Coincroc, Emberkit), and each person gets a distinct starter. More creatures and the egg-hatching collection are coming next",
+      "New pixel XP bar on the companion: a tight row of little squares showing progress into your level, coloured by what you actually did (chores green, workouts orange, Bible gold, school indigo, life teal) and grouped into bands. It replaces the confusing \u201cevolves in N\u201d line",
+      "Fixed the class bug where someone could show as \u201cAthlete\u201d with no workouts. A class now needs real activity in that area and a clear gap above the family average; otherwise you\u2019re an All-Rounder (or Newcomer with no activity yet)",
+      "Clearer wording: the season strip now reads \u201cSeason tier 3/10\u201d so it\u2019s obviously the tier, not XP",
+    ],
+  },
   {
     version: "0.115.0",
     summary: [

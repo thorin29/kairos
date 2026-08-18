@@ -267,7 +267,7 @@ export default async function PersonPage({
             <span className="font-medium">Level {progress.level.level}</span>
             <span className="text-muted">{progress.className}</span>
             <span className="tabular text-muted">
-              &middot; Season {progress.season.tier}/{progress.season.maxTier}
+              &middot; Season tier {progress.season.tier}/{progress.season.maxTier}
             </span>
             {progress.currentStreak > 0 && (
               <span
@@ -308,6 +308,8 @@ export default async function PersonPage({
             colorHex={progress.companionColor}
             level={progress.level.level}
             streak={progress.currentStreak}
+            pct={progress.level.pct}
+            shares={progress.statShares}
           />
         </div>
       )}
