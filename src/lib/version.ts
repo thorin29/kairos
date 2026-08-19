@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.120.0";
+export const APP_VERSION = "0.121.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -74,6 +74,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.121.0",
+    summary: [
+      "Shared chores can now be managed in Admin \u2192 Chores. \u201cOpen now\u201d puts a chore up for grabs immediately \u2014 and clears any stuck or abandoned claim, which fixes chores that got stuck reading \u201c<name> is on it\u201d after a pause",
+      "\u201cMark done\u201d records who did a shared chore and on what date, which resets the countdown so it reopens on the right day. Use it to correct a chore that was finished during/after a vacation",
+      "Together these give you full control over shared chores: force one open, or fix the completion date so the next round comes due correctly",
+    ],
+  },
   {
     version: "0.120.0",
     summary: [
