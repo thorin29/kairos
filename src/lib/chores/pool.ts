@@ -18,7 +18,7 @@ export async function generatePoolChores(
   dayISO: string = todayISO(),
 ): Promise<number> {
   const chores = await prisma.chore.findMany({
-    where: { isActive: true, isPool: true, isPaused: false },
+    where: { isActive: true, isPool: true, isPaused: false, perpetual: false },
   });
 
   if (chores.length === 0) return 0;

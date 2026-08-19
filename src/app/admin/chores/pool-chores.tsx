@@ -24,6 +24,7 @@ export type PoolChore = {
   outstanding: boolean;
   claimedByName?: string | null;
   alwaysOpen?: boolean;
+  perpetual?: boolean;
   effort: number;
   effortLocked: boolean;
 };
@@ -91,6 +92,10 @@ export function PoolChores({
                 <input type="checkbox" name="alwaysOpen" className="accent-[var(--color-accent)]" />
                 Always open (no schedule) &mdash; e.g. take out the garbage
               </label>
+              <label className="mt-2 flex items-center gap-2 text-sm text-muted">
+                <input type="checkbox" name="perpetual" className="accent-[var(--color-accent)]" />
+                Throughout the day &mdash; tap each time it&rsquo;s done (countable), e.g. refilling water
+              </label>
             </div>
 
 
@@ -148,7 +153,9 @@ function PoolRow({
 
   const status = c.isPaused
     ? "paused"
-    : c.outstanding
+    : c.perpetual
+      ? "logged throughout the day"
+      : c.outstanding
       ? "up for grabs now"
       : c.claimedByName
         ? `${c.claimedByName} is on it`
@@ -163,18 +170,24 @@ function PoolRow({
         <div className="min-w-[11rem] flex-1">
           <p className="text-sm font-medium">{c.title}</p>
           <p className="tabular mt-0.5 text-xs text-muted">
-            {c.alwaysOpen ? "always open" : `every ${c.intervalDays} days after it\u2019s done`}
+            {c.perpetual
+              ? "tap each time it\u2019s done"
+              : c.alwaysOpen
+                ? "always open"
+                : `every ${c.intervalDays} days after it\u2019s done`}
             {status ? ` \u00b7 ${status}` : ""}
           </p>
         </div>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => start(async () => void (await reopenPoolChore(c.id)))}
-          className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
-        >
-          Open now
-        </button>
+        {!c.perpetual && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => start(async () => void (await reopenPoolChore(c.id)))}
+            className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+          >
+            Open now
+          </button>
+        )}
         <button
           type="button"
           disabled={disabled}
@@ -191,40 +204,42 @@ function PoolRow({
       </div>
 
       {/* Record a completion — set who did it and when, to fix the countdown. */}
-      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-hairline pt-3 text-xs text-muted">
-        <span>Mark done:</span>
-        <select
-          value={who}
-          onChange={(e) => setWho(e.target.value)}
-          className="h-8 rounded-lg border border-hairline bg-surface px-2 text-xs"
-        >
-          {people.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        <input
-          type="date"
-          value={when}
-          max={today}
-          onChange={(e) => setWhen(e.target.value)}
-          className="tabular h-8 rounded-lg border border-hairline bg-surface px-2 text-xs"
-        />
-        <button
-          type="button"
-          disabled={disabled || !who}
-          onClick={() =>
-            start(async () => {
-              const r = await markPoolChoreDone({ choreId: c.id, userId: who, dateISO: when });
-              if (r.error) alert(r.error);
-            })
-          }
-          className="inline-flex h-8 items-center rounded-full bg-accent px-3 font-medium text-white disabled:opacity-50"
-        >
-          {pending ? "\u2026" : "Save"}
-        </button>
-      </div>
+      {!c.perpetual && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-hairline pt-3 text-xs text-muted">
+          <span>Mark done:</span>
+          <select
+            value={who}
+            onChange={(e) => setWho(e.target.value)}
+            className="h-8 rounded-lg border border-hairline bg-surface px-2 text-xs"
+          >
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={when}
+            max={today}
+            onChange={(e) => setWhen(e.target.value)}
+            className="tabular h-8 rounded-lg border border-hairline bg-surface px-2 text-xs"
+          />
+          <button
+            type="button"
+            disabled={disabled || !who}
+            onClick={() =>
+              start(async () => {
+                const r = await markPoolChoreDone({ choreId: c.id, userId: who, dateISO: when });
+                if (r.error) alert(r.error);
+              })
+            }
+            className="inline-flex h-8 items-center rounded-full bg-accent px-3 font-medium text-white disabled:opacity-50"
+          >
+            {pending ? "\u2026" : "Save"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
