@@ -398,17 +398,21 @@ export async function reopenPoolChore(choreId: string): Promise<{ error: string 
   await prisma.task.deleteMany({
     where: { choreId, status: { not: "COMPLETE" } },
   });
-  await prisma.task.create({
-    data: {
-      userId: holder.id,
-      choreId,
-      title: chore.title,
-      category: "CHORE",
-      dueDate: toDateColumn(today),
-      sortOrder: chore.sortOrder,
-      isOpen: true,
-    },
-  });
+  try {
+    await prisma.task.create({
+      data: {
+        userId: holder.id,
+        choreId,
+        title: chore.title,
+        category: "CHORE",
+        dueDate: toDateColumn(today),
+        sortOrder: chore.sortOrder,
+        isOpen: true,
+      },
+    });
+  } catch {
+    return { error: "Couldn't open it — it may already be out for today." };
+  }
 
   revalidatePath("/admin/chores");
   revalidatePath("/chores");
@@ -438,19 +442,25 @@ export async function markPoolChoreDone(input: {
   await prisma.task.deleteMany({
     where: { choreId: input.choreId, status: { not: "COMPLETE" } },
   });
-  await prisma.task.create({
-    data: {
-      userId: input.userId,
-      choreId: input.choreId,
-      title: chore.title,
-      category: "CHORE",
-      dueDate: toDateColumn(input.dateISO),
-      completedAt: done,
-      status: "COMPLETE",
-      sortOrder: chore.sortOrder,
-      isOpen: false,
-    },
-  });
+  try {
+    await prisma.task.create({
+      data: {
+        userId: input.userId,
+        choreId: input.choreId,
+        title: chore.title,
+        category: "CHORE",
+        dueDate: toDateColumn(input.dateISO),
+        completedAt: done,
+        status: "COMPLETE",
+        sortOrder: chore.sortOrder,
+        isOpen: false,
+      },
+    });
+  } catch {
+    return {
+      error: "That person already has this chore recorded on that date — pick another date.",
+    };
+  }
 
   // Materialise the next open instance if it's already due (e.g. interval has
   // passed, or a pause just ended).

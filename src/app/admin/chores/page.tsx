@@ -149,7 +149,7 @@ export default async function ChoresPage() {
             <PoolChores
               chores={poolChores}
               available={summary}
-              people={byPerson.map((p) => ({ id: p.id, name: p.label }))}
+              people={byPerson.map((p) => ({ id: p.id, name: p.name }))}
             />
           </section>
 
