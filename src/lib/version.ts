@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.121.0";
+export const APP_VERSION = "0.122.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -69,11 +69,20 @@ export const MIGRATIONS = [
   "59_test_score",
   "60_companions",
   "61_always_open",
+  "62_perpetual_chore",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.122.0",
+    summary: [
+      "New \u201cthroughout the day\u201d chore \u2014 for things done many times a day like refilling water or taking out the garbage. It\u2019s always available and countable: on the home dashboard, tap a family face each time someone does it, as often as it happens",
+      "The summary page shows who did each throughout-the-day chore today, with counts \u2014 so at a glance you can see everyone who pitched in",
+      "Set it up with the new \u201cThroughout the day\u201d checkbox when you make a chore shared in Admin \u2192 Chores. These log on their own (a mistap has an \u201cundo\u201d) and don\u2019t clutter the scheduled-chore list",
+    ],
+  },
   {
     version: "0.121.0",
     summary: [

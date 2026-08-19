@@ -89,6 +89,7 @@ model User {
   coopProposals    CoopProposal[]
   coopVotes        CoopVote[]
   companions       Companion[]
+  choreLogs        ChoreLog[]
   companionState   CompanionState?
 
   createdAt DateTime @default(now())
@@ -440,6 +441,7 @@ model Chore {
   // being Saturday.
   isPool       Boolean @default(false)
   alwaysOpen   Boolean @default(false) // perpetual up-for-grabs; regenerates on completion
+  perpetual    Boolean @default(false) // throughout-the-day: tap-to-log, countable
   intervalDays Int?
 
   // A collaborative chore is assigned to several people who each do their
@@ -464,6 +466,7 @@ model Chore {
 
   assignments ChoreAssignment[]
   tasks       Task[]
+  logs        ChoreLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1124,4 +1127,18 @@ model CompanionState {
   eggsHatched      Int    @default(0)
   seasonKey        String?
   eggsThisSeason   Int    @default(0)
+}
+
+// A tap-log for a throughout-the-day (perpetual) chore. One row per time done.
+model ChoreLog {
+  id        String   @id @default(cuid())
+  choreId   String
+  chore     Chore    @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day       DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@index([choreId, day])
+  @@index([day])
 }

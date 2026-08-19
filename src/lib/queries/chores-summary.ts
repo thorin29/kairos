@@ -37,6 +37,7 @@ export type PoolChoreRow = {
   outstanding: boolean;
   claimedByName: string | null;
   alwaysOpen: boolean;
+  perpetual: boolean;
   effort: number;
   effortLocked: boolean;
 };
@@ -85,6 +86,7 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
       outstanding,
       claimedByName,
       alwaysOpen: c.alwaysOpen,
+      perpetual: c.perpetual,
       effort: c.effort,
       effortLocked: c.effortLocked,
     };
@@ -167,4 +169,51 @@ export async function loadSharedChoreTally(): Promise<SharedTallyRow[]> {
   return [...counts.entries()]
     .map(([name, v]) => ({ name, color: v.color, count: v.count }))
     .sort((a, b) => b.count - a.count);
+}
+
+export type PerpetualChore = {
+  id: string;
+  title: string;
+  effort: number;
+  effortLocked: boolean;
+  total: number; // times done today
+  byUser: { id: string; name: string; color: string; count: number }[];
+};
+
+/** Throughout-the-day chores with today's tap counts per person. */
+export async function loadPerpetualChores(
+  dayISO: string,
+): Promise<PerpetualChore[]> {
+  const { toDateColumn } = await import("@/lib/dates");
+  const chores = await prisma.chore.findMany({
+    where: { isActive: true, perpetual: true },
+    orderBy: { title: "asc" },
+    include: {
+      logs: {
+        where: { day: toDateColumn(dayISO) },
+        include: { user: { select: { id: true, name: true, displayName: true, color: true } } },
+      },
+    },
+  });
+  return chores.map((c) => {
+    const counts = new Map<string, { name: string; color: string; count: number }>();
+    for (const l of c.logs) {
+      const key = l.user.id;
+      const cur = counts.get(key) ?? {
+        name: l.user.displayName ?? l.user.name,
+        color: l.user.color,
+        count: 0,
+      };
+      cur.count += 1;
+      counts.set(key, cur);
+    }
+    return {
+      id: c.id,
+      title: c.title,
+      effort: c.effort,
+      effortLocked: c.effortLocked,
+      total: c.logs.length,
+      byUser: [...counts.entries()].map(([id, v]) => ({ id, ...v })),
+    };
+  });
 }

@@ -180,9 +180,9 @@ all live in the database, never in this repository.
 - [x] "Always open" shared chore (e.g. take out the garbage): perpetually up
       for grabs, regenerates the instant it's done; Chores page shows a per-user
       tally of who's done the shared chores (v0.120.0)
-- [ ] Recurring throughout-the-day open chore: an always-open chore that can be
-      done several times a day and counts each time (e.g. taking out the
-      garbage, refilling something), with who-did-it shown on the summary
+- [x] Throughout-the-day countable chore (v0.122.0): always available, tap a
+      face each time it's done (any number of times a day); dashboard logs it,
+      summary shows who did it today with counts
 - [ ] Calendar events: start & end time with a clean time picker; in week view
       place the longer event on the left of each day
 - [ ] Cycle-based workouts: choose specific rest days, N-day rotations off the
