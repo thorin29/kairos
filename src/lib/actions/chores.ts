@@ -375,3 +375,89 @@ export async function assignAnytimeChore(input: {
   revalidatePath("/");
   return { error: null };
 }
+
+/**
+ * Make a shared chore available to grab right now — clears whatever instance is
+ * out (including a stuck, abandoned claim) and puts a fresh open one on the
+ * board today. Use this when it should be up for grabs immediately (e.g. the
+ * moment a vacation ends).
+ */
+export async function reopenPoolChore(choreId: string): Promise<{ error: string | null }> {
+  if (!(await isAdmin())) return { error: "Only a parent can change this. Switch profiles first." };
+  const chore = await prisma.chore.findUnique({ where: { id: choreId } });
+  if (!chore || !chore.isPool) return { error: "That shared chore no longer exists." };
+
+  const holder = await prisma.user.findFirst({
+    where: { isActive: true, role: "ADMIN" },
+    orderBy: { sortOrder: "asc" },
+  });
+  if (!holder) return { error: "Need a parent account to hold shared chores." };
+
+  const today = todayISO();
+  // Clear any instance that isn't a finished record, then post a fresh open one.
+  await prisma.task.deleteMany({
+    where: { choreId, status: { not: "COMPLETE" } },
+  });
+  await prisma.task.create({
+    data: {
+      userId: holder.id,
+      choreId,
+      title: chore.title,
+      category: "CHORE",
+      dueDate: toDateColumn(today),
+      sortOrder: chore.sortOrder,
+      isOpen: true,
+    },
+  });
+
+  revalidatePath("/admin/chores");
+  revalidatePath("/chores");
+  revalidatePath("/");
+  return { error: null };
+}
+
+/**
+ * Record that a shared chore was done — by whom and on what day — and start the
+ * countdown from that date. Clears whatever was out first, so it also fixes a
+ * stuck claim. The next round opens (that date + interval) days later.
+ */
+export async function markPoolChoreDone(input: {
+  choreId: string;
+  userId: string;
+  dateISO: string;
+}): Promise<{ error: string | null }> {
+  if (!(await isAdmin())) return { error: "Only a parent can change this. Switch profiles first." };
+  const chore = await prisma.chore.findUnique({ where: { id: input.choreId } });
+  if (!chore || !chore.isPool) return { error: "That shared chore no longer exists." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return { error: "Pick a valid date." };
+
+  const person = await prisma.user.findUnique({ where: { id: input.userId } });
+  if (!person) return { error: "Pick who did it." };
+
+  const done = new Date(`${input.dateISO}T12:00:00.000Z`);
+  await prisma.task.deleteMany({
+    where: { choreId: input.choreId, status: { not: "COMPLETE" } },
+  });
+  await prisma.task.create({
+    data: {
+      userId: input.userId,
+      choreId: input.choreId,
+      title: chore.title,
+      category: "CHORE",
+      dueDate: toDateColumn(input.dateISO),
+      completedAt: done,
+      status: "COMPLETE",
+      sortOrder: chore.sortOrder,
+      isOpen: false,
+    },
+  });
+
+  // Materialise the next open instance if it's already due (e.g. interval has
+  // passed, or a pause just ended).
+  await generatePoolChores();
+
+  revalidatePath("/admin/chores");
+  revalidatePath("/chores");
+  revalidatePath("/");
+  return { error: null };
+}

@@ -146,7 +146,11 @@ export default async function ChoresPage() {
 
           <section>
             <SectionHeading>Up for grabs</SectionHeading>
-            <PoolChores chores={poolChores} available={summary} />
+            <PoolChores
+              chores={poolChores}
+              available={summary}
+              people={byPerson.map((p) => ({ id: p.id, name: p.label }))}
+            />
           </section>
 
           {unassigned.length > 0 && (
