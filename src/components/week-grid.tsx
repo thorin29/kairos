@@ -210,7 +210,7 @@ export function WeekGrid({
     openAt({ ...data, date: ev.dayISO });
   };
 
-  const editEvent = async (ev: GridEvent) => {
+  const editEvent = async (ev: GridEvent, scope: "single" | "series") => {
     const data = await eventCopyData(ev.eventId);
     if (!data) return;
     // Recurring: edit the occurrence that was clicked. Non-recurring (incl. a
@@ -221,6 +221,7 @@ export function WeekGrid({
         eventId: ev.eventId,
         occurrenceISO: ev.dayISO,
         recurring: ev.recurring,
+        scope,
       },
     );
   };
@@ -725,10 +726,10 @@ export function WeekGrid({
           event={detail.event}
           anchor={detail.anchor}
           onClose={() => setDetail(null)}
-          onEdit={() => {
+          onEdit={(scope) => {
             const ev = detail.event;
             setDetail(null);
-            void editEvent(ev);
+            void editEvent(ev, scope);
           }}
           onDuplicate={() => {
             const ev = detail.event;

@@ -17,7 +17,7 @@ export function MonthChip({ event }: { event: GridEvent }) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const { openAt, openEdit } = useAddEvent();
 
-  const editEvent = async () => {
+  const editEvent = async (scope: "single" | "series") => {
     const data = await eventCopyData(event.eventId);
     if (!data) return;
     openEdit(
@@ -26,6 +26,7 @@ export function MonthChip({ event }: { event: GridEvent }) {
         eventId: event.eventId,
         occurrenceISO: event.dayISO,
         recurring: event.recurring,
+        scope,
       },
     );
   };
@@ -69,9 +70,9 @@ export function MonthChip({ event }: { event: GridEvent }) {
           event={event}
           anchor={anchor}
           onClose={() => setAnchor(null)}
-          onEdit={() => {
+          onEdit={(scope) => {
             setAnchor(null);
-            void editEvent();
+            void editEvent(scope);
           }}
           onDuplicate={() => {
             setAnchor(null);

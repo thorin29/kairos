@@ -66,7 +66,7 @@ export function EventDetail({
   event: GridEvent;
   anchor: DOMRect;
   onClose: () => void;
-  onEdit: () => void;
+  onEdit: (scope: "single" | "series") => void;
   onDuplicate: () => void;
   onDelete: (
     scope: "all" | "future" | "one",
@@ -77,6 +77,7 @@ export function EventDetail({
     () => place(anchor, 320),
   );
   const [confirming, setConfirming] = useState(false);
+  const [editScope, setEditScope] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [banner, setBanner] = useState(!!event.bgKey);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +93,7 @@ export function EventDetail({
   useLayoutEffect(() => {
     const h = ref.current?.offsetHeight ?? 320;
     setPos(place(anchor, h));
-  }, [anchor, confirming]);
+  }, [anchor, confirming, editScope]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -138,7 +139,12 @@ export function EventDetail({
         <div className="flex items-center justify-end gap-0.5 px-2 pt-2">
           {!readOnly && (
             <>
-              <IconBtn label="Edit" onClick={onEdit}>
+              <IconBtn
+                label="Edit"
+                onClick={() =>
+                  event.recurring ? setEditScope(true) : onEdit("series")
+                }
+              >
                 <PencilIcon className="h-4 w-4" />
               </IconBtn>
               <IconBtn label="Duplicate" onClick={onDuplicate}>
@@ -229,6 +235,37 @@ export function EventDetail({
             <p className="mt-3 text-xs text-muted">
               Manage this from the School page.
             </p>
+          )}
+
+          {editScope && (
+            <div className="mt-4 rounded-lg border border-hairline bg-ground p-3">
+              <p className="text-sm font-medium">
+                This event repeats. What should be edited?
+              </p>
+              <div className="mt-2 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => onEdit("single")}
+                  className="inline-flex h-9 w-full items-center justify-center rounded-full bg-accent text-xs font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  This event only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onEdit("series")}
+                  className="inline-flex h-9 w-full items-center justify-center rounded-full bg-accent text-xs font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  All events in the series
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditScope(false)}
+                  className="inline-flex h-9 w-full items-center justify-center rounded-full border border-hairline text-xs font-medium text-muted transition-colors hover:text-ink"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           )}
 
           {confirming && (

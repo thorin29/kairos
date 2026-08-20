@@ -90,6 +90,10 @@ export type EditTarget = {
   eventId: string;
   occurrenceISO: string;
   recurring: boolean;
+  // Which way a recurring edit was opened: just the clicked occurrence, or the
+  // whole series. Chosen up front (the pop-up on Edit) and pre-selects the
+  // in-form radio, which can still be changed before saving.
+  scope?: "single" | "series";
 };
 
 const AddEventContext = createContext<{
@@ -266,7 +270,9 @@ function EventModal({
     );
   // For a recurring event, an edit applies to just this occurrence or the
   // whole series. Default to the single occurrence — the safer, smaller change.
-  const [scope, setScope] = useState<"single" | "series">("single");
+  const [scope, setScope] = useState<"single" | "series">(
+    editing?.scope ?? "single",
+  );
 
   const [startDate, setStartDate] = useState(date);
   const [endDate, setEndDate] = useState(() => addDays(date, endDayOffset ?? 0));
