@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.124.0";
+export const APP_VERSION = "0.125.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -75,6 +75,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.125.0",
+    summary: [
+      "Fixed a phantom \u201clate\u201d workout: taking a rest day on a day with no workout planned no longer invents a workout prompt, and deleting a rest day no longer turns it into an overdue workout. Any stray late-workout prompts left by the old behaviour are cleared automatically on the next load",
+      "A rest day never affects scoring \u2014 it only excuses a workout that was actually planned that day",
+    ],
+  },
   {
     version: "0.124.0",
     summary: [

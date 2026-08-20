@@ -138,6 +138,50 @@ export async function generateWorkoutTasks(
     removed = (await prisma.task.deleteMany({ where: { id: { in: orphaned } } })).count;
   }
 
+  // Sweep stranded prompts: past, still-pending workout tasks that no current
+  // plan or schedule would ever produce — e.g. a rest day that was later
+  // deleted, back when resting could manufacture a task. A genuinely missed
+  // workout is safe, because the weekday it fell on still has a plan or an
+  // active schedule behind it.
+  const planDow = new Set<string>();
+  for (const w of planned) planDow.add(`${w.userId}|${w.dayOfWeek}`);
+  const schedWindows = new Map<string, { from: string; to: string | null }[]>();
+  for (const s of schedules) {
+    const key = `${s.userId}|${s.dayOfWeek}`;
+    const arr = schedWindows.get(key) ?? [];
+    arr.push({
+      from: fromDateColumn(s.effectiveFrom),
+      to: s.endDate ? fromDateColumn(s.endDate) : null,
+    });
+    schedWindows.set(key, arr);
+  }
+
+  const pastPending = await prisma.task.findMany({
+    where: {
+      category: Category.EXERCISE,
+      generatedFrom: { startsWith: "workout:" },
+      status: "PENDING",
+      dueDate: { lt: toDateColumn(fromISO) },
+    },
+    select: { id: true, generatedFrom: true, dueDate: true },
+  });
+  const strays: string[] = [];
+  for (const t of pastPending) {
+    const userId = (t.generatedFrom ?? "").slice("workout:".length);
+    const iso = fromDateColumn(t.dueDate);
+    const key = `${userId}|${dayOfWeek(iso)}`;
+    const backed =
+      planDow.has(key) ||
+      (schedWindows.get(key) ?? []).some(
+        (w) => w.from <= iso && (w.to === null || w.to >= iso),
+      );
+    if (!backed) strays.push(t.id);
+  }
+  if (strays.length > 0) {
+    removed += (await prisma.task.deleteMany({ where: { id: { in: strays } } }))
+      .count;
+  }
+
   const missing = [...expected.entries()]
     .filter(([key]) => !present.has(key))
     .map(([, row]) => row);
