@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.122.0";
+export const APP_VERSION = "0.123.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -75,6 +75,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.123.0",
+    summary: [
+      "New event form picks a start time and an end time directly, each from a clean drop-down of half-hour slots (with the current time highlighted) \u2014 no more choosing a length from a list. You can still type a time like \u201c4:15 PM\u201d for anything off the half-hour",
+      "An event can now end on a later day than it starts, so something running past midnight can be entered in one go",
+      "In the week view, when two appointments overlap on the same day, the longer one is now drawn on the left \u2014 so the bigger commitment reads first at a glance. The day view is unchanged",
+    ],
+  },
   {
     version: "0.122.0",
     summary: [

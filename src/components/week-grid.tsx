@@ -603,7 +603,9 @@ export function WeekGrid({
 
           {cols.map((key) => {
             const events = colEvents(key);
-            const lanes = assignLanes(events);
+            // Week view (day columns, not person columns) draws the longer of
+            // two overlapping events on the left; the day view keeps start order.
+            const lanes = assignLanes(events, !personMode && days.length > 1);
             const isToday = personMode ? singleISO === todayISO : key === todayISO;
             // Shaded all-day events tint behind the hours. In person mode a
             // shared/vacation shade applies to everyone, so every column shows
@@ -777,8 +779,14 @@ function hourLabel(h: number): string | undefined {
  * Side-by-side placement for overlapping blocks. Greedy: an event takes the
  * first lane whose last event has already finished. Good enough for a family
  * schedule, and it degrades gracefully when three things collide.
+ *
+ * With `preferLongerLeft` (week view), the greedy packing into the fewest lanes
+ * is kept, then the lanes are relabelled so the one holding the longest block
+ * sits leftmost, the next-longest beside it, and so on. Relabelling is a
+ * bijection, so overlapping events still land in different lanes — it only
+ * changes which side of the day each column is drawn on.
  */
-function assignLanes(events: GridEvent[]) {
+function assignLanes(events: GridEvent[], preferLongerLeft = false) {
   const result = new Map<string, { index: number; of: number }>();
   const sorted = [...events].sort((a, b) => a.startMin - b.startMin);
 
@@ -801,8 +809,38 @@ function assignLanes(events: GridEvent[]) {
       placed.set(e.id, lane);
     }
 
+    const of = laneEnds.length;
+
+    // Week view: order the lanes so longer commitments sit on the left. Rank
+    // each lane by its longest block (ties broken by the earlier start), then
+    // remap old lane → new index.
+    let remap: number[] | null = null;
+    if (preferLongerLeft && of > 1) {
+      const weight = Array.from({ length: of }, () => ({
+        maxDur: -1,
+        minStart: Infinity,
+      }));
+      for (const e of cluster) {
+        const l = placed.get(e.id)!;
+        const dur = e.endMin - e.startMin;
+        if (dur > weight[l].maxDur) weight[l].maxDur = dur;
+        if (e.startMin < weight[l].minStart) weight[l].minStart = e.startMin;
+      }
+      const order = Array.from({ length: of }, (_, i) => i).sort(
+        (a, b) =>
+          weight[b].maxDur - weight[a].maxDur ||
+          weight[a].minStart - weight[b].minStart ||
+          a - b,
+      );
+      remap = Array.from({ length: of }, () => 0);
+      order.forEach((oldLane, newIndex) => {
+        remap![oldLane] = newIndex;
+      });
+    }
+
     for (const e of cluster) {
-      result.set(e.id, { index: placed.get(e.id) ?? 0, of: laneEnds.length });
+      const old = placed.get(e.id) ?? 0;
+      result.set(e.id, { index: remap ? remap[old] : old, of });
     }
     cluster = [];
   };
