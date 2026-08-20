@@ -111,6 +111,7 @@ export type PersonWorkout = {
   todayWorkouts: TodayWorkout[];
   history: HistoryEntry[];
   plan: PlanDay[];
+  rotation: RotationData | null;
   todayPlanned: { id: string; name: string }[];
   reminders: Reminder[];
 };
@@ -173,7 +174,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
   const cards: PersonWorkout[] = [];
 
   for (const person of people) {
-    const [exercises, schedules, weightSets, task, todaySessions, plannedRows, recentSessions] =
+    const [exercises, schedules, weightSets, task, todaySessions, plannedRows, recentSessions, rotationRow] =
       await Promise.all([
       prisma.exercise.findMany({
         where: { userId: person.id, isActive: true },
@@ -281,7 +282,55 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           },
         },
       }),
+      prisma.workoutRotation.findUnique({
+        where: { userId: person.id },
+        select: {
+          anchorDate: true,
+          restMask: true,
+          isActive: true,
+          slots: {
+            orderBy: { position: "asc" },
+            select: {
+              id: true,
+              position: true,
+              name: true,
+              category: true,
+              muscleGroup: true,
+              isRest: true,
+            },
+          },
+        },
+      }),
     ]);
+
+    const rotRow = rotationRow as unknown as {
+      anchorDate: Date;
+      restMask: number;
+      isActive: boolean;
+      slots: {
+        id: string;
+        position: number;
+        name: string;
+        category: string | null;
+        muscleGroup: string | null;
+        isRest: boolean;
+      }[];
+    } | null;
+    const rotation: RotationData | null =
+      rotRow && rotRow.isActive
+        ? {
+            anchorISO: fromDateColumn(rotRow.anchorDate),
+            restMask: rotRow.restMask,
+            slots: rotRow.slots.map((s) => ({
+              id: s.id,
+              position: s.position,
+              name: s.name,
+              category: s.category as WorkoutCategory | null,
+              muscleGroup: s.muscleGroup as MuscleGroup | null,
+              isRest: s.isRest,
+            })),
+          }
+        : null;
 
     const exRows = exercises as unknown as {
       id: string; name: string; unit: string; implement: string | null;
@@ -528,6 +577,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       todayWorkouts,
       history,
       plan,
+      rotation,
       todayPlanned: pausedName ? [] : todayPlanned,
       reminders,
     });

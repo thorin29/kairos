@@ -191,8 +191,9 @@ all live in the database, never in this repository.
 - [~] Cycle-based workouts: choose specific rest days, N-day rotations off the
       weekly grid.
       - [x] Phase 1a — rotation model + fixed rest days that pause the cycle +
-            admin editor with 10-day preview; scheduling derived at read time
-            (v0.126.0)
+            builder with 10-day preview, on each person's own workout card
+            (choose Weekly or Rotation when creating a plan); scheduling derived
+            at read time (v0.126.0, moved to the user card in v0.127.0)
       - [ ] Phase 1b — log a workout for a past day, not only today
       - [ ] Phase 2 — expire an overdue workout when the next one for the same
             muscle group comes due (matches the main group, ignores sub-work)
