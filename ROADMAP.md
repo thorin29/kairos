@@ -183,8 +183,11 @@ all live in the database, never in this repository.
 - [x] Throughout-the-day countable chore (v0.122.0): always available, tap a
       face each time it's done (any number of times a day); dashboard logs it,
       summary shows who did it today with counts
-- [ ] Calendar events: start & end time with a clean time picker; in week view
-      place the longer event on the left of each day
+- [x] Calendar events: start & end time with a clean time picker; in week view
+      place the longer event on the left of each day. Start and end are each
+      picked from a half-hour drop-down (off-grid times still typable), an event
+      can end on a later day (past midnight in one entry), and overlapping week
+      blocks draw the longer one leftmost \u2014 day view unchanged (v0.123.0)
 - [ ] Cycle-based workouts: choose specific rest days, N-day rotations off the
       weekly grid
 - [ ] Personal Bible reading plan (alongside the family plan)

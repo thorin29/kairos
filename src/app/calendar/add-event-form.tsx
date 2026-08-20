@@ -10,8 +10,9 @@ import {
 } from "react";
 import { addEvent, updateEvent, type EventState } from "@/lib/actions/events";
 import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
-import { dayOfWeek } from "@/lib/dates";
+import { addDays, dayOfWeek, daysBetween } from "@/lib/dates";
 import { PlusIcon } from "@/components/icons";
+import { TimeSelect } from "@/components/time-select";
 
 const initial: EventState = { error: null, saved: false };
 
@@ -52,30 +53,18 @@ function addHour(hhmm: string): string {
   return `${String(nh).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
 }
 
-const DURATIONS = [15, 30, 45, 60, 90, 120, 150, 180];
-
-function addMinutes(hhmm: string, min: number): string {
+function hhmmToMin(hhmm: string): number {
   const [h, m] = hhmm.split(":").map(Number);
-  if (!Number.isFinite(h)) return hhmm;
-  const total = ((h * 60 + m + min) % 1440 + 1440) % 1440;
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(
-    total % 60,
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+}
+
+// Minutes-from-midnight → "HH:MM", wrapping into the day (the day it spills
+// onto is tracked separately by the end-date field).
+function minToHHMM(total: number): string {
+  const t = ((total % 1440) + 1440) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(
+    t % 60,
   ).padStart(2, "0")}`;
-}
-
-function minutesBetween(a: string, b: string): number {
-  const [ah, am] = a.split(":").map(Number);
-  const [bh, bm] = b.split(":").map(Number);
-  if (![ah, am, bh, bm].every(Number.isFinite)) return 60;
-  return (bh * 60 + bm - (ah * 60 + am) + 1440) % 1440;
-}
-
-function fmtDuration(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h === 0) return `${m} min`;
-  if (m === 0) return `${h} hr`;
-  return `${h} hr ${m} min`;
 }
 
 // --- shared open mechanism ------------------------------------------------
@@ -84,6 +73,9 @@ type Prefill = {
   date?: string;
   start?: string;
   end?: string;
+  // Days the end date sits after the start date (0 = same day). Kept as an
+  // offset, not an absolute date, so a copy dropped on a new day keeps its span.
+  endDayOffset?: number;
   // Copy: seed the remaining fields from an existing event so the overlay opens
   // as a duplicate the user can re-place.
   title?: string;
@@ -160,6 +152,7 @@ export function AddEventProvider({
           date={prefill.date ?? defaultDate}
           start={prefill.start ?? "16:00"}
           end={prefill.end}
+          endDayOffset={prefill.endDayOffset}
           title={prefill.title}
           userId={prefill.userId}
           kindInit={prefill.kind}
@@ -211,6 +204,7 @@ function EventModal({
   date,
   start,
   end,
+  endDayOffset,
   title,
   userId,
   kindInit,
@@ -232,6 +226,7 @@ function EventModal({
   date: string;
   start: string;
   end?: string;
+  endDayOffset?: number;
   title?: string;
   userId?: string;
   kindInit?: string;
@@ -273,23 +268,36 @@ function EventModal({
   // whole series. Default to the single occurrence — the safer, smaller change.
   const [scope, setScope] = useState<"single" | "series">("single");
 
+  const [startDate, setStartDate] = useState(date);
+  const [endDate, setEndDate] = useState(() => addDays(date, endDayOffset ?? 0));
   const [startTime, setStartTime] = useState(start);
   const [endTime, setEndTime] = useState(end ?? addHour(start));
-  // Duration drives the end time via presets; "custom" hands control back to a
-  // plain end-time field (also how a copied event with an odd length shows up).
-  const [durMin, setDurMin] = useState<number | "custom">(() => {
-    const d = minutesBetween(start, end ?? addHour(start));
-    return DURATIONS.includes(d) ? d : "custom";
-  });
 
-  const applyDuration = (m: number | "custom") => {
-    setDurMin(m);
-    if (m !== "custom") setEndTime(addMinutes(startTime, m));
+  // The event's length in minutes across whatever days it spans. Used to keep
+  // the end in step when the start moves — drag the start later and the end
+  // follows, staying exactly as long as before.
+  const spanMinutes = () =>
+    daysBetween(startDate, endDate) * 1440 +
+    hhmmToMin(endTime) -
+    hhmmToMin(startTime);
+
+  // Put the end `endAbs` minutes after the given day's midnight, spilling onto
+  // a later day when it crosses midnight.
+  const placeEnd = (baseDate: string, endAbs: number) => {
+    setEndDate(addDays(baseDate, Math.floor(endAbs / 1440)));
+    setEndTime(minToHHMM(endAbs));
   };
 
-  const onStartChange = (v: string) => {
+  const onStartTimeChange = (v: string) => {
+    const dur = Math.max(spanMinutes(), 15);
     setStartTime(v);
-    if (durMin !== "custom") setEndTime(addMinutes(v, durMin));
+    placeEnd(startDate, hhmmToMin(v) + dur);
+  };
+
+  const onStartDateChange = (d: string) => {
+    const dur = Math.max(spanMinutes(), 15);
+    setStartDate(d);
+    placeEnd(d, hhmmToMin(startTime) + dur);
   };
 
   const chooseKind = (value: string) => {
@@ -301,9 +309,7 @@ function EventModal({
     if (value.startsWith("type:")) {
       const t = types.find((x) => `type:${x.id}` === value);
       if (t?.defaultMinutes) {
-        const m = t.defaultMinutes;
-        setDurMin(DURATIONS.includes(m) ? m : "custom");
-        setEndTime(addMinutes(startTime, m));
+        placeEnd(startDate, hhmmToMin(startTime) + t.defaultMinutes);
       }
     }
   };
@@ -448,21 +454,70 @@ function EventModal({
               </div>
             )}
 
-            <div>
-              <label htmlFor="ev-date" className="mb-1.5 block text-sm font-medium">
-                Date
-              </label>
-              <input
-                id="ev-date"
-                name="date"
-                type="date"
-                required
-                defaultValue={date}
-                className={`tabular ${field}`}
-              />
-            </div>
+            {allDay ? (
+              <div>
+                <label htmlFor="ev-date" className="mb-1.5 block text-sm font-medium">
+                  Date
+                </label>
+                <input
+                  id="ev-date"
+                  name="date"
+                  type="date"
+                  required
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className={`tabular ${field}`}
+                />
+              </div>
+            ) : (
+              <div className="space-y-3 sm:col-span-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Starts</label>
+                  <div className="flex gap-2">
+                    <input
+                      aria-label="Start date"
+                      name="date"
+                      type="date"
+                      required
+                      value={startDate}
+                      onChange={(e) => onStartDateChange(e.target.value)}
+                      className={`tabular ${field} min-w-0 flex-[3]`}
+                    />
+                    <TimeSelect
+                      name="start"
+                      ariaLabel="Start time"
+                      value={startTime}
+                      onChange={onStartTimeChange}
+                      className="min-w-0 flex-[2]"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Ends</label>
+                  <div className="flex gap-2">
+                    <input
+                      aria-label="End date"
+                      name="endDate"
+                      type="date"
+                      required
+                      min={startDate}
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className={`tabular ${field} min-w-0 flex-[3]`}
+                    />
+                    <TimeSelect
+                      name="end"
+                      ariaLabel="End time"
+                      value={endTime}
+                      onChange={setEndTime}
+                      className="min-w-0 flex-[2]"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
-            <div>
+            <div className={allDay ? "" : "sm:col-span-2"}>
               <label htmlFor="ev-location" className="mb-1.5 block text-sm font-medium">
                 Where
               </label>
@@ -475,67 +530,6 @@ function EventModal({
                 className={field}
               />
             </div>
-
-            {!allDay && (
-              <>
-                <div>
-                  <label htmlFor="ev-start" className="mb-1.5 block text-sm font-medium">
-                    Starts
-                  </label>
-                  <input
-                    id="ev-start"
-                    name="start"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => onStartChange(e.target.value)}
-                    className={`tabular ${field}`}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="ev-duration" className="mb-1.5 block text-sm font-medium">
-                    Duration
-                  </label>
-                  <select
-                    id="ev-duration"
-                    value={String(durMin)}
-                    onChange={(e) =>
-                      applyDuration(
-                        e.target.value === "custom"
-                          ? "custom"
-                          : Number(e.target.value),
-                      )
-                    }
-                    className={field}
-                  >
-                    {DURATIONS.map((m) => (
-                      <option key={m} value={m}>
-                        {fmtDuration(m)}
-                      </option>
-                    ))}
-                    <option value="custom">Custom end time…</option>
-                  </select>
-                </div>
-
-                {durMin === "custom" && (
-                  <div>
-                    <label htmlFor="ev-end" className="mb-1.5 block text-sm font-medium">
-                      Ends
-                    </label>
-                    <input
-                      id="ev-end"
-                      name="end"
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className={`tabular ${field}`}
-                    />
-                  </div>
-                )}
-                {durMin !== "custom" && (
-                  <input type="hidden" name="end" value={endTime} />
-                )}
-              </>
-            )}
           </div>
 
           {(!editing || (editing.recurring && scope === "series")) && (

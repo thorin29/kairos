@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 import { requireInteractive } from "@/lib/gate";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { householdTz, localParts, toDateColumn, zonedToUtc, addDays } from "@/lib/dates";
+import {
+  householdTz,
+  localParts,
+  toDateColumn,
+  zonedToUtc,
+  addDays,
+  daysBetween,
+} from "@/lib/dates";
 import { buildRule, parseRule } from "@/lib/calendar/recur";
 import { isAdmin } from "@/lib/session";
 import { isHexColor } from "@/lib/palette";
@@ -139,6 +146,9 @@ export async function addEvent(
   const date = String(formData.get("date") ?? "");
   const start = String(formData.get("start") ?? "");
   const end = String(formData.get("end") ?? "");
+  // The end can sit on a later day (an event running past midnight); it defaults
+  // to the start day when the form doesn't send one.
+  const endDate = String(formData.get("endDate") ?? "") || date;
   const allDay = formData.get("allDay") === "on";
   // Only all-day events shade; a timed event keeps the default so a later
   // switch to all-day still tints.
@@ -183,14 +193,18 @@ export async function addEvent(
     if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) {
       return { error: "Set a start and end time.", saved: false };
     }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      return { error: "Pick an end date.", saved: false };
+    }
 
     const tz = householdTz();
     const [y, mo, d] = date.split("-").map(Number);
+    const [ey, emo, ed] = endDate.split("-").map(Number);
     const [sh, sm] = start.split(":").map(Number);
     const [eh, em] = end.split(":").map(Number);
 
     startsAt = zonedToUtc(y, mo, d, sh, sm, 0, tz);
-    endsAt = zonedToUtc(y, mo, d, eh, em, 0, tz);
+    endsAt = zonedToUtc(ey, emo, ed, eh, em, 0, tz);
 
     if (endsAt <= startsAt) {
       return { error: "The end time is before the start.", saved: false };
@@ -306,6 +320,7 @@ export async function updateEvent(
   const formDate = String(formData.get("date") ?? "");
   const start = String(formData.get("start") ?? "");
   const end = String(formData.get("end") ?? "");
+  const endDate = String(formData.get("endDate") ?? "") || formDate;
   const allDay = formData.get("allDay") === "on";
   const shadeDay = allDay ? formData.get("shadeDay") === "on" : true;
   const location = String(formData.get("location") ?? "").trim().slice(0, 200);
@@ -348,12 +363,21 @@ export async function updateEvent(
     if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) {
       return { error: "Set a start and end time.", saved: false };
     }
+    // The end may sit on a later day. A series edit stays anchored to the
+    // original start date, so carry the form's start→end day gap onto that
+    // anchor rather than using the typed end date directly.
+    const endGap = /^\d{4}-\d{2}-\d{2}$/.test(endDate)
+      ? Math.max(daysBetween(formDate, endDate), 0)
+      : 0;
+    const endRowISO = seriesEdit ? addDays(dateForRow, endGap) : endDate;
+
     const tz = householdTz();
     const [y, mo, d] = dateForRow.split("-").map(Number);
+    const [ey, emo, ed] = endRowISO.split("-").map(Number);
     const [sh, sm] = start.split(":").map(Number);
     const [eh, em] = end.split(":").map(Number);
     startsAt = zonedToUtc(y, mo, d, sh, sm, 0, tz);
-    endsAt = zonedToUtc(y, mo, d, eh, em, 0, tz);
+    endsAt = zonedToUtc(ey, emo, ed, eh, em, 0, tz);
     if (endsAt <= startsAt) {
       return { error: "The end time is before the start.", saved: false };
     }
@@ -459,6 +483,7 @@ export type EventCopyData = {
   start: string;
   end: string;
   date: string;
+  endDayOffset: number;
 };
 
 const hhmm = (min: number): string =>
@@ -503,6 +528,9 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
     start: hhmm(s.minutes),
     end: hhmm(en.minutes),
     date: s.iso,
+    // Days the end sits after the start (0 = same day), so a copy re-placed on
+    // another day keeps its span.
+    endDayOffset: Math.max(daysBetween(s.iso, en.iso), 0),
   };
 }
 
