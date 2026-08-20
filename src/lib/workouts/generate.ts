@@ -10,6 +10,10 @@ import {
   todayISO,
 } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
+import {
+  isRotationWorkoutDay,
+  type RotationShape,
+} from "@/lib/workouts/rotation";
 
 const HORIZON_DAYS = 14;
 
@@ -29,7 +33,7 @@ export async function generateWorkoutTasks(
 ): Promise<{ created: number; removed: number }> {
   const toISO = addDays(fromISO, days - 1);
 
-  const [schedules, planned, pauses] = await Promise.all([
+  const [schedules, planned, pauses, rotations] = await Promise.all([
     prisma.workoutSchedule.findMany({
       where: {
         isActive: true,
@@ -60,6 +64,24 @@ export async function generateWorkoutTasks(
       },
       select: { startDate: true, endDate: true },
     }),
+    // People on a rotation are scheduled by their cycle, not by weekday.
+    prisma.workoutRotation.findMany({
+      where: { isActive: true },
+      select: {
+        userId: true,
+        anchorDate: true,
+        restMask: true,
+        slots: {
+          select: {
+            position: true,
+            name: true,
+            category: true,
+            muscleGroup: true,
+            isRest: true,
+          },
+        },
+      },
+    }),
   ]);
 
   const pausedDates = new Set<string>();
@@ -72,10 +94,31 @@ export async function generateWorkoutTasks(
     }
   }
 
+  // People on a rotation are scheduled by their cycle instead of by weekday, so
+  // their weekly planned workouts and schedules are ignored here.
+  const rotationShapes = rotations.map((r) => ({
+    userId: r.userId,
+    shape: {
+      anchorISO: fromDateColumn(r.anchorDate),
+      restMask: r.restMask,
+      slots: r.slots.map((s) => ({
+        position: s.position,
+        name: s.name,
+        category: s.category,
+        muscleGroup: s.muscleGroup,
+        isRest: s.isRest,
+      })),
+    } as RotationShape,
+  }));
+  const rotationUsers = new Set(rotationShapes.map((r) => r.userId));
+
   // A person trains on a weekday if they have a planned workout for it, or a
   // scheduled exercise still in its date window.
   const trains = new Set<string>();
-  for (const w of planned) trains.add(`${w.userId}|${w.dayOfWeek}`);
+  for (const w of planned) {
+    if (rotationUsers.has(w.userId)) continue;
+    trains.add(`${w.userId}|${w.dayOfWeek}`);
+  }
 
   const expected = new Map<
     string,
@@ -88,6 +131,7 @@ export async function generateWorkoutTasks(
     const dow = dayOfWeek(iso);
 
     for (const s of schedules) {
+      if (rotationUsers.has(s.userId)) continue;
       if (s.dayOfWeek !== dow) continue;
       if (fromDateColumn(s.effectiveFrom) > iso) continue;
       if (s.endDate && fromDateColumn(s.endDate) < iso) continue;
@@ -105,6 +149,19 @@ export async function generateWorkoutTasks(
       const sep = key.lastIndexOf("|");
       const userId = key.slice(0, sep);
       if (Number(key.slice(sep + 1)) !== dow) continue;
+      expected.set(`${userId}|${iso}`, {
+        userId,
+        category: Category.EXERCISE,
+        title: "Workout",
+        dueDate: toDateColumn(iso),
+        generatedFrom: `workout:${userId}`,
+      });
+    }
+
+    // Rotation days: a workout slot on this date earns a prompt; rest weekdays
+    // and rest slots don't.
+    for (const { userId, shape } of rotationShapes) {
+      if (!isRotationWorkoutDay(shape, iso)) continue;
       expected.set(`${userId}|${iso}`, {
         userId,
         category: Category.EXERCISE,
@@ -145,6 +202,8 @@ export async function generateWorkoutTasks(
   // active schedule behind it.
   const planDow = new Set<string>();
   for (const w of planned) planDow.add(`${w.userId}|${w.dayOfWeek}`);
+  const rotByUser = new Map<string, RotationShape>();
+  for (const { userId, shape } of rotationShapes) rotByUser.set(userId, shape);
   const schedWindows = new Map<string, { from: string; to: string | null }[]>();
   for (const s of schedules) {
     const key = `${s.userId}|${s.dayOfWeek}`;
@@ -170,11 +229,13 @@ export async function generateWorkoutTasks(
     const userId = (t.generatedFrom ?? "").slice("workout:".length);
     const iso = fromDateColumn(t.dueDate);
     const key = `${userId}|${dayOfWeek(iso)}`;
+    const rot = rotByUser.get(userId);
     const backed =
       planDow.has(key) ||
       (schedWindows.get(key) ?? []).some(
         (w) => w.from <= iso && (w.to === null || w.to >= iso),
-      );
+      ) ||
+      (rot ? isRotationWorkoutDay(rot, iso) : false);
     if (!backed) strays.push(t.id);
   }
   if (strays.length > 0) {

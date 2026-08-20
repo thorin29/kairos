@@ -188,8 +188,14 @@ all live in the database, never in this repository.
       picked from a half-hour drop-down (off-grid times still typable), an event
       can end on a later day (past midnight in one entry), and overlapping week
       blocks draw the longer one leftmost \u2014 day view unchanged (v0.123.0)
-- [ ] Cycle-based workouts: choose specific rest days, N-day rotations off the
-      weekly grid
+- [~] Cycle-based workouts: choose specific rest days, N-day rotations off the
+      weekly grid.
+      - [x] Phase 1a — rotation model + fixed rest days that pause the cycle +
+            admin editor with 10-day preview; scheduling derived at read time
+            (v0.126.0)
+      - [ ] Phase 1b — log a workout for a past day, not only today
+      - [ ] Phase 2 — expire an overdue workout when the next one for the same
+            muscle group comes due (matches the main group, ignores sub-work)
 - [ ] Personal Bible reading plan (alongside the family plan)
 - [ ] Leisure book reading: add a book (name + length), log pages daily, never
       overdue, unobtrusive (a gentle reminder, not a checklist item)

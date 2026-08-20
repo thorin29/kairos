@@ -78,6 +78,7 @@ model User {
   workoutSchedules WorkoutSchedule[] @relation("WorkoutSchedules")
   workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
+  workoutRotation  WorkoutRotation?  @relation("WorkoutRotation")
   hiitWorkouts     HiitWorkout[]
   invites          Invite[]
   sportSkips       SportSkip[]
@@ -889,6 +890,43 @@ model PlannedWorkout {
   exercises PlannedExercise[]
 
   @@index([userId, dayOfWeek])
+}
+
+// A workout rotation: an ordered cycle of days that repeats independent of the
+// calendar (e.g. Chest / Legs / Push, every three days). One per person; its
+// presence means that person is on a rotation instead of a weekly plan.
+//
+// restMask marks weekdays that are always off (bit i set, 0=Sun..6=Sat). A
+// fixed rest weekday PAUSES the cycle — the rotation holds its place and resumes
+// on the next working day, so a weekend never costs you your spot. anchorDate is
+// day 0 of the cycle; the slot for any date is derived at read time from the
+// working days elapsed since the anchor.
+model WorkoutRotation {
+  id         String         @id @default(cuid())
+  userId     String         @unique
+  user       User           @relation("WorkoutRotation", fields: [userId], references: [id], onDelete: Cascade)
+  anchorDate DateTime       @db.Date
+  restMask   Int            @default(0)
+  isActive   Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  slots      RotationSlot[]
+}
+
+// One day in a rotation. A rest slot advances the cycle (unlike a fixed rest
+// weekday, which pauses it) — that's how a pure "every 4th day off" pattern is
+// expressed. muscleGroup is the "main workout" tag used for overdue matching.
+model RotationSlot {
+  id          String           @id @default(cuid())
+  rotationId  String
+  rotation    WorkoutRotation  @relation(fields: [rotationId], references: [id], onDelete: Cascade)
+  position    Int
+  name        String
+  category    WorkoutCategory?
+  muscleGroup MuscleGroup?
+  isRest      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  @@unique([rotationId, position])
 }
 
 // A pool movement placed inside a planned workout, with whether the person
