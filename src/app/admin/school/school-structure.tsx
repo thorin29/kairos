@@ -497,20 +497,36 @@ function Classes({
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium">Term</label>
-            <select
-              name="termId"
-              defaultValue={editing?.termId ?? ""}
-              className={FIELD}
-            >
-              <option value="">No term</option>
-              {terms.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
+          <div className={days.length > 0 ? "sm:col-span-2" : ""}>
+            <label className="block text-sm font-medium">Semester</label>
+            {days.length > 0 && (
+              <p className="mb-1.5 text-xs text-muted">
+                This class repeats. Tie it to a semester and its meetings stop at
+                the term&rsquo;s end date &mdash; leave it off to repeat with no
+                end.
+              </p>
+            )}
+            {terms.length > 0 ? (
+              <select
+                name="termId"
+                defaultValue={editing?.termId ?? ""}
+                className={FIELD}
+              >
+                <option value="">
+                  {days.length > 0
+                    ? "Repeats with no end date"
+                    : "No term"}
                 </option>
-              ))}
-            </select>
+                {terms.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input type="hidden" name="termId" value="" />
+            )}
+            {days.length > 0 && <InlineTermAdd hasTerms={terms.length > 0} />}
           </div>
           <div>
             <label className="block text-sm font-medium">Colour</label>
@@ -666,6 +682,104 @@ function Classes({
           ))}
       </div>
     </section>
+  );
+}
+
+// A quick "add a semester" inside the class form, for when there are no terms
+// yet (or the admin wants a new one without leaving). It doesn't submit with the
+// class form — its inputs are unnamed and it calls addTerm directly; the page
+// revalidates and the new term appears in the dropdown while the half-filled
+// class form keeps its state.
+function InlineTermAdd({ hasTerms }: { hasTerms: boolean }) {
+  const [open, setOpen] = useState(!hasTerms);
+  const [name, setName] = useState("");
+  const [startD, setStartD] = useState("");
+  const [endD, setEndD] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-2 text-sm font-medium text-accent underline-offset-2 hover:underline"
+      >
+        + New semester
+      </button>
+    );
+  }
+
+  const add = () => {
+    setErr(null);
+    const fd = new FormData();
+    fd.set("name", name);
+    fd.set("startDate", startD);
+    fd.set("endDate", endD);
+    start(async () => {
+      const res = await addTerm(initial, fd);
+      if (res.error) {
+        setErr(res.error);
+      } else {
+        setName("");
+        setStartD("");
+        setEndD("");
+        if (hasTerms) setOpen(false);
+      }
+    });
+  };
+
+  return (
+    <div className="mt-2 rounded-lg border border-hairline bg-ground p-3">
+      {!hasTerms && (
+        <p className="mb-2 text-xs text-muted">
+          No semesters yet &mdash; add one to tie this class to it.
+        </p>
+      )}
+      <div className="grid gap-2 sm:grid-cols-3">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={60}
+          placeholder="Name (e.g. Fall 2026)"
+          className={FIELD}
+        />
+        <input
+          value={startD}
+          onChange={(e) => setStartD(e.target.value)}
+          type="date"
+          aria-label="Term start"
+          className={`tabular ${FIELD}`}
+        />
+        <input
+          value={endD}
+          onChange={(e) => setEndD(e.target.value)}
+          type="date"
+          aria-label="Term end"
+          className={`tabular ${FIELD}`}
+        />
+      </div>
+      {err && <p className="mt-1.5 text-xs text-red-600">{err}</p>}
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onClick={add}
+          disabled={pending}
+          className="inline-flex h-9 items-center rounded-full bg-accent px-4 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {pending ? "Adding\u2026" : "Add semester"}
+        </button>
+        {hasTerms && (
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-sm font-medium text-muted hover:text-ink"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
