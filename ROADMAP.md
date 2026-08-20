@@ -196,7 +196,9 @@ all live in the database, never in this repository.
 - [ ] Past sport event auto-logs as a workout for the selected users
 - [ ] Recurrent classes: ask if they end at semester end and tie to that
       semester; if none exists, prompt to create one
-- [ ] Editing a recurrent event prompts "this occurrence" vs "the whole series"
+- [x] Editing a recurrent event prompts "this occurrence" vs "the whole series"
+      up front on Edit (mirrors the delete chooser); the choice pre-selects the
+      in-form scope and can still be changed before saving (v0.124.0)
       (mirroring the delete prompt), instead of silently editing one occurrence
 - [ ] Memory verses: assign verses to memorise, track progress, and count them
       toward the Wisdom stat (reciting/marking one done nudges you above the
