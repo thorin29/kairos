@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.125.0";
+export const APP_VERSION = "0.126.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -70,11 +70,21 @@ export const MIGRATIONS = [
   "60_companions",
   "61_always_open",
   "62_perpetual_chore",
+  "63_workout_rotation",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.126.0",
+    summary: [
+      "New workout rotations: put a person on a repeating cycle of workouts (e.g. Chest, Legs, Push, over and over) instead of a fixed weekly plan \u2014 useful when the same workout comes round every few days and doesn\u2019t line up with the calendar",
+      "Fixed rest days pause the cycle: mark weekends (or any days) always-off and the rotation holds its place, picking up where it left off on the next working day, so you never lose your spot over a weekend",
+      "A rest day placed inside the rotation itself advances the cycle, so an \u201cevery 4th day off\u201d pattern works too. Each rotation workout carries its muscle group",
+      "Set it up from a person\u2019s workout page (Who\u2019s tracking \u2192 tap a person): start a rotation, pick fixed rest days, set the start date, add and reorder the days, with a 10-day preview of what\u2019s coming",
+    ],
+  },
   {
     version: "0.125.0",
     summary: [

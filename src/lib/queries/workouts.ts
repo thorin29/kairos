@@ -714,12 +714,28 @@ export type PendingHiitShare = {
   }[];
 };
 
+export type RotationSlotData = {
+  id: string;
+  position: number;
+  name: string;
+  category: WorkoutCategory | null;
+  muscleGroup: MuscleGroup | null;
+  isRest: boolean;
+};
+
+export type RotationData = {
+  anchorISO: string;
+  restMask: number;
+  slots: RotationSlotData[];
+};
+
 export type PersonWorkoutRecords = {
   user: { id: string; name: string; color: string } | null;
   exercises: PersonRecordExercise[];
   planned: { id: string; dayOfWeek: number; name: string }[];
   sessions: PersonRecordSession[];
   hiitWorkouts: PersonHiitWorkout[];
+  rotation: RotationData | null;
 };
 
 export async function loadPersonWorkoutRecords(
@@ -786,6 +802,54 @@ export async function loadPersonWorkoutRecords(
       }),
     ]);
 
+  const rotationRow = (await prisma.workoutRotation.findUnique({
+    where: { userId },
+    select: {
+      anchorDate: true,
+      restMask: true,
+      isActive: true,
+      slots: {
+        orderBy: { position: "asc" },
+        select: {
+          id: true,
+          position: true,
+          name: true,
+          category: true,
+          muscleGroup: true,
+          isRest: true,
+        },
+      },
+    },
+  })) as unknown as {
+    anchorDate: Date;
+    restMask: number;
+    isActive: boolean;
+    slots: {
+      id: string;
+      position: number;
+      name: string;
+      category: string | null;
+      muscleGroup: string | null;
+      isRest: boolean;
+    }[];
+  } | null;
+
+  const rotation: RotationData | null =
+    rotationRow && rotationRow.isActive
+      ? {
+          anchorISO: fromDateColumn(rotationRow.anchorDate),
+          restMask: rotationRow.restMask,
+          slots: rotationRow.slots.map((s) => ({
+            id: s.id,
+            position: s.position,
+            name: s.name,
+            category: s.category as WorkoutCategory | null,
+            muscleGroup: s.muscleGroup as MuscleGroup | null,
+            isRest: s.isRest,
+          })),
+        }
+      : null;
+
   const daysByExercise = new Map<string, number[]>();
   for (const s of schedules) {
     const arr = daysByExercise.get(s.exerciseId) ?? [];
@@ -842,6 +906,7 @@ export async function loadPersonWorkoutRecords(
         weight: m.weight,
       })),
     })),
+    rotation,
   };
 }
 
