@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { GridEvent } from "@/lib/queries/calendar";
+import type { SharedStyle } from "@/lib/settings";
 import { MonthChip } from "@/components/month-chip";
 import { DAY_SHORT } from "@/lib/days";
 import { isSameMonth } from "@/lib/dates";
@@ -21,12 +22,14 @@ export function MonthGrid({
   events,
   todayISO,
   hrefForDay,
+  sharedStyle = "bands",
 }: {
   days: string[];
   monthISO: string;
   events: GridEvent[];
   todayISO: string;
   hrefForDay: (iso: string) => string;
+  sharedStyle?: SharedStyle;
 }) {
   const rows = Math.max(1, Math.ceil(days.length / 7));
   return (
@@ -74,7 +77,7 @@ export function MonthGrid({
               </span>
 
               {chips.map((e) => (
-                <MonthChip key={e.id} event={e} />
+                <MonthChip key={e.id} event={e} sharedStyle={sharedStyle} />
               ))}
 
               {extra > 0 && (

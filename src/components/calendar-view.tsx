@@ -1,6 +1,7 @@
 "use client";
 
 import type { GridEvent } from "@/lib/queries/calendar";
+import type { SharedStyle } from "@/lib/settings";
 import { WeekGrid } from "@/components/week-grid";
 
 export function CalendarView({
@@ -11,6 +12,7 @@ export function CalendarView({
   nowColor,
   resetSec,
   blockMinutes,
+  sharedStyle,
 }: {
   days: string[];
   timed: GridEvent[];
@@ -20,6 +22,7 @@ export function CalendarView({
   nowColor?: string;
   resetSec?: number;
   blockMinutes?: number;
+  sharedStyle?: SharedStyle;
 }) {
   return (
     <WeekGrid
@@ -30,6 +33,7 @@ export function CalendarView({
       nowColor={nowColor}
       resetSec={resetSec}
       blockMinutes={blockMinutes}
+      sharedStyle={sharedStyle}
     />
   );
 }

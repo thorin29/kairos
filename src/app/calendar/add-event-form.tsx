@@ -85,6 +85,8 @@ type Prefill = {
   allDay?: boolean;
   shadeDay?: boolean;
   rrule?: string | null;
+  // People the event is shared with (besides the owner), to pre-check the picker.
+  participantIds?: string[];
 };
 export type EditTarget = {
   eventId: string;
@@ -164,6 +166,7 @@ export function AddEventProvider({
           allDayInit={prefill.allDay}
           shadeDayInit={prefill.shadeDay}
           rruleInit={prefill.rrule}
+          participantIdsInit={prefill.participantIds}
           onClose={() => setOpen(false)}
         />
       )}
@@ -216,6 +219,7 @@ function EventModal({
   allDayInit,
   shadeDayInit,
   rruleInit,
+  participantIdsInit,
   onClose,
 }: {
   people: { id: string; name: string }[];
@@ -238,6 +242,7 @@ function EventModal({
   allDayInit?: boolean;
   shadeDayInit?: boolean;
   rruleInit?: string | null;
+  participantIdsInit?: string[];
   onClose: () => void;
 }) {
   const [allDay, setAllDay] = useState(allDayInit ?? false);
@@ -432,33 +437,33 @@ function EventModal({
               <input type="hidden" name="eventTypeId" value={eventTypeId} />
             </div>
 
-            {isSport && (
-              <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-sm font-medium">
-                  Who&rsquo;s going?
-                </label>
-                <p className="mb-2 text-xs text-muted">
-                  Everyone checked gets asked if they did it. Leave empty to just
-                  ask whoever it&rsquo;s for.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {people.map((p) => (
-                    <label
-                      key={p.id}
-                      className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-hairline px-3 py-1.5 text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10"
-                    >
-                      <input
-                        type="checkbox"
-                        name="participants"
-                        value={p.id}
-                        className="h-4 w-4"
-                      />
-                      {p.name}
-                    </label>
-                  ))}
-                </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1.5 block text-sm font-medium">
+                Share with
+              </label>
+              <p className="mb-2 text-xs text-muted">
+                {isSport
+                  ? "Everyone checked also gets asked if they did it. The event shows in each person\u2019s colour."
+                  : "Add other people so the event shows on their calendar too, in a blend of everyone\u2019s colours. Leave empty for just the person above."}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {people.map((p) => (
+                  <label
+                    key={p.id}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-hairline px-3 py-1.5 text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10"
+                  >
+                    <input
+                      type="checkbox"
+                      name="participants"
+                      value={p.id}
+                      defaultChecked={participantIdsInit?.includes(p.id) ?? false}
+                      className="h-4 w-4"
+                    />
+                    {p.name}
+                  </label>
+                ))}
               </div>
-            )}
+            </div>
 
             {allDay ? (
               <div>

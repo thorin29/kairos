@@ -20,6 +20,7 @@ import {
   CAL_NOW_COLOR,
   CAL_RESET_SEC,
   CAL_BLOCK_MINUTES,
+  CAL_SHARED_STYLE,
 } from "@/lib/settings";
 
 export type EventState = { error: string | null; saved: boolean };
@@ -64,19 +65,23 @@ export async function addEventType(
   return { error: null };
 }
 
-/** Set the calendar now-line colour and manual-scroll reset (admin). */
+/** Set the calendar now-line colour, manual-scroll reset, block length, and how
+ *  shared events combine people's colours (admin). */
 export async function setCalendarPrefs(
   nowColor: string,
   scrollResetSec: number,
   blockMinutes: number,
+  sharedStyle: string,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   if (!isHexColor(nowColor)) return { error: "Pick a colour." };
   const sec = Math.max(0, Math.min(3600, Math.round(scrollResetSec)));
   const block = Math.max(5, Math.min(240, Math.round(blockMinutes) || 30));
+  const style = sharedStyle === "blend" ? "blend" : "bands";
   await setSetting(CAL_NOW_COLOR, nowColor);
   await setSetting(CAL_RESET_SEC, String(sec));
   await setSetting(CAL_BLOCK_MINUTES, String(block));
+  await setSetting(CAL_SHARED_STYLE, style);
   revalidatePath("/calendar");
   revalidatePath("/admin/calendar");
   return { error: null };
@@ -434,6 +439,7 @@ export async function updateEvent(
     }
   }
 
+  let targetEventId = id;
   if (singleEdit) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(occurrenceISO)) {
       return { error: "Couldn't tell which occurrence to edit.", saved: false };
@@ -446,15 +452,18 @@ export async function updateEvent(
     });
     if (existing) {
       await prisma.event.update({ where: { id: existing.id }, data: fields });
+      targetEventId = existing.id;
     } else {
-      await prisma.event.create({
+      const created = await prisma.event.create({
         data: {
           ...fields,
           rrule: null,
           recurrenceId: id,
           recurrenceDate: overrideDate,
         },
+        select: { id: true },
       });
+      targetEventId = created.id;
     }
   } else {
     // Series or non-recurring: update in place. The recurrence rule changes
@@ -463,6 +472,24 @@ export async function updateEvent(
     await prisma.event.update({
       where: { id },
       data: newRrule !== undefined ? { ...fields, rrule: newRrule } : fields,
+    });
+  }
+
+  // Sync the people this event is shared with (the owner is tracked separately).
+  // Replace the set wholesale so unchecking someone removes them.
+  const participantIds = [
+    ...new Set(
+      formData
+        .getAll("participants")
+        .map(String)
+        .filter((pid) => pid && pid !== "family" && pid !== owner),
+    ),
+  ];
+  await prisma.eventParticipant.deleteMany({ where: { eventId: targetEventId } });
+  if (participantIds.length) {
+    await prisma.eventParticipant.createMany({
+      data: participantIds.map((userId) => ({ eventId: targetEventId, userId })),
+      skipDuplicates: true,
     });
   }
 
@@ -484,6 +511,7 @@ export type EventCopyData = {
   end: string;
   date: string;
   endDayOffset: number;
+  participantIds: string[];
 };
 
 const hhmm = (min: number): string =>
@@ -511,6 +539,7 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
       rrule: true,
       startsAt: true,
       endsAt: true,
+      participants: { select: { userId: true } },
     },
   });
   if (!e) return null;
@@ -531,6 +560,10 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
     // Days the end sits after the start (0 = same day), so a copy re-placed on
     // another day keeps its span.
     endDayOffset: Math.max(daysBetween(s.iso, en.iso), 0),
+    participantIds:
+      (e as { participants?: { userId: string }[] }).participants?.map(
+        (p) => p.userId,
+      ) ?? [],
   };
 }
 

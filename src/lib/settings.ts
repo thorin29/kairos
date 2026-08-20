@@ -7,6 +7,10 @@ export const FAMILY_COLOR = "familyColor";
 export const CAL_NOW_COLOR = "calendar.nowColor";
 export const CAL_RESET_SEC = "calendar.scrollResetSec";
 export const CAL_BLOCK_MINUTES = "calendar.blockMinutes";
+// How a shared event (two or more people) shows their colours: "bands" (vertical
+// stripes, one per person) or "blend" (a single mixed hue that steers clear of
+// brown). Bands by default — crisp and unambiguous.
+export const CAL_SHARED_STYLE = "calendar.sharedStyle";
 export const WORKOUT_OVERDUE_DAYS = "workout.overdueDays";
 export const SCHOOL_ROLLOVER_INTERVAL = "school.rolloverIntervalDays";
 export const SCHOOL_ROLLOVER_SNOOZE = "school.rolloverSnoozeUntil";
@@ -41,19 +45,24 @@ export async function getCoopFloor(): Promise<number> {
   return Math.min(10, Math.max(1, n));
 }
 
+export type SharedStyle = "bands" | "blend";
+
 export type CalendarPrefs = {
   nowColor: string;
   scrollResetSec: number;
   blockMinutes: number;
+  sharedStyle: SharedStyle;
 };
 
-/** Now-line colour, the inactivity reset for manual scrolling, and the default
- *  length of the block a tap/click drops on the grid. */
+/** Now-line colour, the inactivity reset for manual scrolling, the default
+ *  length of the block a tap/click drops on the grid, and how shared events
+ *  combine people's colours. */
 export async function getCalendarPrefs(): Promise<CalendarPrefs> {
-  const [c, r, b] = await Promise.all([
+  const [c, r, b, s] = await Promise.all([
     getSetting(CAL_NOW_COLOR),
     getSetting(CAL_RESET_SEC),
     getSetting(CAL_BLOCK_MINUTES),
+    getSetting(CAL_SHARED_STYLE),
   ]);
   const sec = r != null ? parseInt(r, 10) : 60;
   const block = b != null ? parseInt(b, 10) : 30;
@@ -61,6 +70,7 @@ export async function getCalendarPrefs(): Promise<CalendarPrefs> {
     nowColor: c ?? "#ef4444",
     scrollResetSec: Number.isFinite(sec) ? sec : 60,
     blockMinutes: Number.isFinite(block) && block > 0 ? block : 30,
+    sharedStyle: s === "blend" ? "blend" : "bands",
   };
 }
 

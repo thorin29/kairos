@@ -19,6 +19,10 @@ export type GridEvent = {
   timeLabel: string;
   allDay: boolean;
   color: string;
+  /** Distinct profile colours of everyone on the event (owner + participants),
+   *  for shared events. Zero or one entry means "not shared" — render `color`.
+   *  Two or more means paint bands or a blend of these. */
+  memberColors: string[];
   /** True for shared "Family" events (not per-person, not birthdays). */
   isFamily: boolean;
   /** The owner's user id, or null for shared/family events. */
@@ -151,6 +155,7 @@ async function birthdayEvents(
         timeLabel: "All day",
         allDay: true,
         color: familyColor,
+        memberColors: [],
         // Not a "Family filter" event, so isFamily stays false; the day-column
         // wash keys off the BIRTHDAY kind instead, so birthdays still tint.
         isFamily: false,
@@ -192,6 +197,7 @@ async function holidayEvents(days: string[]): Promise<GridEvent[]> {
     timeLabel: "All day",
     allDay: true,
     color,
+    memberColors: [],
     isFamily: false,
     ownerId: "",
     memberIds: [],
@@ -272,7 +278,7 @@ export async function loadRange(
       user: { select: { name: true, displayName: true, color: true } },
       externalCalendar: { select: { name: true } },
       eventType: { select: { name: true, color: true } },
-      participants: { select: { userId: true } },
+      participants: { select: { userId: true, user: { select: { color: true } } } },
     },
   });
 
@@ -357,11 +363,29 @@ export async function loadRange(
       ? []
       : Array.from(new Set([...(e.userId ? [e.userId] : []), ...participantIds]));
 
+    // Distinct profile colours of everyone on a shared event (owner +
+    // participants). Two or more → the block paints their colours; otherwise the
+    // single `color` above is used.
+    const participantColors =
+      (e as { participants?: { user?: { color?: string } | null }[] })
+        .participants?.map((p) => p.user?.color)
+        .filter((c): c is string => Boolean(c)) ?? [];
+    const memberColors = e.isFamily
+      ? []
+      : Array.from(
+          new Set(
+            [e.user?.color, ...participantColors].filter((c): c is string =>
+              Boolean(c),
+            ),
+          ),
+        );
+
     const base = {
       id: `${e.id}${suffix}`,
       title: e.title,
       location: e.location,
       color,
+      memberColors,
       isFamily: e.isFamily,
       ownerId: e.isFamily ? null : (e.userId ?? null),
       memberIds,
@@ -573,6 +597,7 @@ async function applySchoolWork(
       title: t.title,
       location: null,
       color,
+      memberColors: [],
       isFamily: false,
       ownerId: t.userId,
       memberIds: [t.userId],
