@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.127.0";
+export const APP_VERSION = "0.128.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -76,6 +76,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.128.0",
+    summary: [
+      "Log a workout for an earlier day, not just today: the Log screen now has a date picker (back up to 90 days). Pick a past day to record what was done, mark it done, or mark it a rest day \u2014 it clears that day\u2019s missed prompt just like logging on the day would have",
+      "Logging for today is unchanged",
+    ],
+  },
   {
     version: "0.127.0",
     summary: [

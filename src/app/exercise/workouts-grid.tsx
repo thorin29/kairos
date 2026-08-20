@@ -20,7 +20,9 @@ import {
   createAndLogHiitWorkout,
   requestShareHiitWorkout,
   restDay,
+  markWorkedOut,
 } from "@/lib/actions/workouts";
+import { addDays } from "@/lib/dates";
 import { PlanBuilder } from "./plan-builder";
 import { RotationBuilder } from "./rotation-builder";
 import { TodayPlan } from "./workout-card";
@@ -67,6 +69,9 @@ export function WorkoutsGrid({
   // When creating a plan from scratch, which kind the person chose (before one
   // exists). Once a plan or rotation exists, that decides what's shown instead.
   const [planMode, setPlanMode] = useState<"weekly" | "rotation" | null>(null);
+  // Which day the log step writes to. Defaults to today; can be set back to a
+  // recent past day to record a workout that wasn't logged at the time.
+  const [logDate, setLogDate] = useState(todayISO);
   const [browseFilter, setBrowseFilter] = useState<"regular" | "hero">(
     "regular",
   );
@@ -84,6 +89,7 @@ export function WorkoutsGrid({
     setOpenId(id);
     setStep("menu");
     setPlanMode(null);
+    setLogDate(todayISO);
   };
 
   const open = people.find((p) => p.user.id === openId) ?? null;
@@ -368,34 +374,108 @@ export function WorkoutsGrid({
                     Log workout
                   </h3>
 
-                  <TodayPlan
-                    userId={open.user.id}
-                    dateISO={todayISO}
-                    workouts={open.plan[todayDow]?.workouts ?? []}
-                    doneLabels={open.todayWorkouts.map((w) => w.label)}
-                    paused={open.today.paused}
-                    rested={open.today.rested}
-                    unitSystem={unitSystem}
-                  />
-
-                  <div className="border-t border-hairline pt-5">
-                    <h4 className="mb-1 font-display text-sm font-semibold">
-                      Log something else
-                    </h4>
-                    <p className="mb-3 text-sm text-muted">
-                      A one-off from the pool &mdash; a run, hockey, an extra
-                      lift. Pick the type, choose the movement, drop in the
-                      result.
-                    </p>
-                    <CustomWorkoutForm
-                      userId={open.user.id}
-                      unitSystem={unitSystem}
-                      pool={pool}
-                      hiitWorkouts={hiitWorkouts}
-                      dateISO={todayISO}
-                      onDone={() => setStep("menu")}
+                  <div>
+                    <label
+                      htmlFor="log-date"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Date
+                    </label>
+                    <input
+                      id="log-date"
+                      type="date"
+                      value={logDate}
+                      max={todayISO}
+                      min={addDays(todayISO, -90)}
+                      onChange={(e) => setLogDate(e.target.value || todayISO)}
+                      className="tabular h-11 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
                     />
+                    {logDate !== todayISO && (
+                      <p className="mt-1 text-xs text-muted">
+                        Recording a workout for an earlier day.
+                      </p>
+                    )}
                   </div>
+
+                  {logDate === todayISO ? (
+                    <>
+                      <TodayPlan
+                        userId={open.user.id}
+                        dateISO={todayISO}
+                        workouts={open.plan[todayDow]?.workouts ?? []}
+                        doneLabels={open.todayWorkouts.map((w) => w.label)}
+                        paused={open.today.paused}
+                        rested={open.today.rested}
+                        unitSystem={unitSystem}
+                      />
+
+                      <div className="border-t border-hairline pt-5">
+                        <h4 className="mb-1 font-display text-sm font-semibold">
+                          Log something else
+                        </h4>
+                        <p className="mb-3 text-sm text-muted">
+                          A one-off from the pool &mdash; a run, hockey, an extra
+                          lift. Pick the type, choose the movement, drop in the
+                          result.
+                        </p>
+                        <CustomWorkoutForm
+                          userId={open.user.id}
+                          unitSystem={unitSystem}
+                          pool={pool}
+                          hiitWorkouts={hiitWorkouts}
+                          dateISO={todayISO}
+                          onDone={() => setStep("menu")}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            startTransition(async () => {
+                              await markWorkedOut(open.user.id, logDate, true);
+                              setStep("menu");
+                            })
+                          }
+                          className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-white"
+                        >
+                          Mark workout done
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            startTransition(async () => {
+                              await restDay(open.user.id, logDate);
+                              setStep("menu");
+                            })
+                          }
+                          className="inline-flex h-10 items-center rounded-full border border-hairline px-5 text-sm font-medium text-muted hover:text-ink"
+                        >
+                          Rest day
+                        </button>
+                      </div>
+
+                      <div className="border-t border-hairline pt-5">
+                        <h4 className="mb-1 font-display text-sm font-semibold">
+                          Log a specific workout
+                        </h4>
+                        <p className="mb-3 text-sm text-muted">
+                          Record what was actually done that day &mdash; pick the
+                          type, choose the movement, drop in the result.
+                        </p>
+                        <CustomWorkoutForm
+                          userId={open.user.id}
+                          unitSystem={unitSystem}
+                          pool={pool}
+                          hiitWorkouts={hiitWorkouts}
+                          dateISO={logDate}
+                          onDone={() => setStep("menu")}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

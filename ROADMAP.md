@@ -194,7 +194,8 @@ all live in the database, never in this repository.
             builder with 10-day preview, on each person's own workout card
             (choose Weekly or Rotation when creating a plan); scheduling derived
             at read time (v0.126.0, moved to the user card in v0.127.0)
-      - [ ] Phase 1b — log a workout for a past day, not only today
+      - [x] Phase 1b — log a workout (or rest day) for a past day via a date
+            picker on the Log screen, completing that day's prompt (v0.128.0)
       - [ ] Phase 2 — expire an overdue workout when the next one for the same
             muscle group comes due (matches the main group, ignores sub-work)
 - [ ] Personal Bible reading plan (alongside the family plan)
