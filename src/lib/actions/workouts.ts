@@ -273,8 +273,10 @@ async function completeWorkoutTask(userId: string, dateISO: string): Promise<voi
   revalidatePath(`/person/${userId}`);
 }
 
-/** A rest day marks the day's workout task SKIPPED — excused, so it scores
- *  nothing and doesn't count against completion. Just a handled day. */
+/** A rest day excuses the day's workout task (marks it SKIPPED — scores
+ *  nothing, doesn't count against completion). If there's no workout planned
+ *  that day there's nothing to excuse, so no task is created: a rest day must
+ *  never manufacture a prompt that could later look overdue. */
 async function skipWorkoutTask(userId: string, dateISO: string): Promise<void> {
   const due = toDateColumn(dateISO);
   const existing = await prisma.task.findFirst({
@@ -284,17 +286,6 @@ async function skipWorkoutTask(userId: string, dateISO: string): Promise<void> {
     await prisma.task.update({
       where: { id: existing.id },
       data: { status: "SKIPPED", completedAt: null },
-    });
-  } else {
-    await prisma.task.create({
-      data: {
-        userId,
-        category: "EXERCISE",
-        title: "Rest day",
-        dueDate: due,
-        status: "SKIPPED",
-        generatedFrom: `workout:${userId}`,
-      },
     });
   }
   revalidatePath(`/person/${userId}`);
@@ -418,7 +409,12 @@ export async function markWorkedOut(
     });
     if (remaining === 0) {
       const task = await prisma.task.findFirst({
-        where: { userId, category: "EXERCISE", dueDate: date },
+        where: {
+          userId,
+          category: "EXERCISE",
+          dueDate: date,
+          status: "COMPLETE",
+        },
       });
       if (task) {
         await prisma.task.update({
@@ -1178,8 +1174,16 @@ export async function deleteWorkoutSession(sessionId: string): Promise<void> {
     where: { userId: session.userId, date: session.date, isRest: false },
   });
   if (remaining === 0) {
+    // Only a task that a logged session completed drops back to "not logged
+    // yet". A SKIPPED rest day, or a day with no plan, is left untouched — so
+    // deleting a rest day can't resurrect it as an overdue workout.
     const task = await prisma.task.findFirst({
-      where: { userId: session.userId, category: "EXERCISE", dueDate: session.date },
+      where: {
+        userId: session.userId,
+        category: "EXERCISE",
+        dueDate: session.date,
+        status: "COMPLETE",
+      },
     });
     if (task) {
       await prisma.task.update({
