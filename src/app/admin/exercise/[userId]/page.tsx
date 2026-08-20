@@ -4,7 +4,6 @@ import { AdminBack } from "@/components/admin-back";
 import { ArrowLeftIcon } from "@/components/icons";
 import { loadPersonWorkoutRecords } from "@/lib/queries/workouts";
 import { PersonRecords } from "./person-records";
-import { RotationBuilder } from "./rotation-builder";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +44,6 @@ export default async function PersonWorkoutsPage({
           </p>
         </div>
       </header>
-
-      <div className="mb-8">
-        <RotationBuilder userId={data.user.id} rotation={data.rotation} />
-      </div>
 
       <PersonRecords data={data} />
     </main>

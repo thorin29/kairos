@@ -22,6 +22,7 @@ import {
   restDay,
 } from "@/lib/actions/workouts";
 import { PlanBuilder } from "./plan-builder";
+import { RotationBuilder } from "./rotation-builder";
 import { TodayPlan } from "./workout-card";
 import { LineChart } from "@/components/line-chart";
 import type {
@@ -63,6 +64,9 @@ export function WorkoutsGrid({
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("menu");
+  // When creating a plan from scratch, which kind the person chose (before one
+  // exists). Once a plan or rotation exists, that decides what's shown instead.
+  const [planMode, setPlanMode] = useState<"weekly" | "rotation" | null>(null);
   const [browseFilter, setBrowseFilter] = useState<"regular" | "hero">(
     "regular",
   );
@@ -79,6 +83,7 @@ export function WorkoutsGrid({
     setOrigin(`${x} top`);
     setOpenId(id);
     setStep("menu");
+    setPlanMode(null);
   };
 
   const open = people.find((p) => p.user.id === openId) ?? null;
@@ -283,16 +288,76 @@ export function WorkoutsGrid({
                   <h3 className="mb-3 font-display text-lg font-semibold">
                     Workout plan
                   </h3>
-                  <PlanBuilder
-                    userId={open.user.id}
-                    plan={open.plan}
-                    todayDow={todayDow}
-                    pool={pool}
-                    hiitWorkouts={hiitWorkouts.filter(
-                      (w) =>
-                        w.ownerId === null || w.ownerId === open.user.id,
-                    )}
-                  />
+                  {(() => {
+                    const hasRotation = !!open.rotation;
+                    const hasWeekly = open.plan.some((d) =>
+                      d.workouts.some((w) => !w.isRest),
+                    );
+                    const showRotation =
+                      hasRotation || planMode === "rotation";
+                    const showWeekly =
+                      !showRotation && (hasWeekly || planMode === "weekly");
+
+                    if (showRotation) {
+                      return (
+                        <RotationBuilder
+                          userId={open.user.id}
+                          rotation={open.rotation}
+                        />
+                      );
+                    }
+                    if (showWeekly) {
+                      return (
+                        <PlanBuilder
+                          userId={open.user.id}
+                          plan={open.plan}
+                          todayDow={todayDow}
+                          pool={pool}
+                          hiitWorkouts={hiitWorkouts.filter(
+                            (w) =>
+                              w.ownerId === null ||
+                              w.ownerId === open.user.id,
+                          )}
+                        />
+                      );
+                    }
+                    return (
+                      <div>
+                        <p className="mb-4 text-sm text-muted">
+                          How should this plan work?
+                        </p>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            onClick={() => setPlanMode("weekly")}
+                            className="rounded-2xl border border-hairline p-4 text-left transition-colors hover:border-accent"
+                          >
+                            <span className="block font-display text-base font-semibold">
+                              Weekly plan
+                            </span>
+                            <span className="mt-1 block text-sm text-muted">
+                              The same workouts on set weekdays — e.g. legs every
+                              Monday, chest every Thursday.
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPlanMode("rotation")}
+                            className="rounded-2xl border border-hairline p-4 text-left transition-colors hover:border-accent"
+                          >
+                            <span className="block font-display text-base font-semibold">
+                              Rotation
+                            </span>
+                            <span className="mt-1 block text-sm text-muted">
+                              A repeating cycle of workouts (chest, legs, push…)
+                              that runs off the weekly grid, with rest days that
+                              pause it.
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
