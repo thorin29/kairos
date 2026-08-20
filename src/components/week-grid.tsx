@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { GridEvent } from "@/lib/queries/calendar";
+import type { SharedStyle } from "@/lib/settings";
+import { sharedBackground } from "@/lib/shared-color";
 import { DAY_SHORT } from "@/lib/days";
 import { useAddEvent } from "@/app/calendar/add-event-form";
 import { EventMenu, type MenuItem } from "@/components/event-menu";
@@ -45,6 +47,7 @@ export function WeekGrid({
   nowColor = "#ef4444",
   resetSec = 60,
   blockMinutes = 30,
+  sharedStyle = "bands",
   personColumns,
 }: {
   days: string[];
@@ -56,6 +59,7 @@ export function WeekGrid({
   nowColor?: string;
   resetSec?: number;
   blockMinutes?: number;
+  sharedStyle?: SharedStyle;
   /** Day view only: render a column per person instead of per day. Family
    *  (shared) timed events span every column; all-day events span the top. */
   personColumns?: {
@@ -66,6 +70,12 @@ export function WeekGrid({
 }) {
   // In person mode the single date is days[0] and the columns are people.
   const personMode = !!personColumns && personColumns.length > 0 && days.length === 1;
+  // Background for an event block: a plain fill normally, or bands/blend of the
+  // members' colours when it's shared with more than one person.
+  const bgFor = (e: GridEvent): { backgroundColor?: string; backgroundImage?: string } =>
+    e.memberColors.length >= 2
+      ? sharedBackground(e.memberColors, sharedStyle)
+      : { backgroundColor: e.color };
   const singleISO = days[0];
   const cols = personMode ? personColumns!.map((p) => p.id) : days;
   // Events belonging to a column: by day normally, by owner in person mode
@@ -241,7 +251,7 @@ export function WeekGrid({
       title={`${e.title}${e.location ? ` · ${e.location}` : ""}`}
       className="mb-1 block cursor-pointer select-none truncate rounded px-1.5 py-1 text-[0.7rem] font-medium text-white"
       style={{
-        backgroundColor: e.color,
+        ...bgFor(e),
         boxShadow: selectedId === e.id ? SELECTED_RING : undefined,
       }}
     >
@@ -283,7 +293,7 @@ export function WeekGrid({
           height,
           left: `calc(${lane.index * width}% + 2px)`,
           width: `calc(${width}% - 8px)`,
-          backgroundColor: e.color,
+          ...bgFor(e),
           boxShadow: selected ? SELECTED_RING : undefined,
         }}
       >

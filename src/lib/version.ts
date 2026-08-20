@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.128.0";
+export const APP_VERSION = "0.129.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -76,6 +76,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.129.0",
+    summary: [
+      "Share an event with more than one person: every event\u2019s add/edit form now has a \u201cShare with\u201d picker at the bottom. Shared events show on each person\u2019s calendar and appear in everyone\u2019s colours \u2014 as split bands (one stripe per person) or a single blended colour",
+      "The blend mixes on the colour wheel, so two colours meet at a vivid hue rather than turning brown",
+      "Choose bands or blend under Admin \u2192 Calendar (bands by default). Editing an event now also updates who it\u2019s shared with",
+    ],
+  },
   {
     version: "0.128.0",
     summary: [

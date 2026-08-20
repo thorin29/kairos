@@ -31,24 +31,33 @@ export function DisplayPrefs({
   nowColor,
   resetSec,
   blockMinutes,
+  sharedStyle,
 }: {
   nowColor: string;
   resetSec: number;
   blockMinutes: number;
+  sharedStyle: "bands" | "blend";
 }) {
   const [color, setColor] = useState(nowColor);
   const [sec, setSec] = useState(resetSec);
   const [block, setBlock] = useState(blockMinutes);
+  const [style, setStyle] = useState<"bands" | "blend">(sharedStyle);
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();
 
-  const save = (nextColor: string, nextSec: number, nextBlock: number) => {
+  const save = (
+    nextColor: string,
+    nextSec: number,
+    nextBlock: number,
+    nextStyle: "bands" | "blend",
+  ) => {
     setColor(nextColor);
     setSec(nextSec);
     setBlock(nextBlock);
+    setStyle(nextStyle);
     setSaved(false);
     start(async () => {
-      await setCalendarPrefs(nextColor, nextSec, nextBlock);
+      await setCalendarPrefs(nextColor, nextSec, nextBlock, nextStyle);
       setSaved(true);
     });
   };
@@ -64,7 +73,7 @@ export function DisplayPrefs({
             <button
               key={c.value}
               type="button"
-              onClick={() => save(c.value, sec, block)}
+              onClick={() => save(c.value, sec, block, style)}
               aria-label={c.label}
               aria-pressed={color.toLowerCase() === c.value}
               className={`h-9 w-9 rounded-full border transition-transform ${
@@ -87,7 +96,7 @@ export function DisplayPrefs({
             <button
               key={r.value}
               type="button"
-              onClick={() => save(color, r.value, block)}
+              onClick={() => save(color, r.value, block, style)}
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                 sec === r.value
                   ? "border-accent bg-accent/10 text-accent"
@@ -113,7 +122,7 @@ export function DisplayPrefs({
             <button
               key={b.value}
               type="button"
-              onClick={() => save(color, sec, b.value)}
+              onClick={() => save(color, sec, b.value, style)}
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                 block === b.value
                   ? "border-accent bg-accent/10 text-accent"
@@ -127,6 +136,37 @@ export function DisplayPrefs({
         <p className="mt-2 text-xs text-muted">
           Tapping an empty spot on the calendar highlights a block this long;
           right-click (or long-press) it to start a new event.
+        </p>
+      </div>
+
+      <div className="mt-4 border-t border-hairline pt-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
+          Shared events
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {(
+            [
+              { value: "bands", label: "Split bands" },
+              { value: "blend", label: "Blended colour" },
+            ] as const
+          ).map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => save(color, sec, block, o.value)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                style === o.value
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-hairline text-muted hover:border-accent"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          When an event is shared with more than one person, show it as vertical
+          stripes of each person&rsquo;s colour, or as a single blended colour.
         </p>
       </div>
 

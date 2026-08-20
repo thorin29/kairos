@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { GridEvent } from "@/lib/queries/calendar";
+import type { SharedStyle } from "@/lib/settings";
+import { sharedBackground } from "@/lib/shared-color";
 import { SchoolTypeIcon } from "@/components/icons";
 import { EventDetail } from "@/components/event-detail";
 import { useAddEvent } from "@/app/calendar/add-event-form";
@@ -13,7 +15,13 @@ import { eventCopyData, deleteEvent } from "@/lib/actions/events";
  * delete-with-confirm and class due-items too. preventDefault stops the day
  * cell's link from firing.
  */
-export function MonthChip({ event }: { event: GridEvent }) {
+export function MonthChip({
+  event,
+  sharedStyle = "bands",
+}: {
+  event: GridEvent;
+  sharedStyle?: SharedStyle;
+}) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const { openAt, openEdit } = useAddEvent();
 
@@ -46,7 +54,11 @@ export function MonthChip({ event }: { event: GridEvent }) {
           setAnchor(e.currentTarget.getBoundingClientRect());
         }}
         className="mb-0.5 flex cursor-pointer items-center gap-0.5 truncate rounded px-1 py-0.5 text-[0.65rem] font-medium text-white"
-        style={{ backgroundColor: event.color }}
+        style={
+          event.memberColors.length >= 2
+            ? sharedBackground(event.memberColors, sharedStyle)
+            : { backgroundColor: event.color }
+        }
       >
         {event.schoolType && (
           <SchoolTypeIcon type={event.schoolType} className="h-2.5 w-2.5 shrink-0" />

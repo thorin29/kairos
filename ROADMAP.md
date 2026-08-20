@@ -201,6 +201,10 @@ all live in the database, never in this repository.
 - [ ] Personal Bible reading plan (alongside the family plan)
 - [ ] Leisure book reading: add a book (name + length), log pages daily, never
       overdue, unobtrusive (a gentle reminder, not a checklist item)
+- [x] Shared events across profiles: a "Share with" picker on every event's
+      add/edit form; shared events show on each member's calendar in everyone's
+      colours as split bands or a wheel-mixed blend (avoids brown), toggled under
+      Admin → Calendar. Editing syncs participants (v0.129.0)
 - [ ] Past sport event auto-logs as a workout for the selected users
 - [ ] Recurrent classes: ask if they end at semester end and tie to that
       semester; if none exists, prompt to create one

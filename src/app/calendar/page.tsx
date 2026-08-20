@@ -29,7 +29,7 @@ import { PersonFilterBadge, FamilyFilterBadge } from "@/components/person-filter
 import { SchoolIcon } from "@/components/icons";
 import { CATEGORY_COLORS } from "@/lib/colors";
 import { getFamilyColor } from "@/lib/settings";
-import { getCalendarPrefs } from "@/lib/settings";
+import { getCalendarPrefs, type SharedStyle } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -281,6 +281,7 @@ export default async function CalendarPage({
                 nowColor={calPrefs.nowColor}
                 resetSec={calPrefs.scrollResetSec}
                 blockMinutes={calPrefs.blockMinutes}
+                sharedStyle={calPrefs.sharedStyle}
               />
             )}
 
@@ -292,6 +293,7 @@ export default async function CalendarPage({
                 nowColor={calPrefs.nowColor}
                 resetSec={calPrefs.scrollResetSec}
                 blockMinutes={calPrefs.blockMinutes}
+                sharedStyle={calPrefs.sharedStyle}
                 people={people
                   .filter((p) => selectedSet.has(p.id))
                   .map((p) => ({
@@ -311,6 +313,7 @@ export default async function CalendarPage({
                 hrefForDay={(iso) =>
                   link({ view: "day", date: iso, who: whoEncoded })
                 }
+                sharedStyle={calPrefs.sharedStyle}
               />
             )}
           </div>
@@ -328,6 +331,7 @@ function DayPanel({
   nowColor,
   resetSec,
   blockMinutes,
+  sharedStyle,
   people,
 }: {
   date: string;
@@ -336,6 +340,7 @@ function DayPanel({
   nowColor: string;
   resetSec: number;
   blockMinutes: number;
+  sharedStyle: SharedStyle;
   people: { id: string; name: string; color: string }[];
 }) {
   if (people.length === 0) {
@@ -355,6 +360,7 @@ function DayPanel({
       nowColor={nowColor}
       resetSec={resetSec}
       blockMinutes={blockMinutes}
+      sharedStyle={sharedStyle}
       personColumns={people}
     />
   );
