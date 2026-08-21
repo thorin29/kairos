@@ -323,6 +323,17 @@ export async function saveClass(
     }
   }
 
+  // A class can run a shorter window than its whole term (e.g. the first half of
+  // the semester) or any custom span. These optional dates override the term's;
+  // blank falls back to the term (or today / no end when there's no term).
+  const customStart = String(formData.get("meetingStartDate") ?? "");
+  const customEnd = String(formData.get("meetingEndDate") ?? "");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(customStart)) anchorISO = customStart;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(customEnd)) untilISO = customEnd;
+  if (hasMeeting && untilISO && untilISO < anchorISO) {
+    return { error: "The class's last day is before its first day." };
+  }
+
   const evData = hasMeeting
     ? meetingEventData({ userId, name, byday, start, end, anchorISO, untilISO })
     : null;

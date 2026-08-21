@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.130.0";
+export const APP_VERSION = "0.131.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -76,6 +76,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.131.0",
+    summary: [
+      "Classes can run part of a term: the class form now has optional \u201cRuns from\u201d and \u201cRuns until\u201d dates. Leave them blank to use the whole semester, or set them to run a shorter window \u2014 e.g. a class that meets only the first half",
+      "These dates also work without a term, for a class on any custom start-to-end span",
+    ],
+  },
   {
     version: "0.130.0",
     summary: [

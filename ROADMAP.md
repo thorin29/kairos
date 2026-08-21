@@ -209,7 +209,9 @@ all live in the database, never in this repository.
 - [x] Recurrent classes: ask if they end at semester end and tie to that
       semester; if none exists, prompt to create one. The class form prompts for
       a term on recurring classes (bounding the meeting to the term's dates) and
-      lets you add a semester inline when there are none (v0.130.0)
+      lets you add a semester inline when there are none (v0.130.0). Optional
+      "Runs from / Runs until" dates let a class run only part of a term (a
+      half-semester class) or any custom span (v0.131.0)
 - [x] Editing a recurrent event prompts "this occurrence" vs "the whole series"
       up front on Edit (mirrors the delete chooser); the choice pre-selects the
       in-form scope and can still be changed before saving (v0.124.0)

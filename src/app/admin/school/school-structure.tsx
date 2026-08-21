@@ -591,6 +591,39 @@ function Classes({
           </div>
         )}
 
+        {days.length > 0 && (
+          <div className="mt-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium">
+                  Runs from <span className="text-muted">(optional)</span>
+                </label>
+                <input
+                  name="meetingStartDate"
+                  type="date"
+                  defaultValue={editing?.meetingStartDate ?? ""}
+                  className={`tabular ${FIELD}`}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">
+                  Runs until <span className="text-muted">(optional)</span>
+                </label>
+                <input
+                  name="meetingEndDate"
+                  type="date"
+                  defaultValue={editing?.meetingEndDate ?? ""}
+                  className={`tabular ${FIELD}`}
+                />
+              </div>
+            </div>
+            <p className="mt-1.5 text-xs text-muted">
+              Leave blank to use the whole term. Set these to run only part of it
+              &mdash; e.g. a class that meets just the first half of the semester.
+            </p>
+          </div>
+        )}
+
         {shareOptions.length > 0 && (
           <div className="mt-3">
             <label className="block text-sm font-medium">Shared with</label>
