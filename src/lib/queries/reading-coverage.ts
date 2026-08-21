@@ -22,7 +22,7 @@ export type Coverage = {
 export async function loadCoverage(planId?: string): Promise<Coverage> {
   const plan = planId
     ? await prisma.readingPlan.findUnique({ where: { id: planId } })
-    : await prisma.readingPlan.findFirst({ where: { isPublished: true } });
+    : await prisma.readingPlan.findFirst({ where: { isPublished: true, ownerId: null } });
 
   const covered = new Set<string>();
   const touched = new Set<string>();

@@ -410,6 +410,7 @@ export type PlanPreview = {
 export async function listPlans(): Promise<PlanPreview[]> {
   await requireInteractive();
   const plans = await prisma.readingPlan.findMany({
+    where: { ownerId: null },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { days: true } } },
   });

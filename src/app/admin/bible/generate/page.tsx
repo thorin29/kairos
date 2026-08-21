@@ -11,7 +11,8 @@ export default async function GeneratePlanPage() {
   const today = todayISO();
 
   const published = await prisma.readingPlan.findFirst({
-    where: { isPublished: true },
+    where: { isPublished: true, ownerId: null },
+    orderBy: { endDate: "desc" },
   });
 
   const last = published

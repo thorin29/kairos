@@ -1,10 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
-import {
-  loadReadingStats,
-  loadPersonalReadingStats,
-  loadPersonalReadKeys,
-} from "@/lib/queries/reading-stats";
+import { loadPersonalReadingStats, loadPersonalReadKeys } from "@/lib/queries/reading-stats";
+import { loadReadingStats } from "@/lib/queries/reading-stats";
+import { loadPersonalPlan } from "@/lib/queries/personal-plan";
+import { PersonalPlanSection } from "@/app/bible/personal-plan-section";
 import { currentUser } from "@/lib/user-session";
 import { deviceMode } from "@/lib/device";
 import { ProgressTabs } from "@/components/personal-bible";
@@ -42,7 +41,7 @@ export default async function BiblePage() {
 
   const [publishedPlans, stats] = await Promise.all([
     prisma.readingPlan.findMany({
-      where: { isPublished: true },
+      where: { isPublished: true, ownerId: null },
       orderBy: { startDate: "asc" },
     }),
     loadReadingStats(today),
@@ -68,13 +67,14 @@ export default async function BiblePage() {
   // though a person may be signed in to log their own reading elsewhere.
   const me = await currentUser();
   const showPersonal = (await deviceMode()) === "personal" && !!me;
-  const [personalStats, personalKeys] =
+  const [personalStats, personalKeys, personalPlan] =
     showPersonal && me
       ? await Promise.all([
           loadPersonalReadingStats(me.id, today),
           loadPersonalReadKeys(me.id),
+          loadPersonalPlan(me.id),
         ])
-      : [null, [] as string[]];
+      : [null, [] as string[], null];
 
   // A window either side of today, so yesterday's missed reading and the
   // next few days are one swipe away.
@@ -88,7 +88,7 @@ export default async function BiblePage() {
   const window = havePlan
     ? await prisma.readingDay.findMany({
         where: {
-          plan: { isPublished: true },
+          plan: { isPublished: true, ownerId: null },
           day: {
             gte: toDateColumn(addDays(today, -WINDOW_BACK)),
             lte: toDateColumn(addDays(today, WINDOW_FORWARD)),
@@ -114,7 +114,7 @@ export default async function BiblePage() {
   const remainingCount = havePlan
     ? await prisma.readingDay.count({
         where: {
-          plan: { isPublished: true },
+          plan: { isPublished: true, ownerId: null },
           day: { gte: toDateColumn(today) },
         },
       })
@@ -122,7 +122,7 @@ export default async function BiblePage() {
 
   const last = havePlan
     ? await prisma.readingDay.findFirst({
-        where: { plan: { isPublished: true } },
+        where: { plan: { isPublished: true, ownerId: null } },
         orderBy: { day: "desc" },
       })
     : null;
@@ -244,6 +244,19 @@ export default async function BiblePage() {
             </div>
           ))}
         </Card>
+
+        <div className="mt-6">
+          <SectionHeading>Your plan</SectionHeading>
+          <p className="mb-3 mt-1 text-sm text-muted">
+            A reading plan just for you. Tick a day off and those chapters are
+            marked read &mdash; feeding the coverage above and your Wisdom.
+          </p>
+          <PersonalPlanSection
+            userId={me.id}
+            plan={personalPlan}
+            todayISOStr={today}
+          />
+        </div>
 
         <div className="mt-6">
           <SectionHeading>Mark what you&rsquo;ve read</SectionHeading>
