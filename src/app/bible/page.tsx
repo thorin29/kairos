@@ -40,10 +40,28 @@ export default async function BiblePage() {
   const today = todayISO();
   await generateReadingTasks(today);
 
-  const [plan, stats] = await Promise.all([
-    prisma.readingPlan.findFirst({ where: { isPublished: true } }),
+  const [publishedPlans, stats] = await Promise.all([
+    prisma.readingPlan.findMany({
+      where: { isPublished: true },
+      orderBy: { startDate: "asc" },
+    }),
     loadReadingStats(today),
   ]);
+
+  // The plan whose dates bracket today (for the page subtitle) — or the next one
+  // to start, or the most recent. More than one plan can be published so the
+  // reading rolls straight from one into the next.
+  const plan =
+    publishedPlans.find((p) => {
+      const s = p.startDate ? fromDateColumn(p.startDate) : null;
+      const e = p.endDate ? fromDateColumn(p.endDate) : null;
+      return (!s || s <= today) && (!e || e >= today);
+    }) ??
+    publishedPlans.find(
+      (p) => p.startDate && fromDateColumn(p.startDate) > today,
+    ) ??
+    publishedPlans[publishedPlans.length - 1] ??
+    null;
 
   // Personal reading only appears when this is a *personal* device with someone
   // signed in. A shared device (the wall tablet) always shows family only, even
@@ -63,38 +81,48 @@ export default async function BiblePage() {
   const WINDOW_BACK = 7;
   const WINDOW_FORWARD = 14;
 
-  const window = plan
+  const havePlan = publishedPlans.length > 0;
+
+  // Daily cards come from every published plan in the window, so the reading
+  // flows seamlessly across a plan boundary. Dedupe by day (later plan wins).
+  const window = havePlan
     ? await prisma.readingDay.findMany({
         where: {
-          planId: plan.id,
+          plan: { isPublished: true },
           day: {
             gte: toDateColumn(addDays(today, -WINDOW_BACK)),
             lte: toDateColumn(addDays(today, WINDOW_FORWARD)),
           },
         },
-        orderBy: { day: "asc" },
+        orderBy: [{ plan: { startDate: "asc" } }, { day: "asc" }],
+        select: { day: true, passage: true },
       })
     : [];
 
-  const cards: ReadingCard[] = window.map((d) => {
-    const iso = fromDateColumn(d.day);
-    return { iso, passage: d.passage, label: formatLong(iso) };
-  });
+  const byDay = new Map<string, string>();
+  for (const d of window) byDay.set(fromDateColumn(d.day), d.passage);
+
+  const cards: ReadingCard[] = [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([iso, passage]) => ({ iso, passage, label: formatLong(iso) }));
 
   const todayIndex = Math.max(
     0,
     cards.findIndex((c) => c.iso === today),
   );
 
-  const remainingCount = plan
+  const remainingCount = havePlan
     ? await prisma.readingDay.count({
-        where: { planId: plan.id, day: { gte: toDateColumn(today) } },
+        where: {
+          plan: { isPublished: true },
+          day: { gte: toDateColumn(today) },
+        },
       })
     : 0;
 
-  const last = plan
+  const last = havePlan
     ? await prisma.readingDay.findFirst({
-        where: { planId: plan.id },
+        where: { plan: { isPublished: true } },
         orderBy: { day: "desc" },
       })
     : null;

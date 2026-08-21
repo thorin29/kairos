@@ -20,15 +20,21 @@ export async function generateReadingTasks(
 ): Promise<{ created: number; removed: number }> {
   const toISO = addDays(fromISO, days - 1);
 
-  const plan = await prisma.readingPlan.findFirst({
-    where: { isPublished: true },
-    include: {
-      days: {
-        where: {
-          day: { gte: toDateColumn(fromISO), lte: toDateColumn(toISO) },
-        },
-      },
+  // Days from every published plan in the window. More than one plan can be
+  // published (a plan queued to start when another ends), so we union their
+  // days; on the rare overlap the later-starting plan wins.
+  const planDays = await prisma.readingDay.findMany({
+    where: {
+      plan: { isPublished: true },
+      day: { gte: toDateColumn(fromISO), lte: toDateColumn(toISO) },
     },
+    select: {
+      day: true,
+      passage: true,
+      planId: true,
+      plan: { select: { startDate: true } },
+    },
+    orderBy: [{ plan: { startDate: "asc" } }, { day: "asc" }],
   });
 
   const people = await prisma.user.findMany({
@@ -36,18 +42,19 @@ export async function generateReadingTasks(
     select: { id: true },
   });
 
-  const expected = new Map<string, { userId: string; day: string; passage: string }>();
+  // day ISO -> { passage, planId }, later-starting plan overwriting on overlap.
+  const byDay = new Map<string, { passage: string; planId: string }>();
+  for (const d of planDays) {
+    byDay.set(fromDateColumn(d.day), { passage: d.passage, planId: d.planId });
+  }
 
-  if (plan) {
-    for (const d of plan.days) {
-      const iso = fromDateColumn(d.day);
-      for (const p of people) {
-        expected.set(`${p.id}|${iso}`, {
-          userId: p.id,
-          day: iso,
-          passage: d.passage,
-        });
-      }
+  const expected = new Map<
+    string,
+    { userId: string; day: string; passage: string; planId: string }
+  >();
+  for (const [iso, { passage, planId }] of byDay) {
+    for (const p of people) {
+      expected.set(`${p.id}|${iso}`, { userId: p.id, day: iso, passage, planId });
     }
   }
 
@@ -100,7 +107,7 @@ export async function generateReadingTasks(
       title: row.passage,
       category: Category.BIBLE,
       dueDate: toDateColumn(row.day),
-      generatedFrom: `plan:${plan?.id ?? ""}`,
+      generatedFrom: `plan:${row.planId}`,
     }));
 
   let created = 0;
