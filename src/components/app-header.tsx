@@ -20,6 +20,7 @@ export type Section =
   | "school"
   | "games"
   | "exercise"
+  | "reading"
   | "groceries"
   | "money"
   | "summary";
@@ -65,6 +66,13 @@ const NAV: {
     href: "/bible",
     label: "Bible reading",
     color: "#7c3aed",
+    icon: <BookIcon className="h-6 w-6" />,
+  },
+  {
+    key: "reading",
+    href: "/reading",
+    label: "Reading",
+    color: "#0891b2",
     icon: <BookIcon className="h-6 w-6" />,
   },
   {

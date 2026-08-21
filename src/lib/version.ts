@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.131.0";
+export const APP_VERSION = "0.132.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -71,11 +71,20 @@ export const MIGRATIONS = [
   "61_always_open",
   "62_perpetual_chore",
   "63_workout_rotation",
+  "64_leisure_reading",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.132.0",
+    summary: [
+      "New Reading section for books read for pleasure: add a book with its length in pages or chapters, then log how much you read each day and watch the progress bar fill",
+      "Leisure reading is deliberately low-key \u2014 it never goes overdue and never shows as a checklist item. It just nudges your Scholar level up a little; the more (and longer) you read, the more it adds, but only slightly",
+      "Reading credit is capped at each book\u2019s length, and pages and chapters are balanced so both count fairly",
+    ],
+  },
   {
     version: "0.131.0",
     summary: [
