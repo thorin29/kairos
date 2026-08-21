@@ -227,8 +227,8 @@ export default async function BiblePage() {
           <BookProgress
             initialManual={personalKeys}
             planCovered={[]}
-            saveBook={saveMyBookChapters}
-            saveBooks={saveMyBooks}
+            saveBook={saveMyBookChapters.bind(null, me.id)}
+            saveBooks={saveMyBooks.bind(null, me.id)}
           />
         </div>
       </section>

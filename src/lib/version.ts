@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.134.0";
+export const APP_VERSION = "0.135.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -78,6 +78,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.135.0",
+    summary: [
+      "Personal Bible reading now follows the device mode. On a personal device the Bible page has a Family Progress / Personal Progress switch \u2014 your own coverage and tracker live behind Personal Progress; a shared device stays family-only",
+      "On any device, each person\u2019s dashboard card has a Personal Bible Reading button that logs that person\u2019s own reading \u2014 so on the shared tablet anyone can record their reading from their own card, the household way chores are logged",
+    ],
+  },
   {
     version: "0.134.0",
     summary: [

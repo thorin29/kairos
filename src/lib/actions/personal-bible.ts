@@ -2,19 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/user-session";
+import { requireInteractive } from "@/lib/gate";
 import { BOOK_BY_NAME } from "@/lib/bible/books";
 
-// These act on the *signed-in* person's own record only — the userId comes from
-// the session, never from the caller, so one person can't edit another's.
+// Personal Bible reading is logged per person, the same household way chores and
+// workouts are: any interactive user on the device can record it for the person
+// whose page it's on. The userId is bound by the page, not taken from the login,
+// so on the shared wall tablet every person's own card can log their reading.
 
-/** Replace a book's read chapters for the signed-in person with exactly this
- *  set (delete-and-rewrite, mirroring the household editor's save-on-commit). */
+/** Replace a book's read chapters for `userId` with exactly this set. */
 export async function saveMyBookChapters(
+  userId: string,
   bookName: string,
   chapters: number[],
 ): Promise<void> {
-  const me = await requireUser();
+  await requireInteractive();
+  if (!userId) return;
   const book = BOOK_BY_NAME.get(bookName);
   if (!book) return;
 
@@ -22,23 +25,26 @@ export async function saveMyBookChapters(
     (c) => Number.isInteger(c) && c >= 1 && c <= book.chapters,
   );
 
-  await prisma.userChapterRead.deleteMany({ where: { userId: me.id, bookName } });
+  await prisma.userChapterRead.deleteMany({ where: { userId, bookName } });
   if (valid.length > 0) {
     await prisma.userChapterRead.createMany({
-      data: valid.map((chapter) => ({ userId: me.id, bookName, chapter })),
+      data: valid.map((chapter) => ({ userId, bookName, chapter })),
       skipDuplicates: true,
     });
   }
   revalidatePath("/bible");
+  revalidatePath(`/person/${userId}`);
   revalidatePath("/");
 }
 
-/** Mark or clear several whole books at once (a testament in one go). */
+/** Mark or clear several whole books at once for `userId`. */
 export async function saveMyBooks(
+  userId: string,
   bookNames: string[],
   read: boolean,
 ): Promise<void> {
-  const me = await requireUser();
+  await requireInteractive();
+  if (!userId) return;
   const names = bookNames.filter((b) => BOOK_BY_NAME.has(b));
   if (names.length === 0) return;
 
@@ -46,7 +52,7 @@ export async function saveMyBooks(
     const rows = names.flatMap((bookName) => {
       const book = BOOK_BY_NAME.get(bookName)!;
       return Array.from({ length: book.chapters }, (_, i) => ({
-        userId: me.id,
+        userId,
         bookName,
         chapter: i + 1,
       }));
@@ -54,9 +60,10 @@ export async function saveMyBooks(
     await prisma.userChapterRead.createMany({ data: rows, skipDuplicates: true });
   } else {
     await prisma.userChapterRead.deleteMany({
-      where: { userId: me.id, bookName: { in: names } },
+      where: { userId, bookName: { in: names } },
     });
   }
   revalidatePath("/bible");
+  revalidatePath(`/person/${userId}`);
   revalidatePath("/");
 }
