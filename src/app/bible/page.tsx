@@ -6,6 +6,8 @@ import {
   loadPersonalReadKeys,
 } from "@/lib/queries/reading-stats";
 import { currentUser } from "@/lib/user-session";
+import { deviceMode } from "@/lib/device";
+import { ProgressTabs } from "@/components/personal-bible";
 import { BookProgress } from "@/app/admin/bible/book-progress";
 import { saveMyBookChapters, saveMyBooks } from "@/lib/actions/personal-bible";
 import { generateReadingTasks } from "@/lib/bible/generate";
@@ -43,15 +45,18 @@ export default async function BiblePage() {
     loadReadingStats(today),
   ]);
 
-  // A signed-in person also gets their own coverage + tracker below the family
-  // stats. On the shared wall tablet (no personal sign-in) this stays hidden.
+  // Personal reading only appears when this is a *personal* device with someone
+  // signed in. A shared device (the wall tablet) always shows family only, even
+  // though a person may be signed in to log their own reading elsewhere.
   const me = await currentUser();
-  const [personalStats, personalKeys] = me
-    ? await Promise.all([
-        loadPersonalReadingStats(me.id, today),
-        loadPersonalReadKeys(me.id),
-      ])
-    : [null, [] as string[]];
+  const showPersonal = (await deviceMode()) === "personal" && !!me;
+  const [personalStats, personalKeys] =
+    showPersonal && me
+      ? await Promise.all([
+          loadPersonalReadingStats(me.id, today),
+          loadPersonalReadKeys(me.id),
+        ])
+      : [null, [] as string[]];
 
   // A window either side of today, so yesterday's missed reading and the
   // next few days are one swipe away.
@@ -94,17 +99,8 @@ export default async function BiblePage() {
       })
     : null;
 
-  return (
+  const familyContent = (
     <>
-      <AppHeader
-        title="Bible reading"
-        subtitle={plan ? plan.name : "No plan is published yet"}
-        active="bible"
-      />
-
-      <main className="mx-auto max-w-4xl px-6 py-6">
-
-
       {plan && cards.length > 0 && (
         <div className="mb-10">
           <ReadingCards cards={cards} todayIndex={todayIndex} />
@@ -133,9 +129,7 @@ export default async function BiblePage() {
             <Card key={g.label} className="p-5">
               <div className="mb-2 flex items-baseline justify-between">
                 <span className="text-sm font-medium">{g.label}</span>
-                <span className="tabular text-lg font-medium">
-                  {g.percent}%
-                </span>
+                <span className="tabular text-lg font-medium">{g.percent}%</span>
               </div>
               <Bar percent={g.percent} color="#0f5c63" />
               <p className="tabular mt-2 text-xs text-muted">
@@ -172,75 +166,89 @@ export default async function BiblePage() {
           can&rsquo;t push a figure past 100%.
         </p>
       </section>
+    </>
+  );
 
-      {me && personalStats && (
-        <section className="mt-12 border-t border-hairline pt-8">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <SectionHeading>
-              Your reading &middot; {me.displayName ?? me.name}
-            </SectionHeading>
-            {personalStats.wholeBible && (
-              <span
-                className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold text-white"
-                style={{ backgroundColor: me.color }}
-              >
-                <TrophyIcon className="h-4 w-4" />
-                Whole Bible read
-              </span>
-            )}
-          </div>
+  const personalContent =
+    personalStats && me ? (
+      <section>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <SectionHeading>Your reading</SectionHeading>
+          {personalStats.wholeBible && (
+            <span
+              className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold text-white"
+              style={{ backgroundColor: me.color }}
+            >
+              <TrophyIcon className="h-4 w-4" />
+              Whole Bible read
+            </span>
+          )}
+        </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            {[personalStats.ot, personalStats.nt].map((g) => (
-              <Card key={g.label} className="p-5">
-                <div className="mb-2 flex items-baseline justify-between">
-                  <span className="text-sm font-medium">{g.label}</span>
-                  <span className="tabular text-lg font-medium">
-                    {g.percent}%
-                  </span>
-                </div>
-                <Bar percent={g.percent} color={me.color} />
-                <p className="tabular mt-2 text-xs text-muted">
-                  {g.read} of {g.chapters} chapters
-                </p>
-              </Card>
-            ))}
-          </div>
-
-          <Card className="mt-4 divide-y divide-hairline">
-            {personalStats.groups.map((g) => (
-              <div key={g.label} className="flex items-center gap-4 px-5 py-3">
-                <span className="w-36 shrink-0 text-sm">{g.label}</span>
-                <span className="flex-1">
-                  <Bar percent={g.percent} color={me.color} />
-                </span>
-                <span className="tabular w-14 shrink-0 text-right text-sm text-muted">
-                  {g.percent}%
-                </span>
-                <span className="tabular w-20 shrink-0 text-right text-xs text-muted">
-                  {g.read}/{g.chapters}
-                </span>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[personalStats.ot, personalStats.nt].map((g) => (
+            <Card key={g.label} className="p-5">
+              <div className="mb-2 flex items-baseline justify-between">
+                <span className="text-sm font-medium">{g.label}</span>
+                <span className="tabular text-lg font-medium">{g.percent}%</span>
               </div>
-            ))}
-          </Card>
+              <Bar percent={g.percent} color={me.color} />
+              <p className="tabular mt-2 text-xs text-muted">
+                {g.read} of {g.chapters} chapters
+              </p>
+            </Card>
+          ))}
+        </div>
 
-          <div className="mt-6">
-            <SectionHeading>Mark what you&rsquo;ve read</SectionHeading>
-            <p className="mb-3 mt-1 text-sm text-muted">
-              Tick any chapters or whole books you&rsquo;ve read, in any order.
-              This is just your own record &mdash; it adds a little to your Wisdom
-              and doesn&rsquo;t touch the family totals above.
-            </p>
-            <BookProgress
-              initialManual={personalKeys}
-              planCovered={[]}
-              saveBook={saveMyBookChapters}
-              saveBooks={saveMyBooks}
-            />
-          </div>
-        </section>
-      )}
-    </main>
+        <Card className="mt-4 divide-y divide-hairline">
+          {personalStats.groups.map((g) => (
+            <div key={g.label} className="flex items-center gap-4 px-5 py-3">
+              <span className="w-36 shrink-0 text-sm">{g.label}</span>
+              <span className="flex-1">
+                <Bar percent={g.percent} color={me.color} />
+              </span>
+              <span className="tabular w-14 shrink-0 text-right text-sm text-muted">
+                {g.percent}%
+              </span>
+              <span className="tabular w-20 shrink-0 text-right text-xs text-muted">
+                {g.read}/{g.chapters}
+              </span>
+            </div>
+          ))}
+        </Card>
+
+        <div className="mt-6">
+          <SectionHeading>Mark what you&rsquo;ve read</SectionHeading>
+          <p className="mb-3 mt-1 text-sm text-muted">
+            Tick any chapters or whole books you&rsquo;ve read, in any order.
+            This is just your own record &mdash; it adds a little to your Wisdom
+            and doesn&rsquo;t touch the family totals.
+          </p>
+          <BookProgress
+            initialManual={personalKeys}
+            planCovered={[]}
+            saveBook={saveMyBookChapters}
+            saveBooks={saveMyBooks}
+          />
+        </div>
+      </section>
+    ) : null;
+
+  return (
+    <>
+      <AppHeader
+        title="Bible reading"
+        subtitle={plan ? plan.name : "No plan is published yet"}
+        active="bible"
+      />
+
+      <main className="mx-auto max-w-4xl px-6 py-6">
+        {showPersonal && personalStats && me ? (
+          <ProgressTabs family={familyContent} personal={personalContent} />
+        ) : (
+          familyContent
+        )}
+      </main>
     </>
   );
 }

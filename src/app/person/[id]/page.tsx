@@ -36,6 +36,11 @@ import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
+import { currentUser } from "@/lib/user-session";
+import { loadPersonalReadKeys } from "@/lib/queries/reading-stats";
+import { PersonalReveal } from "@/components/personal-bible";
+import { BookProgress } from "@/app/admin/bible/book-progress";
+import { saveMyBookChapters, saveMyBooks } from "@/lib/actions/personal-bible";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
 import { AddSchoolWork } from "@/components/add-school-work";
@@ -76,6 +81,13 @@ export default async function PersonPage({
 
   const person = await prisma.user.findUnique({ where: { id } });
   if (!person) notFound();
+
+  // The "Personal Bible Reading" tracker shows only on your own page (you can
+  // only log your own reading). This is how personal reading is logged on a
+  // shared device, where the Bible page itself stays family-only.
+  const me = await currentUser();
+  const ownPage = me?.id === id;
+  const personalReadKeys = ownPage ? await loadPersonalReadKeys(id) : [];
 
   // Self-healing: if this page is opened before the dashboard, today's
   // chores still get created.
@@ -403,6 +415,24 @@ export default async function PersonPage({
         <div className="mt-8">
           <GameTimeCard status={gameStatus} />
         </div>
+      )}
+
+      {ownPage && (
+        <section className="mt-8">
+          <SectionHeading>Bible reading</SectionHeading>
+          <p className="mb-3 mt-1 text-sm text-muted">
+            Log your own reading &mdash; mark any chapters or whole books
+            you&rsquo;ve read, in any order. It adds a little to your Wisdom.
+          </p>
+          <PersonalReveal>
+            <BookProgress
+              initialManual={personalReadKeys}
+              planCovered={[]}
+              saveBook={saveMyBookChapters}
+              saveBooks={saveMyBooks}
+            />
+          </PersonalReveal>
+        </section>
       )}
 
       <div className="mt-10">

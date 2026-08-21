@@ -207,9 +207,12 @@ all live in the database, never in this repository.
             dashboard person card (kept off the card for now)
 - [~] Personal Bible reading (own program alongside the family plan); no
       reward, feeds Wisdom XP the same slight way leisure reading feeds Scholar.
-      - [x] Phase A — per-person chapter-read record + personal coverage stats on
-            the Bible page (shown when signed in) + free-form "mark anything
-            read" tracker + Wisdom XP (v0.133.0)
+      - [x] Phase A — per-person chapter-read record + personal coverage stats +
+            free-form "mark anything read" tracker + Wisdom XP (v0.133.0).
+            Surfacing (v0.134.0): personal device shows a Family/Personal toggle
+            on the Bible page; shared device stays family-only and personal
+            reading is logged from your own dashboard card (person page), your
+            own only
       - [ ] Phase B — personal scheduled plans (own dated program, daily cards,
             reading prompts), coverage folding into the Phase-A stats
 - [x] Shared events across profiles: a "Share with" picker on every event's
