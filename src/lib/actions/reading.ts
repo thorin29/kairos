@@ -349,16 +349,13 @@ function normalizeDate(value: string): string | null {
 export async function publishPlan(id: string): Promise<void> {
   await requireAdmin();
 
-  await prisma.$transaction([
-    prisma.readingPlan.updateMany({
-      where: { isPublished: true },
-      data: { isPublished: false },
-    }),
-    prisma.readingPlan.update({
-      where: { id },
-      data: { isPublished: true },
-    }),
-  ]);
+  // Multiple plans can be published at once, so a plan that starts when another
+  // ends can be published ahead of time and the family reading rolls straight
+  // on. Each day's reading comes from whichever published plan covers it.
+  await prisma.readingPlan.update({
+    where: { id },
+    data: { isPublished: true },
+  });
 
   await generateReadingTasks();
 
