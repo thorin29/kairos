@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.136.0";
+export const APP_VERSION = "0.137.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -73,11 +73,20 @@ export const MIGRATIONS = [
   "63_workout_rotation",
   "64_leisure_reading",
   "65_personal_bible",
+  "66_personal_plan",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.137.0",
+    summary: [
+      "Personal Bible reading plans: create your own dated plan \u2014 pick which books to read, a start date and a chapters-per-day pace, and it lays out the daily readings just for you",
+      "Tick a day off and those chapters are marked read in your own record, which feeds your coverage stats and your Wisdom \u2014 no separate bookkeeping. Your plan sits alongside the free-form \u201cmark anything read\u201d tracker",
+      "Personal plans are entirely yours and never affect the family reading or the family\u2019s figures",
+    ],
+  },
   {
     version: "0.136.0",
     summary: [

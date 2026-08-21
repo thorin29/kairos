@@ -213,8 +213,13 @@ all live in the database, never in this repository.
             Bible page; shared device stays family-only and each person's reading
             is logged from their own dashboard card (person page), for any user
             on a shared device (v0.133.0–v0.135.0)
-      - [ ] Phase B — personal scheduled plans (own dated program, daily cards,
-            reading prompts), coverage folding into the Phase-A stats
+      - [x] Phase B — personal scheduled plans (generate-only): create your own
+            dated plan (pick books + start + chapters/day), daily cards with a
+            tick that marks those chapters read, feeding the Phase-A coverage and
+            Wisdom. Personal plans carry an owner and never touch family reading
+            (v0.137.0)
+      - [ ] Later: import a personal plan (paste), and show the family + personal
+            readings as two check-offs together on the day
 - [x] Shared events across profiles: a "Share with" picker on every event's
       add/edit form; shared events show on each member's calendar in everyone's
       colours as split bands or a wheel-mixed blend (avoids brown), toggled under

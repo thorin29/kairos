@@ -25,7 +25,7 @@ export async function generateReadingTasks(
   // days; on the rare overlap the later-starting plan wins.
   const planDays = await prisma.readingDay.findMany({
     where: {
-      plan: { isPublished: true },
+      plan: { isPublished: true, ownerId: null },
       day: { gte: toDateColumn(fromISO), lte: toDateColumn(toISO) },
     },
     select: {

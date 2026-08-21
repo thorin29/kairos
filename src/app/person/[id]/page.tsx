@@ -37,7 +37,9 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { loadPersonalReadKeys } from "@/lib/queries/reading-stats";
+import { loadPersonalPlan } from "@/lib/queries/personal-plan";
 import { PersonalReveal } from "@/components/personal-bible";
+import { PersonalPlanSection } from "@/app/bible/personal-plan-section";
 import { BookProgress } from "@/app/admin/bible/book-progress";
 import { saveMyBookChapters, saveMyBooks } from "@/lib/actions/personal-bible";
 import { TaskRow } from "@/components/task-row";
@@ -85,6 +87,7 @@ export default async function PersonPage({
   // that person — the household way (like chores), so on the shared wall tablet
   // anyone can record their own reading from their own card.
   const personalReadKeys = await loadPersonalReadKeys(id);
+  const personalPlan = await loadPersonalPlan(id);
 
   // Self-healing: if this page is opened before the dashboard, today's
   // chores still get created.
@@ -421,12 +424,26 @@ export default async function PersonPage({
           books read, in any order. It adds a little to their Wisdom.
         </p>
         <PersonalReveal>
-          <BookProgress
-            initialManual={personalReadKeys}
-            planCovered={[]}
-            saveBook={saveMyBookChapters.bind(null, id)}
-            saveBooks={saveMyBooks.bind(null, id)}
-          />
+          <div className="space-y-4">
+            <PersonalPlanSection
+              userId={id}
+              plan={personalPlan}
+              todayISOStr={today}
+            />
+            <details className="rounded-2xl border border-hairline p-4">
+              <summary className="cursor-pointer text-sm font-medium">
+                Mark other reading (any chapters, any order)
+              </summary>
+              <div className="mt-3">
+                <BookProgress
+                  initialManual={personalReadKeys}
+                  planCovered={[]}
+                  saveBook={saveMyBookChapters.bind(null, id)}
+                  saveBooks={saveMyBooks.bind(null, id)}
+                />
+              </div>
+            </details>
+          </div>
         </PersonalReveal>
       </section>
 

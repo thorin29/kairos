@@ -46,7 +46,7 @@ export async function loadReadingStats(
   const [days, completions] = await Promise.all([
     prisma.readingDay.findMany({
       where: {
-        plan: { isPublished: true },
+        plan: { isPublished: true, ownerId: null },
         isExtra: false,
         day: { lte: toDateColumn(todayISO) },
       },

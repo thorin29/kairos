@@ -80,6 +80,7 @@ model User {
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   books            Book[]
   chapterReads     UserChapterRead[]
+  readingPlans     ReadingPlan[]     @relation("ReadingPlans")
   workoutRotation  WorkoutRotation?  @relation("WorkoutRotation")
   hiitWorkouts     HiitWorkout[]
   invites          Invite[]
@@ -509,6 +510,12 @@ model ReadingPlan {
   id     String  @id @default(cuid())
   name   String
   notes  String?
+
+  // A personal plan belongs to one person (family plans leave this null). A
+  // personal plan's days are theirs alone and, when read, mark that person's
+  // chapters — they never touch the family figures.
+  ownerId String?
+  owner   User?   @relation("ReadingPlans", fields: [ownerId], references: [id], onDelete: Cascade)
 
   isPublished Boolean @default(false)
 
