@@ -79,6 +79,7 @@ model User {
   workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   books            Book[]
+  chapterReads     UserChapterRead[]
   workoutRotation  WorkoutRotation?  @relation("WorkoutRotation")
   hiitWorkouts     HiitWorkout[]
   invites          Invite[]
@@ -547,6 +548,21 @@ model ChapterCompletion {
   completedAt DateTime @default(now())
 
   @@id([bookName, chapter])
+}
+
+// A person's own record of Bible chapters they've read, in any order — the
+// personal counterpart to the household ChapterCompletion. Powers each person's
+// own coverage stats and feeds Wisdom XP. Kept separate so personal reading
+// never touches the shared household figures.
+model UserChapterRead {
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookName    String
+  chapter     Int
+  completedAt DateTime @default(now())
+
+  @@id([userId, bookName, chapter])
+  @@index([userId])
 }
 
 // Leisure reading, per person. Add a book with a length (in pages or chapters);

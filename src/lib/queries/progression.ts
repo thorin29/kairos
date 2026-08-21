@@ -12,7 +12,7 @@ import { getScoringStart } from "@/lib/settings";
 import { currentSeasonWindow } from "@/lib/season";
 import { blendPalette, eggCostFor, stageForTenure, EGGS_PER_SEASON_CAP } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
-import { readingXpForBook } from "@/lib/scoring/reading";
+import { readingXpForBook, bibleXpForChapters } from "@/lib/scoring/reading";
 import { loadBonuses } from "@/lib/queries/bonus";
 import { isStale, loadStaleContext, type StaleInput } from "@/lib/chores/stale";
 import { computeStreaks, earnedMilestones, type DayClass } from "@/lib/scoring/streaks";
@@ -90,7 +90,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
   const startISO = await getScoringStart();
   const dueFloor = startISO ? { gte: toDateColumn(startISO) } : {};
 
-  const [people, tasks, ctx, seasonBonus, lifetimeBonus, compStates, activeComps, books] = await Promise.all([
+  const [people, tasks, ctx, seasonBonus, lifetimeBonus, compStates, activeComps, books, chapterReads] = await Promise.all([
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -128,6 +128,8 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         logs: { select: { amount: true } },
       },
     }),
+    // Personal Bible reading feeds Wisdom slightly (one row per chapter read).
+    prisma.userChapterRead.findMany({ select: { userId: true } }),
   ]);
 
   type StateRow = {
@@ -233,6 +235,19 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     const xp = readingXpForBook(b.unit, b.length, totalRead);
     a.xp += xp;
     a.statXp.SCHOOL += xp;
+  }
+
+  // Personal Bible reading lifts Wisdom a little, one row per chapter read.
+  const chaptersByUser = new Map<string, number>();
+  for (const r of chapterReads as { userId: string }[]) {
+    chaptersByUser.set(r.userId, (chaptersByUser.get(r.userId) ?? 0) + 1);
+  }
+  for (const [userId, count] of chaptersByUser) {
+    const a = acc.get(userId);
+    if (!a) continue;
+    const xp = bibleXpForChapters(count);
+    a.xp += xp;
+    a.statXp.BIBLE += xp;
   }
 
   // The family baseline per stat, so class and colour reflect what each person
