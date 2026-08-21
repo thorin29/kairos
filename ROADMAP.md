@@ -205,8 +205,13 @@ all live in the database, never in this repository.
       pages/chapters, capped at length) (v0.132.0)
       - [ ] Follow-up: a gentle "currently reading — read today?" nudge on the
             dashboard person card (kept off the card for now)
-- [ ] Personal Bible reading plan (own program alongside the family plan); no
-      reward, feeds Wisdom XP the same slight way leisure reading feeds Scholar
+- [~] Personal Bible reading (own program alongside the family plan); no
+      reward, feeds Wisdom XP the same slight way leisure reading feeds Scholar.
+      - [x] Phase A — per-person chapter-read record + personal coverage stats on
+            the Bible page (shown when signed in) + free-form "mark anything
+            read" tracker + Wisdom XP (v0.133.0)
+      - [ ] Phase B — personal scheduled plans (own dated program, daily cards,
+            reading prompts), coverage folding into the Phase-A stats
 - [x] Shared events across profiles: a "Share with" picker on every event's
       add/edit form; shared events show on each member's calendar in everyone's
       colours as split bands or a wheel-mixed blend (avoids brown), toggled under

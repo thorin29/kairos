@@ -131,3 +131,93 @@ export async function loadReadingStats(
     }),
   };
 }
+
+/**
+ * The same coverage figures, but for one person's own reading record
+ * (UserChapterRead) instead of the household plan + shared marks. Used on the
+ * Bible page when someone is signed in on a personal account.
+ */
+export async function loadPersonalReadingStats(
+  userId: string,
+  todayISO: string,
+): Promise<ReadingStats> {
+  const year = todayISO.slice(0, 4);
+  const reads = await prisma.userChapterRead.findMany({
+    where: { userId },
+    select: { bookName: true, chapter: true },
+  });
+
+  const byName = new Map(BOOKS.map((b) => [b.name, b]));
+  const seen = new Set<string>();
+  const readByBook = new Map<string, Set<number>>();
+  for (const { bookName, chapter } of reads) {
+    if (!byName.has(bookName)) continue;
+    seen.add(`${bookName}|${chapter}`);
+    if (!readByBook.has(bookName)) readByBook.set(bookName, new Set());
+    readByBook.get(bookName)!.add(chapter);
+  }
+
+  const completedBooks = BOOKS.filter((b) => {
+    const marked = readByBook.get(b.name);
+    return marked && marked.size >= b.chapters;
+  }).map((b) => b.name);
+
+  const countFor = (predicate: (bookName: string) => boolean) => {
+    const books = BOOKS.filter((b) => predicate(b.name));
+    const chapters = books.reduce((n, b) => n + b.chapters, 0);
+    let read = 0;
+    for (const b of books) {
+      for (let c = 1; c <= b.chapters; c++) {
+        if (seen.has(`${b.name}|${c}`)) read += 1;
+      }
+    }
+    return {
+      chapters,
+      read,
+      percent: chapters ? Math.round((read / chapters) * 100) : 0,
+    };
+  };
+
+  const groupNames: Group[] = [
+    "Pentateuch",
+    "History",
+    "Wisdom",
+    "Major Prophets",
+    "Minor Prophets",
+    "Gospels",
+    "Acts",
+    "Paul",
+    "General Epistles",
+    "Revelation",
+  ];
+
+  return {
+    yearISO: year,
+    totalChapters: TOTAL,
+    readChapters: seen.size,
+    ot: { label: "Old Testament", ...countFor((n) => byName.get(n)!.testament === "OT") },
+    nt: { label: "New Testament", ...countFor((n) => byName.get(n)!.testament === "NT") },
+    groups: groupNames.map((g) => ({
+      label: g,
+      ...countFor((n) => byName.get(n)!.group === g),
+    })),
+    booksTouched: new Set([...seen].map((k) => k.split("|")[0])).size,
+    completedBooks,
+    wholeBible: BOOKS.every((b) => {
+      for (let c = 1; c <= b.chapters; c++) {
+        if (!seen.has(`${b.name}|${c}`)) return false;
+      }
+      return true;
+    }),
+  };
+}
+
+/** The "book|chapter" keys a person has personally read — for pre-filling the
+ *  tracker editor. */
+export async function loadPersonalReadKeys(userId: string): Promise<string[]> {
+  const reads = await prisma.userChapterRead.findMany({
+    where: { userId },
+    select: { bookName: true, chapter: true },
+  });
+  return reads.map((r) => `${r.bookName}|${r.chapter}`);
+}

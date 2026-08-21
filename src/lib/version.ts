@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.132.0";
+export const APP_VERSION = "0.133.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -72,11 +72,21 @@ export const MIGRATIONS = [
   "62_perpetual_chore",
   "63_workout_rotation",
   "64_leisure_reading",
+  "65_personal_bible",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.133.0",
+    summary: [
+      "Personal Bible reading (part one): when you\u2019re signed in on your own account, the Bible page now shows your own coverage below the family\u2019s \u2014 the same Old/New Testament and by-group percentage bars, in your colour",
+      "Mark any chapters or whole books you\u2019ve read, in any order \u2014 your own record, kept separate from the family totals",
+      "Personal reading nudges your Wisdom level up slightly (a couple of XP per chapter, capped at the whole Bible), with no reward attached",
+      "Scheduled personal plans (your own dated reading program) are the next part",
+    ],
+  },
   {
     version: "0.132.0",
     summary: [

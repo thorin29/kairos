@@ -37,9 +37,13 @@ const GROUP_COLOR: Record<Group, string> = {
 export function BookProgress({
   initialManual,
   planCovered,
+  saveBook = setBookChapters,
+  saveBooks = setBooksRead,
 }: {
   initialManual: string[];
   planCovered: string[];
+  saveBook?: (bookName: string, chapters: number[]) => Promise<void>;
+  saveBooks?: (bookNames: string[], read: boolean) => Promise<void>;
 }) {
   const [manual, setManual] = useState<Set<string>>(() => new Set(initialManual));
   const [open, setOpen] = useState<string | null>(null);
@@ -127,7 +131,7 @@ export function BookProgress({
     if (!openBook) return;
     const book = openBook.name;
     const chapters = [...draft];
-    startTransition(() => setBookChapters(book, chapters));
+    startTransition(() => saveBook(book, chapters));
 
     setManual((prev) => {
       const next = new Set(prev);
@@ -151,7 +155,7 @@ export function BookProgress({
       }
       return next;
     });
-    startTransition(() => setBooksRead(names, read));
+    startTransition(() => saveBooks(names, read));
   };
 
   const chip =
