@@ -9,7 +9,7 @@ import {
   toDateColumn,
   todayISO,
 } from "@/lib/dates";
-import { occurrencesIn } from "@/lib/calendar/recur";
+import { occurrencesIn, parseRule } from "@/lib/calendar/recur";
 import {
   getSetting,
   getRolloverIntervalDays,
@@ -190,6 +190,10 @@ export type ClassRow = {
   meetingDays: string[];
   meetingStart: string;
   meetingEnd: string;
+  // The meeting's actual first day and last day (rrule anchor + UNTIL). Usually
+  // the term's dates, but can be a shorter window (a half-semester class).
+  meetingStartDate: string | null;
+  meetingEndDate: string | null;
   sharedWith: string[];
 };
 
@@ -275,6 +279,8 @@ export async function loadSchoolStructure(): Promise<{
       meetingDays: parsed.days,
       meetingStart: parsed.start,
       meetingEnd: parsed.end,
+      meetingStartDate: c.event ? localParts(c.event.startsAt).iso : null,
+      meetingEndDate: c.event ? (parseRule(c.event.rrule)?.until ?? null) : null,
       sharedWith: c.members
         .map((m) => m.userId)
         .filter((uid) => uid !== c.userId),
