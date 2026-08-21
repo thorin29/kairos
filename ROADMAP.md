@@ -199,8 +199,14 @@ all live in the database, never in this repository.
       - [ ] Phase 2 — expire an overdue workout when the next one for the same
             muscle group comes due (matches the main group, ignores sub-work)
 - [ ] Personal Bible reading plan (alongside the family plan)
-- [ ] Leisure book reading: add a book (name + length), log pages daily, never
-      overdue, unobtrusive (a gentle reminder, not a checklist item)
+- [x] Leisure book reading: add a book (name + length in pages or chapters),
+      log daily, never overdue, not a checklist item. A Reading section with
+      per-person books + progress; feeds Scholar XP slightly (normalized across
+      pages/chapters, capped at length) (v0.132.0)
+      - [ ] Follow-up: a gentle "currently reading — read today?" nudge on the
+            dashboard person card (kept off the card for now)
+- [ ] Personal Bible reading plan (own program alongside the family plan); no
+      reward, feeds Wisdom XP the same slight way leisure reading feeds Scholar
 - [x] Shared events across profiles: a "Share with" picker on every event's
       add/edit form; shared events show on each member's calendar in everyone's
       colours as split bands or a wheel-mixed blend (avoids brown), toggled under

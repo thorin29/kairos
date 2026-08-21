@@ -12,6 +12,7 @@ import { getScoringStart } from "@/lib/settings";
 import { currentSeasonWindow } from "@/lib/season";
 import { blendPalette, eggCostFor, stageForTenure, EGGS_PER_SEASON_CAP } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
+import { readingXpForBook } from "@/lib/scoring/reading";
 import { loadBonuses } from "@/lib/queries/bonus";
 import { isStale, loadStaleContext, type StaleInput } from "@/lib/chores/stale";
 import { computeStreaks, earnedMilestones, type DayClass } from "@/lib/scoring/streaks";
@@ -89,7 +90,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
   const startISO = await getScoringStart();
   const dueFloor = startISO ? { gte: toDateColumn(startISO) } : {};
 
-  const [people, tasks, ctx, seasonBonus, lifetimeBonus, compStates, activeComps] = await Promise.all([
+  const [people, tasks, ctx, seasonBonus, lifetimeBonus, compStates, activeComps, books] = await Promise.all([
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -118,6 +119,15 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     loadBonuses(startISO ?? EPOCH, today),
     prisma.companionState.findMany(),
     prisma.companion.findMany({ where: { isActive: true } }),
+    // Leisure reading feeds Scholar slightly (derived from the logs at read time).
+    prisma.book.findMany({
+      select: {
+        userId: true,
+        unit: true,
+        length: true,
+        logs: { select: { amount: true } },
+      },
+    }),
   ]);
 
   type StateRow = {
@@ -205,6 +215,24 @@ export async function loadProgression(): Promise<PersonProgress[]> {
       a.month.assigned += effort;
       if (complete) a.month.complete += effort;
     }
+  }
+
+  // Leisure reading lifts Scholar a little: normalize each book's pages/chapters
+  // read, cap at its length, scale gently. Added before the baseline so it flows
+  // into the per-stat level, the character level, and the signature just like a
+  // completed task would.
+  for (const b of books as {
+    userId: string;
+    unit: "PAGES" | "CHAPTERS";
+    length: number;
+    logs: { amount: number }[];
+  }[]) {
+    const a = acc.get(b.userId);
+    if (!a) continue;
+    const totalRead = b.logs.reduce((n, l) => n + l.amount, 0);
+    const xp = readingXpForBook(b.unit, b.length, totalRead);
+    a.xp += xp;
+    a.statXp.SCHOOL += xp;
   }
 
   // The family baseline per stat, so class and colour reflect what each person

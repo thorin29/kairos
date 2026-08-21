@@ -78,6 +78,7 @@ model User {
   workoutSchedules WorkoutSchedule[] @relation("WorkoutSchedules")
   workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
+  books            Book[]
   workoutRotation  WorkoutRotation?  @relation("WorkoutRotation")
   hiitWorkouts     HiitWorkout[]
   invites          Invite[]
@@ -546,6 +547,41 @@ model ChapterCompletion {
   completedAt DateTime @default(now())
 
   @@id([bookName, chapter])
+}
+
+// Leisure reading, per person. Add a book with a length (in pages or chapters);
+// each day you can log how much you read. It never goes overdue and isn't a
+// checklist item — just a gentle tracker. Progress is the sum of the logs,
+// capped at the length. Reading feeds the Scholar stat slightly (the more you
+// read, the more it adds), derived at read time from the logs.
+enum ReadingUnit {
+  PAGES
+  CHAPTERS
+}
+
+model Book {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  unit       ReadingUnit @default(PAGES)
+  length     Int
+  finishedAt DateTime?
+  createdAt  DateTime    @default(now())
+  logs       BookLog[]
+
+  @@index([userId])
+}
+
+model BookLog {
+  id        String   @id @default(cuid())
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  day       DateTime @db.Date
+  amount    Int
+  createdAt DateTime @default(now())
+
+  @@index([bookId, day])
 }
 
 // ---------------------------------------------------------------

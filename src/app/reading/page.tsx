@@ -1,0 +1,34 @@
+import { AppHeader } from "@/components/app-header";
+import { loadReading } from "@/lib/queries/reading";
+import { todayISO, formatLong } from "@/lib/dates";
+import { ReadingBoard } from "./reading-board";
+
+export const dynamic = "force-dynamic";
+
+export default async function ReadingPage() {
+  const today = todayISO();
+  const people = await loadReading();
+
+  return (
+    <>
+      <AppHeader title="Reading" subtitle={formatLong(today)} active="reading" />
+
+      <main className="mx-auto max-w-3xl px-6 py-6">
+        {people.length === 0 ? (
+          <p className="rounded-2xl border border-hairline bg-surface p-6 text-sm text-muted">
+            Add people to the household to start tracking reading.
+          </p>
+        ) : (
+          <>
+            <p className="mb-4 text-sm text-muted">
+              Books read for pleasure. Log a little each day &mdash; there&rsquo;s
+              no due date and nothing goes late; reading just nudges your Scholar
+              level up a touch.
+            </p>
+            <ReadingBoard people={people} />
+          </>
+        )}
+      </main>
+    </>
+  );
+}
