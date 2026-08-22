@@ -218,8 +218,9 @@ all live in the database, never in this repository.
             tick that marks those chapters read, feeding the Phase-A coverage and
             Wisdom. Personal plans carry an owner and never touch family reading
             (v0.137.0)
-      - [ ] Later: import a personal plan (paste), and show the family + personal
-            readings as two check-offs together on the day
+      - [~] Later: import a personal plan (paste) is still open; the family +
+            personal readings now show as two check-offs together on the day
+            (v0.138.0)
 - [x] Shared events across profiles: a "Share with" picker on every event's
       add/edit form; shared events show on each member's calendar in everyone's
       colours as split bands or a wheel-mixed blend (avoids brown), toggled under

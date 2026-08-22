@@ -39,7 +39,7 @@ import { generateReadingTasks } from "@/lib/bible/generate";
 import { loadPersonalReadKeys } from "@/lib/queries/reading-stats";
 import { loadPersonalPlan } from "@/lib/queries/personal-plan";
 import { PersonalReveal } from "@/components/personal-bible";
-import { PersonalPlanSection } from "@/app/bible/personal-plan-section";
+import { PersonalPlanSection, PersonalDayReading } from "@/app/bible/personal-plan-section";
 import { BookProgress } from "@/app/admin/bible/book-progress";
 import { saveMyBookChapters, saveMyBooks } from "@/lib/actions/personal-bible";
 import { TaskRow } from "@/components/task-row";
@@ -88,6 +88,8 @@ export default async function PersonPage({
   // anyone can record their own reading from their own card.
   const personalReadKeys = await loadPersonalReadKeys(id);
   const personalPlan = await loadPersonalPlan(id);
+  const personalToday =
+    personalPlan?.days.find((d) => d.iso === today) ?? null;
 
   // Self-healing: if this page is opened before the dashboard, today's
   // chores still get created.
@@ -368,17 +370,46 @@ export default async function PersonPage({
               </div>
               <Card className="divide-y divide-hairline">
                 {g.items.map(renderRow)}
+                {g.category === "BIBLE" && personalToday && (
+                  <PersonalDayReading
+                    userId={id}
+                    passage={personalToday.passage}
+                    read={personalToday.read}
+                  />
+                )}
               </Card>
             </section>
           ))}
         </div>
       ) : (
-        overdue.length === 0 && (
+        overdue.length === 0 &&
+        !personalToday && (
           <Card className="p-6 text-sm text-muted">
             Nothing scheduled today.
           </Card>
         )
       )}
+
+      {personalToday &&
+        !groups.some((g) => g.category === "BIBLE") && (
+          <section className="mt-8">
+            <div className="mb-3 flex items-center gap-2">
+              <span
+                aria-hidden
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: CATEGORY_COLORS.BIBLE }}
+              />
+              <SectionHeading>{CATEGORY_LABELS.BIBLE}</SectionHeading>
+            </div>
+            <Card className="divide-y divide-hairline">
+              <PersonalDayReading
+                userId={id}
+                passage={personalToday.passage}
+                read={personalToday.read}
+              />
+            </Card>
+          </section>
+        )}
 
       {missed.length > 0 && (
         <section className="mt-8">
