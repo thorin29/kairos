@@ -37,6 +37,7 @@ export type PoolChoreRow = {
   outstanding: boolean;
   claimedByName: string | null;
   alwaysOpen: boolean;
+  cooldownMinutes: number;
   effort: number;
   effortLocked: boolean;
 };
@@ -58,7 +59,9 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
   return chores.map((c) => {
     const latest = c.tasks[0];
     const interval = c.intervalDays ?? 7;
-    const pending = Boolean(latest && latest.status !== "COMPLETE");
+    // Always-open chores are tap-to-complete, not scheduled — they have no
+    // pending instance, claim, or next-due date to report.
+    const pending = !c.alwaysOpen && Boolean(latest && latest.status !== "COMPLETE");
     // "Up for grabs" only if nobody has claimed it yet.
     const outstanding = pending && Boolean(latest?.isOpen);
     const claimedByName =
@@ -67,7 +70,7 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
         : null;
 
     let nextDueISO: string | null = null;
-    if (latest && latest.status === "COMPLETE") {
+    if (!c.alwaysOpen && latest && latest.status === "COMPLETE") {
       const from = latest.completedAt ?? latest.dueDate;
       const d = new Date(
         Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()),
@@ -85,6 +88,7 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
       outstanding,
       claimedByName,
       alwaysOpen: c.alwaysOpen,
+      cooldownMinutes: c.cooldownMinutes,
       effort: c.effort,
       effortLocked: c.effortLocked,
     };
@@ -170,3 +174,66 @@ export async function loadSharedChoreTally(): Promise<SharedTallyRow[]> {
 }
 
 
+export type AlwaysOpenChore = {
+  id: string;
+  title: string;
+  effort: number;
+  total: number; // times done today (across everyone)
+  byUser: { id: string; name: string; color: string; count: number }[];
+  cooldownMinutes: number;
+  /** When it becomes tappable again (epoch ms), or null if available now. */
+  readyAtMs: number | null;
+};
+
+/**
+ * Always-open chores for the dashboard: each shows today's per-person tap
+ * counts and, if a cooldown is set, when it's next available.
+ */
+export async function loadAlwaysOpenChores(
+  dayISO: string,
+): Promise<AlwaysOpenChore[]> {
+  const { toDateColumn } = await import("@/lib/dates");
+  const chores = await prisma.chore.findMany({
+    where: { isActive: true, isPool: true, alwaysOpen: true, isPaused: false },
+    orderBy: { title: "asc" },
+    include: {
+      tasks: {
+        where: { dueDate: toDateColumn(dayISO), status: "COMPLETE" },
+        include: {
+          user: { select: { id: true, name: true, displayName: true, color: true } },
+        },
+      },
+    },
+  });
+
+  const now = Date.now();
+  return chores.map((c) => {
+    const counts = new Map<string, { name: string; color: string; count: number }>();
+    let lastMs = 0;
+    for (const t of c.tasks) {
+      const key = t.user.id;
+      const cur = counts.get(key) ?? {
+        name: t.user.displayName ?? t.user.name,
+        color: t.user.color,
+        count: 0,
+      };
+      cur.count += 1;
+      counts.set(key, cur);
+      if (t.completedAt) lastMs = Math.max(lastMs, t.completedAt.getTime());
+    }
+    let readyAtMs: number | null = null;
+    if (c.cooldownMinutes > 0 && lastMs > 0) {
+      const ready = lastMs + c.cooldownMinutes * 60_000;
+      if (ready > now) readyAtMs = ready;
+    }
+    return {
+      id: c.id,
+      title: c.title,
+      effort: c.effort,
+      total: c.tasks.length,
+      byUser: [...counts.entries()].map(([id, v]) => ({ id, ...v })),
+      cooldownMinutes: c.cooldownMinutes,
+      readyAtMs,
+    };
+  });
+}

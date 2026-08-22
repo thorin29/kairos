@@ -18,7 +18,13 @@ export async function generatePoolChores(
   dayISO: string = todayISO(),
 ): Promise<number> {
   const chores = await prisma.chore.findMany({
-    where: { isActive: true, isPool: true, isPaused: false, perpetual: false },
+    where: { isActive: true, isPool: true, isPaused: false, perpetual: false, alwaysOpen: false },
+  });
+
+  // Always-open chores are tap-to-complete now, not scheduled instances.
+  // Clear any pending ones the old model may have left on the board.
+  await prisma.task.deleteMany({
+    where: { status: { not: TaskStatus.COMPLETE }, chore: { alwaysOpen: true } },
   });
 
   if (chores.length === 0) return 0;

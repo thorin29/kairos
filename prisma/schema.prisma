@@ -295,6 +295,11 @@ model Task {
 
   sortOrder Int @default(0)
 
+  // Distinguishes repeated same-day completions of an "always open" chore.
+  // Scheduled chores keep 0, so one-per-person-per-day still holds for them;
+  // each always-open tap gets a distinct value so credit can stack.
+  repeatKey Int @default(0)
+
   // Set on generated chore tasks. Gives every instance of the same job a
   // shared identity so a superseded one can be recognized.
   choreId String?
@@ -312,7 +317,7 @@ model Task {
 
   // Makes chore generation idempotent: re-running it can never duplicate a
   // row. Postgres treats NULLs as distinct, so hand-added tasks are exempt.
-  @@unique([choreId, userId, dueDate])
+  @@unique([choreId, userId, dueDate, repeatKey])
   @@index([userId, dueDate])
   @@index([dueDate, status])
   @@index([userId, category, dueDate])
@@ -447,6 +452,10 @@ model Chore {
   alwaysOpen   Boolean @default(false) // perpetual up-for-grabs; regenerates on completion
   perpetual    Boolean @default(false) // throughout-the-day: tap-to-log, countable
   intervalDays Int?
+
+  // For an always-open chore: minutes it stays gone after a completion before
+  // it can be done again. 0 means it never leaves — it's always tappable.
+  cooldownMinutes Int @default(0)
 
   // A collaborative chore is assigned to several people who each do their
   // part; the flag just labels it as shared work. intervalWeeks lets an

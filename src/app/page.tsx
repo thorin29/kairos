@@ -12,6 +12,8 @@ import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { AlertIcon } from "@/components/icons";
 import { OpenTasks } from "@/components/open-tasks";
+import { AlwaysOpenChores } from "@/components/always-open-chores";
+import { loadAlwaysOpenChores } from "@/lib/queries/chores-summary";
 
 import { DaySchedule } from "@/components/day-schedule";
 import { loadDaySchedule } from "@/lib/queries/calendar";
@@ -97,6 +99,7 @@ export default async function Home({
     else promptsByUser.set(p.userId, [p]);
   }
   const openTasks = await loadOpenTasks(today);
+  const alwaysOpenChores = await loadAlwaysOpenChores(today);
   const todaySchedule = await loadDaySchedule(scheduleDay);
 
   // The "start a new semester" reminder rides each admin's card. It's the same
@@ -177,6 +180,12 @@ export default async function Home({
       {!personal && (
         <div className="mt-8">
           <OpenTasks tasks={openTasks} people={roster} />
+        </div>
+      )}
+
+      {!personal && (
+        <div className="mt-8">
+          <AlwaysOpenChores chores={alwaysOpenChores} people={roster} />
         </div>
       )}
 

@@ -143,6 +143,9 @@ export async function addPoolChore(
   const choreId = String(formData.get("choreId") ?? "");
   const alwaysOpen = formData.get("alwaysOpen") === "on";
   const intervalDays = alwaysOpen ? 1 : Number(formData.get("intervalDays") ?? 0);
+  const cooldownRaw = Number(formData.get("cooldownMinutes") ?? 0);
+  const cooldownMinutes =
+    alwaysOpen && Number.isInteger(cooldownRaw) && cooldownRaw > 0 ? cooldownRaw : 0;
 
   if (!choreId) return { error: "Pick a chore." };
   if (!alwaysOpen && (!Number.isInteger(intervalDays) || intervalDays < 1 || intervalDays > 365)) {
@@ -155,6 +158,7 @@ export async function addPoolChore(
       data: {
         isPool: true,
         alwaysOpen,
+        cooldownMinutes,
         intervalDays,
         isActive: true,
         isCollaborative: false,
@@ -474,3 +478,70 @@ export async function markPoolChoreDone(input: {
 }
 
 
+/**
+ * Tap-to-complete for an always-open chore: records one finished unit credited
+ * to the tapper (a completed CHORE task, so it scores like any other), and
+ * leaves the chore on the board to be done again. Each tap is its own row via
+ * repeatKey, so the same person can do it as many times as it happens.
+ */
+export async function completeAlwaysOpenChore(
+  choreId: string,
+  userId: string,
+): Promise<{ error: string | null }> {
+  await requireInteractive();
+  const chore = await prisma.chore.findUnique({ where: { id: choreId } });
+  if (!chore || !chore.alwaysOpen || !chore.isActive || chore.isPaused) {
+    return { error: "That chore isn't available." };
+  }
+  const person = await prisma.user.findUnique({ where: { id: userId } });
+  if (!person) return { error: "Pick who did it." };
+
+  // Honour the cooldown: if it was done recently, it isn't back yet.
+  if (chore.cooldownMinutes > 0) {
+    const last = await prisma.task.findFirst({
+      where: { choreId, status: "COMPLETE" },
+      orderBy: { completedAt: "desc" },
+      select: { completedAt: true },
+    });
+    if (last?.completedAt) {
+      const readyAt = last.completedAt.getTime() + chore.cooldownMinutes * 60_000;
+      if (Date.now() < readyAt) return { error: "It\u2019s not back up yet." };
+    }
+  }
+
+  const now = new Date();
+  const dueDate = toDateColumn(todayISO());
+  // A distinct key per tap keeps each completion its own row. Milliseconds
+  // since midnight is small enough for an int and unique in practice; a rare
+  // same-instant double tap just retries with the next value.
+  const midnight = new Date(now);
+  midnight.setHours(0, 0, 0, 0);
+  let repeatKey = now.getTime() - midnight.getTime();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      await prisma.task.create({
+        data: {
+          userId,
+          choreId,
+          title: chore.title,
+          category: "CHORE",
+          dueDate,
+          completedAt: now,
+          status: "COMPLETE",
+          sortOrder: chore.sortOrder,
+          isOpen: false,
+          repeatKey,
+        },
+      });
+      break;
+    } catch {
+      repeatKey += 1;
+      if (attempt === 4) return { error: "Couldn\u2019t log it \u2014 try again." };
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/summary");
+  revalidatePath(`/person/${userId}`);
+  return { error: null };
+}
