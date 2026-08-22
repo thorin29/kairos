@@ -131,6 +131,17 @@ export function BookIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+export function BibleIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v14H6.5A2.5 2.5 0 0 0 4 19.5V5.5Z" />
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H19v4H6.5A2.5 2.5 0 0 1 4 19.5Z" />
+      <path d="M13 5.5v8.5" />
+      <path d="M10.4 8h5.2" />
+    </svg>
+  );
+}
+
 export function DumbbellIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>

@@ -3,6 +3,7 @@ import {
   HomeIcon,
   CalendarIcon,
   BookIcon,
+  BibleIcon,
   ChoresIcon,
   SchoolIcon,
   GamepadIcon,
@@ -66,7 +67,7 @@ const NAV: {
     href: "/bible",
     label: "Bible reading",
     color: "#7c3aed",
-    icon: <BookIcon className="h-6 w-6" />,
+    icon: <BibleIcon className="h-6 w-6" />,
   },
   {
     key: "reading",

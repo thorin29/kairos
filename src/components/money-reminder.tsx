@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DollarIcon, BookIcon } from "@/components/icons";
+import { DollarIcon, BibleIcon } from "@/components/icons";
 
 /**
  * Rides each admin's dashboard card when money needs attention — transactions
@@ -27,7 +27,7 @@ export function MoneyReminder({
       )}
       {bibleRewards > 0 && (
         <div className="flex items-center gap-2">
-          <BookIcon className="h-4 w-4 shrink-0 text-amber-700" />
+          <BibleIcon className="h-4 w-4 shrink-0 text-amber-700" />
           <p className="text-sm font-medium text-amber-900">
             Bible reading {bibleRewards === 1 ? "reward" : "rewards"} ready
             {bibleRewards > 1 ? ` (${bibleRewards} months)` : ""}
