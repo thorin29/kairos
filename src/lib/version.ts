@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.138.0";
+export const APP_VERSION = "0.139.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -79,6 +79,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.139.0",
+    summary: [
+      "Removed the separate \u201cthroughout the day\u201d chore \u2014 it did the same job as an \u201calways open\u201d shared chore, which already reopens the moment it\u2019s done, so you can do it as many times a day as it happens",
+      "Make repeated chores like refilling water or taking out the garbage \u201calways open\u201d instead \u2014 tap to grab it on the home dashboard, and a fresh one is up again as soon as it\u2019s finished",
+    ],
+  },
   {
     version: "0.138.0",
     summary: [

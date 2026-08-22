@@ -141,12 +141,11 @@ export async function addPoolChore(
   if (!(await isAdmin())) return { error: "Only a parent can change this. Switch profiles first." };
 
   const choreId = String(formData.get("choreId") ?? "");
-  const perpetual = formData.get("perpetual") === "on";
-  const alwaysOpen = !perpetual && formData.get("alwaysOpen") === "on";
-  const intervalDays = alwaysOpen || perpetual ? 1 : Number(formData.get("intervalDays") ?? 0);
+  const alwaysOpen = formData.get("alwaysOpen") === "on";
+  const intervalDays = alwaysOpen ? 1 : Number(formData.get("intervalDays") ?? 0);
 
   if (!choreId) return { error: "Pick a chore." };
-  if (!alwaysOpen && !perpetual && (!Number.isInteger(intervalDays) || intervalDays < 1 || intervalDays > 365)) {
+  if (!alwaysOpen && (!Number.isInteger(intervalDays) || intervalDays < 1 || intervalDays > 365)) {
     return { error: "Set how many days between rounds, from 1 to 365." };
   }
 
@@ -156,7 +155,6 @@ export async function addPoolChore(
       data: {
         isPool: true,
         alwaysOpen,
-        perpetual,
         intervalDays,
         isActive: true,
         isCollaborative: false,
@@ -475,37 +473,4 @@ export async function markPoolChoreDone(input: {
   return { error: null };
 }
 
-/** Log one instance of a throughout-the-day chore (tap each time it's done). */
-export async function logPerpetualChore(
-  choreId: string,
-  userId: string,
-): Promise<{ error: string | null }> {
-  await requireInteractive();
-  const chore = await prisma.chore.findUnique({ where: { id: choreId } });
-  if (!chore || !chore.perpetual) return { error: "That chore no longer exists." };
-  const person = await prisma.user.findUnique({ where: { id: userId } });
-  if (!person) return { error: "Pick who did it." };
 
-  await prisma.choreLog.create({
-    data: { choreId, userId, day: toDateColumn(todayISO()) },
-  });
-  revalidatePath("/");
-  revalidatePath("/summary");
-  return { error: null };
-}
-
-/** Undo the most recent log today for a person (mistap). */
-export async function undoPerpetualChore(
-  choreId: string,
-  userId: string,
-): Promise<{ error: string | null }> {
-  await requireInteractive();
-  const last = await prisma.choreLog.findFirst({
-    where: { choreId, userId, day: toDateColumn(todayISO()) },
-    orderBy: { createdAt: "desc" },
-  });
-  if (last) await prisma.choreLog.delete({ where: { id: last.id } });
-  revalidatePath("/");
-  revalidatePath("/summary");
-  return { error: null };
-}

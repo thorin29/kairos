@@ -191,7 +191,7 @@ export default async function ChoresOverviewPage() {
             </div>
           )}
           <Card className="divide-y divide-hairline">
-            {poolChores.filter((c) => !c.perpetual).map((c) => (
+            {poolChores.map((c) => (
               <div key={c.id} className="flex flex-wrap items-center gap-3 p-4">
                 <span className="min-w-[10rem] flex-1 text-sm font-medium">
                   {c.title}

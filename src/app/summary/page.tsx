@@ -1,6 +1,5 @@
 import { loadProgression, type PersonProgress } from "@/lib/queries/progression";
 import { loadCoop } from "@/lib/queries/coop";
-import { loadPerpetualChores } from "@/lib/queries/chores-summary";
 import { getScoringStart } from "@/lib/settings";
 import { formatLong, todayISO } from "@/lib/dates";
 import { currentSeasonWindow } from "@/lib/season";
@@ -29,11 +28,10 @@ function Bar({ pct, tone = "accent" }: { pct: number; tone?: "accent" | "orange"
 export default async function SummaryPage() {
   const today = todayISO();
   const people = await loadProgression();
-  const [since, seasonWin, coop, perpetual] = await Promise.all([
+  const [since, seasonWin, coop] = await Promise.all([
     getScoringStart(),
     currentSeasonWindow(today),
     loadCoop(people),
-    loadPerpetualChores(today),
   ]);
   const season = seasonWin.label;
 
@@ -81,45 +79,6 @@ export default async function SummaryPage() {
             </DayLogCard>
           ))}
         </div>
-
-        {perpetual.some((c) => c.total > 0) && (
-          <div className="mt-8">
-            <h2 className="mb-3 text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
-              Throughout the day
-            </h2>
-            <div className="space-y-2">
-              {perpetual
-                .filter((c) => c.total > 0)
-                .map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface p-3"
-                  >
-                    <span className="min-w-[8rem] flex-1 text-sm font-medium">
-                      {c.title}
-                      <span className="tabular ml-1.5 font-normal text-muted">
-                        &times;{c.total}
-                      </span>
-                    </span>
-                    {c.byUser.map((u) => (
-                      <span
-                        key={u.id}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-xs"
-                      >
-                        <span
-                          aria-hidden
-                          className="h-2 w-2 rounded-full"
-                          style={{ background: u.color }}
-                        />
-                        {u.name}
-                        <span className="tabular font-semibold">{u.count}</span>
-                      </span>
-                    ))}
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
 
         <p className="mt-6 text-xs text-muted">
           Everyone levels up their own character &mdash; no one&rsquo;s ranked
