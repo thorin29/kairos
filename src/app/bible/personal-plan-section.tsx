@@ -23,6 +23,42 @@ export function PersonalPlanSection({
   return <PlanCreator userId={userId} />;
 }
 
+/** One day's personal reading as a check row, to sit beside the family reading
+ *  on the person's day. Rendered only when the person has a plan reading that
+ *  day, so a person without a plan sees nothing extra. */
+export function PersonalDayReading({
+  userId,
+  passage,
+  read,
+}: {
+  userId: string;
+  passage: string;
+  read: boolean;
+}) {
+  const [pending, start] = useTransition();
+  return (
+    <div className="flex items-center gap-3 px-5 py-3">
+      <input
+        type="checkbox"
+        checked={read}
+        disabled={pending}
+        onChange={(e) =>
+          start(() => markPersonalReading(userId, passage, e.target.checked))
+        }
+        className="h-5 w-5 shrink-0"
+      />
+      <span className="flex-1">
+        <span
+          className={`block text-sm ${read ? "text-muted line-through" : "font-medium"}`}
+        >
+          {passage}
+        </span>
+        <span className="text-xs text-muted">Your reading</span>
+      </span>
+    </div>
+  );
+}
+
 function PlanView({
   userId,
   plan,
