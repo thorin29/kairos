@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.139.0";
+export const APP_VERSION = "0.140.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -74,11 +74,20 @@ export const MIGRATIONS = [
   "64_leisure_reading",
   "65_personal_bible",
   "66_personal_plan",
+  "67_always_open_taps",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.140.0",
+    summary: [
+      "Always-open chores are now tap-to-complete right on the home dashboard: tap whoever did it and it counts for them straight away \u2014 no more claiming it to a card first, and no more error when you tick it off",
+      "The same person can do an always-open chore as many times a day as it happens (e.g. refilling water), and each one earns its points",
+      "When setting up an always-open chore you can now have it step aside for a set number of minutes after it\u2019s done, then come back on its own \u2014 or leave that at 0 and it simply stays up all the time",
+    ],
+  },
   {
     version: "0.139.0",
     summary: [

@@ -164,11 +164,12 @@ export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
     orderBy: [{ dueDate: "asc" }, { sortOrder: "asc" }],
     include: {
       user: { select: { name: true, displayName: true } },
-      chore: { select: { isPool: true, intervalDays: true } },
+      chore: { select: { isPool: true, intervalDays: true, alwaysOpen: true } },
     },
   });
 
   return rows
+    .filter((t) => !t.chore?.alwaysOpen)
     .filter((t) => !isStale(t, dayISO, stale))
     .filter((t) => !(activePause && PAUSABLE_CATEGORIES.includes(t.category)))
     .map((t) => ({
