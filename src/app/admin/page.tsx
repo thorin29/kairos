@@ -8,7 +8,7 @@ import {
   PeopleIcon,
   CalendarPlusIcon,
   TrophyIcon,
-  BookIcon,
+  BibleIcon,
   DumbbellIcon,
   SchoolIcon,
   GamepadIcon,
@@ -42,7 +42,7 @@ const TILES: Tile[] = [
     href: "/admin/bible",
     label: "Bible reading",
     blurb: "Build or import a plan, review it, publish it",
-    icon: <BookIcon className="h-7 w-7" />,
+    icon: <BibleIcon className="h-7 w-7" />,
     ready: true,
   },
   {

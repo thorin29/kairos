@@ -31,7 +31,7 @@ import {
   signedCents,
 } from "@/lib/money";
 import { formatShortYear } from "@/lib/dates";
-import { CheckIcon, PencilIcon, TrashIcon, DollarIcon, BookIcon } from "@/components/icons";
+import { CheckIcon, PencilIcon, TrashIcon, DollarIcon, BibleIcon } from "@/components/icons";
 import type { AdminMoneyRow } from "@/lib/queries/money";
 import type { RewardConfig, RewardMonth } from "@/lib/bible-rewards";
 
@@ -80,7 +80,7 @@ export function AdminMoney({
       {rewardMonths.length > 0 && (
         <section>
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
-            <BookIcon className="h-5 w-5 text-accent" />
+            <BibleIcon className="h-5 w-5 text-accent" />
             Bible reading rewards
           </h2>
           <ul className="space-y-3">
