@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { requireInteractive } from "@/lib/gate";
-import { requireAdmin } from "@/lib/session";
+import { requireAdmin, isAdmin } from "@/lib/session";
+import { currentUser } from "@/lib/user-session";
+import { getClassFromCalendarMode, SCHOOL_CLASS_FROM_CALENDAR } from "@/lib/settings";
 import { Category, SchoolWorkType } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
@@ -223,6 +225,46 @@ export async function saveClass(
   formData: FormData,
 ): Promise<SchoolActionState> {
   await requireAdmin();
+  return persistClass(formData);
+}
+
+// Toggle-gated entry point for creating or editing a class from the calendar's
+// "Class" event type. When the household setting allows "anyone", any
+// interactive user may use it — and a non-admin's new class is owned by them,
+// and they may only edit a class they're in. Otherwise it stays admin-only,
+// exactly like the admin form. The subject/term/type pools stay admin-only
+// either way.
+export async function saveClassFromCalendar(
+  _prev: SchoolActionState,
+  formData: FormData,
+): Promise<SchoolActionState> {
+  const mode = await getClassFromCalendarMode();
+  if (mode === "anyone") {
+    await requireInteractive();
+  } else {
+    await requireAdmin();
+  }
+  const admin = await isAdmin();
+  const me = await currentUser();
+  const editId = String(formData.get("id") ?? "").trim() || null;
+  if (editId && !admin) {
+    const member = me
+      ? await prisma.classMember.findFirst({
+          where: { classId: editId, userId: me.id },
+          select: { id: true },
+        })
+      : null;
+    if (!member) return { error: "You can only edit your own classes." };
+  }
+  const forcedOwnerId = admin ? undefined : me?.id;
+  if (!admin && !forcedOwnerId) return { error: "Sign in to add a class." };
+  return persistClass(formData, forcedOwnerId);
+}
+
+async function persistClass(
+  formData: FormData,
+  forcedOwnerId?: string,
+): Promise<SchoolActionState> {
   const id = String(formData.get("id") ?? "").trim() || null;
 
   // The class name comes from the Subject pool now (like chores pick from the
@@ -287,7 +329,7 @@ export async function saveClass(
   if (name.length < 2) return { error: "Pick a subject for the class." };
 
   // The owner: from the form on create, from the existing row on edit.
-  let userId = String(formData.get("userId") ?? "");
+  let userId = forcedOwnerId ?? String(formData.get("userId") ?? "");
   let existingEventId: string | null = null;
   if (id) {
     const existing = await prisma.schoolClass.findUnique({
@@ -414,6 +456,16 @@ export async function saveClass(
 
   schoolStructureRevalidate();
   return { error: null };
+}
+
+/** Set whether classes can be created from the calendar by anyone or admins only. */
+export async function setClassFromCalendarMode(
+  mode: "admin" | "anyone",
+): Promise<void> {
+  await requireAdmin();
+  await setSetting(SCHOOL_CLASS_FROM_CALENDAR, mode === "anyone" ? "anyone" : "admin");
+  schoolStructureRevalidate();
+  revalidatePath("/calendar");
 }
 
 export async function deleteClass(id: string): Promise<void> {

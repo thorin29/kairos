@@ -186,6 +186,11 @@ export type ClassRow = {
   classTypeId: string | null;
   classTypeName: string | null;
   promptHomework: boolean;
+  // The class owner (the student whose class this is). A class is listed under
+  // every member now, so this distinguishes the owner from a student it's
+  // shared with.
+  ownerId: string;
+  ownerName: string;
   meeting: string | null;
   meetingDays: string[];
   meetingStart: string;
@@ -261,6 +266,10 @@ export async function loadSchoolStructure(): Promise<{
     }),
   ]);
 
+  const nameById = new Map<string, string>(
+    people.map((p) => [p.id, (p.displayName ?? p.name) as string] as const),
+  );
+
   const byUser = new Map<string, ClassRow[]>();
   for (const c of classes) {
     const parsed = c.event
@@ -275,6 +284,8 @@ export async function loadSchoolStructure(): Promise<{
       classTypeId: c.classTypeId ?? null,
       classTypeName: c.classType?.name ?? null,
       promptHomework: c.promptHomework,
+      ownerId: c.userId,
+      ownerName: nameById.get(c.userId) ?? "",
       meeting: parsed.summary,
       meetingDays: parsed.days,
       meetingStart: parsed.start,
@@ -285,9 +296,18 @@ export async function loadSchoolStructure(): Promise<{
         .map((m) => m.userId)
         .filter((uid) => uid !== c.userId),
     };
-    const list = byUser.get(c.userId) ?? [];
-    list.push(row);
-    byUser.set(c.userId, list);
+    // List the class under every member — the owner and everyone it's shared
+    // with — so it appears the same way under each student's name, not just the
+    // owner's.
+    const memberIds =
+      c.members.length > 0
+        ? Array.from(new Set(c.members.map((m) => m.userId)))
+        : [c.userId];
+    for (const uid of memberIds) {
+      const list = byUser.get(uid) ?? [];
+      list.push(row);
+      byUser.set(uid, list);
+    }
   }
 
   return {

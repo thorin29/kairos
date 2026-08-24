@@ -13,8 +13,28 @@ import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
 import { addDays, dayOfWeek, daysBetween } from "@/lib/dates";
 import { PlusIcon } from "@/components/icons";
 import { TimeSelect } from "@/components/time-select";
+import {
+  CalendarClassForm,
+  type ClassFormOption,
+} from "@/components/calendar-class-form";
 
 const initial: EventState = { error: null, saved: false };
+
+export type ClassCtx = {
+  canMakeClass: boolean;
+  isAdmin: boolean;
+  meName: string | null;
+  subjects: ClassFormOption[];
+  classTypes: ClassFormOption[];
+  terms: ClassFormOption[];
+  people: ClassFormOption[];
+};
+
+const SUN_FIRST_TOKENS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+function weekdayToken(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  return SUN_FIRST_TOKENS[d.getDay()] ?? "MO";
+}
 
 const field =
   "h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent";
@@ -113,6 +133,7 @@ export function useAddEvent() {
 export function AddEventProvider({
   people,
   types,
+  classCtx,
   defaultDate,
   children,
 }: {
@@ -124,6 +145,7 @@ export function AddEventProvider({
     sportWorkout: boolean;
     defaultMinutes: number | null;
   }[];
+  classCtx: ClassCtx;
   defaultDate: string;
   children: React.ReactNode;
 }) {
@@ -154,6 +176,7 @@ export function AddEventProvider({
           key={openId}
           people={people}
           types={types}
+          classCtx={classCtx}
           editing={editing}
           date={prefill.date ?? defaultDate}
           start={prefill.start ?? "16:00"}
@@ -207,6 +230,7 @@ export function AddEventButton({ wide = false }: { wide?: boolean }) {
 function EventModal({
   people,
   types,
+  classCtx,
   editing,
   date,
   start,
@@ -230,6 +254,7 @@ function EventModal({
     sportWorkout: boolean;
     defaultMinutes: number | null;
   }[];
+  classCtx: ClassCtx;
   editing?: EditTarget | null;
   date: string;
   start: string;
@@ -328,6 +353,15 @@ function EventModal({
   const isCustomType = kind.startsWith("type:");
   const kindForSubmit = isCustomType ? "OTHER" : kind;
   const eventTypeId = isCustomType ? kind.slice(5) : "";
+
+  // "Class" is only offered when the household allows it (admins always). When
+  // it's chosen for a NEW event, the overlay becomes the full class form and
+  // saves a real class instead of a bare calendar block. Editing an existing
+  // class event still uses the plain editor for now.
+  const kindOptions = classCtx.canMakeClass
+    ? KINDS
+    : KINDS.filter((k) => k.value !== "CLASS");
+  const classCreate = kind === "CLASS" && !editing && classCtx.canMakeClass;
   const isSport =
     (eventTypeId ? types.find((t) => t.id === eventTypeId) : undefined)
       ?.sportWorkout ?? false;
@@ -349,6 +383,57 @@ function EventModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  if (classCreate) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
+        onClick={onClose}
+      >
+        <div
+          className="my-4 w-full max-w-lg rounded-2xl bg-surface p-5 shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-lg font-semibold">Add class</h2>
+            <div className="flex items-center gap-2">
+              <select
+                value={kind}
+                onChange={(e) => chooseKind(e.target.value)}
+                className="h-8 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+              >
+                {kindOptions.map((k) => (
+                  <option key={k.value} value={k.value}>
+                    {k.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          <CalendarClassForm
+            people={classCtx.people}
+            subjects={classCtx.subjects}
+            classTypes={classCtx.classTypes}
+            terms={classCtx.terms}
+            isAdmin={classCtx.isAdmin}
+            meName={classCtx.meName}
+            dayToken={weekdayToken(date)}
+            start={start}
+            end={end}
+            onClose={onClose}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -422,7 +507,7 @@ function EventModal({
                 onChange={(e) => chooseKind(e.target.value)}
                 className={field}
               >
-                {KINDS.map((k) => (
+                {kindOptions.map((k) => (
                   <option key={k.value} value={k.value}>
                     {k.label}
                   </option>

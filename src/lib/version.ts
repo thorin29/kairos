@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.141.0";
+export const APP_VERSION = "0.142.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -80,6 +80,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.142.0",
+    summary: [
+      "You can now create a full class straight from the calendar: pick \u201cClass\u201d when adding an event and the overlay opens the same form as the admin page \u2014 subject from the pool (or add a new one), term, type, colour, who it\u2019s shared with, and the homework prompt \u2014 with the meeting time filled in from the slot you picked",
+      "A new admin setting under School decides who can add classes from the calendar: admin only (the default) or anyone, so older kids can add their own. The setting shows plainly which way it\u2019s set",
+      "Fixed a shared class only showing under the owning student: a shared class now appears the same way under every student it\u2019s shared with, not just the owner",
+      "Managing subjects, terms, and class types stays admin-only",
+    ],
+  },
   {
     version: "0.141.0",
     summary: [
