@@ -7,20 +7,24 @@ import {
   loadRolloverState,
 } from "@/lib/queries/school";
 import { todayISO } from "@/lib/dates";
+import { getClassFromCalendarMode } from "@/lib/settings";
 import { SchoolAdmin } from "./school-admin";
 import { SchoolStructure } from "./school-structure";
+import { ClassAccessToggle } from "./class-access-toggle";
 import { RolloverBanner } from "./rollover-banner";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSchoolPage() {
   const today = todayISO();
-  const [people, structure, classOptions, rollover] = await Promise.all([
-    loadSchoolAdmin(),
-    loadSchoolStructure(),
-    loadClassOptions(),
-    loadRolloverState(today),
-  ]);
+  const [people, structure, classOptions, rollover, classMode] =
+    await Promise.all([
+      loadSchoolAdmin(),
+      loadSchoolStructure(),
+      loadClassOptions(),
+      loadRolloverState(today),
+      getClassFromCalendarMode(),
+    ]);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -41,7 +45,8 @@ export default async function AdminSchoolPage() {
 
       <section className="mb-12">
         <SectionHeading>Terms &amp; classes</SectionHeading>
-        <div className="mt-3">
+        <div className="mt-3 space-y-4">
+          <ClassAccessToggle mode={classMode} />
           <SchoolStructure
             terms={structure.terms}
             people={structure.people}

@@ -30,6 +30,10 @@ import { SchoolIcon } from "@/components/icons";
 import { CATEGORY_COLORS } from "@/lib/colors";
 import { getFamilyColor } from "@/lib/settings";
 import { getCalendarPrefs, type SharedStyle } from "@/lib/settings";
+import { getClassFromCalendarMode } from "@/lib/settings";
+import { loadSchoolStructure } from "@/lib/queries/school";
+import { isAdmin } from "@/lib/session";
+import { currentUser } from "@/lib/user-session";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +131,25 @@ export default async function CalendarPage({
   // toggle people in and out of it via the URL.
   const familyColor = await getFamilyColor();
   const calPrefs = await getCalendarPrefs();
+
+  // Everything the "Class" event type needs: the pools to pick from, and who's
+  // allowed to create a class from here (admins always; anyone when the
+  // household setting is switched on).
+  const [classMode, meAdmin, me, structure] = await Promise.all([
+    getClassFromCalendarMode(),
+    isAdmin(),
+    currentUser(),
+    loadSchoolStructure(),
+  ]);
+  const classCtx = {
+    canMakeClass: meAdmin || classMode === "anyone",
+    isAdmin: meAdmin,
+    meName: me?.displayName ?? me?.name ?? null,
+    subjects: structure.subjects.map((s) => ({ id: s.id, name: s.name })),
+    classTypes: structure.classTypes.map((t) => ({ id: t.id, name: t.name })),
+    terms: structure.terms.map((t) => ({ id: t.id, name: t.name })),
+    people: structure.people.map((p) => ({ id: p.id, name: p.name })),
+  };
   const allIds = people.map((p) => p.id);
   const selectedSet = new Set<string>(
     !who || who === "all"
@@ -167,6 +190,7 @@ export default async function CalendarPage({
       <AddEventProvider
         people={people.map((p) => ({ id: p.id, name: p.displayName ?? p.name }))}
         types={await loadEventTypes()}
+        classCtx={classCtx}
         defaultDate={view === "month" ? today : date}
       >
       <main className="mx-auto max-w-[92rem] px-6 py-6">

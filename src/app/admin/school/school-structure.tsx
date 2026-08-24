@@ -704,10 +704,12 @@ function Classes({
                     cls={c}
                     editing={editing?.id === c.id}
                     termName={terms.find((t) => t.id === c.termId)?.name ?? null}
+                    ownedBy={c.ownerId === person.id ? null : c.ownerName}
                     sharedNames={c.sharedWith
+                      .filter((id) => id !== person.id)
                       .map((id) => people.find((p) => p.id === id)?.name)
                       .filter((n): n is string => Boolean(n))}
-                    onEdit={() => startEdit(c, person.id, person.name)}
+                    onEdit={() => startEdit(c, c.ownerId, c.ownerName)}
                   />
                 ))}
               </Card>
@@ -821,12 +823,14 @@ function ClassRowView({
   editing,
   termName,
   sharedNames,
+  ownedBy,
   onEdit,
 }: {
   cls: ClassRow;
   editing: boolean;
   termName: string | null;
   sharedNames: string[];
+  ownedBy: string | null;
   onEdit: () => void;
 }) {
   const [pending, start] = useTransition();
@@ -844,6 +848,7 @@ function ClassRowView({
         <p className="truncate text-sm font-medium">{cls.name}</p>
         <p className="truncate text-xs text-muted">
           {[
+            ownedBy ? `${ownedBy}\u2019s class` : null,
             cls.meeting ?? "No set time",
             cls.classTypeName,
             termName,

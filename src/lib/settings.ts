@@ -97,6 +97,18 @@ export async function getSetting(key: string): Promise<string | null> {
   return row?.value ?? null;
 }
 
+// Who may create a class from the calendar's "Class" event type. "admin" (the
+// default) keeps it locked to parents; "anyone" lets any interactive user —
+// e.g. an older kid adding their own classes — do it. Managing the subject,
+// term and class-type pools stays admin-only either way.
+export const SCHOOL_CLASS_FROM_CALENDAR = "school.classFromCalendar";
+export type ClassFromCalendarMode = "admin" | "anyone";
+
+export async function getClassFromCalendarMode(): Promise<ClassFromCalendarMode> {
+  const raw = await getSetting(SCHOOL_CLASS_FROM_CALENDAR);
+  return raw === "anyone" ? "anyone" : "admin";
+}
+
 /** The colour of the shared Family calendar identity (birthdays, etc.). */
 export async function getFamilyColor(): Promise<string> {
   const row = await prisma.appSetting.findUnique({
