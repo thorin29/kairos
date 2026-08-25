@@ -537,7 +537,7 @@ async function applySchoolWork(
       title: true,
       userId: true,
       dueDate: true,
-      user: { select: { name: true, displayName: true } },
+      user: { select: { name: true, displayName: true, color: true } },
       schoolWork: {
         select: {
           type: true,
@@ -565,7 +565,6 @@ async function applySchoolWork(
   };
   const badges = new Map<string, Map<string, string>>();
 
-  const color = CATEGORY_COLORS.SCHOOL;
   const markers: GridEvent[] = [];
 
   for (const t of tasks) {
@@ -596,7 +595,7 @@ async function applySchoolWork(
     const markerBase = {
       title: t.title,
       location: null,
-      color,
+      color: t.user?.color ?? CATEGORY_COLORS.SCHOOL,
       memberColors: [],
       isFamily: false,
       ownerId: t.userId,

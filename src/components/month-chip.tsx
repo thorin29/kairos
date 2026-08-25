@@ -68,6 +68,13 @@ export function MonthChip({
             ? event.title
             : `${event.timeLabel.split(" – ")[0]} ${event.title}`}
         </span>
+        {event.schoolType &&
+          event.ownerName &&
+          !(event.schoolBadges && event.schoolBadges.length > 0) && (
+            <span className="ml-auto shrink-0 pl-0.5 text-[0.58rem] font-normal opacity-85">
+              {event.ownerName}
+            </span>
+          )}
         {event.schoolBadges && event.schoolBadges.length > 0 && (
           <span className="ml-auto flex shrink-0 gap-0.5">
             {event.schoolBadges.map((b) => (
