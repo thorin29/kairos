@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.148.0";
+export const APP_VERSION = "0.149.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -80,6 +80,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.149.0",
+    summary: [
+      "Cleaned up the top of every page on phones: content now starts in a consistent spot below the corner logo, so headings, buttons, and tables no longer sit underneath it, and pages don\u2019t jump around as you move between them",
+      "The date in the top-right corner is now hidden on phones (where it wasn\u2019t helpful) and on Bible reading (where the reading cards already show it)",
+      "Removed two more explanatory lines \u2014 the one under personal reading and the one on workouts",
+      "The \u201cSchool work\u201d filter on the calendar now uses the app\u2019s green theme when on, instead of a stray blue",
+    ],
+  },
   {
     version: "0.148.0",
     summary: [

@@ -32,9 +32,6 @@ export default async function WorkoutsPage() {
           </p>
         ) : (
           <>
-            <p className="mb-4 text-sm text-muted">
-              Tap a card to open the plan and log a session.
-            </p>
             <WorkoutsGrid
               people={board.people}
               unitSystem={board.unitSystem}

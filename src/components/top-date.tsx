@@ -12,6 +12,7 @@ export function TopDate({ label }: { label: string }) {
   const path = usePathname();
   if (
     path.startsWith("/calendar") ||
+    path.startsWith("/bible") ||
     path.startsWith("/login") ||
     path.startsWith("/join") ||
     path.startsWith("/unlock")
@@ -19,7 +20,7 @@ export function TopDate({ label }: { label: string }) {
     return null;
   }
   return (
-    <div className="tabular pointer-events-none fixed right-4 top-3 z-20 text-sm font-medium text-muted">
+    <div className="tabular pointer-events-none fixed right-4 top-3 z-20 hidden text-sm font-medium text-muted md:block">
       {label}
     </div>
   );

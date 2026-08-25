@@ -19,9 +19,6 @@ export default async function ReadingPage() {
           </p>
         ) : (
           <>
-            <p className="mb-4 text-sm text-muted">
-              Personal reading &mdash; nudges your Scholar level up a little.
-            </p>
             <ReadingBoard people={people} />
           </>
         )}

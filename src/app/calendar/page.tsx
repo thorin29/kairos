@@ -26,7 +26,6 @@ import { AddEventProvider, AddEventButton } from "./add-event-form";
 import { PersonFilterBadge, FamilyFilterBadge } from "@/components/person-filter";
 import { SchoolIcon, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import { CalendarViewSelect } from "./view-select";
-import { CATEGORY_COLORS } from "@/lib/colors";
 import { getFamilyColor } from "@/lib/settings";
 import { getCalendarPrefs, type SharedStyle } from "@/lib/settings";
 import { getClassFromCalendarMode } from "@/lib/settings";
@@ -290,14 +289,9 @@ export default async function CalendarPage({
               })}
               className={`inline-flex h-9 items-center gap-2 self-start rounded-full border px-3.5 text-sm font-medium transition-colors ${
                 showSchoolWork
-                  ? "border-transparent text-white"
+                  ? "border-transparent bg-accent text-white"
                   : "border-hairline text-muted hover:border-accent hover:text-accent"
               }`}
-              style={
-                showSchoolWork
-                  ? { backgroundColor: CATEGORY_COLORS.SCHOOL }
-                  : undefined
-              }
               aria-pressed={showSchoolWork}
               title="Show assignments and tests by due date"
             >
