@@ -13,15 +13,24 @@ const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
  * keyboard and accepts letters that can never be part of a PIN, which is
  * what made the first version feel broken.
  */
-export function PinPad({ next = "/admin" }: { next?: string }) {
+export function PinPad({
+  next = "/admin",
+  onUnlocked,
+}: {
+  next?: string;
+  onUnlocked?: () => void;
+}) {
   const router = useRouter();
   const [pin, setPin] = useState("");
   const [state, formAction, pending] = useActionState(unlockAdmin, initial);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state.ok) router.push(next);
-  }, [state.ok, next, router]);
+    if (state.ok) {
+      if (onUnlocked) onUnlocked();
+      else router.push(next);
+    }
+  }, [state.ok, next, router, onUnlocked]);
 
   useEffect(() => {
     if (state.error) setPin("");

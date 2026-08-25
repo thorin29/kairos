@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.143.0";
+export const APP_VERSION = "0.144.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -80,6 +80,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.144.0",
+    summary: [
+      "Fixed editing a class from the calendar when classes are set to admin-only: tapping a class meeting no longer falls back to the appointment editor (which could have damaged the class). It now opens the class editor, asking for the admin PIN first when needed, then opens straight into it",
+    ],
+  },
   {
     version: "0.143.0",
     summary: [
