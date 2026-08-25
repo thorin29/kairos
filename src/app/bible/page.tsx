@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { AppHeader } from "@/components/app-header";
 import { loadPersonalReadingStats, loadPersonalReadKeys } from "@/lib/queries/reading-stats";
 import { loadReadingStats } from "@/lib/queries/reading-stats";
 import { loadPersonalPlan } from "@/lib/queries/personal-plan";
@@ -277,11 +276,7 @@ export default async function BiblePage() {
 
   return (
     <>
-      <AppHeader
-        title="Bible reading"
-        subtitle={plan ? plan.name : "No plan is published yet"}
-        active="bible"
-      />
+      
 
       <main className="mx-auto max-w-4xl px-6 py-6">
         {showPersonal && personalStats && me ? (

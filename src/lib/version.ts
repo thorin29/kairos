@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.144.0";
+export const APP_VERSION = "0.145.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -80,6 +80,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.145.0",
+    summary: [
+      "The top navigation bar has moved to a collapsible menu down the left side. Collapsed, it\u2019s a thin strip of icons; open it and each icon gets its page name, with the logo and current page name at the top and the collapse control at the bottom. It opens over the page rather than pushing everything across",
+      "The sign-in moved into the bottom of that side menu",
+      "Cleared out the clutter: the small grey explanation line under each page title is gone everywhere, and \u201cToday\u201d is no longer shown as the dashboard\u2019s title. The date now sits quietly in the top-right corner instead",
+      "Calendar controls reworked to match: Today, then the \u2039 \u203a step arrows (hover for \u201cPrevious/Next\u201d), then the month and year, with day/week/month now a dropdown over on the right \u2014 and the calendar itself sits higher up the page",
+    ],
+  },
   {
     version: "0.144.0",
     summary: [

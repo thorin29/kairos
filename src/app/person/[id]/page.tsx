@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { AppHeader } from "@/components/app-header";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadPersonProgress } from "@/lib/queries/progression";
 import { loadGetAhead } from "@/lib/queries/get-ahead";
@@ -20,7 +19,6 @@ import { CATEGORY_LABELS } from "@/lib/colors";
 import {
   addDays,
   dayOfWeek,
-  formatLong,
   formatShort,
   fromDateColumn,
   startOfWeek,
@@ -239,11 +237,7 @@ export default async function PersonPage({
 
   return (
     <>
-      <AppHeader
-        title={person.displayName ?? person.name}
-        subtitle={formatLong(today)}
-        active="home"
-      />
+      
 
       <main className="mx-auto max-w-3xl px-6 py-6">
 
@@ -265,6 +259,10 @@ export default async function PersonPage({
             Edit
           </span>
         </Link>
+
+        <h1 className="font-display text-2xl font-semibold tracking-tight">
+          {person.displayName ?? person.name}
+        </h1>
 
         {person.role === "ADMIN" && (
           <Link

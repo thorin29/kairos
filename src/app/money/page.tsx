@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { AppHeader } from "@/components/app-header";
 import { loadMoneyPage, frequentPaymentLabels } from "@/lib/queries/money";
 import { todayISO } from "@/lib/dates";
 import { formatDollars, formatAmountGrouped } from "@/lib/money";
@@ -32,7 +31,7 @@ export default async function MoneyPage({
 
   return (
     <>
-      <AppHeader title="Money" subtitle="Balances and transactions" active="money" />
+      
 
       <main className="mx-auto max-w-6xl px-6 py-6">
         {participants.length === 0 ? (

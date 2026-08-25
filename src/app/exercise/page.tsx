@@ -1,4 +1,3 @@
-import { AppHeader } from "@/components/app-header";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import {
   loadWorkoutsBoard,
@@ -6,7 +5,7 @@ import {
   loadMovementComparisons,
   loadHiitWorkoutsForBoard,
 } from "@/lib/queries/workouts";
-import { todayISO, formatLong, dayOfWeek } from "@/lib/dates";
+import { todayISO, dayOfWeek } from "@/lib/dates";
 import { WorkoutsGrid } from "./workouts-grid";
 import { CompareView } from "./compare-view";
 
@@ -24,7 +23,7 @@ export default async function WorkoutsPage() {
 
   return (
     <>
-      <AppHeader title="Workouts" subtitle={formatLong(today)} active="exercise" />
+      
 
       <main className="mx-auto max-w-5xl px-6 py-6">
         {board.people.length === 0 ? (
