@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   HomeIcon,
   CalendarIcon,
@@ -53,8 +53,15 @@ function activeFor(path: string): NavItem | null {
   return best;
 }
 
-const COLLAPSED = "4rem"; // thin icon rail, always present in the layout
-const EXPANDED = "15rem"; // overlay width when opened
+const COLLAPSED = "4rem"; // thin icon rail
+const EXPANDED = "15rem"; // labelled width
+
+function Logo({ className = "h-10 w-10" }: { className?: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/logo.png" alt="Kairos" className={`${className} rounded-lg`} />
+  );
+}
 
 export function Sidebar({
   initialExpanded,
@@ -64,7 +71,20 @@ export function Sidebar({
   user?: { name: string; color: string; avatarPath: string | null } | null;
 }) {
   const path = usePathname();
+  const router = useRouter();
   const [expanded, setExpanded] = useState(initialExpanded);
+  // Mobile only: whether the rail is rolled out. It rolls up into the logo by
+  // default so a narrow screen isn't eaten by the rail.
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   // Hidden on the full-screen auth pages, which have no app chrome.
   if (
@@ -77,36 +97,65 @@ export function Sidebar({
 
   const active = activeFor(path);
 
-  const toggle = () => {
+  const toggleExpanded = () => {
     const next = !expanded;
     setExpanded(next);
-    // A year, so the choice sticks across reloads.
     document.cookie = `sidebar=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
   };
 
+  // The logo: on desktop it's home; on mobile it rolls the rail up/out.
+  const onLogo = () => {
+    if (isMobile) setMobileOpen((v) => !v);
+    else router.push("/");
+  };
+
+  const showScrim = isMobile ? mobileOpen : expanded;
+  const onScrim = () => (isMobile ? setMobileOpen(false) : toggleExpanded());
+
   return (
     <>
-      {/* Dim the page behind the expanded overlay; tap to collapse. */}
-      {expanded && (
+      {/* When the rail is rolled up on mobile, only the logo shows in the
+          corner — tap it to roll the rail back out. */}
+      <button
+        type="button"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open menu"
+        className={`fixed left-3 top-4 z-40 rounded-lg shadow-md md:hidden ${
+          mobileOpen ? "hidden" : "block"
+        }`}
+      >
+        <Logo />
+      </button>
+
+      {/* Dim the page behind the rail; tap to close/collapse. */}
+      {showScrim && (
         <button
           type="button"
-          aria-label="Collapse menu"
-          onClick={toggle}
+          aria-label="Close menu"
+          onClick={onScrim}
           className="fixed inset-0 z-30 bg-black/20"
         />
       )}
 
       <nav
         aria-label="Sections"
-        className="fixed inset-y-0 left-0 z-40 flex flex-col bg-[var(--color-sidebar)] text-white shadow-lg transition-[width] duration-200 ease-out"
+        className={`fixed inset-y-0 left-0 z-40 flex origin-top-left flex-col bg-[var(--color-sidebar)] text-white shadow-lg transition-all duration-200 ease-out md:scale-100 md:opacity-100 ${
+          mobileOpen
+            ? "scale-100 opacity-100"
+            : "scale-0 opacity-0 md:pointer-events-auto pointer-events-none"
+        }`}
         style={{ width: expanded ? EXPANDED : COLLAPSED }}
       >
         {/* Logo + (when expanded) the current page name. */}
         <div className="flex h-20 items-center gap-3 px-3">
-          <Link href="/" aria-label="Kairos home" className="shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Kairos" className="h-10 w-10 rounded-lg" />
-          </Link>
+          <button
+            type="button"
+            onClick={onLogo}
+            aria-label={isMobile ? "Hide menu" : "Kairos home"}
+            className="shrink-0"
+          >
+            <Logo />
+          </button>
           {expanded && active && (
             <span className="font-display truncate text-lg font-semibold tracking-tight">
               {active.label}
@@ -125,6 +174,7 @@ export function Sidebar({
                   aria-label={item.label}
                   aria-current={current ? "page" : undefined}
                   title={expanded ? undefined : item.label}
+                  onClick={() => setMobileOpen(false)}
                   className={[
                     "flex h-11 items-center gap-3 rounded-xl px-2.5 transition-colors",
                     current
@@ -165,7 +215,7 @@ export function Sidebar({
           )}
           <button
             type="button"
-            onClick={toggle}
+            onClick={toggleExpanded}
             aria-label={expanded ? "Collapse menu" : "Expand menu"}
             className="flex h-10 w-full items-center gap-3 rounded-xl px-2.5 text-white/85 transition-colors hover:bg-white/15 hover:text-white"
           >

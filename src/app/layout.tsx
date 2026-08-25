@@ -96,7 +96,7 @@ export default async function RootLayout({
 
         {chrome && <TopDate label={formatLong(todayISO())} />}
 
-        <div className={chrome ? "pl-16" : ""}>{children}</div>
+        <div className={chrome ? "md:pl-16" : ""}>{children}</div>
 
         <AdminLock unlocked={unlocked} pinSet={pinSet} />
       </body>

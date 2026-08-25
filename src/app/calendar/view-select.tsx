@@ -19,7 +19,7 @@ export function CalendarViewSelect({
         const next = options.find((o) => o.key === e.target.value);
         if (next) router.push(next.href);
       }}
-      className="h-10 rounded-full border border-hairline bg-surface px-4 text-sm font-medium text-ink outline-none transition-colors hover:border-accent focus:border-accent"
+      className="h-8 rounded-full border border-hairline bg-surface px-3 text-sm font-medium text-ink outline-none transition-colors hover:border-accent focus:border-accent"
     >
       {options.map((o) => (
         <option key={o.key} value={o.key}>

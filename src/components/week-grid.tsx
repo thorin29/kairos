@@ -259,6 +259,11 @@ export function WeekGrid({
         <span className="flex items-center gap-1">
           <SchoolTypeIcon type={e.schoolType} className="h-3 w-3 shrink-0" />
           <span className="truncate">{e.title}</span>
+          {e.ownerName && (
+            <span className="ml-auto shrink-0 pl-1 text-[0.6rem] font-normal opacity-85">
+              {e.ownerName}
+            </span>
+          )}
         </span>
       ) : (
         e.title
@@ -303,6 +308,11 @@ export function WeekGrid({
           <span className="flex items-center gap-1 font-medium">
             <SchoolTypeIcon type={e.schoolType} className="h-3 w-3 shrink-0" />
             <span className="block truncate">{e.title}</span>
+            {e.ownerName && (
+              <span className="ml-auto shrink-0 pl-1 text-[0.6rem] font-normal opacity-85">
+                {e.ownerName}
+              </span>
+            )}
           </span>
         ) : (
           <span className="block truncate font-medium">{e.title}</span>
