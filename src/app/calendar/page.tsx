@@ -11,7 +11,6 @@ import {
   addMonths,
   formatLong,
   formatMonth,
-  formatShort,
   monthGridDays,
   startOfMonth,
   startOfWeek,
@@ -44,6 +43,25 @@ const VIEWS: { key: View; label: string }[] = [
   { key: "week", label: "Week" },
   { key: "month", label: "Month" },
 ];
+
+/**
+ * A week's heading as month(s), not a day range — the day numbers are already
+ * visible in the grid. "August 2026" within one month, "Aug – Sep 2026" across
+ * two, "Dec 2026 – Jan 2027" across a year boundary.
+ */
+function weekMonthHeading(startISO: string, endISO: string): string {
+  const sY = startISO.slice(0, 4);
+  const eY = endISO.slice(0, 4);
+  const sM = startISO.slice(5, 7);
+  const eM = endISO.slice(5, 7);
+  const abbr = (iso: string) =>
+    new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short" }).format(
+      new Date(`${iso}T00:00:00Z`),
+    );
+  if (sY === eY && sM === eM) return formatMonth(startISO);
+  if (sY === eY) return `${abbr(startISO)} \u2013 ${abbr(endISO)} ${sY}`;
+  return `${abbr(startISO)} ${sY} \u2013 ${abbr(endISO)} ${eY}`;
+}
 
 export default async function CalendarPage({
   searchParams,
@@ -204,7 +222,7 @@ export default async function CalendarPage({
       ? formatLong(date)
       : view === "month"
         ? formatMonth(date)
-        : `${formatShort(days[0])} – ${formatShort(days[6])}`;
+        : weekMonthHeading(days[0], days[6]);
 
   const chip =
     "inline-flex h-10 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors";
@@ -315,14 +333,16 @@ export default async function CalendarPage({
               <span className="font-display ml-1 text-xl font-semibold tracking-tight">
                 {heading}
               </span>
-              <CalendarViewSelect
-                view={view}
-                options={VIEWS.map((v) => ({
-                  key: v.key,
-                  label: v.label,
-                  href: link({ view: v.key, date, who: whoEncoded }),
-                }))}
-              />
+              <div className="ml-auto">
+                <CalendarViewSelect
+                  view={view}
+                  options={VIEWS.map((v) => ({
+                    key: v.key,
+                    label: v.label,
+                    href: link({ view: v.key, date, who: whoEncoded }),
+                  }))}
+                />
+              </div>
             </div>
 
             {view === "week" && (

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.146.0";
+export const APP_VERSION = "0.147.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -80,6 +80,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.147.0",
+    summary: [
+      "Sign-out reworked: when the sidebar is open, a sign-out icon sits next to your name, and tapping it asks for confirmation in a small popup \u2014 no more leftover box stuck in the collapsed rail",
+      "Calendar: the day/week/month dropdown is back over on the right",
+      "Calendar week view now shows the month rather than a day range \u2014 \u201cAugust 2026\u201d, or \u201cAug \u2013 Sep 2026\u201d across two months, or \u201cDec 2026 \u2013 Jan 2027\u201d across a year \u2014 since the day numbers are already on the grid",
+    ],
+  },
   {
     version: "0.146.0",
     summary: [
