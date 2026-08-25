@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { loadDay, loadOpenTasks } from "@/lib/queries/overview";
 import { addDays, formatLong, todayISO } from "@/lib/dates";
 import { PersonCard } from "@/components/person-card";
-import { AppHeader } from "@/components/app-header";
 import { AddTaskForm } from "@/components/add-task-form";
 import { generateChores } from "@/lib/chores/generate";
 import { generateAnytimeChores } from "@/lib/chores/anytime";
@@ -145,16 +144,13 @@ export default async function Home({
 
   return (
     <>
-      <AppHeader title="Today" subtitle={formatLong(today)} active="home">
+      <main className="mx-auto max-w-6xl px-6 py-6">
         {totalOverdue > 0 && (
-          <p className="tabular inline-flex items-center gap-1.5 text-sm font-medium text-red-700">
+          <p className="tabular mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-red-700">
             <AlertIcon className="h-4 w-4" />
             {totalOverdue} overdue
           </p>
         )}
-      </AppHeader>
-
-      <main className="mx-auto max-w-6xl px-6 py-6">
 
       {personal && me && (
         <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-ink/5 px-3 py-1 text-sm text-muted">

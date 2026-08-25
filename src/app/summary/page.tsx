@@ -1,10 +1,9 @@
 import { loadProgression, type PersonProgress } from "@/lib/queries/progression";
 import { loadCoop } from "@/lib/queries/coop";
 import { getScoringStart } from "@/lib/settings";
-import { formatLong, todayISO } from "@/lib/dates";
+import { todayISO } from "@/lib/dates";
 import { currentSeasonWindow } from "@/lib/season";
 import { SEASON_MAX_TIER } from "@/lib/scoring/progression";
-import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
 import { Card, SectionHeading } from "@/components/ui";
 import type { ReactNode } from "react";
@@ -37,13 +36,7 @@ export default async function SummaryPage() {
 
   return (
     <>
-      <AppHeader
-        title="Characters"
-        subtitle={
-          since ? `Since ${formatLong(since)}` : `Season · ${season}`
-        }
-        active="summary"
-      />
+      
 
       <main className="mx-auto max-w-3xl px-6 py-6">
         <div className="mb-4">

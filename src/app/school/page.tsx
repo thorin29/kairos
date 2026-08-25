@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
 import { Card, SectionHeading } from "@/components/ui";
 import {
@@ -10,7 +9,7 @@ import {
   type ClassRow,
 } from "@/lib/queries/school";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
-import { todayISO, formatLong, formatShort } from "@/lib/dates";
+import { todayISO, formatShort } from "@/lib/dates";
 import { AddSchoolWork } from "@/components/add-school-work";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +61,7 @@ export default async function SchoolPage({
 
   return (
     <>
-      <AppHeader title="School" subtitle={formatLong(today)} active="school" />
+      
 
       <main className="mx-auto max-w-4xl px-6 py-6">
         <p className="mb-6 max-w-2xl text-sm text-muted">

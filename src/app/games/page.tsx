@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { AppHeader } from "@/components/app-header";
 import { loadGameStatus } from "@/lib/queries/games";
 import { todayISO } from "@/lib/dates";
 import { Card, SectionHeading } from "@/components/ui";
@@ -26,11 +25,7 @@ export default async function GamesPage() {
 
   return (
     <>
-      <AppHeader
-        title="Game time"
-        subtitle="Today's allowance and this week's tokens"
-        active="games"
-       />
+      
 
       <main className="mx-auto max-w-4xl px-6 py-6">
 

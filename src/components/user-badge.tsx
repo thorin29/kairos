@@ -16,10 +16,12 @@ export function UserBadge({
   name,
   color,
   avatarPath,
+  inline = false,
 }: {
   name: string;
   color: string;
   avatarPath: string | null;
+  inline?: boolean;
 }) {
   const path = usePathname();
   const router = useRouter();
@@ -42,9 +44,13 @@ export function UserBadge({
     });
 
   return (
-    <div className="fixed bottom-4 left-4 z-40">
+    <div className={inline ? "relative" : "fixed bottom-4 left-4 z-40"}>
       {open ? (
-        <div className="flex items-center gap-2 rounded-full border border-hairline bg-ground/95 py-1.5 pl-2 pr-1.5 shadow-md backdrop-blur">
+        <div
+          className={`flex items-center gap-2 rounded-full border border-hairline bg-ground/95 py-1.5 pl-2 pr-1.5 shadow-md backdrop-blur ${
+            inline ? "absolute bottom-0 left-0 z-50 whitespace-nowrap" : ""
+          }`}
+        >
           <Avatar name={name} color={color} avatarPath={avatarPath} size="sm" />
           <span className="max-w-[8rem] truncate text-sm font-medium">
             {name}

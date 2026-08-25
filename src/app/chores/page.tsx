@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { AppHeader } from "@/components/app-header";
 import {
   loadChoreSummary,
   loadPoolChores,
@@ -58,11 +57,7 @@ export default async function ChoresOverviewPage() {
 
   return (
     <>
-      <AppHeader
-        title="Chores"
-        subtitle="Who has what, and how this week is going"
-        active="chores"
-       />
+      
 
       <main className="mx-auto max-w-5xl px-6 py-6">
 

@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { AppHeader } from "@/components/app-header";
 import { loadGroceries } from "@/lib/queries/groceries";
 import { GroceryBoard } from "./grocery-board";
 
@@ -19,15 +18,7 @@ export default async function GroceriesPage() {
 
   return (
     <>
-      <AppHeader
-        title="Groceries"
-        subtitle={
-          data.items.length === 0
-            ? "The list is empty"
-            : `${needed} still to buy`
-        }
-        active="groceries"
-      />
+      
 
       <main className="mx-auto max-w-4xl px-6 py-6">
         {data.stores.length === 0 ? (

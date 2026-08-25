@@ -1,6 +1,5 @@
-import { AppHeader } from "@/components/app-header";
 import { loadReading } from "@/lib/queries/reading";
-import { todayISO, formatLong } from "@/lib/dates";
+import { todayISO } from "@/lib/dates";
 import { ReadingBoard } from "./reading-board";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +10,7 @@ export default async function ReadingPage() {
 
   return (
     <>
-      <AppHeader title="Reading" subtitle={formatLong(today)} active="reading" />
+      
 
       <main className="mx-auto max-w-3xl px-6 py-6">
         {people.length === 0 ? (

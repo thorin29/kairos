@@ -1,13 +1,16 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import "./globals.css";
 import { AdminLock } from "@/components/admin-lock";
 import { UserBadge } from "@/components/user-badge";
+import { Sidebar } from "@/components/sidebar";
 import { isAdmin, adminPinSet } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
 import { loginRequired, isPublicPath } from "@/lib/gate";
+import { formatLong } from "@/lib/dates";
+import { todayISO } from "@/lib/dates";
 
 // Self-hosted so the production build never depends on fetching from Google
 // Fonts at build time (a flaky, deploy-blocking network step in CI). Same
@@ -61,6 +64,7 @@ export default async function RootLayout({
     loginRequired(),
     headers().then((h) => h.get("x-pathname") ?? "/"),
   ]);
+  const sidebarExpanded = (await cookies()).get("sidebar")?.value === "1";
 
   // When login is required, every page but the public ones needs a session.
   // The gate is here (not middleware) because deciding it needs the database.
@@ -68,20 +72,39 @@ export default async function RootLayout({
     redirect(`/login?next=${encodeURIComponent(path)}`);
   }
 
+  const chrome = !isPublicPath(path);
+  const showDate = chrome && !path.startsWith("/calendar");
+
   return (
     <html lang="en">
       <body
         className={`${bricolage.variable} ${plexSans.variable} ${plexMono.variable} min-h-dvh bg-ground text-ink antialiased`}
       >
-        {children}
-        <AdminLock unlocked={unlocked} pinSet={pinSet} />
-        {me && (
-          <UserBadge
-            name={me.displayName ?? me.name}
-            color={me.color}
-            avatarPath={me.avatarPath}
+        {chrome && (
+          <Sidebar
+            initialExpanded={sidebarExpanded}
+            signIn={
+              me ? (
+                <UserBadge
+                  name={me.displayName ?? me.name}
+                  color={me.color}
+                  avatarPath={me.avatarPath}
+                  inline
+                />
+              ) : null
+            }
           />
         )}
+
+        {showDate && (
+          <div className="tabular pointer-events-none fixed right-4 top-3 z-20 text-sm font-medium text-muted">
+            {formatLong(todayISO())}
+          </div>
+        )}
+
+        <div className={chrome ? "pl-16" : ""}>{children}</div>
+
+        <AdminLock unlocked={unlocked} pinSet={pinSet} />
       </body>
     </html>
   );

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { AppHeader } from "@/components/app-header";
 import {
   loadRange,
   loadEventTypes,
@@ -26,7 +25,8 @@ import { MonthGrid } from "@/components/month-grid";
 import { MiniMonth } from "@/components/mini-month";
 import { AddEventProvider, AddEventButton } from "./add-event-form";
 import { PersonFilterBadge, FamilyFilterBadge } from "@/components/person-filter";
-import { SchoolIcon } from "@/components/icons";
+import { SchoolIcon, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+import { CalendarViewSelect } from "./view-select";
 import { CATEGORY_COLORS } from "@/lib/colors";
 import { getFamilyColor } from "@/lib/settings";
 import { getCalendarPrefs, type SharedStyle } from "@/lib/settings";
@@ -212,7 +212,7 @@ export default async function CalendarPage({
 
   return (
     <>
-      <AppHeader title="Calendar" subtitle={heading} active="calendar" />
+      
 
       <AddEventProvider
         people={people.map((p) => ({ id: p.id, name: p.displayName ?? p.name }))}
@@ -220,7 +220,7 @@ export default async function CalendarPage({
         classCtx={classCtx}
         defaultDate={view === "month" ? today : date}
       >
-      <main className="mx-auto max-w-[92rem] px-6 py-6">
+      <main className="mx-auto max-w-[92rem] px-6 pb-6 pt-4">
         <div className="flex flex-col gap-6 lg:flex-row">
           <aside className="flex flex-col gap-5 lg:w-60 lg:shrink-0">
             <AddEventButton wide />
@@ -289,38 +289,42 @@ export default async function CalendarPage({
           </aside>
 
           <div className="min-w-0 flex-1">
-            <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-              <div className="mr-auto inline-flex rounded-full border border-hairline p-0.5">
-                {VIEWS.map((v) => (
-                  <Link
-                    key={v.key}
-                    href={link({ view: v.key, date, who: whoEncoded })}
-                    className={`inline-flex h-9 items-center rounded-full px-4 text-sm font-medium transition-colors ${
-                      view === v.key
-                        ? "bg-accent text-white"
-                        : "text-muted hover:text-accent"
-                    }`}
-                  >
-                    {v.label}
-                  </Link>
-                ))}
-              </div>
-
+            <div className="mb-4 flex flex-wrap items-center gap-2">
               <Link
-                href={link({ view, date: step(-1), who: whoEncoded })}
+                href={link({ view, who: whoEncoded })}
                 className={`${chip} ${idle}`}
               >
-                &larr;
-              </Link>
-              <Link href={link({ view, who: whoEncoded })} className={`${chip} ${idle}`}>
                 Today
               </Link>
               <Link
-                href={link({ view, date: step(1), who: whoEncoded })}
-                className={`${chip} ${idle}`}
+                href={link({ view, date: step(-1), who: whoEncoded })}
+                title={`Previous ${view}`}
+                aria-label={`Previous ${view}`}
+                className={`${chip} ${idle} px-2.5`}
               >
-                &rarr;
+                <ChevronLeftIcon className="h-5 w-5" />
               </Link>
+              <Link
+                href={link({ view, date: step(1), who: whoEncoded })}
+                title={`Next ${view}`}
+                aria-label={`Next ${view}`}
+                className={`${chip} ${idle} px-2.5`}
+              >
+                <ChevronRightIcon className="h-5 w-5" />
+              </Link>
+              <span className="font-display ml-1 text-xl font-semibold tracking-tight">
+                {heading}
+              </span>
+              <div className="ml-auto">
+                <CalendarViewSelect
+                  view={view}
+                  options={VIEWS.map((v) => ({
+                    key: v.key,
+                    label: v.label,
+                    href: link({ view: v.key, date, who: whoEncoded }),
+                  }))}
+                />
+              </div>
             </div>
 
             {view === "week" && (
