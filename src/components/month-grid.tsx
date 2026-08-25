@@ -62,7 +62,9 @@ export function MonthGrid({
               href={hrefForDay(iso)}
               className={`flex flex-col overflow-hidden border-b border-l border-hairline p-1.5 transition-colors hover:bg-ground ${
                 i % 7 === 0 ? "border-l-0" : ""
-              } ${outside ? "bg-ground/40" : ""}`}
+              } ${
+                isToday ? "bg-accent/5" : outside ? "bg-ground/40" : ""
+              }`}
             >
               <span
                 className={`tabular mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${

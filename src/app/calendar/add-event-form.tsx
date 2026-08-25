@@ -16,6 +16,7 @@ import { TimeSelect } from "@/components/time-select";
 import {
   CalendarClassForm,
   type ClassFormOption,
+  type ClassEditInit,
 } from "@/components/calendar-class-form";
 
 const initial: EventState = { error: null, saved: false };
@@ -28,6 +29,7 @@ export type ClassCtx = {
   classTypes: ClassFormOption[];
   terms: ClassFormOption[];
   people: ClassFormOption[];
+  classesByEventId: Record<string, ClassEditInit>;
 };
 
 const SUN_FIRST_TOKENS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
@@ -361,7 +363,15 @@ function EventModal({
   const kindOptions = classCtx.canMakeClass
     ? KINDS
     : KINDS.filter((k) => k.value !== "CLASS");
-  const classCreate = kind === "CLASS" && !editing && classCtx.canMakeClass;
+  // The "Class" overlay handles three cases: a brand-new class, editing a real
+  // class (found by its meeting's event id), and upgrading an old bare "Class"
+  // block into a real class (not found — carry its event id so the old block is
+  // replaced, not duplicated).
+  const classMode = kind === "CLASS" && classCtx.canMakeClass;
+  const existingClass =
+    editing && classMode
+      ? classCtx.classesByEventId[editing.eventId]
+      : undefined;
   const isSport =
     (eventTypeId ? types.find((t) => t.id === eventTypeId) : undefined)
       ?.sportWorkout ?? false;
@@ -384,7 +394,13 @@ function EventModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  if (classCreate) {
+  if (classMode) {
+    const converting = Boolean(editing && !existingClass);
+    const heading = existingClass
+      ? "Edit class"
+      : converting
+        ? "Turn into a class"
+        : "Add class";
     return (
       <div
         className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
@@ -395,19 +411,21 @@ function EventModal({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold">Add class</h2>
+            <h2 className="font-display text-lg font-semibold">{heading}</h2>
             <div className="flex items-center gap-2">
-              <select
-                value={kind}
-                onChange={(e) => chooseKind(e.target.value)}
-                className="h-8 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
-              >
-                {kindOptions.map((k) => (
-                  <option key={k.value} value={k.value}>
-                    {k.label}
-                  </option>
-                ))}
-              </select>
+              {!editing && (
+                <select
+                  value={kind}
+                  onChange={(e) => chooseKind(e.target.value)}
+                  className="h-8 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+                >
+                  {kindOptions.map((k) => (
+                    <option key={k.value} value={k.value}>
+                      {k.label}
+                    </option>
+                  ))}
+                </select>
+              )}
               <button
                 type="button"
                 onClick={onClose}
@@ -418,6 +436,12 @@ function EventModal({
               </button>
             </div>
           </div>
+          {converting && (
+            <p className="mb-3 rounded-lg bg-accent/10 px-3 py-2 text-xs text-ink">
+              This calendar block isn’t a real class yet. Fill in the details and
+              it becomes one — the old block is replaced, not duplicated.
+            </p>
+          )}
           <CalendarClassForm
             people={classCtx.people}
             subjects={classCtx.subjects}
@@ -428,6 +452,8 @@ function EventModal({
             dayToken={weekdayToken(date)}
             start={start}
             end={end}
+            editing={existingClass}
+            replaceEventId={converting ? editing!.eventId : undefined}
             onClose={onClose}
           />
         </div>

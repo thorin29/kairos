@@ -266,6 +266,10 @@ async function persistClass(
   forcedOwnerId?: string,
 ): Promise<SchoolActionState> {
   const id = String(formData.get("id") ?? "").trim() || null;
+  // When an old bare "Class" block is being upgraded into a real class, this is
+  // the block's event id, so we can remove it once the real class exists.
+  const replaceEventId =
+    String(formData.get("replaceEventId") ?? "").trim() || null;
 
   // The class name comes from the Subject pool now (like chores pick from the
   // master list). Either an existing subject is chosen, or a new one is typed
@@ -454,11 +458,16 @@ async function persistClass(
     });
   }
 
+  // Upgrading an old bare block: now that the real class (and its own meeting
+  // event) exist, remove the original block so it isn't left as a duplicate.
+  if (replaceEventId && replaceEventId !== eventId) {
+    await prisma.event.delete({ where: { id: replaceEventId } }).catch(() => {});
+  }
+
   schoolStructureRevalidate();
+  revalidatePath("/calendar");
   return { error: null };
 }
-
-/** Set whether classes can be created from the calendar by anyone or admins only. */
 export async function setClassFromCalendarMode(
   mode: "admin" | "anyone",
 ): Promise<void> {
