@@ -18,6 +18,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "@/components/icons";
+import { UserBadge } from "@/components/user-badge";
 
 type NavItem = {
   href: string;
@@ -57,10 +58,10 @@ const EXPANDED = "15rem"; // overlay width when opened
 
 export function Sidebar({
   initialExpanded,
-  signIn,
+  user,
 }: {
   initialExpanded: boolean;
-  signIn?: React.ReactNode;
+  user?: { name: string; color: string; avatarPath: string | null } | null;
 }) {
   const path = usePathname();
   const [expanded, setExpanded] = useState(initialExpanded);
@@ -151,7 +152,17 @@ export function Sidebar({
 
         {/* Sign-in, then the collapse/expand control, pinned to the bottom. */}
         <div className="mt-auto space-y-2 border-t border-white/20 px-2 py-3">
-          {signIn && <div className="px-1">{signIn}</div>}
+          {user && (
+            <div className="px-1">
+              <UserBadge
+                name={user.name}
+                color={user.color}
+                avatarPath={user.avatarPath}
+                inline
+                expanded={expanded}
+              />
+            </div>
+          )}
           <button
             type="button"
             onClick={toggle}

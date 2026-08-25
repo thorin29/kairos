@@ -72,15 +72,6 @@ export default async function SummaryPage() {
             </DayLogCard>
           ))}
         </div>
-
-        <p className="mt-6 text-xs text-muted">
-          Everyone levels up their own character &mdash; no one&rsquo;s ranked
-          against anyone. Doing all your own work completes your season; the top
-          tiers come from getting ahead and grabbing shared chores. Levels and
-          stats never drop. Your class and your companion&rsquo;s colour come
-          from what you do <em>more</em> of than the family average, so an area
-          becomes your focus only when you go beyond the shared minimum.
-        </p>
       </main>
     </>
   );
@@ -160,7 +151,11 @@ function PersonCard({ p }: { p: PersonProgress }) {
               {p.season.tier >= SEASON_MAX_TIER ? "Maxed" : "Complete"}
             </span>
           ) : (
-            <span className="text-xs text-muted">your own work fills this</span>
+            <span className="text-xs font-medium text-muted">
+              {p.season.tier + 1 <= SEASON_MAX_TIER
+                ? `Next up: Tier ${p.season.tier + 1}`
+                : "Almost there"}
+            </span>
           )}
         </div>
         <Bar pct={p.season.pct} tone={p.season.complete ? "emerald" : "accent"} />

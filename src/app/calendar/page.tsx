@@ -315,16 +315,14 @@ export default async function CalendarPage({
               <span className="font-display ml-1 text-xl font-semibold tracking-tight">
                 {heading}
               </span>
-              <div className="ml-auto">
-                <CalendarViewSelect
-                  view={view}
-                  options={VIEWS.map((v) => ({
-                    key: v.key,
-                    label: v.label,
-                    href: link({ view: v.key, date, who: whoEncoded }),
-                  }))}
-                />
-              </div>
+              <CalendarViewSelect
+                view={view}
+                options={VIEWS.map((v) => ({
+                  key: v.key,
+                  label: v.label,
+                  href: link({ view: v.key, date, who: whoEncoded }),
+                }))}
+              />
             </div>
 
             {view === "week" && (

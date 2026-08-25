@@ -120,10 +120,6 @@ export default async function ChoresOverviewPage() {
             </div>
           ))}
         </Card>
-        <p className="mt-2 text-xs text-muted">
-          Missed is all-time: chores that expired because the same chore came
-          round again for someone else.
-        </p>
       </section>
 
       <section className="mb-10">

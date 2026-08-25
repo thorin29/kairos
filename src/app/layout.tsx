@@ -4,8 +4,8 @@ import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import "./globals.css";
 import { AdminLock } from "@/components/admin-lock";
-import { UserBadge } from "@/components/user-badge";
 import { Sidebar } from "@/components/sidebar";
+import { TopDate } from "@/components/top-date";
 import { isAdmin, adminPinSet } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
 import { loginRequired, isPublicPath } from "@/lib/gate";
@@ -73,7 +73,6 @@ export default async function RootLayout({
   }
 
   const chrome = !isPublicPath(path);
-  const showDate = chrome && !path.startsWith("/calendar");
 
   return (
     <html lang="en">
@@ -83,24 +82,19 @@ export default async function RootLayout({
         {chrome && (
           <Sidebar
             initialExpanded={sidebarExpanded}
-            signIn={
-              me ? (
-                <UserBadge
-                  name={me.displayName ?? me.name}
-                  color={me.color}
-                  avatarPath={me.avatarPath}
-                  inline
-                />
-              ) : null
+            user={
+              me
+                ? {
+                    name: me.displayName ?? me.name,
+                    color: me.color,
+                    avatarPath: me.avatarPath,
+                  }
+                : null
             }
           />
         )}
 
-        {showDate && (
-          <div className="tabular pointer-events-none fixed right-4 top-3 z-20 text-sm font-medium text-muted">
-            {formatLong(todayISO())}
-          </div>
-        )}
+        {chrome && <TopDate label={formatLong(todayISO())} />}
 
         <div className={chrome ? "pl-16" : ""}>{children}</div>
 

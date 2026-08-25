@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.145.0";
+export const APP_VERSION = "0.146.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -80,6 +80,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.146.0",
+    summary: [
+      "Sidebar sign-in tidied up: your name now shows in dark, readable text, and the sign-out stays tucked inside the menu instead of spilling out over the page",
+      "Removed more of the small grey explanation lines that were adding clutter \u2014 on the dashboard, chores, Bible reading, personal reading, school, and the characters page",
+      "The characters page now shows what you\u2019re working toward next (\u201cNext up: Tier N\u201d) in plain language instead of a vague note",
+      "Fixed the date overlapping the calendar\u2019s view control: the date now correctly hides on the calendar as you move around the app, and the day/week/month dropdown sits beside the month instead of jammed in the corner",
+    ],
+  },
   {
     version: "0.145.0",
     summary: [

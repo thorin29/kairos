@@ -65,9 +65,7 @@ export default async function SchoolPage({
 
       <main className="mx-auto max-w-4xl px-6 py-6">
         <p className="mb-6 max-w-2xl text-sm text-muted">
-          Open assignments and tests. Add your own from your day; a parent can
-          add for anyone from the admin panel. Timed classes show on the
-          calendar.
+          Classes, assignments, and tests.
         </p>
 
         <div className="mb-8">

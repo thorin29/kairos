@@ -20,9 +20,7 @@ export default async function ReadingPage() {
         ) : (
           <>
             <p className="mb-4 text-sm text-muted">
-              Books read for pleasure. Log a little each day &mdash; there&rsquo;s
-              no due date and nothing goes late; reading just nudges your Scholar
-              level up a touch.
+              Personal reading &mdash; nudges your Scholar level up a little.
             </p>
             <ReadingBoard people={people} />
           </>

@@ -8,6 +8,27 @@ all live in the database, never in this repository.
 
 ---
 
+## Personal settings (per-user, non-admin)
+
+- [ ] A settings area reached from a **settings icon in the sidebar**, shown
+      when someone is signed into their own account. Distinct from the admin
+      panel: these are personal preferences, not household administration.
+      Icon is deliberately held back until the area exists, so there's no dead
+      button in the sidebar.
+- [ ] Change your own password.
+- [ ] Appearance / themes — light and dark mode, plus a few colour themes, so
+      the app isn't locked to the teal-green palette. Groundwork already laid:
+      the sidebar colour is a single CSS variable, and the intent is to move
+      the rest of the palette behind variables a theme can swap.
+- [ ] Personal calendar event colours — custom colours for events when you're
+      viewing your **own, not-shared** calendar. The shared view keeps whatever
+      is configured household-wide; only your personal view is recoloured.
+- [ ] Personal defaults (e.g. default calendar view, starting page) and other
+      per-user preferences as they come up.
+- [ ] Update `README.md` and `ARCHITECTURE.md` when this ships.
+
+---
+
 ## Foundations
 
 - [x] Single application container plus PostgreSQL, deployed from GHCR

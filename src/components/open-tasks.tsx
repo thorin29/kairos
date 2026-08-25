@@ -83,9 +83,6 @@ export function OpenTasks({
           {error}
         </p>
       )}
-      <p className="mt-2 text-xs text-muted">
-        These count for whoever picks them up.
-      </p>
     </section>
   );
 }
