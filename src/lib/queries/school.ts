@@ -191,6 +191,7 @@ export type ClassRow = {
   // shared with.
   ownerId: string;
   ownerName: string;
+  eventId: string | null;
   meeting: string | null;
   meetingDays: string[];
   meetingStart: string;
@@ -242,6 +243,7 @@ export async function loadSchoolStructure(): Promise<{
         userId: true,
         subjectId: true,
         classTypeId: true,
+        eventId: true,
         classType: { select: { name: true } },
         promptHomework: true,
         members: { select: { userId: true } },
@@ -286,6 +288,7 @@ export async function loadSchoolStructure(): Promise<{
       promptHomework: c.promptHomework,
       ownerId: c.userId,
       ownerName: nameById.get(c.userId) ?? "",
+      eventId: c.eventId ?? null,
       meeting: parsed.summary,
       meetingDays: parsed.days,
       meetingStart: parsed.start,

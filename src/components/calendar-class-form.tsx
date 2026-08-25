@@ -69,6 +69,7 @@ export function CalendarClassForm({
   start,
   end,
   editing,
+  replaceEventId,
   onClose,
 }: {
   people: ClassFormOption[];
@@ -81,6 +82,7 @@ export function CalendarClassForm({
   start?: string;
   end?: string;
   editing?: ClassEditInit;
+  replaceEventId?: string;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -117,6 +119,9 @@ export function CalendarClassForm({
   return (
     <form ref={ref} action={action} className="space-y-4">
       {editing && <input type="hidden" name="id" value={editing.id} />}
+      {replaceEventId && (
+        <input type="hidden" name="replaceEventId" value={replaceEventId} />
+      )}
       <input type="hidden" name="byday" value={days.join(",")} />
       <input
         type="hidden"

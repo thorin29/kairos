@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.142.0";
+export const APP_VERSION = "0.143.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -80,6 +80,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.143.0",
+    summary: [
+      "Today now stands out at a glance: its column in week view and its cell in month view get a light tint, on top of the date still being circled",
+      "You can now edit a class straight from the calendar \u2014 tapping a class meeting opens the same full form used to create one, so existing classes and new ones behave identically",
+      "Older \u201cClass\u201d blocks that were never a real class can be upgraded in place: open one, fill in the details, and it becomes a proper class \u2014 the old block is replaced, not duplicated",
+    ],
+  },
   {
     version: "0.142.0",
     summary: [

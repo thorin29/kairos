@@ -561,7 +561,11 @@ export function WeekGrid({
                   type="button"
                   onClick={() => onSelectDay(iso)}
                   className={`border-l border-ink/15 px-1 py-2.5 text-center transition-colors ${
-                    isSelected ? "bg-accent/15" : "hover:bg-shade-soft"
+                    isSelected
+                      ? "bg-accent/15"
+                      : isToday
+                        ? "bg-accent/5 hover:bg-accent/10"
+                        : "hover:bg-shade-soft"
                   }`}
                 >
                   {inner}
@@ -569,7 +573,9 @@ export function WeekGrid({
               ) : (
                 <div
                   key={iso}
-                  className="border-l border-ink/15 px-1 py-2.5 text-center"
+                  className={`border-l border-ink/15 px-1 py-2.5 text-center ${
+                    isToday ? "bg-accent/5" : ""
+                  }`}
                 >
                   {inner}
                 </div>
@@ -635,7 +641,11 @@ export function WeekGrid({
                 onContextMenu={(e) => onColContextMenu(key, e)}
                 title="Tap for a block, then right-click / long-press to add"
                 className={`relative cursor-pointer select-none border-l border-hairline ${
-                  selectedDay === key ? "bg-accent/5" : ""
+                  selectedDay === key
+                    ? "bg-accent/10"
+                    : isToday
+                      ? "bg-accent/5"
+                      : ""
                 }`}
               >
                 {shaded.length > 0 && (
