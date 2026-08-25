@@ -125,9 +125,6 @@ export function AlwaysOpenChores({
           {error}
         </p>
       )}
-      <p className="mt-2 text-xs text-muted">
-        Each tap counts for whoever did it, as often as it happens.
-      </p>
     </section>
   );
 }

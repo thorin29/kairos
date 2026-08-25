@@ -182,16 +182,6 @@ export default async function BiblePage() {
             </div>
           ))}
         </Card>
-
-        <p className="mt-3 text-xs text-muted">
-          Distinct chapters the published plan has taken us through so far, plus
-          any books marked as already read
-          {stats.completedBooks.length > 0
-            ? ` (${stats.completedBooks.length} so far)`
-            : ""}
-          . Special one-off readings don&rsquo;t count, and a chapter read twice
-          can&rsquo;t push a figure past 100%.
-        </p>
       </section>
     </>
   );
