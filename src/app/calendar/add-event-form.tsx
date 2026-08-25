@@ -13,6 +13,8 @@ import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
 import { addDays, dayOfWeek, daysBetween } from "@/lib/dates";
 import { PlusIcon } from "@/components/icons";
 import { TimeSelect } from "@/components/time-select";
+import { PinPad } from "@/components/pin-pad";
+import { useRouter } from "next/navigation";
 import {
   CalendarClassForm,
   type ClassFormOption,
@@ -272,6 +274,7 @@ function EventModal({
   participantIdsInit?: string[];
   onClose: () => void;
 }) {
+  const router = useRouter();
   const [allDay, setAllDay] = useState(allDayInit ?? false);
   const [kind, setKind] = useState(kindInit ?? "APPOINTMENT");
   // When editing a repeating event, pre-fill the repeat controls from its rule
@@ -366,10 +369,14 @@ function EventModal({
   // The "Class" overlay handles three cases: a brand-new class, editing a real
   // class (found by its meeting's event id), and upgrading an old bare "Class"
   // block into a real class (not found — carry its event id so the old block is
-  // replaced, not duplicated).
-  const classMode = kind === "CLASS" && classCtx.canMakeClass;
+  // replaced, not duplicated). Editing an existing class ALWAYS routes here so
+  // it never opens as a plain appointment; if class actions are locked to
+  // admins, we show a PIN prompt in place of the form.
+  const classMode =
+    kind === "CLASS" && (classCtx.canMakeClass || Boolean(editing));
+  const classLocked = classMode && !classCtx.canMakeClass;
   const existingClass =
-    editing && classMode
+    editing && classMode && !classLocked
       ? classCtx.classesByEventId[editing.eventId]
       : undefined;
   const isSport =
@@ -395,12 +402,14 @@ function EventModal({
   }, [onClose]);
 
   if (classMode) {
-    const converting = Boolean(editing && !existingClass);
-    const heading = existingClass
-      ? "Edit class"
-      : converting
-        ? "Turn into a class"
-        : "Add class";
+    const converting = Boolean(editing && !existingClass && !classLocked);
+    const heading = classLocked
+      ? "Admin needed"
+      : existingClass
+        ? "Edit class"
+        : converting
+          ? "Turn into a class"
+          : "Add class";
     return (
       <div
         className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
@@ -413,7 +422,7 @@ function EventModal({
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold">{heading}</h2>
             <div className="flex items-center gap-2">
-              {!editing && (
+              {!editing && !classLocked && (
                 <select
                   value={kind}
                   onChange={(e) => chooseKind(e.target.value)}
@@ -436,26 +445,39 @@ function EventModal({
               </button>
             </div>
           </div>
-          {converting && (
-            <p className="mb-3 rounded-lg bg-accent/10 px-3 py-2 text-xs text-ink">
-              This calendar block isn’t a real class yet. Fill in the details and
-              it becomes one — the old block is replaced, not duplicated.
-            </p>
+
+          {classLocked ? (
+            <div>
+              <p className="mb-4 text-sm text-muted">
+                Editing a class is set to admins only. Enter the admin PIN to
+                open the class editor.
+              </p>
+              <PinPad onUnlocked={() => router.refresh()} />
+            </div>
+          ) : (
+            <>
+              {converting && (
+                <p className="mb-3 rounded-lg bg-accent/10 px-3 py-2 text-xs text-ink">
+                  This calendar block isn’t a real class yet. Fill in the details
+                  and it becomes one — the old block is replaced, not duplicated.
+                </p>
+              )}
+              <CalendarClassForm
+                people={classCtx.people}
+                subjects={classCtx.subjects}
+                classTypes={classCtx.classTypes}
+                terms={classCtx.terms}
+                isAdmin={classCtx.isAdmin}
+                meName={classCtx.meName}
+                dayToken={weekdayToken(date)}
+                start={start}
+                end={end}
+                editing={existingClass}
+                replaceEventId={converting ? editing!.eventId : undefined}
+                onClose={onClose}
+              />
+            </>
           )}
-          <CalendarClassForm
-            people={classCtx.people}
-            subjects={classCtx.subjects}
-            classTypes={classCtx.classTypes}
-            terms={classCtx.terms}
-            isAdmin={classCtx.isAdmin}
-            meName={classCtx.meName}
-            dayToken={weekdayToken(date)}
-            start={start}
-            end={end}
-            editing={existingClass}
-            replaceEventId={converting ? editing!.eventId : undefined}
-            onClose={onClose}
-          />
         </div>
       </div>
     );
