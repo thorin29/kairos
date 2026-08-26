@@ -641,18 +641,56 @@ own exercises, optionally schedules them, and records what they did.
 - [x] Icons guessed from the item name, remembered and admin-editable
 - [x] Type-ahead add: matches from the catalog appear as you type, or add a
       brand-new item in one tap
+- [x] Adding an item asks which store in a pop-up (no store drop-down); the
+      item's usual store is offered first, and with only one store it's skipped
+- [x] Fixing a catalog item's name or icon in admin also corrects the lines
+      already on the list (a line mirrors the catalog, it's not frozen history)
+- [x] Admin edits flash green to confirm they saved
+- [x] On a personal device the signed-in person is logged as the requester;
+      unassigned on the shared hub (the assignee drop-down is gone)
 - [x] Two clear modes on one page — a **list** (add things, grouped by store,
       each store with its own "Shop" button) and a focused **shopping cart**
-      (pick a store → big-tap checklist of just that store's items)
-- [x] Checking an item off while shopping removes it from the shared list
-      straight away, with an in-trip Undo (the "basket" strip) if a tap slips
-- [x] A live got/total progress bar while shopping
-- [x] Assign an item to a person (avatar rides along into the cart)
+      (pick a store → big-tap checklist of just that store's items). *Interim:
+      the cart is shared and checking deletes on the spot; superseded by the
+      shopping-trip model below.*
+- [x] A live got/total progress bar while shopping, with an in-trip Undo
 - [x] A typed item's store defaults to its remembered catalog store
 - [x] Non-grocery stores handled the same way — a "store" is just a shopping
       destination (clothing, hardware) with the same cart flow
 - [x] Admin: full editing of stores (rename, icon, hide, delete-when-empty)
       and catalog items (rename, icon, default store, hide, delete)
+
+### Next: reorder and move between stores (planned)
+
+- [ ] An "Edit list" toggle on the groceries page (no PIN needed) that reveals
+      a drag handle per item, to reorder within a store and drag an item onto a
+      different store's list. Needs a `sortOrder` column on a line (lines are
+      currently ordered by when they were added) and a touch-friendly reorder
+      (the shared screen and phones are touch, where native HTML drag doesn't
+      work), so it's its own increment.
+
+### Next: shopping trips (planned epic)
+
+The current cart is shared and check = delete. The trip model makes a run
+belong to one person and keeps the list intact until they finish:
+
+- [ ] Tapping **Shop** on a store asks *who is shopping* (tap a profile), which
+      opens a trip for that store assigned to that person
+- [ ] A **shopping task line on that person's dashboard card** (personal view),
+      tapping it opens their cart — the cart only appears for the shopper
+- [ ] The shopper can **drop the trip** if they don't end up going, which puts
+      the store back to "Shop" for anyone
+- [ ] While shopping, the **whole list stays visible** — checked items show as
+      done rather than vanishing — until **Complete trip**
+- [ ] Items added by anyone while a trip is live **join that trip**
+- [ ] **Complete trip**: purchased items drop off, unpurchased ones return to
+      the saved list for next time
+- [ ] Needs a migration (a `ShoppingTrip`, a trip link + a purchased mark on a
+      line), a dashboard-card line, and personal/shared branching on the page —
+      hence a dedicated release.
+
+### Later
+
 - [ ] Quantities on an item (2 dozen) — the note field exists on a line but
       isn't surfaced in the add form yet
 - [ ] Recurring staples that re-add themselves on a cadence

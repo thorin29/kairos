@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Card, SectionHeading } from "@/components/ui";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import {
@@ -17,6 +17,24 @@ import {
   setStoreIcon,
 } from "@/lib/actions/groceries";
 import type { AdminCatalogItem, AdminStore } from "@/lib/queries/groceries";
+
+/**
+ * A brief green wash on a row to confirm a save landed — appears at once,
+ * holds, then fades out over a second. Survives the revalidation re-render
+ * because it lives on the (stable) row component, not the inputs.
+ */
+function useFlash(): [boolean, () => void] {
+  const [on, setOn] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flash = () => {
+    setOn(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setOn(false), 1600);
+  };
+  return [on, flash];
+}
+
+const FLASH_CLASS = "bg-emerald-50";
 
 export function GroceryAdmin({
   stores,
@@ -160,6 +178,7 @@ function StoreRow({
   startTransition: (fn: () => void) => void;
 }) {
   const [taken, setTaken] = useState(false);
+  const [flashed, flash] = useFlash();
 
   const saveName = (v: string) => {
     const next = v.trim();
@@ -167,12 +186,17 @@ function StoreRow({
     if (!next || next === store.name) return;
     startTransition(async () => {
       const res = await renameStore(store.id, next);
-      if (!res.ok && res.reason === "duplicate") setTaken(true);
+      if (res.ok) flash();
+      else if (res.reason === "duplicate") setTaken(true);
     });
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 py-2.5">
+    <div
+      className={`flex flex-wrap items-center gap-2 rounded-lg px-1.5 py-2.5 transition-colors duration-700 ${
+        flashed ? FLASH_CLASS : ""
+      }`}
+    >
       <input
         defaultValue={store.icon}
         key={`icon-${store.icon}`}
@@ -180,7 +204,10 @@ function StoreRow({
         onBlur={(e) => {
           const v = e.target.value.trim();
           if (v && v !== store.icon) {
-            startTransition(() => setStoreIcon(store.id, v));
+            startTransition(() => {
+              setStoreIcon(store.id, v);
+            });
+            flash();
           }
         }}
         className="h-9 w-12 rounded-lg border border-hairline bg-ground/40 text-center outline-none focus:border-accent"
@@ -242,6 +269,7 @@ function CatalogRow({
   startTransition: (fn: () => void) => void;
 }) {
   const [taken, setTaken] = useState(false);
+  const [flashed, flash] = useFlash();
 
   const saveName = (v: string) => {
     const next = v.trim();
@@ -249,13 +277,16 @@ function CatalogRow({
     if (!next || next === item.name) return;
     startTransition(async () => {
       const res = await renameCatalogItem(item.id, next);
-      if (!res.ok && res.reason === "duplicate") setTaken(true);
+      if (res.ok) flash();
+      else if (res.reason === "duplicate") setTaken(true);
     });
   };
 
   return (
     <div
-      className={`flex flex-wrap items-center gap-2 p-3 ${item.isActive ? "" : "opacity-50"}`}
+      className={`flex flex-wrap items-center gap-2 p-3 transition-colors duration-700 ${
+        flashed ? FLASH_CLASS : item.isActive ? "" : "opacity-50"
+      }`}
     >
       <input
         defaultValue={item.icon}
@@ -264,7 +295,10 @@ function CatalogRow({
         onBlur={(e) => {
           const v = e.target.value.trim();
           if (v && v !== item.icon) {
-            startTransition(() => setCatalogIcon(item.id, v));
+            startTransition(() => {
+              setCatalogIcon(item.id, v);
+            });
+            flash();
           }
         }}
         className="h-9 w-12 rounded-lg border border-hairline bg-ground/40 text-center outline-none focus:border-accent"
@@ -286,9 +320,10 @@ function CatalogRow({
       </div>
       <select
         value={item.defaultStoreId ?? ""}
-        onChange={(e) =>
-          startTransition(() => setCatalogStore(item.id, e.target.value || null))
-        }
+        onChange={(e) => {
+          startTransition(() => setCatalogStore(item.id, e.target.value || null));
+          flash();
+        }}
         aria-label="Default store"
         className="h-9 rounded-lg border border-hairline bg-ground/40 px-2 text-xs outline-none focus:border-accent"
       >
