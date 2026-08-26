@@ -1,10 +1,20 @@
 import { loadGroceries } from "@/lib/queries/groceries";
+import { currentUser } from "@/lib/user-session";
+import { deviceMode } from "@/lib/device";
 import { GroceryBoard } from "./grocery-board";
 
 export const dynamic = "force-dynamic";
 
 export default async function GroceriesPage() {
-  const data = await loadGroceries();
+  const [data, me, mode] = await Promise.all([
+    loadGroceries(),
+    currentUser(),
+    deviceMode(),
+  ]);
+
+  // A cart only opens on the shopper's own personal device; the shared hub and
+  // everyone else see a trip as a status line.
+  const meId = mode === "personal" && me ? me.id : null;
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-6">
@@ -15,8 +25,11 @@ export default async function GroceriesPage() {
       ) : (
         <GroceryBoard
           stores={data.stores}
-          items={data.items}
+          saved={data.saved}
+          trips={data.trips}
           catalog={data.catalog}
+          roster={data.roster}
+          meId={meId}
         />
       )}
     </main>

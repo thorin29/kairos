@@ -21,6 +21,7 @@ import { currentUser } from "@/lib/user-session";
 import { pendingSportPrompts, type SportPrompt } from "@/lib/workouts/generate";
 import { loadRolloverState, pendingClassPrompts } from "@/lib/queries/school";
 import { pendingMoneyCount } from "@/lib/queries/money";
+import { loadDashboardTrips } from "@/lib/queries/groceries";
 import { pendingBibleRewards } from "@/lib/bible-rewards";
 import { clearPausedTasks } from "@/lib/queries/pauses";
 import { autoLogSportFeeds } from "@/lib/calendar/sport-feeds";
@@ -142,6 +143,15 @@ export default async function Home({
     else classPromptsByUser.set(cp.userId, [cp]);
   }
 
+  // Active shopping trips ride the shopper's card as a line into their cart.
+  const dashboardTrips = await loadDashboardTrips();
+  const tripsByUser = new Map<string, typeof dashboardTrips>();
+  for (const t of dashboardTrips) {
+    const arr = tripsByUser.get(t.shopperId);
+    if (arr) arr.push(t);
+    else tripsByUser.set(t.shopperId, [t]);
+  }
+
   return (
     <>
       <main className="mx-auto max-w-6xl px-6 py-6">
@@ -168,6 +178,7 @@ export default async function Home({
             moneyPending={moneyAdminIds.has(p.id) ? moneyPending : 0}
             moneyBibleRewards={moneyAdminIds.has(p.id) ? bibleRewardsReady : 0}
             classPrompts={classPromptsByUser.get(p.id) ?? []}
+            shoppingTrips={tripsByUser.get(p.id) ?? []}
             dateISO={today}
           />
         ))}

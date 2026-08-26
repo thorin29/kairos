@@ -30,9 +30,10 @@ schedule.
 - **Game time.** A daily screen-time allowance per person, with weekly tokens
   that buy extra minutes.
 - **Groceries.** A shared shopping list that learns the items you buy and their
-  icons. Add what you need, then tap **Shop** on a store to get a big-tap
-  checklist of just that store's items — check things off and they leave the
-  list, with an Undo if a tap slips.
+  icons. Add what you need, then tap **Shop** on a store and pick who's going:
+  that store becomes their shopping trip, with a line on their dashboard card
+  that opens a big-tap checklist. Finishing keeps whatever wasn't bought for
+  next time.
 - **Work and appointments.** Shifts, lessons, practices, and visits on a week
   grid with an hourly gutter, color-coded by person or by category.
 - **Subscribed calendars.** Point it at any public ICS feed and those events
@@ -53,7 +54,7 @@ Built:
 - [x] Bible reading plan generator with progress tracking
 - [x] Workouts — routines assigned by weekday, logged with sets and reps
 - [x] Game time — daily limits and weekly tokens
-- [x] Groceries — a learning shared list, with a per-store shopping cart
+- [x] Groceries — a learning shared list, with per-store shopping trips
 - [x] Week and month calendar views
 - [x] ICS calendar subscriptions
 - [x] School — assignments, tests, subjects and class schedules

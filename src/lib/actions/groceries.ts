@@ -23,6 +23,17 @@ async function requesterId(explicit?: string | null): Promise<string | null> {
 function refresh() {
   revalidatePath("/groceries");
   revalidatePath("/admin/groceries");
+  revalidatePath("/");
+}
+
+/** The active trip for a store, if one is under way. A line added while a trip
+ *  is live joins that trip rather than the saved list. */
+async function activeTripId(storeId: string): Promise<string | null> {
+  const trip = await prisma.shoppingTrip.findUnique({
+    where: { storeId },
+    select: { id: true },
+  });
+  return trip?.id ?? null;
 }
 
 /**
@@ -63,6 +74,7 @@ export async function addItem(input: {
       name,
       icon,
       storeId: input.storeId,
+      tripId: await activeTripId(input.storeId),
       assignedToId: await requesterId(input.assignedToId),
       note: input.note?.trim() || null,
     },
@@ -93,6 +105,7 @@ export async function addFromCatalog(
       name: item.name,
       icon: item.icon,
       storeId: targetStore,
+      tripId: await activeTripId(targetStore),
       assignedToId: await requesterId(),
     },
   });
@@ -124,30 +137,97 @@ export async function removeItem(itemId: string): Promise<void> {
   refresh();
 }
 
+// --- shopping trips ------------------------------------------------------
+
 /**
- * Put a just-checked line back, for the "undo" during a shopping trip. It
- * recreates the line as it was without bumping the catalog again, so an
- * accidental tap costs nothing.
+ * Start a run for a store, claimed by one person. Everything currently on that
+ * store's saved list is pulled into the trip, and anything added later joins it
+ * too. One trip per store: if a run is already under way this is a no-op, so a
+ * double-tap can't hijack someone else's cart. A store with nothing on it can
+ * still be started — items can be added into the trip while out.
  */
-export async function restoreItem(input: {
-  name: string;
-  icon: string;
-  storeId: string;
-  assignedToId?: string | null;
-  note?: string | null;
-}): Promise<void> {
+export async function startTrip(
+  storeId: string,
+  shopperId: string,
+): Promise<{ ok: boolean; reason?: string }> {
   await requireInteractive();
-  const store = await prisma.store.findUnique({ where: { id: input.storeId } });
-  if (!store) return;
-  await prisma.shoppingItem.create({
-    data: {
-      name: input.name,
-      icon: input.icon,
-      storeId: input.storeId,
-      assignedToId: input.assignedToId || null,
-      note: input.note?.trim() || null,
-    },
+  const [store, shopper, existing] = await Promise.all([
+    prisma.store.findUnique({ where: { id: storeId } }),
+    prisma.user.findUnique({ where: { id: shopperId } }),
+    prisma.shoppingTrip.findUnique({ where: { storeId } }),
+  ]);
+  if (!store || !shopper || !shopper.isActive) return { ok: false, reason: "invalid" };
+  if (existing) return { ok: false, reason: "in-progress" };
+
+  let trip;
+  try {
+    trip = await prisma.shoppingTrip.create({
+      data: { storeId, shopperId },
+    });
+  } catch {
+    // Lost a race to the unique storeId — someone else just started it.
+    return { ok: false, reason: "in-progress" };
+  }
+  // Pull the saved list for this store into the trip, unpurchased.
+  await prisma.shoppingItem.updateMany({
+    where: { storeId, tripId: null },
+    data: { tripId: trip.id, boughtAt: null },
   });
+  refresh();
+  return { ok: true };
+}
+
+/** Mark / unmark a line as purchased within its trip. The line stays visible
+ *  (struck through) until the trip is completed. */
+export async function setPurchased(
+  itemId: string,
+  purchased: boolean,
+): Promise<void> {
+  await requireInteractive();
+  await prisma.shoppingItem.update({
+    where: { id: itemId },
+    data: { boughtAt: purchased ? new Date() : null },
+  });
+  refresh();
+}
+
+/**
+ * Finish the trip: the purchased lines drop off for good, and anything not
+ * bought returns to the saved list for next time. The trip row is removed, so
+ * the store is back to "Shop".
+ */
+export async function completeTrip(tripId: string): Promise<void> {
+  await requireInteractive();
+  const trip = await prisma.shoppingTrip.findUnique({ where: { id: tripId } });
+  if (!trip) return;
+  await prisma.$transaction([
+    prisma.shoppingItem.deleteMany({
+      where: { tripId, boughtAt: { not: null } },
+    }),
+    prisma.shoppingItem.updateMany({
+      where: { tripId },
+      data: { tripId: null, boughtAt: null },
+    }),
+    prisma.shoppingTrip.delete({ where: { id: tripId } }),
+  ]);
+  refresh();
+}
+
+/**
+ * Abandon the trip without shopping: every line goes back to the saved list
+ * unpurchased, and the store returns to "Shop" for anyone to claim.
+ */
+export async function dropTrip(tripId: string): Promise<void> {
+  await requireInteractive();
+  const trip = await prisma.shoppingTrip.findUnique({ where: { id: tripId } });
+  if (!trip) return;
+  await prisma.$transaction([
+    prisma.shoppingItem.updateMany({
+      where: { tripId },
+      data: { tripId: null, boughtAt: null },
+    }),
+    prisma.shoppingTrip.delete({ where: { id: tripId } }),
+  ]);
   refresh();
 }
 
