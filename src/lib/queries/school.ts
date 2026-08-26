@@ -34,6 +34,7 @@ export type PersonSchool = {
   name: string;
   color: string;
   avatarPath: string | null;
+  avatarPosition: string | null;
   pending: number;
   overdue: number;
   items: SchoolItem[];
@@ -55,7 +56,7 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
         name: true,
         displayName: true,
         color: true,
-        avatarPath: true,
+        avatarPath: true, avatarPosition: true,
       },
     }),
     prisma.task.findMany({
@@ -109,6 +110,7 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
       name: p.displayName ?? p.name,
       color: p.color,
       avatarPath: p.avatarPath,
+      avatarPosition: p.avatarPosition,
       pending: items.length,
       overdue: items.filter((i) => i.overdue).length,
       items,
@@ -208,6 +210,7 @@ export type PersonClasses = {
   name: string;
   color: string;
   avatarPath: string | null;
+  avatarPosition: string | null;
   classes: ClassRow[];
 };
 
@@ -230,7 +233,7 @@ export async function loadSchoolStructure(): Promise<{
         name: true,
         displayName: true,
         color: true,
-        avatarPath: true,
+        avatarPath: true, avatarPosition: true,
       },
     }),
     prisma.schoolClass.findMany({
@@ -325,6 +328,7 @@ export async function loadSchoolStructure(): Promise<{
       name: p.displayName ?? p.name,
       color: p.color,
       avatarPath: p.avatarPath,
+      avatarPosition: p.avatarPosition,
       classes: byUser.get(p.id) ?? [],
     })),
     subjects,

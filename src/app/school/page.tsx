@@ -101,7 +101,7 @@ export default async function SchoolPage({
                       <Avatar
                         name={person.name}
                         color={person.color}
-                        avatarPath={person.avatarPath}
+                        avatarPath={person.avatarPath} avatarPosition={person.avatarPosition}
                         size="sm"
                       />
                       <span className="font-display font-semibold">
@@ -245,7 +245,7 @@ export default async function SchoolPage({
                       <Avatar
                         name={p.name}
                         color={p.color}
-                        avatarPath={p.avatarPath}
+                        avatarPath={p.avatarPath} avatarPosition={p.avatarPosition}
                         size="sm"
                       />
                       <span className="font-display font-semibold">

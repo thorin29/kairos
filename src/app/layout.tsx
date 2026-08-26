@@ -88,6 +88,7 @@ export default async function RootLayout({
                     name: me.displayName ?? me.name,
                     color: me.color,
                     avatarPath: me.avatarPath,
+                    avatarPosition: (me as { avatarPosition?: string }).avatarPosition ?? null,
                   }
                 : null
             }

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.150.0";
+export const APP_VERSION = "0.151.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -75,11 +75,20 @@ export const MIGRATIONS = [
   "65_personal_bible",
   "66_personal_plan",
   "67_always_open_taps",
+  "68_avatar_position",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.151.0",
+    summary: [
+      "Profile photos can now be repositioned: on the profile page, tap \u201cAdjust position\u201d and drag the picture around inside the circle to choose what shows, then Apply. It applies everywhere that person\u2019s avatar appears, and can be nudged again any time \u2014 no re-cropping",
+      "Calendar: fixed the lopsided gap on the left \u2014 the filters and month now sit the same distance from the side menu as they do from the calendar",
+      "The version number now shows in small text at the bottom of the side menu when it\u2019s expanded",
+    ],
+  },
   {
     version: "0.150.0",
     summary: [

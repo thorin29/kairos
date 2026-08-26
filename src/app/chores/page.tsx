@@ -34,7 +34,7 @@ export default async function ChoresOverviewPage() {
         name: true,
         displayName: true,
         color: true,
-        avatarPath: true,
+        avatarPath: true, avatarPosition: true,
       },
     }),
     loadActivePause(today),
@@ -94,7 +94,7 @@ export default async function ChoresOverviewPage() {
                 <Avatar
                   name={p.label}
                   color={p.color}
-                  avatarPath={p.avatarPath}
+                  avatarPath={p.avatarPath} avatarPosition={p.avatarPosition}
                   size="sm"
                 />
                 <span className="truncate text-sm font-medium">{p.label}</span>
@@ -131,7 +131,7 @@ export default async function ChoresOverviewPage() {
                 <Avatar
                   name={p.label}
                   color={p.color}
-                  avatarPath={p.avatarPath}
+                  avatarPath={p.avatarPath} avatarPosition={p.avatarPosition}
                   size="sm"
                 />
                 <h3 className="font-display text-lg font-semibold">

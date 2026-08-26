@@ -10,6 +10,7 @@ export type CoopChild = {
   name: string;
   color: string;
   avatarPath: string | null;
+  avatarPosition: string | null;
   tier: number;
   meets: boolean;
 };
@@ -19,6 +20,7 @@ export type CoopPerson = {
   name: string;
   color: string;
   avatarPath: string | null;
+  avatarPosition: string | null;
 };
 
 export type CoopProposalView = {
@@ -67,7 +69,7 @@ export async function loadCoop(
         name: true,
         displayName: true,
         color: true,
-        avatarPath: true,
+        avatarPath: true, avatarPosition: true,
         kind: true,
       },
     }),
@@ -97,6 +99,7 @@ export async function loadCoop(
         name: u.displayName ?? u.name,
         color: u.color,
         avatarPath: u.avatarPath,
+        avatarPosition: u.avatarPosition,
         tier,
         meets: tier >= floor,
       };
@@ -110,6 +113,7 @@ export async function loadCoop(
     name: u.displayName ?? u.name,
     color: u.color,
     avatarPath: u.avatarPath,
+    avatarPosition: u.avatarPosition,
   }));
 
   const views: CoopProposalView[] = proposals.map((p) => ({

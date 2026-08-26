@@ -46,6 +46,7 @@ export type PersonProgress = {
   name: string;
   color: string;
   avatarPath: string | null;
+  avatarPosition: string | null;
   className: string;
   level: LevelState;
   stats: StatProgress[];
@@ -312,6 +313,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
       name,
       color: person.color,
       avatarPath: person.avatarPath,
+      avatarPosition: person.avatarPosition,
       className: classFromSignature(
         signatureOf(a.statXp, baseline),
         a.statXp,

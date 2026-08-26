@@ -19,6 +19,7 @@ import {
   ChevronRightIcon,
 } from "@/components/icons";
 import { UserBadge } from "@/components/user-badge";
+import { APP_VERSION } from "@/lib/version";
 
 type NavItem = {
   href: string;
@@ -68,7 +69,12 @@ export function Sidebar({
   user,
 }: {
   initialExpanded: boolean;
-  user?: { name: string; color: string; avatarPath: string | null } | null;
+  user?: {
+    name: string;
+    color: string;
+    avatarPath: string | null;
+    avatarPosition?: string | null;
+  } | null;
 }) {
   const path = usePathname();
   const router = useRouter();
@@ -208,6 +214,7 @@ export function Sidebar({
                 name={user.name}
                 color={user.color}
                 avatarPath={user.avatarPath}
+                avatarPosition={user.avatarPosition}
                 inline
                 expanded={expanded}
               />
@@ -228,6 +235,11 @@ export function Sidebar({
             </span>
             {expanded && <span className="text-sm font-medium">Collapse</span>}
           </button>
+          {expanded && (
+            <p className="pr-1 text-right text-[0.6rem] leading-none text-white/50">
+              v{APP_VERSION}
+            </p>
+          )}
         </div>
       </nav>
     </>

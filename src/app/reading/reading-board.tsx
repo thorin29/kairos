@@ -35,7 +35,7 @@ function PersonReading({ person }: { person: PersonBooks }) {
         <Avatar
           name={person.name}
           color={person.color}
-          avatarPath={person.avatarPath}
+          avatarPath={person.avatarPath} avatarPosition={person.avatarPosition}
           size="sm"
         />
         <h2 className="font-display text-lg font-semibold">{person.name}</h2>

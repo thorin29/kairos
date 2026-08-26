@@ -49,6 +49,9 @@ model User {
   credentialVersion Int     @default(0)
 
   avatarPath  String? // uploaded image, stored under appdata
+  // How the uploaded photo is framed inside the circle (CSS object-position),
+  // so a face that sits off-centre can be nudged into view. Ignored for icons.
+  avatarPosition String @default("50% 50%")
 
   // Date only — a birthday is a calendar day, never an instant, and it has
   // no year-relative meaning that a timestamp would capture.

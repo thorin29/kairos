@@ -119,7 +119,7 @@ export function AccountRow({ account }: { account: AccountState }) {
         <Avatar
           name={name}
           color={account.color}
-          avatarPath={account.avatarPath}
+          avatarPath={account.avatarPath} avatarPosition={account.avatarPosition}
           size="sm"
         />
         <span className="font-medium">{name}</span>

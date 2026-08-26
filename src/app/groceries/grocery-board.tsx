@@ -304,7 +304,7 @@ function Row({
         <Avatar
           name={item.assignee.name}
           color={item.assignee.color}
-          avatarPath={item.assignee.avatarPath}
+          avatarPath={item.assignee.avatarPath} avatarPosition={item.assignee.avatarPosition}
           size="sm"
         />
       )}

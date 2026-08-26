@@ -152,7 +152,7 @@ async function activePeople(): Promise<Person[]> {
       name: true,
       displayName: true,
       color: true,
-      avatarPath: true,
+      avatarPath: true, avatarPosition: true,
     },
   });
   return rows.map((p) => ({

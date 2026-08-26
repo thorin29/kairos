@@ -20,11 +20,13 @@ export function Avatar({
   name,
   color,
   avatarPath,
+  avatarPosition,
   size = "md",
 }: {
   name: string;
   color: string;
   avatarPath?: string | null;
+  avatarPosition?: string | null;
   size?: keyof typeof sizes;
 }) {
   const isPhoto = !!avatarPath && !isIcon(avatarPath);
@@ -46,6 +48,7 @@ export function Avatar({
           src={avatarUrl(avatarPath)}
           alt=""
           className="h-full w-full object-cover"
+          style={{ objectPosition: avatarPosition ?? "50% 50%" }}
         />
       ) : (
         <span className="flex h-full w-full items-center justify-center">

@@ -35,6 +35,8 @@ export default async function ProfilePage({
           displayName: person.displayName,
           color: person.color,
           avatarPath: person.avatarPath,
+          avatarPosition:
+            (person as { avatarPosition?: string }).avatarPosition ?? "50% 50%",
           birthdayISO: person.birthday ? fromDateColumn(person.birthday) : null,
           shadeBirthday:
             (person as { shadeBirthday?: boolean }).shadeBirthday ?? true,
