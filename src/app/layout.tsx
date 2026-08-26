@@ -85,10 +85,11 @@ export default async function RootLayout({
             user={
               me
                 ? {
+                    id: me.id,
                     name: me.displayName ?? me.name,
                     color: me.color,
                     avatarPath: me.avatarPath,
-                    avatarPosition: (me as { avatarPosition?: string }).avatarPosition ?? null,
+                    avatarPosition: me.avatarPosition,
                   }
                 : null
             }

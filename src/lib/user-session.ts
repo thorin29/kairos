@@ -54,6 +54,7 @@ export type CurrentUser = {
   displayName: string | null;
   color: string;
   avatarPath: string | null;
+  avatarPosition: string | null;
   role: "ADMIN" | "MEMBER";
 };
 
@@ -96,6 +97,7 @@ export async function currentUser(): Promise<CurrentUser | null> {
     displayName: user.displayName,
     color: user.color,
     avatarPath: user.avatarPath,
+    avatarPosition: user.avatarPosition,
     role: user.role,
   };
 }

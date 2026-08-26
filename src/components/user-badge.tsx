@@ -1,30 +1,34 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Avatar } from "@/components/avatar";
 import { SwitchIcon } from "@/components/icons";
 import { logoutUser } from "@/lib/actions/accounts";
 
 /**
- * Who the app thinks you are, shown at the bottom of the sidebar. Collapsed,
- * it's just the avatar. Expanded, the name shows in dark, readable text with a
- * sign-out icon beside it; tapping that asks for confirmation in a small popup
- * rather than expanding an inline box inside the rail.
+ * Who the app thinks you are, shown at the bottom of the sidebar. Tapping your
+ * photo or name opens your profile (where the picture and its framing are
+ * edited); a separate sign-out icon handles signing out.
  */
 export function UserBadge({
+  userId,
   name,
   color,
   avatarPath,
   avatarPosition,
   expanded = false,
+  onNavigate,
 }: {
+  userId?: string;
   name: string;
   color: string;
   avatarPath: string | null;
   avatarPosition?: string | null;
   inline?: boolean;
   expanded?: boolean;
+  onNavigate?: () => void;
 }) {
   const path = usePathname();
   const router = useRouter();
@@ -46,15 +50,39 @@ export function UserBadge({
       router.push("/");
     });
 
+  const profileHref = userId ? `/person/${userId}/profile` : null;
+
   return (
     <>
       <div className="flex w-full items-center gap-2 px-1.5 py-1.5">
-        <Avatar name={name} color={color} avatarPath={avatarPath} avatarPosition={avatarPosition} size="sm" />
+        {profileHref ? (
+          <Link
+            href={profileHref}
+            onClick={onNavigate}
+            aria-label="Your profile"
+            title={expanded ? undefined : "Your profile"}
+            className="shrink-0 rounded-full transition-transform hover:scale-105"
+          >
+            <Avatar name={name} color={color} avatarPath={avatarPath} avatarPosition={avatarPosition} size="sm" />
+          </Link>
+        ) : (
+          <Avatar name={name} color={color} avatarPath={avatarPath} avatarPosition={avatarPosition} size="sm" />
+        )}
         {expanded && (
           <>
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
-              {name}
-            </span>
+            {profileHref ? (
+              <Link
+                href={profileHref}
+                onClick={onNavigate}
+                className="min-w-0 flex-1 truncate text-sm font-medium text-ink hover:underline"
+              >
+                {name}
+              </Link>
+            ) : (
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
+                {name}
+              </span>
+            )}
             <button
               type="button"
               onClick={() => setConfirm(true)}
