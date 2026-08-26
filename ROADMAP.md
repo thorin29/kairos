@@ -658,14 +658,19 @@ own exercises, optionally schedules them, and records what they did.
 - [x] Admin: full editing of stores (rename, icon, hide, delete-when-empty)
       and catalog items (rename, icon, default store, hide, delete)
 
-### Next: reorder and move between stores (planned)
+### Reorder, move between stores, and a dedicated cart (done)
 
-- [ ] An "Edit list" toggle on the groceries page (no PIN needed) that reveals
-      a drag handle per item, to reorder within a store and drag an item onto a
-      different store's list. Needs a `sortOrder` column on a line (lines are
-      currently ordered by when they were added) and a touch-friendly reorder
-      (the shared screen and phones are touch, where native HTML drag doesn't
-      work), so it's its own increment.
+- [x] Drag a handle on each saved line to reorder it within its store, or drag
+      it onto another store to move it there (persisted as a `sortOrder`, added
+      in migration 70). Uses the same native-drag pattern as the other reorder
+      screens; touch drag on the shared tablet/phones can be revisited if it
+      proves fiddly.
+- [x] The shopping checklist lives on its own page (`/groceries/shop/[storeId]`)
+      rather than sharing the main page with the add box and store overview.
+      The dashboard line and a store's trip both open it; it's interactive for
+      the shopper on their own device and read-only for everyone else.
+- [x] Dropped the separate "Drop trip" — "Complete trip" with nothing ticked
+      returns everything to the list, which is the same outcome.
 
 ### Shopping trips (done)
 
@@ -677,8 +682,8 @@ until the run is finished:
 - [x] A **shopping line on that person's dashboard card**, tapping it opens
       their cart — the cart only opens on the shopper's own personal device;
       the shared hub and everyone else see who's shopping and their progress
-- [x] The trip can be **dropped** if the run doesn't happen (from the shopper's
-      cart, or from the store's status line on the hub), putting everything back
+- [x] A trip that isn't going to happen is closed with **Complete trip** and
+      nothing ticked — everything returns to the list (no separate Drop button)
 - [x] While shopping the **whole list stays visible** — checked items show as
       done, not gone — until **Complete trip**
 - [x] Items added by anyone while a trip is live **join that trip**

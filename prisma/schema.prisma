@@ -795,6 +795,7 @@ model ShoppingItem {
   assignedTo   User?     @relation("GroceryAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   note         String?
   boughtAt     DateTime?
+  sortOrder    Int       @default(0)
   createdAt    DateTime  @default(now())
 
   @@index([storeId])

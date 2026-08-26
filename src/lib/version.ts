@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.157.0";
+export const APP_VERSION = "0.158.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -77,11 +77,20 @@ export const MIGRATIONS = [
   "67_always_open_taps",
   "68_avatar_position",
   "69_shopping_trips",
+  "70_grocery_sort",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.158.0",
+    summary: [
+      "The shopping checklist now has its own page. Tapping a store’s trip (or the line on your dashboard card) opens a full, focused list to tick off — no longer sharing the screen with the add box and the other stores",
+      "On the main groceries page you can now drag items to reorder them within a store, or drag one onto a different store to move it there — grab the handle on the left of each item",
+      "Dropped the separate ‘Drop’ button — ‘Complete trip’ covers it: finish with nothing ticked and everything simply goes back to the list",
+    ],
+  },
   {
     version: "0.157.0",
     summary: [

@@ -1,15 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/avatar";
-import { CartIcon, CheckIcon, PlusIcon, TrashIcon } from "@/components/icons";
+import {
+  CartIcon,
+  GripIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@/components/icons";
 import {
   addFromCatalog,
   addItem,
-  completeTrip,
-  dropTrip,
   removeItem,
-  setPurchased,
+  saveOrder,
   startTrip,
 } from "@/lib/actions/groceries";
 import type {
@@ -20,7 +25,6 @@ import type {
   TripView,
 } from "@/lib/queries/groceries";
 
-// What's waiting on a store to be chosen when adding.
 type Pending = {
   label: string;
   catalogId?: string;
@@ -42,22 +46,87 @@ export function GroceryBoard({
   roster: Person[];
   meId: string | null;
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
-
-  // Optimistic purchased toggles for a snappy check, reset once the server
-  // sends fresh data.
-  const [optimistic, setOptimistic] = useState<Map<string, boolean>>(new Map());
-  useEffect(() => setOptimistic(new Map()), [trips]);
 
   const tripByStore = useMemo(
     () => new Map(trips.map((t) => [t.storeId, t])),
     [trips],
   );
 
+  // Per-store saved lists, held locally so a drag moves items live; re-synced
+  // whenever the server sends fresh data.
+  const [lists, setLists] = useState<Map<string, ShoppingItemView[]>>(new Map());
+  useEffect(() => {
+    const m = new Map<string, ShoppingItemView[]>();
+    for (const s of stores) m.set(s.id, []);
+    for (const i of saved) {
+      const arr = m.get(i.storeId);
+      if (arr) arr.push(i);
+      else m.set(i.storeId, [i]);
+    }
+    setLists(m);
+  }, [saved, stores]);
+
+  const dragId = useRef<string | null>(null);
+  const touched = useRef<Set<string>>(new Set());
+
+  const findItem = (id: string): ShoppingItemView | null => {
+    for (const arr of lists.values()) {
+      const hit = arr.find((i) => i.id === id);
+      if (hit) return hit;
+    }
+    return null;
+  };
+
+  // Move the dragged item into targetStore at index, live.
+  const moveTo = (targetStore: string, index: number) => {
+    const id = dragId.current;
+    if (!id) return;
+    setLists((prev) => {
+      const next = new Map(prev);
+      let moved: ShoppingItemView | null = null;
+      let sourceStore: string | null = null;
+      for (const [sid, arr] of next) {
+        const at = arr.findIndex((i) => i.id === id);
+        if (at !== -1) {
+          moved = arr[at];
+          sourceStore = sid;
+          const copy = arr.slice();
+          copy.splice(at, 1);
+          next.set(sid, copy);
+          break;
+        }
+      }
+      if (!moved) return prev;
+      const dest = (next.get(targetStore) ?? []).slice();
+      const clampedItem = { ...moved, storeId: targetStore };
+      const clamped = Math.max(0, Math.min(index, dest.length));
+      dest.splice(clamped, 0, clampedItem);
+      next.set(targetStore, dest);
+      if (sourceStore) touched.current.add(sourceStore);
+      touched.current.add(targetStore);
+      return next;
+    });
+  };
+
+  const endDrag = () => {
+    const changed = [...touched.current];
+    dragId.current = null;
+    touched.current = new Set();
+    if (changed.length === 0) return;
+    const groups = changed.map((storeId) => ({
+      storeId,
+      itemIds: (lists.get(storeId) ?? []).map((i) => i.id),
+    }));
+    startTransition(() => saveOrder(groups));
+  };
+
+  // Add flow
   const [name, setName] = useState("");
   const [focused, setFocused] = useState(false);
   const [pick, setPick] = useState<Pending | null>(null);
-  const [who, setWho] = useState<string | null>(null); // storeId awaiting shopper
+  const [who, setWho] = useState<string | null>(null);
 
   const q = name.trim().toLowerCase();
   const matches = useMemo(() => {
@@ -78,14 +147,12 @@ export function GroceryBoard({
     }
     setPick(p);
   };
-
   const chooseStore = (storeId: string) => {
     if (!pick) return;
     if (pick.catalogId) startTransition(() => addFromCatalog(pick.catalogId!, storeId));
     else startTransition(() => addItem({ name: pick.label, storeId }));
     setPick(null);
   };
-
   const submitTyped = () => {
     const label = name.trim();
     if (!label) return;
@@ -102,18 +169,12 @@ export function GroceryBoard({
     const storeId = who;
     setWho(null);
     startTransition(async () => {
-      await startTrip(storeId, shopperId);
+      const res = await startTrip(storeId, shopperId);
+      if (res.ok && meId && shopperId === meId) {
+        router.push(`/groceries/shop/${storeId}`);
+      }
     });
   };
-
-  const togglePurchased = (item: ShoppingItemView) => {
-    const now = !displayPurchased(item);
-    setOptimistic((m) => new Map(m).set(item.id, now));
-    startTransition(() => setPurchased(item.id, now));
-  };
-
-  const displayPurchased = (item: ShoppingItemView) =>
-    optimistic.has(item.id) ? !!optimistic.get(item.id) : item.purchased;
 
   return (
     <div className="space-y-6">
@@ -141,7 +202,6 @@ export function GroceryBoard({
               placeholder="Add an item…"
               className="h-11 w-full rounded-full border border-hairline bg-ground/40 px-5 outline-none focus:border-accent"
             />
-
             {focused && q.length > 0 && (
               <div className="absolute left-0 right-0 top-12 z-20 overflow-hidden rounded-2xl border border-hairline bg-surface shadow-lg">
                 {matches.map((c) => (
@@ -179,7 +239,6 @@ export function GroceryBoard({
               </div>
             )}
           </div>
-
           <button
             type="button"
             onClick={submitTyped}
@@ -219,48 +278,45 @@ export function GroceryBoard({
         )}
       </div>
 
-      {/* Per-store: a saved list, an active trip status, or my own cart */}
+      {/* Per-store */}
       <div className="space-y-4">
         {stores.map((s) => {
           const trip = tripByStore.get(s.id);
-          if (trip && meId && trip.shopper.id === meId) {
-            return (
-              <MyCart
-                key={s.id}
-                store={s}
-                trip={trip}
-                pending={pending}
-                isPurchased={displayPurchased}
-                onToggle={togglePurchased}
-                onComplete={() => startTransition(() => completeTrip(trip.id))}
-                onDrop={() => startTransition(() => dropTrip(trip.id))}
-              />
-            );
-          }
-          if (trip) {
-            return (
-              <TripStatus
-                key={s.id}
-                store={s}
-                trip={trip}
-                onDrop={() => startTransition(() => dropTrip(trip.id))}
-              />
-            );
-          }
-          const list = saved.filter((i) => i.storeId === s.id);
+          if (trip) return <TripStatus key={s.id} store={s} trip={trip} />;
           return (
             <SavedStore
               key={s.id}
               store={s}
-              items={list}
+              items={lists.get(s.id) ?? []}
               onShop={() => setWho(s.id)}
-              onRemove={(id) => startTransition(() => removeItem(id))}
+              onRemove={(id) => {
+                setLists((prev) => {
+                  const next = new Map(prev);
+                  next.set(
+                    s.id,
+                    (next.get(s.id) ?? []).filter((i) => i.id !== id),
+                  );
+                  return next;
+                });
+                startTransition(() => removeItem(id));
+              }}
+              onDragStartItem={(id) => {
+                dragId.current = id;
+              }}
+              onDragOverItem={(index) => moveTo(s.id, index)}
+              onDragOverCard={() => {
+                const cur = lists.get(s.id) ?? [];
+                if (dragId.current && !cur.some((i) => i.id === dragId.current)) {
+                  moveTo(s.id, cur.length);
+                }
+              }}
+              onDragEnd={endDrag}
+              dragging={dragId.current}
             />
           );
         })}
       </div>
 
-      {/* Store chooser (adding an item) */}
       {pick && (
         <StorePicker
           label={pick.label}
@@ -270,8 +326,6 @@ export function GroceryBoard({
           onClose={() => setPick(null)}
         />
       )}
-
-      {/* Who's shopping (starting a trip) */}
       {who && (
         <WhoPicker
           storeName={stores.find((s) => s.id === who)?.name ?? ""}
@@ -285,21 +339,41 @@ export function GroceryBoard({
   );
 }
 
-/* --------------------------- store: no trip --------------------------- */
+/* --------------------------- store: saved list --------------------------- */
 
 function SavedStore({
   store,
   items,
   onShop,
   onRemove,
+  onDragStartItem,
+  onDragOverItem,
+  onDragOverCard,
+  onDragEnd,
+  dragging,
 }: {
   store: StoreView;
   items: ShoppingItemView[];
   onShop: () => void;
   onRemove: (id: string) => void;
+  onDragStartItem: (id: string) => void;
+  onDragOverItem: (index: number) => void;
+  onDragOverCard: () => void;
+  onDragEnd: () => void;
+  dragging: string | null;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+    <div
+      className="overflow-hidden rounded-2xl border border-hairline bg-surface"
+      onDragOver={(e) => {
+        e.preventDefault();
+        onDragOverCard();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDragEnd();
+      }}
+    >
       <div className="flex items-center gap-3 border-b border-hairline px-4 py-3">
         <span className="text-2xl" aria-hidden>
           {store.icon}
@@ -326,8 +400,27 @@ function SavedStore({
 
       {items.length > 0 && (
         <div className="divide-y divide-hairline">
-          {items.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
+          {items.map((item, index) => (
+            <div
+              key={item.id}
+              draggable
+              onDragStart={() => onDragStartItem(item.id)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                onDragOverItem(index);
+              }}
+              onDragEnd={onDragEnd}
+              className={[
+                "flex items-center gap-2 px-3 py-2.5",
+                dragging === item.id ? "opacity-50" : "",
+              ].join(" ")}
+            >
+              <span
+                className="shrink-0 cursor-grab touch-none text-muted"
+                title="Drag to reorder or move to another store"
+              >
+                <GripIcon className="h-4 w-4" />
+              </span>
               <span className="text-xl" aria-hidden>
                 {item.icon}
               </span>
@@ -364,18 +457,13 @@ function SavedStore({
 
 /* ----------------------- store: someone shopping ---------------------- */
 
-function TripStatus({
-  store,
-  trip,
-  onDrop,
-}: {
-  store: StoreView;
-  trip: TripView;
-  onDrop: () => void;
-}) {
+function TripStatus({ store, trip }: { store: StoreView; trip: TripView }) {
   const pct = trip.total === 0 ? 0 : Math.round((trip.got / trip.total) * 100);
   return (
-    <div className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+    <Link
+      href={`/groceries/shop/${store.id}`}
+      className="block overflow-hidden rounded-2xl border border-hairline bg-surface transition-colors hover:border-accent"
+    >
       <div className="flex items-center gap-3 px-4 py-3">
         <span className="text-2xl" aria-hidden>
           {store.icon}
@@ -400,14 +488,6 @@ function TripStatus({
             avatarPosition={trip.shopper.avatarPosition}
             size="sm"
           />
-          <button
-            type="button"
-            onClick={onDrop}
-            className="rounded-full px-2 py-1 text-xs font-medium text-muted hover:text-red-700"
-            title="Cancel this trip"
-          >
-            Drop
-          </button>
         </div>
       </div>
       {trip.total > 0 && (
@@ -418,138 +498,7 @@ function TripStatus({
           />
         </div>
       )}
-    </div>
-  );
-}
-
-/* --------------------------- store: my cart --------------------------- */
-
-function MyCart({
-  store,
-  trip,
-  pending,
-  isPurchased,
-  onToggle,
-  onComplete,
-  onDrop,
-}: {
-  store: StoreView;
-  trip: TripView;
-  pending: boolean;
-  isPurchased: (item: ShoppingItemView) => boolean;
-  onToggle: (item: ShoppingItemView) => void;
-  onComplete: () => void;
-  onDrop: () => void;
-}) {
-  const got = trip.items.filter(isPurchased).length;
-  const total = trip.items.length;
-  const pct = total === 0 ? 0 : Math.round((got / total) * 100);
-
-  return (
-    <div className="overflow-hidden rounded-2xl border-2 border-accent bg-surface">
-      <div className="flex items-center gap-3 px-4 py-3">
-        <span className="text-2xl" aria-hidden>
-          {store.icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-lg font-semibold leading-tight">
-            {store.name}
-          </p>
-          <p className="text-xs font-medium text-accent">You’re shopping</p>
-        </div>
-        <span className="tabular shrink-0 text-sm font-medium text-muted">
-          {got}/{total}
-        </span>
-      </div>
-
-      {total > 0 && (
-        <div className="h-1.5 bg-ground/60">
-          <div
-            className="h-full bg-accent transition-all duration-300"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      )}
-
-      {total > 0 ? (
-        <div className="divide-y divide-hairline">
-          {trip.items.map((item) => {
-            const done = isPurchased(item);
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onToggle(item)}
-                disabled={pending}
-                className="flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-accent/5 active:bg-accent/10 disabled:opacity-60"
-              >
-                <span
-                  className={[
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                    done
-                      ? "border-accent bg-accent text-white"
-                      : "border-hairline text-transparent",
-                  ].join(" ")}
-                >
-                  <CheckIcon className="h-5 w-5" />
-                </span>
-                <span className="text-2xl" aria-hidden>
-                  {item.icon}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span
-                    className={[
-                      "block truncate text-base font-medium",
-                      done ? "text-muted line-through" : "",
-                    ].join(" ")}
-                  >
-                    {item.name}
-                  </span>
-                  {item.note && (
-                    <span className="block truncate text-sm text-muted">
-                      {item.note}
-                    </span>
-                  )}
-                </span>
-                {item.assignee && (
-                  <Avatar
-                    name={item.assignee.name}
-                    color={item.assignee.color}
-                    avatarPath={item.assignee.avatarPath}
-                    avatarPosition={item.assignee.avatarPosition}
-                    size="sm"
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="px-4 py-6 text-center text-sm text-muted">
-          Nothing here yet — add items above and they’ll drop into this trip.
-        </p>
-      )}
-
-      <div className="flex items-center gap-2 border-t border-hairline p-3">
-        <button
-          type="button"
-          onClick={onComplete}
-          disabled={pending}
-          className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md disabled:opacity-50"
-        >
-          <CheckIcon className="h-4 w-4" />
-          Complete trip
-        </button>
-        <button
-          type="button"
-          onClick={onDrop}
-          disabled={pending}
-          className="inline-flex h-11 items-center justify-center rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-red-300 hover:text-red-700 disabled:opacity-50"
-        >
-          Drop
-        </button>
-      </div>
-    </div>
+    </Link>
   );
 }
 
@@ -590,9 +539,7 @@ function StorePicker({
             <span className="text-2xl" aria-hidden>
               {s.icon}
             </span>
-            <span className="flex-1 truncate text-base font-medium">
-              {s.name}
-            </span>
+            <span className="flex-1 truncate text-base font-medium">{s.name}</span>
             {s.id === usualStoreId && (
               <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
                 usual
@@ -619,7 +566,6 @@ function WhoPicker({
   onChoose: (shopperId: string) => void;
   onClose: () => void;
 }) {
-  // Put "me" first on a personal device.
   const ordered = useMemo(() => {
     if (!meId) return roster;
     const me = roster.filter((p) => p.id === meId);
@@ -630,9 +576,7 @@ function WhoPicker({
   return (
     <Overlay onClose={onClose}>
       <p className="text-sm text-muted">Who’s shopping</p>
-      <p className="mb-4 truncate font-display text-xl font-semibold">
-        {storeName}?
-      </p>
+      <p className="mb-4 truncate font-display text-xl font-semibold">{storeName}?</p>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
         {ordered.map((p) => (
           <button
@@ -659,13 +603,7 @@ function WhoPicker({
   );
 }
 
-function Overlay({
-  children,
-  onClose,
-}: {
-  children: ReactNode;
-  onClose: () => void;
-}) {
+function Overlay({ children, onClose }: { children: ReactNode; onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center"
