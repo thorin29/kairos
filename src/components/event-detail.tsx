@@ -217,6 +217,7 @@ export function EventDetail({
                     event.schoolType
                   ] ?? "Work"}{" "}
                   due
+                  {event.schoolClassName ? ` \u00b7 ${event.schoolClassName}` : ""}
                 </span>
               </div>
             )}
