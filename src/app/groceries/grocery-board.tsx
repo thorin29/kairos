@@ -12,7 +12,6 @@ import {
 import {
   addFromCatalog,
   addItem,
-  assignItem,
   removeItem,
   restoreItem,
 } from "@/lib/actions/groceries";
@@ -21,14 +20,6 @@ import type {
   ShoppingItemView,
   StoreView,
 } from "@/lib/queries/groceries";
-
-type Person = {
-  id: string;
-  name: string;
-  color: string;
-  avatarPath: string | null;
-  avatarPosition: string | null;
-};
 
 type BasketEntry = {
   key: number;
@@ -39,16 +30,22 @@ type BasketEntry = {
   note: string | null;
 };
 
+// What's waiting on a store to be chosen: either an existing catalog item or a
+// brand-new typed name.
+type Pending = {
+  label: string;
+  catalogId?: string;
+  defaultStoreId?: string | null;
+};
+
 export function GroceryBoard({
   stores,
   items,
   catalog,
-  roster,
 }: {
   stores: StoreView[];
   items: ShoppingItemView[];
   catalog: CatalogSuggestion[];
-  roster: Person[];
 }) {
   // Two modes share this page: planning the list, and shopping one store.
   const [shopId, setShopId] = useState<string | null>(null);
@@ -125,8 +122,6 @@ export function GroceryBoard({
   if (shopId) {
     const store = storeById.get(shopId);
     if (!store) {
-      // Store vanished under us (hidden or deleted in admin mid-trip); offer a
-      // way back rather than mutating state during render.
       return (
         <div className="rounded-2xl border border-hairline bg-surface p-8 text-center">
           <p className="text-sm text-muted">That store isn’t available anymore.</p>
@@ -158,13 +153,11 @@ export function GroceryBoard({
       stores={stores}
       items={live}
       catalog={catalog}
-      roster={roster}
       pending={pending}
-      onAdd={(payload) => startTransition(() => addItem(payload))}
+      onAdd={(name, storeId) => startTransition(() => addItem({ name, storeId }))}
       onAddCatalog={(catalogId, storeId) =>
         startTransition(() => addFromCatalog(catalogId, storeId))
       }
-      onAssign={(id, uid) => startTransition(() => assignItem(id, uid))}
       onRemove={dropFromList}
       onShop={enterShop}
     />
@@ -179,58 +172,69 @@ function ListView({
   stores,
   items,
   catalog,
-  roster,
   pending,
   onAdd,
   onAddCatalog,
-  onAssign,
   onRemove,
   onShop,
 }: {
   stores: StoreView[];
   items: ShoppingItemView[];
   catalog: CatalogSuggestion[];
-  roster: Person[];
   pending: boolean;
-  onAdd: (p: { name: string; storeId: string; assignedToId: string | null }) => void;
-  onAddCatalog: (catalogId: string, storeId?: string) => void;
-  onAssign: (id: string, uid: string | null) => void;
+  onAdd: (name: string, storeId: string) => void;
+  onAddCatalog: (catalogId: string, storeId: string) => void;
   onRemove: (id: string) => void;
   onShop: (storeId: string) => void;
 }) {
   const [name, setName] = useState("");
-  const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
-  const [assignee, setAssignee] = useState("");
   const [focused, setFocused] = useState(false);
+  const [pick, setPick] = useState<Pending | null>(null);
 
   const q = name.trim().toLowerCase();
   const matches = useMemo(() => {
     if (!q) return [];
-    return catalog
-      .filter((c) => c.name.toLowerCase().includes(q))
-      .slice(0, 6);
+    return catalog.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 6);
   }, [catalog, q]);
   const exact = catalog.some((c) => c.name.toLowerCase() === q);
-
   const common = useMemo(() => catalog.slice(0, 12), [catalog]);
 
+  const only = stores.length === 1 ? stores[0].id : null;
+
+  // Commit an item: with a single store, drop it straight in; otherwise open
+  // the store chooser.
+  const commit = (p: Pending) => {
+    setName("");
+    setFocused(false);
+    if (only) {
+      if (p.catalogId) onAddCatalog(p.catalogId, only);
+      else onAdd(p.label, only);
+      return;
+    }
+    setPick(p);
+  };
+
+  const chooseStore = (storeId: string) => {
+    if (!pick) return;
+    if (pick.catalogId) onAddCatalog(pick.catalogId, storeId);
+    else onAdd(pick.label, storeId);
+    setPick(null);
+  };
+
   const submitTyped = () => {
-    if (!name.trim() || !storeId) return;
-    onAdd({ name, storeId, assignedToId: assignee || null });
-    setName("");
+    const label = name.trim();
+    if (!label) return;
+    const hit = catalog.find((c) => c.name.toLowerCase() === label.toLowerCase());
+    commit(
+      hit
+        ? { label: hit.name, catalogId: hit.id, defaultStoreId: hit.defaultStoreId }
+        : { label },
+    );
   };
-
-  const pickCatalog = (c: CatalogSuggestion) => {
-    onAddCatalog(c.id, c.defaultStoreId ?? storeId);
-    setName("");
-  };
-
-  const countFor = (id: string) =>
-    items.filter((i) => i.storeId === id).length;
 
   return (
     <div className="space-y-6">
-      {/* Add bar */}
+      {/* Add bar — type a name (with suggestions) or tap a common item */}
       <div className="rounded-2xl border border-hairline bg-surface p-4">
         <div className="flex flex-wrap items-stretch gap-2">
           <div className="relative min-w-[12rem] flex-1">
@@ -242,7 +246,12 @@ function ListView({
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  if (matches.length && !exact) pickCatalog(matches[0]);
+                  if (matches.length && !exact)
+                    commit({
+                      label: matches[0].name,
+                      catalogId: matches[0].id,
+                      defaultStoreId: matches[0].defaultStoreId,
+                    });
                   else submitTyped();
                 }
               }}
@@ -257,7 +266,13 @@ function ListView({
                     key={c.id}
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => pickCatalog(c)}
+                    onClick={() =>
+                      commit({
+                        label: c.name,
+                        catalogId: c.id,
+                        defaultStoreId: c.defaultStoreId,
+                      })
+                    }
                     className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm hover:bg-ink/5"
                   >
                     <span className="text-lg" aria-hidden>
@@ -282,39 +297,10 @@ function ListView({
             )}
           </div>
 
-          {stores.length > 1 && (
-            <select
-              value={storeId}
-              onChange={(e) => setStoreId(e.target.value)}
-              aria-label="Store"
-              className="h-11 rounded-full border border-hairline bg-ground/40 px-4 text-sm outline-none focus:border-accent"
-            >
-              {stores.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.icon} {s.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          <select
-            value={assignee}
-            onChange={(e) => setAssignee(e.target.value)}
-            aria-label="For whom"
-            className="h-11 rounded-full border border-hairline bg-ground/40 px-4 text-sm outline-none focus:border-accent"
-          >
-            <option value="">Anyone</option>
-            {roster.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-
           <button
             type="button"
             onClick={submitTyped}
-            disabled={pending || !name.trim() || !storeId}
+            disabled={pending || !name.trim()}
             className="inline-flex h-11 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md disabled:opacity-50"
           >
             <PlusIcon className="h-4 w-4" />
@@ -332,7 +318,13 @@ function ListView({
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => onAddCatalog(c.id, c.defaultStoreId ?? storeId)}
+                  onClick={() =>
+                    commit({
+                      label: c.name,
+                      catalogId: c.id,
+                      defaultStoreId: c.defaultStoreId,
+                    })
+                  }
                   className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent hover:text-accent"
                 >
                   <span aria-hidden>{c.icon}</span>
@@ -348,7 +340,7 @@ function ListView({
       <div className="space-y-4">
         {stores.map((s) => {
           const list = items.filter((i) => i.storeId === s.id);
-          const count = countFor(s.id);
+          const count = list.length;
           return (
             <div
               key={s.id}
@@ -385,8 +377,6 @@ function ListView({
                     <ListRow
                       key={item.id}
                       item={item}
-                      roster={roster}
-                      onAssign={(uid) => onAssign(item.id, uid)}
                       onRemove={() => onRemove(item.id)}
                     />
                   ))}
@@ -396,19 +386,94 @@ function ListView({
           );
         })}
       </div>
+
+      {/* Store chooser */}
+      {pick && (
+        <StorePicker
+          label={pick.label}
+          stores={stores}
+          usualStoreId={pick.defaultStoreId ?? null}
+          onChoose={chooseStore}
+          onClose={() => setPick(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function StorePicker({
+  label,
+  stores,
+  usualStoreId,
+  onChoose,
+  onClose,
+}: {
+  label: string;
+  stores: StoreView[];
+  usualStoreId: string | null;
+  onChoose: (storeId: string) => void;
+  onClose: () => void;
+}) {
+  // Put the usual store first so it's the fastest tap.
+  const ordered = useMemo(() => {
+    if (!usualStoreId) return stores;
+    const usual = stores.filter((s) => s.id === usualStoreId);
+    const rest = stores.filter((s) => s.id !== usualStoreId);
+    return [...usual, ...rest];
+  }, [stores, usualStoreId]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-3xl border border-hairline bg-surface p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-sm text-muted">Which store for</p>
+        <p className="mb-4 truncate font-display text-xl font-semibold">
+          {label}?
+        </p>
+        <div className="space-y-2">
+          {ordered.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onChoose(s.id)}
+              className="flex w-full items-center gap-3 rounded-2xl border border-hairline px-4 py-3 text-left transition-colors hover:border-accent hover:bg-accent/5"
+            >
+              <span className="text-2xl" aria-hidden>
+                {s.icon}
+              </span>
+              <span className="flex-1 truncate text-base font-medium">
+                {s.name}
+              </span>
+              {s.id === usualStoreId && (
+                <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                  usual
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-4 h-10 w-full rounded-full text-sm font-medium text-muted hover:bg-ink/5"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
 
 function ListRow({
   item,
-  roster,
-  onAssign,
   onRemove,
 }: {
   item: ShoppingItemView;
-  roster: Person[];
-  onAssign: (uid: string | null) => void;
   onRemove: () => void;
 }) {
   return (
@@ -432,20 +497,6 @@ function ListRow({
           size="sm"
         />
       )}
-
-      <select
-        value={item.assignee?.id ?? ""}
-        onChange={(e) => onAssign(e.target.value || null)}
-        aria-label="For whom"
-        className="h-9 max-w-[7rem] rounded-full border border-hairline bg-ground/40 px-3 text-xs outline-none focus:border-accent"
-      >
-        <option value="">Anyone</option>
-        {roster.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
 
       <button
         type="button"

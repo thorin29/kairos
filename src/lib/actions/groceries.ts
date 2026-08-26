@@ -4,7 +4,21 @@ import { revalidatePath } from "next/cache";
 import { requireInteractive } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
+import { currentUser } from "@/lib/user-session";
+import { deviceMode } from "@/lib/device";
 import { guessIcon, normalizeName } from "@/lib/groceries/catalog";
+
+/**
+ * Who to attribute a newly-added item to. On a personal device we log the
+ * signed-in person as the requester; on the shared hub it's left unassigned,
+ * because there "who asked" isn't meaningful.
+ */
+async function requesterId(explicit?: string | null): Promise<string | null> {
+  if (explicit) return explicit;
+  const me = await currentUser();
+  if (me && (await deviceMode()) === "personal") return me.id;
+  return null;
+}
 
 function refresh() {
   revalidatePath("/groceries");
@@ -49,7 +63,7 @@ export async function addItem(input: {
       name,
       icon,
       storeId: input.storeId,
-      assignedToId: input.assignedToId || null,
+      assignedToId: await requesterId(input.assignedToId),
       note: input.note?.trim() || null,
     },
   });
@@ -75,7 +89,12 @@ export async function addFromCatalog(
   });
 
   await prisma.shoppingItem.create({
-    data: { name: item.name, icon: item.icon, storeId: targetStore },
+    data: {
+      name: item.name,
+      icon: item.icon,
+      storeId: targetStore,
+      assignedToId: await requesterId(),
+    },
   });
 
   refresh();
@@ -141,14 +160,27 @@ export async function setCatalogIcon(
   await requireAdmin();
   const trimmed = icon.trim().slice(0, 8);
   if (!trimmed) return;
-  await prisma.groceryItem.update({
-    where: { id: catalogId },
-    data: { icon: trimmed },
-  });
+  const item = await prisma.groceryItem.findUnique({ where: { id: catalogId } });
+  if (!item) return;
+  // Keep any lines already on the list in step with the catalog — in this
+  // model a line is just "currently needed", not kept history, so a corrected
+  // icon should show everywhere the item appears.
+  await prisma.$transaction([
+    prisma.groceryItem.update({
+      where: { id: catalogId },
+      data: { icon: trimmed },
+    }),
+    prisma.shoppingItem.updateMany({
+      where: { name: item.name },
+      data: { icon: trimmed },
+    }),
+  ]);
   refresh();
 }
 
-/** Rename a catalog item. Names are unique; a clash is left as a no-op. */
+/** Rename a catalog item. Names are unique; a clash is left as a no-op. The
+ *  matching lines already on the list are renamed too, so fixing a misspelling
+ *  corrects it everywhere it currently appears. */
 export async function renameCatalogItem(
   catalogId: string,
   name: string,
@@ -156,14 +188,23 @@ export async function renameCatalogItem(
   await requireAdmin();
   const clean = normalizeName(name);
   if (!clean) return { ok: false, reason: "empty" };
+  const item = await prisma.groceryItem.findUnique({ where: { id: catalogId } });
+  if (!item) return { ok: false, reason: "missing" };
+  if (clean === item.name) return { ok: true };
   const clash = await prisma.groceryItem.findUnique({ where: { name: clean } });
   if (clash && clash.id !== catalogId) {
     return { ok: false, reason: "duplicate" };
   }
-  await prisma.groceryItem.update({
-    where: { id: catalogId },
-    data: { name: clean },
-  });
+  await prisma.$transaction([
+    prisma.groceryItem.update({
+      where: { id: catalogId },
+      data: { name: clean },
+    }),
+    prisma.shoppingItem.updateMany({
+      where: { name: item.name },
+      data: { name: clean },
+    }),
+  ]);
   refresh();
   return { ok: true };
 }

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.155.0";
+export const APP_VERSION = "0.156.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -81,6 +81,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.156.0",
+    summary: [
+      "Adding a grocery item is simpler: no more store drop-down. Type or tap the item, and a small pop-up asks which store to buy it at — tap the store and it drops into that store’s list. The item’s usual store is offered first",
+      "Fixing a misspelled (or re-iconed) item in the admin catalog now also corrects it on the list itself, not just for future adds",
+      "Admin grocery edits now flash green for a moment to confirm the change saved",
+      "On a personal device the person signed in is quietly logged as who asked for an item; on the shared hub items stay unassigned",
+    ],
+  },
   {
     version: "0.155.0",
     summary: [
