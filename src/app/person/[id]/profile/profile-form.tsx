@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { updateProfile, type ProfileState } from "@/lib/actions/profile";
-import { AVATAR_ICONS, ICON_PREFIX, avatarUrl, isIcon } from "@/lib/avatars";
+import { AVATAR_ICONS, ICON_PREFIX, avatarUrl, isIcon, parseAvatarTransform, avatarTransformCss } from "@/lib/avatars";
 import { AvatarAdjuster } from "@/components/avatar-adjuster";
 import { PERSON_PALETTE } from "@/lib/palette";
 import { Card } from "@/components/ui";
@@ -26,7 +26,7 @@ export function ProfileForm({
   const [state, formAction, pending] = useActionState(updateProfile, initial);
 
   const [color, setColor] = useState(person.color);
-  const [pos, setPos] = useState(person.avatarPosition || "50% 50%");
+  const [pos, setPos] = useState(person.avatarPosition || "0 0 1");
   const [adjusting, setAdjusting] = useState(false);
   const [icon, setIcon] = useState(
     isIcon(person.avatarPath)
@@ -146,7 +146,7 @@ export function ProfileForm({
                 src={preview}
                 alt=""
                 className="h-full w-full object-cover"
-                style={{ objectPosition: pos }}
+                style={{ transform: avatarTransformCss(parseAvatarTransform(pos)) }}
               />
             ) : icon ? (
               AVATAR_ICONS[icon]
@@ -170,7 +170,7 @@ export function ProfileForm({
                 if (file) {
                   setPreview(URL.createObjectURL(file));
                   setRemovePhoto(false);
-                  setPos("50% 50%");
+                  setPos("0 0 1");
                 }
               }}
               className="block w-full text-sm file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border-0 file:bg-accent/10 file:px-4 file:text-sm file:font-medium file:text-accent"

@@ -79,3 +79,27 @@ export function avatarUrl(avatarPath: string): string {
 export function initialOf(name: string): string {
   return name.trim().charAt(0).toUpperCase() || "?";
 }
+
+/**
+ * Avatar framing stored as "<tx> <ty> <scale>": a percentage pan on each axis
+ * plus a zoom. This is a free transform (not object-position), so a photo —
+ * especially a transparent PNG with no real edges — can be moved and scaled a
+ * long way, not just nudged within the tiny bit that overflows the circle.
+ * Anything that doesn't parse (including the legacy "50% 50%") falls back to
+ * centred and unzoomed.
+ */
+export type AvatarTransform = { tx: number; ty: number; scale: number };
+
+export function parseAvatarTransform(
+  value: string | null | undefined,
+): AvatarTransform {
+  const m = String(value ?? "").match(
+    /^(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) (\d+(?:\.\d+)?)$/,
+  );
+  if (!m) return { tx: 0, ty: 0, scale: 1 };
+  return { tx: Number(m[1]), ty: Number(m[2]), scale: Number(m[3]) };
+}
+
+export function avatarTransformCss(t: AvatarTransform): string {
+  return `translate(${t.tx}%, ${t.ty}%) scale(${t.scale})`;
+}

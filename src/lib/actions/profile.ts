@@ -84,9 +84,9 @@ export async function updateProfile(
   }
 
   const avatarPositionRaw = String(formData.get("avatarPosition") ?? "");
-  const avatarPosition = /^\d{1,3}% \d{1,3}%$/.test(avatarPositionRaw)
+  const avatarPosition = /^-?\d+ -?\d+ \d+(\.\d+)?$/.test(avatarPositionRaw)
     ? avatarPositionRaw
-    : "50% 50%";
+    : "0 0 1";
 
   await prisma.user.update({
     where: { id },

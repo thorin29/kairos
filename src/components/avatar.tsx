@@ -1,4 +1,11 @@
-import { avatarUrl, iconGlyph, initialOf, isIcon } from "@/lib/avatars";
+import {
+  avatarUrl,
+  iconGlyph,
+  initialOf,
+  isIcon,
+  parseAvatarTransform,
+  avatarTransformCss,
+} from "@/lib/avatars";
 
 const sizes = {
   xs: "h-6 w-6 text-[0.6rem]",
@@ -38,7 +45,7 @@ export function Avatar({
       className={`${sizes[size]} block shrink-0 overflow-hidden rounded-full align-middle select-none`}
       style={{
         boxShadow: `0 0 0 2.5px ${color}`,
-        backgroundColor: isPhoto ? undefined : `${color}1a`,
+        backgroundColor: `${color}1a`,
         color,
       }}
     >
@@ -48,7 +55,7 @@ export function Avatar({
           src={avatarUrl(avatarPath)}
           alt=""
           className="h-full w-full object-cover"
-          style={{ objectPosition: avatarPosition ?? "50% 50%" }}
+          style={{ transform: avatarTransformCss(parseAvatarTransform(avatarPosition)) }}
         />
       ) : (
         <span className="flex h-full w-full items-center justify-center">
