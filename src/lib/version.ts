@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.152.0";
+export const APP_VERSION = "0.153.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -81,6 +81,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.153.0",
+    summary: [
+      "Profile photo positioning now lets you move the picture freely and zoom in or out, instead of only nudging it a little \u2014 much better for images (like transparent PNGs) that don\u2019t fill the whole circle. Drag to move, use the slider to zoom, Reset to re-centre",
+      "Uploaded photos now sit on a faint tint of the person\u2019s colour, so a picture with a see-through background still reads as a filled circle",
+    ],
+  },
   {
     version: "0.152.0",
     summary: [
