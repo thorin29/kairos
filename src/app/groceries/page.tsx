@@ -10,7 +10,7 @@ export default async function GroceriesPage() {
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, color: true, avatarPath: true },
+      select: { id: true, name: true, color: true, avatarPath: true, avatarPosition: true },
     }),
   ]);
 

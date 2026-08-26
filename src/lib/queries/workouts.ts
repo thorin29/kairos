@@ -165,7 +165,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, displayName: true, color: true, avatarPath: true },
+      select: { id: true, name: true, displayName: true, color: true, avatarPath: true, avatarPosition: true },
     }),
     getSetting(UNIT_SYSTEM_KEY),
     loadWeightUnits(),
