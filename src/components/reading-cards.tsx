@@ -52,18 +52,10 @@ export function ReadingCards({
 
   return (
     <section>
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-        <div>
-          {/* The header is the anchor to the real today — this is what makes
-              "Back to today" meaningful. */}
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-            {relativeLabel(active - todayIndex)}
-          </p>
-          <p className="tabular font-display text-lg font-semibold">
-            {current.label}
-          </p>
-        </div>
-
+      {/* Only "Back to today" lives up here now — the date and relative label
+          are already on the cards. A fixed height means the button appearing or
+          disappearing doesn't nudge the cards up and down. */}
+      <div className="mb-3 flex h-9 items-center justify-end">
         {active !== todayIndex && (
           <button
             type="button"
