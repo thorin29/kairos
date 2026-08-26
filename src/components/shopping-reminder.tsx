@@ -14,7 +14,7 @@ export function ShoppingReminder({ trips }: { trips: DashboardTrip[] }) {
       {trips.map((t) => (
         <Link
           key={t.tripId}
-          href="/groceries"
+          href={`/groceries/shop/${t.storeId}`}
           className="flex items-center gap-2 text-sm font-medium text-teal-900 hover:underline"
         >
           <CartIcon className="h-4 w-4 shrink-0 text-teal-700" />

@@ -30,10 +30,10 @@ schedule.
 - **Game time.** A daily screen-time allowance per person, with weekly tokens
   that buy extra minutes.
 - **Groceries.** A shared shopping list that learns the items you buy and their
-  icons. Add what you need, then tap **Shop** on a store and pick who's going:
-  that store becomes their shopping trip, with a line on their dashboard card
-  that opens a big-tap checklist. Finishing keeps whatever wasn't bought for
-  next time.
+  icons. Drag items to reorder them or move them between stores. Tap **Shop** on
+  a store and pick who's going: that store becomes their trip, with a line on
+  their dashboard card that opens a big-tap checklist on its own page. Finishing
+  keeps whatever wasn't bought for next time.
 - **Work and appointments.** Shifts, lessons, practices, and visits on a week
   grid with an hourly gutter, color-coded by person or by category.
 - **Subscribed calendars.** Point it at any public ICS feed and those events

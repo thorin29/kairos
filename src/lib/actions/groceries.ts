@@ -36,6 +36,16 @@ async function activeTripId(storeId: string): Promise<string | null> {
   return trip?.id ?? null;
 }
 
+/** Append position for a new saved line, so it lands at the bottom of its
+ *  store's list rather than jostling the manual order. */
+async function nextSortOrder(storeId: string): Promise<number> {
+  const top = await prisma.shoppingItem.aggregate({
+    where: { storeId },
+    _max: { sortOrder: true },
+  });
+  return (top._max.sortOrder ?? -1) + 1;
+}
+
 /**
  * Add a needed item to the list. Finds or creates its catalog entry (bumping
  * the use count and reusing or guessing an icon), then drops a snapshot line
@@ -75,6 +85,7 @@ export async function addItem(input: {
       icon,
       storeId: input.storeId,
       tripId: await activeTripId(input.storeId),
+      sortOrder: await nextSortOrder(input.storeId),
       assignedToId: await requesterId(input.assignedToId),
       note: input.note?.trim() || null,
     },
@@ -106,6 +117,7 @@ export async function addFromCatalog(
       icon: item.icon,
       storeId: targetStore,
       tripId: await activeTripId(targetStore),
+      sortOrder: await nextSortOrder(targetStore),
       assignedToId: await requesterId(),
     },
   });
@@ -214,20 +226,26 @@ export async function completeTrip(tripId: string): Promise<void> {
 }
 
 /**
- * Abandon the trip without shopping: every line goes back to the saved list
- * unpurchased, and the store returns to "Shop" for anyone to claim.
+ * Persist a drag: for each affected store, the ordered ids become that store's
+ * order (sortOrder = position), and every listed line is pinned to that store —
+ * so the same call handles reordering within a store and dragging a line onto
+ * another store. Only saved lines move (trip lines are excluded), and only the
+ * stores the drag touched are passed, so nothing else is disturbed.
  */
-export async function dropTrip(tripId: string): Promise<void> {
+export async function saveOrder(
+  groups: { storeId: string; itemIds: string[] }[],
+): Promise<void> {
   await requireInteractive();
-  const trip = await prisma.shoppingTrip.findUnique({ where: { id: tripId } });
-  if (!trip) return;
-  await prisma.$transaction([
-    prisma.shoppingItem.updateMany({
-      where: { tripId },
-      data: { tripId: null, boughtAt: null },
-    }),
-    prisma.shoppingTrip.delete({ where: { id: tripId } }),
-  ]);
+  const writes = groups.flatMap((g) =>
+    g.itemIds.map((id, i) =>
+      prisma.shoppingItem.updateMany({
+        where: { id, tripId: null },
+        data: { storeId: g.storeId, sortOrder: i },
+      }),
+    ),
+  );
+  if (writes.length === 0) return;
+  await prisma.$transaction(writes);
   refresh();
 }
 

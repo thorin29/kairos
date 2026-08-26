@@ -93,7 +93,7 @@ export async function loadGroceries(): Promise<GroceriesData> {
     }),
     prisma.shoppingItem.findMany({
       where: { tripId: null },
-      orderBy: [{ createdAt: "asc" }],
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       select: {
         id: true,
         name: true,
@@ -156,8 +156,55 @@ export async function loadGroceries(): Promise<GroceriesData> {
   };
 }
 
+export type CartData = {
+  store: StoreView;
+  trip: TripView;
+} | null;
+
+/**
+ * The active trip for one store, for its own shopping page. Null when there's
+ * no run under way (the page then shows an empty state and a way back).
+ */
+export async function loadCart(storeId: string): Promise<CartData> {
+  const trip = await prisma.shoppingTrip.findUnique({
+    where: { storeId },
+    select: {
+      id: true,
+      storeId: true,
+      store: { select: { id: true, name: true, icon: true } },
+      shopper: { select: PERSON_SELECT },
+      items: {
+        orderBy: [{ boughtAt: "asc" }, { createdAt: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          icon: true,
+          storeId: true,
+          note: true,
+          boughtAt: true,
+          assignedTo: { select: PERSON_SELECT },
+        },
+      },
+    },
+  });
+  if (!trip) return null;
+  const items = trip.items.map(itemView);
+  return {
+    store: trip.store,
+    trip: {
+      id: trip.id,
+      storeId: trip.storeId,
+      shopper: trip.shopper,
+      items,
+      total: items.length,
+      got: items.filter((i) => i.purchased).length,
+    },
+  };
+}
+
 export type DashboardTrip = {
   tripId: string;
+  storeId: string;
   shopperId: string;
   storeName: string;
   storeIcon: string;
@@ -171,6 +218,7 @@ export async function loadDashboardTrips(): Promise<DashboardTrip[]> {
   const trips = await prisma.shoppingTrip.findMany({
     select: {
       id: true,
+      storeId: true,
       shopperId: true,
       store: { select: { name: true, icon: true } },
       items: { select: { boughtAt: true } },
@@ -178,6 +226,7 @@ export async function loadDashboardTrips(): Promise<DashboardTrip[]> {
   });
   return trips.map((t) => ({
     tripId: t.id,
+    storeId: t.storeId,
     shopperId: t.shopperId,
     storeName: t.store.name,
     storeIcon: t.store.icon,
