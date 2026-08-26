@@ -649,11 +649,9 @@ own exercises, optionally schedules them, and records what they did.
 - [x] On a personal device the signed-in person is logged as the requester;
       unassigned on the shared hub (the assignee drop-down is gone)
 - [x] Two clear modes on one page — a **list** (add things, grouped by store,
-      each store with its own "Shop" button) and a focused **shopping cart**
-      (pick a store → big-tap checklist of just that store's items). *Interim:
-      the cart is shared and checking deletes on the spot; superseded by the
-      shopping-trip model below.*
-- [x] A live got/total progress bar while shopping, with an in-trip Undo
+      each store with its own "Shop" button) that becomes a per-store shopping
+      **trip** (see below)
+- [x] A live got/total progress bar while shopping
 - [x] A typed item's store defaults to its remembered catalog store
 - [x] Non-grocery stores handled the same way — a "store" is just a shopping
       destination (clothing, hardware) with the same cart flow
@@ -669,25 +667,25 @@ own exercises, optionally schedules them, and records what they did.
       (the shared screen and phones are touch, where native HTML drag doesn't
       work), so it's its own increment.
 
-### Next: shopping trips (planned epic)
+### Shopping trips (done)
 
-The current cart is shared and check = delete. The trip model makes a run
-belong to one person and keeps the list intact until they finish:
+Each store is its own trip, started before you leave; the list stays intact
+until the run is finished:
 
-- [ ] Tapping **Shop** on a store asks *who is shopping* (tap a profile), which
+- [x] Tapping **Shop** on a store asks *who is shopping* (tap a profile) and
       opens a trip for that store assigned to that person
-- [ ] A **shopping task line on that person's dashboard card** (personal view),
-      tapping it opens their cart — the cart only appears for the shopper
-- [ ] The shopper can **drop the trip** if they don't end up going, which puts
-      the store back to "Shop" for anyone
-- [ ] While shopping, the **whole list stays visible** — checked items show as
-      done rather than vanishing — until **Complete trip**
-- [ ] Items added by anyone while a trip is live **join that trip**
-- [ ] **Complete trip**: purchased items drop off, unpurchased ones return to
+- [x] A **shopping line on that person's dashboard card**, tapping it opens
+      their cart — the cart only opens on the shopper's own personal device;
+      the shared hub and everyone else see who's shopping and their progress
+- [x] The trip can be **dropped** if the run doesn't happen (from the shopper's
+      cart, or from the store's status line on the hub), putting everything back
+- [x] While shopping the **whole list stays visible** — checked items show as
+      done, not gone — until **Complete trip**
+- [x] Items added by anyone while a trip is live **join that trip**
+- [x] **Complete trip**: purchased items drop off, unpurchased ones return to
       the saved list for next time
-- [ ] Needs a migration (a `ShoppingTrip`, a trip link + a purchased mark on a
-      line), a dashboard-card line, and personal/shared branching on the page —
-      hence a dedicated release.
+- [x] One trip per store (a unique constraint), so two people can shop two
+      stores at once without carts crossing
 
 ### Later
 

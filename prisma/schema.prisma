@@ -98,6 +98,7 @@ model User {
   companions       Companion[]
   choreLogs        ChoreLog[]
   companionState   CompanionState?
+  shoppingTrips    ShoppingTrip[]    @relation("TripShopper")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -742,6 +743,24 @@ model Store {
 
   catalog GroceryItem[]
   items   ShoppingItem[]
+  trip    ShoppingTrip?
+}
+
+// A live shopping run for one store, claimed by one person. It exists only
+// while active — completing or dropping it removes the row — so there's at most
+// one per store (the unique storeId). Trips are per store even on a single
+// outing: two stores are two trips, so each store's cart stays its own.
+model ShoppingTrip {
+  id        String   @id @default(cuid())
+  storeId   String   @unique
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shopperId String
+  shopper   User     @relation("TripShopper", fields: [shopperId], references: [id], onDelete: Cascade)
+  startedAt DateTime @default(now())
+
+  items ShoppingItem[]
+
+  @@index([shopperId])
 }
 
 // The remembered catalog. Adding a needed item finds or creates its entry,
@@ -759,14 +778,19 @@ model GroceryItem {
   createdAt      DateTime @default(now())
 }
 
-// One line currently on the list. Name and icon are snapshotted so editing the
-// catalog later doesn't rewrite history on the list.
+// One line on the list. It sits on the saved list (tripId null) until a trip
+// for its store is started, which pulls it into that trip; anything added while
+// a trip is live joins it too. `boughtAt` marks a line purchased *within the
+// current trip* — completing the trip drops the purchased lines and returns the
+// rest to the saved list. Name and icon are snapshots that track the catalog.
 model ShoppingItem {
   id           String    @id @default(cuid())
   name         String
   icon         String    @default("📦")
   storeId      String
   store        Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  tripId       String?
+  trip         ShoppingTrip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
   assignedToId String?
   assignedTo   User?     @relation("GroceryAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   note         String?
@@ -774,6 +798,7 @@ model ShoppingItem {
   createdAt    DateTime  @default(now())
 
   @@index([storeId])
+  @@index([tripId])
 }
 
 // ---------------------------------------------------------------

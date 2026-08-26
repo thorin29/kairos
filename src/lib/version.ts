@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.156.0";
+export const APP_VERSION = "0.157.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -76,11 +76,21 @@ export const MIGRATIONS = [
   "66_personal_plan",
   "67_always_open_taps",
   "68_avatar_position",
+  "69_shopping_trips",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.157.0",
+    summary: [
+      "Groceries now works in shopping trips, one per store. Tap Shop on a store, pick who’s going, and that store’s list becomes their trip — even on one outing, each store stays its own trip",
+      "Whoever is shopping gets a line on their dashboard card (“Shopping Costco 3/8”) that opens their cart. The cart only opens on that person’s own device; on the shared hub and everyone else’s, the store just shows who’s shopping and their progress",
+      "While shopping, the whole list stays put — checked items show as done rather than vanishing — until you tap Complete trip. Completing drops the purchased items and returns anything you didn’t get to the saved list for next time",
+      "Anything added while a trip is live drops straight into that trip. A trip can also be dropped if the run doesn’t happen, which puts everything back and reopens the store for anyone",
+    ],
+  },
   {
     version: "0.156.0",
     summary: [

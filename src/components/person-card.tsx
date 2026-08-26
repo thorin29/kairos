@@ -7,6 +7,8 @@ import { SportPrompts } from "./sport-prompts";
 import { RolloverReminder } from "./rollover-reminder";
 import { MoneyReminder } from "./money-reminder";
 import { ClassPrompts, type ClassPromptItem } from "./class-prompts";
+import { ShoppingReminder } from "./shopping-reminder";
+import type { DashboardTrip } from "@/lib/queries/groceries";
 
 type Prompt = { eventId: string; userId: string; title: string };
 
@@ -17,6 +19,7 @@ export function PersonCard({
   moneyPending = 0,
   moneyBibleRewards = 0,
   classPrompts = [],
+  shoppingTrips = [],
   dateISO,
 }: {
   person: PersonSummary;
@@ -25,6 +28,7 @@ export function PersonCard({
   moneyPending?: number;
   moneyBibleRewards?: number;
   classPrompts?: ClassPromptItem[];
+  shoppingTrips?: DashboardTrip[];
   dateISO: string;
 }) {
   return (
@@ -102,8 +106,12 @@ export function PersonCard({
         rollover ||
         moneyPending > 0 ||
         moneyBibleRewards > 0 ||
-        classPrompts.length > 0) && (
+        classPrompts.length > 0 ||
+        shoppingTrips.length > 0) && (
         <div className="relative z-[1] mt-4 space-y-3">
+          {shoppingTrips.length > 0 && (
+            <ShoppingReminder trips={shoppingTrips} />
+          )}
           {rollover && <RolloverReminder fromTermName={rollover.fromTermName} />}
           {(moneyPending > 0 || moneyBibleRewards > 0) && (
             <MoneyReminder count={moneyPending} bibleRewards={moneyBibleRewards} />
