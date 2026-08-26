@@ -237,7 +237,7 @@ export default async function CalendarPage({
         classCtx={classCtx}
         defaultDate={view === "month" ? today : date}
       >
-      <main className="mx-auto max-w-[92rem] px-6 pb-6 pt-4">
+      <main className="mx-auto max-w-[92rem] px-6 pb-6 pt-6">
         <div className="flex flex-col gap-6 lg:flex-row">
           <aside className="flex flex-col gap-5 lg:w-60 lg:shrink-0">
             <AddEventButton wide />
