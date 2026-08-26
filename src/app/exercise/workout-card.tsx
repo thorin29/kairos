@@ -16,6 +16,16 @@ import {
 } from "@/lib/workouts/catalog";
 import type { PlanWorkout } from "@/lib/queries/workouts";
 
+// Verb-noun for the log button, so it reads "Log weight" / "Log time" rather
+// than a generic "Complete workout".
+const LOG_NOUN: Record<Metric, string> = {
+  WEIGHT: "weight",
+  DISTANCE: "distance",
+  METERS: "meters",
+  DURATION: "time",
+  REPS: "reps",
+};
+
 /**
  * A day's scheduled workouts, each completable straight from the plan: tapping
  * one asks only for the metrics it was set to track (pulled from the pool), and
@@ -93,7 +103,6 @@ function PlanRow({
   unitSystem: UnitSystem;
   done: boolean;
 }) {
-  const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
@@ -105,6 +114,21 @@ function PlanRow({
   const soloMetric = defaultMetricFor(category);
 
   const metricFor = (m: Metric | null): Metric => m ?? defaultMetricFor(category);
+
+  // Name the log button after what's being logged where that's unambiguous.
+  let logLabel = "Log workout";
+  if (!hiit) {
+    if (metricOnly) {
+      logLabel = `Log ${LOG_NOUN[soloMetric]}`;
+    } else if (trackedExercises.length === 0) {
+      logLabel = "Mark complete";
+    } else {
+      const metrics = new Set(trackedExercises.map((e) => metricFor(e.metric)));
+      if (metrics.size === 1) {
+        logLabel = `Log ${LOG_NOUN[[...metrics][0]]}`;
+      }
+    }
+  }
 
   const setVal = (key: string, v: string) =>
     setValues((prev) => ({ ...prev, [key]: v.replace(/[^\d.]/g, "") }));
@@ -125,7 +149,7 @@ function PlanRow({
           hiitWorkoutId: hiit.id,
           value,
         });
-        setOpen(false);
+        setValues({});
       });
       return;
     }
@@ -172,7 +196,7 @@ function PlanRow({
         plannedWorkoutId: workout.id,
         entries,
       });
-      setOpen(false);
+      setValues({});
     });
   };
 
@@ -209,17 +233,9 @@ function PlanRow({
             </div>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-sm font-medium text-muted hover:border-accent hover:text-accent"
-        >
-          {open ? "Cancel" : "Complete"}
-        </button>
       </div>
 
-      {open && (
-        <div className="mt-3 space-y-2 border-t border-hairline pt-3">
+      <div className="mt-3 space-y-2 border-t border-hairline pt-3">
           {hiit ? (
             <div>
               <span className="mb-1 block text-sm font-medium">
@@ -307,10 +323,9 @@ function PlanRow({
             className="mt-1 inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm hover:shadow-md disabled:opacity-40"
           >
             <CheckIcon className="h-4 w-4" />
-            {pending ? "Completing…" : "Complete workout"}
+            {pending ? "Logging…" : logLabel}
           </button>
         </div>
-      )}
     </div>
   );
 }

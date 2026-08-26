@@ -131,13 +131,9 @@ export function WorkoutLauncher({
                 />
 
                 <div className="border-t border-hairline pt-5">
-                  <h4 className="mb-1 font-display text-sm font-semibold">
-                    Log something else
+                  <h4 className="mb-3 font-display text-sm font-semibold">
+                    Log a different workout
                   </h4>
-                  <p className="mb-3 text-sm text-muted">
-                    A one-off from the pool &mdash; a run, hockey, an extra lift.
-                    Pick the type, choose the movement, drop in the result.
-                  </p>
                   <CustomWorkoutForm
                     userId={userId}
                     unitSystem={unitSystem}

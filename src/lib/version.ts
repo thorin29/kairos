@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.158.0";
+export const APP_VERSION = "0.159.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.159.0",
+    summary: [
+      "Logging a workout is one tap fewer: opening a scheduled workout now shows the weight/time boxes straight away instead of a Complete-then-reveal step, and the button reads for what you\u2019re logging (\u201cLog weight\u201d, \u201cLog time\u201d\u2026)",
+      "The weights graph now reads in real gym numbers \u2014 the left scale steps in plate-sized amounts (45, 90, 135\u2026) starting at your lowest logged lift, instead of odd values like 191 or 212. An unusual max just sits between lines; tap the dot for the exact weight",
+      "Chores page now shows an \u201cAlways open\u201d section counting how many times each up-for-grabs chore has been done today and this week",
+      "Tidied the person cards: removed the \u201cMissed\u201d section, the week calendar at the bottom, and some explanatory blurbs",
+      "Renamed the Bible \u201cHow far we\u2019ve come\u201d heading to \u201cFamily reading\u201d",
+    ],
+  },
   {
     version: "0.158.0",
     summary: [

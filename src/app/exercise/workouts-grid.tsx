@@ -239,6 +239,7 @@ export function WorkoutsGrid({
 
                   {open.weightSeries.length > 0 && (
                     <LineChart
+                      weight
                       series={open.weightSeries.map((s) => ({
                         id: s.exerciseId,
                         name: s.name,

@@ -5,6 +5,7 @@ import {
   loadSharedChoreTally,
 } from "@/lib/queries/chores-summary";
 import { loadChoreMetrics } from "@/lib/queries/chore-metrics";
+import { loadAlwaysOpenCounts } from "@/lib/queries/always-open-counts";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { DAY_SHORT } from "@/lib/days";
 import { formatShort, todayISO } from "@/lib/dates";
@@ -22,7 +23,7 @@ export const dynamic = "force-dynamic";
 export default async function ChoresOverviewPage() {
   const today = todayISO();
 
-  const [metrics, summary, poolChores, people, activePause, sharedTally] = await Promise.all([
+  const [metrics, summary, poolChores, people, activePause, sharedTally, alwaysOpenCounts] = await Promise.all([
     loadChoreMetrics(today),
     loadChoreSummary(),
     loadPoolChores(),
@@ -39,6 +40,7 @@ export default async function ChoresOverviewPage() {
     }),
     loadActivePause(today),
     loadSharedChoreTally(),
+    loadAlwaysOpenCounts(today),
   ]);
 
   const byPerson = people.map((p) => ({
@@ -159,6 +161,36 @@ export default async function ChoresOverviewPage() {
           ))}
         </div>
       </section>
+
+      {alwaysOpenCounts.length > 0 && (
+        <section className="mb-10">
+          <SectionHeading>Always open</SectionHeading>
+          <Card className="divide-y divide-hairline">
+            <div className="flex items-center gap-3 px-5 py-2.5 text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
+              <span className="flex-1">Chore</span>
+              <span className="w-20 text-right">Today</span>
+              <span className="w-20 text-right">This week</span>
+            </div>
+            {alwaysOpenCounts.map((c) => (
+              <div key={c.id} className="flex items-center gap-3 px-5 py-3">
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {c.title}
+                </span>
+                <span className="tabular w-20 text-right text-sm font-medium">
+                  {c.today}
+                </span>
+                <span className="tabular w-20 text-right text-sm text-muted">
+                  {c.week}
+                </span>
+              </div>
+            ))}
+          </Card>
+          <p className="mt-2 text-xs text-muted">
+            How many times each up-for-grabs chore has been completed &mdash;
+            they can be done over and over, so these are counts, not a checklist.
+          </p>
+        </section>
+      )}
 
       {poolChores.length > 0 && (
         <section>
