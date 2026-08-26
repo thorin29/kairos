@@ -61,7 +61,7 @@ export async function loadAchievements(): Promise<PersonAchievements[]> {
         name: true,
         displayName: true,
         color: true,
-        avatarPath: true,
+        avatarPath: true, avatarPosition: true,
       },
     }),
     prisma.task.findMany({

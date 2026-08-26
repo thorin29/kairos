@@ -252,7 +252,7 @@ export default async function PersonPage({
           <Avatar
             name={person.displayName ?? person.name}
             color={person.color}
-            avatarPath={person.avatarPath}
+            avatarPath={person.avatarPath} avatarPosition={person.avatarPosition}
             size="lg"
           />
           <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-ink/45 text-[0.6rem] font-semibold uppercase tracking-wide text-white opacity-0 transition-opacity group-hover:opacity-100">

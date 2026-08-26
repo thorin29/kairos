@@ -54,7 +54,7 @@ export default async function GamesPage() {
                   <Avatar
                     name={s.name}
                     color={s.color}
-                    avatarPath={s.avatarPath}
+                    avatarPath={s.avatarPath} avatarPosition={s.avatarPosition}
                     size="sm"
                   />
                   <div className="min-w-0 flex-1">

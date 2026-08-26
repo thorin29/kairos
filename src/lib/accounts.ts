@@ -23,6 +23,7 @@ export type AccountState = {
   email: string | null;
   color: string;
   avatarPath: string | null;
+  avatarPosition: string | null;
   role: "ADMIN" | "MEMBER";
   hasPassword: boolean;
   invitePending: boolean;
@@ -41,7 +42,7 @@ export async function listAccounts(): Promise<AccountState[]> {
       displayName: true,
       email: true,
       color: true,
-      avatarPath: true,
+      avatarPath: true, avatarPosition: true,
       role: true,
       passwordHash: true,
       invites: {
@@ -60,6 +61,7 @@ export async function listAccounts(): Promise<AccountState[]> {
     email: p.email,
     color: p.color,
     avatarPath: p.avatarPath,
+    avatarPosition: p.avatarPosition,
     role: p.role,
     hasPassword: p.passwordHash !== null,
     invitePending: p.invites.length > 0,

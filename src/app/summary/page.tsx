@@ -112,7 +112,7 @@ function PersonCard({ p }: { p: PersonProgress }) {
     <Card className="p-5">
       {/* Header: avatar, class, level */}
       <div className="flex items-center gap-4">
-        <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} size="lg" />
+        <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="lg" />
         <div className="min-w-0 flex-1">
           <p className="font-display text-lg font-semibold leading-tight">{p.name}</p>
           <p className="text-sm text-muted">{p.className}</p>

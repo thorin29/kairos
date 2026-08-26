@@ -14,7 +14,7 @@ export type ShoppingItemView = {
   storeId: string;
   note: string | null;
   bought: boolean;
-  assignee: { id: string; name: string; color: string; avatarPath: string | null } | null;
+  assignee: { id: string; name: string; color: string; avatarPath: string | null; avatarPosition: string | null } | null;
 };
 
 export type CatalogSuggestion = {
@@ -53,7 +53,7 @@ export async function loadGroceries(): Promise<GroceriesData> {
         note: true,
         boughtAt: true,
         assignedTo: {
-          select: { id: true, name: true, color: true, avatarPath: true },
+          select: { id: true, name: true, color: true, avatarPath: true, avatarPosition: true },
         },
       },
     }),

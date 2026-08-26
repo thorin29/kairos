@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { updateProfile, type ProfileState } from "@/lib/actions/profile";
 import { AVATAR_ICONS, ICON_PREFIX, avatarUrl, isIcon } from "@/lib/avatars";
+import { AvatarAdjuster } from "@/components/avatar-adjuster";
 import { PERSON_PALETTE } from "@/lib/palette";
 import { Card } from "@/components/ui";
 
@@ -17,6 +18,7 @@ export function ProfileForm({
     displayName: string | null;
     color: string;
     avatarPath: string | null;
+    avatarPosition: string;
     birthdayISO: string | null;
     shadeBirthday: boolean;
   };
@@ -24,6 +26,8 @@ export function ProfileForm({
   const [state, formAction, pending] = useActionState(updateProfile, initial);
 
   const [color, setColor] = useState(person.color);
+  const [pos, setPos] = useState(person.avatarPosition || "50% 50%");
+  const [adjusting, setAdjusting] = useState(false);
   const [icon, setIcon] = useState(
     isIcon(person.avatarPath)
       ? person.avatarPath!.slice(ICON_PREFIX.length)
@@ -41,6 +45,7 @@ export function ProfileForm({
       <input type="hidden" name="id" value={person.id} />
       <input type="hidden" name="color" value={color} />
       <input type="hidden" name="icon" value={preview ? "" : icon} />
+      <input type="hidden" name="avatarPosition" value={pos} />
       <input
         type="hidden"
         name="removePhoto"
@@ -141,6 +146,7 @@ export function ProfileForm({
                 src={preview}
                 alt=""
                 className="h-full w-full object-cover"
+                style={{ objectPosition: pos }}
               />
             ) : icon ? (
               AVATAR_ICONS[icon]
@@ -164,11 +170,23 @@ export function ProfileForm({
                 if (file) {
                   setPreview(URL.createObjectURL(file));
                   setRemovePhoto(false);
+                  setPos("50% 50%");
                 }
               }}
               className="block w-full text-sm file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border-0 file:bg-accent/10 file:px-4 file:text-sm file:font-medium file:text-accent"
             />
             <p className="text-xs text-muted">JPG, PNG, WebP or GIF, up to 5 MB.</p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                disabled={!preview}
+                onClick={() => setAdjusting(true)}
+                className={`text-xs font-medium underline underline-offset-4 ${
+                  preview ? "text-accent hover:text-accent/80" : "invisible"
+                }`}
+              >
+                Adjust position
+              </button>
             <button
               type="button"
               disabled={!preview}
@@ -182,6 +200,7 @@ export function ProfileForm({
             >
               Remove photo
             </button>
+            </div>
           </div>
         </div>
 
@@ -231,6 +250,16 @@ export function ProfileForm({
       >
         {pending ? "Saving\u2026" : "Save profile"}
       </button>
+
+      {adjusting && preview && (
+        <AvatarAdjuster
+          src={preview}
+          color={color}
+          position={pos}
+          onApply={setPos}
+          onClose={() => setAdjusting(false)}
+        />
+      )}
     </form>
   );
 }

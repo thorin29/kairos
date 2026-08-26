@@ -83,12 +83,18 @@ export async function updateProfile(
     avatarPath = null;
   }
 
+  const avatarPositionRaw = String(formData.get("avatarPosition") ?? "");
+  const avatarPosition = /^\d{1,3}% \d{1,3}%$/.test(avatarPositionRaw)
+    ? avatarPositionRaw
+    : "50% 50%";
+
   await prisma.user.update({
     where: { id },
     data: {
       displayName: displayName || null,
       color,
       avatarPath,
+      avatarPosition,
       birthday: birthday ? toDateColumn(birthday) : null,
       shadeBirthday,
     },

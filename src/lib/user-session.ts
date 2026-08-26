@@ -79,7 +79,7 @@ export async function currentUser(): Promise<CurrentUser | null> {
       name: true,
       displayName: true,
       color: true,
-      avatarPath: true,
+      avatarPath: true, avatarPosition: true,
       role: true,
       isActive: true,
       passwordHash: true,

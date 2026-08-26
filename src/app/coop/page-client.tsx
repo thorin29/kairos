@@ -47,7 +47,7 @@ export function CoopBoard({ data, isAdmin }: { data: CoopData; isAdmin: boolean 
               }`}
               title={`Season tier ${c.tier}`}
             >
-              <Avatar name={c.name} color={c.color} avatarPath={c.avatarPath} size="xs" />
+              <Avatar name={c.name} color={c.color} avatarPath={c.avatarPath} avatarPosition={c.avatarPosition} size="xs" />
               {c.name}
               {c.meets ? <CheckIcon className="h-3.5 w-3.5" /> : <span className="tabular">t{c.tier}</span>}
             </span>
@@ -238,7 +238,7 @@ function ProposalCard({
                   : "border-hairline text-muted hover:border-accent"
               }`}
             >
-              <Avatar name={person.name} color={person.color} avatarPath={person.avatarPath} size="xs" />
+              <Avatar name={person.name} color={person.color} avatarPath={person.avatarPath} avatarPosition={person.avatarPosition} size="xs" />
               {person.name}
             </button>
           );

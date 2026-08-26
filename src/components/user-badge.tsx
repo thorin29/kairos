@@ -16,11 +16,13 @@ export function UserBadge({
   name,
   color,
   avatarPath,
+  avatarPosition,
   expanded = false,
 }: {
   name: string;
   color: string;
   avatarPath: string | null;
+  avatarPosition?: string | null;
   inline?: boolean;
   expanded?: boolean;
 }) {
@@ -47,7 +49,7 @@ export function UserBadge({
   return (
     <>
       <div className="flex w-full items-center gap-2 px-1.5 py-1.5">
-        <Avatar name={name} color={color} avatarPath={avatarPath} size="sm" />
+        <Avatar name={name} color={color} avatarPath={avatarPath} avatarPosition={avatarPosition} size="sm" />
         {expanded && (
           <>
             <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">

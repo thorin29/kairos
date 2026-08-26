@@ -18,6 +18,7 @@ export type PersonBooks = {
   name: string;
   color: string;
   avatarPath: string | null;
+  avatarPosition: string | null;
   current: BookProgress[];
   finished: BookProgress[];
 };
@@ -33,7 +34,7 @@ export async function loadReading(): Promise<PersonBooks[]> {
         name: true,
         displayName: true,
         color: true,
-        avatarPath: true,
+        avatarPath: true, avatarPosition: true,
       },
     }),
     prisma.book.findMany({
@@ -88,6 +89,7 @@ export async function loadReading(): Promise<PersonBooks[]> {
     name: p.displayName ?? p.name,
     color: p.color,
     avatarPath: p.avatarPath,
+    avatarPosition: p.avatarPosition,
     current: byUser.get(p.id)!.current,
     finished: byUser.get(p.id)!.finished,
   }));

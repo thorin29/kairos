@@ -61,14 +61,22 @@ export function PersonAvatar({
   name,
   color,
   avatarPath,
+  avatarPosition,
 }: {
   name: string;
   color: string;
   avatarPath: string | null;
+  avatarPosition?: string | null;
 }) {
   return (
     <AvatarBadge label={name} pillColor={color}>
-      <Avatar name={name} color={color} avatarPath={avatarPath} size="lg" />
+      <Avatar
+        name={name}
+        color={color}
+        avatarPath={avatarPath}
+        avatarPosition={avatarPosition}
+        size="lg"
+      />
     </AvatarBadge>
   );
 }
@@ -131,6 +139,7 @@ export function PersonFilterBadge({
   name,
   color,
   avatarPath,
+  avatarPosition,
   selected,
   compact = false,
 }: {
@@ -138,6 +147,7 @@ export function PersonFilterBadge({
   name: string;
   color: string;
   avatarPath: string | null;
+  avatarPosition?: string | null;
   selected: boolean;
   compact?: boolean;
 }) {
@@ -159,6 +169,7 @@ export function PersonFilterBadge({
           name={name}
           color={color}
           avatarPath={avatarPath}
+          avatarPosition={avatarPosition}
           size={compact ? "md" : "lg"}
         />
       </AvatarBadge>
