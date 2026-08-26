@@ -47,6 +47,7 @@ export type GridEvent = {
   /** Set on synthesized school-work due markers; the work type, for the glyph
    *  and colour. Null/absent on ordinary events. */
   schoolType?: string | null;
+  schoolClassName?: string | null;
   /** On a class meeting block: one entry per student in the class with pending
    *  work due that day, for the little "work is due" badges. Absent otherwise. */
   schoolBadges?: { userId: string; type: string }[];
@@ -542,7 +543,7 @@ async function applySchoolWork(
         select: {
           type: true,
           dueMinutes: true,
-          class: { select: { eventId: true } },
+          class: { select: { eventId: true, name: true } },
         },
       },
     },
@@ -609,6 +610,7 @@ async function applySchoolWork(
       recurLabel: null,
       external: false,
       schoolType: sw.type as string,
+      schoolClassName: sw.class?.name ?? null,
     };
 
     if (sw.dueMinutes == null) {

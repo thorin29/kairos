@@ -7,6 +7,7 @@ export type GameStatus = {
   name: string;
   color: string;
   avatarPath: string | null;
+  avatarPosition: string | null;
   enabled: boolean;
 
   dailyMinutes: number;
@@ -77,6 +78,7 @@ export async function loadGameStatus(
       name: p.displayName ?? p.name,
       color: p.color,
       avatarPath: p.avatarPath,
+      avatarPosition: p.avatarPosition,
       enabled: profile?.isActive ?? false,
 
       dailyMinutes,
