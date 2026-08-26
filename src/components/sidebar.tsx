@@ -70,6 +70,7 @@ export function Sidebar({
 }: {
   initialExpanded: boolean;
   user?: {
+    id: string;
     name: string;
     color: string;
     avatarPath: string | null;
@@ -211,12 +212,14 @@ export function Sidebar({
           {user && (
             <div className="px-1">
               <UserBadge
+                userId={user.id}
                 name={user.name}
                 color={user.color}
                 avatarPath={user.avatarPath}
                 avatarPosition={user.avatarPosition}
                 inline
                 expanded={expanded}
+                onNavigate={() => setMobileOpen(false)}
               />
             </div>
           )}

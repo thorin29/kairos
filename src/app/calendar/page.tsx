@@ -267,6 +267,7 @@ export default async function CalendarPage({
                   name={p.displayName ?? p.name}
                   color={p.color}
                   avatarPath={p.avatarPath}
+                  avatarPosition={p.avatarPosition}
                   selected={selectedSet.has(p.id)}
                   compact
                 />

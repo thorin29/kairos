@@ -98,7 +98,7 @@ export type PlanWorkout = {
 export type PlanDay = { day: number; workouts: PlanWorkout[] };
 
 export type PersonWorkout = {
-  user: { id: string; name: string; color: string; avatarPath: string | null };
+  user: { id: string; name: string; color: string; avatarPath: string | null; avatarPosition: string | null };
   categories: WorkoutCategory[];
   exercises: ExerciseDef[];
   weightSeries: GraphSeries[];
@@ -564,6 +564,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         name: person.displayName ?? person.name,
         color: person.color,
         avatarPath: person.avatarPath,
+        avatarPosition: person.avatarPosition,
       },
       categories,
       exercises: defs,

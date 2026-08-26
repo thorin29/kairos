@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.153.0";
+export const APP_VERSION = "0.154.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -81,6 +81,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.154.0",
+    summary: [
+      "A photo\u2019s adjusted framing now shows everywhere it appears \u2014 the dashboard cards, the calendar people row, workouts, and the side menu \u2014 not just in some places",
+      "Tapping your photo or name in the side menu now opens your profile, where you edit the picture and its framing (no need to go through your dashboard card). Signing out is still the separate icon",
+    ],
+  },
   {
     version: "0.153.0",
     summary: [

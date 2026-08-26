@@ -43,6 +43,7 @@ export function PersonCard({
             name={person.name}
             color={person.color}
             avatarPath={person.avatarPath}
+            avatarPosition={person.avatarPosition}
           />
           <span className="tabular text-lg font-medium">
             {person.percent === null ? (

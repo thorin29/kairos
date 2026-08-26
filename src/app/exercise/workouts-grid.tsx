@@ -123,6 +123,7 @@ export function WorkoutsGrid({
                   name={p.user.name}
                   color={p.user.color}
                   avatarPath={p.user.avatarPath}
+                  avatarPosition={p.user.avatarPosition}
                 />
               </div>
               <div className="mt-2">
@@ -160,6 +161,7 @@ export function WorkoutsGrid({
                   name={open.user.name}
                   color={open.user.color}
                   avatarPath={open.user.avatarPath}
+                  avatarPosition={open.user.avatarPosition}
                 />
                 <button
                   type="button"
