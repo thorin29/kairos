@@ -57,7 +57,7 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
         person.
       </p>
 
-      <LineChart series={current.series} />
+      <LineChart series={current.series} weight={current.metric === "WEIGHT"} />
 
       {current.series.length === 1 && (
         <p className="mt-2 text-xs text-muted">

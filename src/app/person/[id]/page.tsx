@@ -17,18 +17,14 @@ import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { loadClassOptions, loadSubjectNames } from "@/lib/queries/school";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import {
-  addDays,
   dayOfWeek,
   formatShort,
   fromDateColumn,
-  startOfWeek,
   todayISO,
-  weekDays,
 } from "@/lib/dates";
-import { loadRange } from "@/lib/queries/calendar";
+
 import { loadGameStatus } from "@/lib/queries/games";
 import { GameTimeCard } from "@/components/game-time-card";
-import { PersonWeek } from "@/components/person-week";
 import { generateChores } from "@/lib/chores/generate";
 import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
@@ -73,10 +69,6 @@ export default async function PersonPage({
   const { id } = await params;
   const { week } = await searchParams;
   const today = todayISO();
-
-  const weekAnchor = startOfWeek(
-    week && /^\d{4}-\d{2}-\d{2}$/.test(week) ? week : today,
-  );
 
   const person = await prisma.user.findUnique({ where: { id } });
   if (!person) notFound();
@@ -139,8 +131,6 @@ export default async function PersonPage({
     };
   }
 
-  const days = weekDays(weekAnchor);
-  const weekRange = await loadRange(days, id);
   const [gameStatus] = await loadGameStatus(today, id);
 
   const rows = tasks.map((t) => {
@@ -201,7 +191,6 @@ export default async function PersonPage({
     : null;
 
   const overdue = rows.filter((r) => r.isOverdue);
-  const missed = rows.filter((r) => r.stale);
   const todayRows = rows.filter((r) => !r.isOverdue && !r.stale);
 
   // Grouped so the day reads as sections rather than one long list.
@@ -409,21 +398,6 @@ export default async function PersonPage({
           </section>
         )}
 
-      {missed.length > 0 && (
-        <section className="mt-8">
-          <SectionHeading>Missed</SectionHeading>
-          <Card className="divide-y divide-hairline opacity-60">
-            {missed.map((t) => (
-              <TaskRow key={t.id} task={t} />
-            ))}
-          </Card>
-          <p className="mt-2 text-xs text-muted">
-            Someone else has these now, or they came around again. They no
-            longer count either way.
-          </p>
-        </section>
-      )}
-
       {getAhead.length > 0 && (
         <section className="mt-8">
           <SectionHeading>Get ahead</SectionHeading>
@@ -448,10 +422,6 @@ export default async function PersonPage({
 
       <section className="mt-8">
         <SectionHeading>Bible reading</SectionHeading>
-        <p className="mb-3 mt-1 text-sm text-muted">
-          Log {person.name}&rsquo;s own reading &mdash; mark any chapters or whole
-          books read, in any order. It adds a little to their Wisdom.
-        </p>
         <PersonalReveal>
           <div className="space-y-4">
             <PersonalPlanSection
@@ -475,19 +445,6 @@ export default async function PersonPage({
           </div>
         </PersonalReveal>
       </section>
-
-      <div className="mt-10">
-        <PersonWeek
-          days={days}
-          events={[...weekRange.allDay, ...weekRange.timed]}
-          todayISO={today}
-          label="This week"
-          prevHref={`/person/${id}?week=${addDays(weekAnchor, -7)}`}
-          nextHref={`/person/${id}?week=${addDays(weekAnchor, 7)}`}
-          thisWeekHref={`/person/${id}`}
-          fullHref={`/calendar?who=${id}`}
-        />
-      </div>
 
       <div className="mt-8 flex flex-wrap gap-3">
         <AddTaskForm

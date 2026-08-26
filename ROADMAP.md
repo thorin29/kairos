@@ -41,10 +41,26 @@ all live in the database, never in this repository.
 - [x] Nightly `pg_dump` into the mapped data volume
 - [x] About page with version number and a migration completeness check
 - [ ] Export everything to JSON from the admin panel
-- [ ] PWA install and offline queueing for actions taken without signal
-- [ ] **Installable Android app** — a real APK rather than a home-screen
-      shortcut, so it can be allowed on a child device with a time limit and
-      work where general internet access is blocked
+
+#### Android app — decided direction
+
+PWA is ruled out: several users have browsers blocked by the device time-limit
+container, and a PWA needs a working browser. The app will be a **Capacitor**
+build — a real installable APK that bundles its own web engine (so a blocked
+system browser doesn't matter) and wraps the existing web UI, keeping one
+codebase. TWA is avoided because it borrows the system browser.
+
+- [ ] **Capacitor Android app** in a separate repo (`kairos-app`): native shell,
+      permissions, packaging. The screens stay in this repo, served as now.
+- [ ] **Push notifications + background tasks** via Capacitor plugins (email
+      delivery already proves the notifier end-to-end; device push is the new
+      transport).
+- [ ] **Offline for groceries and calendar** — the two screens used away from
+      wifi. Cache both to open and read with no signal; a small change-queue
+      replays actions on reconnect. Groceries is single-shopper (no multi-person
+      merge), so its queue is simple; calendar needs two-way sync because events
+      may be added/edited offline. Everything else stays server-loaded.
+- [ ] Small additive API endpoints in this repo for the offline sync to call.
 - [ ] Push notifications for the app. (Email delivery now exists via SMTP, so
       the notifier concept is proven end-to-end; push to devices is a separate
       transport still to build.)
@@ -126,6 +142,30 @@ all live in the database, never in this repository.
 - [ ] **Per-resource ownership** (finer than session-level): e.g. on a personal
       device, only log your own workout. Not needed for the shared tablet, where
       acting for the whole household is the point. Revisit with the phone app.
+
+#### Personal-view scoping (for the phone app screens)
+
+On a personal device each page should show only the signed-in person. The data
+scoping is worth doing regardless of the app; the layout tweaks are really the
+phone screens. Track A (the non-personal fixes) shipped in 0.159.0; these are
+the remaining personal-view items:
+
+- [ ] #2 Home/card: open straight onto the card contents (not the summary
+      tile); completeness bars at the top; drop the "personal view — {name}"
+      banner and the red exclamation; surface up-for-grabs and always-open
+      chores that are currently missing from the personal home.
+- [ ] #4 (personal half): "This week" and "Weekly rotation" show only the
+      signed-in user; keep shared chores; (always-open counts shipped in 0.159).
+- [ ] #6 Reading — only your own reading.
+- [ ] #7 School — only your classes, assignments, tests.
+- [ ] #8 Game time — only you.
+- [ ] #9 Workouts — only you, and open straight onto the workout overlay/page
+      rather than a card you then tap.
+- [ ] #11 Transactions — only your transactions; hide the page/menu entry
+      entirely if you have no data.
+- [ ] #12 Character — only you, and move the character onto this page from the
+      home card.
+- [ ] Calendar — "major changes" still to be specced before building.
 - [ ] Kairos-side TOTP for the eventual app API path that bypasses Authelia.
 - [ ] **"Act as me" step-up** on the shared tablet — attribute a single action
       to a person (tap avatar, optional personal PIN) without turning the
