@@ -21,6 +21,7 @@ export async function addItem(input: {
   name: string;
   storeId: string;
   assignedToId?: string | null;
+  note?: string | null;
 }): Promise<void> {
   await requireInteractive();
   const name = normalizeName(input.name);
@@ -49,6 +50,7 @@ export async function addItem(input: {
       icon,
       storeId: input.storeId,
       assignedToId: input.assignedToId || null,
+      note: input.note?.trim() || null,
     },
   });
 
@@ -79,15 +81,6 @@ export async function addFromCatalog(
   refresh();
 }
 
-export async function setBought(itemId: string, bought: boolean): Promise<void> {
-  await requireInteractive();
-  await prisma.shoppingItem.update({
-    where: { id: itemId },
-    data: { boughtAt: bought ? new Date() : null },
-  });
-  refresh();
-}
-
 export async function assignItem(
   itemId: string,
   userId: string | null,
@@ -100,17 +93,41 @@ export async function assignItem(
   refresh();
 }
 
+/**
+ * Take a line off the list. This is both "we don't need this after all" from
+ * the list and "got it" from the shopping cart — either way the line is done
+ * and leaves the shared list. The catalog memory isn't touched (it already
+ * learned when the item was added), so nothing to unwind here.
+ */
 export async function removeItem(itemId: string): Promise<void> {
   await requireInteractive();
   await prisma.shoppingItem.deleteMany({ where: { id: itemId } });
   refresh();
 }
 
-/** Clear everything already bought — optionally just for one store. */
-export async function clearBought(storeId?: string): Promise<void> {
+/**
+ * Put a just-checked line back, for the "undo" during a shopping trip. It
+ * recreates the line as it was without bumping the catalog again, so an
+ * accidental tap costs nothing.
+ */
+export async function restoreItem(input: {
+  name: string;
+  icon: string;
+  storeId: string;
+  assignedToId?: string | null;
+  note?: string | null;
+}): Promise<void> {
   await requireInteractive();
-  await prisma.shoppingItem.deleteMany({
-    where: { boughtAt: { not: null }, ...(storeId ? { storeId } : {}) },
+  const store = await prisma.store.findUnique({ where: { id: input.storeId } });
+  if (!store) return;
+  await prisma.shoppingItem.create({
+    data: {
+      name: input.name,
+      icon: input.icon,
+      storeId: input.storeId,
+      assignedToId: input.assignedToId || null,
+      note: input.note?.trim() || null,
+    },
   });
   refresh();
 }
@@ -131,6 +148,38 @@ export async function setCatalogIcon(
   refresh();
 }
 
+/** Rename a catalog item. Names are unique; a clash is left as a no-op. */
+export async function renameCatalogItem(
+  catalogId: string,
+  name: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  await requireAdmin();
+  const clean = normalizeName(name);
+  if (!clean) return { ok: false, reason: "empty" };
+  const clash = await prisma.groceryItem.findUnique({ where: { name: clean } });
+  if (clash && clash.id !== catalogId) {
+    return { ok: false, reason: "duplicate" };
+  }
+  await prisma.groceryItem.update({
+    where: { id: catalogId },
+    data: { name: clean },
+  });
+  refresh();
+  return { ok: true };
+}
+
+export async function setCatalogStore(
+  catalogId: string,
+  storeId: string | null,
+): Promise<void> {
+  await requireAdmin();
+  await prisma.groceryItem.update({
+    where: { id: catalogId },
+    data: { defaultStoreId: storeId || null },
+  });
+  refresh();
+}
+
 export async function setCatalogActive(
   catalogId: string,
   active: boolean,
@@ -140,6 +189,12 @@ export async function setCatalogActive(
     where: { id: catalogId },
     data: { isActive: active },
   });
+  refresh();
+}
+
+export async function deleteCatalogItem(catalogId: string): Promise<void> {
+  await requireAdmin();
+  await prisma.groceryItem.deleteMany({ where: { id: catalogId } });
   refresh();
 }
 
@@ -184,6 +239,33 @@ export async function addStore(name: string, icon: string): Promise<void> {
   refresh();
 }
 
+export async function renameStore(
+  storeId: string,
+  name: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  await requireAdmin();
+  const clean = name.trim().slice(0, 40);
+  if (!clean) return { ok: false, reason: "empty" };
+  const clash = await prisma.store.findUnique({ where: { name: clean } });
+  if (clash && clash.id !== storeId) return { ok: false, reason: "duplicate" };
+  await prisma.store.update({ where: { id: storeId }, data: { name: clean } });
+  refresh();
+  return { ok: true };
+}
+
+export async function setStoreIcon(
+  storeId: string,
+  icon: string,
+): Promise<void> {
+  await requireAdmin();
+  const trimmed = icon.trim().slice(0, 8) || "🛒";
+  await prisma.store.update({
+    where: { id: storeId },
+    data: { icon: trimmed },
+  });
+  refresh();
+}
+
 export async function setStoreActive(
   storeId: string,
   active: boolean,
@@ -194,4 +276,18 @@ export async function setStoreActive(
     data: { isActive: active },
   });
   refresh();
+}
+
+/**
+ * Delete a store outright. Deleting one cascades to any lines still under it,
+ * so the admin UI only offers this once a store is empty; the guard here is
+ * the backstop.
+ */
+export async function deleteStore(storeId: string): Promise<{ ok: boolean; reason?: string }> {
+  await requireAdmin();
+  const lines = await prisma.shoppingItem.count({ where: { storeId } });
+  if (lines > 0) return { ok: false, reason: "not-empty" };
+  await prisma.store.deleteMany({ where: { id: storeId } });
+  refresh();
+  return { ok: true };
 }

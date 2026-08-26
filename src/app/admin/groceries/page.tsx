@@ -18,8 +18,8 @@ export default async function AdminGroceriesPage() {
         </h1>
         <p className="mt-2 max-w-xl text-muted">
           Stores to shop at, and the catalog the list remembers. The catalog
-          fills itself in as people add things — this is where you seed an
-          initial list, fix an icon, or tuck something away.
+          fills itself in as people add things — here you can seed items, rename
+          them, fix an icon, set a default store, hide, or delete.
         </p>
       </header>
 

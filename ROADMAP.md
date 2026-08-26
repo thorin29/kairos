@@ -129,8 +129,9 @@ all live in the database, never in this repository.
 - [ ] Kairos-side TOTP for the eventual app API path that bypasses Authelia.
 - [ ] **"Act as me" step-up** on the shared tablet — attribute a single action
       to a person (tap avatar, optional personal PIN) without turning the
-      tablet into a private session. First consumer: the grocery "I'm going
-      shopping → pull my cart" flow.
+      tablet into a private session. The grocery "I'm going shopping → cart"
+      flow now exists as a shared run; this would let a run be tied to one
+      person (their name on the trip, their staples) if that ever proves useful.
 - [ ] **Personal / focused views** on a signed-in device, plus a summary page
       that's one tap away rather than front-and-centre.
 - [ ] Admin is still a separate axis (the shared PIN). Later: let a personal
@@ -635,17 +636,25 @@ own exercises, optionally schedules them, and records what they did.
 
 - [x] Shared shopping list, added to from the dashboard by anyone
 - [x] Stores to shop at (Costco, the grocery store), extendable by an admin
-- [x] Filter the list by store — "I'm at Costco" shows just Costco's items
 - [x] A learning catalog: adding an item remembers it with an icon, and the
       common ones surface first as quick picks
 - [x] Icons guessed from the item name, remembered and admin-editable
-- [x] Assign an item to a person, and check items off into a cart
-- [x] Admin: manage stores and the remembered catalog, seed an initial list
-- [ ] Per-person cart: "I'm going to Costco" pulls that store's items into
-      one person's run, and checking off updates the shared list
-- [ ] Quantities and notes on an item (2 dozen, the good kind)
-- [ ] Non-grocery stores handled the same way (clothing, hardware)
-- [ ] Suggest a store for a typed item from its catalog default
+- [x] Type-ahead add: matches from the catalog appear as you type, or add a
+      brand-new item in one tap
+- [x] Two clear modes on one page — a **list** (add things, grouped by store,
+      each store with its own "Shop" button) and a focused **shopping cart**
+      (pick a store → big-tap checklist of just that store's items)
+- [x] Checking an item off while shopping removes it from the shared list
+      straight away, with an in-trip Undo (the "basket" strip) if a tap slips
+- [x] A live got/total progress bar while shopping
+- [x] Assign an item to a person (avatar rides along into the cart)
+- [x] A typed item's store defaults to its remembered catalog store
+- [x] Non-grocery stores handled the same way — a "store" is just a shopping
+      destination (clothing, hardware) with the same cart flow
+- [x] Admin: full editing of stores (rename, icon, hide, delete-when-empty)
+      and catalog items (rename, icon, default store, hide, delete)
+- [ ] Quantities on an item (2 dozen) — the note field exists on a line but
+      isn't surfaced in the add form yet
 - [ ] Recurring staples that re-add themselves on a cadence
 - [ ] Installable on a phone as a PWA, so a shopper has the list in the aisle
 - [ ] Optional native Android wrapper if a PWA proves too limiting

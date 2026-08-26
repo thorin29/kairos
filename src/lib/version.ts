@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.154.0";
+export const APP_VERSION = "0.155.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -81,6 +81,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.155.0",
+    summary: [
+      "Groceries redesigned into two clear steps. The main page is now the list: add what you need (start typing and past items pop up to tap, or add something new in one go), with everything grouped under the store you\u2019d buy it at",
+      "Each store has its own \u201cShop\u201d button. Tapping it opens a focused, big-button checklist of just that store\u2019s items \u2014 made for holding a phone in the aisle. Tick something off and it leaves the list right away, with a running \u201c3 of 8\u201d progress and an Undo in the basket if you tap the wrong thing",
+      "The admin area now lets you fully edit groceries: rename a store or item, change its icon, set which store an item belongs to by default, hide it, or delete it (a store can be deleted once its list is empty)",
+    ],
+  },
   {
     version: "0.154.0",
     summary: [
