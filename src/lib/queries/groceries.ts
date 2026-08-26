@@ -13,8 +13,13 @@ export type ShoppingItemView = {
   icon: string;
   storeId: string;
   note: string | null;
-  bought: boolean;
-  assignee: { id: string; name: string; color: string; avatarPath: string | null; avatarPosition: string | null } | null;
+  assignee: {
+    id: string;
+    name: string;
+    color: string;
+    avatarPath: string | null;
+    avatarPosition: string | null;
+  } | null;
 };
 
 export type CatalogSuggestion = {
@@ -27,40 +32,47 @@ export type CatalogSuggestion = {
 export type GroceriesData = {
   stores: StoreView[];
   items: ShoppingItemView[];
-  suggestions: CatalogSuggestion[];
+  catalog: CatalogSuggestion[];
 };
 
 /**
- * Everything the grocery board needs: the stores to filter by, the lines
- * currently on the list, and the most-used catalog items to offer as quick
- * picks. Suggestions are ordered by how often they've been bought, which is
- * how the list "learns" what's common.
+ * Everything the grocery page needs: the stores to shop, the lines currently
+ * needed, and the remembered catalog. The catalog is returned whole (ordered
+ * by how often each thing has been added) so the client can both show the
+ * most common items as one-tap chips and offer the rest as you type. A line on
+ * the list is always "needed" — checking it off while shopping deletes it, so
+ * there is no bought/unbought state to carry here.
  */
 export async function loadGroceries(): Promise<GroceriesData> {
-  const [stores, items, suggestions] = await Promise.all([
+  const [stores, items, catalog] = await Promise.all([
     prisma.store.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true, icon: true },
     }),
     prisma.shoppingItem.findMany({
-      orderBy: [{ boughtAt: "asc" }, { createdAt: "asc" }],
+      orderBy: [{ createdAt: "asc" }],
       select: {
         id: true,
         name: true,
         icon: true,
         storeId: true,
         note: true,
-        boughtAt: true,
         assignedTo: {
-          select: { id: true, name: true, color: true, avatarPath: true, avatarPosition: true },
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            avatarPath: true,
+            avatarPosition: true,
+          },
         },
       },
     }),
     prisma.groceryItem.findMany({
       where: { isActive: true },
       orderBy: [{ useCount: "desc" }, { lastUsedAt: "desc" }, { name: "asc" }],
-      take: 24,
+      take: 500,
       select: { id: true, name: true, icon: true, defaultStoreId: true },
     }),
   ]);
@@ -73,10 +85,9 @@ export async function loadGroceries(): Promise<GroceriesData> {
       icon: i.icon,
       storeId: i.storeId,
       note: i.note,
-      bought: i.boughtAt !== null,
       assignee: i.assignedTo,
     })),
-    suggestions,
+    catalog,
   };
 }
 
@@ -85,6 +96,7 @@ export type AdminStore = {
   name: string;
   icon: string;
   isActive: boolean;
+  itemCount: number;
 };
 
 export type AdminCatalogItem = {
@@ -100,7 +112,7 @@ export async function loadGroceryAdmin(): Promise<{
   stores: AdminStore[];
   catalog: AdminCatalogItem[];
 }> {
-  const [stores, catalog] = await Promise.all([
+  const [stores, catalog, counts] = await Promise.all([
     prisma.store.findMany({
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true, icon: true, isActive: true },
@@ -116,6 +128,21 @@ export async function loadGroceryAdmin(): Promise<{
         isActive: true,
       },
     }),
+    // How many lines currently sit under each store, so the admin can be
+    // warned before deleting a store that still has things on the list.
+    prisma.shoppingItem.groupBy({
+      by: ["storeId"],
+      _count: { _all: true },
+    }),
   ]);
-  return { stores, catalog };
+
+  const countByStore = new Map(counts.map((c) => [c.storeId, c._count._all]));
+
+  return {
+    stores: stores.map((s) => ({
+      ...s,
+      itemCount: countByStore.get(s.id) ?? 0,
+    })),
+    catalog,
+  };
 }

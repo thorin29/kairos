@@ -10,30 +10,30 @@ export default async function GroceriesPage() {
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, color: true, avatarPath: true, avatarPosition: true },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        avatarPath: true,
+        avatarPosition: true,
+      },
     }),
   ]);
 
-  const needed = data.items.filter((i) => !i.bought).length;
-
   return (
-    <>
-      
-
-      <main className="mx-auto max-w-4xl px-6 py-6">
-        {data.stores.length === 0 ? (
-          <p className="rounded-2xl border border-hairline bg-surface p-6 text-sm text-muted">
-            No stores yet. A parent can add one from the admin area.
-          </p>
-        ) : (
-          <GroceryBoard
-            stores={data.stores}
-            items={data.items}
-            suggestions={data.suggestions}
-            roster={roster}
-          />
-        )}
-      </main>
-    </>
+    <main className="mx-auto max-w-4xl px-6 py-6">
+      {data.stores.length === 0 ? (
+        <p className="rounded-2xl border border-hairline bg-surface p-6 text-sm text-muted">
+          No stores yet. A parent can add one from the admin area.
+        </p>
+      ) : (
+        <GroceryBoard
+          stores={data.stores}
+          items={data.items}
+          catalog={data.catalog}
+          roster={roster}
+        />
+      )}
+    </main>
   );
 }
