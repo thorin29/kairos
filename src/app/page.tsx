@@ -155,18 +155,12 @@ export default async function Home({
   return (
     <>
       <main className="mx-auto max-w-6xl px-6 py-6">
-        {totalOverdue > 0 && (
+        {!personal && totalOverdue > 0 && (
           <p className="tabular mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-red-700">
             <AlertIcon className="h-4 w-4" />
             {totalOverdue} overdue
           </p>
         )}
-
-      {personal && me && (
-        <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-ink/5 px-3 py-1 text-sm text-muted">
-          Personal view — {me.displayName ?? me.name}
-        </p>
-      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((p) => (
