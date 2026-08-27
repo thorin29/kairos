@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
 
@@ -17,6 +17,7 @@ export async function addBook(input: {
   length: number;
 }): Promise<{ error: string | null }> {
   await requireInteractive();
+  await requireCanActFor(input.userId);
   const title = input.title.trim().slice(0, 120);
   if (!input.userId) return { error: "Whose book is this?" };
   if (title.length < 1) return { error: "Give the book a title." };
@@ -39,6 +40,12 @@ export async function logBookReading(
 ): Promise<void> {
   await requireInteractive();
   if (!bookId) return;
+  const owner = await prisma.book.findUnique({
+    where: { id: bookId },
+    select: { userId: true },
+  });
+  if (!owner) return;
+  await requireCanActFor(owner.userId);
   const amt = Math.max(0, Math.min(100000, Math.round(amount) || 0));
   const day = toDateColumn(todayISO());
   const existing = await prisma.bookLog.findFirst({ where: { bookId, day } });
@@ -61,6 +68,12 @@ export async function editBook(
 ): Promise<void> {
   await requireInteractive();
   if (!bookId) return;
+  const owner = await prisma.book.findUnique({
+    where: { id: bookId },
+    select: { userId: true },
+  });
+  if (!owner) return;
+  await requireCanActFor(owner.userId);
   const data: { title?: string; length?: number } = {};
   if (patch.title !== undefined)
     data.title = patch.title.trim().slice(0, 120) || "Book";
@@ -77,6 +90,12 @@ export async function finishBook(
 ): Promise<void> {
   await requireInteractive();
   if (!bookId) return;
+  const owner = await prisma.book.findUnique({
+    where: { id: bookId },
+    select: { userId: true },
+  });
+  if (!owner) return;
+  await requireCanActFor(owner.userId);
   await prisma.book.update({
     where: { id: bookId },
     data: { finishedAt: finished ? new Date() : null },
@@ -87,6 +106,12 @@ export async function finishBook(
 export async function deleteBook(bookId: string): Promise<void> {
   await requireInteractive();
   if (!bookId) return;
+  const owner = await prisma.book.findUnique({
+    where: { id: bookId },
+    select: { userId: true },
+  });
+  if (!owner) return;
+  await requireCanActFor(owner.userId);
   await prisma.book.delete({ where: { id: bookId } }).catch(() => {});
   refresh();
 }

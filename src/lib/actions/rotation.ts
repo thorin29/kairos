@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
@@ -25,6 +25,7 @@ async function rotationIdFor(userId: string): Promise<string | null> {
  *  don't have one yet). Its presence is what switches them off the weekly plan. */
 export async function startRotation(userId: string): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId) return;
   const existing = await prisma.workoutRotation.findUnique({ where: { userId } });
   if (existing) {
@@ -46,6 +47,7 @@ export async function startRotation(userId: string): Promise<void> {
 /** Return a person to the weekly plan by removing their rotation (slots cascade). */
 export async function stopRotation(userId: string): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId) return;
   await prisma.workoutRotation.deleteMany({ where: { userId } });
   await generateWorkoutTasks();
@@ -58,6 +60,7 @@ export async function setRotationRestDays(
   restMask: number,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId) return;
   const mask = Math.max(0, Math.min(127, Math.trunc(restMask)));
   await prisma.workoutRotation.updateMany({
@@ -74,6 +77,7 @@ export async function setRotationAnchor(
   dateISO: string,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
   await prisma.workoutRotation.updateMany({
     where: { userId },
@@ -93,6 +97,7 @@ export async function addRotationSlot(
   },
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   const rotationId = await rotationIdFor(userId);
   if (!rotationId) return;
   const count = await prisma.rotationSlot.count({ where: { rotationId } });
@@ -121,6 +126,12 @@ export async function updateRotationSlot(
 ): Promise<void> {
   await requireInteractive();
   if (!slotId) return;
+  const uslot = await prisma.rotationSlot.findUnique({
+    where: { id: slotId },
+    select: { rotation: { select: { userId: true } } },
+  });
+  if (!uslot) return;
+  await requireCanActFor(uslot.rotation.userId);
   const data: {
     name?: string;
     category?: WorkoutCategory | null;
@@ -139,9 +150,10 @@ export async function removeRotationSlot(slotId: string): Promise<void> {
   if (!slotId) return;
   const slot = await prisma.rotationSlot.findUnique({
     where: { id: slotId },
-    select: { rotationId: true },
+    select: { rotationId: true, rotation: { select: { userId: true } } },
   });
   if (!slot) return;
+  await requireCanActFor(slot.rotation.userId);
   await prisma.rotationSlot.delete({ where: { id: slotId } });
   // Re-pack positions so they stay contiguous 0..n-1.
   const rest = await prisma.rotationSlot.findMany({
@@ -168,9 +180,15 @@ export async function moveRotationSlot(
   if (!slotId) return;
   const slot = await prisma.rotationSlot.findUnique({
     where: { id: slotId },
-    select: { id: true, rotationId: true, position: true },
+    select: {
+      id: true,
+      rotationId: true,
+      position: true,
+      rotation: { select: { userId: true } },
+    },
   });
   if (!slot) return;
+  await requireCanActFor(slot.rotation.userId);
   const neighbour = await prisma.rotationSlot.findFirst({
     where: { rotationId: slot.rotationId, position: slot.position + dir },
     select: { id: true, position: true },

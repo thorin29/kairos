@@ -43,3 +43,20 @@ export async function requireAdminOrSelf(subjectUserId: string): Promise<void> {
   if (me && (me.role === "ADMIN" || me.id === subjectUserId)) return;
   throw new Error("You can only edit your own profile.");
 }
+
+/**
+ * Ownership guard for per-person actions (log my money, my workout, my school
+ * work…). Open mode is unchanged — the shared wall tablet acts for the whole
+ * household, and an admin (or the tablet's admin unlock) always may. Once
+ * login-gating is on, a signed-in non-admin can only act for themselves, so a
+ * child on their own phone can't mutate a parent's or sibling's data by passing
+ * another id. Shared resources (the grocery list, the chore pool, the calendar)
+ * deliberately don't use this — anyone may act on those.
+ */
+export async function requireCanActFor(subjectUserId: string): Promise<void> {
+  if (!(await loginRequired())) return;
+  if (await isAdmin()) return;
+  const me = await currentUser();
+  if (me && (me.role === "ADMIN" || me.id === subjectUserId)) return;
+  throw new Error("You can only do that for yourself.");
+}

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { requireAdmin, isAdmin } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
 import { getClassFromCalendarMode, SCHOOL_CLASS_FROM_CALENDAR } from "@/lib/settings";
@@ -63,6 +63,7 @@ export async function addSchoolWork(
   }
 
   if (!userId) return { error: "Pick who this is for." };
+  await requireCanActFor(userId);
   if (title.length < 2) return { error: "Give the assignment a name." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
     return { error: "That date isn't valid." };
@@ -125,9 +126,11 @@ export async function deleteSchoolWork(taskId: string): Promise<void> {
     where: { id: taskId },
     select: { userId: true },
   });
+  if (!task) return;
+  await requireCanActFor(task.userId);
   await prisma.task.delete({ where: { id: taskId } }).catch(() => {});
   revalidatePath("/");
-  if (task) revalidatePath(`/person/${task.userId}`);
+  revalidatePath(`/person/${task.userId}`);
   revalidatePath("/admin/school");
 }
 
@@ -757,6 +760,7 @@ export async function answerClassPrompt(input: {
 }): Promise<{ error: string | null }> {
   await requireInteractive();
   const { classId, userId, dateISO, attended } = input;
+  await requireCanActFor(userId);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return { error: "Bad date." };
 
   // Guard: only a member of this class can answer its prompt.
@@ -870,6 +874,11 @@ export async function setTestScore(input: {
   });
   if (!sw) return { error: "That school item no longer exists." };
   if (sw.type !== "TEST") return { error: "Only tests take a score." };
+  const owner = await prisma.task.findUnique({
+    where: { id: input.taskId },
+    select: { userId: true },
+  });
+  if (owner) await requireCanActFor(owner.userId);
 
   if (input.score == null) {
     await prisma.schoolWork.update({
