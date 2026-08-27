@@ -6,6 +6,7 @@ import {
 } from "@/lib/queries/chores-summary";
 import { loadChoreMetrics } from "@/lib/queries/chore-metrics";
 import { loadAlwaysOpenCounts } from "@/lib/queries/always-open-counts";
+import { personalUserId } from "@/lib/personal-scope";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { DAY_SHORT } from "@/lib/days";
 import { formatShort, todayISO } from "@/lib/dates";
@@ -57,6 +58,11 @@ export default async function ChoresOverviewPage() {
       .sort((a, b) => a.dayOfWeek - b.dayOfWeek),
   }));
 
+  // On a personal device, the per-person tables show only the signed-in person;
+  // shared chores and the always-open counts stay household-wide.
+  const meId = await personalUserId();
+  const shownPeople = meId ? byPerson.filter((p) => p.id === meId) : byPerson;
+
   return (
     <>
       
@@ -90,7 +96,7 @@ export default async function ChoresOverviewPage() {
             <span className="w-16 text-right">Missed</span>
           </div>
 
-          {byPerson.map((p) => (
+          {shownPeople.map((p) => (
             <div key={p.id} className="flex items-center gap-3 px-5 py-3">
               <span className="flex min-w-0 flex-1 items-center gap-2.5">
                 <Avatar
@@ -127,7 +133,7 @@ export default async function ChoresOverviewPage() {
       <section className="mb-10">
         <SectionHeading>Weekly rotation</SectionHeading>
         <div className="grid gap-4 sm:grid-cols-2">
-          {byPerson.map((p) => (
+          {shownPeople.map((p) => (
             <Card key={p.id} className="p-5">
               <div className="mb-3 flex items-center gap-2.5">
                 <Avatar
