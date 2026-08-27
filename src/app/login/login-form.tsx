@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { loginUser, type LoginState } from "@/lib/actions/accounts";
 
 const initial: LoginState = { error: null, ok: false };
@@ -12,12 +11,14 @@ const field =
 /** Name + password. Deliberately plain: this is a personal sign-in on a phone,
  *  not the tablet PIN pad. */
 export function LoginForm({ next = "/" }: { next?: string }) {
-  const router = useRouter();
   const [state, formAction, pending] = useActionState(loginUser, initial);
 
   useEffect(() => {
-    if (state.ok) router.push(next);
-  }, [state.ok, next, router]);
+    // A full navigation (not router.push) so the root layout re-runs with the
+    // new session — otherwise the sidebar and personal view don't appear until
+    // a manual refresh, since a shared layout isn't re-rendered on soft nav.
+    if (state.ok) window.location.assign(next);
+  }, [state.ok, next]);
 
   return (
     <form action={formAction} className="space-y-4">

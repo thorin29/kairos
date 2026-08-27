@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/user-session";
 import { LoginForm } from "./login-form";
-import { BackLink } from "@/components/back-link";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +23,6 @@ export default async function LoginPage({
 
   return (
     <main className="mx-auto max-w-md px-6 py-10">
-      <BackLink />
-
       <header className="mb-8 mt-8 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

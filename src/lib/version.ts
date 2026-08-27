@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.172.0";
+export const APP_VERSION = "0.173.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.173.0",
+    summary: [
+      "Signing in now lands you fully in the app \u2014 the sidebar and your personal view appear right away instead of only after a refresh (login now does a full navigation so the page frame reloads with your session).",
+      "Phones and the app default to the personal view once signed in; the shared wall tablet (which doesn't sign in) stays on the whole-household view. An admin can still pin either mode per device.",
+      "Removed the Dashboard button from the sign-in screen \u2014 it now shows only the login form.",
+    ],
+  },
   {
     version: "0.172.0",
     summary: [
