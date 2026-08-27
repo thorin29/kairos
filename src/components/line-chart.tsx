@@ -14,30 +14,35 @@ const W = 520;
 const H = 240;
 const PAD = { top: 16, right: 16, bottom: 28, left: 44 };
 
+// Common barbell loads (bar + standard plate pairs). Labeled on the axis; the
+// lighter minor lines fill in between.
+const COMMON_LB = [45, 65, 95, 115, 135, 155, 185, 205, 225, 245, 275, 315, 365, 405, 455, 495, 545, 585];
+const COMMON_KG = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 140, 160, 180, 200, 220, 240, 260];
+
 /**
- * Build a weight axis from real plate math: gridlines land on round, gym-legible
- * loads (45, 90, 135…) stepping by a plate-friendly amount, starting at the
- * lowest logged weight (snapped down to a line) and clearing the highest. An odd
- * max just floats between lines — its exact value is on the dot — so the scale
- * never reads 191 or 212.
+ * A weight axis in real gym numbers: light gridlines every plate-step, with the
+ * common loads (45, 95, 135, 185…) labeled. Starts at the lowest logged lift and
+ * clears the highest; an odd max just floats between lines.
  */
-function weightTicks(lo: number, hi: number, unit: string) {
-  const ladder =
-    unit === "kg" ? [2.5, 5, 10, 20, 25, 50, 100] : [5, 10, 25, 45, 90, 135, 225];
-  if (!(hi > lo)) hi = lo + ladder[0];
-  let step = ladder[ladder.length - 1];
-  for (const s of ladder) {
-    const start = Math.floor(lo / s) * s;
-    if ((hi - start) / s <= 6) {
-      step = s;
-      break;
-    }
+function weightGrid(lo: number, hi: number, unit: string) {
+  const kg = unit === "kg";
+  const minorStep = kg ? 5 : 10;
+  const common = kg ? COMMON_KG : COMMON_LB;
+
+  const yMin = Math.floor(lo / minorStep) * minorStep;
+  let yMax = Math.ceil(hi / minorStep) * minorStep;
+  if (yMax <= yMin) yMax = yMin + minorStep * 2;
+
+  const minor: number[] = [];
+  for (let v = yMin; v <= yMax + 1e-9; v += minorStep) minor.push(v);
+
+  let major = common.filter((v) => v >= yMin && v <= yMax);
+  if (major.length < 2) {
+    // Range sits between common loads — label a sparse set of the minor lines.
+    const stride = Math.max(1, Math.ceil(minor.length / 5));
+    major = minor.filter((_, i) => i % stride === 0);
   }
-  const yMin = Math.floor(lo / step) * step;
-  const yMax = Math.ceil(hi / step) * step;
-  const ticks: number[] = [];
-  for (let v = yMin; v <= yMax + 1e-9; v += step) ticks.push(Number(v.toFixed(2)));
-  return { ticks, yMin, yMax };
+  return { yMin, yMax, minor, major };
 }
 
 export function LineChart({
@@ -51,10 +56,10 @@ export function LineChart({
 
   const visible = series.filter((s) => !hidden.has(s.id));
 
-  const { xMin, xMax, yMin, yMax, ticks } = useMemo(() => {
+  const { xMin, xMax, yMin, yMax, major, minor } = useMemo(() => {
     const pts = visible.flatMap((s) => s.points);
     if (pts.length === 0) {
-      return { xMin: 0, xMax: 1, yMin: 0, yMax: 1, ticks: [0, 1] };
+      return { xMin: 0, xMax: 1, yMin: 0, yMax: 1, major: [0, 1], minor: [] as number[] };
     }
     const xs = pts.map((p) => Date.parse(`${p.date}T00:00:00Z`));
     const ys = pts.map((p) => p.value);
@@ -63,13 +68,14 @@ export function LineChart({
 
     if (weight) {
       const unit = visible.find((s) => s.points.length > 0)?.unit ?? "lb";
-      const w = weightTicks(lo, hi, unit);
+      const g = weightGrid(lo, hi, unit);
       return {
         xMin: Math.min(...xs),
         xMax: Math.max(...xs),
-        yMin: w.yMin,
-        yMax: w.yMax,
-        ticks: w.ticks,
+        yMin: g.yMin,
+        yMax: g.yMax,
+        major: g.major,
+        minor: g.minor,
       };
     }
 
@@ -84,8 +90,8 @@ export function LineChart({
     const y0 = Math.max(0, gLo - pad);
     const y1 = gHi + pad;
     const n = 4;
-    const gticks = Array.from({ length: n + 1 }, (_, i) => y0 + ((y1 - y0) * i) / n);
-    return { xMin: Math.min(...xs), xMax: Math.max(...xs), yMin: y0, yMax: y1, ticks: gticks };
+    const ticks = Array.from({ length: n + 1 }, (_, i) => y0 + ((y1 - y0) * i) / n);
+    return { xMin: Math.min(...xs), xMax: Math.max(...xs), yMin: y0, yMax: y1, major: ticks, minor: [] as number[] };
   }, [visible, weight]);
 
   const plotW = W - PAD.left - PAD.right;
@@ -98,9 +104,7 @@ export function LineChart({
 
   const fmtDate = (ms: number) =>
     new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-
-  const fmtTick = (t: number) =>
-    Number.isInteger(t) ? String(t) : t.toFixed(1);
+  const fmtTick = (t: number) => (Number.isInteger(t) ? String(t) : t.toFixed(1));
 
   const toggle = (id: string) =>
     setHidden((prev) => {
@@ -127,9 +131,24 @@ export function LineChart({
         role="img"
         aria-label="Progress over time"
       >
-        {/* y grid + labels */}
-        {ticks.map((t, i) => (
-          <g key={i}>
+        {/* minor gridlines (weights only): light, dotted, no label */}
+        {minor.map((t, i) => (
+          <line
+            key={`m${i}`}
+            x1={PAD.left}
+            x2={W - PAD.right}
+            y1={y(t)}
+            y2={y(t)}
+            stroke="var(--color-hairline)"
+            strokeWidth={1}
+            strokeDasharray="2 4"
+            opacity={0.5}
+          />
+        ))}
+
+        {/* major gridlines + labels */}
+        {major.map((t, i) => (
+          <g key={`M${i}`}>
             <line
               x1={PAD.left}
               x2={W - PAD.right}
