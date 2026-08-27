@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { toDateColumn } from "@/lib/dates";
 import { buildPlan, type Selection } from "@/lib/bible/plan-builder";
 import { parsePassage } from "@/lib/bible/books";
@@ -23,6 +23,7 @@ export async function generatePersonalPlan(
   },
 ): Promise<{ error: string | null }> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId) return { error: "Whose plan is this?" };
   const name = input.name.trim().slice(0, 80) || "My reading plan";
   const books = [...new Set(input.bookNames)].filter(Boolean);
@@ -77,6 +78,7 @@ export async function generatePersonalPlan(
 
 export async function deletePersonalPlan(userId: string): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId) return;
   await prisma.readingPlan.deleteMany({ where: { ownerId: userId } });
   revalidatePath("/bible");
@@ -91,6 +93,7 @@ export async function markPersonalReading(
   read: boolean,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId) return;
   const refs = parsePassage(passage);
   if (refs.length === 0) return;

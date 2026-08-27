@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { setSetting, WORKOUT_OVERDUE_DAYS, WORKOUT_OVERDUE_MAX } from "@/lib/settings";
@@ -65,6 +65,7 @@ export async function addExercise(
   },
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   const name = input.name.trim().slice(0, 60);
   if (!userId || name.length < 1) return;
 
@@ -89,6 +90,12 @@ export async function updateExercise(
   data: { name?: string; unit?: string; tracked?: boolean; implement?: Implement | null },
 ): Promise<void> {
   await requireInteractive();
+  const ex = await prisma.exercise.findUnique({
+    where: { id },
+    select: { userId: true },
+  });
+  if (!ex) return;
+  await requireCanActFor(ex.userId);
   await prisma.exercise.update({
     where: { id },
     data: {
@@ -103,6 +110,12 @@ export async function updateExercise(
 
 export async function removeExercise(id: string): Promise<void> {
   await requireInteractive();
+  const ex = await prisma.exercise.findUnique({
+    where: { id },
+    select: { userId: true },
+  });
+  if (!ex) return;
+  await requireCanActFor(ex.userId);
   await prisma.exercise.update({ where: { id }, data: { isActive: false } });
   refresh();
 }
@@ -185,6 +198,7 @@ export async function setScheduleDays(
   endISO?: string | null,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   const days = [...new Set(weekdays)].filter((d) => d >= 0 && d <= 6);
   const effectiveFrom = toDateColumn(
     startISO && /^\d{4}-\d{2}-\d{2}$/.test(startISO) ? startISO : todayISO(),
@@ -221,6 +235,12 @@ export async function pauseExercise(
   paused: boolean,
 ): Promise<void> {
   await requireInteractive();
+  const pex = await prisma.exercise.findUnique({
+    where: { id: exerciseId },
+    select: { userId: true },
+  });
+  if (!pex) return;
+  await requireCanActFor(pex.userId);
   await prisma.workoutSchedule.updateMany({
     where: { exerciseId },
     data: { isPaused: paused },
@@ -234,6 +254,12 @@ export async function setExerciseEnd(
   endISO: string | null,
 ): Promise<void> {
   await requireInteractive();
+  const eex = await prisma.exercise.findUnique({
+    where: { id: exerciseId },
+    select: { userId: true },
+  });
+  if (!eex) return;
+  await requireCanActFor(eex.userId);
   const endDate =
     endISO && /^\d{4}-\d{2}-\d{2}$/.test(endISO) ? toDateColumn(endISO) : null;
   await prisma.workoutSchedule.updateMany({
@@ -318,6 +344,7 @@ export async function logSession(input: {
   notes?: string;
 }): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(input.userId);
   if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
 
   const sessionId = await findOrCreateSession(input.userId, input.dateISO);
@@ -391,6 +418,7 @@ export async function markWorkedOut(
   worked: boolean,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
   const date = toDateColumn(dateISO);
 
@@ -435,6 +463,7 @@ export async function addPlannedWorkout(
   name: string,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   const clean = name.trim().slice(0, 40);
   if (!userId || clean.length < 1 || dayOfWeek < 0 || dayOfWeek > 6) return;
 
@@ -448,6 +477,12 @@ export async function addPlannedWorkout(
 
 export async function removePlannedWorkout(id: string): Promise<void> {
   await requireInteractive();
+  const pw = await prisma.plannedWorkout.findUnique({
+    where: { id },
+    select: { userId: true },
+  });
+  if (!pw) return;
+  await requireCanActFor(pw.userId);
   await prisma.plannedWorkout.delete({ where: { id } }).catch(() => {});
   await generateWorkoutTasks();
   refresh();
@@ -475,6 +510,7 @@ export async function addPlannedWorkoutFromPool(
   },
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId || dayOfWeek < 0 || dayOfWeek > 6) return;
 
   const label = (
@@ -523,6 +559,7 @@ export async function copyDayPlan(
   toDay: number,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId || fromDay === toDay) return;
 
   const [source, existing] = await Promise.all([
@@ -553,6 +590,7 @@ export async function addPlannedHiitWorkout(
   hiitWorkoutId: string,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId || dayOfWeek < 0 || dayOfWeek > 6 || !hiitWorkoutId) return;
   const w = await prisma.hiitWorkout.findUnique({
     where: { id: hiitWorkoutId },
@@ -579,6 +617,7 @@ export async function addPlannedRestDay(
   dayOfWeek: number,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId || dayOfWeek < 0 || dayOfWeek > 6) return;
   const existing = await prisma.plannedWorkout.findFirst({
     where: { userId, dayOfWeek, isRest: true },
@@ -594,6 +633,7 @@ export async function addPlannedRestDay(
 
 export async function restDay(userId: string, dateISO: string): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
   const date = toDateColumn(dateISO);
 
@@ -630,6 +670,7 @@ export async function completePlannedWorkout(input: {
   }[];
 }): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(input.userId);
   if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
 
   const plan = (await prisma.plannedWorkout.findUnique({
@@ -890,6 +931,7 @@ export async function logCustomWorkout(input: {
   notes?: string;
 }): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(input.userId);
   if (!input.userId) return;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
   if (!Number.isFinite(input.value) || input.value <= 0) return;
@@ -1041,6 +1083,7 @@ export async function logHiitWorkout(input: {
   notes?: string;
 }): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(input.userId);
   if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
   if (!Number.isFinite(input.value) || input.value <= 0) return;
 
@@ -1111,6 +1154,7 @@ export async function createAndLogHiitWorkout(input: {
   notes?: string;
 }): Promise<{ error: string | null }> {
   await requireInteractive();
+  await requireCanActFor(input.userId);
   if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) {
     return { error: "Something went wrong." };
   }
@@ -1167,6 +1211,7 @@ export async function deleteWorkoutSession(sessionId: string): Promise<void> {
     select: { userId: true, date: true },
   });
   if (!session) return;
+  await requireCanActFor(session.userId);
 
   await prisma.workoutSession.delete({ where: { id: sessionId } });
 

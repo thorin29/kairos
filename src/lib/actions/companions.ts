@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { currentSeasonWindow } from "@/lib/season";
 import { loadProgression } from "@/lib/queries/progression";
 import { pickHatch, stageForTenure, COMPANIONS } from "@/lib/companions";
@@ -19,6 +19,7 @@ export async function hatchEgg(
   mode: "new" | "deepen",
 ): Promise<{ error: string | null; hatched?: string }> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId) return { error: "No person." };
 
   const rows = await loadProgression();

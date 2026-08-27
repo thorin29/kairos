@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { BOOK_BY_NAME } from "@/lib/bible/books";
 
 // Personal Bible reading is logged per person, the same household way chores and
@@ -17,6 +17,7 @@ export async function saveMyBookChapters(
   chapters: number[],
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId) return;
   const book = BOOK_BY_NAME.get(bookName);
   if (!book) return;
@@ -44,6 +45,7 @@ export async function saveMyBooks(
   read: boolean,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId) return;
   const names = bookNames.filter((b) => BOOK_BY_NAME.has(b));
   if (names.length === 0) return;

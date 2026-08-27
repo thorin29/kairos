@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Category } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 
 /**
  * "Yes, I did it." Logs the SPORT session linked to the event (idempotent),
@@ -17,6 +17,7 @@ export async function confirmSportWorkout(
   dateISO: string,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   const date = toDateColumn(dateISO);
 
   const event = await prisma.event.findUnique({
@@ -80,6 +81,7 @@ export async function declineSportWorkout(
   dateISO: string,
 ): Promise<void> {
   await requireInteractive();
+  await requireCanActFor(userId);
   const date = toDateColumn(dateISO);
   await prisma.sportSkip.upsert({
     where: { eventId_userId_date: { eventId, userId, date } },

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { requireAdmin, currentAdmin, isAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
@@ -55,6 +55,7 @@ export async function addMoneyEntry(
 
   const userId = String(fd.get("userId") ?? "").trim();
   if (!userId) return { error: "Pick who this is for." };
+  await requireCanActFor(userId);
 
   const direction = String(fd.get("direction") ?? "");
   if (direction !== "DEPOSIT" && direction !== "PAYMENT") {

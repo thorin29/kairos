@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { toDateColumn } from "@/lib/dates";
 
 export type DayLogItem = {
@@ -18,6 +18,7 @@ export async function personDayLog(
   dayISO: string,
 ): Promise<{ items: DayLogItem[]; doneCount: number; assigned: number }> {
   await requireInteractive();
+  await requireCanActFor(userId);
   if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dayISO)) {
     return { items: [], doneCount: 0, assigned: 0 };
   }
