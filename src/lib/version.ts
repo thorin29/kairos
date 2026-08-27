@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.167.0";
+export const APP_VERSION = "0.168.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.168.0",
+    summary: [
+      "New weight calculator on the personal Workouts page. Tap the plates and they load onto a drawn barbell \u2014 bumpers, steel, and fractional plates in their real colours and to scale \u2014 with the total (bar included) shown big underneath. Each tap adds a pair, one per side, and you can pick a 45 or 15 lb bar",
+      "(Saving your bar and plate set in personal settings is the next step \u2014 for now it opens with the full set and a 45 lb bar.)",
+    ],
+  },
   {
     version: "0.167.0",
     summary: [
