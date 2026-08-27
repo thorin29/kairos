@@ -10,7 +10,7 @@ import {
 } from "@/lib/queries/school";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { todayISO, formatShort } from "@/lib/dates";
-import { personalUserId } from "@/lib/personal-scope";
+import { personalVisibleIds } from "@/lib/personal-scope";
 import { AddSchoolWork } from "@/components/add-school-work";
 
 export const dynamic = "force-dynamic";
@@ -55,9 +55,12 @@ export default async function SchoolPage({
       for (const uid of c.sharedWith) classesByPerson.get(uid)?.push(c);
     }
   }
-  // On a personal device, narrow to just the signed-in student.
-  const meId = await personalUserId();
-  const shownPeople = meId ? people.filter((p) => p.id === meId) : people;
+  // Personal device: a child sees only their own; a parent sees the children
+  // too. Shared tablet shows everyone.
+  const visible = await personalVisibleIds();
+  const shownPeople = visible
+    ? people.filter((p) => visible.includes(p.id))
+    : people;
 
   const anyWork =
     shownPeople.some((p) => p.items.length > 0) ||

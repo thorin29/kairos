@@ -66,9 +66,11 @@ function Logo({ className = "h-10 w-10" }: { className?: string }) {
 
 export function Sidebar({
   initialExpanded,
+  hiddenHrefs = [],
   user,
 }: {
   initialExpanded: boolean;
+  hiddenHrefs?: string[];
   user?: {
     id: string;
     name: string;
@@ -103,6 +105,7 @@ export function Sidebar({
   }
 
   const active = activeFor(path);
+  const navItems = NAV.filter((item) => !hiddenHrefs.includes(item.href));
 
   const toggleExpanded = () => {
     const next = !expanded;
@@ -172,7 +175,7 @@ export function Sidebar({
 
         {/* Icon column. Labels appear only when expanded. */}
         <ul className="flex-1 space-y-1 overflow-y-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {NAV.map((item) => {
+          {navItems.map((item) => {
             const current = item.href === active?.href;
             return (
               <li key={item.href}>

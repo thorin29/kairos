@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadMoneyPage, frequentPaymentLabels } from "@/lib/queries/money";
 import { todayISO } from "@/lib/dates";
+import { personalVisibleIds } from "@/lib/personal-scope";
 import { formatDollars, formatAmountGrouped } from "@/lib/money";
 import { MoneyView } from "@/components/money-view";
 import { DollarIcon } from "@/components/icons";
@@ -14,13 +16,31 @@ export default async function MoneyPage({
   searchParams: Promise<{ user?: string }>;
 }) {
   const { user } = await searchParams;
-  const { participants, selectedId, rows } = await loadMoneyPage(user);
+  const page = await loadMoneyPage(user);
 
-  // The overlay's picker offers everyone active — a new person joins the left
-  // rail the moment they have a row, so the picker can't be limited to people
-  // who already appear there.
+  // Personal device: a child sees only their own ledger; a parent sees the
+  // children too. Shared tablet shows everyone.
+  const visible = await personalVisibleIds();
+  const vset = visible ? new Set(visible) : null;
+  const participants = vset
+    ? page.participants.filter((p) => vset.has(p.id))
+    : page.participants;
+
+  // Keep the selection inside what's visible; if the requested person isn't,
+  // land on the first one we can show.
+  let selectedId = page.selectedId;
+  let rows = page.rows;
+  if (vset && selectedId && !vset.has(selectedId) && participants.length > 0) {
+    redirect(`/money?user=${participants[0].id}`);
+  }
+  if (vset && participants.length > 0 && !participants.some((p) => p.id === selectedId)) {
+    redirect(`/money?user=${participants[0].id}`);
+  }
+
+  // The add-transaction picker: everyone on the shared tablet; on a personal
+  // device only who you're allowed to act for.
   const roster = await prisma.user.findMany({
-    where: { isActive: true },
+    where: vset ? { isActive: true, id: { in: [...vset] } } : { isActive: true },
     orderBy: { sortOrder: "asc" },
     select: { id: true, name: true },
   });
