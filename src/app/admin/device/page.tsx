@@ -15,6 +15,13 @@ export default async function DeviceAdminPage() {
     loginableCount(),
     adminPinSet(),
   ]);
+  // Whether the edge (middleware) gate is actually active. This is the only
+  // thing that secures a public site on every navigation; the in-app toggle
+  // alone doesn't. Both env vars must be set.
+  const edgeEnforced =
+    process.env.REQUIRE_LOGIN === "true" &&
+    !!process.env.SESSION_SECRET &&
+    process.env.SESSION_SECRET.length >= 16;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
@@ -38,6 +45,7 @@ export default async function DeviceAdminPage() {
         requireLogin={gate}
         loginable={loginable}
         pinSet={pinSet}
+        edgeEnforced={edgeEnforced}
       />
     </main>
   );

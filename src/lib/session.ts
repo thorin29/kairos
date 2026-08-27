@@ -24,6 +24,9 @@ const REQUIRE_LOGIN_KEY = "requireLogin";
  * an unattended tablet doesn't stay open.
  */
 async function secret(): Promise<string> {
+  const env = process.env.SESSION_SECRET;
+  if (env && env.length >= 16) return env;
+
   const existing = await prisma.appSetting.findUnique({
     where: { key: SECRET_KEY },
   });

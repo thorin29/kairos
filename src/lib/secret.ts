@@ -12,6 +12,13 @@ import { prisma } from "@/lib/prisma";
 const SECRET_KEY = "sessionSecret";
 
 export async function appSecret(): Promise<string> {
+  // An explicit env secret takes precedence so that edge middleware (which
+  // can't reach the database) can verify the same cookies the app signs. Set
+  // SESSION_SECRET to a long random value for a public/gated deployment. With
+  // it unset, we fall back to the DB-minted secret, unchanged for LAN installs.
+  const env = process.env.SESSION_SECRET;
+  if (env && env.length >= 16) return env;
+
   const existing = await prisma.appSetting.findUnique({
     where: { key: SECRET_KEY },
   });

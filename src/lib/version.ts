@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.171.0";
+export const APP_VERSION = "0.172.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.172.0",
+    summary: [
+      "Security fix: the sign-in gate is now enforced in middleware on every request. Previously it lived only in the page layout, which a client-side navigation could skip \u2014 so a link back to the dashboard from the login screen could open the site without signing in. Closed.",
+      "Going public now uses two container variables \u2014 REQUIRE_LOGIN=true and SESSION_SECRET \u2014 which the gate reads to enforce on every navigation. The Device settings page now shows whether this edge enforcement is actually active, so the app can't give a false sense of being locked down.",
+    ],
+  },
   {
     version: "0.171.0",
     summary: [
