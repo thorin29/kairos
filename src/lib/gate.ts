@@ -16,6 +16,10 @@ import { currentUser } from "@/lib/user-session";
 export const REQUIRE_LOGIN = "requireLogin";
 
 export async function loginRequired(): Promise<boolean> {
+  // The environment variable is authoritative for a public deployment, because
+  // it's the only signal edge middleware can read to enforce the gate on every
+  // navigation. The in-app toggle still works for a LAN-only install.
+  if (process.env.REQUIRE_LOGIN === "true") return true;
   return (await getSetting(REQUIRE_LOGIN)) === "true";
 }
 

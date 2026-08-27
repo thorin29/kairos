@@ -13,11 +13,13 @@ export function DeviceControls({
   requireLogin,
   loginable,
   pinSet,
+  edgeEnforced,
 }: {
   mode: DeviceMode;
   requireLogin: boolean;
   loginable: number;
   pinSet: boolean;
+  edgeEnforced: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -114,6 +116,34 @@ export function DeviceControls({
             isn&rsquo;t open to everyone once sign-in is required.
           </p>
         )}
+
+        <div
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            edgeEnforced
+              ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+              : "border-amber-300 bg-amber-50 text-amber-800"
+          }`}
+        >
+          {edgeEnforced ? (
+            <p>
+              <span className="font-semibold">Edge enforcement is on.</span> The
+              sign-in gate runs on every request, so it&rsquo;s safe to expose
+              this behind Authelia.
+            </p>
+          ) : (
+            <p>
+              <span className="font-semibold">
+                Not safe for a public domain yet.
+              </span>{" "}
+              The in-app toggle alone doesn&rsquo;t protect every navigation. To
+              go public, set the{" "}
+              <code className="rounded bg-black/5 px-1">REQUIRE_LOGIN=true</code>{" "}
+              and{" "}
+              <code className="rounded bg-black/5 px-1">SESSION_SECRET</code>{" "}
+              container variables (and keep Authelia in front).
+            </p>
+          )}
+        </div>
       </section>
 
       {error && (
