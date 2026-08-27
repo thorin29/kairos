@@ -27,6 +27,7 @@ import { PlanBuilder } from "./plan-builder";
 import { RotationBuilder } from "./rotation-builder";
 import { TodayPlan } from "./workout-card";
 import { LineChart } from "@/components/line-chart";
+import { WeightCalculator } from "./weight-calculator";
 import type {
   PersonWorkout,
   PoolEntry,
@@ -73,6 +74,7 @@ export function WorkoutsGrid({
     personal ? (people[0]?.user.id ?? null) : null,
   );
   const [step, setStep] = useState<Step>("menu");
+  const [calcOpen, setCalcOpen] = useState(false);
   // When creating a plan from scratch, which kind the person chose (before one
   // exists). Once a plan or rotation exists, that decides what's shown instead.
   const [planMode, setPlanMode] = useState<"weekly" | "rotation" | null>(null);
@@ -302,6 +304,17 @@ export function WorkoutsGrid({
                     <BookIcon className="h-4 w-4" />
                     Browse workouts
                   </button>
+
+                  {personal && (
+                    <button
+                      type="button"
+                      onClick={() => setCalcOpen(true)}
+                      className="flex w-full items-center justify-center gap-2 rounded-full border border-hairline px-4 py-2.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+                    >
+                      <DumbbellIcon className="h-4 w-4" />
+                      Weight calculator
+                    </button>
+                  )}
 
                   {open.history.length > 0 && (
                     <button
@@ -638,6 +651,8 @@ export function WorkoutsGrid({
           </div>
         </div>
       )}
+
+      {calcOpen && <WeightCalculator onClose={() => setCalcOpen(false)} />}
     </>
   );
 }
