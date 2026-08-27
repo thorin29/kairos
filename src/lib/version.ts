@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.165.0";
+export const APP_VERSION = "0.166.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.166.0",
+    summary: [
+      "Workouts personal view: on a signed-in personal device the Workouts page shows just you and opens straight into your workout detail \u2014 landing on a stacked list of today's workouts, each expanded and ready to log, with no grid to tap through",
+      "The Dashboard icon now stays highlighted on the personal home (which lives at your own page), and tapping it takes you there",
+      "Cleaned up the \u201clog a different workout\u201d section on the Workouts page to match the rest of the app",
+    ],
+  },
   {
     version: "0.165.0",
     summary: [

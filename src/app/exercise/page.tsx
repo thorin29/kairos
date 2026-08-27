@@ -6,6 +6,7 @@ import {
   loadHiitWorkoutsForBoard,
 } from "@/lib/queries/workouts";
 import { todayISO, dayOfWeek } from "@/lib/dates";
+import { personalUserId } from "@/lib/personal-scope";
 import { WorkoutsGrid } from "./workouts-grid";
 import { CompareView } from "./compare-view";
 
@@ -14,12 +15,20 @@ export const dynamic = "force-dynamic";
 export default async function WorkoutsPage() {
   const today = todayISO();
   await generateWorkoutTasks(today);
-  const [board, pool, comparisons, hiitWorkouts] = await Promise.all([
+  const [board, pool, comparisons, hiitWorkouts, meId] = await Promise.all([
     loadWorkoutsBoard(today),
     loadExercisePool(),
     loadMovementComparisons(),
     loadHiitWorkoutsForBoard(),
+    personalUserId(),
   ]);
+
+  // Personal device: only the signed-in person, and the page opens straight
+  // into their workout detail (no grid to tap through).
+  const personal = meId != null && board.people.some((p) => p.user.id === meId);
+  const people = personal
+    ? board.people.filter((p) => p.user.id === meId)
+    : board.people;
 
   return (
     <>
@@ -33,7 +42,8 @@ export default async function WorkoutsPage() {
         ) : (
           <>
             <WorkoutsGrid
-              people={board.people}
+              people={people}
+              personal={personal}
               unitSystem={board.unitSystem}
               pool={pool}
               hiitWorkouts={hiitWorkouts}
@@ -41,7 +51,7 @@ export default async function WorkoutsPage() {
               todayDow={dayOfWeek(today)}
             />
 
-            {comparisons.length > 0 && (
+            {!personal && comparisons.length > 0 && (
               <div className="mt-8">
                 <CompareView movements={comparisons} />
               </div>

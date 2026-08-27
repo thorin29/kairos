@@ -51,6 +51,7 @@ type Step = "menu" | "plan" | "log" | "history" | "browse";
 
 export function WorkoutsGrid({
   people,
+  personal = false,
   unitSystem,
   pool,
   hiitWorkouts,
@@ -58,14 +59,17 @@ export function WorkoutsGrid({
   todayDow,
 }: {
   people: PersonWorkout[];
+  personal?: boolean;
   unitSystem: UnitSystem;
   pool: PoolEntry[];
   hiitWorkouts: BoardHiitWorkout[];
   todayISO: string;
   todayDow: number;
 }) {
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [step, setStep] = useState<Step>("menu");
+  const [openId, setOpenId] = useState<string | null>(
+    personal ? (people[0]?.user.id ?? null) : null,
+  );
+  const [step, setStep] = useState<Step>(personal ? "log" : "menu");
   // When creating a plan from scratch, which kind the person chose (before one
   // exists). Once a plan or rotation exists, that decides what's shown instead.
   const [planMode, setPlanMode] = useState<"weekly" | "rotation" | null>(null);
@@ -109,51 +113,59 @@ export function WorkoutsGrid({
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {people.map((p) => {
-          return (
-            <button
-              key={p.user.id}
-              type="button"
-              onClick={(e) => openFrom(p.user.id, e.currentTarget)}
-              className="hover-bounce group flex flex-col rounded-xl border border-hairline bg-surface p-5 text-left outline-none transition-colors hover:border-accent"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <PersonAvatar
-                  name={p.user.name}
-                  color={p.user.color}
-                  avatarPath={p.user.avatarPath}
-                  avatarPosition={p.user.avatarPosition}
-                />
-              </div>
-              <div className="mt-2">
-                <TileStatus person={p} />
-              </div>
-              {/* Preview of the actions — icons only and softly out of focus at
-                  rest; they come sharp (and gain their labels) once the card is
-                  tapped open. */}
-              <div className="mt-4 grid grid-cols-3 gap-3" aria-hidden>
-                <ActionChip icon={CalendarPlusIcon} />
-                <ActionChip icon={DumbbellIcon} />
-                <ActionChip icon={MoonIcon} />
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {!personal && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {people.map((p) => {
+            return (
+              <button
+                key={p.user.id}
+                type="button"
+                onClick={(e) => openFrom(p.user.id, e.currentTarget)}
+                className="hover-bounce group flex flex-col rounded-xl border border-hairline bg-surface p-5 text-left outline-none transition-colors hover:border-accent"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <PersonAvatar
+                    name={p.user.name}
+                    color={p.user.color}
+                    avatarPath={p.user.avatarPath}
+                    avatarPosition={p.user.avatarPosition}
+                  />
+                </div>
+                <div className="mt-2">
+                  <TileStatus person={p} />
+                </div>
+                {/* Preview of the actions — icons only and softly out of focus at
+                    rest; they come sharp (and gain their labels) once the card is
+                    tapped open. */}
+                <div className="mt-4 grid grid-cols-3 gap-3" aria-hidden>
+                  <ActionChip icon={CalendarPlusIcon} />
+                  <ActionChip icon={DumbbellIcon} />
+                  <ActionChip icon={MoonIcon} />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {open && (
         <div
-          className="animate-backdrop-fade fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${open.user.name}'s workouts`}
-          onClick={close}
+          className={
+            personal
+              ? ""
+              : "animate-backdrop-fade fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6"
+          }
+          role={personal ? undefined : "dialog"}
+          aria-modal={personal ? undefined : "true"}
+          aria-label={personal ? undefined : `${open.user.name}'s workouts`}
+          onClick={personal ? undefined : close}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ transformOrigin: origin }}
-            className="animate-card-zoom my-4 w-full max-w-2xl"
+            style={personal ? undefined : { transformOrigin: origin }}
+            className={
+              personal ? "w-full" : "animate-card-zoom my-4 w-full max-w-2xl"
+            }
           >
             <div className="rounded-2xl border border-hairline bg-surface p-6 shadow-xl">
               <div className="flex items-start justify-between gap-3">
@@ -163,14 +175,16 @@ export function WorkoutsGrid({
                   avatarPath={open.user.avatarPath}
                   avatarPosition={open.user.avatarPosition}
                 />
-                <button
-                  type="button"
-                  onClick={close}
-                  aria-label="Close"
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-black/5 hover:text-ink"
-                >
-                  ✕
-                </button>
+                {!personal && (
+                  <button
+                    type="button"
+                    onClick={close}
+                    aria-label="Close"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-black/5 hover:text-ink"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
               {step === "menu" && (
@@ -413,14 +427,9 @@ export function WorkoutsGrid({
                       />
 
                       <div className="border-t border-hairline pt-5">
-                        <h4 className="mb-1 font-display text-sm font-semibold">
-                          Log something else
+                        <h4 className="mb-3 font-display text-sm font-semibold">
+                          Log a different workout
                         </h4>
-                        <p className="mb-3 text-sm text-muted">
-                          A one-off from the pool &mdash; a run, hockey, an extra
-                          lift. Pick the type, choose the movement, drop in the
-                          result.
-                        </p>
                         <CustomWorkoutForm
                           userId={open.user.id}
                           unitSystem={unitSystem}
