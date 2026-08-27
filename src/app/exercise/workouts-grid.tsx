@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
 import {
@@ -32,6 +32,7 @@ import type {
   PoolEntry,
   BoardHiitWorkout,
 } from "@/lib/queries/workouts";
+import type { WeeklyActivity } from "@/lib/queries/weekly-activity";
 import {
   CATEGORY_LABEL,
   MUSCLE_GROUPS,
@@ -52,6 +53,7 @@ type Step = "menu" | "plan" | "log" | "history" | "browse";
 export function WorkoutsGrid({
   people,
   personal = false,
+  weeklyActivity = [],
   unitSystem,
   pool,
   hiitWorkouts,
@@ -60,6 +62,7 @@ export function WorkoutsGrid({
 }: {
   people: PersonWorkout[];
   personal?: boolean;
+  weeklyActivity?: WeeklyActivity[];
   unitSystem: UnitSystem;
   pool: PoolEntry[];
   hiitWorkouts: BoardHiitWorkout[];
@@ -69,7 +72,7 @@ export function WorkoutsGrid({
   const [openId, setOpenId] = useState<string | null>(
     personal ? (people[0]?.user.id ?? null) : null,
   );
-  const [step, setStep] = useState<Step>(personal ? "log" : "menu");
+  const [step, setStep] = useState<Step>("menu");
   // When creating a plan from scratch, which kind the person chose (before one
   // exists). Once a plan or rotation exists, that decides what's shown instead.
   const [planMode, setPlanMode] = useState<"weekly" | "rotation" | null>(null);
@@ -168,14 +171,14 @@ export function WorkoutsGrid({
             }
           >
             <div className="rounded-2xl border border-hairline bg-surface p-6 shadow-xl">
-              <div className="flex items-start justify-between gap-3">
-                <PersonAvatar
-                  name={open.user.name}
-                  color={open.user.color}
-                  avatarPath={open.user.avatarPath}
-                  avatarPosition={open.user.avatarPosition}
-                />
-                {!personal && (
+              {!personal && (
+                <div className="flex items-start justify-between gap-3">
+                  <PersonAvatar
+                    name={open.user.name}
+                    color={open.user.color}
+                    avatarPath={open.user.avatarPath}
+                    avatarPosition={open.user.avatarPosition}
+                  />
                   <button
                     type="button"
                     onClick={close}
@@ -184,11 +187,18 @@ export function WorkoutsGrid({
                   >
                     ✕
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
               {step === "menu" && (
                 <div className="mt-5 space-y-5">
+                  {personal && (
+                    <PersonalTop
+                      open={open}
+                      todayDow={todayDow}
+                      weekly={weeklyActivity}
+                    />
+                  )}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted">
                       Today
@@ -251,7 +261,7 @@ export function WorkoutsGrid({
                     )}
                   </div>
 
-                  {open.weightSeries.length > 0 && (
+                  {!personal && open.weightSeries.length > 0 && (
                     <LineChart
                       weight
                       series={open.weightSeries.map((s) => ({
@@ -629,6 +639,112 @@ export function WorkoutsGrid({
         </div>
       )}
     </>
+  );
+}
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+type GraphChoice =
+  | { kind: "none" }
+  | { kind: "chart"; label: string; series: PersonWorkout["weightSeries"] };
+
+/**
+ * Which weight movements to graph, and the caption for them. If today has a
+ * weights workout the series is already today's (scoped server-side); otherwise
+ * we look ahead to the next day that has one and scope to its movements. With no
+ * logged weight numbers at all there's nothing to graph — the weekly list stands
+ * in instead.
+ */
+function chooseGraph(open: PersonWorkout, todayDow: number): GraphChoice {
+  const hasData = open.weightSeries.some((s) => s.points.length > 0);
+  if (!hasData) return { kind: "none" };
+
+  const weightsOn = (d: number) =>
+    (open.plan[d]?.workouts ?? []).filter(
+      (w) => w.category === "WEIGHTS" && !w.isRest,
+    );
+
+  if (weightsOn(todayDow).length > 0) {
+    return { kind: "chart", label: "Today", series: open.weightSeries };
+  }
+
+  for (let i = 1; i <= 7; i++) {
+    const d = (todayDow + i) % 7;
+    const workouts = weightsOn(d);
+    if (workouts.length === 0) continue;
+    const poolIds = new Set(
+      workouts.flatMap((w) =>
+        w.exercises.filter((e) => e.tracked).map((e) => e.poolExerciseId),
+      ),
+    );
+    const series = open.weightSeries.filter((s) => poolIds.has(s.exerciseId));
+    if (series.some((s) => s.points.length > 0)) {
+      const names = workouts.map((w) => w.name).join(", ");
+      return { kind: "chart", label: `${DAY_NAMES[d]} · ${names}`, series };
+    }
+  }
+
+  return { kind: "chart", label: "Recent lifts", series: open.weightSeries };
+}
+
+function PersonalTop({
+  open,
+  todayDow,
+  weekly,
+}: {
+  open: PersonWorkout;
+  todayDow: number;
+  weekly: WeeklyActivity[];
+}) {
+  const graph = useMemo(() => chooseGraph(open, todayDow), [open, todayDow]);
+
+  return (
+    <div className="space-y-5">
+      {graph.kind === "chart" && (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
+            {graph.label}
+          </p>
+          <LineChart
+            weight
+            series={graph.series.map((s) => ({
+              id: s.exerciseId,
+              name: s.name,
+              color: s.color,
+              unit: s.unit,
+              points: s.points,
+            }))}
+          />
+        </div>
+      )}
+
+      {weekly.length > 0 ? (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
+            This week
+          </p>
+          <ul className="space-y-1.5">
+            {weekly.map((w) => (
+              <li
+                key={w.label}
+                className="flex items-center justify-between rounded-xl border border-hairline bg-ground/40 px-3 py-2 text-sm"
+              >
+                <span className="font-medium">{w.label}</span>
+                <span className="tabular text-muted">
+                  {w.count}×{w.detail ? ` · ${w.detail}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        graph.kind === "none" && (
+          <p className="rounded-xl border border-hairline bg-ground/30 p-6 text-center text-sm text-muted">
+            Nothing logged this week yet.
+          </p>
+        )
+      )}
+    </div>
   );
 }
 
