@@ -12,10 +12,12 @@ export function DeviceControls({
   mode,
   requireLogin,
   loginable,
+  pinSet,
 }: {
   mode: DeviceMode;
   requireLogin: boolean;
   loginable: number;
+  pinSet: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -86,7 +88,7 @@ export function DeviceControls({
             role="switch"
             aria-checked={requireLogin}
             onClick={() => toggleGate(!requireLogin)}
-            disabled={pending || (!requireLogin && loginable === 0)}
+            disabled={pending || (!requireLogin && (loginable === 0 || !pinSet))}
             className={`relative mt-1 h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-40 ${
               requireLogin ? "bg-accent" : "bg-ink/15"
             }`}
@@ -103,6 +105,13 @@ export function DeviceControls({
           <p className="text-sm text-amber-700">
             No one has a login yet. Invite someone in Household → Accounts before
             turning this on, or you&rsquo;ll lock everyone out.
+          </p>
+        )}
+
+        {loginable > 0 && !pinSet && !requireLogin && (
+          <p className="text-sm text-amber-700">
+            Set an admin PIN first (the lock button above), so the admin area
+            isn&rsquo;t open to everyone once sign-in is required.
           </p>
         )}
       </section>

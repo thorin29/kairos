@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/session";
+import { requireAdmin, adminPinSet } from "@/lib/session";
 import { setDeviceMode, type DeviceMode } from "@/lib/device";
 import { REQUIRE_LOGIN } from "@/lib/gate";
 import { setSetting } from "@/lib/settings";
@@ -29,6 +29,13 @@ export async function setRequireLoginAction(
     return {
       error:
         "Set up at least one login first (invite someone in Accounts), or you'll lock everyone out.",
+    };
+  }
+
+  if (on && !(await adminPinSet())) {
+    return {
+      error:
+        "Set an admin PIN first (Admin \u2192 Lock). Without one, the admin area would be open to everyone once sign-in is required.",
     };
   }
 

@@ -3,15 +3,17 @@ import { LockButton } from "../lock-button";
 import { deviceMode } from "@/lib/device";
 import { loginRequired } from "@/lib/gate";
 import { loginableCount } from "@/lib/accounts";
+import { adminPinSet } from "@/lib/session";
 import { DeviceControls } from "./device-controls";
 
 export const dynamic = "force-dynamic";
 
 export default async function DeviceAdminPage() {
-  const [mode, gate, loginable] = await Promise.all([
+  const [mode, gate, loginable, pinSet] = await Promise.all([
     deviceMode(),
     loginRequired(),
     loginableCount(),
+    adminPinSet(),
   ]);
 
   return (
@@ -31,7 +33,12 @@ export default async function DeviceAdminPage() {
         <LockButton />
       </header>
 
-      <DeviceControls mode={mode} requireLogin={gate} loginable={loginable} />
+      <DeviceControls
+        mode={mode}
+        requireLogin={gate}
+        loginable={loginable}
+        pinSet={pinSet}
+      />
     </main>
   );
 }
