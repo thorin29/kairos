@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { loadGameStatus } from "@/lib/queries/games";
 import { todayISO } from "@/lib/dates";
-import { personalUserId } from "@/lib/personal-scope";
+import { personalVisibleIds } from "@/lib/personal-scope";
 import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
 import { TokenIcon } from "@/components/icons";
@@ -17,13 +17,15 @@ function hhmm(minutes: number): string {
 
 export default async function GamesPage() {
   const today = todayISO();
-  const [statuses, anyProfile, meId] = await Promise.all([
+  const [statuses, anyProfile, visible] = await Promise.all([
     loadGameStatus(today),
     prisma.gameProfile.count(),
-    personalUserId(),
+    personalVisibleIds(),
   ]);
 
-  const scoped = meId ? statuses.filter((s) => s.userId === meId) : statuses;
+  const scoped = visible
+    ? statuses.filter((s) => visible.includes(s.userId))
+    : statuses;
   const active = scoped.filter((s) => s.enabled);
 
   return (

@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/sidebar";
 import { TopDate } from "@/components/top-date";
 import { isAdmin, adminPinSet } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
+import { hiddenNavHrefs } from "@/lib/personal-scope";
 import { loginRequired, isPublicPath } from "@/lib/gate";
 import { formatLong } from "@/lib/dates";
 import { todayISO } from "@/lib/dates";
@@ -73,6 +74,7 @@ export default async function RootLayout({
   }
 
   const chrome = !isPublicPath(path);
+  const hiddenNav = chrome ? await hiddenNavHrefs() : [];
 
   return (
     <html lang="en">
@@ -82,6 +84,7 @@ export default async function RootLayout({
         {chrome && (
           <Sidebar
             initialExpanded={sidebarExpanded}
+            hiddenHrefs={hiddenNav}
             user={
               me
                 ? {

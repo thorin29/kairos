@@ -6,7 +6,7 @@ import {
 } from "@/lib/queries/chores-summary";
 import { loadChoreMetrics } from "@/lib/queries/chore-metrics";
 import { loadAlwaysOpenCounts } from "@/lib/queries/always-open-counts";
-import { personalUserId } from "@/lib/personal-scope";
+import { personalVisibleIds } from "@/lib/personal-scope";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { DAY_SHORT } from "@/lib/days";
 import { formatShort, todayISO } from "@/lib/dates";
@@ -58,10 +58,12 @@ export default async function ChoresOverviewPage() {
       .sort((a, b) => a.dayOfWeek - b.dayOfWeek),
   }));
 
-  // On a personal device, the per-person tables show only the signed-in person;
-  // shared chores and the always-open counts stay household-wide.
-  const meId = await personalUserId();
-  const shownPeople = meId ? byPerson.filter((p) => p.id === meId) : byPerson;
+  // Personal device: a child sees only themselves; a parent sees the children
+  // too. Shared chores and household counts stay whole; shared tablet shows all.
+  const visible = await personalVisibleIds();
+  const shownPeople = visible
+    ? byPerson.filter((p) => visible.includes(p.id))
+    : byPerson;
 
   return (
     <>

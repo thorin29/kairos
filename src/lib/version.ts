@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.162.0";
+export const APP_VERSION = "0.163.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.163.0",
+    summary: [
+      "Personal view is now role-aware for School, Chores, Game time, and Money: a signed-in child sees only their own, while a parent sees themselves and the children too, so they can check what the kids have assigned. The shared wall tablet still shows everyone",
+      "Money hides itself: on a personal device the Money tab (and page) disappears for someone who has no transactions",
+    ],
+  },
   {
     version: "0.162.0",
     summary: [
