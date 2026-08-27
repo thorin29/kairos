@@ -10,6 +10,7 @@ import {
 } from "@/lib/queries/school";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { todayISO, formatShort } from "@/lib/dates";
+import { personalUserId } from "@/lib/personal-scope";
 import { AddSchoolWork } from "@/components/add-school-work";
 
 export const dynamic = "force-dynamic";
@@ -54,9 +55,13 @@ export default async function SchoolPage({
       for (const uid of c.sharedWith) classesByPerson.get(uid)?.push(c);
     }
   }
+  // On a personal device, narrow to just the signed-in student.
+  const meId = await personalUserId();
+  const shownPeople = meId ? people.filter((p) => p.id === meId) : people;
+
   const anyWork =
-    people.some((p) => p.items.length > 0) ||
-    [...classesByPerson.values()].some((cs) => cs.length > 0);
+    shownPeople.some((p) => p.items.length > 0) ||
+    shownPeople.some((p) => (classesByPerson.get(p.id)?.length ?? 0) > 0);
   const anyStats = metrics.some((m) => m.total > 0);
 
   return (
@@ -70,7 +75,7 @@ export default async function SchoolPage({
 
         <div className="mb-8">
           <AddSchoolWork
-            people={people.map((p) => ({ id: p.id, name: p.name }))}
+            people={shownPeople.map((p) => ({ id: p.id, name: p.name }))}
             classesByUser={classOptions}
             subjects={structure.subjects.map((s) => s.name)}
             defaultDate={today}
@@ -84,7 +89,7 @@ export default async function SchoolPage({
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {people
+            {shownPeople
               .filter(
                 (p) =>
                   p.items.length > 0 ||
