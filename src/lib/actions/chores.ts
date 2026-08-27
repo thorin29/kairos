@@ -8,7 +8,7 @@ import { toDateColumn, todayISO } from "@/lib/dates";
 import { generateChores } from "@/lib/chores/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { isAdmin, requireAdmin } from "@/lib/session";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 
 export type ChoreActionState = { error: string | null };
 
@@ -489,6 +489,7 @@ export async function completeAlwaysOpenChore(
   userId: string,
 ): Promise<{ error: string | null }> {
   await requireInteractive();
+  await requireCanActFor(userId);
   const chore = await prisma.chore.findUnique({ where: { id: choreId } });
   if (!chore || !chore.alwaysOpen || !chore.isActive || chore.isPaused) {
     return { error: "That chore isn't available." };

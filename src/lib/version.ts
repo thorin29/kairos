@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.169.0";
+export const APP_VERSION = "0.170.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.170.0",
+    summary: [
+      "Security hardening (F2, part 2): the shared chore/task pool now checks ownership too. Once login is required, a person can claim and complete tasks and always-open chores only for themselves; an unclaimed pool item is still grabbable by anyone (you claim it for yourself first). Admins and the shared tablet are unchanged, as is today's open mode.",
+    ],
+  },
   {
     version: "0.169.0",
     summary: [
