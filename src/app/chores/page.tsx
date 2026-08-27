@@ -185,10 +185,6 @@ export default async function ChoresOverviewPage() {
               </div>
             ))}
           </Card>
-          <p className="mt-2 text-xs text-muted">
-            How many times each up-for-grabs chore has been completed &mdash;
-            they can be done over and over, so these are counts, not a checklist.
-          </p>
         </section>
       )}
 
