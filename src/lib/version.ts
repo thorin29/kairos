@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.164.0";
+export const APP_VERSION = "0.165.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.165.0",
+    summary: [
+      "Personal home rewritten: on a signed-in personal device the home now opens straight onto your card contents instead of the little summary tile. Your completeness bars sit at the top, then your day's tasks, reminders (including your shopping-cart line), the up-for-grabs and always-open chores that were missing, and today's schedule",
+      "The shared wall tablet home is unchanged",
+    ],
+  },
   {
     version: "0.164.0",
     summary: [

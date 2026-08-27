@@ -78,9 +78,12 @@ export default async function Home({
   if (people.length === 0) redirect("/setup");
 
   // Personal mode (a phone) shows just the signed-in person; shared mode (the
-  // wall tablet, and the default) shows the whole household as before.
+  // wall tablet, and the default) shows the whole household as before. On a
+  // personal device the home IS the person's card contents, so hand off to that
+  // page (which carries the bars, reminders, up-for-grabs and schedule too).
   const me = await currentUser();
   const personal = (await deviceMode()) === "personal" && !!me;
+  if (personal && me) redirect(`/person/${me.id}`);
   const shown = personal && me ? people.filter((p) => p.id === me.id) : people;
 
   const roster = await prisma.user.findMany({
