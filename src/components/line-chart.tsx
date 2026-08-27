@@ -12,7 +12,7 @@ export type Series = {
 
 const W = 520;
 const H = 240;
-const PAD = { top: 16, right: 16, bottom: 28, left: 44 };
+const PAD = { top: 16, right: 16, bottom: 30, left: 60 };
 
 // Common barbell loads (bar + standard plate pairs). Labeled on the axis; the
 // lighter minor lines fill in between.
@@ -161,7 +161,8 @@ export function LineChart({
               x={PAD.left - 6}
               y={y(t) + 3}
               textAnchor="end"
-              className="fill-[var(--color-muted)] text-[9px]"
+              fill="var(--color-muted)"
+              fontSize={14}
             >
               {fmtTick(t)}
             </text>
@@ -169,14 +170,15 @@ export function LineChart({
         ))}
 
         {/* x end labels */}
-        <text x={PAD.left} y={H - 8} className="fill-[var(--color-muted)] text-[9px]">
+        <text x={PAD.left} y={H - 8} fill="var(--color-muted)" fontSize={13}>
           {fmtDate(xMin)}
         </text>
         <text
           x={W - PAD.right}
           y={H - 8}
           textAnchor="end"
-          className="fill-[var(--color-muted)] text-[9px]"
+              fill="var(--color-muted)"
+              fontSize={14}
         >
           {fmtDate(xMax)}
         </text>

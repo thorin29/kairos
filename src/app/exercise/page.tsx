@@ -5,8 +5,9 @@ import {
   loadMovementComparisons,
   loadHiitWorkoutsForBoard,
 } from "@/lib/queries/workouts";
-import { todayISO, dayOfWeek } from "@/lib/dates";
+import { todayISO, dayOfWeek, weekDays as weekDaysOf } from "@/lib/dates";
 import { personalUserId } from "@/lib/personal-scope";
+import { loadWeeklyActivity } from "@/lib/queries/weekly-activity";
 import { WorkoutsGrid } from "./workouts-grid";
 import { CompareView } from "./compare-view";
 
@@ -29,6 +30,8 @@ export default async function WorkoutsPage() {
   const people = personal
     ? board.people.filter((p) => p.user.id === meId)
     : board.people;
+  const weeklyActivity =
+    personal && meId ? await loadWeeklyActivity(meId, weekDaysOf(today)) : [];
 
   return (
     <>
@@ -44,6 +47,7 @@ export default async function WorkoutsPage() {
             <WorkoutsGrid
               people={people}
               personal={personal}
+              weeklyActivity={weeklyActivity}
               unitSystem={board.unitSystem}
               pool={pool}
               hiitWorkouts={hiitWorkouts}

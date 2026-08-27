@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.166.0";
+export const APP_VERSION = "0.167.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.167.0",
+    summary: [
+      "Personal Workouts page reworked: it no longer jumps into logging. The weight graph sits at the top with larger, readable weight numbers on the side, and it defaults to today's lifting workout \u2014 or, if today isn't a lifting day, the next day that is",
+      "If you have no logged lifts, the graph gives way to your week's workouts by count (ran 3\u00d7 \u00b7 4 mi, and so on). That weekly readout also sits under the graph when you do have lifts",
+      "The person's avatar and name are gone from this page (it's already just you), and the edit-plan / log / rest / browse / recent actions sit below",
+    ],
+  },
   {
     version: "0.166.0",
     summary: [
