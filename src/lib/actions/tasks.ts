@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireInteractive } from "@/lib/gate";
+import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
@@ -19,6 +19,7 @@ export async function addTask(
   const dueDate = String(formData.get("dueDate") ?? "") || todayISO();
 
   if (!userId) return { error: "Pick who this is for." };
+  await requireCanActFor(userId);
   if (title.length < 2) return { error: "Give the task a name." };
 
   const category = (Object.values(Category) as string[]).includes(rawCategory)
@@ -47,6 +48,7 @@ export async function toggleTask(id: string): Promise<void> {
   await requireInteractive();
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return;
+  await requireCanActFor(task.userId);
 
   const nowComplete = task.status !== TaskStatus.COMPLETE;
 
@@ -70,6 +72,7 @@ export async function releaseTask(id: string): Promise<void> {
   await requireInteractive();
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task || task.status === TaskStatus.COMPLETE) return;
+  await requireCanActFor(task.userId);
 
   await prisma.task.update({
     where: { id },
@@ -87,6 +90,7 @@ export async function claimTask(
   userId: string,
 ): Promise<ClaimState> {
   await requireInteractive();
+  await requireCanActFor(userId);
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return { error: "That task is gone." };
   if (!task.isOpen) return { error: "Someone already picked that up." };
@@ -122,6 +126,7 @@ export async function deleteTask(id: string): Promise<void> {
   await requireInteractive();
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return;
+  await requireCanActFor(task.userId);
   await prisma.task.delete({ where: { id } });
   revalidatePath("/");
   revalidatePath(`/person/${task.userId}`);
