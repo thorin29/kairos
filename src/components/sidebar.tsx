@@ -43,12 +43,14 @@ const NAV: NavItem[] = [
   { href: "/summary", label: "Characters", color: "#db2777", icon: <TrophyIcon className="h-6 w-6" /> },
 ];
 
-/** Which nav item owns the current path (longest matching href wins). */
-function activeFor(path: string): NavItem | null {
+/** Which nav item owns the current path (longest matching href wins). The
+ *  dashboard's href is passed in because on a personal device the home lives at
+ *  /person/<me>, and that path should still light up Dashboard. */
+function activeFor(items: NavItem[], path: string, dashHref: string): NavItem | null {
   let best: NavItem | null = null;
-  for (const item of NAV) {
-    const match =
-      item.href === "/" ? path === "/" : path.startsWith(item.href);
+  for (const item of items) {
+    const isDash = item.href === dashHref;
+    const match = isDash ? path === dashHref : path.startsWith(item.href);
     if (match && (!best || item.href.length > best.href.length)) best = item;
   }
   return best;
@@ -67,10 +69,12 @@ function Logo({ className = "h-10 w-10" }: { className?: string }) {
 export function Sidebar({
   initialExpanded,
   hiddenHrefs = [],
+  dashboardHref = "/",
   user,
 }: {
   initialExpanded: boolean;
   hiddenHrefs?: string[];
+  dashboardHref?: string;
   user?: {
     id: string;
     name: string;
@@ -104,8 +108,10 @@ export function Sidebar({
     return null;
   }
 
-  const active = activeFor(path);
-  const navItems = NAV.filter((item) => !hiddenHrefs.includes(item.href));
+  const navItems = NAV.filter((item) => !hiddenHrefs.includes(item.href)).map(
+    (item) => (item.href === "/" ? { ...item, href: dashboardHref } : item),
+  );
+  const active = activeFor(navItems, path, dashboardHref);
 
   const toggleExpanded = () => {
     const next = !expanded;
@@ -116,7 +122,7 @@ export function Sidebar({
   // The logo: on desktop it's home; on mobile it rolls the rail up/out.
   const onLogo = () => {
     if (isMobile) setMobileOpen((v) => !v);
-    else router.push("/");
+    else router.push(dashboardHref);
   };
 
   const showScrim = isMobile ? mobileOpen : expanded;

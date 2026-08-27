@@ -9,6 +9,7 @@ import { TopDate } from "@/components/top-date";
 import { isAdmin, adminPinSet } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
 import { hiddenNavHrefs } from "@/lib/personal-scope";
+import { deviceMode } from "@/lib/device";
 import { loginRequired, isPublicPath } from "@/lib/gate";
 import { formatLong } from "@/lib/dates";
 import { todayISO } from "@/lib/dates";
@@ -75,6 +76,12 @@ export default async function RootLayout({
 
   const chrome = !isPublicPath(path);
   const hiddenNav = chrome ? await hiddenNavHrefs() : [];
+  // On a personal device the home is the signed-in person's page, so the
+  // Dashboard link points there and lights up on that path.
+  const personalHome =
+    chrome && me && (await deviceMode()) === "personal"
+      ? `/person/${me.id}`
+      : "/";
 
   return (
     <html lang="en">
@@ -85,6 +92,7 @@ export default async function RootLayout({
           <Sidebar
             initialExpanded={sidebarExpanded}
             hiddenHrefs={hiddenNav}
+            dashboardHref={personalHome}
             user={
               me
                 ? {
