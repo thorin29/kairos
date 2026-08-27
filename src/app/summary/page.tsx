@@ -10,6 +10,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { FlameIcon, StarIcon, TrophyIcon } from "@/components/icons";
 import { Companion } from "@/components/companion";
+import { HatchControls } from "@/components/hatch-controls";
+import { personalUserId } from "@/lib/personal-scope";
 import { DayLogCard } from "@/components/day-log-card";
 
 export const dynamic = "force-dynamic";
@@ -26,11 +28,14 @@ function Bar({ pct, tone = "accent" }: { pct: number; tone?: "accent" | "orange"
 
 export default async function SummaryPage() {
   const today = todayISO();
-  const people = await loadProgression();
+  const allPeople = await loadProgression();
+  const meId = await personalUserId();
+  const people = meId ? allPeople.filter((p) => p.id === meId) : allPeople;
+  const personal = meId != null && people.length > 0;
   const [since, seasonWin, coop] = await Promise.all([
     getScoringStart(),
     currentSeasonWindow(today),
-    loadCoop(people),
+    loadCoop(allPeople),
   ]);
   const season = seasonWin.label;
 
@@ -68,7 +73,20 @@ export default async function SummaryPage() {
         <div className="space-y-5">
           {people.map((p) => (
             <DayLogCard key={p.id} userId={p.id} name={p.name}>
-              <PersonCard p={p} />
+              {personal && (
+                <div className="mb-6 flex flex-col items-center">
+                  <Companion
+                    companion={p.companion}
+                    colorHex={p.companionColor}
+                    pct={p.level.pct}
+                    shares={p.statShares}
+                  />
+                  {p.companion.eggReady && (
+                    <HatchControls userId={p.id} hasActive={p.companion.active} />
+                  )}
+                </div>
+              )}
+              <PersonCard p={p} full={personal} />
             </DayLogCard>
           ))}
         </div>
@@ -77,7 +95,7 @@ export default async function SummaryPage() {
   );
 }
 
-function PersonCard({ p }: { p: PersonProgress }) {
+function PersonCard({ p, full = false }: { p: PersonProgress; full?: boolean }) {
   const chips: { key: string; icon: ReactNode; label: string }[] = [];
   if (p.season.complete) {
     chips.push({
@@ -117,11 +135,13 @@ function PersonCard({ p }: { p: PersonProgress }) {
           <p className="font-display text-lg font-semibold leading-tight">{p.name}</p>
           <p className="text-sm text-muted">{p.className}</p>
         </div>
-        <Companion
-          companion={p.companion}
-          colorHex={p.companionColor}
-          size="sm"
-        />
+        {!full && (
+          <Companion
+            companion={p.companion}
+            colorHex={p.companionColor}
+            size="sm"
+          />
+        )}
         <div className="text-right">
           <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
             Level

@@ -42,6 +42,7 @@ import { AddSchoolWork } from "@/components/add-school-work";
 import { Card, SectionHeading } from "@/components/ui";
 import { Companion } from "@/components/companion";
 import { HatchControls } from "@/components/hatch-controls";
+import { deviceMode } from "@/lib/device";
 import { Avatar } from "@/components/avatar";
 import { LockIcon, MoonIcon, FlameIcon, StarIcon } from "@/components/icons";
 import { CATEGORY_COLORS } from "@/lib/colors";
@@ -69,6 +70,10 @@ export default async function PersonPage({
   const { id } = await params;
   const { week } = await searchParams;
   const today = todayISO();
+
+  // On a personal device the character lives on the Character page, so it comes
+  // off the card here.
+  const onPersonalDevice = (await deviceMode()) === "personal";
 
   const person = await prisma.user.findUnique({ where: { id } });
   if (!person) notFound();
@@ -303,7 +308,7 @@ export default async function PersonPage({
         </div>
       </div>
 
-      {progress && (
+      {progress && !onPersonalDevice && (
         <div className="mb-8 flex flex-col items-center">
           <Companion
             companion={progress.companion}

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.163.0";
+export const APP_VERSION = "0.164.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.164.0",
+    summary: [
+      "Character page shows just you on a personal device, and your character now lives here \u2014 the creature and its hatch controls moved off the home card onto this page",
+      "Tidied the personal home: dropped the \u201cpersonal view \u2014 {name}\u201d tag and the red overdue banner (the overdue banner still shows on the shared tablet)",
+    ],
+  },
   {
     version: "0.163.0",
     summary: [
