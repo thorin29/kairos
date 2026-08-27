@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.170.0";
+export const APP_VERSION = "0.171.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.171.0",
+    summary: [
+      "Security hardening (F1): the admin area can no longer be left open by accident when the app is public. Requiring sign-in now can't be turned on until an admin PIN is set, and if an install is ever public without a PIN, admin fails closed (locked) instead of open. No change to a private LAN tablet with no PIN.",
+    ],
+  },
   {
     version: "0.170.0",
     summary: [

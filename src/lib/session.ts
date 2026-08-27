@@ -9,6 +9,9 @@ const COOKIE = "fd_admin";
 const UNLOCK_HOURS = 8;
 const SECRET_KEY = "sessionSecret";
 const ADMIN_PIN_KEY = "adminPinHash";
+// Mirror of gate.ts's REQUIRE_LOGIN key. Read directly here (rather than
+// importing from gate.ts) because gate.ts imports from this module.
+const REQUIRE_LOGIN_KEY = "requireLogin";
 
 /**
  * There is no per-person sign-in. The dashboard is a shared household screen:
@@ -88,8 +91,14 @@ async function hasValidUnlockCookie(): Promise<boolean> {
 }
 
 export async function isAdmin(): Promise<boolean> {
-  // Optional PIN: with none set, admin isn't gated at all.
-  if (!(await adminPinSet())) return true;
+  if (!(await adminPinSet())) {
+    // No PIN set. On a private LAN tablet that means admin is open, as it
+    // always has been. But if the install is public (sign-in required), don't
+    // fall open — refuse admin rather than handing it to everyone who's signed
+    // in. The toggle below won't let sign-in be turned on without a PIN, so in
+    // practice this is belt-and-suspenders for a hand-edited setting.
+    return (await getSetting(REQUIRE_LOGIN_KEY)) !== "true";
+  }
   return hasValidUnlockCookie();
 }
 
