@@ -43,6 +43,23 @@ import { Card, SectionHeading } from "@/components/ui";
 import { Companion } from "@/components/companion";
 import { HatchControls } from "@/components/hatch-controls";
 import { deviceMode } from "@/lib/device";
+import { CompletionBar } from "@/components/completion-bar";
+import { OpenTasks } from "@/components/open-tasks";
+import { AlwaysOpenChores } from "@/components/always-open-chores";
+import { DaySchedule } from "@/components/day-schedule";
+import { ShoppingReminder } from "@/components/shopping-reminder";
+import { SportPrompts } from "@/components/sport-prompts";
+import { ClassPrompts } from "@/components/class-prompts";
+import { MoneyReminder } from "@/components/money-reminder";
+import { RolloverReminder } from "@/components/rollover-reminder";
+import { loadOpenTasks } from "@/lib/queries/overview";
+import { loadAlwaysOpenChores } from "@/lib/queries/chores-summary";
+import { loadDaySchedule } from "@/lib/queries/calendar";
+import { pendingSportPrompts } from "@/lib/workouts/generate";
+import { pendingClassPrompts, loadRolloverState } from "@/lib/queries/school";
+import { pendingMoneyCount } from "@/lib/queries/money";
+import { pendingBibleRewards } from "@/lib/bible-rewards";
+import { loadDashboardTrips } from "@/lib/queries/groceries";
 import { Avatar } from "@/components/avatar";
 import { LockIcon, MoonIcon, FlameIcon, StarIcon } from "@/components/icons";
 import { CATEGORY_COLORS } from "@/lib/colors";
@@ -204,6 +221,79 @@ export default async function PersonPage({
     items: todayRows.filter((r) => r.category === category),
   })).filter((g) => g.items.length > 0);
 
+  // Per-category completeness bars for the top of the personal home. Mirrors the
+  // dashboard card's bars, computed from the same rows (school excluded, like
+  // the header percent).
+  const catBars = onPersonalDevice
+    ? ORDER.map((category) => {
+        const items = rows.filter(
+          (r) =>
+            r.category === category &&
+            r.status !== "SKIPPED" &&
+            !r.stale &&
+            r.category !== "SCHOOL",
+        );
+        const total = items.length;
+        const complete = items.filter((r) => r.status === "COMPLETE").length;
+        const overdueN = items.filter((r) => r.isOverdue).length;
+        return {
+          category,
+          total,
+          complete,
+          overdue: overdueN,
+          percent: total ? Math.round((complete / total) * 100) : 0,
+        };
+      }).filter((c) => c.total > 0)
+    : [];
+
+  // This page is the home on a personal device, so it also carries the
+  // up-for-grabs / always-open chores, the reminder lines, and the schedule
+  // that otherwise live on the shared dashboard.
+  let home: {
+    openTasks: Awaited<ReturnType<typeof loadOpenTasks>>;
+    alwaysOpen: Awaited<ReturnType<typeof loadAlwaysOpenChores>>;
+    roster: { id: string; name: string; color: string }[];
+    schedule: Awaited<ReturnType<typeof loadDaySchedule>>;
+    trips: Awaited<ReturnType<typeof loadDashboardTrips>>;
+    sport: Awaited<ReturnType<typeof pendingSportPrompts>>;
+    classPrompts: Awaited<ReturnType<typeof pendingClassPrompts>>;
+    moneyPending: number;
+    bibleReady: number;
+    rolloverName: string | null;
+  } | null = null;
+  if (onPersonalDevice) {
+    const [openTasks, alwaysOpen, roster, schedule, trips, sport, classP] =
+      await Promise.all([
+        loadOpenTasks(today),
+        loadAlwaysOpenChores(today),
+        prisma.user.findMany({
+          where: { isActive: true },
+          orderBy: { sortOrder: "asc" },
+          select: { id: true, name: true, color: true },
+        }),
+        loadDaySchedule(today),
+        loadDashboardTrips(),
+        pendingSportPrompts(today),
+        pendingClassPrompts(today),
+      ]);
+    const isAdmin = person.role === "ADMIN";
+    const moneyPending = isAdmin ? await pendingMoneyCount() : 0;
+    const bibleReady = isAdmin ? (await pendingBibleRewards(today)).count : 0;
+    const rollover = isAdmin ? await loadRolloverState(today) : null;
+    home = {
+      openTasks,
+      alwaysOpen,
+      roster,
+      schedule,
+      trips: trips.filter((t) => t.shopperId === id),
+      sport: sport.filter((s) => s.userId === id),
+      classPrompts: classP.filter((c) => c.userId === id),
+      moneyPending,
+      bibleReady,
+      rolloverName: rollover?.needed ? (rollover.fromTerm?.name ?? null) : null,
+    };
+  }
+
   // Workout prompts open the log step; everything else is a plain checklist row.
   const renderRow = (t: (typeof rows)[number]) => {
     if (t.isWorkout) {
@@ -234,6 +324,60 @@ export default async function PersonPage({
       
 
       <main className="mx-auto max-w-3xl px-6 py-6">
+
+      {home && catBars.length > 0 && (
+        <section className="mb-6">
+          <ul className="space-y-3">
+            {catBars.map((c) => (
+              <li key={c.category}>
+                <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                  <span>{CATEGORY_LABELS[c.category]}</span>
+                  <span className="tabular text-xs text-muted">
+                    {c.complete}/{c.total}
+                    {c.overdue > 0 && (
+                      <span className="ml-2 font-medium text-red-700">
+                        {c.overdue} late
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <CompletionBar
+                  percent={c.percent}
+                  overdue={c.overdue}
+                  total={c.total}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {home &&
+        (home.trips.length > 0 ||
+          home.sport.length > 0 ||
+          home.classPrompts.length > 0 ||
+          home.moneyPending > 0 ||
+          home.bibleReady > 0 ||
+          home.rolloverName !== null) && (
+          <div className="mb-6 space-y-3">
+            {home.trips.length > 0 && <ShoppingReminder trips={home.trips} />}
+            {home.rolloverName !== null && (
+              <RolloverReminder fromTermName={home.rolloverName} />
+            )}
+            {(home.moneyPending > 0 || home.bibleReady > 0) && (
+              <MoneyReminder
+                count={home.moneyPending}
+                bibleRewards={home.bibleReady}
+              />
+            )}
+            {home.classPrompts.length > 0 && (
+              <ClassPrompts prompts={home.classPrompts} today={today} />
+            )}
+            {home.sport.length > 0 && (
+              <SportPrompts prompts={home.sport} dateISO={today} />
+            )}
+          </div>
+        )}
 
 
       <div className="mb-8 flex flex-wrap items-center gap-4 border-b border-hairline pb-5">
@@ -464,6 +608,25 @@ export default async function PersonPage({
           defaultDate={today}
         />
       </div>
+
+      {home && (
+        <>
+          <div className="mt-8">
+            <OpenTasks tasks={home.openTasks} people={home.roster} />
+          </div>
+          <div className="mt-8">
+            <AlwaysOpenChores chores={home.alwaysOpen} people={home.roster} />
+          </div>
+          <div className="mt-10">
+            <DaySchedule
+              events={[...home.schedule.allDay, ...home.schedule.timed]}
+              title="Today's schedule"
+              emptyText="Nothing scheduled."
+              href={`/calendar?view=day&date=${today}`}
+            />
+          </div>
+        </>
+      )}
     </main>
     </>
   );
