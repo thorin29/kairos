@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { lockAdmin } from "@/lib/actions/session";
 
 // Admin sub-pages map back to their own dashboard; the hub goes home.
@@ -16,7 +16,6 @@ const DASHBOARDS = new Set([
 ]);
 
 export function LockButton() {
-  const router = useRouter();
   const path = usePathname();
   const [pending, startTransition] = useTransition();
 
@@ -31,7 +30,8 @@ export function LockButton() {
       onClick={() =>
         startTransition(async () => {
           await lockAdmin();
-          router.push(dashboard);
+          // Full navigation so the admin chrome clears immediately.
+          window.location.assign(dashboard);
         })
       }
       className="inline-flex h-10 items-center rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"

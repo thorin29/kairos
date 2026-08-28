@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/avatar";
 import { SwitchIcon } from "@/components/icons";
 import { logoutUser } from "@/lib/actions/accounts";
@@ -31,7 +31,6 @@ export function UserBadge({
   onNavigate?: () => void;
 }) {
   const path = usePathname();
-  const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -47,7 +46,9 @@ export function UserBadge({
     startTransition(async () => {
       await logoutUser();
       setConfirm(false);
-      router.push("/");
+      // Full navigation so the layout re-runs: chrome resets to signed-out and,
+      // when the gate is on, middleware sends us to the login screen.
+      window.location.assign("/");
     });
 
   const profileHref = userId ? `/person/${userId}/profile` : null;
