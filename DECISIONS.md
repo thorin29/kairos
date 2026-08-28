@@ -37,20 +37,43 @@ the server, called by both doors.
 explicit, and is valuable even if the app is never built. Additive-only within
 a major version.
 
-## 2026-08 — Mobile identity is per-person device tokens (proposed)
-**Decision (proposed, not yet built):** enrollment binds a device to a Person;
-the device token is the identity; no password login on the phone. Parents
-enroll devices from the admin area.
+## 2026-08 — Mobile identity: per-person device tokens (confirmed, built v0.177)
+**Decision (confirmed):** enrollment binds a device to a Person; the device
+token *is* the identity; there is no password login on the phone. A parent
+generates a one-time enrollment code in the admin area (rendered as a short code
+and a QR); redeeming it on the phone mints the token. This is the gating mobile
+decision from docs/API.md, now settled as option 1.
+**Shape as built:**
+- A `Device` row per enrolled phone; only `sha256(secret)` is stored, never the
+  raw token — same as an Invite. `Device.expiresAt` (365 d) refuses stale
+  tokens; `refresh` rotates the secret; `revoke` soft-revokes the row.
+- An `EnrollmentCode` row per pending enrollment: one-time, 15-minute TTL, hash
+  only, deleted on redemption (or expiry). One live code per person.
+- Surface: `POST /api/v1/auth/enroll` (no auth — the one internet-facing,
+  rate-limited, code-gated endpoint), `POST /auth/refresh`, `POST /auth/revoke`,
+  `GET /me`, `GET /meta`. All but enroll require `Authorization: Bearer`.
 **Reason:** preserves the household model (no per-person passwords), keeps the
-web app identity-free, and still lets a phone open to just that person. See
-docs/API.md "identity" for the alternatives considered. **This is the gating
-decision for mobile and must be confirmed before Kotlin begins.**
+web app identity-free, and still lets a phone open to just that person. The
+parent-facing "generate a code / see this person's phones" admin screen is the
+next increment; the contract and token backend land first.
+**Supersedes** the 2026-08 "per-person device tokens (proposed)" entry.
 
-## 2026-08 — Authelia `/api` bypass stays off until app-auth exists
-**Decision:** do not add an Authelia bypass for `/api` until the token-based
-app authentication surface is actually built.
-**Reason:** an unauthenticated `/api` behind a lifted Authelia gate would be a
-public hole. The bypass and the token surface ship together, never apart.
+## 2026-08 — Authelia `/api/v1` bypass is unblocked (token surface now exists)
+**Decision:** the token-based app authentication surface is built (v0.177), so
+the precondition for an Authelia bypass is met. When the bypass is added it is
+scoped to **`/api/v1` only**, never all of `/api`. Kairos still authenticates
+every `/api/v1` request itself: a bearer token on all endpoints except
+`/api/v1/auth/enroll`, which is intentionally public and guarded instead by a
+one-time, short-lived, rate-limited enrollment code.
+**Boundary that makes this safe:** `/api/v1` is exempt from the app's own
+login-gate middleware and does its own per-request auth in the route handlers
+(src/lib/api/device-auth.ts). The exemption is scoped by prefix, so no other
+`/api` route is opened by it.
+**Infra note:** enabling the bypass is a change to the Authelia config on the
+server, not in this repo. This entry records that it is now permitted and how it
+must be scoped.
+**Supersedes** the 2026-08 "Authelia `/api` bypass stays off until app-auth
+exists" entry — the condition it waited on is now satisfied.
 
 ## 2026-08 — Public exposure requires env enforcement, not the in-app toggle
 **Decision:** for a public deployment, `REQUIRE_LOGIN=true` and `SESSION_SECRET`

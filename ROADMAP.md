@@ -53,16 +53,23 @@ with a near-stable web UI and a bounded mobile surface, building the native UI
 once beats a Capacitor UI now and a native rebuild later. The React web app is
 unchanged; Android is a new client on the shared API.
 
-Before any Kotlin, two things settle first (see docs/API.md open questions):
-the **mobile identity model** (proposed: per-person device tokens) and the
-**`/api/v1` contract**.
+The two gating pre-Kotlin decisions are now settled: the **mobile identity
+model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
 
-- [ ] Confirm the identity decision (per-person device tokens vs alternatives).
-- [ ] Build the `/api/v1` surface in this repo (auth/enroll, me, dashboard,
-      chores, rewards, calendar, reading, workouts, companions, devices, sync,
-      meta). Additive-only; business logic reused from existing server code.
-- [ ] Add the Authelia `/api` bypass **only once** token auth exists
-      (DECISIONS.md).
+- [x] Confirm the identity decision — **per-person device tokens** (v0.177,
+      DECISIONS.md).
+- [x] Auth/identity + meta slice of `/api/v1` (v0.177): `auth/enroll`,
+      `auth/refresh`, `auth/revoke`, `me`, `meta`. Device + EnrollmentCode
+      models, hash-only token storage, rotate/revoke/expiry, per-source rate
+      limiting on enroll, edge-exempt + self-authenticating routes.
+- [ ] Admin enrollment UI — a "generate code" button (short code + QR) and a
+      per-person device list with revoke. Backend actions already exist
+      (`src/lib/actions/enrollment.ts`); this is the pure-UI increment.
+- [ ] Rest of the `/api/v1` surface: dashboard, chores, rewards, calendar,
+      reading, workouts, companions, devices (push), sync. Additive-only;
+      business logic reused from existing server code.
+- [ ] Add the Authelia bypass — now unblocked; scope it to **`/api/v1` only**
+      (DECISIONS.md). Infra change on the server, not in this repo.
 - [ ] Native Kotlin client (`kairos-app`): Compose UI, ViewModel, Retrofit,
       Room, WorkManager, FCM.
 - [ ] **Push notifications** via FCM, with typed deep-link targets

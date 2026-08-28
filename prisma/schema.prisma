@@ -87,6 +87,8 @@ model User {
   workoutRotation  WorkoutRotation?  @relation("WorkoutRotation")
   hiitWorkouts     HiitWorkout[]
   invites          Invite[]
+  devices          Device[]
+  enrollmentCodes  EnrollmentCode[]
   sportSkips       SportSkip[]
   eventParticipations EventParticipant[]
   classMemberships ClassMember[]
@@ -710,6 +712,41 @@ model Invite {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// A phone (or other personal device) enrolled to one person. On the mobile
+// client the device token *is* that person's identity — the web wall tablet
+// stays identity-free (see docs/API.md "identity"). Only a hash of the token's
+// secret is stored, like an Invite; the raw token is shown once at enrollment.
+// Rotating (refresh) or revoking replaces/blanks the hash so the old token
+// stops verifying. `expiresAt` refuses a stale token even before revocation.
+model Device {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String? // a label the parent gives, e.g. "Ellie's phone"
+  tokenHash  String    @unique // sha256 of the bearer token's secret
+  expiresAt  DateTime
+  lastSeenAt DateTime?
+  revokedAt  DateTime? // soft-revoke; a revoked row never verifies
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// A one-time, short-lived code a parent generates in the admin area to bind a
+// device to a person. Redeeming it mints the device token and deletes the code.
+// Only the hash is stored; the raw code is shown once (as a QR or a short code).
+// This is the only path to a device token — there is no self-enrollment.
+model EnrollmentCode {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
 
