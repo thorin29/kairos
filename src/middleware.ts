@@ -15,14 +15,15 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const COOKIE = "fd_user";
 
-/** Pages reachable without a session even when the gate is on. */
+/** Pages reachable without a session even when the gate is on. Note /api is
+ *  NOT blanket-public: only the avatar image route is exempt, so a future API
+ *  route is gated by default rather than silently open. (A token-authed app API
+ *  added later would be exempted here and do its own auth.) */
 function isPublicPath(path: string): boolean {
   return (
     path.startsWith("/login") ||
     path.startsWith("/join") ||
-    // Avatar images and any future token-authed app endpoints live under /api
-    // and are not page routes; the gate doesn't apply to them here.
-    path.startsWith("/api/")
+    path.startsWith("/api/avatars/")
   );
 }
 
