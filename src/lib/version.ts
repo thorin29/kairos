@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.173.0";
+export const APP_VERSION = "0.174.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.174.0",
+    summary: [
+      "Web now correctly defaults to the shared view; only phones and the app default to personal. The admin toggle still overrides per device.",
+      "Auth verification pass: found and fixed two more places with the same refresh-needed bug as sign-in \u2014 accepting an invite, and signing out \u2014 so both now land you in the right place immediately. Locking admin now clears the admin bar right away too.",
+    ],
+  },
   {
     version: "0.173.0",
     summary: [

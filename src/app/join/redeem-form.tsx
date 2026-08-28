@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { redeemInviteAction, type RedeemState } from "@/lib/actions/accounts";
 
 const initial: RedeemState = { error: null, ok: false };
@@ -12,15 +11,16 @@ const field =
 /** Set a password against a one-time invite token. On success the person is
  *  signed in and dropped on the dashboard. */
 export function RedeemForm({ token }: { token: string }) {
-  const router = useRouter();
   const [state, formAction, pending] = useActionState(
     redeemInviteAction,
     initial,
   );
 
   useEffect(() => {
-    if (state.ok) router.push("/");
-  }, [state.ok, router]);
+    // Full navigation (not router.push) so the layout re-runs with the new
+    // session — otherwise the sidebar and personal view lag until a refresh.
+    if (state.ok) window.location.assign("/");
+  }, [state.ok]);
 
   return (
     <form action={formAction} className="space-y-4">
