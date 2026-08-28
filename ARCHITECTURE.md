@@ -142,6 +142,12 @@ PIN — `/chores` and `/admin/chores`, `/bible` and `/admin/bible`.
   applied in the database against the ones this build expects, which catches a
   partial deploy in seconds.
 - `src/lib/version.ts` carries the version and a short changelog.
+- Repository docs are the source of truth, not any tool's memory: ARCHITECTURE.md
+  (how it's built), ROADMAP.md (what's planned/done), DECISIONS.md (what was
+  decided and why), docs/API.md (the mobile contract). A change that makes,
+  reverses, or narrows a standing decision — a security posture, an auth
+  boundary, a scoring rule, the mobile contract — updates DECISIONS.md in the
+  same release, the same way version.ts and ROADMAP.md are always touched.
 - Verify with `npx tsc --noEmit` before shipping. The generated Prisma client
   won't exist until `prisma generate` runs, so errors mentioning
   `@/generated/prisma` are expected locally and resolve during the build.

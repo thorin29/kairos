@@ -45,25 +45,32 @@ all live in the database, never in this repository.
 #### Android app — decided direction
 
 PWA is ruled out: several users have browsers blocked by the device time-limit
-container, and a PWA needs a working browser. The app will be a **Capacitor**
-build — a real installable APK that bundles its own web engine (so a blocked
-system browser doesn't matter) and wraps the existing web UI, keeping one
-codebase. TWA is avoided because it borrows the system browser.
+container, and a PWA needs a working browser. The app will be a **native
+Kotlin / Jetpack Compose** client in a separate repo (`kairos-app`), talking to
+a versioned REST API (see docs/API.md). This reverses the earlier Capacitor
+plan — see DECISIONS.md ("Native Kotlin for Android, not Capacitor") for why:
+with a near-stable web UI and a bounded mobile surface, building the native UI
+once beats a Capacitor UI now and a native rebuild later. The React web app is
+unchanged; Android is a new client on the shared API.
 
-- [ ] **Capacitor Android app** in a separate repo (`kairos-app`): native shell,
-      permissions, packaging. The screens stay in this repo, served as now.
-- [ ] **Push notifications + background tasks** via Capacitor plugins (email
-      delivery already proves the notifier end-to-end; device push is the new
-      transport).
-- [ ] **Offline for groceries and calendar** — the two screens used away from
-      wifi. Cache both to open and read with no signal; a small change-queue
-      replays actions on reconnect. Groceries is single-shopper (no multi-person
-      merge), so its queue is simple; calendar needs two-way sync because events
-      may be added/edited offline. Everything else stays server-loaded.
-- [ ] Small additive API endpoints in this repo for the offline sync to call.
-- [ ] Push notifications for the app. (Email delivery now exists via SMTP, so
-      the notifier concept is proven end-to-end; push to devices is a separate
-      transport still to build.)
+Before any Kotlin, two things settle first (see docs/API.md open questions):
+the **mobile identity model** (proposed: per-person device tokens) and the
+**`/api/v1` contract**.
+
+- [ ] Confirm the identity decision (per-person device tokens vs alternatives).
+- [ ] Build the `/api/v1` surface in this repo (auth/enroll, me, dashboard,
+      chores, rewards, calendar, reading, workouts, companions, devices, sync,
+      meta). Additive-only; business logic reused from existing server code.
+- [ ] Add the Authelia `/api` bypass **only once** token auth exists
+      (DECISIONS.md).
+- [ ] Native Kotlin client (`kairos-app`): Compose UI, ViewModel, Retrofit,
+      Room, WorkManager, FCM.
+- [ ] **Push notifications** via FCM, with typed deep-link targets
+      (`chore:<id>`, `reward:<id>`, `event:<id>`, `reading:<ref>`).
+- [ ] **Offline** for the personal daily surface (today's chores + completion
+      at minimum), replaying writes through the same POST endpoints so there is
+      no separate write-sync path. Wider offline (calendar two-way) is a later
+      step.
 
 ## Dashboard
 
