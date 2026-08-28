@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.174.0";
+export const APP_VERSION = "0.175.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.175.0",
+    summary: [
+      "Fixed the sidebar not appearing until a manual refresh. The page frame (sidebar and top bar) is now always present and decides its own visibility as you move around, instead of being decided once on the server and getting stuck. This also fixes it going missing after closing the admin menu.",
+      "Removed the Dashboard button from the create-password screen.",
+      "Hardening: API routes are now protected by default \u2014 only the avatar-image route is public \u2014 so a new endpoint can't be left unprotected by accident.",
+    ],
+  },
   {
     version: "0.174.0",
     summary: [

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import "./globals.css";
 import { AdminLock } from "@/components/admin-lock";
 import { Sidebar } from "@/components/sidebar";
+import { ContentPad } from "@/components/content-pad";
 import { TopDate } from "@/components/top-date";
 import { isAdmin, adminPinSet } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
@@ -69,47 +70,45 @@ export default async function RootLayout({
   const sidebarExpanded = (await cookies()).get("sidebar")?.value === "1";
 
   // When login is required, every page but the public ones needs a session.
-  // The gate is here (not middleware) because deciding it needs the database.
+  // This is a hard-load backstop; middleware enforces it on every navigation.
   if (gate && !me && !isPublicPath(path)) {
     redirect(`/login?next=${encodeURIComponent(path)}`);
   }
 
-  const chrome = !isPublicPath(path);
-  const hiddenNav = chrome ? await hiddenNavHrefs() : [];
-  // On a personal device the home is the signed-in person's page, so the
-  // Dashboard link points there and lights up on that path.
+  // Chrome (sidebar, top bar, content padding) is ALWAYS rendered here and
+  // decides its own visibility on the client via the live path. Deciding it in
+  // this server layout was the bug: the layout doesn't re-render on in-app
+  // navigation, so a value computed from the request path froze at the last
+  // hard load and the sidebar could stay gone until a manual refresh.
+  const hiddenNav = me ? await hiddenNavHrefs() : [];
   const personalHome =
-    chrome && me && (await deviceMode()) === "personal"
-      ? `/person/${me.id}`
-      : "/";
+    me && (await deviceMode()) === "personal" ? `/person/${me.id}` : "/";
 
   return (
     <html lang="en">
       <body
         className={`${bricolage.variable} ${plexSans.variable} ${plexMono.variable} min-h-dvh bg-ground text-ink antialiased`}
       >
-        {chrome && (
-          <Sidebar
-            initialExpanded={sidebarExpanded}
-            hiddenHrefs={hiddenNav}
-            dashboardHref={personalHome}
-            user={
-              me
-                ? {
-                    id: me.id,
-                    name: me.displayName ?? me.name,
-                    color: me.color,
-                    avatarPath: me.avatarPath,
-                    avatarPosition: me.avatarPosition,
-                  }
-                : null
-            }
-          />
-        )}
+        <Sidebar
+          initialExpanded={sidebarExpanded}
+          hiddenHrefs={hiddenNav}
+          dashboardHref={personalHome}
+          user={
+            me
+              ? {
+                  id: me.id,
+                  name: me.displayName ?? me.name,
+                  color: me.color,
+                  avatarPath: me.avatarPath,
+                  avatarPosition: me.avatarPosition,
+                }
+              : null
+          }
+        />
 
-        {chrome && <TopDate label={formatLong(todayISO())} />}
+        <TopDate label={formatLong(todayISO())} />
 
-        <div className={chrome ? "pt-12 md:pl-16 md:pt-0" : ""}>{children}</div>
+        <ContentPad>{children}</ContentPad>
 
         <AdminLock unlocked={unlocked} pinSet={pinSet} />
       </body>
