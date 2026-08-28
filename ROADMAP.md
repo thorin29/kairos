@@ -909,7 +909,19 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 ## Security hardening
 - [x] Brute-force protection: wrong admin-PIN and wrong login-password attempts
       are now rate-limited (in-memory fixed window, best-effort for a single
-      container). Blunts a kid working through combinations.
+      container). Blunts a kid working through combinations. v0.176 adds a
+      per-source-address ceiling on top of the per-account limit.
+- [x] v0.176 hardening batch (from third-party review + own audit):
+      - Secure flag on `fd_user` / `fd_admin` / `fd_mode` cookies, driven by
+        forwarded proto (TLS terminates at Traefik/Cloudflare) or `COOKIE_SECURE`;
+        default off so LAN-HTTP sign-in still works.
+      - Admin read-window closed at the edge: middleware verifies the signed
+        `fd_admin` cookie on every `/admin` navigation, so a lapsed unlock
+        redirects immediately instead of lingering to the next hard load. Unlock
+        TTL trimmed 8h -> 4h.
+      - Avatar uploads validated by magic bytes, not just the claimed MIME.
+      - CSRF: `serverActions.allowedOrigins` configurable via `ALLOWED_ORIGINS`.
+      - Nodemailer bumped 6 -> 7 (CVE); lockfile synced.
 - [x] Cookie signing secret: confirmed. Both the admin unlock and personal
       sessions are HMAC-signed with a 32-byte secret generated on first use and
       kept in `AppSetting` (`sessionSecret`), not a weak default — a fresh
@@ -920,8 +932,9 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       Cloudflared) plus a decision on what's reachable. The phone app forces
       this: an allowlisted APK on a child's device must reach Kairos over the
       tunnel. Revisit when device modes land.
-- [ ] Session lifetime / auto-lock: the admin unlock still lasts a few hours;
-      confirm whether a shared wall tablet should auto-lock after inactivity.
+- [~] Session lifetime / auto-lock: admin unlock is now 4h and is re-checked at
+      the edge on every admin navigation (v0.176). A true inactivity auto-lock
+      (rolling idle timeout) for the shared wall tablet is still open.
       (Personal sessions are deliberately long — a phone should stay signed in.)
 - [ ] Per-device session revocation: personal sessions are stateless, so
       "sign out everywhere" is currently all-or-nothing via `credentialVersion`.

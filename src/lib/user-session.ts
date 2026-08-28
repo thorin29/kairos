@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { appSecret } from "@/lib/secret";
+import { cookieSecure } from "@/lib/cookie-flags";
 
 /**
  * A personal sign-in, distinct from the shared admin unlock. The wall tablet
@@ -38,6 +39,7 @@ export async function startUserSession(
   store.set(COOKIE, `${payload}.${sign(payload, await appSecret())}`, {
     httpOnly: true,
     sameSite: "lax",
+    secure: await cookieSecure(),
     path: "/",
     maxAge: SESSION_DAYS * 86_400,
   });

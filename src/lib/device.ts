@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { appSecret } from "@/lib/secret";
+import { cookieSecure } from "@/lib/cookie-flags";
 
 /**
  * Shared vs personal is a property of the *device*. An admin can pin it per
@@ -31,6 +32,7 @@ export async function setDeviceMode(mode: DeviceMode): Promise<void> {
   store.set(COOKIE, `${mode}.${sign(mode, await appSecret())}`, {
     httpOnly: true,
     sameSite: "lax",
+    secure: await cookieSecure(),
     path: "/",
     maxAge: MAX_AGE,
   });

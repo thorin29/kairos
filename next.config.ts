@@ -13,7 +13,19 @@ const nextConfig: NextConfig = {
   experimental: {
     // Profile photos post through a server action, and the default cap is
     // 1 MB — smaller than a phone snapshot.
-    serverActions: { bodySizeLimit: "6mb" },
+    serverActions: {
+      bodySizeLimit: "6mb",
+      // CSRF defense-in-depth for a public deployment: restrict which origins
+      // may invoke server actions. Set ALLOWED_ORIGINS to your host(s),
+      // comma-separated (e.g. "kairos.ninjaknox.net"). Unset = same-origin only.
+      ...(process.env.ALLOWED_ORIGINS
+        ? {
+            allowedOrigins: process.env.ALLOWED_ORIGINS.split(",")
+              .map((o) => o.trim())
+              .filter(Boolean),
+          }
+        : {}),
+    },
   },
 };
 

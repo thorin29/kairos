@@ -14,6 +14,7 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 
 const COOKIE = "fd_user";
+const ADMIN_COOKIE = "fd_admin";
 
 /** Pages reachable without a session even when the gate is on. Note /api is
  *  NOT blanket-public: only the avatar image route is exempt, so a future API
@@ -50,14 +51,36 @@ function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
  *  credentialVersion) still happen server-side; this stops the unauthenticated
  *  bypass on every navigation. */
 async function validSession(token: string, secret: string): Promise<boolean> {
+  return validSigned(token, 4, secret, (p) => {
+    const [userId, expires, version] = p;
+    return !!userId && !!expires && !!version && `${userId}.${expires}.${version}`;
+  }, 1);
+}
+
+/** The admin unlock cookie is `expires.signature`. Verify it the same way so a
+ *  lapsed unlock is caught on every navigation into /admin, not just on a hard
+ *  reload. */
+async function validAdminUnlock(token: string, secret: string): Promise<boolean> {
+  return validSigned(token, 2, secret, (p) => p[0], 0);
+}
+
+/** Shared HMAC check: split into `parts` segments, the last is the signature
+ *  over the payload the builder returns, and an expiry field must be in the
+ *  future. */
+async function validSigned(
+  token: string,
+  segments: number,
+  secret: string,
+  payloadOf: (parts: string[]) => string | false,
+  expiresIndex: number,
+): Promise<boolean> {
   const parts = token.split(".");
-  if (parts.length !== 4) return false;
-  const [userId, expires, version, signature] = parts;
-  if (!userId || !expires || !version || !signature) return false;
-  if (!Number.isFinite(Number(expires)) || Number(expires) < Date.now()) {
-    return false;
-  }
-  const payload = `${userId}.${expires}.${version}`;
+  if (parts.length !== segments) return false;
+  const signature = parts[segments - 1];
+  const payload = payloadOf(parts);
+  if (!payload || !signature) return false;
+  const expires = Number(parts[expiresIndex]);
+  if (!Number.isFinite(expires) || expires < Date.now()) return false;
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -70,9 +93,7 @@ async function validSession(token: string, secret: string): Promise<boolean> {
     key,
     new TextEncoder().encode(payload),
   );
-  const got = new Uint8Array(mac);
-  const want = hexToBytes(signature);
-  return timingSafeEqual(got, want);
+  return timingSafeEqual(new Uint8Array(mac), hexToBytes(signature));
 }
 
 export async function middleware(req: NextRequest) {
@@ -89,15 +110,35 @@ export async function middleware(req: NextRequest) {
   if (isPublicPath(path)) return pass;
 
   const secret = process.env.SESSION_SECRET;
+  const hasSecret = !!secret && secret.length >= 16;
   const token = req.cookies.get(COOKIE)?.value;
-  if (secret && secret.length >= 16 && token && (await validSession(token, secret))) {
-    return pass;
+  const signedIn =
+    hasSecret && !!token && (await validSession(token, secret as string));
+
+  if (!signedIn) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = `?next=${encodeURIComponent(path)}`;
+    return NextResponse.redirect(url);
   }
 
-  const url = req.nextUrl.clone();
-  url.pathname = "/login";
-  url.search = `?next=${encodeURIComponent(path)}`;
-  return NextResponse.redirect(url);
+  // The admin area additionally needs a current unlock — checked here so a
+  // lapsed unlock is enforced on every navigation, not only on a hard reload.
+  if (path.startsWith("/admin")) {
+    const adminTok = req.cookies.get(ADMIN_COOKIE)?.value;
+    const unlocked =
+      hasSecret &&
+      !!adminTok &&
+      (await validAdminUnlock(adminTok, secret as string));
+    if (!unlocked) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/unlock";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  return pass;
 }
 
 export const config = {
