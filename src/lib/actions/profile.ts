@@ -12,6 +12,36 @@ import { requireAdminOrSelf } from "@/lib/gate";
 const UPLOADS = path.join(process.env.DATA_DIR || "/app/data", "uploads");
 const MAX_BYTES = 5 * 1024 * 1024;
 
+/** Confirm the file's leading bytes match the claimed image type, so a
+ *  non-image can't be stored just by sending an image MIME string. */
+function looksLikeImage(b: Buffer, mime: string): boolean {
+  if (b.length < 12) return false;
+  switch (mime) {
+    case "image/jpeg":
+      return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+    case "image/png":
+      return (
+        b[0] === 0x89 &&
+        b[1] === 0x50 &&
+        b[2] === 0x4e &&
+        b[3] === 0x47 &&
+        b[4] === 0x0d &&
+        b[5] === 0x0a &&
+        b[6] === 0x1a &&
+        b[7] === 0x0a
+      );
+    case "image/gif":
+      return b.slice(0, 6).toString("latin1").match(/^GIF8[79]a$/) !== null;
+    case "image/webp":
+      return (
+        b.slice(0, 4).toString("latin1") === "RIFF" &&
+        b.slice(8, 12).toString("latin1") === "WEBP"
+      );
+    default:
+      return false;
+  }
+}
+
 const EXTENSIONS: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
@@ -63,14 +93,16 @@ export async function updateProfile(
       return { error: "Use a JPG, PNG, WebP, or GIF.", saved: false };
     }
 
+    const bytes = Buffer.from(await photo.arrayBuffer());
+    if (!looksLikeImage(bytes, photo.type)) {
+      return { error: "That file isn't a valid image.", saved: false };
+    }
+
     // Random suffix means a replaced photo gets a fresh URL, so browsers
     // don't serve the old one from cache.
     const filename = `${id}-${randomBytes(6).toString("hex")}${ext}`;
     await mkdir(UPLOADS, { recursive: true });
-    await writeFile(
-      path.join(UPLOADS, filename),
-      Buffer.from(await photo.arrayBuffer()),
-    );
+    await writeFile(path.join(UPLOADS, filename), bytes);
     avatarPath = filename;
   } else if (icon) {
     // A chosen icon wins over removePhoto: picking an icon also clears any

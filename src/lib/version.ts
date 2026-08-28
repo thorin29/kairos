@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.175.0";
+export const APP_VERSION = "0.176.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,6 +83,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.176.0",
+    summary: [
+      "Hardening: sign-in and admin cookies are now marked Secure when the site is served over HTTPS, so they can't leak over a plain connection. This is detected automatically; it can be forced on or off with COOKIE_SECURE if needed.",
+      "Hardening: an expired admin unlock now takes effect immediately as you move around the admin area, instead of lingering until the next full page load. The unlock also now lasts four hours rather than eight.",
+      "Hardening: uploaded profile photos are checked to be real images, not just files with an image name.",
+      "Hardening: sign-in attempts are now rate-limited per source address as well as per account.",
+      "Hardening: server actions can be restricted to known site addresses with ALLOWED_ORIGINS, and the mail library was updated to a patched release.",
+    ],
+  },
   {
     version: "0.175.0",
     summary: [

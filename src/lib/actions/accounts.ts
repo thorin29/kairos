@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { requireAdmin } from "@/lib/session";
 import {
   authenticate,
@@ -32,11 +33,19 @@ export async function loginUser(
     return { error: "Enter your name or email and your password.", ok: false };
   }
 
+  // Two limits: per-identifier (someone hammering one account) and a looser
+  // per-IP ceiling (someone spraying many identifiers from one source). Either
+  // tripping blocks the attempt.
+  const ipHeader = (await headers()).get("x-forwarded-for") ?? "";
+  const ip = ipHeader.split(",")[0].trim() || "unknown";
   const key = `login:${identifier.toLowerCase()}`;
+  const ipKey = `login-ip:${ip}`;
   const limit = rateLimit(key, 10, 10 * 60_000);
-  if (!limit.ok) {
+  const ipLimit = rateLimit(ipKey, 30, 10 * 60_000);
+  if (!limit.ok || !ipLimit.ok) {
+    const retry = Math.max(limit.retryAfterSec, ipLimit.retryAfterSec);
     return {
-      error: `Too many attempts. Try again in ${limit.retryAfterSec}s.`,
+      error: `Too many attempts. Try again in ${retry}s.`,
       ok: false,
     };
   }

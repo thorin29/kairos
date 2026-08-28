@@ -4,9 +4,10 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getSetting, setSetting, clearSetting } from "@/lib/settings";
 import { hashPin, verifyPin } from "@/lib/auth";
+import { cookieSecure } from "@/lib/cookie-flags";
 
 const COOKIE = "fd_admin";
-const UNLOCK_HOURS = 8;
+const UNLOCK_HOURS = 4;
 const SECRET_KEY = "sessionSecret";
 const ADMIN_PIN_KEY = "adminPinHash";
 // Mirror of gate.ts's REQUIRE_LOGIN key. Read directly here (rather than
@@ -69,6 +70,7 @@ export async function startAdminSession(): Promise<void> {
   store.set(COOKIE, `${payload}.${sign(payload, await secret())}`, {
     httpOnly: true,
     sameSite: "lax",
+    secure: await cookieSecure(),
     path: "/",
     maxAge: UNLOCK_HOURS * 3600,
   });
