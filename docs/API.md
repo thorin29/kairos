@@ -1,10 +1,11 @@
 # Kairos API (v1) — mobile client contract
 
-Status: **draft / proposal.** Nothing here is built yet. This document is the
-contract the native Android client and the Next.js backend will both hold to,
-so the client is never coupled to Next.js implementation details. It is worth
-having even if the app is never built, because it forces the boundary to be
-explicit.
+Status: **partly built.** The identity model is settled (per-person device
+tokens) and the auth/identity surface is implemented as of v0.177:
+`POST /auth/enroll`, `POST /auth/refresh`, `POST /auth/revoke`, `GET /me`, and
+`GET /meta`. Everything else below remains a **proposal** until built. This
+document is the contract the native Android client and the Next.js backend both
+hold to, so the client is never coupled to Next.js implementation details.
 
 The web app talks to the backend through Next.js Server Actions and will keep
 doing so. This REST surface is **additive** — a second door onto the same
@@ -24,7 +25,9 @@ A personal mobile app breaks that assumption: a phone belongs to one person and
 should open to *their* chores, *their* points, *their* reading. So the mobile
 client introduces the first genuine per-person identity the system has had.
 
-This is the decision to make before any Kotlin is written. Three shapes:
+**Decided (v0.177): option 1, per-person device tokens.** The three shapes that
+were weighed are kept below for the record; the contract implements option 1.
+The three shapes were:
 
 1. **Per-person device tokens (recommended).** Enrollment binds a device to a
    `Person`. The token *is* the identity; there is no password login on the
@@ -40,13 +43,22 @@ This is the decision to make before any Kotlin is written. Three shapes:
    just a portable dashboard. Loses the "opens to just me" benefit that made
    native attractive in the first place.
 
-**Recommendation: option 1.** It preserves the household model, requires no new
-password surface, and keeps the web app unchanged. The rest of this contract
-assumes option 1; if a different option is chosen, the `/auth` and `/me`
-sections change and little else does.
+**Chosen: option 1.** It preserves the household model, requires no new password
+surface, and keeps the web app unchanged. Identity lives only on the mobile
+edge; the web wall tablet stays identity-free.
 
-Until this is settled and a token surface exists, the Authelia `/api` bypass
-must NOT be added — that is a standing decision (see DECISIONS.md).
+As built: a parent generates a one-time **enrollment code** for a person in the
+admin area; the phone redeems it at `/auth/enroll` for a long-lived **device
+token** (a bearer token). Only a SHA-256 of each secret is stored — enrollment
+codes and device tokens alike — so a database leak yields nothing usable. The
+token is rotatable (`/auth/refresh`) and revocable (`/auth/revoke`), and expires
+on its own after a year. See DECISIONS.md for the full record and the concrete
+request/response shapes under "Auth & identity" below.
+
+Now that the token surface exists, the Authelia bypass is unblocked but must be
+scoped to `/api/v1` only (DECISIONS.md). `/api/v1` authenticates every request
+itself; it is exempt from the app's own login-gate middleware and never relies
+on Authelia to protect it.
 
 ---
 
@@ -94,13 +106,59 @@ was wrong (matches the existing login behaviour).
 Grouped by the domains that already exist as server actions. This is the
 surface a personal mobile client needs, not a mirror of every web feature.
 
-### Auth & identity
+### Auth & identity — **built (v0.177)**
+
 ```
 POST /api/v1/auth/enroll        redeem an enrollment code -> device token + person
-POST /api/v1/auth/refresh       rotate device token
-POST /api/v1/auth/revoke        revoke this device
-GET  /api/v1/me                 the enrolled person: id, name, avatar, role
+POST /api/v1/auth/refresh       rotate this device's token
+POST /api/v1/auth/revoke        revoke (sign out) this device
+GET  /api/v1/me                 the enrolled person
 ```
+
+**`POST /auth/enroll`** — the only endpoint with no bearer token. Public by
+design (a phone anywhere), protected by the code's short life, single use, and
+per-source rate limiting.
+```
+request:  { "code": "ABCD-EF23", "deviceName": "Ellie's Pixel" }   // deviceName optional
+200:      { "token": "<device-token>",
+            "expiresAt": "2027-08-28T00:00:00.000Z",
+            "person": { …see /me… } }
+422:      validation  — code missing
+403:      forbidden   — code invalid or expired (never says which)
+429:      rate_limited
+```
+The `code` is case-insensitive and the dash is optional. The `token` goes in
+`Authorization: Bearer <token>` on every later request; store it in the OS
+keystore.
+
+**`POST /auth/refresh`** — bearer required. Rotates the secret; the presented
+token stops working immediately and the response carries its replacement.
+```
+200:      { "token": "<new-device-token>", "expiresAt": "…" }
+401:      unauthenticated — missing/invalid/expired token
+```
+
+**`POST /auth/revoke`** — bearer required. Signs this device out for good;
+re-enrolling needs a fresh code from a parent.
+```
+200:      { "revoked": true }
+401:      unauthenticated
+```
+
+**`GET /me`** — bearer required. The person this device is enrolled to.
+```
+200:      { "id": "clx…",
+            "name": "Ellie",            // display name if set, else short name
+            "shortName": "ellie",       // the unique dashboard handle
+            "avatarUrl": "/api/avatars/…" | null,   // relative to the API base
+            "avatarIcon": "🦊" | null,               // emoji when an icon was picked
+            "role": "ADMIN" | "MEMBER",
+            "kind": "CHILD" | "PARENT" }
+401:      unauthenticated
+```
+Exactly one of `avatarUrl` / `avatarIcon` is non-null (both null means no
+avatar). `kind` is additive over the original "id, name, avatar, role" sketch so
+the client can scope child-only features.
 
 ### Dashboard (one call to paint the home screen)
 ```
@@ -162,10 +220,13 @@ GET  /api/v1/sync?since=<cursor>   changes since cursor, for offline reconcile
 Cursor-based, additive. Offline writes replay through the same POSTs above, so
 there is no separate write-sync path to keep consistent.
 
-### Meta
+### Meta — **built (v0.177)**
 ```
-GET  /api/v1/meta               apiVersion, appVersion, minClient
+GET  /api/v1/meta               { "apiVersion": 1, "appVersion": "0.177.0", "minClient": 0 }
 ```
+No auth. The handshake a fresh install uses to decide whether it can talk to
+this server. `minClient` is the lowest client build this server still accepts
+(0 = any); raise it to force old apps to update.
 
 ---
 
@@ -184,11 +245,17 @@ separate contract if wanted, and would reuse this auth layer.
 
 ---
 
-## Open questions to close before Kotlin
+## Open questions
 
-1. Identity shape (section above) — the gating decision.
-2. Enrollment UX: QR from the admin area vs short numeric code.
-3. Token lifetime and refresh cadence for device tokens.
-4. Whether parents get a management surface in v1 or web-only.
+1. ~~Identity shape~~ — **closed (v0.177): per-person device tokens (option 1).**
+2. ~~Enrollment UX~~ — **closed: one code, shown as both a short 8-char code
+   (`ABCD-EF23`, look-alike-free alphabet) and a QR of the same string.** Manual
+   entry and scan hit the same `/auth/enroll`.
+3. ~~Token lifetime~~ — **closed: enrollment code 15 min, single use; device
+   token 365 days, rotated by `/auth/refresh` (client refreshes before expiry).**
+4. **Admin management surface** — the enrollment/device backend is built (issue
+   code, list a person's devices, revoke). The parent-facing *screen* for it is
+   the next increment. Broader parent-facing management (creating chores etc.)
+   stays web-only for v1.
 5. Offline scope: which screens must work with no network (likely today's
-   chores + completion), which can require it.
+   chores + completion), which can require it. Still open.

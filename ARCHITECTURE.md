@@ -120,6 +120,24 @@ dependency-free modules (`src/lib/days.ts`, `src/lib/bible/books.ts`).
 
 Enum imports used only as types are `import type`, which TypeScript erases.
 
+### The mobile API is a second door, self-authenticated
+
+The native phone client talks to a versioned REST surface at `/api/v1`
+(docs/API.md), not to Server Actions. It is **additive** — the same domain logic
+behind a second door — and is the first place per-person identity enters the
+system. A phone enrolls to one `Person` and carries a bearer **device token**;
+the web wall tablet stays identity-free.
+
+Two properties are load-bearing. First, only a SHA-256 of every secret is
+stored — enrollment codes and device tokens alike, exactly like an `Invite` — so
+a database leak yields nothing usable. Second, `/api/v1` does its own auth on
+every request in the route handlers (`src/lib/api/device-auth.ts`), so it is
+**exempt from the login-gate middleware** rather than redirected to `/login`.
+That per-request self-authentication is also what makes a scoped Authelia
+`/api/v1` bypass safe: the app never relies on Authelia to protect it. The one
+unauthenticated endpoint, `/auth/enroll`, is public by design and guarded
+instead by a one-time, short-lived, rate-limited code.
+
 ## Layout
 
 ```

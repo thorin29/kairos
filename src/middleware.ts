@@ -16,15 +16,20 @@ import { NextResponse, type NextRequest } from "next/server";
 const COOKIE = "fd_user";
 const ADMIN_COOKIE = "fd_admin";
 
-/** Pages reachable without a session even when the gate is on. Note /api is
- *  NOT blanket-public: only the avatar image route is exempt, so a future API
- *  route is gated by default rather than silently open. (A token-authed app API
- *  added later would be exempted here and do its own auth.) */
+/** Pages reachable without the cookie session even when the gate is on. Note
+ *  /api is NOT blanket-public: only the avatar image route and the versioned
+ *  app API are exempt, so any *other* new API route is gated by default rather
+ *  than silently open. `/api/v1` is the token-authed mobile surface — it does
+ *  its own per-request bearer auth in the route handlers (see
+ *  src/lib/api/device-auth.ts), so it must not be redirected to /login. This is
+ *  also what makes a scoped Authelia `/api/v1` bypass safe (see DECISIONS.md). */
 function isPublicPath(path: string): boolean {
   return (
     path.startsWith("/login") ||
     path.startsWith("/join") ||
-    path.startsWith("/api/avatars/")
+    path.startsWith("/api/avatars/") ||
+    path.startsWith("/api/v1/") ||
+    path === "/api/v1"
   );
 }
 

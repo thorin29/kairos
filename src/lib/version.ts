@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.176.0";
+export const APP_VERSION = "0.177.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -78,11 +78,22 @@ export const MIGRATIONS = [
   "68_avatar_position",
   "69_shopping_trips",
   "70_grocery_sort",
+  "71_devices",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.177.0",
+    summary: [
+      "Mobile groundwork: the phone app's identity model is settled \\u2014 each phone enrolls to one person and carries that person's identity, with no per-person password. The wall tablet stays a shared, no-login screen.",
+      "Added the first pieces of the phone app's connection (`/api/v1`): a phone redeems a one-time code a parent generates to get signed in, can refresh or sign itself out, and can ask who it's signed in as. A version check is included so the server can ask an outdated app to update.",
+      "Enrollment codes are short-lived and single-use, shown once as a short code (also QR-able); only a scrambled form is stored, never the code itself. A phone's saved credential is stored the same way and can be rotated or revoked at any time.",
+      "This app connection does its own check on every request and is the only part of the site that can safely sit in front of the main sign-in wall \\u2014 nothing else changed about how the website is protected.",
+      "The button for a parent to generate a code and see a person's phones is the next step; the connection and its safeguards land first.",
+    ],
+  },
   {
     version: "0.176.0",
     summary: [
