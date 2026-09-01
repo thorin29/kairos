@@ -236,6 +236,13 @@ export async function PersonalCalendar({
             holidaySystem={holidaySystem}
             kindColors={prefs.kindColors}
             meColor={me.color}
+            eventTypes={eventTypes.map((t) => ({
+              id: t.id,
+              name: t.name,
+              color: t.color,
+            }))}
+            eventTypeColors={prefs.eventTypeColors}
+            subColors={prefs.subColors}
           />
         </div>
 
