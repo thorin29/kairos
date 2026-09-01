@@ -27,10 +27,13 @@ import {
   setCalendarNowColor,
   setCalendarHolidayColor,
   setCalendarKindColor,
+  setCalendarEventTypeColor,
+  setCalendarSubColor,
 } from "@/lib/actions/calendar-prefs";
 
 type Person = { id: string; name: string; color: string };
 type Sub = { id: string; name: string; ownerName: string | null; color: string };
+type EventType = { id: string; name: string; color: string };
 
 const GREY = "#9ca3af";
 
@@ -51,6 +54,9 @@ export function CalendarOptionsDrawer({
   holidaySystem,
   kindColors,
   meColor,
+  eventTypes,
+  eventTypeColors,
+  subColors,
 }: {
   view: CalView;
   people: Person[];
@@ -68,6 +74,9 @@ export function CalendarOptionsDrawer({
   holidaySystem: string;
   kindColors: Record<string, string>;
   meColor: string;
+  eventTypes: EventType[];
+  eventTypeColors: Record<string, string>;
+  subColors: Record<string, string>;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
@@ -255,6 +264,34 @@ export function CalendarOptionsDrawer({
                         onPick={(c) => start(() => setCalendarHolidayColor(c))}
                         onClear={() => start(() => setCalendarHolidayColor(null))}
                       />
+                      {eventTypes.map((t) => (
+                        <ColorField
+                          key={t.id}
+                          label={t.name}
+                          value={eventTypeColors[t.id] ?? null}
+                          fallback={t.color}
+                          onPick={(c) =>
+                            start(() => setCalendarEventTypeColor(t.id, c))
+                          }
+                          onClear={() =>
+                            start(() => setCalendarEventTypeColor(t.id, null))
+                          }
+                        />
+                      ))}
+                      {subscriptions.map((s) => (
+                        <ColorField
+                          key={s.id}
+                          label={s.name}
+                          value={subColors[s.id] ?? null}
+                          fallback={s.color}
+                          onPick={(c) =>
+                            start(() => setCalendarSubColor(s.id, c))
+                          }
+                          onClear={() =>
+                            start(() => setCalendarSubColor(s.id, null))
+                          }
+                        />
+                      ))}
                     </>
                   )}
                 </div>

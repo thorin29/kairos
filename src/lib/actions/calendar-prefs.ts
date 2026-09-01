@@ -14,6 +14,8 @@ import {
   setNowColor,
   setHolidayColor,
   setKindColor,
+  setEventTypeColor,
+  setSubColor,
   CAL_VIEWS,
   type CalView,
   type OthersMode,
@@ -123,5 +125,28 @@ export async function setCalendarKindColor(
   const v = color(c);
   if (!id || v === undefined || !KINDS.has(kind)) return;
   await setKindColor(id, kind, v);
+  revalidatePath("/calendar");
+}
+
+export async function setCalendarEventTypeColor(
+  eventTypeId: string,
+  c: string | null,
+): Promise<void> {
+  const id = await me();
+  const v = color(c);
+  if (!id || v === undefined || typeof eventTypeId !== "string" || !eventTypeId)
+    return;
+  await setEventTypeColor(id, eventTypeId, v);
+  revalidatePath("/calendar");
+}
+
+export async function setCalendarSubColor(
+  subId: string,
+  c: string | null,
+): Promise<void> {
+  const id = await me();
+  const v = color(c);
+  if (!id || v === undefined || typeof subId !== "string" || !subId) return;
+  await setSubColor(id, subId, v);
   revalidatePath("/calendar");
 }
