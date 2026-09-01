@@ -47,6 +47,9 @@ export type GridEvent = {
   /** The subscribed-feed id when this event came from an ICS feed, else null.
    *  Lets the personal view filter by which subscriptions are shown. */
   externalCalendarId?: string | null;
+  /** The custom EventType id when one applies, else null. Lets the personal
+   *  view recolour by event type. */
+  eventTypeId?: string | null;
   /** Set on synthesized school-work due markers; the work type, for the glyph
    *  and colour. Null/absent on ordinary events. */
   schoolType?: string | null;
@@ -281,7 +284,7 @@ export async function loadRange(
     include: {
       user: { select: { name: true, displayName: true, color: true } },
       externalCalendar: { select: { name: true } },
-      eventType: { select: { name: true, color: true } },
+      eventType: { select: { id: true, name: true, color: true } },
       participants: { select: { userId: true, user: { select: { color: true } } } },
     },
   });
@@ -347,7 +350,7 @@ export async function loadRange(
     // A custom event type sets its own colour (a "Hockey game" is that colour
     // for everyone); otherwise it's the owner's colour, or the family colour
     // for shared events.
-    const eventType = (e as { eventType?: { name: string; color: string } | null })
+    const eventType = (e as { eventType?: { id: string; name: string; color: string } | null })
       .eventType;
     const color = eventType?.color
       ? eventType.color
@@ -405,6 +408,7 @@ export async function loadRange(
       recurLabel: recurLabelOf(e.rrule),
       external: Boolean(e.externalCalendarId),
       externalCalendarId: e.externalCalendarId ?? null,
+      eventTypeId: eventType?.id ?? null,
     };
 
     if (e.allDay) {

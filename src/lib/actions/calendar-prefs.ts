@@ -8,9 +8,25 @@ import {
   setShowSchoolWork,
   setShownPeople,
   setShownSubs,
+  setPersonalize,
+  setOthersMode,
+  setOthersColor,
+  setNowColor,
+  setHolidayColor,
+  setKindColor,
   CAL_VIEWS,
   type CalView,
+  type OthersMode,
 } from "@/lib/calendar/prefs";
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+const KINDS = new Set(["APPOINTMENT", "CLASS", "WORK", "BIRTHDAY"]);
+/** A valid hex colour, or null to clear back to the system default. */
+function color(v: unknown): string | null | undefined {
+  if (v === null) return null;
+  if (typeof v === "string" && HEX.test(v)) return v;
+  return undefined; // reject anything else — leave unchanged
+}
 
 /**
  * The signed-in person's own calendar preferences. Every action resolves the
@@ -56,5 +72,56 @@ export async function setCalendarSubs(ids: string[]): Promise<void> {
   const id = await me();
   if (!id) return;
   await setShownSubs(id, ids.filter((x) => typeof x === "string"));
+  revalidatePath("/calendar");
+}
+
+// --- Phase B: colours ---
+
+export async function setCalendarPersonalize(on: boolean): Promise<void> {
+  const id = await me();
+  if (!id) return;
+  await setPersonalize(id, Boolean(on));
+  revalidatePath("/calendar");
+}
+
+export async function setCalendarOthersMode(mode: string): Promise<void> {
+  const id = await me();
+  if (!id || !(mode === "own" || mode === "grey" || mode === "family")) return;
+  await setOthersMode(id, mode as OthersMode);
+  revalidatePath("/calendar");
+}
+
+export async function setCalendarOthersColor(c: string | null): Promise<void> {
+  const id = await me();
+  const v = color(c);
+  if (!id || v === undefined) return;
+  await setOthersColor(id, v);
+  revalidatePath("/calendar");
+}
+
+export async function setCalendarNowColor(c: string | null): Promise<void> {
+  const id = await me();
+  const v = color(c);
+  if (!id || v === undefined) return;
+  await setNowColor(id, v);
+  revalidatePath("/calendar");
+}
+
+export async function setCalendarHolidayColor(c: string | null): Promise<void> {
+  const id = await me();
+  const v = color(c);
+  if (!id || v === undefined) return;
+  await setHolidayColor(id, v);
+  revalidatePath("/calendar");
+}
+
+export async function setCalendarKindColor(
+  kind: string,
+  c: string | null,
+): Promise<void> {
+  const id = await me();
+  const v = color(c);
+  if (!id || v === undefined || !KINDS.has(kind)) return;
+  await setKindColor(id, kind, v);
   revalidatePath("/calendar");
 }

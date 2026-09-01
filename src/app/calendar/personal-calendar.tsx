@@ -9,7 +9,6 @@ import { syncStaleCalendars } from "@/lib/calendar/sync";
 import {
   addDays,
   addMonths,
-  formatLong,
   formatMonth,
   monthGridDays,
   startOfMonth,
@@ -18,15 +17,16 @@ import {
   weekDays,
 } from "@/lib/dates";
 import { CalendarView } from "@/components/calendar-view";
-import { WeekGrid } from "@/components/week-grid";
 import { MonthGrid } from "@/components/month-grid";
 import { DaySchedule } from "@/components/day-schedule";
 import { AddEventProvider, AddEventButton } from "./add-event-form";
 import { CalendarOptionsDrawer } from "./calendar-options-drawer";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import { getFamilyColor, getCalendarPrefs } from "@/lib/settings";
+import { getHolidayColor } from "@/lib/holidays";
 import { loadClassCtx } from "@/lib/queries/class-ctx";
 import { loadCalendarPrefs, type CalView } from "@/lib/calendar/prefs";
+import { recolorForPersonal } from "@/lib/calendar/colors";
 
 /** Heading for a two-ISO span: one month, a cross-month range, or cross-year. */
 function spanHeading(startISO: string, endISO: string): string {
@@ -66,7 +66,7 @@ export async function PersonalCalendar({
   const view: CalView = valid(rawView) ? rawView : prefs.view;
   const date = rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : today;
 
-  const [people, subsRaw, familyColor, calPrefs, classCtx, eventTypes] =
+  const [people, subsRaw, familyColor, calPrefs, holidaySystem, classCtx, eventTypes] =
     await Promise.all([
       prisma.user.findMany({
         where: { isActive: true },
@@ -94,6 +94,7 @@ export async function PersonalCalendar({
       }),
       getFamilyColor(),
       getCalendarPrefs(),
+      getHolidayColor(),
       loadClassCtx(),
       loadEventTypes(),
     ]);
@@ -113,7 +114,6 @@ export async function PersonalCalendar({
   const shownPeople = prefs.shownPeople ?? [me.id];
   const shownSubs =
     prefs.shownSubs ?? subs.filter((s) => s.userId === me.id).map((s) => s.id);
-  const peopleSet = new Set(shownPeople);
   const subsSet = new Set(shownSubs);
 
   const days =
@@ -141,8 +141,25 @@ export async function PersonalCalendar({
     (!e.isFamily || prefs.showFamily) &&
     (!e.external ||
       (e.externalCalendarId ? subsSet.has(e.externalCalendarId) : true));
-  const timed = rawRange.timed.filter(keep);
-  const allDay = rawRange.allDay.filter(keep);
+  const colorPrefs = {
+    personalizeColors: prefs.personalizeColors,
+    othersMode: prefs.othersMode,
+    othersColor: prefs.othersColor,
+    holidayColor: prefs.holidayColor,
+    kindColors: prefs.kindColors,
+    eventTypeColors: prefs.eventTypeColors,
+    subColors: prefs.subColors,
+  };
+  const recolor = (e: GridEvent) => recolorForPersonal(e, colorPrefs, me.id);
+  const timed = rawRange.timed.filter(keep).map(recolor);
+  const allDay = rawRange.allDay.filter(keep).map(recolor);
+
+  // The now-line follows the admin colour unless the person has overridden it
+  // (and only while personalisation is on).
+  const nowColor =
+    prefs.personalizeColors && prefs.nowColor
+      ? prefs.nowColor
+      : calPrefs.nowColor;
 
   const link = (p: { view?: CalView; date?: string }) => {
     const q = new URLSearchParams();
@@ -158,11 +175,7 @@ export async function PersonalCalendar({
         ? spanHeading(days[0], days[6])
         : view === "three_day"
           ? spanHeading(days[0], days[2])
-          : formatLong(date);
-
-  const dayColumns = people
-    .filter((p) => peopleSet.has(p.id))
-    .map((p) => ({ id: p.id, name: p.displayName ?? p.name, color: p.color }));
+          : formatMonth(date);
 
   const chip =
     "inline-flex h-10 items-center gap-2 rounded-full border border-hairline px-3.5 text-sm font-medium transition-colors hover:border-accent hover:text-accent";
@@ -214,6 +227,15 @@ export async function PersonalCalendar({
               color: s.color,
             }))}
             selectedSubs={shownSubs}
+            personalizeColors={prefs.personalizeColors}
+            othersMode={prefs.othersMode}
+            othersColor={prefs.othersColor}
+            nowColor={prefs.nowColor}
+            nowSystem={calPrefs.nowColor}
+            holidayColor={prefs.holidayColor}
+            holidaySystem={holidaySystem}
+            kindColors={prefs.kindColors}
+            meColor={me.color}
           />
         </div>
 
@@ -228,35 +250,18 @@ export async function PersonalCalendar({
           />
         )}
 
-        {(view === "week" || view === "three_day") && (
+        {(view === "week" || view === "three_day" || view === "day") && (
           <CalendarView
             days={days}
             timed={timed}
             allDay={allDay}
             todayISO={today}
-            nowColor={calPrefs.nowColor}
+            nowColor={nowColor}
             resetSec={calPrefs.scrollResetSec}
             blockMinutes={calPrefs.blockMinutes}
             sharedStyle={calPrefs.sharedStyle}
           />
         )}
-
-        {view === "day" &&
-          (dayColumns.length === 0 ? (
-            <Empty />
-          ) : (
-            <WeekGrid
-              days={[date]}
-              timed={timed}
-              allDay={allDay}
-              todayISO={today}
-              nowColor={calPrefs.nowColor}
-              resetSec={calPrefs.scrollResetSec}
-              blockMinutes={calPrefs.blockMinutes}
-              sharedStyle={calPrefs.sharedStyle}
-              personColumns={dayColumns}
-            />
-          ))}
 
         {view === "agenda" && (
           <DaySchedule
@@ -271,13 +276,5 @@ export async function PersonalCalendar({
         )}
       </main>
     </AddEventProvider>
-  );
-}
-
-function Empty() {
-  return (
-    <div className="rounded-xl border border-hairline px-5 py-10 text-center text-sm text-muted">
-      Select at least one person to see the day.
-    </div>
   );
 }

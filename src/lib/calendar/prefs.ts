@@ -144,3 +144,78 @@ export async function setShownSubs(
 ): Promise<void> {
   await patchPrefs(userId, { shownSubs: ids });
 }
+
+// --- Phase B: colours ---
+
+export async function setPersonalize(
+  userId: string,
+  on: boolean,
+): Promise<void> {
+  await patchPrefs(userId, { personalizeColors: on });
+}
+
+export async function setOthersMode(
+  userId: string,
+  mode: OthersMode,
+): Promise<void> {
+  await patchPrefs(userId, { othersMode: mode });
+}
+
+export async function setOthersColor(
+  userId: string,
+  color: string | null,
+): Promise<void> {
+  await patchPrefs(userId, { othersColor: color });
+}
+
+export async function setNowColor(
+  userId: string,
+  color: string | null,
+): Promise<void> {
+  await patchPrefs(userId, { nowColor: color });
+}
+
+export async function setHolidayColor(
+  userId: string,
+  color: string | null,
+): Promise<void> {
+  await patchPrefs(userId, { holidayColor: color });
+}
+
+/** Merge one key into a Json colour map (or clear it when color is null). */
+async function patchColorMap(
+  userId: string,
+  field: "kindColors" | "eventTypeColors" | "subColors",
+  key: string,
+  color: string | null,
+): Promise<void> {
+  const prefs = await loadCalendarPrefs(userId);
+  const map = { ...prefs[field] };
+  if (color) map[key] = color;
+  else delete map[key];
+  await patchPrefs(userId, { [field]: map });
+}
+
+export async function setKindColor(
+  userId: string,
+  kind: string,
+  color: string | null,
+): Promise<void> {
+  await patchColorMap(userId, "kindColors", kind, color);
+}
+
+export async function setEventTypeColor(
+  userId: string,
+  eventTypeId: string,
+  color: string | null,
+): Promise<void> {
+  await patchColorMap(userId, "eventTypeColors", eventTypeId, color);
+}
+
+export async function setSubColor(
+  userId: string,
+  subId: string,
+  color: string | null,
+): Promise<void> {
+  await patchColorMap(userId, "subColors", subId, color);
+}

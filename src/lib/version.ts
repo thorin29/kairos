@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.180.0";
+export const APP_VERSION = "0.181.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -85,6 +85,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.181.0",
+    summary: [
+      "Your personal calendar can now be recoloured to your taste: turn on Personalise colours in the options panel to set your own colours for appointments, class, work, birthdays, and holidays.",
+      "Choose how other people's events look to you \\u2014 in their own colours, all in one grey, or exactly as the shared wall tablet shows them.",
+      "You can also set your own colour for the current-time line.",
+      "Day view is cleaner: it no longer labels the column with your name (you already know it's you), and the top now shows just the month, with the weekday and date on the day itself.",
+    ],
+  },
   {
     version: "0.180.0",
     summary: [

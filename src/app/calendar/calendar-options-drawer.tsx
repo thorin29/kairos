@@ -2,11 +2,18 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { SlidersIcon, CheckIcon, PeopleIcon, SchoolIcon } from "@/components/icons";
+import {
+  SlidersIcon,
+  CheckIcon,
+  PeopleIcon,
+  SchoolIcon,
+  PaletteIcon,
+} from "@/components/icons";
 import {
   CAL_VIEWS,
   CAL_VIEW_LABELS,
   type CalView,
+  type OthersMode,
 } from "@/lib/calendar/views";
 import {
   setCalendarView,
@@ -14,10 +21,18 @@ import {
   setCalendarFamily,
   setCalendarSchoolWork,
   setCalendarSubs,
+  setCalendarPersonalize,
+  setCalendarOthersMode,
+  setCalendarOthersColor,
+  setCalendarNowColor,
+  setCalendarHolidayColor,
+  setCalendarKindColor,
 } from "@/lib/actions/calendar-prefs";
 
 type Person = { id: string; name: string; color: string };
 type Sub = { id: string; name: string; ownerName: string | null; color: string };
+
+const GREY = "#9ca3af";
 
 export function CalendarOptionsDrawer({
   view,
@@ -27,6 +42,15 @@ export function CalendarOptionsDrawer({
   showSchoolWork,
   subscriptions,
   selectedSubs,
+  personalizeColors,
+  othersMode,
+  othersColor,
+  nowColor,
+  nowSystem,
+  holidayColor,
+  holidaySystem,
+  kindColors,
+  meColor,
 }: {
   view: CalView;
   people: Person[];
@@ -35,6 +59,15 @@ export function CalendarOptionsDrawer({
   showSchoolWork: boolean;
   subscriptions: Sub[];
   selectedSubs: string[];
+  personalizeColors: boolean;
+  othersMode: OthersMode;
+  othersColor: string | null;
+  nowColor: string | null;
+  nowSystem: string;
+  holidayColor: string | null;
+  holidaySystem: string;
+  kindColors: Record<string, string>;
+  meColor: string;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
@@ -152,6 +185,82 @@ export function CalendarOptionsDrawer({
               </Section>
             )}
 
+            <Section>
+              <Row
+                checked={personalizeColors}
+                onClick={() =>
+                  start(() => setCalendarPersonalize(!personalizeColors))
+                }
+                icon={<PaletteIcon className="h-4 w-4" />}
+                label="Personalise colours"
+              />
+
+              {personalizeColors && (
+                <div className="mt-1.5 space-y-0.5">
+                  <div className="grid grid-cols-3 gap-1.5 px-1 pb-1">
+                    {(["own", "grey", "family"] as OthersMode[]).map((m) => (
+                      <Choice
+                        key={m}
+                        active={othersMode === m}
+                        onClick={() => start(() => setCalendarOthersMode(m))}
+                        label={
+                          m === "own" ? "Own" : m === "grey" ? "Grey" : "Family"
+                        }
+                      />
+                    ))}
+                  </div>
+
+                  {othersMode === "grey" && (
+                    <ColorField
+                      label="Others"
+                      value={othersColor}
+                      fallback={GREY}
+                      onPick={(c) => start(() => setCalendarOthersColor(c))}
+                      onClear={() => start(() => setCalendarOthersColor(null))}
+                    />
+                  )}
+
+                  {othersMode !== "family" && (
+                    <>
+                      <ColorField
+                        label="Now line"
+                        value={nowColor}
+                        fallback={nowSystem}
+                        onPick={(c) => start(() => setCalendarNowColor(c))}
+                        onClear={() => start(() => setCalendarNowColor(null))}
+                      />
+                      {[
+                        ["APPOINTMENT", "Appointments"],
+                        ["CLASS", "Class"],
+                        ["WORK", "Work"],
+                        ["BIRTHDAY", "Birthdays"],
+                      ].map(([k, label]) => (
+                        <ColorField
+                          key={k}
+                          label={label}
+                          value={kindColors[k] ?? null}
+                          fallback={meColor}
+                          onPick={(c) =>
+                            start(() => setCalendarKindColor(k, c))
+                          }
+                          onClear={() =>
+                            start(() => setCalendarKindColor(k, null))
+                          }
+                        />
+                      ))}
+                      <ColorField
+                        label="Holidays"
+                        value={holidayColor}
+                        fallback={holidaySystem}
+                        onPick={(c) => start(() => setCalendarHolidayColor(c))}
+                        onClear={() => start(() => setCalendarHolidayColor(null))}
+                      />
+                    </>
+                  )}
+                </div>
+              )}
+            </Section>
+
             <div className="h-4" aria-hidden />
             {pending && (
               <span className="sr-only" role="status">
@@ -195,6 +304,52 @@ function Choice({
     >
       {label}
     </button>
+  );
+}
+
+function ColorField({
+  label,
+  value,
+  fallback,
+  onPick,
+  onClear,
+}: {
+  label: string;
+  value: string | null;
+  fallback: string;
+  onPick: (color: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-2 py-1.5">
+      <span className="text-sm">{label}</span>
+      <span className="flex items-center gap-2">
+        {value && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="text-xs text-muted hover:text-accent"
+          >
+            Auto
+          </button>
+        )}
+        <label className="relative block h-6 w-6 cursor-pointer">
+          <span
+            className={`block h-6 w-6 rounded-full border ${
+              value ? "border-hairline" : "border-dashed border-ink/30"
+            }`}
+            style={{ backgroundColor: value ?? fallback }}
+          />
+          <input
+            type="color"
+            value={value ?? fallback}
+            onChange={(e) => onPick(e.target.value)}
+            aria-label={label}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          />
+        </label>
+      </span>
+    </div>
   );
 }
 

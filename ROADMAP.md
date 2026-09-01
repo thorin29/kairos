@@ -196,10 +196,17 @@ the remaining personal-view items:
         on a signed-in personal device; the shared wall tablet is unchanged.
         Defaults: just you, family **off**, school work **on**. No colour
         personalisation yet (that's Phase B).
-  - [ ] **B — colours.** Per-user overrides for each event kind
-        (Appointment/Class/Work/Birthday), each custom EventType, holidays, and
-        subscriptions; the `OWN / GREY / FAMILY` others-mode; now-line override.
-        School work follows the **Class** colour. OTHER stays system.
+  - [~] **B — colours.** *(mostly shipped 0.181.0)* A "Personalise colours"
+        master toggle in the options drawer, the `OWN / GREY / FAMILY`
+        others-mode, now-line override, and per-user overrides for each event
+        kind (Appointment/Class/Work/Birthday) and holidays. School work
+        follows the **Class** colour; OTHER stays system; holidays and birthdays
+        recolour uniformly. The resolution engine already handles custom
+        EventTypes and subscriptions.
+        - [ ] **B2** — the dynamic colour pickers still to wire in the drawer:
+              per custom EventType and per subscribed feed. (`eventTypeId` is
+              already exposed on events; `eventTypeColors` / `subColors` already
+              stored and honoured — this is UI-only.)
   - [ ] **C — month-name dropdown + polish.** On non-month views, tapping the
         month name drops a mini-month (single-letter weekdays, coloured event
         dots) with a caret that flips open/closed. Fill-screen month view with
