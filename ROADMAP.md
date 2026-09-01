@@ -20,11 +20,13 @@ all live in the database, never in this repository.
       the app isn't locked to the teal-green palette. Groundwork already laid:
       the sidebar colour is a single CSS variable, and the intent is to move
       the rest of the palette behind variables a theme can swap.
-- [ ] Personal calendar event colours — custom colours for events when you're
-      viewing your **own, not-shared** calendar. The shared view keeps whatever
-      is configured household-wide; only your personal view is recoloured.
-- [ ] Personal defaults (e.g. default calendar view, starting page) and other
-      per-user preferences as they come up.
+- [ ] Personal calendar event colours, view, and filters — now specced as the
+      **Personal calendar** epic under "Personal-view scoping" below (model and
+      precedence in DECISIONS.md). Your personal view is recoloured and
+      filtered per-person; the shared wall-tablet view keeps the household-wide
+      settings.
+- [ ] Personal defaults (starting page and other per-user preferences as they
+      come up). Default calendar view is covered by the Personal calendar epic.
 - [ ] Update `README.md` and `ARCHITECTURE.md` when this ships.
 
 ---
@@ -179,7 +181,33 @@ the remaining personal-view items:
       entirely if you have no data.
 - [ ] #12 Character — only you, and move the character onto this page from the
       home card.
-- [ ] Calendar — "major changes" still to be specced before building.
+- [ ] **Personal calendar (web first, then Kotlin app).** The signed-in
+      calendar becomes per-person: its own view, filters, and colours, stored
+      server-side so a phone and the web personal view always match. The shared
+      wall-tablet calendar is untouched — it keeps the household-wide settings.
+      Full model and colour precedence are in DECISIONS.md
+      ("Personal calendar: per-user preferences…"). Built on the web first so
+      the logic is proven before the app renders it. Phases:
+  - [ ] **A — structure.** `UserCalendarPref` model (+ migration); a right-side
+        options drawer (opened by a filter/sliders icon top-right, mirroring the
+        left nav drawer — not a second hamburger); view switching across all
+        five views (add **3-day** and **agenda**; only Day/Week/Month exist
+        today); persistent people + subscription checkboxes. Defaults: personal,
+        family **off**, school work **on**. No colour personalisation yet.
+  - [ ] **B — colours.** Per-user overrides for each event kind
+        (Appointment/Class/Work/Birthday), each custom EventType, holidays, and
+        subscriptions; the `OWN / GREY / FAMILY` others-mode; now-line override.
+        School work follows the **Class** colour. OTHER stays system.
+  - [ ] **C — month-name dropdown + polish.** On non-month views, tapping the
+        month name drops a mini-month (single-letter weekdays, coloured event
+        dots) with a caret that flips open/closed. Fill-screen month view with
+        add (+). Final look pass — clean menus, **no explanatory text**.
+  - [ ] **D — gestures (deferred, native-first).** Native swipe/one-finger
+        scroll gets built in the Kotlin app, where it belongs, against the
+        proven contract. Web views navigate with prev/next until then.
+        *Known issue to fix if/when web swipe is built: the current web calendar
+        needs a two-finger drag to page because one finger scrolls the grid —
+        single-finger should page.*
 - [ ] Kairos-side TOTP for the eventual app API path that bypasses Authelia.
 - [ ] **"Act as me" step-up** on the shared tablet — attribute a single action
       to a person (tap avatar, optional personal PIN) without turning the
