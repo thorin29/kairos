@@ -201,33 +201,24 @@ export function CalendarOptionsDrawer({
                   start(() => setCalendarPersonalize(!personalizeColors))
                 }
                 icon={<PaletteIcon className="h-4 w-4" />}
-                label="Personalise colours"
+                label="Customise"
               />
 
               {personalizeColors && (
                 <div className="mt-1.5 space-y-0.5">
-                  <div className="grid grid-cols-3 gap-1.5 px-1 pb-1">
-                    {(["own", "grey", "family"] as OthersMode[]).map((m) => (
+                  <div className="grid grid-cols-2 gap-1.5 px-1 pb-1">
+                    {([
+                      ["own", "Custom"],
+                      ["family", "System"],
+                    ] as [OthersMode, string][]).map(([m, label]) => (
                       <Choice
                         key={m}
                         active={othersMode === m}
                         onClick={() => start(() => setCalendarOthersMode(m))}
-                        label={
-                          m === "own" ? "Own" : m === "grey" ? "Grey" : "Family"
-                        }
+                        label={label}
                       />
                     ))}
                   </div>
-
-                  {othersMode === "grey" && (
-                    <ColorField
-                      label="Others"
-                      value={othersColor}
-                      fallback={GREY}
-                      onPick={(c) => start(() => setCalendarOthersColor(c))}
-                      onClear={() => start(() => setCalendarOthersColor(null))}
-                    />
-                  )}
 
                   {othersMode !== "family" && (
                     <>

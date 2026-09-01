@@ -478,3 +478,11 @@ export function ChevronRightIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+export function ChevronDownIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}

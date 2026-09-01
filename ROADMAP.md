@@ -203,10 +203,12 @@ the remaining personal-view items:
         EventType**, and **each subscribed feed**. School work follows the
         **Class** colour; OTHER stays system; holidays and birthdays recolour
         uniformly. Each colour has an Auto reset to the shared default.
-  - [ ] **C — month-name dropdown + polish.** On non-month views, tapping the
-        month name drops a mini-month (single-letter weekdays, coloured event
-        dots) with a caret that flips open/closed. Fill-screen month view with
-        add (+). Final look pass — clean menus, **no explanatory text**.
+  - [x] **C — month-name dropdown + polish.** *(shipped 0.183.0)* On the
+        non-month views, tapping the month name drops a mini-month (single-letter
+        weekdays, up to three coloured event dots per day, caret that flips) for
+        jumping to any date; neighbouring-month days are tappable too. The month
+        view already fills the screen and carries the add (+). Menus stay clean
+        with no explanatory text.
   - [ ] **D — gestures (deferred, native-first).** Native swipe/one-finger
         scroll gets built in the Kotlin app, where it belongs, against the
         proven contract. Web views navigate with prev/next until then.
