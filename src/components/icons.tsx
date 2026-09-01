@@ -272,6 +272,18 @@ export function DotIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+export function PaletteIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <circle cx="13.5" cy="6.8" r="1.1" />
+      <circle cx="17.2" cy="10.5" r="1.1" />
+      <circle cx="8.6" cy="7.4" r="1.1" />
+      <circle cx="6.6" cy="12.2" r="1.1" />
+      <path d="M12 3a9 9 0 1 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1a1.5 1.5 0 0 1 1.11-2.5H16a5 5 0 0 0 5-5c0-4.42-4.03-8-9-8z" />
+    </svg>
+  );
+}
+
 export function SlidersIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>
