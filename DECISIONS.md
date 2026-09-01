@@ -19,6 +19,34 @@ the reason.
 
 ---
 
+## 2026-08 — Invite links: single-use, validated at page load (v0.178)
+**Decision:** an invite link is authority to set a person's *initial* password,
+and nothing more. The guarantees, now made explicit and enforced end to end:
+- **Unguessable / not replicable:** the token is 256 bits of randomness; only
+  its SHA-256 is stored, never the raw value.
+- **Single-use:** redeeming sets the password and deletes the invite in one
+  transaction, and bumps `credentialVersion` so any prior sessions are voided.
+  Issuing or re-issuing an invite deletes any existing one for that person.
+- **Expiring:** 7-day TTL, checked on redemption.
+- **Validated before the form is shown:** the redeem page (`/join`) now checks
+  the token is live *on load* (`inviteIsRedeemable`) and shows an "already used
+  or expired" message instead of the password form for a dead token. Previously
+  the form rendered for any URL carrying a token, so a used link appeared
+  reusable even though the backend correctly refused it — a fix to a
+  perceived vulnerability, not a change to the (already sound) redemption path.
+**Reason:** possession of the one-time link = authority to choose the first
+password is the standard invite model and is fine for the household threat
+model; the gap was purely that the UI re-showed the form. Validating at load
+closes it without adding a heavier lock.
+
+## 2026-08 — Sending an invite saves and uses the typed email (v0.178)
+**Decision:** on the household page, "Send invite" persists the address in the
+row and attempts to email the invite in one step; if it can't email (no address
+on file, or SMTP not configured/failed) it reports why rather than silently
+showing only a link. **Reason:** the email field had a separate Save button and
+the action read the *saved* address, so a typed-but-unsaved email was ignored
+and the fallback to a link was silent — it looked like sending was broken.
+
 ## 2026-08 — Native Kotlin for Android, not Capacitor
 **Decision:** the Android client will be native Kotlin/Jetpack Compose, not a
 Capacitor wrapper around the web UI.

@@ -24,6 +24,9 @@ export function AccountRow({ account }: { account: AccountState }) {
   const [copyFailed, setCopyFailed] = useState(false);
   const [emailedTo, setEmailedTo] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSkipped, setEmailSkipped] = useState<
+    "no_address" | "not_configured" | null
+  >(null);
   const linkRef = useRef<HTMLInputElement>(null);
 
   const [email, setEmail] = useState(account.email ?? "");
@@ -38,12 +41,20 @@ export function AccountRow({ account }: { account: AccountState }) {
       setCopyFailed(false);
       setEmailedTo(null);
       setEmailError(null);
-      const res = await createInviteAction(account.userId);
+      setEmailSkipped(null);
+      setEmailStatus(null);
+      // Send the address in the box so it's saved and used in one step.
+      const res = await createInviteAction(account.userId, email);
+      if (res.error) {
+        setEmailStatus(res.error);
+        return;
+      }
       if (res.token) {
         setLink(`${window.location.origin}/join?token=${res.token}`);
       }
       setEmailedTo(res.emailedTo ?? null);
       setEmailError(res.emailError ?? null);
+      setEmailSkipped(res.emailSkipped ?? null);
     });
 
   const saveEmail = () =>
@@ -229,6 +240,12 @@ export function AccountRow({ account }: { account: AccountState }) {
             <p className="mb-2 text-xs font-medium text-amber-700">
               Couldn&rsquo;t email the invite ({emailError}). Share the link
               below instead.
+            </p>
+          )}
+          {emailSkipped === "not_configured" && (
+            <p className="mb-2 text-xs font-medium text-amber-700">
+              Email isn&rsquo;t set up, so share this link instead. Configure it
+              in Admin &rarr; Email to send invites automatically.
             </p>
           )}
           <p className="mb-2 text-xs font-medium text-accent">

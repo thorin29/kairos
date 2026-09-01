@@ -70,25 +70,50 @@ export async function logoutUser(): Promise<void> {
 
 /** Issue (or re-issue) an invite for a person. Re-issuing is how a password is
  *  reset. Returns the one-time link to hand over, and — if the person has an
- *  email and SMTP is set up — emails it too. Admin only. */
-export async function createInviteAction(userId: string): Promise<{
+ *  email and SMTP is set up — emails it too. The email typed on the row is
+ *  saved as part of sending, so a parent doesn't have to Save it first; the
+ *  reason it fell back to a link (no address, or email not set up) is reported
+ *  so it isn't silent. Admin only. */
+export async function createInviteAction(
+  userId: string,
+  email?: string,
+): Promise<{
   error: string | null;
   token?: string;
   expiresAt?: string;
   emailedTo?: string;
   emailError?: string;
+  emailSkipped?: "no_address" | "not_configured";
 }> {
   await requireAdmin();
+
+  // Fold the typed address in: validate and persist it before sending, so
+  // "type an email, hit Send invite" works in one step rather than silently
+  // ignoring an unsaved address.
+  if (email !== undefined) {
+    const value = email.trim();
+    if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      return { error: "That doesn't look like an email address." };
+    }
+    const saved = await setUserEmail(userId, value);
+    if (saved.error) return { error: saved.error };
+  }
+
   const { token, expiresAt } = await issueInvite(userId);
 
   let emailedTo: string | undefined;
   let emailError: string | undefined;
+  let emailSkipped: "no_address" | "not_configured" | undefined;
+
   const to = await userEmail(userId);
-  if (to) {
+  if (!to) {
+    emailSkipped = "no_address";
+  } else {
     const link = inviteLink(await baseUrl(), token);
     const res = await sendInviteEmail(to, to, link);
     if (res.sent) emailedTo = to;
     else if (res.error) emailError = res.error;
+    else emailSkipped = "not_configured"; // SMTP off/unset — link is the fallback
   }
 
   revalidatePath("/setup");
@@ -98,6 +123,7 @@ export async function createInviteAction(userId: string): Promise<{
     expiresAt: expiresAt.toISOString(),
     emailedTo,
     emailError,
+    emailSkipped,
   };
 }
 
