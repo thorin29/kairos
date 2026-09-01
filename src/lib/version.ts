@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.179.0";
+export const APP_VERSION = "0.180.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -79,11 +79,21 @@ export const MIGRATIONS = [
   "69_shopping_trips",
   "70_grocery_sort",
   "71_devices",
+  "72_calendar_prefs",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.180.0",
+    summary: [
+      "When you're signed in on your own phone, the calendar is now your own: it opens to just your events, remembers how you like it, and stays separate from the shared wall tablet.",
+      "Five ways to look at it \\u2014 Month, Week, 3 days, Day, and an Agenda list \\u2014 chosen from a new options panel on the right.",
+      "That panel also lets you add other people, the whole family, school work, and any subscribed calendars to your view; whatever you tick is remembered for next time.",
+      "It starts with just you and your school work showing, and the family turned off, so it's uncluttered until you add more.",
+    ],
+  },
   {
     version: "0.179.0",
     summary: [

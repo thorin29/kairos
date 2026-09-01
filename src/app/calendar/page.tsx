@@ -28,10 +28,10 @@ import { SchoolIcon, ChevronLeftIcon, ChevronRightIcon } from "@/components/icon
 import { CalendarViewSelect } from "./view-select";
 import { getFamilyColor } from "@/lib/settings";
 import { getCalendarPrefs, type SharedStyle } from "@/lib/settings";
-import { getClassFromCalendarMode } from "@/lib/settings";
-import { loadSchoolStructure } from "@/lib/queries/school";
-import { isAdmin } from "@/lib/session";
+import { loadClassCtx } from "@/lib/queries/class-ctx";
 import { currentUser } from "@/lib/user-session";
+import { deviceMode } from "@/lib/device";
+import { PersonalCalendar } from "./personal-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +74,16 @@ export default async function CalendarPage({
 }) {
   const { view: rawView, date: rawDate, who, sw } = await searchParams;
   const showSchoolWork = sw === "1";
+
+  // On a personal device with someone signed in, the calendar becomes their
+  // own — its own views, filters, and (later) colours, all stored per user. The
+  // shared wall tablet keeps everything below unchanged.
+  const meUser = await currentUser();
+  if ((await deviceMode()) === "personal" && meUser) {
+    return (
+      <PersonalCalendar me={meUser} rawView={rawView} rawDate={rawDate} />
+    );
+  }
 
   const today = todayISO();
   const view: View =
@@ -149,51 +159,8 @@ export default async function CalendarPage({
   const familyColor = await getFamilyColor();
   const calPrefs = await getCalendarPrefs();
 
-  // Everything the "Class" event type needs: the pools to pick from, and who's
-  // allowed to create a class from here (admins always; anyone when the
-  // household setting is switched on).
-  const [classMode, meAdmin, me, structure] = await Promise.all([
-    getClassFromCalendarMode(),
-    isAdmin(),
-    currentUser(),
-    loadSchoolStructure(),
-  ]);
-  const classCtx = {
-    canMakeClass: meAdmin || classMode === "anyone",
-    isAdmin: meAdmin,
-    meName: me?.displayName ?? me?.name ?? null,
-    subjects: structure.subjects.map((s) => ({ id: s.id, name: s.name })),
-    classTypes: structure.classTypes.map((t) => ({ id: t.id, name: t.name })),
-    terms: structure.terms.map((t) => ({ id: t.id, name: t.name })),
-    people: structure.people.map((p) => ({ id: p.id, name: p.name })),
-    // Lets the overlay recognise a class meeting on the calendar and open it in
-    // edit mode with all its fields, keyed by the meeting's event id.
-    classesByEventId: Object.fromEntries(
-      structure.people
-        .flatMap((p) => p.classes)
-        .filter((c) => c.eventId)
-        .map((c) => [
-          c.eventId as string,
-          {
-            id: c.id,
-            name: c.name,
-            ownerId: c.ownerId,
-            ownerName: c.ownerName,
-            subjectId: c.subjectId,
-            classTypeId: c.classTypeId,
-            termId: c.termId,
-            color: c.color,
-            meetingDays: c.meetingDays,
-            meetingStart: c.meetingStart,
-            meetingEnd: c.meetingEnd,
-            meetingStartDate: c.meetingStartDate,
-            meetingEndDate: c.meetingEndDate,
-            sharedWith: c.sharedWith,
-            promptHomework: c.promptHomework,
-          },
-        ]),
-    ),
-  };
+  // Everything the "Class" event type needs (shared with the personal view).
+  const classCtx = await loadClassCtx();
   const allIds = people.map((p) => p.id);
   const selectedSet = new Set<string>(
     !who || who === "all"
