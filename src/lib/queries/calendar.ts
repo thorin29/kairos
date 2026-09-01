@@ -44,6 +44,9 @@ export type GridEvent = {
    *  for the event detail popup. */
   recurLabel?: string | null;
   external: boolean;
+  /** The subscribed-feed id when this event came from an ICS feed, else null.
+   *  Lets the personal view filter by which subscriptions are shown. */
+  externalCalendarId?: string | null;
   /** Set on synthesized school-work due markers; the work type, for the glyph
    *  and colour. Null/absent on ordinary events. */
   schoolType?: string | null;
@@ -401,6 +404,7 @@ export async function loadRange(
       recurring: Boolean(e.rrule),
       recurLabel: recurLabelOf(e.rrule),
       external: Boolean(e.externalCalendarId),
+      externalCalendarId: e.externalCalendarId ?? null,
     };
 
     if (e.allDay) {

@@ -1,0 +1,152 @@
+import "server-only";
+import { prisma } from "@/lib/prisma";
+
+/**
+ * Per-user personal-calendar preferences. Loaded for the signed-in personal
+ * view (and later the app); the shared tablet never touches this. Phase A uses
+ * the structure fields; the colour fields are carried through for Phase B.
+ *
+ * `shownPeople` / `shownSubs` are null when the user has never customised them,
+ * which the caller resolves to a default (just self; the user's own feeds) —
+ * distinct from an explicit empty list (show nobody / no feeds).
+ */
+
+export type CalView = "month" | "week" | "three_day" | "day" | "agenda";
+export const CAL_VIEWS: CalView[] = [
+  "month",
+  "week",
+  "three_day",
+  "day",
+  "agenda",
+];
+export const CAL_VIEW_LABELS: Record<CalView, string> = {
+  month: "Month",
+  week: "Week",
+  three_day: "3 days",
+  day: "Day",
+  agenda: "Agenda",
+};
+
+export type OthersMode = "own" | "grey" | "family";
+
+export type CalendarPrefs = {
+  view: CalView;
+  showFamily: boolean;
+  showSchoolWork: boolean;
+  shownPeople: string[] | null;
+  shownSubs: string[] | null;
+  // Phase B (unused until then, but loaded so the shape is stable)
+  personalizeColors: boolean;
+  othersMode: OthersMode;
+  othersColor: string | null;
+  nowColor: string | null;
+  holidayColor: string | null;
+  kindColors: Record<string, string>;
+  eventTypeColors: Record<string, string>;
+  subColors: Record<string, string>;
+};
+
+function asStringArray(v: unknown): string[] | null {
+  if (!Array.isArray(v)) return null;
+  return v.filter((x): x is string => typeof x === "string");
+}
+
+function asColorMap(v: unknown): Record<string, string> {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (typeof val === "string") out[k] = val;
+  }
+  return out;
+}
+
+function asView(v: unknown): CalView {
+  return CAL_VIEWS.includes(v as CalView) ? (v as CalView) : "week";
+}
+
+function asOthersMode(v: unknown): OthersMode {
+  return v === "grey" || v === "family" ? v : "own";
+}
+
+const DEFAULTS: CalendarPrefs = {
+  view: "week",
+  showFamily: false,
+  showSchoolWork: true,
+  shownPeople: null,
+  shownSubs: null,
+  personalizeColors: false,
+  othersMode: "own",
+  othersColor: null,
+  nowColor: null,
+  holidayColor: null,
+  kindColors: {},
+  eventTypeColors: {},
+  subColors: {},
+};
+
+export async function loadCalendarPrefs(
+  userId: string,
+): Promise<CalendarPrefs> {
+  const row = await prisma.userCalendarPref.findUnique({ where: { userId } });
+  if (!row) return { ...DEFAULTS };
+  return {
+    view: asView(row.view),
+    showFamily: row.showFamily,
+    showSchoolWork: row.showSchoolWork,
+    shownPeople: asStringArray(row.shownPeople),
+    shownSubs: asStringArray(row.shownSubs),
+    personalizeColors: row.personalizeColors,
+    othersMode: asOthersMode(row.othersMode),
+    othersColor: row.othersColor,
+    nowColor: row.nowColor,
+    holidayColor: row.holidayColor,
+    kindColors: asColorMap(row.kindColors),
+    eventTypeColors: asColorMap(row.eventTypeColors),
+    subColors: asColorMap(row.subColors),
+  };
+}
+
+/** Upsert one or more preference fields for a user, creating the row if needed
+ *  with the documented defaults for everything else. */
+async function patchPrefs(
+  userId: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  await prisma.userCalendarPref.upsert({
+    where: { userId },
+    create: { userId, ...data },
+    update: data,
+  });
+}
+
+export async function setView(userId: string, view: CalView): Promise<void> {
+  await patchPrefs(userId, { view });
+}
+
+export async function setShowFamily(
+  userId: string,
+  on: boolean,
+): Promise<void> {
+  await patchPrefs(userId, { showFamily: on });
+}
+
+export async function setShowSchoolWork(
+  userId: string,
+  on: boolean,
+): Promise<void> {
+  await patchPrefs(userId, { showSchoolWork: on });
+}
+
+export async function setShownPeople(
+  userId: string,
+  ids: string[],
+): Promise<void> {
+  await patchPrefs(userId, { shownPeople: ids });
+}
+
+export async function setShownSubs(
+  userId: string,
+  ids: string[],
+): Promise<void> {
+  await patchPrefs(userId, { shownSubs: ids });
+}

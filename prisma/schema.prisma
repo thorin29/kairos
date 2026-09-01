@@ -89,6 +89,7 @@ model User {
   invites          Invite[]
   devices          Device[]
   enrollmentCodes  EnrollmentCode[]
+  calendarPref     UserCalendarPref?
   sportSkips       SportSkip[]
   eventParticipations EventParticipant[]
   classMemberships ClassMember[]
@@ -433,8 +434,39 @@ model ExternalCalendar {
   updatedAt DateTime @updatedAt
 }
 
-// ---------------------------------------------------------------
-// Chores
+// Per-user personal-calendar preferences (docs/API.md, DECISIONS.md "Personal
+// calendar…"). Only used by the signed-in personal view and the mobile app;
+// the shared wall tablet ignores this entirely and keeps the household-wide
+// settings. Stored, not derived — these are chosen preferences.
+//
+// The id-list columns are Json so null can mean "never customised → fall back
+// to the default" (self for people, the user's own feeds for subscriptions),
+// distinct from an explicit empty list. The colour columns are defined now but
+// unused until Phase B, so the whole epic needs a single migration.
+model UserCalendarPref {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Phase A — structure
+  view           String  @default("week") // month | week | three_day | day | agenda
+  showFamily     Boolean @default(false)
+  showSchoolWork Boolean @default(true)
+  shownPeople    Json? // user ids explicitly shown; null = default to just self
+  shownSubs      Json? // ExternalCalendar ids shown; null = default to own feeds
+
+  // Phase B — colours (unused until then)
+  personalizeColors Boolean @default(false)
+  othersMode        String  @default("own") // own | grey | family
+  othersColor       String? // the single colour used when othersMode = grey
+  nowColor          String? // personal override of the admin now-line colour
+  holidayColor      String? // personal override of the admin holiday colour
+  kindColors        Json? // { APPOINTMENT|CLASS|WORK|BIRTHDAY: "#rrggbb" }
+  eventTypeColors   Json? // { <eventTypeId>: "#rrggbb" }
+  subColors         Json? // { <externalCalendarId>: "#rrggbb" }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 //
 // A Chore is the job itself ("Vacuum the living room"), independent of who
 // does it or when. That identity is what drives expiry: an unfinished

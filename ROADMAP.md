@@ -188,12 +188,14 @@ the remaining personal-view items:
       Full model and colour precedence are in DECISIONS.md
       ("Personal calendar: per-user preferences…"). Built on the web first so
       the logic is proven before the app renders it. Phases:
-  - [ ] **A — structure.** `UserCalendarPref` model (+ migration); a right-side
-        options drawer (opened by a filter/sliders icon top-right, mirroring the
-        left nav drawer — not a second hamburger); view switching across all
-        five views (add **3-day** and **agenda**; only Day/Week/Month exist
-        today); persistent people + subscription checkboxes. Defaults: personal,
-        family **off**, school work **on**. No colour personalisation yet.
+  - [x] **A — structure.** *(shipped 0.180.0)* `UserCalendarPref` model (+
+        migration 72); a right-side options drawer (sliders icon top-right);
+        all five views (added **3-day** and **agenda**); persistent people,
+        family, school-work, and subscription checkboxes; per-user, stored
+        server-side. Branches off `deviceMode` — the personal view only shows
+        on a signed-in personal device; the shared wall tablet is unchanged.
+        Defaults: just you, family **off**, school work **on**. No colour
+        personalisation yet (that's Phase B).
   - [ ] **B — colours.** Per-user overrides for each event kind
         (Appointment/Class/Work/Birthday), each custom EventType, holidays, and
         subscriptions; the `OWN / GREY / FAMILY` others-mode; now-line override.
