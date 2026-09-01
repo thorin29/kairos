@@ -1,5 +1,17 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import {
+  CAL_VIEWS,
+  type CalView,
+  type OthersMode,
+} from "@/lib/calendar/views";
+
+export {
+  CAL_VIEWS,
+  CAL_VIEW_LABELS,
+  type CalView,
+  type OthersMode,
+} from "@/lib/calendar/views";
 
 /**
  * Per-user personal-calendar preferences. Loaded for the signed-in personal
@@ -10,24 +22,6 @@ import { prisma } from "@/lib/prisma";
  * which the caller resolves to a default (just self; the user's own feeds) —
  * distinct from an explicit empty list (show nobody / no feeds).
  */
-
-export type CalView = "month" | "week" | "three_day" | "day" | "agenda";
-export const CAL_VIEWS: CalView[] = [
-  "month",
-  "week",
-  "three_day",
-  "day",
-  "agenda",
-];
-export const CAL_VIEW_LABELS: Record<CalView, string> = {
-  month: "Month",
-  week: "Week",
-  three_day: "3 days",
-  day: "Day",
-  agenda: "Agenda",
-};
-
-export type OthersMode = "own" | "grey" | "family";
 
 export type CalendarPrefs = {
   view: CalView;

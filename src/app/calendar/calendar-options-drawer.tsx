@@ -7,7 +7,7 @@ import {
   CAL_VIEWS,
   CAL_VIEW_LABELS,
   type CalView,
-} from "@/lib/calendar/prefs";
+} from "@/lib/calendar/views";
 import {
   setCalendarView,
   setCalendarPeople,
