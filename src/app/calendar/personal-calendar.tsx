@@ -21,6 +21,7 @@ import { MonthGrid } from "@/components/month-grid";
 import { DaySchedule } from "@/components/day-schedule";
 import { AddEventProvider, AddEventButton } from "./add-event-form";
 import { CalendarOptionsDrawer } from "./calendar-options-drawer";
+import { MonthDropdown } from "./month-dropdown";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import { getFamilyColor, getCalendarPrefs } from "@/lib/settings";
 import { getHolidayColor } from "@/lib/holidays";
@@ -161,6 +162,22 @@ export async function PersonalCalendar({
       ? prefs.nowColor
       : calPrefs.nowColor;
 
+  // Coloured event dots for the heading month-dropdown (shown on the non-month
+  // views, so only load the month's events then). Up to three distinct colours
+  // per day.
+  const dotsByDay: Record<string, string[]> = {};
+  if (view !== "month") {
+    const mr = await loadRange(
+      monthGridDays(date),
+      shownPeople,
+      prefs.showSchoolWork,
+    );
+    for (const e of [...mr.allDay, ...mr.timed].filter(keep).map(recolor)) {
+      const arr = dotsByDay[e.dayISO] ?? (dotsByDay[e.dayISO] = []);
+      if (arr.length < 3 && !arr.includes(e.color)) arr.push(e.color);
+    }
+  }
+
   const link = (p: { view?: CalView; date?: string }) => {
     const q = new URLSearchParams();
     q.set("view", p.view ?? view);
@@ -206,9 +223,22 @@ export async function PersonalCalendar({
           >
             <ChevronRightIcon className="h-5 w-5" />
           </Link>
-          <span className="font-display ml-1 min-w-0 flex-1 truncate text-xl font-semibold tracking-tight">
-            {heading}
-          </span>
+          <div className="ml-1 min-w-0 flex-1">
+            {view === "month" ? (
+              <span className="font-display truncate text-xl font-semibold tracking-tight">
+                {heading}
+              </span>
+            ) : (
+              <MonthDropdown
+                label={heading}
+                monthISO={startOfMonth(date)}
+                todayISO={today}
+                currentDate={date}
+                dotsByDay={dotsByDay}
+                dayHref={(iso) => link({ date: iso })}
+              />
+            )}
+          </div>
           <AddEventButton />
           <CalendarOptionsDrawer
             view={view}
