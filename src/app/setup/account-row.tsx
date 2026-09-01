@@ -10,6 +10,7 @@ import {
   setUserEmailAction,
 } from "@/lib/actions/accounts";
 import type { AccountState } from "@/lib/accounts";
+import { DeviceEnrollment } from "./device-enrollment";
 
 /**
  * One person's login state and the actions on it. The invite link is a
@@ -282,6 +283,8 @@ export function AccountRow({ account }: { account: AccountState }) {
           )}
         </div>
       )}
+
+      <DeviceEnrollment userId={account.userId} name={name} />
     </li>
   );
 }
