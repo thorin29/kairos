@@ -19,6 +19,62 @@ the reason.
 
 ---
 
+## 2026-08 — Personal calendar: per-user preferences, colour precedence, native-first gestures (planned)
+Records the design agreed before building, so the plan survives across sessions.
+The signed-in ("personal") calendar becomes per-person; the shared wall tablet
+is untouched and keeps the household-wide settings. Built on the **web personal
+view first**, then the Kotlin app renders the same model.
+
+**Storage:** a new per-user `UserCalendarPref` (server-side, so a phone and the
+web personal view always agree and a new device inherits the prefs). Holds:
+default view; `othersMode`; per-kind / per-EventType / holiday / subscription
+colour overrides; a `personalizeColours` master toggle; now-line override; shown
+people; checked subscriptions; `showFamily` (default off); `showSchoolWork`
+(default on).
+
+**Two enums, not to be confused:** calendar events use `EventKind`
+(CLASS/WORK/APPOINTMENT/BIRTHDAY/EXTERNAL/OTHER) plus admin `EventType` custom
+types; tasks use `Category`. Personalisation is by event kind/type — a **new
+colour axis**, since events are currently coloured by owner (person) and the
+only category colouring today is for tasks.
+
+**Others-mode** (how *other people's* items look to me): `OWN` (their profile
+colour) / `GREY` (one colour, default grey, personalisable) / `FAMILY` (tablet
+parity — the household scheme, for admins who want to see everyone as the
+tablet does).
+
+**Colour precedence for a personal viewer:**
+1. `othersMode = FAMILY` → use the exact shared-tablet precedence
+   (EventType.colour → family colour → owner colour, with bands/blend for
+   shared events). Admin parity.
+2. Item is someone else's **and** `othersMode = GREY` → grey / chosen colour.
+3. Otherwise (mine, or `OWN`): my kind/type override if personalisation is on →
+   else the system default (EventType.colour → owner colour → family). Holidays
+   and subscriptions follow the same "my override else system" rule.
+
+**Personalisable set:** Appointment, Class, Work, Birthday, each custom
+EventType, holidays, subscriptions. **School work follows the Class colour** (no
+separate row). `OTHER` stays system. **Vacations** stay admin-only on the family
+colour scheme and are never user-recoloured. The now-line ("hour line") is
+admin-set but a personal user may override it.
+
+**Defaults on first open:** personal (family filter off), school work on,
+others shown in their own colour, personalisation off (everything follows
+system) until the user turns it on.
+
+**Phasing:** A structure (model + right-side options drawer + all five views,
+adding 3-day and agenda + persistent filters) → B colours (overrides +
+others-mode + now-line) → C month-name mini-month dropdown + polish (clean menus,
+**no explanatory text**). Web first each phase; the app follows.
+
+**Gestures are native-first.** Swipe / one-finger scroll gets built in the
+Kotlin app, not the web view — web touch handling wouldn't transfer to Compose
+and would mean debugging gesture physics and colour precedence at once. Web
+views navigate with prev/next; a web-swipe phase (D) is deferred and optional.
+**Known issue to fix if web swipe is ever built:** the current web calendar
+needs a two-finger drag to page because a single finger scrolls the grid —
+single-finger should page.
+
 ## 2026-08 — Device enrollment lives on the household page; QR holds the raw code (v0.179)
 **Decision:** the parent-facing enrollment surface is a per-person "Phone app"
 panel in the household list (`/setup`), beside the web-login controls — not a
