@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.177.0";
+export const APP_VERSION = "0.178.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -84,6 +84,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.178.0",
+    summary: [
+      "Fixed: on the household page, typing an email and pressing Send invite now saves that address and emails the invite in one step, instead of quietly ignoring an unsaved address and only showing a link.",
+      "When an invite can't be emailed, the page now says why \\u2014 no email set up, or the send failed \\u2014 rather than silently falling back to a link.",
+      "Closed a confusing invite-link issue: once an invite has been used or has expired, opening its link now shows a clear \"already used or expired\" message instead of re-opening the password screen.",
+      "Confirmed and hardened invite links: each is single-use, random and unguessable, stored only in scrambled form, expires after 7 days, and is invalidated the moment a password is created or a new link is issued.",
+    ],
+  },
   {
     version: "0.177.0",
     summary: [

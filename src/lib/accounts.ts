@@ -150,6 +150,22 @@ export async function revokeInvites(userId: string): Promise<void> {
   await prisma.invite.deleteMany({ where: { userId } });
 }
 
+/**
+ * Whether a raw token still corresponds to a live, unexpired invite. A pure,
+ * side-effect-free read used by the redeem page to decide whether to show the
+ * password form at all — a used invite is deleted on redemption and an expired
+ * one is past its date, so both come back false and the page refuses the form
+ * instead of reappearing. Reveals only valid/invalid, never who has an invite.
+ */
+export async function inviteIsRedeemable(token: string): Promise<boolean> {
+  if (!token) return false;
+  const invite = await prisma.invite.findUnique({
+    where: { tokenHash: hashToken(token) },
+    select: { expiresAt: true },
+  });
+  return !!invite && invite.expiresAt > new Date();
+}
+
 /** Turn a login off: clear the password and bump the credential version, which
  *  voids any live session, and drop any pending invite. The profile itself is
  *  untouched — the person still exists on the wall tablet. */
