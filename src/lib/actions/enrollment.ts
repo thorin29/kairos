@@ -7,6 +7,7 @@ import {
   revokeDevice,
   type DeviceSummary,
 } from "@/lib/api/device-auth";
+import { qrSvg } from "@/lib/qr";
 
 /**
  * The parent-facing side of device enrollment. Generating a code and managing a
@@ -18,14 +19,15 @@ import {
  */
 
 /** Generate a one-time enrollment code for a person. Returns the raw code
- *  (shown once — render it as text and a QR) and when it expires. */
+ *  (shown once), a ready-to-render QR of it, and when it expires. */
 export async function issueEnrollmentCodeAction(userId: string): Promise<{
   code: string;
+  qrSvg: string;
   expiresAt: string;
 }> {
   await requireAdmin();
   const { code, expiresAt } = await issueEnrollmentCode(userId);
-  return { code, expiresAt: expiresAt.toISOString() };
+  return { code, qrSvg: qrSvg(code), expiresAt: expiresAt.toISOString() };
 }
 
 /** Enrolled devices for a person, for the admin list. */

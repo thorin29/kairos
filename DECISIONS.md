@@ -19,6 +19,20 @@ the reason.
 
 ---
 
+## 2026-08 — Device enrollment lives on the household page; QR holds the raw code (v0.179)
+**Decision:** the parent-facing enrollment surface is a per-person "Phone app"
+panel in the household list (`/setup`), beside the web-login controls — not a
+separate admin screen. It generates a one-time code (shown once as a short code
+**and** a QR) and lists/revokes that person's devices. The **QR encodes the raw
+enrollment code string itself** (not a URL or deep link), so the eventual app
+scanner reads the code and posts it to `/api/v1/auth/enroll` exactly as if it
+were typed. **Reason:** enrollment is per-person access management, so it belongs
+next to the other per-person access controls; keeping the QR payload equal to
+the typed code means scan and manual entry hit one code path, and defers any
+deep-link scheme until the app actually needs one. The QR is rendered from the
+dependency-free `qrcode-generator` on the server (`src/lib/qr.ts`), so it stays
+out of the client bundle and the lean dependency set barely grows.
+
 ## 2026-08 — Invite links: single-use, validated at page load (v0.178)
 **Decision:** an invite link is authority to set a person's *initial* password,
 and nothing more. The guarantees, now made explicit and enforced end to end:

@@ -62,9 +62,9 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       `auth/refresh`, `auth/revoke`, `me`, `meta`. Device + EnrollmentCode
       models, hash-only token storage, rotate/revoke/expiry, per-source rate
       limiting on enroll, edge-exempt + self-authenticating routes.
-- [ ] Admin enrollment UI — a "generate code" button (short code + QR) and a
-      per-person device list with revoke. Backend actions already exist
-      (`src/lib/actions/enrollment.ts`); this is the pure-UI increment.
+- [x] Admin enrollment UI (v0.179): a per-person "Phone app" panel on the
+      household page — generate a one-time code (short code + QR), and list /
+      revoke that person's enrolled devices. Independent of web login.
 - [ ] Rest of the `/api/v1` surface: dashboard, chores, rewards, calendar,
       reading, workouts, companions, devices (push), sync. Additive-only;
       business logic reused from existing server code.

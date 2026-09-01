@@ -253,9 +253,11 @@ separate contract if wanted, and would reuse this auth layer.
    entry and scan hit the same `/auth/enroll`.
 3. ~~Token lifetime~~ — **closed: enrollment code 15 min, single use; device
    token 365 days, rotated by `/auth/refresh` (client refreshes before expiry).**
-4. **Admin management surface** — the enrollment/device backend is built (issue
-   code, list a person's devices, revoke). The parent-facing *screen* for it is
-   the next increment. Broader parent-facing management (creating chores etc.)
-   stays web-only for v1.
+4. ~~Admin management surface~~ — **closed (v0.179): a per-person "Phone app"
+   panel on the household page generates a one-time code (short code + QR) and
+   lists / revokes that person's devices.** The QR encodes the raw enrollment
+   code string, so the app's scanner reads it and posts it straight to
+   `/auth/enroll`. Broader parent-facing management (creating chores etc.) stays
+   web-only for v1.
 5. Offline scope: which screens must work with no network (likely today's
    chores + completion), which can require it. Still open.
