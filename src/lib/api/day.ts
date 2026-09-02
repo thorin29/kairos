@@ -1,5 +1,6 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
+import type { NextRequest } from "next/server";
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
@@ -53,4 +54,20 @@ export async function apiSetTaskComplete(
   revalidatePath(`/person/${task.userId}`);
 
   return { ok: true, id: taskId, status: status as string };
+}
+
+/**
+ * Read an optional `{ "date": "YYYY-MM-DD" }` body, defaulting to today. Returns
+ * the resolved date, or `null` when a value was supplied but malformed (the
+ * caller maps that to a validation error). A missing/empty body is fine.
+ */
+export async function bodyDate(
+  req: NextRequest,
+  today: string,
+): Promise<string | null> {
+  const body = (await req.json().catch(() => null)) as { date?: unknown } | null;
+  const d = body?.date;
+  if (d == null || d === "") return today;
+  if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  return null;
 }

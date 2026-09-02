@@ -21,6 +21,13 @@ import {
   type WorkoutCategory,
   type WorkoutType,
 } from "@/lib/workouts/catalog";
+import {
+  completeWorkoutTask,
+  skipWorkoutTask,
+  findOrCreateSession,
+  setWorkedOut,
+  setRestDay,
+} from "@/lib/workouts/mark";
 
 function refresh() {
   revalidatePath("/exercise");
@@ -272,58 +279,9 @@ export async function setExerciseEnd(
 
 // --- logging -------------------------------------------------------------
 
-async function completeWorkoutTask(userId: string, dateISO: string): Promise<void> {
-  const due = toDateColumn(dateISO);
-  const existing = await prisma.task.findFirst({
-    where: { userId, category: "EXERCISE", dueDate: due },
-  });
-  if (existing) {
-    await prisma.task.update({
-      where: { id: existing.id },
-      data: { status: "COMPLETE", completedAt: new Date() },
-    });
-  } else {
-    await prisma.task.create({
-      data: {
-        userId,
-        category: "EXERCISE",
-        title: "Workout",
-        dueDate: due,
-        status: "COMPLETE",
-        completedAt: new Date(),
-        generatedFrom: `workout:${userId}`,
-      },
-    });
-  }
-  // A workout can be logged from a person's dashboard now, so refresh it.
-  revalidatePath(`/person/${userId}`);
-}
-
-/** A rest day excuses the day's workout task (marks it SKIPPED — scores
- *  nothing, doesn't count against completion). If there's no workout planned
- *  that day there's nothing to excuse, so no task is created: a rest day must
- *  never manufacture a prompt that could later look overdue. */
-async function skipWorkoutTask(userId: string, dateISO: string): Promise<void> {
-  const due = toDateColumn(dateISO);
-  const existing = await prisma.task.findFirst({
-    where: { userId, category: "EXERCISE", dueDate: due },
-  });
-  if (existing) {
-    await prisma.task.update({
-      where: { id: existing.id },
-      data: { status: "SKIPPED", completedAt: null },
-    });
-  }
-  revalidatePath(`/person/${userId}`);
-}
-
-async function findOrCreateSession(userId: string, dateISO: string): Promise<string> {
-  const date = toDateColumn(dateISO);
-  const found = await prisma.workoutSession.findFirst({ where: { userId, date } });
-  if (found) return found.id;
-  const created = await prisma.workoutSession.create({ data: { userId, date } });
-  return created.id;
-}
+// completeWorkoutTask, skipWorkoutTask, and findOrCreateSession now live in
+// @/lib/workouts/mark (imported above) so the mobile API shares the exact same
+// logic.
 
 export type LogEntry = {
   exerciseId: string;
@@ -420,38 +378,7 @@ export async function markWorkedOut(
   await requireInteractive();
   await requireCanActFor(userId);
   if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
-  const date = toDateColumn(dateISO);
-
-  if (worked) {
-    await findOrCreateSession(userId, dateISO);
-    await completeWorkoutTask(userId, dateISO);
-  } else {
-    // Remove only empty placeholder sessions (a quick "worked out" with no
-    // detail); never delete a logged workout. Reset the day only if nothing
-    // real is left.
-    await prisma.workoutSession.deleteMany({
-      where: { userId, date, isRest: false, sets: { none: {} } },
-    });
-    const remaining = await prisma.workoutSession.count({
-      where: { userId, date, isRest: false },
-    });
-    if (remaining === 0) {
-      const task = await prisma.task.findFirst({
-        where: {
-          userId,
-          category: "EXERCISE",
-          dueDate: date,
-          status: "COMPLETE",
-        },
-      });
-      if (task) {
-        await prisma.task.update({
-          where: { id: task.id },
-          data: { status: "PENDING", completedAt: null },
-        });
-      }
-    }
-  }
+  await setWorkedOut(userId, dateISO, worked);
   refresh();
 }
 
@@ -635,20 +562,7 @@ export async function restDay(userId: string, dateISO: string): Promise<void> {
   await requireInteractive();
   await requireCanActFor(userId);
   if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
-  const date = toDateColumn(dateISO);
-
-  const existing = await prisma.workoutSession.findFirst({ where: { userId, date } });
-  if (existing) {
-    await prisma.workoutSession.update({
-      where: { id: existing.id },
-      data: { isRest: true, finished: false },
-    });
-  } else {
-    await prisma.workoutSession.create({
-      data: { userId, date, isRest: true, finished: false },
-    });
-  }
-  await skipWorkoutTask(userId, dateISO);
+  await setRestDay(userId, dateISO);
   refresh();
 }
 

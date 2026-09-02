@@ -93,11 +93,12 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       household page — generate a one-time code (short code + QR), and list /
       revoke that person's enrolled devices. Independent of web login.
 - [~] Rest of the `/api/v1` surface. Built: `GET /dashboard` (v0.185, phase 1 —
-      the personal day as grouped checklist + per-category bars) and task
-      completion (`POST /tasks/{id}/complete` · `/uncomplete`). Remaining:
-      rewards, calendar, reading, workouts (+ workout-prompt logging), pool
-      claim, companions, devices (push), sync. Additive-only; logic reused from
-      existing server code.
+      the personal day as grouped checklist + per-category bars), task completion
+      (`POST /tasks/{id}/complete` · `/uncomplete`), and day-level workouts
+      (v0.186 — `POST /workouts/complete` · `/uncomplete` · `/rest`, sharing
+      src/lib/workouts/mark.ts with the web). Remaining: detailed workout logging
+      (weights/reps), rewards, calendar, reading, pool claim, companions, devices
+      (push), sync. Additive-only; logic reused from existing server code.
 - [ ] Add the Authelia bypass — now unblocked; scope it to **`/api/v1` only**
       (DECISIONS.md). Infra change on the server, not in this repo.
 - [x] Native Kotlin client scaffold + enrollment/sign-in (`kairos-app` v0.1.0):
