@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "6mb",
       // CSRF defense-in-depth for a public deployment: restrict which origins
       // may invoke server actions. Set ALLOWED_ORIGINS to your host(s),
-      // comma-separated (e.g. "kairos.ninjaknox.net"). Unset = same-origin only.
+      // comma-separated (e.g. "app.example.com"). Unset = same-origin only.
       ...(process.env.ALLOWED_ORIGINS
         ? {
             allowedOrigins: process.env.ALLOWED_ORIGINS.split(",")
