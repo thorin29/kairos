@@ -59,8 +59,16 @@ export const PLATE_BY_ID: Record<string, Plate> = Object.fromEntries(
   ALL_PLATES.map((p) => [p.id, p]),
 );
 
-// Bar options (lb). Editable per user later.
-export const BARS = [45, 15] as const;
+// Bar options. `type` drives the drawing: a straight shaft, or the bent shaft
+// of an Olympic EZ-curl bar. Editable per user later.
+export type BarType = "straight" | "ez";
+export type BarOption = { weight: number; label: string; type: BarType };
+
+export const BARS: BarOption[] = [
+  { weight: 45, label: "45", type: "straight" },
+  { weight: 15, label: "15", type: "straight" },
+  { weight: 19, label: "EZ", type: "ez" },
+];
 
 export function fmtWeight(lb: number): string {
   return Number.isInteger(lb) ? String(lb) : String(Math.round(lb * 100) / 100);

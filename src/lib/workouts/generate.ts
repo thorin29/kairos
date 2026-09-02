@@ -276,7 +276,10 @@ export async function pendingSportPrompts(
 
   const events = await prisma.event.findMany({
     where: {
-      eventType: { is: { sportWorkout: true } },
+      OR: [
+        { eventType: { is: { sportWorkout: true } } },
+        { externalCalendar: { is: { sportWorkout: true } } },
+      ],
     },
     select: {
       id: true,
@@ -285,6 +288,8 @@ export async function pendingSportPrompts(
       startsAt: true,
       rrule: true,
       participants: { select: { userId: true } },
+      eventType: { select: { sportWorkout: true } },
+      externalCalendar: { select: { sportWorkout: true, userId: true } },
     },
   });
   if (events.length === 0) return [];
@@ -314,13 +319,21 @@ export async function pendingSportPrompts(
 
   const prompts: SportPrompt[] = [];
   for (const e of due) {
-    // Whoever's going gets asked; with no one listed, it falls back to the
-    // owner, so existing single-person events are unchanged.
-    const targets = e.participants.length
-      ? e.participants.map((p) => p.userId)
-      : e.userId
-        ? [e.userId]
-        : [];
+    // Who gets asked. For an event on a sport-flagged type, whoever's going
+    // (participants, else the owner). For an event from a sport-flagged
+    // subscribed feed, the feed's owner. An event can be both.
+    const targets = new Set<string>();
+    if (e.eventType?.sportWorkout) {
+      const going = e.participants.length
+        ? e.participants.map((p) => p.userId)
+        : e.userId
+          ? [e.userId]
+          : [];
+      for (const id of going) targets.add(id);
+    }
+    if (e.externalCalendar?.sportWorkout && e.externalCalendar.userId) {
+      targets.add(e.externalCalendar.userId);
+    }
     for (const userId of targets) {
       const key = `${userId}|${e.id}`;
       if (!doneSet.has(key) && !skipSet.has(key)) {

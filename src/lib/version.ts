@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.183.0";
+export const APP_VERSION = "0.184.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -85,6 +85,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.184.0",
+    summary: [
+      "Sport events from your calendars and subscribed feeds no longer count as a workout automatically \\u2014 they always ask whether you did it, and only count once you confirm.",
+      "Sport events now land on the day they actually happened (an evening game no longer slips onto the next day), and \\\"this week\\\" is a clean Sunday\\u2013Saturday.",
+      "Weight calculator: the barbell is drawn true to life \\u2014 a narrow shaft between the collars, then the sleeves running out to the ends \\u2014 and there's a new Olympic EZ-curl bar (19 lb).",
+      "Chores weekly rotation: a green check appears beside each completed chore, and a chore that's past due and still not done shows in red.",
+      "Renamed \\\"Dashboard\\\" to \\\"Home\\\" in the side menu.",
+    ],
+  },
   {
     version: "0.183.0",
     summary: [

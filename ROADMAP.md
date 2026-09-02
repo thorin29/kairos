@@ -8,6 +8,31 @@ all live in the database, never in this repository.
 
 ---
 
+## Current status (Sept 2026, v0.184)
+
+Recently shipped: the **mobile device-token API** (`/api/v1` auth slice), the
+**personal calendar** epic on the web — per-user preferences, five views, the
+options drawer, and colours (phases A–C, v0.180–0.183) — and a round of fixes
+(v0.184): sport events now prompt instead of auto-counting, a realistic barbell
+drawing + an Olympic EZ-curl bar in the weight calculator, and the chores weekly
+rotation showing completion (green check) and past-due (red).
+
+Next up, roughly in order:
+- **Build the Android app** (native Kotlin / Jetpack Compose, repo `kairos-app`)
+  against the versioned API. The two gating decisions — device-token identity
+  and the `/api/v1` contract — are settled.
+- **Expand `/api/v1`** beyond auth to the read/write surface the app needs
+  (dashboard aggregate, chores, rewards, calendar, reading, workouts,
+  companions). The calendar's personal model is finalised on the web first, as
+  intended, so the app can mirror it.
+- **Personal-calendar colour model rework** — the colour controls work, but the
+  model (others-mode, the Custom/System split) wants hands-on refinement in the
+  actual app rather than more blind iteration. Deferred deliberately.
+- **Phase D — native calendar gestures** (swipe / one-finger paging) in the
+  Kotlin app; see the Personal calendar epic below.
+
+---
+
 ## Personal settings (per-user, non-admin)
 
 - [ ] A settings area reached from a **settings icon in the sidebar**, shown

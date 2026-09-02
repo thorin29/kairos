@@ -20,18 +20,19 @@ export function MonthDropdown({
   todayISO,
   currentDate,
   dotsByDay,
-  dayHref,
+  view,
 }: {
   label: string;
   monthISO: string;
   todayISO: string;
   currentDate: string;
   dotsByDay: Record<string, string[]>;
-  dayHref: (iso: string) => string;
+  view: string;
 }) {
   const [open, setOpen] = useState(false);
   const month = startOfMonth(monthISO);
   const cells = monthGridDays(month);
+  const hrefFor = (iso: string) => `/calendar?view=${view}&date=${iso}`;
 
   return (
     <div className="relative">
@@ -77,7 +78,7 @@ export function MonthDropdown({
                 return (
                   <Link
                     key={iso}
-                    href={dayHref(iso)}
+                    href={hrefFor(iso)}
                     onClick={() => setOpen(false)}
                     className="mx-auto flex h-9 w-9 flex-col items-center justify-center rounded-full transition-colors hover:bg-ground"
                   >

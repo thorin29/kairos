@@ -4,7 +4,7 @@ import { ButtonLink } from "@/components/ui";
 /** Primary way back up a level, sized as a real target for tablet use. */
 export function BackLink({
   href = "/",
-  label = "Dashboard",
+  label = "Home",
 }: {
   href?: string;
   label?: string;
