@@ -160,19 +160,48 @@ Exactly one of `avatarUrl` / `avatarIcon` is non-null (both null means no
 avatar). `kind` is additive over the original "id, name, avatar, role" sketch so
 the client can scope child-only features.
 
-### Dashboard (one call to paint the home screen)
+### Dashboard (one call to paint the home screen) — **built (v0.185, phase 1)**
 ```
-GET  /api/v1/dashboard          today for this person: chores due, points,
-                                streak, next calendar items, reading due
+GET  /api/v1/dashboard          this person's day (query: ?date=YYYY-MM-DD, default today)
 ```
-One aggregated read so the phone paints in a single round trip; the fields are
-derived server-side.
+One aggregated read so the phone paints in a single round trip; every field is
+derived server-side and mirrors the web personal view (src/app/person/[id]).
+```
+200: { "date": "2026-09-02",
+       "percent": 72 | null,                 // school excluded, like the web header
+       "categories": [                        // per-category bars, school excluded
+         { "category":"CHORE","label":"Chores","total":4,"complete":3,"overdue":0,"percent":75 } ],
+       "overdue": [ Task, … ],
+       "groups":  [ { "category":"CHORE","label":"Chores","items":[ Task, … ] } ] }
+```
+`Task` on the wire:
+```
+{ "id","title","category","status","dueDate":"YYYY-MM-DD",
+  "subtitle": string|null,        // e.g. school "Biology · Test · due 5/9"
+  "isOverdue": bool, "stale": bool,
+  "locked": bool,                 // generated from a chore (parent removes it)
+  "isWorkout": bool,              // a workout prompt: shown, completed via the logger
+  "completable": bool,            // false for workout prompts and stale rows
+  "test": { "score":int|null, "scoreMax":int } | null }
+```
+Phase 1 is the grouped checklist + bars. The shared-dashboard extras (claimable
+pool, day schedule, reminders, companion, progression) and workout-prompt
+logging are later phases; the fields above are additive-only.
 
-### Chores
+### Task completion — **built (v0.185)**
+Completion is uniform across the day (any `Task` row), so it lives at task level
+rather than only under chores.
 ```
-GET  /api/v1/chores             this person's chores (query: ?date=YYYY-MM-DD)
-POST /api/v1/chores/{id}/complete
-POST /api/v1/chores/{id}/uncomplete
+POST /api/v1/tasks/{id}/complete     mark this person's task done  (idempotent)
+POST /api/v1/tasks/{id}/uncomplete   mark it not-done             (idempotent)
+200: { "id", "status": "COMPLETE" | "PENDING" }
+403: forbidden   — the task isn't this device's person's
+404: not_found
+409: conflict    — workout prompts complete via the workout logger, not here
+```
+
+### Chores (further chore-specific surface — proposal)
+```
 GET  /api/v1/chores/pool        claimable pool chores
 POST /api/v1/chores/pool/{id}/claim
 ```
