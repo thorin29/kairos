@@ -233,6 +233,39 @@ No `.env` on the server; `.env.example` is documentation only.
 **Reason:** single source of truth for deployment; avoids a stray file drifting
 from the actual running config.
 
+## 2026-09 — Android app: technical shape (scaffold, app v0.1.0)
+**Decision:** the `kairos-app` client is built as: Jetpack Compose (Material 3,
+single-activity) · Navigation-Compose with type-safe routes · Retrofit + OkHttp
+with kotlinx.serialization (unknown fields ignored, per docs/API.md) · DataStore
+for settings · the device token encrypted with an AES-256-GCM key in the Android
+Keystore · **manual DI** (a small AppContainer), not Hilt. Toolchain is pinned in
+a Gradle version catalog (AGP 8.13 line, Kotlin 2.2, compileSdk/targetSdk 36,
+minSdk 26, JDK 17) — AGP 9 is deliberately deferred. Auth state is a single
+`SessionState` flow that gates the whole UI (Setup → Enroll → Home); there is no
+"navigate to login", so the soft-navigation bypass class can't occur.
+**No deployment specifics in the repo:** the server base URL is user-entered at
+first launch and editable any time; no host, handle, or LAN address is baked into
+the source. The repo ships pointing at nothing.
+**Reason:** keeps the maintenance surface and rebuild risk low (codegen-free
+except serialization; lean dependency set), matches the identity model already
+built server-side, and keeps a public repo free of any household's details.
+Room/WorkManager/FCM and QR scanning are deferred to later increments.
+**Avatars caveat:** uploaded avatar photos (`/api/avatars/*`) stay behind the
+reverse-proxy auth and are not fetched by the app yet; the emoji `avatarIcon` or
+initials cover identity display until a token-authed avatar path exists.
+
+## 2026-09 — Scoped `/api/v1` Authelia bypass: rule specified
+**Decision:** the public-domain bypass is a single Authelia `access_control`
+rule scoped to `resources: ^/api/v1(/.*)?$` with `policy: bypass`, ordered
+**above** the host's catch-all. Everything else (including `/api/avatars` and
+`/admin`) keeps its existing policy. `REQUIRE_LOGIN` + `SESSION_SECRET` stay set.
+**Reason:** `/api/v1` self-authenticates every request (bearer on all routes
+except the public, rate-limited `/auth/enroll`), so it never relies on Authelia —
+exactly the condition that makes a *scoped* bypass safe. Broadening to `^/api/`
+would expose the avatar route and any future `/api` route, so the scope is
+strict. During build-out the app can instead point at a LAN base URL, avoiding
+the proxy entirely.
+
 ---
 
 ## Product-shape decisions (from ARCHITECTURE.md, restated for the log)

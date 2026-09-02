@@ -97,8 +97,13 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       business logic reused from existing server code.
 - [ ] Add the Authelia bypass — now unblocked; scope it to **`/api/v1` only**
       (DECISIONS.md). Infra change on the server, not in this repo.
-- [ ] Native Kotlin client (`kairos-app`): Compose UI, ViewModel, Retrofit,
-      Room, WorkManager, FCM.
+- [x] Native Kotlin client scaffold + enrollment/sign-in (`kairos-app` v0.1.0):
+      Compose + Retrofit + kotlinx.serialization, device token encrypted in the
+      Android Keystore, configurable base URL (no host baked in), and a
+      SessionState-gated flow Setup → Enroll (code entry) → Home; sign-out
+      revokes. QR scan and the real dashboard are the next increment.
+- [ ] Rest of the native client (`kairos-app`): QR enrollment scan, dashboard +
+      read screens, Room, WorkManager, FCM.
 - [ ] **Push notifications** via FCM, with typed deep-link targets
       (`chore:<id>`, `reward:<id>`, `event:<id>`, `reading:<ref>`).
 - [ ] **Offline** for the personal daily surface (today's chores + completion
