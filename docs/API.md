@@ -224,11 +224,18 @@ GET  /api/v1/reading            today's assigned reading + coverage stats
 POST /api/v1/reading/{ref}/complete
 ```
 
-### Workouts
+### Workouts — **built (v0.186, phase 1: day-level)**
+Day-level "did you work out / rest" — the lightweight path (no set-by-set
+detail). Body `{ "date": "YYYY-MM-DD" }` optional, defaults today. All idempotent.
 ```
-GET  /api/v1/workouts           today's planned workout for this person
-POST /api/v1/workouts/{id}/complete
+POST /api/v1/workouts/complete     mark the day worked out (placeholder session)
+POST /api/v1/workouts/uncomplete   undo a quick "worked out" (empty sessions only)
+POST /api/v1/workouts/rest         mark a rest day (excuses the workout task)
+200: { "date", "status": "worked" | "pending" | "rest" }
 ```
+Shares the exact web logic (src/lib/workouts/mark.ts). Detailed logging —
+per-exercise weights/reps/duration via the planned-workout logger — is phase 2
+and will add `GET /api/v1/workouts` (plan + pool) and a set-entry POST.
 
 ### Companions (collectible creatures)
 ```
