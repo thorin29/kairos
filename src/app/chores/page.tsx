@@ -12,7 +12,7 @@ import { DAY_SHORT } from "@/lib/days";
 import { formatShort, todayISO } from "@/lib/dates";
 import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
-import { MoonIcon } from "@/components/icons";
+import { MoonIcon, CheckIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ export default async function ChoresOverviewPage() {
 
   const [metrics, summary, poolChores, people, activePause, sharedTally, alwaysOpenCounts] = await Promise.all([
     loadChoreMetrics(today),
-    loadChoreSummary(),
+    loadChoreSummary(today),
     loadPoolChores(),
     prisma.user.findMany({
       where: { isActive: true },
@@ -160,7 +160,16 @@ export default async function ChoresOverviewPage() {
                       <span className="tabular w-10 shrink-0 text-xs font-medium text-muted">
                         {DAY_SHORT[a.dayOfWeek]}
                       </span>
-                      <span className="min-w-0 flex-1 text-sm">{a.chore}</span>
+                      <span
+                        className={`min-w-0 flex-1 text-sm ${
+                          a.pastDue ? "font-medium text-red-700" : ""
+                        }`}
+                      >
+                        {a.chore}
+                      </span>
+                      {a.complete && (
+                        <CheckIcon className="h-4 w-4 shrink-0 text-green-600" />
+                      )}
                     </li>
                   ))}
                 </ul>

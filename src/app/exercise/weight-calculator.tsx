@@ -9,21 +9,47 @@ import {
   PLATE_BY_ID,
   STEEL,
   fmtWeight,
+  type BarOption,
+  type BarType,
   type Plate,
 } from "@/lib/workouts/plates";
 
 const SCALE = 0.42; // px per mm
 const SHAFT_HALF = 64; // px from centre to the collar on each side
 const COLLAR = 14;
-const END = 18;
+const END = 14; // gap from the last plate out to the bar end
+const SLEEVE_MIN = 74; // shortest visible sleeve (an unloaded bar still looks loaded-ready)
 const AXIS = 150; // vertical centre of the bar in the drawing
 
+/** The bent grip of an EZ-curl bar, drawn as a thick stroked wave between the
+ *  collars. A smooth many-point polyline reads cleanly at this stroke width. */
+function ezShaftPath(cx: number): string {
+  const L = cx - SHAFT_HALF;
+  const R = cx + SHAFT_HALF;
+  const s = L + 8;
+  const e = R - 8;
+  const A = 11;
+  const N = 40;
+  const parts = [`M ${L} ${AXIS}`, `L ${s} ${AXIS}`];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const x = s + (e - s) * t;
+    const y = AXIS - A * Math.sin(2 * 2 * Math.PI * t);
+    parts.push(`L ${x.toFixed(1)} ${y.toFixed(1)}`);
+  }
+  parts.push(`L ${R} ${AXIS}`);
+  return parts.join(" ");
+}
+
 /** Draws the loaded barbell. `perSide` is the plates on ONE side, already sorted
- *  inner (largest) → outer; both sides are mirrored so the bar is symmetric. */
-function Barbell({ perSide }: { perSide: Plate[] }) {
+ *  inner (largest) → outer; both sides are mirrored so the bar is symmetric.
+ *  Real proportions: a narrow shaft between the collars, the collars as the
+ *  widest step, then the sleeves stepping down and running out to the ends. */
+function Barbell({ perSide, barType }: { perSide: Plate[]; barType: BarType }) {
   const sideThickness = perSide.reduce((s, p) => s + p.thicknessMm * SCALE, 0);
-  const half = SHAFT_HALF + COLLAR + sideThickness + END;
-  const width = Math.max(360, half * 2);
+  const sleeveLen = Math.max(SLEEVE_MIN, sideThickness + END);
+  const half = SHAFT_HALF + COLLAR + sleeveLen;
+  const width = half * 2;
   const cx = width / 2;
   const height = 300;
 
@@ -77,28 +103,51 @@ function Barbell({ perSide }: { perSide: Plate[] }) {
       role="img"
       aria-label="Loaded barbell"
     >
-      {/* shaft */}
-      <rect x={0} y={AXIS - 6} width={width} height={12} rx={6} fill="#9aa1a9" />
-      {/* sleeves */}
+      {/* sleeves — step down from the collars and run out to the bar ends */}
       <rect
-        x={cx + SHAFT_HALF}
+        x={cx + SHAFT_HALF + COLLAR}
         y={AXIS - 11}
-        width={COLLAR + Math.max(0, sideThickness) + END}
+        width={sleeveLen}
         height={22}
-        rx={4}
+        rx={5}
         fill="#b7bdc4"
       />
       <rect
-        x={cx - SHAFT_HALF - COLLAR - Math.max(0, sideThickness) - END}
+        x={cx - SHAFT_HALF - COLLAR - sleeveLen}
         y={AXIS - 11}
-        width={COLLAR + Math.max(0, sideThickness) + END}
+        width={sleeveLen}
         height={22}
-        rx={4}
+        rx={5}
         fill="#b7bdc4"
       />
-      {/* collars */}
+      {/* end caps at the very ends of the sleeves */}
+      <rect x={width - 5} y={AXIS - 13} width={5} height={26} rx={2} fill="#8c939b" />
+      <rect x={0} y={AXIS - 13} width={5} height={26} rx={2} fill="#8c939b" />
+
+      {/* collars — the widest step */}
       <rect x={cx + SHAFT_HALF} y={AXIS - 16} width={COLLAR} height={32} rx={3} fill="#7c848d" />
       <rect x={cx - SHAFT_HALF - COLLAR} y={AXIS - 16} width={COLLAR} height={32} rx={3} fill="#7c848d" />
+
+      {/* shaft — narrowest, only between the collars */}
+      {barType === "ez" ? (
+        <path
+          d={ezShaftPath(cx)}
+          fill="none"
+          stroke="#9aa1a9"
+          strokeWidth={12}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ) : (
+        <rect
+          x={cx - SHAFT_HALF}
+          y={AXIS - 6}
+          width={2 * SHAFT_HALF}
+          height={12}
+          rx={6}
+          fill="#9aa1a9"
+        />
+      )}
 
       {right.map(({ p, x, w }) => plateRect(p, x, w, false))}
       {right.map(({ p, x, w }) => plateRect(p, x, w, true))}
@@ -131,7 +180,7 @@ function PlateButton({
 }
 
 export function WeightCalculator({ onClose }: { onClose: () => void }) {
-  const [bar, setBar] = useState<number>(BARS[0]);
+  const [bar, setBar] = useState<BarOption>(BARS[0]);
   const [loaded, setLoaded] = useState<string[]>([]); // plate ids, one entry = one pair
 
   const add = (id: string) => setLoaded((l) => [...l, id]);
@@ -146,7 +195,7 @@ export function WeightCalculator({ onClose }: { onClose: () => void }) {
   const clear = () => setLoaded([]);
 
   const total = useMemo(
-    () => bar + loaded.reduce((s, id) => s + (PLATE_BY_ID[id]?.weight ?? 0) * 2, 0),
+    () => bar.weight + loaded.reduce((s, id) => s + (PLATE_BY_ID[id]?.weight ?? 0) * 2, 0),
     [bar, loaded],
   );
 
@@ -188,7 +237,7 @@ export function WeightCalculator({ onClose }: { onClose: () => void }) {
 
         {/* Barbell */}
         <div className="rounded-2xl border border-hairline bg-ground/30 px-2 py-3">
-          <Barbell perSide={perSide} />
+          <Barbell perSide={perSide} barType={bar.type} />
         </div>
 
         {/* Total */}
@@ -205,17 +254,17 @@ export function WeightCalculator({ onClose }: { onClose: () => void }) {
             <span className="text-sm text-muted">Bar</span>
             {BARS.map((b) => (
               <button
-                key={b}
+                key={b.label}
                 type="button"
                 onClick={() => setBar(b)}
                 className={[
                   "rounded-full border px-3 py-1 text-sm font-medium",
-                  bar === b
+                  bar.label === b.label
                     ? "border-accent text-accent"
                     : "border-hairline text-muted",
                 ].join(" ")}
               >
-                {b}
+                {b.label}
               </button>
             ))}
           </div>

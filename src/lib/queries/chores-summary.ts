@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { Category } from "@/generated/prisma/client";
+import { weekDays, todayISO, toDateColumn, fromDateColumn } from "@/lib/dates";
 
 export type AssignmentRow = {
   id: string;
@@ -6,6 +8,10 @@ export type AssignmentRow = {
   userId: string;
   userName: string;
   userColor: string;
+  /** This week's instance is done. */
+  complete: boolean;
+  /** This week's instance was due earlier this week and isn't done. */
+  pastDue: boolean;
 };
 
 export type ChoreSummary = {
@@ -95,7 +101,10 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
   });
 }
 
-export async function loadChoreSummary(): Promise<ChoreSummary[]> {
+export async function loadChoreSummary(
+  today: string = todayISO(),
+): Promise<ChoreSummary[]> {
+  const week = weekDays(today); // Sun..Sat, index === dayOfWeek
   const chores = await prisma.chore.findMany({
     where: { isActive: true, isPool: false },
     // Alphabetical everywhere: the master list, the assign dropdown, and the
@@ -110,15 +119,44 @@ export async function loadChoreSummary(): Promise<ChoreSummary[]> {
     },
   });
 
+  // This week's generated chore instances, to show completion on the rotation.
+  const weekTasks = await prisma.task.findMany({
+    where: {
+      category: Category.CHORE,
+      choreId: { not: null },
+      dueDate: { gte: toDateColumn(week[0]), lte: toDateColumn(week[6]) },
+    },
+    select: { choreId: true, userId: true, dueDate: true, status: true },
+  });
+  const statusByKey = new Map<string, string>();
+  for (const t of weekTasks) {
+    if (!t.choreId) continue;
+    statusByKey.set(
+      `${t.choreId}|${t.userId}|${fromDateColumn(t.dueDate)}`,
+      t.status,
+    );
+  }
+
   return chores.map((c) => {
     const assignments = c.assignments
-      .map((a) => ({
-        id: a.id,
-        dayOfWeek: a.dayOfWeek,
-        userId: a.userId,
-        userName: a.user.name,
-        userColor: a.user.color,
-      }))
+      .map((a) => {
+        const dateISO = week[a.dayOfWeek] ?? null;
+        const status = dateISO
+          ? statusByKey.get(`${c.id}|${a.userId}|${dateISO}`)
+          : undefined;
+        const complete = status === "COMPLETE";
+        const pastDue =
+          status === "PENDING" && dateISO !== null && dateISO < today;
+        return {
+          id: a.id,
+          dayOfWeek: a.dayOfWeek,
+          userId: a.userId,
+          userName: a.user.name,
+          userColor: a.user.color,
+          complete,
+          pastDue,
+        };
+      })
       .sort((a, b) => a.dayOfWeek - b.dayOfWeek);
 
     const days = assignments.map((a) => a.dayOfWeek);

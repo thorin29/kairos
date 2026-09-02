@@ -55,17 +55,21 @@ Built:
 - [x] Workouts — routines assigned by weekday, logged with sets and reps
 - [x] Game time — daily limits and weekly tokens
 - [x] Groceries — a learning shared list, with per-store shopping trips
-- [x] Week and month calendar views
+- [x] Week and month calendar views, plus a signed-in **personal calendar**
+      (its own day/3-day/week/month/agenda views, per-user filters and colours)
 - [x] ICS calendar subscriptions
 - [x] School — assignments, tests, subjects and class schedules
 - [x] Seasons — a personal-progression RPG: character levels, per-category
       stats and class, a monthly season ladder, streaks, badges and mastery
       titles, all fuelled by fair, effort-weighted completion (nobody ranked)
+- [x] Mobile API — versioned `/api/v1` with per-person device-token sign-in,
+      the foundation for the phone app
 
 Planned:
 
 - [ ] Weather panel and forecast
-- [ ] Installable phone app (PWA), with grocery lists in the aisle
+- [ ] **Native Android app** (Kotlin / Jetpack Compose) over the versioned API —
+      replaces the earlier PWA idea; see the roadmap and DECISIONS.md
 - [ ] Smooth drag-and-drop reordering
 
 ## Requirements

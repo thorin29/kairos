@@ -30,7 +30,7 @@ type NavItem = {
 
 // Fixed order, so the target you're aiming at never moves between pages.
 const NAV: NavItem[] = [
-  { href: "/", label: "Dashboard", color: "#0f5c63", icon: <HomeIcon className="h-6 w-6" /> },
+  { href: "/", label: "Home", color: "#0f5c63", icon: <HomeIcon className="h-6 w-6" /> },
   { href: "/calendar", label: "Calendar", color: "#2563eb", icon: <CalendarIcon className="h-6 w-6" /> },
   { href: "/chores", label: "Chores", color: "#d97706", icon: <ChoresIcon className="h-6 w-6" /> },
   { href: "/bible", label: "Bible reading", color: "#7c3aed", icon: <BibleIcon className="h-6 w-6" /> },

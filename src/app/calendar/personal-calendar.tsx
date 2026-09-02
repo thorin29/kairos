@@ -235,7 +235,7 @@ export async function PersonalCalendar({
                 todayISO={today}
                 currentDate={date}
                 dotsByDay={dotsByDay}
-                dayHref={(iso) => link({ date: iso })}
+                view={view}
               />
             )}
           </div>

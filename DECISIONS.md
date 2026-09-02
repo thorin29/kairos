@@ -19,6 +19,38 @@ the reason.
 
 ---
 
+## 2026-09 — No function props from Server to Client Components
+A Client Component (`"use client"`) must only receive serialisable props from a
+Server Component. Passing a function — e.g. an `hrefFor(iso)` builder or an
+event handler — compiles and even builds cleanly, then throws at render:
+"Functions cannot be passed directly to Client Components." Instead, pass the
+plain data the client needs and build the value inside the client (e.g. pass the
+current `view` string and construct `/calendar?view=…&date=…` there). Server
+Components may still pass functions to other Server Components, which is why the
+shared tablet calendar's `hrefForDay` into `MonthGrid`/`MiniMonth` is fine.
+
+Reason: this class of bug is invisible to both the local typecheck and the
+Docker build (it's a runtime serialisation error), so it only surfaces when the
+page actually renders. It bit the calendar month-dropdown once; worth keeping in
+mind especially as the Kotlin app adds more client/server boundaries.
+
+## 2026-09 — Sport events are never auto-counted; they always ask
+Calendar events that count as a sport workout — whether flagged on the event
+type or coming from a subscribed feed marked "counts as a sport workout" — no
+longer log a workout on their own. They surface a "did you do it?" prompt on the
+dashboard, and only become a logged SPORT session when the person confirms (a
+decline is remembered per person per occurrence). The old auto-logger
+(`autoLogSportFeeds`) is removed.
+
+Reason: auto-counting was both wrong and confusing. It credited a workout the
+person may not have done, and it dated events off the raw UTC timestamp, so an
+evening game slid onto the next day and could land in the wrong week. The prompt
+path already dates each occurrence in the household timezone and only counts on
+confirmation, so routing subscribed feeds through it fixes the day/week
+attribution and the false "completed" at once. "This week" on the activity card
+is the calendar week (Sunday–Saturday). Note: any SPORT sessions the old
+auto-logger already wrote stay in the data until cleared by hand.
+
 ## 2026-08 — Personal calendar: per-user preferences, colour precedence, native-first gestures (planned)
 Records the design agreed before building, so the plan survives across sessions.
 The signed-in ("personal") calendar becomes per-person; the shared wall tablet
