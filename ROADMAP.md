@@ -93,9 +93,12 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       household page — generate a one-time code (short code + QR), and list /
       revoke that person's enrolled devices. Independent of web login.
 - [~] Rest of the `/api/v1` surface. Built: auth `POST /auth/login` + `/auth/reauth` (v0.187–0.188 — the layered
-      login+code enrollment and the credential-version re-login gate), `GET /dashboard`
+      login+code enrollment and the credential-version re-login gate), device
+      visibility (v0.189 — `GET /devices` · `POST /devices/{id}/revoke` +
+      new-device email alert), `GET /dashboard`
       (v0.185), task completion, and day-level workouts (v0.186). Remaining:
-      detailed workout logging, rewards, calendar, reading, pool claim,
+      admin badge count + revoked-row hard-delete (web), detailed workout
+      logging, rewards, calendar, reading, pool claim,
       companions, devices (push), sync. Additive-only; logic reused from
       existing server code.
 - [ ] Add the Authelia bypass — now unblocked; scope it to **`/api/v1` only**

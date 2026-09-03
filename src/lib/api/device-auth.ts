@@ -7,6 +7,7 @@ import { avatarUrl, isIcon, iconGlyph } from "@/lib/avatars";
 import { apiError } from "@/lib/api/errors";
 import { bearerToken } from "@/lib/api/request";
 import { verifyLoginProof } from "@/lib/api/login-proof";
+import { sendNewDeviceEmail } from "@/lib/mail/send";
 
 /**
  * Per-person device tokens are the mobile client's identity (docs/API.md,
@@ -300,6 +301,46 @@ export async function revokeDevice(deviceId: string): Promise<void> {
     where: { id: deviceId },
     data: { revokedAt: new Date() },
   });
+}
+
+/** Revoke a device the caller actually owns (the app's self-service revoke). */
+export async function revokeOwnDevice(
+  deviceId: string,
+  userId: string,
+): Promise<"ok" | "not_found" | "forbidden"> {
+  const d = await prisma.device.findUnique({
+    where: { id: deviceId },
+    select: { userId: true },
+  });
+  if (!d) return "not_found";
+  if (d.userId !== userId) return "forbidden";
+  await prisma.device.update({
+    where: { id: deviceId },
+    data: { revokedAt: new Date() },
+  });
+  return "ok";
+}
+
+/** Best-effort "a new device was enrolled" alert to the person's email. Silent
+ *  when there's no email or SMTP isn't configured. Never throws. */
+export async function notifyNewDeviceEnrolled(
+  userId: string,
+  deviceName: string | null,
+): Promise<void> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true, displayName: true },
+    });
+    if (!user?.email) return;
+    await sendNewDeviceEmail(
+      user.email,
+      user.displayName ?? user.name,
+      deviceName ?? "A new phone",
+    );
+  } catch {
+    /* alerting is best-effort; never block enrollment on it */
+  }
 }
 
 export type DeviceSummary = {
