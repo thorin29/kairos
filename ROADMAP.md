@@ -109,7 +109,37 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       Android Keystore, configurable base URL (no host baked in), and a
       SessionState-gated flow Setup → Enroll (code entry) → Home; sign-out
       revokes. QR scan and the real dashboard are the next increment.
-- [ ] **Admin device panel — two deferred fixes** (web only, `src/app/setup`):
+#### Android app — build-out plan (parity with the personal/mobile web view)
+
+**Approach (agreed):** build the navigation shell first, then complete one
+section at a time to **full parity with its web personal page** — API endpoints
+(reads *and* writes) + native page + all sub-features — before starting the next
+section. No shipping a dashboard action-rail and jumping domains. The app is
+inherently single-person (the enrolled device is one person), so personal-view
+scoping is automatic.
+
+The eleven sections (from `src/components/sidebar.tsx`): Home, Calendar, Chores,
+Bible reading, Reading, School, Game time, Workouts, Groceries, Money,
+Characters. Each drawer entry keeps its web brand colour.
+
+- [~] **Phase 0 — navigation shell** (`kairos-app`): the drawer the top-left
+      logo opens, all eleven sections with active state, Devices + Sign out in
+      the drawer footer. Home is the real page; other sections show a placeholder
+      until built. (In progress.)
+- [ ] **Workouts — full parity** (chosen first, already in flight). Components
+      from `src/app/exercise`: today's plan card + weight/reps logging (have the
+      log), per-exercise **progress graph** (LineChart), **weight calculator**,
+      **browse exercises**, **plan + rotation** view, **history**. Server: a
+      workouts-board read (graph series, history, plan), the exercise pool.
+- [ ] **Bible reading — full parity.** Components from `src/app/bible`: today's
+      **personal reading plan** with chapters to check off, **streak/stats**,
+      **progress tabs**, **book progress**. Server: personal-plan read +
+      mark-chapter-read write. (Replaces the current dashboard tickbox.)
+- [ ] **Remaining sections, each to full parity** (enumerate components from the
+      web page at build time): Chores (full page), Calendar, Reading, School,
+      Game time, Groceries, Money, Characters.
+
+
       - **Persistent "Phone app" badge count.** Today `DeviceEnrollment` loads a
         person's devices lazily on expand (intentional — avoids N queries on the
         household page), so the count only appears after clicking. Fix without
