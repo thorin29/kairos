@@ -122,6 +122,10 @@ The eleven sections (from `src/components/sidebar.tsx`): Home, Calendar, Chores,
 Bible reading, Reading, School, Game time, Workouts, Groceries, Money,
 Characters. Each drawer entry keeps its web brand colour.
 
+- [ ] **App Settings menu** (`kairos-app`): a deeper settings area to hold
+      Devices (moved out of the nav rail to keep it clean) and later theme,
+      server, and account options. Until it exists, the Devices screen/route is
+      built but unlinked.
 - [~] **Phase 0 — navigation shell** (`kairos-app`): the drawer the top-left
       logo opens, all eleven sections with active state, Devices + Sign out in
       the drawer footer. Home is the real page; other sections show a placeholder
