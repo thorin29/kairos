@@ -198,3 +198,133 @@ export async function loadTodayPlannedWorkout(
 
   return { plannedWorkoutId: plan.id, name: plan.name, exercises };
 }
+
+/**
+ * A person's workout history and per-movement weight progress, for the Workouts
+ * page. Series = max weight per day per pool movement (the graph); history =
+ * recent sessions with a short label and result line.
+ */
+export type GraphPoint = { date: string; value: number };
+export type ProgressSeries = {
+  poolExerciseId: string;
+  name: string;
+  unit: string;
+  points: GraphPoint[];
+};
+export type WorkoutHistoryEntry = {
+  id: string;
+  date: string;
+  label: string;
+  result: string;
+  isRest: boolean;
+};
+export type WorkoutProgress = {
+  series: ProgressSeries[];
+  history: WorkoutHistoryEntry[];
+};
+
+export async function loadWorkoutProgress(
+  userId: string,
+): Promise<WorkoutProgress> {
+  const system = await loadWorkoutUnitSystem();
+  const weightUnit = metricUnit("WEIGHT" as Metric, system);
+
+  const [wSets, recent] = await Promise.all([
+    prisma.sessionSet.findMany({
+      where: {
+        session: { userId },
+        weight: { not: null },
+        poolExerciseId: { not: null },
+      },
+      select: {
+        weight: true,
+        poolExerciseId: true,
+        poolExercise: { select: { name: true } },
+        session: { select: { date: true } },
+      },
+    }),
+    prisma.workoutSession.findMany({
+      where: { userId },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: 20,
+      select: {
+        id: true,
+        date: true,
+        name: true,
+        isRest: true,
+        sets: {
+          orderBy: { setNumber: "asc" },
+          select: {
+            weight: true,
+            reps: true,
+            unit: true,
+            poolExercise: { select: { name: true } },
+          },
+        },
+      },
+    }),
+  ]);
+
+  // Series: max weight per day per pool movement.
+  const meta = new Map<string, string>();
+  const perDay = new Map<string, Map<string, number>>();
+  for (const s of wSets) {
+    if (s.weight == null || !s.poolExerciseId || !s.poolExercise) continue;
+    const id = s.poolExerciseId;
+    if (!meta.has(id)) meta.set(id, s.poolExercise.name);
+    const d = fromDateColumn(s.session.date);
+    const m = perDay.get(id) ?? new Map<string, number>();
+    m.set(d, Math.max(m.get(d) ?? 0, s.weight));
+    perDay.set(id, m);
+  }
+  const series: ProgressSeries[] = [...meta.entries()]
+    .map(([id, name]) => ({
+      poolExerciseId: id,
+      name,
+      unit: weightUnit,
+      points: [...perDay.get(id)!.entries()]
+        .map(([date, value]) => ({ date, value }))
+        .sort((a, b) => (a.date < b.date ? -1 : 1)),
+    }))
+    .filter((s) => s.points.length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const history: WorkoutHistoryEntry[] = recent.map((s) => ({
+    id: s.id,
+    date: fromDateColumn(s.date),
+    label: s.isRest ? "Rest day" : s.name?.trim() || "Workout",
+    result: s.isRest ? "" : historyResult(s.sets),
+    isRest: s.isRest,
+  }));
+
+  return { series, history };
+}
+
+function historyResult(
+  sets: {
+    weight: number | null;
+    reps: number | null;
+    unit: string | null;
+    poolExercise: { name: string } | null;
+  }[],
+): string {
+  if (sets.length === 0) return "";
+  if (sets.length === 1) {
+    const x = sets[0];
+    if (x.weight != null && x.reps != null) {
+      return `${trimNum(x.weight)}${x.unit ?? ""} × ${x.reps}`;
+    }
+    if (x.weight != null) return `${trimNum(x.weight)}${x.unit ?? ""}`;
+    return x.poolExercise?.name ?? "Logged";
+  }
+  const names = [
+    ...new Set(sets.map((x) => x.poolExercise?.name).filter((n): n is string => !!n)),
+  ];
+  if (names.length === 0) return `${sets.length} movements`;
+  const shown = names.slice(0, 3).join(", ");
+  return names.length > 3 ? `${shown} +${names.length - 3}` : shown;
+}
+
+function trimNum(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
