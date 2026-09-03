@@ -225,3 +225,85 @@ export async function logWorkoutSession(
 
   await completeWorkoutTask(userId, dateISO);
 }
+
+export type PlannedLogEntry = {
+  poolExerciseId: string;
+  metric: string;
+  value: number;
+  unit: string;
+};
+
+/**
+ * Log a planned workout (a named plan of shared pool movements, e.g. "Legs"):
+ * one value per movement, typed by its metric. Edit-friendly — reuses the day's
+ * session and replaces its sets — then completes the workout task. Mirrors the
+ * web's completePlannedWorkout, adapted to a single editable session per day.
+ */
+export async function logPlannedWorkout(
+  userId: string,
+  dateISO: string,
+  plannedWorkoutId: string,
+  entries: PlannedLogEntry[],
+): Promise<void> {
+  const plan = await prisma.plannedWorkout.findUnique({
+    where: { id: plannedWorkoutId },
+    select: { name: true, category: true, userId: true },
+  });
+  if (!plan || plan.userId !== userId) return;
+
+  const sessionId = await findOrCreateSession(userId, dateISO);
+  await prisma.workoutSession.update({
+    where: { id: sessionId },
+    data: {
+      name: plan.name,
+      category: plan.category,
+      finished: true,
+      isRest: false,
+    },
+  });
+  await prisma.sessionSet.deleteMany({ where: { sessionId } });
+
+  let setNumber = 0;
+  for (const e of entries) {
+    if (!Number.isFinite(e.value) || e.value <= 0) continue;
+    setNumber++;
+    const set: {
+      sessionId: string;
+      poolExerciseId: string | null;
+      setNumber: number;
+      unit: string | null;
+      finished: boolean;
+      weight?: number;
+      reps?: number;
+      distance?: number;
+      meters?: number;
+      seconds?: number;
+    } = {
+      sessionId,
+      poolExerciseId: e.poolExerciseId,
+      setNumber,
+      unit: e.unit || null,
+      finished: true,
+    };
+    switch (e.metric) {
+      case "WEIGHT":
+        set.weight = e.value;
+        break;
+      case "REPS":
+        set.reps = Math.round(e.value);
+        break;
+      case "DISTANCE":
+        set.distance = e.value;
+        break;
+      case "METERS":
+        set.meters = e.value;
+        break;
+      case "DURATION":
+        set.seconds = Math.round(e.value);
+        break;
+    }
+    await prisma.sessionSet.create({ data: set });
+  }
+
+  await completeWorkoutTask(userId, dateISO);
+}

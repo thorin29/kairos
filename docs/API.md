@@ -272,22 +272,22 @@ POST /api/v1/workouts/rest         mark a rest day (excuses the workout task)
 ```
 Shares the exact web logic (src/lib/workouts/mark.ts).
 
-**Detailed logging — built (v0.190, phase 1: weight × reps).**
+**Detailed logging — built (v0.191, phase 1: planned workouts).**
 ```
-GET  /api/v1/workouts?date=YYYY-MM-DD    the day's scheduled exercises to log
-200: { "date", "loggable": bool,
-       "exercises": [ { "exerciseId","name","unit","metric",
-                        "logged": { "weight": num|null, "reps": num|null } | null } ] }
+GET  /api/v1/workouts?date=YYYY-MM-DD    today's planned workout to log
+200: { "date", "loggable": bool, "plannedWorkoutId": str|null, "name": str|null,
+       "exercises": [ { "poolExerciseId","name","metric","unit","value": num|null } ] }
 
-POST /api/v1/workouts/log                log weight × reps and complete the workout
-request: { "date", "entries": [ { "exerciseId","weight": num|null,"reps": num|null } ], "notes"?: str }
+POST /api/v1/workouts/log                log one value per movement, complete it
+request: { "date","plannedWorkoutId","entries":[ { "poolExerciseId","metric","value":num,"unit" } ] }
 200:     { "date", "status": "worked" }
 ```
-`loggable` is false when nothing per-exercise is scheduled that day — the client
-falls back to the day-level actions above. Only the caller's own exercises are
-accepted; unknown ids are ignored. Records one summary set (setNumber 1) per
-exercise, mirroring the web scheduled-lift prompt. Non-weight metrics, multi-set,
-HIIT, and custom workouts are later phases.
+A planned workout (e.g. "Legs") is a named plan of shared pool movements; each
+logs a single value typed by its `metric` (WEIGHT/REPS/DISTANCE/METERS/DURATION),
+with `unit` from the household unit system. `loggable` is false when nothing is
+planned today — the client falls back to the day-level actions. Edit-friendly:
+re-logging replaces the day's session. HIIT, custom, and per-exercise weekday
+"scheduled lifts" are later phases.
 
 ### Companions (collectible creatures)
 ```
