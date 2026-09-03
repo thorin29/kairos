@@ -96,10 +96,11 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       login+code enrollment and the credential-version re-login gate), device
       visibility (v0.189 — `GET /devices` · `POST /devices/{id}/revoke` +
       new-device email alert), `GET /dashboard`
-      (v0.185), task completion, and day-level workouts (v0.186). Remaining:
-      admin badge count + revoked-row hard-delete (web), detailed workout
-      logging, rewards, calendar, reading, pool claim,
-      companions, devices (push), sync. Additive-only; logic reused from
+      (v0.185), task completion, and workouts — day-level (v0.186) plus detailed
+      weight × reps logging (v0.190, `GET /workouts` · `POST /workouts/log`).
+      Remaining: admin badge count + revoked-row hard-delete (web),
+      non-weight/multi-set/HIIT workout logging, rewards, calendar, reading,
+      pool claim, companions, push, sync. Additive-only; logic reused from
       existing server code.
 - [ ] Add the Authelia bypass — now unblocked; scope it to **`/api/v1` only**
       (DECISIONS.md). Infra change on the server, not in this repo.
@@ -108,6 +109,23 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       Android Keystore, configurable base URL (no host baked in), and a
       SessionState-gated flow Setup → Enroll (code entry) → Home; sign-out
       revokes. QR scan and the real dashboard are the next increment.
+- [ ] **Admin device panel — two deferred fixes** (web only, `src/app/setup`):
+      - **Persistent "Phone app" badge count.** Today `DeviceEnrollment` loads a
+        person's devices lazily on expand (intentional — avoids N queries on the
+        household page), so the count only appears after clicking. Fix without
+        making it eager: compute live-device counts for everyone in ONE grouped
+        query at the setup-page level (Device where `revokedAt` null and
+        `expiresAt` in future), thread the count into `AccountRow` →
+        `DeviceEnrollment` as an `initialCount` prop, and have the badge render
+        `loaded ? liveCount : initialCount`. The existing lazy full-list load
+        stays for the expanded view.
+      - **Hard-delete for revoked rows.** Add `deleteDevice(deviceId)` in
+        `src/lib/api/device-auth.ts` (`prisma.device.delete`), a
+        `deleteDeviceAction` (`requireAdmin`) in `src/lib/actions/enrollment.ts`,
+        and a trash-icon button on **revoked** rows in `device-enrollment.tsx`
+        (it already imports `TrashIcon` and has the revoke wiring to mirror). Soft
+        revoke stays the default; delete only clears already-revoked rows so the
+        list stops growing.
 - [ ] Rest of the native client (`kairos-app`): QR enrollment scan, dashboard +
       read screens, Room, WorkManager, FCM.
 - [ ] **Push notifications** via FCM, with typed deep-link targets
