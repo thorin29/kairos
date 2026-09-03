@@ -92,10 +92,9 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
 - [x] Admin enrollment UI (v0.179): a per-person "Phone app" panel on the
       household page — generate a one-time code (short code + QR), and list /
       revoke that person's enrolled devices. Independent of web login.
-- [~] Rest of the `/api/v1` surface. Built: auth `POST /auth/login` (v0.187 —
-      login proof for the layered login+code enrollment), `GET /dashboard`
+- [~] Rest of the `/api/v1` surface. Built: auth `POST /auth/login` + `/auth/reauth` (v0.187–0.188 — the layered
+      login+code enrollment and the credential-version re-login gate), `GET /dashboard`
       (v0.185), task completion, and day-level workouts (v0.186). Remaining:
-      device `credentialVersion` gate (re-login on password change, Increment B),
       detailed workout logging, rewards, calendar, reading, pool claim,
       companions, devices (push), sync. Additive-only; logic reused from
       existing server code.

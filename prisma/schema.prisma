@@ -765,6 +765,7 @@ model Device {
   expiresAt  DateTime
   lastSeenAt DateTime?
   revokedAt  DateTime? // soft-revoke; a revoked row never verifies
+  credentialVersion Int @default(0) // password version this device last authenticated at
   createdAt  DateTime  @default(now())
 
   @@index([userId])

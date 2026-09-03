@@ -269,10 +269,11 @@ deployment the account password must be the gate (Authelia can't be assumed for
 others running Kairos). Requiring both factors means a leaked password can't
 enrol a new device and a leaked code can't impersonate a password-holder. The
 no-password path stays only for passwordless kiosk/shared mode and local testing.
-**Deferred (Increment B):** a `credentialVersion` column on `Device` so changing
-or disabling a password forces the phone to sign in again while staying enrolled
-(the device row persists; only re-auth is required). Explicit revoke still cuts a
-device off entirely.
+**Increment B (done, v0.188):** a `credentialVersion` column on `Device` records
+the password version it authenticated at. When a password account's version
+bumps (password change/disable), every request returns `reauth_required`; the
+phone stays enrolled and clears it via `/auth/reauth` (password only). Explicit
+revoke still cuts a device off entirely. Passwordless children are never gated.
 
 ## 2026-09 — Scoped `/api/v1` Authelia bypass: rule specified
 **Decision:** the public-domain bypass is a single Authelia `access_control`
