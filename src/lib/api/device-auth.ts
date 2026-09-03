@@ -6,6 +6,7 @@ import { hashToken } from "@/lib/auth";
 import { avatarUrl, isIcon, iconGlyph } from "@/lib/avatars";
 import { apiError } from "@/lib/api/errors";
 import { bearerToken } from "@/lib/api/request";
+import { verifyLoginProof } from "@/lib/api/login-proof";
 
 /**
  * Per-person device tokens are the mobile client's identity (docs/API.md,
@@ -131,36 +132,65 @@ export async function issueEnrollmentCode(
 }
 
 /**
+ * Outcome of redeeming a code. `login_required` means the target account has a
+ * password and no valid login proof accompanied the code; `reauth` means a proof
+ * was supplied but the password changed since (stale). Both tell the client to
+ * sign in (again) before entering the code. Passwordless accounts (kids) never
+ * hit these — a parent-issued code alone enrols them.
+ */
+export type RedeemResult =
+  | { ok: true; token: string; expiresAt: Date; person: EnrolledPerson }
+  | { ok: false; reason: "invalid" | "login_required" | "reauth" };
+
+/**
  * Redeem an enrollment code: mint a device token bound to the code's person and
- * consume the code. Returns null for any bad, expired, or inactive-person code
- * without saying which — the caller maps that to a single opaque error.
+ * consume the code. A password account additionally requires a matching login
+ * proof (login + code); a passwordless account enrols by code alone. The code is
+ * only consumed on success, so a "sign in first" outcome doesn't burn it.
  */
 export async function redeemEnrollmentCode(
   rawCode: string,
   deviceName: string | null,
-): Promise<{ token: string; expiresAt: Date; person: EnrolledPerson } | null> {
+  loginToken?: string | null,
+): Promise<RedeemResult> {
   const norm = normalizeCode(rawCode);
-  if (norm.length !== CODE_LEN) return null;
+  if (norm.length !== CODE_LEN) return { ok: false, reason: "invalid" };
+
+  // Verify the proof (if any) up front; it doesn't need the transaction.
+  const proof = loginToken ? await verifyLoginProof(loginToken) : null;
 
   return prisma.$transaction(async (tx) => {
     const rec = await tx.enrollmentCode.findUnique({
       where: { codeHash: hashToken(norm) },
       select: { userId: true, expiresAt: true },
     });
-    if (!rec) return null;
+    if (!rec) return { ok: false, reason: "invalid" };
     if (rec.expiresAt < new Date()) {
       await tx.enrollmentCode.deleteMany({ where: { userId: rec.userId } });
-      return null;
+      return { ok: false, reason: "invalid" };
     }
 
     const user = await tx.user.findUnique({
       where: { id: rec.userId },
-      select: personSelect,
+      select: { ...personSelect, passwordHash: true, credentialVersion: true },
     });
-    // Code is single-use regardless of outcome.
-    await tx.enrollmentCode.deleteMany({ where: { userId: rec.userId } });
-    if (!user || !user.isActive) return null;
+    if (!user || !user.isActive) {
+      await tx.enrollmentCode.deleteMany({ where: { userId: rec.userId } });
+      return { ok: false, reason: "invalid" };
+    }
 
+    // Layered gate: password accounts need login + code for the same person.
+    if (user.passwordHash) {
+      if (!proof || proof.userId !== user.id) {
+        return { ok: false, reason: "login_required" };
+      }
+      if (proof.credV !== user.credentialVersion) {
+        return { ok: false, reason: "reauth" };
+      }
+    }
+
+    // Success: consume the code and mint the device token.
+    await tx.enrollmentCode.deleteMany({ where: { userId: user.id } });
     const secret = newSecret();
     const expiresAt = new Date(Date.now() + DEVICE_TOKEN_DAYS * 86_400_000);
     await tx.device.create({
@@ -173,8 +203,18 @@ export async function redeemEnrollmentCode(
       select: { id: true },
     });
 
-    return { token: secret, expiresAt, person: toPerson(user) };
+    return { ok: true, token: secret, expiresAt, person: toPerson(user) };
   });
+}
+
+/** The wire person for an authenticated user id (used by /auth/login). */
+export async function personPayloadById(userId: string) {
+  const row = await prisma.user.findUnique({
+    where: { id: userId },
+    select: personSelect,
+  });
+  if (!row || !row.isActive) return null;
+  return personPayload(toPerson(row));
 }
 
 /**

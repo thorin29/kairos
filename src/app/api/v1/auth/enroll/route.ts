@@ -34,6 +34,8 @@ export async function POST(req: NextRequest) {
   const code = typeof raw?.code === "string" ? raw.code : "";
   const deviceName =
     typeof raw?.deviceName === "string" ? raw.deviceName : null;
+  const loginToken =
+    typeof raw?.loginToken === "string" ? raw.loginToken : null;
 
   if (!code.trim()) {
     return apiError("validation", "An enrollment code is required.", {
@@ -41,8 +43,20 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const result = await redeemEnrollmentCode(code, deviceName);
-  if (!result) {
+  const result = await redeemEnrollmentCode(code, deviceName, loginToken);
+  if (!result.ok) {
+    if (result.reason === "login_required") {
+      return apiError(
+        "unauthenticated",
+        "Sign in with your password first, then enter your code.",
+      );
+    }
+    if (result.reason === "reauth") {
+      return apiError(
+        "unauthenticated",
+        "Your sign-in expired — sign in again, then enter your code.",
+      );
+    }
     return apiError(
       "forbidden",
       "That enrollment code is invalid or has expired.",
