@@ -279,11 +279,30 @@ and will add `GET /api/v1/workouts` (plan + pool) and a set-entry POST.
 GET  /api/v1/companions         this person's roster
 ```
 
-### Devices & notifications
+### Devices — **built (v0.189)**
+This person's own devices, so anyone can see what's enrolled and revoke a phone
+they don't recognise without the admin panel. On enrollment the person is
+emailed a "new device added" alert (when SMTP is configured and they have an
+email) — the tripwire for an unexpected enrollment.
 ```
-POST /api/v1/devices            register FCM push token for this device
-DELETE /api/v1/devices          drop this device's push token
-GET  /api/v1/notifications      recent notifications for deep-linking
+GET  /api/v1/devices               this person's devices
+200: { "devices": [
+        { "id","name": string|null,
+          "enrolledAt": ISO, "lastSeenAt": ISO|null,
+          "status": "active" | "expired" | "revoked",
+          "current": bool } ] }     // current = the calling device
+
+POST /api/v1/devices/{id}/revoke   revoke one of your own devices
+200: { "id", "revoked": true }
+403: forbidden   — not your device
+404: not_found
+```
+
+### Push & notifications — proposal
+```
+POST   /api/v1/devices/push        register FCM push token for this device
+DELETE /api/v1/devices/push        drop this device's push token
+GET    /api/v1/notifications       recent notifications for deep-linking
 ```
 
 ### Sync

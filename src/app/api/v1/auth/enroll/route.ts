@@ -1,6 +1,10 @@
 import type { NextRequest } from "next/server";
 import { apiError, apiOk } from "@/lib/api/errors";
-import { redeemEnrollmentCode, personPayload } from "@/lib/api/device-auth";
+import {
+  redeemEnrollmentCode,
+  personPayload,
+  notifyNewDeviceEnrolled,
+} from "@/lib/api/device-auth";
 import { clientIp } from "@/lib/api/request";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -62,6 +66,9 @@ export async function POST(req: NextRequest) {
       "That enrollment code is invalid or has expired.",
     );
   }
+
+  // Tripwire: let the person know a device was just added to their account.
+  await notifyNewDeviceEnrolled(result.person.id, deviceName);
 
   return apiOk({
     token: result.token,

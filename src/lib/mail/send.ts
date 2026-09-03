@@ -103,6 +103,51 @@ export async function sendInviteEmail(
   }
 }
 
+/** Alert a person that a new device was just enrolled to their account — the
+ *  tripwire for an unexpected enrollment. No-op when SMTP isn't configured or
+ *  the person has no email. */
+export async function sendNewDeviceEmail(
+  to: string,
+  name: string,
+  deviceName: string,
+): Promise<{ sent: boolean; error?: string }> {
+  const cfg = await resolveSmtp();
+  if (!cfg.configured) return { sent: false };
+
+  const device = deviceName.trim() || "A new phone";
+  const text = [
+    `Hi ${name},`,
+    "",
+    `${device} was just enrolled to your Kairos account.`,
+    "If this was you, no action is needed.",
+    "If it wasn't, open Kairos on a device you trust, revoke it under",
+    "Settings → Devices, and change your password.",
+  ].join("\n");
+
+  const html = `
+    <div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:#111">
+      <p>Hi ${escapeHtml(name)},</p>
+      <p><strong>${escapeHtml(device)}</strong> was just enrolled to your Kairos
+         account.</p>
+      <p>If this was you, no action is needed. If it wasn't, open Kairos on a
+         device you trust, revoke it under <em>Settings → Devices</em>, and
+         change your password.</p>
+    </div>`;
+
+  try {
+    await transportFor(cfg).sendMail({
+      from: fromLine(cfg),
+      to,
+      subject: "New device added to your Kairos account",
+      text,
+      html,
+    });
+    return { sent: true };
+  } catch (e) {
+    return { sent: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
