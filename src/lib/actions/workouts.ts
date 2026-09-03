@@ -27,6 +27,7 @@ import {
   findOrCreateSession,
   setWorkedOut,
   setRestDay,
+  logWorkoutSession,
 } from "@/lib/workouts/mark";
 
 function refresh() {
@@ -304,67 +305,10 @@ export async function logSession(input: {
   await requireInteractive();
   await requireCanActFor(input.userId);
   if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
-
-  const sessionId = await findOrCreateSession(input.userId, input.dateISO);
-
-  await prisma.workoutSession.update({
-    where: { id: sessionId },
-    data: {
-      finished: input.finished ?? true,
-      isRest: false,
-      ...(input.notes !== undefined ? { notes: input.notes.slice(0, 300) } : {}),
-    },
+  await logWorkoutSession(input.userId, input.dateISO, input.entries, {
+    finished: input.finished,
+    notes: input.notes,
   });
-
-  for (const e of input.entries) {
-    const hasValue =
-      e.weight != null ||
-      e.reps != null ||
-      e.distance != null ||
-      e.meters != null ||
-      e.seconds != null;
-    if (!e.exerciseId) continue;
-
-    if (!hasValue) {
-      await prisma.sessionSet.deleteMany({
-        where: { sessionId, exerciseId: e.exerciseId, setNumber: 1 },
-      });
-      continue;
-    }
-
-    await prisma.sessionSet.upsert({
-      where: {
-        sessionId_exerciseId_setNumber: {
-          sessionId,
-          exerciseId: e.exerciseId,
-          setNumber: 1,
-        },
-      },
-      update: {
-        weight: e.weight ?? null,
-        reps: e.reps ?? null,
-        distance: e.distance ?? null,
-        meters: e.meters ?? null,
-        seconds: e.seconds ?? null,
-        unit: e.unit ?? null,
-        finished: e.finished ?? true,
-      },
-      create: {
-        sessionId,
-        exerciseId: e.exerciseId,
-        setNumber: 1,
-        weight: e.weight ?? null,
-        reps: e.reps ?? null,
-        distance: e.distance ?? null,
-        meters: e.meters ?? null,
-        seconds: e.seconds ?? null,
-        unit: e.unit ?? null,
-        finished: e.finished ?? true,
-      },
-    });
-  }
-
-  await completeWorkoutTask(input.userId, input.dateISO);
   refresh();
 }
 

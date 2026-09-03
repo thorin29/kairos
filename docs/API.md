@@ -270,9 +270,24 @@ POST /api/v1/workouts/uncomplete   undo a quick "worked out" (empty sessions onl
 POST /api/v1/workouts/rest         mark a rest day (excuses the workout task)
 200: { "date", "status": "worked" | "pending" | "rest" }
 ```
-Shares the exact web logic (src/lib/workouts/mark.ts). Detailed logging —
-per-exercise weights/reps/duration via the planned-workout logger — is phase 2
-and will add `GET /api/v1/workouts` (plan + pool) and a set-entry POST.
+Shares the exact web logic (src/lib/workouts/mark.ts).
+
+**Detailed logging — built (v0.190, phase 1: weight × reps).**
+```
+GET  /api/v1/workouts?date=YYYY-MM-DD    the day's scheduled exercises to log
+200: { "date", "loggable": bool,
+       "exercises": [ { "exerciseId","name","unit","metric",
+                        "logged": { "weight": num|null, "reps": num|null } | null } ] }
+
+POST /api/v1/workouts/log                log weight × reps and complete the workout
+request: { "date", "entries": [ { "exerciseId","weight": num|null,"reps": num|null } ], "notes"?: str }
+200:     { "date", "status": "worked" }
+```
+`loggable` is false when nothing per-exercise is scheduled that day — the client
+falls back to the day-level actions above. Only the caller's own exercises are
+accepted; unknown ids are ignored. Records one summary set (setNumber 1) per
+exercise, mirroring the web scheduled-lift prompt. Non-weight metrics, multi-set,
+HIIT, and custom workouts are later phases.
 
 ### Companions (collectible creatures)
 ```

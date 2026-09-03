@@ -140,3 +140,88 @@ export async function setRestDay(
   }
   await skipWorkoutTask(userId, dateISO);
 }
+
+export type WorkoutLogEntry = {
+  exerciseId: string;
+  weight?: number | null;
+  reps?: number | null;
+  distance?: number | null;
+  meters?: number | null;
+  seconds?: number | null;
+  unit?: string | null;
+  finished?: boolean;
+};
+
+/**
+ * The guard-free core of logSession, shared by the web action and the mobile
+ * API. Records one summary set (setNumber 1) per exercise on the day's session
+ * and completes the workout task. An entry with no values clears that exercise's
+ * set. Mirrors the web's logSession exactly.
+ */
+export async function logWorkoutSession(
+  userId: string,
+  dateISO: string,
+  entries: WorkoutLogEntry[],
+  opts?: { finished?: boolean; notes?: string },
+): Promise<void> {
+  const sessionId = await findOrCreateSession(userId, dateISO);
+
+  await prisma.workoutSession.update({
+    where: { id: sessionId },
+    data: {
+      finished: opts?.finished ?? true,
+      isRest: false,
+      ...(opts?.notes !== undefined ? { notes: opts.notes.slice(0, 300) } : {}),
+    },
+  });
+
+  for (const e of entries) {
+    if (!e.exerciseId) continue;
+    const hasValue =
+      e.weight != null ||
+      e.reps != null ||
+      e.distance != null ||
+      e.meters != null ||
+      e.seconds != null;
+
+    if (!hasValue) {
+      await prisma.sessionSet.deleteMany({
+        where: { sessionId, exerciseId: e.exerciseId, setNumber: 1 },
+      });
+      continue;
+    }
+
+    await prisma.sessionSet.upsert({
+      where: {
+        sessionId_exerciseId_setNumber: {
+          sessionId,
+          exerciseId: e.exerciseId,
+          setNumber: 1,
+        },
+      },
+      update: {
+        weight: e.weight ?? null,
+        reps: e.reps ?? null,
+        distance: e.distance ?? null,
+        meters: e.meters ?? null,
+        seconds: e.seconds ?? null,
+        unit: e.unit ?? null,
+        finished: e.finished ?? true,
+      },
+      create: {
+        sessionId,
+        exerciseId: e.exerciseId,
+        setNumber: 1,
+        weight: e.weight ?? null,
+        reps: e.reps ?? null,
+        distance: e.distance ?? null,
+        meters: e.meters ?? null,
+        seconds: e.seconds ?? null,
+        unit: e.unit ?? null,
+        finished: e.finished ?? true,
+      },
+    });
+  }
+
+  await completeWorkoutTask(userId, dateISO);
+}
