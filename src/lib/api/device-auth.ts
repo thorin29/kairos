@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashToken } from "@/lib/auth";
+import { hashToken, verifyPassword } from "@/lib/auth";
 import { avatarUrl, isIcon, iconGlyph } from "@/lib/avatars";
 import { apiError } from "@/lib/api/errors";
 import { bearerToken } from "@/lib/api/request";
@@ -199,6 +199,7 @@ export async function redeemEnrollmentCode(
         name: deviceName?.trim() || null,
         tokenHash: hashToken(secret),
         expiresAt,
+        credentialVersion: user.credentialVersion,
       },
       select: { id: true },
     });
@@ -222,24 +223,48 @@ export async function personPayloadById(userId: string) {
  * revoked, expired, and inactive-person tokens. Full identity lives here on the
  * server, never trusted from the client.
  */
+export type DeviceAuthResult =
+  | { status: "ok"; device: AuthedDevice }
+  /** Valid token, but a password account rotated its password — the device stays
+   *  enrolled and must re-authenticate (POST /auth/reauth) to continue. */
+  | { status: "reauth"; device: AuthedDevice }
+  | { status: "invalid" };
+
 export async function authenticateDevice(
   token: string,
-): Promise<AuthedDevice | null> {
-  if (!token) return null;
+): Promise<DeviceAuthResult> {
+  if (!token) return { status: "invalid" };
   const device = await prisma.device.findUnique({
     where: { tokenHash: hashToken(token) },
     select: {
       id: true,
       expiresAt: true,
       revokedAt: true,
-      user: { select: personSelect },
+      credentialVersion: true,
+      user: {
+        select: { ...personSelect, passwordHash: true, credentialVersion: true },
+      },
     },
   });
-  if (!device) return null;
-  if (device.revokedAt) return null;
-  if (device.expiresAt < new Date()) return null;
-  if (!device.user.isActive) return null;
-  return { deviceId: device.id, person: toPerson(device.user) };
+  if (!device) return { status: "invalid" };
+  if (device.revokedAt) return { status: "invalid" };
+  if (device.expiresAt < new Date()) return { status: "invalid" };
+  if (!device.user.isActive) return { status: "invalid" };
+
+  const authed: AuthedDevice = {
+    deviceId: device.id,
+    person: toPerson(device.user),
+  };
+
+  // Only password accounts are gated. A passwordless child never bumps its
+  // credentialVersion, so its device is never asked to re-authenticate.
+  if (
+    device.user.passwordHash &&
+    device.credentialVersion !== device.user.credentialVersion
+  ) {
+    return { status: "reauth", device: authed };
+  }
+  return { status: "ok", device: authed };
 }
 
 /** Record activity. Best-effort; a failure here must not fail the request. */
@@ -315,12 +340,65 @@ export async function requireDevice(
   if (!token) {
     return { response: apiError("unauthenticated", "Missing bearer token.") };
   }
-  const device = await authenticateDevice(token);
-  if (!device) {
+  const result = await authenticateDevice(token);
+  if (result.status === "invalid") {
     return {
       response: apiError("unauthenticated", "Invalid or expired token."),
     };
   }
-  await touchDevice(device.deviceId);
-  return { device };
+  if (result.status === "reauth") {
+    return {
+      response: apiError(
+        "reauth_required",
+        "Sign in again to continue.",
+      ),
+    };
+  }
+  await touchDevice(result.device.deviceId);
+  return { device: result.device };
+}
+
+/**
+ * Like requireDevice but accepts a device whose credential version is stale —
+ * this is exactly the state /auth/reauth exists to clear. Still rejects a
+ * revoked/expired/invalid token.
+ */
+export async function requireDeviceForReauth(
+  req: NextRequest,
+): Promise<{ device: AuthedDevice } | { response: NextResponse }> {
+  const token = bearerToken(req);
+  if (!token) {
+    return { response: apiError("unauthenticated", "Missing bearer token.") };
+  }
+  const result = await authenticateDevice(token);
+  if (result.status === "invalid") {
+    return {
+      response: apiError("unauthenticated", "Invalid or expired token."),
+    };
+  }
+  await touchDevice(result.device.deviceId);
+  return { device: result.device };
+}
+
+/**
+ * Verify the person's password and bring the device's credential version up to
+ * date, clearing the reauth state without re-enrolling. Returns false on a wrong
+ * or missing password.
+ */
+export async function setDeviceReauthed(
+  deviceId: string,
+  userId: string,
+  password: string,
+): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true, credentialVersion: true },
+  });
+  if (!user?.passwordHash) return false;
+  if (!verifyPassword(password, user.passwordHash)) return false;
+  await prisma.device.update({
+    where: { id: deviceId },
+    data: { credentialVersion: user.credentialVersion },
+  });
+  return true;
 }

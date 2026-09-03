@@ -166,6 +166,22 @@ re-enrolling needs a fresh code from a parent.
 401:      unauthenticated
 ```
 
+**`POST /auth/reauth`** — bearer required (v0.188). For a password account, any
+request returns **`401 reauth_required`** once the account's password is changed
+or disabled — the device stays enrolled but must re-confirm the password. This
+endpoint takes the password and brings the device current, with no re-enroll.
+Passwordless children never see this.
+```
+request:  { "password": "…" }
+200:      { "person": { …see /me… } }
+401:      unauthenticated — wrong password (or bad/revoked token)
+422:      validation      — password missing
+429:      rate_limited
+```
+Clients treat `reauth_required` differently from `unauthenticated`: keep the
+device token, show a password prompt, call `/auth/reauth`. Only a plain
+`unauthenticated` (bad/expired/revoked token) means re-enroll from scratch.
+
 **`GET /me`** — bearer required. The person this device is enrolled to.
 ```
 200:      { "id": "clx…",
