@@ -293,9 +293,32 @@ POST /api/v1/rewards/{id}/redeem
 GET  /api/v1/ledger             this person's transactions
 ```
 
-### Calendar
+### Calendar — **Phase 1 built (v0.210): read-only Month / Agenda / Day**
+The person's own calendar for a view + date, mirroring the web personal calendar
+(src/app/calendar/personal-calendar.tsx): events with colours already resolved
+from their saved prefs, respecting their saved people/family/school-work/
+subscription filters, plus the month grid + dots for the picker. Read-only —
+editing, the options drawer, the time-grid views (week/3-day), and the colour
+controls are later phases.
 ```
-GET  /api/v1/calendar           events in a window (?from=&to=), person-filtered
+GET  /api/v1/calendar           ?view=(month|week|three_day|day|agenda) &date=YYYY-MM-DD
+                                 both optional; fall back to saved view + today
+200: { "today","view","date","heading",
+       "rangeDays": [ "YYYY-MM-DD", … ],       // days this view covers
+       "prevDate","nextDate",                   // paging anchors for this view
+       "events": [ CalEvent, … ],               // in-range, filtered + recoloured
+       "monthDays": [ "YYYY-MM-DD", … ],        // 42-day grid for date's month
+       "monthDots": { "YYYY-MM-DD": [ "#rrggbb", … ] } }  // ≤3 colours/day
+```
+`CalEvent` on the wire:
+```
+{ "id","eventId","title","location":str|null,"dayISO",
+  "allDay":bool,"startMin":int,"endMin":int,"timeLabel":"9:00 AM",
+  "color":"#rrggbb","memberColors":[ "#rrggbb", … ],   // >1 = shared, paint bands
+  "isFamily":bool,"shade":bool,"kind":"APPOINTMENT",
+  "ownerName","calendarName":str|null,
+  "recurring":bool,"recurLabel":str|null,"external":bool,
+  "schoolType":str|null,"schoolClassName":str|null }
 ```
 
 ### Bible reading — **built (v0.204)**
