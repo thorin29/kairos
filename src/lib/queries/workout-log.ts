@@ -220,27 +220,36 @@ export type WorkoutHistoryEntry = {
 };
 export type WorkoutProgress = {
   series: ProgressSeries[];
+  /** Which movement to show by default: today's tracked weights, or the next
+   *  day that has one. Null when there's nothing to graph. */
+  defaultId: string | null;
   history: WorkoutHistoryEntry[];
 };
 
 export async function loadWorkoutProgress(
   userId: string,
+  todayISO: string,
 ): Promise<WorkoutProgress> {
   const system = await loadWorkoutUnitSystem();
   const weightUnit = metricUnit("WEIGHT" as Metric, system);
+  const dow = dayOfWeek(todayISO);
 
-  const [wSets, recent] = await Promise.all([
-    prisma.sessionSet.findMany({
-      where: {
-        session: { userId },
-        weight: { not: null },
-        poolExerciseId: { not: null },
-      },
+  const [plans, recent] = await Promise.all([
+    prisma.plannedWorkout.findMany({
+      where: { userId },
       select: {
-        weight: true,
-        poolExerciseId: true,
-        poolExercise: { select: { name: true } },
-        session: { select: { date: true } },
+        dayOfWeek: true,
+        isRest: true,
+        category: true,
+        exercises: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            poolExerciseId: true,
+            tracked: true,
+            metric: true,
+            poolExercise: { select: { name: true, category: true } },
+          },
+        },
       },
     }),
     prisma.workoutSession.findMany({
@@ -265,29 +274,79 @@ export async function loadWorkoutProgress(
     }),
   ]);
 
-  // Series: max weight per day per pool movement.
-  const meta = new Map<string, string>();
+  // The person's tracked weight movements (the only ones graphed / selectable).
+  const isWeight = (poolCat: string | null, metric: string | null) =>
+    poolCat === "WEIGHTS" || metric === "WEIGHT";
+  const trackedNames = new Map<string, string>();
+  for (const p of plans) {
+    for (const e of p.exercises) {
+      if (e.tracked && isWeight(e.poolExercise.category, e.metric)) {
+        trackedNames.set(e.poolExerciseId, e.poolExercise.name);
+      }
+    }
+  }
+  const trackedIds = [...trackedNames.keys()];
+
+  // Max weight per day for those movements.
+  const wSets = trackedIds.length
+    ? await prisma.sessionSet.findMany({
+        where: {
+          session: { userId },
+          weight: { not: null },
+          poolExerciseId: { in: trackedIds },
+        },
+        select: {
+          weight: true,
+          poolExerciseId: true,
+          session: { select: { date: true } },
+        },
+      })
+    : [];
   const perDay = new Map<string, Map<string, number>>();
   for (const s of wSets) {
-    if (s.weight == null || !s.poolExerciseId || !s.poolExercise) continue;
-    const id = s.poolExerciseId;
-    if (!meta.has(id)) meta.set(id, s.poolExercise.name);
+    if (s.weight == null || !s.poolExerciseId) continue;
     const d = fromDateColumn(s.session.date);
-    const m = perDay.get(id) ?? new Map<string, number>();
+    const m = perDay.get(s.poolExerciseId) ?? new Map<string, number>();
     m.set(d, Math.max(m.get(d) ?? 0, s.weight));
-    perDay.set(id, m);
+    perDay.set(s.poolExerciseId, m);
   }
-  const series: ProgressSeries[] = [...meta.entries()]
+
+  const series: ProgressSeries[] = [...trackedNames.entries()]
     .map(([id, name]) => ({
       poolExerciseId: id,
       name,
       unit: weightUnit,
-      points: [...perDay.get(id)!.entries()]
+      points: [...(perDay.get(id)?.entries() ?? [])]
         .map(([date, value]) => ({ date, value }))
         .sort((a, b) => (a.date < b.date ? -1 : 1)),
     }))
-    .filter((s) => s.points.length > 0)
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  // Default: today's tracked weights, else the next day that has some.
+  const weightsOn = (d: number): string[] =>
+    plans
+      .filter((p) => p.dayOfWeek === d && p.category === "WEIGHTS" && !p.isRest)
+      .flatMap((p) =>
+        p.exercises
+          .filter((e) => e.tracked && isWeight(e.poolExercise.category, e.metric))
+          .map((e) => e.poolExerciseId),
+      );
+  let defaultId: string | null = weightsOn(dow)[0] ?? null;
+  if (!defaultId) {
+    for (let i = 1; i <= 7; i++) {
+      const found = weightsOn((dow + i) % 7)[0];
+      if (found) {
+        defaultId = found;
+        break;
+      }
+    }
+  }
+  if (!defaultId) {
+    defaultId =
+      series.find((s) => s.points.length > 0)?.poolExerciseId ??
+      series[0]?.poolExerciseId ??
+      null;
+  }
 
   const history: WorkoutHistoryEntry[] = recent.map((s) => ({
     id: s.id,
@@ -297,7 +356,7 @@ export async function loadWorkoutProgress(
     isRest: s.isRest,
   }));
 
-  return { series, history };
+  return { series, defaultId, history };
 }
 
 function historyResult(
