@@ -2,6 +2,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
+import { CATEGORY_LABEL, type WorkoutCategory } from "@/lib/workouts/catalog";
 
 /**
  * The guard-free core of workout completion, shared by the web server action
@@ -322,4 +323,102 @@ export async function deleteWorkoutSessionOwned(
   if (s.userId !== userId) return "forbidden";
   await prisma.workoutSession.delete({ where: { id: sessionId } });
   return "ok";
+}
+
+export type CustomLogInput = {
+  poolExerciseId?: string | null;
+  category?: string | null; // WorkoutCategory, for metric-only logs (a run, a row)
+  metric: string;
+  value: number;
+  unit: string;
+  load?: number | null;
+  notes?: string;
+};
+
+/**
+ * Log an ad-hoc "different workout" — a pool movement or a metric-only activity.
+ * Each is its own named session (a day can hold several). Mirrors the web's
+ * logCustomWorkout; completes the workout task.
+ */
+export async function logCustomEntry(
+  userId: string,
+  dateISO: string,
+  input: CustomLogInput,
+): Promise<void> {
+  if (!Number.isFinite(input.value) || input.value <= 0) return;
+
+  let name: string;
+  let category: WorkoutCategory;
+  let poolExerciseId: string | null = null;
+  if (input.poolExerciseId) {
+    const pool = await prisma.poolExercise.findUnique({
+      where: { id: input.poolExerciseId },
+      select: { name: true, category: true },
+    });
+    if (!pool) return;
+    name = pool.name;
+    category = pool.category as WorkoutCategory;
+    poolExerciseId = input.poolExerciseId;
+  } else if (input.category) {
+    category = input.category as WorkoutCategory;
+    name = CATEGORY_LABEL[category];
+  } else {
+    return;
+  }
+
+  const unit = input.unit.trim().slice(0, 8);
+  const date = toDateColumn(dateISO);
+  const session = await prisma.workoutSession.create({
+    data: {
+      userId,
+      date,
+      name,
+      category,
+      finished: true,
+      isRest: false,
+      notes: input.notes?.slice(0, 300) || null,
+    },
+  });
+
+  const set: {
+    sessionId: string;
+    poolExerciseId: string | null;
+    setNumber: number;
+    unit: string | null;
+    finished: boolean;
+    weight?: number;
+    reps?: number;
+    distance?: number;
+    meters?: number;
+    seconds?: number;
+  } = {
+    sessionId: session.id,
+    poolExerciseId,
+    setNumber: 1,
+    unit: unit || null,
+    finished: true,
+  };
+  switch (input.metric) {
+    case "WEIGHT":
+      set.weight = input.value;
+      break;
+    case "REPS":
+      set.reps = Math.round(input.value);
+      break;
+    case "DISTANCE":
+      set.distance = input.value;
+      break;
+    case "METERS":
+      set.meters = input.value;
+      break;
+    case "DURATION":
+      set.seconds = Math.round(input.value);
+      break;
+  }
+  if (input.load != null && input.load > 0 && set.weight == null) {
+    set.weight = input.load;
+  }
+  await prisma.sessionSet.create({ data: set });
+
+  await completeWorkoutTask(userId, dateISO);
 }

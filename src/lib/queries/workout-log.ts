@@ -328,3 +328,98 @@ function historyResult(
 function trimNum(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
+
+/**
+ * Everything the "Log a different workout" form needs: the loggable categories
+ * (each with its metric choices and units) and the shared exercise pool.
+ * Mirrors the web's CustomWorkoutForm config (workouts-grid.tsx). HIIT is
+ * omitted for now (it uses a dedicated builder).
+ */
+export type MetricOption = { key: string; label: string; unit: string };
+export type LogCategory = {
+  key: string;
+  label: string;
+  isPool: boolean;
+  metrics: MetricOption[];
+  load: boolean;
+};
+export type PoolExerciseLite = { id: string; name: string; category: string };
+export type WorkoutPool = {
+  categories: LogCategory[];
+  exercises: PoolExerciseLite[];
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  WEIGHTS: "Weights",
+  RUNNING: "Running",
+  ROWING: "Rowing",
+  SPORT: "Sport",
+  STRETCHING: "Stretching",
+  ISOMETRIC: "Isometric",
+  RUCKING: "Rucking",
+};
+const METRIC_LABELS: Record<string, string> = {
+  DURATION: "Time",
+  REPS: "Reps / rounds",
+  DISTANCE: "Distance",
+  METERS: "Meters",
+  WEIGHT: "Weight",
+};
+// key: [category], value: metric config (locked or choices, + load, + isPool).
+const CAT_CFG: Record<
+  string,
+  { locked?: string; choices?: string[]; load?: boolean; pool: boolean }
+> = {
+  WEIGHTS: { locked: "WEIGHT", pool: true },
+  RUNNING: { choices: ["DISTANCE", "METERS"], pool: false },
+  ROWING: { locked: "METERS", pool: false },
+  RUCKING: { locked: "DISTANCE", load: true, pool: false },
+  SPORT: { choices: ["DURATION", "REPS"], pool: true },
+  STRETCHING: { choices: ["DURATION", "REPS"], pool: true },
+  ISOMETRIC: { choices: ["DURATION", "REPS"], pool: true },
+};
+// Order shown in the picker.
+const CAT_ORDER = ["WEIGHTS", "RUNNING", "ROWING", "RUCKING", "SPORT", "STRETCHING", "ISOMETRIC"];
+
+function unitForMetric(metric: string, system: string): string {
+  switch (metric) {
+    case "WEIGHT":
+      return system === "metric" ? "kg" : "lb";
+    case "DISTANCE":
+      return system === "metric" ? "km" : "mi";
+    case "METERS":
+      return "m";
+    case "REPS":
+      return "rep";
+    default:
+      return "";
+  }
+}
+
+export async function loadWorkoutPool(): Promise<WorkoutPool> {
+  const system = await loadWorkoutUnitSystem();
+
+  const categories: LogCategory[] = CAT_ORDER.map((key) => {
+    const cfg = CAT_CFG[key];
+    const metricKeys = cfg.locked ? [cfg.locked] : (cfg.choices ?? ["REPS"]);
+    return {
+      key,
+      label: CATEGORY_LABELS[key] ?? key,
+      isPool: cfg.pool,
+      load: !!cfg.load,
+      metrics: metricKeys.map((m) => ({
+        key: m,
+        label: METRIC_LABELS[m] ?? m,
+        unit: unitForMetric(m, system),
+      })),
+    };
+  });
+
+  const exercises = await prisma.poolExercise.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, category: true },
+  });
+
+  return { categories, exercises };
+}
