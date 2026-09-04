@@ -51,9 +51,9 @@ export function PersonalDayReading({
         <span
           className={`block text-sm ${read ? "text-muted line-through" : "font-medium"}`}
         >
-          {passage}
+          Personal bible reading
         </span>
-        <span className="text-xs text-muted">Your reading</span>
+        <span className="text-xs text-muted">{passage}</span>
       </span>
     </div>
   );

@@ -210,7 +210,8 @@ derived server-side and mirrors the web personal view (src/app/person/[id]).
        "categories": [                        // per-category bars, school excluded
          { "category":"CHORE","label":"Chores","total":4,"complete":3,"overdue":0,"percent":75 } ],
        "overdue": [ Task, … ],
-       "groups":  [ { "category":"CHORE","label":"Chores","items":[ Task, … ] } ] }
+       "groups":  [ { "category":"CHORE","label":"Chores","items":[ Task, … ] } ],
+       "personalReading": { "passage":"John 3","read":false } | null }  // their plan's reading today; shown in the Bible group, toggled via /reading/mark
 ```
 `Task` on the wire:
 ```
