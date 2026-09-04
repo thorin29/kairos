@@ -328,6 +328,14 @@ GET  /api/v1/calendar           ?view=(month|week|three_day|day|agenda) &date=YY
   "schoolType":str|null,"schoolClassName":str|null }
 ```
 ```
+POST /api/v1/calendar/event        create a basic personal event (v0.214, Phase 3a)
+request: { "title", "allDay":bool, "date":"YYYY-MM-DD",
+           "start"?:"HH:MM","end"?:"HH:MM","endDate"?:"YYYY-MM-DD",
+           "location"?:str, "timezone"?:"America/Chicago" }  // tz default home; sets the stored instant
+200: { "status":"ok" }   422: bad name / date / times
+                                   // single occurrence, owner = enrolled person.
+                                   // recurrence, participants, event types, family, editing = later.
+
 POST /api/v1/calendar/prefs        update filters/view (v0.212); all fields optional
 request: { "shownPeople"?:[…], "shownSubs"?:[…], "showFamily"?:bool,
            "showSchoolWork"?:bool, "view"?:"month|week|three_day|day|agenda" }
