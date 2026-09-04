@@ -74,6 +74,7 @@ export function DeviceEnrollment({
   const [devices, setDevices] = useState<DeviceView[]>([]);
   const [reveal, setReveal] = useState<Reveal | null>(null);
   const [copied, setCopied] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const codeRef = useRef<HTMLInputElement>(null);
 
@@ -243,24 +244,46 @@ export function DeviceEnrollment({
                     >
                       {s.label}
                     </span>
-                    {d.revokedAt === null ? (
-                      <button
-                        type="button"
-                        onClick={() => revoke(d.id)}
-                        disabled={pending}
-                        className={`${btn} shrink-0 px-2.5 text-red-700 hover:bg-red-500/10`}
-                        aria-label={`Revoke ${d.name || "device"}`}
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+                    {confirmId === d.id ? (
+                      <span className="flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmId(null)}
+                          disabled={pending}
+                          className={`${btn} px-2.5 text-muted hover:bg-ink/10`}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const active = d.revokedAt === null;
+                            setConfirmId(null);
+                            if (active) revoke(d.id);
+                            else del(d.id);
+                          }}
+                          disabled={pending}
+                          className={`${btn} bg-red-600 px-2.5 font-semibold text-white hover:bg-red-700`}
+                        >
+                          {d.revokedAt === null ? "Revoke" : "Delete"}
+                        </button>
+                      </span>
                     ) : (
                       <button
                         type="button"
-                        onClick={() => del(d.id)}
+                        onClick={() => setConfirmId(d.id)}
                         disabled={pending}
-                        className={`${btn} shrink-0 px-2.5 text-muted hover:bg-ink/10`}
-                        aria-label={`Delete ${d.name || "device"} permanently`}
-                        title="Delete permanently"
+                        className={`${btn} shrink-0 px-2.5 ${
+                          d.revokedAt === null
+                            ? "text-red-700 hover:bg-red-500/10"
+                            : "text-muted hover:bg-ink/10"
+                        }`}
+                        aria-label={
+                          d.revokedAt === null
+                            ? `Revoke ${d.name || "device"}`
+                            : `Delete ${d.name || "device"} permanently`
+                        }
+                        title={d.revokedAt === null ? "Revoke" : "Delete permanently"}
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
