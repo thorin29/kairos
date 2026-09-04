@@ -238,11 +238,36 @@ POST /api/v1/tasks/{id}/uncomplete   mark it not-done             (idempotent)
 409: conflict    — workout prompts complete via the workout logger, not here
 ```
 
-### Chores (further chore-specific surface — proposal)
+### Chores overview — **built (v0.206)**
+The read-only chore overview the app's Chores screen paints, mirroring the web
+`/chores` page. Completion is **not** here — it's on the dashboard (`/dashboard`
++ task completion); management is the PIN-gated `/admin/chores`, web-only. Scope
+is role/kind aware, driven by the token's person: a **parent OR admin** sees the
+household (self + every active child); a non-admin child sees only themselves.
+Always-open and shared (pool) chores are household-wide for everyone. Runs the
+same chore reconcile the dashboard does before reading.
 ```
-GET  /api/v1/chores/pool        claimable pool chores
-POST /api/v1/chores/pool/{id}/claim
+GET  /api/v1/chores             the chore overview (read-only)
+200: { "today":"YYYY-MM-DD",
+       "scope":"self" | "household",
+       "pause": { "name","startISO","endISO" } | null,
+       "people": [                          // scoped; ordered by sortOrder
+         { "person": Person,                // same wire shape as /me's person
+           "stats": { "due":int,"done":int,"open":int,"missed":int },  // this week; missed = all-time
+           "rotation": [                     // this week's assigned chores, non-anytime
+             { "dayOfWeek":0..6,"label":"Sun","chore":"Dishes",
+               "complete":bool,"pastDue":bool } ] } ],
+       "alwaysOpen": [ { "id","title","today":int,"week":int } ],   // household counts
+       "pool": {
+         "chores": [ {                        // shared chores, excludes always-open
+           "id","title","intervalDays":int,"isPaused":bool,
+           "nextDueISO":"YYYY-MM-DD"|null,"outstanding":bool,
+           "claimedByName":string|null,"alwaysOpen":false,
+           "cooldownMinutes":int,"effort":int,"effortLocked":bool } ],
+         "tally": [ { "name","color":"#rrggbb","count":int } ] } }   // shared completions, this season
 ```
+Pool *claim* (a write) stays a future dashboard action; this page only reports
+status, like the web. Supersedes the earlier `/chores/pool` sketch.
 
 ### Points & rewards (money ledger)
 ```
