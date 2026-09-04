@@ -13,6 +13,7 @@ import { generateReadingTasks } from "@/lib/bible/generate";
 import { loadPersonalPlan } from "@/lib/queries/personal-plan";
 import { loadOpenTasks } from "@/lib/queries/overview";
 import { loadAlwaysOpenChores } from "@/lib/queries/chores-summary";
+import { loadDaySchedule } from "@/lib/queries/calendar";
 
 /**
  * The `/api/v1/dashboard` payload: the same "my day" the web personal view
@@ -94,6 +95,17 @@ export type ApiDashboard = {
     title: string;
     readyAtMs: number | null;
     myCount: number;
+  }[];
+  /** The whole household's events today ("Today's schedule"), all-day first then
+   *  by start. Empty unless `date` is today. */
+  schedule: {
+    title: string;
+    allDay: boolean;
+    timeLabel: string;
+    startMin: number;
+    color: string;
+    ownerName: string;
+    location: string | null;
   }[];
 };
 
@@ -218,10 +230,12 @@ export async function loadApiDashboard(
   // released to the household.
   let upForGrabs: ApiDashboard["upForGrabs"] = [];
   let alwaysOpen: ApiDashboard["alwaysOpen"] = [];
+  let schedule: ApiDashboard["schedule"] = [];
   if (dayISO === today) {
-    const [openTasks, alwaysOpenChores] = await Promise.all([
+    const [openTasks, alwaysOpenChores, daySchedule] = await Promise.all([
       loadOpenTasks(today),
       loadAlwaysOpenChores(today),
+      loadDaySchedule(today),
     ]);
     upForGrabs = openTasks
       .filter((t) => t.category === "CHORE")
@@ -239,6 +253,17 @@ export async function loadApiDashboard(
       readyAtMs: c.readyAtMs,
       myCount: c.byUser.find((u) => u.id === userId)?.count ?? 0,
     }));
+    schedule = [...daySchedule.allDay, ...daySchedule.timed]
+      .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.startMin - b.startMin)
+      .map((e) => ({
+        title: e.title,
+        allDay: e.allDay,
+        timeLabel: e.timeLabel,
+        startMin: e.startMin,
+        color: e.color,
+        ownerName: e.ownerName,
+        location: e.location,
+      }));
   }
 
   return {
@@ -250,5 +275,6 @@ export async function loadApiDashboard(
     personalReading,
     upForGrabs,
     alwaysOpen,
+    schedule,
   };
 }
