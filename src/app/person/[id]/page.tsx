@@ -30,12 +30,8 @@ import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
-import { loadPersonalReadKeys } from "@/lib/queries/reading-stats";
 import { loadPersonalPlan } from "@/lib/queries/personal-plan";
-import { PersonalReveal } from "@/components/personal-bible";
-import { PersonalPlanSection, PersonalDayReading } from "@/app/bible/personal-plan-section";
-import { BookProgress } from "@/app/admin/bible/book-progress";
-import { saveMyBookChapters, saveMyBooks } from "@/lib/actions/personal-bible";
+import { PersonalDayReading } from "@/app/bible/personal-plan-section";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
 import { AddSchoolWork } from "@/components/add-school-work";
@@ -98,7 +94,6 @@ export default async function PersonPage({
   // The "Personal Bible Reading" tracker is on every person's page and logs to
   // that person — the household way (like chores), so on the shared wall tablet
   // anyone can record their own reading from their own card.
-  const personalReadKeys = await loadPersonalReadKeys(id);
   const personalPlan = await loadPersonalPlan(id);
   const personalToday =
     personalPlan?.days.find((d) => d.iso === today) ?? null;
@@ -568,32 +563,6 @@ export default async function PersonPage({
           <GameTimeCard status={gameStatus} />
         </div>
       )}
-
-      <section className="mt-8">
-        <SectionHeading>Bible reading</SectionHeading>
-        <PersonalReveal>
-          <div className="space-y-4">
-            <PersonalPlanSection
-              userId={id}
-              plan={personalPlan}
-              todayISOStr={today}
-            />
-            <details className="rounded-2xl border border-hairline p-4">
-              <summary className="cursor-pointer text-sm font-medium">
-                Mark other reading (any chapters, any order)
-              </summary>
-              <div className="mt-3">
-                <BookProgress
-                  initialManual={personalReadKeys}
-                  planCovered={[]}
-                  saveBook={saveMyBookChapters.bind(null, id)}
-                  saveBooks={saveMyBooks.bind(null, id)}
-                />
-              </div>
-            </details>
-          </div>
-        </PersonalReveal>
-      </section>
 
       <div className="mt-8 flex flex-wrap gap-3">
         <AddTaskForm

@@ -10,6 +10,7 @@ import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
+import { loadPersonalPlan } from "@/lib/queries/personal-plan";
 
 /**
  * The `/api/v1/dashboard` payload: the same "my day" the web personal view
@@ -70,6 +71,10 @@ export type ApiDashboard = {
   categories: ApiCategoryBar[];
   overdue: ApiTask[];
   groups: { category: Category; label: string; items: ApiTask[] }[];
+  /** The person's own reading-plan entry for the day, shown in the Bible group
+   *  as "Personal bible reading" and toggled via /reading/mark. Null when they
+   *  have no personal plan or no reading due today. */
+  personalReading: { passage: string; read: boolean } | null;
 };
 
 /**
@@ -182,5 +187,11 @@ export async function loadApiDashboard(
     items: todayRows.filter((r) => r.category === category),
   })).filter((g) => g.items.length > 0);
 
-  return { date: dayISO, percent, categories, overdue, groups };
+  const personalPlan = await loadPersonalPlan(userId);
+  const personalDay = personalPlan?.days.find((d) => d.iso === dayISO) ?? null;
+  const personalReading = personalDay
+    ? { passage: personalDay.passage, read: personalDay.read }
+    : null;
+
+  return { date: dayISO, percent, categories, overdue, groups, personalReading };
 }

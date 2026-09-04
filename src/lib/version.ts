@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.206.0";
+export const APP_VERSION = "0.207.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -86,6 +86,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.207.0",
+    summary: [
+      "Your personal reading plan is no longer a separate button on your page. When you have a plan, the day's reading now shows right in the Bible reading section as 'Personal bible reading', ready to check off. Create or change your plan on the Bible reading page.",
+    ],
+  },
   {
     version: "0.205.0",
     summary: [
