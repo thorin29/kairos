@@ -36,6 +36,11 @@ Building the Android client to full parity settled a few patterns worth keeping.
   app deliberately widens this to **parent OR admin** sees the household, per
   product call, so an admin who isn't parent-kind still gets the household view.
   Non-admin children see only themselves. Always-open + pool stay household-wide.
+  (v0.209: the household view shows the **whole active household — every parent
+  and child**, not just self + kids, so a parent sees their own and other parents'
+  chores here even when none are assigned. App `/chores` endpoint only; the web
+  `/chores` page keeps the shared `personalVisibleIds` scoping, reused by
+  school/money/game-time.)
 - **Dashboard shared chores (v0.207–0.208).** The app Home mirrors the web
   person-page "home" block: the day's **personal reading** (`personalReading`,
   toggled via `/reading/mark`), plus **up-for-grabs** and **always-open** chores
