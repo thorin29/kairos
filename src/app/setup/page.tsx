@@ -10,6 +10,7 @@ import { FamilyColorPicker } from "./family-color-picker";
 import { ResetScoringButton } from "./reset-scoring-button";
 import { getScoringStart } from "@/lib/settings";
 import { listAccounts } from "@/lib/accounts";
+import { liveDeviceCounts } from "@/lib/api/device-auth";
 import { AccountRow } from "./account-row";
 import { SectionHeading } from "@/components/ui";
 import { isAdmin, adminPinSet } from "@/lib/session";
@@ -38,6 +39,7 @@ export default async function SetupPage() {
     (p) => p.role === "ADMIN" && p.isActive,
   ).length;
   const accounts = hasAdmin ? await listAccounts() : [];
+  const deviceCounts = hasAdmin ? await liveDeviceCounts() : {};
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -103,7 +105,11 @@ export default async function SetupPage() {
             </p>
             <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-surface">
               {accounts.map((a) => (
-                <AccountRow key={a.userId} account={a} />
+                <AccountRow
+                  key={a.userId}
+                  account={a}
+                  initialCount={deviceCounts[a.userId] ?? 0}
+                />
               ))}
             </ul>
           </section>

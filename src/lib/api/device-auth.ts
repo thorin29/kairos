@@ -87,7 +87,7 @@ export function personPayload(p: EnrolledPerson) {
     id: p.id,
     name: p.displayName ?? p.name,
     shortName: p.name,
-    avatarUrl: uploaded ? avatarUrl(p.avatarPath as string) : null,
+    avatarUrl: uploaded ? `/api/v1/avatars/${encodeURIComponent(p.avatarPath as string)}` : null,
     avatarIcon: isIcon(p.avatarPath) ? iconGlyph(p.avatarPath) : null,
     role: p.role,
     kind: p.kind,
@@ -296,6 +296,11 @@ export async function refreshDevice(
 
 /** Revoke this device. Soft-revoke keeps the row for the admin list; it never
  *  verifies again. */
+/** Hard-delete a device row entirely (for clearing out old revoked phones). */
+export async function deleteDevice(deviceId: string): Promise<void> {
+  await prisma.device.delete({ where: { id: deviceId } }).catch(() => {});
+}
+
 export async function revokeDevice(deviceId: string): Promise<void> {
   await prisma.device.update({
     where: { id: deviceId },
@@ -354,6 +359,18 @@ export type DeviceSummary = {
 
 /** Enrolled devices for a person, for the admin management surface. Never
  *  includes the token hash. */
+/** Live (non-revoked, unexpired) device count per user, for the setup badge. */
+export async function liveDeviceCounts(): Promise<Record<string, number>> {
+  const rows = await prisma.device.groupBy({
+    by: ["userId"],
+    where: { revokedAt: null, expiresAt: { gt: new Date() } },
+    _count: { _all: true },
+  });
+  const out: Record<string, number> = {};
+  for (const r of rows) out[r.userId] = r._count._all;
+  return out;
+}
+
 export async function listDevices(userId: string): Promise<DeviceSummary[]> {
   return prisma.device.findMany({
     where: { userId },

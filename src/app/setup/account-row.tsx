@@ -18,7 +18,13 @@ import { DeviceEnrollment } from "./device-enrollment";
  * the reveal box makes that explicit. Re-issuing (New link / Reset password)
  * simply mints a fresh one and invalidates the old.
  */
-export function AccountRow({ account }: { account: AccountState }) {
+export function AccountRow({
+  account,
+  initialCount = 0,
+}: {
+  account: AccountState;
+  initialCount?: number;
+}) {
   const [pending, startTransition] = useTransition();
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -284,7 +290,7 @@ export function AccountRow({ account }: { account: AccountState }) {
         </div>
       )}
 
-      <DeviceEnrollment userId={account.userId} name={name} />
+      <DeviceEnrollment userId={account.userId} name={name} initialCount={initialCount} />
     </li>
   );
 }
