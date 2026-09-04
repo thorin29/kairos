@@ -62,6 +62,18 @@ Building the Android client to full parity settled a few patterns worth keeping.
   "colour model rework" — best tuned hands-on once the base is in). Time-grid
   views (week/3-day) + swipe paging are Phase 2, add/edit is Phase 3, the options
   drawer is Phase 4.
+- **Calendar timezones — viewer-local (fixed-instant).** The household model: an
+  event is pinned to a timezone (default the home-server tz, and — once Phase 3
+  event creation lands — selectable per event), and the calendar shows it at the
+  wall-clock time it **actually occurs where the viewer is**. On a travelling phone
+  a 9 AM home-tz event displays at its device-local equivalent; at home (device tz
+  == home tz) nothing shifts; all-day events never shift. The server keeps sending
+  home-tz times + the home tz id; the **app** converts each timed event to the
+  device tz via its real instant (DST-safe, `withZoneSameInstant`), and the
+  now-line runs on device time. App-side only for now; covers the common travel
+  case (same calendar date, a few hours of offset). Cross-date-line, per-event tz
+  overrides, and any server-side re-bucketing come with Phase 3. (This replaced an
+  earlier now-line-in-household-tz approach — the opposite of the desired model.)
 
 ## 2026-09 — Edit plan on the app mirrors the web builder
 
