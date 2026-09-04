@@ -1,7 +1,8 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { slotForDate } from "@/lib/workouts/rotation";
 import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES } from "@/lib/workouts/catalog";
-import { dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
+import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
 import { metricUnit, type Metric } from "@/lib/workouts/catalog";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
 
@@ -690,4 +691,73 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
     })),
     hiitWorkouts: hiit.map((w) => ({ id: w.id, name: w.name, personal: w.personal })),
   };
+}
+
+/** The person's rotation (if any), with a 10-day preview computed here so the
+ *  app doesn't reimplement the cycle math. */
+export type RotationSlotLite = { id: string; position: number; name: string; label: string; isRest: boolean };
+export type RotationPreviewDay = { date: string; label: string; rest: boolean };
+export type RotationView = {
+  active: boolean;
+  anchorISO: string | null;
+  restMask: number;
+  slots: RotationSlotLite[];
+  preview: RotationPreviewDay[];
+};
+
+export async function loadRotation(userId: string): Promise<RotationView> {
+  const row = await prisma.workoutRotation.findUnique({
+    where: { userId },
+    select: {
+      isActive: true,
+      anchorDate: true,
+      restMask: true,
+      slots: {
+        orderBy: { position: "asc" },
+        select: { id: true, position: true, name: true, category: true, muscleGroup: true, isRest: true },
+      },
+    },
+  });
+
+  if (!row || !row.isActive) {
+    return { active: false, anchorISO: null, restMask: 0, slots: [], preview: [] };
+  }
+
+  const anchorISO = fromDateColumn(row.anchorDate);
+  const slots: RotationSlotLite[] = row.slots.map((s) => ({
+    id: s.id,
+    position: s.position,
+    name: s.name,
+    label: s.isRest
+      ? "Rest"
+      : s.muscleGroup
+        ? (MUSCLE_GROUP_LABEL as Record<string, string>)[s.muscleGroup] ?? s.name
+        : s.name,
+    isRest: s.isRest,
+  }));
+
+  const shape = {
+    anchorISO,
+    restMask: row.restMask,
+    slots: row.slots.map((s) => ({
+      position: s.position,
+      name: s.name,
+      category: s.category as string | null,
+      muscleGroup: s.muscleGroup as string | null,
+      isRest: s.isRest,
+    })),
+  };
+  const preview: RotationPreviewDay[] = Array.from({ length: 10 }, (_, i) => {
+    const iso = addDays(todayISO(), i);
+    const r = slotForDate(shape, iso);
+    const label =
+      r.kind === "workout"
+        ? r.slot.muscleGroup
+          ? (MUSCLE_GROUP_LABEL as Record<string, string>)[r.slot.muscleGroup] ?? r.slot.name
+          : r.slot.name
+        : "Rest";
+    return { date: iso, label, rest: r.kind !== "workout" };
+  });
+
+  return { active: true, anchorISO, restMask: row.restMask, slots, preview };
 }
