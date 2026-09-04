@@ -59,18 +59,16 @@ export async function loadChoresPagePayload(
   });
   const household = self?.role === "ADMIN" || self?.kind === "PARENT";
 
-  // Visible people, ordered like the web page (sortOrder). A parent/admin sees
-  // self + every active child; anyone else sees just themselves.
+  // Visible people, ordered by sortOrder. A parent/admin sees the whole active
+  // household — every parent and every child — so a parent's own chores (and any
+  // other parent's) show here too, even when someone has none assigned. Anyone
+  // else sees only themselves.
   const active = await prisma.user.findMany({
     where: { isActive: true },
     orderBy: { sortOrder: "asc" },
-    select: { id: true, kind: true },
+    select: { id: true },
   });
-  const visibleIds = household
-    ? active
-        .filter((u) => u.id === viewerId || u.kind === "CHILD")
-        .map((u) => u.id)
-    : [viewerId];
+  const visibleIds = household ? active.map((u) => u.id) : [viewerId];
   const visibleSet = new Set(visibleIds);
 
   const [metrics, summary, poolChores, activePause, tally, alwaysOpen] =

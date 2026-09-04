@@ -259,8 +259,8 @@ POST /api/v1/tasks/{id}/uncomplete   mark it not-done             (idempotent)
 The read-only chore overview the app's Chores screen paints, mirroring the web
 `/chores` page. Completion is **not** here — it's on the dashboard (`/dashboard`
 + task completion); management is the PIN-gated `/admin/chores`, web-only. Scope
-is role/kind aware, driven by the token's person: a **parent OR admin** sees the
-household (self + every active child); a non-admin child sees only themselves.
+is role/kind aware, driven by the token's person: a **parent OR admin** sees the whole
+active household (every parent and child); a non-admin child sees only themselves.
 Always-open and shared (pool) chores are household-wide for everyone. Runs the
 same chore reconcile the dashboard does before reading.
 ```
