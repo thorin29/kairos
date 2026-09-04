@@ -107,8 +107,11 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       `/reading/mark`), and the **shared-chore dashboard actions** (v0.208 —
       `upForGrabs` + `alwaysOpen` on `/dashboard`, chores only, seen by everyone;
       `POST /chores/claim` + `POST /chores/always-open` acting for the enrolled
-      person; guard-free cores in `lib/chores/dashboard-actions-core.ts`).
-      Remaining: non-weight/multi-set/HIIT workout logging, rewards, calendar,
+      person; guard-free cores in `lib/chores/dashboard-actions-core.ts`), and the
+      **calendar** (v0.210, Phase 1 — `GET /calendar` read-only Month/Agenda/Day,
+      colours resolved from saved prefs; `queries/calendar-page.ts`).
+      Remaining: non-weight/multi-set/HIIT workout logging, rewards, calendar
+      phases 2-5 (time-grids, add/edit, options drawer, colour personalisation),
       companions, push, sync. Additive-only; logic reused from existing server
       code.
 - [ ] Add the Authelia bypass — now unblocked; scope it to **`/api/v1` only**
@@ -173,9 +176,15 @@ Characters. Each drawer entry keeps its web brand colour.
       `GET /chores`. Completion stays on Home (dashboard tasks); management stays
       the PIN-gated `/admin/chores`, web-only. Pool *claim* deferred to a future
       dashboard action.
+- [~] **Calendar — phased.** Phase 1 done (web v0.210, app v0.27): read-only
+      **Month / Agenda / Day**, one aggregate `GET /calendar` returning in-range
+      events (colours resolved from saved prefs, saved filters respected) + month
+      grid/dots. Remaining phases: 2) Week/3-day time-grids + swipe paging;
+      3) add/edit events; 4) options drawer (people/family/school-work/subs
+      filters); 5) colour personalisation (deferred rework, tuned in-app).
 - [ ] **Remaining sections, each to full parity ← NEXT** (enumerate components
-      from the web page at build time): Calendar, Reading, School, Game time,
-      Groceries, Money, Characters.
+      from the web page at build time): Reading, School, Game time, Groceries,
+      Money, Characters.
 
 
       - [x] **Persistent "Phone app" badge count** (v0.201) — done via one

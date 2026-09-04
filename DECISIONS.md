@@ -52,6 +52,16 @@ Building the Android client to full parity settled a few patterns worth keeping.
   `POST /chores/always-open` act for the token's person (no person-picker like the
   shared tablet). Shared guard-free cores in `lib/chores/dashboard-actions-core.ts`;
   the web actions gate then delegate.
+- **Calendar — phased (v0.210, Phase 1).** The calendar is large, so it ships in
+  phases. Phase 1 is read-only Month/Agenda/Day: `GET /api/v1/calendar`
+  (`queries/calendar-page.ts`) mirrors the web personal calendar's data exactly —
+  same saved prefs (view, shown people/subs, family, school-work), same filter,
+  and the same server-side `recolorForPersonal`, so a person's web colour and
+  filter choices carry straight over. Colours are resolved on the server because
+  the in-app colour-personalisation UI is deferred to Phase 5 (the DECISIONS
+  "colour model rework" — best tuned hands-on once the base is in). Time-grid
+  views (week/3-day) + swipe paging are Phase 2, add/edit is Phase 3, the options
+  drawer is Phase 4.
 
 ## 2026-09 — Edit plan on the app mirrors the web builder
 
