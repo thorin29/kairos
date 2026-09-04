@@ -130,8 +130,11 @@ Characters. Each drawer entry keeps its web brand colour.
       logo opens, all eleven sections with active state, Devices + Sign out in
       the drawer footer. Home is the real page; other sections show a placeholder
       until built. (In progress.)
-- [ ] **Workouts — full parity** (in flight). Done: TODAY (planned-workout logging,
-      v0.191) and a workout history + weight-progress read (v0.192). Components
+- [ ] **Workouts — full parity** (in flight). Done: Log workout page (Today's plan +
+      "log a different workout" custom form, v0.191/0.194), Recent workouts on its
+      own page with edit-gated confirm delete (v0.195), and the weight-progress
+      graph on the launcher (v0.192 read + app chart). Remaining: This Week
+      (sports), Browse workouts, Weight calculator, Edit plan (plan builder). Components
       from `src/app/exercise`: today's plan card + weight/reps logging (have the
       log), per-exercise **progress graph** (LineChart), **weight calculator**,
       **browse exercises**, **plan + rotation** view, **history**. Server: a
