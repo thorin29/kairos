@@ -307,3 +307,19 @@ export async function logPlannedWorkout(
 
   await completeWorkoutTask(userId, dateISO);
 }
+
+/** Delete one of the caller's own workout sessions (for the Recent page's
+ *  "remove a mistake"). Cascade removes its sets. */
+export async function deleteWorkoutSessionOwned(
+  sessionId: string,
+  userId: string,
+): Promise<"ok" | "not_found" | "forbidden"> {
+  const s = await prisma.workoutSession.findUnique({
+    where: { id: sessionId },
+    select: { userId: true },
+  });
+  if (!s) return "not_found";
+  if (s.userId !== userId) return "forbidden";
+  await prisma.workoutSession.delete({ where: { id: sessionId } });
+  return "ok";
+}
