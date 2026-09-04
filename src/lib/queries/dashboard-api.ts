@@ -11,6 +11,8 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { loadPersonalPlan } from "@/lib/queries/personal-plan";
+import { loadOpenTasks } from "@/lib/queries/overview";
+import { loadAlwaysOpenChores } from "@/lib/queries/chores-summary";
 
 /**
  * The `/api/v1/dashboard` payload: the same "my day" the web personal view
@@ -75,6 +77,24 @@ export type ApiDashboard = {
    *  as "Personal bible reading" and toggled via /reading/mark. Null when they
    *  have no personal plan or no reading due today. */
   personalReading: { passage: string; read: boolean } | null;
+  /** Household chores anyone can take today (chores only — never other
+   *  categories). Claimed for the enrolled person via /chores/claim. */
+  upForGrabs: {
+    id: string;
+    title: string;
+    isShared: boolean;
+    releasedByName: string;
+    isOverdue: boolean;
+    dueDate: string;
+  }[];
+  /** Always-open chores, tap-to-complete for the enrolled person via
+   *  /chores/always-open. `readyAtMs` set means it's on cooldown until then. */
+  alwaysOpen: {
+    id: string;
+    title: string;
+    readyAtMs: number | null;
+    myCount: number;
+  }[];
 };
 
 /**
@@ -193,5 +213,42 @@ export async function loadApiDashboard(
     ? { passage: personalDay.passage, read: personalDay.read }
     : null;
 
-  return { date: dayISO, percent, categories, overdue, groups, personalReading };
+  // Household shared chores anyone can pick up today. Only meaningful "now", so
+  // only on today's board. Chores only — schoolwork and the like are never
+  // released to the household.
+  let upForGrabs: ApiDashboard["upForGrabs"] = [];
+  let alwaysOpen: ApiDashboard["alwaysOpen"] = [];
+  if (dayISO === today) {
+    const [openTasks, alwaysOpenChores] = await Promise.all([
+      loadOpenTasks(today),
+      loadAlwaysOpenChores(today),
+    ]);
+    upForGrabs = openTasks
+      .filter((t) => t.category === "CHORE")
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        isShared: t.isShared,
+        releasedByName: t.releasedByName,
+        isOverdue: t.isOverdue,
+        dueDate: t.dueDateISO,
+      }));
+    alwaysOpen = alwaysOpenChores.map((c) => ({
+      id: c.id,
+      title: c.title,
+      readyAtMs: c.readyAtMs,
+      myCount: c.byUser.find((u) => u.id === userId)?.count ?? 0,
+    }));
+  }
+
+  return {
+    date: dayISO,
+    percent,
+    categories,
+    overdue,
+    groups,
+    personalReading,
+    upForGrabs,
+    alwaysOpen,
+  };
 }

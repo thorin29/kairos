@@ -102,10 +102,15 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       `/plan/delete`, `/mark`, `/books`, `/books/bulk`; shared core
       `lib/bible/personal-core.ts`; `color` added to `/me`), and **chores**
       (v0.206 — `GET /chores` read-only overview, role/kind-scoped: parent-or-admin
-      sees the household, others see only themselves).
+      sees the household, others see only themselves), the **dashboard personal
+      reading** (v0.207 — `personalReading` on `/dashboard`, toggled via
+      `/reading/mark`), and the **shared-chore dashboard actions** (v0.208 —
+      `upForGrabs` + `alwaysOpen` on `/dashboard`, chores only, seen by everyone;
+      `POST /chores/claim` + `POST /chores/always-open` acting for the enrolled
+      person; guard-free cores in `lib/chores/dashboard-actions-core.ts`).
       Remaining: non-weight/multi-set/HIIT workout logging, rewards, calendar,
-      pool claim, companions, push, sync. Additive-only; logic reused from
-      existing server code.
+      companions, push, sync. Additive-only; logic reused from existing server
+      code.
 - [ ] Add the Authelia bypass — now unblocked; scope it to **`/api/v1` only**
       (DECISIONS.md). Infra change on the server, not in this repo.
 - [x] Native Kotlin client scaffold + enrollment/sign-in (`kairos-app` v0.1.0):

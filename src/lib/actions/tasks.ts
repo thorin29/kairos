@@ -5,6 +5,7 @@ import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
+import { claimTaskCore } from "@/lib/chores/dashboard-actions-core";
 
 export type TaskActionState = { error: string | null };
 
@@ -91,35 +92,7 @@ export async function claimTask(
 ): Promise<ClaimState> {
   await requireInteractive();
   await requireCanActFor(userId);
-  const task = await prisma.task.findUnique({ where: { id } });
-  if (!task) return { error: "That task is gone." };
-  if (!task.isOpen) return { error: "Someone already picked that up." };
-
-  // The unique index on (chore, person, day) means a person can't hold the
-  // same chore twice in a day.
-  if (task.choreId) {
-    const clash = await prisma.task.findFirst({
-      where: {
-        choreId: task.choreId,
-        userId,
-        dueDate: task.dueDate,
-        id: { not: id },
-      },
-    });
-    if (clash) return { error: "They already have that chore today." };
-  }
-
-  const previousOwner = task.userId;
-
-  await prisma.task.update({
-    where: { id },
-    data: { userId, isOpen: false },
-  });
-
-  revalidatePath("/");
-  revalidatePath(`/person/${userId}`);
-  revalidatePath(`/person/${previousOwner}`);
-  return { error: null };
+  return claimTaskCore(id, userId);
 }
 
 export async function deleteTask(id: string): Promise<void> {

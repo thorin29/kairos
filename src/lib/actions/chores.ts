@@ -9,6 +9,7 @@ import { generateChores } from "@/lib/chores/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { isAdmin, requireAdmin } from "@/lib/session";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
+import { completeAlwaysOpenChoreCore } from "@/lib/chores/dashboard-actions-core";
 
 export type ChoreActionState = { error: string | null };
 
@@ -490,59 +491,5 @@ export async function completeAlwaysOpenChore(
 ): Promise<{ error: string | null }> {
   await requireInteractive();
   await requireCanActFor(userId);
-  const chore = await prisma.chore.findUnique({ where: { id: choreId } });
-  if (!chore || !chore.alwaysOpen || !chore.isActive || chore.isPaused) {
-    return { error: "That chore isn't available." };
-  }
-  const person = await prisma.user.findUnique({ where: { id: userId } });
-  if (!person) return { error: "Pick who did it." };
-
-  // Honour the cooldown: if it was done recently, it isn't back yet.
-  if (chore.cooldownMinutes > 0) {
-    const last = await prisma.task.findFirst({
-      where: { choreId, status: "COMPLETE" },
-      orderBy: { completedAt: "desc" },
-      select: { completedAt: true },
-    });
-    if (last?.completedAt) {
-      const readyAt = last.completedAt.getTime() + chore.cooldownMinutes * 60_000;
-      if (Date.now() < readyAt) return { error: "It\u2019s not back up yet." };
-    }
-  }
-
-  const now = new Date();
-  const dueDate = toDateColumn(todayISO());
-  // A distinct key per tap keeps each completion its own row. Milliseconds
-  // since midnight is small enough for an int and unique in practice; a rare
-  // same-instant double tap just retries with the next value.
-  const midnight = new Date(now);
-  midnight.setHours(0, 0, 0, 0);
-  let repeatKey = now.getTime() - midnight.getTime();
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      await prisma.task.create({
-        data: {
-          userId,
-          choreId,
-          title: chore.title,
-          category: "CHORE",
-          dueDate,
-          completedAt: now,
-          status: "COMPLETE",
-          sortOrder: chore.sortOrder,
-          isOpen: false,
-          repeatKey,
-        },
-      });
-      break;
-    } catch {
-      repeatKey += 1;
-      if (attempt === 4) return { error: "Couldn\u2019t log it \u2014 try again." };
-    }
-  }
-
-  revalidatePath("/");
-  revalidatePath("/summary");
-  revalidatePath(`/person/${userId}`);
-  return { error: null };
+  return completeAlwaysOpenChoreCore(choreId, userId);
 }

@@ -36,6 +36,17 @@ Building the Android client to full parity settled a few patterns worth keeping.
   app deliberately widens this to **parent OR admin** sees the household, per
   product call, so an admin who isn't parent-kind still gets the household view.
   Non-admin children see only themselves. Always-open + pool stay household-wide.
+- **Dashboard shared chores (v0.207–0.208).** The app Home mirrors the web
+  person-page "home" block: the day's **personal reading** (`personalReading`,
+  toggled via `/reading/mark`), plus **up-for-grabs** and **always-open** chores
+  (`upForGrabs`/`alwaysOpen` on `/dashboard`), shown to **everyone** (not gated).
+  Up-for-grabs is **chores only** — the web only ever releases chore-generated
+  (`locked`) tasks, so schoolwork etc. is never releasable; the API filters to
+  `CHORE` to enforce it. On a single-person device "anyone can take these"
+  resolves to the enrolled person, so `POST /chores/claim` and
+  `POST /chores/always-open` act for the token's person (no person-picker like the
+  shared tablet). Shared guard-free cores in `lib/chores/dashboard-actions-core.ts`;
+  the web actions gate then delegate.
 
 ## 2026-09 — Edit plan on the app mirrors the web builder
 
