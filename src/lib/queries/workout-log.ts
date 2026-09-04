@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { formatHiitMovement, WORKOUT_TYPE_LABEL } from "@/lib/workouts/catalog";
+import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor } from "@/lib/workouts/catalog";
 import { dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
 import { metricUnit, type Metric } from "@/lib/workouts/catalog";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
@@ -547,4 +547,88 @@ export async function loadBrowsableWorkouts(
       detail,
     };
   });
+}
+
+/** The person's weekly plan (7 days), each workout flattened to a name + a
+ *  one-line detail, mirroring the web PlanBuilder rows. */
+export type PlanWorkoutLite = {
+  id: string;
+  name: string;
+  isRest: boolean;
+  detail: string;
+};
+export type PlanDayLite = { day: number; workouts: PlanWorkoutLite[] };
+
+export async function loadPlan(userId: string): Promise<PlanDayLite[]> {
+  const rows = await prisma.plannedWorkout.findMany({
+    where: { userId },
+    orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      dayOfWeek: true,
+      category: true,
+      isRest: true,
+      hiitWorkout: {
+        select: {
+          type: true,
+          movements: {
+            orderBy: { position: "asc" },
+            select: {
+              reps: true,
+              distance: true,
+              weight: true,
+              poolExercise: { select: { name: true } },
+            },
+          },
+        },
+      },
+      exercises: {
+        orderBy: { sortOrder: "asc" },
+        select: { tracked: true, poolExercise: { select: { name: true } } },
+      },
+    },
+  });
+
+  const byDay = new Map<number, PlanWorkoutLite[]>();
+  for (let d = 0; d < 7; d++) byDay.set(d, []);
+  for (const w of rows) {
+    byDay.get(w.dayOfWeek)?.push({
+      id: w.id,
+      name: w.name,
+      isRest: w.isRest,
+      detail: planDetail(w),
+    });
+  }
+  return [...byDay.entries()].map(([day, workouts]) => ({ day, workouts }));
+}
+
+function planDetail(w: {
+  category: string | null;
+  isRest: boolean;
+  hiitWorkout: {
+    type: string;
+    movements: { reps: number | null; distance: number | null; weight: number | null; poolExercise: { name: string } | null }[];
+  } | null;
+  exercises: { tracked: boolean; poolExercise: { name: string } | null }[];
+}): string {
+  if (w.hiitWorkout) {
+    const label = (WORKOUT_TYPE_LABEL as Record<string, string>)[w.hiitWorkout.type] ?? w.hiitWorkout.type;
+    if (w.hiitWorkout.movements.length === 0) return label;
+    const moves = w.hiitWorkout.movements
+      .map((m) => formatHiitMovement({ name: m.poolExercise?.name ?? "—", reps: m.reps, distance: m.distance, weight: m.weight }))
+      .join(", ");
+    return `${label} · ${moves}`;
+  }
+  if (w.isRest) return "";
+  if (w.exercises.length > 0) {
+    return w.exercises
+      .map((e) => (e.tracked ? e.poolExercise?.name ?? "—" : `${e.poolExercise?.name ?? "—"} (no log)`))
+      .join(" · ");
+  }
+  if (w.category) {
+    const m = defaultMetricFor(w.category as never);
+    return `Log ${(METRIC_LABEL_SHORT as Record<string, string>)[m].toLowerCase()} on completion`;
+  }
+  return "Legacy workout";
 }
