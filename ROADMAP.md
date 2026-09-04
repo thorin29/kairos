@@ -100,7 +100,9 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       weight × reps logging (v0.190, `GET /workouts` · `POST /workouts/log`), and
       **reading** (v0.204 — `GET /reading` aggregate + `POST /reading/plan`,
       `/plan/delete`, `/mark`, `/books`, `/books/bulk`; shared core
-      `lib/bible/personal-core.ts`; `color` added to `/me`).
+      `lib/bible/personal-core.ts`; `color` added to `/me`), and **chores**
+      (v0.206 — `GET /chores` read-only overview, role/kind-scoped: parent-or-admin
+      sees the household, others see only themselves).
       Remaining: non-weight/multi-set/HIIT workout logging, rewards, calendar,
       pool claim, companions, push, sync. Additive-only; logic reused from
       existing server code.
@@ -155,9 +157,20 @@ Characters. Each drawer entry keeps its web brand colour.
       added to `/me`. Like the web page, family completion stays a dashboard
       task — no family-tick on this screen. (Replaces the dashboard tickbox for
       the personal daily surface.)
+- [x] **Chores — full parity** (web v0.206, app v0.26). Read-only household
+      overview mirroring the web `/chores` page: pause banner, "This week"
+      (per-person due/done/open/missed), "Weekly rotation" (per-person, day-by-day
+      with past-due red + done check), "Always open" (household tap-counts), and
+      "Shared chores" (pool status + tally). Role/kind scoped: a **parent OR
+      admin** sees the household (self + every child) in a table + card grid; a
+      non-admin child sees just their own compact summary + rotation; always-open
+      and shared chores are household-wide for all. Server: one aggregate
+      `GET /chores`. Completion stays on Home (dashboard tasks); management stays
+      the PIN-gated `/admin/chores`, web-only. Pool *claim* deferred to a future
+      dashboard action.
 - [ ] **Remaining sections, each to full parity ← NEXT** (enumerate components
-      from the web page at build time): Chores (full page), Calendar, Reading,
-      School, Game time, Groceries, Money, Characters.
+      from the web page at build time): Calendar, Reading, School, Game time,
+      Groceries, Money, Characters.
 
 
       - [x] **Persistent "Phone app" badge count** (v0.201) — done via one

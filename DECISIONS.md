@@ -28,6 +28,14 @@ Building the Android client to full parity settled a few patterns worth keeping.
   BIBLE task on the dashboard, not the Bible screen, matching the web page.
   `color` was added to `personPayload` (so `/me` and every person object carry
   the person's colour, used for their coverage bars and trophy).
+- **Chores overview (v0.206).** `GET /api/v1/chores` (`queries/chores-page.ts`)
+  is a read-only aggregate mirroring the web `/chores` page — no completion (that
+  stays dashboard tasks) and no management (that stays the PIN-gated
+  `/admin/chores`, web-only). Scope is driven by the **token's** person, not a
+  session: the web uses `personalVisibleIds()` (kind only — parent sees kids); the
+  app deliberately widens this to **parent OR admin** sees the household, per
+  product call, so an admin who isn't parent-kind still gets the household view.
+  Non-admin children see only themselves. Always-open + pool stay household-wide.
 
 ## 2026-09 — Edit plan on the app mirrors the web builder
 
