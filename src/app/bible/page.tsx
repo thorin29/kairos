@@ -236,10 +236,7 @@ export default async function BiblePage() {
 
         <div className="mt-6">
           <SectionHeading>Your plan</SectionHeading>
-          <p className="mb-3 mt-1 text-sm text-muted">
-            A reading plan just for you. Tick a day off and those chapters are
-            marked read &mdash; feeding the coverage above and your Wisdom.
-          </p>
+          <div className="mt-2" />
           <PersonalPlanSection
             userId={me.id}
             plan={personalPlan}
@@ -248,12 +245,8 @@ export default async function BiblePage() {
         </div>
 
         <div className="mt-6">
-          <SectionHeading>Mark what you&rsquo;ve read</SectionHeading>
-          <p className="mb-3 mt-1 text-sm text-muted">
-            Tick any chapters or whole books you&rsquo;ve read, in any order.
-            This is just your own record &mdash; it adds a little to your Wisdom
-            and doesn&rsquo;t touch the family totals.
-          </p>
+          <SectionHeading>Manual checklist</SectionHeading>
+          <div className="mt-2" />
           <BookProgress
             initialManual={personalKeys}
             planCovered={[]}
