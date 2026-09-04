@@ -148,7 +148,7 @@ Characters. Each drawer entry keeps its web brand colour.
       −7…+14 window) with days-left/plan-runout, OT/NT + by-group coverage; and
       the personal tab — own coverage, "Your plan" (create via books + start +
       chapters/day with live estimate, or work an existing plan, tick days,
-      confirm-gated delete keeping read chapters), and "Mark what you've read"
+      confirm-gated delete keeping read chapters), and "Manual checklist"
       (genre book grid + per-chapter modal, Mark OT/NT read, clear hand-marked).
       Server: one aggregate `GET /reading` + writes `plan`, `plan/delete`, `mark`,
       `books`, `books/bulk` over shared core `lib/bible/personal-core.ts`; `color`
