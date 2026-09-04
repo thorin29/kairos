@@ -35,6 +35,7 @@ export type EnrolledPerson = {
   id: string;
   name: string;
   displayName: string | null;
+  color: string;
   avatarPath: string | null;
   avatarPosition: string | null;
   role: "ADMIN" | "MEMBER";
@@ -50,6 +51,7 @@ const personSelect = {
   id: true,
   name: true,
   displayName: true,
+  color: true,
   avatarPath: true,
   avatarPosition: true,
   role: true,
@@ -61,6 +63,7 @@ type PersonRow = {
   id: string;
   name: string;
   displayName: string | null;
+  color: string;
   avatarPath: string | null;
   avatarPosition: string | null;
   role: "ADMIN" | "MEMBER";
@@ -73,6 +76,7 @@ function toPerson(row: PersonRow): EnrolledPerson {
     id: row.id,
     name: row.name,
     displayName: row.displayName,
+    color: row.color,
     avatarPath: row.avatarPath,
     avatarPosition: row.avatarPosition,
     role: row.role,
@@ -91,6 +95,7 @@ export function personPayload(p: EnrolledPerson) {
     id: p.id,
     name: p.displayName ?? p.name,
     shortName: p.name,
+    color: p.color,
     avatarUrl: uploaded ? `/api/v1/avatars/${encodeURIComponent(p.avatarPath as string)}` : null,
     avatarPosition: uploaded ? p.avatarPosition : null,
     avatarIcon: isIcon(p.avatarPath) ? iconGlyph(p.avatarPath) : null,

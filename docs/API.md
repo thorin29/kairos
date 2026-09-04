@@ -189,6 +189,7 @@ device token, show a password prompt, call `/auth/reauth`. Only a plain
             "shortName": "ellie",       // the unique dashboard handle
             "avatarUrl": "/api/avatars/…" | null,   // relative to the API base
             "avatarIcon": "🦊" | null,               // emoji when an icon was picked
+            "color": "#0f5c63",                       // this person's colour (added v0.204)
             "role": "ADMIN" | "MEMBER",
             "kind": "CHILD" | "PARENT" }
 401:      unauthenticated
@@ -255,11 +256,66 @@ GET  /api/v1/ledger             this person's transactions
 GET  /api/v1/calendar           events in a window (?from=&to=), person-filtered
 ```
 
-### Bible reading
+### Bible reading — **built (v0.204)**
+One aggregate read paints the whole Bible screen (mirrors src/app/bible/page.tsx
+on a personal device): the family reading deck + coverage, and this person's own
+coverage, plan, and hand-marked chapters. The family reading has **no completion
+here** — like the web page, family completion is a BIBLE task on the dashboard,
+not this screen. Writes go through a shared core (`lib/bible/personal-core.ts`),
+the same one the web `"use server"` actions call.
 ```
-GET  /api/v1/reading            today's assigned reading + coverage stats
-POST /api/v1/reading/{ref}/complete
+GET  /api/v1/reading            the whole Bible screen
+200: { "today":"YYYY-MM-DD",
+       "family": {
+         "havePlan": bool,
+         "cards": [ { "iso":"YYYY-MM-DD","passage":"Acts 27-28","label":"Sunday, July 26, 2026" } ],
+         "todayIndex": int,               // index of today's card (client centres it)
+         "remaining": int,                // days left in the family plan
+         "lastDayISO": "YYYY-MM-DD"|null, // when the plan runs out
+         "stats": ReadingStats },
+       "personal": {
+         "color": "#0f5c63",              // this person's colour, for their bars/trophy
+         "stats": ReadingStats,
+         "plan": PersonalPlan|null,
+         "readKeys": [ "Genesis|1", … ] } }
 ```
+`ReadingStats` on the wire:
+```
+{ "totalChapters":1189, "readChapters":int, "wholeBible":bool,
+  "ot": Group, "nt": Group,
+  "groups": [ Group, … ] }               // Pentateuch … Revelation
+Group = { "label":"Old Testament","chapters":int,"read":int,"percent":int }
+```
+`PersonalPlan` on the wire:
+```
+{ "id","name","remaining":int,
+  "days": [ { "iso","label","passage","read":bool } ] }   // window −7 … +14 days
+```
+
+```
+POST /api/v1/reading/plan          create (replacing) this person's plan
+request: { "name","bookNames":[ "Genesis", … ],"startISO":"YYYY-MM-DD","chaptersPerDay":int }
+200:     { "status":"ok" }
+422:     validation   — no books, bad date, empty/over-long plan (message is shown)
+
+POST /api/v1/reading/plan/delete   delete this person's plan (read chapters stay)
+200:     { "status":"ok" }
+
+POST /api/v1/reading/mark          tick/untick a day's reading
+request: { "passage":"Acts 27-28","read":bool }   // read defaults true
+200:     { "status":"ok" }         // marks exactly that passage's chapters. idempotent
+
+POST /api/v1/reading/books         replace one book's read chapters (staged Save)
+request: { "bookName":"Psalms","chapters":[ 1,2,3 ] }
+200:     { "status":"ok" }
+
+POST /api/v1/reading/books/bulk    mark/clear whole books (OT/NT read, clear)
+request: { "bookNames":[ "Genesis", … ],"read":bool }
+200:     { "status":"ok" }
+```
+Passages are addressed by body, not a `{ref}` path — they carry spaces and
+dashes ("Acts 27-28"). This supersedes the earlier `POST /reading/{ref}/complete`
+sketch.
 
 ### Workouts — **built (v0.186, phase 1: day-level)**
 Day-level "did you work out / rest" — the lightweight path (no set-by-set
