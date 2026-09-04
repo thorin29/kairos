@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor } from "@/lib/workouts/catalog";
+import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES } from "@/lib/workouts/catalog";
 import { dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
 import { metricUnit, type Metric } from "@/lib/workouts/catalog";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
@@ -631,4 +631,63 @@ function planDetail(w: {
     return `Log ${(METRIC_LABEL_SHORT as Record<string, string>)[m].toLowerCase()} on completion`;
   }
   return "Legacy workout";
+}
+
+/** Everything the "Add workout" plan picker needs. */
+export type PlanMetric = { key: string; label: string };
+export type PlanCategoryOption = {
+  key: string;
+  label: string;
+  kind: string; // "weights" | "hiit" | "metricOnly" | "pool"
+  metrics: PlanMetric[];
+  defaultMetric: string;
+};
+export type PlanOptions = {
+  categories: PlanCategoryOption[];
+  muscleGroups: { key: string; label: string }[];
+  exercises: { id: string; name: string; category: string; muscleGroup: string | null }[];
+  hiitWorkouts: { id: string; name: string; personal: boolean }[];
+};
+
+const PLAN_CAT_ORDER = ["WEIGHTS", "HIIT", "ISOMETRIC", "STRETCHING", "SPORT", "RUNNING", "ROWING", "RUCKING"];
+
+export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
+  const categories: PlanCategoryOption[] = PLAN_CAT_ORDER.map((c) => {
+    const kind = c === "WEIGHTS" ? "weights"
+      : c === "HIIT" ? "hiit"
+      : (METRIC_ONLY_CATEGORIES as string[]).includes(c) ? "metricOnly"
+      : "pool";
+    const choices = metricChoicesFor(c as never) as string[];
+    return {
+      key: c,
+      label: (CATEGORY_LABEL as Record<string, string>)[c] ?? c,
+      kind,
+      metrics: choices.map((m) => ({ key: m, label: (METRIC_LABEL_SHORT as Record<string, string>)[m] ?? m })),
+      defaultMetric: defaultMetricFor(c as never) as string,
+    };
+  });
+
+  const [exRows, hiit] = await Promise.all([
+    prisma.poolExercise.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, category: true, muscleGroup: true },
+    }),
+    loadBrowsableWorkouts(userId),
+  ]);
+
+  return {
+    categories,
+    muscleGroups: (MUSCLE_GROUPS as string[]).map((m) => ({
+      key: m,
+      label: (MUSCLE_GROUP_LABEL as Record<string, string>)[m] ?? m,
+    })),
+    exercises: exRows.map((e) => ({
+      id: e.id,
+      name: e.name,
+      category: e.category as string,
+      muscleGroup: (e.muscleGroup as string | null) ?? null,
+    })),
+    hiitWorkouts: hiit.map((w) => ({ id: w.id, name: w.name, personal: w.personal })),
+  };
 }

@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
+import {
+  MUSCLE_GROUP_LABEL,
+  CATEGORY_LABEL,
+  type WorkoutCategory,
+  type MuscleGroup,
+  type Metric,
+} from "@/lib/workouts/catalog";
 
 /** Remove one of the caller's own planned workouts. */
 export async function removePlannedWorkoutOwned(
@@ -59,4 +66,78 @@ export async function copyDayPlanCore(
     });
   }
   await generateWorkoutTasks();
+}
+
+
+/** Add a structured workout from the pool to a day. */
+export async function addPlannedFromPoolCore(
+  userId: string,
+  day: number,
+  input: {
+    category: string;
+    muscleGroup?: string | null;
+    exercises: { poolExerciseId: string; tracked: boolean; metric?: string | null }[];
+  },
+): Promise<void> {
+  if (day < 0 || day > 6) return;
+  const label = (
+    input.muscleGroup
+      ? (MUSCLE_GROUP_LABEL as Record<string, string>)[input.muscleGroup]
+      : (CATEGORY_LABEL as Record<string, string>)[input.category]
+  ).slice(0, 40);
+
+  const seen = new Set<string>();
+  const rows = input.exercises.filter((e) => {
+    if (!e.poolExerciseId || seen.has(e.poolExerciseId)) return false;
+    seen.add(e.poolExerciseId);
+    return true;
+  });
+
+  const count = await prisma.plannedWorkout.count({ where: { userId, dayOfWeek: day } });
+  await prisma.plannedWorkout.create({
+    data: {
+      userId,
+      dayOfWeek: day,
+      name: label,
+      sortOrder: count,
+      category: input.category as WorkoutCategory,
+      muscleGroup: (input.muscleGroup ?? null) as MuscleGroup | null,
+      exercises: {
+        create: rows.map((e, i) => ({
+          poolExerciseId: e.poolExerciseId,
+          tracked: e.tracked,
+          metric: (e.metric ?? null) as Metric | null,
+          sortOrder: i,
+        })),
+      },
+    },
+  });
+  await generateWorkoutTasks();
+}
+
+/** Add a named HIIT/CrossFit workout to a day. */
+export async function addPlannedHiitCore(
+  userId: string,
+  day: number,
+  hiitWorkoutId: string,
+): Promise<"ok" | "not_found"> {
+  if (day < 0 || day > 6 || !hiitWorkoutId) return "not_found";
+  const w = await prisma.hiitWorkout.findUnique({
+    where: { id: hiitWorkoutId },
+    select: { name: true },
+  });
+  if (!w) return "not_found";
+  const count = await prisma.plannedWorkout.count({ where: { userId, dayOfWeek: day } });
+  await prisma.plannedWorkout.create({
+    data: {
+      userId,
+      dayOfWeek: day,
+      name: w.name.slice(0, 40),
+      category: "HIIT" as WorkoutCategory,
+      hiitWorkoutId,
+      sortOrder: count,
+    },
+  });
+  await generateWorkoutTasks();
+  return "ok";
 }
