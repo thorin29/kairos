@@ -14,7 +14,7 @@ import {
   startOfWeek,
   weekDays,
 } from "@/lib/dates";
-import { getFamilyColor } from "@/lib/settings";
+import { getFamilyColor, getCalendarPrefs } from "@/lib/settings";
 import { loadCalendarPrefs, type CalView } from "@/lib/calendar/prefs";
 import { recolorForPersonal } from "@/lib/calendar/colors";
 
@@ -62,6 +62,9 @@ export type CalendarPagePayload = {
   prevDate: string;
   nextDate: string;
   events: CalEvent[];
+  /** The now-line colour, resolved from the person's saved prefs (for the
+   *  time-grid views). */
+  nowColor: string;
   /** The 42-day month grid containing `date`, for the Month view and the
    *  date-picker on the other views. */
   monthDays: string[];
@@ -128,13 +131,14 @@ export async function loadCalendarPagePayload(
   const date =
     rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : todayISO;
 
-  const [subsRaw, familyColor] = await Promise.all([
+  const [subsRaw, familyColor, calPrefs] = await Promise.all([
     prisma.externalCalendar.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
       select: { id: true, userId: true },
     }),
     getFamilyColor(),
+    getCalendarPrefs(),
   ]);
   void familyColor;
 
@@ -210,6 +214,11 @@ export async function loadCalendarPagePayload(
           ? spanHeading(days[0], days[2])
           : formatMonth(date);
 
+  // Now-line colour follows the admin default unless the person overrode it
+  // (and only while personalisation is on) — same rule as the web.
+  const nowColor =
+    prefs.personalizeColors && prefs.nowColor ? prefs.nowColor : calPrefs.nowColor;
+
   return {
     today: todayISO,
     view,
@@ -219,6 +228,7 @@ export async function loadCalendarPagePayload(
     prevDate: stepDate(-1),
     nextDate: stepDate(1),
     events,
+    nowColor,
     monthDays,
     monthDots,
   };
