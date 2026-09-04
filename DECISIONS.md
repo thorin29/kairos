@@ -18,6 +18,16 @@ Building the Android client to full parity settled a few patterns worth keeping.
   can't reach it, so there's a device-authed mirror `GET /api/v1/avatars/[file]`.
   `personPayload` sends `avatarUrl` pointing at that path plus `avatarPosition`
   (`"tx ty scale"`); the app reproduces the web's `translate()/scale()` transform.
+- **Bible reading (v0.204).** Personal-reading writes moved into a guard-free
+  core `lib/bible/personal-core.ts` (plan create/delete, day mark, book chapters,
+  bulk books); the `"use server"` actions (`actions/personal-plan.ts`,
+  `personal-bible.ts`) now just gate and delegate, and the `/api/v1/reading/*`
+  routes call the same core after `requireDevice`. Reads use one aggregate
+  (`queries/reading-page.ts` → `GET /api/v1/reading`) mirroring the Bible page.
+  The family reading has **no completion endpoint** — family completion is a
+  BIBLE task on the dashboard, not the Bible screen, matching the web page.
+  `color` was added to `personPayload` (so `/me` and every person object carry
+  the person's colour, used for their coverage bars and trophy).
 
 ## 2026-09 — Edit plan on the app mirrors the web builder
 

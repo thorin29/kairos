@@ -97,9 +97,11 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       visibility (v0.189 — `GET /devices` · `POST /devices/{id}/revoke` +
       new-device email alert), `GET /dashboard`
       (v0.185), task completion, and workouts — day-level (v0.186) plus detailed
-      weight × reps logging (v0.190, `GET /workouts` · `POST /workouts/log`).
-      Remaining: admin badge count + revoked-row hard-delete (web),
-      non-weight/multi-set/HIIT workout logging, rewards, calendar, reading,
+      weight × reps logging (v0.190, `GET /workouts` · `POST /workouts/log`), and
+      **reading** (v0.204 — `GET /reading` aggregate + `POST /reading/plan`,
+      `/plan/delete`, `/mark`, `/books`, `/books/bulk`; shared core
+      `lib/bible/personal-core.ts`; `color` added to `/me`).
+      Remaining: non-weight/multi-set/HIIT workout logging, rewards, calendar,
       pool claim, companions, push, sync. Additive-only; logic reused from
       existing server code.
 - [ ] Add the Authelia bypass — now unblocked; scope it to **`/api/v1` only**
@@ -141,13 +143,21 @@ Characters. Each drawer entry keeps its web brand colour.
       slots add/remove/reorder). Deferred (small): rotation slot **edit** +
       **anchor date** (Edit plan step C2); on-device confirm of the weight-
       calculator bar corners.
-- [ ] **Bible reading — full parity. ← NEXT.** Components from `src/app/bible`: today's
-      **personal reading plan** with chapters to check off, **streak/stats**,
-      **progress tabs**, **book progress**. Server: personal-plan read +
-      mark-chapter-read write. (Replaces the current dashboard tickbox.)
-- [ ] **Remaining sections, each to full parity** (enumerate components from the
-      web page at build time): Chores (full page), Calendar, Reading, School,
-      Game time, Groceries, Money, Characters.
+- [x] **Bible reading — full parity** (web v0.204, app v0.25). Family/Personal
+      tabs (ProgressTabs): the family reading deck (swipe + arrows + back-to-today,
+      −7…+14 window) with days-left/plan-runout, OT/NT + by-group coverage; and
+      the personal tab — own coverage, "Your plan" (create via books + start +
+      chapters/day with live estimate, or work an existing plan, tick days,
+      confirm-gated delete keeping read chapters), and "Mark what you've read"
+      (genre book grid + per-chapter modal, Mark OT/NT read, clear hand-marked).
+      Server: one aggregate `GET /reading` + writes `plan`, `plan/delete`, `mark`,
+      `books`, `books/bulk` over shared core `lib/bible/personal-core.ts`; `color`
+      added to `/me`. Like the web page, family completion stays a dashboard
+      task — no family-tick on this screen. (Replaces the dashboard tickbox for
+      the personal daily surface.)
+- [ ] **Remaining sections, each to full parity ← NEXT** (enumerate components
+      from the web page at build time): Chores (full page), Calendar, Reading,
+      School, Game time, Groceries, Money, Characters.
 
 
       - [x] **Persistent "Phone app" badge count** (v0.201) — done via one
