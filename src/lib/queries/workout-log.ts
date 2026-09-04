@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { formatHiitMovement, WORKOUT_TYPE_LABEL } from "@/lib/workouts/catalog";
 import { dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
 import { metricUnit, type Metric } from "@/lib/workouts/catalog";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
@@ -481,4 +482,69 @@ export async function loadWorkoutPool(): Promise<WorkoutPool> {
   });
 
   return { categories, exercises };
+}
+
+/** Named workouts this person can browse: the shared approved library plus
+ *  their own. Mirrors the web "Browse workouts" list. */
+export type BrowsableWorkout = {
+  id: string;
+  name: string;
+  type: string;
+  typeLabel: string;
+  personal: boolean;
+  heroWod: boolean;
+  detail: string;
+};
+
+export async function loadBrowsableWorkouts(
+  userId: string,
+): Promise<BrowsableWorkout[]> {
+  const rows = await prisma.hiitWorkout.findMany({
+    where: {
+      OR: [{ ownerId: null, approved: true }, { ownerId: userId }],
+    },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      heroWod: true,
+      notes: true,
+      ownerId: true,
+      movements: {
+        orderBy: { position: "asc" },
+        select: {
+          reps: true,
+          distance: true,
+          weight: true,
+          poolExercise: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  return rows.map((w) => {
+    const moves = w.movements.map((m) =>
+      formatHiitMovement({
+        name: m.poolExercise?.name ?? "—",
+        reps: m.reps,
+        distance: m.distance,
+        weight: m.weight,
+      }),
+    );
+    const detail = w.notes?.trim()
+      ? w.notes.trim()
+      : moves.length > 0
+        ? moves.join(", ")
+        : "No details yet.";
+    return {
+      id: w.id,
+      name: w.name,
+      type: w.type as string,
+      typeLabel: (WORKOUT_TYPE_LABEL as Record<string, string>)[w.type] ?? (w.type as string),
+      personal: w.ownerId === userId,
+      heroWod: w.heroWod,
+      detail,
+    };
+  });
 }
