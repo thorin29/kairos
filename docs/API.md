@@ -310,7 +310,7 @@ GET  /api/v1/calendar           ?view=(month|week|three_day|day|agenda) &date=YY
        "nowColor":"#rrggbb",                    // now-line colour for the time-grid views
        "monthDays": [ "YYYY-MM-DD", … ],        // 42-day grid for date's month
        "monthDots": { "YYYY-MM-DD": [ "#rrggbb", … ] },  // ≤3 colours/day
-       "timezone":"America/Chicago",              // household tz, for the now-line
+       "timezone":"America/Chicago",              // home/event tz; app localises timed events to the device tz
        "options": {                               // for the filters drawer (v0.212)
          "people": [ { "id","name","color" } ],
          "subscriptions": [ { "id","name","ownerName":str|null,"color" } ],
