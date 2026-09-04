@@ -211,7 +211,23 @@ derived server-side and mirrors the web personal view (src/app/person/[id]).
          { "category":"CHORE","label":"Chores","total":4,"complete":3,"overdue":0,"percent":75 } ],
        "overdue": [ Task, … ],
        "groups":  [ { "category":"CHORE","label":"Chores","items":[ Task, … ] } ],
-       "personalReading": { "passage":"John 3","read":false } | null }  // their plan's reading today; shown in the Bible group, toggled via /reading/mark
+       "personalReading": { "passage":"John 3","read":false } | null,  // their plan's reading today; shown in the Bible group, toggled via /reading/mark
+       "upForGrabs": [ {                       // chores anyone can take today (chores only; empty unless date is today)
+         "id","title","isShared":bool,         // isShared = a shared/pool chore (else released from a person)
+         "releasedByName":"Sam","isOverdue":bool,"dueDate":"YYYY-MM-DD" } ],
+       "alwaysOpen": [ {                        // always-open chores, tap-to-complete for yourself
+         "id","title","readyAtMs":int|null,     // readyAtMs set = on cooldown until then
+         "myCount":int } ] }                    // times you've done it today
+```
+Shared-chore actions (both act for the enrolled person — "anyone can take these"):
+```
+POST /api/v1/chores/claim          take an up-for-grabs chore
+request: { "taskId":"…" }
+200: { "status":"ok" }   422: already taken / you already have it today
+
+POST /api/v1/chores/always-open    tap an always-open chore done
+request: { "choreId":"…" }
+200: { "status":"ok" }   422: unavailable / still on cooldown
 ```
 `Task` on the wire:
 ```
