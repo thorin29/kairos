@@ -87,6 +87,8 @@ export function WorkoutsGrid({
   // Which side of the screen the opened card was tapped on, so the pop-out
   // grows outward from roughly where it sat rather than always from centre.
   const [origin, setOrigin] = useState("center top");
+  const [editingHistory, setEditingHistory] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const openFrom = (id: string, el: HTMLElement) => {
@@ -603,12 +605,23 @@ export function WorkoutsGrid({
               {step === "history" && (
                 <div className="mt-4">
                   <BackLink onClick={() => setStep("menu")} />
-                  <h3 className="mb-1 font-display text-lg font-semibold">
-                    Recent workouts
-                  </h3>
-                  <p className="mb-3 text-sm text-muted">
-                    Logged a mistake? Remove it here.
-                  </p>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="font-display text-lg font-semibold">
+                      Recent workouts
+                    </h3>
+                    {open.history.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingHistory((e) => !e);
+                          setConfirmDeleteId(null);
+                        }}
+                        className="text-sm font-semibold text-accent"
+                      >
+                        {editingHistory ? "Done" : "Edit"}
+                      </button>
+                    )}
+                  </div>
                   {open.history.length === 0 ? (
                     <p className="text-sm text-muted">No past workouts.</p>
                   ) : (
@@ -631,16 +644,39 @@ export function WorkoutsGrid({
                               </p>
                             )}
                           </div>
-                          <button
-                            type="button"
-                            aria-label={`Delete ${h.label} on ${h.dateISO}`}
-                            onClick={() =>
-                              startTransition(() => deleteWorkoutSession(h.id))
-                            }
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-black/5 hover:text-red-700"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
+                          {editingHistory &&
+                            (confirmDeleteId === h.id ? (
+                              <div className="flex shrink-0 items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="rounded-full px-2 py-1 text-xs font-medium text-muted hover:bg-black/5"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setConfirmDeleteId(null);
+                                    startTransition(() =>
+                                      deleteWorkoutSession(h.id),
+                                    );
+                                  }}
+                                  className="rounded-full bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                aria-label={`Delete ${h.label} on ${h.dateISO}`}
+                                onClick={() => setConfirmDeleteId(h.id)}
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted hover:bg-black/5 hover:text-red-700"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            ))}
                         </li>
                       ))}
                     </ul>
