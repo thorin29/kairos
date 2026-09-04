@@ -293,7 +293,7 @@ POST /api/v1/rewards/{id}/redeem
 GET  /api/v1/ledger             this person's transactions
 ```
 
-### Calendar — **Phase 1 built (v0.210): read-only Month / Agenda / Day**
+### Calendar — **Phase 1-2 built: read-only Month / Agenda / Day (v0.210) + Week / 3-day / Day time-grids (v0.211)**
 The person's own calendar for a view + date, mirroring the web personal calendar
 (src/app/calendar/personal-calendar.tsx): events with colours already resolved
 from their saved prefs, respecting their saved people/family/school-work/
@@ -307,6 +307,7 @@ GET  /api/v1/calendar           ?view=(month|week|three_day|day|agenda) &date=YY
        "rangeDays": [ "YYYY-MM-DD", … ],       // days this view covers
        "prevDate","nextDate",                   // paging anchors for this view
        "events": [ CalEvent, … ],               // in-range, filtered + recoloured
+       "nowColor":"#rrggbb",                    // now-line colour for the time-grid views
        "monthDays": [ "YYYY-MM-DD", … ],        // 42-day grid for date's month
        "monthDots": { "YYYY-MM-DD": [ "#rrggbb", … ] } }  // ≤3 colours/day
 ```
