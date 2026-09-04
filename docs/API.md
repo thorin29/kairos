@@ -339,6 +339,12 @@ request: { "title", "allDay":bool, "date":"YYYY-MM-DD",
                                    // single occurrence, owner = enrolled person.
                                    // recurrence, participants, event types, family, editing = later.
 
+POST /api/v1/calendar/event/delete   delete an event (v0.216)
+request: { "eventId", "scope"?:"all"|"future"|"one", "occurrenceISO"?:"YYYY-MM-DD" }
+200: { "status":"ok" }   422: feed event / not yours / repeating needs a parent
+                                   // scope defaults "all"; non-admins limited to own/family;
+                                   // recurring + birthdays admin-only.
+
 POST /api/v1/calendar/prefs        update filters/view (v0.212); all fields optional
 request: { "shownPeople"?:[…], "shownSubs"?:[…], "showFamily"?:bool,
            "showSchoolWork"?:bool, "view"?:"month|week|three_day|day|agenda" }

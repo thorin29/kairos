@@ -13,6 +13,7 @@ import {
   daysBetween,
 } from "@/lib/dates";
 import { buildRule, parseRule } from "@/lib/calendar/recur";
+import { deleteEventCore } from "@/lib/calendar/delete-event-core";
 import { isAdmin } from "@/lib/session";
 import { isHexColor } from "@/lib/palette";
 import {
@@ -576,94 +577,8 @@ export async function deleteEvent(
   occurrenceISO?: string,
 ): Promise<DeleteState> {
   await requireInteractive();
-  const event = await prisma.event.findUnique({ where: { id } });
-  if (!event) return { error: null };
-
-  // Subscribed events are owned by their feed — removing one here would
-  // just bring it back on the next sync. Unsubscribe instead.
-  if (event.externalCalendarId) {
-    return { error: "Unsubscribe from the feed to remove its events." };
-  }
-
-  // A repeating event and a birthday both affect far more than the day
-  // you're looking at, so removing one is a parent decision.
-  if (event.rrule || event.kind === "BIRTHDAY") {
-    if (!(await isAdmin())) {
-      return {
-        error: "Only a parent can delete a repeating event or a birthday.",
-      };
-    }
-  }
-
-  const validOccurrence =
-    !!occurrenceISO && /^\d{4}-\d{2}-\d{2}$/.test(occurrenceISO);
-  const parentStartISO = event.startsAt.toISOString().slice(0, 10);
-
-  const done = () => {
-    revalidatePath("/calendar");
-    revalidatePath("/");
-    revalidatePath(`/person/${event.userId}`);
-    return { error: null };
-  };
-
-  // Whole series (the default), a non-repeating event, or a scope we can't
-  // pin to a date: remove everything.
-  if (!event.rrule || scope === "all" || !validOccurrence) {
-    if (event.rrule) {
-      await prisma.event.deleteMany({ where: { recurrenceId: id } });
-    }
-    await prisma.event.delete({ where: { id } });
-    return done();
-  }
-
-  if (scope === "future") {
-    const untilISO = addDays(occurrenceISO!, -1);
-    // Truncating before the first occurrence leaves nothing — delete it all
-    // rather than orphan an invisible parent.
-    if (untilISO < parentStartISO) {
-      await prisma.event.deleteMany({ where: { recurrenceId: id } });
-      await prisma.event.delete({ where: { id } });
-      return done();
-    }
-    const r = parseRule(event.rrule);
-    if (!r) {
-      await prisma.event.deleteMany({ where: { recurrenceId: id } });
-      await prisma.event.delete({ where: { id } });
-      return done();
-    }
-    const newRule = buildRule(r.freq, r.interval, untilISO, null, r.byday);
-    // Drop detached overrides (moves) and tombstones on/after the cut date.
-    await prisma.event.deleteMany({
-      where: {
-        recurrenceId: id,
-        recurrenceDate: { gte: toDateColumn(occurrenceISO!) },
-      },
-    });
-    await prisma.event.update({ where: { id }, data: { rrule: newRule } });
-    return done();
-  }
-
-  // scope === "one": drop just this date. Replace any existing override for
-  // the date with a non-rendering tombstone whose recurrenceDate makes the
-  // parent skip it.
-  const occDate = toDateColumn(occurrenceISO!);
-  await prisma.event.deleteMany({
-    where: { recurrenceId: id, recurrenceDate: occDate },
+  return deleteEventCore(id, scope, occurrenceISO, {
+    isAdmin: await isAdmin(),
+    callerUserId: null,
   });
-  const at = new Date(`${occurrenceISO!}T00:00:00.000Z`);
-  await prisma.event.create({
-    data: {
-      userId: event.userId,
-      isFamily: event.isFamily,
-      kind: event.kind,
-      title: event.title,
-      startsAt: at,
-      endsAt: at,
-      allDay: event.allDay,
-      cancelled: true,
-      recurrenceId: id,
-      recurrenceDate: occDate,
-    },
-  });
-  return done();
 }
