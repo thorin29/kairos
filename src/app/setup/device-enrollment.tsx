@@ -6,6 +6,7 @@ import {
   issueEnrollmentCodeAction,
   listDevicesAction,
   revokeDeviceAction,
+  deleteDeviceAction,
 } from "@/lib/actions/enrollment";
 
 type DeviceView = {
@@ -62,9 +63,11 @@ function deviceStatus(d: DeviceView): {
 export function DeviceEnrollment({
   userId,
   name,
+  initialCount = 0,
 }: {
   userId: string;
   name: string;
+  initialCount?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -98,6 +101,12 @@ export function DeviceEnrollment({
     startTransition(async () => {
       await revokeDeviceAction(id);
       await refresh();
+    });
+
+  const del = (id: string) =>
+    startTransition(async () => {
+      await deleteDeviceAction(id);
+      setDevices((prev) => prev.filter((d) => d.id !== id));
     });
 
   const copy = async () => {
@@ -135,11 +144,14 @@ export function DeviceEnrollment({
       >
         <DeviceIcon className="h-4 w-4" />
         Phone app
-        {loaded && liveCount > 0 && (
-          <span className="ml-0.5 rounded-full bg-accent/15 px-1.5 text-xs font-semibold text-accent">
-            {liveCount}
-          </span>
-        )}
+        {(() => {
+          const badge = loaded ? liveCount : initialCount;
+          return badge > 0 ? (
+            <span className="ml-0.5 rounded-full bg-accent/15 px-1.5 text-xs font-semibold text-accent">
+              {badge}
+            </span>
+          ) : null;
+        })()}
       </button>
 
       {open && (
@@ -231,13 +243,24 @@ export function DeviceEnrollment({
                     >
                       {s.label}
                     </span>
-                    {d.revokedAt === null && (
+                    {d.revokedAt === null ? (
                       <button
                         type="button"
                         onClick={() => revoke(d.id)}
                         disabled={pending}
                         className={`${btn} shrink-0 px-2.5 text-red-700 hover:bg-red-500/10`}
                         aria-label={`Revoke ${d.name || "device"}`}
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => del(d.id)}
+                        disabled={pending}
+                        className={`${btn} shrink-0 px-2.5 text-muted hover:bg-ink/10`}
+                        aria-label={`Delete ${d.name || "device"} permanently`}
+                        title="Delete permanently"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>

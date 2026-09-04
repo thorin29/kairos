@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/session";
 import {
   issueEnrollmentCode,
   listDevices,
-  revokeDevice,
+  revokeDevice, deleteDevice,
   type DeviceSummary,
 } from "@/lib/api/device-auth";
 import { qrSvg } from "@/lib/qr";
@@ -42,4 +42,10 @@ export async function listDevicesAction(
 export async function revokeDeviceAction(deviceId: string): Promise<void> {
   await requireAdmin();
   await revokeDevice(deviceId);
+}
+
+/** Permanently delete a device row (typically an old revoked one). */
+export async function deleteDeviceAction(deviceId: string): Promise<void> {
+  await requireAdmin();
+  await deleteDevice(deviceId);
 }
