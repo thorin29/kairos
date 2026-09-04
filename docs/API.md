@@ -217,7 +217,10 @@ derived server-side and mirrors the web personal view (src/app/person/[id]).
          "releasedByName":"Sam","isOverdue":bool,"dueDate":"YYYY-MM-DD" } ],
        "alwaysOpen": [ {                        // always-open chores, tap-to-complete for yourself
          "id","title","readyAtMs":int|null,     // readyAtMs set = on cooldown until then
-         "myCount":int } ] }                    // times you've done it today
+         "myCount":int } ],                     // times you've done it today
+       "schedule": [ {                          // whole household's events today ("Today's schedule")
+         "title","allDay":bool,"timeLabel","startMin":int,
+         "color":"#rrggbb","ownerName","location":str|null } ] }
 ```
 Shared-chore actions (both act for the enrolled person — "anyone can take these"):
 ```
