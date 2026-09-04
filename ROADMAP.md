@@ -126,20 +126,22 @@ Characters. Each drawer entry keeps its web brand colour.
       Devices (moved out of the nav rail to keep it clean) and later theme,
       server, and account options. Until it exists, the Devices screen/route is
       built but unlinked.
-- [~] **Phase 0 — navigation shell** (`kairos-app`): the drawer the top-left
+- [x] **Phase 0 — navigation shell** (`kairos-app`): the drawer the top-left
       logo opens, all eleven sections with active state, Devices + Sign out in
       the drawer footer. Home is the real page; other sections show a placeholder
-      until built. (In progress.)
-- [ ] **Workouts — full parity** (in flight). Done: Log workout page (Today's plan +
-      "log a different workout" custom form, v0.191/0.194), Recent workouts on its
-      own page with edit-gated confirm delete (v0.195), and the weight-progress
-      graph on the launcher (v0.192 read + app chart). Remaining: This Week
-      (sports), Browse workouts, Weight calculator, Edit plan (plan builder). Components
-      from `src/app/exercise`: today's plan card + weight/reps logging (have the
-      log), per-exercise **progress graph** (LineChart), **weight calculator**,
-      **browse exercises**, **plan + rotation** view, **history**. Server: a
-      workouts-board read (graph series, history, plan), the exercise pool.
-- [ ] **Bible reading — full parity.** Components from `src/app/bible`: today's
+      until built. (Done, custom overlay rail with Kairos branding.)
+- [x] **Workouts — full parity** (web v0.200, app v0.24). Shipped: Log workout
+      page (Today's plan + "log a different workout"), Recent workouts (own page,
+      edit-gated confirm delete), progress graph (single tracked movement,
+      defaulting to today's/next weights, stepped scale, tappable points, name
+      selector), This week, Browse workouts (Workouts / Hero WODs), Weight
+      calculator (bars from the uploaded SVGs), and Edit plan — weekly (add via
+      category→muscle→exercise / named workout / rest, remove, mark-rest,
+      copy-from-day) and Rotation (start/stop, rest-weekday mask, 10-day preview,
+      slots add/remove/reorder). Deferred (small): rotation slot **edit** +
+      **anchor date** (Edit plan step C2); on-device confirm of the weight-
+      calculator bar corners.
+- [ ] **Bible reading — full parity. ← NEXT.** Components from `src/app/bible`: today's
       **personal reading plan** with chapters to check off, **streak/stats**,
       **progress tabs**, **book progress**. Server: personal-plan read +
       mark-chapter-read write. (Replaces the current dashboard tickbox.)
@@ -148,7 +150,9 @@ Characters. Each drawer entry keeps its web brand colour.
       Game time, Groceries, Money, Characters.
 
 
-      - **Persistent "Phone app" badge count.** Today `DeviceEnrollment` loads a
+      - [x] **Persistent "Phone app" badge count** (v0.201) — done via one
+        grouped `liveDeviceCounts()` threaded as `initialCount`.
+      - (original note) **Persistent "Phone app" badge count.** Today `DeviceEnrollment` loads a
         person's devices lazily on expand (intentional — avoids N queries on the
         household page), so the count only appears after clicking. Fix without
         making it eager: compute live-device counts for everyone in ONE grouped
@@ -157,15 +161,20 @@ Characters. Each drawer entry keeps its web brand colour.
         `DeviceEnrollment` as an `initialCount` prop, and have the badge render
         `loaded ? liveCount : initialCount`. The existing lazy full-list load
         stays for the expanded view.
-      - **Hard-delete for revoked rows.** Add `deleteDevice(deviceId)` in
+      - [x] **Hard-delete for revoked rows** (v0.201) + confirm-gated revoke/
+        delete (v0.202). Done.
+      - (original note) **Hard-delete for revoked rows.** Add `deleteDevice(deviceId)` in
         `src/lib/api/device-auth.ts` (`prisma.device.delete`), a
         `deleteDeviceAction` (`requireAdmin`) in `src/lib/actions/enrollment.ts`,
         and a trash-icon button on **revoked** rows in `device-enrollment.tsx`
         (it already imports `TrashIcon` and has the revoke wiring to mirror). Soft
         revoke stays the default; delete only clears already-revoked rows so the
         list stops growing.
-- [ ] Rest of the native client (`kairos-app`): QR enrollment scan, dashboard +
-      read screens, Room, WorkManager, FCM.
+- [x] Avatar API (web v0.201–0.203): device-authed `/api/v1/avatars/[file]`,
+      `/me` sends `avatarUrl` + `avatarPosition`, app renders photos via Coil
+      (token-authed) with the web's position/zoom transform.
+- [ ] Rest of the native client (`kairos-app`): QR enrollment scan, Room,
+      WorkManager, FCM.
 - [ ] **Push notifications** via FCM, with typed deep-link targets
       (`chore:<id>`, `reward:<id>`, `event:<id>`, `reading:<ref>`).
 - [ ] **Offline** for the personal daily surface (today's chores + completion

@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-09 — App-facing API: device-authed cores, lenient responses, avatars
+
+Building the Android client to full parity settled a few patterns worth keeping.
+
+- **Device-authed routes call `requireDevice`, not the `"use server"` actions.**
+  The actions gate on an Authelia session (`requireInteractive`/`requireCanActFor`)
+  which a device token doesn't have. So each `/api/v1` route authenticates the
+  bearer token and delegates to a **shared core** extracted into a lib
+  (`lib/workouts/mark.ts`, `plan-edit.ts`, `rotation-edit.ts`,
+  `queries/workout-log.ts`). Cores skip the session gate but still run side
+  effects (`generateWorkoutTasks()` after any plan/rotation change).
+- **Return shapes must be tolerant.** The Kotlin client defaults every DTO field.
+  Mutation routes may return `{ status: "ok" }`; that's fine. Don't rely on the
+  client to reject a partial body.
+- **Avatars for the app.** `/api/avatars/*` sits behind Authelia and the app
+  can't reach it, so there's a device-authed mirror `GET /api/v1/avatars/[file]`.
+  `personPayload` sends `avatarUrl` pointing at that path plus `avatarPosition`
+  (`"tx ty scale"`); the app reproduces the web's `translate()/scale()` transform.
+
+## 2026-09 — Edit plan on the app mirrors the web builder
+
+Weekly plan editor (view + add via category→muscle→exercise / named workout /
+rest, remove, mark-rest, copy-from-day) and Rotation (start/stop, rest-weekday
+mask, 10-day preview computed server-side via `slotForDate`, slots add/remove/
+reorder). Slot **edit** and **anchor date** are the remaining rotation bits.
+
+
 Standing decisions for Kairos: the choices that are settled, and why, so they
 aren't relitigated and so any tool or person working on the repo can see the
 reasoning without reconstructing it from old conversations. ARCHITECTURE.md
