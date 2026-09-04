@@ -293,7 +293,7 @@ POST /api/v1/rewards/{id}/redeem
 GET  /api/v1/ledger             this person's transactions
 ```
 
-### Calendar — **Phase 1-2 built: read-only Month / Agenda / Day (v0.210) + Week / 3-day / Day time-grids (v0.211)**
+### Calendar — **Phases 1-4 built: read-only views (v0.210-211) + filters drawer (v0.212)**
 The person's own calendar for a view + date, mirroring the web personal calendar
 (src/app/calendar/personal-calendar.tsx): events with colours already resolved
 from their saved prefs, respecting their saved people/family/school-work/
@@ -309,7 +309,13 @@ GET  /api/v1/calendar           ?view=(month|week|three_day|day|agenda) &date=YY
        "events": [ CalEvent, … ],               // in-range, filtered + recoloured
        "nowColor":"#rrggbb",                    // now-line colour for the time-grid views
        "monthDays": [ "YYYY-MM-DD", … ],        // 42-day grid for date's month
-       "monthDots": { "YYYY-MM-DD": [ "#rrggbb", … ] } }  // ≤3 colours/day
+       "monthDots": { "YYYY-MM-DD": [ "#rrggbb", … ] },  // ≤3 colours/day
+       "timezone":"America/Chicago",              // household tz, for the now-line
+       "options": {                               // for the filters drawer (v0.212)
+         "people": [ { "id","name","color" } ],
+         "subscriptions": [ { "id","name","ownerName":str|null,"color" } ],
+         "shownPeople": [ "userId", … ], "shownSubs": [ "subId", … ],
+         "showFamily":bool, "showSchoolWork":bool } }
 ```
 `CalEvent` on the wire:
 ```
@@ -320,6 +326,12 @@ GET  /api/v1/calendar           ?view=(month|week|three_day|day|agenda) &date=YY
   "ownerName","calendarName":str|null,
   "recurring":bool,"recurLabel":str|null,"external":bool,
   "schoolType":str|null,"schoolClassName":str|null }
+```
+```
+POST /api/v1/calendar/prefs        update filters/view (v0.212); all fields optional
+request: { "shownPeople"?:[…], "shownSubs"?:[…], "showFamily"?:bool,
+           "showSchoolWork"?:bool, "view"?:"month|week|three_day|day|agenda" }
+200: { "status":"ok" }
 ```
 
 ### Bible reading — **built (v0.204)**

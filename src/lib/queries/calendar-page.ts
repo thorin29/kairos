@@ -17,6 +17,7 @@ import {
 import { getFamilyColor, getCalendarPrefs } from "@/lib/settings";
 import { loadCalendarPrefs, type CalView } from "@/lib/calendar/prefs";
 import { recolorForPersonal } from "@/lib/calendar/colors";
+import { householdTz } from "@/lib/dates";
 
 /**
  * The read-only "my calendar" the app's Calendar screen paints (Phase 1: Month,
@@ -51,11 +52,23 @@ export type CalEvent = {
   schoolClassName: string | null;
 };
 
+export type CalendarOptions = {
+  people: { id: string; name: string; color: string }[];
+  subscriptions: { id: string; name: string; ownerName: string | null; color: string }[];
+  shownPeople: string[];
+  shownSubs: string[];
+  showFamily: boolean;
+  showSchoolWork: boolean;
+};
+
 export type CalendarPagePayload = {
   today: string;
   view: CalView;
   date: string;
   heading: string;
+  /** The household timezone (IANA id), so the app's now-line is placed in
+   *  household time even when the device is in another zone. */
+  timezone: string;
   /** The ISO days this view covers (month = 42-day grid, week = 7, etc.). */
   rangeDays: string[];
   /** Prev/next anchor dates for this view's paging. */
@@ -70,6 +83,8 @@ export type CalendarPagePayload = {
   monthDays: string[];
   /** Up to three distinct colours per day in that month, for dots. */
   monthDots: Record<string, string[]>;
+  /** Filter options + current selections, for the options drawer. */
+  options: CalendarOptions;
 };
 
 /** Heading for a two-ISO span: one month, cross-month, or cross-year. */
@@ -131,22 +146,41 @@ export async function loadCalendarPagePayload(
   const date =
     rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : todayISO;
 
-  const [subsRaw, familyColor, calPrefs] = await Promise.all([
+  const [subsRaw, familyColor, calPrefs, people] = await Promise.all([
     prisma.externalCalendar.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
-      select: { id: true, userId: true },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        isFamily: true,
+        userId: true,
+        user: { select: { displayName: true, name: true, color: true } },
+      },
     }),
     getFamilyColor(),
     getCalendarPrefs(),
+    prisma.user.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, name: true, displayName: true, color: true },
+    }),
   ]);
-  void familyColor;
+
+  const subs = subsRaw.map((s) => ({
+    id: s.id,
+    name: s.name,
+    ownerName: s.isFamily ? "Family" : (s.user?.displayName ?? s.user?.name ?? null),
+    color: s.color ?? s.user?.color ?? familyColor,
+    userId: s.userId,
+  }));
 
   // Defaults resolve here, exactly like the web: unset people → just me; unset
   // subscriptions → the ones I own; an explicit empty list means "show none".
   const shownPeople = prefs.shownPeople ?? [userId];
   const shownSubs =
-    prefs.shownSubs ?? subsRaw.filter((s) => s.userId === userId).map((s) => s.id);
+    prefs.shownSubs ?? subs.filter((s) => s.userId === userId).map((s) => s.id);
   const subsSet = new Set(shownSubs);
 
   const days =
@@ -224,6 +258,7 @@ export async function loadCalendarPagePayload(
     view,
     date,
     heading,
+    timezone: householdTz(),
     rangeDays: days,
     prevDate: stepDate(-1),
     nextDate: stepDate(1),
@@ -231,5 +266,22 @@ export async function loadCalendarPagePayload(
     nowColor,
     monthDays,
     monthDots,
+    options: {
+      people: people.map((p) => ({
+        id: p.id,
+        name: p.displayName ?? p.name,
+        color: p.color,
+      })),
+      subscriptions: subs.map((s) => ({
+        id: s.id,
+        name: s.name,
+        ownerName: s.ownerName,
+        color: s.color,
+      })),
+      shownPeople,
+      shownSubs,
+      showFamily: prefs.showFamily,
+      showSchoolWork: prefs.showSchoolWork,
+    },
   };
 }

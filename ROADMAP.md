@@ -176,13 +176,15 @@ Characters. Each drawer entry keeps its web brand colour.
       `GET /chores`. Completion stays on Home (dashboard tasks); management stays
       the PIN-gated `/admin/chores`, web-only. Pool *claim* deferred to a future
       dashboard action.
-- [~] **Calendar — phased.** Phases 1-2 done (web v0.210-0.211, app v0.27-0.28):
-      read-only **Month / Agenda** and the **Week / 3-day / Day time-grids** (now-line,
-      overlap lanes, all-day row) with **swipe paging**. One aggregate `GET /calendar`
-      returns in-range events (colours + filters from saved prefs), month grid/dots,
-      and the now-line colour. Remaining phases: 3) add/edit events; 4) options
-      drawer (people/family/school-work/subs filters); 5) colour personalisation
-      (deferred rework, tuned in-app).
+- [~] **Calendar — phased.** Phases 1, 2, 4 done (web v0.210-0.212, app v0.27-0.29):
+      read-only **Month / Agenda** + **Week / 3-day / Day time-grids** (now-line in
+      household tz, overlap lanes, all-day row, swipe paging), and the **options
+      drawer** (people / family / school-work / subscription filters, writing prefs
+      via `POST /calendar/prefs`). `GET /calendar` returns in-range events (colours
+      from saved prefs), month grid/dots, now-line colour, household timezone, and
+      the filter options + current selections. Remaining: 3) add/edit events;
+      5) colour personalisation (deferred rework, tuned in-app). Later polish:
+      drag-follow pager.
 - [ ] **Remaining sections, each to full parity ← NEXT** (enumerate components
       from the web page at build time): Reading, School, Game time, Groceries,
       Money, Characters.
