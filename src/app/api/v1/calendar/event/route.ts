@@ -36,6 +36,9 @@ export async function POST(req: NextRequest) {
       isFamily: raw.isFamily === true,
       kind: str("kind"),
       eventTypeId: str("eventTypeId"),
+      participants: Array.isArray(raw.participants)
+        ? raw.participants.filter((x): x is string => typeof x === "string")
+        : undefined,
     },
     p.role === "ADMIN" || p.kind === "PARENT",
   );
