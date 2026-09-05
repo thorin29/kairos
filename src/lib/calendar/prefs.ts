@@ -35,6 +35,7 @@ export type CalendarPrefs = {
   othersColor: string | null;
   nowColor: string | null;
   holidayColor: string | null;
+  familyColor: string | null;
   kindColors: Record<string, string>;
   eventTypeColors: Record<string, string>;
   subColors: Record<string, string>;
@@ -73,6 +74,7 @@ const DEFAULTS: CalendarPrefs = {
   othersColor: null,
   nowColor: null,
   holidayColor: null,
+  familyColor: null,
   kindColors: {},
   eventTypeColors: {},
   subColors: {},
@@ -94,6 +96,7 @@ export async function loadCalendarPrefs(
     othersColor: row.othersColor,
     nowColor: row.nowColor,
     holidayColor: row.holidayColor,
+    familyColor: row.familyColor,
     kindColors: asColorMap(row.kindColors),
     eventTypeColors: asColorMap(row.eventTypeColors),
     subColors: asColorMap(row.subColors),

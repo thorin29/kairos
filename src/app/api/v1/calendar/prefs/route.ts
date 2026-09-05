@@ -63,6 +63,8 @@ export async function POST(req: NextRequest) {
   if (raw.othersMode === "own" || raw.othersMode === "grey" || raw.othersMode === "family") cp.othersMode = raw.othersMode;
   if (isHex(raw.othersColor) || raw.othersColor === null) cp.othersColor = raw.othersColor;
   if (isHex(raw.holidayColor) || raw.holidayColor === null) cp.holidayColor = raw.holidayColor;
+  if (isHex(raw.familyColor) || raw.familyColor === null) cp.familyColor = raw.familyColor;
+  if (isHex(raw.nowColor) || raw.nowColor === null) cp.nowColor = raw.nowColor;
   if (raw.kindColors !== undefined) cp.kindColors = colorMap(raw.kindColors);
   if (raw.eventTypeColors !== undefined) cp.eventTypeColors = colorMap(raw.eventTypeColors);
   if (raw.subColors !== undefined) cp.subColors = colorMap(raw.subColors);

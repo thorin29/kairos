@@ -77,12 +77,16 @@ export type CalendarOptions = {
     othersMode: string;
     othersColor: string | null;
     holidayColor: string | null;
+    familyColor: string | null;
+    nowColor: string | null;
     kindColors: Record<string, string>;
     eventTypeColors: Record<string, string>;
     subColors: Record<string, string>;
   };
   meColor: string;
   holidaySystemColor: string;
+  familySystemColor: string;
+  nowSystemColor: string;
 };
 
 export type CalendarPagePayload = {
@@ -238,6 +242,7 @@ export async function loadCalendarPagePayload(
     othersMode: prefs.othersMode,
     othersColor: prefs.othersColor,
     holidayColor: prefs.holidayColor,
+    familyColor: prefs.familyColor,
     kindColors: prefs.kindColors,
     eventTypeColors: prefs.eventTypeColors,
     subColors: prefs.subColors,
@@ -319,14 +324,17 @@ export async function loadCalendarPagePayload(
         othersMode: prefs.othersMode,
         othersColor: prefs.othersColor,
         holidayColor: prefs.holidayColor,
+        familyColor: prefs.familyColor,
+        nowColor: prefs.nowColor,
         kindColors: prefs.kindColors,
         eventTypeColors: prefs.eventTypeColors,
         subColors: prefs.subColors,
       },
-      // Fallbacks the colour picker shows when a slot is unset: the person's own
-      // colour for their event kinds, the family colour for holidays.
+      // Fallbacks the colour picker shows when a slot is unset.
       meColor: people.find((p) => p.id === userId)?.color ?? "#2563eb",
       holidaySystemColor: familyColor,
+      familySystemColor: familyColor,
+      nowSystemColor: calPrefs.nowColor,
     },
   };
 }
