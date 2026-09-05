@@ -79,7 +79,7 @@ export function EventDetail({
   const [confirming, setConfirming] = useState(false);
   const [editScope, setEditScope] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [banner, setBanner] = useState(!!event.bgKey);
+  const [banner, setBanner] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isSchoolWork = event.kind === "SCHOOLWORK";
@@ -121,18 +121,32 @@ export function EventDetail({
         }}
         className="absolute flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xl"
       >
-        {banner && event.bgKey && (
-          <div className="relative h-20 w-full shrink-0">
+        {event.bgKey && (
+          <>
+            {/* Preload to decide whether the banner has art; a 1px hidden probe
+                avoids the broken-image icon while it resolves. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={bgUrl(event.bgKey)}
               alt=""
               aria-hidden
+              onLoad={() => setBanner(true)}
               onError={() => setBanner(false)}
-              className="absolute inset-0 h-full w-full object-cover"
+              style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
             />
-            <span className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/45" />
-          </div>
+            {banner && (
+              <div className="relative h-20 w-full shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={bgUrl(event.bgKey)}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <span className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/45" />
+              </div>
+            )}
+          </>
         )}
 
         {/* Action bar */}
