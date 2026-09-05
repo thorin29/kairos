@@ -77,6 +77,16 @@ function addHour(hhmm: string): string {
   return `${String(nh).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
 }
 
+/** The current wall-clock time rounded up to the next half hour (clamped so a
+ *  one-hour default end still lands the same day), so new events don't default
+ *  to a time that's already passed. */
+function nextHalfHour(): string {
+  const n = new Date();
+  let mins = n.getHours() * 60 + n.getMinutes();
+  mins = Math.min(Math.ceil((mins + 1) / 30) * 30, 22 * 60);
+  return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+}
+
 function hhmmToMin(hhmm: string): number {
   const [h, m] = hhmm.split(":").map(Number);
   return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
@@ -183,7 +193,7 @@ export function AddEventProvider({
           classCtx={classCtx}
           editing={editing}
           date={prefill.date ?? defaultDate}
-          start={prefill.start ?? "16:00"}
+          start={prefill.start ?? nextHalfHour()}
           end={prefill.end}
           endDayOffset={prefill.endDayOffset}
           title={prefill.title}

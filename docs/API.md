@@ -346,7 +346,8 @@ request: { "title", "allDay":bool, "date":"YYYY-MM-DD",
                                    // recurrence, participants, event types, family, editing = later.
 
 POST /api/v1/calendar/event/update   edit an event (v0.217; recurring v0.219)
-request: same body as create + "eventId","scope"?:"single"|"series","occurrenceISO"?
+request: same body as create (incl. isFamily/kind/eventTypeId/participants) +
+         "eventId","scope"?:"single"|"series","occurrenceISO"?   // v0.223: edit type/owner/participants
 200: { "status":"ok" }   422: feed/not-yours/bad fields; series edit is parent-only
                                    // scope: single = just this occurrence (override);
                                    // series = the whole repeat (keeps the pattern).

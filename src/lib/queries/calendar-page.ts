@@ -45,6 +45,11 @@ export type CalEvent = {
   shade: boolean;
   kind: string;
   ownerName: string;
+  ownerId: string | null;
+  eventTypeId: string | null;
+  /** Everyone this event belongs to (owner + participants); minus owner = the
+   *  shared-with people, for edit prefill. */
+  memberIds: string[];
   calendarName: string | null;
   recurring: boolean;
   recurLabel: string | null;
@@ -132,6 +137,9 @@ function toWire(e: GridEvent): CalEvent {
     shade: e.shade,
     kind: e.kind,
     ownerName: e.ownerName,
+    ownerId: e.ownerId,
+    eventTypeId: e.eventTypeId ?? null,
+    memberIds: e.memberIds,
     calendarName: e.calendarName,
     recurring: e.recurring,
     recurLabel: e.recurLabel ?? null,
