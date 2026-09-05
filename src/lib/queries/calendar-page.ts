@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import {
   loadRange,
+  loadEventTypes,
   type GridEvent,
 } from "@/lib/queries/calendar";
 import { syncStaleCalendars } from "@/lib/calendar/sync";
@@ -59,6 +60,11 @@ export type CalendarOptions = {
   shownSubs: string[];
   showFamily: boolean;
   showSchoolWork: boolean;
+  /** Whether this person may add to the family calendar / manage birthdays +
+   *  repeats (parent or admin). */
+  canManageFamily: boolean;
+  /** Custom event types, for the type picker. */
+  eventTypes: { id: string; name: string; color: string }[];
 };
 
 export type CalendarPagePayload = {
@@ -146,7 +152,7 @@ export async function loadCalendarPagePayload(
   const date =
     rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : todayISO;
 
-  const [subsRaw, familyColor, calPrefs, people] = await Promise.all([
+  const [subsRaw, familyColor, calPrefs, people, eventTypes, self] = await Promise.all([
     prisma.externalCalendar.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
@@ -166,7 +172,10 @@ export async function loadCalendarPagePayload(
       orderBy: { sortOrder: "asc" },
       select: { id: true, name: true, displayName: true, color: true },
     }),
+    loadEventTypes(),
+    prisma.user.findUnique({ where: { id: userId }, select: { role: true, kind: true } }),
   ]);
+  const canManageFamily = self?.role === "ADMIN" || self?.kind === "PARENT";
 
   const subs = subsRaw.map((s) => ({
     id: s.id,
@@ -282,6 +291,8 @@ export async function loadCalendarPagePayload(
       shownSubs,
       showFamily: prefs.showFamily,
       showSchoolWork: prefs.showSchoolWork,
+      canManageFamily,
+      eventTypes: eventTypes.map((t) => ({ id: t.id, name: t.name, color: t.color })),
     },
   };
 }

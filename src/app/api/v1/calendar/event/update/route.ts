@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       timezone: str("timezone"),
       occurrenceISO: str("occurrenceISO"),
     },
-    authed.device.person.role === "ADMIN",
+    authed.device.person.role === "ADMIN" || authed.device.person.kind === "PARENT",
     str("scope") === "single" ? "single" : "series",
   );
   if (res.error) return apiError("validation", res.error);

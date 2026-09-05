@@ -318,7 +318,9 @@ GET  /api/v1/calendar           ?view=(month|week|three_day|day|agenda) &date=YY
          "people": [ { "id","name","color" } ],
          "subscriptions": [ { "id","name","ownerName":str|null,"color" } ],
          "shownPeople": [ "userId", … ], "shownSubs": [ "subId", … ],
-         "showFamily":bool, "showSchoolWork":bool } }
+         "showFamily":bool, "showSchoolWork":bool,
+         "canManageFamily":bool,                 // v0.220: parent/admin — may add to family + manage birthdays/repeats
+         "eventTypes": [ { "id","name","color" } ] } }
 ```
 `CalEvent` on the wire:
 ```
@@ -335,7 +337,9 @@ POST /api/v1/calendar/event        create a basic personal event (v0.214, Phase 
 request: { "title", "allDay":bool, "date":"YYYY-MM-DD",
            "start"?:"HH:MM","end"?:"HH:MM","endDate"?:"YYYY-MM-DD",
            "location"?:str, "timezone"?:"America/Chicago",  // tz default home; sets the stored instant
-           "repeat"?:"NONE"|"DAILY"|"WEEKLY"|"MONTHLY"|"YEARLY" }  // v0.218; interval 1
+           "repeat"?:"NONE"|"DAILY"|"WEEKLY"|"MONTHLY"|"YEARLY",  // v0.218; interval 1
+           "isFamily"?:bool, "kind"?:"APPOINTMENT"|"CLASS"|"WORK"|"BIRTHDAY"|"OTHER",
+           "eventTypeId"?:str }  // v0.220: owner (family needs parent/admin) + kind/type
 200: { "status":"ok" }   422: bad name / date / times
                                    // single occurrence, owner = enrolled person.
                                    // recurrence, participants, event types, family, editing = later.
