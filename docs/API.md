@@ -334,7 +334,8 @@ GET  /api/v1/calendar           ?view=(month|week|three_day|day|agenda) &date=YY
 POST /api/v1/calendar/event        create a basic personal event (v0.214, Phase 3a)
 request: { "title", "allDay":bool, "date":"YYYY-MM-DD",
            "start"?:"HH:MM","end"?:"HH:MM","endDate"?:"YYYY-MM-DD",
-           "location"?:str, "timezone"?:"America/Chicago" }  // tz default home; sets the stored instant
+           "location"?:str, "timezone"?:"America/Chicago",  // tz default home; sets the stored instant
+           "repeat"?:"NONE"|"DAILY"|"WEEKLY"|"MONTHLY"|"YEARLY" }  // v0.218; interval 1
 200: { "status":"ok" }   422: bad name / date / times
                                    // single occurrence, owner = enrolled person.
                                    // recurrence, participants, event types, family, editing = later.

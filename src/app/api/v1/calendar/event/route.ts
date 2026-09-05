@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     endDate: str("endDate"),
     location: str("location"),
     timezone: str("timezone"),
+    repeat: str("repeat"),
   });
   if (res.error) return apiError("validation", res.error);
   return apiOk({ status: "ok" });
