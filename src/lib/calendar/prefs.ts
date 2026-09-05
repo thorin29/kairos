@@ -219,3 +219,13 @@ export async function setSubColor(
 ): Promise<void> {
   await patchColorMap(userId, "subColors", subId, color);
 }
+
+/** Patch any of the colour fields at once (validated by the caller). Maps are
+ *  replaced wholesale — the app sends the full map for the field it changed. */
+export async function setColorPrefs(
+  userId: string,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  if (Object.keys(patch).length === 0) return;
+  await patchPrefs(userId, patch);
+}

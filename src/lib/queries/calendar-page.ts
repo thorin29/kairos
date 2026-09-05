@@ -70,6 +70,19 @@ export type CalendarOptions = {
   canManageFamily: boolean;
   /** Custom event types, for the type picker. */
   eventTypes: { id: string; name: string; color: string }[];
+  /** Phase 5 colour personalisation: current prefs + the fallback colours the
+   *  picker shows for unset slots. */
+  colorPrefs: {
+    personalizeColors: boolean;
+    othersMode: string;
+    othersColor: string | null;
+    holidayColor: string | null;
+    kindColors: Record<string, string>;
+    eventTypeColors: Record<string, string>;
+    subColors: Record<string, string>;
+  };
+  meColor: string;
+  holidaySystemColor: string;
 };
 
 export type CalendarPagePayload = {
@@ -301,6 +314,19 @@ export async function loadCalendarPagePayload(
       showSchoolWork: prefs.showSchoolWork,
       canManageFamily,
       eventTypes: eventTypes.map((t) => ({ id: t.id, name: t.name, color: t.color })),
+      colorPrefs: {
+        personalizeColors: prefs.personalizeColors,
+        othersMode: prefs.othersMode,
+        othersColor: prefs.othersColor,
+        holidayColor: prefs.holidayColor,
+        kindColors: prefs.kindColors,
+        eventTypeColors: prefs.eventTypeColors,
+        subColors: prefs.subColors,
+      },
+      // Fallbacks the colour picker shows when a slot is unset: the person's own
+      // colour for their event kinds, the family colour for holidays.
+      meColor: people.find((p) => p.id === userId)?.color ?? "#2563eb",
+      holidaySystemColor: familyColor,
     },
   };
 }
