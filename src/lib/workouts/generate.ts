@@ -286,6 +286,7 @@ export async function pendingSportPrompts(
       userId: true,
       title: true,
       startsAt: true,
+      endsAt: true,
       rrule: true,
       participants: { select: { userId: true } },
       eventType: { select: { sportWorkout: true } },
@@ -294,11 +295,20 @@ export async function pendingSportPrompts(
   });
   if (events.length === 0) return [];
 
-  const due = events.filter((e) =>
-    e.rrule
-      ? occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz).length > 0
-      : localParts(e.startsAt).iso === dateISO,
-  );
+  // Only ask after the event has actually happened — its occurrence today must
+  // have ended (start + duration ≤ now), matching how class prompts work.
+  const now = Date.now();
+  const due = events.filter((e) => {
+    const durationMs = e.endsAt.getTime() - e.startsAt.getTime();
+    if (e.rrule) {
+      return occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz).some(
+        (s) => s.getTime() + durationMs <= now,
+      );
+    }
+    return (
+      localParts(e.startsAt).iso === dateISO && e.endsAt.getTime() <= now
+    );
+  });
   if (due.length === 0) return [];
 
   const date = toDateColumn(dateISO);
