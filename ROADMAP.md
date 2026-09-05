@@ -189,7 +189,9 @@ Characters. Each drawer entry keeps its web brand colour.
       **End-of-epic polish (remind before closing the epic):** (a) smooth
       drag-follow swipe paging (the current swipe is fling-to-page, not a pager
       that tracks the finger with pre-rendered neighbours); (b) the month-name
-      dropdown could look better. Also by end of epic: the dashboard should be
+      dropdown could look better; (c) the app editor's pop-up menus (Type,
+      Calendar, Timezone, Repeats) render as a left-anchored popup rather than a
+      true dropdown attached to the field — switch to a proper anchored dropdown. Also by end of epic: the dashboard should be
       able to **ask whether sporting calendar events were completed** (it's
       calendar-event-driven — see Dashboard).
 - [ ] **Remaining sections, each to full parity ← NEXT** (enumerate components
