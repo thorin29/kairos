@@ -460,6 +460,7 @@ model UserCalendarPref {
   othersColor       String? // the single colour used when othersMode = grey
   nowColor          String? // personal override of the admin now-line colour
   holidayColor      String? // personal override of the admin holiday colour
+  familyColor       String? // personal override of the family calendar colour
   kindColors        Json? // { APPOINTMENT|CLASS|WORK|BIRTHDAY: "#rrggbb" }
   eventTypeColors   Json? // { <eventTypeId>: "#rrggbb" }
   subColors         Json? // { <externalCalendarId>: "#rrggbb" }

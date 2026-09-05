@@ -147,6 +147,7 @@ export async function PersonalCalendar({
     othersMode: prefs.othersMode,
     othersColor: prefs.othersColor,
     holidayColor: prefs.holidayColor,
+    familyColor: prefs.familyColor,
     kindColors: prefs.kindColors,
     eventTypeColors: prefs.eventTypeColors,
     subColors: prefs.subColors,

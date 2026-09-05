@@ -16,6 +16,7 @@ export type ColorPrefs = {
   othersMode: OthersMode;
   othersColor: string | null;
   holidayColor: string | null;
+  familyColor: string | null;
   kindColors: Record<string, string>;
   eventTypeColors: Record<string, string>;
   subColors: Record<string, string>;
@@ -52,8 +53,11 @@ export function recolorForPersonal(
     return c ? paint(e, c) : e;
   }
 
-  // Family / shared household events keep the household (family) colour.
-  if (e.isFamily || e.ownerId == null) return e;
+  // Family / shared household events keep the household (family) colour, unless
+  // the person has picked their own family colour.
+  if (e.isFamily || e.ownerId == null) {
+    return p.familyColor ? paint(e, p.familyColor) : e;
+  }
 
   // Someone else's personal event → their own colour, or one grey.
   if (e.ownerId !== meId) {
