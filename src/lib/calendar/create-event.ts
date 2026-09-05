@@ -32,6 +32,8 @@ export type EventInput = {
   kind?: string;
   /** Create only: a custom EventType id whose colour wins. */
   eventTypeId?: string;
+  /** People (user ids) to share this event with, besides the owner. */
+  participants?: string[];
 };
 
 const CREATE_KINDS = ["CLASS", "WORK", "APPOINTMENT", "BIRTHDAY", "OTHER"] as const;
@@ -113,7 +115,7 @@ export async function createPersonalEvent(
   const rrule =
     input.repeat && isFreq(input.repeat) ? buildRule(input.repeat, 1, null) : null;
 
-  await prisma.event.create({
+  const created = await prisma.event.create({
     data: {
       userId: isFamily ? null : actorUserId,
       isFamily,
@@ -130,10 +132,33 @@ export async function createPersonalEvent(
     select: { id: true },
   });
 
+  await setParticipants(created.id, input.participants, isFamily ? null : actorUserId);
+
   revalidatePath("/calendar");
   revalidatePath("/");
   if (!isFamily) revalidatePath(`/person/${actorUserId}`);
   return { error: null };
+}
+
+/** Replace an event's shared-with people (excluding the owner), validating ids. */
+async function setParticipants(
+  eventId: string,
+  participants: string[] | undefined,
+  ownerId: string | null,
+): Promise<void> {
+  if (participants === undefined) return;
+  const ids = [...new Set(participants)].filter((p) => p && p !== ownerId);
+  await prisma.eventParticipant.deleteMany({ where: { eventId } });
+  if (ids.length === 0) return;
+  const valid = await prisma.user.findMany({
+    where: { id: { in: ids }, isActive: true },
+    select: { id: true },
+  });
+  if (valid.length === 0) return;
+  await prisma.eventParticipant.createMany({
+    data: valid.map((u) => ({ eventId, userId: u.id })),
+    skipDuplicates: true,
+  });
 }
 
 /** Update a personal event. For a repeating event, `scope` is "single" (edit
@@ -193,10 +218,12 @@ export async function updatePersonalEvent(
       where: { recurrenceId: eventId, recurrenceDate: overrideDate },
       select: { id: true },
     });
+    let targetId: string;
     if (existing) {
       await prisma.event.update({ where: { id: existing.id }, data: fields });
+      targetId = existing.id;
     } else {
-      await prisma.event.create({
+      const created = await prisma.event.create({
         data: {
           ...fields,
           userId: ev.userId,
@@ -208,9 +235,12 @@ export async function updatePersonalEvent(
         },
         select: { id: true },
       });
+      targetId = created.id;
     }
+    await setParticipants(targetId, input.participants, ev.isFamily ? null : ev.userId);
   } else {
     await prisma.event.update({ where: { id: eventId }, data: fields });
+    await setParticipants(eventId, input.participants, ev.isFamily ? null : ev.userId);
   }
 
   revalidatePath("/calendar");

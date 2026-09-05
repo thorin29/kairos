@@ -339,7 +339,8 @@ request: { "title", "allDay":bool, "date":"YYYY-MM-DD",
            "location"?:str, "timezone"?:"America/Chicago",  // tz default home; sets the stored instant
            "repeat"?:"NONE"|"DAILY"|"WEEKLY"|"MONTHLY"|"YEARLY",  // v0.218; interval 1
            "isFamily"?:bool, "kind"?:"APPOINTMENT"|"CLASS"|"WORK"|"BIRTHDAY"|"OTHER",
-           "eventTypeId"?:str }  // v0.220: owner (family needs parent/admin) + kind/type
+           "eventTypeId"?:str,   // v0.220: owner (family needs parent/admin) + kind/type
+           "participants"?:[ "userId", … ] }  // v0.222: share with other people
 200: { "status":"ok" }   422: bad name / date / times
                                    // single occurrence, owner = enrolled person.
                                    // recurrence, participants, event types, family, editing = later.
