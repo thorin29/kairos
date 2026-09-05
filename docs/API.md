@@ -339,6 +339,10 @@ request: { "title", "allDay":bool, "date":"YYYY-MM-DD",
                                    // single occurrence, owner = enrolled person.
                                    // recurrence, participants, event types, family, editing = later.
 
+POST /api/v1/calendar/event/update   edit a non-recurring event (v0.217)
+request: same body as create + "eventId"
+200: { "status":"ok" }   422: feed/recurring/not-yours/bad fields
+
 POST /api/v1/calendar/event/delete   delete an event (v0.216)
 request: { "eventId", "scope"?:"all"|"future"|"one", "occurrenceISO"?:"YYYY-MM-DD" }
 200: { "status":"ok" }   422: feed event / not yours / repeating needs a parent
