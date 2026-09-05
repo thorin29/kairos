@@ -35,6 +35,12 @@ export async function POST(req: NextRequest) {
       location: str("location"),
       timezone: str("timezone"),
       occurrenceISO: str("occurrenceISO"),
+      isFamily: raw.isFamily === true,
+      kind: str("kind"),
+      eventTypeId: str("eventTypeId"),
+      participants: Array.isArray(raw.participants)
+        ? raw.participants.filter((x): x is string => typeof x === "string")
+        : undefined,
     },
     authed.device.person.role === "ADMIN" || authed.device.person.kind === "PARENT",
     str("scope") === "single" ? "single" : "series",

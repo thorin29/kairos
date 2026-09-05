@@ -191,6 +191,32 @@ export async function updatePersonalEvent(
   if (title.length < 2) return { error: "Give the event a name." };
   const location = (input.location ?? "").trim().slice(0, 200) || null;
 
+  // Type and owner can change on a plain (non-recurring or series) edit. Moving
+  // to the family calendar needs parent/admin; birthdays likewise (already gated
+  // above). Kind isn't changed on a single-occurrence override.
+  const nextIsFamily = input.isFamily === true;
+  if (nextIsFamily && !canManageFamily) {
+    return { error: "Only a parent can move an event to the family calendar." };
+  }
+  const nextKind = input.kind !== undefined ? toKind(input.kind) : ev.kind;
+  if (nextKind === "BIRTHDAY" && !canManageFamily) {
+    return { error: "Only a parent can make an event a birthday." };
+  }
+  let nextTypeId: string | null | undefined = undefined;
+  if (input.kind !== undefined) {
+    // The app sends kind + eventTypeId together as one type selection, so a
+    // built-in kind (no eventTypeId) clears any custom type.
+    if (input.eventTypeId) {
+      const t = await prisma.eventType.findUnique({
+        where: { id: input.eventTypeId },
+        select: { id: true },
+      });
+      nextTypeId = t?.id ?? null;
+    } else {
+      nextTypeId = null;
+    }
+  }
+
   // A series edit keeps the series anchored to its original start date and only
   // changes the time of day; single / non-recurring edits use the form's date.
   const dateForRow = seriesEdit ? localParts(ev.startsAt).iso : input.date;
@@ -207,6 +233,16 @@ export async function updatePersonalEvent(
     allDay: input.allDay,
     shadeDay: input.allDay,
   };
+  // Owner/kind/type apply to a normal or series edit (not a single-occurrence
+  // override, which stays tied to its parent's identity).
+  const ownerFields = singleEdit
+    ? {}
+    : {
+        userId: nextIsFamily ? null : ev.userId ?? userId,
+        isFamily: nextIsFamily,
+        kind: nextKind,
+        ...(nextTypeId !== undefined ? { eventTypeId: nextTypeId } : {}),
+      };
 
   if (singleEdit) {
     const occ =
@@ -239,8 +275,9 @@ export async function updatePersonalEvent(
     }
     await setParticipants(targetId, input.participants, ev.isFamily ? null : ev.userId);
   } else {
-    await prisma.event.update({ where: { id: eventId }, data: fields });
-    await setParticipants(eventId, input.participants, ev.isFamily ? null : ev.userId);
+    await prisma.event.update({ where: { id: eventId }, data: { ...fields, ...ownerFields } });
+    const ownerAfter = nextIsFamily ? null : ev.userId ?? userId;
+    await setParticipants(eventId, input.participants, ownerAfter);
   }
 
   revalidatePath("/calendar");
