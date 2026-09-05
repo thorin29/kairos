@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { householdTz, toDateColumn, zonedToUtc } from "@/lib/dates";
+import { buildRule } from "@/lib/calendar/recur";
 
 /**
  * Create / update a basic personal calendar event for the app (Phase 3a-b).
@@ -21,7 +22,13 @@ export type EventInput = {
   endDate?: string;
   location?: string;
   timezone?: string;
+  /** NONE | DAILY | WEEKLY | MONTHLY | YEARLY (create only, interval 1 for now). */
+  repeat?: string;
 };
+
+const FREQS = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"] as const;
+type Freq = (typeof FREQS)[number];
+const isFreq = (v: string): v is Freq => (FREQS as readonly string[]).includes(v);
 
 function validTz(tz: string): boolean {
   try {
@@ -72,6 +79,9 @@ export async function createPersonalEvent(
   const t = computeTimes(input);
   if ("error" in t) return { error: t.error };
 
+  const rrule =
+    input.repeat && isFreq(input.repeat) ? buildRule(input.repeat, 1, null) : null;
+
   await prisma.event.create({
     data: {
       userId,
@@ -83,7 +93,7 @@ export async function createPersonalEvent(
       endsAt: t.endsAt,
       allDay: input.allDay,
       shadeDay: input.allDay,
-      rrule: null,
+      rrule,
     },
     select: { id: true },
   });

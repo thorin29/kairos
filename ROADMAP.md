@@ -184,9 +184,14 @@ Characters. Each drawer entry keeps its web brand colour.
       school-work/subscription checkboxes), and **create a basic event**
       (`POST /calendar/event` — single occurrence, per-event timezone default home).
       `GET /calendar` returns in-range events, month grid/dots, now-line colour,
-      household timezone, and the filter options. Remaining: 3b) recurrence /
-      participants / event-types / **editing**; 5) colour personalisation. Later
-      polish: drag-follow pager.
+      household timezone, and the filter options. Remaining: 3b) recurring **edit / delete-this-occurrence** (recurring *create*
+      done v0.218: daily/weekly/monthly/yearly) / participants / event-types; 5) colour personalisation.
+      **End-of-epic polish (remind before closing the epic):** (a) smooth
+      drag-follow swipe paging (the current swipe is fling-to-page, not a pager
+      that tracks the finger with pre-rendered neighbours); (b) the month-name
+      dropdown could look better. Also by end of epic: the dashboard should be
+      able to **ask whether sporting calendar events were completed** (it's
+      calendar-event-driven — see Dashboard).
 - [ ] **Remaining sections, each to full parity ← NEXT** (enumerate components
       from the web page at build time): Reading, School, Game time, Groceries,
       Money, Characters.
@@ -217,8 +222,19 @@ Characters. Each drawer entry keeps its web brand colour.
       (token-authed) with the web's position/zoom transform.
 - [ ] Rest of the native client (`kairos-app`): QR enrollment scan, Room,
       WorkManager, FCM.
-- [ ] **Push notifications** via FCM, with typed deep-link targets
-      (`chore:<id>`, `reward:<id>`, `event:<id>`, `reading:<ref>`).
+- [ ] **Notifications epic** (via FCM, typed deep-link targets: `chore:<id>`,
+      `reward:<id>`, `event:<id>`, `reading:<ref>`). **App- and user-specific**
+      (a per-device, per-user concern — not a household setting). Design:
+      - **Start with calendar events only**; chores and school work come later.
+      - **Per-event-type defaults**, since event types already exist
+        (appointments, class, work shift, birthdays, plus any user-added
+        categories) — each user sets a default lead time per type (e.g. "15 min
+        before"), overridable per event.
+      - **Default OFF** for everything, so we don't train users to silence us; a
+        user opts in per type / per event. Ramp up only once it's proven useful.
+      - Needs: FCM token registration per device, a per-user/-device notification
+        prefs store, a scheduler that fires on the event's instant minus lead
+        time (respecting the event's timezone), and quiet-hours later.
 - [ ] **Offline** for the personal daily surface (today's chores + completion
       at minimum), replaying writes through the same POST endpoints so there is
       no separate write-sync path. Wider offline (calendar two-way) is a later
@@ -236,6 +252,13 @@ Characters. Each drawer entry keeps its web brand colour.
       of day and sky, moon phase
 - [ ] Weekly forecast page styled after Breezy Weather
 - [ ] Month and week completion grid — every person's rate by day
+- [ ] **Follow-up prompts on the home dashboard** (nudge, don't nag):
+      - **"Did this happen?" for sporting calendar events** — after a sport event
+        passes, ask whether it was completed (feeds scoring/streaks). Calendar-
+        event-driven, so integrate by the end of the calendar epic.
+      - **"Did you go?" for classes** — confirm class attendance/completion.
+      - **Bible reading rewards ready** — remind when a reward is available to
+        claim.
 
 ## People and profiles
 
