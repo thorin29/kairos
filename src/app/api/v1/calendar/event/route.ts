@@ -20,17 +20,25 @@ export async function POST(req: NextRequest) {
   const raw = (body ?? {}) as Record<string, unknown>;
   const str = (k: string) => (typeof raw[k] === "string" ? (raw[k] as string) : undefined);
 
-  const res = await createPersonalEvent(authed.device.person.id, {
-    title: str("title") ?? "",
-    allDay: raw.allDay === true,
-    date: str("date") ?? "",
-    start: str("start"),
-    end: str("end"),
-    endDate: str("endDate"),
-    location: str("location"),
-    timezone: str("timezone"),
-    repeat: str("repeat"),
-  });
+  const p = authed.device.person;
+  const res = await createPersonalEvent(
+    p.id,
+    {
+      title: str("title") ?? "",
+      allDay: raw.allDay === true,
+      date: str("date") ?? "",
+      start: str("start"),
+      end: str("end"),
+      endDate: str("endDate"),
+      location: str("location"),
+      timezone: str("timezone"),
+      repeat: str("repeat"),
+      isFamily: raw.isFamily === true,
+      kind: str("kind"),
+      eventTypeId: str("eventTypeId"),
+    },
+    p.role === "ADMIN" || p.kind === "PARENT",
+  );
   if (res.error) return apiError("validation", res.error);
   return apiOk({ status: "ok" });
 }

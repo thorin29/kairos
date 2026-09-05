@@ -26,7 +26,20 @@ export type EventInput = {
   repeat?: string;
   /** The home-tz date of the occurrence being edited (for single-scope edits). */
   occurrenceISO?: string;
+  /** Create only: the family calendar (needs parent/admin) vs the actor's own. */
+  isFamily?: boolean;
+  /** Create only: CLASS | WORK | APPOINTMENT | BIRTHDAY | OTHER. */
+  kind?: string;
+  /** Create only: a custom EventType id whose colour wins. */
+  eventTypeId?: string;
 };
+
+const CREATE_KINDS = ["CLASS", "WORK", "APPOINTMENT", "BIRTHDAY", "OTHER"] as const;
+function toKind(v: string | undefined): EventKind {
+  return v && (CREATE_KINDS as readonly string[]).includes(v)
+    ? (v as EventKind)
+    : EventKind.APPOINTMENT;
+}
 
 const FREQS = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"] as const;
 type Freq = (typeof FREQS)[number];
@@ -70,13 +83,29 @@ function computeTimes(
 }
 
 export async function createPersonalEvent(
-  userId: string,
+  actorUserId: string,
   input: EventInput,
+  canManageFamily: boolean,
 ): Promise<{ error: string | null }> {
+  const isFamily = input.isFamily === true;
+  if (isFamily && !canManageFamily) {
+    return { error: "Only a parent can add to the family calendar." };
+  }
+  const kind = toKind(input.kind);
+
   const title = input.title.trim().slice(0, 120);
   if (title.length < 2) return { error: "Give the event a name." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { error: "Pick a date." };
   const location = (input.location ?? "").trim().slice(0, 200) || null;
+
+  let eventTypeId: string | null = null;
+  if (input.eventTypeId) {
+    const t = await prisma.eventType.findUnique({
+      where: { id: input.eventTypeId },
+      select: { id: true },
+    });
+    eventTypeId = t?.id ?? null;
+  }
 
   const t = computeTimes(input);
   if ("error" in t) return { error: t.error };
@@ -86,9 +115,10 @@ export async function createPersonalEvent(
 
   await prisma.event.create({
     data: {
-      userId,
-      isFamily: false,
-      kind: EventKind.APPOINTMENT,
+      userId: isFamily ? null : actorUserId,
+      isFamily,
+      kind,
+      eventTypeId,
       title,
       location,
       startsAt: t.startsAt,
@@ -102,7 +132,7 @@ export async function createPersonalEvent(
 
   revalidatePath("/calendar");
   revalidatePath("/");
-  revalidatePath(`/person/${userId}`);
+  if (!isFamily) revalidatePath(`/person/${actorUserId}`);
   return { error: null };
 }
 
@@ -114,7 +144,7 @@ export async function updatePersonalEvent(
   userId: string,
   eventId: string,
   input: EventInput,
-  isAdmin: boolean,
+  canManageFamily: boolean,
   scope: "single" | "series" = "series",
 ): Promise<{ error: string | null }> {
   const ev = await prisma.event.findUnique({ where: { id: eventId } });
@@ -125,10 +155,10 @@ export async function updatePersonalEvent(
   const singleEdit = recurring && scope === "single";
   const seriesEdit = recurring && scope === "series";
 
-  if ((seriesEdit || ev.kind === "BIRTHDAY") && !isAdmin) {
+  if ((seriesEdit || ev.kind === "BIRTHDAY") && !canManageFamily) {
     return { error: "Only a parent can edit a repeating event or a birthday." };
   }
-  if (!ev.isFamily && ev.userId !== userId && !isAdmin) {
+  if (!ev.isFamily && ev.userId !== userId && !canManageFamily) {
     return { error: "You can only edit your own events." };
   }
 

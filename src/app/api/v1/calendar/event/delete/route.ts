@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   const occurrenceISO = typeof raw.occurrenceISO === "string" ? raw.occurrenceISO : undefined;
 
   const res = await deleteEventCore(eventId, scope, occurrenceISO, {
-    isAdmin: authed.device.person.role === "ADMIN",
+    isAdmin: authed.device.person.role === "ADMIN" || authed.device.person.kind === "PARENT",
     callerUserId: authed.device.person.id,
   });
   if (res.error) return apiError("validation", res.error);
