@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Category } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { toDateColumn } from "@/lib/dates";
+import { localParts, toDateColumn } from "@/lib/dates";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 
 /**
@@ -18,13 +18,19 @@ export async function confirmSportWorkout(
 ): Promise<void> {
   await requireInteractive();
   await requireCanActFor(userId);
-  const date = toDateColumn(dateISO);
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { title: true },
+    select: { title: true, startsAt: true, rrule: true },
   });
   if (!event) return;
+
+  // Date the session by when the event actually happened, not when it was
+  // confirmed: a late Saturday game you tick off Sunday morning still counts for
+  // Saturday. (Recurring events are prompted per-occurrence, so the passed date
+  // is already the occurrence.)
+  const occurrenceISO = event.rrule ? dateISO : localParts(event.startsAt).iso;
+  const date = toDateColumn(occurrenceISO);
 
   const existing = await prisma.workoutSession.findFirst({
     where: { date, sourceEventId: eventId, userId },
@@ -82,7 +88,13 @@ export async function declineSportWorkout(
 ): Promise<void> {
   await requireInteractive();
   await requireCanActFor(userId);
-  const date = toDateColumn(dateISO);
+  const ev = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { startsAt: true, rrule: true },
+  });
+  if (!ev) return;
+  const occurrenceISO = ev.rrule ? dateISO : localParts(ev.startsAt).iso;
+  const date = toDateColumn(occurrenceISO);
   await prisma.sportSkip.upsert({
     where: { eventId_userId_date: { eventId, userId, date } },
     update: {},
