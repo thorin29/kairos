@@ -358,6 +358,9 @@ request: { "eventId", "scope"?:"all"|"future"|"one", "occurrenceISO"?:"YYYY-MM-D
                                    // scope defaults "all"; non-admins limited to own/family;
                                    // recurring + birthdays admin-only.
 
+POST /api/v1/sport/confirm  { "eventId", "dateISO"? }  // v0.229: answer a home "Did you do X?" sport prompt (yes)
+POST /api/v1/sport/decline  { "eventId", "dateISO"? }  // v0.229: (no). GET /dashboard now returns sportPrompts.
+
 POST /api/v1/calendar/prefs        update filters/view (v0.212); all fields optional
 request: { "shownPeople"?:[…], "shownSubs"?:[…], "showFamily"?:bool,
            "showSchoolWork"?:bool, "view"?:"month|week|three_day|day|agenda" }
