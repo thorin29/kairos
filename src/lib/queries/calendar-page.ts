@@ -45,6 +45,7 @@ export type CalEvent = {
   shade: boolean;
   kind: string;
   ownerName: string;
+  whoLabel: string;
   ownerId: string | null;
   eventTypeId: string | null;
   /** Everyone this event belongs to (owner + participants); minus owner = the
@@ -69,7 +70,7 @@ export type CalendarOptions = {
    *  repeats (parent or admin). */
   canManageFamily: boolean;
   /** Custom event types, for the type picker. */
-  eventTypes: { id: string; name: string; color: string }[];
+  eventTypes: { id: string; name: string; color: string; defaultMinutes: number | null }[];
   /** Phase 5 colour personalisation: current prefs + the fallback colours the
    *  picker shows for unset slots. */
   colorPrefs: {
@@ -154,6 +155,7 @@ function toWire(e: GridEvent): CalEvent {
     shade: e.shade,
     kind: e.kind,
     ownerName: e.ownerName,
+    whoLabel: e.whoLabel,
     ownerId: e.ownerId,
     eventTypeId: e.eventTypeId ?? null,
     memberIds: e.memberIds,
@@ -318,7 +320,7 @@ export async function loadCalendarPagePayload(
       showFamily: prefs.showFamily,
       showSchoolWork: prefs.showSchoolWork,
       canManageFamily,
-      eventTypes: eventTypes.map((t) => ({ id: t.id, name: t.name, color: t.color })),
+      eventTypes: eventTypes.map((t) => ({ id: t.id, name: t.name, color: t.color, defaultMinutes: t.defaultMinutes })),
       colorPrefs: {
         personalizeColors: prefs.personalizeColors,
         othersMode: prefs.othersMode,

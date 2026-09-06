@@ -215,7 +215,7 @@ export function EventDetail({
                   style={{ backgroundColor: event.color }}
                 />
               </span>
-              <span>{event.ownerName}</span>
+              <span>{event.whoLabel}</span>
             </div>
             {event.external && event.calendarName && (
               <div className="flex items-center gap-2 text-muted">

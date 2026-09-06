@@ -51,7 +51,7 @@ export function DaySchedule({
             </div>
             {!compact && (
               <span className="shrink-0 text-xs text-muted">
-                {e.ownerName}
+                {e.whoLabel}
               </span>
             )}
           </li>
