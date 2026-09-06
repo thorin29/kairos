@@ -2,7 +2,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
-import { buildPlan, type Selection } from "@/lib/bible/plan-builder";
+import { buildPlan, type Selection, type Pace } from "@/lib/bible/plan-builder";
 import { parsePassage, BOOK_BY_NAME } from "@/lib/bible/books";
 
 /**
@@ -21,54 +21,64 @@ const MAX_DAYS = 1500;
  *  date and a chapters-per-day pace. Replaces any existing personal plan (the
  *  chapters already read are kept — they live in the person's own record, not on
  *  the plan). */
-export async function generatePersonalPlanCore(
-  userId: string,
-  input: {
-    name: string;
-    bookNames: string[];
-    startISO: string;
-    chaptersPerDay: number;
-  },
-): Promise<{ error: string | null }> {
-  if (!userId) return { error: "Whose plan is this?" };
+export type PersonalPlanInput = {
+  name: string;
+  bookNames: string[];
+  startISO: string;
+  chaptersPerDay?: number;
+  /** Finish-by-date pace: when set, overrides chaptersPerDay. */
+  endISO?: string;
+};
+
+/** Validate a selection and build its dated passages (no save). Shared by the
+ *  create action and the preview endpoint. */
+export function buildPersonalDays(input: PersonalPlanInput): {
+  error: string | null;
+  name?: string;
+  days?: { iso: string; passage: string; isExtra: boolean }[];
+  totalChapters?: number;
+} {
   const name = input.name.trim().slice(0, 80) || "My reading plan";
   const books = [...new Set(input.bookNames)].filter(Boolean);
   if (books.length === 0) return { error: "Pick at least one book." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startISO))
-    return { error: "Pick a start date." };
-  const cpd = Math.max(1, Math.min(50, Math.round(input.chaptersPerDay) || 1));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startISO)) return { error: "Pick a start date." };
 
   const segments: Selection[] = books.map((book) => ({ book }));
-  const perWeekday: Record<number, number> = {
-    0: cpd,
-    1: cpd,
-    2: cpd,
-    3: cpd,
-    4: cpd,
-    5: cpd,
-    6: cpd,
-  };
-  const built = buildPlan({
-    segments,
-    startISO: input.startISO,
-    pace: { kind: "weekly", perWeekday },
-    keepBooksWhole: false,
-  });
+  let pace: Pace;
+  if (input.endISO && /^\d{4}-\d{2}-\d{2}$/.test(input.endISO)) {
+    if (input.endISO < input.startISO) return { error: "The end date is before the start date." };
+    pace = { kind: "finish", endISO: input.endISO, weekdays: [0, 1, 2, 3, 4, 5, 6] };
+  } else {
+    const cpd = Math.max(1, Math.min(50, Math.round(input.chaptersPerDay ?? 1) || 1));
+    pace = { kind: "weekly", perWeekday: { 0: cpd, 1: cpd, 2: cpd, 3: cpd, 4: cpd, 5: cpd, 6: cpd } };
+  }
+
+  const built = buildPlan({ segments, startISO: input.startISO, pace, keepBooksWhole: false });
   if (built.error) return { error: built.error };
   if (built.days.length === 0 || built.days.length > MAX_DAYS)
     return { error: "That plan is empty or far too long." };
+  return { error: null, name, days: built.days, totalChapters: built.totalChapters };
+}
+
+export async function generatePersonalPlanCore(
+  userId: string,
+  input: PersonalPlanInput,
+): Promise<{ error: string | null }> {
+  if (!userId) return { error: "Whose plan is this?" };
+  const b = buildPersonalDays(input);
+  if (b.error || !b.days) return { error: b.error };
 
   await prisma.readingPlan.deleteMany({ where: { ownerId: userId } });
   await prisma.readingPlan.create({
     data: {
-      name,
+      name: b.name!,
       ownerId: userId,
       isPublished: true,
-      notes: `${built.totalChapters} chapters over ${built.days.length} days`,
-      startDate: toDateColumn(built.days[0].iso),
-      endDate: toDateColumn(built.days[built.days.length - 1].iso),
+      notes: `${b.totalChapters} chapters over ${b.days.length} days`,
+      startDate: toDateColumn(b.days[0].iso),
+      endDate: toDateColumn(b.days[b.days.length - 1].iso),
       days: {
-        create: built.days.map((d) => ({
+        create: b.days.map((d) => ({
           day: toDateColumn(d.iso),
           passage: d.passage.slice(0, 120),
           isExtra: d.isExtra,
