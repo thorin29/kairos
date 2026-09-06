@@ -35,6 +35,7 @@ export type GridEvent = {
   /** Whether this all-day event tints its day column. */
   shade: boolean;
   ownerName: string;
+  notes: string | null;
   /** Everyone the event belongs to, by name (owner + participants). */
   memberNames: string[];
   /** Display label: "Family", a single name, "A & B", or "A +N" when crowded. */
@@ -177,6 +178,7 @@ async function birthdayEvents(
         memberIds: [],
         shade: (p as { shadeBirthday?: boolean }).shadeBirthday ?? true,
         ownerName: who,
+        notes: null,
         memberNames: who ? [who] : [],
         whoLabel: who || "Family",
         kind: "BIRTHDAY",
@@ -216,6 +218,7 @@ async function holidayEvents(days: string[]): Promise<GridEvent[]> {
     memberIds: [],
     shade: false,
     ownerName: "Holiday",
+    notes: null,
     memberNames: [],
     whoLabel: "Holiday",
     kind: "HOLIDAY",
@@ -419,6 +422,7 @@ export async function loadRange(
       id: `${e.id}${suffix}`,
       title: e.title,
       location: e.location,
+      notes: (e as { notes?: string | null }).notes ?? null,
       color,
       memberColors,
       isFamily: e.isFamily,
@@ -641,6 +645,7 @@ async function applySchoolWork(
       memberIds: [t.userId],
       shade: false,
       ownerName,
+      notes: null,
       memberNames: ownerName ? [ownerName] : [],
       whoLabel: ownerName || "Family",
       kind: "SCHOOLWORK",
