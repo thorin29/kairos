@@ -358,6 +358,9 @@ request: { "eventId", "scope"?:"all"|"future"|"one", "occurrenceISO"?:"YYYY-MM-D
                                    // scope defaults "all"; non-admins limited to own/family;
                                    // recurring + birthdays admin-only.
 
+POST /api/v1/reading/plan  now also accepts "endISO" (finish-by-date pace; overrides chaptersPerDay)
+POST /api/v1/reading/plan/preview  { bookNames[], startISO, chaptersPerDay?|endISO? } -> { dayCount, totalChapters, startISO, endISO, days[] }  // v0.231
+
 POST /api/v1/sport/confirm  { "eventId", "dateISO"? }  // v0.229: answer a home "Did you do X?" sport prompt (yes)
 POST /api/v1/sport/decline  { "eventId", "dateISO"? }  // v0.229: (no). GET /dashboard now returns sportPrompts.
 

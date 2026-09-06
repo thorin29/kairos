@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
   const startISO = typeof raw?.startISO === "string" ? raw.startISO : "";
   const chaptersPerDay =
     typeof raw?.chaptersPerDay === "number" ? raw.chaptersPerDay : Number(raw?.chaptersPerDay) || 1;
+  const endISO = typeof raw?.endISO === "string" ? raw.endISO : undefined;
   const bookNames = Array.isArray(raw?.bookNames)
     ? raw.bookNames.filter((b): b is string => typeof b === "string")
     : [];
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
     bookNames,
     startISO,
     chaptersPerDay,
+    endISO,
   });
   if (res.error) return apiError("validation", res.error);
   return apiOk({ status: "ok" });
