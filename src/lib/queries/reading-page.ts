@@ -50,6 +50,11 @@ export type ReadingPagePayload = {
     stats: ReadingStats;
     plan: PersonalPlan | null;
     readKeys: string[];
+    havePlan: boolean;
+    cards: ReadingCardPayload[];
+    todayIndex: number;
+    remaining: number;
+    lastDayISO: string | null;
   };
 };
 
@@ -121,6 +126,46 @@ export async function loadReadingPagePayload(
       }),
     ]);
 
+  // Personal reading deck — mirrors the family deck, filtered to this person's
+  // own plan, so the personal view can look like the family view.
+  const havePersonalPlan = !!personalPlan;
+  const personalWindow = havePersonalPlan
+    ? await prisma.readingDay.findMany({
+        where: {
+          plan: { ownerId: userId },
+          day: {
+            gte: toDateColumn(addDays(todayISO, -WINDOW_BACK)),
+            lte: toDateColumn(addDays(todayISO, WINDOW_FORWARD)),
+          },
+        },
+        orderBy: { day: "asc" },
+        select: { day: true, passage: true },
+      })
+    : [];
+  const personalByDay = new Map<string, string>();
+  for (const d of personalWindow) personalByDay.set(fromDateColumn(d.day), d.passage);
+  const personalCards: ReadingCardPayload[] = [...personalByDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([iso, passage]) => ({ iso, passage, label: formatLong(iso) }));
+  const personalTodayIndex = Math.max(
+    0,
+    personalCards.findIndex((c) => c.iso === todayISO),
+  );
+  const [personalRemaining, personalLast] = await Promise.all([
+    havePersonalPlan
+      ? prisma.readingDay.count({
+          where: { plan: { ownerId: userId }, day: { gte: toDateColumn(todayISO) } },
+        })
+      : Promise.resolve(0),
+    havePersonalPlan
+      ? prisma.readingDay.findFirst({
+          where: { plan: { ownerId: userId } },
+          orderBy: { day: "desc" },
+          select: { day: true },
+        })
+      : Promise.resolve(null),
+  ]);
+
   return {
     today: todayISO,
     family: {
@@ -136,6 +181,11 @@ export async function loadReadingPagePayload(
       stats: personalStats,
       plan: personalPlan,
       readKeys,
+      havePlan: havePersonalPlan,
+      cards: personalCards,
+      todayIndex: personalTodayIndex,
+      remaining: personalRemaining,
+      lastDayISO: personalLast ? fromDateColumn(personalLast.day) : null,
     },
   };
 }
