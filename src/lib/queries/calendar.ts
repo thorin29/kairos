@@ -35,6 +35,10 @@ export type GridEvent = {
   /** Whether this all-day event tints its day column. */
   shade: boolean;
   ownerName: string;
+  /** Everyone the event belongs to, by name (owner + participants). */
+  memberNames: string[];
+  /** Display label: "Family", a single name, "A & B", or "A +N" when crowded. */
+  whoLabel: string;
   kind: string;
   calendarName: string | null;
   /** The underlying row, without the per-occurrence suffix. */
@@ -173,6 +177,8 @@ async function birthdayEvents(
         memberIds: [],
         shade: (p as { shadeBirthday?: boolean }).shadeBirthday ?? true,
         ownerName: who,
+        memberNames: who ? [who] : [],
+        whoLabel: who || "Family",
         kind: "BIRTHDAY",
         bgKey: "birthday",
         calendarName: null,
@@ -210,6 +216,8 @@ async function holidayEvents(days: string[]): Promise<GridEvent[]> {
     memberIds: [],
     shade: false,
     ownerName: "Holiday",
+    memberNames: [],
+    whoLabel: "Holiday",
     kind: "HOLIDAY",
     bgKey: bgKeyForHoliday(h.key),
     calendarName: null,
@@ -251,6 +259,14 @@ function ownerFilter(userId?: string | string[]): object {
   };
 }
 
+/** "Family" / a name / "A & B" / "A +N" — how a shared event's people show. */
+function whoLabelFrom(names: string[]): string {
+  if (names.length === 0) return "Family";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} & ${names[1]}`;
+  return `${names[0]} +${names.length - 1}`;
+}
+
 export async function loadRange(
   days: string[],
   userId?: string | string[],
@@ -285,7 +301,7 @@ export async function loadRange(
       user: { select: { name: true, displayName: true, color: true } },
       externalCalendar: { select: { name: true } },
       eventType: { select: { id: true, name: true, color: true } },
-      participants: { select: { userId: true, user: { select: { color: true } } } },
+      participants: { select: { userId: true, user: { select: { color: true, name: true, displayName: true } } } },
     },
   });
 
@@ -387,6 +403,18 @@ export async function loadRange(
           ),
         );
 
+    // Every person the event belongs to, by name (owner + participants) — a
+    // shared event functions like one event per person, so all names show.
+    const participantNames =
+      (e as { participants?: { user?: { name?: string; displayName?: string } | null }[] })
+        .participants?.map((p) => p.user?.displayName ?? p.user?.name)
+        .filter((n): n is string => Boolean(n)) ?? [];
+    const ownerNm = e.user?.displayName ?? e.user?.name;
+    const memberNames = e.isFamily
+      ? []
+      : Array.from(new Set([...(ownerNm ? [ownerNm] : []), ...participantNames]));
+    const whoLabel = e.isFamily ? "Family" : whoLabelFrom(memberNames);
+
     const base = {
       id: `${e.id}${suffix}`,
       title: e.title,
@@ -400,6 +428,8 @@ export async function loadRange(
       ownerName: e.isFamily
         ? "Family"
         : (e.user?.displayName ?? e.user?.name ?? "Family"),
+      memberNames,
+      whoLabel,
       kind: eventType?.name ?? (e.kind as string),
       bgKey: bgKeyForKind(eventType?.name ?? (e.kind as string)),
       calendarName: e.externalCalendar?.name ?? null,
@@ -611,6 +641,8 @@ async function applySchoolWork(
       memberIds: [t.userId],
       shade: false,
       ownerName,
+      memberNames: ownerName ? [ownerName] : [],
+      whoLabel: ownerName || "Family",
       kind: "SCHOOLWORK",
       calendarName: null,
       eventId: t.id,

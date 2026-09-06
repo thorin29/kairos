@@ -261,7 +261,7 @@ export function WeekGrid({
           <span className="truncate">{e.title}</span>
           {e.ownerName && (
             <span className="ml-auto shrink-0 pl-1 text-[0.6rem] font-normal opacity-85">
-              {e.ownerName}
+              {e.whoLabel}
             </span>
           )}
         </span>
@@ -289,7 +289,7 @@ export function WeekGrid({
         onPointerDown={(ev) => ev.stopPropagation()}
         title={`${e.title}${e.schoolClassName ? `\n${e.schoolClassName}` : ""}\n${e.timeLabel}${
           e.location ? `\n${e.location}` : ""
-        }\n${e.ownerName}`}
+        }\n${e.whoLabel}`}
         className={`pointer-events-auto absolute cursor-pointer overflow-hidden rounded-md px-1.5 py-1 text-[0.7rem] leading-tight text-white ${
           selected ? "z-[6]" : "shadow-sm"
         }`}
@@ -310,7 +310,7 @@ export function WeekGrid({
             <span className="block truncate">{e.title}</span>
             {e.ownerName && (
               <span className="ml-auto shrink-0 pl-1 text-[0.6rem] font-normal opacity-85">
-                {e.ownerName}
+                {e.whoLabel}
               </span>
             )}
           </span>

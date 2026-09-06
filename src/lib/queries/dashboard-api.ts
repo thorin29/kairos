@@ -264,7 +264,7 @@ export async function loadApiDashboard(
         timeLabel: e.timeLabel,
         startMin: e.startMin,
         color: e.color,
-        ownerName: e.ownerName,
+        ownerName: e.whoLabel,
         location: e.location,
       }));
   }
