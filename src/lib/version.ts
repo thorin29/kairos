@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.233.0";
+export const APP_VERSION = "0.234.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -82,11 +82,18 @@ export const MIGRATIONS = [
   "71_devices",
   "72_calendar_prefs",
   "73_device_credential_version",
+  "74_personal_workouts",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.234.0",
+    summary: [
+      "Groundwork for personal workouts: you can create your own HIIT/CrossFit workouts, they show under a 'Personal' section when browsing, can be shared to another person (who gets their own copy), and you can add custom movements that appear only in your own menus. The app screens for this land next.",
+    ],
+  },
   {
     version: "0.226.0",
     summary: [
