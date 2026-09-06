@@ -457,7 +457,7 @@ function unitForMetric(metric: string, system: string): string {
   }
 }
 
-export async function loadWorkoutPool(): Promise<WorkoutPool> {
+export async function loadWorkoutPool(userId?: string): Promise<WorkoutPool> {
   const system = await loadWorkoutUnitSystem();
 
   const categories: LogCategory[] = CAT_ORDER.map((key) => {
@@ -477,7 +477,10 @@ export async function loadWorkoutPool(): Promise<WorkoutPool> {
   });
 
   const exercises = await prisma.poolExercise.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      OR: [{ ownerId: null }, ...(userId ? [{ ownerId: userId }] : [])],
+    },
     orderBy: { name: "asc" },
     select: { id: true, name: true, category: true },
   });
