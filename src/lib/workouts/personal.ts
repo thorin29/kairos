@@ -85,6 +85,46 @@ export async function sharePersonalWorkoutCore(
   return { error: null };
 }
 
+/** Full edit of one of this person's own workouts (name, type, cap, exercises). */
+export async function updatePersonalWorkoutCore(
+  userId: string,
+  workoutId: string,
+  input: PersonalWorkoutInput,
+): Promise<{ error: string | null }> {
+  const owned = await prisma.hiitWorkout.findFirst({
+    where: { id: workoutId, ownerId: userId },
+    select: { id: true },
+  });
+  if (!owned) return { error: "Workout not found." };
+  const name = input.name.trim().slice(0, 60);
+  if (name.length < 2) return { error: "Give the workout a name." };
+  const movements = input.movements.filter((m) => m.poolExerciseId);
+  if (movements.length === 0) return { error: "Add at least one exercise." };
+
+  await prisma.$transaction([
+    prisma.hiitWorkoutMovement.deleteMany({ where: { hiitWorkoutId: workoutId } }),
+    prisma.hiitWorkout.update({
+      where: { id: workoutId },
+      data: {
+        name,
+        type: input.type,
+        capSec: input.capSec ?? null,
+        notes: input.notes?.trim() || null,
+        movements: {
+          create: movements.map((m, i) => ({
+            poolExerciseId: m.poolExerciseId,
+            reps: m.reps ?? null,
+            distance: m.distance ?? null,
+            weight: m.weight ?? null,
+            position: i,
+          })),
+        },
+      },
+    }),
+  ]);
+  return { error: null };
+}
+
 /** Delete one of this person's own workouts. */
 export async function deletePersonalWorkoutCore(
   userId: string,
