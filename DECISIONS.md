@@ -386,3 +386,29 @@ the proxy entirely.
 - **School work stays out of scoring** until the scoring rework epic ships.
 - **Idempotent migrations always** (`ADD COLUMN IF NOT EXISTS`, guarded
   `CREATE TYPE`, guarded FK creation).
+
+## App UI: dialogs and dropdowns use shared animated components (v0.66+)
+
+Standard for the Android app, so every pop-up and select feels the same and
+future work stays consistent (this is a hard convention — follow it for any new
+screen, even in a fresh session):
+
+- **Pop-ups / dialogs:** use `AnimatedDialog` (`ui/common/AnimatedDialog.kt`),
+  never `androidx.compose.material3.AlertDialog`. It eases in with a fade + gentle
+  centre scale driven by a single `animateFloatAsState` through `graphicsLayer`
+  (an `AnimatedVisibility + scaleIn` approach stutters on first frame — do not use
+  it). Signature: `AnimatedDialog(onDismissRequest, title?, confirmButton?,
+  dismissButton?, content)`.
+- **Dropdowns / selects:** use the shared `RollPicker`
+  (`ui/common/RollPicker.kt`), never `ExposedDropdownMenu`. It rolls open/closed
+  with `expandVertically + fadeIn` / `shrinkVertically + fadeOut`.
+- **Bottom sheets that trigger navigation:** animate the sheet closed
+  (`sheetState.hide()`) and only navigate in `invokeOnCompletion`, so the sheet
+  doesn't linger over the next screen and state stays clean for re-opening (see
+  `HomeScreen.WorkoutSheet`).
+
+Migration status: new/shared components exist; the workout forms, the workout
+share/confirm dialogs, and the home workout sheet follow this. Remaining
+`AlertDialog` call sites (calendar, bible plan, recent workouts, AppRoot,
+create-workout confirms) are being converted to `AnimatedDialog` — convert any you
+touch. Tracked in ROADMAP.

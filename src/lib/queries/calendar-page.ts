@@ -47,6 +47,7 @@ export type CalEvent = {
   ownerName: string;
   whoLabel: string;
   notes: string | null;
+  didNotAttend: boolean;
   ownerId: string | null;
   eventTypeId: string | null;
   /** Everyone this event belongs to (owner + participants); minus owner = the
@@ -158,6 +159,7 @@ function toWire(e: GridEvent): CalEvent {
     ownerName: e.ownerName,
     whoLabel: e.whoLabel,
     notes: e.notes,
+    didNotAttend: e.didNotAttend,
     ownerId: e.ownerId,
     eventTypeId: e.eventTypeId ?? null,
     memberIds: e.memberIds,

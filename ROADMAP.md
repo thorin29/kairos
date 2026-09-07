@@ -1165,3 +1165,18 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       dropdown/select across the app (calendar editor, bible, school, etc.) so all
       selects roll open/closed with the same fade + expand. Started with the workout
       Create/Edit and Log-a-different-workout forms (app v0.62–0.64).
+- [ ] App offline support (BIG, high priority): the app should work without a
+      signal for the shared, read-mostly surfaces — calendar viewing, and marking
+      chores / groceries — instead of showing spinners when the network is down.
+      Needs an on-device cache (e.g. Room) with a read-through + optimistic-write
+      queue that syncs when back online. Currently every screen fetches live, so a
+      dropped signal = spinner. Scope which surfaces are offline-capable first
+      (calendar read, chores toggle, grocery check) vs. later.
+- [ ] App: finish converting all `AlertDialog` call sites to the shared
+      `AnimatedDialog` (14 remaining across calendar, bible, recent workouts,
+      AppRoot, create-workout). Standard recorded in DECISIONS.
+- [ ] "Log a different workout" -> wizard: replace the crowded single-screen
+      dropdowns with a step flow. "Log something else" button -> pick type ->
+      then per type: Weights = muscle group -> exercise -> log (+ weight for
+      tracked metrics), like the create-workout wizard; Running = just distance;
+      HIIT/CrossFit = pick workout -> result (mid complexity). Less scrolling.
