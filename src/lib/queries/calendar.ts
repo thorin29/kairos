@@ -36,6 +36,8 @@ export type GridEvent = {
   shade: boolean;
   ownerName: string;
   notes: string | null;
+  /** This person declined the sport prompt for this occurrence. */
+  didNotAttend: boolean;
   /** Everyone the event belongs to, by name (owner + participants). */
   memberNames: string[];
   /** Display label: "Family", a single name, "A & B", or "A +N" when crowded. */
@@ -179,6 +181,7 @@ async function birthdayEvents(
         shade: (p as { shadeBirthday?: boolean }).shadeBirthday ?? true,
         ownerName: who,
         notes: null,
+        didNotAttend: false,
         memberNames: who ? [who] : [],
         whoLabel: who || "Family",
         kind: "BIRTHDAY",
@@ -219,6 +222,7 @@ async function holidayEvents(days: string[]): Promise<GridEvent[]> {
     shade: false,
     ownerName: "Holiday",
     notes: null,
+    didNotAttend: false,
     memberNames: [],
     whoLabel: "Holiday",
     kind: "HOLIDAY",
@@ -281,6 +285,18 @@ export async function loadRange(
   );
 
   const familyColor = await getFamilyColor();
+
+  // Sport prompts the person answered "No" to: shown as "did not attend".
+  const skipUserId = typeof userId === "string" ? userId : null;
+  const sportSkipRows = skipUserId
+    ? await prisma.sportSkip.findMany({
+        where: { userId: skipUserId, date: { gte: rangeStart, lte: rangeEnd } },
+        select: { eventId: true, date: true },
+      })
+    : [];
+  const sportSkipSet = new Set(
+    sportSkipRows.map((r) => `${r.eventId}|${fromDateColumn(r.date)}`),
+  );
 
   const events = await prisma.event.findMany({
     where: {
@@ -423,6 +439,7 @@ export async function loadRange(
       title: e.title,
       location: e.location,
       notes: (e as { notes?: string | null }).notes ?? null,
+      didNotAttend: sportSkipSet.has(`${e.id}|${start.iso}`),
       color,
       memberColors,
       isFamily: e.isFamily,
@@ -646,6 +663,7 @@ async function applySchoolWork(
       shade: false,
       ownerName,
       notes: null,
+      didNotAttend: false,
       memberNames: ownerName ? [ownerName] : [],
       whoLabel: ownerName || "Family",
       kind: "SCHOOLWORK",
