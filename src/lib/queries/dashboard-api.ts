@@ -15,6 +15,8 @@ import { loadPersonalPlan } from "@/lib/queries/personal-plan";
 import { loadOpenTasks } from "@/lib/queries/overview";
 import { loadAlwaysOpenChores } from "@/lib/queries/chores-summary";
 import { loadDaySchedule } from "@/lib/queries/calendar";
+import { pendingMoneyCount } from "@/lib/queries/money";
+import { pendingBibleRewards } from "@/lib/bible-rewards";
 
 /**
  * The `/api/v1/dashboard` payload: the same "my day" the web personal view
@@ -72,6 +74,10 @@ export type ApiCategoryBar = {
 export type ApiDashboard = {
   date: string;
   percent: number | null;
+  /** Admin only (else null): household money needing attention, driving the
+   *  home banner. `pendingApprovals` = transactions awaiting a mark;
+   *  `rewardMonths` = Bible-reward months ready to grant. Review opens Money. */
+  money?: { pendingApprovals: number; rewardMonths: number } | null;
   categories: ApiCategoryBar[];
   overdue: ApiTask[];
   groups: { category: Category; label: string; items: ApiTask[] }[];
@@ -129,6 +135,7 @@ export async function loadApiDashboard(
   userId: string,
   dayISO: string,
   today: string,
+  isAdmin = false,
 ): Promise<ApiDashboard> {
   await ensureGenerated(dayISO, today);
 
@@ -277,9 +284,21 @@ export async function loadApiDashboard(
     .filter((p) => p.userId === userId)
     .map((p) => ({ eventId: p.eventId, title: p.title }));
 
+  // Admin devices see the household money queue on their home banner, mirroring
+  // the web MoneyReminder. Same counts for every admin, so acting clears it once.
+  let money: ApiDashboard["money"] = null;
+  if (isAdmin) {
+    const [pendingApprovals, rewards] = await Promise.all([
+      pendingMoneyCount(),
+      pendingBibleRewards(today),
+    ]);
+    money = { pendingApprovals, rewardMonths: rewards.count };
+  }
+
   return {
     date: dayISO,
     percent,
+    money,
     categories,
     overdue,
     groups,

@@ -3,14 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { requireAdmin, currentAdmin, isAdmin } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
-import { toDateColumn, todayISO } from "@/lib/dates";
+import { todayISO } from "@/lib/dates";
 import {
   DEPOSIT_CATEGORIES,
   parseAmountToCents,
   type DepositCategory,
 } from "@/lib/money";
-import { addMoneyEntryCore } from "@/lib/money-core";
+import {
+  addMoneyEntryCore,
+  approveMoneyEntryCore,
+  unapproveMoneyEntryCore,
+  approveAllMoneyCore,
+  updateMoneyEntryCore,
+  deleteMoneyEntryCore,
+  setStartingFundsCore,
+} from "@/lib/money-core";
 
 export type MoneyActionState = { error: string | null; ok?: boolean };
 
@@ -92,35 +99,17 @@ export async function setStartingFunds(
     return { error: "Only an admin can set starting funds." };
   }
 
-  const userId = String(fd.get("userId") ?? "").trim();
-  if (!userId) return { error: "Pick who this is for." };
-
+  const admin = await currentAdmin();
   const amountCents = readAmount(fd);
   if (amountCents === null) return { error: "Enter an amount over $0.00." };
 
-  const existing = await prisma.moneyEntry.findFirst({
-    where: { userId, kind: "STARTING" },
-    select: { id: true },
+  const res = await setStartingFundsCore({
+    userId: String(fd.get("userId") ?? "").trim(),
+    amountCents,
+    dateISO: readDate(fd),
+    adminId: admin?.id ?? null,
   });
-  if (existing) {
-    return { error: "Starting funds are already set for this person." };
-  }
-
-  const admin = await currentAdmin();
-  await prisma.moneyEntry.create({
-    data: {
-      userId,
-      date: toDateColumn(readDate(fd)),
-      direction: "DEPOSIT",
-      category: null,
-      detail: null,
-      amountCents,
-      kind: "STARTING",
-      status: "APPROVED",
-      approvedById: admin?.id ?? null,
-      approvedAt: new Date(),
-    },
-  });
+  if (!res.ok) return { error: res.error };
 
   refresh();
   return { error: null, ok: true };
@@ -129,38 +118,21 @@ export async function setStartingFunds(
 /** Mark a row verified. Admin only. */
 export async function approveMoneyEntry(id: string): Promise<void> {
   const admin = await requireAdmin();
-  await prisma.moneyEntry.update({
-    where: { id },
-    data: {
-      status: "APPROVED",
-      approvedById: admin.id,
-      approvedAt: new Date(),
-    },
-  });
+  await approveMoneyEntryCore(id, admin.id);
   refresh();
 }
 
 /** Send a row back to pending. Admin only. */
 export async function unapproveMoneyEntry(id: string): Promise<void> {
   await requireAdmin();
-  await prisma.moneyEntry.update({
-    where: { id },
-    data: { status: "PENDING", approvedById: null, approvedAt: null },
-  });
+  await unapproveMoneyEntryCore(id);
   refresh();
 }
 
 /** Approve everything outstanding in one go. Admin only. */
 export async function approveAllMoney(): Promise<void> {
   const admin = await requireAdmin();
-  await prisma.moneyEntry.updateMany({
-    where: { status: "PENDING" },
-    data: {
-      status: "APPROVED",
-      approvedById: admin.id,
-      approvedAt: new Date(),
-    },
-  });
+  await approveAllMoneyCore(admin.id);
   refresh();
 }
 
@@ -171,34 +143,19 @@ export async function updateMoneyEntry(
 ): Promise<MoneyActionState> {
   if (!(await isAdmin())) return { error: "Only an admin can edit rows." };
 
-  const id = String(fd.get("id") ?? "").trim();
-  if (!id) return { error: "Missing row." };
-
-  const direction = String(fd.get("direction") ?? "");
-  if (direction !== "DEPOSIT" && direction !== "PAYMENT") {
-    return { error: "Choose a deposit or a payment." };
-  }
-
   const amountCents = readAmount(fd);
   if (amountCents === null) return { error: "Enter an amount over $0.00." };
 
-  const detailRaw = String(fd.get("detail") ?? "").trim();
-  const detail = detailRaw ? detailRaw.slice(0, 200) : null;
-  const category = direction === "DEPOSIT" ? readCategory(fd) : null;
-  if (direction === "DEPOSIT" && !category) {
-    return { error: "Pick a category for the deposit." };
-  }
-
-  await prisma.moneyEntry.update({
-    where: { id },
-    data: {
-      date: toDateColumn(readDate(fd)),
-      direction,
-      category,
-      detail,
-      amountCents,
-    },
+  const direction = String(fd.get("direction") ?? "");
+  const res = await updateMoneyEntryCore({
+    id: String(fd.get("id") ?? "").trim(),
+    direction: direction as "DEPOSIT" | "PAYMENT",
+    amountCents,
+    detail: String(fd.get("detail") ?? ""),
+    category: direction === "DEPOSIT" ? readCategory(fd) : null,
+    dateISO: readDate(fd),
   });
+  if (!res.ok) return { error: res.error };
 
   refresh();
   return { error: null, ok: true };
@@ -207,6 +164,6 @@ export async function updateMoneyEntry(
 /** Remove a row. Admin only. */
 export async function deleteMoneyEntry(id: string): Promise<void> {
   await requireAdmin();
-  await prisma.moneyEntry.delete({ where: { id } });
+  await deleteMoneyEntryCore(id);
   refresh();
 }

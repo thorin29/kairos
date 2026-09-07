@@ -304,8 +304,12 @@ GET  /api/v1/money              ?user=<id>  (optional; selects whose ledger)
        "rows": [ MoneyRow, … ],                 // selected person's, newest first
        "roster": [ Person, … ],                 // visible active people (the add picker)
        "frequentPayments": [ string, … ],       // top payment descriptions, quick-picks
-       "canApproveRewards": bool,               // admin device
-       "rewardMonths": [ RewardMonth, … ] }     // admin only; else []
+       "isAdmin": bool,                          // admin device: may approve/edit/delete/starting
+       "canApproveRewards": bool,               // admin device (== isAdmin)
+       "rewardMonths": [ RewardMonth, … ],       // admin only; else []
+       "pendingApprovals": [ AdminRow, … ] }     // admin only: household transactions awaiting a mark
+
+AdminRow = MoneyRow + { "userId","userName" }
 
 MoneyRow:
   { "id","date":"YYYY-MM-DD","direction":"DEPOSIT"|"PAYMENT",
@@ -329,7 +333,20 @@ request: { "periodKey":"YYYY-MM" }          approve base (+ bonus) for the whole
 POST /api/v1/money/rewards/approve-base     admin device only
 request: { "userId","periodKey":"YYYY-MM" } approve one person's base reward
 200: { "status":"ok" }
+
+Admin transaction management (admin device only; the shared web tablet keeps
+these behind the PIN). CSV import stays web-only.
+POST /api/v1/money/approve        { "id" }                      → { "status":"ok" }
+POST /api/v1/money/unapprove      { "id" }                      → { "status":"ok" }
+POST /api/v1/money/approve-all    {}                            → { "status":"ok" }
+POST /api/v1/money/update         { "id","direction","amountCents":int,
+                                    "category"?,"detail"?,"date"? }  → { "status":"ok" }
+POST /api/v1/money/delete         { "id" }                      → { "status":"ok" }
+POST /api/v1/money/starting       { "userId","amountCents":int,"date"? }  → { "status":"ok" }
 ```
+The dashboard read (`GET /api/v1/dashboard`) additionally carries, for an admin
+device, `"money": { "pendingApprovals":int, "rewardMonths":int } | null` — the
+household counts that drive the home reminder banner (Review opens Money).
 `Person` is the standard wire person (id, name, shortName, color, avatarUrl,
 avatarPosition, avatarIcon, role, kind) as sent by /me.
 

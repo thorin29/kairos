@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.248.0";
+export const APP_VERSION = "0.249.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -88,6 +88,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.249.0",
+    summary: [
+      "Mobile app: parent admins can now approve, unapprove, edit, and delete transactions and set starting funds from the phone (everything the web Money admin does except CSV import), and the home dashboard shows a reminder banner when money or Bible-reading rewards are waiting. Backed by new device-authed admin routes; the shared web tablet still keeps these behind the PIN.",
+    ],
+  },
   {
     version: "0.248.0",
     summary: [

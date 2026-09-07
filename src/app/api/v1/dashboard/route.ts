@@ -25,6 +25,11 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const data = await loadApiDashboard(authed.device.person.id, date, today);
+  const data = await loadApiDashboard(
+    authed.device.person.id,
+    date,
+    today,
+    authed.device.person.role === "ADMIN",
+  );
   return apiOk(data);
 }
