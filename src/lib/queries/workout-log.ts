@@ -432,6 +432,7 @@ const CAT_CFG: Record<
   { locked?: string; choices?: string[]; load?: boolean; pool: boolean }
 > = {
   WEIGHTS: { locked: "WEIGHT", pool: true },
+  HIIT: { choices: ["DURATION", "REPS"], pool: true },
   RUNNING: { choices: ["DISTANCE", "METERS"], pool: false },
   ROWING: { locked: "METERS", pool: false },
   RUCKING: { locked: "DISTANCE", load: true, pool: false },
@@ -440,7 +441,7 @@ const CAT_CFG: Record<
   ISOMETRIC: { choices: ["DURATION", "REPS"], pool: true },
 };
 // Order shown in the picker.
-const CAT_ORDER = ["WEIGHTS", "RUNNING", "ROWING", "RUCKING", "SPORT", "STRETCHING", "ISOMETRIC"];
+const CAT_ORDER = ["WEIGHTS", "HIIT", "RUNNING", "ROWING", "RUCKING", "SPORT", "STRETCHING", "ISOMETRIC"];
 
 function unitForMetric(metric: string, system: string): string {
   switch (metric) {
