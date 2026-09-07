@@ -37,12 +37,15 @@ export async function POST(req: NextRequest) {
   }
   const poolExerciseId =
     typeof raw?.poolExerciseId === "string" ? raw.poolExerciseId : null;
+  const hiitWorkoutId =
+    typeof raw?.hiitWorkoutId === "string" ? raw.hiitWorkoutId : null;
   const category = typeof raw?.category === "string" ? raw.category : null;
-  if (!poolExerciseId && !category) {
-    return apiError("validation", "An exercise or category is required.");
+  if (!poolExerciseId && !category && !hiitWorkoutId) {
+    return apiError("validation", "An exercise, workout, or category is required.");
   }
 
   await logCustomEntry(authed.device.person.id, date, {
+    hiitWorkoutId,
     poolExerciseId,
     category,
     metric,

@@ -432,13 +432,24 @@ export type LogCategory = {
   load: boolean;
 };
 export type PoolExerciseLite = { id: string; name: string; category: string };
+export type HiitLogOption = {
+  id: string;
+  name: string;
+  hero: boolean;
+  resultMetric: string;
+  resultLabel: string;
+  resultUnit: string;
+};
+
 export type WorkoutPool = {
   categories: LogCategory[];
   exercises: PoolExerciseLite[];
+  hiitWorkouts: HiitLogOption[];
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
   WEIGHTS: "Weights",
+  HIIT: "HIIT/CrossFit",
   RUNNING: "Running",
   ROWING: "Rowing",
   SPORT: "Sport",
@@ -513,7 +524,26 @@ export async function loadWorkoutPool(userId?: string): Promise<WorkoutPool> {
     select: { id: true, name: true, category: true },
   });
 
-  return { categories, exercises };
+  // Named HIIT/CrossFit workouts you can log: the shared library (admin, normal +
+  // Hero) plus your own. Same set the browse list and web use.
+  const hiitRows = await prisma.hiitWorkout.findMany({
+    where: { OR: [{ ownerId: null, approved: true }, ...(userId ? [{ ownerId: userId }] : [])] },
+    orderBy: [{ heroWod: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, type: true, heroWod: true },
+  });
+  const hiitWorkouts: HiitLogOption[] = hiitRows.map((w) => {
+    const res = hiitResult(w.type as WorkoutType);
+    return {
+      id: w.id,
+      name: w.heroWod ? `${w.name} (Hero)` : w.name,
+      hero: w.heroWod,
+      resultMetric: res.metric,
+      resultLabel: res.label,
+      resultUnit: metricUnit(res.metric, system),
+    };
+  });
+
+  return { categories, exercises, hiitWorkouts };
 }
 
 /** Named workouts this person can browse: the shared approved library plus

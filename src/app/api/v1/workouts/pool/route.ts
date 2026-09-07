@@ -10,5 +10,5 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
-  return apiOk(await loadWorkoutPool());
+  return apiOk(await loadWorkoutPool(authed.device.person.id));
 }

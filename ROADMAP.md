@@ -1161,3 +1161,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       workout, bible, etc.) to the shared `AnimatedDialog` (ui/common) so every
       pop-up eases in with the same soft fade + scale as the workout share
       dialog. Started with the share + share-confirmation dialogs (app v0.64.0).
+- [ ] App dropdowns: use the shared smooth `RollPicker` (ui/common) for every
+      dropdown/select across the app (calendar editor, bible, school, etc.) so all
+      selects roll open/closed with the same fade + expand. Started with the workout
+      Create/Edit and Log-a-different-workout forms (app v0.62–0.64).

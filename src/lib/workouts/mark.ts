@@ -327,6 +327,7 @@ export async function deleteWorkoutSessionOwned(
 
 export type CustomLogInput = {
   poolExerciseId?: string | null;
+  hiitWorkoutId?: string | null; // a named HIIT/CrossFit workout logged as one result
   category?: string | null; // WorkoutCategory, for metric-only logs (a run, a row)
   metric: string;
   value: number;
@@ -350,7 +351,18 @@ export async function logCustomEntry(
   let name: string;
   let category: WorkoutCategory;
   let poolExerciseId: string | null = null;
-  if (input.poolExerciseId) {
+  if (input.hiitWorkoutId) {
+    const w = await prisma.hiitWorkout.findFirst({
+      where: {
+        id: input.hiitWorkoutId,
+        OR: [{ ownerId: null, approved: true }, { ownerId: userId }],
+      },
+      select: { name: true },
+    });
+    if (!w) return;
+    name = w.name;
+    category = "HIIT" as WorkoutCategory;
+  } else if (input.poolExerciseId) {
     const pool = await prisma.poolExercise.findUnique({
       where: { id: input.poolExerciseId },
       select: { name: true, category: true },
