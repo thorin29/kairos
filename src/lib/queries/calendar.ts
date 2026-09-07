@@ -38,6 +38,10 @@ export type GridEvent = {
   notes: string | null;
   /** This person declined the sport prompt for this occurrence. */
   didNotAttend: boolean;
+  /** Per-member attendance for sport events (owner + participants). state is
+   *  ATTENDED | DECLINED | UNKNOWN for sport events, "" otherwise. Empty for
+   *  family events. */
+  attendees: { name: string; state: string }[];
   /** Everyone the event belongs to, by name (owner + participants). */
   memberNames: string[];
   /** Display label: "Family", a single name, "A & B", or "A +N" when crowded. */
@@ -182,6 +186,7 @@ async function birthdayEvents(
         ownerName: who,
         notes: null,
         didNotAttend: false,
+        attendees: [],
         memberNames: who ? [who] : [],
         whoLabel: who || "Family",
         kind: "BIRTHDAY",
@@ -223,6 +228,7 @@ async function holidayEvents(days: string[]): Promise<GridEvent[]> {
     ownerName: "Holiday",
     notes: null,
     didNotAttend: false,
+    attendees: [],
     memberNames: [],
     whoLabel: "Holiday",
     kind: "HOLIDAY",
@@ -287,17 +293,30 @@ export async function loadRange(
   const familyColor = await getFamilyColor();
 
   // Sport prompts the person answered "No" to: shown as "did not attend".
-  const skipUserIds =
-    typeof userId === "string" ? [userId] : Array.isArray(userId) ? userId : [];
-  const sportSkipRows = skipUserIds.length
-    ? await prisma.sportSkip.findMany({
-        where: { userId: { in: skipUserIds }, date: { gte: rangeStart, lte: rangeEnd } },
-        select: { eventId: true, date: true },
-      })
-    : [];
-  const sportSkipSet = new Set(
-    sportSkipRows.map((r) => `${r.eventId}|${fromDateColumn(r.date)}`),
+  // Per-person sport attendance for this range: a workout session linked to the
+  // event = attended; a SportSkip = declined; neither = unknown. Fetched for the
+  // whole range (all people) so every member's state is available, not just the
+  // calendar's own people.
+  const attendedRows = await prisma.workoutSession.findMany({
+    where: { sourceEventId: { not: null }, date: { gte: rangeStart, lte: rangeEnd } },
+    select: { userId: true, sourceEventId: true, date: true },
+  });
+  const attendedSet = new Set(
+    attendedRows.map((r) => `${r.sourceEventId}|${r.userId}|${fromDateColumn(r.date)}`),
   );
+  const sportSkipRows = await prisma.sportSkip.findMany({
+    where: { date: { gte: rangeStart, lte: rangeEnd } },
+    select: { eventId: true, userId: true, date: true },
+  });
+  const declinedSet = new Set(
+    sportSkipRows.map((r) => `${r.eventId}|${r.userId}|${fromDateColumn(r.date)}`),
+  );
+  function attendanceState(eventId: string, userId: string, iso: string): string {
+    const key = `${eventId}|${userId}|${iso}`;
+    if (attendedSet.has(key)) return "ATTENDED";
+    if (declinedSet.has(key)) return "DECLINED";
+    return "UNKNOWN";
+  }
 
   const events = await prisma.event.findMany({
     where: {
@@ -320,7 +339,7 @@ export async function loadRange(
     include: {
       user: { select: { name: true, displayName: true, color: true } },
       externalCalendar: { select: { name: true } },
-      eventType: { select: { id: true, name: true, color: true } },
+      eventType: { select: { id: true, name: true, color: true, sportWorkout: true } },
       participants: { select: { userId: true, user: { select: { color: true, name: true, displayName: true } } } },
     },
   });
@@ -386,7 +405,7 @@ export async function loadRange(
     // A custom event type sets its own colour (a "Hockey game" is that colour
     // for everyone); otherwise it's the owner's colour, or the family colour
     // for shared events.
-    const eventType = (e as { eventType?: { id: string; name: string; color: string } | null })
+    const eventType = (e as { eventType?: { id: string; name: string; color: string; sportWorkout?: boolean } | null })
       .eventType;
     const color = eventType?.color
       ? eventType.color
@@ -435,12 +454,34 @@ export async function loadRange(
       : Array.from(new Set([...(ownerNm ? [ownerNm] : []), ...participantNames]));
     const whoLabel = e.isFamily ? "Family" : whoLabelFrom(memberNames);
 
+    // Per-member attendance (owner + participants), for sport events only, never
+    // for family events. state is "" for non-sport events (name shown, no icon).
+    const isSport = Boolean(eventType?.sportWorkout);
+    const memberPairs: { id: string; name: string }[] = e.isFamily
+      ? []
+      : [
+          ...(e.userId && ownerNm ? [{ id: e.userId, name: ownerNm }] : []),
+          ...((e as {
+            participants?: { userId: string; user?: { name?: string; displayName?: string } | null }[];
+          }).participants ?? [])
+            .map((p) => ({ id: p.userId, name: p.user?.displayName ?? p.user?.name ?? "" }))
+            .filter((p) => p.name),
+        ];
+    const seenMember = new Set<string>();
+    const attendees = memberPairs
+      .filter((m) => (seenMember.has(m.id) ? false : (seenMember.add(m.id), true)))
+      .map((m) => ({
+        name: m.name,
+        state: isSport ? attendanceState(e.id, m.id, start.iso) : "",
+      }));
+
     const base = {
       id: `${e.id}${suffix}`,
       title: e.title,
       location: e.location,
       notes: (e as { notes?: string | null }).notes ?? null,
-      didNotAttend: sportSkipSet.has(`${e.id}|${start.iso}`),
+      didNotAttend: isSport && e.userId != null && attendanceState(e.id, e.userId, start.iso) === "DECLINED",
+      attendees,
       color,
       memberColors,
       isFamily: e.isFamily,
@@ -665,6 +706,7 @@ async function applySchoolWork(
       ownerName,
       notes: null,
       didNotAttend: false,
+      attendees: [],
       memberNames: ownerName ? [ownerName] : [],
       whoLabel: ownerName || "Family",
       kind: "SCHOOLWORK",
