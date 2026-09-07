@@ -228,7 +228,7 @@ export async function logWorkoutSession(
 }
 
 export type PlannedLogEntry = {
-  poolExerciseId: string;
+  poolExerciseId: string | null;
   metric: string;
   value: number;
   unit: string;

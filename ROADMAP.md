@@ -1157,3 +1157,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       "sign out everywhere" is currently all-or-nothing via `credentialVersion`.
       A Session table would allow listing and revoking individual devices —
       worth it once the phone app is real.
+- [ ] App pop-ups: convert all remaining dialogs (AlertDialogs across calendar,
+      workout, bible, etc.) to the shared `AnimatedDialog` (ui/common) so every
+      pop-up eases in with the same soft fade + scale as the workout share
+      dialog. Started with the share + share-confirmation dialogs (app v0.64.0).
