@@ -287,10 +287,11 @@ export async function loadRange(
   const familyColor = await getFamilyColor();
 
   // Sport prompts the person answered "No" to: shown as "did not attend".
-  const skipUserId = typeof userId === "string" ? userId : null;
-  const sportSkipRows = skipUserId
+  const skipUserIds =
+    typeof userId === "string" ? [userId] : Array.isArray(userId) ? userId : [];
+  const sportSkipRows = skipUserIds.length
     ? await prisma.sportSkip.findMany({
-        where: { userId: skipUserId, date: { gte: rangeStart, lte: rangeEnd } },
+        where: { userId: { in: skipUserIds }, date: { gte: rangeStart, lte: rangeEnd } },
         select: { eventId: true, date: true },
       })
     : [];

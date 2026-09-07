@@ -267,6 +267,7 @@ export async function loadApiDashboard(
         ownerName: e.whoLabel,
         location: e.location,
         notes: e.notes,
+        didNotAttend: e.didNotAttend,
       }));
   }
 
