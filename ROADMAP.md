@@ -197,16 +197,23 @@ Characters. Each drawer entry keeps its web brand colour.
 - [~] **Remaining sections, each to full parity ← NEXT** (enumerate components
       from the web page at build time): Reading, School, Game time, Groceries,
       Characters.
-      - [x] **Money** (web v0.248 / app v0.72.0): per-person ledger with running
-        balances (`GET /money`, personal-scoped — child sees self, parent sees
-        self + kids), add a deposit/payment (`POST /money/entry`, lands PENDING),
-        search, and a single participant collapses the people selector. Admins
-        additionally get the **Bible-reading reward approvals** on the phone
-        (`POST /money/rewards/approve-month|approve-base`, no PIN — the device
-        token proves the parent). Device-authed routes delegate to shared cores
-        (`lib/money-core.ts`, `approveBibleBaseCore`/`approveBibleMonthAllCore`).
-        Deferred (still web-admin, behind the PIN): approve/unapprove a filed
-        transaction, edit/delete a row, set starting funds, CSV import.
+      - [x] **Money** (web v0.248-0.249 / app v0.72-0.73): per-person ledger with
+        running balances (`GET /money`, personal-scoped — child sees self, parent
+        sees self + kids), add a deposit/payment (`POST /money/entry`, lands
+        PENDING), search, and a single participant collapses the people selector.
+        **Parent admins get full admin parity minus CSV import**: approve /
+        unapprove / approve-all, edit, delete, and set starting funds
+        (`/money/approve|unapprove|approve-all|update|delete|starting`, all
+        admin-device-only), plus the Bible-reward payout approvals
+        (`/money/rewards/approve-month|approve-base`). The home dashboard shows an
+        amber reminder banner (`/dashboard` carries admin `money` counts) →
+        Review opens Money. The add/edit forms use pop-up selectors (Type,
+        Category, For, frequent-payment) rather than inline dropdowns. Approval on
+        the shared web tablet still requires the PIN (the app gates on the device
+        role instead). Device routes delegate to shared cores in `lib/money-core.ts`
+        + `lib/bible-rewards.ts`.
+        Deferred (still web-admin only): **CSV import** (one-time) and the Bible
+        **reward-settings config** form (per-person opt-in/amounts, bonus, grace).
 
 
       - [x] **Persistent "Phone app" badge count** (v0.201) — done via one

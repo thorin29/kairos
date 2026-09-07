@@ -406,3 +406,27 @@ What stays web-admin-only (behind the PIN), by choice: approving/unapproving a
 *filed* transaction, editing/deleting a row, setting starting funds, and CSV
 import. The app mirrors the read-only `/money` page plus reward approval; those
 management actions weren't requested for the phone.
+
+---
+
+## Money admin parity on the phone, minus import (v0.249)
+
+The app now does everything the web Money admin (`/admin/money`, PIN-gated) does
+except the one-time CSV import: approve / unapprove / approve-all, edit, delete,
+and set starting funds — plus the Bible-reward payout approvals from v0.248. All
+of it is admin-device-only: the route checks `person.role === "ADMIN"`, which
+replaces the PIN because the device token already proves the parent. **The shared
+web wall tablet keeps the PIN** — it's identity-free, so approval there still goes
+through `/admin/money`; the app never exposes these on a non-admin device.
+
+Every mutation is a session-free core in `lib/money-core.ts`
+(`approveMoneyEntryCore`, `unapproveMoneyEntryCore`, `approveAllMoneyCore`,
+`updateMoneyEntryCore`, `deleteMoneyEntryCore`, `setStartingFundsCore`) shared by
+the web action and the device route, so validation/eligibility live in one place.
+The home dashboard read carries admin-only `money: { pendingApprovals, rewardMonths }`
+counts that drive the amber reminder banner (mirrors the web `MoneyReminder`);
+Review opens Money rather than approving inline.
+
+Still web-admin only, by choice: **CSV import** (a one-time setup task) and the
+**Bible reward-settings config** (per-person opt-in/amounts, bonus, grace — a
+set-once form). Both are named in ROADMAP; ask to bring either to the phone.

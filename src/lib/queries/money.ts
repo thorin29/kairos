@@ -279,8 +279,10 @@ export async function loadMoneyApi(
   rows: MoneyRow[];
   roster: ReturnType<typeof personPayload>[];
   frequentPayments: string[];
+  isAdmin: boolean;
   canApproveRewards: boolean;
   rewardMonths: MoneyRewardMonthWire[];
+  pendingApprovals: AdminMoneyRow[];
 }> {
   const visibleIds = await ledgerVisibleIds({ id: person.id, kind: person.kind });
   const vset = new Set(visibleIds);
@@ -339,9 +341,11 @@ export async function loadMoneyApi(
   const frequentPayments = await frequentPaymentLabels();
 
   // Reward approvals are an admin-only capability; only compute the queue then.
-  const canApproveRewards = person.role === "ADMIN";
+  const isAdmin = person.role === "ADMIN";
+  const canApproveRewards = isAdmin;
   let rewardMonths: MoneyRewardMonthWire[] = [];
-  if (canApproveRewards) {
+  let pendingApprovals: AdminMoneyRow[] = [];
+  if (isAdmin) {
     const { months } = await pendingBibleRewards();
     rewardMonths = months.map((m) => ({
       periodKey: m.periodKey,
@@ -355,6 +359,38 @@ export async function loadMoneyApi(
         needsBase: c.needsBase,
       })),
     }));
+
+    // The household-wide transactions still awaiting a verification mark, newest
+    // first (mirrors the web admin queue). Carries the owner's name since the
+    // admin works across people.
+    const pend = await prisma.moneyEntry.findMany({
+      where: { status: "PENDING" },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      select: {
+        id: true,
+        userId: true,
+        date: true,
+        direction: true,
+        category: true,
+        detail: true,
+        amountCents: true,
+        status: true,
+        kind: true,
+        user: { select: { name: true } },
+      },
+    });
+    pendingApprovals = pend.map((e) => ({
+      id: e.id,
+      userId: e.userId,
+      userName: e.user.name,
+      date: fromDateColumn(e.date),
+      direction: e.direction,
+      category: e.category,
+      detail: e.detail,
+      amountCents: e.amountCents,
+      status: e.status,
+      kind: e.kind,
+    }));
   }
 
   return {
@@ -364,7 +400,9 @@ export async function loadMoneyApi(
     rows,
     roster,
     frequentPayments,
+    isAdmin,
     canApproveRewards,
     rewardMonths,
+    pendingApprovals,
   };
 }
