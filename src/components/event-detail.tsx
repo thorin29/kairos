@@ -210,12 +210,6 @@ export function EventDetail({
               <span>{kindLabel}</span>
             </div>
             <div className="flex items-start gap-2 text-muted">
-              <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: event.color }}
-                />
-              </span>
               <AttendeeList event={event} align="start" />
             </div>
             {event.external && event.calendarName && (

@@ -52,7 +52,7 @@ export function DaySchedule({
             </div>
             {!compact && (
               <span className="shrink-0">
-                <AttendeeList event={e} align="end" />
+                <AttendeeList event={e} align="start" />
               </span>
             )}
           </li>
