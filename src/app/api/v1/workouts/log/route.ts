@@ -37,14 +37,13 @@ export async function POST(req: NextRequest) {
       (e): e is Record<string, unknown> =>
         !!e &&
         typeof e === "object" &&
-        typeof (e as Record<string, unknown>).poolExerciseId === "string" &&
         typeof (e as Record<string, unknown>).metric === "string" &&
         METRICS.has((e as Record<string, unknown>).metric as string) &&
         typeof (e as Record<string, unknown>).value === "number" &&
         Number.isFinite((e as Record<string, unknown>).value as number),
     )
     .map((e) => ({
-      poolExerciseId: e.poolExerciseId as string,
+      poolExerciseId: (typeof e.poolExerciseId === "string" && e.poolExerciseId) ? (e.poolExerciseId as string) : null,
       metric: e.metric as string,
       value: e.value as number,
       unit: typeof e.unit === "string" ? (e.unit as string) : "",

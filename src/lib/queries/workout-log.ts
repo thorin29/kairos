@@ -1,7 +1,8 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { slotForDate } from "@/lib/workouts/rotation";
-import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES } from "@/lib/workouts/catalog";
+import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES, hiitResult } from "@/lib/workouts/catalog";
+import type { WorkoutType } from "@/generated/prisma/client";
 import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
 import { metricUnit, type Metric } from "@/lib/workouts/catalog";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
@@ -155,6 +156,8 @@ export async function loadTodayPlannedWorkout(
     select: {
       id: true,
       name: true,
+      hiitWorkoutId: true,
+      hiitWorkout: { select: { type: true } },
       exercises: {
         orderBy: { sortOrder: "asc" },
         select: {
@@ -165,7 +168,31 @@ export async function loadTodayPlannedWorkout(
       },
     },
   });
-  if (!plan || plan.exercises.length === 0) return null;
+  if (!plan) return null;
+
+  // HIIT/CrossFit workouts log a single result whose metric follows the workout
+  // type: for-time/stations/pyramid -> a time, AMRAP -> rounds, the rest -> total
+  // reps. Mirrors the web's hiitResult().
+  const hiit = plan as unknown as {
+    hiitWorkoutId: string | null;
+    hiitWorkout: { type: string } | null;
+  };
+  if (hiit.hiitWorkoutId && hiit.hiitWorkout) {
+    const res = hiitResult(hiit.hiitWorkout.type as WorkoutType);
+    const unit = metricUnit(res.metric, system);
+    const prior = await prisma.sessionSet.findFirst({
+      where: { session: { userId, date: toDateColumn(dayISO) }, poolExerciseId: null },
+      select: { weight: true, reps: true, distance: true, meters: true, seconds: true },
+    });
+    const value = prior ? valueForMetric(prior, res.metric) : null;
+    return {
+      plannedWorkoutId: plan.id,
+      name: plan.name,
+      exercises: [{ poolExerciseId: "", name: res.label, metric: res.metric, unit, value }],
+    };
+  }
+
+  if (plan.exercises.length === 0) return null;
 
   const sets = await prisma.sessionSet.findMany({
     where: {
