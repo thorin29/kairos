@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   if ("response" in authed) return authed.response;
   const userId = authed.device.person.id;
 
-  const [pool, people, mine] = await Promise.all([
+  const [pool, people, mine, myExercises] = await Promise.all([
     loadWorkoutPool(userId),
     prisma.user.findMany({
       where: { isActive: true, id: { not: userId } },
@@ -39,6 +39,11 @@ export async function GET(req: NextRequest) {
         },
       },
     }),
+    prisma.poolExercise.findMany({
+      where: { ownerId: userId, category: "HIIT" as never },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
   ]);
 
   const types = Object.entries(WORKOUT_TYPE_LABEL as Record<string, string>).map(
@@ -51,6 +56,7 @@ export async function GET(req: NextRequest) {
   return apiOk({
     types,
     movements: hiitMovements.map((e) => ({ id: e.id, name: e.name })),
+    myExercises: (myExercises as { id: string; name: string }[]).map((e) => ({ id: e.id, name: e.name })),
     people: people.map((p) => ({ id: p.id, name: p.displayName?.trim() || p.name })),
     myWorkouts: mine.map((w) => ({
       id: w.id,

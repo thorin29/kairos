@@ -134,6 +134,33 @@ export async function deletePersonalWorkoutCore(
   return { error: null };
 }
 
+/** Rename one of this person's own custom exercises. */
+export async function renameUserMovementCore(
+  userId: string,
+  movementId: string,
+  name: string,
+): Promise<{ error: string | null }> {
+  const nm = name.trim().slice(0, 50);
+  if (nm.length < 2) return { error: "Name the exercise." };
+  const owned = await prisma.poolExercise.findFirst({
+    where: { id: movementId, ownerId: userId },
+    select: { id: true },
+  });
+  if (!owned) return { error: "Exercise not found." };
+  await prisma.poolExercise.update({ where: { id: movementId }, data: { name: nm } });
+  return { error: null };
+}
+
+/** Delete one of this person's own custom exercises (also removes it from any of
+ *  their workouts that used it). */
+export async function deleteUserMovementCore(
+  userId: string,
+  movementId: string,
+): Promise<{ error: string | null }> {
+  await prisma.poolExercise.deleteMany({ where: { id: movementId, ownerId: userId } });
+  return { error: null };
+}
+
 /** Add a custom movement that shows only in this person's menus (or reuse an
  *  existing shared/own one with the same name). Returns its id. */
 export async function addUserMovementCore(
