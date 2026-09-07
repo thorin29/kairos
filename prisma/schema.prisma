@@ -636,8 +636,16 @@ model Book {
   userId     String
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   title      String
+  author     String?
+  // Progress is tracked in one unit (unit/length, derived from pages/chapters —
+  // pages win when both are set). pages/chapters carry the full size metadata; a
+  // book must have at least one, and may have both.
   unit       ReadingUnit @default(PAGES)
   length     Int
+  pages      Int?
+  chapters   Int?
+  shelved    Boolean     @default(false)
+  bookmarked Boolean     @default(false)
   finishedAt DateTime?
   createdAt  DateTime    @default(now())
   logs       BookLog[]

@@ -430,3 +430,22 @@ Review opens Money rather than approving inline.
 Still web-admin only, by choice: **CSV import** (a one-time setup task) and the
 **Bible reward-settings config** (per-person opt-in/amounts, bonus, grace — a
 set-once form). Both are named in ROADMAP; ask to bring either to the phone.
+
+## Reading — leisure book-tracker (v0.250)
+Strictly **self-only**, unlike Money: `personalUserId()` narrows the web page to
+the signed-in person and every `/api/v1/books` route acts only on the enrolled
+person's own books (mutations 403 otherwise). Parents do **not** see a child's
+leisure reading here — that's deliberate.
+
+A book keeps its size in **pages and/or chapters** (at least one; both allowed).
+Progress still runs on the single `unit`/`length` pair the scoring/progress code
+already uses, **derived with pages winning** when both are set — so a "both" book
+tracks pages and shows the chapter count as metadata. This kept the Scholar
+scoring in `progression.ts` (via `readingXpForBook`) unchanged: logging pages
+already feeds Scholar, capped at length. No new scoring was needed.
+
+`shelved` and `bookmarked` are additive booleans; buckets are derived at read
+time (queue = `!shelved && !finished`; bookshelf = read/to-read/bookmarked, where
+bookmarked overlaps). Finishing un-shelves. Operations live in session-free
+`books-core.ts`, shared by the web actions (Authelia session) and the device
+routes (bearer token) — same core/auth-at-the-caller split as Money.

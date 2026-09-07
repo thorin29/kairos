@@ -350,7 +350,36 @@ household counts that drive the home reminder banner (Review opens Money).
 `Person` is the standard wire person (id, name, shortName, color, avatarUrl,
 avatarPosition, avatarIcon, role, kind) as sent by /me.
 
-### Calendar — **Phases 1-4 built: read-only views (v0.210-211) + filters drawer (v0.212)**
+### Reading — leisure book-tracker (built v0.250)
+Strictly **self-only** — every route acts on the enrolled person's own books and
+no one else's (distinct from the Bible reading endpoints above). A book has a
+title, optional author, and a size in **pages and/or chapters** (at least one;
+both allowed — progress runs on pages when both are set). Reading a book already
+feeds the Scholar stat (unchanged). Books carry `shelved` and `bookmarked` flags;
+the client buckets into the reading queue (`!shelved && !finished`) and the
+bookshelf (read / to-read / bookmarked).
+```
+GET  /api/v1/books
+200: { "today":"YYYY-MM-DD", "books": [ Book, … ] }
+
+Book:
+  { "id","title","author":str|null,
+    "unit":"PAGES"|"CHAPTERS","length":int,        // the progress unit (derived)
+    "pages":int|null,"chapters":int|null,
+    "read":int,"rawRead":int,"todayAmount":int,    // read is capped at length
+    "finished":bool,"shelved":bool,"bookmarked":bool }
+
+POST /api/v1/books/add       { "title","author"?,"pages"?:int,"chapters"?:int }  → { "status":"ok" }
+POST /api/v1/books/log       { "id","amount":int }        // today's total; 0 clears
+POST /api/v1/books/update    { "id","title"?,"author"?,"pages"?:int,"chapters"?:int }
+POST /api/v1/books/finish    { "id","finished":bool }     // finishing un-shelves
+POST /api/v1/books/shelf     { "id","shelved":bool }
+POST /api/v1/books/bookmark  { "id","bookmarked":bool }
+POST /api/v1/books/delete    { "id" }
+```
+All mutations 403 unless the book is the enrolled person's own.
+
+
 The person's own calendar for a view + date, mirroring the web personal calendar
 (src/app/calendar/personal-calendar.tsx): events with colours already resolved
 from their saved prefs, respecting their saved people/family/school-work/

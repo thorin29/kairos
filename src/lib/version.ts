@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.249.0";
+export const APP_VERSION = "0.250.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -83,11 +83,18 @@ export const MIGRATIONS = [
   "72_calendar_prefs",
   "73_device_credential_version",
   "74_personal_workouts",
+  "75_reading_books",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.250.0",
+    summary: [
+      "Reading now tracks a book's optional author and its size in pages and/or chapters (one required, both allowed). Books can be bookmarked or shelved, and a new bookshelf groups them into To read / Bookmarked / Read \u2014 move a book back to the reading queue anytime. The web reading page is now a per-person card you open to see that person's books and shelf. Reading still feeds the Scholar stat. Adds the self-only /api/v1/books surface for the mobile app.",
+    ],
+  },
   {
     version: "0.249.0",
     summary: [
