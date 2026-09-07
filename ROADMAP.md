@@ -1157,26 +1157,37 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       "sign out everywhere" is currently all-or-nothing via `credentialVersion`.
       A Session table would allow listing and revoking individual devices —
       worth it once the phone app is real.
-- [ ] App pop-ups: convert all remaining dialogs (AlertDialogs across calendar,
-      workout, bible, etc.) to the shared `AnimatedDialog` (ui/common) so every
-      pop-up eases in with the same soft fade + scale as the workout share
-      dialog. Started with the share + share-confirmation dialogs (app v0.64.0).
-- [ ] App dropdowns: use the shared smooth `RollPicker` (ui/common) for every
-      dropdown/select across the app (calendar editor, bible, school, etc.) so all
-      selects roll open/closed with the same fade + expand. Started with the workout
-      Create/Edit and Log-a-different-workout forms (app v0.62–0.64).
-- [ ] App offline support (BIG, high priority): the app should work without a
-      signal for the shared, read-mostly surfaces — calendar viewing, and marking
-      chores / groceries — instead of showing spinners when the network is down.
-      Needs an on-device cache (e.g. Room) with a read-through + optimistic-write
-      queue that syncs when back online. Currently every screen fetches live, so a
-      dropped signal = spinner. Scope which surfaces are offline-capable first
-      (calendar read, chores toggle, grocery check) vs. later.
-- [ ] App: finish converting all `AlertDialog` call sites to the shared
-      `AnimatedDialog` (14 remaining across calendar, bible, recent workouts,
-      AppRoot, create-workout). Standard recorded in DECISIONS.
-- [ ] "Log a different workout" -> wizard: replace the crowded single-screen
-      dropdowns with a step flow. "Log something else" button -> pick type ->
-      then per type: Weights = muscle group -> exercise -> log (+ weight for
-      tracked metrics), like the create-workout wizard; Running = just distance;
-      HIIT/CrossFit = pick workout -> result (mid complexity). Less scrolling.
+- [ ] **App offline support (BIG — high priority, its own dedicated effort).**
+      The app must be usable without a signal for the shared, read-mostly surfaces.
+      Today every screen fetches live over the Cloudflared tunnel, so a dropped
+      signal shows a spinner and nothing loads (the calendar is the worst offender).
+      What it needs:
+        * On-device cache (Room, or DataStore for small state) of fetched payloads
+          so screens render last-known data instantly, including fully offline.
+        * Read-through pattern: show cache first, refresh from the network in the
+          background, reconcile.
+        * Optimistic writes with an offline queue that flushes on reconnect, for the
+          on-the-go actions: marking chores done, workout done/rest, grocery check-off
+          (once groceries exist), sport/class attendance answers.
+      Priority scope: (1) calendar VIEWING offline — the top ask; (2) chores toggle;
+      (3) grocery check. Two-way calendar EDIT sync is a later phase. Not a quick fix.
+- [ ] **App UI consistency — pop-ups & dropdowns (ongoing).** Standard is recorded
+      in DECISIONS ("App UI: dialogs and dropdowns use shared animated components"):
+      every pop-up must use `AnimatedDialog` (ui/common) and every select must use
+      `RollPicker` (ui/common). Done so far: workout share + share-confirmation
+      dialogs, the home workout menu, and all workout-form dropdowns (v0.62–0.68).
+      STILL TODO — convert the remaining `AlertDialog`/`Dialog` call sites, and note
+      that some dialogs ADDED since (the calendar colour picker v0.71.0, the
+      manage-custom-exercises screen, the log wizard's confirm) were built with
+      AlertDialog/Dialog and also need converting. Call sites span calendar
+      (CalendarScreen colour picker + confirms, CalendarAddEvent's SelectorOverlay
+      which is still a custom selector, not RollPicker), bible (PlanWizard,
+      PersonalPlanSection), recent workouts, AppRoot, and the workout create/edit +
+      wizard confirms.
+- [ ] **App: attendance markers on the calendar GRID blocks.** Per-person attendance
+      markers (green check / red X / grey ? person) currently show on the AGENDA
+      rows, the HOME schedule cards, and the event DETAIL — but NOT painted on the
+      small timed-event blocks in the day / 3-day / week / month grids. Add a compact
+      indicator there too (space is tight, so likely a single small dot/marker per
+      block or on the block corner). Data is already available on each event
+      (`attendees` on GridEvent/CalEvent).
