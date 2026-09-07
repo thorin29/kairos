@@ -11,10 +11,8 @@ import {
   BIBLE_GRACE_MAX,
 } from "@/lib/settings";
 import {
-  userFinishedMonth,
-  monthBonusAvailable,
-  monthEndDate,
-  pendingBibleRewards,
+  approveBibleBaseCore,
+  approveBibleMonthAllCore,
 } from "@/lib/bible-rewards";
 
 export type RewardActionState = { error: string | null; ok?: boolean };
@@ -69,67 +67,15 @@ export async function saveBibleRewardConfig(
   return { error: null, ok: true };
 }
 
-/** Create one auto-approved reward row, unless one already exists for that
- *  person/month/kind. The unique index is the real guard; this keeps the
- *  action idempotent and quiet on a repeat click. */
-async function postReward(
-  userId: string,
-  periodKey: string,
-  kind: "BIBLE_REWARD" | "BIBLE_BONUS",
-  amountCents: number,
-  detail: string,
-  approverId: string | null,
-) {
-  if (amountCents <= 0) return;
-  const exists = await prisma.moneyEntry.findFirst({
-    where: { userId, kind, periodKey },
-    select: { id: true },
-  });
-  if (exists) return;
-  await prisma.moneyEntry.create({
-    data: {
-      userId,
-      date: monthEndDate(periodKey),
-      direction: "DEPOSIT",
-      category: "BIBLE",
-      detail,
-      amountCents,
-      kind,
-      periodKey,
-      status: "APPROVED",
-      approvedById: approverId,
-      approvedAt: new Date(),
-    },
-  });
-}
-
-/** Approve one person's base reward for a month. Admin only. Re-checks that
- *  the month is actually finished before paying. */
+/** Approve one person's base reward for a month. Admin only. The eligibility
+ *  re-check lives in the shared core; this adds the web session gate + refresh. */
 export async function approveBibleBase(
   userId: string,
   periodKey: string,
 ): Promise<void> {
   if (!(await isAdmin())) throw new Error("Admin only.");
-  if (!/^\d{4}-\d{2}$/.test(periodKey)) return;
-
-  const finished = await userFinishedMonth(userId, periodKey);
-  if (!finished) return;
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { bibleRewardCents: true, bibleRewardEnabled: true },
-  });
-  if (!user || !user.bibleRewardEnabled) return;
-
   const admin = await currentAdmin();
-  await postReward(
-    userId,
-    periodKey,
-    "BIBLE_REWARD",
-    user.bibleRewardCents,
-    "Finished the month's Bible reading",
-    admin?.id ?? null,
-  );
+  await approveBibleBaseCore(userId, periodKey, admin?.id ?? null);
   refresh();
 }
 
@@ -137,39 +83,11 @@ export async function approveBibleBase(
  * Approve a whole month at once: base for every finisher who hasn't been paid,
  * and — when everyone finished within grace — the group bonus on top for each.
  * This is the single "approve all + bonus" action; it's idempotent, so it can
- * also top up a month whose bases were approved individually earlier.
+ * also top up a month whose bases were approved individually earlier. Admin only.
  */
 export async function approveBibleMonthAll(periodKey: string): Promise<void> {
   if (!(await isAdmin())) throw new Error("Admin only.");
-  if (!/^\d{4}-\d{2}$/.test(periodKey)) return;
-
-  const { months } = await pendingBibleRewards();
-  const month = months.find((m) => m.periodKey === periodKey);
-  // Nothing outstanding for this month.
-  if (!month) return;
-
   const admin = await currentAdmin();
-  const bonusOk = month.bonusAvailable && (await monthBonusAvailable(periodKey));
-
-  for (const c of month.completers) {
-    await postReward(
-      c.userId,
-      periodKey,
-      "BIBLE_REWARD",
-      c.baseCents,
-      "Finished the month's Bible reading",
-      admin?.id ?? null,
-    );
-    if (bonusOk) {
-      await postReward(
-        c.userId,
-        periodKey,
-        "BIBLE_BONUS",
-        month.bonusCents,
-        "Everyone finished — group bonus",
-        admin?.id ?? null,
-      );
-    }
-  }
+  await approveBibleMonthAllCore(periodKey, admin?.id ?? null);
   refresh();
 }

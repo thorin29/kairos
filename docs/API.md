@@ -289,12 +289,49 @@ GET  /api/v1/chores             the chore overview (read-only)
 Pool *claim* (a write) stays a future dashboard action; this page only reports
 status, like the web. Supersedes the earlier `/chores/pool` sketch.
 
-### Points & rewards (money ledger)
+### Money — **built: per-person ledger + add + admin reward approval (v0.248)**
+Mirrors the web /money page, personal-scoped from the enrolled person: a child
+sees only their own ledger; a parent (kind PARENT) sees themselves + every active
+child; an admin device additionally gets the outstanding Bible-reward months to
+approve (no PIN — the device token proves identity). Approving a filed
+transaction, editing/deleting rows, setting starting funds, and CSV import remain
+web-admin-only (behind the PIN). Amounts are whole cents on the wire.
 ```
-GET  /api/v1/rewards            catalogue + this person's balance
-POST /api/v1/rewards/{id}/redeem
-GET  /api/v1/ledger             this person's transactions
+GET  /api/v1/money              ?user=<id>  (optional; selects whose ledger)
+200: { "today":"YYYY-MM-DD",                  // household tz; the add form's date default
+       "participants": [ { "person": Person, "balanceCents":int } ],  // visible people who keep a ledger
+       "selectedId": string|null,
+       "rows": [ MoneyRow, … ],                 // selected person's, newest first
+       "roster": [ Person, … ],                 // visible active people (the add picker)
+       "frequentPayments": [ string, … ],       // top payment descriptions, quick-picks
+       "canApproveRewards": bool,               // admin device
+       "rewardMonths": [ RewardMonth, … ] }     // admin only; else []
+
+MoneyRow:
+  { "id","date":"YYYY-MM-DD","direction":"DEPOSIT"|"PAYMENT",
+    "category":string|null,"detail":string|null,"amountCents":int,
+    "status":"PENDING"|"APPROVED","kind":"MANUAL"|"STARTING"|"BIBLE_REWARD"|"BIBLE_BONUS"|"IMPORT" }
+
+RewardMonth:
+  { "periodKey":"YYYY-MM","label":"November 2025","bonusAvailable":bool,"bonusCents":int,
+    "completers": [ { "userId","name","baseCents":int,"needsBase":bool } ] }
+
+POST /api/v1/money/entry        file a deposit/payment (lands PENDING)
+request: { "userId","direction":"DEPOSIT"|"PAYMENT","amountCents":int,
+           "category"?:"BIRTHDAY"|"GIFT"|"HOLIDAY"|"EARNINGS"|"BIBLE"|"OTHER",  // deposits only, required
+           "detail"?:string, "date"?:"YYYY-MM-DD" }                            // date defaults today
+200: { "status":"ok" }   // 403 if filing for someone you may not act for
+
+POST /api/v1/money/rewards/approve-month   admin device only
+request: { "periodKey":"YYYY-MM" }          approve base (+ bonus) for the whole month
+200: { "status":"ok" }
+
+POST /api/v1/money/rewards/approve-base     admin device only
+request: { "userId","periodKey":"YYYY-MM" } approve one person's base reward
+200: { "status":"ok" }
 ```
+`Person` is the standard wire person (id, name, shortName, color, avatarUrl,
+avatarPosition, avatarIcon, role, kind) as sent by /me.
 
 ### Calendar — **Phases 1-4 built: read-only views (v0.210-211) + filters drawer (v0.212)**
 The person's own calendar for a view + date, mirroring the web personal calendar
