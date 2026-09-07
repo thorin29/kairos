@@ -268,6 +268,7 @@ export async function loadApiDashboard(
         location: e.location,
         notes: e.notes,
         didNotAttend: e.didNotAttend,
+        attendees: e.attendees,
       }));
   }
 
