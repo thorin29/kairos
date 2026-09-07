@@ -431,7 +431,7 @@ export type LogCategory = {
   metrics: MetricOption[];
   load: boolean;
 };
-export type PoolExerciseLite = { id: string; name: string; category: string };
+export type PoolExerciseLite = { id: string; name: string; category: string; muscleGroup: string | null };
 export type HiitLogOption = {
   id: string;
   name: string;
@@ -445,6 +445,7 @@ export type WorkoutPool = {
   categories: LogCategory[];
   exercises: PoolExerciseLite[];
   hiitWorkouts: HiitLogOption[];
+  muscleGroups: { key: string; label: string }[];
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -521,7 +522,7 @@ export async function loadWorkoutPool(userId?: string): Promise<WorkoutPool> {
       OR: [{ ownerId: null }, ...(userId ? [{ ownerId: userId }] : [])],
     },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, category: true },
+    select: { id: true, name: true, category: true, muscleGroup: true },
   });
 
   // Named HIIT/CrossFit workouts you can log: the shared library (admin, normal +
@@ -543,7 +544,22 @@ export async function loadWorkoutPool(userId?: string): Promise<WorkoutPool> {
     };
   });
 
-  return { categories, exercises, hiitWorkouts };
+  const muscleGroups = (MUSCLE_GROUPS as string[]).map((m) => ({
+    key: m,
+    label: (MUSCLE_GROUP_LABEL as Record<string, string>)[m] ?? m,
+  }));
+
+  return {
+    categories,
+    exercises: exercises.map((e) => ({
+      id: e.id,
+      name: e.name,
+      category: e.category as string,
+      muscleGroup: (e as { muscleGroup?: string | null }).muscleGroup ?? null,
+    })),
+    hiitWorkouts,
+    muscleGroups,
+  };
 }
 
 /** Named workouts this person can browse: the shared approved library plus
