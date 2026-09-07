@@ -195,8 +195,19 @@ Characters. Each drawer entry keeps its web brand colour.
       able to **ask whether sporting calendar events were completed** (it's
       calendar-event-driven — see Dashboard).
 - [~] **Remaining sections, each to full parity ← NEXT** (enumerate components
-      from the web page at build time): Reading, School, Game time, Groceries,
+      from the web page at build time): School, Game time, Groceries,
       Characters.
+      - [x] **Reading** (web v0.250 / app v0.74): strictly self-only leisure
+        book-tracker (`GET /api/v1/books`, no one sees anyone else's). A book has
+        a title, optional **author**, and a size in **pages and/or chapters**
+        (at least one; both allowed — progress tracks pages when both are set).
+        Log today's reading (feeds the **Scholar** stat, already wired via
+        `progression.ts` — no new scoring needed). **Bookmark** and **shelve**
+        flags drive a **Bookshelf** grouped into To read / Bookmarked / Read;
+        "Move to reading" / "Reopen" returns a book to the queue. Delete asks
+        first. Web `/reading` became a per-person card that opens that person's
+        queue + shelf. Endpoints: `/api/v1/books` + `add`/`log`/`update`/
+        `finish`/`shelf`/`bookmark`/`delete`, all self-only.
       - [x] **Money** (web v0.248-0.249 / app v0.72-0.73): per-person ledger with
         running balances (`GET /money`, personal-scoped — child sees self, parent
         sees self + kids), add a deposit/payment (`POST /money/entry`, lands
