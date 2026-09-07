@@ -1184,10 +1184,3 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       which is still a custom selector, not RollPicker), bible (PlanWizard,
       PersonalPlanSection), recent workouts, AppRoot, and the workout create/edit +
       wizard confirms.
-- [ ] **App: attendance markers on the calendar GRID blocks.** Per-person attendance
-      markers (green check / red X / grey ? person) currently show on the AGENDA
-      rows, the HOME schedule cards, and the event DETAIL — but NOT painted on the
-      small timed-event blocks in the day / 3-day / week / month grids. Add a compact
-      indicator there too (space is tight, so likely a single small dot/marker per
-      block or on the block corner). Data is already available on each event
-      (`attendees` on GridEvent/CalEvent).
