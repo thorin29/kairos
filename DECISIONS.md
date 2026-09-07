@@ -386,3 +386,23 @@ the proxy entirely.
 - **School work stays out of scoring** until the scoring rework epic ships.
 - **Idempotent migrations always** (`ADD COLUMN IF NOT EXISTS`, guarded
   `CREATE TYPE`, guarded FK creation).
+
+---
+
+## Approving Bible rewards from the phone (mobile admin, no PIN) — v0.248
+
+The web's reward-payout approval lives in Admin → Money behind the PIN
+(`approveBibleBase` / `approveBibleMonthAll` over `pendingBibleRewards()`). The
+mobile app can't sit behind that PIN — the device token already establishes who
+the person is — so a **parent admin (`person.role === "ADMIN"`) can approve from
+the app** with no PIN. The two approval actions were split into session-free
+cores in `lib/bible-rewards.ts` (`approveBibleBaseCore`,
+`approveBibleMonthAllCore`, plus the moved `postReward`); the web actions and the
+new device routes both delegate, so eligibility is re-checked server-side in one
+place and a stale client can't force a payout. Same pattern as the add-entry core
+(`lib/money-core.ts`), shared by the web action and `POST /money/entry`.
+
+What stays web-admin-only (behind the PIN), by choice: approving/unapproving a
+*filed* transaction, editing/deleting a row, setting starting funds, and CSV
+import. The app mirrors the read-only `/money` page plus reward approval; those
+management actions weren't requested for the phone.

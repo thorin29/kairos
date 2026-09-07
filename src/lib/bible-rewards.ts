@@ -289,3 +289,114 @@ export async function monthBonusAvailable(periodKey: string): Promise<boolean> {
 export function monthEndDate(periodKey: string): Date {
   return toDateColumn(lastOfMonth(`${periodKey}-01`));
 }
+
+// ---------------------------------------------------------------------------
+// Approval cores — shared by the web server actions (behind the admin PIN) and
+// the device-authed API routes (behind an admin device token, no PIN). The
+// caller decides *who* may approve; these cores just do the work and re-check
+// eligibility server-side before paying, so a stale client can't force a
+// payout. `adminId` is recorded as the approver; pass null when unknown.
+// ---------------------------------------------------------------------------
+
+/**
+ * Create one auto-approved reward row, unless one already exists for that
+ * person/month/kind. The unique index is the real guard; this keeps callers
+ * idempotent and quiet on a repeat click.
+ */
+async function postReward(
+  userId: string,
+  periodKey: string,
+  kind: "BIBLE_REWARD" | "BIBLE_BONUS",
+  amountCents: number,
+  detail: string,
+  approverId: string | null,
+) {
+  if (amountCents <= 0) return;
+  const exists = await prisma.moneyEntry.findFirst({
+    where: { userId, kind, periodKey },
+    select: { id: true },
+  });
+  if (exists) return;
+  await prisma.moneyEntry.create({
+    data: {
+      userId,
+      date: monthEndDate(periodKey),
+      direction: "DEPOSIT",
+      category: "BIBLE",
+      detail,
+      amountCents,
+      kind,
+      periodKey,
+      status: "APPROVED",
+      approvedById: approverId,
+      approvedAt: new Date(),
+    },
+  });
+}
+
+/** Approve one person's base reward for a month. Re-checks the month is truly
+ *  finished before paying. */
+export async function approveBibleBaseCore(
+  userId: string,
+  periodKey: string,
+  adminId: string | null,
+): Promise<void> {
+  if (!/^\d{4}-\d{2}$/.test(periodKey)) return;
+
+  const finished = await userFinishedMonth(userId, periodKey);
+  if (!finished) return;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { bibleRewardCents: true, bibleRewardEnabled: true },
+  });
+  if (!user || !user.bibleRewardEnabled) return;
+
+  await postReward(
+    userId,
+    periodKey,
+    "BIBLE_REWARD",
+    user.bibleRewardCents,
+    "Finished the month's Bible reading",
+    adminId,
+  );
+}
+
+/**
+ * Approve a whole month at once: base for every finisher who hasn't been paid,
+ * and — when everyone finished within grace — the group bonus on top for each.
+ * Idempotent, so it can also top up a month whose bases were approved earlier.
+ */
+export async function approveBibleMonthAllCore(
+  periodKey: string,
+  adminId: string | null,
+): Promise<void> {
+  if (!/^\d{4}-\d{2}$/.test(periodKey)) return;
+
+  const { months } = await pendingBibleRewards();
+  const month = months.find((m) => m.periodKey === periodKey);
+  if (!month) return; // Nothing outstanding for this month.
+
+  const bonusOk = month.bonusAvailable && (await monthBonusAvailable(periodKey));
+
+  for (const c of month.completers) {
+    await postReward(
+      c.userId,
+      periodKey,
+      "BIBLE_REWARD",
+      c.baseCents,
+      "Finished the month's Bible reading",
+      adminId,
+    );
+    if (bonusOk) {
+      await postReward(
+        c.userId,
+        periodKey,
+        "BIBLE_BONUS",
+        month.bonusCents,
+        "Everyone finished — group bonus",
+        adminId,
+      );
+    }
+  }
+}

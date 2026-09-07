@@ -10,6 +10,7 @@ import {
   parseAmountToCents,
   type DepositCategory,
 } from "@/lib/money";
+import { addMoneyEntryCore } from "@/lib/money-core";
 
 export type MoneyActionState = { error: string | null; ok?: boolean };
 
@@ -58,36 +59,20 @@ export async function addMoneyEntry(
   await requireCanActFor(userId);
 
   const direction = String(fd.get("direction") ?? "");
-  if (direction !== "DEPOSIT" && direction !== "PAYMENT") {
-    return { error: "Choose a deposit or a payment." };
-  }
-
   const amountCents = readAmount(fd);
   if (amountCents === null) return { error: "Enter an amount over $0.00." };
 
-  const detailRaw = String(fd.get("detail") ?? "").trim();
-  const detail = detailRaw ? detailRaw.slice(0, 200) : null;
-
-  const category = direction === "DEPOSIT" ? readCategory(fd) : null;
-  if (direction === "DEPOSIT" && !category) {
-    return { error: "Pick a category for the deposit." };
-  }
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) return { error: "That person no longer exists." };
-
-  await prisma.moneyEntry.create({
-    data: {
-      userId,
-      date: toDateColumn(readDate(fd)),
-      direction,
-      category,
-      detail,
-      amountCents,
-      kind: "MANUAL",
-      status: "PENDING",
-    },
+  // The web form carries dollars and a category name; the core takes cents and
+  // the plain fields, and is shared with the device API so both doors agree.
+  const res = await addMoneyEntryCore({
+    userId,
+    direction: direction as "DEPOSIT" | "PAYMENT",
+    amountCents,
+    detail: String(fd.get("detail") ?? ""),
+    category: direction === "DEPOSIT" ? readCategory(fd) : null,
+    dateISO: readDate(fd),
   });
+  if (!res.ok) return { error: res.error };
 
   refresh();
   return { error: null, ok: true };

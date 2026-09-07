@@ -194,9 +194,19 @@ Characters. Each drawer entry keeps its web brand colour.
       true dropdown attached to the field — switch to a proper anchored dropdown. Also by end of epic: the dashboard should be
       able to **ask whether sporting calendar events were completed** (it's
       calendar-event-driven — see Dashboard).
-- [ ] **Remaining sections, each to full parity ← NEXT** (enumerate components
+- [~] **Remaining sections, each to full parity ← NEXT** (enumerate components
       from the web page at build time): Reading, School, Game time, Groceries,
-      Money, Characters.
+      Characters.
+      - [x] **Money** (web v0.248 / app v0.72.0): per-person ledger with running
+        balances (`GET /money`, personal-scoped — child sees self, parent sees
+        self + kids), add a deposit/payment (`POST /money/entry`, lands PENDING),
+        search, and a single participant collapses the people selector. Admins
+        additionally get the **Bible-reading reward approvals** on the phone
+        (`POST /money/rewards/approve-month|approve-base`, no PIN — the device
+        token proves the parent). Device-authed routes delegate to shared cores
+        (`lib/money-core.ts`, `approveBibleBaseCore`/`approveBibleMonthAllCore`).
+        Deferred (still web-admin, behind the PIN): approve/unapprove a filed
+        transaction, edit/delete a row, set starting funds, CSV import.
 
 
       - [x] **Persistent "Phone app" badge count** (v0.201) — done via one
