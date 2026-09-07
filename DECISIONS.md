@@ -412,3 +412,31 @@ share/confirm dialogs, and the home workout sheet follow this. Remaining
 `AlertDialog` call sites (calendar, bible plan, recent workouts, AppRoot,
 create-workout confirms) are being converted to `AnimatedDialog` — convert any you
 touch. Tracked in ROADMAP.
+
+## App: use collectAsState(), never collectAsStateWithLifecycle() (v0.68.4+)
+
+**Lesson learned (hard-won).** Symptom: on a screen, after navigating away and back
+(especially via the drawer, which navigates with `popUpTo(Route.Home)` +
+`launchSingleTop`), tapping something did nothing — the screen rendered but state
+changes weren't reflected — until the app was force-restarted. First seen on the
+home dashboard: tapping today's workout set `workoutSheet` in the ViewModel but no
+menu appeared. It was NOT the pop-up (a bottom sheet and a dialog both failed
+identically), and NOT the tap handler.
+
+**Root cause.** State was read with `collectAsStateWithLifecycle()`, which only
+collects while the destination's lifecycle is at least STARTED. That drawer
+navigation can leave a destination's `NavBackStackEntry` lifecycle stuck below
+RESUMED after returning to it (confirmed in logcat: the screen's `ON_RESUME`-driven
+dashboard reload never fired on return). So collection stopped and never restarted —
+the composable's `ui` was frozen at its last value, ignoring every ViewModel update.
+
+**Fix / standing rule.** Use `collectAsState()` for screen/ViewModel state in this
+app — it observes while the composable is in composition, independent of the
+lifecycle quirk. Do NOT use `collectAsStateWithLifecycle()` for screen state here.
+Applied app-wide (every `ui/**` screen) in v0.68.4–0.68.5. If a new screen is added,
+collect its state with `collectAsState()`.
+
+Note: a side effect is that `ON_RESUME`-based "reload on return" (a `DisposableEffect`
++ `LifecycleEventObserver`) is also unreliable under this nav pattern; prefer an
+explicit refresh trigger (pull-to-refresh, or a nav result) over `ON_RESUME` if a
+screen must refresh when shown again.
