@@ -318,6 +318,22 @@ export async function loadRange(
     return "UNKNOWN";
   }
 
+  // Class attendance: a ClassCheckin (attended true/false) per class per person per
+  // day; absent = unknown. Same three markers as sport.
+  const classCheckinRows = await prisma.classCheckin.findMany({
+    where: { date: { gte: rangeStart, lte: rangeEnd } },
+    select: { classId: true, userId: true, date: true, attended: true },
+  });
+  const classCheckinMap = new Map<string, boolean>();
+  for (const r of classCheckinRows) {
+    classCheckinMap.set(`${r.classId}|${r.userId}|${fromDateColumn(r.date)}`, r.attended);
+  }
+  function classAttendanceState(classId: string, userId: string, iso: string): string {
+    const v = classCheckinMap.get(`${classId}|${userId}|${iso}`);
+    if (v === undefined) return "UNKNOWN";
+    return v ? "ATTENDED" : "DECLINED";
+  }
+
   const events = await prisma.event.findMany({
     where: {
       AND: [
@@ -340,6 +356,7 @@ export async function loadRange(
       user: { select: { name: true, displayName: true, color: true } },
       externalCalendar: { select: { name: true } },
       eventType: { select: { id: true, name: true, color: true, sportWorkout: true } },
+      schoolClass: { select: { id: true } },
       participants: { select: { userId: true, user: { select: { color: true, name: true, displayName: true } } } },
     },
   });
@@ -454,9 +471,11 @@ export async function loadRange(
       : Array.from(new Set([...(ownerNm ? [ownerNm] : []), ...participantNames]));
     const whoLabel = e.isFamily ? "Family" : whoLabelFrom(memberNames);
 
-    // Per-member attendance (owner + participants), for sport events only, never
-    // for family events. state is "" for non-sport events (name shown, no icon).
+    // Per-member attendance (owner + participants), for sport and class events,
+    // never for family events. state is "" for others (name shown, no icon).
     const isSport = Boolean(eventType?.sportWorkout);
+    const classId = (e as { schoolClass?: { id: string } | null }).schoolClass?.id ?? null;
+    const isClass = (e.kind as string) === "CLASS" && classId != null;
     const memberPairs: { id: string; name: string }[] = e.isFamily
       ? []
       : [
@@ -472,7 +491,11 @@ export async function loadRange(
       .filter((m) => (seenMember.has(m.id) ? false : (seenMember.add(m.id), true)))
       .map((m) => ({
         name: m.name,
-        state: isSport ? attendanceState(e.id, m.id, start.iso) : "",
+        state: isSport
+          ? attendanceState(e.id, m.id, start.iso)
+          : isClass
+            ? classAttendanceState(classId!, m.id, start.iso)
+            : "",
       }));
 
     const base = {
