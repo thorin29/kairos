@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { GridEvent } from "@/lib/queries/calendar";
+import { AttendeeList } from "@/components/attendance";
 import { classDueItems } from "@/lib/actions/school";
 import { bgUrl } from "@/lib/event-bg";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
@@ -208,14 +209,14 @@ export function EventDetail({
               <CategoryIcon className="h-4 w-4 shrink-0" />
               <span>{kindLabel}</span>
             </div>
-            <div className="flex items-center gap-2 text-muted">
-              <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
+            <div className="flex items-start gap-2 text-muted">
+              <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center">
                 <span
                   className="h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: event.color }}
                 />
               </span>
-              <span>{event.whoLabel}</span>
+              <AttendeeList event={event} align="start" />
             </div>
             {event.external && event.calendarName && (
               <div className="flex items-center gap-2 text-muted">

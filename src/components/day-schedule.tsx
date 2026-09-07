@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { GridEvent } from "@/lib/queries/calendar";
+import { AttendeeList } from "@/components/attendance";
 import { Card } from "@/components/ui";
 import { CalendarIcon } from "@/components/icons";
 
@@ -50,8 +51,8 @@ export function DaySchedule({
               </p>
             </div>
             {!compact && (
-              <span className="shrink-0 text-xs text-muted">
-                {e.whoLabel}
+              <span className="shrink-0">
+                <AttendeeList event={e} align="end" />
               </span>
             )}
           </li>
