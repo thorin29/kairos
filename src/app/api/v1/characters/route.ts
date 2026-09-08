@@ -68,8 +68,8 @@ export async function GET(req: NextRequest) {
   const stageName = STAGE_NAMES[Math.max(0, Math.min(2, c.stage))];
   const image =
     c.active && sp
-      ? `/api/v1/companions/${sp.id}/${stageName}.png`
-      : `/api/v1/companions/eggs/mystery.png`;
+      ? `/api/v1/companion-sprite?p=${encodeURIComponent(`${sp.id}/${stageName}.png`)}`
+      : `/api/v1/companion-sprite?p=${encodeURIComponent("eggs/mystery.png")}`;
 
   return apiOk({
     seasonName,

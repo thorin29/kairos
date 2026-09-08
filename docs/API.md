@@ -489,7 +489,7 @@ POST /api/v1/groceries/trip/complete  { "tripId" }
 POST /api/v1/groceries/move           { "id","storeId" }                 // move a saved line to another store
 
 GET  /api/v1/characters                                                   // your own character sheet (companion, level, season, stats, streak, mastery)
-GET  /api/v1/companions/{...path}.png                                     // device-authed companion sprite (mirrors /public/companions)
+GET  /api/v1/companion-sprite?p=<species>/<stage>.png                     // device-authed companion sprite (mirrors /public/companions)
 POST /api/v1/characters/hatch         { "mode":"new"|"deepen" }            // hatch your ready egg (self only)
 GET  /api/v1/characters/collection                                        // your gallery: creatures grouped by era, owned vs mystery (self only)
 ```

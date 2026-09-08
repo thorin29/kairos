@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.260.0";
+export const APP_VERSION = "0.263.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,6 +90,24 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.263.0",
+    summary: [
+      "Companion sprites: replaced the catch-all /api/v1/companions/[...] route (whose folder name broke file uploads and may have kept the app showing the egg) with a plain /api/v1/companion-sprite?p=\u2026 route. The old bracketed route folder should be deleted.",
+    ],
+  },
+  {
+    version: "0.262.0",
+    summary: [
+      "Companion sprite endpoint: tries more candidate public paths and logs where it looked when a sprite isn't found, to pin down why the app shows the egg fallback.",
+    ],
+  },
+  {
+    version: "0.261.0",
+    summary: [
+      "Characters API: /api/v1/characters now includes the season name and the segmented XP-bar cells; added /api/v1/characters/collection (the gallery, grouped by era, owned vs mystery). Made the companion sprite endpoint resolve /public robustly.",
+    ],
+  },
   {
     version: "0.260.0",
     summary: [
