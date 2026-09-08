@@ -5,7 +5,6 @@ import { Avatar } from "@/components/avatar";
 import {
   PlusIcon,
   TrashIcon,
-  StarIcon,
   BookIcon,
   ChevronLeftIcon,
 } from "@/components/icons";
@@ -31,7 +30,7 @@ function sizeLabel(b: BookProgress): string {
 }
 
 const queueOf = (books: BookProgress[]) =>
-  books.filter((b) => !b.shelved && !b.finished);
+  books.filter((b) => !b.shelved && !b.bookmarked && !b.finished);
 
 export function ReadingBoard({ people }: { people: PersonBooks[] }) {
   const [selected, setSelected] = useState<string | null>(
@@ -53,7 +52,7 @@ export function ReadingBoard({ people }: { people: PersonBooks[] }) {
     <div className="grid gap-3 sm:grid-cols-2">
       {people.map((p) => {
         const reading = queueOf(p.books).length;
-        const shelf = p.books.filter((b) => b.shelved && !b.finished).length;
+        const shelf = p.books.filter((b) => (b.shelved || b.bookmarked) && !b.finished).length;
         return (
           <button
             key={p.id}
@@ -94,8 +93,8 @@ function PersonDetail({
   const [showShelf, setShowShelf] = useState(false);
 
   const queue = queueOf(person.books);
-  const toRead = person.books.filter((b) => b.shelved && !b.finished);
-  const bookmarked = person.books.filter((b) => b.bookmarked);
+  const toRead = person.books.filter((b) => b.shelved && !b.bookmarked && !b.finished);
+  const bookmarked = person.books.filter((b) => b.bookmarked && !b.finished);
   const read = person.books.filter((b) => b.finished);
   const shelfCount = toRead.length + bookmarked.length + read.length;
 
@@ -189,15 +188,6 @@ function BookCard({ book }: { book: BookProgress }) {
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
-            disabled={pending}
-            onClick={() => start(() => bookmarkBook(book.id, !book.bookmarked))}
-            aria-label={book.bookmarked ? "Remove bookmark" : "Bookmark"}
-            className={book.bookmarked ? "text-amber-500" : "text-muted hover:text-amber-500"}
-          >
-            <StarIcon className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
             onClick={() => {
               if (confirm(`Remove "${book.title}"?`)) start(() => deleteBook(book.id));
             }}
@@ -256,6 +246,14 @@ function BookCard({ book }: { book: BookProgress }) {
         <button
           type="button"
           disabled={pending}
+          onClick={() => start(() => bookmarkBook(book.id, true))}
+          className="font-medium text-muted hover:text-ink"
+        >
+          Bookmark
+        </button>
+        <button
+          type="button"
+          disabled={pending}
           onClick={() => start(() => shelveBook(book.id, true))}
           className="font-medium text-muted hover:text-ink"
         >
@@ -309,12 +307,22 @@ function ShelfRow({
 }) {
   const [pending, start] = useTransition();
   const pct = book.length > 0 ? Math.round((book.read / book.length) * 100) : 0;
-  const canReturn = book.shelved || book.finished;
 
-  const returnToQueue = () =>
-    start(async () => {
-      if (book.finished) await finishBook(book.id, false);
-      if (book.shelved) await shelveBook(book.id, false);
+  const place =
+    kind === "read"
+      ? "Read"
+      : kind === "bookmarked"
+        ? `On ${book.read} of ${book.length} ${unitLabel(book.unit, book.length)}`
+        : book.read > 0
+          ? `${pct}%`
+          : "Not started";
+
+  // Each shelf bucket clears exactly its own flag to come back to the queue.
+  const back = () =>
+    start(() => {
+      if (kind === "read") return finishBook(book.id, false);
+      if (kind === "bookmarked") return bookmarkBook(book.id, false);
+      return shelveBook(book.id, false);
     });
 
   return (
@@ -325,31 +333,18 @@ function ShelfRow({
         </span>
         <span className="text-xs text-muted">
           {book.author ? `${book.author} \u00b7 ` : ""}
-          {kind === "read" ? "Read" : `${pct}%`}
+          {place}
         </span>
       </span>
       <span className="flex shrink-0 items-center gap-2">
-        {(kind !== "bookmarked" || canReturn) && (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={returnToQueue}
-            className="text-xs font-medium text-accent hover:underline"
-          >
-            {kind === "read" ? "Reopen" : "Move to reading"}
-          </button>
-        )}
-        {kind === "bookmarked" && (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => start(() => bookmarkBook(book.id, false))}
-            aria-label="Remove bookmark"
-            className="text-amber-500"
-          >
-            <StarIcon className="h-4 w-4" />
-          </button>
-        )}
+        <button
+          type="button"
+          disabled={pending}
+          onClick={back}
+          className="text-xs font-medium text-accent hover:underline"
+        >
+          {kind === "read" ? "Reopen" : "Move to reading"}
+        </button>
         <button
           type="button"
           onClick={() => {

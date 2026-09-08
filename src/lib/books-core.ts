@@ -155,19 +155,30 @@ export async function finishBookCore(bookId: string, finished: boolean): Promise
   if (!bookId) return;
   await prisma.book.update({
     where: { id: bookId },
-    // Finishing takes a book off the shelf; it's read now, not to-read.
-    data: { finishedAt: finished ? new Date() : null, shelved: finished ? false : undefined },
+    // A finished book is "read" — clear the shelf/bookmark state so it lands in
+    // exactly one bucket. Reopening (finished=false) drops it back in the queue.
+    data: { finishedAt: finished ? new Date() : null, shelved: false, bookmarked: false },
   });
 }
 
+/** Shelve = "save for later" (To read). Bookmark = "set aside, keep my place"
+ *  (Bookmarked). They're mutually exclusive shelf states — setting one clears
+ *  the other so a book is only ever in one bucket. Progress is untouched either
+ *  way, so moving a book back to the queue resumes from the last logged page. */
 export async function shelfBookCore(bookId: string, shelved: boolean): Promise<void> {
   if (!bookId) return;
-  await prisma.book.update({ where: { id: bookId }, data: { shelved } });
+  await prisma.book.update({
+    where: { id: bookId },
+    data: shelved ? { shelved: true, bookmarked: false } : { shelved: false },
+  });
 }
 
 export async function bookmarkBookCore(bookId: string, bookmarked: boolean): Promise<void> {
   if (!bookId) return;
-  await prisma.book.update({ where: { id: bookId }, data: { bookmarked } });
+  await prisma.book.update({
+    where: { id: bookId },
+    data: bookmarked ? { bookmarked: true, shelved: false } : { bookmarked: false },
+  });
 }
 
 export async function deleteBookCore(bookId: string): Promise<void> {
