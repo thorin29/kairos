@@ -47,20 +47,30 @@ export async function addItemCore(input: {
   requesterId?: string | null;
   note?: string | null;
 }): Promise<void> {
-  const name = normalizeName(input.name);
-  if (!name || !input.storeId) return;
+  const typed = normalizeName(input.name);
+  if (!typed || !input.storeId) return;
 
   const store = await prisma.store.findUnique({ where: { id: input.storeId } });
   if (!store) return;
 
-  const existing = await prisma.groceryItem.findUnique({ where: { name } });
+  // Match the catalog case-insensitively so "napkins" / "Napkins" / "NAPKINS"
+  // are one item — the first spelling added wins as the canonical name.
+  const existing = await prisma.groceryItem.findFirst({
+    where: { name: { equals: typed, mode: "insensitive" } },
+  });
+  const name = existing?.name ?? typed;
   const icon = existing?.icon ?? guessIcon(name);
 
-  await prisma.groceryItem.upsert({
-    where: { name },
-    update: { useCount: { increment: 1 }, lastUsedAt: new Date() },
-    create: { name, icon, defaultStoreId: input.storeId, useCount: 1 },
-  });
+  if (existing) {
+    await prisma.groceryItem.update({
+      where: { id: existing.id },
+      data: { useCount: { increment: 1 }, lastUsedAt: new Date() },
+    });
+  } else {
+    await prisma.groceryItem.create({
+      data: { name, icon, defaultStoreId: input.storeId, useCount: 1 },
+    });
+  }
 
   await prisma.shoppingItem.create({
     data: {
@@ -72,6 +82,17 @@ export async function addItemCore(input: {
       assignedToId: input.requesterId ?? null,
       note: input.note?.trim() || null,
     },
+  });
+}
+
+/** Move a saved line to a different store. */
+export async function moveItemCore(itemId: string, storeId: string): Promise<void> {
+  if (!itemId || !storeId) return;
+  const store = await prisma.store.findUnique({ where: { id: storeId } });
+  if (!store) return;
+  await prisma.shoppingItem.updateMany({
+    where: { id: itemId, tripId: null },
+    data: { storeId, sortOrder: await nextSortOrder(storeId) },
   });
 }
 
@@ -173,4 +194,53 @@ export async function completeTripCore(tripId: string): Promise<void> {
     prisma.shoppingItem.updateMany({ where: { tripId }, data: { tripId: null, boughtAt: null } }),
     prisma.shoppingTrip.delete({ where: { id: tripId } }),
   ]);
+}
+
+/**
+ * One-shot tidy-up for the catalog: merge entries that differ only by case or
+ * spacing (keeping the most-used spelling and summing use counts, repointing any
+ * live lines), and refresh every item's icon from its name with the current
+ * guesser. Fixes historical duplicates like "Coconut water" / "Coconut Water"
+ * and stale icons in one pass. Idempotent.
+ */
+export async function resyncCatalogCore(): Promise<{ merged: number; reiconed: number }> {
+  const items = await prisma.groceryItem.findMany();
+  const groups = new Map<string, typeof items>();
+  for (const it of items) {
+    const key = it.name.trim().replace(/\s+/g, " ").toLowerCase();
+    const bucket = groups.get(key);
+    if (bucket) bucket.push(it);
+    else groups.set(key, [it]);
+  }
+
+  let merged = 0;
+  let reiconed = 0;
+  for (const grp of groups.values()) {
+    // Keeper = most used, then oldest.
+    grp.sort((a, b) => b.useCount - a.useCount || a.createdAt.getTime() - b.createdAt.getTime());
+    const keeper = grp[0];
+    const canonical = normalizeName(keeper.name);
+    const icon = guessIcon(canonical);
+    const totalUse = grp.reduce((sum, i) => sum + i.useCount, 0);
+
+    for (const loser of grp.slice(1)) {
+      await prisma.shoppingItem.updateMany({
+        where: { name: loser.name },
+        data: { name: canonical, icon },
+      });
+      await prisma.groceryItem.delete({ where: { id: loser.id } });
+      merged += 1;
+    }
+
+    await prisma.groceryItem.update({
+      where: { id: keeper.id },
+      data: { name: canonical, icon, useCount: totalUse },
+    });
+    await prisma.shoppingItem.updateMany({
+      where: { name: canonical },
+      data: { icon },
+    });
+    reiconed += 1;
+  }
+  return { merged, reiconed };
 }

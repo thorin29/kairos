@@ -15,6 +15,8 @@ import {
   startTripCore,
   setPurchasedCore,
   completeTripCore,
+  moveItemCore,
+  resyncCatalogCore,
 } from "@/lib/groceries-core";
 
 /**
@@ -97,6 +99,20 @@ export async function completeTrip(tripId: string): Promise<void> {
   await requireInteractive();
   await completeTripCore(tripId);
   refresh();
+}
+
+export async function moveItem(itemId: string, storeId: string): Promise<void> {
+  await requireInteractive();
+  await moveItemCore(itemId, storeId);
+  refresh();
+}
+
+/** Admin: merge case/spacing-duplicate catalog items and refresh all icons. */
+export async function resyncCatalog(): Promise<{ merged: number; reiconed: number }> {
+  await requireAdmin();
+  const res = await resyncCatalogCore();
+  refresh();
+  return res;
 }
 
 /**

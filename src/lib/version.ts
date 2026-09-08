@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.251.1";
+export const APP_VERSION = "0.252.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,6 +90,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.252.0",
+    summary: [
+      "Groceries: adding an item now matches the catalog case-insensitively, so \"napkins\" and \"Napkins\" (or \"bottled water\" and \"Bottled Water\") are the same item \u2014 the first spelling wins. A new admin \"Re-sync catalog\" button merges any existing duplicates that differ only by case or spacing and refreshes every item's icon from its name. Napkins no longer guess a place-setting icon. Added a device route to move a saved item to a different store (for the app's item editor).",
+    ],
+  },
   {
     version: "0.251.1",
     summary: [
