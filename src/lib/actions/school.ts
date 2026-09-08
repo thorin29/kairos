@@ -134,6 +134,67 @@ export async function deleteSchoolWork(taskId: string): Promise<void> {
   revalidatePath("/admin/school");
 }
 
+/**
+ * Edit a school assignment/test: title, type, subject, class, and due date. The
+ * class must be one the student is actually in (owner or shared member), same
+ * rule as adding. Used by the admin School page.
+ */
+export async function editSchoolWork(input: {
+  id: string;
+  title: string;
+  type: string;
+  subject?: string | null;
+  classId?: string | null;
+  dueDate: string;
+}): Promise<SchoolActionState> {
+  await requireInteractive();
+  const task = await prisma.task.findUnique({
+    where: { id: input.id },
+    select: { userId: true, schoolWork: { select: { id: true } } },
+  });
+  if (!task || !task.schoolWork) {
+    return { error: "That assignment no longer exists." };
+  }
+  await requireCanActFor(task.userId);
+
+  const title = String(input.title ?? "").trim().slice(0, 120);
+  if (title.length < 2) return { error: "Give the assignment a name." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) {
+    return { error: "That date isn't valid." };
+  }
+
+  const type: SchoolWorkType = (TYPES as readonly string[]).includes(input.type)
+    ? (input.type as SchoolWorkType)
+    : "ASSIGNMENT";
+
+  const subject = String(input.subject ?? "").trim().slice(0, 60) || null;
+
+  // Only accept a class this student is actually in (membership, like add).
+  let classId: string | null = null;
+  const rawClassId = String(input.classId ?? "").trim() || null;
+  if (rawClassId) {
+    const member = await prisma.classMember.findFirst({
+      where: { classId: rawClassId, userId: task.userId },
+      select: { classId: true },
+    });
+    classId = member?.classId ?? null;
+  }
+
+  await prisma.task.update({
+    where: { id: input.id },
+    data: { title, dueDate: toDateColumn(input.dueDate) },
+  });
+  await prisma.schoolWork.update({
+    where: { id: task.schoolWork.id },
+    data: { type, subject, classId },
+  });
+
+  revalidatePath("/");
+  revalidatePath(`/person/${task.userId}`);
+  revalidatePath("/admin/school");
+  return { error: null };
+}
+
 // --- terms & classes (admin) ---------------------------------------------
 
 const WEEKDAY_TOKENS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];

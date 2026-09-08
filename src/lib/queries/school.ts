@@ -24,6 +24,7 @@ export type SchoolItem = {
   subject: string | null;
   className: string | null;
   classColor: string | null;
+  classId: string | null;
   dueISO: string;
   status: string;
   overdue: boolean;
@@ -76,7 +77,7 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
           select: {
             type: true,
             subject: true,
-            class: { select: { name: true, color: true } },
+            class: { select: { id: true, name: true, color: true } },
           },
         },
       },
@@ -94,6 +95,7 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
       subject: t.schoolWork.subject,
       className: t.schoolWork.class?.name ?? null,
       classColor: t.schoolWork.class?.color ?? null,
+      classId: t.schoolWork.class?.id ?? null,
       dueISO,
       status: t.status as string,
       overdue: dueISO < today,

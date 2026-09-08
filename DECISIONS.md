@@ -479,3 +479,16 @@ type; the first Map uses `Pick<LoggedSet,"weight"|"reps">`) and casting the
 projected rows, which the selects back at runtime. valueForMetric now takes
 `LoggedSet`. Remaining workout-log.ts noise is only the `@/generated/prisma`
 type import + implicit-any params — the accepted baseline.
+
+## Admin Tasks page + School assignment editing (0.275.0)
+Admin > Tasks (/admin/tasks): server page loads all Category.OTHER tasks for active
+users; TasksAdmin client has one pencil (top-left) toggling a whole-list edit mode.
+In edit mode each row gets inline edit (title, due date, reassign person) + delete.
+New action editTask({id,title,dueDate,userId?}) in actions/tasks.ts (reassign needs
+requireCanActFor on the new owner too); deleteTask now also revalidates /admin/tasks.
+Admin > School: assignments/tests are now editable, not just deletable. New action
+editSchoolWork({id,title,type,subject,classId,dueDate}) updates the Task + its
+SchoolWork detail; classId validated against ClassMember like add. school-admin ItemRow
+gained a pencil -> inline EditForm (title, type, class-or-subject, due). Added classId
+to SchoolItem query/type so the edit form pre-fills the class. No migration (selects an
+existing column; edits existing rows). Next: app Settings menu.

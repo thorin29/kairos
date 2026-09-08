@@ -18,6 +18,7 @@ import {
   DeviceIcon,
   DollarIcon,
   StarIcon,
+  TasksIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,13 @@ const TILES: Tile[] = [
     label: "Chores",
     blurb: "Master list, weekly assignments, shared chores",
     icon: <ChoresIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/admin/tasks",
+    label: "Tasks",
+    blurb: "Every one-off task; rename, re-date, reassign, or delete",
+    icon: <TasksIcon className="h-7 w-7" />,
     ready: true,
   },
   {
