@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.274.0";
+export const APP_VERSION = "0.275.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,6 +90,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.275.0",
+    summary: [
+      "Admin \u2192 Tasks: a new admin page listing every one-off task across the household. Tap the pencil (top-left) to edit the whole list, then rename, re-date, reassign, or delete any task.",
+      "Admin \u2192 School: assignments and tests can now be edited (title, type, subject or class, and due date), not just deleted \u2014 tap the pencil on any item.",
+    ],
+  },
   {
     version: "0.274.0",
     summary: [

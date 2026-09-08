@@ -105,7 +105,52 @@ export async function deleteTask(id: string): Promise<void> {
   await requireCanActFor(task.userId);
   await prisma.task.delete({ where: { id } });
   revalidatePath("/");
+  revalidatePath("/tasks");
+  revalidatePath("/admin/tasks");
   revalidatePath(`/person/${task.userId}`);
+}
+
+/**
+ * Edit a one-off task: rename, re-date, or reassign it. Used by the admin Tasks
+ * page. Reassigning needs permission over the new owner too.
+ */
+export async function editTask(input: {
+  id: string;
+  title: string;
+  dueDate: string;
+  userId?: string;
+}): Promise<{ error: string | null }> {
+  await requireInteractive();
+  const task = await prisma.task.findUnique({
+    where: { id: input.id },
+    select: { userId: true },
+  });
+  if (!task) return { error: "That task no longer exists." };
+  await requireCanActFor(task.userId);
+
+  const title = String(input.title ?? "").trim().slice(0, 120);
+  if (title.length < 2) return { error: "Give the task a name." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) {
+    return { error: "That date isn't valid." };
+  }
+
+  let userId = task.userId;
+  if (input.userId && input.userId !== task.userId) {
+    await requireCanActFor(input.userId);
+    userId = input.userId;
+  }
+
+  await prisma.task.update({
+    where: { id: input.id },
+    data: { title, dueDate: toDateColumn(input.dueDate), userId },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/tasks");
+  revalidatePath("/admin/tasks");
+  revalidatePath(`/person/${task.userId}`);
+  if (userId !== task.userId) revalidatePath(`/person/${userId}`);
+  return { error: null };
 }
 
 /** Typed "assign a task" used by the /tasks page (self, or anyone if admin). */
