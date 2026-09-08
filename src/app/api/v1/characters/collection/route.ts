@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
           rarity: s.rarity,
           owned: isOwned,
           name: isOwned ? s.name : null,
-          image: isOwned ? `/api/v1/companions/${s.id}/adult.png` : null,
+          image: isOwned ? `/api/v1/companion-sprite?p=${encodeURIComponent(`${s.id}/adult.png`)}` : null,
         };
       });
     return {
