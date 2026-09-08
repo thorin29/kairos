@@ -16,6 +16,7 @@ import {
   weekDays,
 } from "@/lib/dates";
 import { getFamilyColor, getCalendarPrefs } from "@/lib/settings";
+import { getHolidayColor } from "@/lib/holidays";
 import { loadCalendarPrefs, type CalView } from "@/lib/calendar/prefs";
 import { recolorForPersonal } from "@/lib/calendar/colors";
 import { householdTz } from "@/lib/dates";
@@ -208,6 +209,7 @@ export async function loadCalendarPagePayload(
     loadEventTypes(),
     prisma.user.findUnique({ where: { id: userId }, select: { role: true, kind: true } }),
   ]);
+  const holidaySystemColor = await getHolidayColor();
   const canManageFamily = self?.role === "ADMIN" || self?.kind === "PARENT";
 
   const subs = subsRaw.map((s) => ({
@@ -340,7 +342,7 @@ export async function loadCalendarPagePayload(
       },
       // Fallbacks the colour picker shows when a slot is unset.
       meColor: people.find((p) => p.id === userId)?.color ?? "#2563eb",
-      holidaySystemColor: familyColor,
+      holidaySystemColor,
       familySystemColor: familyColor,
       nowSystemColor: calPrefs.nowColor,
     },
