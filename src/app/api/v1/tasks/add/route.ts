@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   const userId = typeof body.userId === "string" ? body.userId : "";
   if (!userId) return apiError("validation", "Pick who this is for.");
-  if (!(me.role === "ADMIN" || userId === me.id)) {
+  if (!(me.role === "ADMIN" || me.kind === "PARENT" || userId === me.id)) {
     return apiError("forbidden", "You can only assign tasks to yourself.");
   }
   const r = await addTaskCore({

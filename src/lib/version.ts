@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.272.0";
+export const APP_VERSION = "0.273.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,6 +90,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.273.0",
+    summary: [
+      "Tasks: parents and admins now see (and can assign to) everyone, including each other. On the web Tasks page, tapping a person opens their tasks in a pop-up, and assigning uses the same Add task button as the home dashboard.",
+    ],
+  },
   {
     version: "0.272.0",
     summary: [
