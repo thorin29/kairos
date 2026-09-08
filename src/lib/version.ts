@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.267.0";
+export const APP_VERSION = "0.268.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,6 +90,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.268.0",
+    summary: [
+      "Family goal: added a device API so the app's Family goal card can open a full co-op screen \u2014 see children's progress, propose rewards, vote, and (for parents/admins) select/grant/remove. Shared cores; the web co-op page is unchanged.",
+    ],
+  },
   {
     version: "0.267.0",
     summary: [
