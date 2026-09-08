@@ -491,6 +491,7 @@ POST /api/v1/groceries/move           { "id","storeId" }                 // move
 GET  /api/v1/characters                                                   // your own character sheet (companion, level, season, stats, streak, mastery)
 GET  /api/v1/companions/{...path}.png                                     // device-authed companion sprite (mirrors /public/companions)
 POST /api/v1/characters/hatch         { "mode":"new"|"deepen" }            // hatch your ready egg (self only)
+GET  /api/v1/characters/collection                                        // your gallery: creatures grouped by era, owned vs mystery (self only)
 ```
 
 ### Bible reading — **built (v0.204)**
