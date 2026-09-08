@@ -487,6 +487,9 @@ POST /api/v1/groceries/trip/start     { "storeId","shopperId"? }          // sho
      → { "ok":bool, "reason":str|null }                                   // reason "in-progress" if a run exists
 POST /api/v1/groceries/trip/complete  { "tripId" }
 POST /api/v1/groceries/move           { "id","storeId" }                 // move a saved line to another store
+
+GET  /api/v1/characters                                                   // your own character sheet (companion, level, season, stats, streak, mastery)
+GET  /api/v1/companions/{...path}.png                                     // device-authed companion sprite (mirrors /public/companions)
 ```
 
 ### Bible reading — **built (v0.204)**
