@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.265.0";
+export const APP_VERSION = "0.266.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,6 +90,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.266.0",
+    summary: [
+      "Characters: added sprites for 18 more creatures (3 Modern, 8 '80s/'90s, and the 7 Vintage cartoons incl. two new ones \u2014 Eugene and Knox). Removed the placeholder Arcade Wyrmlet (the dragons cover it).",
+    ],
+  },
   {
     version: "0.265.0",
     summary: [

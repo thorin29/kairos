@@ -65,7 +65,6 @@ export const COMPANIONS: Record<string, CompanionSpecies> = {
   bytehog: c("bytehog", "Bytehog", "ARCADE", "rare"),
   chompix: c("chompix", "Chompix", "ARCADE", "rare"),
   pixapup: c("pixapup", "Pixapup", "ARCADE", "rare"),
-  wyrmlet: c("wyrmlet", "Wyrmlet", "ARCADE", "rare"),
   // Dragon · rare
   rosewyrm: c("rosewyrm", "Rosewyrm", "DRAGON", "rare"),
   nightscale: c("nightscale", "Nightscale", "DRAGON", "rare"),
@@ -80,6 +79,8 @@ export const COMPANIONS: Record<string, CompanionSpecies> = {
   reel_rascal_ollie: c("reel_rascal_ollie", "Reel Rascal Ollie", "VINTAGE", "legendary"),
   curtain_call_curly: c("curtain_call_curly", "Curtain-Call Curly", "VINTAGE", "legendary"),
   newsreel_nettie: c("newsreel_nettie", "Newsreel Nettie", "VINTAGE", "legendary"),
+  eugene: c("eugene", "Eugene", "VINTAGE", "legendary"),
+  knox: c("knox", "Knox", "VINTAGE", "legendary"),
   // WW2 · legendary
   victory_vip: c("victory_vip", "Victory Vip", "WW2", "legendary"),
   wingsley: c("wingsley", "Wingsley", "WW2", "legendary"),
