@@ -43,16 +43,52 @@ export const COMPANIONS: Record<string, CompanionSpecies> = {
   tumble: c("tumble", "Tumble", "MODERN", "common"),
   snugglet: c("snugglet", "Snugglet", "MODERN", "common"),
   waddles: c("waddles", "Waddles", "MODERN", "common"),
+  nibbles: c("nibbles", "Nibbles", "MODERN", "common"),
+  otterly: c("otterly", "Otterly", "MODERN", "common"),
+  dapple: c("dapple", "Dapple", "MODERN", "common"),
+  pearl: c("pearl", "Pearl", "MODERN", "common"),
   // '80s / '90s Toon · uncommon
   emberkit: c("emberkit", "Emberkit", "TOON", "uncommon"),
+  zapmouse: c("zapmouse", "Zapmouse", "TOON", "uncommon"),
+  radrocket: c("radrocket", "Radrocket", "TOON", "uncommon"),
+  chomporz: c("chomporz", "Chomporz", "TOON", "uncommon"),
+  boombug: c("boombug", "Boombug", "TOON", "uncommon"),
+  slyfox_vex: c("slyfox_vex", "Slyfox Vex", "TOON", "uncommon"),
+  turbo_tusk: c("turbo_tusk", "Turbo Tusk", "TOON", "uncommon"),
+  chillwing: c("chillwing", "Chillwing", "TOON", "uncommon"),
+  zizzer: c("zizzer", "Zizzer", "TOON", "uncommon"),
   // Arcade · rare
-  coincroc: c("coincroc", "Coincroc", "ARCADE", "rare"),
   bitwing: c("bitwing", "Bitwing", "ARCADE", "rare"),
   glitchkit: c("glitchkit", "Glitchkit", "ARCADE", "rare"),
+  coincroc: c("coincroc", "Coincroc", "ARCADE", "rare"),
   pixiepuff: c("pixiepuff", "Pixiepuff", "ARCADE", "rare"),
   bytehog: c("bytehog", "Bytehog", "ARCADE", "rare"),
   chompix: c("chompix", "Chompix", "ARCADE", "rare"),
   pixapup: c("pixapup", "Pixapup", "ARCADE", "rare"),
+  wyrmlet: c("wyrmlet", "Wyrmlet", "ARCADE", "rare"),
+  // Dragon · rare
+  rosewyrm: c("rosewyrm", "Rosewyrm", "DRAGON", "rare"),
+  nightscale: c("nightscale", "Nightscale", "DRAGON", "rare"),
+  frostwyrm: c("frostwyrm", "Frostwyrm", "DRAGON", "rare"),
+  tidewyrm: c("tidewyrm", "Tidewyrm", "DRAGON", "rare"),
+  sunscale: c("sunscale", "Sunscale", "DRAGON", "rare"),
+  blazewyrm: c("blazewyrm", "Blazewyrm", "DRAGON", "rare"),
+  ferndrake: c("ferndrake", "Ferndrake", "DRAGON", "rare"),
+  // Vintage · legendary
+  old_reel_rufus: c("old_reel_rufus", "Old-Reel Rufus", "VINTAGE", "legendary"),
+  inkbelle: c("inkbelle", "Inkbelle", "VINTAGE", "legendary"),
+  reel_rascal_ollie: c("reel_rascal_ollie", "Reel Rascal Ollie", "VINTAGE", "legendary"),
+  curtain_call_curly: c("curtain_call_curly", "Curtain-Call Curly", "VINTAGE", "legendary"),
+  newsreel_nettie: c("newsreel_nettie", "Newsreel Nettie", "VINTAGE", "legendary"),
+  // WW2 · legendary
+  victory_vip: c("victory_vip", "Victory Vip", "WW2", "legendary"),
+  wingsley: c("wingsley", "Wingsley", "WW2", "legendary"),
+  pluck: c("pluck", "Pluck", "WW2", "legendary"),
+  // Imaginary · legendary
+  mozzle: c("mozzle", "Mozzle", "IMAGINARY", "legendary"),
+  glimbit: c("glimbit", "Glimbit", "IMAGINARY", "legendary"),
+  grobble: c("grobble", "Grobble", "IMAGINARY", "legendary"),
+  zephra: c("zephra", "Zephra", "IMAGINARY", "legendary"),
 };
 
 function c(

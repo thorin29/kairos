@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.263.0";
+export const APP_VERSION = "0.265.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,6 +90,18 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.265.0",
+    summary: [
+      "Characters: added the Dragon era with 7 dragons (Rosewyrm, Nightscale, Frostwyrm, Tidewyrm, Sunscale, Blazewyrm, Ferndrake) and their sprites, plus the dragon egg.",
+    ],
+  },
+  {
+    version: "0.264.0",
+    summary: [
+      "Characters: expanded the creature roster to the full 44 across Modern, '80s/'90s, Arcade, Vintage, WW2, and Imaginary (dropped the unused Dragon era, added Imaginary). Sprites can be added under /public/companions/<id>/ as they arrive.",
+    ],
+  },
   {
     version: "0.263.0",
     summary: [
