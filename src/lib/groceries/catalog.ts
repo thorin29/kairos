@@ -109,6 +109,7 @@ const ICONS: [RegExp, string][] = [
   [/\bcoffee\b/, "☕"],
   [/\btea\b/, "🍵"],
   [/\bjuice\b/, "🧃"],
+  [/\b(bottled water|water bottle)\b/, "ic:waterbottle"],
   [/\bwater\b/, "💧"],
   [/\b(soda|cola|pop|soft drink|sparkling)\b/, "🥤"],
   [/\bwine\b/, "🍷"],
@@ -123,7 +124,7 @@ const ICONS: [RegExp, string][] = [
   // Household & personal
   [/\b(toilet paper|paper towel|kitchen roll)\b/, "🧻"],
   [/\b(tissues?|kleenex)\b/, "🤧"],
-  // (no emoji depicts a napkin; napkins fall through to the default box)
+  [/\b(napkins?|serviette)\b/, "ic:napkin"],
   [/\b(soap|detergent|shampoo|conditioner|cleaner|bleach|sanitizer)\b/, "🧼"],
   [/\b(sponge|scrubber)\b/, "🧽"],
   [/\b(toothpaste|toothbrush|floss)\b/, "🪥"],

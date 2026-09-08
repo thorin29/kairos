@@ -486,3 +486,46 @@ export function ChevronDownIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+export function NapkinIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M3 19h18L12 5Z" />
+      <path d="M12 5 8.5 19" />
+      <path d="M12 5 15.5 19" />
+    </svg>
+  );
+}
+
+export function WaterBottleIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M10 2h4" />
+      <path d="M9 4h6v2l1.5 3v9a2 2 0 0 1-2 2h-5a2 2 0 0 1-2-2V9l1.5-3Z" />
+      <path d="M8.5 12h7" />
+    </svg>
+  );
+}
+
+/**
+ * Renders an item's stored icon: a small drawn glyph for the "ic:*" tokens the
+ * catalog guesser emits for items with no good emoji (napkins, bottled water),
+ * or the emoji/text otherwise. Unknown tokens fall back to a box.
+ */
+export function GroceryGlyph({
+  icon,
+  className = "h-5 w-5",
+  emojiClassName,
+}: {
+  icon: string;
+  className?: string;
+  emojiClassName?: string;
+}) {
+  if (icon === "ic:napkin") return <NapkinIcon className={className} />;
+  if (icon === "ic:waterbottle") return <WaterBottleIcon className={className} />;
+  return (
+    <span className={emojiClassName} aria-hidden>
+      {icon.startsWith("ic:") ? "📦" : icon}
+    </span>
+  );
+}
