@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { loadPersonProgress } from "@/lib/queries/progression";
+import { loadProgression } from "@/lib/queries/progression";
+import { loadCoop } from "@/lib/queries/coop";
 import { COMPANIONS, STAGE_NAMES } from "@/lib/companions";
 
 export const runtime = "nodejs";
@@ -16,8 +17,18 @@ export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
 
-  const p = await loadPersonProgress(authed.device.person.id);
+  const all = await loadProgression();
+  const p = all.find((x) => x.id === authed.device.person.id);
   if (!p) return apiError("validation", "No character data yet.");
+  const coop = await loadCoop(all);
+  const familyGoal = {
+    text: coop.granted
+      ? `Earned: ${coop.granted.title}`
+      : coop.selected
+        ? `Working toward: ${coop.selected.title}`
+        : "Propose and vote on a family reward",
+    kids: coop.childrenTotal > 0 ? `${coop.childrenMeeting}/${coop.childrenTotal} kids` : null,
+  };
 
   const c = p.companion;
   const sp = c.species ? COMPANIONS[c.species] : null;
@@ -28,6 +39,7 @@ export async function GET(req: NextRequest) {
       : `/api/v1/companions/eggs/mystery.png`;
 
   return apiOk({
+    familyGoal,
     className: p.className,
     level: {
       level: p.level.level,

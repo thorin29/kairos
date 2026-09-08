@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.258.0";
+export const APP_VERSION = "0.260.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,6 +90,18 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.260.0",
+    summary: [
+      "Characters API: the app's /api/v1/characters now also returns the family-goal status, and a new POST /api/v1/characters/hatch lets a device hatch its own ready egg (new creature or deepen). Extracted a shared hatch core; the web hatch button is unchanged.",
+    ],
+  },
+  {
+    version: "0.259.0",
+    summary: [
+      "Characters: added a device API for the app \u2014 GET /api/v1/characters returns the signed-in person's own character sheet (companion, level, season tier, stats, streak, mastery), and GET /api/v1/companions/* serves companion art to enrolled devices.",
+    ],
+  },
   {
     version: "0.258.0",
     summary: [
