@@ -72,3 +72,14 @@ export async function schoolTaskOwner(taskId: string): Promise<string | null> {
 export async function deleteSchoolWorkCore(taskId: string): Promise<void> {
   await prisma.task.delete({ where: { id: taskId } }).catch(() => {});
 }
+
+/** Rename a school item (updates the task title). Auth-free core. */
+export async function renameSchoolWorkCore(
+  taskId: string,
+  title: string,
+): Promise<{ error: string | null }> {
+  const t = title.trim().slice(0, 120);
+  if (t.length < 2) return { error: "Give the assignment a name." };
+  await prisma.task.update({ where: { id: taskId }, data: { title: t } }).catch(() => {});
+  return { error: null };
+}
