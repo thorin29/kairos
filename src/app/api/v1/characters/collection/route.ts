@@ -10,11 +10,12 @@ export const dynamic = "force-dynamic";
 // The eras shown in the gallery, in order.
 const ERAS: { key: CompanionEra; label: string }[] = [
   { key: "MODERN", label: "Modern" },
-  { key: "TOON", label: "'80s / '90s Toon" },
+  { key: "TOON", label: "'80s / '90s" },
   { key: "ARCADE", label: "Arcade" },
   { key: "DRAGON", label: "Dragon" },
   { key: "VINTAGE", label: "Vintage" },
-  { key: "WW2", label: "Wartime" },
+  { key: "WW2", label: "WW2" },
+  { key: "IMAGINARY", label: "Imaginary" },
 ];
 
 /**
