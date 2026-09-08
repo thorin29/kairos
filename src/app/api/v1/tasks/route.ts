@@ -18,15 +18,18 @@ export async function GET(req: NextRequest) {
   if ("response" in authed) return authed.response;
   const me = authed.device.person;
 
+  // Parents and admins see (and can assign to) everyone, including each other;
+  // a child sees only themselves.
+  const privileged = me.kind === "PARENT" || me.role === "ADMIN";
   let visible: string[] = [me.id];
-  if (me.kind === "PARENT") {
-    const kids = await prisma.user.findMany({
-      where: { isActive: true, kind: "CHILD" },
+  if (privileged) {
+    const all = await prisma.user.findMany({
+      where: { isActive: true },
       select: { id: true },
     });
-    visible = [me.id, ...kids.map((k) => k.id)];
+    visible = all.map((u) => u.id);
   }
-  const canAct = me.role === "ADMIN";
+  const canAct = privileged;
   const today = todayISO();
 
   const [users, tasks] = await Promise.all([

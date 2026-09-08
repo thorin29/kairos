@@ -42,6 +42,7 @@ export async function addTask(
   });
 
   revalidatePath("/");
+  revalidatePath("/tasks");
   revalidatePath(`/person/${userId}`);
   return { error: null };
 }
@@ -64,6 +65,7 @@ export async function toggleTask(id: string): Promise<void> {
 
   revalidatePath("/");
   revalidatePath(`/person/${task.userId}`);
+  revalidatePath("/tasks");
 }
 
 /**
