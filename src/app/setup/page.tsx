@@ -6,7 +6,6 @@ import { AdminBack } from "@/components/admin-back";
 import { AdminPinControls } from "./admin-pin-controls";
 import { AdminToggle } from "./admin-toggle";
 import { KindToggle } from "./kind-toggle";
-import { FamilyColorPicker } from "./family-color-picker";
 import { ResetScoringButton } from "./reset-scoring-button";
 import { getScoringStart } from "@/lib/settings";
 import { listAccounts } from "@/lib/accounts";
@@ -14,7 +13,6 @@ import { liveDeviceCounts } from "@/lib/api/device-auth";
 import { AccountRow } from "./account-row";
 import { SectionHeading } from "@/components/ui";
 import { isAdmin, adminPinSet } from "@/lib/session";
-import { getFamilyColor } from "@/lib/settings";
 import { ParentOnly } from "@/components/parent-only";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +32,6 @@ export default async function SetupPage() {
   const scoringStart = await getScoringStart();
   const hasAdmin = people.some((p) => p.role === "ADMIN");
   const pinSet = await adminPinSet();
-  const familyColor = await getFamilyColor();
   const adminCount = people.filter(
     (p) => p.role === "ADMIN" && p.isActive,
   ).length;
@@ -122,16 +119,6 @@ export default async function SetupPage() {
               simply opens admin.
             </p>
             <AdminPinControls pinSet={pinSet} />
-          </section>
-
-          <section className="mt-10">
-            <SectionHeading>Family calendar color</SectionHeading>
-            <p className="mb-3 max-w-xl text-sm text-muted">
-              The shared color for birthdays (and, soon, family events and
-              holidays) on the calendar &mdash; it&rsquo;s the color of the
-              Family filter.
-            </p>
-            <FamilyColorPicker current={familyColor} />
           </section>
 
           <section className="mt-10">
