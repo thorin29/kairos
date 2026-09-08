@@ -470,3 +470,12 @@ follows the catalog (`GroceryItem.defaultStoreId`): a typed name that matches a
 catalog entry defaults to that store; a new item's store is remembered on first
 add. `trip/start` defaults the shopper to the enrolled person (it's their phone).
 Store/catalog editing (admin) stays web-only — deferred, like Money's CSV import.
+
+## workout-log.ts: explicit types for logged-set lookups (0.258.0)
+The three non-noise type errors in src/lib/queries/workout-log.ts came from
+Prisma-projected rows degrading to `{}` when the generated client isn't resolved
+(sandbox). Fixed by typing the two lookup Maps explicitly (a shared `LoggedSet`
+type; the first Map uses `Pick<LoggedSet,"weight"|"reps">`) and casting the
+projected rows, which the selects back at runtime. valueForMetric now takes
+`LoggedSet`. Remaining workout-log.ts noise is only the `@/generated/prisma`
+type import + implicit-any params — the accepted baseline.
