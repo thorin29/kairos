@@ -486,6 +486,7 @@ POST /api/v1/groceries/purchased      { "id","purchased":bool }           // wit
 POST /api/v1/groceries/trip/start     { "storeId","shopperId"? }          // shopper defaults to caller
      → { "ok":bool, "reason":str|null }                                   // reason "in-progress" if a run exists
 POST /api/v1/groceries/trip/complete  { "tripId" }
+POST /api/v1/groceries/move           { "id","storeId" }                 // move a saved line to another store
 ```
 
 ### Bible reading — **built (v0.204)**

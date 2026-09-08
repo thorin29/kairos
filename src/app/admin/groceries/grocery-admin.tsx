@@ -9,6 +9,7 @@ import {
   deleteCatalogItem,
   deleteStore,
   renameCatalogItem,
+  resyncCatalog,
   renameStore,
   setCatalogActive,
   setCatalogIcon,
@@ -96,6 +97,14 @@ export function GroceryAdmin({
       {/* Catalog */}
       <section>
         <SectionHeading>Catalog</SectionHeading>
+
+        <button
+          type="button"
+          onClick={() => startTransition(() => { void resyncCatalog(); })}
+          className="mb-4 rounded-full border border-hairline px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-accent hover:text-accent"
+        >
+          Re-sync catalog (merge duplicates &amp; refresh icons)
+        </button>
 
         <Card className="mb-4 p-4">
           <div className="flex flex-wrap items-center gap-2">

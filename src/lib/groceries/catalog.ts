@@ -123,7 +123,7 @@ const ICONS: [RegExp, string][] = [
   // Household & personal
   [/\b(toilet paper|paper towel|kitchen roll)\b/, "🧻"],
   [/\b(tissues?|kleenex)\b/, "🤧"],
-  [/\b(napkins?|serviette)\b/, "🍽️"],
+  // (no emoji depicts a napkin; napkins fall through to the default box)
   [/\b(soap|detergent|shampoo|conditioner|cleaner|bleach|sanitizer)\b/, "🧼"],
   [/\b(sponge|scrubber)\b/, "🧽"],
   [/\b(toothpaste|toothbrush|floss)\b/, "🪥"],
