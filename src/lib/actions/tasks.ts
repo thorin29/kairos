@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { Category, TaskStatus } from "@/generated/prisma/client";
+import { addTaskCore } from "@/lib/task-core";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { claimTaskCore } from "@/lib/chores/dashboard-actions-core";
@@ -103,4 +104,18 @@ export async function deleteTask(id: string): Promise<void> {
   await prisma.task.delete({ where: { id } });
   revalidatePath("/");
   revalidatePath(`/person/${task.userId}`);
+}
+
+/** Typed "assign a task" used by the /tasks page (self, or anyone if admin). */
+export async function assignTask(input: {
+  userId: string;
+  title: string;
+  dueDate?: string | null;
+}): Promise<{ error: string | null }> {
+  await requireInteractive();
+  await requireCanActFor(input.userId);
+  const r = await addTaskCore(input);
+  revalidatePath("/tasks");
+  revalidatePath("/");
+  return r;
 }
