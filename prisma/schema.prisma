@@ -639,13 +639,15 @@ model Book {
   author     String?
   // Progress is tracked in one unit (unit/length, derived from pages/chapters —
   // pages win when both are set). pages/chapters carry the full size metadata; a
-  // book must have at least one, and may have both.
+  // book must have at least one, and may have both. `position` is the page/chapter
+  // the reader is up to; how far they've read (and the Scholar XP) derives from it
+  // at read time, so paging back and forth never banks extra credit.
   unit       ReadingUnit @default(PAGES)
   length     Int
   pages      Int?
   chapters   Int?
+  position   Int         @default(0)
   shelved    Boolean     @default(false)
-  bookmarked Boolean     @default(false)
   finishedAt DateTime?
   createdAt  DateTime    @default(now())
   logs       BookLog[]

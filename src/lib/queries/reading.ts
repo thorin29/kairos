@@ -1,6 +1,5 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { fromDateColumn, todayISO } from "@/lib/dates";
 
 export type BookProgress = {
   id: string;
@@ -10,12 +9,10 @@ export type BookProgress = {
   length: number;
   pages: number | null;
   chapters: number | null;
-  read: number; // capped at length
-  rawRead: number; // uncapped total
-  todayAmount: number;
+  position: number; // the page/chapter the reader is up to
+  read: number; // min(position, length)
   finished: boolean;
   shelved: boolean;
-  bookmarked: boolean;
 };
 
 export type PersonBooks = {
@@ -36,10 +33,9 @@ type BookRow = {
   length: number;
   pages: number | null;
   chapters: number | null;
+  position: number;
   finishedAt: Date | null;
   shelved: boolean;
-  bookmarked: boolean;
-  logs: { day: Date; amount: number }[];
 };
 
 const bookSelect = {
@@ -51,16 +47,12 @@ const bookSelect = {
   length: true,
   pages: true,
   chapters: true,
+  position: true,
   finishedAt: true,
   shelved: true,
-  bookmarked: true,
-  logs: { select: { day: true, amount: true } },
 } as const;
 
-function toProgress(b: BookRow, today: string): BookProgress {
-  const rawRead = b.logs.reduce((n, l) => n + l.amount, 0);
-  const todayAmount =
-    b.logs.find((l) => fromDateColumn(l.day) === today)?.amount ?? 0;
+function toProgress(b: BookRow): BookProgress {
   return {
     id: b.id,
     title: b.title,
@@ -69,12 +61,10 @@ function toProgress(b: BookRow, today: string): BookProgress {
     length: b.length,
     pages: b.pages,
     chapters: b.chapters,
-    read: Math.min(rawRead, b.length),
-    rawRead,
-    todayAmount,
+    position: b.position,
+    read: Math.min(b.position, b.length),
     finished: b.finishedAt != null,
     shelved: b.shelved,
-    bookmarked: b.bookmarked,
   };
 }
 
@@ -82,7 +72,6 @@ function toProgress(b: BookRow, today: string): BookProgress {
  *  buckets into the reading queue and the shelf). The page then narrows to the
  *  signed-in person on a personal device. */
 export async function loadReading(): Promise<PersonBooks[]> {
-  const today = todayISO();
   const [people, books] = await Promise.all([
     prisma.user.findMany({
       where: { isActive: true },
@@ -105,7 +94,7 @@ export async function loadReading(): Promise<PersonBooks[]> {
   const byUser = new Map<string, BookProgress[]>();
   for (const p of people) byUser.set(p.id, []);
   for (const b of books as BookRow[]) {
-    byUser.get(b.userId)?.push(toProgress(b, today));
+    byUser.get(b.userId)?.push(toProgress(b));
   }
 
   return people.map((p) => ({
@@ -121,12 +110,11 @@ export async function loadReading(): Promise<PersonBooks[]> {
 /** One person's books for the device API (reading is self-only). */
 export async function loadMyBooks(
   userId: string,
-): Promise<{ today: string; books: BookProgress[] }> {
-  const today = todayISO();
+): Promise<{ books: BookProgress[] }> {
   const books = await prisma.book.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
     select: bookSelect,
   });
-  return { today, books: (books as BookRow[]).map((b) => toProgress(b, today)) };
+  return { books: (books as BookRow[]).map(toProgress) };
 }

@@ -15,11 +15,10 @@ import {
   editBook,
   finishBook,
   shelveBook,
-  bookmarkBook,
   deleteBook,
 } from "@/lib/actions/books";
 
-const unitLabel = (unit: "PAGES" | "CHAPTERS", n: number) =>
+const unitWord = (unit: "PAGES" | "CHAPTERS", n: number) =>
   unit === "PAGES" ? (n === 1 ? "page" : "pages") : n === 1 ? "chapter" : "chapters";
 
 function sizeLabel(b: BookProgress): string {
@@ -30,7 +29,7 @@ function sizeLabel(b: BookProgress): string {
 }
 
 const queueOf = (books: BookProgress[]) =>
-  books.filter((b) => !b.shelved && !b.bookmarked && !b.finished);
+  books.filter((b) => !b.shelved && !b.finished);
 
 export function ReadingBoard({ people }: { people: PersonBooks[] }) {
   const [selected, setSelected] = useState<string | null>(
@@ -52,7 +51,7 @@ export function ReadingBoard({ people }: { people: PersonBooks[] }) {
     <div className="grid gap-3 sm:grid-cols-2">
       {people.map((p) => {
         const reading = queueOf(p.books).length;
-        const shelf = p.books.filter((b) => (b.shelved || b.bookmarked) && !b.finished).length;
+        const shelf = p.books.filter((b) => b.shelved && !b.finished).length;
         return (
           <button
             key={p.id}
@@ -93,10 +92,9 @@ function PersonDetail({
   const [showShelf, setShowShelf] = useState(false);
 
   const queue = queueOf(person.books);
-  const toRead = person.books.filter((b) => b.shelved && !b.bookmarked && !b.finished);
-  const bookmarked = person.books.filter((b) => b.bookmarked && !b.finished);
+  const toRead = person.books.filter((b) => b.shelved && !b.finished);
   const read = person.books.filter((b) => b.finished);
-  const shelfCount = toRead.length + bookmarked.length + read.length;
+  const shelfCount = toRead.length + read.length;
 
   return (
     <section className="rounded-2xl border border-hairline bg-surface p-5">
@@ -156,7 +154,6 @@ function PersonDetail({
           {showShelf && (
             <div className="mt-3 space-y-4">
               <ShelfGroup title="To read" books={toRead} kind="toRead" />
-              <ShelfGroup title="Bookmarked" books={bookmarked} kind="bookmarked" />
               <ShelfGroup title="Read" books={read} kind="read" />
             </div>
           )}
@@ -168,13 +165,13 @@ function PersonDetail({
 
 function BookCard({ book }: { book: BookProgress }) {
   const [pending, start] = useTransition();
-  const [amount, setAmount] = useState(String(book.todayAmount || ""));
+  const [page, setPage] = useState(String(book.position || ""));
   const [editing, setEditing] = useState(false);
   const pct = book.length > 0 ? Math.round((book.read / book.length) * 100) : 0;
   const done = book.read >= book.length;
 
   const save = () => {
-    const n = Math.max(0, Math.round(Number(amount) || 0));
+    const n = Math.max(0, Math.round(Number(page) || 0));
     start(() => logBookReading(book.id, n));
   };
 
@@ -185,18 +182,16 @@ function BookCard({ book }: { book: BookProgress }) {
           <p className="font-medium leading-tight">{book.title}</p>
           {book.author && <p className="text-xs text-muted">{book.author}</p>}
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm(`Remove "${book.title}"?`)) start(() => deleteBook(book.id));
-            }}
-            aria-label="Remove book"
-            className="text-muted hover:text-red-600"
-          >
-            <TrashIcon className="h-4 w-4" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm(`Remove "${book.title}"?`)) start(() => deleteBook(book.id));
+          }}
+          aria-label="Remove book"
+          className="shrink-0 text-muted hover:text-red-600"
+        >
+          <TrashIcon className="h-4 w-4" />
+        </button>
       </div>
 
       <div className="mt-2">
@@ -207,24 +202,23 @@ function BookCard({ book }: { book: BookProgress }) {
           />
         </div>
         <p className="mt-1 text-xs text-muted">
-          {book.read} / {book.length} {unitLabel(book.unit, book.length)} ({pct}%)
+          {book.read} / {book.length} {unitWord(book.unit, book.length)} ({pct}%)
           {book.pages && book.chapters ? ` \u00b7 ${sizeLabel(book)}` : ""}
         </p>
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <label className="text-sm text-muted">Read today:</label>
+        <label className="text-sm text-muted">
+          {book.unit === "PAGES" ? "Page you're on:" : "Chapter you're on:"}
+        </label>
         <input
           type="number"
           min={0}
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          value={page}
+          onChange={(e) => setPage(e.target.value)}
           onBlur={save}
           className="tabular h-9 w-20 rounded-lg border border-hairline bg-surface px-2 text-sm outline-none focus:border-accent"
         />
-        <span className="text-sm text-muted">
-          {unitLabel(book.unit, Number(amount) || 0)}
-        </span>
         <button
           type="button"
           disabled={pending}
@@ -242,14 +236,6 @@ function BookCard({ book }: { book: BookProgress }) {
           className="font-medium text-muted hover:text-ink"
         >
           Edit
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => start(() => bookmarkBook(book.id, true))}
-          className="font-medium text-muted hover:text-ink"
-        >
-          Bookmark
         </button>
         <button
           type="button"
@@ -281,7 +267,7 @@ function ShelfGroup({
 }: {
   title: string;
   books: BookProgress[];
-  kind: "toRead" | "bookmarked" | "read";
+  kind: "toRead" | "read";
 }) {
   if (books.length === 0) return null;
   return (
@@ -303,27 +289,19 @@ function ShelfRow({
   kind,
 }: {
   book: BookProgress;
-  kind: "toRead" | "bookmarked" | "read";
+  kind: "toRead" | "read";
 }) {
   const [pending, start] = useTransition();
-  const pct = book.length > 0 ? Math.round((book.read / book.length) * 100) : 0;
 
   const place =
     kind === "read"
       ? "Read"
-      : kind === "bookmarked"
-        ? `On ${book.read} of ${book.length} ${unitLabel(book.unit, book.length)}`
-        : book.read > 0
-          ? `${pct}%`
-          : "Not started";
+      : book.position > 0
+        ? `On ${book.read} of ${book.length} ${unitWord(book.unit, book.length)}`
+        : "Not started";
 
-  // Each shelf bucket clears exactly its own flag to come back to the queue.
   const back = () =>
-    start(() => {
-      if (kind === "read") return finishBook(book.id, false);
-      if (kind === "bookmarked") return bookmarkBook(book.id, false);
-      return shelveBook(book.id, false);
-    });
+    start(() => (kind === "read" ? finishBook(book.id, false) : shelveBook(book.id, false)));
 
   return (
     <li className="flex items-center justify-between gap-2 rounded-lg border border-hairline px-3 py-2 text-sm">
@@ -360,6 +338,9 @@ function ShelfRow({
   );
 }
 
+const FIELD =
+  "h-9 w-full rounded-lg border border-hairline bg-surface px-2 text-sm outline-none focus:border-accent";
+
 function AddBook({ userId, onDone }: { userId: string; onDone: () => void }) {
   const [pending, start] = useTransition();
   const [title, setTitle] = useState("");
@@ -367,9 +348,6 @@ function AddBook({ userId, onDone }: { userId: string; onDone: () => void }) {
   const [pages, setPages] = useState("");
   const [chapters, setChapters] = useState("");
   const [error, setError] = useState<string | null>(null);
-
-  const FIELD =
-    "h-9 w-full rounded-lg border border-hairline bg-surface px-2 text-sm outline-none focus:border-accent";
 
   const submit = () => {
     const p = Math.round(Number(pages) || 0);
@@ -424,17 +402,16 @@ function EditBook({ book, onDone }: { book: BookProgress; onDone: () => void }) 
   const [author, setAuthor] = useState(book.author ?? "");
   const [pages, setPages] = useState(book.pages ? String(book.pages) : "");
   const [chapters, setChapters] = useState(book.chapters ? String(book.chapters) : "");
-
-  const FIELD =
-    "h-9 w-full rounded-lg border border-hairline bg-surface px-2 text-sm outline-none focus:border-accent";
+  const [position, setPosition] = useState(String(book.position || ""));
 
   return (
     <div className="mt-2 space-y-2 rounded-lg bg-ground p-2">
       <input value={title} onChange={(e) => setTitle(e.target.value)} className={FIELD} placeholder="Title" />
       <input value={author} onChange={(e) => setAuthor(e.target.value)} className={FIELD} placeholder="Author (optional)" />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <input type="number" min={1} value={pages} onChange={(e) => setPages(e.target.value)} placeholder="Pages" className={`tabular ${FIELD}`} />
         <input type="number" min={1} value={chapters} onChange={(e) => setChapters(e.target.value)} placeholder="Chapters" className={`tabular ${FIELD}`} />
+        <input type="number" min={0} value={position} onChange={(e) => setPosition(e.target.value)} placeholder={book.unit === "PAGES" ? "On page" : "On ch."} className={`tabular ${FIELD}`} />
       </div>
       <div className="flex items-center gap-2">
         <button
@@ -447,6 +424,7 @@ function EditBook({ book, onDone }: { book: BookProgress; onDone: () => void }) 
                 author: author.trim() || null,
                 pages: Math.round(Number(pages) || 0) || null,
                 chapters: Math.round(Number(chapters) || 0) || null,
+                position: Math.max(0, Math.round(Number(position) || 0)),
               });
               onDone();
             })
