@@ -93,7 +93,7 @@ export async function loadGroceries(): Promise<GroceriesData> {
     }),
     prisma.shoppingItem.findMany({
       where: { tripId: null },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      orderBy: [{ name: "asc" }],
       select: {
         id: true,
         name: true,
@@ -111,7 +111,7 @@ export async function loadGroceries(): Promise<GroceriesData> {
         storeId: true,
         shopper: { select: PERSON_SELECT },
         items: {
-          orderBy: [{ boughtAt: "asc" }, { createdAt: "asc" }],
+          orderBy: [{ name: "asc" }],
           select: {
             id: true,
             name: true,
@@ -174,7 +174,7 @@ export async function loadCart(storeId: string): Promise<CartData> {
       store: { select: { id: true, name: true, icon: true } },
       shopper: { select: PERSON_SELECT },
       items: {
-        orderBy: [{ boughtAt: "asc" }, { createdAt: "asc" }],
+        orderBy: [{ name: "asc" }],
         select: {
           id: true,
           name: true,
@@ -262,7 +262,7 @@ export async function loadGroceryAdmin(): Promise<{
       select: { id: true, name: true, icon: true, isActive: true },
     }),
     prisma.groceryItem.findMany({
-      orderBy: [{ useCount: "desc" }, { name: "asc" }],
+      orderBy: [{ name: "asc" }],
       select: {
         id: true,
         name: true,

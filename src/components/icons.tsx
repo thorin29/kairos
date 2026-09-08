@@ -507,10 +507,17 @@ export function WaterBottleIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+const GLYPH_IMAGES: Record<string, string> = {
+  "ic:napkin": "/grocery-icons/napkin.png",
+  "ic:papertowel": "/grocery-icons/paper-towel.png",
+  "ic:waterbottle": "/grocery-icons/water-bottle.png",
+  "ic:protein": "/grocery-icons/protein.png",
+};
+
 /**
- * Renders an item's stored icon: a small drawn glyph for the "ic:*" tokens the
- * catalog guesser emits for items with no good emoji (napkins, bottled water),
- * or the emoji/text otherwise. Unknown tokens fall back to a box.
+ * Renders an item's stored icon: a small image for the "ic:*" tokens the catalog
+ * guesser emits for items with no good emoji (napkins, paper towels, bottled
+ * water, protein), or the emoji/text otherwise. Unknown tokens fall back to a box.
  */
 export function GroceryGlyph({
   icon,
@@ -521,8 +528,11 @@ export function GroceryGlyph({
   className?: string;
   emojiClassName?: string;
 }) {
-  if (icon === "ic:napkin") return <NapkinIcon className={className} />;
-  if (icon === "ic:waterbottle") return <WaterBottleIcon className={className} />;
+  const src = GLYPH_IMAGES[icon];
+  if (src) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt="" className={`${className} object-contain`} aria-hidden />;
+  }
   return (
     <span className={emojiClassName} aria-hidden>
       {icon.startsWith("ic:") ? "📦" : icon}

@@ -110,6 +110,7 @@ const ICONS: [RegExp, string][] = [
   [/\btea\b/, "🍵"],
   [/\bjuice\b/, "🧃"],
   [/\b(bottled water|water bottle)\b/, "ic:waterbottle"],
+  [/\bprotein\b/, "ic:protein"],
   [/\bwater\b/, "💧"],
   [/\b(soda|cola|pop|soft drink|sparkling)\b/, "🥤"],
   [/\bwine\b/, "🍷"],
@@ -122,7 +123,8 @@ const ICONS: [RegExp, string][] = [
   [/\b(dumpling|gyoza|potsticker)/, "🥟"],
   [/\b(herbs?|basil|parsley|cilantro|thyme|rosemary|oregano|mint)\b/, "🌿"],
   // Household & personal
-  [/\b(toilet paper|paper towel|kitchen roll)\b/, "🧻"],
+  [/\b(paper towels?|kitchen roll)\b/, "ic:papertowel"],
+  [/\btoilet paper\b/, "🧻"],
   [/\b(tissues?|kleenex)\b/, "🤧"],
   [/\b(napkins?|serviette)\b/, "ic:napkin"],
   [/\b(soap|detergent|shampoo|conditioner|cleaner|bleach|sanitizer)\b/, "🧼"],
