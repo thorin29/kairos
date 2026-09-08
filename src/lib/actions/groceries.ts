@@ -7,6 +7,15 @@ import { requireAdmin } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
 import { deviceMode } from "@/lib/device";
 import { guessIcon, normalizeName } from "@/lib/groceries/catalog";
+import {
+  addItemCore,
+  addFromCatalogCore,
+  assignItemCore,
+  removeItemCore,
+  startTripCore,
+  setPurchasedCore,
+  completeTripCore,
+} from "@/lib/groceries-core";
 
 /**
  * Who to attribute a newly-added item to. On a personal device we log the
@@ -26,32 +35,6 @@ function refresh() {
   revalidatePath("/");
 }
 
-/** The active trip for a store, if one is under way. A line added while a trip
- *  is live joins that trip rather than the saved list. */
-async function activeTripId(storeId: string): Promise<string | null> {
-  const trip = await prisma.shoppingTrip.findUnique({
-    where: { storeId },
-    select: { id: true },
-  });
-  return trip?.id ?? null;
-}
-
-/** Append position for a new saved line, so it lands at the bottom of its
- *  store's list rather than jostling the manual order. */
-async function nextSortOrder(storeId: string): Promise<number> {
-  const top = await prisma.shoppingItem.aggregate({
-    where: { storeId },
-    _max: { sortOrder: true },
-  });
-  return (top._max.sortOrder ?? -1) + 1;
-}
-
-/**
- * Add a needed item to the list. Finds or creates its catalog entry (bumping
- * the use count and reusing or guessing an icon), then drops a snapshot line
- * onto the list. Deliberately open to anyone — it's the shared screen; the
- * whole point is that anyone can say "we're out of milk".
- */
 export async function addItem(input: {
   name: string;
   storeId: string;
@@ -59,169 +42,60 @@ export async function addItem(input: {
   note?: string | null;
 }): Promise<void> {
   await requireInteractive();
-  const name = normalizeName(input.name);
-  if (!name || !input.storeId) return;
-
-  const store = await prisma.store.findUnique({ where: { id: input.storeId } });
-  if (!store) return;
-
-  const existing = await prisma.groceryItem.findUnique({ where: { name } });
-  const icon = existing?.icon ?? guessIcon(name);
-
-  await prisma.groceryItem.upsert({
-    where: { name },
-    update: { useCount: { increment: 1 }, lastUsedAt: new Date() },
-    create: {
-      name,
-      icon,
-      defaultStoreId: input.storeId,
-      useCount: 1,
-    },
+  await addItemCore({
+    name: input.name,
+    storeId: input.storeId,
+    requesterId: await requesterId(input.assignedToId),
+    note: input.note,
   });
-
-  await prisma.shoppingItem.create({
-    data: {
-      name,
-      icon,
-      storeId: input.storeId,
-      tripId: await activeTripId(input.storeId),
-      sortOrder: await nextSortOrder(input.storeId),
-      assignedToId: await requesterId(input.assignedToId),
-      note: input.note?.trim() || null,
-    },
-  });
-
   refresh();
 }
 
 /** Add straight from a catalog suggestion (its remembered store, unless told). */
-export async function addFromCatalog(
-  catalogId: string,
-  storeId?: string,
-): Promise<void> {
+export async function addFromCatalog(catalogId: string, storeId?: string): Promise<void> {
   await requireInteractive();
-  const item = await prisma.groceryItem.findUnique({ where: { id: catalogId } });
-  if (!item) return;
-
-  const targetStore = storeId || item.defaultStoreId;
-  if (!targetStore) return;
-
-  await prisma.groceryItem.update({
-    where: { id: item.id },
-    data: { useCount: { increment: 1 }, lastUsedAt: new Date() },
-  });
-
-  await prisma.shoppingItem.create({
-    data: {
-      name: item.name,
-      icon: item.icon,
-      storeId: targetStore,
-      tripId: await activeTripId(targetStore),
-      sortOrder: await nextSortOrder(targetStore),
-      assignedToId: await requesterId(),
-    },
-  });
-
+  await addFromCatalogCore(catalogId, storeId, await requesterId());
   refresh();
 }
 
-export async function assignItem(
-  itemId: string,
-  userId: string | null,
-): Promise<void> {
+export async function assignItem(itemId: string, userId: string | null): Promise<void> {
   await requireInteractive();
-  await prisma.shoppingItem.update({
-    where: { id: itemId },
-    data: { assignedToId: userId },
-  });
+  await assignItemCore(itemId, userId);
   refresh();
 }
 
 /**
  * Take a line off the list. This is both "we don't need this after all" from
  * the list and "got it" from the shopping cart — either way the line is done
- * and leaves the shared list. The catalog memory isn't touched (it already
- * learned when the item was added), so nothing to unwind here.
+ * and leaves the shared list.
  */
 export async function removeItem(itemId: string): Promise<void> {
   await requireInteractive();
-  await prisma.shoppingItem.deleteMany({ where: { id: itemId } });
+  await removeItemCore(itemId);
   refresh();
 }
 
 // --- shopping trips ------------------------------------------------------
 
-/**
- * Start a run for a store, claimed by one person. Everything currently on that
- * store's saved list is pulled into the trip, and anything added later joins it
- * too. One trip per store: if a run is already under way this is a no-op, so a
- * double-tap can't hijack someone else's cart. A store with nothing on it can
- * still be started — items can be added into the trip while out.
- */
 export async function startTrip(
   storeId: string,
   shopperId: string,
 ): Promise<{ ok: boolean; reason?: string }> {
   await requireInteractive();
-  const [store, shopper, existing] = await Promise.all([
-    prisma.store.findUnique({ where: { id: storeId } }),
-    prisma.user.findUnique({ where: { id: shopperId } }),
-    prisma.shoppingTrip.findUnique({ where: { storeId } }),
-  ]);
-  if (!store || !shopper || !shopper.isActive) return { ok: false, reason: "invalid" };
-  if (existing) return { ok: false, reason: "in-progress" };
-
-  let trip;
-  try {
-    trip = await prisma.shoppingTrip.create({
-      data: { storeId, shopperId },
-    });
-  } catch {
-    // Lost a race to the unique storeId — someone else just started it.
-    return { ok: false, reason: "in-progress" };
-  }
-  // Pull the saved list for this store into the trip, unpurchased.
-  await prisma.shoppingItem.updateMany({
-    where: { storeId, tripId: null },
-    data: { tripId: trip.id, boughtAt: null },
-  });
-  refresh();
-  return { ok: true };
+  const res = await startTripCore(storeId, shopperId);
+  if (res.ok) refresh();
+  return res;
 }
 
-/** Mark / unmark a line as purchased within its trip. The line stays visible
- *  (struck through) until the trip is completed. */
-export async function setPurchased(
-  itemId: string,
-  purchased: boolean,
-): Promise<void> {
+export async function setPurchased(itemId: string, purchased: boolean): Promise<void> {
   await requireInteractive();
-  await prisma.shoppingItem.update({
-    where: { id: itemId },
-    data: { boughtAt: purchased ? new Date() : null },
-  });
+  await setPurchasedCore(itemId, purchased);
   refresh();
 }
 
-/**
- * Finish the trip: the purchased lines drop off for good, and anything not
- * bought returns to the saved list for next time. The trip row is removed, so
- * the store is back to "Shop".
- */
 export async function completeTrip(tripId: string): Promise<void> {
   await requireInteractive();
-  const trip = await prisma.shoppingTrip.findUnique({ where: { id: tripId } });
-  if (!trip) return;
-  await prisma.$transaction([
-    prisma.shoppingItem.deleteMany({
-      where: { tripId, boughtAt: { not: null } },
-    }),
-    prisma.shoppingItem.updateMany({
-      where: { tripId },
-      data: { tripId: null, boughtAt: null },
-    }),
-    prisma.shoppingTrip.delete({ where: { id: tripId } }),
-  ]);
+  await completeTripCore(tripId);
   refresh();
 }
 

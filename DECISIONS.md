@@ -457,3 +457,16 @@ a shelved book shows where you left off and resumes there. The `bookmarked` colu
 is left in the DB unused rather than dropped. Operations live in session-free
 `books-core.ts`, shared by the web actions (Authelia session) and the device
 routes (bearer token) — same core/auth-at-the-caller split as Money.
+
+## Groceries — device API (v0.251)
+Groceries was built web-first long ago (shared list, stores, catalog, per-store
+trips). To reach it from the app, the seven shopping operations moved out of the
+`"use server"` actions into a session-free `groceries-core.ts`; the web actions
+and the new device routes both delegate to it, so **web and app run the exact
+same rules** (no drift). The shopping list is **shared family data** — the device
+routes are device-authed but not self-only; any enrolled device may read and
+write it, matching the web's "anyone can say we're out of milk". Store membership
+follows the catalog (`GroceryItem.defaultStoreId`): a typed name that matches a
+catalog entry defaults to that store; a new item's store is remembered on first
+add. `trip/start` defaults the shopper to the enrolled person (it's their phone).
+Store/catalog editing (admin) stays web-only — deferred, like Money's CSV import.

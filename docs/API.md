@@ -454,6 +454,40 @@ request: { "shownPeople"?:[…], "shownSubs"?:[…], "showFamily"?:bool,
 200: { "status":"ok" }
 ```
 
+### Groceries — shared shopping list (device API added v0.251)
+**Shared family data**, not self-only — any enrolled device may read and write it
+(the point is anyone can say "we're out of milk"). Multiple named **stores**
+(Groceries, Costco…); each has a saved list of lines, a remembered **catalog**
+(name → icon + default store), and at most one live **trip**. Store membership
+follows the catalog: a typed name that matches a catalog item defaults to that
+item's store (skip the picker when there's one store); a new item's store is
+remembered on first add. Adds are attributed to the enrolled person.
+
+A line sits on the saved list until a trip for its store is started, which pulls
+it in; ticking it "bought" strikes it through but keeps it visible; completing the
+trip drops the bought lines and returns the rest to the saved list. Store/catalog
+editing stays web-admin only.
+```
+GET  /api/v1/groceries
+200: { "stores":[ {id,name,icon} ],
+       "saved":[ Item ], "trips":[ Trip ],
+       "catalog":[ {id,name,icon,defaultStoreId:str|null} ],
+       "roster":[ Person ] }
+
+Item:   { "id","name","icon","storeId","note":str|null,
+          "purchased":bool,"assignee":Person|null }
+Trip:   { "id","storeId","shopper":Person,"items":[ Item ],"total":int,"got":int }
+Person: { "id","name","color","avatarPath":str|null,"avatarPosition":str|null }
+
+POST /api/v1/groceries/add            { "name","storeId","note"? }        → { "status":"ok" }
+POST /api/v1/groceries/add-catalog    { "catalogId","storeId"? }
+POST /api/v1/groceries/remove         { "id" }                            // off the list / "got it"
+POST /api/v1/groceries/purchased      { "id","purchased":bool }           // within a trip
+POST /api/v1/groceries/trip/start     { "storeId","shopperId"? }          // shopper defaults to caller
+     → { "ok":bool, "reason":str|null }                                   // reason "in-progress" if a run exists
+POST /api/v1/groceries/trip/complete  { "tripId" }
+```
+
 ### Bible reading — **built (v0.204)**
 One aggregate read paints the whole Bible screen (mirrors src/app/bible/page.tsx
 on a personal device): the family reading deck + coverage, and this person's own
