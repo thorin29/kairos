@@ -444,8 +444,11 @@ tracks pages and shows the chapter count as metadata. This kept the Scholar
 scoring in `progression.ts` (via `readingXpForBook`) unchanged: logging pages
 already feeds Scholar, capped at length. No new scoring was needed.
 
-`shelved` and `bookmarked` are additive booleans; buckets are derived at read
-time (queue = `!shelved && !finished`; bookshelf = read/to-read/bookmarked, where
-bookmarked overlaps). Finishing un-shelves. Operations live in session-free
+`shelved` (To read) and `bookmarked` (set a book aside keeping your place) are
+**mutually exclusive** shelf states — setting one clears the other, finishing
+clears both — so a book sits in exactly one bucket. Buckets derive at read
+time (queue = `!shelved && !bookmarked && !finished`). Progress is never touched,
+so "Move to reading" resumes from the last logged page (each bucket clears just
+its own flag). Bookmark is deliberately **not** a favourite/star. Operations live in session-free
 `books-core.ts`, shared by the web actions (Authelia session) and the device
 routes (bearer token) — same core/auth-at-the-caller split as Money.

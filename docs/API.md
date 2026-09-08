@@ -356,8 +356,11 @@ no one else's (distinct from the Bible reading endpoints above). A book has a
 title, optional author, and a size in **pages and/or chapters** (at least one;
 both allowed — progress runs on pages when both are set). Reading a book already
 feeds the Scholar stat (unchanged). Books carry `shelved` and `bookmarked` flags;
-the client buckets into the reading queue (`!shelved && !finished`) and the
-bookshelf (read / to-read / bookmarked).
+the client buckets into the reading queue (`!shelved && !bookmarked && !finished`)
+and the bookshelf. `shelved` (To read) and `bookmarked` (set aside, keep your
+place) are **mutually exclusive** shelf states — setting one clears the other, and
+finishing clears both. Progress is never touched, so moving a book back to the
+queue resumes from the last logged page.
 ```
 GET  /api/v1/books
 200: { "today":"YYYY-MM-DD", "books": [ Book, … ] }
@@ -372,7 +375,7 @@ Book:
 POST /api/v1/books/add       { "title","author"?,"pages"?:int,"chapters"?:int }  → { "status":"ok" }
 POST /api/v1/books/log       { "id","amount":int }        // today's total; 0 clears
 POST /api/v1/books/update    { "id","title"?,"author"?,"pages"?:int,"chapters"?:int }
-POST /api/v1/books/finish    { "id","finished":bool }     // finishing un-shelves
+POST /api/v1/books/finish    { "id","finished":bool }     // finishing clears shelf/bookmark
 POST /api/v1/books/shelf     { "id","shelved":bool }
 POST /api/v1/books/bookmark  { "id","bookmarked":bool }
 POST /api/v1/books/delete    { "id" }
