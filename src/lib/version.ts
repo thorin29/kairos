@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.253.0";
+export const APP_VERSION = "0.254.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,6 +90,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.254.0",
+    summary: [
+      "Groceries: napkins, paper towels, bottled water, and protein now show real picture icons. The saved/shopping lists and the admin catalog are sorted alphabetically. Re-run \"Re-sync catalog\" (or re-add) to refresh existing items to the new icons.",
+    ],
+  },
   {
     version: "0.253.0",
     summary: [
