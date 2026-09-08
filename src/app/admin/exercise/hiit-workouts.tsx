@@ -420,7 +420,7 @@ export function HiitWorkouts({
               onChange={(e) => setInstructions(e.target.value)}
               rows={3}
               placeholder={
-                "How the workout goes — e.g. 100 thrusters for time, 5 burpees at the top of every minute."
+                "example: 100 thrusters for time, 5 burpees at the top of every minute."
               }
               className="w-full rounded-2xl border border-hairline bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
             />
