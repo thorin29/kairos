@@ -492,6 +492,12 @@ GET  /api/v1/characters                                                   // you
 GET  /api/v1/companion-sprite?p=<species>/<stage>.png                     // device-authed companion sprite (mirrors /public/companions)
 POST /api/v1/characters/hatch         { "mode":"new"|"deepen" }            // hatch your ready egg (self only)
 GET  /api/v1/characters/collection                                        // your gallery: creatures grouped by era, owned vs mystery (self only)
+GET  /api/v1/coop                                                         // family goal: season, children progress, reward proposals + your votes
+POST /api/v1/coop/propose            { "title","detail?" }                // propose a family reward (proposer = you)
+POST /api/v1/coop/vote               { "proposalId" }                     // toggle your vote on a proposal
+POST /api/v1/coop/select             { "proposalId" }                     // parents/admins: pick the season reward
+POST /api/v1/coop/grant              { "proposalId" }                     // parents/admins: hand out the reward
+POST /api/v1/coop/remove             { "proposalId" }                     // parents/admins: remove a proposal
 ```
 
 ### Bible reading — **built (v0.204)**
