@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.250.2";
+export const APP_VERSION = "0.251.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,6 +90,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.251.0",
+    summary: [
+      "Groceries is now reachable from the phone app: added the self-serve device API for the shared shopping list \u2014 read the whole board (stores, saved list, active trips, catalog, roster), add items (with the catalog's remembered store), start a store's shopping trip, tick items bought, and complete a trip. The grocery logic moved into a shared core so the web and the app run the exact same rules; store/catalog editing stays web-admin only.",
+    ],
+  },
   {
     version: "0.250.2",
     summary: [

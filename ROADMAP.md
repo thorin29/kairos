@@ -195,7 +195,7 @@ Characters. Each drawer entry keeps its web brand colour.
       able to **ask whether sporting calendar events were completed** (it's
       calendar-event-driven — see Dashboard).
 - [~] **Remaining sections, each to full parity ← NEXT** (enumerate components
-      from the web page at build time): School, Game time, Groceries,
+      from the web page at build time): School, Game time,
       Characters.
       - [x] **Reading** (web v0.250 / app v0.74): strictly self-only leisure
         book-tracker (`GET /api/v1/books`, no one sees anyone else's). A book has
