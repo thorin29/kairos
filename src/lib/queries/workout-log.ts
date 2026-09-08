@@ -69,10 +69,13 @@ export async function loadTodayExercises(
     sched.set(s.exerciseId, e);
   }
 
-  const logged = new Map(
+  const logged = new Map<string, Pick<LoggedSet, "weight" | "reps">>(
     sets
       .filter((s) => s.exerciseId)
-      .map((s) => [s.exerciseId as string, s]),
+      .map((s) => [
+        s.exerciseId as string,
+        s as Pick<LoggedSet, "weight" | "reps">,
+      ]),
   );
 
   return exercises
@@ -117,14 +120,16 @@ export type TodayPlanned = {
   exercises: PlannedMovement[];
 } | null;
 
+type LoggedSet = {
+  weight: number | null;
+  reps: number | null;
+  distance: number | null;
+  meters: number | null;
+  seconds: number | null;
+};
+
 function valueForMetric(
-  s: {
-    weight: number | null;
-    reps: number | null;
-    distance: number | null;
-    meters: number | null;
-    seconds: number | null;
-  },
+  s: LoggedSet,
   metric: string,
 ): number | null {
   switch (metric) {
@@ -208,8 +213,10 @@ export async function loadTodayPlannedWorkout(
       seconds: true,
     },
   });
-  const loggedByPool = new Map(
-    sets.filter((s) => s.poolExerciseId).map((s) => [s.poolExerciseId as string, s]),
+  const loggedByPool = new Map<string, LoggedSet>(
+    sets
+      .filter((s) => s.poolExerciseId)
+      .map((s) => [s.poolExerciseId as string, s as LoggedSet]),
   );
 
   const exercises: PlannedMovement[] = plan.exercises.map((pe) => {
