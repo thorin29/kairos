@@ -9,6 +9,7 @@ import {
   GripIcon,
   PlusIcon,
   TrashIcon,
+  GroceryGlyph,
 } from "@/components/icons";
 import {
   addFromCatalog,
@@ -218,9 +219,7 @@ export function GroceryBoard({
                     }
                     className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm hover:bg-ink/5"
                   >
-                    <span className="text-lg" aria-hidden>
-                      {c.icon}
-                    </span>
+                    <GroceryGlyph icon={c.icon} className="h-5 w-5" emojiClassName="text-lg" />
                     <span className="flex-1 truncate">{c.name}</span>
                     <PlusIcon className="h-4 w-4 text-muted" />
                   </button>
@@ -269,7 +268,7 @@ export function GroceryBoard({
                   }
                   className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent hover:text-accent"
                 >
-                  <span aria-hidden>{c.icon}</span>
+                  <GroceryGlyph icon={c.icon} className="h-4 w-4" />
                   {c.name}
                 </button>
               ))}
@@ -421,9 +420,7 @@ function SavedStore({
               >
                 <GripIcon className="h-4 w-4" />
               </span>
-              <span className="text-xl" aria-hidden>
-                {item.icon}
-              </span>
+              <GroceryGlyph icon={item.icon} className="h-5 w-5" emojiClassName="text-xl" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{item.name}</p>
                 {item.note && (

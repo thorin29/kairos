@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/avatar";
-import { ArrowLeftIcon, CheckIcon } from "@/components/icons";
+import { ArrowLeftIcon, CheckIcon, GroceryGlyph } from "@/components/icons";
 import { completeTrip, setPurchased } from "@/lib/actions/groceries";
 import type { ShoppingItemView, StoreView, TripView } from "@/lib/queries/groceries";
 
@@ -98,9 +98,7 @@ export function CartView({
                 >
                   <CheckIcon className="h-5 w-5" />
                 </span>
-                <span className="text-2xl" aria-hidden>
-                  {item.icon}
-                </span>
+                <GroceryGlyph icon={item.icon} className="h-6 w-6" emojiClassName="text-2xl" />
                 <span className="min-w-0 flex-1">
                   <span
                     className={[
