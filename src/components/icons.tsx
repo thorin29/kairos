@@ -14,6 +14,15 @@ const base = {
   strokeLinejoin: "round",
 } as const;
 
+export function TasksIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <rect x="4" y="4" width="16" height="16" rx="4.5" />
+      <path d="m8.5 12 2.5 2.5 4.5-5.5" />
+    </svg>
+  );
+}
+
 export function HomeIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>
