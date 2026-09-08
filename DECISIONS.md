@@ -435,20 +435,25 @@ set-once form). Both are named in ROADMAP; ask to bring either to the phone.
 Strictly **self-only**, unlike Money: `personalUserId()` narrows the web page to
 the signed-in person and every `/api/v1/books` route acts only on the enrolled
 person's own books (mutations 403 otherwise). Parents do **not** see a child's
-leisure reading here — that's deliberate.
+leisure reading here — deliberate.
 
 A book keeps its size in **pages and/or chapters** (at least one; both allowed).
-Progress still runs on the single `unit`/`length` pair the scoring/progress code
-already uses, **derived with pages winning** when both are set — so a "both" book
-tracks pages and shows the chapter count as metadata. This kept the Scholar
-scoring in `progression.ts` (via `readingXpForBook`) unchanged: logging pages
-already feeds Scholar, capped at length. No new scoring was needed.
+Progress runs on the single `unit`/`length` pair (pages win when both are set),
+so leisure reading keeps feeding the Scholar stat unchanged.
 
-`shelved` (To read) and `bookmarked` (set a book aside keeping your place) are
-**mutually exclusive** shelf states — setting one clears the other, finishing
-clears both — so a book sits in exactly one bucket. Buckets derive at read
-time (queue = `!shelved && !bookmarked && !finished`). Progress is never touched,
-so "Move to reading" resumes from the last logged page (each bucket clears just
-its own flag). Bookmark is deliberately **not** a favourite/star. Operations live in session-free
+Reading tracks a **current position** (`Book.position`, the page/chapter you're
+up to). How far you've read (`read = min(position, length)`) and the Scholar XP
+**derive from it at read time** — there is no per-day amount log anymore. Because
+scoring is a function of the single current value (never a running sum), setting
+the page back and forth can't bank extra credit: each page counts once. Marking
+finished sets `position = length` (100%) and un-shelves. The old per-day `BookLog`
+rows are unused now (migration 76 backfilled `position` from their sum); the table
+is left in place (non-destructive).
+
+**Bookmark was removed** (v0.250.2) as functionally redundant with Shelve — both
+just moved a book to the shelf and both kept progress, so it was a second label
+for one capability. The shelf is now **To read** (shelved) and **Read** (finished);
+a shelved book shows where you left off and resumes there. The `bookmarked` column
+is left in the DB unused rather than dropped. Operations live in session-free
 `books-core.ts`, shared by the web actions (Authelia session) and the device
 routes (bearer token) — same core/auth-at-the-caller split as Money.

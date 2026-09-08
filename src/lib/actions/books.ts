@@ -9,7 +9,6 @@ import {
   updateBookCore,
   finishBookCore,
   shelfBookCore,
-  bookmarkBookCore,
   deleteBookCore,
 } from "@/lib/books-core";
 
@@ -42,16 +41,23 @@ export async function addBook(input: {
   return { error: null };
 }
 
-export async function logBookReading(bookId: string, amount: number): Promise<void> {
+/** Set the page/chapter the reader is up to. */
+export async function logBookReading(bookId: string, page: number): Promise<void> {
   await requireInteractive();
   if (!(await ownerOrThrow(bookId))) return;
-  await logBookCore(bookId, amount);
+  await logBookCore(bookId, page);
   refresh();
 }
 
 export async function editBook(
   bookId: string,
-  patch: { title?: string; author?: string | null; pages?: number | null; chapters?: number | null },
+  patch: {
+    title?: string;
+    author?: string | null;
+    pages?: number | null;
+    chapters?: number | null;
+    position?: number;
+  },
 ): Promise<void> {
   await requireInteractive();
   if (!(await ownerOrThrow(bookId))) return;
@@ -70,13 +76,6 @@ export async function shelveBook(bookId: string, shelved: boolean): Promise<void
   await requireInteractive();
   if (!(await ownerOrThrow(bookId))) return;
   await shelfBookCore(bookId, shelved);
-  refresh();
-}
-
-export async function bookmarkBook(bookId: string, bookmarked: boolean): Promise<void> {
-  await requireInteractive();
-  if (!(await ownerOrThrow(bookId))) return;
-  await bookmarkBookCore(bookId, bookmarked);
   refresh();
 }
 

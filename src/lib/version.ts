@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.250.1";
+export const APP_VERSION = "0.250.2";
 
 export const MIGRATIONS = [
   "0_init",
@@ -84,11 +84,18 @@ export const MIGRATIONS = [
   "73_device_credential_version",
   "74_personal_workouts",
   "75_reading_books",
+  "76_reading_position",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.250.2",
+    summary: [
+      "Reading now works by the page you're on: enter what page (or chapter) you're up to and how far you've read is figured out from that for scoring \u2014 paging back and forth never double-counts, each page counts once. Mark finished completes the book to 100%. Bookmark was dropped as redundant with Shelve; the bookshelf is now To read / Read, and a shelved book shows where you left off so you resume there.",
+    ],
+  },
   {
     version: "0.250.1",
     summary: [

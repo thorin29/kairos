@@ -201,13 +201,14 @@ Characters. Each drawer entry keeps its web brand colour.
         book-tracker (`GET /api/v1/books`, no one sees anyone else's). A book has
         a title, optional **author**, and a size in **pages and/or chapters**
         (at least one; both allowed — progress tracks pages when both are set).
-        Log today's reading (feeds the **Scholar** stat, already wired via
-        `progression.ts` — no new scoring needed). **Bookmark** and **shelve**
-        flags drive a **Bookshelf** grouped into To read / Bookmarked / Read;
-        "Move to reading" / "Reopen" returns a book to the queue. Delete asks
-        first. Web `/reading` became a per-person card that opens that person's
-        queue + shelf. Endpoints: `/api/v1/books` + `add`/`log`/`update`/
-        `finish`/`shelf`/`bookmark`/`delete`, all self-only.
+        Enter the **page/chapter you're up to**; how far you've read derives
+        from that at read time and feeds the **Scholar** stat (via
+        `progression.ts`), so paging back and forth never double-counts. **Shelve**
+        drives a **Bookshelf** of To read / Read; "Move to reading" / "Reopen"
+        returns a book to the queue (resuming where you left off). Mark finished
+        completes to 100%. Delete asks first. Web `/reading` became a per-person
+        card that opens that person's queue + shelf. Endpoints: `/api/v1/books` +
+        `add`/`log`/`update`/`finish`/`shelf`/`delete`, all self-only.
       - [x] **Money** (web v0.248-0.249 / app v0.72-0.73): per-person ledger with
         running balances (`GET /money`, personal-scoped — child sees self, parent
         sees self + kids), add a deposit/payment (`POST /money/entry`, lands

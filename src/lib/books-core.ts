@@ -1,18 +1,18 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { toDateColumn, todayISO } from "@/lib/dates";
 
 /**
  * Leisure book-tracker operations shared by the web server actions (behind an
  * Authelia session) and the device API routes (behind a bearer token). Auth
  * lives with the caller — the web action runs `requireCanActFor`, the device
- * route checks the book is the enrolled person's own (reading is self-only). The
- * cores just do the work.
+ * route checks the book is the enrolled person's own (reading is self-only).
  *
  * A book records its size in pages and/or chapters (at least one). Progress runs
- * on the single `unit`/`length` pair the scoring/progress code already uses,
- * derived here with pages winning when both are set, so leisure reading keeps
- * feeding the Scholar stat unchanged.
+ * on the single `unit`/`length` pair the scoring/progress code uses, derived here
+ * with pages winning when both are set. `position` is the page/chapter the reader
+ * is up to; how far they've read — and the Scholar XP — derives from it at read
+ * time (capped at length), so setting the page back and forth never banks extra
+ * credit: each page counts once, and the current position is all that matters.
  */
 
 const MAX = 100000;
@@ -22,8 +22,7 @@ function clampInt(n: unknown, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
-/** pages/chapters → the progress unit + length. Pages win when both are set.
- *  Returns null when neither is a positive number. */
+/** pages/chapters -> the progress unit + length. Pages win when both are set. */
 function derive(
   pages: number | null,
   chapters: number | null,
@@ -70,12 +69,13 @@ export async function addBookCore(input: {
       length: primary.length,
       pages,
       chapters,
+      position: 0,
     },
   });
   return { ok: true };
 }
 
-/** Owner id for a book, or null — the route uses it to enforce self-only. */
+/** Owner id for a book, or null - the route uses it to enforce self-only. */
 export async function bookOwnerId(bookId: string): Promise<string | null> {
   if (!bookId) return null;
   const b = await prisma.book.findUnique({
@@ -85,27 +85,26 @@ export async function bookOwnerId(bookId: string): Promise<string | null> {
   return b?.userId ?? null;
 }
 
-/** Set how much was read today (one figure per day; re-enter to fix, 0 clears). */
-export async function logBookCore(bookId: string, amount: number): Promise<void> {
+/** Set the page/chapter the reader is up to. This is the current position, not a
+ *  per-day amount - scoring derives from it at read time, so re-entering it never
+ *  double-counts. */
+export async function logBookCore(bookId: string, page: number): Promise<void> {
   if (!bookId) return;
-  const amt = clampInt(amount, 0, MAX);
-  const day = toDateColumn(todayISO());
-  const existing = await prisma.bookLog.findFirst({ where: { bookId, day } });
-  if (existing) {
-    if (amt === 0) await prisma.bookLog.delete({ where: { id: existing.id } });
-    else
-      await prisma.bookLog.update({
-        where: { id: existing.id },
-        data: { amount: amt },
-      });
-  } else if (amt > 0) {
-    await prisma.bookLog.create({ data: { bookId, day, amount: amt } });
-  }
+  await prisma.book.update({
+    where: { id: bookId },
+    data: { position: clampInt(page, 0, MAX) },
+  });
 }
 
 export async function updateBookCore(
   bookId: string,
-  patch: { title?: string; author?: string | null; pages?: unknown; chapters?: unknown },
+  patch: {
+    title?: string;
+    author?: string | null;
+    pages?: unknown;
+    chapters?: unknown;
+    position?: unknown;
+  },
 ): Promise<BookResult> {
   if (!bookId) return { ok: false, error: "Missing book." };
   const data: {
@@ -115,6 +114,7 @@ export async function updateBookCore(
     length?: number;
     pages?: number | null;
     chapters?: number | null;
+    position?: number;
   } = {};
 
   if (patch.title !== undefined) {
@@ -124,6 +124,9 @@ export async function updateBookCore(
   }
   if (patch.author !== undefined) {
     data.author = (patch.author ?? "").trim().slice(0, 120) || null;
+  }
+  if (patch.position !== undefined) {
+    data.position = clampInt(patch.position, 0, MAX);
   }
 
   // If either count is provided, re-derive size + progress unit from the pair.
@@ -151,34 +154,33 @@ export async function updateBookCore(
   return { ok: true };
 }
 
+/** Finishing completes the reading - the position jumps to the full length (100%
+ *  for scoring) - and takes the book off the shelf into the Read pile. Reopening
+ *  drops it back in the queue at its current position. */
 export async function finishBookCore(bookId: string, finished: boolean): Promise<void> {
   if (!bookId) return;
-  await prisma.book.update({
-    where: { id: bookId },
-    // A finished book is "read" — clear the shelf/bookmark state so it lands in
-    // exactly one bucket. Reopening (finished=false) drops it back in the queue.
-    data: { finishedAt: finished ? new Date() : null, shelved: false, bookmarked: false },
-  });
+  if (finished) {
+    const b = await prisma.book.findUnique({
+      where: { id: bookId },
+      select: { length: true },
+    });
+    await prisma.book.update({
+      where: { id: bookId },
+      data: { finishedAt: new Date(), shelved: false, position: b?.length ?? undefined },
+    });
+  } else {
+    await prisma.book.update({
+      where: { id: bookId },
+      data: { finishedAt: null, shelved: false },
+    });
+  }
 }
 
-/** Shelve = "save for later" (To read). Bookmark = "set aside, keep my place"
- *  (Bookmarked). They're mutually exclusive shelf states — setting one clears
- *  the other so a book is only ever in one bucket. Progress is untouched either
- *  way, so moving a book back to the queue resumes from the last logged page. */
+/** Shelve = "save for later" (To read). Progress is untouched, so moving a book
+ *  back to the queue resumes from the same page. */
 export async function shelfBookCore(bookId: string, shelved: boolean): Promise<void> {
   if (!bookId) return;
-  await prisma.book.update({
-    where: { id: bookId },
-    data: shelved ? { shelved: true, bookmarked: false } : { shelved: false },
-  });
-}
-
-export async function bookmarkBookCore(bookId: string, bookmarked: boolean): Promise<void> {
-  if (!bookId) return;
-  await prisma.book.update({
-    where: { id: bookId },
-    data: bookmarked ? { bookmarked: true, shelved: false } : { bookmarked: false },
-  });
+  await prisma.book.update({ where: { id: bookId }, data: { shelved } });
 }
 
 export async function deleteBookCore(bookId: string): Promise<void> {

@@ -126,7 +126,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         userId: true,
         unit: true,
         length: true,
-        logs: { select: { amount: true } },
+        position: true,
       },
     }),
     // Personal Bible reading feeds Wisdom slightly (one row per chapter read).
@@ -228,12 +228,11 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     userId: string;
     unit: "PAGES" | "CHAPTERS";
     length: number;
-    logs: { amount: number }[];
+    position: number;
   }[]) {
     const a = acc.get(b.userId);
     if (!a) continue;
-    const totalRead = b.logs.reduce((n, l) => n + l.amount, 0);
-    const xp = readingXpForBook(b.unit, b.length, totalRead);
+    const xp = readingXpForBook(b.unit, b.length, b.position);
     a.xp += xp;
     a.statXp.SCHOOL += xp;
   }

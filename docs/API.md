@@ -354,30 +354,28 @@ avatarPosition, avatarIcon, role, kind) as sent by /me.
 Strictly **self-only** — every route acts on the enrolled person's own books and
 no one else's (distinct from the Bible reading endpoints above). A book has a
 title, optional author, and a size in **pages and/or chapters** (at least one;
-both allowed — progress runs on pages when both are set). Reading a book already
-feeds the Scholar stat (unchanged). Books carry `shelved` and `bookmarked` flags;
-the client buckets into the reading queue (`!shelved && !bookmarked && !finished`)
-and the bookshelf. `shelved` (To read) and `bookmarked` (set aside, keep your
-place) are **mutually exclusive** shelf states — setting one clears the other, and
-finishing clears both. Progress is never touched, so moving a book back to the
-queue resumes from the last logged page.
+both allowed — progress runs on pages when both are set). `position` is the
+page/chapter the reader is up to; how far they've read (`read`) and the Scholar
+XP both derive from it at read time (capped at length), so re-entering the page
+never double-counts. `shelved` = To read; finishing sets the position to the full
+length and moves the book to Read. The client buckets into the reading queue
+(`!shelved && !finished`) and the bookshelf (to-read / read).
 ```
 GET  /api/v1/books
-200: { "today":"YYYY-MM-DD", "books": [ Book, … ] }
+200: { "books": [ Book, … ] }
 
 Book:
   { "id","title","author":str|null,
     "unit":"PAGES"|"CHAPTERS","length":int,        // the progress unit (derived)
     "pages":int|null,"chapters":int|null,
-    "read":int,"rawRead":int,"todayAmount":int,    // read is capped at length
-    "finished":bool,"shelved":bool,"bookmarked":bool }
+    "position":int,"read":int,                     // read = min(position,length)
+    "finished":bool,"shelved":bool }
 
 POST /api/v1/books/add       { "title","author"?,"pages"?:int,"chapters"?:int }  → { "status":"ok" }
-POST /api/v1/books/log       { "id","amount":int }        // today's total; 0 clears
-POST /api/v1/books/update    { "id","title"?,"author"?,"pages"?:int,"chapters"?:int }
-POST /api/v1/books/finish    { "id","finished":bool }     // finishing clears shelf/bookmark
+POST /api/v1/books/log       { "id","page":int }          // the page/chapter you're up to
+POST /api/v1/books/update    { "id","title"?,"author"?,"pages"?:int,"chapters"?:int,"position"?:int }
+POST /api/v1/books/finish    { "id","finished":bool }     // finishing completes to 100% + un-shelves
 POST /api/v1/books/shelf     { "id","shelved":bool }
-POST /api/v1/books/bookmark  { "id","bookmarked":bool }
 POST /api/v1/books/delete    { "id" }
 ```
 All mutations 403 unless the book is the enrolled person's own.
