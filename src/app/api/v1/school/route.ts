@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
   const actForIds = canAct ? visible : [me.id];
 
   return apiOk({
+    meId: me.id,
     seasonHint: selected ? selected.name : "All time",
     terms: terms.map((t) => ({ id: t.id, name: t.name })),
     selectedTermId: selected ? selected.id : null,
