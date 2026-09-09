@@ -5,6 +5,9 @@ import { getFamilyColor } from "@/lib/settings";
 import { householdTz } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
 import { CATEGORY_COLORS } from "@/lib/colors";
+
+/** Medical / Dental (the OTHER kind) is red for everyone by default. */
+const MEDICAL_RED = "#dc2626";
 import { getHolidayColor, holidayEntries } from "@/lib/holidays";
 import { bgKeyForKind, bgKeyForHoliday } from "@/lib/event-bg";
 
@@ -429,9 +432,11 @@ export async function loadRange(
       .eventType;
     const color = eventType?.color
       ? eventType.color
-      : e.isFamily
-        ? familyColor
-        : (e.user?.color ?? familyColor);
+      : (e.kind as string) === "OTHER"
+        ? MEDICAL_RED
+        : e.isFamily
+          ? familyColor
+          : (e.user?.color ?? familyColor);
 
     const suffix = e.rrule ? `-${start.iso}` : "";
 

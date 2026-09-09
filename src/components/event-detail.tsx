@@ -21,7 +21,7 @@ const KIND_LABEL: Record<string, string> = {
   APPOINTMENT: "Appointment",
   BIRTHDAY: "Birthday",
   EXTERNAL: "Subscribed",
-  OTHER: "Event",
+  OTHER: "Medical / Dental",
   HOLIDAY: "Holiday",
   SCHOOLWORK: "School work",
 };
@@ -256,14 +256,14 @@ export function EventDetail({
                 <button
                   type="button"
                   onClick={() => onEdit("single")}
-                  className="inline-flex h-9 w-full items-center justify-center rounded-full bg-accent text-xs font-medium text-white transition-opacity hover:opacity-90"
+                  className="inline-flex h-9 w-full items-center justify-center rounded-full bg-accent text-xs font-medium text-on-accent transition-opacity hover:opacity-90"
                 >
                   This event only
                 </button>
                 <button
                   type="button"
                   onClick={() => onEdit("series")}
-                  className="inline-flex h-9 w-full items-center justify-center rounded-full bg-accent text-xs font-medium text-white transition-opacity hover:opacity-90"
+                  className="inline-flex h-9 w-full items-center justify-center rounded-full bg-accent text-xs font-medium text-on-accent transition-opacity hover:opacity-90"
                 >
                   All events in the series
                 </button>
