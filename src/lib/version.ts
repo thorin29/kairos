@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.289.0";
+export const APP_VERSION = "0.290.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -94,6 +94,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.290.0",
+    summary: [
+      "Invite and reset emails no longer show a button that email apps silently disable (they strip app links). Instead they show the invite as copyable text with a clear \u201copen the app, paste this\u201d instruction, so it actually works.",
+    ],
+  },
   {
     version: "0.289.0",
     summary: [
