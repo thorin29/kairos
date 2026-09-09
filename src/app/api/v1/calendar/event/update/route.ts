@@ -44,6 +44,9 @@ export async function POST(req: NextRequest) {
       reminders: Array.isArray(raw.reminders)
         ? raw.reminders.filter((x): x is number => typeof x === "number")
         : undefined,
+      reminderUserIds: Array.isArray(raw.reminderUserIds)
+        ? raw.reminderUserIds.filter((x): x is string => typeof x === "string")
+        : undefined,
     },
     authed.device.person.role === "ADMIN" || authed.device.person.kind === "PARENT",
     str("scope") === "single" ? "single" : "series",

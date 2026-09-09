@@ -48,19 +48,20 @@ export async function GET(req: NextRequest) {
         rrule: null,
         startsAt: { gte: new Date(now), lte: windowEnd },
       },
-      select: { id: true, title: true, location: true, startsAt: true, reminders: true },
+      select: { id: true, title: true, location: true, startsAt: true, reminders: true, reminderUserIds: true },
     }),
     prisma.event.findMany({
       where: { ...scope, rrule: { not: null }, startsAt: { lte: windowEnd } },
-      select: { id: true, title: true, location: true, startsAt: true, rrule: true, reminders: true },
+      select: { id: true, title: true, location: true, startsAt: true, rrule: true, reminders: true, reminderUserIds: true },
     }),
   ]);
 
-  type Row = { id: string; title: string; location: string | null; startsAt: Date; reminders: number[] };
+  type Row = { id: string; title: string; location: string | null; startsAt: Date; reminders: number[]; reminderUserIds: string[] };
 
   const out: { id: string; title: string; location: string | null; startMs: number; reminders: number[] }[] = [];
 
   for (const e of singles as Row[]) {
+    if (!e.reminderUserIds.includes(uid)) continue; // only this person's reminders
     out.push({ id: e.id, title: e.title, location: e.location, startMs: e.startsAt.getTime(), reminders: e.reminders });
   }
 
@@ -81,6 +82,7 @@ export async function GET(req: NextRequest) {
 
   for (const s of series as (Row & { rrule: string | null })[]) {
     if (!s.rrule) continue;
+    if (!s.reminderUserIds.includes(uid)) continue; // only this person's reminders
     const occs = occurrencesIn(s.startsAt, s.rrule, fromISO, toISO, tz);
     for (const occ of occs) {
       const ms = occ.getTime();

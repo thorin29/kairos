@@ -37,6 +37,9 @@ export type EventInput = {
   /** Minutes-before reminders (e.g. [15, 60]). Undefined leaves them unchanged
    *  on an update; on create, undefined means none. */
   reminders?: number[];
+  /** User ids that receive the reminders. Undefined leaves them unchanged on an
+   *  update; on create, undefined means nobody. */
+  reminderUserIds?: string[];
 };
 
 const CREATE_KINDS = ["CLASS", "WORK", "APPOINTMENT", "BIRTHDAY", "OTHER"] as const;
@@ -53,6 +56,12 @@ function normalizeReminders(r: number[] | undefined): number[] {
     .filter((n) => typeof n === "number" && Number.isFinite(n) && n >= 0)
     .map((n) => Math.min(40320, Math.round(n)));
   return [...new Set(clean)].sort((a, b) => a - b).slice(0, 5);
+}
+
+/** Clean a recipient list: distinct non-empty user id strings. */
+function normalizeUserIds(ids: string[] | undefined): string[] {
+  if (!Array.isArray(ids)) return [];
+  return [...new Set(ids.filter((x) => typeof x === "string" && x.length > 0))];
 }
 
 const FREQS = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"] as const;
@@ -141,6 +150,7 @@ export async function createPersonalEvent(
       shadeDay: input.allDay,
       rrule,
       reminders: normalizeReminders(input.reminders),
+      reminderUserIds: normalizeUserIds(input.reminderUserIds),
     },
     select: { id: true },
   });
@@ -247,6 +257,9 @@ export async function updatePersonalEvent(
     shadeDay: input.allDay,
     ...(input.reminders !== undefined
       ? { reminders: normalizeReminders(input.reminders) }
+      : {}),
+    ...(input.reminderUserIds !== undefined
+      ? { reminderUserIds: normalizeUserIds(input.reminderUserIds) }
       : {}),
   };
   // Owner/kind/type apply to a normal or series edit (not a single-occurrence
