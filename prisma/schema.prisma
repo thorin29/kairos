@@ -379,6 +379,8 @@ model Event {
   // Minutes-before reminders for this event (e.g. [15, 60] = 15 min and 1 hr
   // before). Empty means no reminder. Fired per-device by the app.
   reminders Int[] @default([])
+  // User ids that receive this event's reminders (empty = nobody).
+  reminderUserIds String[] @default([])
 
   // Timestamptz — a 4pm shift is a real instant, unlike a task's due date.
   startsAt DateTime
