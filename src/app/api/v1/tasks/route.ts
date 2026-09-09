@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     }),
     prisma.task.findMany({
       where: { userId: { in: visible }, category: Category.OTHER },
-      select: { id: true, userId: true, title: true, dueDate: true, status: true, completedAt: true },
+      select: { id: true, userId: true, title: true, dueDate: true, status: true, completedAt: true, generatedFrom: true },
       orderBy: [{ dueDate: "asc" }],
     }),
   ]);
@@ -55,11 +55,12 @@ export async function GET(req: NextRequest) {
         .filter((t) => t.status !== TaskStatus.COMPLETE)
         .map((t) => {
           const dueISO = fromDateColumn(t.dueDate);
-          return { id: t.id, title: t.title, dueISO, overdue: dueISO < today };
+          const recurring = t.generatedFrom?.startsWith("rtask:") ?? false;
+          return { id: t.id, title: t.title, dueISO, overdue: dueISO < today, recurring };
         });
       const done = mine
         .filter((t) => t.status === TaskStatus.COMPLETE)
-        .map((t) => ({ id: t.id, title: t.title, dueISO: fromDateColumn(t.dueDate) }));
+        .map((t) => ({ id: t.id, title: t.title, dueISO: fromDateColumn(t.dueDate), recurring: t.generatedFrom?.startsWith("rtask:") ?? false }));
       return {
         userId: uid,
         name: u.displayName ?? u.name,
