@@ -49,8 +49,25 @@ export function verifyPassword(password: string, stored: string): boolean {
  * as a SHA-256 digest. Redemption hashes the presented token the same way and
  * looks it up, so a leak of the database never yields a usable token.
  */
+const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const INVITE_CODE_LEN = 8;
+
+/** A short, typeable invitation code (8 chars, no ambiguous letters). Short
+ *  enough to text or read aloud, and it runs the full join flow when redeemed.
+ *  Safety comes from single use, expiry, and rate limiting — not length. */
 export function newInviteToken(): string {
-  return randomBytes(32).toString("base64url");
+  const bytes = randomBytes(INVITE_CODE_LEN);
+  let s = "";
+  for (let i = 0; i < INVITE_CODE_LEN; i++) {
+    s += INVITE_CODE_ALPHABET[bytes[i] % INVITE_CODE_ALPHABET.length];
+  }
+  return s;
+}
+
+/** Fold a typed code to its canonical form so "abcd-2345", "ABCD 2345" and
+ *  "ABCD2345" all match: upper-case and strip anything outside the alphabet. */
+export function normalizeInviteCode(raw: string): string {
+  return raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
 export function hashToken(token: string): string {

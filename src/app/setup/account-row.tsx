@@ -27,6 +27,7 @@ export function AccountRow({
 }) {
   const [pending, startTransition] = useTransition();
   const [link, setLink] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const [emailedTo, setEmailedTo] = useState<string | null>(null);
@@ -59,8 +60,8 @@ export function AccountRow({
         return;
       }
       if (res.token) {
-        // The app deep link — carries only the token, no server address. Safe to
-        // text: messaging apps make kairos:// links tappable (email strips them).
+        setCode(res.token);
+        // A paste/deep-link form of the same code (carries only the token).
         setLink(`kairos://join?token=${res.token}`);
       }
       setEmailedTo(res.emailedTo ?? null);
@@ -91,17 +92,19 @@ export function AccountRow({
   const revoke = () =>
     startTransition(async () => {
       setLink(null);
+      setCode(null);
       await revokeInviteAction(account.userId);
     });
 
   const disable = () =>
     startTransition(async () => {
       setLink(null);
+      setCode(null);
       await disableLoginAction(account.userId);
     });
 
   const copy = async () => {
-    if (!link) return;
+    if (!code) return;
     setCopyFailed(false);
 
     // The async Clipboard API only exists in a secure context (HTTPS or
@@ -109,7 +112,7 @@ export function AccountRow({
     // and fall through to the legacy path rather than throwing.
     if (window.isSecureContext && navigator.clipboard) {
       try {
-        await navigator.clipboard.writeText(link);
+        await navigator.clipboard.writeText(code);
         setCopied(true);
         return;
       } catch {
@@ -123,7 +126,7 @@ export function AccountRow({
     if (el) {
       el.focus();
       el.select();
-      el.setSelectionRange(0, link.length);
+      el.setSelectionRange(0, code.length);
       try {
         if (document.execCommand("copy")) {
           setCopied(true);
@@ -167,6 +170,15 @@ export function AccountRow({
         <span className="ml-auto flex flex-wrap items-center justify-end gap-2">
           {account.hasPassword ? (
             <>
+              <button
+                type="button"
+                onClick={() => invite()}
+                disabled={pending}
+                className={`${btn} bg-accent/10 text-accent hover:bg-accent/20`}
+              >
+                <LinkIcon className="h-4 w-4" />
+                Add a phone
+              </button>
               <button
                 type="button"
                 onClick={() => invite("reset")}
@@ -286,11 +298,11 @@ export function AccountRow({
         )}
       </div>
 
-      {link && (
+      {code && (
         <div className="mt-3 rounded-xl border border-accent/30 bg-accent/5 p-3">
           {emailedTo && (
             <p className="mb-2 text-xs font-medium text-emerald-700">
-              Invite emailed to {emailedTo}. The link below is a backup.
+              Invite emailed to {emailedTo}. The code below is a backup.
             </p>
           )}
           {emailError && (
@@ -306,16 +318,16 @@ export function AccountRow({
             </p>
           )}
           <p className="mb-2 text-xs font-medium text-accent">
-            One-time invite link — text it to them (it opens the app), or they
-            can paste it into the app. Copy it now; it won&rsquo;t be shown again.
+            One-time invitation code — text it or read it to them; they enter it
+            in the app. Copy it now; it won&rsquo;t be shown again.
           </p>
           <div className="flex items-center gap-2">
             <input
               ref={linkRef}
               readOnly
-              value={link}
+              value={code}
               onFocus={(e) => e.currentTarget.select()}
-              className="min-w-0 flex-1 truncate rounded-lg bg-surface px-3 py-2 font-mono text-xs outline-none focus:ring-2 focus:ring-accent/40"
+              className="min-w-0 flex-1 rounded-lg bg-surface px-3 py-2 text-center font-mono text-lg font-semibold tracking-[0.3em] outline-none focus:ring-2 focus:ring-accent/40"
             />
             <button
               type="button"
@@ -332,6 +344,10 @@ export function AccountRow({
               )}
             </button>
           </div>
+          <p className="mt-2 text-xs text-muted">
+            Or send a link that pastes into the app:{" "}
+            <span className="break-all font-mono">{link}</span>
+          </p>
           {copyFailed && (
             <p className="mt-2 text-xs text-muted">
               Couldn&rsquo;t copy automatically &mdash; the link is selected, so
