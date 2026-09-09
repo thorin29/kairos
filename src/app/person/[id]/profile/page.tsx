@@ -24,7 +24,7 @@ export default async function ProfilePage({
           Profile
         </h1>
         <p className="mt-2 text-muted">
-          Pick a picture and a colour. Both show up across the dashboard.
+          Pick a picture and a color. Both show up across the dashboard.
         </p>
       </header>
 

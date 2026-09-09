@@ -20,7 +20,7 @@ export default async function AdminAppearancePage() {
           Appearance
         </h1>
         <p className="mt-2 max-w-xl text-muted">
-          A colour theme and dark mode for the whole household&rsquo;s web view.
+          A color theme and dark mode for the whole household&rsquo;s web view.
           Everyone sees the same look here; the phone app has its own per-device
           setting.
         </p>

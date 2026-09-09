@@ -6,7 +6,7 @@ import { EFFORT_VALUES, effortColor } from "@/lib/chores/effort";
 import { LockIcon } from "@/components/icons";
 
 /**
- * Shows the effort as a coloured 1-5 badge. Clicking opens a small picker
+ * Shows the effort as a colored 1-5 badge. Clicking opens a small picker
  * rather than changing anything, so a stray click can't alter the value; a
  * lock makes it read-only until deliberately unlocked.
  */

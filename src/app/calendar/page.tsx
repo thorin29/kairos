@@ -76,7 +76,7 @@ export default async function CalendarPage({
   const showSchoolWork = sw === "1";
 
   // On a personal device with someone signed in, the calendar becomes their
-  // own — its own views, filters, and (later) colours, all stored per user. The
+  // own — its own views, filters, and (later) colors, all stored per user. The
   // shared wall tablet keeps everything below unchanged.
   const meUser = await currentUser();
   if ((await deviceMode()) === "personal" && meUser) {

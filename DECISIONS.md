@@ -588,3 +588,12 @@ safety net + enqueueOnce. Triggers: MainActivity enqueues periodic+once; AppRoot
 once on every dataRevision (so a calendar edit reschedules). Manifest: USE_EXACT_ALARM (33+)
 + SCHEDULE_EXACT_ALARM (<=32) + RECEIVE_BOOT_COMPLETED + the two receivers. NOTE: offline-
 created reminders schedule only after sync (endpoint is server-side). NOTIFICATIONS COMPLETE.
+
+## Web 0.279.0 + app 0.125.0: American spelling + app calendar/settings fixes
+Replaced colour->color / Colour->Color across both repos (prose, comments, user-facing
+strings; identifiers already used "color"). App-only fixes: (1) Settings Notifications blurb
+-> "Reminders, sounds, and vibration settings"; (2) military clock now HH:00 (e.g. 13:00) not
+HH; (3) CalendarViewModel.setTab resets date to today + clearPageCaches + navNonce bump, so
+switching views always returns to the current day; (4) event editor "Share with" excludes the
+owner (editEvent.ownerId, else the current person from session state) and uses KairosIcons.Share
+(the workout-share icon) instead of the checklist icon.

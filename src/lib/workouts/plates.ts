@@ -2,11 +2,11 @@
 // barbell drawing is accurately scaled. Diameter and thickness are in
 // millimetres (approximate real plates); the drawing scales mm → px.
 //
-// Colour scheme (per lb):
+// Color scheme (per lb):
 //   bumpers  10=black, 25=green, 35=yellow, 45=blue, 55=red
 //   fractional .25=green, .5=yellow, .75=blue, 1=red
 //   steel/change plates (2.5, 5, 10) are grey
-// Bumpers can be shown in their colours or all black (a per-user setting, later).
+// Bumpers can be shown in their colors or all black (a per-user setting, later).
 
 export type PlateKind = "bumper" | "steel" | "fraction";
 

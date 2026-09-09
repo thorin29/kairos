@@ -156,15 +156,15 @@ export async function PersonalCalendar({
   const timed = rawRange.timed.filter(keep).map(recolor);
   const allDay = rawRange.allDay.filter(keep).map(recolor);
 
-  // The now-line follows the admin colour unless the person has overridden it
+  // The now-line follows the admin color unless the person has overridden it
   // (and only while personalisation is on).
   const nowColor =
     prefs.personalizeColors && prefs.nowColor
       ? prefs.nowColor
       : calPrefs.nowColor;
 
-  // Coloured event dots for the heading month-dropdown (shown on the non-month
-  // views, so only load the month's events then). Up to three distinct colours
+  // Colored event dots for the heading month-dropdown (shown on the non-month
+  // views, so only load the month's events then). Up to three distinct colors
   // per day.
   const dotsByDay: Record<string, string[]> = {};
   if (view !== "month") {

@@ -22,7 +22,7 @@ export function nextColor(taken: string[]): string {
 }
 
 /**
- * Colour options for the shared "Family" calendar identity (birthdays, and —
+ * Color options for the shared "Family" calendar identity (birthdays, and —
  * later — family events and holidays). The first is the default and matches
  * the app accent.
  */
@@ -39,7 +39,7 @@ export const FAMILY_PALETTE = [
 
 export const DEFAULT_FAMILY_COLOR = FAMILY_PALETTE[0];
 
-/** A valid 6-digit hex colour like #1d4ed8 — for custom colour inputs. */
+/** A valid 6-digit hex color like #1d4ed8 — for custom color inputs. */
 export function isHexColor(s: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(s.trim());
 }

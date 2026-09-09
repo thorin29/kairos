@@ -2,7 +2,7 @@
 
 import { STAT_ORDER, type StatKey } from "@/lib/scoring/progression";
 
-// Domain colours (match the companion palette hues).
+// Domain colors (match the companion palette hues).
 const HEX: Record<StatKey, string> = {
   CHORE: "#22c55e",
   EXERCISE: "#f97316",
@@ -15,7 +15,7 @@ const CELLS = 20;
 
 /**
  * A tight row of little squares showing progress into the current level. The
- * filled squares are coloured by what you actually did — grouped by domain into
+ * filled squares are colored by what you actually did — grouped by domain into
  * bands (all chore-green together, all workout-orange together, …) so it reads
  * as your mix at a glance, not confetti. Replaces the old "evolves in N" text.
  */
@@ -29,7 +29,7 @@ export function XpBar({
   const filled = Math.max(0, Math.min(CELLS, Math.round((pct / 100) * CELLS)));
 
   // Allocate the filled cells across domains by share, in a fixed order so
-  // colours stay grouped. Largest-remainder keeps the total exact.
+  // colors stay grouped. Largest-remainder keeps the total exact.
   const raw = STAT_ORDER.map((k) => ({ k, want: (shares[k] ?? 0) * filled }));
   const alloc: Record<StatKey, number> = {
     CHORE: 0,

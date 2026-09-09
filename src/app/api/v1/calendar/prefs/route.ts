@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   if (typeof raw.showSchoolWork === "boolean") await setShowSchoolWork(uid, raw.showSchoolWork);
   if (isView(raw.view)) await setView(uid, raw.view);
 
-  // Colour personalisation (Phase 5). Colours are #rrggbb or null (clear);
+  // Color personalisation (Phase 5). Colors are #rrggbb or null (clear);
   // maps are replaced wholesale with the validated entries.
   const isHex = (v: unknown): v is string =>
     typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);

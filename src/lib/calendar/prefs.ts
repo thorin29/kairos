@@ -16,7 +16,7 @@ export {
 /**
  * Per-user personal-calendar preferences. Loaded for the signed-in personal
  * view (and later the app); the shared tablet never touches this. Phase A uses
- * the structure fields; the colour fields are carried through for Phase B.
+ * the structure fields; the color fields are carried through for Phase B.
  *
  * `shownPeople` / `shownSubs` are null when the user has never customised them,
  * which the caller resolves to a default (just self; the user's own feeds) —
@@ -148,7 +148,7 @@ export async function setShownSubs(
   await patchPrefs(userId, { shownSubs: ids });
 }
 
-// --- Phase B: colours ---
+// --- Phase B: colors ---
 
 export async function setPersonalize(
   userId: string,
@@ -185,7 +185,7 @@ export async function setHolidayColor(
   await patchPrefs(userId, { holidayColor: color });
 }
 
-/** Merge one key into a Json colour map (or clear it when color is null). */
+/** Merge one key into a Json color map (or clear it when color is null). */
 async function patchColorMap(
   userId: string,
   field: "kindColors" | "eventTypeColors" | "subColors",
@@ -223,7 +223,7 @@ export async function setSubColor(
   await patchColorMap(userId, "subColors", subId, color);
 }
 
-/** Patch any of the colour fields at once (validated by the caller). Maps are
+/** Patch any of the color fields at once (validated by the caller). Maps are
  *  replaced wholesale — the app sends the full map for the field it changed. */
 export async function setColorPrefs(
   userId: string,

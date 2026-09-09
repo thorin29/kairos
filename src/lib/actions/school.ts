@@ -280,7 +280,7 @@ function meetingEventData(input: {
 }
 
 /**
- * Create or edit a class. When `id` is present it's an edit: name, term, colour,
+ * Create or edit a class. When `id` is present it's an edit: name, term, color,
  * and meeting schedule can all change, and the linked CLASS calendar event is
  * created, updated, or removed to match.
  */
@@ -670,7 +670,7 @@ function meetingFromEvent(
 }
 
 /** Create the next term and, for each ticked class, recreate it in that term —
- *  same subject, type, colour, owner, members and weekly meeting (re-anchored
+ *  same subject, type, color, owner, members and weekly meeting (re-anchored
  *  to the new term's dates). */
 export async function createNextSemester(
   _prev: SchoolActionState,

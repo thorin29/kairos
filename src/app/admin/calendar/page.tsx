@@ -79,7 +79,7 @@ export default async function AdminCalendarPage() {
         <SectionHeading>Event types</SectionHeading>
         <p className="mb-3 max-w-xl text-sm text-muted">
           Custom types anyone can pick when adding an event — a hockey game, a
-          medical appointment — each with its own colour on the calendar.
+          medical appointment — each with its own color on the calendar.
         </p>
         <EventTypes types={eventTypes} />
       </div>

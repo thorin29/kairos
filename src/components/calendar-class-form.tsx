@@ -221,7 +221,7 @@ export function CalendarClassForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Colour</label>
+          <label className="block text-sm font-medium">Color</label>
           <select
             name="color"
             defaultValue={editing?.color ?? ""}
@@ -371,7 +371,7 @@ export function CalendarClassForm({
         <button
           type="submit"
           disabled={pending}
-          className="h-10 rounded-full bg-accent px-5 text-sm font-semibold text-white disabled:opacity-50"
+          className="h-10 rounded-full bg-accent px-5 text-sm font-semibold text-on-accent disabled:opacity-50"
         >
           {pending ? "Saving…" : editing ? "Save class" : "Add class"}
         </button>

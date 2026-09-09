@@ -73,7 +73,7 @@ export async function updateProfile(
   if (!user) return { error: "That person no longer exists.", saved: false };
 
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
-    return { error: "Pick a colour.", saved: false };
+    return { error: "Pick a color.", saved: false };
   }
 
   if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {

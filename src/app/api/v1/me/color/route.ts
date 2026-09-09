@@ -8,9 +8,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Set the enrolled person's colour from their device. This is the same
+ * Set the enrolled person's color from their device. This is the same
  * `user.color` the web profile edits, so it flows to the calendar, avatar ring,
- * and everywhere the person's colour is shown.
+ * and everywhere the person's color is shown.
  */
 export async function POST(req: NextRequest) {
   const authed = await requireDevice(req);
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const raw = body as Record<string, unknown> | null;
   const color = typeof raw?.color === "string" ? raw.color.trim() : "";
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
-    return apiError("validation", "Pick a valid colour.");
+    return apiError("validation", "Pick a valid color.");
   }
 
   const id = authed.device.person.id;

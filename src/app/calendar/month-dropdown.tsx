@@ -9,7 +9,7 @@ const INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
 
 /**
  * The heading month name, tappable: it drops a small month calendar (single
- * letter weekdays, a few coloured dots on days that have events) for jumping
+ * letter weekdays, a few colored dots on days that have events) for jumping
  * to any day. Shown on the non-month views; tapping a day navigates there in
  * the current view. Days from the neighbouring months are tappable too, so
  * there's no need for separate month arrows.

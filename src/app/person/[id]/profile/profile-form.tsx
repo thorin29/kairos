@@ -97,7 +97,7 @@ export function ProfileForm({
       </Card>
 
       <Card className="p-5">
-        <p className="text-sm font-medium">Colour</p>
+        <p className="text-sm font-medium">Color</p>
         <p className="mt-1 text-xs text-muted">
           Used beside your name and for your blocks on the calendar.
         </p>
@@ -106,7 +106,7 @@ export function ProfileForm({
             <button
               key={c}
               type="button"
-              aria-label={`Use colour ${c}`}
+              aria-label={`Use color ${c}`}
               aria-pressed={color.toLowerCase() === c.toLowerCase()}
               onClick={() => setColor(c)}
               className={`h-10 w-10 rounded-full transition-transform ${
@@ -246,7 +246,7 @@ export function ProfileForm({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-12 items-center rounded-full bg-accent px-7 font-medium text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
+        className="inline-flex h-12 items-center rounded-full bg-accent px-7 font-medium text-on-accent shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
       >
         {pending ? "Saving\u2026" : "Save profile"}
       </button>

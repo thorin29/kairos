@@ -42,7 +42,7 @@ export async function addEventType(
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   const clean = name.trim().slice(0, 40);
   if (clean.length < 2) return { error: "Give the type a name." };
-  if (!isHexColor(color)) return { error: "Pick a colour." };
+  if (!isHexColor(color)) return { error: "Pick a color." };
   const mins = normalizeMinutes(defaultMinutes);
 
   const exists = await prisma.eventType.findUnique({
@@ -66,8 +66,8 @@ export async function addEventType(
   return { error: null };
 }
 
-/** Set the calendar now-line colour, manual-scroll reset, block length, and how
- *  shared events combine people's colours (admin). */
+/** Set the calendar now-line color, manual-scroll reset, block length, and how
+ *  shared events combine people's colors (admin). */
 export async function setCalendarPrefs(
   nowColor: string,
   scrollResetSec: number,
@@ -75,7 +75,7 @@ export async function setCalendarPrefs(
   sharedStyle: string,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
-  if (!isHexColor(nowColor)) return { error: "Pick a colour." };
+  if (!isHexColor(nowColor)) return { error: "Pick a color." };
   const sec = Math.max(0, Math.min(3600, Math.round(scrollResetSec)));
   const block = Math.max(5, Math.min(240, Math.round(blockMinutes) || 30));
   const style = sharedStyle === "blend" ? "blend" : "bands";
@@ -88,7 +88,7 @@ export async function setCalendarPrefs(
   return { error: null };
 }
 
-/** Rename / recolour a custom event type (admin). */
+/** Rename / recolor a custom event type (admin). */
 export async function updateEventType(
   id: string,
   name: string,
@@ -99,7 +99,7 @@ export async function updateEventType(
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   const clean = name.trim().slice(0, 40);
   if (clean.length < 2) return { error: "Give the type a name." };
-  if (!isHexColor(color)) return { error: "Pick a colour." };
+  if (!isHexColor(color)) return { error: "Pick a color." };
   const mins = normalizeMinutes(defaultMinutes);
   const clash = await prisma.eventType.findFirst({
     where: { name: clean, id: { not: id } },
@@ -117,7 +117,7 @@ export async function updateEventType(
   return { error: null };
 }
 
-/** Delete a custom event type; its events fall back to their kind colour. */
+/** Delete a custom event type; its events fall back to their kind color. */
 export async function deleteEventType(id: string): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   await prisma.eventType.delete({ where: { id } }).catch(() => {});

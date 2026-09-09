@@ -33,7 +33,7 @@ const clamp = (v: number, lo: number, hi: number) =>
  *    earliest event in the morning, then follows the clock into the afternoon
  *    so evening events come into view.
  *  - A now-line tracks the current time (updates each minute) in whatever
- *    colour the admin chose.
+ *    color the admin chose.
  *  - Manual scrolling always works; after `resetSec` of no scrolling it eases
  *    back to the anchor. resetSec of 0 turns the reset off.
  */
@@ -71,7 +71,7 @@ export function WeekGrid({
   // In person mode the single date is days[0] and the columns are people.
   const personMode = !!personColumns && personColumns.length > 0 && days.length === 1;
   // Background for an event block: a plain fill normally, or bands/blend of the
-  // members' colours when it's shared with more than one person.
+  // members' colors when it's shared with more than one person.
   const bgFor = (e: GridEvent): { backgroundColor?: string; backgroundImage?: string } =>
     e.memberColors.length >= 2
       ? sharedBackground(e.memberColors, sharedStyle)
@@ -558,7 +558,7 @@ export function WeekGrid({
                   </span>
                   <span
                     className={`tabular mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
-                      isToday ? "bg-accent text-white" : ""
+                      isToday ? "bg-accent text-on-accent" : ""
                     }`}
                   >
                     {d.getUTCDate()}

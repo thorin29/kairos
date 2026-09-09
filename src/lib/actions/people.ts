@@ -196,13 +196,13 @@ export async function reorderPeople(orderedIds: string[]): Promise<void> {
   revalidatePath("/chores");
 }
 
-/** Set the shared Family calendar colour (birthdays and family events). */
+/** Set the shared Family calendar color (birthdays and family events). */
 export async function setFamilyColor(
   color: string,
 ): Promise<{ error: string | null }> {
   await requireAdmin();
   if (!(FAMILY_PALETTE as readonly string[]).includes(color) && !isHexColor(color)) {
-    return { error: "Pick a colour, or enter a valid hex value." };
+    return { error: "Pick a color, or enter a valid hex value." };
   }
   await setSetting(FAMILY_COLOR, color);
   revalidatePath("/setup");

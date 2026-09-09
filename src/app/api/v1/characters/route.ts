@@ -23,7 +23,7 @@ const STAT_HEX: Record<StatKey, string> = {
   TASK: "#14b8a6",
 };
 
-/** A 20-cell level bar coloured by where the XP came from (grouped by domain),
+/** A 20-cell level bar colored by where the XP came from (grouped by domain),
  *  mirroring the web's XpBar. Empty cells are "". */
 function xpCells(pct: number, shares: Record<string, number>): string[] {
   const CELLS = 20;

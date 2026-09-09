@@ -100,7 +100,7 @@ export async function setSeasonLength(
 
 // --- Appearance (household theme) -----------------------------------------
 
-/** Set the household colour theme (admin only). Applies to every screen. */
+/** Set the household color theme (admin only). Applies to every screen. */
 export async function setAppearanceTheme(theme: string): Promise<void> {
   await requireAdmin();
   const name: ThemeName = (THEME_NAMES as readonly string[]).includes(theme)
