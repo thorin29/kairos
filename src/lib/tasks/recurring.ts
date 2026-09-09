@@ -1,4 +1,4 @@
-import { Category } from "@/generated/prisma/client";
+import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   addDays,
@@ -177,5 +177,29 @@ export async function generateRecurringTasks(
     ).count;
   }
 
-  return { created, removed };
+  // Keep recurring history light: retain only the most recent completed
+  // occurrences per template, pruning older completed ones. Runs alongside the
+  // usual reconcile so history doesn't grow without bound.
+  const COMPLETED_KEEP = 2;
+  const history = await prisma.task.findMany({
+    where: { generatedFrom: { startsWith: "rtask:" }, status: TaskStatus.COMPLETE },
+    select: { id: true, generatedFrom: true },
+    orderBy: [{ dueDate: "desc" }, { completedAt: "desc" }],
+  });
+  const kept = new Map<string, number>();
+  const stale: string[] = [];
+  for (const t of history) {
+    const gf = t.generatedFrom ?? "";
+    const n = (kept.get(gf) ?? 0) + 1;
+    kept.set(gf, n);
+    if (n > COMPLETED_KEEP) stale.push(t.id);
+  }
+  let pruned = 0;
+  if (stale.length > 0) {
+    pruned = (
+      await prisma.task.deleteMany({ where: { id: { in: stale } } })
+    ).count;
+  }
+
+  return { created, removed: removed + pruned };
 }

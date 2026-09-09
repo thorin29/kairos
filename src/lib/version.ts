@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.292.0";
+export const APP_VERSION = "0.293.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -94,6 +94,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.293.0",
+    summary: [
+      "Recurring tasks now carry a flag the app shows as a repeat icon in the task list, and recurring history stays light \u2014 only the last 2 completed occurrences per recurring task are kept; older ones are pruned.",
+    ],
+  },
   {
     version: "0.292.0",
     summary: [
