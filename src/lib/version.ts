@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.280.0";
+export const APP_VERSION = "0.280.1";
 
 export const MIGRATIONS = [
   "0_init",
@@ -91,6 +91,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.280.1",
+    summary: [
+      "Updated the email library (Nodemailer 7 \u2192 9) to a fully patched release, clearing several dependency advisories. Kairos was never exposed to them \u2014 it doesn't use the affected send options \u2014 but staying on a maintained, patched version is the right default. Email behavior is unchanged.",
+    ],
+  },
   {
     version: "0.280.0",
     summary: [
