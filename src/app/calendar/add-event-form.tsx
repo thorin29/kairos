@@ -51,6 +51,14 @@ const KINDS = [
   { value: "OTHER", label: "Medical / Dental" },
 ];
 
+const REMINDER_PRESETS = [
+  { min: 10, label: "10 min" },
+  { min: 15, label: "15 min" },
+  { min: 30, label: "30 min" },
+  { min: 60, label: "1 hour" },
+  { min: 1440, label: "1 day" },
+];
+
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 const DAY_NAMES = [
   "Sunday",
@@ -105,6 +113,8 @@ function minToHHMM(total: number): string {
 // --- shared open mechanism ------------------------------------------------
 
 type Prefill = {
+  reminders?: number[];
+  reminderUserIds?: string[];
   date?: string;
   start?: string;
   end?: string;
@@ -205,6 +215,8 @@ export function AddEventProvider({
           shadeDayInit={prefill.shadeDay}
           rruleInit={prefill.rrule}
           participantIdsInit={prefill.participantIds}
+          remindersInit={prefill.reminders}
+          reminderUserIdsInit={prefill.reminderUserIds}
           onClose={() => setOpen(false)}
         />
       )}
@@ -259,6 +271,8 @@ function EventModal({
   shadeDayInit,
   rruleInit,
   participantIdsInit,
+  remindersInit,
+  reminderUserIdsInit,
   onClose,
 }: {
   people: { id: string; name: string }[];
@@ -283,6 +297,8 @@ function EventModal({
   shadeDayInit?: boolean;
   rruleInit?: string | null;
   participantIdsInit?: string[];
+  remindersInit?: number[];
+  reminderUserIdsInit?: string[];
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -592,21 +608,91 @@ function EventModal({
               </p>
               <div className="flex flex-wrap gap-2">
                 {people.map((p) => (
+                  <span key={p.id} className="inline-flex items-center gap-1">
+                    <label
+                      className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-hairline px-3 py-1.5 text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10"
+                    >
+                      <input
+                        type="checkbox"
+                        name="participants"
+                        value={p.id}
+                        defaultChecked={participantIdsInit?.includes(p.id) ?? false}
+                        className="h-4 w-4"
+                      />
+                      {p.name}
+                    </label>
+                    <label
+                      className="inline-flex cursor-pointer items-center"
+                      title={`Notify ${p.name}`}
+                    >
+                      <input
+                        type="checkbox"
+                        name="reminderBell"
+                        value={p.id}
+                        defaultChecked={reminderUserIdsInit?.includes(p.id) ?? false}
+                        className="peer sr-only"
+                      />
+                      {/* off: red bell with a slash */}
+                      <svg
+                        className="h-5 w-5 text-red-500 peer-checked:hidden"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5" />
+                        <path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7" />
+                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                        <line x1="2" x2="22" y1="2" y2="22" />
+                      </svg>
+                      {/* on: green bell */}
+                      <svg
+                        className="hidden h-5 w-5 text-green-600 peer-checked:block"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                      </svg>
+                    </label>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">
+                Reminders
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {REMINDER_PRESETS.map((r) => (
                   <label
-                    key={p.id}
+                    key={r.min}
                     className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-hairline px-3 py-1.5 text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10"
                   >
                     <input
                       type="checkbox"
-                      name="participants"
-                      value={p.id}
-                      defaultChecked={participantIdsInit?.includes(p.id) ?? false}
+                      name="reminders"
+                      value={r.min}
+                      defaultChecked={remindersInit?.includes(r.min) ?? false}
                       className="h-4 w-4"
                     />
-                    {p.name}
+                    {r.label}
                   </label>
                 ))}
               </div>
+              <p className="mt-1 text-xs text-muted">
+                Only people with a green bell above get these reminders. Bells
+                start off.
+              </p>
             </div>
 
             {allDay ? (

@@ -140,6 +140,16 @@ const FREQS = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"] as const;
  * Times are entered as wall-clock in the household timezone and stored as
  * real instants, so a 4pm shift stays 4pm across a DST change.
  */
+/** Reminder lead-times (minutes) from the form: valid, deduped, sorted, capped. */
+function readReminderMinutes(formData: FormData): number[] {
+  const mins = formData
+    .getAll("reminders")
+    .map((v) => Number(v))
+    .filter((n) => Number.isFinite(n) && n >= 0)
+    .map((n) => Math.min(40320, Math.round(n)));
+  return [...new Set(mins)].sort((a, b) => a - b).slice(0, 5);
+}
+
 export async function addEvent(
   _prev: EventState,
   formData: FormData,
@@ -267,6 +277,24 @@ export async function addEvent(
         .filter((id) => id && id !== "family"),
     ),
   ];
+
+  // Reminders: minute lead-times, and the recipients (bell on) among the people
+  // on the event. A family event can notify anyone; otherwise only the owner
+  // and participants are eligible. Default: nobody (bells start off).
+  const reminders = readReminderMinutes(formData);
+  const belled = new Set(
+    formData.getAll("reminderBell").map(String).filter(Boolean),
+  );
+  const eligible = new Set<string>(participantIds);
+  if (!isFamily && owner) eligible.add(owner);
+  const reminderUserIds = isFamily
+    ? [...belled]
+    : [...belled].filter((id) => eligible.has(id));
+  await prisma.event.update({
+    where: { id: created.id },
+    data: { reminders, reminderUserIds },
+  });
+
   if (participantIds.length) {
     await prisma.eventParticipant.createMany({
       data: participantIds.map((userId) => ({ eventId: created.id, userId })),
@@ -486,6 +514,20 @@ export async function updateEvent(
         .filter((pid) => pid && pid !== "family" && pid !== owner),
     ),
   ];
+  // Reminders + recipients (bells), same rules as create.
+  const reminders = readReminderMinutes(formData);
+  const belled = new Set(
+    formData.getAll("reminderBell").map(String).filter(Boolean),
+  );
+  const eligible = new Set<string>(participantIds);
+  if (!isFamily && owner) eligible.add(owner);
+  const reminderUserIds = isFamily
+    ? [...belled]
+    : [...belled].filter((id) => eligible.has(id));
+  await prisma.event.update({
+    where: { id: targetEventId },
+    data: { reminders, reminderUserIds },
+  });
   await prisma.eventParticipant.deleteMany({ where: { eventId: targetEventId } });
   if (participantIds.length) {
     await prisma.eventParticipant.createMany({
@@ -513,6 +555,8 @@ export type EventCopyData = {
   date: string;
   endDayOffset: number;
   participantIds: string[];
+  reminders: number[];
+  reminderUserIds: string[];
 };
 
 const hhmm = (min: number): string =>
@@ -540,6 +584,8 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
       rrule: true,
       startsAt: true,
       endsAt: true,
+      reminders: true,
+      reminderUserIds: true,
       participants: { select: { userId: true } },
     },
   });
@@ -565,6 +611,8 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
       (e as { participants?: { userId: string }[] }).participants?.map(
         (p) => p.userId,
       ) ?? [],
+    reminders: (e as { reminders?: number[] }).reminders ?? [],
+    reminderUserIds: (e as { reminderUserIds?: string[] }).reminderUserIds ?? [],
   };
 }
 
