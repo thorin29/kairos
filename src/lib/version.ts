@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.278.1";
+export const APP_VERSION = "0.279.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -92,6 +92,12 @@ export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
+    version: "0.279.0",
+    summary: [
+      "Spelling: \"colour\" is now \"color\" throughout (American spelling).",
+    ],
+  },
+  {
     version: "0.278.1",
     summary: [
       "Added a device endpoint the app uses to schedule reminders: upcoming events (next ~30 days) that carry reminders, with recurring events expanded to their occurrences.",
@@ -119,13 +125,13 @@ export const CHANGES: Change[] = [
     version: "0.276.2",
     summary: [
       "Admin \u2192 Appearance: fixed the dark-mode toggle, which sat on the wrong side and slid out of frame.",
-      "Added a device endpoint so the phone app can set a person's colour (their ring, calendar, and everywhere it shows).",
+      "Added a device endpoint so the phone app can set a person's color (their ring, calendar, and everywhere it shows).",
     ],
   },
   {
     version: "0.276.1",
     summary: [
-      "Admin \u2192 Appearance: a colour theme (teal, olive drab, green, blue, purple, pink, orange, or red) and dark mode for the whole household's web view. The accent, sidebar, buttons, highlights and \u2014 in dark mode \u2014 the backgrounds and text all follow the choice. The phone app keeps its own per-device setting.",
+      "Admin \u2192 Appearance: a color theme (teal, olive drab, green, blue, purple, pink, orange, or red) and dark mode for the whole household's web view. The accent, sidebar, buttons, highlights and \u2014 in dark mode \u2014 the backgrounds and text all follow the choice. The phone app keeps its own per-device setting.",
     ],
   },
   {
@@ -252,7 +258,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.256.0",
     summary: [
-      "Calendar: fixed the holiday colour shown in the app's colour picker (it was showing the family colour, not the holiday colour). Moved the Family calendar colour picker into Admin \u2192 Calendar, and choosing a colour now asks to confirm before saving (Cancel keeps the previous one).",
+      "Calendar: fixed the holiday color shown in the app's color picker (it was showing the family color, not the holiday color). Moved the Family calendar color picker into Admin \u2192 Calendar, and choosing a color now asks to confirm before saving (Cancel keeps the previous one).",
     ],
   },
   {
@@ -324,7 +330,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.246.0",
     summary: [
-      "Event detail no longer shows a colour dot next to attendee names, and multi-person names now left-align to a common start position.",
+      "Event detail no longer shows a color dot next to attendee names, and multi-person names now left-align to a common start position.",
     ],
   },
   {
@@ -414,7 +420,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.221.0",
     summary: [
-      "Fixed calendar events showing a grey broken-image icon (and a washed-out colour) on first load. Event background art now stays hidden until it actually loads, so events without art just show their colour cleanly.",
+      "Fixed calendar events showing a grey broken-image icon (and a washed-out color) on first load. Event background art now stays hidden until it actually loads, so events without art just show their color cleanly.",
     ],
   },
   {
@@ -442,23 +448,23 @@ export const CHANGES: Change[] = [
   {
     version: "0.183.0",
     summary: [
-      "On the personal calendar's week, day, 3-day, and agenda views, tap the month name to drop a small month calendar \\u2014 with a coloured dot on each day that has something on it \\u2014 and jump straight to any date.",
-      "Renamed the colour options for clarity: the on/off is now \\\"Customise\\\", and how others' events look is a simple \\\"Custom\\\" or \\\"System\\\" choice.",
+      "On the personal calendar's week, day, 3-day, and agenda views, tap the month name to drop a small month calendar \\u2014 with a colored dot on each day that has something on it \\u2014 and jump straight to any date.",
+      "Renamed the color options for clarity: the on/off is now \\\"Customise\\\", and how others' events look is a simple \\\"Custom\\\" or \\\"System\\\" choice.",
     ],
   },
   {
     version: "0.182.0",
     summary: [
-      "Personalise colours now covers the rest of your calendar: pick your own colour for each custom event type (like a sports schedule) and for each subscribed calendar.",
-      "As before, each colour has an Auto option to fall back to the shared default.",
+      "Personalise colors now covers the rest of your calendar: pick your own color for each custom event type (like a sports schedule) and for each subscribed calendar.",
+      "As before, each color has an Auto option to fall back to the shared default.",
     ],
   },
   {
     version: "0.181.0",
     summary: [
-      "Your personal calendar can now be recoloured to your taste: turn on Personalise colours in the options panel to set your own colours for appointments, class, work, birthdays, and holidays.",
-      "Choose how other people's events look to you \\u2014 in their own colours, all in one grey, or exactly as the shared wall tablet shows them.",
-      "You can also set your own colour for the current-time line.",
+      "Your personal calendar can now be recolored to your taste: turn on Personalise colors in the options panel to set your own colors for appointments, class, work, birthdays, and holidays.",
+      "Choose how other people's events look to you \\u2014 in their own colors, all in one grey, or exactly as the shared wall tablet shows them.",
+      "You can also set your own color for the current-time line.",
       "Day view is cleaner: it no longer labels the column with your name (you already know it's you), and the top now shows just the month, with the weekday and date on the day itself.",
     ],
   },
@@ -560,7 +566,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.168.0",
     summary: [
-      "New weight calculator on the personal Workouts page. Tap the plates and they load onto a drawn barbell \u2014 bumpers, steel, and fractional plates in their real colours and to scale \u2014 with the total (bar included) shown big underneath. Each tap adds a pair, one per side, and you can pick a 45 or 15 lb bar",
+      "New weight calculator on the personal Workouts page. Tap the plates and they load onto a drawn barbell \u2014 bumpers, steel, and fractional plates in their real colors and to scale \u2014 with the total (bar included) shown big underneath. Each tap adds a pair, one per side, and you can pick a 45 or 15 lb bar",
       "(Saving your bar and plate set in personal settings is the next step \u2014 for now it opens with the full set and a 45 lb bar.)",
     ],
   },
@@ -675,7 +681,7 @@ export const CHANGES: Change[] = [
     version: "0.153.0",
     summary: [
       "Profile photo positioning now lets you move the picture freely and zoom in or out, instead of only nudging it a little \u2014 much better for images (like transparent PNGs) that don\u2019t fill the whole circle. Drag to move, use the slider to zoom, Reset to re-centre",
-      "Uploaded photos now sit on a faint tint of the person\u2019s colour, so a picture with a see-through background still reads as a filled circle",
+      "Uploaded photos now sit on a faint tint of the person\u2019s color, so a picture with a see-through background still reads as a filled circle",
     ],
   },
   {
@@ -712,7 +718,7 @@ export const CHANGES: Change[] = [
     version: "0.148.0",
     summary: [
       "On phones, the sidebar now tucks away into the logo in the corner: tap the logo to roll it out over the page, tap it again to roll it back up \u2014 so a narrow screen isn\u2019t eaten by the menu. Tablet and desktop are unchanged",
-      "School work on the calendar now takes the colour of whoever it belongs to, instead of everything being blue, with the person\u2019s name shown small beside the item",
+      "School work on the calendar now takes the color of whoever it belongs to, instead of everything being blue, with the person\u2019s name shown small beside the item",
       "Made the day/week/month dropdown on the calendar a little smaller",
     ],
   },
@@ -759,7 +765,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.142.0",
     summary: [
-      "You can now create a full class straight from the calendar: pick \u201cClass\u201d when adding an event and the overlay opens the same form as the admin page \u2014 subject from the pool (or add a new one), term, type, colour, who it\u2019s shared with, and the homework prompt \u2014 with the meeting time filled in from the slot you picked",
+      "You can now create a full class straight from the calendar: pick \u201cClass\u201d when adding an event and the overlay opens the same form as the admin page \u2014 subject from the pool (or add a new one), term, type, color, who it\u2019s shared with, and the homework prompt \u2014 with the meeting time filled in from the slot you picked",
       "A new admin setting under School decides who can add classes from the calendar: admin only (the default) or anyone, so older kids can add their own. The setting shows plainly which way it\u2019s set",
       "Fixed a shared class only showing under the owning student: a shared class now appears the same way under every student it\u2019s shared with, not just the owner",
       "Managing subjects, terms, and class types stays admin-only",
@@ -768,7 +774,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.141.0",
     summary: [
-      "Bible reading now has its own icon \u2014 a book with a cross \u2014 so it\u2019s no longer just a colour apart from ordinary reading. It shows in the top navigation, on the admin Bible reading page, and on the Bible reading reward badges in the money area",
+      "Bible reading now has its own icon \u2014 a book with a cross \u2014 so it\u2019s no longer just a color apart from ordinary reading. It shows in the top navigation, on the admin Bible reading page, and on the Bible reading reward badges in the money area",
     ],
   },
   {
@@ -826,7 +832,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.133.0",
     summary: [
-      "Personal Bible reading (part one): when you\u2019re signed in on your own account, the Bible page now shows your own coverage below the family\u2019s \u2014 the same Old/New Testament and by-group percentage bars, in your colour",
+      "Personal Bible reading (part one): when you\u2019re signed in on your own account, the Bible page now shows your own coverage below the family\u2019s \u2014 the same Old/New Testament and by-group percentage bars, in your color",
       "Mark any chapters or whole books you\u2019ve read, in any order \u2014 your own record, kept separate from the family totals",
       "Personal reading nudges your Wisdom level up slightly (a couple of XP per chapter, capped at the whole Bible), with no reward attached",
       "Scheduled personal plans (your own dated reading program) are the next part",
@@ -857,8 +863,8 @@ export const CHANGES: Change[] = [
   {
     version: "0.129.0",
     summary: [
-      "Share an event with more than one person: every event\u2019s add/edit form now has a \u201cShare with\u201d picker at the bottom. Shared events show on each person\u2019s calendar and appear in everyone\u2019s colours \u2014 as split bands (one stripe per person) or a single blended colour",
-      "The blend mixes on the colour wheel, so two colours meet at a vivid hue rather than turning brown",
+      "Share an event with more than one person: every event\u2019s add/edit form now has a \u201cShare with\u201d picker at the bottom. Shared events show on each person\u2019s calendar and appear in everyone\u2019s colors \u2014 as split bands (one stripe per person) or a single blended color",
+      "The blend mixes on the color wheel, so two colors meet at a vivid hue rather than turning brown",
       "Choose bands or blend under Admin \u2192 Calendar (bands by default). Editing an event now also updates who it\u2019s shared with",
     ],
   },
@@ -957,7 +963,7 @@ export const CHANGES: Change[] = [
     version: "0.116.0",
     summary: [
       "Companion variety \u2014 everyone no longer starts with the same creature. There are now three (Sprout Pup, Coincroc, Emberkit), and each person gets a distinct starter. More creatures and the egg-hatching collection are coming next",
-      "New pixel XP bar on the companion: a tight row of little squares showing progress into your level, coloured by what you actually did (chores green, workouts orange, Bible gold, school indigo, life teal) and grouped into bands. It replaces the confusing \u201cevolves in N\u201d line",
+      "New pixel XP bar on the companion: a tight row of little squares showing progress into your level, colored by what you actually did (chores green, workouts orange, Bible gold, school indigo, life teal) and grouped into bands. It replaces the confusing \u201cevolves in N\u201d line",
       "Fixed the class bug where someone could show as \u201cAthlete\u201d with no workouts. A class now needs real activity in that area and a clear gap above the family average; otherwise you\u2019re an All-Rounder (or Newcomer with no activity yet)",
       "Clearer wording: the season strip now reads \u201cSeason tier 3/10\u201d so it\u2019s obviously the tier, not XP",
     ],
@@ -973,7 +979,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.114.0",
     summary: [
-      "Your class and your companion\u2019s colour now come from your \u201csignature\u201d \u2014 what you do *above* the family average in each area \u2014 instead of your raw totals. So work everyone does equally (like the daily Bible reading) no longer makes everyone the same class; it\u2019s the floor everyone stands on",
+      "Your class and your companion\u2019s color now come from your \u201csignature\u201d \u2014 what you do *above* the family average in each area \u2014 instead of your raw totals. So work everyone does equally (like the daily Bible reading) no longer makes everyone the same class; it\u2019s the floor everyone stands on",
       "What sets you apart is rising above the norm: extra workouts, extra or heavier chores, reading past the plan. An area only becomes your focus if you do more of it than the family typically does",
       "Two people who do everything identically are now honestly All-Rounders (not both \u201cSage\u201d), and their different companions are what make them distinct \u2014 which is the point of the collection. Your per-area stat levels still climb from all your work, as before",
     ],
@@ -982,9 +988,9 @@ export const CHANGES: Change[] = [
     version: "0.113.0",
     summary: [
       "Companions (first creature!) \u2014 everyone now has a companion that grows with them. It appears on your own page and on your character card, and evolves through three stages as your character levels up (hatchling \u2192 juvenile \u2192 adult)",
-      "Its card glows with your personal colour \u2014 a smooth blend of where your XP actually goes (chores, strength, wisdom, scholar, life), so no two people\u2019s look quite the same, and it shifts a little as your habits shift",
+      "Its card glows with your personal color \u2014 a smooth blend of where your XP actually goes (chores, strength, wisdom, scholar, life), so no two people\u2019s look quite the same, and it shifts a little as your habits shift",
       "It has a gentle mood: bouncy when you\u2019re on a streak, napping when the streak\u2019s asleep \u2014 it always perks back up, never a punishment",
-      "This is the mechanism built end-to-end against one creature (Coincroc, arcade-pixel era). The roster is a simple list, so more creatures \u2014 and the egg-hatching collection, shinies, and colour-fingerprint keepsakes \u2014 drop in as the art arrives",
+      "This is the mechanism built end-to-end against one creature (Coincroc, arcade-pixel era). The roster is a simple list, so more creatures \u2014 and the egg-hatching collection, shinies, and color-fingerprint keepsakes \u2014 drop in as the art arrives",
     ],
   },
   {
@@ -1109,21 +1115,21 @@ export const CHANGES: Change[] = [
     version: "0.99.2",
     summary: [
       "Background image support for calendar items \u2014 events, birthdays and holidays can show a background image (behind the block on the calendar and as a banner in the detail popup), chosen by kind/holiday with a dark scrim so text stays readable",
-      "It\u2019s wired and ready but ships with no art: drop JPGs into public/event-bg/ (see the README there for the exact filenames) and they appear. Missing images just show the item\u2019s colour, so nothing breaks in the meantime",
+      "It\u2019s wired and ready but ships with no art: drop JPGs into public/event-bg/ (see the README there for the exact filenames) and they appear. Missing images just show the item\u2019s color, so nothing breaks in the meantime",
     ],
   },
   {
     version: "0.99.1",
     summary: [
       "The event detail popup now works in month view too \u2014 click a chip to open it (edit, duplicate, delete, class due-items) instead of jumping to the day",
-      "Holidays are now listed in the order they occur through the year within each category, and the shared holiday colour is editable in Admin \u2192 Calendar \u2192 Holidays",
+      "Holidays are now listed in the order they occur through the year within each category, and the shared holiday color is editable in Admin \u2192 Calendar \u2192 Holidays",
       "Trimmed the suggested extra holidays to Cinco de Mayo, Palm Sunday and Patriot Day",
     ],
   },
   {
     version: "0.99.0",
     summary: [
-      "Built-in US & Texas holidays \u2014 no subscription needed. They\u2019re computed for every year (so they never stop at year\u2019s end) and show as all-day items in a shared colour. Turn exactly the ones you want on or off in Admin \u2192 Calendar \u2192 Holidays, grouped by Federal / Texas / Religious / Observance / Seasonal",
+      "Built-in US & Texas holidays \u2014 no subscription needed. They\u2019re computed for every year (so they never stop at year\u2019s end) and show as all-day items in a shared color. Turn exactly the ones you want on or off in Admin \u2192 Calendar \u2192 Holidays, grouped by Federal / Texas / Religious / Observance / Seasonal",
       "The full list is on by default; a few fitting extras (Cinco de Mayo, Ash Wednesday, Palm Sunday, LBJ Day, Cesar Chavez Day, Patriot Day, Tax Day, Grandparents Day) are available to toggle on",
     ],
   },
@@ -1154,7 +1160,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.95.0",
     summary: [
-      "School work on the calendar: a new \u201cSchool work\u201d filter (in the calendar sidebar) drops every pending assignment, test, homework and project onto the calendar by due date, in one shared colour, so a parent can see at a glance how loaded a day is. It\u2019s off by default, keeping the scheduling grid clean until you want the overload view",
+      "School work on the calendar: a new \u201cSchool work\u201d filter (in the calendar sidebar) drops every pending assignment, test, homework and project onto the calendar by due date, in one shared color, so a parent can see at a glance how loaded a day is. It\u2019s off by default, keeping the scheduling grid clean until you want the overload view",
       "Assignments can now carry an optional due time \u2014 with one, the item sits as a timed block at that time; without one, it\u2019s an all-day chip",
       "Fixed: a student who shares a class (but isn\u2019t its owner) can now file work under it, matching the shared-class picker added in 0.93.0",
     ],
@@ -1169,7 +1175,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.94.0",
     summary: [
-      "Semester rollover: once a term has ended and nothing newer is set up, Admin \u2192 School shows a \u201cstart a new semester\u201d prompt \u2014 name the new term, set its dates (pre-filled to follow the last one), and tick which classes to carry over. Reused classes come back with the same subject, type, colour, students and weekly meeting, re-anchored to the new term",
+      "Semester rollover: once a term has ended and nothing newer is set up, Admin \u2192 School shows a \u201cstart a new semester\u201d prompt \u2014 name the new term, set its dates (pre-filled to follow the last one), and tick which classes to carry over. Reused classes come back with the same subject, type, color, students and weekly meeting, re-anchored to the new term",
       "The reminder can be snoozed with \u201cRemind me later,\u201d and how often it comes back is adjustable (default every 7 days)",
     ],
   },
@@ -1203,7 +1209,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.89.0",
     summary: [
-      "Classes can be edited in place now, instead of delete-and-re-add. Hit Edit on a class to change its name, term, colour, or meeting schedule \u2014 the class\u2019s calendar block is updated, created, or removed to match (e.g. clearing the meeting days turns it into independent work and removes the calendar event)",
+      "Classes can be edited in place now, instead of delete-and-re-add. Hit Edit on a class to change its name, term, color, or meeting schedule \u2014 the class\u2019s calendar block is updated, created, or removed to match (e.g. clearing the meeting days turns it into independent work and removes the calendar event)",
     ],
   },
   {
@@ -1315,7 +1321,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.73.0",
     summary: [
-      "A subscribed calendar can now belong to the whole family instead of one person \u2014 pick \u201cFamily (shared)\u201d when adding a feed, and its events show for everyone in the family colour (good for a town or school-wide calendar). Feeds owned by a person still take that person's colour",
+      "A subscribed calendar can now belong to the whole family instead of one person \u2014 pick \u201cFamily (shared)\u201d when adding a feed, and its events show for everyone in the family color (good for a town or school-wide calendar). Feeds owned by a person still take that person's color",
       "When adding an event, custom types (like a hockey game or a dentist appointment) now sit in the same Type list as the built-in ones instead of under a separate \u201cCustom\u201d heading",
     ],
   },
@@ -1403,14 +1409,14 @@ export const CHANGES: Change[] = [
     version: "0.62.0",
     summary: [
       "Day shading is now decided per event instead of by one global switch: the add-event form has a \u201cShade this day\u201d box for all-day events, and each person\u2019s profile has a \u201cshade this birthday\u201d toggle \u2014 so you can shade immediate family birthdays every year and leave extended family unshaded",
-      "When more than one all-day event on the same day is set to shade, the day splits into side-by-side colour bands \u2014 so two shared birthdays can both show, or you can shade just one, or neither",
+      "When more than one all-day event on the same day is set to shade, the day splits into side-by-side color bands \u2014 so two shared birthdays can both show, or you can shade just one, or neither",
       "The old global all-day shading switch in Admin \u2192 Calendar has been removed in favour of this per-event control",
     ],
   },
   {
     version: "0.61.0",
     summary: [
-      "Birthdays now shade their day too, and there's a new switch in Admin \u2192 Calendar to turn the all-day shading on or off \u2014 when on, any all-day event (a vacation, a birthday, a day off) tints its whole day column in a light wash of its colour",
+      "Birthdays now shade their day too, and there's a new switch in Admin \u2192 Calendar to turn the all-day shading on or off \u2014 when on, any all-day event (a vacation, a birthday, a day off) tints its whole day column in a light wash of its color",
       "Adding an event now has a Duration picker (15 min up to 3 hours, or a custom end time) instead of only an end time",
       "Custom event types can be given a default length in Admin \u2192 Calendar (e.g. hockey practice = 90 min), and picking that type when adding an event fills the duration in automatically",
     ],
@@ -1427,7 +1433,7 @@ export const CHANGES: Change[] = [
     version: "0.59.0",
     summary: [
       "Calendar day/week grid now follows the clock as intended: in the afternoon it opens scrolled to the current time instead of always parking at the morning \u2014 the fix that was silently not firing before",
-      "A shared all-day \"Family\" event (like a vacation) now tints its whole day column with a light wash of the family colour, with the event pill still pinned at the top; birthdays don't trigger the wash",
+      "A shared all-day \"Family\" event (like a vacation) now tints its whole day column with a light wash of the family color, with the event pill still pinned at the top; birthdays don't trigger the wash",
     ],
   },
   {
@@ -1513,7 +1519,7 @@ export const CHANGES: Change[] = [
     version: "0.50.0",
     summary: [
       "Day view is now a time grid like the week, with tap-to-add and the same scrolling",
-      "A now-line tracks the current time on the day and week grids (colour set in Admin \u2192 Calendar)",
+      "A now-line tracks the current time on the day and week grids (color set in Admin \u2192 Calendar)",
       "Grids open on the morning's earliest event and follow the clock into the afternoon so evening events come into view; scroll freely and it eases back after a configurable pause",
     ],
   },
@@ -1522,7 +1528,7 @@ export const CHANGES: Change[] = [
     summary: [
       "Adding a calendar event is now a pop-up over the calendar, opened from a + at the top",
       "Tap a day/time slot in the week grid to start an event there, with the day and time pre-filled (still editable)",
-      "Custom event types can be renamed and recoloured from Admin \u2192 Calendar",
+      "Custom event types can be renamed and recolored from Admin \u2192 Calendar",
     ],
   },
   {
@@ -1566,9 +1572,9 @@ export const CHANGES: Change[] = [
   {
     version: "0.43.0",
     summary: [
-      "Calendar: \"Kind\" is now \"Type\", and parents can add custom event types from Admin \u2192 Calendar (e.g. Hockey game, Medical appointment), each with its own colour",
-      "Events given a custom type show in that type's colour on the calendar",
-      "The Family calendar colour now accepts any custom colour, not just the presets",
+      "Calendar: \"Kind\" is now \"Type\", and parents can add custom event types from Admin \u2192 Calendar (e.g. Hockey game, Medical appointment), each with its own color",
+      "Events given a custom type show in that type's color on the calendar",
+      "The Family calendar color now accepts any custom color, not just the presets",
     ],
   },
   {
@@ -1598,7 +1604,7 @@ export const CHANGES: Change[] = [
       "Weights units are now set per muscle group in the pool (lb or kg each), replacing the single global measurement system",
       "Fixed the one-off \"Log something else\" button staying greyed out — it now works the moment you've picked an exercise and entered a result",
       "Logging a planned lift now labels the field \"today's max\" so it's clear what the number is",
-      "Progress charts: the legend shows just each person's name and colour; hover a point to see the value and date",
+      "Progress charts: the legend shows just each person's name and color; hover a point to see the value and date",
       "Admin: the pool creation form says \"Muscle group\", each group has a lb/kg switch, and opening a person now shows just their logged workouts (with a count on the list) instead of the empty exercise/plan sections",
     ],
   },
@@ -1882,7 +1888,7 @@ export const CHANGES: Change[] = [
       "Workouts reworked into a personal training log",
       "Define your own lifts, schedule them by weekday, pause or end a plan",
       "\"Worked out today?\" is binary on the dashboard; logging completes it",
-      "Weightlifting progress graph — a coloured line per lift you can toggle",
+      "Weightlifting progress graph — a colored line per lift you can toggle",
       "Admin sets the measurement system; per-exercise units override it",
     ],
   },
@@ -1938,7 +1944,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.14.1",
     summary: [
-      "Family reading progress moved to its own page, coloured by genre",
+      "Family reading progress moved to its own page, colored by genre",
       "Editing chapters is now a pop-up you save or cancel — no more auto-save",
       "Books are shaded dark when complete, lighter when part way through",
     ],

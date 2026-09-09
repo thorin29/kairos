@@ -13,7 +13,7 @@
   --color-shade: #dde5ed;
   --color-shade-soft: #e8edf3;
   --color-accent: #0f5c63;
-  /* Text/icon colour that sits on top of the accent (buttons). White in light
+  /* Text/icon color that sits on top of the accent (buttons). White in light
      mode; flipped to a dark tint in dark mode where the accent brightens. */
   --color-on-accent: #ffffff;
 
@@ -153,7 +153,7 @@ button:disabled {
    reads these tokens, so switching here re-skins the whole app.
    ========================================================================== */
 
-/* --- Colour themes: light accent + sidebar --- */
+/* --- Color themes: light accent + sidebar --- */
 html[data-theme="olive"]  { --color-accent: #5a6b2f; --color-sidebar: #9aa37e; }
 html[data-theme="green"]  { --color-accent: #2e7d32; --color-sidebar: #8fb097; }
 html[data-theme="blue"]   { --color-accent: #1e5fa8; --color-sidebar: #8ca0bc; }

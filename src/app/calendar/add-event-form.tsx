@@ -586,8 +586,8 @@ function EventModal({
               </label>
               <p className="mb-2 text-xs text-muted">
                 {isSport
-                  ? "Everyone checked also gets asked if they did it. The event shows in each person\u2019s colour."
-                  : "Add other people so the event shows on their calendar too, in a blend of everyone\u2019s colours. Leave empty for just the person above."}
+                  ? "Everyone checked also gets asked if they did it. The event shows in each person\u2019s color."
+                  : "Add other people so the event shows on their calendar too, in a blend of everyone\u2019s colors. Leave empty for just the person above."}
               </p>
               <div className="flex flex-wrap gap-2">
                 {people.map((p) => (

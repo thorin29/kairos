@@ -30,7 +30,7 @@ export type EventInput = {
   isFamily?: boolean;
   /** Create only: CLASS | WORK | APPOINTMENT | BIRTHDAY | OTHER. */
   kind?: string;
-  /** Create only: a custom EventType id whose colour wins. */
+  /** Create only: a custom EventType id whose color wins. */
   eventTypeId?: string;
   /** People (user ids) to share this event with, besides the owner. */
   participants?: string[];

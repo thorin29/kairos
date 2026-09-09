@@ -11,7 +11,7 @@ export async function saveHolidays(keys: string[]): Promise<void> {
   revalidatePath("/", "layout");
 }
 
-/** Change the shared holiday colour (admin only). */
+/** Change the shared holiday color (admin only). */
 export async function setHolidayColor(color: string): Promise<void> {
   await requireAdmin();
   await setHolidayColorValue(color);

@@ -8,7 +8,7 @@ export const FAMILY_COLOR = "familyColor";
 export const CAL_NOW_COLOR = "calendar.nowColor";
 export const CAL_RESET_SEC = "calendar.scrollResetSec";
 export const CAL_BLOCK_MINUTES = "calendar.blockMinutes";
-// How a shared event (two or more people) shows their colours: "bands" (vertical
+// How a shared event (two or more people) shows their colors: "bands" (vertical
 // stripes, one per person) or "blend" (a single mixed hue that steers clear of
 // brown). Bands by default — crisp and unambiguous.
 export const CAL_SHARED_STYLE = "calendar.sharedStyle";
@@ -55,9 +55,9 @@ export type CalendarPrefs = {
   sharedStyle: SharedStyle;
 };
 
-/** Now-line colour, the inactivity reset for manual scrolling, the default
+/** Now-line color, the inactivity reset for manual scrolling, the default
  *  length of the block a tap/click drops on the grid, and how shared events
- *  combine people's colours. */
+ *  combine people's colors. */
 export async function getCalendarPrefs(): Promise<CalendarPrefs> {
   const [c, r, b, s] = await Promise.all([
     getSetting(CAL_NOW_COLOR),
@@ -127,7 +127,7 @@ export async function getClassFromCalendarMode(): Promise<ClassFromCalendarMode>
   return raw === "anyone" ? "anyone" : "admin";
 }
 
-/** The colour of the shared Family calendar identity (birthdays, etc.). */
+/** The color of the shared Family calendar identity (birthdays, etc.). */
 export async function getFamilyColor(): Promise<string> {
   const row = await prisma.appSetting.findUnique({
     where: { key: FAMILY_COLOR },

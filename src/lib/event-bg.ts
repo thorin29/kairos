@@ -1,7 +1,7 @@
 /**
  * Which background image a calendar item uses. Image files live at
  * `/event-bg/<key>.jpg` — create them in `public/event-bg/` (see the README
- * there). Missing files degrade gracefully: the item just shows its colour, so
+ * there). Missing files degrade gracefully: the item just shows its color, so
  * this is safe to ship before any art exists.
  */
 

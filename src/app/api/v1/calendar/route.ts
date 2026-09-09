@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * The person's own calendar for a view + date (Phase 1: Month, Agenda, Day) —
- * events with colours already resolved from their saved prefs, plus the month
+ * events with colors already resolved from their saved prefs, plus the month
  * grid + dots for the picker. Read-only; mirrors the web personal calendar.
  * `?view=` (month|week|three_day|day|agenda) and `?date=YYYY-MM-DD` are optional;
  * they fall back to the person's saved view and today.

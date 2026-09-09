@@ -19,7 +19,7 @@ export type GridEvent = {
   timeLabel: string;
   allDay: boolean;
   color: string;
-  /** Distinct profile colours of everyone on the event (owner + participants),
+  /** Distinct profile colors of everyone on the event (owner + participants),
    *  for shared events. Zero or one entry means "not shared" — render `color`.
    *  Two or more means paint bands or a blend of these. */
   memberColors: string[];
@@ -60,16 +60,16 @@ export type GridEvent = {
    *  Lets the personal view filter by which subscriptions are shown. */
   externalCalendarId?: string | null;
   /** The custom EventType id when one applies, else null. Lets the personal
-   *  view recolour by event type. */
+   *  view recolor by event type. */
   eventTypeId?: string | null;
   /** Set on synthesized school-work due markers; the work type, for the glyph
-   *  and colour. Null/absent on ordinary events. */
+   *  and color. Null/absent on ordinary events. */
   schoolType?: string | null;
   schoolClassName?: string | null;
   /** On a class meeting block: one entry per student in the class with pending
    *  work due that day, for the little "work is due" badges. Absent otherwise. */
   schoolBadges?: { userId: string; type: string }[];
-  /** Background-image key (see lib/event-bg). Null/absent = colour only. */
+  /** Background-image key (see lib/event-bg). Null/absent = color only. */
   bgKey?: string | null;
 };
 
@@ -105,8 +105,8 @@ export async function loadEventTypes(): Promise<EventTypeRow[]> {
 }
 
 /**
- * Colour follows the spec: everyone on screen means colour by person, so
- * each child's blocks match their profile. Filter to one person and colour
+ * Color follows the spec: everyone on screen means color by person, so
+ * each child's blocks match their profile. Filter to one person and color
  * switches to category, identical for every person, so a filtered week reads
  * as school versus work rather than a wall of one hue.
  */
@@ -208,7 +208,7 @@ async function birthdayEvents(
 }
 
 /** Enabled US/Texas holidays as family-wide all-day items, computed for the
- *  years the range touches. Read-only (no stored row), one shared colour. */
+ *  years the range touches. Read-only (no stored row), one shared color. */
 async function holidayEvents(days: string[]): Promise<GridEvent[]> {
   const entries = await holidayEntries(days);
   if (entries.length === 0) return [];
@@ -422,8 +422,8 @@ export async function loadRange(
     const start = localParts(startsAt);
     const end = localParts(new Date(startsAt.getTime() + durationMs));
 
-    // A custom event type sets its own colour (a "Hockey game" is that colour
-    // for everyone); otherwise it's the owner's colour, or the family colour
+    // A custom event type sets its own color (a "Hockey game" is that color
+    // for everyone); otherwise it's the owner's color, or the family color
     // for shared events.
     const eventType = (e as { eventType?: { id: string; name: string; color: string; sportWorkout?: boolean } | null })
       .eventType;
@@ -445,8 +445,8 @@ export async function loadRange(
       ? []
       : Array.from(new Set([...(e.userId ? [e.userId] : []), ...participantIds]));
 
-    // Distinct profile colours of everyone on a shared event (owner +
-    // participants). Two or more → the block paints their colours; otherwise the
+    // Distinct profile colors of everyone on a shared event (owner +
+    // participants). Two or more → the block paints their colors; otherwise the
     // single `color` above is used.
     const participantColors =
       (e as { participants?: { user?: { color?: string } | null }[] })
@@ -629,7 +629,7 @@ function recurLabelOf(rrule: string | null): string | null {
  * (one icon per student with work due, dropping off as each is completed),
  * rather than stacking separate blocks on the same time. Everything else — no
  * class, or a class that doesn't meet that day — shows as its own marker
- * (timed if it has a due time, else an all-day chip). One shared colour;
+ * (timed if it has a due time, else an all-day chip). One shared color;
  * respects the person filter; behind the calendar's "School work" filter.
  *
  * Mutates `timedEvents` to attach badges to class blocks, and returns the
@@ -839,7 +839,7 @@ export async function loadTasksForDays(
     dayISO: fromDateColumn(t.dueDate),
     status: t.status as string,
     ownerName: t.user.displayName ?? t.user.name,
-    // Always the owner's colour, so you can tell whose event it is even when
+    // Always the owner's color, so you can tell whose event it is even when
     // several people are shown at once.
     color: t.user.color,
   }));

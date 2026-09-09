@@ -51,7 +51,7 @@ export function AppearanceAdmin({
 
       <section>
         <h3 className="mb-3 font-display text-base font-semibold">
-          Colour theme
+          Color theme
         </h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {THEME_NAMES.map((name) => {

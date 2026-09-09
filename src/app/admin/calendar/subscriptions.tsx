@@ -113,8 +113,8 @@ export function Subscriptions({
         <p className="mt-3 text-xs text-muted">
           Siblings can share a feed &mdash; subscribe once for each of them and
           give each subscription its own name. Events take the owner&rsquo;s
-          colour. A feed set to <em>Family (shared)</em> shows for everyone in
-          the family colour.
+          color. A feed set to <em>Family (shared)</em> shows for everyone in
+          the family color.
         </p>
 
         {state.error && (

@@ -23,7 +23,7 @@ import {
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const KINDS = new Set(["APPOINTMENT", "CLASS", "WORK", "BIRTHDAY"]);
-/** A valid hex colour, or null to clear back to the system default. */
+/** A valid hex color, or null to clear back to the system default. */
 function color(v: unknown): string | null | undefined {
   if (v === null) return null;
   if (typeof v === "string" && HEX.test(v)) return v;
@@ -77,7 +77,7 @@ export async function setCalendarSubs(ids: string[]): Promise<void> {
   revalidatePath("/calendar");
 }
 
-// --- Phase B: colours ---
+// --- Phase B: colors ---
 
 export async function setCalendarPersonalize(on: boolean): Promise<void> {
   const id = await me();

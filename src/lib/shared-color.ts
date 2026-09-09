@@ -1,5 +1,5 @@
-// How a shared event (two or more people) paints its colours: either vertical
-// bands, one per person, or a single blended hue. The blend mixes on the colour
+// How a shared event (two or more people) paints its colors: either vertical
+// bands, one per person, or a single blended hue. The blend mixes on the color
 // wheel (circular mean of hue, kept saturated) rather than averaging raw RGB —
 // averaging red and blue in RGB muddies toward grey/brown, whereas the wheel
 // mean lands on a vivid purple. That's the "avoid brown" trick.
@@ -36,8 +36,8 @@ function hslToCss(h: number, s: number, l: number): string {
   )}%)`;
 }
 
-/** A single mixed colour from several, mixed on the hue wheel so complementary
- *  colours meet at a vivid hue instead of muddy brown. */
+/** A single mixed color from several, mixed on the hue wheel so complementary
+ *  colors meet at a vivid hue instead of muddy brown. */
 export function blendColors(colors: string[]): string {
   const hsls = colors
     .map(hexToRgb)
@@ -53,7 +53,7 @@ export function blendColors(colors: string[]): string {
   let sSum = 0;
   let lSum = 0;
   for (const [h, s, l] of hsls) {
-    const w = 0.15 + s; // keep a floor so all colours count a little
+    const w = 0.15 + s; // keep a floor so all colors count a little
     x += Math.cos(h * 2 * Math.PI) * w;
     y += Math.sin(h * 2 * Math.PI) * w;
     sSum += s;
@@ -61,14 +61,14 @@ export function blendColors(colors: string[]): string {
   }
   let h = Math.atan2(y, x) / (2 * Math.PI);
   if (h < 0) h += 1;
-  // Keep it saturated and mid-light so the blend reads as a real colour, never
+  // Keep it saturated and mid-light so the blend reads as a real color, never
   // brown (brown is just dark, desaturated orange).
   const s = Math.min(0.85, Math.max(0.5, sSum / hsls.length));
   const l = Math.min(0.6, Math.max(0.42, lSum / hsls.length));
   return hslToCss(h, s, l);
 }
 
-/** Vertical hard-edged stripes, one per colour. */
+/** Vertical hard-edged stripes, one per color. */
 export function bandsGradient(colors: string[]): string {
   const n = colors.length;
   const stops = colors
@@ -77,7 +77,7 @@ export function bandsGradient(colors: string[]): string {
   return `linear-gradient(90deg, ${stops})`;
 }
 
-/** A style object for a shared block. For a single colour it's a plain fill; for
+/** A style object for a shared block. For a single color it's a plain fill; for
  *  several it's bands or a blend per the household setting. Returns
  *  `backgroundImage` for bands (leaving backgroundColor as a solid fallback) and
  *  `backgroundColor` otherwise. */

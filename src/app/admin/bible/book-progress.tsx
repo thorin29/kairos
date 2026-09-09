@@ -19,7 +19,7 @@ const GROUPS: Group[] = [
   "Revelation",
 ];
 
-// A hue per genre, so the grid reads as its sections at a glance. Full colour
+// A hue per genre, so the grid reads as its sections at a glance. Full color
 // means a book is finished; a light wash of the same hue means part way.
 const GROUP_COLOR: Record<Group, string> = {
   Pentateuch: "#b45309",

@@ -57,7 +57,7 @@ export type PersonProgress = {
   perfectWeeks: number;
   bestWeekPct: number | null;
   masteries: MasteryTitle[];
-  /** The companion display: an incubating egg, or the active creature. Colour
+  /** The companion display: an incubating egg, or the active creature. Color
    *  is the skill-blend fingerprint on the card frame either way. */
   companionColor: string;
   companion: {
@@ -250,7 +250,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     a.statXp.BIBLE += xp;
   }
 
-  // The family baseline per stat, so class and colour reflect what each person
+  // The family baseline per stat, so class and color reflect what each person
   // does *above* the shared norm — universal work cancels out.
   const baseline = computeBaseline(people.map((p) => acc.get(p.id)!.statXp));
 

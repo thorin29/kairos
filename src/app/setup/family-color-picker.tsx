@@ -5,8 +5,8 @@ import { setFamilyColor } from "@/lib/actions/people";
 import { FAMILY_PALETTE } from "@/lib/palette";
 
 /**
- * Picks the shared family calendar colour. Choosing a swatch stages it and asks
- * for confirmation before saving — Cancel reverts to the last saved colour, so a
+ * Picks the shared family calendar color. Choosing a swatch stages it and asks
+ * for confirmation before saving — Cancel reverts to the last saved color, so a
  * mis-tap never changes what the whole household sees.
  */
 export function FamilyColorPicker({ current }: { current: string }) {
@@ -65,9 +65,9 @@ export function FamilyColorPicker({ current }: { current: string }) {
       {pending && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
           <div className="w-full max-w-sm rounded-2xl border border-hairline bg-surface p-6 shadow-xl">
-            <h3 className="text-lg font-semibold">Change the family colour?</h3>
+            <h3 className="text-lg font-semibold">Change the family color?</h3>
             <p className="mt-1 text-sm text-muted">
-              This is the shared colour for family events, birthdays, and
+              This is the shared color for family events, birthdays, and
               holidays across everyone&rsquo;s calendar.
             </p>
             <div className="mt-4 flex items-center gap-3">
@@ -90,7 +90,7 @@ export function FamilyColorPicker({ current }: { current: string }) {
                 type="button"
                 onClick={confirm}
                 disabled={busy}
-                className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm hover:shadow-md disabled:opacity-60"
+                className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-on-accent shadow-sm hover:shadow-md disabled:opacity-60"
               >
                 Save
               </button>

@@ -12,7 +12,7 @@ export const HOLIDAY_SETTING = "holidays.enabled";
 export const HOLIDAY_COLOR_SETTING = "holidays.color";
 export const HOLIDAY_COLOR_DEFAULT = "#b45309";
 
-/** The shared colour for all holiday items, admin-editable. */
+/** The shared color for all holiday items, admin-editable. */
 export async function getHolidayColor(): Promise<string> {
   const raw = await getSetting(HOLIDAY_COLOR_SETTING);
   return raw && /^#[0-9a-fA-F]{6}$/.test(raw) ? raw : HOLIDAY_COLOR_DEFAULT;

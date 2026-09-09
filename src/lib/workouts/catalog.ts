@@ -73,7 +73,7 @@ export function defaultWeightUnit(
   return system === "metric" ? "kg" : "lb";
 }
 
-// A stable, distinct colour per graphed lift. Falls back through the palette
+// A stable, distinct color per graphed lift. Falls back through the palette
 // for custom exercises beyond the basics.
 export const LINE_COLORS = [
   "#0f5c63", // bench — teal (the app accent)

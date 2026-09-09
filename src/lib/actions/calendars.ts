@@ -11,7 +11,7 @@ export type CalendarState = { error: string | null; saved: boolean };
 /**
  * Two children can subscribe to the same feed — the same hockey schedule
  * often covers siblings. Each subscription is its own row with its own
- * display name, so they can be told apart and coloured by owner.
+ * display name, so they can be told apart and colored by owner.
  */
 export async function addCalendar(
   _prev: CalendarState,

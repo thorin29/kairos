@@ -5,7 +5,7 @@ import qrcode from "qrcode-generator";
  * qrcode-generator module matrix — dependency-free, no canvas, no raster — as a
  * single path of unit squares with the standard 4-module quiet zone, sized by
  * its container through the viewBox. `currentColor` lets it inherit the text
- * colour of wherever it's dropped. Error-correction level M. The input here is
+ * color of wherever it's dropped. Error-correction level M. The input here is
  * always our own [A-Z2-9] code, so inlining the markup carries no injection
  * surface.
  */

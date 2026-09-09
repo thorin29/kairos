@@ -56,13 +56,13 @@ export function EventTypes({ types }: { types: EventTypeRow[] }) {
 
           <label className="flex flex-col gap-1">
             <span className="text-xs font-semibold uppercase tracking-widest text-muted">
-              Colour
+              Color
             </span>
             <input
               type="color"
               value={color}
               onChange={(e) => setColor(e.target.value)}
-              aria-label="Type colour"
+              aria-label="Type color"
               className="h-10 w-14 cursor-pointer rounded-lg border border-hairline bg-surface p-1"
             />
           </label>
@@ -158,7 +158,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
           type="color"
           value={color}
           onChange={(e) => setColor(e.target.value)}
-          aria-label="Type colour"
+          aria-label="Type color"
           className="h-9 w-11 shrink-0 cursor-pointer rounded-lg border border-hairline bg-surface p-1"
         />
         <input
@@ -251,7 +251,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
         aria-label={`Delete ${type.name}`}
         disabled={pending}
         onClick={() => {
-          if (confirm(`Delete "${type.name}"? Its events keep their colour.`)) {
+          if (confirm(`Delete "${type.name}"? Its events keep their color.`)) {
             start(() => void deleteEventType(type.id));
           }
         }}

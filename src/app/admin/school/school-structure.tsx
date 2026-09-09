@@ -529,7 +529,7 @@ function Classes({
             {days.length > 0 && <InlineTermAdd hasTerms={terms.length > 0} />}
           </div>
           <div>
-            <label className="block text-sm font-medium">Colour</label>
+            <label className="block text-sm font-medium">Color</label>
             <select
               name="color"
               defaultValue={editing?.color ?? ""}

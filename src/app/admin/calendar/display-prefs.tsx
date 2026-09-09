@@ -66,7 +66,7 @@ export function DisplayPrefs({
     <Card className="p-5">
       <div className="mb-4">
         <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
-          Now-line colour
+          Now-line color
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {NOW_COLORS.map((c) => (
@@ -147,7 +147,7 @@ export function DisplayPrefs({
           {(
             [
               { value: "bands", label: "Split bands" },
-              { value: "blend", label: "Blended colour" },
+              { value: "blend", label: "Blended color" },
             ] as const
           ).map((o) => (
             <button
@@ -166,7 +166,7 @@ export function DisplayPrefs({
         </div>
         <p className="mt-2 text-xs text-muted">
           When an event is shared with more than one person, show it as vertical
-          stripes of each person&rsquo;s colour, or as a single blended colour.
+          stripes of each person&rsquo;s color, or as a single blended color.
         </p>
       </div>
 

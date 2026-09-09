@@ -25,9 +25,9 @@ import { householdTz } from "@/lib/dates";
  * The read-only "my calendar" the app's Calendar screen paints (Phase 1: Month,
  * Agenda, Day). Mirrors src/app/calendar/personal-calendar.tsx exactly — same
  * saved prefs (view, which people/subscriptions/family/school-work are shown),
- * same filtering, and the same server-side recolour from the person's saved
- * colour choices — but returns JSON instead of rendering. Editing, the options
- * drawer, the time-grid views, and colour controls are later phases.
+ * same filtering, and the same server-side recolor from the person's saved
+ * color choices — but returns JSON instead of rendering. Editing, the options
+ * drawer, the time-grid views, and color controls are later phases.
  */
 
 export type CalEvent = {
@@ -76,7 +76,7 @@ export type CalendarOptions = {
   canManageFamily: boolean;
   /** Custom event types, for the type picker. */
   eventTypes: { id: string; name: string; color: string; defaultMinutes: number | null; defaultReminder: number | null }[];
-  /** Phase 5 colour personalisation: current prefs + the fallback colours the
+  /** Phase 5 color personalisation: current prefs + the fallback colors the
    *  picker shows for unset slots. */
   colorPrefs: {
     personalizeColors: boolean;
@@ -109,13 +109,13 @@ export type CalendarPagePayload = {
   prevDate: string;
   nextDate: string;
   events: CalEvent[];
-  /** The now-line colour, resolved from the person's saved prefs (for the
+  /** The now-line color, resolved from the person's saved prefs (for the
    *  time-grid views). */
   nowColor: string;
   /** The 42-day month grid containing `date`, for the Month view and the
    *  date-picker on the other views. */
   monthDays: string[];
-  /** Up to three distinct colours per day in that month, for dots. */
+  /** Up to three distinct colors per day in that month, for dots. */
   monthDots: Record<string, string[]>;
   /** Filter options + current selections, for the options drawer. */
   options: CalendarOptions;
@@ -295,7 +295,7 @@ export async function loadCalendarPagePayload(
           ? spanHeading(days[0], days[2])
           : formatMonth(date);
 
-  // Now-line colour follows the admin default unless the person overrode it
+  // Now-line color follows the admin default unless the person overrode it
   // (and only while personalisation is on) — same rule as the web.
   const nowColor =
     prefs.personalizeColors && prefs.nowColor ? prefs.nowColor : calPrefs.nowColor;
@@ -342,7 +342,7 @@ export async function loadCalendarPagePayload(
         eventTypeColors: prefs.eventTypeColors,
         subColors: prefs.subColors,
       },
-      // Fallbacks the colour picker shows when a slot is unset.
+      // Fallbacks the color picker shows when a slot is unset.
       meColor: people.find((p) => p.id === userId)?.color ?? "#2563eb",
       holidaySystemColor,
       familySystemColor: familyColor,

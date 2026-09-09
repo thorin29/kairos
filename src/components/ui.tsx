@@ -3,13 +3,13 @@ import type { ReactNode } from "react";
 
 /**
  * Material-style buttons: pill shape, a state layer on hover rather than a
- * colour swap, and generous hit areas for tablet use. Three emphasis levels
+ * color swap, and generous hit areas for tablet use. Three emphasis levels
  * — filled for the primary action, tonal for secondary, text for tertiary.
  */
 
 const shapes = {
   filled:
-    "bg-accent text-white shadow-sm hover:shadow-md hover:brightness-110 active:brightness-95",
+    "bg-accent text-on-accent shadow-sm hover:shadow-md hover:brightness-110 active:brightness-95",
   tonal:
     "bg-accent/10 text-accent hover:bg-accent/20 active:bg-accent/25",
   outlined:

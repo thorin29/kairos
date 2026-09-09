@@ -20,7 +20,7 @@ const sizes = {
  *
  * The outer circle is ALWAYS the same element and size; only its contents
  * change. That way adding or removing a photo never shifts the box or anything
- * positioned against it (e.g. the calendar name tags). The person's colour is
+ * positioned against it (e.g. the calendar name tags). The person's color is
  * the ring, so a photo stays legible while still being identifiable.
  */
 export function Avatar({

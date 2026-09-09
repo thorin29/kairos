@@ -193,7 +193,7 @@ export function computeBaseline(
  * This is what actually differentiates people who are assigned similar work —
  * doing the daily minimum everyone does contributes nothing; rising above the
  * norm (extra workouts, extra chores, reading past the plan) is what defines
- * your class and your companion's colour.
+ * your class and your companion's color.
  */
 export function signatureOf(
   statXp: Record<StatKey, number>,

@@ -5,7 +5,7 @@
  *
  * For now everyone has the same starter companion (Coincroc), derived entirely
  * from progression — its stage grows with your level, its card glows with your
- * skill-blend colour, its mood follows your streak. When the collection lands
+ * skill-blend color, its mood follows your streak. When the collection lands
  * (random eggs, shinies, essence), the *species* becomes per-user and stored;
  * everything here stays the same.
  */
@@ -168,7 +168,7 @@ export function moodForStreak(currentStreak: number): CompanionMood {
   return "content";
 }
 
-// ---- Colour fingerprint: a blend of where your XP goes -------------------
+// ---- Color fingerprint: a blend of where your XP goes -------------------
 // Each domain has a hue; the card glow is a weighted blend, so it's a smooth
 // palette (never binary) that shifts a little as habits shift.
 const STAT_HUES: Record<string, [number, number, number]> = {

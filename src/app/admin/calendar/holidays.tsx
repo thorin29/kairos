@@ -59,11 +59,11 @@ export function Holidays({
       <p className="text-sm text-muted">
         Holidays are computed for every year, so they never stop at year&rsquo;s
         end. Turn on exactly the ones you want; they show as all-day items in a
-        shared colour.
+        shared color.
       </p>
 
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium">Holiday colour</span>
+        <span className="text-sm font-medium">Holiday color</span>
         <input
           type="color"
           value={swatch}
@@ -72,7 +72,7 @@ export function Holidays({
             setSwatch(c);
             start(() => void setHolidayColor(c));
           }}
-          aria-label="Holiday colour"
+          aria-label="Holiday color"
           className="h-8 w-12 cursor-pointer rounded border border-hairline bg-surface p-0.5"
         />
         <span className="tabular text-xs text-muted">{swatch}</span>

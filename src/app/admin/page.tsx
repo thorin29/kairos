@@ -106,7 +106,7 @@ const TILES: Tile[] = [
   {
     href: "/admin/appearance",
     label: "Appearance",
-    blurb: "Colour theme and dark mode for the household's web view",
+    blurb: "Color theme and dark mode for the household's web view",
     icon: <PaletteIcon className="h-7 w-7" />,
     ready: true,
   },

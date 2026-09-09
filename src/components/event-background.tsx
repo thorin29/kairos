@@ -9,8 +9,8 @@ import { bgUrl } from "@/lib/event-bg";
  * layered above (z-index).
  *
  * The image (and its darkening scrim) stay hidden until the file actually loads,
- * so a missing image shows nothing but the block's colour — no broken-image icon
- * and no scrim muddying the colour on first paint. (The old approach started
+ * so a missing image shows nothing but the block's color — no broken-image icon
+ * and no scrim muddying the color on first paint. (The old approach started
  * visible and hid on error, which flashed the browser's grey broken-image icon
  * every first load, since the art files may not exist yet.)
  */
