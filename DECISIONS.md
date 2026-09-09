@@ -628,3 +628,17 @@ Not changed: the in-memory limiter stays process-local (single container, fine
 behind Cloudflare/Traefik) — bounded now, but not moved to a shared store. The
 Nodemailer bump and the false-positive enrollment-code "modulo bias" were left out
 deliberately (see the review notes).
+
+## 2026-09 — Nodemailer 7 → 9.1.1 (v0.280.1)
+The source review flagged Nodemailer 7.x as carrying advisories; verified against current
+sources: 7.x is affected by several (raw-option File Read/SSRF fixed 9.0.1; the *critical*
+envelope.size SMTP CRLF injection fixed 8.0.4; jsonTransport/`list` issues fixed 8.0.9).
+**Kairos was not exploitable through any of them** — `lib/mail/send.ts` passes only
+host/port/auth/tls to `createTransport` and from/to/subject/text/html to `sendMail`: no
+custom `envelope`, `raw`, `list`, `jsonTransport`, attachments, or attacker-controlled
+addresses, and the only interpolated values (name/link/deviceName) are HTML-escaped.
+Bumped to **^9.1.1** (top of the 9.x line — fixes all of the above) rather than 10.x, whose
+only breaking change is a Node-20 floor (we run Node 22) with no functional gain and a
+TypeScript-migration that could disturb the `@types/nodemailer` setup. 9.1.1 is a plain
+drop-in: no code change, `@types/nodemailer ^8.0.1` kept, and nodemailer has zero runtime
+deps so the lockfile delta is a single entry. `npm ci` stays valid.
