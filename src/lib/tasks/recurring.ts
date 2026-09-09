@@ -203,3 +203,67 @@ export async function generateRecurringTasks(
 
   return { created, removed: removed + pruned };
 }
+
+const FREQS = ["DAILY", "WEEKLY", "MONTHLY"];
+const ENDS = ["NEVER", "COUNT", "UNTIL"];
+
+export type RecurringInput = {
+  userId: string;
+  title: string;
+  freq: string;
+  interval: number;
+  byday: string[];
+  startDate: string;
+  endMode: string;
+  maxCount: number | null;
+  until: string;
+  createdById?: string | null;
+};
+
+/**
+ * Validate and create one recurring-task template, then materialize its
+ * near-term occurrences. Shared by the admin form and the device task-add
+ * endpoint so both enforce the same rules.
+ */
+export async function createRecurringTask(
+  input: RecurringInput,
+): Promise<{ error: string | null }> {
+  const title = input.title.trim().slice(0, 120);
+  const interval = Math.max(1, Math.min(52, Math.round(input.interval) || 1));
+  const byday = input.byday.map((d) => d.trim().toUpperCase()).filter(Boolean);
+  const freq = FREQS.includes(input.freq) ? input.freq : "WEEKLY";
+  const endMode = ENDS.includes(input.endMode) ? input.endMode : "NEVER";
+  const maxCount = Math.round(Number(input.maxCount ?? 0)) || null;
+
+  if (!input.userId) return { error: "Pick who it's for." };
+  if (title.length < 2) return { error: "Give the task a name." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate)) {
+    return { error: "Pick a start date." };
+  }
+  if (freq === "WEEKLY" && byday.length === 0) {
+    return { error: "Pick at least one weekday." };
+  }
+  if (endMode === "COUNT" && (!maxCount || maxCount < 1)) {
+    return { error: "Say how many times." };
+  }
+  if (endMode === "UNTIL" && !/^\d{4}-\d{2}-\d{2}$/.test(input.until)) {
+    return { error: "Pick an end date." };
+  }
+
+  await prisma.recurringTask.create({
+    data: {
+      userId: input.userId,
+      title,
+      freq,
+      interval,
+      byday: freq === "WEEKLY" ? byday.join(",") : null,
+      startDate: toDateColumn(input.startDate),
+      endMode,
+      maxCount: endMode === "COUNT" ? maxCount : null,
+      untilDate: endMode === "UNTIL" ? toDateColumn(input.until) : null,
+      createdById: input.createdById ?? null,
+    },
+  });
+  await generateRecurringTasks();
+  return { error: null };
+}
