@@ -508,3 +508,13 @@ actions/settings.ts: setAppearanceTheme/setAppearanceDark (requireAdmin, revalid
 New /admin/appearance page + tile (PaletteIcon). No migration (appSetting rows). Theme is
 household-wide per Marco; app theme stays per-device. Next epic items: profile (device
 endpoints) + notifications.
+
+## Web 0.276.1: server-only fix for the appearance client
+0.276.0 failed the Docker build: appearance-admin.tsx (a "use client" component)
+imported THEME_NAMES/THEME_LABEL as VALUES from settings.ts, which starts with
+`import "server-only"` -> webpack error. (Pre-existing client imports of settings.ts
+are `import type` only, which are erased, so they were fine.) Fix: moved the client-safe
+constants to a new src/lib/themes.ts (THEME_NAMES, ThemeName, THEME_LABEL, THEME_SWATCH);
+settings.ts + actions/settings.ts + appearance-admin.tsx import from there. Reconfirms the
+standing rule: never import a server-only module's VALUES into a client component. This is
+the class of bug only the Docker build catches.

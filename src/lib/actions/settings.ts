@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { SCORING_START, SEASON_MODE, SEASON_WEEKS, SEASON_ANCHOR, SEASON_WEEKS_MAX, setSetting } from "@/lib/settings";
+import { SCORING_START, SEASON_MODE, SEASON_WEEKS, SEASON_ANCHOR, SEASON_WEEKS_MAX, setSetting, APPEARANCE_THEME, APPEARANCE_DARK } from "@/lib/settings";
+import { THEME_NAMES, type ThemeName } from "@/lib/themes";
 import { toDateColumn, todayISO } from "@/lib/dates";
-import { isAdmin } from "@/lib/session";
+import { isAdmin, requireAdmin } from "@/lib/session";
 
 /**
  * A family reset: start scoring fresh from today and clear the overdue-chore
@@ -95,4 +96,23 @@ export async function setSeasonLength(
   revalidatePath("/summary");
   revalidatePath("/admin/season");
   return { error: null };
+}
+
+// --- Appearance (household theme) -----------------------------------------
+
+/** Set the household colour theme (admin only). Applies to every screen. */
+export async function setAppearanceTheme(theme: string): Promise<void> {
+  await requireAdmin();
+  const name: ThemeName = (THEME_NAMES as readonly string[]).includes(theme)
+    ? (theme as ThemeName)
+    : "teal";
+  await setSetting(APPEARANCE_THEME, name);
+  revalidatePath("/", "layout");
+}
+
+/** Turn dark mode on or off for the household (admin only). */
+export async function setAppearanceDark(on: boolean): Promise<void> {
+  await requireAdmin();
+  await setSetting(APPEARANCE_DARK, on ? "1" : "0");
+  revalidatePath("/", "layout");
 }
