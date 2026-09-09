@@ -52,6 +52,7 @@ export type CalEvent = {
   attendees: { name: string; state: string }[];
   ownerId: string | null;
   eventTypeId: string | null;
+  reminders: number[];
   /** Everyone this event belongs to (owner + participants); minus owner = the
    *  shared-with people, for edit prefill. */
   memberIds: string[];
@@ -74,7 +75,7 @@ export type CalendarOptions = {
    *  repeats (parent or admin). */
   canManageFamily: boolean;
   /** Custom event types, for the type picker. */
-  eventTypes: { id: string; name: string; color: string; defaultMinutes: number | null }[];
+  eventTypes: { id: string; name: string; color: string; defaultMinutes: number | null; defaultReminder: number | null }[];
   /** Phase 5 colour personalisation: current prefs + the fallback colours the
    *  picker shows for unset slots. */
   colorPrefs: {
@@ -165,6 +166,7 @@ function toWire(e: GridEvent): CalEvent {
     attendees: e.attendees,
     ownerId: e.ownerId,
     eventTypeId: e.eventTypeId ?? null,
+    reminders: e.reminders ?? [],
     memberIds: e.memberIds,
     calendarName: e.calendarName,
     recurring: e.recurring,
@@ -328,7 +330,7 @@ export async function loadCalendarPagePayload(
       showFamily: prefs.showFamily,
       showSchoolWork: prefs.showSchoolWork,
       canManageFamily,
-      eventTypes: eventTypes.map((t) => ({ id: t.id, name: t.name, color: t.color, defaultMinutes: t.defaultMinutes })),
+      eventTypes: eventTypes.map((t) => ({ id: t.id, name: t.name, color: t.color, defaultMinutes: t.defaultMinutes, defaultReminder: t.defaultReminder })),
       colorPrefs: {
         personalizeColors: prefs.personalizeColors,
         othersMode: prefs.othersMode,

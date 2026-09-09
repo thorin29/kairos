@@ -39,6 +39,9 @@ export async function POST(req: NextRequest) {
       participants: Array.isArray(raw.participants)
         ? raw.participants.filter((x): x is string => typeof x === "string")
         : undefined,
+      reminders: Array.isArray(raw.reminders)
+        ? raw.reminders.filter((x): x is number => typeof x === "number")
+        : undefined,
     },
     p.role === "ADMIN" || p.kind === "PARENT",
   );

@@ -354,6 +354,8 @@ model EventType {
   color     String
   sportWorkout Boolean @default(false)
   defaultMinutes Int?
+  // Default reminder (minutes before) pre-filled on new events of this type.
+  defaultReminder Int?
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 
@@ -374,6 +376,9 @@ model Event {
   title    String
   location String?
   notes    String?
+  // Minutes-before reminders for this event (e.g. [15, 60] = 15 min and 1 hr
+  // before). Empty means no reminder. Fired per-device by the app.
+  reminders Int[] @default([])
 
   // Timestamptz — a 4pm shift is a real instant, unlike a task's due date.
   startsAt DateTime

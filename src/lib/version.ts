@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.276.4";
+export const APP_VERSION = "0.277.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -85,11 +85,18 @@ export const MIGRATIONS = [
   "74_personal_workouts",
   "75_reading_books",
   "76_reading_position",
+  "77_event_reminders",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.277.0",
+    summary: [
+      "Groundwork for per-event reminders: events can now carry their own reminder times, and each event type can set a default reminder (the editors to set them come next).",
+    ],
+  },
   {
     version: "0.276.4",
     summary: [
