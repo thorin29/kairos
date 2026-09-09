@@ -61,7 +61,8 @@ export async function sendTestEmail(to: string): Promise<SendResult> {
 export async function sendInviteEmail(
   to: string,
   name: string,
-  link: string,
+  appLink: string,
+  webLink: string,
 ): Promise<{ sent: boolean; error?: string }> {
   const cfg = await resolveSmtp();
   if (!cfg.configured) return { sent: false };
@@ -69,9 +70,12 @@ export async function sendInviteEmail(
   const text = [
     `Hi ${name},`,
     "",
-    "You've been invited to set up a personal Kairos account.",
-    "Open this link to choose a password and sign in:",
-    link,
+    "You've been invited to set up your Kairos account.",
+    "On your phone with the Kairos app installed, open this link (or paste it",
+    "into the app's Join screen):",
+    appLink,
+    "",
+    `On a computer instead, use: ${webLink}`,
     "",
     "The link is single-use and expires. If it has, ask for a new one.",
   ].join("\n");
@@ -79,12 +83,14 @@ export async function sendInviteEmail(
   const html = `
     <div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:#111">
       <p>Hi ${escapeHtml(name)},</p>
-      <p>You've been invited to set up a personal Kairos account. Choose a
-         password and sign in:</p>
-      <p><a href="${escapeAttr(link)}"
+      <p>You've been invited to set up your Kairos account. On your phone (with
+         the Kairos app installed), tap to open it in the app:</p>
+      <p><a href="${escapeAttr(appLink)}"
             style="display:inline-block;padding:10px 18px;border-radius:9999px;background:#0f5c63;color:#fff;text-decoration:none">
-         Set up your account</a></p>
-      <p style="font-size:13px;color:#666">Or paste this link:<br>${escapeHtml(link)}</p>
+         Open in the Kairos app</a></p>
+      <p style="font-size:13px;color:#666">Or paste this into the app's Join screen:<br>${escapeHtml(appLink)}</p>
+      <p style="font-size:13px;color:#666">On a computer instead, use
+         <a href="${escapeAttr(webLink)}">${escapeHtml(webLink)}</a>.</p>
       <p style="font-size:13px;color:#666">The link is single-use and expires.
          If it has, ask for a new one.</p>
     </div>`;
