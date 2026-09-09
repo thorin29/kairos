@@ -570,3 +570,21 @@ CalEventTypeDto.defaultReminder, Create/UpdateEventRequest.reminders (Delete doe
 NEXT (sub-phase 2): app CalendarAddEvent reminder section (Proton-style: Add notification ->
 picker, bell+label+X, multiple; new events pre-fill eventType.defaultReminder). Then web
 event form + the firing engine.
+
+## Web 0.278.0 + app 0.123.0: notification firing engine
+Web: GET /api/v1/notifications/upcoming - events in the next 30 days with non-empty
+reminders, scoped to the person (owned/family/participant, non-external, non-cancelled).
+Non-recurring included directly; recurring expanded via occurrencesIn() (household tz),
+skipping dates a cancelled single-occurrence override removes. Returns {id,title,startMs
+(epoch),reminders}; recurring occurrence ids are "parentId:ms".
+App engine: NotificationScheduler.refresh() fetches upcoming, computes each reminder's
+fire time (startMs - min), schedules exact alarms (AlarmManager.setExactAndAllowWhileIdle,
+RTC_WAKEUP; canScheduleExactAlarms guard on 31+, falls back to inexact) via a PendingIntent
+to AlarmReceiver (carries title + notifId=code, code = hash("eventId|min")); cancels codes
+no longer desired; tracks codes in SettingsStore. Gated by master toggle + POST_NOTIFICATIONS
+(clears all if off). AlarmReceiver posts the event name. BootReceiver re-schedules on boot/
+package-replace. NotificationWorker (WorkManager, work-runtime-ktx 2.9.1): periodic 2h KEEP
+safety net + enqueueOnce. Triggers: MainActivity enqueues periodic+once; AppRoot enqueues
+once on every dataRevision (so a calendar edit reschedules). Manifest: USE_EXACT_ALARM (33+)
++ SCHEDULE_EXACT_ALARM (<=32) + RECEIVE_BOOT_COMPLETED + the two receivers. NOTE: offline-
+created reminders schedule only after sync (endpoint is server-side). NOTIFICATIONS COMPLETE.
