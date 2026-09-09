@@ -10,6 +10,17 @@ import "server-only";
 type Bucket = { count: number; resetAt: number };
 const buckets = new Map<string, Bucket>();
 
+/** Cap on distinct live keys, so attacker-varied keys (spoofed IPs, random
+ *  codes) can't grow the map without bound. Expired entries are swept first;
+ *  the ceiling is generous relative to a household's real key count. */
+const MAX_BUCKETS = 10_000;
+
+function pruneExpired(now: number): void {
+  for (const [k, b] of buckets) {
+    if (b.resetAt <= now) buckets.delete(k);
+  }
+}
+
 export type RateResult = { ok: boolean; retryAfterSec: number };
 
 export function rateLimit(
@@ -21,6 +32,7 @@ export function rateLimit(
   const b = buckets.get(key);
 
   if (!b || b.resetAt <= now) {
+    if (buckets.size >= MAX_BUCKETS) pruneExpired(now);
     buckets.set(key, { count: 1, resetAt: now + windowMs });
     return { ok: true, retryAfterSec: 0 };
   }

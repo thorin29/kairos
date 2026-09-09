@@ -42,6 +42,19 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Secondary limit keyed by the account itself, so rotating source IPs can't
+  // brute-force one identifier past the per-IP ceiling above.
+  const rlId = rateLimit(
+    `login-id:${identifier.trim().toLowerCase()}`,
+    10,
+    60_000,
+  );
+  if (!rlId.ok) {
+    return apiError("rate_limited", "Too many attempts. Try again shortly.", {
+      retryAfterSec: rlId.retryAfterSec,
+    });
+  }
+
   const auth = await authenticate(identifier, password);
   if (!auth) {
     return apiError("unauthenticated", "Wrong username or password.");

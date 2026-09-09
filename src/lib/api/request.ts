@@ -14,12 +14,28 @@ export function bearerToken(req: NextRequest): string | null {
 }
 
 /**
- * A best-effort client address for rate-limiting. Behind Traefik/Cloudflared
- * the real address is in `x-forwarded-for` (first hop). Falls back to
- * `x-real-ip`, then a constant so a missing header buckets together rather than
- * bypassing the limiter.
+ * A best-effort client address for rate-limiting.
+ *
+ * `x-forwarded-for` is client-supplied and therefore spoofable, so it is only
+ * safe if the proxy in front of Kairos *overwrites* it (Traefik/Cloudflare do).
+ * We prefer Cloudflare's `cf-connecting-ip`, which Cloudflare sets to the true
+ * client IP and strips from client requests. `REAL_IP_HEADER` overrides the
+ * header name for other proxy setups. As a last resort we fall back to the
+ * first `x-forwarded-for` hop, then a constant so a missing header buckets
+ * together rather than bypassing the limiter.
+ *
+ * IP is never the sole limit on the auth endpoints — they also limit per
+ * account / per code — so a spoofed header can't by itself defeat throttling.
  */
 export function clientIp(req: NextRequest): string {
+  const configured = process.env.REAL_IP_HEADER?.toLowerCase().trim();
+  if (configured) {
+    const v = req.headers.get(configured);
+    const first = v?.split(",")[0].trim();
+    if (first) return first;
+  }
+  const cf = req.headers.get("cf-connecting-ip")?.trim();
+  if (cf) return cf;
   const xff = req.headers.get("x-forwarded-for");
   if (xff) {
     const first = xff.split(",")[0].trim();

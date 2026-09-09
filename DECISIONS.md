@@ -597,3 +597,34 @@ HH; (3) CalendarViewModel.setTab resets date to today + clearPageCaches + navNon
 switching views always returns to the current day; (4) event editor "Share with" excludes the
 owner (editEvent.ownerId, else the current person from session state) and uses KairosIcons.Share
 (the workout-share icon) instead of the checklist icon.
+
+## 2026-09 — Security hardening batch (v0.280.0)
+From a source review (ChatGPT), verified against the tree before applying:
+- **Calendar SSRF.** `syncCalendar` fetched an attacker-influenced subscription
+  URL with no address checks and read the whole body unbounded. Fetching now goes
+  through `lib/calendar/safe-fetch.ts`: scheme restricted to http(s), the host
+  resolved and rejected if any address is loopback/private/link-local/CGNAT/
+  reserved, redirects followed manually with each hop re-validated (max 5), and
+  the body capped at 5 MB. Residual DNS-rebinding risk is documented in that file
+  (only enrolled members can add feeds, so it's a proportionate defence).
+- **Auth throttling no longer trusts a spoofable IP alone.** `clientIp` now prefers
+  Cloudflare's `cf-connecting-ip` (overwritten by CF, not client-settable), with a
+  `REAL_IP_HEADER` override, then XFF as a last resort — and, more importantly,
+  every auth endpoint has a *secondary* limit that doesn't depend on IP: login per
+  identifier, enroll per code, reauth per device. So rotating source IPs can't
+  brute-force one account/code/device past the ceiling.
+- **Rate-limit map is bounded** (`MAX_BUCKETS`, expired entries pruned) so varied
+  keys can't grow it without bound.
+- **API auth is structurally enforced.** `withDeviceAuth(handler)` is the sanctioned
+  wrapper for new routes, and `scripts/check-api-auth.mjs` runs in `npm run build`
+  (the Docker gate): it fails the build if any `/api/v1` route neither references a
+  device guard nor is in the tiny public allowlist (meta, auth/login, auth/enroll).
+  Existing routes were left as-is (all already guard); the check prevents a future
+  route shipping open.
+- **`lastSeenAt` throttled.** `touchDevice` now does a conditional update that writes
+  only when the stamp is older than 15 min, so a chatty client doesn't amplify into
+  a device write per request.
+Not changed: the in-memory limiter stays process-local (single container, fine
+behind Cloudflare/Traefik) — bounded now, but not moved to a shared store. The
+Nodemailer bump and the false-positive enrollment-code "modulo bias" were left out
+deliberately (see the review notes).

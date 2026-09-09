@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.279.1";
+export const APP_VERSION = "0.280.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -91,6 +91,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.280.0",
+    summary: [
+      "Security hardening (from a source review): subscribed calendar feeds are now fetched with SSRF protection \u2014 private, loopback and link-local addresses are refused, every redirect is re-checked, and the response size is capped.",
+      "Mobile API throttling no longer relies on a spoofable forwarded-IP header alone: sign-in is also limited per account, enrollment per code, and re-auth per device; Cloudflare's real-client-IP header is preferred when present.",
+      "Every /api/v1 route is verified at build time to authenticate (or be explicitly public), so a new route can't ship unguarded.",
+      "Device last-seen timestamps are updated at most every 15 minutes instead of on every request.",
+    ],
+  },
   {
     version: "0.279.1",
     summary: [
