@@ -492,3 +492,19 @@ SchoolWork detail; classId validated against ClassMember like add. school-admin 
 gained a pencil -> inline EditForm (title, type, class-or-subject, due). Added classId
 to SchoolItem query/type so the edit form pre-fills the class. No migration (selects an
 existing column; edits existing rows). Next: app Settings menu.
+
+## Web: Appearance / themes (0.276.0) - Phase 2b (household, admin-set)
+Tailwind v4 @theme tokens are var()-backed, so themes = CSS overrides of the colour
+variables. globals.css: added --color-on-accent (white default); html[data-theme="X"]
+overrides --color-accent + --color-sidebar (light); html.dark flips neutrals (ground/
+surface/ink/muted/hairline/shade) + brightens accent + darkens on-accent; html.dark
+[data-theme="X"] per-scheme dark accent/sidebar/on-accent. Same 8 schemes + exact hexes
+as the app for parity. Web is token-based (2175 semantic classes vs ~153 raw), so dark
+mode is comprehensive; the one fix was accent buttons: migrated `text-white` ->
+`text-on-accent` on every line that also had `bg-accent` (114 occ / 76 files, verified no
+false positives against bg-black/ink). settings.ts: APPEARANCE_THEME/APPEARANCE_DARK +
+getAppearance(); layout applies data-theme + .dark to <html> (force-dynamic already).
+actions/settings.ts: setAppearanceTheme/setAppearanceDark (requireAdmin, revalidate layout).
+New /admin/appearance page + tile (PaletteIcon). No migration (appSetting rows). Theme is
+household-wide per Marco; app theme stays per-device. Next epic items: profile (device
+endpoints) + notifications.

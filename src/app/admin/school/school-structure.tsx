@@ -181,7 +181,7 @@ function PoolColumn({
         <button
           type="submit"
           disabled={pending}
-          className="mt-3 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="mt-3 rounded-md bg-accent px-4 py-2 text-sm font-medium text-on-accent disabled:opacity-50"
         >
           {pending ? "Adding\u2026" : "Add"}
         </button>
@@ -299,7 +299,7 @@ function Terms({ terms, today }: { terms: TermRow[]; today: string }) {
         <button
           type="submit"
           disabled={pending}
-          className="mt-3 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="mt-3 rounded-md bg-accent px-4 py-2 text-sm font-medium text-on-accent disabled:opacity-50"
         >
           {pending ? "Adding\u2026" : "Add term"}
         </button>
@@ -673,7 +673,7 @@ function Classes({
         <button
           type="submit"
           disabled={pending}
-          className="mt-3 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="mt-3 rounded-md bg-accent px-4 py-2 text-sm font-medium text-on-accent disabled:opacity-50"
         >
           {pending
             ? "Saving\u2026"
@@ -800,7 +800,7 @@ function InlineTermAdd({ hasTerms }: { hasTerms: boolean }) {
           type="button"
           onClick={add}
           disabled={pending}
-          className="inline-flex h-9 items-center rounded-full bg-accent px-4 text-sm font-medium text-white disabled:opacity-50"
+          className="inline-flex h-9 items-center rounded-full bg-accent px-4 text-sm font-medium text-on-accent disabled:opacity-50"
         >
           {pending ? "Adding\u2026" : "Add semester"}
         </button>

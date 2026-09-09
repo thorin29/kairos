@@ -243,7 +243,7 @@ export function ChoreCards({
                     className={[
                       "h-10 w-12 rounded-xl border text-sm font-medium transition-colors",
                       on
-                        ? "border-accent bg-accent text-white"
+                        ? "border-accent bg-accent text-on-accent"
                         : "border-hairline text-muted hover:border-accent",
                     ].join(" ")}
                   >
@@ -264,7 +264,7 @@ export function ChoreCards({
               <button
                 type="button"
                 onClick={saveReassign}
-                className="inline-flex h-10 items-center rounded-full bg-accent px-6 text-sm font-medium text-white shadow-sm hover:shadow-md"
+                className="inline-flex h-10 items-center rounded-full bg-accent px-6 text-sm font-medium text-on-accent shadow-sm hover:shadow-md"
               >
                 Move
               </button>

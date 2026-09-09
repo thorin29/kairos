@@ -108,7 +108,7 @@ export function AdminMoney({
                     onClick={() =>
                       start(() => void approveBibleMonthAll(m.periodKey))
                     }
-                    className="shrink-0 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
+                    className="shrink-0 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-on-accent transition-all hover:brightness-110 disabled:opacity-50"
                   >
                     {m.bonusAvailable
                       ? `Approve all + bonus (+${formatDollars(m.bonusCents)} each)`
@@ -187,7 +187,7 @@ export function AdminMoney({
                 type="button"
                 disabled={busy}
                 onClick={() => start(() => void approveAllMoney())}
-                className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
+                className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-on-accent transition-all hover:brightness-110 disabled:opacity-50"
               >
                 Approve all
               </button>
@@ -465,7 +465,7 @@ function RewardSettings({ config }: { config: RewardConfig }) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
+          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-on-accent transition-all hover:brightness-110 disabled:opacity-50"
         >
           {pending ? "Saving\u2026" : "Save settings"}
         </button>
@@ -547,7 +547,7 @@ function StartingModal({
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
+          className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-all hover:brightness-110 disabled:opacity-50"
         >
           {pending ? "Saving\u2026" : "Submit"}
         </button>
@@ -666,7 +666,7 @@ function EditModal({
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
+          className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-on-accent transition-all hover:brightness-110 disabled:opacity-50"
         >
           {pending ? "Saving\u2026" : "Save changes"}
         </button>

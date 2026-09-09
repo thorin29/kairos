@@ -231,7 +231,7 @@ export function SmtpForm({ initial }: { initial: SmtpFormValues }) {
           type="button"
           onClick={save}
           disabled={pending}
-          className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
+          className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save settings"}
         </button>

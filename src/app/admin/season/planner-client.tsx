@@ -181,7 +181,7 @@ export function SeasonPlanner({ plan }: { plan: SeasonPlan }) {
                 else setSaved(true);
               });
             }}
-            className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
+            className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
           >
             {pending ? "Saving\u2026" : "Apply"}
           </button>

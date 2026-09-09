@@ -297,7 +297,7 @@ function ProposeForm({ people }: { people: CoopData["people"] }) {
                 }
               })
             }
-            className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm hover:brightness-110 disabled:opacity-50"
+            className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm hover:brightness-110 disabled:opacity-50"
           >
             {pending ? "Adding\u2026" : "Add idea"}
           </button>
@@ -344,7 +344,7 @@ function FloorControl({ floor }: { floor: number }) {
               else setSaved(true);
             })
           }
-          className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm hover:brightness-110 disabled:opacity-50"
+          className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm hover:brightness-110 disabled:opacity-50"
         >
           {pending ? "Saving\u2026" : "Save"}
         </button>

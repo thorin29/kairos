@@ -242,7 +242,7 @@ function PlanCreator({
                 onClick={() => toggle(b.name)}
                 className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                   on
-                    ? "bg-accent text-white"
+                    ? "bg-accent text-on-accent"
                     : "border border-hairline text-muted hover:text-ink"
                 }`}
               >
@@ -293,7 +293,7 @@ function PlanCreator({
           type="button"
           disabled={pending}
           onClick={submit}
-          className="inline-flex h-9 items-center rounded-full bg-accent px-4 text-sm font-medium text-white disabled:opacity-50"
+          className="inline-flex h-9 items-center rounded-full bg-accent px-4 text-sm font-medium text-on-accent disabled:opacity-50"
         >
           {pending ? "Building\u2026" : "Create plan"}
         </button>

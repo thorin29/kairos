@@ -94,7 +94,7 @@ export function PauseForm({ pauses }: { pauses: PauseRow[] }) {
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-11 items-center gap-1.5 rounded-full bg-accent px-5 font-semibold text-white disabled:opacity-40"
+          className="inline-flex h-11 items-center gap-1.5 rounded-full bg-accent px-5 font-semibold text-on-accent disabled:opacity-40"
         >
           <PlusIcon className="h-4 w-4" />
           {pending ? "Adding…" : "Add pause"}

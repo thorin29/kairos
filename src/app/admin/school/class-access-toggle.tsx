@@ -34,7 +34,7 @@ export function ClassAccessToggle({ mode }: { mode: ClassFromCalendarMode }) {
           aria-pressed={current === "admin"}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             current === "admin"
-              ? "bg-accent text-white"
+              ? "bg-accent text-on-accent"
               : "text-muted hover:text-ink"
           }`}
         >
@@ -47,7 +47,7 @@ export function ClassAccessToggle({ mode }: { mode: ClassFromCalendarMode }) {
           aria-pressed={current === "anyone"}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             current === "anyone"
-              ? "bg-accent text-white"
+              ? "bg-accent text-on-accent"
               : "text-muted hover:text-ink"
           }`}
         >

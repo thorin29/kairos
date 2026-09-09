@@ -320,7 +320,7 @@ function PlanRow({
             type="button"
             onClick={complete}
             disabled={pending}
-            className="mt-1 inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm hover:shadow-md disabled:opacity-40"
+            className="mt-1 inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm hover:shadow-md disabled:opacity-40"
           >
             <CheckIcon className="h-4 w-4" />
             {pending ? "Logging…" : logLabel}

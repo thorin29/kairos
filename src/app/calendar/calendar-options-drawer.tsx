@@ -326,7 +326,7 @@ function Choice({
       aria-pressed={active}
       className={`h-10 rounded-lg text-sm font-medium transition-colors ${
         active
-          ? "bg-accent text-white"
+          ? "bg-accent text-on-accent"
           : "border border-hairline text-ink hover:border-accent"
       }`}
     >
@@ -422,7 +422,7 @@ function Row({
         aria-hidden
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
           checked
-            ? "border-accent bg-accent text-white"
+            ? "border-accent bg-accent text-on-accent"
             : "border-hairline text-transparent"
         }`}
       >

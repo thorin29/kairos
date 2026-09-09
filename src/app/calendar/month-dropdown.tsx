@@ -85,7 +85,7 @@ export function MonthDropdown({
                     <span
                       className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
                         isToday
-                          ? "bg-accent font-semibold text-white"
+                          ? "bg-accent font-semibold text-on-accent"
                           : isCurrent
                             ? "ring-1 ring-accent"
                             : ""

@@ -110,7 +110,7 @@ export function PoolChores({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
             >
               <PlusIcon className="h-4 w-4" />
               {pending ? "Adding\u2026" : "Add"}
@@ -240,7 +240,7 @@ function PoolRow({
                 if (r.error) alert(r.error);
               })
             }
-            className="inline-flex h-8 items-center rounded-full bg-accent px-3 font-medium text-white disabled:opacity-50"
+            className="inline-flex h-8 items-center rounded-full bg-accent px-3 font-medium text-on-accent disabled:opacity-50"
           >
             {pending ? "\u2026" : "Save"}
           </button>

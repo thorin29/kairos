@@ -13,6 +13,7 @@ import { hiddenNavHrefs } from "@/lib/personal-scope";
 import { deviceMode } from "@/lib/device";
 import { loginRequired, isPublicPath } from "@/lib/gate";
 import { formatLong } from "@/lib/dates";
+import { getAppearance } from "@/lib/settings";
 import { todayISO } from "@/lib/dates";
 
 // Self-hosted so the production build never depends on fetching from Google
@@ -60,12 +61,13 @@ export const dynamic = "force-dynamic";
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [unlocked, pinSet, me, gate, path] = await Promise.all([
+  const [unlocked, pinSet, me, gate, path, appearance] = await Promise.all([
     isAdmin(),
     adminPinSet(),
     currentUser(),
     loginRequired(),
     headers().then((h) => h.get("x-pathname") ?? "/"),
+    getAppearance(),
   ]);
   const sidebarExpanded = (await cookies()).get("sidebar")?.value === "1";
 
@@ -85,7 +87,7 @@ export default async function RootLayout({
     me && (await deviceMode()) === "personal" ? `/person/${me.id}` : "/";
 
   return (
-    <html lang="en">
+    <html lang="en" data-theme={appearance.theme} className={appearance.dark ? "dark" : undefined}>
       <body
         className={`${bricolage.variable} ${plexSans.variable} ${plexMono.variable} min-h-dvh bg-ground text-ink antialiased`}
       >

@@ -242,7 +242,7 @@ export function GroceryBoard({
             type="button"
             onClick={submitTyped}
             disabled={pending || !name.trim()}
-            className="inline-flex h-11 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md disabled:opacity-50"
+            className="inline-flex h-11 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm transition-all hover:shadow-md disabled:opacity-50"
           >
             <PlusIcon className="h-4 w-4" />
             Add
@@ -390,7 +390,7 @@ function SavedStore({
         <button
           type="button"
           onClick={onShop}
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-on-accent shadow-sm transition-all hover:shadow-md"
         >
           <CartIcon className="h-4 w-4" />
           Shop

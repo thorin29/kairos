@@ -62,7 +62,7 @@ export function RedeemForm({ token }: { token: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="mt-2 flex h-12 w-full items-center justify-center rounded-full bg-accent text-base font-medium text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-40"
+        className="mt-2 flex h-12 w-full items-center justify-center rounded-full bg-accent text-base font-medium text-on-accent shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-40"
       >
         {pending ? "Setting up\u2026" : "Create account"}
       </button>

@@ -92,7 +92,7 @@ export function CartView({
                   className={[
                     "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
                     done
-                      ? "border-accent bg-accent text-white"
+                      ? "border-accent bg-accent text-on-accent"
                       : "border-hairline text-transparent",
                   ].join(" ")}
                 >
@@ -156,7 +156,7 @@ export function CartView({
           type="button"
           onClick={complete}
           disabled={pending}
-          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md disabled:opacity-50"
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-on-accent shadow-sm transition-all hover:shadow-md disabled:opacity-50"
         >
           <CheckIcon className="h-4 w-4" />
           Complete trip

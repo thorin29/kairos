@@ -47,7 +47,7 @@ export function RotationBuilder({
           type="button"
           disabled={pending}
           onClick={() => run(() => startRotation(userId))}
-          className="mt-3 inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-white disabled:opacity-50"
+          className="mt-3 inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent disabled:opacity-50"
         >
           Start a rotation
         </button>
@@ -115,7 +115,7 @@ export function RotationBuilder({
                 title={DAY_NAMES[dow]}
                 className={`h-9 w-9 rounded-full text-xs font-semibold transition-colors disabled:opacity-50 ${
                   on
-                    ? "bg-accent text-white"
+                    ? "bg-accent text-on-accent"
                     : "border border-hairline text-muted hover:text-ink"
                 }`}
               >
@@ -314,7 +314,7 @@ function AddSlot({
         type="button"
         disabled={disabled}
         onClick={addWorkout}
-        className="inline-flex h-9 items-center gap-1 rounded-full bg-accent px-3 text-sm font-medium text-white disabled:opacity-50"
+        className="inline-flex h-9 items-center gap-1 rounded-full bg-accent px-3 text-sm font-medium text-on-accent disabled:opacity-50"
       >
         <PlusIcon className="h-4 w-4" /> Workout
       </button>

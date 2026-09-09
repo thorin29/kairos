@@ -257,7 +257,7 @@ export default async function CalendarPage({
               })}
               className={`inline-flex h-9 items-center gap-2 self-start rounded-full border px-3.5 text-sm font-medium transition-colors ${
                 showSchoolWork
-                  ? "border-transparent bg-accent text-white"
+                  ? "border-transparent bg-accent text-on-accent"
                   : "border-hairline text-muted hover:border-accent hover:text-accent"
               }`}
               aria-pressed={showSchoolWork}
