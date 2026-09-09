@@ -766,6 +766,7 @@ model Invite {
   tokenHash String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+  purpose   String   @default("join")
 
   @@index([userId])
 }

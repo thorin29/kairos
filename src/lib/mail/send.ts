@@ -109,6 +109,61 @@ export async function sendInviteEmail(
   }
 }
 
+/** Email a password-reset link. Same shape as the invite mail, but worded for a
+ *  reset and reassuring that ignoring it changes nothing. Returns sent:false
+ *  (not an error) when SMTP isn't configured. */
+export async function sendResetEmail(
+  to: string,
+  name: string,
+  appLink: string,
+  webLink: string,
+): Promise<{ sent: boolean; error?: string }> {
+  const cfg = await resolveSmtp();
+  if (!cfg.configured) return { sent: false };
+
+  const text = [
+    `Hi ${name},`,
+    "",
+    "Someone asked to reset your Kairos password. If that was you, open this",
+    "link on your phone with the Kairos app to choose a new one (or paste it",
+    "into the app's Join screen):",
+    appLink,
+    "",
+    `On a computer instead, use: ${webLink}`,
+    "",
+    "If you didn't ask for this, ignore this email — nothing changes until the",
+    "link is used, and it's single-use and expires.",
+  ].join("\n");
+
+  const html = `
+    <div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:#111">
+      <p>Hi ${escapeHtml(name)},</p>
+      <p>Someone asked to reset your Kairos password. If that was you, open this
+         on your phone to choose a new one:</p>
+      <p><a href="${escapeAttr(appLink)}"
+            style="display:inline-block;padding:10px 18px;border-radius:9999px;background:#0f5c63;color:#fff;text-decoration:none">
+         Reset password in the app</a></p>
+      <p style="font-size:13px;color:#666">Or paste this into the app's Join screen:<br>${escapeHtml(appLink)}</p>
+      <p style="font-size:13px;color:#666">On a computer instead, use
+         <a href="${escapeAttr(webLink)}">${escapeHtml(webLink)}</a>.</p>
+      <p style="font-size:13px;color:#666">If you didn't ask for this, ignore this
+         email — nothing changes until the link is used, and it's single-use and expires.</p>
+    </div>`;
+
+  try {
+    await transportFor(cfg).sendMail({
+      from: fromLine(cfg),
+      to,
+      subject: "Reset your Kairos password",
+      text,
+      html,
+    });
+    return { sent: true };
+  } catch (e) {
+    return { sent: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /** Alert a person that a new device was just enrolled to their account — the
  *  tripwire for an unexpected enrollment. No-op when SMTP isn't configured or
  *  the person has no email. */

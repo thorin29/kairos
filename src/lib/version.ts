@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.288.0";
+export const APP_VERSION = "0.289.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -88,11 +88,19 @@ export const MIGRATIONS = [
   "77_event_reminders",
   "78_reminder_recipients",
   "79_recurring_tasks",
+  "80_invite_purpose",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.289.0",
+    summary: [
+      "Household admin: a person\u2019s email is locked until you tap Edit, so it can\u2019t be changed \u2014 or used for an invite \u2014 without saving.",
+      "Self-service password reset (backend): a forgot-password request emails a single-use reset link to the address on file; the link sets a new password and enrolls the phone. Invites now carry a purpose, so a reset always sets a new password while a normal invite confirms an existing account.",
+    ],
+  },
   {
     version: "0.288.0",
     summary: [
