@@ -8,28 +8,42 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (Sept 2026, v0.184)
+## Current status (Sept 2026, web v0.279 / app v0.125)
 
-Recently shipped: the **mobile device-token API** (`/api/v1` auth slice), the
-**personal calendar** epic on the web — per-user preferences, five views, the
-options drawer, and colours (phases A–C, v0.180–0.183) — and a round of fixes
-(v0.184): sport events now prompt instead of auto-counting, a realistic barbell
-drawing + an Olympic EZ-curl bar in the weight calculator, and the chores weekly
-rotation showing completion (green check) and past-due (red).
+The web is mature and the **Android app has reached parity** across every
+daily-use section (Home, Calendar, Chores, Bible, Reading, School, Workouts,
+Groceries, Money, Characters; Game time is parked). Since the last status note
+the following large efforts shipped:
+
+- **App offline support** (the whole optimism effort): a read-through HTTP cache
+  + a durable offline write queue that replays on reconnect, and optimistic UI
+  across chores, tasks, school, reading, bible, groceries, money, calendar, and
+  workout logging. Add-then-delete offline cancels cleanly. (Was the big open
+  item under Security hardening.)
+- **Settings epic** (app + web): an app Settings screen reached by a gear next
+  to your name — **Appearance** (dark mode + eight color themes, per-device),
+  **Profile** (photo + framing + your synced color, with an HSV custom-color
+  picker), and **Notifications**. The web gets the same **themes + dark mode**
+  household-wide from **Admin → Appearance**. 24-hour clock option on the app.
+- **Notifications** (app, local — not FCM): per-event reminders set on each event
+  (Proton/Google style, multiple, custom lead times), a master on/off + test +
+  a link to Android's per-channel sound/vibration settings, and a firing engine
+  (exact alarms via AlarmManager + a WorkManager refresh + reboot re-arm) that
+  posts the event name at the reminder time. Default OFF at every gate.
+- **Web admin additions**: **Admin → Tasks** (edit every one-off task — rename,
+  re-date, reassign, delete) and **editable school assignments** in Admin → School.
+- **Companions**: the full 52-creature roster art across all six eras is in;
+  incubate → hatch → choose collection shipped earlier.
 
 Next up, roughly in order:
-- **Build the Android app** (native Kotlin / Jetpack Compose, repo `kairos-app`)
-  against the versioned API. The two gating decisions — device-token identity
-  and the `/api/v1` contract — are settled.
-- **Expand `/api/v1`** beyond auth to the read/write surface the app needs
-  (dashboard aggregate, chores, rewards, calendar, reading, workouts,
-  companions). The calendar's personal model is finalised on the web first, as
-  intended, so the app can mirror it.
-- **Personal-calendar colour model rework** — the colour controls work, but the
-  model (others-mode, the Custom/System split) wants hands-on refinement in the
-  actual app rather than more blind iteration. Deferred deliberately.
-- **Phase D — native calendar gestures** (swipe / one-finger paging) in the
-  Kotlin app; see the Personal calendar epic below.
+- **Web event editor reminders** are intentionally *not* built — reminders are
+  app-only for now (per decision). The per-type default-reminder field exists in
+  the schema but has no UI, kept OFF so nothing auto-notifies.
+- **Companion collection gallery** (owned + silhouettes to find) and the lighter
+  collect mechanic for the 50+ roster.
+- **Dashboard weather/forecast**, per-person dashboard ordering, and the
+  remaining follow-up prompts.
+- Assorted smaller items enumerated per-section below.
 
 ---
 
@@ -41,10 +55,12 @@ Next up, roughly in order:
       Icon is deliberately held back until the area exists, so there's no dead
       button in the sidebar.
 - [ ] Change your own password.
-- [ ] Appearance / themes — light and dark mode, plus a few colour themes, so
-      the app isn't locked to the teal-green palette. Groundwork already laid:
-      the sidebar colour is a single CSS variable, and the intent is to move
-      the rest of the palette behind variables a theme can swap.
+- [x] Appearance / themes — light and **dark mode**, plus **eight color themes**
+      (teal, olive, green, blue, purple, pink, orange, red). Shipped in the app
+      (per-device) and on the web from **Admin → Appearance** (household-wide);
+      the palette moved behind CSS variables / a snapshot color state so a theme
+      swaps them all. (The web put this in the admin area rather than a personal
+      sidebar settings page.)
 - [ ] Personal calendar event colours, view, and filters — now specced as the
       **Personal calendar** epic under "Personal-view scoping" below (model and
       precedence in DECISIONS.md). Your personal view is recoloured and
@@ -134,10 +150,10 @@ The eleven sections (from `src/components/sidebar.tsx`): Home, Calendar, Chores,
 Bible reading, Reading, School, Game time, Workouts, Groceries, Money,
 Characters. Each drawer entry keeps its web brand colour.
 
-- [ ] **App Settings menu** (`kairos-app`): a deeper settings area to hold
-      Devices (moved out of the nav rail to keep it clean) and later theme,
-      server, and account options. Until it exists, the Devices screen/route is
-      built but unlinked.
+- [x] **App Settings menu** (`kairos-app`): reached by a gear next to the
+      person's name in the drawer. Holds Appearance (dark mode + color themes +
+      24-hour clock), Profile (photo/framing + your synced color), and
+      Notifications.
 - [x] **Phase 0 — navigation shell** (`kairos-app`): the drawer the top-left
       logo opens, all eleven sections with active state, Devices + Sign out in
       the drawer footer. Home is the real page; other sections show a placeholder
@@ -194,9 +210,10 @@ Characters. Each drawer entry keeps its web brand colour.
       true dropdown attached to the field — switch to a proper anchored dropdown. Also by end of epic: the dashboard should be
       able to **ask whether sporting calendar events were completed** (it's
       calendar-event-driven — see Dashboard).
-- [~] **Remaining sections, each to full parity ← NEXT** (enumerate components
-      from the web page at build time): School, Game time,
-      Characters.
+- [x] **Remaining sections to parity:** School and Characters (CharacterScreen)
+      shipped; **Game time** is deliberately parked (the Xbox/Family Safety API is
+      fragile and Steam needs per-kid setup) — hidden from the app sidebar and web
+      nav, code kept for a future revisit.
       - [x] **Reading** (web v0.250 / app v0.74): strictly self-only leisure
         book-tracker (`GET /api/v1/books`, no one sees anyone else's). A book has
         a title, optional **author**, and a size in **pages and/or chapters**
@@ -253,7 +270,17 @@ Characters. Each drawer entry keeps its web brand colour.
       (token-authed) with the web's position/zoom transform.
 - [ ] Rest of the native client (`kairos-app`): QR enrollment scan, Room,
       WorkManager, FCM.
-- [ ] **Notifications epic** (via FCM, typed deep-link targets: `chore:<id>`,
+- [x] **Notifications epic** — shipped, but **local (AlarmManager + WorkManager),
+      not FCM**: reminders are set **per event** (Proton/Google style — multiple,
+      with lead times at start / minutes / hours / days / a week / custom), stored
+      on the event server-side (`Event.reminders`, migration 77). A per-device
+      master switch (default OFF) + a test notification + a link to Android's
+      per-channel sound/vibration settings. The firing engine fetches upcoming
+      events (`GET /api/v1/notifications/upcoming`), schedules exact alarms, posts
+      the event name, and re-arms on reboot. Reminders are **app-only** (no web
+      event-editor reminders for now); the per-type default field exists in the
+      schema, kept OFF, with no UI. Originally specced below as FCM/push:
+- [ ] (superseded) **Notifications epic** (via FCM, typed deep-link targets: `chore:<id>`,
       `reward:<id>`, `event:<id>`, `reading:<ref>`). **App- and user-specific**
       (a per-device, per-user concern — not a household setting). Design:
       - **Start with calendar events only**; chores and school work come later.
@@ -750,6 +777,8 @@ the remaining personal-view items:
       answered (most recent unanswered meeting first, 14-day window) (v0.97.0)
 - [x] School counts toward scores, with its own per-category weekly line —
       each assignment or test done on time, no difficulty weighting (v0.106.0)
+- [x] Admin → School: assignments/tests are **editable** (title, type, subject or
+      class, due date), not just deletable
 
 ## Calendar &amp; holidays
 - [x] Built-in US/Texas holidays — computed from rules for any year (no feed, no
@@ -1123,6 +1152,9 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] Cancel out of the add form
 - [x] Tasks are plain to-do items, without a category
 - [x] Add appointments to the calendar
+- [x] **Admin → Tasks** page: every one-off task in one place; a pencil edits the
+      whole list — rename, re-date, reassign to another person, or delete
+- [x] Web Tasks page + app Tasks screen (assign, complete, per-person)
 - [ ] Recurring tasks
 
 ## Interface
@@ -1139,7 +1171,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       indicator that travels between them, and page content that transitions
       rather than snapping
 - [ ] Icon badges — overdue count, unclaimed chores, unread plan days
-- [ ] Dark mode
+- [x] Dark mode (app per-device + web from Admin → Appearance)
 - [ ] Large touch tiles on each person's page for exercise, school, and
       reading
 - [ ] Phone layout for the week grid
@@ -1186,7 +1218,17 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       "sign out everywhere" is currently all-or-nothing via `credentialVersion`.
       A Session table would allow listing and revoking individual devices —
       worth it once the phone app is real.
-- [ ] **App offline support (BIG — high priority, its own dedicated effort).**
+- [x] **App offline support (BIG)** — shipped across the app: read-through HTTP
+      cache; a durable DataStore write queue that replays on reconnect (5xx/network
+      retried, 4xx dropped); optimistic UI on chores, tasks, school, reading, bible,
+      groceries, money, calendar, and workout logging, each re-derived from the
+      queue on load so changes survive navigation/restart; a structural "reload the
+      visible screen whenever the queue changes" net so a queued change always shows;
+      and add-then-delete offline cancels both. Multipart (avatar) uploads stay
+      online-only (can't be queued as text). Two-way calendar edit was the stated
+      later phase and is effectively covered by the optimistic calendar work.
+      Original spec:
+- [ ] (done) **App offline support (BIG — high priority, its own dedicated effort).**
       The app must be usable without a signal for the shared, read-mostly surfaces.
       Today every screen fetches live over the Cloudflared tunnel, so a dropped
       signal shows a spinner and nothing loads (the calendar is the worst offender).
@@ -1200,7 +1242,11 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
           (once groceries exist), sport/class attendance answers.
       Priority scope: (1) calendar VIEWING offline — the top ask; (2) chores toggle;
       (3) grocery check. Two-way calendar EDIT sync is a later phase. Not a quick fix.
-- [ ] **App UI consistency — pop-ups & dropdowns (ongoing).** Standard is recorded
+- [x] **App UI consistency — pop-ups & dropdowns.** The remaining stock
+      `AlertDialog`/`Dialog` call sites were converted to the house `AnimatedDialog`
+      across HomeScreen, AppRoot, the bible wizards, calendar, and the workout
+      create/edit + wizard confirms. Original note:
+- [ ] (done) **App UI consistency — pop-ups & dropdowns (ongoing).** Standard is recorded
       in DECISIONS ("App UI: dialogs and dropdowns use shared animated components"):
       every pop-up must use `AnimatedDialog` (ui/common) and every select must use
       `RollPicker` (ui/common). Done so far: workout share + share-confirmation
