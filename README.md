@@ -38,6 +38,11 @@ schedule.
   grid with an hourly gutter, color-coded by person or by category.
 - **Subscribed calendars.** Point it at any public ICS feed and those events
   land on the same grid.
+- **Themes and dark mode.** A household-wide color theme (eight options) and
+  dark mode, set from Admin → Appearance.
+- **Companion Android app.** A native phone client (repo `kairos-app`) mirrors
+  the personal view over the `/api/v1` API, works offline, and adds per-device
+  themes, profile editing, and local calendar reminders.
 - **Overdue carries forward.** Anything left unfinished is flagged and shown
   again the next day without losing its original due date.
 
