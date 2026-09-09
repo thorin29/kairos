@@ -59,7 +59,9 @@ export function AccountRow({
         return;
       }
       if (res.token) {
-        setLink(`${window.location.origin}/join?token=${res.token}`);
+        // The app deep link — carries only the token, no server address. Safe to
+        // text: messaging apps make kairos:// links tappable (email strips them).
+        setLink(`kairos://join?token=${res.token}`);
       }
       setEmailedTo(res.emailedTo ?? null);
       setEmailError(res.emailError ?? null);
@@ -304,7 +306,8 @@ export function AccountRow({
             </p>
           )}
           <p className="mb-2 text-xs font-medium text-accent">
-            One-time invite link — copy it now, it won&rsquo;t be shown again.
+            One-time invite link — text it to them (it opens the app), or they
+            can paste it into the app. Copy it now; it won&rsquo;t be shown again.
           </p>
           <div className="flex items-center gap-2">
             <input

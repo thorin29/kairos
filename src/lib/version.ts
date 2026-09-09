@@ -98,6 +98,7 @@ export const CHANGES: Change[] = [
     version: "0.290.0",
     summary: [
       "Invite and reset emails no longer show a button that email apps silently disable (they strip app links). Instead they show the invite as copyable text with a clear \u201copen the app, paste this\u201d instruction, so it actually works.",
+      "The invite link shown in Household admin is now the app link (kairos://\u2026), so you can text it to someone and it opens the app on tap \u2014 messaging apps allow app links even though email doesn\u2019t. It still carries only the token, never your server address.",
     ],
   },
   {
