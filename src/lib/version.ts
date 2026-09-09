@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.284.0";
+export const APP_VERSION = "0.285.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -87,11 +87,18 @@ export const MIGRATIONS = [
   "76_reading_position",
   "77_event_reminders",
   "78_reminder_recipients",
+  "79_recurring_tasks",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.285.0",
+    summary: [
+      "Recurring tasks: set up a repeating to-do (daily, weekly on chosen days, or monthly) that ends never, after a number of times, or on a date. It appears on the right days automatically.",
+    ],
+  },
   {
     version: "0.284.0",
     summary: [

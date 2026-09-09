@@ -7,6 +7,7 @@ import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import { dayOfWeek, formatShort, fromDateColumn } from "@/lib/dates";
 import { generateChores } from "@/lib/chores/generate";
+import { generateRecurringTasks } from "@/lib/tasks/recurring";
 import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
@@ -125,6 +126,7 @@ export type ApiDashboard = {
 async function ensureGenerated(dayISO: string, today: string): Promise<void> {
   if (dayISO !== today) return;
   await generateChores(today);
+  await generateRecurringTasks(today);
   await generateWorkoutTasks(today);
   await generatePoolChores(today);
   await generateReadingTasks(today);

@@ -74,6 +74,7 @@ model User {
   schoolClasses   SchoolClass[]
   createdTasks    Task[]         @relation("TaskCreator")
   events          Event[]
+  recurringTasks  RecurringTask[]   @relation("RecurringTaskOwner")
   choreAssignments ChoreAssignment[]
   calendars       ExternalCalendar[]
   groceryItems    ShoppingItem[]    @relation("GroceryAssignee")
@@ -1367,4 +1368,29 @@ model ChoreLog {
 
   @@index([choreId, day])
   @@index([day])
+}
+
+model RecurringTask {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("RecurringTaskOwner", fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  notes       String?
+  category    Category  @default(OTHER)
+  weight      Int?
+  // DAILY | WEEKLY | MONTHLY, every `interval` of that unit.
+  freq        String    @default("WEEKLY")
+  interval    Int       @default(1)
+  // Weekly only: comma-separated day codes (SU,MO,TU,WE,TH,FR,SA).
+  byday       String?
+  startDate   DateTime  @db.Date
+  // NEVER | COUNT (first `maxCount`) | UNTIL (through `untilDate`).
+  endMode     String    @default("NEVER")
+  maxCount    Int?
+  untilDate   DateTime? @db.Date
+  active      Boolean   @default(true)
+  createdById String?
+  createdAt   DateTime  @default(now())
+
+  @@index([active])
 }
