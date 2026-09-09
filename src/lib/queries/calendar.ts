@@ -40,6 +40,7 @@ export type GridEvent = {
   ownerName: string;
   notes: string | null;
   reminders?: number[];
+  reminderUserIds?: string[];
   /** This person declined the sport prompt for this occurrence. */
   didNotAttend: boolean;
   /** Per-member attendance for sport events (owner + participants). state is
@@ -512,6 +513,7 @@ export async function loadRange(
       location: e.location,
       notes: (e as { notes?: string | null }).notes ?? null,
       reminders: (e as { reminders?: number[] }).reminders ?? [],
+      reminderUserIds: (e as { reminderUserIds?: string[] }).reminderUserIds ?? [],
       didNotAttend: isSport && e.userId != null && attendanceState(e.id, e.userId, start.iso) === "DECLINED",
       attendees,
       color,
