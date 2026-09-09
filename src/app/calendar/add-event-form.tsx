@@ -48,6 +48,7 @@ const KINDS = [
   { value: "CLASS", label: "Class" },
   { value: "WORK", label: "Work shift" },
   { value: "BIRTHDAY", label: "Birthday" },
+  { value: "OTHER", label: "Medical / Dental" },
 ];
 
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
