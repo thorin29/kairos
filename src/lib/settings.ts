@@ -1,4 +1,5 @@
 import "server-only";
+import { THEME_NAMES, type ThemeName } from "@/lib/themes";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_FAMILY_COLOR } from "@/lib/palette";
 
@@ -95,6 +96,23 @@ export async function getWorkoutOverdueDays(): Promise<number> {
 export async function getSetting(key: string): Promise<string | null> {
   const row = await prisma.appSetting.findUnique({ where: { key } });
   return row?.value ?? null;
+}
+
+// --- Appearance (household theme, admin-set) ------------------------------
+
+export const APPEARANCE_THEME = "appearance.theme";
+export const APPEARANCE_DARK = "appearance.dark";
+
+/** The whole-household theme + dark mode, applied to <html> in the layout. */
+export async function getAppearance(): Promise<{ theme: ThemeName; dark: boolean }> {
+  const [t, d] = await Promise.all([
+    getSetting(APPEARANCE_THEME),
+    getSetting(APPEARANCE_DARK),
+  ]);
+  const theme = (THEME_NAMES as readonly string[]).includes(t ?? "")
+    ? (t as ThemeName)
+    : "teal";
+  return { theme, dark: d === "1" };
 }
 
 // Who may create a class from the calendar's "Class" event type. "admin" (the

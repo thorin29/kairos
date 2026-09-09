@@ -5,20 +5,10 @@ import {
   setAppearanceTheme,
   setAppearanceDark,
 } from "@/lib/actions/settings";
-import { THEME_NAMES, THEME_LABEL, type ThemeName } from "@/lib/settings";
+import { THEME_NAMES, THEME_LABEL, THEME_SWATCH, type ThemeName } from "@/lib/themes";
 import { Card } from "@/components/ui";
 import { CheckIcon } from "@/components/icons";
 
-const SWATCH: Record<ThemeName, string> = {
-  teal: "#0f5c63",
-  olive: "#5a6b2f",
-  green: "#2e7d32",
-  blue: "#1e5fa8",
-  purple: "#6b3fa0",
-  pink: "#b83280",
-  orange: "#c2570c",
-  red: "#b3261e",
-};
 
 export function AppearanceAdmin({
   theme,
@@ -80,7 +70,7 @@ export function AppearanceAdmin({
               >
                 <span
                   className="relative flex h-10 w-10 items-center justify-center rounded-full"
-                  style={{ backgroundColor: SWATCH[name] }}
+                  style={{ backgroundColor: THEME_SWATCH[name] }}
                 >
                   {selected && <CheckIcon className="h-5 w-5 text-white" />}
                 </span>

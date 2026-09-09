@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.275.0";
+export const APP_VERSION = "0.276.1";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,6 +90,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.276.1",
+    summary: [
+      "Admin \u2192 Appearance: a colour theme (teal, olive drab, green, blue, purple, pink, orange, or red) and dark mode for the whole household's web view. The accent, sidebar, buttons, highlights and \u2014 in dark mode \u2014 the backgrounds and text all follow the choice. The phone app keeps its own per-device setting.",
+    ],
+  },
   {
     version: "0.275.0",
     summary: [
