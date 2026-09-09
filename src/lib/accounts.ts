@@ -1,5 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { sendResetEmail } from "@/lib/mail/send";
+import { appJoinLink, inviteLink, baseUrl } from "@/lib/url";
 import {
   hashPassword,
   verifyPassword,
@@ -132,6 +134,7 @@ export async function setUserEmail(
  *  token (shown once) and its expiry. */
 export async function issueInvite(
   userId: string,
+  purpose: "join" | "reset" = "join",
 ): Promise<{ token: string; expiresAt: Date }> {
   const token = newInviteToken();
   const expiresAt = new Date(Date.now() + INVITE_DAYS * 86_400_000);
@@ -139,7 +142,7 @@ export async function issueInvite(
   await prisma.$transaction([
     prisma.invite.deleteMany({ where: { userId } }),
     prisma.invite.create({
-      data: { userId, tokenHash: hashToken(token), expiresAt },
+      data: { userId, tokenHash: hashToken(token), expiresAt, purpose },
     }),
   ]);
 
@@ -148,6 +151,36 @@ export async function issueInvite(
 
 export async function revokeInvites(userId: string): Promise<void> {
   await prisma.invite.deleteMany({ where: { userId } });
+}
+
+/**
+ * Self-service password reset. Looks up an active account by name or email; if
+ * it exists AND has an email on file, issues a one-time "reset" invite and mails
+ * the link to that address (the only place it goes — possession of the inbox is
+ * the identity check). Returns nothing either way, so the caller can answer
+ * identically whether or not a message was sent, avoiding account enumeration.
+ */
+export async function requestPasswordReset(identifier: string): Promise<void> {
+  const id = identifier.trim();
+  if (!id) return;
+  const user = await prisma.user.findFirst({
+    where: {
+      isActive: true,
+      OR: [
+        { name: { equals: id, mode: "insensitive" } },
+        { email: { equals: id, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, email: true, name: true, displayName: true },
+  });
+  if (!user || !user.email) return;
+  const { token } = await issueInvite(user.id, "reset");
+  await sendResetEmail(
+    user.email,
+    user.displayName ?? user.name,
+    appJoinLink(token),
+    inviteLink(await baseUrl(), token),
+  );
 }
 
 /**

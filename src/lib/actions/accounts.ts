@@ -77,6 +77,7 @@ export async function logoutUser(): Promise<void> {
 export async function createInviteAction(
   userId: string,
   email?: string,
+  purpose: "join" | "reset" = "join",
 ): Promise<{
   error: string | null;
   token?: string;
@@ -99,7 +100,7 @@ export async function createInviteAction(
     if (saved.error) return { error: saved.error };
   }
 
-  const { token, expiresAt } = await issueInvite(userId);
+  const { token, expiresAt } = await issueInvite(userId, purpose);
 
   let emailedTo: string | undefined;
   let emailError: string | undefined;

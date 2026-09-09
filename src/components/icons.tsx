@@ -58,6 +58,15 @@ export function CheckIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+
+export function XIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
 export function TrashIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>

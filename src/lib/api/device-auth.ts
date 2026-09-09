@@ -224,25 +224,31 @@ export async function redeemEnrollmentCode(
  *  have a password (confirm) or not (create one)? Reveals nothing else. */
 export async function joinCheck(
   token: string,
-): Promise<{ valid: boolean; hasPassword: boolean; name: string }> {
+): Promise<{
+  valid: boolean;
+  hasPassword: boolean;
+  name: string;
+  purpose: string;
+}> {
   const invite = await prisma.invite.findUnique({
     where: { tokenHash: hashToken(token) },
-    select: { userId: true, expiresAt: true },
+    select: { userId: true, expiresAt: true, purpose: true },
   });
   if (!invite || invite.expiresAt < new Date()) {
-    return { valid: false, hasPassword: false, name: "" };
+    return { valid: false, hasPassword: false, name: "", purpose: "join" };
   }
   const user = await prisma.user.findUnique({
     where: { id: invite.userId },
     select: { passwordHash: true, name: true, displayName: true, isActive: true },
   });
   if (!user || !user.isActive) {
-    return { valid: false, hasPassword: false, name: "" };
+    return { valid: false, hasPassword: false, name: "", purpose: "join" };
   }
   return {
     valid: true,
     hasPassword: user.passwordHash !== null,
     name: user.displayName ?? user.name,
+    purpose: invite.purpose,
   };
 }
 
@@ -261,7 +267,7 @@ export async function redeemJoin(
 > {
   const invite = await prisma.invite.findUnique({
     where: { tokenHash: hashToken(token) },
-    select: { userId: true, expiresAt: true },
+    select: { userId: true, expiresAt: true, purpose: true },
   });
   if (!invite || invite.expiresAt < new Date()) {
     return { ok: false, reason: "invalid" };
@@ -273,16 +279,20 @@ export async function redeemJoin(
   if (!user || !user.isActive) return { ok: false, reason: "invalid" };
 
   const hasPassword = user.passwordHash !== null;
-  if (!hasPassword && password.length < 6) {
+  // A "reset" invite always sets a new password (the forgot flow, where the
+  // person can't confirm the old one). A "join" invite creates a password for a
+  // new account, or confirms it for an existing one adding a device.
+  const settingPassword = !hasPassword || invite.purpose === "reset";
+  if (settingPassword && password.length < 6) {
     return { ok: false, reason: "weak" };
   }
-  if (hasPassword && !verifyPassword(password, user.passwordHash as string)) {
+  if (!settingPassword && !verifyPassword(password, user.passwordHash as string)) {
     return { ok: false, reason: "wrong_password" };
   }
 
   return prisma.$transaction(async (tx) => {
     let credV = user.credentialVersion;
-    if (!hasPassword) {
+    if (settingPassword) {
       const updated = await tx.user.update({
         where: { id: user.id },
         data: {

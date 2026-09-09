@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/avatar";
-import { LinkIcon, TrashIcon, CheckIcon } from "@/components/icons";
+import { LinkIcon, TrashIcon, CheckIcon, PencilIcon, XIcon } from "@/components/icons";
 import {
   createInviteAction,
   revokeInviteAction,
@@ -36,13 +36,15 @@ export function AccountRow({
   >(null);
   const linkRef = useRef<HTMLInputElement>(null);
 
+  const [savedEmail, setSavedEmail] = useState(account.email ?? "");
   const [email, setEmail] = useState(account.email ?? "");
+  const [editingEmail, setEditingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState<string | null>(null);
-  const dirty = email.trim() !== (account.email ?? "");
+  const dirty = email.trim() !== savedEmail;
 
   const name = account.displayName ?? account.name;
 
-  const invite = () =>
+  const invite = (purpose: "join" | "reset" = "join") =>
     startTransition(async () => {
       setCopied(false);
       setCopyFailed(false);
@@ -51,7 +53,7 @@ export function AccountRow({
       setEmailSkipped(null);
       setEmailStatus(null);
       // Send the address in the box so it's saved and used in one step.
-      const res = await createInviteAction(account.userId, email);
+      const res = await createInviteAction(account.userId, savedEmail, purpose);
       if (res.error) {
         setEmailStatus(res.error);
         return;
@@ -68,8 +70,21 @@ export function AccountRow({
     startTransition(async () => {
       setEmailStatus(null);
       const res = await setUserEmailAction(account.userId, email);
-      setEmailStatus(res.error ?? "Saved");
+      if (res.error) {
+        setEmailStatus(res.error);
+        return;
+      }
+      setSavedEmail(email.trim());
+      setEmail(email.trim());
+      setEditingEmail(false);
+      setEmailStatus("Saved");
     });
+
+  const cancelEmailEdit = () => {
+    setEmail(savedEmail);
+    setEditingEmail(false);
+    setEmailStatus(null);
+  };
 
   const revoke = () =>
     startTransition(async () => {
@@ -152,7 +167,7 @@ export function AccountRow({
             <>
               <button
                 type="button"
-                onClick={invite}
+                onClick={() => invite("reset")}
                 disabled={pending}
                 className={`${btn} bg-ink/5 text-ink hover:bg-ink/10`}
               >
@@ -173,7 +188,7 @@ export function AccountRow({
             <>
               <button
                 type="button"
-                onClick={invite}
+                onClick={() => invite()}
                 disabled={pending}
                 className={`${btn} bg-accent/10 text-accent hover:bg-accent/20`}
               >
@@ -193,9 +208,9 @@ export function AccountRow({
           ) : (
             <button
               type="button"
-              onClick={invite}
+              onClick={() => invite()}
               disabled={pending}
-              className={`${btn} bg-accent text-white hover:brightness-110`}
+              className={`${btn} bg-accent text-on-accent hover:brightness-110`}
             >
               <LinkIcon className="h-4 w-4" />
               Send invite
@@ -205,26 +220,59 @@ export function AccountRow({
       </div>
 
       <div className="mt-2 flex items-center gap-2">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            setEmailStatus(null);
-          }}
-          placeholder="email (optional) — where an invite is sent"
-          autoComplete="off"
-          autoCapitalize="none"
-          className="h-9 min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
-        />
-        <button
-          type="button"
-          onClick={saveEmail}
-          disabled={pending || !dirty}
-          className={`${btn} shrink-0 bg-ink/5 text-ink hover:bg-ink/10`}
-        >
-          Save
-        </button>
+        {editingEmail ? (
+          <>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setEmailStatus(null);
+              }}
+              placeholder="email (optional) — where an invite is sent"
+              autoComplete="off"
+              autoCapitalize="none"
+              autoFocus
+              className="h-9 min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+            />
+            <button
+              type="button"
+              onClick={saveEmail}
+              disabled={pending || !dirty}
+              className={`${btn} shrink-0 bg-ink/5 text-ink hover:bg-ink/10`}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={cancelEmailEdit}
+              disabled={pending}
+              aria-label="Cancel"
+              className={`${btn} shrink-0 text-muted hover:bg-ink/5`}
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="flex h-9 min-w-0 flex-1 items-center truncate rounded-lg border border-hairline bg-ink/[0.02] px-3 text-sm">
+              {savedEmail || <span className="text-muted">No email set</span>}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingEmail(true);
+                setEmailStatus(null);
+              }}
+              disabled={pending}
+              aria-label="Edit email"
+              className={`${btn} shrink-0 bg-ink/5 text-ink hover:bg-ink/10`}
+            >
+              <PencilIcon className="h-4 w-4" />
+              Edit
+            </button>
+          </>
+        )}
         {emailStatus && (
           <span
             className={`shrink-0 text-xs ${
@@ -269,7 +317,7 @@ export function AccountRow({
             <button
               type="button"
               onClick={copy}
-              className={`${btn} shrink-0 bg-accent text-white hover:brightness-110`}
+              className={`${btn} shrink-0 bg-accent text-on-accent hover:brightness-110`}
             >
               {copied ? (
                 <>

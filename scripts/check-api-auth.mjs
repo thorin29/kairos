@@ -19,6 +19,7 @@ const PUBLIC = new Set([
   "auth/enroll/route.ts",
   "auth/join/route.ts",
   "auth/join/check/route.ts",
+  "auth/forgot/route.ts",
 ]);
 
 // Any of these in a route's source counts as "this route authenticates".
