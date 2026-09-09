@@ -542,3 +542,17 @@ ColorPickerDialog (hue bar + SV square), last custom colour persisted per-device
 (SettingsStore.lastCustomColor) and shown as an extra swatch. Text: "User color" +
 "Avatar color shared across the platform" (US spelling per Marco). PROFILE COMPLETE.
 Remaining epic item: notifications.
+
+## Web 0.276.4 + app 0.118.0: notifications - Phase 1 (settings + plumbing)
+Notifications is the last epic item and the biggest, so phased. Phase 1 (this): the
+config surface + Android plumbing, verifiable via a test notification; Phase 2 (next):
+the scheduling engine that actually fires at event times. Web: GET /api/v1/notifications/
+meta returns the household event types for the per-type toggles. App: NotifPrefs (per-device,
+JSON in DataStore, all OFF by default) - master enabled, scope (MINE/ALL/FAMILY), per-type
+{enabled,lead}, birthday {enabled,lead 1day}. Lead options: at start/15m/1h/1d. Notifications
+helper: one "calendar_reminders" channel (IMPORTANCE_HIGH, created at MainActivity start),
+POST_NOTIFICATIONS permission (manifest + runtime request when the master toggle is turned on),
+post() no-ops without permission. ic_notification vector added. NotificationsScreen wired into
+Settings. PHASE 2 TODO: web GET /api/v1/notifications/upcoming (events next ~48h + birthdays,
+absolute start, type, mine/family flags); app scheduler (WorkManager periodic + AlarmManager
+exact alarms + AlarmReceiver + BootReceiver) reading NotifPrefs -> posts event-name reminders.
