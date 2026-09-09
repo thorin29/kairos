@@ -556,3 +556,17 @@ post() no-ops without permission. ic_notification vector added. NotificationsScr
 Settings. PHASE 2 TODO: web GET /api/v1/notifications/upcoming (events next ~48h + birthdays,
 absolute start, type, mine/family flags); app scheduler (WorkManager periodic + AlarmManager
 exact alarms + AlarmReceiver + BootReceiver) reading NotifPrefs -> posts event-name reminders.
+
+## Web 0.277.0: per-event reminders foundation (schema + calendar API)
+Migration 77_event_reminders (additive, idempotent): Event.reminders Int[] default {},
+EventType.defaultReminder Int?. create-event.ts: EventInput.reminders, normalizeReminders
+(non-neg whole minutes, <=40320, dedupe, sort, cap 5); create stores it; update stores it
+only when the client sends it (undefined = leave unchanged). Device calendar event
+create+update routes parse reminders[]. calendar.ts: GridEvent.reminders? (optional -
+base/real events set it from the included row, synthetic birthday/task events omit it),
+loadEventTypes + the events include now select defaultReminder. calendar-page.ts: CalEvent.
+reminders + toWire + options.eventTypes.defaultReminder. App DTOs: CalEventDto.reminders,
+CalEventTypeDto.defaultReminder, Create/UpdateEventRequest.reminders (Delete does NOT).
+NEXT (sub-phase 2): app CalendarAddEvent reminder section (Proton-style: Add notification ->
+picker, bell+label+X, multiple; new events pre-fill eventType.defaultReminder). Then web
+event form + the firing engine.

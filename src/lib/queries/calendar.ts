@@ -36,6 +36,7 @@ export type GridEvent = {
   shade: boolean;
   ownerName: string;
   notes: string | null;
+  reminders?: number[];
   /** This person declined the sport prompt for this occurrence. */
   didNotAttend: boolean;
   /** Per-member attendance for sport events (owner + participants). state is
@@ -84,6 +85,7 @@ export type EventTypeRow = {
   color: string;
   sportWorkout: boolean;
   defaultMinutes: number | null;
+  defaultReminder: number | null;
 };
 
 /** Admin-managed custom event types, in display order. */
@@ -96,6 +98,7 @@ export async function loadEventTypes(): Promise<EventTypeRow[]> {
       color: true,
       sportWorkout: true,
       defaultMinutes: true,
+      defaultReminder: true,
     },
   });
   return rows as unknown as EventTypeRow[];
@@ -355,7 +358,7 @@ export async function loadRange(
     include: {
       user: { select: { name: true, displayName: true, color: true } },
       externalCalendar: { select: { name: true } },
-      eventType: { select: { id: true, name: true, color: true, sportWorkout: true } },
+      eventType: { select: { id: true, name: true, color: true, sportWorkout: true, defaultReminder: true } },
       schoolClass: { select: { id: true } },
       participants: { select: { userId: true, user: { select: { color: true, name: true, displayName: true } } } },
     },
@@ -503,6 +506,7 @@ export async function loadRange(
       title: e.title,
       location: e.location,
       notes: (e as { notes?: string | null }).notes ?? null,
+      reminders: (e as { reminders?: number[] }).reminders ?? [],
       didNotAttend: isSport && e.userId != null && attendanceState(e.id, e.userId, start.iso) === "DECLINED",
       attendees,
       color,
