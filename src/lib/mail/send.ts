@@ -90,7 +90,7 @@ export async function sendInviteEmail(
       <p>You've been invited to set up your Kairos account.</p>
       <p><strong>On your phone:</strong> open the Kairos app, tap
          &ldquo;Have an invitation code?&rdquo; on the sign-in screen, and enter this code:</p>
-      <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:600;letter-spacing:6px;text-align:center;background:#f3f4f6;padding:16px;border-radius:8px;color:#111">${escapeHtml(code)}</p>
+      <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:600;text-align:center;background:#f3f4f6;padding:16px;border-radius:8px;color:#111">${escapeHtml(code)}</p>
       <p style="font-size:13px;color:#666">Or paste this link instead:
          <span style="font-family:ui-monospace,monospace;word-break:break-all">${escapeHtml(appLink)}</span></p>
       <p style="font-size:13px;color:#666">On a computer where you can already sign in,
@@ -149,7 +149,7 @@ export async function sendResetEmail(
       <p>Someone asked to reset your Kairos password. If that was you:</p>
       <p><strong>On your phone:</strong> open the Kairos app, tap
          &ldquo;Have an invitation code?&rdquo; on the sign-in screen, and enter this code:</p>
-      <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:600;letter-spacing:6px;text-align:center;background:#f3f4f6;padding:16px;border-radius:8px;color:#111">${escapeHtml(code)}</p>
+      <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:600;text-align:center;background:#f3f4f6;padding:16px;border-radius:8px;color:#111">${escapeHtml(code)}</p>
       <p style="font-size:13px;color:#666">Or paste this link instead:
          <span style="font-family:ui-monospace,monospace;word-break:break-all">${escapeHtml(appLink)}</span></p>
       <p style="font-size:13px;color:#666">On a computer where you can already sign in,
