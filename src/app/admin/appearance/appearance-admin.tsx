@@ -35,13 +35,14 @@ export function AppearanceAdmin({
             aria-checked={dark}
             disabled={pending}
             onClick={() => start(() => void setAppearanceDark(!dark))}
-            className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${
               dark ? "bg-accent" : "bg-hairline"
             }`}
           >
             <span
-              className={`absolute top-0.5 h-6 w-6 rounded-full bg-surface shadow transition-transform ${
-                dark ? "translate-x-5" : "translate-x-0.5"
+              aria-hidden="true"
+              className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+                dark ? "translate-x-[22px]" : "translate-x-0.5"
               }`}
             />
           </button>
