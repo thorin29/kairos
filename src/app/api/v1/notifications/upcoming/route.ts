@@ -48,20 +48,20 @@ export async function GET(req: NextRequest) {
         rrule: null,
         startsAt: { gte: new Date(now), lte: windowEnd },
       },
-      select: { id: true, title: true, startsAt: true, reminders: true },
+      select: { id: true, title: true, location: true, startsAt: true, reminders: true },
     }),
     prisma.event.findMany({
       where: { ...scope, rrule: { not: null }, startsAt: { lte: windowEnd } },
-      select: { id: true, title: true, startsAt: true, rrule: true, reminders: true },
+      select: { id: true, title: true, location: true, startsAt: true, rrule: true, reminders: true },
     }),
   ]);
 
-  type Row = { id: string; title: string; startsAt: Date; reminders: number[] };
+  type Row = { id: string; title: string; location: string | null; startsAt: Date; reminders: number[] };
 
-  const out: { id: string; title: string; startMs: number; reminders: number[] }[] = [];
+  const out: { id: string; title: string; location: string | null; startMs: number; reminders: number[] }[] = [];
 
   for (const e of singles as Row[]) {
-    out.push({ id: e.id, title: e.title, startMs: e.startsAt.getTime(), reminders: e.reminders });
+    out.push({ id: e.id, title: e.title, location: e.location, startMs: e.startsAt.getTime(), reminders: e.reminders });
   }
 
   // Dates cancelled by a single-occurrence override, so the series skips them.
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
       if (ms < now || ms > windowEnd.getTime()) continue;
       const dayKey = occ.toISOString().slice(0, 10);
       if (cancelledDates.has(`${s.id}|${dayKey}`)) continue;
-      out.push({ id: `${s.id}:${ms}`, title: s.title, startMs: ms, reminders: s.reminders });
+      out.push({ id: `${s.id}:${ms}`, title: s.title, location: s.location, startMs: ms, reminders: s.reminders });
     }
   }
 
