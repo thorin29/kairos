@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       { isFamily: true },
       { participants: { some: { userId: uid } } },
     ],
-  } as const;
+  };
 
   const [singles, series] = await Promise.all([
     prisma.event.findMany({
