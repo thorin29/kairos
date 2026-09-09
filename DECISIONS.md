@@ -518,3 +518,14 @@ constants to a new src/lib/themes.ts (THEME_NAMES, ThemeName, THEME_LABEL, THEME
 settings.ts + actions/settings.ts + appearance-admin.tsx import from there. Reconfirms the
 standing rule: never import a server-only module's VALUES into a client component. This is
 the class of bug only the Docker build catches.
+
+## Web 0.276.2 + app 0.116.0: profile colour (ring) + toggle fix
+Toggle: the dark-mode switch used absolute+translate with no explicit left, so the knob
+drifted right / off-frame. Rebuilt with the reliable inline-flex + items-center pattern
+(knob translate-x-0.5 off / translate-x-[22px] on, bg-white). Profile colour: new device
+endpoint POST /api/v1/me/color sets the enrolled person's user.color (hex, validated) and
+revalidates web paths - same field the web profile edits, so it flows to calendar + ring +
+everywhere. App: ProfileScreen (settings) with the 8 PERSON_PALETTE swatches + a live ring
+preview; setMyColor + refreshPerson (guarded to online so an offline save doesn't revert the
+ring from cached me()). Profile is now navigable in Settings. Photo + framing (avatar upload +
+pan/zoom cropper producing "tx ty scale") is the next profile phase - bigger Android build.
