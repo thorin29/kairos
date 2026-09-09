@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.286.0";
+export const APP_VERSION = "0.287.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -93,6 +93,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.287.0",
+    summary: [
+      "One-link onboarding (backend): a public join endpoint lets the app set a new account\u2019s password (or confirm an existing one) and enroll the phone in one step, and invite emails now open the app. Your server address never leaves the household \u2014 the link carries only the invite. The phone-side flow is next.",
+    ],
+  },
   {
     version: "0.286.0",
     summary: [

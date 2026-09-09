@@ -15,7 +15,7 @@ import {
 } from "@/lib/accounts";
 import { startUserSession, endUserSession } from "@/lib/user-session";
 import { rateLimit, rateLimitReset } from "@/lib/rate-limit";
-import { baseUrl, inviteLink } from "@/lib/url";
+import { baseUrl, inviteLink, appJoinLink } from "@/lib/url";
 import { sendInviteEmail, sendTestEmail } from "@/lib/mail/send";
 import { saveSmtp, type SmtpInput } from "@/lib/mail/config";
 
@@ -109,8 +109,12 @@ export async function createInviteAction(
   if (!to) {
     emailSkipped = "no_address";
   } else {
-    const link = inviteLink(await baseUrl(), token);
-    const res = await sendInviteEmail(to, to, link);
+    const res = await sendInviteEmail(
+      to,
+      to,
+      appJoinLink(token),
+      inviteLink(await baseUrl(), token),
+    );
     if (res.sent) emailedTo = to;
     else if (res.error) emailError = res.error;
     else emailSkipped = "not_configured"; // SMTP off/unset — link is the fallback

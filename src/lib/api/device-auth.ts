@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashToken, verifyPassword } from "@/lib/auth";
+import { hashToken, hashPassword, verifyPassword } from "@/lib/auth";
 import { avatarUrl, isIcon, iconGlyph } from "@/lib/avatars";
 import { apiError } from "@/lib/api/errors";
 import { bearerToken } from "@/lib/api/request";
@@ -216,6 +216,102 @@ export async function redeemEnrollmentCode(
     });
 
     return { ok: true, token: secret, expiresAt, person: toPerson(user) };
+  });
+}
+
+
+/** For the app's join screen: is this token valid, and does the account already
+ *  have a password (confirm) or not (create one)? Reveals nothing else. */
+export async function joinCheck(
+  token: string,
+): Promise<{ valid: boolean; hasPassword: boolean; name: string }> {
+  const invite = await prisma.invite.findUnique({
+    where: { tokenHash: hashToken(token) },
+    select: { userId: true, expiresAt: true },
+  });
+  if (!invite || invite.expiresAt < new Date()) {
+    return { valid: false, hasPassword: false, name: "" };
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: invite.userId },
+    select: { passwordHash: true, name: true, displayName: true, isActive: true },
+  });
+  if (!user || !user.isActive) {
+    return { valid: false, hasPassword: false, name: "" };
+  }
+  return {
+    valid: true,
+    hasPassword: user.passwordHash !== null,
+    name: user.displayName ?? user.name,
+  };
+}
+
+/**
+ * Redeem a join token from the app: set the password (new account) or confirm
+ * it (existing account), consume the invite, and enroll this phone in one step.
+ * The unified onboarding path — no separate enrollment code needed.
+ */
+export async function redeemJoin(
+  token: string,
+  password: string,
+  deviceName: string | null,
+): Promise<
+  | { ok: true; token: string; expiresAt: Date; person: EnrolledPerson }
+  | { ok: false; reason: "invalid" | "wrong_password" | "weak" }
+> {
+  const invite = await prisma.invite.findUnique({
+    where: { tokenHash: hashToken(token) },
+    select: { userId: true, expiresAt: true },
+  });
+  if (!invite || invite.expiresAt < new Date()) {
+    return { ok: false, reason: "invalid" };
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: invite.userId },
+    select: { ...personSelect, passwordHash: true, credentialVersion: true },
+  });
+  if (!user || !user.isActive) return { ok: false, reason: "invalid" };
+
+  const hasPassword = user.passwordHash !== null;
+  if (!hasPassword && password.length < 6) {
+    return { ok: false, reason: "weak" };
+  }
+  if (hasPassword && !verifyPassword(password, user.passwordHash as string)) {
+    return { ok: false, reason: "wrong_password" };
+  }
+
+  return prisma.$transaction(async (tx) => {
+    let credV = user.credentialVersion;
+    if (!hasPassword) {
+      const updated = await tx.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash: hashPassword(password),
+          credentialVersion: { increment: 1 },
+        },
+        select: { credentialVersion: true },
+      });
+      credV = updated.credentialVersion;
+    }
+    await tx.invite.deleteMany({ where: { userId: user.id } });
+    const secret = newSecret();
+    const expiresAt = new Date(Date.now() + DEVICE_TOKEN_DAYS * 86_400_000);
+    await tx.device.create({
+      data: {
+        userId: user.id,
+        name: deviceName?.trim() || null,
+        tokenHash: hashToken(secret),
+        expiresAt,
+        credentialVersion: credV,
+      },
+      select: { id: true },
+    });
+    return {
+      ok: true as const,
+      token: secret,
+      expiresAt,
+      person: toPerson({ ...user, credentialVersion: credV }),
+    };
   });
 }
 
