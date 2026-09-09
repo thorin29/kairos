@@ -71,27 +71,27 @@ export async function sendInviteEmail(
     `Hi ${name},`,
     "",
     "You've been invited to set up your Kairos account.",
-    "On your phone with the Kairos app installed, open this link (or paste it",
-    "into the app's Join screen):",
+    "",
+    "On your phone: open the Kairos app, tap \"Have an invite link?\" on the",
+    "sign-in screen, and paste this:",
+    "",
     appLink,
     "",
-    `On a computer instead, use: ${webLink}`,
+    `(On a computer where you can already sign in, you can instead open: ${webLink})`,
     "",
-    "The link is single-use and expires. If it has, ask for a new one.",
+    "This is single-use and expires. If it has, ask for a new one.",
   ].join("\n");
 
   const html = `
     <div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:#111">
       <p>Hi ${escapeHtml(name)},</p>
-      <p>You've been invited to set up your Kairos account. On your phone (with
-         the Kairos app installed), tap to open it in the app:</p>
-      <p><a href="${escapeAttr(appLink)}"
-            style="display:inline-block;padding:10px 18px;border-radius:9999px;background:#0f5c63;color:#fff;text-decoration:none">
-         Open in the Kairos app</a></p>
-      <p style="font-size:13px;color:#666">Or paste this into the app's Join screen:<br>${escapeHtml(appLink)}</p>
-      <p style="font-size:13px;color:#666">On a computer instead, use
-         <a href="${escapeAttr(webLink)}">${escapeHtml(webLink)}</a>.</p>
-      <p style="font-size:13px;color:#666">The link is single-use and expires.
+      <p>You've been invited to set up your Kairos account.</p>
+      <p><strong>On your phone:</strong> open the Kairos app, tap
+         &ldquo;Have an invite link?&rdquo; on the sign-in screen, and paste this:</p>
+      <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;word-break:break-all;background:#f3f4f6;padding:12px;border-radius:8px;color:#111">${escapeHtml(appLink)}</p>
+      <p style="font-size:13px;color:#666">On a computer where you can already sign in,
+         you can instead open <a href="${escapeAttr(webLink)}">${escapeHtml(webLink)}</a>.</p>
+      <p style="font-size:13px;color:#666">This is single-use and expires.
          If it has, ask for a new one.</p>
     </div>`;
 
@@ -124,12 +124,14 @@ export async function sendResetEmail(
   const text = [
     `Hi ${name},`,
     "",
-    "Someone asked to reset your Kairos password. If that was you, open this",
-    "link on your phone with the Kairos app to choose a new one (or paste it",
-    "into the app's Join screen):",
+    "Someone asked to reset your Kairos password. If that was you:",
+    "",
+    "On your phone: open the Kairos app, tap \"Have an invite link?\" on the",
+    "sign-in screen, and paste this:",
+    "",
     appLink,
     "",
-    `On a computer instead, use: ${webLink}`,
+    `(On a computer where you can already sign in, you can instead open: ${webLink})`,
     "",
     "If you didn't ask for this, ignore this email — nothing changes until the",
     "link is used, and it's single-use and expires.",
@@ -138,14 +140,12 @@ export async function sendResetEmail(
   const html = `
     <div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:#111">
       <p>Hi ${escapeHtml(name)},</p>
-      <p>Someone asked to reset your Kairos password. If that was you, open this
-         on your phone to choose a new one:</p>
-      <p><a href="${escapeAttr(appLink)}"
-            style="display:inline-block;padding:10px 18px;border-radius:9999px;background:#0f5c63;color:#fff;text-decoration:none">
-         Reset password in the app</a></p>
-      <p style="font-size:13px;color:#666">Or paste this into the app's Join screen:<br>${escapeHtml(appLink)}</p>
-      <p style="font-size:13px;color:#666">On a computer instead, use
-         <a href="${escapeAttr(webLink)}">${escapeHtml(webLink)}</a>.</p>
+      <p>Someone asked to reset your Kairos password. If that was you:</p>
+      <p><strong>On your phone:</strong> open the Kairos app, tap
+         &ldquo;Have an invite link?&rdquo; on the sign-in screen, and paste this:</p>
+      <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;word-break:break-all;background:#f3f4f6;padding:12px;border-radius:8px;color:#111">${escapeHtml(appLink)}</p>
+      <p style="font-size:13px;color:#666">On a computer where you can already sign in,
+         you can instead open <a href="${escapeAttr(webLink)}">${escapeHtml(webLink)}</a>.</p>
       <p style="font-size:13px;color:#666">If you didn't ask for this, ignore this
          email — nothing changes until the link is used, and it's single-use and expires.</p>
     </div>`;
