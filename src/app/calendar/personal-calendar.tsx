@@ -157,7 +157,7 @@ export async function PersonalCalendar({
   const allDay = rawRange.allDay.filter(keep).map(recolor);
 
   // The now-line follows the admin color unless the person has overridden it
-  // (and only while personalisation is on).
+  // (and only while personalization is on).
   const nowColor =
     prefs.personalizeColors && prefs.nowColor
       ? prefs.nowColor

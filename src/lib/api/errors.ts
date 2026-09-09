@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
  * One error envelope for the whole `/api/v1` surface, so the mobile client has
  * a single error path (docs/API.md "Errors"). The HTTP status mirrors the code.
  * Messages are human-readable but must never leak internals or say which of
- * identifier/secret was wrong — matching the web login's behaviour.
+ * identifier/secret was wrong — matching the web login's behavior.
  */
 export type ApiErrorCode =
   | "unauthenticated"
