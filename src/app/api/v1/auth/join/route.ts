@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   const result = await redeemJoin(token, password, deviceName);
   if (!result.ok) {
     if (result.reason === "wrong_password") {
-      return apiError("unauthenticated", "That password doesn't match. Try again.");
+      return apiError("forbidden", "That password doesn't match. Try again.");
     }
     if (result.reason === "weak") {
       return apiError("validation", "Choose a password of at least 6 characters.", {
