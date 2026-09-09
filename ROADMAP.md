@@ -1200,6 +1200,17 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       - Avatar uploads validated by magic bytes, not just the claimed MIME.
       - CSRF: `serverActions.allowedOrigins` configurable via `ALLOWED_ORIGINS`.
       - Nodemailer bumped 6 -> 7 (CVE); lockfile synced.
+- [x] **v0.280.0 hardening batch (from a source review, verified first):**
+      - Calendar feed **SSRF guard** — subscription fetches refuse private/loopback/
+        link-local addresses, re-check each redirect, and cap the body size.
+      - Mobile-auth throttling no longer relies on a spoofable forwarded IP: a
+        **secondary limit per account / code / device** backs the per-IP one, and
+        `cf-connecting-ip` is preferred (with a `REAL_IP_HEADER` override).
+      - **Bounded** the in-memory rate-limit map (prune expired, cap size).
+      - **API auth made structural**: `withDeviceAuth` wrapper + a build-time
+        route-inventory check (`scripts/check-api-auth.mjs`) that fails the build if
+        a new `/api/v1` route isn't guarded or explicitly public.
+      - **lastSeenAt** written at most every 15 min, not per request.
 - [x] Cookie signing secret: confirmed. Both the admin unlock and personal
       sessions are HMAC-signed with a 32-byte secret generated on first use and
       kept in `AppSetting` (`sessionSecret`), not a weak default — a fresh

@@ -3,6 +3,7 @@ import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { householdTz } from "@/lib/dates";
 import { parseIcs } from "./ics";
+import { fetchIcsText } from "./safe-fetch";
 
 /** Feeds are re-fetched at most this often, however many times a page loads. */
 const STALE_AFTER_MS = 15 * 60 * 1000;
@@ -33,17 +34,9 @@ export async function syncCalendar(id: string): Promise<SyncResult> {
     // webcal:// is just http(s) with a different scheme.
     const url = calendar.url.replace(/^webcal:\/\//i, "https://");
 
-    const response = await fetch(url, {
-      headers: { Accept: "text/calendar, text/plain" },
-      cache: "no-store",
-      signal: AbortSignal.timeout(20_000),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Feed returned ${response.status}`);
-    }
-
-    const body = await response.text();
+    // SSRF-guarded fetch: blocks private/reserved addresses, validates every
+    // redirect hop, and caps the body size.
+    const body = await fetchIcsText(url);
     if (!body.includes("BEGIN:VCALENDAR")) {
       throw new Error("That URL didn't return a calendar feed");
     }

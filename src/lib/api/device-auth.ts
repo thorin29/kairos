@@ -278,11 +278,21 @@ export async function authenticateDevice(
   return { status: "ok", device: authed };
 }
 
-/** Record activity. Best-effort; a failure here must not fail the request. */
+/** Don't rewrite lastSeenAt more often than this; a chatty app would otherwise
+ *  write on every request. */
+const LAST_SEEN_THROTTLE_MS = 15 * 60_000;
+
+/** Record activity, at most every [LAST_SEEN_THROTTLE_MS]. The conditional
+ *  update matches zero rows (and writes nothing) when the stamp is fresh, so a
+ *  busy client doesn't amplify into a write per request. Best-effort. */
 export async function touchDevice(deviceId: string): Promise<void> {
+  const cutoff = new Date(Date.now() - LAST_SEEN_THROTTLE_MS);
   try {
-    await prisma.device.update({
-      where: { id: deviceId },
+    await prisma.device.updateMany({
+      where: {
+        id: deviceId,
+        OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: cutoff } }],
+      },
       data: { lastSeenAt: new Date() },
     });
   } catch {
@@ -424,6 +434,29 @@ export async function requireDevice(
   }
   await touchDevice(result.device.deviceId);
   return { device: result.device };
+}
+
+/**
+ * The sanctioned wrapper for a device-authed route: authenticates the bearer
+ * token and hands the resolved device to the handler, or short-circuits with
+ * the standard 401. New `/api/v1` routes should use this so authorization can't
+ * be forgotten; the route-inventory build check (scripts/check-api-auth.mjs)
+ * verifies every non-public route references a device guard.
+ *
+ *   export const POST = withDeviceAuth(async (req, device) => { ... });
+ */
+export function withDeviceAuth<Ctx = unknown>(
+  handler: (
+    req: NextRequest,
+    device: AuthedDevice,
+    ctx: Ctx,
+  ) => Promise<Response> | Response,
+): (req: NextRequest, ctx: Ctx) => Promise<Response> {
+  return async (req: NextRequest, ctx: Ctx) => {
+    const authed = await requireDevice(req);
+    if ("response" in authed) return authed.response;
+    return handler(req, authed.device, ctx);
+  };
 }
 
 /**

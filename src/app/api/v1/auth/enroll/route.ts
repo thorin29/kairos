@@ -47,6 +47,20 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Secondary limit keyed by the code, so rotating source IPs can't brute-force
+  // a single short code past the per-IP ceiling above. Codes are also one-time
+  // and short-lived; this caps guesses against any one code.
+  const rlCode = rateLimit(
+    `enroll-code:${code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "")}`,
+    10,
+    300_000,
+  );
+  if (!rlCode.ok) {
+    return apiError("rate_limited", "Too many attempts. Try again shortly.", {
+      retryAfterSec: rlCode.retryAfterSec,
+    });
+  }
+
   const result = await redeemEnrollmentCode(code, deviceName, loginToken);
   if (!result.ok) {
     if (result.reason === "login_required") {

@@ -28,6 +28,15 @@ export async function POST(req: NextRequest) {
   const authed = await requireDeviceForReauth(req);
   if ("response" in authed) return authed.response;
 
+  // Secondary limit keyed by the device, so password guesses can't be spread
+  // across source IPs against one enrolled device.
+  const rlDev = rateLimit(`reauth-dev:${authed.device.deviceId}`, 10, 60_000);
+  if (!rlDev.ok) {
+    return apiError("rate_limited", "Too many attempts. Try again shortly.", {
+      retryAfterSec: rlDev.retryAfterSec,
+    });
+  }
+
   let body: unknown;
   try {
     body = await req.json();
