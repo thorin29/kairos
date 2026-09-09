@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashToken, hashPassword, verifyPassword } from "@/lib/auth";
+import { hashToken, hashPassword, verifyPassword, normalizeInviteCode } from "@/lib/auth";
 import { avatarUrl, isIcon, iconGlyph } from "@/lib/avatars";
 import { apiError } from "@/lib/api/errors";
 import { bearerToken } from "@/lib/api/request";
@@ -231,7 +231,7 @@ export async function joinCheck(
   purpose: string;
 }> {
   const invite = await prisma.invite.findUnique({
-    where: { tokenHash: hashToken(token) },
+    where: { tokenHash: hashToken(normalizeInviteCode(token)) },
     select: { userId: true, expiresAt: true, purpose: true },
   });
   if (!invite || invite.expiresAt < new Date()) {
@@ -266,7 +266,7 @@ export async function redeemJoin(
   | { ok: false; reason: "invalid" | "wrong_password" | "weak" }
 > {
   const invite = await prisma.invite.findUnique({
-    where: { tokenHash: hashToken(token) },
+    where: { tokenHash: hashToken(normalizeInviteCode(token)) },
     select: { userId: true, expiresAt: true, purpose: true },
   });
   if (!invite || invite.expiresAt < new Date()) {

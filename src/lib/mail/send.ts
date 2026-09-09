@@ -61,6 +61,7 @@ export async function sendTestEmail(to: string): Promise<SendResult> {
 export async function sendInviteEmail(
   to: string,
   name: string,
+  code: string,
   appLink: string,
   webLink: string,
 ): Promise<{ sent: boolean; error?: string }> {
@@ -72,12 +73,13 @@ export async function sendInviteEmail(
     "",
     "You've been invited to set up your Kairos account.",
     "",
-    "On your phone: open the Kairos app, tap \"Have an invite link?\" on the",
-    "sign-in screen, and paste this:",
+    "On your phone: open the Kairos app, tap \"Have an invitation code?\" on the",
+    "sign-in screen, and enter this code:",
     "",
-    appLink,
+    `    ${code}`,
     "",
-    `(On a computer where you can already sign in, you can instead open: ${webLink})`,
+    `(Or paste this link instead: ${appLink})`,
+    `(On a computer where you can already sign in: ${webLink})`,
     "",
     "This is single-use and expires. If it has, ask for a new one.",
   ].join("\n");
@@ -87,8 +89,10 @@ export async function sendInviteEmail(
       <p>Hi ${escapeHtml(name)},</p>
       <p>You've been invited to set up your Kairos account.</p>
       <p><strong>On your phone:</strong> open the Kairos app, tap
-         &ldquo;Have an invite link?&rdquo; on the sign-in screen, and paste this:</p>
-      <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;word-break:break-all;background:#f3f4f6;padding:12px;border-radius:8px;color:#111">${escapeHtml(appLink)}</p>
+         &ldquo;Have an invitation code?&rdquo; on the sign-in screen, and enter this code:</p>
+      <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:600;letter-spacing:6px;text-align:center;background:#f3f4f6;padding:16px;border-radius:8px;color:#111">${escapeHtml(code)}</p>
+      <p style="font-size:13px;color:#666">Or paste this link instead:
+         <span style="font-family:ui-monospace,monospace;word-break:break-all">${escapeHtml(appLink)}</span></p>
       <p style="font-size:13px;color:#666">On a computer where you can already sign in,
          you can instead open <a href="${escapeAttr(webLink)}">${escapeHtml(webLink)}</a>.</p>
       <p style="font-size:13px;color:#666">This is single-use and expires.
@@ -115,6 +119,7 @@ export async function sendInviteEmail(
 export async function sendResetEmail(
   to: string,
   name: string,
+  code: string,
   appLink: string,
   webLink: string,
 ): Promise<{ sent: boolean; error?: string }> {
@@ -126,15 +131,16 @@ export async function sendResetEmail(
     "",
     "Someone asked to reset your Kairos password. If that was you:",
     "",
-    "On your phone: open the Kairos app, tap \"Have an invite link?\" on the",
-    "sign-in screen, and paste this:",
+    "On your phone: open the Kairos app, tap \"Have an invitation code?\" on the",
+    "sign-in screen, and enter this code:",
     "",
-    appLink,
+    `    ${code}`,
     "",
-    `(On a computer where you can already sign in, you can instead open: ${webLink})`,
+    `(Or paste this link instead: ${appLink})`,
+    `(On a computer where you can already sign in: ${webLink})`,
     "",
     "If you didn't ask for this, ignore this email — nothing changes until the",
-    "link is used, and it's single-use and expires.",
+    "code is used, and it's single-use and expires.",
   ].join("\n");
 
   const html = `
@@ -142,12 +148,14 @@ export async function sendResetEmail(
       <p>Hi ${escapeHtml(name)},</p>
       <p>Someone asked to reset your Kairos password. If that was you:</p>
       <p><strong>On your phone:</strong> open the Kairos app, tap
-         &ldquo;Have an invite link?&rdquo; on the sign-in screen, and paste this:</p>
-      <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;word-break:break-all;background:#f3f4f6;padding:12px;border-radius:8px;color:#111">${escapeHtml(appLink)}</p>
+         &ldquo;Have an invitation code?&rdquo; on the sign-in screen, and enter this code:</p>
+      <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:600;letter-spacing:6px;text-align:center;background:#f3f4f6;padding:16px;border-radius:8px;color:#111">${escapeHtml(code)}</p>
+      <p style="font-size:13px;color:#666">Or paste this link instead:
+         <span style="font-family:ui-monospace,monospace;word-break:break-all">${escapeHtml(appLink)}</span></p>
       <p style="font-size:13px;color:#666">On a computer where you can already sign in,
          you can instead open <a href="${escapeAttr(webLink)}">${escapeHtml(webLink)}</a>.</p>
       <p style="font-size:13px;color:#666">If you didn't ask for this, ignore this
-         email — nothing changes until the link is used, and it's single-use and expires.</p>
+         email — nothing changes until the code is used, and it's single-use and expires.</p>
     </div>`;
 
   try {

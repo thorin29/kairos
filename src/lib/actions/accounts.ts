@@ -113,6 +113,7 @@ export async function createInviteAction(
     const res = await sendInviteEmail(
       to,
       to,
+      token,
       appJoinLink(token),
       inviteLink(await baseUrl(), token),
     );

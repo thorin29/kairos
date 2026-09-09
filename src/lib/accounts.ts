@@ -6,6 +6,7 @@ import {
   hashPassword,
   verifyPassword,
   newInviteToken,
+  normalizeInviteCode,
   hashToken,
 } from "@/lib/auth";
 
@@ -142,7 +143,7 @@ export async function issueInvite(
   await prisma.$transaction([
     prisma.invite.deleteMany({ where: { userId } }),
     prisma.invite.create({
-      data: { userId, tokenHash: hashToken(token), expiresAt, purpose },
+      data: { userId, tokenHash: hashToken(normalizeInviteCode(token)), expiresAt, purpose },
     }),
   ]);
 
@@ -178,6 +179,7 @@ export async function requestPasswordReset(identifier: string): Promise<void> {
   await sendResetEmail(
     user.email,
     user.displayName ?? user.name,
+    token,
     appJoinLink(token),
     inviteLink(await baseUrl(), token),
   );
@@ -193,7 +195,7 @@ export async function requestPasswordReset(identifier: string): Promise<void> {
 export async function inviteIsRedeemable(token: string): Promise<boolean> {
   if (!token) return false;
   const invite = await prisma.invite.findUnique({
-    where: { tokenHash: hashToken(token) },
+    where: { tokenHash: hashToken(normalizeInviteCode(token)) },
     select: { expiresAt: true },
   });
   return !!invite && invite.expiresAt > new Date();
@@ -219,7 +221,7 @@ export async function redeemInvite(
   password: string,
 ): Promise<{ id: string; credentialVersion: number } | null> {
   const invite = await prisma.invite.findUnique({
-    where: { tokenHash: hashToken(token) },
+    where: { tokenHash: hashToken(normalizeInviteCode(token)) },
     select: { id: true, userId: true, expiresAt: true },
   });
   if (!invite || invite.expiresAt < new Date()) return null;

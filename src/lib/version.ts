@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.290.0";
+export const APP_VERSION = "0.291.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -94,6 +94,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.291.0",
+    summary: [
+      "Invitations are now a short 8-character code you can text, read aloud, or paste. Entering it in the app runs the full setup: create a password (new person), confirm it (add a phone), or set a new one (reset), then enrolls the device.",
+      "Household admin: each person now has an \u201cAdd a phone\u201d action (a confirm-password code that doesn\u2019t reset other devices) next to \u201cReset password\u201d; the invite box shows the code prominently; and the old separate enrollment-code generator is gone (the device list and revoke stay).",
+    ],
+  },
   {
     version: "0.290.0",
     summary: [
