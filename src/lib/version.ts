@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.279.0";
+export const APP_VERSION = "0.279.1";
 
 export const MIGRATIONS = [
   "0_init",
@@ -92,9 +92,9 @@ export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
-    version: "0.279.0",
+    version: "0.279.1",
     summary: [
-      "Spelling: \"colour\" is now \"color\" throughout (American spelling).",
+      "Spelling: American forms throughout \u2014 \"colour\" \u2192 \"color\", \"personalise\" \u2192 \"personalize\", \"behaviour\" \u2192 \"behavior\".",
     ],
   },
   {
@@ -246,7 +246,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.258.0",
     summary: [
-      "Internal: fixed the three long-standing type errors in the scheduled-workout query by giving the logged-set lookups explicit types (no behaviour change).",
+      "Internal: fixed the three long-standing type errors in the scheduled-workout query by giving the logged-set lookups explicit types (no behavior change).",
     ],
   },
   {
@@ -455,14 +455,14 @@ export const CHANGES: Change[] = [
   {
     version: "0.182.0",
     summary: [
-      "Personalise colors now covers the rest of your calendar: pick your own color for each custom event type (like a sports schedule) and for each subscribed calendar.",
+      "Personalize colors now covers the rest of your calendar: pick your own color for each custom event type (like a sports schedule) and for each subscribed calendar.",
       "As before, each color has an Auto option to fall back to the shared default.",
     ],
   },
   {
     version: "0.181.0",
     summary: [
-      "Your personal calendar can now be recolored to your taste: turn on Personalise colors in the options panel to set your own colors for appointments, class, work, birthdays, and holidays.",
+      "Your personal calendar can now be recolored to your taste: turn on Personalize colors in the options panel to set your own colors for appointments, class, work, birthdays, and holidays.",
       "Choose how other people's events look to you \\u2014 in their own colors, all in one grey, or exactly as the shared wall tablet shows them.",
       "You can also set your own color for the current-time line.",
       "Day view is cleaner: it no longer labels the column with your name (you already know it's you), and the top now shows just the month, with the weekday and date on the day itself.",
@@ -894,7 +894,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.125.0",
     summary: [
-      "Fixed a phantom \u201clate\u201d workout: taking a rest day on a day with no workout planned no longer invents a workout prompt, and deleting a rest day no longer turns it into an overdue workout. Any stray late-workout prompts left by the old behaviour are cleared automatically on the next load",
+      "Fixed a phantom \u201clate\u201d workout: taking a rest day on a day with no workout planned no longer invents a workout prompt, and deleting a rest day no longer turns it into an overdue workout. Any stray late-workout prompts left by the old behavior are cleared automatically on the next load",
       "A rest day never affects scoring \u2014 it only excuses a workout that was actually planned that day",
     ],
   },
@@ -1441,7 +1441,7 @@ export const CHANGES: Change[] = [
     summary: [
       "A sport-workout event can now include several people: when the event type is a sport workout, the form shows a \"who's going?\" picker, and each person checked gets their own \"did you do it?\" prompt",
       "Each person answers independently per occurrence \u2014 one completing and another declining never affect each other or future days",
-      "Leaving the picker empty keeps the old behaviour: just the person the event is for is asked",
+      "Leaving the picker empty keeps the old behavior: just the person the event is for is asked",
     ],
   },
   {

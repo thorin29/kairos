@@ -76,7 +76,7 @@ export type CalendarOptions = {
   canManageFamily: boolean;
   /** Custom event types, for the type picker. */
   eventTypes: { id: string; name: string; color: string; defaultMinutes: number | null; defaultReminder: number | null }[];
-  /** Phase 5 color personalisation: current prefs + the fallback colors the
+  /** Phase 5 color personalization: current prefs + the fallback colors the
    *  picker shows for unset slots. */
   colorPrefs: {
     personalizeColors: boolean;
@@ -296,7 +296,7 @@ export async function loadCalendarPagePayload(
           : formatMonth(date);
 
   // Now-line color follows the admin default unless the person overrode it
-  // (and only while personalisation is on) — same rule as the web.
+  // (and only while personalization is on) — same rule as the web.
   const nowColor =
     prefs.personalizeColors && prefs.nowColor ? prefs.nowColor : calPrefs.nowColor;
 

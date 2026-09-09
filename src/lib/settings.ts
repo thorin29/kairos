@@ -26,7 +26,7 @@ export const ROLLOVER_INTERVAL_MAX = 90;
 export const WORKOUT_OVERDUE_MAX = 6;
 export const WORKOUT_OVERDUE_DEFAULT = 6;
 
-// Season length. "month" follows the calendar month (the original behaviour);
+// Season length. "month" follows the calendar month (the original behavior);
 // "weeks" runs fixed N-week seasons from an anchor date, so a household with a
 // lighter workload can run longer seasons to reach a fuller ladder.
 export const SEASON_MODE = "season.mode";

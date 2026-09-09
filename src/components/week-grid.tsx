@@ -28,7 +28,7 @@ const clamp = (v: number, lo: number, hi: number) =>
  * Outlook-style time grid: an hour gutter down the left and a column per day
  * (one day or a whole week). Blocks are positioned by minutes from midnight.
  *
- * Scrolling behaviour:
+ * Scrolling behavior:
  *  - On mount (and after inactivity) it anchors to a sensible spot: the day's
  *    earliest event in the morning, then follows the clock into the afternoon
  *    so evening events come into view.
