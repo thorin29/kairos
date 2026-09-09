@@ -529,3 +529,16 @@ everywhere. App: ProfileScreen (settings) with the 8 PERSON_PALETTE swatches + a
 preview; setMyColor + refreshPerson (guarded to online so an offline save doesn't revert the
 ring from cached me()). Profile is now navigable in Settings. Photo + framing (avatar upload +
 pan/zoom cropper producing "tx ty scale") is the next profile phase - bigger Android build.
+
+## Web 0.276.3 + app 0.117.0: finish profile (photo + framing, custom colour)
+Web: new POST /api/v1/me/avatar (multipart: optional image + "position"). Replicates
+profile.ts file-save (UPLOADS dir, 5MB cap, magic-byte check, random filename, unlink old);
+image optional so it also re-frames the current photo (position only). App: ProfileScreen
+finished - avatar preview now applies avatarPosition (parseXf + graphicsLayer, matches the
+rest of the app so it's WYSIWYG); "Change photo" (PickVisualMedia) + "Adjust framing" open a
+circular AvatarCropDialog (detectTransformGestures -> tx/ty % + scale, same transform math);
+reads bytes off-main-thread and uploads via setAvatar (multipart). Custom colour: HSV
+ColorPickerDialog (hue bar + SV square), last custom colour persisted per-device
+(SettingsStore.lastCustomColor) and shown as an extra swatch. Text: "User color" +
+"Avatar color shared across the platform" (US spelling per Marco). PROFILE COMPLETE.
+Remaining epic item: notifications.
