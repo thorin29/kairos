@@ -11,6 +11,7 @@ import {
 } from "@/lib/scoring/weights";
 import { XP_PER_EFFORT, levelFromXp } from "@/lib/scoring/progression";
 import { generateChores } from "@/lib/chores/generate";
+import { generateRecurringTasks } from "@/lib/tasks/recurring";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
@@ -64,6 +65,7 @@ export async function loadSeasonPlan(): Promise<SeasonPlan> {
   // Make sure the window is populated (the same generation any page triggers).
   await Promise.all([
     generateChores(today),
+    generateRecurringTasks(today),
     generateWorkoutTasks(today),
     generatePoolChores(today),
     generateReadingTasks(today),

@@ -5,6 +5,7 @@ import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { todayISO, fromDateColumn } from "@/lib/dates";
 import { TasksAdmin, type AdminTask, type AdminPerson } from "./tasks-admin";
+import { RecurringTasksAdmin } from "./recurring-tasks-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,28 @@ export default async function AdminTasksPage() {
     };
   });
 
+  const recurring = (await prisma.recurringTask.findMany({
+    orderBy: { createdAt: "desc" },
+  })) as unknown as Array<{
+    id: string;
+    userId: string;
+    title: string;
+    freq: string;
+    interval: number;
+    byday: string | null;
+    startDate: Date;
+    endMode: string;
+    maxCount: number | null;
+    untilDate: Date | null;
+  }>;
+  const nameById = new Map(people.map((p) => [p.id, p.name]));
+  const recurringItems = recurring.map((r) => ({
+    id: r.id,
+    userName: nameById.get(r.userId) ?? "\u2014",
+    title: r.title,
+    summary: recurringSummary(r),
+  }));
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <AdminBack />
@@ -58,6 +81,54 @@ export default async function AdminTasksPage() {
       </header>
 
       <TasksAdmin people={people} tasks={items} today={today} />
+
+      <RecurringTasksAdmin
+        people={people}
+        items={recurringItems}
+        today={today}
+      />
     </main>
   );
+}
+
+const DAY_LABEL: Record<string, string> = {
+  SU: "Sun",
+  MO: "Mon",
+  TU: "Tue",
+  WE: "Wed",
+  TH: "Thu",
+  FR: "Fri",
+  SA: "Sat",
+};
+
+/** A plain-language line describing a recurring task's schedule. */
+function recurringSummary(r: {
+  freq: string;
+  interval: number;
+  byday: string | null;
+  endMode: string;
+  maxCount: number | null;
+  untilDate: Date | null;
+}): string {
+  const every = r.interval > 1 ? `every ${r.interval} ` : "";
+  let base: string;
+  if (r.freq === "DAILY") {
+    base = r.interval > 1 ? `Every ${r.interval} days` : "Every day";
+  } else if (r.freq === "MONTHLY") {
+    base = r.interval > 1 ? `Every ${r.interval} months` : "Every month";
+  } else {
+    const days = (r.byday ?? "")
+      .split(",")
+      .filter(Boolean)
+      .map((d) => DAY_LABEL[d] ?? d)
+      .join(", ");
+    base = `${every}week${r.interval > 1 ? "s" : ""} on ${days || "\u2014"}`;
+    base = base.charAt(0).toUpperCase() + base.slice(1);
+  }
+  let end = "";
+  if (r.endMode === "COUNT" && r.maxCount) end = ` \u00b7 ${r.maxCount} times`;
+  else if (r.endMode === "UNTIL" && r.untilDate) {
+    end = ` \u00b7 until ${fromDateColumn(r.untilDate)}`;
+  }
+  return base + end;
 }
