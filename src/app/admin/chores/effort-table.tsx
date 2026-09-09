@@ -81,7 +81,7 @@ export function EffortTable({ rows }: { rows: BalanceRow[] }) {
               <td
                 className={`${cell} ${
                   r.weekEffort === weekMax
-                    ? "bg-accent font-bold text-white"
+                    ? "bg-accent font-bold text-on-accent"
                     : "font-semibold"
                 }`}
               >

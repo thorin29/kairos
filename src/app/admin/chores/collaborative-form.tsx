@@ -97,7 +97,7 @@ export function CollaborativeForm({
                 className={[
                   "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors",
                   on
-                    ? "border-accent bg-accent text-white"
+                    ? "border-accent bg-accent text-on-accent"
                     : "border-hairline text-muted hover:border-accent",
                 ].join(" ")}
               >
@@ -158,7 +158,7 @@ export function CollaborativeForm({
           type="button"
           onClick={submit}
           disabled={pending}
-          className="inline-flex h-11 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md disabled:opacity-50"
+          className="inline-flex h-11 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm transition-all hover:shadow-md disabled:opacity-50"
         >
           <PlusIcon className="h-4 w-4" />
           Add collaborative chore

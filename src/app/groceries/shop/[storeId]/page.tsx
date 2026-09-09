@@ -28,7 +28,7 @@ export default async function ShopPage({
           </p>
           <Link
             href="/groceries"
-            className="mt-4 inline-flex h-11 items-center rounded-full bg-accent px-6 text-sm font-semibold text-white"
+            className="mt-4 inline-flex h-11 items-center rounded-full bg-accent px-6 text-sm font-semibold text-on-accent"
           >
             Back to groceries
           </Link>

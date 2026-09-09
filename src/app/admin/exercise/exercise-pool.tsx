@@ -114,7 +114,7 @@ export function ExercisePool({
             type="button"
             onClick={add}
             disabled={!canAdd}
-            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-white disabled:opacity-40"
+            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-on-accent disabled:opacity-40"
           >
             <PlusIcon className="h-4 w-4" />
             Add
@@ -232,7 +232,7 @@ function WeightUnitToggle({
             startTransition(() => setWeightUnit(muscleGroup, u))
           }
           className={`px-2.5 py-1 transition-colors disabled:opacity-50 ${
-            unit === u ? "bg-accent text-white" : "text-muted hover:text-accent"
+            unit === u ? "bg-accent text-on-accent" : "text-muted hover:text-accent"
           }`}
         >
           {u}

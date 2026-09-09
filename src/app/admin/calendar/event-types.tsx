@@ -89,7 +89,7 @@ export function EventTypes({ types }: { types: EventTypeRow[] }) {
             type="button"
             onClick={add}
             disabled={pending || name.trim().length < 2}
-            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-white disabled:opacity-40"
+            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-on-accent disabled:opacity-40"
           >
             <PlusIcon className="h-4 w-4" />
             Add
@@ -196,7 +196,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
           type="button"
           onClick={save}
           disabled={pending}
-          className="h-9 rounded-full bg-accent px-4 text-sm font-semibold text-white disabled:opacity-40"
+          className="h-9 rounded-full bg-accent px-4 text-sm font-semibold text-on-accent disabled:opacity-40"
         >
           Save
         </button>

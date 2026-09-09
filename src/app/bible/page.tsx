@@ -144,7 +144,7 @@ export default async function BiblePage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <SectionHeading>Family reading</SectionHeading>
           {stats.wholeBible && (
-            <span className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-white">
+            <span className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-on-accent">
               <TrophyIcon className="h-4 w-4" />
               Whole Bible read
             </span>

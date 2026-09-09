@@ -19,6 +19,7 @@ import {
   DollarIcon,
   StarIcon,
   TasksIcon,
+  PaletteIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -100,6 +101,13 @@ const TILES: Tile[] = [
     label: "Email",
     blurb: "SMTP server for sending invites, with a test button",
     icon: <MailIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/admin/appearance",
+    label: "Appearance",
+    blurb: "Colour theme and dark mode for the household's web view",
+    icon: <PaletteIcon className="h-7 w-7" />,
     ready: true,
   },
   {

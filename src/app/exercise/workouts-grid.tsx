@@ -476,7 +476,7 @@ export function WorkoutsGrid({
                               setStep("menu");
                             })
                           }
-                          className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-white"
+                          className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent"
                         >
                           Mark workout done
                         </button>
@@ -1204,7 +1204,7 @@ export function CustomWorkoutForm({
         type="button"
         onClick={save}
         disabled={!canSave}
-        className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+        className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-on-accent disabled:opacity-40"
       >
         {pending ? "Logging…" : "Log workout"}
       </button>
@@ -1492,7 +1492,7 @@ function HiitBuilder({
         type="button"
         onClick={save}
         disabled={!canSave}
-        className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+        className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-on-accent disabled:opacity-40"
       >
         {pending ? "Logging…" : "Log workout"}
       </button>

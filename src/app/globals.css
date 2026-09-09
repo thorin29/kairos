@@ -13,6 +13,9 @@
   --color-shade: #dde5ed;
   --color-shade-soft: #e8edf3;
   --color-accent: #0f5c63;
+  /* Text/icon colour that sits on top of the accent (buttons). White in light
+     mode; flipped to a dark tint in dark mode where the accent brightens. */
+  --color-on-accent: #ffffff;
 
   /* Left navigation rail. A muted teal-grey: clearly darker than the ground
      and calendar surfaces, well short of the dark-green accent. Kept as one
@@ -142,3 +145,41 @@ button:disabled {
 .companion-nap { animation: companion-nap 3.6s ease-in-out infinite; transform-origin: bottom center; }
 .companion-zzz { animation: companion-zzz 2.6s ease-in-out infinite; }
 .pixelated { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+/* ==========================================================================
+   Themes (household, admin-set). The default (teal, light) lives in @theme
+   above. Each theme overrides only the accent + sidebar; dark mode flips the
+   neutrals and swaps to a brighter accent with a dark on-accent. Every widget
+   reads these tokens, so switching here re-skins the whole app.
+   ========================================================================== */
+
+/* --- Colour themes: light accent + sidebar --- */
+html[data-theme="olive"]  { --color-accent: #5a6b2f; --color-sidebar: #9aa37e; }
+html[data-theme="green"]  { --color-accent: #2e7d32; --color-sidebar: #8fb097; }
+html[data-theme="blue"]   { --color-accent: #1e5fa8; --color-sidebar: #8ca0bc; }
+html[data-theme="purple"] { --color-accent: #6b3fa0; --color-sidebar: #a394bc; }
+html[data-theme="pink"]   { --color-accent: #b83280; --color-sidebar: #bc93ac; }
+html[data-theme="orange"] { --color-accent: #c2570c; --color-sidebar: #bfa088; }
+html[data-theme="red"]    { --color-accent: #b3261e; --color-sidebar: #bf9491; }
+
+/* --- Dark mode: neutrals flip; accent brightens, on-accent goes dark --- */
+html.dark {
+  --color-ground: #0b1220;
+  --color-surface: #161e2e;
+  --color-ink: #e7ecf3;
+  --color-muted: #94a3b8;
+  --color-hairline: #2a3547;
+  --color-shade: #202a3b;
+  --color-shade-soft: #1a2333;
+  /* teal (default) dark accent */
+  --color-accent: #2dd4bf;
+  --color-on-accent: #04231f;
+  --color-sidebar: #14343a;
+}
+html.dark[data-theme="olive"]  { --color-accent: #aac066; --color-on-accent: #20260c; --color-sidebar: #333a1e; }
+html.dark[data-theme="green"]  { --color-accent: #5bd37a; --color-on-accent: #07260f; --color-sidebar: #1e3d26; }
+html.dark[data-theme="blue"]   { --color-accent: #6ba6f5; --color-on-accent: #041b34; --color-sidebar: #1e2c48; }
+html.dark[data-theme="purple"] { --color-accent: #c08bf5; --color-on-accent: #1c0a33; --color-sidebar: #2c2146; }
+html.dark[data-theme="pink"]   { --color-accent: #f77fbe; --color-on-accent: #360a24; --color-sidebar: #3d1f32; }
+html.dark[data-theme="orange"] { --color-accent: #fb9e4b; --color-on-accent: #331705; --color-sidebar: #40280f; }
+html.dark[data-theme="red"]    { --color-accent: #f48078; --color-on-accent: #330a07; --color-sidebar: #411e1b; }

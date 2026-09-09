@@ -575,7 +575,7 @@ export function GenerateForm({
           </p>
           <Link
             href="/admin/bible"
-            className="mt-3 inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-white"
+            className="mt-3 inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent"
           >
             Review and publish
           </Link>
@@ -585,7 +585,7 @@ export function GenerateForm({
       <button
         type="submit"
         disabled={pending || Boolean(preview.error)}
-        className="inline-flex h-11 items-center rounded-full bg-accent px-6 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
+        className="inline-flex h-11 items-center rounded-full bg-accent px-6 text-sm font-medium text-on-accent shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
       >
         {pending ? "Building\u2026" : "Save as draft"}
       </button>

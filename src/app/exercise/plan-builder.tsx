@@ -513,7 +513,7 @@ function AddWorkoutModal({
             type="button"
             disabled={!canSave || saving}
             onClick={save}
-            className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+            className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-on-accent disabled:opacity-40"
           >
             {saving ? "Adding…" : "Add workout"}
           </button>

@@ -55,7 +55,7 @@ function ShareRow({ share }: { share: PendingHiitShare }) {
         type="button"
         disabled={pending}
         onClick={() => start(() => void approveHiitWorkout(share.id))}
-        className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
+        className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-sm font-semibold text-on-accent disabled:opacity-40"
       >
         <CheckIcon className="h-4 w-4" />
         Approve

@@ -75,7 +75,7 @@ export function ImportForm() {
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-11 items-center rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
+          className="inline-flex h-11 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
         >
           {pending ? "Importing\u2026" : "Import as draft"}
         </button>

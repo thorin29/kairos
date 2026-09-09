@@ -449,7 +449,7 @@ export function HiitWorkouts({
             type="button"
             onClick={save}
             disabled={pending || name.trim().length < 2 || picked.length === 0}
-            className="mt-4 w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+            className="mt-4 w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-on-accent disabled:opacity-40"
           >
             {pending
               ? "Saving…"

@@ -219,7 +219,7 @@ export function AddEventButton({ wide = false }: { wide?: boolean }) {
       <button
         type="button"
         onClick={() => openAt()}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-accent px-4 font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-110"
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-accent px-4 font-semibold text-on-accent shadow-sm transition-all hover:shadow-md hover:brightness-110"
       >
         <PlusIcon className="h-5 w-5" />
         New event
@@ -232,7 +232,7 @@ export function AddEventButton({ wide = false }: { wide?: boolean }) {
       onClick={() => openAt()}
       aria-label="Add event"
       title="Add event"
-      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-white shadow-sm transition-all hover:shadow-md hover:brightness-110"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-on-accent shadow-sm transition-all hover:shadow-md hover:brightness-110"
     >
       <PlusIcon className="h-5 w-5" />
     </button>
@@ -774,7 +774,7 @@ function EventModal({
                         title={DAY_NAMES[i]}
                         className={`h-10 w-10 rounded-full border text-sm font-medium transition-colors ${
                           on
-                            ? "border-accent bg-accent text-white"
+                            ? "border-accent bg-accent text-on-accent"
                             : "border-hairline text-muted hover:border-accent hover:text-accent"
                         }`}
                       >
@@ -906,7 +906,7 @@ function EventModal({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex h-11 items-center rounded-full bg-accent px-5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
+              className="inline-flex h-11 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
             >
               {pending
                 ? editing
