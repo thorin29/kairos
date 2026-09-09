@@ -310,7 +310,7 @@ export async function redeemJoin(
       ok: true as const,
       token: secret,
       expiresAt,
-      person: toPerson({ ...user, credentialVersion: credV }),
+      person: toPerson(user),
     };
   });
 }
