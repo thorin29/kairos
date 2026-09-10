@@ -48,6 +48,74 @@ const COLORS: [string, string][] = [
   ["#0d9488", "Teal"],
 ];
 
+function ColorSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const selected = COLORS.find(([hex]) => hex === value) ?? COLORS[0];
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+  return (
+    <div ref={boxRef} className="relative mt-1.5">
+      <input type="hidden" name="color" value={value} />
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex h-11 w-full items-center gap-2 rounded-full border border-hairline bg-surface px-5 text-left text-sm outline-none focus:border-accent select-caret"
+      >
+        <span
+          className="h-4 w-4 shrink-0 rounded-full border border-hairline"
+          style={{ backgroundColor: selected[0] || "#e2e8f0" }}
+        />
+        <span>{selected[1]}</span>
+      </button>
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-2xl border border-hairline bg-surface py-1 shadow-lg"
+        >
+          {COLORS.map(([hex, label]) => (
+            <li key={label}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={hex === value}
+                onClick={() => {
+                  onChange(hex);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-accent/10 ${
+                  hex === value ? "bg-accent/5 font-medium" : ""
+                }`}
+              >
+                <span
+                  className="h-4 w-4 shrink-0 rounded-full border border-hairline"
+                  style={{ backgroundColor: hex || "#e2e8f0" }}
+                />
+                {label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 const initial: SchoolActionState = { error: null };
 
 export type ClassFormOption = { id: string; name: string };
@@ -393,17 +461,6 @@ export function CalendarClassForm({
         </div>
       )}
 
-      {/* Where */}
-      {days.length > 0 && (
-        <div>
-          <label className="block text-sm font-medium">Where</label>
-          <LocationCombobox
-            defaultValue={editing?.meetingLocation ?? ""}
-            fieldClassName={FIELD}
-          />
-        </div>
-      )}
-
       {/* Class type | Semester | Color */}
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
@@ -449,26 +506,20 @@ export function CalendarClassForm({
 
         <div>
           <label className="block text-sm font-medium">Color</label>
-          <div className="mt-1.5 flex items-center gap-2">
-            <span
-              className="h-5 w-5 shrink-0 rounded-full border border-hairline"
-              style={{ backgroundColor: color || "#e2e8f0" }}
-            />
-            <select
-              name="color"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              className="h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent select-caret"
-            >
-              {COLORS.map(([hex, label]) => (
-                <option key={label} value={hex}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ColorSelect value={color} onChange={setColor} />
         </div>
       </div>
+
+      {/* Where */}
+      {days.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium">Where</label>
+          <LocationCombobox
+            defaultValue={editing?.meetingLocation ?? ""}
+            fieldClassName={FIELD}
+          />
+        </div>
+      )}
 
       {/* Homework */}
       <label className="flex items-start gap-2.5 text-sm">
