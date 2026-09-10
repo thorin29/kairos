@@ -60,6 +60,25 @@ const REMINDER_PRESETS = [
   { min: 1440, label: "1 day" },
 ];
 
+function BellToggle({ on }: { on: boolean }) {
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+      {!on && <line x1="2" x2="22" y1="2" y2="22" />}
+    </svg>
+  );
+}
+
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 const DAY_NAMES = [
   "Sunday",
@@ -305,6 +324,33 @@ function EventModal({
   const router = useRouter();
   const [allDay, setAllDay] = useState(allDayInit ?? false);
   const [bells, setBells] = useState<Set<string>>(() => new Set(reminderUserIdsInit ?? []));
+  const [participants, setParticipants] = useState<Set<string>>(
+    () => new Set(participantIdsInit ?? []),
+  );
+  const [reminders, setReminders] = useState<Set<number>>(
+    () => new Set(remindersInit ?? []),
+  );
+  const toggleParticipant = (uid: string) =>
+    setParticipants((prev) => {
+      const n = new Set(prev);
+      if (n.has(uid)) n.delete(uid);
+      else n.add(uid);
+      return n;
+    });
+  const toggleReminderMin = (min: number) =>
+    setReminders((prev) => {
+      const n = new Set(prev);
+      if (n.has(min)) n.delete(min);
+      else n.add(min);
+      return n;
+    });
+  const toggleBell = (uid: string) =>
+    setBells((prev) => {
+      const n = new Set(prev);
+      if (n.has(uid)) n.delete(uid);
+      else n.add(uid);
+      return n;
+    });
   const [kind, setKind] = useState(kindInit ?? "APPOINTMENT");
   // When editing a repeating event, pre-fill the repeat controls from its rule
   // so a series edit can change the pattern (ignored when adding or copying).
@@ -506,7 +552,7 @@ function EventModal({
       onClick={onClose}
     >
       <div
-        className="my-4 w-full max-w-3xl rounded-2xl bg-surface p-5 shadow-xl"
+        className="my-4 w-full max-w-4xl rounded-2xl bg-surface p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
@@ -587,106 +633,83 @@ function EventModal({
               <input type="hidden" name="eventTypeId" value={eventTypeId} />
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-sm font-medium">
-                Share with
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {people.map((p) => (
-                  <span key={p.id} className="inline-flex items-center gap-1">
-                    <label
-                      className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-hairline px-3 py-1.5 text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10"
-                    >
-                      <input
-                        type="checkbox"
-                        name="participants"
-                        value={p.id}
-                        defaultChecked={participantIdsInit?.includes(p.id) ?? false}
-                        className="h-4 w-4"
-                      />
-                      {p.name}
-                    </label>
-                    <label
-                      className="inline-flex cursor-pointer items-center"
-                      title={
-                        bells.has(p.id)
-                          ? `Notifications on for ${p.name}`
-                          : `Notifications off for ${p.name}`
-                      }
-                    >
-                      <input
-                        type="checkbox"
-                        name="reminderBell"
-                        value={p.id}
-                        checked={bells.has(p.id)}
-                        onChange={(e) =>
-                          setBells((prev) => {
-                            const n = new Set(prev);
-                            if (e.target.checked) n.add(p.id);
-                            else n.delete(p.id);
-                            return n;
-                          })
-                        }
-                        className="peer sr-only"
-                      />
-                      {/* off: red bell with a slash */}
-                      <svg
-                        className="h-5 w-5 text-red-500 peer-checked:hidden"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">
+                  Share with
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {people.map((p) => (
+                    <span key={p.id} className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleParticipant(p.id)}
+                        aria-pressed={participants.has(p.id)}
+                        className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                          participants.has(p.id)
+                            ? "border-accent bg-accent/10 text-accent"
+                            : "border-hairline text-muted hover:border-accent"
+                        }`}
                       >
-                        <path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5" />
-                        <path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7" />
-                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                        <line x1="2" x2="22" y1="2" y2="22" />
-                      </svg>
-                      {/* on: green bell */}
-                      <svg
-                        className="hidden h-5 w-5 text-green-600 peer-checked:block"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-                      </svg>
-                    </label>
-                  </span>
-                ))}
+                        {p.name}
+                      </button>
+                      {participants.has(p.id) && (
+                        <button
+                          type="button"
+                          onClick={() => toggleBell(p.id)}
+                          title={
+                            bells.has(p.id)
+                              ? `Notifications on for ${p.name}`
+                              : `Notifications off for ${p.name}`
+                          }
+                          aria-label="Toggle notifications"
+                          className={
+                            bells.has(p.id) ? "text-green-600" : "text-red-500"
+                          }
+                        >
+                          <BellToggle on={bells.has(p.id)} />
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">
+                  Reminders
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {REMINDER_PRESETS.map((r) => (
+                    <button
+                      key={r.min}
+                      type="button"
+                      onClick={() => toggleReminderMin(r.min)}
+                      aria-pressed={reminders.has(r.min)}
+                      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                        reminders.has(r.min)
+                          ? "border-accent bg-accent/10 text-accent"
+                          : "border-hairline text-muted hover:border-accent"
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-sm font-medium">
-                Reminders
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {REMINDER_PRESETS.map((r) => (
-                  <label
-                    key={r.min}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-hairline px-3 py-1.5 text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10"
-                  >
-                    <input
-                      type="checkbox"
-                      name="reminders"
-                      value={r.min}
-                      defaultChecked={remindersInit?.includes(r.min) ?? false}
-                      className="h-4 w-4"
-                    />
-                    {r.label}
-                  </label>
-                ))}
-              </div>
-            </div>
+            {[...participants].map((id) => (
+              <input key={id} type="hidden" name="participants" value={id} />
+            ))}
+            {[...bells]
+              .filter((id) => participants.has(id))
+              .map((id) => (
+                <input key={id} type="hidden" name="reminderBell" value={id} />
+              ))}
+            {[...reminders].map((m) => (
+              <input key={m} type="hidden" name="reminders" value={m} />
+            ))}
 
             {allDay ? (
               <div>
