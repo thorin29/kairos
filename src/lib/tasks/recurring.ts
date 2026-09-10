@@ -27,6 +27,7 @@ type Template = {
   maxCount: number | null;
   untilDate: Date | null;
   createdById: string | null;
+  notifyMinutes: number | null;
 };
 
 /** Whether a template lands on a given calendar day (ignoring the end rule). */
@@ -125,6 +126,7 @@ export async function generateRecurringTasks(
       dueDate: Date;
       generatedFrom: string;
       createdById: string | null;
+      notifyMinutes: number | null;
     }
   >();
 
@@ -140,6 +142,7 @@ export async function generateRecurringTasks(
         dueDate: toDateColumn(iso),
         generatedFrom: gf,
         createdById: t.createdById,
+        notifyMinutes: t.notifyMinutes,
       });
     }
   }
@@ -218,6 +221,7 @@ export type RecurringInput = {
   maxCount: number | null;
   until: string;
   createdById?: string | null;
+  notifyMinutes?: number | null;
 };
 
 /**
@@ -262,6 +266,7 @@ export async function createRecurringTask(
       maxCount: endMode === "COUNT" ? maxCount : null,
       untilDate: endMode === "UNTIL" ? toDateColumn(input.until) : null,
       createdById: input.createdById ?? null,
+      notifyMinutes: input.notifyMinutes ?? null,
     },
   });
   await generateRecurringTasks();
