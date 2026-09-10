@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.316.0";
+export const APP_VERSION = "0.317.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -101,6 +101,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.317.0",
+    summary: [
+      "Made the class overlay match the event overlay: fields are now the same pill shape (dropdowns, dates, and times align), and the kind selector moved from the header into an inline Type field at the top, like events. On the \"turn into a class\" overlay, removed the \"replaced, not duplicated\" note and made the banner red instead of blue.",
+    ],
+  },
   {
     version: "0.316.0",
     summary: [

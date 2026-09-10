@@ -450,29 +450,14 @@ function EventModal({
         >
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold">{heading}</h2>
-            <div className="flex items-center gap-2">
-              {!editing && !classLocked && (
-                <select
-                  value={kind}
-                  onChange={(e) => chooseKind(e.target.value)}
-                  className="h-8 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
-                >
-                  {kindOptions.map((k) => (
-                    <option key={k.value} value={k.value}>
-                      {k.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground"
-              >
-                ✕
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground"
+            >
+              ✕
+            </button>
           </div>
 
           {classLocked ? (
@@ -485,10 +470,26 @@ function EventModal({
             </div>
           ) : (
             <>
+              {!editing && (
+                <div className="mb-4">
+                  <label className="mb-1.5 block text-sm font-medium">Type</label>
+                  <select
+                    value={kind}
+                    onChange={(e) => chooseKind(e.target.value)}
+                    className="h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent"
+                  >
+                    {kindOptions.map((k) => (
+                      <option key={k.value} value={k.value}>
+                        {k.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {converting && (
-                <p className="mb-3 rounded-lg bg-accent/10 px-3 py-2 text-xs text-ink">
+                <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
                   This calendar block isn’t a real class yet. Fill in the details
-                  and it becomes one — the old block is replaced, not duplicated.
+                  and it becomes one.
                 </p>
               )}
               <CalendarClassForm
