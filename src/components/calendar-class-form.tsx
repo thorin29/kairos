@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { DateField } from "@/components/date-field";
 import { useRouter } from "next/navigation";
 import { TimeSelect } from "@/components/time-select";
 import { LocationCombobox } from "@/components/location-combobox";
@@ -440,10 +441,10 @@ export function CalendarClassForm({
             <label className="block text-sm font-medium">
               Runs from <span className="text-muted">(opt.)</span>
             </label>
-            <input
+            <DateField
               name="meetingStartDate"
-              type="date"
               defaultValue={editing?.meetingStartDate ?? ""}
+              ariaLabel="Runs from"
               className={`tabular ${FIELD}`}
             />
           </div>
@@ -451,10 +452,10 @@ export function CalendarClassForm({
             <label className="block text-sm font-medium">
               Runs until <span className="text-muted">(opt.)</span>
             </label>
-            <input
+            <DateField
               name="meetingEndDate"
-              type="date"
               defaultValue={editing?.meetingEndDate ?? ""}
+              ariaLabel="Runs until"
               className={`tabular ${FIELD}`}
             />
           </div>
