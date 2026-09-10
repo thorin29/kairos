@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.312.0";
+export const APP_VERSION = "0.313.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -101,6 +101,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.313.0",
+    summary: [
+      "The lock icon now reliably lands on the current page's own admin section after the PIN \u2014 it does a full page load so the admin session is recognized (a soft navigation was bouncing back to the general admin hub) \u2014 and the Tasks page now maps to its admin section too.",
+    ],
+  },
   {
     version: "0.312.0",
     summary: [

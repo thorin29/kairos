@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { unlockAdmin, type UnlockState } from "@/lib/actions/session";
 
 const initial: UnlockState = { error: null, ok: false };
@@ -20,7 +19,6 @@ export function PinPad({
   next?: string;
   onUnlocked?: () => void;
 }) {
-  const router = useRouter();
   const [pin, setPin] = useState("");
   const [state, formAction, pending] = useActionState(unlockAdmin, initial);
   const formRef = useRef<HTMLFormElement>(null);
@@ -28,9 +26,9 @@ export function PinPad({
   useEffect(() => {
     if (state.ok) {
       if (onUnlocked) onUnlocked();
-      else router.push(next);
+      else window.location.assign(next);
     }
-  }, [state.ok, next, router, onUnlocked]);
+  }, [state.ok, next, onUnlocked]);
 
   useEffect(() => {
     if (state.error) setPin("");
