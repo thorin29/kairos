@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.308.0";
+export const APP_VERSION = "0.309.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -95,11 +95,19 @@ export const MIGRATIONS = [
   "84_appointment_to_event",
   "85_birthday_category_to_general",
   "86_drop_address_category",
+  "87_address_nav_by_name",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.309.0",
+    summary: [
+      "Calendar events now show a saved place's friendly name instead of its raw address when the location matches your address book \u2014 in the compact chips on the web, and as name-over-address on the app's event card.",
+      "Added a per-address \"open in maps by name\" setting (on for a business, off for a home). When on, opening the place from the app hands the name to your nav app for a better pin; when off it uses the address alone.",
+    ],
+  },
   {
     version: "0.308.0",
     summary: [

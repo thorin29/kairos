@@ -12,7 +12,7 @@ function bust() {
   revalidatePath("/calendar");
 }
 
-export type AddressInput = { name: string; address: string };
+export type AddressInput = { name: string; address: string; navByName?: boolean };
 export type CreateAddressResult = SaveResult;
 
 /** Admin intake (Admin → Addresses) — lands APPROVED. */
@@ -28,8 +28,8 @@ export async function createSavedAddress(
 
 export async function updateSavedAddress(id: string, input: AddressInput): Promise<void> {
   await requireAdmin();
-  const { name, address } = cleanAddress(input);
-  await prisma.savedAddress.update({ where: { id }, data: { name, address } });
+  const { name, address, navByName } = cleanAddress(input);
+  await prisma.savedAddress.update({ where: { id }, data: { name, address, navByName } });
   bust();
 }
 

@@ -454,6 +454,9 @@ model SavedAddress {
   id        String   @id @default(cuid())
   name      String
   address   String
+  // When on, opening this place in maps searches by "name, address" (best for a
+  // business); off searches the address alone (best for a residence).
+  navByName Boolean  @default(true)
   lat       Float?
   lng       Float?
   status    AddressStatus @default(APPROVED)

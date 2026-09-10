@@ -1,4 +1,5 @@
 import "server-only";
+import { normalizeAddress } from "@/lib/addresses";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, localParts, toDateColumn, weekDays } from "@/lib/dates";
 import { getFamilyColor } from "@/lib/settings";
@@ -15,6 +16,8 @@ export type GridEvent = {
   id: string;
   title: string;
   location: string | null;
+  /** The saved place's friendly name for this location, or null. Derived. */
+  locationName: string | null;
   dayISO: string;
   /** Minutes from midnight in the household timezone. */
   startMin: number;
@@ -174,6 +177,7 @@ async function birthdayEvents(
         id: `birthday-${p.id}-${year}`,
         title: `${who}'s Birthday`,
         location: null,
+        locationName: null,
         dayISO: iso,
         startMin: 0,
         endMin: 1440,
@@ -221,6 +225,7 @@ async function holidayEvents(days: string[]): Promise<GridEvent[]> {
     id: `holiday-${h.key}-${h.iso}`,
     title: h.label,
     location: null,
+    locationName: null,
     dayISO: h.iso,
     startMin: 0,
     endMin: 1440,
@@ -285,6 +290,24 @@ function whoLabelFrom(names: string[]): string {
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]} & ${names[1]}`;
   return `${names[0]} +${names.length - 1}`;
+}
+
+/** Approved saved addresses as a normalized-address → friendly-name map. */
+async function savedAddressNames(): Promise<Map<string, string>> {
+  const rows = await prisma.savedAddress.findMany({
+    where: { status: "APPROVED" },
+    select: { name: true, address: true },
+  });
+  const m = new Map<string, string>();
+  for (const r of rows as { name: string; address: string }[]) {
+    m.set(normalizeAddress(r.address), r.name);
+  }
+  return m;
+}
+
+function nameFor(location: string | null, names: Map<string, string>): string | null {
+  if (!location) return null;
+  return names.get(normalizeAddress(location)) ?? null;
 }
 
 export async function loadRange(
@@ -511,6 +534,7 @@ export async function loadRange(
       id: `${e.id}${suffix}`,
       title: e.title,
       location: e.location,
+      locationName: null,
       notes: (e as { notes?: string | null }).notes ?? null,
       reminders: (e as { reminders?: number[] }).reminders ?? [],
       reminderUserIds: (e as { reminderUserIds?: string[] }).reminderUserIds ?? [],
@@ -596,6 +620,10 @@ export async function loadRange(
       else timed.push(m);
     }
   }
+
+  const addrNames = await savedAddressNames();
+  for (const e of timed) e.locationName = nameFor(e.location, addrNames);
+  for (const e of allDay) e.locationName = nameFor(e.location, addrNames);
 
   return { days, timed, allDay };
 }
@@ -731,6 +759,7 @@ async function applySchoolWork(
     const markerBase = {
       title: t.title,
       location: null,
+      locationName: null,
       color: t.user?.color ?? CATEGORY_COLORS.SCHOOL,
       memberColors: [],
       isFamily: false,
