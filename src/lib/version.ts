@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.322.0";
+export const APP_VERSION = "0.323.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -101,6 +101,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.323.0",
+    summary: [
+      "Subscribed calendars now have an Edit button (matching Addresses): feed names are read-only until you tap Edit, which reveals a pencil to rename each one and the remove button. Renaming stays inline.",
+    ],
+  },
   {
     version: "0.322.0",
     summary: [

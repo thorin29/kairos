@@ -13,6 +13,7 @@ import { Card } from "@/components/ui";
 import {
   CalendarPlusIcon,
   LinkIcon,
+  PencilIcon,
   RefreshIcon,
   TrashIcon,
 } from "@/components/icons";
@@ -44,6 +45,7 @@ export function Subscriptions({
   const [state, formAction, pending] = useActionState(addCalendar, initial);
   const [busy, startTransition] = useTransition();
   const [editing, setEditing] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
 
   return (
     <div className="space-y-5">
@@ -125,6 +127,21 @@ export function Subscriptions({
       </Card>
 
       {subscriptions.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setEditMode((v) => !v);
+              setEditing(null);
+            }}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+          >
+            {editMode ? "Done" : "Edit"}
+          </button>
+        </div>
+      )}
+
+      {subscriptions.length > 0 && (
         <Card className={`divide-y divide-hairline ${busy ? "opacity-60" : ""}`}>
           {subscriptions.map((s) => (
             <div key={s.id} className="flex flex-wrap items-center gap-3 p-4">
@@ -152,14 +169,20 @@ export function Subscriptions({
                     className="h-9 w-full rounded-full border border-accent px-4 text-sm outline-none"
                   />
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setEditing(s.id)}
-                    className="text-left text-sm font-medium hover:text-accent"
-                    title="Rename"
-                  >
-                    {s.name}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium">{s.name}</span>
+                    {editMode && (
+                      <button
+                        type="button"
+                        onClick={() => setEditing(s.id)}
+                        aria-label={`Rename ${s.name}`}
+                        title="Rename"
+                        className="rounded-lg p-1 text-muted transition-colors hover:bg-ink/5 hover:text-accent"
+                      >
+                        <PencilIcon className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 )}
                 <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
                   <LinkIcon className="h-3 w-3" />
@@ -188,20 +211,22 @@ export function Subscriptions({
                 </label>
               </div>
 
-              <button
-                type="button"
-                aria-label={`Remove ${s.name}`}
-                title="Remove subscription"
-                disabled={busy}
-                onClick={() => {
-                  if (confirm(`Remove "${s.name}" and its events?`)) {
-                    startTransition(() => void removeCalendar(s.id));
-                  }
-                }}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-red-50 hover:text-red-700"
-              >
-                <TrashIcon className="h-4 w-4" />
-              </button>
+              {editMode && (
+                <button
+                  type="button"
+                  aria-label={`Remove ${s.name}`}
+                  title="Remove subscription"
+                  disabled={busy}
+                  onClick={() => {
+                    if (confirm(`Remove "${s.name}" and its events?`)) {
+                      startTransition(() => void removeCalendar(s.id));
+                    }
+                  }}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-red-50 hover:text-red-700"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              )}
             </div>
           ))}
         </Card>
