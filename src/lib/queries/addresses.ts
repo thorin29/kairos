@@ -9,11 +9,24 @@ export type AdminAddress = {
 };
 
 /**
+ * The fixed event "types" a location can belong to, mirroring the labels in the
+ * calendar's add-event picker (EventKind). Kept in sync with that list so the
+ * address categories match exactly what you see when creating an event.
+ */
+const KIND_CATEGORIES = [
+  "Appointment",
+  "Medical / Dental",
+  "Class",
+  "Work shift",
+  "Birthday",
+];
+
+/**
  * The address book for the admin screen, plus the category options the intake
- * form offers. Categories are drawn from the household's own event types and
- * active subscribed calendars (so the buckets match what's already in use),
- * with "General" always first. Case-folded so a type and a calendar of the same
- * name don't double up.
+ * form offers. Categories are "General", then the event types (above), then any
+ * custom event types you've defined, then your active subscribed/custom
+ * calendars — so the buckets match what's already in use. Case-folded so a type
+ * and a calendar of the same name don't double up.
  */
 export async function loadAddressAdmin(): Promise<{
   addresses: AdminAddress[];
@@ -34,6 +47,7 @@ export async function loadAddressAdmin(): Promise<{
 
   const cats = new Map<string, string>();
   cats.set("general", "General");
+  for (const label of KIND_CATEGORIES) cats.set(label.toLowerCase(), label);
   for (const t of types as { name: string }[]) cats.set(t.name.toLowerCase(), t.name);
   for (const c of cals as { name: string }[]) cats.set(c.name.toLowerCase(), c.name);
 

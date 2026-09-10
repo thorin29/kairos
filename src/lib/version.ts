@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.301.0";
+export const APP_VERSION = "0.302.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -97,6 +97,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.302.0",
+    summary: [
+      "Address categories now include the event types from the add-event picker (Appointment, Medical / Dental, Class, Work shift, Birthday), alongside General, your custom event types, and your calendars.",
+    ],
+  },
   {
     version: "0.301.0",
     summary: [
