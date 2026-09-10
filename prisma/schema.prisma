@@ -90,7 +90,6 @@ model User {
   poolExercises  PoolExercise[]
   invites          Invite[]
   devices          Device[]
-  enrollmentCodes  EnrollmentCode[]
   calendarPref     UserCalendarPref?
   sportSkips       SportSkip[]
   eventParticipations EventParticipant[]
@@ -790,21 +789,6 @@ model Device {
   revokedAt  DateTime? // soft-revoke; a revoked row never verifies
   credentialVersion Int @default(0) // password version this device last authenticated at
   createdAt  DateTime  @default(now())
-
-  @@index([userId])
-}
-
-// A one-time, short-lived code a parent generates in the admin area to bind a
-// device to a person. Redeeming it mints the device token and deletes the code.
-// Only the hash is stored; the raw code is shown once (as a QR or a short code).
-// This is the only path to a device token — there is no self-enrollment.
-model EnrollmentCode {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  codeHash  String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
 
   @@index([userId])
 }
