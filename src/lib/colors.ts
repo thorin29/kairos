@@ -24,7 +24,7 @@ export const CATEGORY_COLORS: Record<Category, string> = {
 export const CATEGORY_LABELS: Record<Category, string> = {
   SCHOOL:      "School",
   WORK:        "Work",
-  APPOINTMENT: "Appointments",
+  APPOINTMENT: "Events",
   CHORE:       "Chores",
   EXERCISE:    "Workouts",
   BIBLE:       "Bible Reading",

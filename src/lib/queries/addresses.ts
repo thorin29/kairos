@@ -22,7 +22,7 @@ export type PickerAddress = {
  * address categories match exactly what you see when creating an event.
  */
 const KIND_CATEGORIES = [
-  "Appointment",
+  "Event",
   "Medical / Dental",
   "Class",
   "Work shift",

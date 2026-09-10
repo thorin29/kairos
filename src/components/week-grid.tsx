@@ -150,7 +150,7 @@ export function WeekGrid({
     openMenu(
       [
         {
-          label: "New appointment",
+          label: "New event",
           onSelect: () => {
             openAt(
               personMode

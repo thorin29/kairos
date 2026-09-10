@@ -45,7 +45,7 @@ const field =
   "h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent";
 
 const KINDS = [
-  { value: "APPOINTMENT", label: "Appointment" },
+  { value: "APPOINTMENT", label: "Event" },
   { value: "CLASS", label: "Class" },
   { value: "WORK", label: "Work shift" },
   { value: "BIRTHDAY", label: "Birthday" },
