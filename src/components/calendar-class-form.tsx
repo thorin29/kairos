@@ -9,7 +9,7 @@ import {
 } from "@/lib/actions/school";
 
 const FIELD =
-  "mt-1.5 w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm outline-none focus:border-accent";
+  "mt-1.5 h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent";
 
 /** "HH:MM" plus one hour, wrapping at midnight; "" for a bad input. */
 function addHour(t: string): string {
