@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.324.0";
+export const APP_VERSION = "0.325.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -102,6 +102,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.325.0",
+    summary: [
+      "Share with + Reminders now sit on one line on every event type (Event, Work shift, Birthday, Medical, custom) like the class overlay, instead of bunching into a narrow column. The Where field on all-day and birthday events is full width to match other types. Switching Type away from Birthday no longer leaves an event stuck as all-day/yearly. And the Type dropdown keeps your custom event types when you switch away from Class.",
+    ],
+  },
   {
     version: "0.324.0",
     summary: [
