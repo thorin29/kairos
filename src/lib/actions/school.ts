@@ -254,8 +254,10 @@ function meetingEventData(input: {
   end: string;
   anchorISO: string;
   untilISO: string | null;
+  reminders?: number[];
+  reminderUserIds?: string[];
 }) {
-  const { userId, name, byday, start, end, anchorISO, untilISO } = input;
+  const { userId, name, byday, start, end, anchorISO, untilISO, reminders = [], reminderUserIds = [] } = input;
   if (byday.length === 0) return null;
   if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return null;
 
@@ -276,6 +278,8 @@ function meetingEventData(input: {
     endsAt,
     allDay: false,
     rrule,
+    reminders,
+    reminderUserIds,
   };
 }
 
@@ -444,8 +448,26 @@ async function persistClass(
     return { error: "The class's last day is before its first day." };
   }
 
+  const reminderMins = formData
+    .getAll("reminders")
+    .map(Number)
+    .filter((m) => Number.isFinite(m) && m > 0);
+  const reminderBell = formData
+    .getAll("reminderBell")
+    .map(String)
+    .filter(Boolean);
   const evData = hasMeeting
-    ? meetingEventData({ userId, name, byday, start, end, anchorISO, untilISO })
+    ? meetingEventData({
+        userId,
+        name,
+        byday,
+        start,
+        end,
+        anchorISO,
+        untilISO,
+        reminders: reminderMins,
+        reminderUserIds: reminderBell,
+      })
     : null;
 
   // Reconcile the meeting event.

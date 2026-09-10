@@ -19,6 +19,14 @@ function addHour(t: string): string {
   return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
 }
 
+const REMINDER_PRESETS: [number, string][] = [
+  [10, "10 min"],
+  [15, "15 min"],
+  [30, "30 min"],
+  [60, "1 hour"],
+  [1440, "1 day"],
+];
+
 const WEEKDAYS: [string, string][] = [
   ["MO", "Mon"],
   ["TU", "Tue"],
@@ -55,6 +63,8 @@ export type ClassEditInit = {
   meetingDays: string[];
   meetingStart: string;
   meetingEnd: string;
+  meetingReminders: number[];
+  meetingReminderUserIds: string[];
   meetingStartDate: string | null;
   meetingEndDate: string | null;
   sharedWith: string[];
@@ -111,6 +121,26 @@ export function CalendarClassForm({
   const [endTime, setEndTime] = useState(
     editing?.meetingEnd || (startInit ? addHour(startInit) : ""),
   );
+  const [reminders, setReminders] = useState<Set<number>>(
+    () => new Set(editing?.meetingReminders ?? []),
+  );
+  const [bells, setBells] = useState<Set<string>>(
+    () => new Set(editing?.meetingReminderUserIds ?? []),
+  );
+  const toggleReminder = (m: number) =>
+    setReminders((prev) => {
+      const n = new Set(prev);
+      if (n.has(m)) n.delete(m);
+      else n.add(m);
+      return n;
+    });
+  const toggleBell = (id: string) =>
+    setBells((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
 
   useEffect(() => {
     if (!pending && !state.error && state !== initial) {
@@ -331,29 +361,69 @@ export function CalendarClassForm({
       {shareOptions.length > 0 && (
         <div>
           <label className="block text-sm font-medium">Shared with</label>
-          <p className="mb-1.5 text-xs text-muted">
-            Other students in this class. If it meets, the block shows on their
-            calendars too.
-          </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
             {shareOptions.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => toggleShared(p.id)}
-                aria-pressed={shared.includes(p.id)}
-                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  shared.includes(p.id)
-                    ? "border-accent bg-accent/10 text-accent"
-                    : "border-hairline text-muted hover:border-accent"
-                }`}
-              >
-                {p.name}
-              </button>
+              <span key={p.id} className="inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => toggleShared(p.id)}
+                  aria-pressed={shared.includes(p.id)}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    shared.includes(p.id)
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-hairline text-muted hover:border-accent"
+                  }`}
+                >
+                  {p.name}
+                </button>
+                {shared.includes(p.id) && (
+                  <button
+                    type="button"
+                    onClick={() => toggleBell(p.id)}
+                    title={
+                      bells.has(p.id)
+                        ? `Notifications on for ${p.name}`
+                        : `Notifications off for ${p.name}`
+                    }
+                    aria-label="Toggle notifications"
+                    className={bells.has(p.id) ? "text-green-600" : "text-red-500"}
+                  >
+                    <BellToggle on={bells.has(p.id)} />
+                  </button>
+                )}
+              </span>
             ))}
           </div>
         </div>
       )}
+
+      <div>
+        <label className="block text-sm font-medium">Reminders</label>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {REMINDER_PRESETS.map(([min, label]) => (
+            <button
+              key={min}
+              type="button"
+              onClick={() => toggleReminder(min)}
+              aria-pressed={reminders.has(min)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                reminders.has(min)
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-hairline text-muted hover:border-accent"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {[...reminders].map((m) => (
+        <input key={m} type="hidden" name="reminders" value={m} />
+      ))}
+      {[...bells].map((id) => (
+        <input key={id} type="hidden" name="reminderBell" value={id} />
+      ))}
 
       <label className="flex items-start gap-2.5 text-sm">
         <input
@@ -394,5 +464,24 @@ export function CalendarClassForm({
         </button>
       </div>
     </form>
+  );
+}
+
+function BellToggle({ on }: { on: boolean }) {
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+      {!on && <line x1="2" x2="22" y1="2" y2="22" />}
+    </svg>
   );
 }
