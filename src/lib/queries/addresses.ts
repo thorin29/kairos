@@ -26,7 +26,6 @@ const KIND_CATEGORIES = [
   "Medical / Dental",
   "Class",
   "Work shift",
-  "Birthday",
 ];
 
 /**
