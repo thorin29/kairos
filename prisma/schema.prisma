@@ -378,6 +378,10 @@ model Event {
   eventType   EventType? @relation(fields: [eventTypeId], references: [id], onDelete: SetNull)
   title    String
   location String?
+  // A manual address for a subscribed (feed) event that has none, or to correct
+  // one. Sync never touches this field, so it survives feed refreshes; display
+  // and navigation use locationOverride ?? location.
+  locationOverride String?
   notes    String?
   // Minutes-before reminders for this event (e.g. [15, 60] = 15 min and 1 hr
   // before). Empty means no reminder. Fired per-device by the app.

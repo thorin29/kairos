@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import type { GridEvent } from "@/lib/queries/calendar";
 import { AttendeeList } from "@/components/attendance";
 import { classDueItems } from "@/lib/actions/school";
+import { saveSubscribedExtras } from "@/lib/actions/calendars";
 import { bgUrl } from "@/lib/event-bg";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import {
@@ -218,6 +219,9 @@ export function EventDetail({
                 <span>{event.calendarName} (subscribed)</span>
               </div>
             )}
+            {event.external && event.eventId && (
+              <SubscribedExtras event={event} />
+            )}
             {isSchoolWork && event.schoolType && (
               <div className="flex items-center gap-2 text-muted">
                 <SchoolIcon className="h-4 w-4 shrink-0" />
@@ -377,6 +381,95 @@ export function EventDetail({
       </div>
     </div>,
     document.body,
+  );
+}
+
+const SUB_REMINDERS: [number, string][] = [
+  [0, "At start"],
+  [10, "10 min"],
+  [30, "30 min"],
+  [60, "1 hr"],
+  [1440, "1 day"],
+];
+
+/** Reminders + a manual address for a subscribed (feed) event. Both persist
+ *  across feed refreshes. Saves on each change. */
+function SubscribedExtras({ event }: { event: GridEvent }) {
+  const [reminders, setReminders] = useState<Set<number>>(
+    () => new Set(event.reminders ?? []),
+  );
+  const [address, setAddress] = useState(event.location ?? "");
+  const [editingAddr, setEditingAddr] = useState(false);
+  const [, startSave] = useTransition();
+
+  const save = (mins: Set<number>, addr: string) =>
+    startSave(() => void saveSubscribedExtras(event.eventId, [...mins], addr));
+
+  const toggle = (m: number) =>
+    setReminders((prev) => {
+      const n = new Set(prev);
+      if (n.has(m)) n.delete(m);
+      else n.add(m);
+      save(n, address);
+      return n;
+    });
+
+  return (
+    <div className="mt-2 space-y-3 border-t border-hairline pt-3">
+      <div>
+        <p className="text-xs font-medium">Remind me</p>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {SUB_REMINDERS.map(([min, label]) => (
+            <button
+              key={min}
+              type="button"
+              onClick={() => toggle(min)}
+              aria-pressed={reminders.has(min)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                reminders.has(min)
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-hairline text-muted hover:border-accent"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="text-xs font-medium">Where</p>
+        {editingAddr ? (
+          <input
+            autoFocus
+            defaultValue={address}
+            placeholder="Add an address"
+            onBlur={(e) => {
+              const v = e.target.value;
+              setAddress(v);
+              setEditingAddr(false);
+              save(reminders, v);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+              if (e.key === "Escape") setEditingAddr(false);
+            }}
+            className="mt-1 h-9 w-full rounded-full border border-accent px-4 text-sm outline-none"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditingAddr(true)}
+            className="mt-1 text-left text-sm hover:text-accent"
+          >
+            {address ? (
+              <span>{address}</span>
+            ) : (
+              <span className="text-muted">+ Add an address</span>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
