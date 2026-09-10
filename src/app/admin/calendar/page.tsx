@@ -1,9 +1,9 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
+import { MapPinIcon } from "@/components/icons";
 import { loadEventTypes } from "@/lib/queries/calendar";
-import { loadAddressAdmin } from "@/lib/queries/addresses";
-import { AddressAdmin } from "@/app/admin/addresses/address-admin";
 import { getCalendarPrefs, getFamilyColor } from "@/lib/settings";
 import { Subscriptions } from "./subscriptions";
 import { EventTypes } from "./event-types";
@@ -37,7 +37,6 @@ export default async function AdminCalendarPage() {
   const familyColor = await getFamilyColor();
   const holidays = await loadHolidayList();
   const holidayColor = await getHolidayColor();
-  const { addresses } = await loadAddressAdmin();
 
   const subscriptions = calendars.map((c) => ({
     id: c.id,
@@ -68,14 +67,20 @@ export default async function AdminCalendarPage() {
         </p>
       </header>
 
-      <section className="mb-10">
-        <SectionHeading>Addresses</SectionHeading>
-        <p className="mb-3 mt-1 max-w-xl text-sm text-muted">
-          Saved places events reuse as locations — a short name and full address.
-          The location picker offers these on every event and filters as you type.
-        </p>
-        <AddressAdmin addresses={addresses} />
-      </section>
+      <Link
+        href="/admin/addresses"
+        className="mb-8 flex items-center gap-4 rounded-2xl border border-hairline bg-surface p-5 transition-all hover:border-accent hover:shadow-sm"
+      >
+        <span className="text-accent">
+          <MapPinIcon className="h-7 w-7" />
+        </span>
+        <span className="min-w-0">
+          <span className="block font-display text-lg font-semibold">Addresses</span>
+          <span className="block text-sm text-muted">
+            Saved places events reuse as locations — opens its own page.
+          </span>
+        </span>
+      </Link>
 
       <SectionHeading>Subscriptions</SectionHeading>
       <Subscriptions
