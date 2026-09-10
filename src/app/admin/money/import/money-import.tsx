@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import {
   importMoneyEntries,
   type ImportRow,
@@ -347,12 +348,10 @@ export function MoneyImport({
                       }`}
                     >
                       <td className="px-2 py-1.5">
-                        <input
-                          type="date"
+                        <DateField
                           value={r.date}
-                          onChange={(e) =>
-                            update(r.key, { date: e.target.value })
-                          }
+                          onChange={(v) => update(r.key, { date: v })}
+                          ariaLabel="Date"
                           className={FIELD}
                         />
                       </td>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import { BOOKS } from "@/lib/bible/books";
 import { todayISO } from "@/lib/dates";
 import type { PersonalPlan } from "@/lib/queries/personal-plan";
@@ -258,10 +259,10 @@ function PlanCreator({
           <label className="mb-1 block text-xs font-medium text-muted">
             Start
           </label>
-          <input
-            type="date"
+          <DateField
             value={startD}
-            onChange={(e) => setStartD(e.target.value)}
+            onChange={setStartD}
+            ariaLabel="Start"
             className="tabular h-9 rounded-lg border border-hairline bg-surface px-2 text-sm outline-none focus:border-accent"
           />
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import { addCollaborativeChore } from "@/lib/actions/chores";
 import { PlusIcon } from "@/components/icons";
 import { DAY_NAMES } from "@/lib/days";
@@ -146,10 +147,10 @@ export function CollaborativeForm({
 
         <div>
           <label className="mb-1.5 block text-sm font-medium">Starting</label>
-          <input
-            type="date"
+          <DateField
             value={startISO}
-            onChange={(e) => setStartISO(e.target.value)}
+            onChange={setStartISO}
+            ariaLabel="Starting"
             className={`tabular ${field}`}
           />
         </div>

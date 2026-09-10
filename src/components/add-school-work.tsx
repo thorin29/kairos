@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { DateField } from "@/components/date-field";
 import {
   addSchoolWork,
   type SchoolActionState,
@@ -189,11 +190,10 @@ export function AddSchoolWork({
           <label htmlFor="sw-due" className="block text-sm font-medium">
             Due
           </label>
-          <input
-            id="sw-due"
+          <DateField
             name="dueDate"
-            type="date"
             defaultValue={defaultDate}
+            ariaLabel="Due date"
             className={`tabular ${FIELD}`}
           />
         </div>
@@ -237,11 +237,10 @@ export function AddSchoolWork({
           <label htmlFor="sw-start" className="block text-sm font-medium">
             Starts
           </label>
-          <input
-            id="sw-start"
+          <DateField
             name="startDate"
-            type="date"
             defaultValue={defaultDate}
+            ariaLabel="Start date"
             className={`tabular ${FIELD}`}
           />
           <p className="mt-1 text-xs text-muted">

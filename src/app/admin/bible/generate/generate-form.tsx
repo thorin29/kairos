@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useActionState } from "react";
+import { DateField } from "@/components/date-field";
 import Link from "next/link";
 import { BOOKS, type Group } from "@/lib/bible/books";
 import {
@@ -347,13 +348,11 @@ export function GenerateForm({
               <label htmlFor="gen-start" className="mb-1.5 block text-sm font-medium">
                 First reading day
               </label>
-              <input
-                id="gen-start"
+              <DateField
                 name="start"
-                type="date"
-                required
                 value={startISO}
-                onChange={(e) => setStartISO(e.target.value)}
+                onChange={setStartISO}
+                ariaLabel="First reading day"
                 className="tabular h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent"
               />
             </div>
@@ -414,11 +413,11 @@ export function GenerateForm({
               </>
             ) : (
               <div className="flex flex-wrap items-center gap-3">
-                <input
+                <DateField
                   name="finish"
-                  type="date"
                   value={finishISO}
-                  onChange={(e) => setFinishISO(e.target.value)}
+                  onChange={setFinishISO}
+                  ariaLabel="Finish date"
                   className="tabular h-11 rounded-full border border-hairline bg-surface px-4 outline-none focus:border-accent"
                 />
                 <p className="text-xs text-muted">
@@ -535,10 +534,10 @@ export function GenerateForm({
           )}
 
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="date"
+            <DateField
               value={extraDate}
-              onChange={(e) => setExtraDate(e.target.value)}
+              onChange={setExtraDate}
+              ariaLabel="Date"
               className="tabular h-10 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
             />
             <input

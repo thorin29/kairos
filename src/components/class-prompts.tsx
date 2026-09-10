@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import { CheckIcon } from "@/components/icons";
 import { answerClassPrompt } from "@/lib/actions/school";
 import { SCHOOL_TYPES, SCHOOL_TYPE_LABEL } from "@/lib/school";
@@ -146,12 +147,11 @@ function PromptCard({
                 </option>
               ))}
             </select>
-            <input
-              type="date"
+            <DateField
               value={due}
-              onChange={(e) => setDue(e.target.value)}
+              onChange={setDue}
               className={`tabular ${INPUT}`}
-              aria-label="Due date"
+              ariaLabel="Due date"
             />
           </div>
         </div>

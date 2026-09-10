@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import { deleteSchoolWork, editSchoolWork } from "@/lib/actions/school";
 import { SCHOOL_TYPES, SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { formatShort } from "@/lib/dates";
@@ -180,11 +181,12 @@ function EditForm({
             </option>
           ))}
         </select>
-        <input
-          type="date"
+        <DateField
           value={due}
-          onChange={(e) => setDue(e.target.value)}
-          className={`${FIELD} tabular flex-1`}
+          onChange={setDue}
+          ariaLabel="Due date"
+          wrapperClassName="flex-1"
+          className={`${FIELD} tabular`}
         />
       </div>
       {classes.length > 0 && (

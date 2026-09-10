@@ -31,6 +31,7 @@ import {
   signedCents,
 } from "@/lib/money";
 import { formatShortYear } from "@/lib/dates";
+import { DateField } from "@/components/date-field";
 import { CheckIcon, PencilIcon, TrashIcon, DollarIcon, BibleIcon } from "@/components/icons";
 import type { AdminMoneyRow } from "@/lib/queries/money";
 import type { RewardConfig, RewardMonth } from "@/lib/bible-rewards";
@@ -522,11 +523,10 @@ function StartingModal({
             <label htmlFor="sf-date" className={LABEL}>
               As of
             </label>
-            <input
-              id="sf-date"
-              type="date"
+            <DateField
               name="date"
               defaultValue={today}
+              ariaLabel="Date"
               className={FIELD}
             />
           </div>
@@ -585,11 +585,10 @@ function EditModal({
             <label htmlFor="e-date" className={LABEL}>
               Date
             </label>
-            <input
-              id="e-date"
-              type="date"
+            <DateField
               name="date"
               defaultValue={row.date}
+              ariaLabel="Date"
               className={FIELD}
             />
           </div>

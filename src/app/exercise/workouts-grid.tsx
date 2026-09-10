@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
 import {
@@ -423,13 +424,12 @@ export function WorkoutsGrid({
                     >
                       Date
                     </label>
-                    <input
-                      id="log-date"
-                      type="date"
+                    <DateField
                       value={logDate}
                       max={todayISO}
                       min={addDays(todayISO, -90)}
-                      onChange={(e) => setLogDate(e.target.value || todayISO)}
+                      onChange={(v) => setLogDate(v || todayISO)}
+                      ariaLabel="Date"
                       className="tabular h-11 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
                     />
                     {logDate !== todayISO && (
