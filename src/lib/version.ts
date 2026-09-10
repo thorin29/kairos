@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.310.0";
+export const APP_VERSION = "0.311.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -101,6 +101,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.311.0",
+    summary: [
+      "Reorganized the admin menu to follow the sidebar order \u2014 Settings first, then Tasks, Calendar, Chores, Bible, School, Workouts, Groceries, Money, Game time, Characters, and About last. Device, appearance, email, household, and the season planner are grouped under a new Settings card; saved addresses now live inside the Calendar section.",
+    ],
+  },
   {
     version: "0.310.0",
     summary: [

@@ -21,6 +21,7 @@ import {
   StarIcon,
   TasksIcon,
   PaletteIcon,
+  GearIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -35,10 +36,10 @@ type Tile = {
 
 const TILES: Tile[] = [
   {
-    href: "/admin/chores",
-    label: "Chores",
-    blurb: "Master list, weekly assignments, shared chores",
-    icon: <ChoresIcon className="h-7 w-7" />,
+    href: "/admin/settings",
+    label: "Settings",
+    blurb: "Device, appearance, email, household, and the season planner",
+    icon: <GearIcon className="h-7 w-7" />,
     ready: true,
   },
   {
@@ -49,17 +50,24 @@ const TILES: Tile[] = [
     ready: true,
   },
   {
+    href: "/admin/calendar",
+    label: "Calendar",
+    blurb: "Subscribed feeds, holidays, event types, and saved addresses",
+    icon: <CalendarPlusIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/admin/chores",
+    label: "Chores",
+    blurb: "Master list, weekly assignments, shared chores",
+    icon: <ChoresIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
     href: "/admin/bible",
     label: "Bible reading",
     blurb: "Build or import a plan, review it, publish it",
     icon: <BibleIcon className="h-7 w-7" />,
-    ready: true,
-  },
-  {
-    href: "/admin/exercise",
-    label: "Workouts",
-    blurb: "Routines, movements, and per-person weekly assignment",
-    icon: <DumbbellIcon className="h-7 w-7" />,
     ready: true,
   },
   {
@@ -70,10 +78,10 @@ const TILES: Tile[] = [
     ready: true,
   },
   {
-    href: "/admin/games",
-    label: "Game time",
-    blurb: "Daily limits and weekly tokens",
-    icon: <GamepadIcon className="h-7 w-7" />,
+    href: "/admin/exercise",
+    label: "Workouts",
+    blurb: "Routines, movements, and per-person weekly assignment",
+    icon: <DumbbellIcon className="h-7 w-7" />,
     ready: true,
   },
   {
@@ -91,45 +99,10 @@ const TILES: Tile[] = [
     ready: true,
   },
   {
-    href: "/setup",
-    label: "Household",
-    blurb: "People, roles, PINs, scoring start date",
-    icon: <PeopleIcon className="h-7 w-7" />,
-    ready: true,
-  },
-  {
-    href: "/admin/email",
-    label: "Email",
-    blurb: "SMTP server for sending invites, with a test button",
-    icon: <MailIcon className="h-7 w-7" />,
-    ready: true,
-  },
-  {
-    href: "/admin/appearance",
-    label: "Appearance",
-    blurb: "Color theme and dark mode for the household's web view",
-    icon: <PaletteIcon className="h-7 w-7" />,
-    ready: true,
-  },
-  {
-    href: "/admin/device",
-    label: "Device",
-    blurb: "Shared or personal mode for this screen; require sign-in",
-    icon: <DeviceIcon className="h-7 w-7" />,
-    ready: true,
-  },
-  {
-    href: "/admin/calendar",
-    label: "Calendars",
-    blurb: "Subscribed feeds",
-    icon: <CalendarPlusIcon className="h-7 w-7" />,
-    ready: true,
-  },
-  {
-    href: "/admin/addresses",
-    label: "Addresses",
-    blurb: "Saved places events can reuse as locations",
-    icon: <MapPinIcon className="h-7 w-7" />,
+    href: "/admin/games",
+    label: "Game time",
+    blurb: "Daily limits and weekly tokens",
+    icon: <GamepadIcon className="h-7 w-7" />,
     ready: true,
   },
   {
@@ -137,13 +110,6 @@ const TILES: Tile[] = [
     label: "Characters",
     blurb: "Everyone's character cards — the shared page",
     icon: <TrophyIcon className="h-7 w-7" />,
-    ready: true,
-  },
-  {
-    href: "/admin/season",
-    label: "Season planner",
-    blurb: "Project leveling at the loaded workload; set season length",
-    icon: <StarIcon className="h-7 w-7" />,
     ready: true,
   },
   {
