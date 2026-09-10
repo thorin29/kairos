@@ -230,7 +230,7 @@ export function CalendarOptionsDrawer({
                         onClear={() => start(() => setCalendarNowColor(null))}
                       />
                       {[
-                        ["APPOINTMENT", "Appointments"],
+                        ["APPOINTMENT", "Events"],
                         ["CLASS", "Class"],
                         ["WORK", "Work"],
                         ["BIRTHDAY", "Birthdays"],

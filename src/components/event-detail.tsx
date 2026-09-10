@@ -18,7 +18,7 @@ import {
 const KIND_LABEL: Record<string, string> = {
   CLASS: "Class",
   WORK: "Work",
-  APPOINTMENT: "Appointment",
+  APPOINTMENT: "Event",
   BIRTHDAY: "Birthday",
   EXTERNAL: "Subscribed",
   OTHER: "Medical / Dental",

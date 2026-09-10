@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.305.0";
+export const APP_VERSION = "0.306.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -92,11 +92,18 @@ export const MIGRATIONS = [
   "81_task_notify",
   "82_drop_enrollment_code",
   "83_saved_addresses",
+  "84_appointment_to_event",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.306.0",
+    summary: [
+      "Renamed the \"Appointment\" event type to the more general \"Event\" everywhere it shows (the add-event picker, the calendar filter, the detail label, and the address categories). The underlying type is unchanged, so existing events keep their color and behavior.",
+    ],
+  },
   {
     version: "0.305.0",
     summary: [
