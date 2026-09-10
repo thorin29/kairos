@@ -445,7 +445,7 @@ function EventModal({
         onClick={onClose}
       >
         <div
-          className="my-4 w-full max-w-3xl rounded-2xl bg-surface p-5 shadow-xl"
+          className="my-4 w-full max-w-4xl rounded-2xl bg-surface p-5 shadow-xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mb-3 flex items-center justify-between">
@@ -470,22 +470,6 @@ function EventModal({
             </div>
           ) : (
             <>
-              {!editing && (
-                <div className="mb-4">
-                  <label className="mb-1.5 block text-sm font-medium">Type</label>
-                  <select
-                    value={kind}
-                    onChange={(e) => chooseKind(e.target.value)}
-                    className="h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent select-caret"
-                  >
-                    {kindOptions.map((k) => (
-                      <option key={k.value} value={k.value}>
-                        {k.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
               {converting && (
                 <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
                   This calendar block isn’t a real class yet. Fill in the details
@@ -505,6 +489,9 @@ function EventModal({
                 editing={existingClass}
                 replaceEventId={converting ? editing!.eventId : undefined}
                 onClose={onClose}
+                kindValue={kind}
+                onKindChange={chooseKind}
+                kindOptions={kindOptions}
               />
             </>
           )}
