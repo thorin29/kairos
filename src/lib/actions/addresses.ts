@@ -12,7 +12,7 @@ function bust() {
   revalidatePath("/calendar");
 }
 
-export type AddressInput = { name: string; address: string; category: string };
+export type AddressInput = { name: string; address: string };
 export type CreateAddressResult = SaveResult;
 
 /** Admin intake (Admin → Addresses) — lands APPROVED. */
@@ -28,8 +28,8 @@ export async function createSavedAddress(
 
 export async function updateSavedAddress(id: string, input: AddressInput): Promise<void> {
   await requireAdmin();
-  const { name, address, category } = cleanAddress(input);
-  await prisma.savedAddress.update({ where: { id }, data: { name, address, category } });
+  const { name, address } = cleanAddress(input);
+  await prisma.savedAddress.update({ where: { id }, data: { name, address } });
   bust();
 }
 
@@ -46,11 +46,8 @@ export async function approveSavedAddress(id: string): Promise<void> {
   bust();
 }
 
-/** Approved addresses + category options, for the calendar location combobox. */
-export async function listSavedAddresses(): Promise<{
-  addresses: PickerAddress[];
-  categories: string[];
-}> {
+/** Approved addresses for the calendar location combobox. */
+export async function listSavedAddresses(): Promise<{ addresses: PickerAddress[] }> {
   await requireInteractive();
   return loadAddressPicker();
 }

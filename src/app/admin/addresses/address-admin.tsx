@@ -19,30 +19,25 @@ const primaryBtn =
 const ghostBtn =
   "inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-muted transition-colors hover:bg-ink/5";
 
-type FormState = { name: string; address: string; category: string };
+type FormState = { name: string; address: string };
 
-export function AddressAdmin({
-  addresses,
-  categories,
-}: {
-  addresses: AdminAddress[];
-  categories: string[];
-}) {
+export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>({ name: "", address: "", category: "General" });
+  const [form, setForm] = useState<FormState>({ name: "", address: "" });
   const [dup, setDup] = useState<{ id: string; name: string; address: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const approved = addresses.filter((a) => a.status === "APPROVED");
+  const approved = addresses
+    .filter((a) => a.status === "APPROVED")
+    .sort((a, b) => a.name.localeCompare(b.name));
   const awaiting = addresses.filter((a) => a.status === "PENDING");
-  const groups = groupByCategory(approved);
 
   function openAdd() {
     setEditingId(null);
-    setForm({ name: "", address: "", category: categories[0] ?? "General" });
+    setForm({ name: "", address: "" });
     setDup(null);
     setError(null);
     setOpen(true);
@@ -50,7 +45,7 @@ export function AddressAdmin({
 
   function openEdit(a: AdminAddress) {
     setEditingId(a.id);
-    setForm({ name: a.name, address: a.address, category: a.category });
+    setForm({ name: a.name, address: a.address });
     setDup(null);
     setError(null);
     setOpen(true);
@@ -81,7 +76,7 @@ export function AddressAdmin({
           }
           setDup(null);
           if (addAnother) {
-            setForm({ name: "", address: "", category: form.category });
+            setForm({ name: "", address: "" });
           } else {
             close();
           }
@@ -120,10 +115,9 @@ export function AddressAdmin({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{a.name}</p>
                   <p className="truncate text-xs text-muted">{a.address}</p>
-                  <p className="mt-0.5 truncate text-xs text-muted">
-                    {a.category}
-                    {a.submittedBy ? ` · from ${a.submittedBy}` : ""}
-                  </p>
+                  {a.submittedBy && (
+                    <p className="mt-0.5 truncate text-xs text-muted">from {a.submittedBy}</p>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                   <button
@@ -156,54 +150,49 @@ export function AddressAdmin({
           </p>
         </Card>
       ) : (
-        groups.map(([cat, list]) => (
-          <section key={cat}>
-            <SectionHeading>{cat}</SectionHeading>
-            <Card className="mt-2 divide-y divide-hairline p-0">
-              {list.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 px-4 py-3">
+        <Card className="divide-y divide-hairline p-0">
+          {approved.map((a) => (
+            <div key={a.id} className="flex items-center gap-3 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => openEdit(a)}
+                className="min-w-0 flex-1 text-left"
+              >
+                <p className="truncate text-sm font-medium">{a.name}</p>
+                <p className="truncate text-xs text-muted">{a.address}</p>
+              </button>
+              {confirmDelete === a.id ? (
+                <span className="flex shrink-0 items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => openEdit(a)}
-                    className="min-w-0 flex-1 text-left"
+                    onClick={() => setConfirmDelete(null)}
+                    disabled={pending}
+                    className="rounded-lg px-2.5 py-1.5 text-sm text-muted hover:bg-ink/5"
                   >
-                    <p className="truncate text-sm font-medium">{a.name}</p>
-                    <p className="truncate text-xs text-muted">{a.address}</p>
+                    Cancel
                   </button>
-                  {confirmDelete === a.id ? (
-                    <span className="flex shrink-0 items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDelete(null)}
-                        disabled={pending}
-                        className="rounded-lg px-2.5 py-1.5 text-sm text-muted hover:bg-ink/5"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => remove(a.id)}
-                        disabled={pending}
-                        className="rounded-lg bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
-                      >
-                        Delete
-                      </button>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDelete(a.id)}
-                      aria-label={`Delete ${a.name}`}
-                      className="shrink-0 rounded-lg p-2 text-muted transition-colors hover:bg-red-500/10 hover:text-red-700"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </Card>
-          </section>
-        ))
+                  <button
+                    type="button"
+                    onClick={() => remove(a.id)}
+                    disabled={pending}
+                    className="rounded-lg bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(a.id)}
+                  aria-label={`Delete ${a.name}`}
+                  className="shrink-0 rounded-lg p-2 text-muted transition-colors hover:bg-red-500/10 hover:text-red-700"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </Card>
       )}
 
       {open && (
@@ -239,7 +228,7 @@ export function AddressAdmin({
                   className={field}
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Grocery store"
+                  placeholder="Iceplex"
                 />
               </div>
               <div>
@@ -250,20 +239,6 @@ export function AddressAdmin({
                   onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
                   placeholder="1234 Main Rd, Lewisville, TX 75067"
                 />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">Category</label>
-                <select
-                  className={field}
-                  value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                >
-                  {categories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
               </div>
 
               {error && <p className="text-sm text-red-600">{error}</p>}
@@ -323,19 +298,4 @@ export function AddressAdmin({
       )}
     </div>
   );
-}
-
-function groupByCategory(list: AdminAddress[]): [string, AdminAddress[]][] {
-  const map = new Map<string, AdminAddress[]>();
-  for (const a of list) {
-    const arr = map.get(a.category) ?? [];
-    arr.push(a);
-    map.set(a.category, arr);
-  }
-  for (const arr of map.values()) arr.sort((x, y) => x.name.localeCompare(y.name));
-  return Array.from(map.entries()).sort((a, b) => {
-    if (a[0] === "General") return -1;
-    if (b[0] === "General") return 1;
-    return a[0].localeCompare(b[0]);
-  });
 }

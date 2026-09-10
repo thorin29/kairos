@@ -454,7 +454,6 @@ model SavedAddress {
   id        String   @id @default(cuid())
   name      String
   address   String
-  category  String   @default("General")
   lat       Float?
   lng       Float?
   status    AddressStatus @default(APPROVED)

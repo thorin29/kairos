@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { normalizeAddress, normalizeName } from "@/lib/addresses";
 
-export type AddressFields = { name: string; address: string; category: string };
+export type AddressFields = { name: string; address: string };
 export type Duplicate = { id: string; name: string; address: string };
 export type SaveResult =
   | { ok: true; id: string }
@@ -10,9 +10,8 @@ export type SaveResult =
 export function cleanAddress(input: AddressFields): AddressFields {
   const name = input.name.trim();
   const address = input.address.trim();
-  const category = input.category.trim() || "General";
   if (!name || !address) throw new Error("A name and an address are both required.");
-  return { name, address, category };
+  return { name, address };
 }
 
 /** Near-duplicate by normalized address or name, across the whole book; null if none. */
@@ -42,13 +41,13 @@ export async function saveAddress(
   input: AddressFields,
   opts: { force: boolean; status: "APPROVED" | "PENDING"; submittedById: string | null },
 ): Promise<SaveResult> {
-  const { name, address, category } = cleanAddress(input);
+  const { name, address } = cleanAddress(input);
   if (!opts.force) {
     const dup = await findDuplicate(name, address);
     if (dup) return { ok: false, duplicate: dup };
   }
   const created = await prisma.savedAddress.create({
-    data: { name, address, category, status: opts.status, submittedById: opts.submittedById },
+    data: { name, address, status: opts.status, submittedById: opts.submittedById },
     select: { id: true },
   });
   return { ok: true, id: created.id as string };

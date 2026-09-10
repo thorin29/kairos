@@ -8,8 +8,8 @@ import { saveAddress } from "@/lib/addresses-core";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** The approved saved-address book + category options, for the app's location
- *  picker. Shared family data — any enrolled device may read it. */
+/** The approved saved-address book, for the app's location picker. Shared
+ *  family data — any enrolled device may read it. */
 export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if ("response" in authed) return authed.response;
   const me = authed.device.person;
 
-  let body: { name?: string; address?: string; category?: string; force?: boolean };
+  let body: { name?: string; address?: string; force?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -39,11 +39,10 @@ export async function POST(req: NextRequest) {
   if (!name || !address) {
     return apiError("validation", "A name and an address are both required.");
   }
-  const category = String(body.category ?? "General").trim() || "General";
   const trusted = me.kind === "PARENT" || me.role === "ADMIN";
 
   const res = await saveAddress(
-    { name, address, category },
+    { name, address },
     { force: !!body.force, status: trusted ? "APPROVED" : "PENDING", submittedById: me.id },
   );
 

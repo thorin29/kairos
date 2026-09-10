@@ -766,7 +766,6 @@ function EventModal({
               <LocationCombobox
                 defaultValue={location ?? ""}
                 fieldClassName={field}
-                defaultCategory={KINDS.find((k) => k.value === kind)?.label ?? "General"}
               />
             </div>
           </div>
