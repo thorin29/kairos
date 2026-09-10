@@ -26,7 +26,6 @@ const ADMIN_COOKIE = "fd_admin";
 function isPublicPath(path: string): boolean {
   return (
     path.startsWith("/login") ||
-    path.startsWith("/join") ||
     path.startsWith("/api/avatars/") ||
     path.startsWith("/api/v1/") ||
     path === "/api/v1"

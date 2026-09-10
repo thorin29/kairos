@@ -63,7 +63,6 @@ export async function sendInviteEmail(
   name: string,
   code: string,
   appLink: string,
-  webLink: string,
 ): Promise<{ sent: boolean; error?: string }> {
   const cfg = await resolveSmtp();
   if (!cfg.configured) return { sent: false };
@@ -79,7 +78,6 @@ export async function sendInviteEmail(
     `    ${code}`,
     "",
     `(Or paste this link instead: ${appLink})`,
-    `(On a computer where you can already sign in: ${webLink})`,
     "",
     "This is single-use and expires. If it has, ask for a new one.",
   ].join("\n");
@@ -93,8 +91,6 @@ export async function sendInviteEmail(
       <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:600;text-align:center;background:#f3f4f6;padding:16px;border-radius:8px;color:#111">${escapeHtml(code)}</p>
       <p style="font-size:13px;color:#666">Or paste this link instead:
          <span style="font-family:ui-monospace,monospace;word-break:break-all">${escapeHtml(appLink)}</span></p>
-      <p style="font-size:13px;color:#666">On a computer where you can already sign in,
-         you can instead open <a href="${escapeAttr(webLink)}">${escapeHtml(webLink)}</a>.</p>
       <p style="font-size:13px;color:#666">This is single-use and expires.
          If it has, ask for a new one.</p>
     </div>`;
@@ -121,7 +117,6 @@ export async function sendResetEmail(
   name: string,
   code: string,
   appLink: string,
-  webLink: string,
 ): Promise<{ sent: boolean; error?: string }> {
   const cfg = await resolveSmtp();
   if (!cfg.configured) return { sent: false };
@@ -137,7 +132,6 @@ export async function sendResetEmail(
     `    ${code}`,
     "",
     `(Or paste this link instead: ${appLink})`,
-    `(On a computer where you can already sign in: ${webLink})`,
     "",
     "If you didn't ask for this, ignore this email — nothing changes until the",
     "code is used, and it's single-use and expires.",
@@ -152,8 +146,6 @@ export async function sendResetEmail(
       <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:600;text-align:center;background:#f3f4f6;padding:16px;border-radius:8px;color:#111">${escapeHtml(code)}</p>
       <p style="font-size:13px;color:#666">Or paste this link instead:
          <span style="font-family:ui-monospace,monospace;word-break:break-all">${escapeHtml(appLink)}</span></p>
-      <p style="font-size:13px;color:#666">On a computer where you can already sign in,
-         you can instead open <a href="${escapeAttr(webLink)}">${escapeHtml(webLink)}</a>.</p>
       <p style="font-size:13px;color:#666">If you didn't ask for this, ignore this
          email — nothing changes until the code is used, and it's single-use and expires.</p>
     </div>`;

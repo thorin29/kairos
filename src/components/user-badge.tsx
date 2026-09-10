@@ -36,7 +36,6 @@ export function UserBadge({
 
   if (
     path.startsWith("/login") ||
-    path.startsWith("/join") ||
     path.startsWith("/unlock")
   ) {
     return null;
@@ -119,7 +118,7 @@ export function UserBadge({
                 type="button"
                 onClick={signOut}
                 disabled={pending}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-on-accent transition-colors hover:opacity-90 disabled:opacity-50"
               >
                 <SwitchIcon className="h-4 w-4" />
                 {pending ? "\u2026" : "Sign out"}

@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-09 — Retired the web `/join` page; onboarding is app-only
+
+Onboarding moved fully into the Kairos app (enter an invitation code → set/confirm
+password → enroll, all in one step). The old web `/join` redeem page is now gone:
+deleted `src/app/join/*`, removed `redeemInvite` + `inviteIsRedeemable`
+(`lib/accounts.ts`), `redeemInviteAction` + `RedeemState` (`lib/actions/accounts.ts`),
+and `baseUrl` + `inviteLink` (`lib/url.ts`, which now only exports `appJoinLink`).
+Invite/reset emails dropped the "on a computer" web link and carry only the code
+plus the `kairos://join?token=…` paste fallback. All `/join` path-guards
+(middleware, gate, sidebar, top-date, user-badge, content-pad) were removed too.
+
+**Still outstanding (separate effort):** the older `EnrollmentCode` device-enrollment
+path is still wired into Admin (`account-row.tsx` → `DeviceEnrollment` →
+`issueEnrollmentCode`/`redeemEnrollmentCode`) plus the `/api/v1/auth/enroll` route
+and the `EnrollmentCode` Prisma model. Removing it means dropping the table (a
+migration) and pulling the admin UI — do it as its own pass, not bundled with `/join`.
+
 ## 2026-09 — App-facing API: device-authed cores, lenient responses, avatars
 
 Building the Android client to full parity settled a few patterns worth keeping.

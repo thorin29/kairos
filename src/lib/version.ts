@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.297.0";
+export const APP_VERSION = "0.298.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -95,6 +95,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.298.0",
+    summary: [
+      "Deleting a repeating task from Admin \u2192 Tasks now asks for confirmation first.",
+      "Retired the web /join page and its redeem flow \u2014 onboarding is fully app-based (invitation code in the Kairos app). Invite and reset emails no longer carry the \"on a computer\" link.",
+    ],
+  },
   {
     version: "0.297.0",
     summary: [
