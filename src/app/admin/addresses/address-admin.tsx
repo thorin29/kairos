@@ -7,6 +7,7 @@ import {
   createSavedAddress,
   updateSavedAddress,
   deleteSavedAddress,
+  approveSavedAddress,
   type CreateAddressResult,
 } from "@/lib/actions/addresses";
 import type { AdminAddress } from "@/lib/queries/addresses";
@@ -36,6 +37,7 @@ export function AddressAdmin({
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const approved = addresses.filter((a) => a.status === "APPROVED");
+  const awaiting = addresses.filter((a) => a.status === "PENDING");
   const groups = groupByCategory(approved);
 
   function openAdd() {
@@ -97,11 +99,55 @@ export function AddressAdmin({
     });
   }
 
+  function approve(id: string) {
+    startTransition(async () => {
+      await approveSavedAddress(id);
+    });
+  }
+
   return (
     <div className="space-y-8">
       <button type="button" onClick={openAdd} className={primaryBtn}>
         <PlusIcon className="h-4 w-4" /> Add address
       </button>
+
+      {awaiting.length > 0 && (
+        <section>
+          <SectionHeading>Pending approval</SectionHeading>
+          <Card className="mt-2 divide-y divide-hairline p-0">
+            {awaiting.map((a) => (
+              <div key={a.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{a.name}</p>
+                  <p className="truncate text-xs text-muted">{a.address}</p>
+                  <p className="mt-0.5 truncate text-xs text-muted">
+                    {a.category}
+                    {a.submittedBy ? ` · from ${a.submittedBy}` : ""}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => remove(a.id)}
+                    disabled={pending}
+                    className="rounded-lg px-2.5 py-1.5 text-sm text-muted hover:bg-ink/5"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => approve(a.id)}
+                    disabled={pending}
+                    className="rounded-lg bg-accent px-2.5 py-1.5 text-sm font-semibold text-white hover:bg-accent/90"
+                  >
+                    Approve
+                  </button>
+                </div>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
 
       {approved.length === 0 ? (
         <Card className="p-6">

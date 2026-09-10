@@ -39,11 +39,11 @@ Next up, roughly in order:
 - **Saved addresses** (in progress) — a shared address book so event locations
   are picked, not retyped, and carry a full address for phone navigation.
   Self-contained (no external geocoder): type-ahead runs over the saved list.
-  Increments: **(1) done (v0.301)** — data model + Admin → Addresses intake
-  pop-up ("Save & add another", duplicate warning) + grouped, editable list;
-  **(2)** web calendar location combobox (browse on tap, filter as you type) +
-  full "did you mean?" dedup; **(3)** device API + the app's combobox and phone
-  submissions (land PENDING); **(4)** admin approval queue for phone submissions.
+  Increments, all shipped: **(1, v0.301)** data model + Admin → Addresses intake
+  pop-up + grouped, editable list; **(2, v0.303)** web calendar location combobox
+  (browse on tap, filter as you type) + "did you mean?" dedup; **(3, web v0.304 /
+  app v0.158)** device API + the app's combobox and phone submissions (a member's
+  land PENDING); **(4, v0.305)** admin "Pending approval" queue.
   Categories are drawn from event types + subscribed calendars, plus "General".
 - **Web event editor reminders** are intentionally *not* built — reminders are
   app-only for now (per decision). The per-type default-reminder field exists in

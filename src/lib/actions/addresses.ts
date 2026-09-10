@@ -39,6 +39,13 @@ export async function deleteSavedAddress(id: string): Promise<void> {
   bust();
 }
 
+/** Approve a phone-submitted (PENDING) address into the shared book. */
+export async function approveSavedAddress(id: string): Promise<void> {
+  await requireAdmin();
+  await prisma.savedAddress.update({ where: { id }, data: { status: "APPROVED" } });
+  bust();
+}
+
 /** Approved addresses + category options, for the calendar location combobox. */
 export async function listSavedAddresses(): Promise<{
   addresses: PickerAddress[];
