@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.311.0";
+export const APP_VERSION = "0.312.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -101,6 +101,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.312.0",
+    summary: [
+      "Addresses is its own page again, reached by an Addresses card on the Calendar admin page rather than mixed in with the feeds. In the address list's Edit mode, each row now has a pencil to edit and a trash to delete, so editing is an obvious button instead of tapping the row.",
+    ],
+  },
   {
     version: "0.311.0",
     summary: [

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Card, SectionHeading } from "@/components/ui";
-import { PlusIcon, TrashIcon, XIcon } from "@/components/icons";
+import { PlusIcon, PencilIcon, TrashIcon, XIcon } from "@/components/icons";
 import {
   createSavedAddress,
   updateSavedAddress,
@@ -168,21 +168,10 @@ export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
         <Card className="divide-y divide-hairline p-0">
           {approved.map((a) => (
             <div key={a.id} className="flex items-center gap-3 px-4 py-3">
-              {editMode ? (
-                <button
-                  type="button"
-                  onClick={() => openEdit(a)}
-                  className="min-w-0 flex-1 text-left"
-                >
-                  <p className="truncate text-sm font-medium">{a.name}</p>
-                  <p className="truncate text-xs text-muted">{a.address}</p>
-                </button>
-              ) : (
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{a.name}</p>
-                  <p className="truncate text-xs text-muted">{a.address}</p>
-                </div>
-              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{a.name}</p>
+                <p className="truncate text-xs text-muted">{a.address}</p>
+              </div>
               {editMode &&
                 (confirmDelete === a.id ? (
                   <span className="flex shrink-0 items-center gap-1">
@@ -204,14 +193,24 @@ export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
                     </button>
                   </span>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(a.id)}
-                    aria-label={`Delete ${a.name}`}
-                    className="shrink-0 rounded-lg p-2 text-muted transition-colors hover:bg-red-500/10 hover:text-red-700"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
+                  <span className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(a)}
+                      aria-label={`Edit ${a.name}`}
+                      className="rounded-lg p-2 text-muted transition-colors hover:bg-ink/5 hover:text-accent"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(a.id)}
+                      aria-label={`Delete ${a.name}`}
+                      className="rounded-lg p-2 text-muted transition-colors hover:bg-red-500/10 hover:text-red-700"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </span>
                 ))}
             </div>
           ))}
