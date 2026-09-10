@@ -92,6 +92,9 @@ export function CalendarClassForm({
   editing,
   replaceEventId,
   onClose,
+  kindValue,
+  onKindChange,
+  kindOptions,
 }: {
   people: ClassFormOption[];
   subjects: ClassFormOption[];
@@ -105,6 +108,9 @@ export function CalendarClassForm({
   editing?: ClassEditInit;
   replaceEventId?: string;
   onClose: () => void;
+  kindValue?: string;
+  onKindChange?: (v: string) => void;
+  kindOptions?: { value: string; label: string }[];
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState(saveClassFromCalendar, initial);
@@ -117,6 +123,7 @@ export function CalendarClassForm({
     editing?.meetingDays ?? (dayToken ? [dayToken] : []),
   );
   const [shared, setShared] = useState<string[]>(editing?.sharedWith ?? []);
+  const showKind = !editing && !!kindOptions && !!onKindChange;
   const subjectDefault = editing?.subjectId
     ? subjects.find((sub) => sub.id === editing.subjectId)?.name ?? ""
     : "";
@@ -177,9 +184,34 @@ export function CalendarClassForm({
         name="sharedWith"
         value={shared.filter((id) => id !== ownerId).join(",")}
       />
+      {[...reminders].map((m) => (
+        <input key={m} type="hidden" name="reminders" value={m} />
+      ))}
+      {[...bells].map((id) => (
+        <input key={id} type="hidden" name="reminderBell" value={id} />
+      ))}
 
+      {/* Subject */}
+      <div>
+        <label className="block text-sm font-medium">Subject</label>
+        <input
+          name="newSubject"
+          list="class-subjects"
+          defaultValue={subjectDefault}
+          required
+          maxLength={60}
+          placeholder="Biology, Math, Piano…"
+          className={FIELD}
+        />
+        <datalist id="class-subjects">
+          {subjects.map((sub) => (
+            <option key={sub.id} value={sub.name} />
+          ))}
+        </datalist>
+      </div>
+
+      {/* Student | Type */}
       <div className="grid gap-3 sm:grid-cols-2">
-        {/* Owner: a student. Admins pick; a non-admin's class is their own. */}
         {isAdmin && !editing ? (
           <div>
             <label className="block text-sm font-medium">Student</label>
@@ -197,31 +229,183 @@ export function CalendarClassForm({
             </select>
           </div>
         ) : (
-          <div className="sm:col-span-2 text-sm text-muted">
+          <div
+            className={`flex items-end text-sm text-muted ${showKind ? "" : "sm:col-span-2"}`}
+          >
             {editing
               ? `${editing.ownerName}\u2019s class`
               : `Your class${meName ? ` (${meName})` : ""}`}
           </div>
         )}
+        {showKind && (
+          <div>
+            <label className="block text-sm font-medium">Type</label>
+            <select
+              value={kindValue}
+              onChange={(e) => onKindChange!(e.target.value)}
+              className={`${FIELD} select-caret`}
+            >
+              {kindOptions!.map((k) => (
+                <option key={k.value} value={k.value}>
+                  {k.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Shared with | Reminders */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {shareOptions.length > 0 ? (
+          <div>
+            <label className="block text-sm font-medium">Shared with</label>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {shareOptions.map((p) => (
+                <span key={p.id} className="inline-flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleShared(p.id)}
+                    aria-pressed={shared.includes(p.id)}
+                    className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      shared.includes(p.id)
+                        ? "border-accent bg-accent/10 text-accent"
+                        : "border-hairline text-muted hover:border-accent"
+                    }`}
+                  >
+                    {p.name}
+                  </button>
+                  {shared.includes(p.id) && (
+                    <button
+                      type="button"
+                      onClick={() => toggleBell(p.id)}
+                      title={
+                        bells.has(p.id)
+                          ? `Notifications on for ${p.name}`
+                          : `Notifications off for ${p.name}`
+                      }
+                      aria-label="Toggle notifications"
+                      className={
+                        bells.has(p.id) ? "text-green-600" : "text-red-500"
+                      }
+                    >
+                      <BellToggle on={bells.has(p.id)} />
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div />
+        )}
 
         <div>
-          <label className="block text-sm font-medium">Subject</label>
-          <input
-            name="newSubject"
-            list="class-subjects"
-            defaultValue={subjectDefault}
-            required
-            maxLength={60}
-            placeholder="Biology, Math, Piano…"
-            className={FIELD}
-          />
-          <datalist id="class-subjects">
-            {subjects.map((sub) => (
-              <option key={sub.id} value={sub.name} />
+          <label className="block text-sm font-medium">Reminders</label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {REMINDER_PRESETS.map(([min, label]) => (
+              <button
+                key={min}
+                type="button"
+                onClick={() => toggleReminder(min)}
+                aria-pressed={reminders.has(min)}
+                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  reminders.has(min)
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-hairline text-muted hover:border-accent"
+                }`}
+              >
+                {label}
+              </button>
             ))}
-          </datalist>
+          </div>
         </div>
+      </div>
 
+      {/* Meets on */}
+      <div>
+        <label className="block text-sm font-medium">Meets on</label>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {WEEKDAYS.map(([token, label]) => (
+            <button
+              key={token}
+              type="button"
+              onClick={() => toggleDay(token)}
+              aria-pressed={days.includes(token)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                days.includes(token)
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-hairline text-muted hover:border-accent"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Start | End | Runs from | Runs until */}
+      {days.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">Start time</label>
+            <TimeSelect
+              name="start"
+              ariaLabel="Start time"
+              value={startTime}
+              onChange={(v) => {
+                setStartTime(v);
+                if (!endTime) setEndTime(addHour(v));
+              }}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">End time</label>
+            <TimeSelect
+              name="end"
+              ariaLabel="End time"
+              value={endTime}
+              onChange={setEndTime}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">
+              Runs from <span className="text-muted">(opt.)</span>
+            </label>
+            <input
+              name="meetingStartDate"
+              type="date"
+              defaultValue={editing?.meetingStartDate ?? ""}
+              className={`tabular ${FIELD}`}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">
+              Runs until <span className="text-muted">(opt.)</span>
+            </label>
+            <input
+              name="meetingEndDate"
+              type="date"
+              defaultValue={editing?.meetingEndDate ?? ""}
+              className={`tabular ${FIELD}`}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Where */}
+      {days.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium">Where</label>
+          <LocationCombobox
+            defaultValue={editing?.meetingLocation ?? ""}
+            fieldClassName={FIELD}
+          />
+        </div>
+      )}
+
+      {/* Class type | Semester | Color */}
+      <div className="grid gap-3 sm:grid-cols-3">
         <div>
           <label className="block text-sm font-medium">Class type</label>
           <select
@@ -229,7 +413,7 @@ export function CalendarClassForm({
             defaultValue={editing?.classTypeId ?? ""}
             className={`${FIELD} select-caret`}
           >
-            <option value="">Choose a type\u2026</option>
+            <option value="">Choose a type…</option>
             {classTypes.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -256,7 +440,10 @@ export function CalendarClassForm({
               ))}
             </select>
           ) : (
-            <input type="hidden" name="termId" value="" />
+            <>
+              <input type="hidden" name="termId" value="" />
+              <p className="mt-2.5 text-sm text-muted">No semesters yet</p>
+            </>
           )}
         </div>
 
@@ -283,157 +470,7 @@ export function CalendarClassForm({
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium">Meets on</label>
-        <div className="flex flex-wrap gap-1.5">
-          {WEEKDAYS.map(([token, label]) => (
-            <button
-              key={token}
-              type="button"
-              onClick={() => toggleDay(token)}
-              aria-pressed={days.includes(token)}
-              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                days.includes(token)
-                  ? "border-accent bg-accent/10 text-accent"
-                  : "border-hairline text-muted hover:border-accent"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {days.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Start time</label>
-            <TimeSelect
-              name="start"
-              ariaLabel="Start time"
-              value={startTime}
-              onChange={(v) => {
-                setStartTime(v);
-                if (!endTime) setEndTime(addHour(v));
-              }}
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">End time</label>
-            <TimeSelect
-              name="end"
-              ariaLabel="End time"
-              value={endTime}
-              onChange={setEndTime}
-            />
-          </div>
-        </div>
-      )}
-
-      {days.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium">
-              Runs from <span className="text-muted">(optional)</span>
-            </label>
-            <input
-              name="meetingStartDate"
-              type="date"
-              defaultValue={editing?.meetingStartDate ?? ""}
-              className={`tabular ${FIELD}`}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">
-              Runs until <span className="text-muted">(optional)</span>
-            </label>
-            <input
-              name="meetingEndDate"
-              type="date"
-              defaultValue={editing?.meetingEndDate ?? ""}
-              className={`tabular ${FIELD}`}
-            />
-          </div>
-        </div>
-      )}
-
-      {days.length > 0 && (
-        <div>
-          <label className="block text-sm font-medium">Where</label>
-          <LocationCombobox
-            defaultValue={editing?.meetingLocation ?? ""}
-            fieldClassName={FIELD}
-          />
-        </div>
-      )}
-
-      {shareOptions.length > 0 && (
-        <div>
-          <label className="block text-sm font-medium">Shared with</label>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {shareOptions.map((p) => (
-              <span key={p.id} className="inline-flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => toggleShared(p.id)}
-                  aria-pressed={shared.includes(p.id)}
-                  className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                    shared.includes(p.id)
-                      ? "border-accent bg-accent/10 text-accent"
-                      : "border-hairline text-muted hover:border-accent"
-                  }`}
-                >
-                  {p.name}
-                </button>
-                {shared.includes(p.id) && (
-                  <button
-                    type="button"
-                    onClick={() => toggleBell(p.id)}
-                    title={
-                      bells.has(p.id)
-                        ? `Notifications on for ${p.name}`
-                        : `Notifications off for ${p.name}`
-                    }
-                    aria-label="Toggle notifications"
-                    className={bells.has(p.id) ? "text-green-600" : "text-red-500"}
-                  >
-                    <BellToggle on={bells.has(p.id)} />
-                  </button>
-                )}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div>
-        <label className="block text-sm font-medium">Reminders</label>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {REMINDER_PRESETS.map(([min, label]) => (
-            <button
-              key={min}
-              type="button"
-              onClick={() => toggleReminder(min)}
-              aria-pressed={reminders.has(min)}
-              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                reminders.has(min)
-                  ? "border-accent bg-accent/10 text-accent"
-                  : "border-hairline text-muted hover:border-accent"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {[...reminders].map((m) => (
-        <input key={m} type="hidden" name="reminders" value={m} />
-      ))}
-      {[...bells].map((id) => (
-        <input key={id} type="hidden" name="reminderBell" value={id} />
-      ))}
-
+      {/* Homework */}
       <label className="flex items-start gap-2.5 text-sm">
         <input
           type="checkbox"
@@ -441,9 +478,7 @@ export function CalendarClassForm({
           defaultChecked={editing?.promptHomework ?? true}
           className="mt-0.5 h-4 w-4 rounded border-hairline accent-accent"
         />
-        <span>
-          Ask about homework after class
-        </span>
+        <span>Ask about homework after class</span>
       </label>
 
       {state.error && (
