@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.328.0";
+export const APP_VERSION = "0.329.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -102,6 +102,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.329.0",
+    summary: [
+      "Fixed workouts disappearing. A day can hold several logged workouts, but the code that handles \u201crest day,\u201d \u201cmark done,\u201d and logging a scheduled/planned workout was grabbing the day\u2019s first session and overwriting it \u2014 so resting a day, or logging another workout into it, could silently overwrite or hide a workout you already logged (usually the oldest one). Those actions now only ever reuse the day\u2019s own bare/scheduled session and never touch a separately-logged workout, sport confirmation, or a rest marker. Un-marking a day likewise only clears an empty placeholder.",
+    ],
+  },
   {
     version: "0.328.0",
     summary: [
