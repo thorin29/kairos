@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.303.0";
+export const APP_VERSION = "0.304.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -97,6 +97,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.304.0",
+    summary: [
+      "Device API for the address book: GET /api/v1/addresses returns the approved book plus category options for the phone's location picker, and POST submits a new address \u2014 a parent/admin's lands approved, anyone else's lands pending for admin approval \u2014 with a duplicate check.",
+    ],
+  },
   {
     version: "0.303.0",
     summary: [
