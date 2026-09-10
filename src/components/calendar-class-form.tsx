@@ -182,7 +182,7 @@ export function CalendarClassForm({
               name="userId"
               value={owner}
               onChange={(e) => setOwner(e.target.value)}
-              className={FIELD}
+              className={`${FIELD} select-caret`}
             >
               {people.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -205,7 +205,7 @@ export function CalendarClassForm({
             name="subjectId"
             value={subjectId}
             onChange={(e) => setSubjectId(e.target.value)}
-            className={FIELD}
+            className={`${FIELD} select-caret`}
           >
             <option value="">+ Add a new subject…</option>
             {subjects.map((s) => (
@@ -231,7 +231,7 @@ export function CalendarClassForm({
           <select
             name="classTypeId"
             defaultValue={editing?.classTypeId ?? ""}
-            className={FIELD}
+            className={`${FIELD} select-caret`}
           >
             <option value="">No type</option>
             {classTypes.map((t) => (
@@ -248,7 +248,7 @@ export function CalendarClassForm({
             <select
               name="termId"
               defaultValue={editing?.termId ?? ""}
-              className={FIELD}
+              className={`${FIELD} select-caret`}
             >
               <option value="">
                 {days.length > 0 ? "Repeats with no end date" : "No term"}
@@ -269,7 +269,7 @@ export function CalendarClassForm({
           <select
             name="color"
             defaultValue={editing?.color ?? ""}
-            className={FIELD}
+            className={`${FIELD} select-caret`}
           >
             {COLORS.map(([hex, label]) => (
               <option key={label} value={hex}>
