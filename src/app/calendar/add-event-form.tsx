@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { addEvent, updateEvent, type EventState } from "@/lib/actions/events";
+import { LocationCombobox } from "@/components/location-combobox";
 import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
 import { addDays, dayOfWeek, daysBetween } from "@/lib/dates";
 import { PlusIcon } from "@/components/icons";
@@ -762,13 +763,10 @@ function EventModal({
               <label htmlFor="ev-location" className="mb-1.5 block text-sm font-medium">
                 Where
               </label>
-              <input
-                id="ev-location"
-                name="location"
-                maxLength={200}
+              <LocationCombobox
                 defaultValue={location ?? ""}
-                placeholder="Optional"
-                className={field}
+                fieldClassName={field}
+                defaultCategory={KINDS.find((k) => k.value === kind)?.label ?? "General"}
               />
             </div>
           </div>

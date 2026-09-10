@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.302.0";
+export const APP_VERSION = "0.303.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -97,6 +97,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.303.0",
+    summary: [
+      "The calendar event \"Where\" field is now a saved-address picker: tap to browse your address book (grouped by category), or start typing to filter by name or address, then pick to fill in the full address. Typing a brand-new address offers to save it for next time, with a \"did you mean?\" check against what you already have.",
+    ],
+  },
   {
     version: "0.302.0",
     summary: [
