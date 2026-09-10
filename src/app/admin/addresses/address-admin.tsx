@@ -29,6 +29,7 @@ export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
   const [dup, setDup] = useState<{ id: string; name: string; address: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
 
   const approved = addresses
     .filter((a) => a.status === "APPROVED")
@@ -102,9 +103,23 @@ export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
 
   return (
     <div className="space-y-8">
-      <button type="button" onClick={openAdd} className={primaryBtn}>
-        <PlusIcon className="h-4 w-4" /> Add address
-      </button>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={openAdd} className={primaryBtn}>
+          <PlusIcon className="h-4 w-4" /> Add address
+        </button>
+        {approved.length > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              setEditMode((v) => !v);
+              setConfirmDelete(null);
+            }}
+            className={ghostBtn}
+          >
+            {editMode ? "Done" : "Edit"}
+          </button>
+        )}
+      </div>
 
       {awaiting.length > 0 && (
         <section>
@@ -153,43 +168,51 @@ export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
         <Card className="divide-y divide-hairline p-0">
           {approved.map((a) => (
             <div key={a.id} className="flex items-center gap-3 px-4 py-3">
-              <button
-                type="button"
-                onClick={() => openEdit(a)}
-                className="min-w-0 flex-1 text-left"
-              >
-                <p className="truncate text-sm font-medium">{a.name}</p>
-                <p className="truncate text-xs text-muted">{a.address}</p>
-              </button>
-              {confirmDelete === a.id ? (
-                <span className="flex shrink-0 items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(null)}
-                    disabled={pending}
-                    className="rounded-lg px-2.5 py-1.5 text-sm text-muted hover:bg-ink/5"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => remove(a.id)}
-                    disabled={pending}
-                    className="rounded-lg bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
-                  >
-                    Delete
-                  </button>
-                </span>
-              ) : (
+              {editMode ? (
                 <button
                   type="button"
-                  onClick={() => setConfirmDelete(a.id)}
-                  aria-label={`Delete ${a.name}`}
-                  className="shrink-0 rounded-lg p-2 text-muted transition-colors hover:bg-red-500/10 hover:text-red-700"
+                  onClick={() => openEdit(a)}
+                  className="min-w-0 flex-1 text-left"
                 >
-                  <TrashIcon className="h-4 w-4" />
+                  <p className="truncate text-sm font-medium">{a.name}</p>
+                  <p className="truncate text-xs text-muted">{a.address}</p>
                 </button>
+              ) : (
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{a.name}</p>
+                  <p className="truncate text-xs text-muted">{a.address}</p>
+                </div>
               )}
+              {editMode &&
+                (confirmDelete === a.id ? (
+                  <span className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(null)}
+                      disabled={pending}
+                      className="rounded-lg px-2.5 py-1.5 text-sm text-muted hover:bg-ink/5"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => remove(a.id)}
+                      disabled={pending}
+                      className="rounded-lg bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(a.id)}
+                    aria-label={`Delete ${a.name}`}
+                    className="shrink-0 rounded-lg p-2 text-muted transition-colors hover:bg-red-500/10 hover:text-red-700"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                ))}
             </div>
           ))}
         </Card>
