@@ -83,7 +83,7 @@ export function Subscriptions({
             >
               Whose
             </label>
-            <select id="userId" name="userId" required className={`${field} w-full`}>
+            <select id="userId" name="userId" required className={`${field} w-full select-caret`}>
               <option value="">Choose</option>
               <option value="family">Family (shared)</option>
               {people.map((p) => (

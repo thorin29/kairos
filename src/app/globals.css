@@ -183,3 +183,18 @@ html.dark[data-theme="purple"] { --color-accent: #c08bf5; --color-on-accent: #1c
 html.dark[data-theme="pink"]   { --color-accent: #f77fbe; --color-on-accent: #360a24; --color-sidebar: #3d1f32; }
 html.dark[data-theme="orange"] { --color-accent: #fb9e4b; --color-on-accent: #331705; --color-sidebar: #40280f; }
 html.dark[data-theme="red"]    { --color-accent: #f48078; --color-on-accent: #330a07; --color-sidebar: #411e1b; }
+
+/* Consistent dropdown caret across all <select> fields — replaces the browser's
+   default arrow (which varies and sits at the very edge) with one chevron,
+   inset from the right. Apply the `select-caret` class alongside the field
+   style on a <select>. */
+.select-caret {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.05rem;
+  padding-right: 2.5rem;
+}

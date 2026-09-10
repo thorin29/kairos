@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.317.0";
+export const APP_VERSION = "0.318.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -101,6 +101,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.318.0",
+    summary: [
+      "Every calendar-form dropdown now has the same caret, inset from the right, instead of the browser's default arrow that varied and sat at the field edge (Whose, Type, Repeats on events; Student, Subject, Class type, Semester, Color on classes).",
+    ],
+  },
   {
     version: "0.317.0",
     summary: [

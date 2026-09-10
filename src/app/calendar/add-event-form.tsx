@@ -476,7 +476,7 @@ function EventModal({
                   <select
                     value={kind}
                     onChange={(e) => chooseKind(e.target.value)}
-                    className="h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent"
+                    className="h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent select-caret"
                   >
                     {kindOptions.map((k) => (
                       <option key={k.value} value={k.value}>
@@ -563,7 +563,7 @@ function EventModal({
                 name="userId"
                 required
                 defaultValue={userId ?? ""}
-                className={field}
+                className={`${field} select-caret`}
               >
                 <option value="">Choose</option>
                 <option value="family">Family (shared)</option>
@@ -583,7 +583,7 @@ function EventModal({
                 id="ev-kind"
                 value={kind}
                 onChange={(e) => chooseKind(e.target.value)}
-                className={field}
+                className={`${field} select-caret`}
               >
                 {kindOptions.map((k) => (
                   <option key={k.value} value={k.value}>
@@ -793,7 +793,7 @@ function EventModal({
                 id="ev-repeat"
                 value={repeat}
                 onChange={(e) => setRepeat(e.target.value)}
-                className={field}
+                className={`${field} select-caret`}
               >
                 {REPEATS.map((r) => (
                   <option key={r.value} value={r.value}>
@@ -814,7 +814,7 @@ function EventModal({
                       onChange={(e) =>
                         setEndMode(e.target.value as "never" | "until" | "count")
                       }
-                      className={field}
+                      className={`${field} select-caret`}
                     >
                       <option value="never">Never</option>
                       <option value="until">On a date</option>
@@ -899,7 +899,7 @@ function EventModal({
                     id="ev-freq"
                     value={customFreq}
                     onChange={(e) => setCustomFreq(e.target.value)}
-                    className={field}
+                    className={`${field} select-caret`}
                   >
                     <option value="DAILY">days</option>
                     <option value="WEEKLY">weeks</option>
