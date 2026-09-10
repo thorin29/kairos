@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.321.0";
+export const APP_VERSION = "0.322.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -101,6 +101,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.322.0",
+    summary: [
+      "Unified Share with + Reminders across every event type (event, work shift, birthday, medical, custom) to the class-style toggle buttons, with the notification bell showing only once a person is selected. Share with and Reminders now sit side by side, and the event overlay widened to match the class overlay.",
+    ],
+  },
   {
     version: "0.321.0",
     summary: [
