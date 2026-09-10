@@ -46,6 +46,7 @@ export async function loadClassCtx(): Promise<ClassCtx> {
             meetingEnd: c.meetingEnd,
             meetingReminders: c.meetingReminders,
             meetingReminderUserIds: c.meetingReminderUserIds,
+            meetingLocation: c.meetingLocation,
             meetingStartDate: c.meetingStartDate,
             meetingEndDate: c.meetingEndDate,
             sharedWith: c.sharedWith,

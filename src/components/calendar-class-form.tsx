@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TimeSelect } from "@/components/time-select";
+import { LocationCombobox } from "@/components/location-combobox";
 import {
   saveClassFromCalendar,
   type SchoolActionState,
@@ -65,6 +66,7 @@ export type ClassEditInit = {
   meetingEnd: string;
   meetingReminders: number[];
   meetingReminderUserIds: string[];
+  meetingLocation: string | null;
   meetingStartDate: string | null;
   meetingEndDate: string | null;
   sharedWith: string[];
@@ -115,7 +117,10 @@ export function CalendarClassForm({
     editing?.meetingDays ?? (dayToken ? [dayToken] : []),
   );
   const [shared, setShared] = useState<string[]>(editing?.sharedWith ?? []);
-  const [subjectId, setSubjectId] = useState<string>(editing?.subjectId ?? "");
+  const subjectDefault = editing?.subjectId
+    ? subjects.find((sub) => sub.id === editing.subjectId)?.name ?? ""
+    : "";
+  const [color, setColor] = useState(editing?.color ?? "");
   const startInit = editing?.meetingStart || start || "";
   const [startTime, setStartTime] = useState(startInit);
   const [endTime, setEndTime] = useState(
@@ -201,39 +206,30 @@ export function CalendarClassForm({
 
         <div>
           <label className="block text-sm font-medium">Subject</label>
-          <select
-            name="subjectId"
-            value={subjectId}
-            onChange={(e) => setSubjectId(e.target.value)}
-            className={`${FIELD} select-caret`}
-          >
-            <option value="">+ Add a new subject…</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
+          <input
+            name="newSubject"
+            list="class-subjects"
+            defaultValue={subjectDefault}
+            required
+            maxLength={60}
+            placeholder="Biology, Math, Piano…"
+            className={FIELD}
+          />
+          <datalist id="class-subjects">
+            {subjects.map((sub) => (
+              <option key={sub.id} value={sub.name} />
             ))}
-          </select>
-          {subjectId === "" && (
-            <input
-              name="newSubject"
-              required
-              maxLength={60}
-              autoFocus
-              placeholder="New subject name (e.g. Biology)"
-              className={`${FIELD} mt-2`}
-            />
-          )}
+          </datalist>
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Type</label>
+          <label className="block text-sm font-medium">Class type</label>
           <select
             name="classTypeId"
             defaultValue={editing?.classTypeId ?? ""}
             className={`${FIELD} select-caret`}
           >
-            <option value="">No type</option>
+            <option value="">Choose a type\u2026</option>
             {classTypes.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -266,26 +262,29 @@ export function CalendarClassForm({
 
         <div>
           <label className="block text-sm font-medium">Color</label>
-          <select
-            name="color"
-            defaultValue={editing?.color ?? ""}
-            className={`${FIELD} select-caret`}
-          >
-            {COLORS.map(([hex, label]) => (
-              <option key={label} value={hex}>
-                {label}
-              </option>
-            ))}
-          </select>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span
+              className="h-5 w-5 shrink-0 rounded-full border border-hairline"
+              style={{ backgroundColor: color || "#e2e8f0" }}
+            />
+            <select
+              name="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent select-caret"
+            >
+              {COLORS.map(([hex, label]) => (
+                <option key={label} value={hex}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium">Meets on</label>
-        <p className="mb-1.5 text-xs text-muted">
-          Prefilled from the time you picked. Leave blank for independent work
-          with no calendar time.
-        </p>
         <div className="flex flex-wrap gap-1.5">
           {WEEKDAYS.map(([token, label]) => (
             <button
@@ -355,6 +354,16 @@ export function CalendarClassForm({
               className={`tabular ${FIELD}`}
             />
           </div>
+        </div>
+      )}
+
+      {days.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium">Where</label>
+          <LocationCombobox
+            defaultValue={editing?.meetingLocation ?? ""}
+            fieldClassName={FIELD}
+          />
         </div>
       )}
 
@@ -434,10 +443,6 @@ export function CalendarClassForm({
         />
         <span>
           Ask about homework after class
-          <span className="mt-0.5 block text-xs text-muted">
-            After a meeting ends, each student gets a quick attendance and
-            “work assigned?” check on their dashboard.
-          </span>
         </span>
       </label>
 
