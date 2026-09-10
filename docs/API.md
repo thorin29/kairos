@@ -108,6 +108,15 @@ surface a personal mobile client needs, not a mirror of every web feature.
 
 ### Auth & identity — **built (v0.177, login added v0.187)**
 
+> **Onboarding changed (v0.299).** The two-step enrollment-code flow below
+> (`/auth/login` + `/auth/enroll`) is **retired**: `/auth/enroll` and the
+> `EnrollmentCode` table are gone, and `/auth/login` + its login proof are
+> vestigial. Phones now onboard by redeeming an invitation code in the app via
+> **`POST /auth/join`** (set/confirm password + enroll in one step; siblings
+> `/auth/join/check` and `/auth/forgot`). The listings in this section still
+> describe the old flow and need a refresh — tracked in DECISIONS.md.
+
+
 ```
 POST /api/v1/auth/login         verify username/password -> short-lived login proof
 POST /api/v1/auth/enroll        redeem an enrollment code (+ proof) -> device token + person

@@ -11,11 +11,19 @@ Invite/reset emails dropped the "on a computer" web link and carry only the code
 plus the `kairos://join?token=…` paste fallback. All `/join` path-guards
 (middleware, gate, sidebar, top-date, user-badge, content-pad) were removed too.
 
-**Still outstanding (separate effort):** the older `EnrollmentCode` device-enrollment
-path is still wired into Admin (`account-row.tsx` → `DeviceEnrollment` →
-`issueEnrollmentCode`/`redeemEnrollmentCode`) plus the `/api/v1/auth/enroll` route
-and the `EnrollmentCode` Prisma model. Removing it means dropping the table (a
-migration) and pulling the admin UI — do it as its own pass, not bundled with `/join`.
+**Done (v0.299):** retired the `EnrollmentCode` path — removed `/api/v1/auth/enroll`,
+`issueEnrollmentCode`/`redeemEnrollmentCode`/`newEnrollmentCode` and the code
+constants from `device-auth.ts`, `issueEnrollmentCodeAction` + the `qr.ts` lib,
+and the `EnrollmentCode` model (migration `82_drop_enrollment_code`, idempotent
+`DROP TABLE IF EXISTS`). The admin **"Phone app"** panel stays — it only lists /
+revokes devices; enrolling is via the invite buttons (`/auth/join`).
+
+**Follow-ups still open:** (1) `/api/v1/auth/login` + `login-proof.ts` are now
+vestigial (login proof only ever fed `/auth/enroll`) — marked LEGACY in-code,
+removable once we confirm no deployed app build still calls `/auth/login`. The
+app's `ApiService` still declares `login()`/`enroll()`, so confirm before pulling.
+(2) `docs/API.md` still documents the old enrollment-code flow and never documented
+`/auth/join` — needs a refresh.
 
 ## 2026-09 — App-facing API: device-authed cores, lenient responses, avatars
 

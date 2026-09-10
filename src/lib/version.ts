@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.298.0";
+export const APP_VERSION = "0.299.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -90,11 +90,18 @@ export const MIGRATIONS = [
   "79_recurring_tasks",
   "80_invite_purpose",
   "81_task_notify",
+  "82_drop_enrollment_code",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.299.0",
+    summary: [
+      "Retired the legacy enrollment-code path now that phones onboard with an invitation code (POST /auth/join): removed the /api/v1/auth/enroll endpoint, the EnrollmentCode table, and the code-issuing helpers. Managing enrolled phones \u2014 the admin \"Phone app\" panel \u2014 is unchanged.",
+    ],
+  },
   {
     version: "0.298.0",
     summary: [

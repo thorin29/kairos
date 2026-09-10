@@ -13,9 +13,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * Redeem an invite from the app: set the password (new account) or confirm it
- * (existing account), then enroll this phone. Unauthenticated by design — like
- * /auth/enroll, it must be reachable from a new phone with no session — and
- * guarded by the invite's short life, single use, and rate limiting.
+ * (existing account), then enroll this phone. Unauthenticated by design — it
+ * must be reachable from a new phone with no session — and guarded by the
+ * invite's short life, single use, and rate limiting.
  */
 export async function POST(req: NextRequest) {
   const rl = rateLimit(`join:${clientIp(req)}`, 10, 60_000);

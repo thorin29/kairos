@@ -3,13 +3,14 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { appSecret } from "@/lib/secret";
 
 /**
+ * LEGACY. Backed the old two-step enrollment (POST /auth/login issued this
+ * proof, /auth/enroll consumed it); app-based onboarding (POST /auth/join)
+ * replaced that flow and /auth/enroll is gone, so `verifyLoginProof` now has no
+ * caller. Retained with the vestigial /auth/login endpoint, removable together.
  * A short-lived, stateless proof that "someone just entered this person's
- * password." The app gets one from POST /auth/login and hands it back at
- * /auth/enroll, so a password account can only enrol a device when both factors
- * are present for the same person (the layered model in DECISIONS.md). It's an
- * HMAC over {userId, credentialVersion, exp} with the app secret — no DB row —
- * and it carries the credential version so a password change between login and
- * enrol invalidates it.
+ * password": an HMAC over {userId, credentialVersion, exp} with the app secret
+ * — no DB row — carrying the credential version so a password change invalidates
+ * it.
  */
 
 const TTL_MS = 10 * 60_000; // long enough to type a code, short enough to be safe

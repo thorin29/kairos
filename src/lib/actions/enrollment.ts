@@ -2,33 +2,17 @@
 
 import { requireAdmin } from "@/lib/session";
 import {
-  issueEnrollmentCode,
   listDevices,
   revokeDevice, deleteDevice,
   type DeviceSummary,
 } from "@/lib/api/device-auth";
-import { qrSvg } from "@/lib/qr";
 
 /**
- * The parent-facing side of device enrollment. Generating a code and managing a
- * person's enrolled devices is admin-only; the phone-facing redemption lives in
- * the `/api/v1/auth/enroll` route, which needs no session. These are the seam
- * the admin UI (a "Generate enrollment code" button per person, and a device
- * list) calls — the API contract and token backend ship first (v0.177); the
- * admin screen is the next increment.
+ * The parent-facing side of device management: list a person's enrolled phones
+ * and revoke or delete them. Admin-only. Enrolling a new phone is done from the
+ * invite / "Add a phone" buttons, which issue an invitation code the app
+ * redeems (POST /auth/join) — there is no separate enrollment-code step.
  */
-
-/** Generate a one-time enrollment code for a person. Returns the raw code
- *  (shown once), a ready-to-render QR of it, and when it expires. */
-export async function issueEnrollmentCodeAction(userId: string): Promise<{
-  code: string;
-  qrSvg: string;
-  expiresAt: string;
-}> {
-  await requireAdmin();
-  const { code, expiresAt } = await issueEnrollmentCode(userId);
-  return { code, qrSvg: qrSvg(code), expiresAt: expiresAt.toISOString() };
-}
 
 /** Enrolled devices for a person, for the admin list. */
 export async function listDevicesAction(

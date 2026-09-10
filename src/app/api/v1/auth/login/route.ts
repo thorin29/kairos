@@ -10,10 +10,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Verify a username/email + password and return a short-lived login proof. This
- * is the first of two factors for a password account: the app then hands the
- * proof back to /auth/enroll with a device code to complete enrollment. Like the
- * web login, it never says which of identifier/password was wrong.
+ * LEGACY. Part of the old two-step enrollment (login proof + /auth/enroll) that
+ * app-based onboarding (POST /auth/join) replaced; /auth/enroll is gone and no
+ * current client calls this. Retained pending confirmation that no deployed app
+ * build still hits it, then removable together with login-proof. Verifies a
+ * username/email + password and returns a short-lived login proof; like the web
+ * login, it never says which of identifier/password was wrong.
  */
 export async function POST(req: NextRequest) {
   const rl = rateLimit(`login:${clientIp(req)}`, 10, 60_000);
