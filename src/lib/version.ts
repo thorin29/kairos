@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.314.0";
+export const APP_VERSION = "0.315.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -101,6 +101,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.315.0",
+    summary: [
+      "Made the event and class calendar overlays consistent and wider so they fit on screen: both are the same width with side-by-side sections. Removed the explanatory paragraphs under Share with and Reminders; the notification bells now show \"Notifications on/off for <name>\" on hover; the location placeholder is just \"Add location\". The class form now uses the same time picker as events and defaults its end time to one hour after the start.",
+    ],
+  },
   {
     version: "0.314.0",
     summary: [

@@ -108,7 +108,7 @@ export function LocationCombobox({
           setSaved(false);
         }}
         onFocus={() => setOpen(true)}
-        placeholder="Optional — pick a saved place or type a new address"
+        placeholder="Add location"
         className={fieldClassName}
       />
 

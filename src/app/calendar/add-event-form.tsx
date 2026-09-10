@@ -304,6 +304,7 @@ function EventModal({
 }) {
   const router = useRouter();
   const [allDay, setAllDay] = useState(allDayInit ?? false);
+  const [bells, setBells] = useState<Set<string>>(() => new Set(reminderUserIdsInit ?? []));
   const [kind, setKind] = useState(kindInit ?? "APPOINTMENT");
   // When editing a repeating event, pre-fill the repeat controls from its rule
   // so a series edit can change the pattern (ignored when adding or copying).
@@ -517,7 +518,7 @@ function EventModal({
       onClick={onClose}
     >
       <div
-        className="my-4 w-full max-w-lg rounded-2xl bg-surface p-5 shadow-xl"
+        className="my-4 w-full max-w-3xl rounded-2xl bg-surface p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
@@ -602,11 +603,6 @@ function EventModal({
               <label className="mb-1.5 block text-sm font-medium">
                 Share with
               </label>
-              <p className="mb-2 text-xs text-muted">
-                {isSport
-                  ? "Everyone checked also gets asked if they did it. The event shows in each person\u2019s color."
-                  : "Add other people so the event shows on their calendar too, in a blend of everyone\u2019s colors. Leave empty for just the person above."}
-              </p>
               <div className="flex flex-wrap gap-2">
                 {people.map((p) => (
                   <span key={p.id} className="inline-flex items-center gap-1">
@@ -624,13 +620,25 @@ function EventModal({
                     </label>
                     <label
                       className="inline-flex cursor-pointer items-center"
-                      title={`Notify ${p.name}`}
+                      title={
+                        bells.has(p.id)
+                          ? `Notifications on for ${p.name}`
+                          : `Notifications off for ${p.name}`
+                      }
                     >
                       <input
                         type="checkbox"
                         name="reminderBell"
                         value={p.id}
-                        defaultChecked={reminderUserIdsInit?.includes(p.id) ?? false}
+                        checked={bells.has(p.id)}
+                        onChange={(e) =>
+                          setBells((prev) => {
+                            const n = new Set(prev);
+                            if (e.target.checked) n.add(p.id);
+                            else n.delete(p.id);
+                            return n;
+                          })
+                        }
                         className="peer sr-only"
                       />
                       {/* off: red bell with a slash */}
@@ -690,10 +698,6 @@ function EventModal({
                   </label>
                 ))}
               </div>
-              <p className="mt-1 text-xs text-muted">
-                Only people with a green bell above get these reminders. Bells
-                start off.
-              </p>
             </div>
 
             {allDay ? (

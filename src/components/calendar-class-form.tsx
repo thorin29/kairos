@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { TimeSelect } from "@/components/time-select";
 import {
   saveClassFromCalendar,
   type SchoolActionState,
@@ -9,6 +10,14 @@ import {
 
 const FIELD =
   "mt-1.5 w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm outline-none focus:border-accent";
+
+/** "HH:MM" plus one hour, wrapping at midnight; "" for a bad input. */
+function addHour(t: string): string {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (!m) return "";
+  const mins = ((+m[1]) * 60 + (+m[2]) + 60) % (24 * 60);
+  return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+}
 
 const WEEKDAYS: [string, string][] = [
   ["MO", "Mon"],
@@ -97,6 +106,11 @@ export function CalendarClassForm({
   );
   const [shared, setShared] = useState<string[]>(editing?.sharedWith ?? []);
   const [subjectId, setSubjectId] = useState<string>(editing?.subjectId ?? "");
+  const startInit = editing?.meetingStart || start || "";
+  const [startTime, setStartTime] = useState(startInit);
+  const [endTime, setEndTime] = useState(
+    editing?.meetingEnd || (startInit ? addHour(startInit) : ""),
+  );
 
   useEffect(() => {
     if (!pending && !state.error && state !== initial) {
@@ -264,21 +278,24 @@ export function CalendarClassForm({
       {days.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium">Start time</label>
-            <input
+            <label className="mb-1.5 block text-sm font-medium">Start time</label>
+            <TimeSelect
               name="start"
-              type="time"
-              defaultValue={editing?.meetingStart || start || ""}
-              className={`tabular ${FIELD}`}
+              ariaLabel="Start time"
+              value={startTime}
+              onChange={(v) => {
+                setStartTime(v);
+                if (!endTime) setEndTime(addHour(v));
+              }}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium">End time</label>
-            <input
+            <label className="mb-1.5 block text-sm font-medium">End time</label>
+            <TimeSelect
               name="end"
-              type="time"
-              defaultValue={editing?.meetingEnd || end || ""}
-              className={`tabular ${FIELD}`}
+              ariaLabel="End time"
+              value={endTime}
+              onChange={setEndTime}
             />
           </div>
         </div>
