@@ -14,6 +14,7 @@ import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
 import { addDays, dayOfWeek, daysBetween } from "@/lib/dates";
 import { PlusIcon } from "@/components/icons";
 import { TimeSelect } from "@/components/time-select";
+import { DateField } from "@/components/date-field";
 import { PinPad } from "@/components/pin-pad";
 import { useRouter } from "next/navigation";
 import {
@@ -743,13 +744,11 @@ function EventModal({
                 <label htmlFor="ev-date" className="mb-1.5 block text-sm font-medium">
                   Date
                 </label>
-                <input
-                  id="ev-date"
+                <DateField
                   name="date"
-                  type="date"
-                  required
+                  ariaLabel="Date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={setStartDate}
                   className={`tabular ${field}`}
                 />
               </div>
@@ -758,14 +757,13 @@ function EventModal({
                 <div>
                   <label className="mb-1.5 block text-sm font-medium">Starts</label>
                   <div className="flex gap-2">
-                    <input
-                      aria-label="Start date"
+                    <DateField
+                      ariaLabel="Start date"
                       name="date"
-                      type="date"
-                      required
                       value={startDate}
-                      onChange={(e) => onStartDateChange(e.target.value)}
-                      className={`tabular ${field} min-w-0 flex-[3]`}
+                      onChange={onStartDateChange}
+                      wrapperClassName="min-w-0 flex-[3]"
+                      className={`tabular ${field}`}
                     />
                     <TimeSelect
                       name="start"
@@ -779,15 +777,14 @@ function EventModal({
                 <div>
                   <label className="mb-1.5 block text-sm font-medium">Ends</label>
                   <div className="flex gap-2">
-                    <input
-                      aria-label="End date"
+                    <DateField
+                      ariaLabel="End date"
                       name="endDate"
-                      type="date"
-                      required
                       min={startDate}
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className={`tabular ${field} min-w-0 flex-[3]`}
+                      onChange={setEndDate}
+                      wrapperClassName="min-w-0 flex-[3]"
+                      className={`tabular ${field}`}
                     />
                     <TimeSelect
                       name="end"
@@ -858,12 +855,10 @@ function EventModal({
                       <option value="count">After a number of times</option>
                     </select>
                     {endMode === "until" && (
-                      <input
-                        id="ev-until"
+                      <DateField
                         name="until"
-                        type="date"
                         defaultValue={editRec?.until ?? ""}
-                        aria-label="Repeat until date"
+                        ariaLabel="Repeat until date"
                         className={`tabular ${field} mt-2`}
                       />
                     )}
