@@ -6,6 +6,7 @@ export type AdminAddress = {
   address: string;
   category: string;
   status: "APPROVED" | "PENDING";
+  submittedBy: string | null;
 };
 
 export type PickerAddress = {
@@ -59,11 +60,20 @@ export async function loadAddressAdmin(): Promise<{
   const [rows, categories] = await Promise.all([
     prisma.savedAddress.findMany({
       orderBy: [{ category: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, address: true, category: true, status: true },
+      select: {
+        id: true, name: true, address: true, category: true, status: true,
+        submittedBy: { select: { name: true } },
+      },
     }),
     addressCategories(),
   ]);
-  return { addresses: rows as AdminAddress[], categories };
+  const addresses = (rows as { id: string; name: string; address: string; category: string; status: "APPROVED" | "PENDING"; submittedBy: { name: string } | null }[]).map(
+    (r) => ({
+      id: r.id, name: r.name, address: r.address, category: r.category,
+      status: r.status, submittedBy: r.submittedBy?.name ?? null,
+    }),
+  );
+  return { addresses, categories };
 }
 
 /** Approved addresses only, for the calendar location picker. */
