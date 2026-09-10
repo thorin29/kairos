@@ -184,10 +184,12 @@ html.dark[data-theme="pink"]   { --color-accent: #f77fbe; --color-on-accent: #36
 html.dark[data-theme="orange"] { --color-accent: #fb9e4b; --color-on-accent: #331705; --color-sidebar: #40280f; }
 html.dark[data-theme="red"]    { --color-accent: #f48078; --color-on-accent: #330a07; --color-sidebar: #411e1b; }
 
-/* Consistent dropdown caret across all <select> fields — replaces the browser's
-   default arrow (which varies and sits at the very edge) with one chevron,
-   inset from the right. Apply the `select-caret` class alongside the field
-   style on a <select>. */
+/* Consistent dropdown caret across every <select> in the app — replaces the
+   browser's default arrow (which varies and sits at the very edge) with one
+   chevron, inset from the right. Applies to all selects automatically; the
+   `select-caret` class is also honoured for non-select triggers styled to look
+   like a dropdown (e.g. the custom color picker button). */
+select,
 .select-caret {
   -webkit-appearance: none;
   -moz-appearance: none;
