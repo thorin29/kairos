@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.299.0";
+export const APP_VERSION = "0.300.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -96,6 +96,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.300.0",
+    summary: [
+      "Corrected /api/v1/auth/login: it is not vestigial \u2014 the app's unlock flow re-verifies a locked phone's password through it \u2014 so it and its login-proof stay. Only the genuinely dead verifyLoginProof (used solely by the removed enrollment path) was dropped.",
+      "Rewrote docs/API.md to document the current onboarding (/auth/join, /auth/join/check, /auth/forgot), /auth/login as the unlock password check, and the retired enrollment-code flow.",
+    ],
+  },
   {
     version: "0.299.0",
     summary: [

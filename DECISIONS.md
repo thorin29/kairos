@@ -18,12 +18,25 @@ and the `EnrollmentCode` model (migration `82_drop_enrollment_code`, idempotent
 `DROP TABLE IF EXISTS`). The admin **"Phone app"** panel stays — it only lists /
 revokes devices; enrolling is via the invite buttons (`/auth/join`).
 
-**Follow-ups still open:** (1) `/api/v1/auth/login` + `login-proof.ts` are now
-vestigial (login proof only ever fed `/auth/enroll`) — marked LEGACY in-code,
-removable once we confirm no deployed app build still calls `/auth/login`. The
-app's `ApiService` still declares `login()`/`enroll()`, so confirm before pulling.
-(2) `docs/API.md` still documents the old enrollment-code flow and never documented
-`/auth/join` — needs a refresh.
+**Correction (v0.300).** `/api/v1/auth/login` is **not** vestigial. Tracing the
+shipped app (GitHub HEAD, v0.156) settled it: `SignInScreen`/`SignInViewModel`
+are gone, but `SessionRepository.unlock()` calls `svc.login()` to re-verify a
+locked phone's password before unlocking (it reads `person` and reuses the kept
+device token; it ignores `loginToken`). So `/auth/login` + `signLoginProof` stay.
+The `loginToken` field must also stay in the response: the client's
+`LoginResponse.loginToken` is a **non-nullable, non-default kotlinx field**, so
+omitting it would fail deserialization and break unlock on deployed builds — it
+can only be dropped in lockstep with an app release that defaults/removes it.
+Only `verifyLoginProof` (used solely by the removed `/auth/enroll`) was truly
+dead and was deleted. `docs/API.md` was rewritten to match: onboarding via
+`/auth/join` + `/auth/join/check` + `/auth/forgot`, `/auth/login` as the unlock
+password check, and the retired enrollment-code flow noted as history.
+
+**How to verify a route is dead before removing it:** re-clone the *app* repo
+fresh from GitHub (it tracks what's deployed), then trace the call graph — an
+`ApiService` method or a `SessionRepository` method can linger with no reachable
+caller, or (as here) turn out to have a live one in a place you didn't expect
+(`unlock`). A grep for the endpoint string alone isn't enough.
 
 ## 2026-09 — App-facing API: device-authed cores, lenient responses, avatars
 
