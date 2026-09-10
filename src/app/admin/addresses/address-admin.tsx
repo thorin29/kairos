@@ -19,13 +19,13 @@ const primaryBtn =
 const ghostBtn =
   "inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-muted transition-colors hover:bg-ink/5";
 
-type FormState = { name: string; address: string };
+type FormState = { name: string; address: string; navByName: boolean };
 
 export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>({ name: "", address: "" });
+  const [form, setForm] = useState<FormState>({ name: "", address: "", navByName: true });
   const [dup, setDup] = useState<{ id: string; name: string; address: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
 
   function openAdd() {
     setEditingId(null);
-    setForm({ name: "", address: "" });
+    setForm({ name: "", address: "", navByName: true });
     setDup(null);
     setError(null);
     setOpen(true);
@@ -45,7 +45,7 @@ export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
 
   function openEdit(a: AdminAddress) {
     setEditingId(a.id);
-    setForm({ name: a.name, address: a.address });
+    setForm({ name: a.name, address: a.address, navByName: a.navByName });
     setDup(null);
     setError(null);
     setOpen(true);
@@ -76,7 +76,7 @@ export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
           }
           setDup(null);
           if (addAnother) {
-            setForm({ name: "", address: "" });
+            setForm({ name: "", address: "", navByName: true });
           } else {
             close();
           }
@@ -240,6 +240,22 @@ export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
                   placeholder="1234 Main Rd, Lewisville, TX 75067"
                 />
               </div>
+
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={form.navByName}
+                  onChange={(e) => setForm((f) => ({ ...f, navByName: e.target.checked }))}
+                  className="mt-0.5 h-4 w-4 accent-accent"
+                />
+                <span className="text-sm">
+                  Open in maps by name
+                  <span className="block text-xs text-muted">
+                    On for a business (sends the name to your nav app for a better pin);
+                    turn off for a home so it navigates to the address alone.
+                  </span>
+                </span>
+              </label>
 
               {error && <p className="text-sm text-red-600">{error}</p>}
 

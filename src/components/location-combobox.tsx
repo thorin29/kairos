@@ -86,7 +86,7 @@ export function LocationCombobox({
         setDup(res.duplicate);
         return;
       }
-      setAddresses((prev) => [...prev, { id: res.id, name, address: value.trim() }]);
+      setAddresses((prev) => [...prev, { id: res.id, name, address: value.trim(), navByName: true }]);
       setDup(null);
       setSaving(false);
       setSaved(true);

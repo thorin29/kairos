@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if ("response" in authed) return authed.response;
   const me = authed.device.person;
 
-  let body: { name?: string; address?: string; force?: boolean };
+  let body: { name?: string; address?: string; navByName?: boolean; force?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   const trusted = me.kind === "PARENT" || me.role === "ADMIN";
 
   const res = await saveAddress(
-    { name, address },
+    { name, address, navByName: body.navByName ?? true },
     { force: !!body.force, status: trusted ? "APPROVED" : "PENDING", submittedById: me.id },
   );
 

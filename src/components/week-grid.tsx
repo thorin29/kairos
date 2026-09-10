@@ -248,7 +248,7 @@ export function WeekGrid({
       }}
       onContextMenu={(ev) => ev.preventDefault()}
       onPointerDown={(ev) => ev.stopPropagation()}
-      title={`${e.title}${e.schoolClassName ? ` \u00b7 ${e.schoolClassName}` : ""}${e.location ? ` \u00b7 ${e.location}` : ""}`}
+      title={`${e.title}${e.schoolClassName ? ` \u00b7 ${e.schoolClassName}` : ""}${e.location ? ` \u00b7 ${e.locationName ?? e.location}` : ""}`}
       className="mb-1 block cursor-pointer select-none truncate rounded px-1.5 py-1 text-[0.7rem] font-medium text-white"
       style={{
         ...bgFor(e),
@@ -288,7 +288,7 @@ export function WeekGrid({
         onContextMenu={(ev) => ev.preventDefault()}
         onPointerDown={(ev) => ev.stopPropagation()}
         title={`${e.title}${e.schoolClassName ? `\n${e.schoolClassName}` : ""}\n${e.timeLabel}${
-          e.location ? `\n${e.location}` : ""
+          e.location ? `\n${e.locationName ?? e.location}` : ""
         }\n${e.whoLabel}`}
         className={`pointer-events-auto absolute cursor-pointer overflow-hidden rounded-md px-1.5 py-1 text-[0.7rem] leading-tight text-white ${
           selected ? "z-[6]" : "shadow-sm"

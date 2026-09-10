@@ -47,7 +47,7 @@ export function DaySchedule({
               <p className="truncate text-sm font-medium">{e.title}</p>
               <p className="tabular truncate text-xs text-muted">
                 {e.timeLabel}
-                {e.location ? ` · ${e.location}` : ""}
+                {e.location ? ` · ${e.locationName ?? e.location}` : ""}
               </p>
             </div>
             {!compact && (
