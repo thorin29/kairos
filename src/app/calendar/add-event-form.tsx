@@ -417,11 +417,16 @@ function EventModal({
   };
 
   const chooseKind = (value: string) => {
-    setKind(value);
     if (value === "BIRTHDAY") {
       setAllDay(true);
       setRepeat("YEARLY");
+    } else if (kind === "BIRTHDAY") {
+      // Leaving birthday: undo the all-day + yearly it forced on, so the event
+      // doesn't stay locked as an all-day annual event.
+      setAllDay(false);
+      setRepeat("NONE");
     }
+    setKind(value);
     if (value.startsWith("type:")) {
       const t = types.find((x) => `type:${x.id}` === value);
       if (t?.defaultMinutes) {
@@ -537,7 +542,13 @@ function EventModal({
                 onClose={onClose}
                 kindValue={kind}
                 onKindChange={chooseKind}
-                kindOptions={kindOptions}
+                kindOptions={[
+                  ...kindOptions,
+                  ...types.map((t) => ({
+                    value: `type:${t.id}`,
+                    label: t.name,
+                  })),
+                ]}
               />
             </>
           )}
@@ -633,7 +644,7 @@ function EventModal({
               <input type="hidden" name="eventTypeId" value={eventTypeId} />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-sm font-medium">
                   Share with
@@ -774,7 +785,7 @@ function EventModal({
               </div>
             )}
 
-            <div className={allDay ? "" : "sm:col-span-2"}>
+            <div className="sm:col-span-2">
               <label htmlFor="ev-location" className="mb-1.5 block text-sm font-medium">
                 Where
               </label>
