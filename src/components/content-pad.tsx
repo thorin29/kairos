@@ -9,7 +9,7 @@ import { usePathname } from "next/navigation";
  * (the sidebar could vanish until a refresh). The full-screen auth pages get no
  * padding, matching where the sidebar and top bar hide themselves.
  */
-const FULLSCREEN = ["/login", "/join", "/unlock"];
+const FULLSCREEN = ["/login", "/unlock"];
 
 export function ContentPad({ children }: { children: React.ReactNode }) {
   const path = usePathname();

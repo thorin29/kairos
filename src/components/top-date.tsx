@@ -14,7 +14,6 @@ export function TopDate({ label }: { label: string }) {
     path.startsWith("/calendar") ||
     path.startsWith("/bible") ||
     path.startsWith("/login") ||
-    path.startsWith("/join") ||
     path.startsWith("/unlock")
   ) {
     return null;

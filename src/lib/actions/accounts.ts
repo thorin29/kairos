@@ -7,15 +7,13 @@ import {
   authenticate,
   disableLogin,
   issueInvite,
-  redeemInvite,
   revokeInvites,
   setUserEmail,
   userEmail,
-  MIN_PASSWORD,
 } from "@/lib/accounts";
 import { startUserSession, endUserSession } from "@/lib/user-session";
 import { rateLimit, rateLimitReset } from "@/lib/rate-limit";
-import { baseUrl, inviteLink, appJoinLink } from "@/lib/url";
+import { appJoinLink } from "@/lib/url";
 import { sendInviteEmail, sendTestEmail } from "@/lib/mail/send";
 import { saveSmtp, type SmtpInput } from "@/lib/mail/config";
 
@@ -115,7 +113,6 @@ export async function createInviteAction(
       to,
       token,
       appJoinLink(token),
-      inviteLink(await baseUrl(), token),
     );
     if (res.sent) emailedTo = to;
     else if (res.error) emailError = res.error;
@@ -186,46 +183,4 @@ export async function disableLoginAction(
   await disableLogin(userId);
   revalidatePath("/setup");
   return { error: null };
-}
-
-export type RedeemState = { error: string | null; ok: boolean };
-
-/** Redeem an invite by setting a password. On success the person is signed in. */
-export async function redeemInviteAction(
-  _prev: RedeemState,
-  formData: FormData,
-): Promise<RedeemState> {
-  const token = String(formData.get("token") ?? "");
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirm") ?? "");
-
-  if (password.length < MIN_PASSWORD) {
-    return {
-      error: `Use at least ${MIN_PASSWORD} characters.`,
-      ok: false,
-    };
-  }
-  if (password !== confirm) {
-    return { error: "The two passwords don't match.", ok: false };
-  }
-
-  const limit = rateLimit(`redeem:${token.slice(0, 12)}`, 10, 10 * 60_000);
-  if (!limit.ok) {
-    return {
-      error: `Too many attempts. Try again in ${limit.retryAfterSec}s.`,
-      ok: false,
-    };
-  }
-
-  const user = await redeemInvite(token, password);
-  if (!user) {
-    return {
-      error: "This invite link is invalid or has expired. Ask for a new one.",
-      ok: false,
-    };
-  }
-
-  await startUserSession(user.id, user.credentialVersion);
-  revalidatePath("/", "layout");
-  return { error: null, ok: true };
 }

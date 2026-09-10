@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { sendResetEmail } from "@/lib/mail/send";
-import { appJoinLink, inviteLink, baseUrl } from "@/lib/url";
+import { appJoinLink } from "@/lib/url";
 import {
   hashPassword,
   verifyPassword,
@@ -181,24 +181,7 @@ export async function requestPasswordReset(identifier: string): Promise<void> {
     user.displayName ?? user.name,
     token,
     appJoinLink(token),
-    inviteLink(await baseUrl(), token),
   );
-}
-
-/**
- * Whether a raw token still corresponds to a live, unexpired invite. A pure,
- * side-effect-free read used by the redeem page to decide whether to show the
- * password form at all — a used invite is deleted on redemption and an expired
- * one is past its date, so both come back false and the page refuses the form
- * instead of reappearing. Reveals only valid/invalid, never who has an invite.
- */
-export async function inviteIsRedeemable(token: string): Promise<boolean> {
-  if (!token) return false;
-  const invite = await prisma.invite.findUnique({
-    where: { tokenHash: hashToken(normalizeInviteCode(token)) },
-    select: { expiresAt: true },
-  });
-  return !!invite && invite.expiresAt > new Date();
 }
 
 /** Turn a login off: clear the password and bump the credential version, which
@@ -212,31 +195,4 @@ export async function disableLogin(userId: string): Promise<void> {
     }),
     prisma.invite.deleteMany({ where: { userId } }),
   ]);
-}
-
-/** Redeem an invite: set the password, void old sessions, consume the invite.
- *  Returns the person so the caller can sign them in. */
-export async function redeemInvite(
-  token: string,
-  password: string,
-): Promise<{ id: string; credentialVersion: number } | null> {
-  const invite = await prisma.invite.findUnique({
-    where: { tokenHash: hashToken(normalizeInviteCode(token)) },
-    select: { id: true, userId: true, expiresAt: true },
-  });
-  if (!invite || invite.expiresAt < new Date()) return null;
-
-  const [user] = await prisma.$transaction([
-    prisma.user.update({
-      where: { id: invite.userId },
-      data: {
-        passwordHash: hashPassword(password),
-        credentialVersion: { increment: 1 },
-      },
-      select: { id: true, credentialVersion: true },
-    }),
-    prisma.invite.deleteMany({ where: { userId: invite.userId } }),
-  ]);
-
-  return { id: user.id, credentialVersion: user.credentialVersion };
 }

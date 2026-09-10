@@ -225,7 +225,12 @@ export function RecurringTasksAdmin({
                   {it.userName} · {it.summary}
                 </p>
               </div>
-              <form action={deleteRecurringTask.bind(null, it.id)}>
+              <form
+                action={deleteRecurringTask.bind(null, it.id)}
+                onSubmit={(e) => {
+                  if (!confirm("Delete this repeating task and all of its occurrences? This can't be undone.")) e.preventDefault();
+                }}
+              >
                 <button
                   type="submit"
                   className="rounded-lg border border-hairline px-3 py-1.5 text-sm text-muted transition-colors hover:border-red-300 hover:text-red-700"

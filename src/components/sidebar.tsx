@@ -102,7 +102,6 @@ export function Sidebar({
   // Hidden on the full-screen auth pages, which have no app chrome.
   if (
     path.startsWith("/login") ||
-    path.startsWith("/join") ||
     path.startsWith("/unlock")
   ) {
     return null;

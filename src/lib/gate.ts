@@ -26,8 +26,7 @@ export async function loginRequired(): Promise<boolean> {
 /** Paths reachable without a session even when gating is on. */
 export function isPublicPath(pathname: string): boolean {
   return (
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/join")
+    pathname.startsWith("/login")
   );
 }
 
