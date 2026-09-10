@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.300.0";
+export const APP_VERSION = "0.301.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -91,11 +91,18 @@ export const MIGRATIONS = [
   "80_invite_purpose",
   "81_task_notify",
   "82_drop_enrollment_code",
+  "83_saved_addresses",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.301.0",
+    summary: [
+      "New Admin \u2192 Addresses: a shared address book. Add a place with a friendly name, full address, and a category (drawn from your event types and subscribed calendars). The intake pop-up has \"Save & add another\" for entering several at once and warns when an address looks like one you already saved; the list is grouped by category and editable. Calendar events will be able to pick from these next.",
+    ],
+  },
   {
     version: "0.300.0",
     summary: [

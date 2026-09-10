@@ -93,6 +93,7 @@ model User {
   calendarPref     UserCalendarPref?
   sportSkips       SportSkip[]
   eventParticipations EventParticipant[]
+  savedAddresses      SavedAddress[]    @relation("SubmittedAddresses")
   classMemberships ClassMember[]
   classCheckins    ClassCheckin[]
   moneyEntries     MoneyEntry[]      @relation("MoneyOwner")
@@ -442,6 +443,32 @@ model ExternalCalendar {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// A reusable address for calendar event locations: a short friendly name plus
+// the full address (which is what gets sent to a phone's nav app). `category`
+// groups the picker (an event-type or subscribed-calendar name, or "General").
+// lat/lng are unused for now — room for maps later. `status` is APPROVED for
+// admin/web entries; a phone submission lands PENDING for admin approval.
+model SavedAddress {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  category  String   @default("General")
+  lat       Float?
+  lng       Float?
+  status    AddressStatus @default(APPROVED)
+  submittedById String?
+  submittedBy   User?  @relation("SubmittedAddresses", fields: [submittedById], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+enum AddressStatus {
+  APPROVED
+  PENDING
 }
 
 // Per-user personal-calendar preferences (docs/API.md, DECISIONS.md "Personal
