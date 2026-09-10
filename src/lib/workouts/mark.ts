@@ -69,8 +69,20 @@ export async function findOrCreateSession(
   dateISO: string,
 ): Promise<string> {
   const date = toDateColumn(dateISO);
+  // Reuse ONLY the day's own scheduled/placeholder session — one with no name,
+  // category, or source event. Named custom logs, sport confirms, and rest days
+  // are real, separate entries: a day can hold several, so grabbing "the first"
+  // one and overwriting it was silently destroying logged workouts.
   const found = await prisma.workoutSession.findFirst({
-    where: { userId, date },
+    where: {
+      userId,
+      date,
+      isRest: false,
+      name: null,
+      category: null,
+      sourceEventId: null,
+    },
+    select: { id: true },
   });
   if (found) return found.id;
   const created = await prisma.workoutSession.create({
@@ -92,12 +104,31 @@ export async function setWorkedOut(
 ): Promise<void> {
   const date = toDateColumn(dateISO);
   if (worked) {
-    await findOrCreateSession(userId, dateISO);
+    const existing = await prisma.workoutSession.findFirst({
+      where: { userId, date, isRest: false },
+      select: { id: true },
+    });
+    if (!existing) {
+      await prisma.workoutSession.create({ data: { userId, date } });
+    }
     await completeWorkoutTask(userId, dateISO);
     return;
   }
+  // Undo ONLY a bare "I worked out" placeholder: no sets, and no name,
+  // category, or source event. A sport confirm (category SPORT, sourceEventId
+  // set), a named session, or anything with logged sets is a real workout and
+  // must survive un-marking the day — deleting those was silently dropping
+  // logged workouts.
   await prisma.workoutSession.deleteMany({
-    where: { userId, date, isRest: false, sets: { none: {} } },
+    where: {
+      userId,
+      date,
+      isRest: false,
+      sets: { none: {} },
+      name: null,
+      category: null,
+      sourceEventId: null,
+    },
   });
   const remaining = await prisma.workoutSession.count({
     where: { userId, date, isRest: false },
@@ -126,18 +157,37 @@ export async function setRestDay(
   dateISO: string,
 ): Promise<void> {
   const date = toDateColumn(dateISO);
-  const existing = await prisma.workoutSession.findFirst({
-    where: { userId, date },
+  // Convert only a bare, empty placeholder into the rest marker. If the day
+  // holds real logged sessions (named, with sets, a sport confirm, etc.), leave
+  // them alone and add a separate rest marker — marking a day rest must never
+  // delete or hide a workout that was actually logged.
+  const placeholder = await prisma.workoutSession.findFirst({
+    where: {
+      userId,
+      date,
+      isRest: false,
+      name: null,
+      category: null,
+      sourceEventId: null,
+      sets: { none: {} },
+    },
+    select: { id: true },
   });
-  if (existing) {
+  if (placeholder) {
     await prisma.workoutSession.update({
-      where: { id: existing.id },
+      where: { id: placeholder.id },
       data: { isRest: true, finished: false },
     });
   } else {
-    await prisma.workoutSession.create({
-      data: { userId, date, isRest: true, finished: false },
+    const existingRest = await prisma.workoutSession.findFirst({
+      where: { userId, date, isRest: true },
+      select: { id: true },
     });
+    if (!existingRest) {
+      await prisma.workoutSession.create({
+        data: { userId, date, isRest: true, finished: false },
+      });
+    }
   }
   await skipWorkoutTask(userId, dateISO);
 }
@@ -252,7 +302,34 @@ export async function logPlannedWorkout(
   });
   if (!plan || plan.userId !== userId) return;
 
-  const sessionId = await findOrCreateSession(userId, dateISO);
+  const date = toDateColumn(dateISO);
+  // Reuse THIS plan's own session for the day (so re-logging edits it), never
+  // whichever session happens to be first — that could be a custom log.
+  const own = await prisma.workoutSession.findFirst({
+    where: {
+      userId,
+      date,
+      isRest: false,
+      name: plan.name,
+      category: plan.category,
+    },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  const sessionId =
+    own?.id ??
+    (
+      await prisma.workoutSession.create({
+        data: {
+          userId,
+          date,
+          name: plan.name,
+          category: plan.category,
+          finished: true,
+          isRest: false,
+        },
+      })
+    ).id;
   await prisma.workoutSession.update({
     where: { id: sessionId },
     data: {
