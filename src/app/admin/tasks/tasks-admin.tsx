@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import { editTask, deleteTask } from "@/lib/actions/tasks";
 import { formatShort } from "@/lib/dates";
 import { Card } from "@/components/ui";
@@ -131,12 +132,12 @@ function TaskRow({
           className={FIELD}
         />
         <div className="flex flex-wrap gap-2">
-          <input
-            type="date"
+          <DateField
             value={due}
-            min={undefined}
-            onChange={(e) => setDue(e.target.value)}
-            className={`${FIELD} tabular flex-1`}
+            onChange={setDue}
+            ariaLabel="Due date"
+            wrapperClassName="flex-1"
+            className={`${FIELD} tabular`}
           />
           <select
             value={userId}

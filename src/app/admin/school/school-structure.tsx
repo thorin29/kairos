@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import {
   addTerm,
   deleteTerm,
@@ -288,11 +289,11 @@ function Terms({ terms, today }: { terms: TermRow[]; today: string }) {
           </div>
           <div>
             <label className="block text-sm font-medium">Start</label>
-            <input name="startDate" type="date" defaultValue={today} className={`tabular ${FIELD}`} />
+            <DateField name="startDate" defaultValue={today} ariaLabel="Start date" className={`tabular ${FIELD}`} />
           </div>
           <div>
             <label className="block text-sm font-medium">End</label>
-            <input name="endDate" type="date" defaultValue={today} className={`tabular ${FIELD}`} />
+            <DateField name="endDate" defaultValue={today} ariaLabel="End date" className={`tabular ${FIELD}`} />
           </div>
         </div>
         {state.error && <p className="mt-2 text-sm text-red-700">{state.error}</p>}
@@ -598,10 +599,10 @@ function Classes({
                 <label className="block text-sm font-medium">
                   Runs from <span className="text-muted">(optional)</span>
                 </label>
-                <input
+                <DateField
                   name="meetingStartDate"
-                  type="date"
                   defaultValue={editing?.meetingStartDate ?? ""}
+                  ariaLabel="Runs from"
                   className={`tabular ${FIELD}`}
                 />
               </div>
@@ -609,10 +610,10 @@ function Classes({
                 <label className="block text-sm font-medium">
                   Runs until <span className="text-muted">(optional)</span>
                 </label>
-                <input
+                <DateField
                   name="meetingEndDate"
-                  type="date"
                   defaultValue={editing?.meetingEndDate ?? ""}
+                  ariaLabel="Runs until"
                   className={`tabular ${FIELD}`}
                 />
               </div>
@@ -779,18 +780,16 @@ function InlineTermAdd({ hasTerms }: { hasTerms: boolean }) {
           placeholder="Name (e.g. Fall 2026)"
           className={FIELD}
         />
-        <input
+        <DateField
           value={startD}
-          onChange={(e) => setStartD(e.target.value)}
-          type="date"
-          aria-label="Term start"
+          onChange={setStartD}
+          ariaLabel="Term start"
           className={`tabular ${FIELD}`}
         />
-        <input
+        <DateField
           value={endD}
-          onChange={(e) => setEndD(e.target.value)}
-          type="date"
-          aria-label="Term end"
+          onChange={setEndD}
+          ariaLabel="Term end"
           className={`tabular ${FIELD}`}
         />
       </div>

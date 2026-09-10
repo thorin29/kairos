@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { DateField } from "@/components/date-field";
 import { updateProfile, type ProfileState } from "@/lib/actions/profile";
 import { AVATAR_ICONS, ICON_PREFIX, avatarUrl, isIcon, parseAvatarTransform, avatarTransformCss } from "@/lib/avatars";
 import { AvatarAdjuster } from "@/components/avatar-adjuster";
@@ -74,12 +75,11 @@ export function ProfileForm({
         >
           Birthday
         </label>
-        <input
-          id="birthday"
+        <DateField
           name="birthday"
-          type="date"
           defaultValue={person.birthdayISO ?? ""}
-          className="tabular mt-2 h-11 rounded-full border border-hairline px-5 outline-none focus:border-accent"
+          ariaLabel="Birthday"
+          className="tabular mt-2 h-11 w-full rounded-full border border-hairline px-5 outline-none focus:border-accent"
         />
         <p className="mt-2 text-xs text-muted">
           Optional. Shown as an all-day event on the calendar each year.

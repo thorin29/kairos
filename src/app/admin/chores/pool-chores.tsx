@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import {
   addPoolChore,
   setChorePaused,
@@ -224,11 +225,11 @@ function PoolRow({
               </option>
             ))}
           </select>
-          <input
-            type="date"
+          <DateField
             value={when}
             max={today}
-            onChange={(e) => setWhen(e.target.value)}
+            onChange={setWhen}
+            ariaLabel="Date"
             className="tabular h-8 rounded-lg border border-hairline bg-surface px-2 text-xs"
           />
           <button

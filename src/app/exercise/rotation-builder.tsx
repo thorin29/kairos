@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import { DAY_NAMES } from "@/lib/days";
 import { TrashIcon, PlusIcon } from "@/components/icons";
 import {
@@ -131,13 +132,11 @@ export function RotationBuilder({
         <label className="mb-1.5 block text-sm font-medium">
           Cycle starts on
         </label>
-        <input
-          type="date"
+        <DateField
           defaultValue={rotation.anchorISO}
           disabled={pending}
-          onChange={(e) =>
-            e.target.value && run(() => setRotationAnchor(userId, e.target.value))
-          }
+          onChange={(v) => v && run(() => setRotationAnchor(userId, v))}
+          ariaLabel="Cycle starts on"
           className="tabular h-10 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
         />
         <p className="mt-1 text-xs text-muted">Day 1 of the list falls here.</p>

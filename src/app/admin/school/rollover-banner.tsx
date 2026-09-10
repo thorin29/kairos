@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import {
   createNextSemester,
   snoozeRollover,
@@ -63,21 +64,19 @@ export function RolloverBanner({ state }: { state: RolloverState }) {
           </div>
           <div>
             <label className="block text-sm font-medium">Starts</label>
-            <input
-              type="date"
+            <DateField
               name="startDate"
-              required
               defaultValue={state.suggestedStartISO}
+              ariaLabel="Start date"
               className={FIELD}
             />
           </div>
           <div>
             <label className="block text-sm font-medium">Ends</label>
-            <input
-              type="date"
+            <DateField
               name="endDate"
-              required
               defaultValue={state.suggestedEndISO}
+              ariaLabel="End date"
               className={FIELD}
             />
           </div>

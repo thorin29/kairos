@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { DateField } from "@/components/date-field";
 import {
   addRecurringTask,
   deleteRecurringTask,
@@ -116,10 +117,10 @@ export function RecurringTasksAdmin({
           </label>
           <label className="block">
             <span className="mb-1 block text-sm font-medium">Starting</span>
-            <input
+            <DateField
               name="startDate"
-              type="date"
               defaultValue={today}
+              ariaLabel="Start date"
               className="rounded-lg border border-hairline px-3 py-2 text-sm"
             />
           </label>
@@ -188,11 +189,11 @@ export function RecurringTasksAdmin({
                 onChange={() => setEndMode("UNTIL")}
               />
               Until
-              <input
+              <DateField
                 name="until"
-                type="date"
                 disabled={endMode !== "UNTIL"}
-                className="rounded-lg border border-hairline px-2 py-1 text-sm disabled:opacity-40"
+                ariaLabel="Until"
+                className="rounded-lg border border-hairline px-2 py-1 text-sm"
               />
             </label>
           </div>

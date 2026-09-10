@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { DateField } from "@/components/date-field";
 import {
   addMoneyEntry,
   type MoneyActionState,
@@ -269,11 +270,10 @@ function AddOverlay({
             <label htmlFor="m-date" className={LABEL}>
               Date
             </label>
-            <input
-              id="m-date"
-              type="date"
+            <DateField
               name="date"
               defaultValue={today}
+              ariaLabel="Date"
               className={FIELD}
             />
           </div>

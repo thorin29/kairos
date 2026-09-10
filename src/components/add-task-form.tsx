@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { DateField } from "@/components/date-field";
 import { addTask, type TaskActionState } from "@/lib/actions/tasks";
 
 const initial: TaskActionState = { error: null };
@@ -80,11 +81,10 @@ export function AddTaskForm({
           <label htmlFor="dueDate" className="block text-sm font-medium">
             Due
           </label>
-          <input
-            id="dueDate"
+          <DateField
             name="dueDate"
-            type="date"
             defaultValue={defaultDate}
+            ariaLabel="Due date"
             className="tabular mt-1.5 w-full rounded-md border border-hairline px-3 py-2 outline-none focus:border-accent"
           />
         </div>

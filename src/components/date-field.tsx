@@ -54,20 +54,24 @@ export function DateField({
   defaultValue,
   onChange,
   min,
+  max,
   ariaLabel,
   className = "",
   wrapperClassName = "",
   placeholder = "mm/dd/yyyy",
+  disabled = false,
 }: {
   name?: string;
   value?: string;
   defaultValue?: string;
   onChange?: (v: string) => void;
   min?: string;
+  max?: string;
   ariaLabel?: string;
   className?: string;
   wrapperClassName?: string;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   const controlled = value !== undefined;
   const [internal, setInternal] = useState(defaultValue ?? "");
@@ -130,8 +134,13 @@ export function DateField({
     });
 
   const minP = min ? parseISO(min) : null;
+  const maxP = max ? parseISO(max) : null;
   const isBefore = (y: number, m: number, d: number) =>
     minP ? ord(y, m, d) < ord(minP[0], minP[1], minP[2]) : false;
+  const isAfter = (y: number, m: number, d: number) =>
+    maxP ? ord(y, m, d) > ord(maxP[0], maxP[1], maxP[2]) : false;
+  const outOfRange = (y: number, m: number, d: number) =>
+    isBefore(y, m, d) || isAfter(y, m, d);
 
   const dim = daysInMonth(viewY, viewM);
   const lead = firstWeekday(viewY, viewM);
@@ -152,11 +161,12 @@ export function DateField({
       {name && <input type="hidden" name={name} value={val} readOnly />}
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        disabled={disabled}
         aria-label={ariaLabel}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className={`flex items-center justify-between gap-2 text-left ${className}`}
+        className={`flex items-center justify-between gap-2 text-left disabled:opacity-40 ${className}`}
       >
         <span className={val ? "" : "text-muted"}>
           {val ? fmtUS(val) : placeholder}
@@ -205,7 +215,7 @@ export function DateField({
                     selected[2] === c;
                   const isToday =
                     today[0] === viewY && today[1] === viewM && today[2] === c;
-                  const off = isBefore(viewY, viewM, c);
+                  const off = outOfRange(viewY, viewM, c);
                   return (
                     <button
                       key={i}
@@ -243,7 +253,7 @@ export function DateField({
               onClick={() => {
                 const t = todayISO();
                 const p = parseISO(t)!;
-                if (!isBefore(p[0], p[1], p[2])) commit(t);
+                if (!outOfRange(p[0], p[1], p[2])) commit(t);
               }}
               className="text-accent transition-opacity hover:opacity-80"
             >

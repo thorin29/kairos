@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useTransition } from "react";
+import { DateField } from "@/components/date-field";
 import {
   createPause,
   deletePause,
@@ -85,11 +86,11 @@ export function PauseForm({ pauses }: { pauses: PauseRow[] }) {
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium">From</label>
-          <input name="start" type="date" required className={`tabular ${field}`} />
+          <DateField name="start" ariaLabel="Start" className={`tabular ${field}`} />
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium">To</label>
-          <input name="end" type="date" required className={`tabular ${field}`} />
+          <DateField name="end" ariaLabel="End" className={`tabular ${field}`} />
         </div>
         <button
           type="submit"
