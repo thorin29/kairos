@@ -10,12 +10,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * LEGACY. Part of the old two-step enrollment (login proof + /auth/enroll) that
- * app-based onboarding (POST /auth/join) replaced; /auth/enroll is gone and no
- * current client calls this. Retained pending confirmation that no deployed app
- * build still hits it, then removable together with login-proof. Verifies a
- * username/email + password and returns a short-lived login proof; like the web
- * login, it never says which of identifier/password was wrong.
+ * Verify a username/email + password and return the matching person. This backs
+ * the app's UNLOCK flow: a locked phone re-confirms its enrolled person's
+ * password before unlocking (the device token is kept across a lock), so this is
+ * a password check, not an enrollment step. Like the web login, it never says
+ * which of identifier/password was wrong. The returned `loginToken` is a legacy
+ * proof retained only because the client's LoginResponse DTO still requires the
+ * field; no current client reads its value. Rate-limited per source and per
+ * identifier.
  */
 export async function POST(req: NextRequest) {
   const rl = rateLimit(`login:${clientIp(req)}`, 10, 60_000);
