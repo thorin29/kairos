@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, todayISO } from "@/lib/dates";
-import { createRecurringTask } from "@/lib/tasks/recurring";
+import { createRecurringTask, updateRecurringTaskInPlace } from "@/lib/tasks/recurring";
 import { addTaskCore } from "@/lib/task-core";
 
 export type TaskEditData = {
@@ -143,11 +143,33 @@ export async function updateTask(
 ): Promise<{ error: string | null }> {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
-    select: { userId: true },
+    select: { userId: true, generatedFrom: true },
   });
   if (!task) return { error: "No such task." };
   if (!canManage && task.userId !== requesterId) {
     return { error: "Not your task." };
+  }
+
+  const gf = task.generatedFrom ?? "";
+  const rid = gf.startsWith(RTASK) ? gf.slice(RTASK.length) : null;
+
+  // Recurring → recurring: edit the series in place so completed history is kept
+  // (the generator's last-2-completed prune trims it). Other transitions redefine
+  // the task, so they drop the old form and recreate.
+  if (rid && input.recur) {
+    return updateRecurringTaskInPlace(rid, {
+      userId: input.userId,
+      title: input.title,
+      freq: input.recur.freq,
+      interval: input.recur.interval,
+      byday: input.recur.byday,
+      startDate: input.recur.startDate,
+      endMode: input.recur.endMode,
+      maxCount: input.recur.maxCount,
+      until: input.recur.until,
+      notifyMinutes: input.recur.notifyMinutes ?? null,
+      createdById: requesterId,
+    });
   }
 
   await removeExisting(taskId);
