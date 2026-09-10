@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.295.0";
+export const APP_VERSION = "0.296.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -95,6 +95,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.296.0",
+    summary: [
+      "Task editing (backend): endpoints to fetch a task\u2019s editable form, update it (full edit, including converting between one-off and recurring), and delete it \u2014 a recurring occurrence resolves to its whole series, so editing or deleting affects the series. Parents/admins can act on any task; others only their own. App edit UI is next.",
+    ],
+  },
   {
     version: "0.295.0",
     summary: [
