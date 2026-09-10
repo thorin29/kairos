@@ -200,6 +200,8 @@ export type ClassRow = {
   meetingDays: string[];
   meetingStart: string;
   meetingEnd: string;
+  meetingReminders: number[];
+  meetingReminderUserIds: string[];
   // The meeting's actual first day and last day (rrule anchor + UNTIL). Usually
   // the term's dates, but can be a shorter window (a half-semester class).
   meetingStartDate: string | null;
@@ -257,6 +259,8 @@ export async function loadSchoolStructure(): Promise<{
             rrule: true,
             startsAt: true,
             endsAt: true,
+            reminders: true,
+            reminderUserIds: true,
           },
         },
       },
@@ -298,6 +302,10 @@ export async function loadSchoolStructure(): Promise<{
       meetingDays: parsed.days,
       meetingStart: parsed.start,
       meetingEnd: parsed.end,
+      meetingReminders:
+        (c.event as { reminders?: number[] } | null)?.reminders ?? [],
+      meetingReminderUserIds:
+        (c.event as { reminderUserIds?: string[] } | null)?.reminderUserIds ?? [],
       meetingStartDate: c.event ? localParts(c.event.startsAt).iso : null,
       meetingEndDate: c.event ? (parseRule(c.event.rrule)?.until ?? null) : null,
       sharedWith: c.members

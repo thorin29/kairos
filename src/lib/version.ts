@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.315.0";
+export const APP_VERSION = "0.316.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -101,6 +101,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.316.0",
+    summary: [
+      "Classes can now carry reminders like any other calendar event. The class form has a Reminders section and per-student notification bells (matching events); they're saved onto the class's meeting event, so the same notification pipeline delivers them. Editing a class preloads its existing reminders. Also removed the explanatory text from the class Shared-with section for consistency.",
+    ],
+  },
   {
     version: "0.315.0",
     summary: [
