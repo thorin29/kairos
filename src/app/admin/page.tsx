@@ -7,6 +7,7 @@ import {
   ChoresIcon,
   PeopleIcon,
   CalendarPlusIcon,
+  MapPinIcon,
   TrophyIcon,
   BibleIcon,
   DumbbellIcon,
@@ -122,6 +123,13 @@ const TILES: Tile[] = [
     label: "Calendars",
     blurb: "Subscribed feeds",
     icon: <CalendarPlusIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/admin/addresses",
+    label: "Addresses",
+    blurb: "Saved places events can reuse as locations",
+    icon: <MapPinIcon className="h-7 w-7" />,
     ready: true,
   },
   {
