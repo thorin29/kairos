@@ -5,7 +5,7 @@ import { AddressAdmin } from "./address-admin";
 export const dynamic = "force-dynamic";
 
 export default async function AdminAddressesPage() {
-  const { addresses, categories } = await loadAddressAdmin();
+  const { addresses } = await loadAddressAdmin();
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -19,11 +19,12 @@ export default async function AdminAddressesPage() {
           A shared address book. Give each place a short name and its full
           address; when you set a location on a calendar event you can pick from
           these instead of retyping, and directions sent to a phone use the full
-          address. Grouped by category to keep the list tidy.
+          address. It's one searchable list — every address is offered on every
+          event, so you enter each place just once.
         </p>
       </header>
 
-      <AddressAdmin addresses={addresses} categories={categories} />
+      <AddressAdmin addresses={addresses} />
     </main>
   );
 }

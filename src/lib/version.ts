@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.307.0";
+export const APP_VERSION = "0.308.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -94,11 +94,18 @@ export const MIGRATIONS = [
   "83_saved_addresses",
   "84_appointment_to_event",
   "85_birthday_category_to_general",
+  "86_drop_address_category",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.308.0",
+    summary: [
+      "Simplified the address book to a single flat, searchable list \u2014 addresses are just a name and address now, no categories. The picker still shows every address on every event and filters as you type; the category column is dropped.",
+    ],
+  },
   {
     version: "0.307.0",
     summary: [

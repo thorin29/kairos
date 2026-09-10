@@ -10,32 +10,27 @@ import type { PickerAddress } from "@/lib/queries/addresses";
 
 /**
  * The event "Where" field as a combobox over the saved-address book. Tap to
- * browse everything (grouped by category); type to filter live on name and
- * address (prefix matches first). Selecting one fills the full address — the
- * event still submits a plain `location` string via the hidden-named input, so
- * nothing about the form action changes. A brand-new address offers "save for
- * next time", which checks for a near-duplicate first.
+ * browse everything (alphabetical); type to filter live on name and address
+ * (prefix matches first). Selecting one fills the full address — the event still
+ * submits a plain `location` string via the named input, so nothing about the
+ * form action changes. A brand-new address offers "save for next time", which
+ * checks for a near-duplicate first.
  */
 export function LocationCombobox({
   defaultValue,
   fieldClassName,
-  defaultCategory,
 }: {
   defaultValue?: string;
   fieldClassName: string;
-  defaultCategory?: string;
 }) {
   const [value, setValue] = useState(defaultValue ?? "");
   const [open, setOpen] = useState(false);
   const [addresses, setAddresses] = useState<PickerAddress[]>([]);
-  const [categories, setCategories] = useState<string[]>(["General"]);
   const [loaded, setLoaded] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  // Save-for-next-time sub-form
   const [saving, setSaving] = useState(false);
   const [saveName, setSaveName] = useState("");
-  const [saveCategory, setSaveCategory] = useState(defaultCategory ?? "General");
   const [dup, setDup] = useState<{ id: string; name: string; address: string } | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -46,7 +41,6 @@ export function LocationCombobox({
       .then((res) => {
         if (!alive) return;
         setAddresses(res.addresses);
-        setCategories(res.categories);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
@@ -69,9 +63,7 @@ export function LocationCombobox({
   const q = value.trim().toLowerCase();
   const matches = q
     ? rank(addresses, q)
-    : [...addresses].sort(
-        (a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name),
-      );
+    : [...addresses].sort((a, b) => a.name.localeCompare(b.name));
 
   const exact = addresses.some((a) => a.address.trim().toLowerCase() === q && q.length > 0);
   const canSave = value.trim().length > 0 && !exact;
@@ -87,18 +79,14 @@ export function LocationCombobox({
     if (!name) return;
     startTransition(async () => {
       const res: CreateAddressResult = await saveAddressFromCalendar(
-        { name, address: value.trim(), category: saveCategory },
+        { name, address: value.trim() },
         force,
       );
       if (!res.ok) {
         setDup(res.duplicate);
         return;
       }
-      // reflect it locally so it shows next time the list opens this session
-      setAddresses((prev) => [
-        ...prev,
-        { id: res.id, name, address: value.trim(), category: saveCategory },
-      ]);
+      setAddresses((prev) => [...prev, { id: res.id, name, address: value.trim() }]);
       setDup(null);
       setSaving(false);
       setSaved(true);
@@ -130,11 +118,9 @@ export function LocationCombobox({
 
       {open && loaded && (matches.length > 0 || canSave) && (
         <div className="absolute z-50 mt-1 max-h-72 w-full overflow-auto rounded-2xl border border-hairline bg-surface py-1 shadow-xl">
-          {q ? (
-            matches.map((a) => <Row key={a.id} a={a} onPick={pick} />)
-          ) : (
-            <Grouped list={matches} onPick={pick} />
-          )}
+          {matches.map((a) => (
+            <Row key={a.id} a={a} onPick={pick} />
+          ))}
 
           {canSave && !saving && (
             <button
@@ -143,7 +129,6 @@ export function LocationCombobox({
                 setSaving(true);
                 setDup(null);
                 setSaveName("");
-                setSaveCategory(defaultCategory ?? "General");
               }}
               className="mt-1 flex w-full items-center gap-2 border-t border-hairline px-4 py-2.5 text-left text-sm text-accent hover:bg-ink/5"
             >
@@ -183,35 +168,22 @@ export function LocationCombobox({
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
                     value={saveName}
                     onChange={(e) => setSaveName(e.target.value)}
-                    placeholder="Short name (e.g. Grocery store)"
-                    className="w-full rounded-lg border border-hairline bg-ground/40 px-3 py-2 text-sm outline-none focus:border-accent"
+                    placeholder="Short name (e.g. Iceplex)"
+                    className="min-w-0 flex-1 rounded-lg border border-hairline bg-ground/40 px-3 py-2 text-sm outline-none focus:border-accent"
                   />
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={saveCategory}
-                      onChange={(e) => setSaveCategory(e.target.value)}
-                      className="min-w-0 flex-1 rounded-lg border border-hairline bg-ground/40 px-2 py-2 text-sm outline-none focus:border-accent"
-                    >
-                      {categories.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => doSave(false)}
-                      disabled={pending || !saveName.trim()}
-                      className="shrink-0 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-                    >
-                      Save
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => doSave(false)}
+                    disabled={pending || !saveName.trim()}
+                    className="shrink-0 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  >
+                    Save
+                  </button>
                 </div>
               )}
             </div>
@@ -232,35 +204,6 @@ function Row({ a, onPick }: { a: PickerAddress; onPick: (a: PickerAddress) => vo
       <span className="block truncate text-sm font-medium">{a.name}</span>
       <span className="block truncate text-xs text-muted">{a.address}</span>
     </button>
-  );
-}
-
-function Grouped({
-  list,
-  onPick,
-}: {
-  list: PickerAddress[];
-  onPick: (a: PickerAddress) => void;
-}) {
-  const groups: [string, PickerAddress[]][] = [];
-  for (const a of list) {
-    const last = groups[groups.length - 1];
-    if (last && last[0] === a.category) last[1].push(a);
-    else groups.push([a.category, [a]]);
-  }
-  return (
-    <>
-      {groups.map(([cat, items]) => (
-        <div key={cat}>
-          <p className="px-4 pb-0.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
-            {cat}
-          </p>
-          {items.map((a) => (
-            <Row key={a.id} a={a} onPick={onPick} />
-          ))}
-        </div>
-      ))}
-    </>
   );
 }
 
