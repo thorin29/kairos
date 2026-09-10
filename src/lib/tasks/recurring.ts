@@ -229,9 +229,23 @@ export type RecurringInput = {
  * near-term occurrences. Shared by the admin form and the device task-add
  * endpoint so both enforce the same rules.
  */
-export async function createRecurringTask(
+type NormalizedRecurring = {
+  userId: string;
+  title: string;
+  freq: string;
+  interval: number;
+  byday: string | null;
+  startDate: Date;
+  endMode: string;
+  maxCount: number | null;
+  untilDate: Date | null;
+  notifyMinutes: number | null;
+};
+
+/** Validate + normalize a recurring input into the row shape (minus createdById). */
+function normalizeRecurring(
   input: RecurringInput,
-): Promise<{ error: string | null }> {
+): { error: string } | { error: null; data: NormalizedRecurring } {
   const title = input.title.trim().slice(0, 120);
   const interval = Math.max(1, Math.min(52, Math.round(input.interval) || 1));
   const byday = input.byday.map((d) => d.trim().toUpperCase()).filter(Boolean);
@@ -253,8 +267,8 @@ export async function createRecurringTask(
   if (endMode === "UNTIL" && !/^\d{4}-\d{2}-\d{2}$/.test(input.until)) {
     return { error: "Pick an end date." };
   }
-
-  await prisma.recurringTask.create({
+  return {
+    error: null,
     data: {
       userId: input.userId,
       title,
@@ -265,10 +279,38 @@ export async function createRecurringTask(
       endMode,
       maxCount: endMode === "COUNT" ? maxCount : null,
       untilDate: endMode === "UNTIL" ? toDateColumn(input.until) : null,
-      createdById: input.createdById ?? null,
       notifyMinutes: input.notifyMinutes ?? null,
     },
+  };
+}
+
+export async function createRecurringTask(
+  input: RecurringInput,
+): Promise<{ error: string | null }> {
+  const n = normalizeRecurring(input);
+  if (n.error !== null) return { error: n.error };
+  await prisma.recurringTask.create({
+    data: { ...n.data, createdById: input.createdById ?? null },
   });
+  await generateRecurringTasks();
+  return { error: null };
+}
+
+/**
+ * Edit a recurring series in place, keeping its id so completed occurrences are
+ * preserved (the generator's last-2-completed prune trims history). Pending
+ * occurrences are dropped and re-materialized against the new schedule.
+ */
+export async function updateRecurringTaskInPlace(
+  rid: string,
+  input: RecurringInput,
+): Promise<{ error: string | null }> {
+  const n = normalizeRecurring(input);
+  if (n.error !== null) return { error: n.error };
+  await prisma.task.deleteMany({
+    where: { generatedFrom: `rtask:${rid}`, status: TaskStatus.PENDING },
+  });
+  await prisma.recurringTask.update({ where: { id: rid }, data: n.data });
   await generateRecurringTasks();
   return { error: null };
 }
