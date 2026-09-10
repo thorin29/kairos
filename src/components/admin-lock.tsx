@@ -9,6 +9,7 @@ import { PinPad } from "@/components/pin-pad";
 // Each page's lock jumps straight to the matching admin section.
 const SECTION: Record<string, string> = {
   "/": "/admin",
+  "/tasks": "/admin/tasks",
   "/chores": "/admin/chores",
   "/calendar": "/admin/calendar",
   "/exercise": "/admin/exercise",
