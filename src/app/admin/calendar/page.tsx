@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
 import { loadEventTypes } from "@/lib/queries/calendar";
+import { loadAddressAdmin } from "@/lib/queries/addresses";
+import { AddressAdmin } from "@/app/admin/addresses/address-admin";
 import { getCalendarPrefs, getFamilyColor } from "@/lib/settings";
 import { Subscriptions } from "./subscriptions";
 import { EventTypes } from "./event-types";
@@ -35,6 +37,7 @@ export default async function AdminCalendarPage() {
   const familyColor = await getFamilyColor();
   const holidays = await loadHolidayList();
   const holidayColor = await getHolidayColor();
+  const { addresses } = await loadAddressAdmin();
 
   const subscriptions = calendars.map((c) => ({
     id: c.id,
@@ -64,6 +67,15 @@ export default async function AdminCalendarPage() {
           parent job because it changes what everyone sees.
         </p>
       </header>
+
+      <section className="mb-10">
+        <SectionHeading>Addresses</SectionHeading>
+        <p className="mb-3 mt-1 max-w-xl text-sm text-muted">
+          Saved places events reuse as locations — a short name and full address.
+          The location picker offers these on every event and filters as you type.
+        </p>
+        <AddressAdmin addresses={addresses} />
+      </section>
 
       <SectionHeading>Subscriptions</SectionHeading>
       <Subscriptions
