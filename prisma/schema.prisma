@@ -296,6 +296,8 @@ model Task {
   // this rather than on the person, so a chore handed to someone else keeps
   // filling its slot instead of being rebuilt for the original owner.
   generatedFrom String?
+  // Notification time (minutes from midnight, household-local) on the due date; null = no alert.
+  notifyMinutes Int?
 
   // Released back to the household: still due, but nobody owns it yet. Open
   // items drop out of the original person's score and appear on the
@@ -1391,6 +1393,8 @@ model RecurringTask {
   untilDate   DateTime? @db.Date
   active      Boolean   @default(true)
   createdById String?
+  // Alert time (minutes from midnight) stamped onto each generated occurrence.
+  notifyMinutes Int?
   createdAt   DateTime  @default(now())
 
   @@index([active])

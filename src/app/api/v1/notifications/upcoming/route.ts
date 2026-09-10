@@ -2,8 +2,9 @@ import type { NextRequest } from "next/server";
 import { apiOk } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { prisma } from "@/lib/prisma";
-import { householdTz, todayISO, addDays } from "@/lib/dates";
+import { householdTz, todayISO, addDays, toDateColumn, fromDateColumn } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
+import { TaskStatus } from "@/generated/prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -93,5 +94,23 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return apiOk({ events: out });
+  // Tasks this person has an alert time on, due within the window. The app
+  // schedules each at (dueISO at `minute`) in device-local time.
+  const taskRows = await prisma.task.findMany({
+    where: {
+      userId: uid,
+      status: TaskStatus.PENDING,
+      notifyMinutes: { not: null },
+      dueDate: { gte: toDateColumn(fromISO), lte: toDateColumn(toISO) },
+    },
+    select: { id: true, title: true, dueDate: true, notifyMinutes: true },
+  });
+  const tasks = taskRows.map((t) => ({
+    id: t.id,
+    title: t.title,
+    dueISO: fromDateColumn(t.dueDate),
+    minute: t.notifyMinutes ?? 0,
+  }));
+
+  return apiOk({ events: out, tasks });
 }

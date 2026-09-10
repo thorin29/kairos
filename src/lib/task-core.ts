@@ -12,6 +12,7 @@ export async function addTaskCore(input: {
   userId: string;
   title: string;
   dueDate?: string | null;
+  notifyMinutes?: number | null;
 }): Promise<{ error: string | null }> {
   const title = input.title.trim().slice(0, 120);
   if (!input.userId) return { error: "Pick who this is for." };
@@ -23,6 +24,7 @@ export async function addTaskCore(input: {
       title,
       category: Category.OTHER,
       dueDate: toDateColumn(dueDate),
+      notifyMinutes: input.notifyMinutes ?? null,
     },
   });
   return { error: null };

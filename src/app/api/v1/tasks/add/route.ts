@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       endMode: typeof recur.endMode === "string" ? recur.endMode : "NEVER",
       maxCount: recur.maxCount != null ? Number(recur.maxCount) : null,
       until: typeof recur.until === "string" ? recur.until : "",
+      notifyMinutes: recur.notifyMinutes != null ? Number(recur.notifyMinutes) : null,
       createdById: me.id,
     });
     if (res.error) return apiError("validation", res.error);
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
     userId,
     title: typeof body.title === "string" ? body.title : "",
     dueDate: typeof body.dueDate === "string" ? body.dueDate : null,
+    notifyMinutes: typeof body.notifyMinutes === "number" ? body.notifyMinutes : null,
   });
   if (r.error) return apiError("validation", r.error);
   return apiOk({ status: "ok" });

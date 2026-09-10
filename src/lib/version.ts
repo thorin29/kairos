@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.294.0";
+export const APP_VERSION = "0.295.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -89,11 +89,18 @@ export const MIGRATIONS = [
   "78_reminder_recipients",
   "79_recurring_tasks",
   "80_invite_purpose",
+  "81_task_notify",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.295.0",
+    summary: [
+      "Task alerts (backend): a task \u2014 and a recurring template \u2014 can carry an alert time (minutes from midnight), recurring occurrences inherit it, and the upcoming feed returns each person\u2019s task alerts for the app to schedule. The phone-side time picker is the next step.",
+    ],
+  },
   {
     version: "0.294.0",
     summary: [
