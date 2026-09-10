@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.325.0";
+export const APP_VERSION = "0.326.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -102,6 +102,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.326.0",
+    summary: [
+      "Every event overlay now drops the \u201cWhose\u201d owner from the Share with list and updates it as you change the owner, matching how classes work. And every dropdown across the app now uses the same inset chevron \u2014 including the calendar Day/Week/Month view switcher, whose caret had been sitting at the far right.",
+    ],
+  },
   {
     version: "0.325.0",
     summary: [

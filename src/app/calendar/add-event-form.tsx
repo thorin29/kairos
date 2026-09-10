@@ -330,6 +330,19 @@ function EventModal({
   const [reminders, setReminders] = useState<Set<number>>(
     () => new Set(remindersInit ?? []),
   );
+  // "Whose" as controlled state so Share with can drop the owner live. Picking
+  // an owner who was already shared-with removes them from the participant set.
+  const [owner, setOwner] = useState(userId ?? "");
+  const changeOwner = (id: string) => {
+    setOwner(id);
+    setParticipants((prev) => {
+      if (!prev.has(id)) return prev;
+      const n = new Set(prev);
+      n.delete(id);
+      return n;
+    });
+  };
+  const shareOptions = people.filter((p) => p.id !== owner);
   const toggleParticipant = (uid: string) =>
     setParticipants((prev) => {
       const n = new Set(prev);
@@ -606,7 +619,8 @@ function EventModal({
                 id="ev-user"
                 name="userId"
                 required
-                defaultValue={userId ?? ""}
+                value={owner}
+                onChange={(e) => changeOwner(e.target.value)}
                 className={`${field} select-caret`}
               >
                 <option value="">Choose</option>
@@ -650,7 +664,7 @@ function EventModal({
                   Share with
                 </label>
                 <div className="flex flex-wrap gap-1.5">
-                  {people.map((p) => (
+                  {shareOptions.map((p) => (
                     <span key={p.id} className="inline-flex items-center gap-1">
                       <button
                         type="button"
@@ -710,9 +724,11 @@ function EventModal({
               </div>
             </div>
 
-            {[...participants].map((id) => (
-              <input key={id} type="hidden" name="participants" value={id} />
-            ))}
+            {[...participants]
+              .filter((id) => id !== owner)
+              .map((id) => (
+                <input key={id} type="hidden" name="participants" value={id} />
+              ))}
             {[...bells]
               .filter((id) => participants.has(id))
               .map((id) => (
