@@ -444,7 +444,7 @@ function EventModal({
         onClick={onClose}
       >
         <div
-          className="my-4 w-full max-w-lg rounded-2xl bg-surface p-5 shadow-xl"
+          className="my-4 w-full max-w-3xl rounded-2xl bg-surface p-5 shadow-xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mb-3 flex items-center justify-between">
@@ -598,7 +598,7 @@ function EventModal({
               <input type="hidden" name="eventTypeId" value={eventTypeId} />
             </div>
 
-            <div className="sm:col-span-2">
+            <div>
               <label className="mb-1.5 block text-sm font-medium">
                 Share with
               </label>
@@ -712,7 +712,7 @@ function EventModal({
                 />
               </div>
             ) : (
-              <div className="space-y-3 sm:col-span-2">
+              <div className="grid gap-4 sm:grid-cols-2 sm:col-span-2">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium">Starts</label>
                   <div className="flex gap-2">
