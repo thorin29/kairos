@@ -256,8 +256,9 @@ function meetingEventData(input: {
   untilISO: string | null;
   reminders?: number[];
   reminderUserIds?: string[];
+  location?: string | null;
 }) {
-  const { userId, name, byday, start, end, anchorISO, untilISO, reminders = [], reminderUserIds = [] } = input;
+  const { userId, name, byday, start, end, anchorISO, untilISO, reminders = [], reminderUserIds = [], location = null } = input;
   if (byday.length === 0) return null;
   if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return null;
 
@@ -280,6 +281,7 @@ function meetingEventData(input: {
     rrule,
     reminders,
     reminderUserIds,
+    location: location && location.trim() ? location.trim() : null,
   };
 }
 
@@ -467,6 +469,7 @@ async function persistClass(
         untilISO,
         reminders: reminderMins,
         reminderUserIds: reminderBell,
+        location: String(formData.get("location") ?? ""),
       })
     : null;
 

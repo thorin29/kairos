@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.318.0";
+export const APP_VERSION = "0.319.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -101,6 +101,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.319.0",
+    summary: [
+      "Class form updates: Subject is now a type-or-pick combobox (the separate \"new subject\" box is gone); \"Type\" is renamed \"Class type\" and \"No type\" removed; the Color dropdown shows a swatch of the chosen color; a \"Where\" field was added for the class meeting; and the helper text under \"Meets on\" and the homework checkbox was removed. (Field reorder and one-line layout coming next.)",
+    ],
+  },
   {
     version: "0.318.0",
     summary: [
