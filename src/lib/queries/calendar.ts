@@ -533,7 +533,9 @@ export async function loadRange(
     const base = {
       id: `${e.id}${suffix}`,
       title: e.title,
-      location: e.location,
+      location:
+        (e as { locationOverride?: string | null }).locationOverride ??
+        e.location,
       locationName: null,
       notes: (e as { notes?: string | null }).notes ?? null,
       reminders: (e as { reminders?: number[] }).reminders ?? [],

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.323.0";
+export const APP_VERSION = "0.324.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -96,11 +96,18 @@ export const MIGRATIONS = [
   "85_birthday_category_to_general",
   "86_drop_address_category",
   "87_address_nav_by_name",
+  "88_event_location_override",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.324.0",
+    summary: [
+      "Subscribed (feed) events can now carry reminders and a manual address. Open a subscribed event to set \u201cRemind me\u201d and to add an address when the feed doesn\u2019t include one (useful for maps and navigation). Both persist across feed refreshes.",
+    ],
+  },
   {
     version: "0.323.0",
     summary: [

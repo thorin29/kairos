@@ -5,6 +5,7 @@ import { requireInteractive } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { syncCalendar, syncStaleCalendars } from "@/lib/calendar/sync";
 import { isAdmin, requireAdmin } from "@/lib/session";
+import { currentUser } from "@/lib/user-session";
 
 export type CalendarState = { error: string | null; saved: boolean };
 
@@ -107,5 +108,46 @@ export async function setCalendarSport(
 export async function refreshCalendars(): Promise<void> {
   await requireInteractive();
   await syncStaleCalendars(true);
+  revalidatePath("/calendar");
+}
+
+
+/** Attach reminders and/or a manual address to a subscribed (feed) event.
+ *  Reminders live on the event's reminders/reminderUserIds and survive feed
+ *  refreshes (sync never rewrites those). The address is stored as
+ *  locationOverride, which sync also leaves alone, so it persists too. */
+export async function saveSubscribedExtras(
+  eventId: string,
+  reminders: number[],
+  address: string,
+): Promise<void> {
+  await requireInteractive();
+  const me = await currentUser();
+  if (!me) throw new Error("Sign in to do that.");
+
+  const ev = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { externalCalendarId: true, reminderUserIds: true },
+  });
+  if (!ev || !ev.externalCalendarId) return; // subscribed events only
+
+  const mins = [
+    ...new Set(reminders.filter((m) => Number.isFinite(m) && m >= 0)),
+  ].sort((a, b) => a - b);
+  const users = new Set(ev.reminderUserIds ?? []);
+  if (mins.length > 0) users.add(me.id);
+  else users.delete(me.id);
+
+  const clean = address.trim().slice(0, 200);
+
+  await prisma.event.update({
+    where: { id: eventId },
+    data: {
+      reminders: mins,
+      reminderUserIds: [...users],
+      locationOverride: clean.length > 0 ? clean : null,
+    },
+  });
+
   revalidatePath("/calendar");
 }
