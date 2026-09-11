@@ -23,10 +23,11 @@ export async function GET(req: NextRequest) {
   return apiOk({
     canMakeClass: isAdmin || mode === "anyone",
     isAdmin,
+    meId: me.id,
     meName: me.displayName ?? me.name,
     subjects: structure.subjects.map((s) => ({ id: s.id, name: s.name })),
     classTypes: structure.classTypes.map((t) => ({ id: t.id, name: t.name })),
     terms: structure.terms.map((t) => ({ id: t.id, name: t.name })),
-    students: structure.people.map((p) => ({ id: p.id, name: p.name })),
+    students: structure.people.map((p) => ({ id: p.id, name: p.name, color: p.color })),
   });
 }

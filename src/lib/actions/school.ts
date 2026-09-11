@@ -389,6 +389,30 @@ export async function persistClass(
   const color = String(formData.get("color") ?? "").trim() || null;
   const promptHomework = formData.get("promptHomework") != null;
   let termId = String(formData.get("termId") ?? "").trim() || null;
+  // A brand-new semester can be created inline from the class form (like a new
+  // subject). It needs a name and a date range; when valid, it's created and
+  // selected for this class.
+  const newTermName = String(formData.get("newTermName") ?? "").trim().slice(0, 60);
+  const newTermStart = String(formData.get("newTermStart") ?? "");
+  const newTermEnd = String(formData.get("newTermEnd") ?? "");
+  if (
+    newTermName.length >= 2 &&
+    /^\d{4}-\d{2}-\d{2}$/.test(newTermStart) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(newTermEnd) &&
+    newTermEnd >= newTermStart
+  ) {
+    const termCount = await prisma.term.count();
+    const created = await prisma.term.create({
+      data: {
+        name: newTermName,
+        startDate: toDateColumn(newTermStart),
+        endDate: toDateColumn(newTermEnd),
+        sortOrder: termCount,
+      },
+      select: { id: true },
+    });
+    termId = created.id;
+  }
   const start = String(formData.get("start") ?? "");
   const end = String(formData.get("end") ?? "");
   const byday = String(formData.get("byday") ?? "")

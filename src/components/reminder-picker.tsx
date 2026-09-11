@@ -32,7 +32,7 @@ export function ReminderPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
-  const [unit, setUnit] = useState(1440);
+  const [unit, setUnit] = useState(1);
   const customMins = [...reminders]
     .filter((m) => !PRESETS.includes(m))
     .sort((a, b) => a - b);
