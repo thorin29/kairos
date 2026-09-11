@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AdminBack } from "@/components/admin-back";
 import { currentAdmin } from "@/lib/session";
-import { getAppearance, getFamilyColor } from "@/lib/settings";
+import { getAppearance, getFamilyColor, getFamilyAvatar } from "@/lib/settings";
 import { AppearanceAdmin } from "./appearance-admin";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,7 @@ export default async function AdminAppearancePage() {
   if (!admin) redirect("/unlock");
   const { theme, dark } = await getAppearance();
   const familyColor = await getFamilyColor();
+  const familyAvatar = await getFamilyAvatar();
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -27,7 +28,12 @@ export default async function AdminAppearancePage() {
         </p>
       </header>
 
-      <AppearanceAdmin theme={theme} dark={dark} familyColor={familyColor} />
+      <AppearanceAdmin
+        theme={theme}
+        dark={dark}
+        familyColor={familyColor}
+        familyAvatar={familyAvatar}
+      />
     </main>
   );
 }

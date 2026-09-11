@@ -81,6 +81,8 @@ export function Sidebar({
     color: string;
     avatarPath: string | null;
     avatarPosition?: string | null;
+    family?: boolean;
+    pinSet?: boolean;
   } | null;
 }) {
   const path = usePathname();
@@ -225,6 +227,8 @@ export function Sidebar({
                 color={user.color}
                 avatarPath={user.avatarPath}
                 avatarPosition={user.avatarPosition}
+                family={user.family}
+                pinSet={user.pinSet}
                 inline
                 expanded={expanded}
                 onNavigate={() => setMobileOpen(false)}

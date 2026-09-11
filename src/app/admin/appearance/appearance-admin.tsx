@@ -9,16 +9,19 @@ import { THEME_NAMES, THEME_LABEL, THEME_SWATCH, type ThemeName } from "@/lib/th
 import { Card } from "@/components/ui";
 import { CheckIcon } from "@/components/icons";
 import { FamilyColorPicker } from "@/app/setup/family-color-picker";
+import { FamilyAvatarForm } from "./family-avatar-form";
 
 
 export function AppearanceAdmin({
   theme,
   dark,
   familyColor,
+  familyAvatar,
 }: {
   theme: ThemeName;
   dark: boolean;
   familyColor: string;
+  familyAvatar: { path: string | null; position: string };
 }) {
   const [pending, start] = useTransition();
 
@@ -95,6 +98,22 @@ export function AppearanceAdmin({
           default everyone&rsquo;s app uses for family events.
         </p>
         <FamilyColorPicker current={familyColor} />
+      </section>
+
+      <section>
+        <h3 className="mb-1 font-display text-base font-semibold">
+          Family picture
+        </h3>
+        <p className="mb-3 max-w-xl text-sm text-muted">
+          The picture shown for the shared &ldquo;Family&rdquo; profile on shared
+          devices. Choose a photo or an icon, exactly like a person&rsquo;s
+          profile.
+        </p>
+        <FamilyAvatarForm
+          color={familyColor}
+          avatarPath={familyAvatar.path}
+          avatarPosition={familyAvatar.position}
+        />
       </section>
     </div>
   );
