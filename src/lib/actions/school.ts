@@ -668,12 +668,11 @@ export async function deleteSubject(id: string): Promise<void> {
 
 // --- approval of user-proposed subjects & terms -------------------------------
 
-export async function approveSubject(id: string, name: string): Promise<void> {
-  await requireAdmin();
+// Auth-free cores so both the web admin actions and the app's device-auth API
+// route share one implementation.
+export async function approveSubjectCore(id: string, name: string): Promise<void> {
   const clean = name.trim().slice(0, 60);
   if (clean.length < 2) return;
-  // Keep the id so the proposer's class stays linked; clear pending and apply
-  // the admin's spelling to the class name too.
   await prisma
     .$transaction([
       prisma.subject.update({
@@ -689,18 +688,16 @@ export async function approveSubject(id: string, name: string): Promise<void> {
   schoolStructureRevalidate();
 }
 
-export async function mergeSubject(
+export async function mergeSubjectCore(
   pendingId: string,
   targetId: string,
 ): Promise<void> {
-  await requireAdmin();
   if (pendingId === targetId) return;
   const target = await prisma.subject.findUnique({
     where: { id: targetId },
     select: { name: true },
   });
   if (!target) return;
-  // Repoint the proposer's class(es) to the existing subject, then drop the dupe.
   await prisma
     .$transaction([
       prisma.schoolClass.updateMany({
@@ -713,13 +710,12 @@ export async function mergeSubject(
   schoolStructureRevalidate();
 }
 
-export async function approveTerm(
+export async function approveTermCore(
   id: string,
   name: string,
   start: string,
   end: string,
 ): Promise<void> {
-  await requireAdmin();
   const clean = name.trim().slice(0, 60);
   if (clean.length < 2) return;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
@@ -741,11 +737,10 @@ export async function approveTerm(
   schoolStructureRevalidate();
 }
 
-export async function mergeTerm(
+export async function mergeTermCore(
   pendingId: string,
   targetId: string,
 ): Promise<void> {
-  await requireAdmin();
   if (pendingId === targetId) return;
   const target = await prisma.term.findUnique({
     where: { id: targetId },
@@ -762,6 +757,31 @@ export async function mergeTerm(
     ])
     .catch(() => {});
   schoolStructureRevalidate();
+}
+
+export async function approveSubject(id: string, name: string): Promise<void> {
+  await requireAdmin();
+  return approveSubjectCore(id, name);
+}
+
+export async function mergeSubject(pendingId: string, targetId: string): Promise<void> {
+  await requireAdmin();
+  return mergeSubjectCore(pendingId, targetId);
+}
+
+export async function approveTerm(
+  id: string,
+  name: string,
+  start: string,
+  end: string,
+): Promise<void> {
+  await requireAdmin();
+  return approveTermCore(id, name, start, end);
+}
+
+export async function mergeTerm(pendingId: string, targetId: string): Promise<void> {
+  await requireAdmin();
+  return mergeTermCore(pendingId, targetId);
 }
 
 export async function addClassType(
