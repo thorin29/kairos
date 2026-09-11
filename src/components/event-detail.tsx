@@ -13,6 +13,7 @@ import {
   CalendarIcon,
   SchoolIcon,
   LinkIcon,
+  MapPinIcon,
 } from "@/components/icons";
 
 const KIND_LABEL: Record<string, string> = {
@@ -212,6 +213,12 @@ export function EventDetail({
             <div className="flex items-start gap-2 text-muted">
               <AttendeeList event={event} align="start" />
             </div>
+            {event.location && (
+              <div className="flex items-start gap-2 text-muted">
+                <MapPinIcon className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 break-words">{event.location}</span>
+              </div>
+            )}
             {event.external && event.calendarName && (
               <div className="flex items-center gap-2 text-muted">
                 <LinkIcon className="h-4 w-4 shrink-0" />
