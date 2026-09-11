@@ -777,6 +777,28 @@ export async function renameHiitWorkout(
  * progress graph unless `tracked`. The result is written as a single-set
  * session for the day, completing "worked out today" like any other log.
  */
+export type CustomLogResult =
+  | { ok: true }
+  | { conflict: { name: string; summary: string } };
+
+/** Short readout of a set's primary value, e.g. "185 lb" or "45 min". */
+function summarizeSet(s: {
+  weight: number | null;
+  reps: number | null;
+  distance: number | null;
+  meters: number | null;
+  seconds: number | null;
+  unit: string | null;
+}): string {
+  const n = (v: number) => (v === Math.round(v) ? String(v) : String(v));
+  if (s.weight != null) return `${n(s.weight)}${s.unit ? ` ${s.unit}` : ""}`;
+  if (s.distance != null) return `${n(s.distance)} ${s.unit || "mi"}`;
+  if (s.meters != null) return `${n(s.meters)} m`;
+  if (s.seconds != null) return `${Math.round(s.seconds / 60)} min`;
+  if (s.reps != null) return `${s.reps} reps`;
+  return "logged";
+}
+
 export async function logCustomWorkout(input: {
   userId: string;
   dateISO: string;
@@ -787,12 +809,13 @@ export async function logCustomWorkout(input: {
   unit: string;
   load?: number | null;
   notes?: string;
-}): Promise<void> {
+  replace?: boolean; // overwrite the same movement already logged that day
+}): Promise<CustomLogResult> {
   await requireInteractive();
   await requireCanActFor(input.userId);
-  if (!input.userId) return;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
-  if (!Number.isFinite(input.value) || input.value <= 0) return;
+  if (!input.userId) return { ok: true };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return { ok: true };
+  if (!Number.isFinite(input.value) || input.value <= 0) return { ok: true };
 
   // Resolve what was done: a named pool movement, or a metric-only activity
   // that takes its identity from the category (running, rowing, rucking).
@@ -804,7 +827,7 @@ export async function logCustomWorkout(input: {
       where: { id: input.poolExerciseId },
       select: { name: true, category: true },
     });
-    if (!pool) return;
+    if (!pool) return { ok: true };
     name = pool.name;
     category = pool.category as WorkoutCategory;
     poolExerciseId = input.poolExerciseId;
@@ -812,25 +835,68 @@ export async function logCustomWorkout(input: {
     category = input.category;
     name = CATEGORY_LABEL[input.category];
   } else {
-    return;
+    return { ok: true };
   }
 
   const unit = input.unit.trim().slice(0, 8);
   const date = toDateColumn(input.dateISO);
 
-  // Each log is its own named session, so a day can hold several — a lift and a
-  // run, hockey and a ride, or the same thing done twice.
-  const session = await prisma.workoutSession.create({
-    data: {
-      userId: input.userId,
-      date,
-      name,
-      category,
-      finished: true,
-      isRest: false,
-      notes: input.notes?.slice(0, 300) || null,
+  // Same movement already logged that day? Report it back so the caller can ask
+  // "update or cancel" rather than silently stacking a duplicate. On replace we
+  // edit that session in place; a different movement just logs on its own.
+  const existing = await prisma.workoutSession.findFirst({
+    where: { userId: input.userId, date, isRest: false, name },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      sets: {
+        orderBy: { setNumber: "asc" },
+        take: 1,
+        select: {
+          weight: true,
+          reps: true,
+          distance: true,
+          meters: true,
+          seconds: true,
+          unit: true,
+        },
+      },
     },
   });
+  if (existing && !input.replace) {
+    const summary = existing.sets[0] ? summarizeSet(existing.sets[0]) : name;
+    return { conflict: { name, summary } };
+  }
+
+  // Each log is its own named session, so a day can hold several — a lift and a
+  // run, hockey and a ride. Re-logging the SAME movement edits its session.
+  let sessionId: string;
+  if (existing && input.replace) {
+    sessionId = existing.id;
+    await prisma.workoutSession.update({
+      where: { id: sessionId },
+      data: {
+        category,
+        finished: true,
+        isRest: false,
+        notes: input.notes?.slice(0, 300) || null,
+      },
+    });
+    await prisma.sessionSet.deleteMany({ where: { sessionId } });
+  } else {
+    const session = await prisma.workoutSession.create({
+      data: {
+        userId: input.userId,
+        date,
+        name,
+        category,
+        finished: true,
+        isRest: false,
+        notes: input.notes?.slice(0, 300) || null,
+      },
+    });
+    sessionId = session.id;
+  }
 
   const set: {
     sessionId: string;
@@ -844,7 +910,7 @@ export async function logCustomWorkout(input: {
     meters?: number;
     seconds?: number;
   } = {
-    sessionId: session.id,
+    sessionId,
     poolExerciseId,
     setNumber: 1,
     unit: unit || null,
@@ -876,6 +942,7 @@ export async function logCustomWorkout(input: {
   await prisma.sessionSet.create({ data: set });
   await completeWorkoutTask(input.userId, input.dateISO);
   refresh();
+  return { ok: true };
 }
 
 /** Shared writer: one HIIT session (name + type + result), movements in notes. */
