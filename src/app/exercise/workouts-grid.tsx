@@ -975,6 +975,9 @@ export function CustomWorkoutForm({
   onDone: () => void;
 }) {
   const [category, setCategory] = useState<WorkoutCategory>("WEIGHTS");
+  const [conflict, setConflict] = useState<{ name: string; summary: string } | null>(
+    null,
+  );
   const [poolId, setPoolId] = useState(
     () => pool.find((p) => p.category === "WEIGHTS" && p.isActive)?.id ?? "",
   );
@@ -1020,10 +1023,10 @@ export function CustomWorkoutForm({
   const loadUnit = unitSystem === "metric" ? "kg" : "lb";
   const canSave = value > 0 && !pending && (!isPoolCat || !!poolId);
 
-  const save = () => {
+  const save = (replace = false) => {
     if (!canSave) return;
     startTransition(async () => {
-      await logCustomWorkout({
+      const res = await logCustomWorkout({
         userId,
         dateISO,
         poolExerciseId: isPoolCat ? poolId : null,
@@ -1033,7 +1036,13 @@ export function CustomWorkoutForm({
         unit,
         load: cfg.load ? num(load) || null : null,
         notes: notes.trim() || undefined,
+        replace,
       });
+      if (res && "conflict" in res) {
+        setConflict(res.conflict);
+        return;
+      }
+      setConflict(null);
       onDone();
     });
   };
@@ -1200,14 +1209,40 @@ export function CustomWorkoutForm({
         />
       </div>
 
-      <button
-        type="button"
-        onClick={save}
-        disabled={!canSave}
-        className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-on-accent disabled:opacity-40"
-      >
-        {pending ? "Logging…" : "Log workout"}
-      </button>
+      {conflict ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+          <p className="font-medium text-ink">
+            You already logged {conflict.name} today: {conflict.summary}.
+          </p>
+          <p className="mt-0.5 text-muted">Update it with the new value, or cancel?</p>
+          <div className="mt-2.5 flex gap-2">
+            <button
+              type="button"
+              onClick={() => save(true)}
+              disabled={pending}
+              className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-on-accent disabled:opacity-40"
+            >
+              {pending ? "Updating…" : "Update"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConflict(null)}
+              className="rounded-full border border-hairline px-4 py-2 text-sm font-medium text-muted hover:text-ink"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => save()}
+          disabled={!canSave}
+          className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-on-accent disabled:opacity-40"
+        >
+          {pending ? "Logging…" : "Log workout"}
+        </button>
+      )}
         </>
       )}
     </div>
