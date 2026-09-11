@@ -28,7 +28,7 @@ export default async function SchoolPage({
     loadSchoolStructure(),
   ]);
   const classOptions = await loadClassOptions();
-  const terms = structure.terms;
+  const terms = structure.terms.filter((t) => !t.pending);
 
   // Which term scopes the progress numbers: an explicit choice, else the term
   // covering today, else all time.
@@ -80,7 +80,7 @@ export default async function SchoolPage({
           <AddSchoolWork
             people={shownPeople.map((p) => ({ id: p.id, name: p.name }))}
             classesByUser={classOptions}
-            subjects={structure.subjects.map((s) => s.name)}
+            subjects={structure.subjects.filter((s) => !s.pending).map((s) => s.name)}
             defaultDate={today}
           />
         </div>

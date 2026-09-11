@@ -340,6 +340,11 @@ export async function persistClass(
   // the block's event id, so we can remove it once the real class exists.
   const replaceEventId =
     String(formData.get("replaceEventId") ?? "").trim() || null;
+  // A non-admin (forcedOwnerId set) can propose a new subject/term, but it stays
+  // pending until an admin approves it, so it's hidden from everyone else's
+  // pickers meanwhile. An admin's inline additions are approved immediately.
+  const proposerNonAdmin = forcedOwnerId !== undefined;
+  const proposedById = proposerNonAdmin ? forcedOwnerId : null;
 
   // The class name comes from the Subject pool now (like chores pick from the
   // master list). Either an existing subject is chosen, or a new one is typed
@@ -359,7 +364,11 @@ export async function persistClass(
     const subj = await prisma.subject.upsert({
       where: { name: newSubject },
       update: {},
-      create: { name: newSubject },
+      create: {
+        name: newSubject,
+        pending: proposerNonAdmin,
+        proposedById,
+      },
       select: { id: true, name: true },
     });
     subjectId = subj.id;
@@ -408,6 +417,8 @@ export async function persistClass(
         startDate: toDateColumn(newTermStart),
         endDate: toDateColumn(newTermEnd),
         sortOrder: termCount,
+        pending: proposerNonAdmin,
+        proposedById,
       },
       select: { id: true },
     });
@@ -652,6 +663,104 @@ export async function deleteSubject(id: string): Promise<void> {
   await requireAdmin();
   // Classes keep their name; only the pool link is cleared by the FK.
   await prisma.subject.delete({ where: { id } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+// --- approval of user-proposed subjects & terms -------------------------------
+
+export async function approveSubject(id: string, name: string): Promise<void> {
+  await requireAdmin();
+  const clean = name.trim().slice(0, 60);
+  if (clean.length < 2) return;
+  // Keep the id so the proposer's class stays linked; clear pending and apply
+  // the admin's spelling to the class name too.
+  await prisma
+    .$transaction([
+      prisma.subject.update({
+        where: { id },
+        data: { name: clean, pending: false, proposedById: null },
+      }),
+      prisma.schoolClass.updateMany({
+        where: { subjectId: id },
+        data: { name: clean },
+      }),
+    ])
+    .catch(() => {});
+  schoolStructureRevalidate();
+}
+
+export async function mergeSubject(
+  pendingId: string,
+  targetId: string,
+): Promise<void> {
+  await requireAdmin();
+  if (pendingId === targetId) return;
+  const target = await prisma.subject.findUnique({
+    where: { id: targetId },
+    select: { name: true },
+  });
+  if (!target) return;
+  // Repoint the proposer's class(es) to the existing subject, then drop the dupe.
+  await prisma
+    .$transaction([
+      prisma.schoolClass.updateMany({
+        where: { subjectId: pendingId },
+        data: { subjectId: targetId, name: target.name },
+      }),
+      prisma.subject.delete({ where: { id: pendingId } }),
+    ])
+    .catch(() => {});
+  schoolStructureRevalidate();
+}
+
+export async function approveTerm(
+  id: string,
+  name: string,
+  start: string,
+  end: string,
+): Promise<void> {
+  await requireAdmin();
+  const clean = name.trim().slice(0, 60);
+  if (clean.length < 2) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+    return;
+  }
+  if (end < start) return;
+  await prisma.term
+    .update({
+      where: { id },
+      data: {
+        name: clean,
+        startDate: toDateColumn(start),
+        endDate: toDateColumn(end),
+        pending: false,
+        proposedById: null,
+      },
+    })
+    .catch(() => {});
+  schoolStructureRevalidate();
+}
+
+export async function mergeTerm(
+  pendingId: string,
+  targetId: string,
+): Promise<void> {
+  await requireAdmin();
+  if (pendingId === targetId) return;
+  const target = await prisma.term.findUnique({
+    where: { id: targetId },
+    select: { id: true },
+  });
+  if (!target) return;
+  await prisma
+    .$transaction([
+      prisma.schoolClass.updateMany({
+        where: { termId: pendingId },
+        data: { termId: targetId },
+      }),
+      prisma.term.delete({ where: { id: pendingId } }),
+    ])
+    .catch(() => {});
   schoolStructureRevalidate();
 }
 

@@ -22,9 +22,13 @@ export async function loadClassCtx(): Promise<ClassCtx> {
     canMakeClass: meAdmin || classMode === "anyone",
     isAdmin: meAdmin,
     meName: me?.displayName ?? me?.name ?? null,
-    subjects: structure.subjects.map((s) => ({ id: s.id, name: s.name })),
+    subjects: structure.subjects
+      .filter((s) => !s.pending)
+      .map((s) => ({ id: s.id, name: s.name })),
     classTypes: structure.classTypes.map((t) => ({ id: t.id, name: t.name })),
-    terms: structure.terms.map((t) => ({ id: t.id, name: t.name })),
+    terms: structure.terms
+      .filter((t) => !t.pending)
+      .map((t) => ({ id: t.id, name: t.name })),
     people: structure.people.map((p) => ({ id: p.id, name: p.name })),
     classesByEventId: Object.fromEntries(
       structure.people

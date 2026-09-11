@@ -116,25 +116,29 @@ model User {
 // ---------------------------------------------------------------
 
 model Term {
-  id        String        @id @default(cuid())
-  name      String
-  startDate DateTime      @db.Date
-  endDate   DateTime      @db.Date
-  sortOrder Int           @default(0)
-  createdAt DateTime      @default(now())
-  classes   SchoolClass[]
+  id           String        @id @default(cuid())
+  name         String
+  startDate    DateTime      @db.Date
+  endDate      DateTime      @db.Date
+  sortOrder    Int           @default(0)
+  pending      Boolean       @default(false)
+  proposedById String?
+  createdAt    DateTime      @default(now())
+  classes      SchoolClass[]
 }
 
 // A reusable class name, managed like the chore master list. A class picks its
 // name from this pool, so the same subject can be reused term to term (and
 // ticked off when spinning up a new semester).
 model Subject {
-  id        String        @id @default(cuid())
-  name      String        @unique
-  sortOrder Int           @default(0)
-  isActive  Boolean       @default(true)
-  createdAt DateTime      @default(now())
-  classes   SchoolClass[]
+  id           String        @id @default(cuid())
+  name         String        @unique
+  sortOrder    Int           @default(0)
+  isActive     Boolean       @default(true)
+  pending      Boolean       @default(false)
+  proposedById String?
+  createdAt    DateTime      @default(now())
+  classes      SchoolClass[]
 }
 
 // The kind of a class (Homeschool, Church, Dual credit…), admin-managed. A
