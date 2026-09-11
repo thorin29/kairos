@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/avatar";
 import { SwitchIcon } from "@/components/icons";
-import { logoutUser } from "@/lib/actions/accounts";
+import { logoutUser, logoutSharedDevice } from "@/lib/actions/accounts";
 
 /**
  * Who the app thinks you are, shown at the bottom of the sidebar. Tapping your
@@ -20,6 +20,8 @@ export function UserBadge({
   avatarPosition,
   expanded = false,
   onNavigate,
+  family = false,
+  pinSet = false,
 }: {
   userId?: string;
   name: string;
@@ -29,10 +31,26 @@ export function UserBadge({
   inline?: boolean;
   expanded?: boolean;
   onNavigate?: () => void;
+  family?: boolean;
+  pinSet?: boolean;
 }) {
   const path = usePathname();
   const [confirm, setConfirm] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
+
+  const signOutFamily = () =>
+    startTransition(async () => {
+      const r = await logoutSharedDevice(pin);
+      if (!r.ok) {
+        setPinError(r.error);
+        setPin("");
+        return;
+      }
+      setConfirm(false);
+      window.location.assign("/");
+    });
 
   if (
     path.startsWith("/login") ||
@@ -50,7 +68,11 @@ export function UserBadge({
       window.location.assign("/");
     });
 
-  const profileHref = userId ? `/person/${userId}/profile` : null;
+  const profileHref = family
+    ? "/family"
+    : userId
+      ? `/person/${userId}/profile`
+      : null;
 
   return (
     <>
@@ -105,19 +127,47 @@ export function UserBadge({
             className="w-full max-w-xs rounded-2xl bg-surface p-5 text-ink shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-sm font-medium">Sign out of {name}?</p>
+            <p className="text-sm font-medium">
+              {family ? "Sign out of this shared device?" : `Sign out of ${name}?`}
+            </p>
+            {family && pinSet && (
+              <>
+                <p className="mt-1 text-xs text-muted">
+                  Enter the admin PIN to confirm.
+                </p>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoFocus
+                  value={pin}
+                  onChange={(e) => {
+                    setPin(e.target.value);
+                    setPinError(null);
+                  }}
+                  className="mt-3 h-11 w-full rounded-xl border border-hairline bg-surface px-4 text-center text-lg tracking-widest outline-none focus:border-accent"
+                  placeholder="PIN"
+                />
+                {pinError && (
+                  <p className="mt-2 text-xs font-medium text-red-700">{pinError}</p>
+                )}
+              </>
+            )}
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setConfirm(false)}
+                onClick={() => {
+                  setConfirm(false);
+                  setPin("");
+                  setPinError(null);
+                }}
                 className="h-9 rounded-full px-4 text-sm font-medium text-muted transition-colors hover:text-ink"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={signOut}
-                disabled={pending}
+                onClick={family && pinSet ? signOutFamily : signOut}
+                disabled={pending || (family && pinSet && pin.length === 0)}
                 className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-on-accent transition-colors hover:opacity-90 disabled:opacity-50"
               >
                 <SwitchIcon className="h-4 w-4" />

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { requireAdmin } from "@/lib/session";
+import { requireAdmin, verifyAdminPin } from "@/lib/session";
 import {
   authenticate,
   disableLogin,
@@ -64,6 +64,19 @@ export async function loginUser(
 export async function logoutUser(): Promise<void> {
   await endUserSession();
   revalidatePath("/", "layout");
+}
+
+/** Sign out of a shared device. Gated by the admin PIN so a child can't drop
+ *  the shared session and expose the parent's individual access. */
+export async function logoutSharedDevice(
+  pin: string,
+): Promise<{ ok: boolean; error: string | null }> {
+  if (!(await verifyAdminPin((pin ?? "").trim()))) {
+    return { ok: false, error: "That PIN isn't right." };
+  }
+  await endUserSession();
+  revalidatePath("/", "layout");
+  return { ok: true, error: null };
 }
 
 /** Issue (or re-issue) an invite for a person. Re-issuing is how a password is

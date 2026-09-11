@@ -275,15 +275,32 @@ const LAST_SEEN_THROTTLE_MS = 15 * 60_000;
 /** Record activity, at most every [LAST_SEEN_THROTTLE_MS]. The conditional
  *  update matches zero rows (and writes nothing) when the stamp is fresh, so a
  *  busy client doesn't amplify into a write per request. Best-effort. */
-export async function touchDevice(deviceId: string): Promise<void> {
+export async function touchDevice(
+  deviceId: string,
+  clientBuild?: number | null,
+  clientVersion?: string | null,
+): Promise<void> {
   const cutoff = new Date(Date.now() - LAST_SEEN_THROTTLE_MS);
+  const build =
+    typeof clientBuild === "number" && Number.isFinite(clientBuild)
+      ? clientBuild
+      : null;
   try {
     await prisma.device.updateMany({
       where: {
         id: deviceId,
-        OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: cutoff } }],
+        OR: [
+          { lastSeenAt: null },
+          { lastSeenAt: { lt: cutoff } },
+          // A changed build writes immediately, so the version list stays current.
+          ...(build !== null ? [{ clientBuild: { not: build } }] : []),
+        ],
       },
-      data: { lastSeenAt: new Date() },
+      data: {
+        lastSeenAt: new Date(),
+        ...(build !== null ? { clientBuild: build } : {}),
+        ...(clientVersion ? { clientVersion: clientVersion.slice(0, 20) } : {}),
+      },
     });
   } catch {
     // Non-fatal: the device may have just been revoked/deleted concurrently.
@@ -422,7 +439,12 @@ export async function requireDevice(
       ),
     };
   }
-  await touchDevice(result.device.deviceId);
+  const buildHeader = Number(req.headers.get("x-client-build"));
+  await touchDevice(
+    result.device.deviceId,
+    Number.isFinite(buildHeader) && buildHeader > 0 ? buildHeader : null,
+    req.headers.get("x-client-version"),
+  );
   return { device: result.device };
 }
 

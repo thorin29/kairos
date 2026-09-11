@@ -5,6 +5,8 @@ import { DEFAULT_FAMILY_COLOR } from "@/lib/palette";
 
 export const SCORING_START = "scoringStart";
 export const FAMILY_COLOR = "familyColor";
+export const FAMILY_AVATAR = "familyAvatar";
+export const FAMILY_AVATAR_POS = "familyAvatarPosition";
 export const CAL_NOW_COLOR = "calendar.nowColor";
 export const CAL_RESET_SEC = "calendar.scrollResetSec";
 export const CAL_BLOCK_MINUTES = "calendar.blockMinutes";
@@ -133,6 +135,20 @@ export async function getFamilyColor(): Promise<string> {
     where: { key: FAMILY_COLOR },
   });
   return row?.value ?? DEFAULT_FAMILY_COLOR;
+}
+
+export async function getFamilyAvatar(): Promise<{
+  path: string | null;
+  position: string;
+}> {
+  const [pathRow, posRow] = await Promise.all([
+    prisma.appSetting.findUnique({ where: { key: FAMILY_AVATAR } }),
+    prisma.appSetting.findUnique({ where: { key: FAMILY_AVATAR_POS } }),
+  ]);
+  return {
+    path: pathRow?.value || null,
+    position: posRow?.value || "0 0 1",
+  };
 }
 
 /**

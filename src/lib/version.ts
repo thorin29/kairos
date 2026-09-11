@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.339.0";
+export const APP_VERSION = "0.340.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -98,11 +98,18 @@ export const MIGRATIONS = [
   "87_address_nav_by_name",
   "88_event_location_override",
   "89_pending_school_items",
+  "90_device_client_build",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.340.0",
+    summary: [
+      "Shared devices now show a \u201cFamily\u201d profile in the sidebar instead of the signed-in admin \u2014 with the family color and a new family picture set in Appearance \u2014 and signing out is gated behind the admin PIN. Tapping the Family profile opens a page listing each phone and the app version it\u2019s running.",
+    ],
+  },
   {
     version: "0.339.0",
     summary: [

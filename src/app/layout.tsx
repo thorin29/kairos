@@ -11,6 +11,7 @@ import { isAdmin, adminPinSet } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
 import { hiddenNavHrefs } from "@/lib/personal-scope";
 import { deviceMode } from "@/lib/device";
+import { getFamilyColor, getFamilyAvatar } from "@/lib/settings";
 import { loginRequired, isPublicPath } from "@/lib/gate";
 import { formatLong } from "@/lib/dates";
 import { getAppearance } from "@/lib/settings";
@@ -83,8 +84,12 @@ export default async function RootLayout({
   // navigation, so a value computed from the request path froze at the last
   // hard load and the sidebar could stay gone until a manual refresh.
   const hiddenNav = me ? await hiddenNavHrefs() : [];
-  const personalHome =
-    me && (await deviceMode()) === "personal" ? `/person/${me.id}` : "/";
+  const mode = me ? await deviceMode() : "personal";
+  const personalHome = me && mode === "personal" ? `/person/${me.id}` : "/";
+  const shared = Boolean(me) && mode === "shared";
+  const [familyColor, familyAvatar] = shared
+    ? await Promise.all([getFamilyColor(), getFamilyAvatar()])
+    : ["", null];
 
   return (
     <html lang="en" data-theme={appearance.theme} className={appearance.dark ? "dark" : undefined}>
@@ -97,13 +102,23 @@ export default async function RootLayout({
           dashboardHref={personalHome}
           user={
             me
-              ? {
-                  id: me.id,
-                  name: me.displayName ?? me.name,
-                  color: me.color,
-                  avatarPath: me.avatarPath,
-                  avatarPosition: me.avatarPosition,
-                }
+              ? shared
+                ? {
+                    id: me.id,
+                    name: "Family",
+                    color: familyColor,
+                    avatarPath: familyAvatar?.path ?? null,
+                    avatarPosition: familyAvatar?.position ?? null,
+                    family: true,
+                    pinSet,
+                  }
+                : {
+                    id: me.id,
+                    name: me.displayName ?? me.name,
+                    color: me.color,
+                    avatarPath: me.avatarPath,
+                    avatarPosition: me.avatarPosition,
+                  }
               : null
           }
         />

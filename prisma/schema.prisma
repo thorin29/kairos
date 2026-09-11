@@ -825,6 +825,8 @@ model Device {
   lastSeenAt DateTime?
   revokedAt  DateTime? // soft-revoke; a revoked row never verifies
   credentialVersion Int @default(0) // password version this device last authenticated at
+  clientBuild Int? // last app build this device reported (X-Client-Build header)
+  clientVersion String? // human version name, e.g. "0.177.0" (X-Client-Version)
   createdAt  DateTime  @default(now())
 
   @@index([userId])
