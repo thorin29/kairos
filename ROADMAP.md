@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (Sept 2026, web v0.279 / app v0.125)
+## Current status (Sept 2026, web v0.347 / app v0.182)
 
 The web is mature and the **Android app has reached parity** across every
 daily-use section (Home, Calendar, Chores, Bible, Reading, School, Workouts,
@@ -36,7 +36,7 @@ the following large efforts shipped:
   incubate → hatch → choose collection shipped earlier.
 
 Next up, roughly in order:
-- **Saved addresses** (in progress) — a shared address book so event locations
+- **Saved addresses** (shipped) — a shared address book so event locations
   are picked, not retyped, and carry a full address for phone navigation.
   Self-contained (no external geocoder): type-ahead runs over the saved list.
   Increments, all shipped: **(1, v0.301)** data model + Admin → Addresses intake
@@ -48,8 +48,8 @@ Next up, roughly in order:
 - **Web event editor reminders** are intentionally *not* built — reminders are
   app-only for now (per decision). The per-type default-reminder field exists in
   the schema but has no UI, kept OFF so nothing auto-notifies.
-- **Companion collection gallery** (owned + silhouettes to find) and the lighter
-  collect mechanic for the 50+ roster.
+- The lighter collect mechanic for the 50+ roster (the collection gallery itself
+  — owned + silhouettes — has shipped).
 - **Dashboard weather/forecast**, per-person dashboard ordering, and the
   remaining follow-up prompts.
 - Assorted smaller items enumerated per-section below.
