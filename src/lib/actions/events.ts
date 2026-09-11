@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireInteractive } from "@/lib/gate";
 import { EventKind } from "@/generated/prisma/client";
@@ -14,7 +15,7 @@ import {
 } from "@/lib/dates";
 import { buildRule, parseRule } from "@/lib/calendar/recur";
 import { deleteEventCore } from "@/lib/calendar/delete-event-core";
-import { isAdmin } from "@/lib/session";
+import { isAdmin, requireAdmin } from "@/lib/session";
 import { isHexColor } from "@/lib/palette";
 import {
   setSetting,
@@ -22,6 +23,7 @@ import {
   CAL_RESET_SEC,
   CAL_BLOCK_MINUTES,
   CAL_SHARED_STYLE,
+  TIME_24H,
 } from "@/lib/settings";
 
 export type EventState = { error: string | null; saved: boolean };
@@ -628,5 +630,17 @@ export async function deleteEvent(
   return deleteEventCore(id, scope, occurrenceISO, {
     isAdmin: await isAdmin(),
     callerUserId: null,
+  });
+}
+
+/** Toggle 24-hour time in the picker. Stored as a setting and mirrored to a
+ *  cookie the client TimeSelect reads without a round-trip. */
+export async function setTime24h(on: boolean): Promise<void> {
+  await requireAdmin();
+  await setSetting(TIME_24H, on ? "1" : "0");
+  (await cookies()).set("time24h", on ? "1" : "0", {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
   });
 }

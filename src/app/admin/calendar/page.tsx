@@ -4,7 +4,7 @@ import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
 import { MapPinIcon } from "@/components/icons";
 import { loadEventTypes } from "@/lib/queries/calendar";
-import { getCalendarPrefs, getFamilyColor } from "@/lib/settings";
+import { getCalendarPrefs, getFamilyColor, getUse24HourTime } from "@/lib/settings";
 import { Subscriptions } from "./subscriptions";
 import { EventTypes } from "./event-types";
 import { DisplayPrefs } from "./display-prefs";
@@ -34,22 +34,45 @@ export default async function AdminCalendarPage() {
   const calPrefs = await getCalendarPrefs();
   const pauses = await loadPauses();
   const familyColor = await getFamilyColor();
+  const use24h = await getUse24HourTime();
   const holidays = await loadHolidayList();
   const holidayColor = await getHolidayColor();
 
-  const subscriptions = calendars.map((c) => ({
-    id: c.id,
-    name: c.name,
-    url: c.url,
-    ownerName: c.isFamily
-      ? "Family"
-      : (c.user?.displayName ?? c.user?.name ?? "Family"),
-    ownerColor: c.isFamily ? familyColor : (c.user?.color ?? familyColor),
-    eventCount: c._count.events,
-    sportWorkout: c.sportWorkout,
-    lastFetchedAt: c.lastFetchedAt?.toISOString() ?? null,
-    lastError: c.lastError,
-  }));
+  const nameById = new Map(
+    people.map((p) => [p.id, p.displayName ?? p.name] as const),
+  );
+  const upcomingRows = await prisma.event.groupBy({
+    by: ["externalCalendarId"],
+    where: { externalCalendarId: { not: null }, endsAt: { gte: new Date() } },
+    _count: { _all: true },
+  });
+  const hasUpcoming = new Set(
+    upcomingRows.map((r) => r.externalCalendarId).filter((x): x is string => !!x),
+  );
+
+  const subscriptions = calendars.map((c) => {
+    const memberIds = (c as { memberIds?: string[] }).memberIds ?? [];
+    return {
+      id: c.id,
+      name: c.name,
+      url: c.url,
+      userId: c.userId ?? null,
+      isFamily: c.isFamily,
+      ownerName: c.isFamily
+        ? "Family"
+        : (c.user?.displayName ?? c.user?.name ?? "Family"),
+      ownerColor: c.isFamily ? familyColor : (c.user?.color ?? familyColor),
+      memberIds,
+      memberNames: memberIds
+        .map((mid) => nameById.get(mid))
+        .filter((n): n is string => Boolean(n)),
+      eventCount: c._count.events,
+      canRetire: c._count.events > 0 && !hasUpcoming.has(c.id),
+      sportWorkout: c.sportWorkout,
+      lastFetchedAt: c.lastFetchedAt?.toISOString() ?? null,
+      lastError: c.lastError,
+    };
+  });
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -110,6 +133,7 @@ export default async function AdminCalendarPage() {
           resetSec={calPrefs.scrollResetSec}
           blockMinutes={calPrefs.blockMinutes}
           sharedStyle={calPrefs.sharedStyle}
+          time24h={use24h}
         />
       </div>
 

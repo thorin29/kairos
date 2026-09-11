@@ -14,6 +14,7 @@ export const CAL_BLOCK_MINUTES = "calendar.blockMinutes";
 // stripes, one per person) or "blend" (a single mixed hue that steers clear of
 // brown). Bands by default — crisp and unambiguous.
 export const CAL_SHARED_STYLE = "calendar.sharedStyle";
+export const TIME_24H = "calendar.time24h";
 export const WORKOUT_OVERDUE_DAYS = "workout.overdueDays";
 export const SCHOOL_ROLLOVER_INTERVAL = "school.rolloverIntervalDays";
 export const SCHOOL_ROLLOVER_SNOOZE = "school.rolloverSnoozeUntil";
@@ -135,6 +136,11 @@ export async function getFamilyColor(): Promise<string> {
     where: { key: FAMILY_COLOR },
   });
   return row?.value ?? DEFAULT_FAMILY_COLOR;
+}
+
+export async function getUse24HourTime(): Promise<boolean> {
+  const row = await prisma.appSetting.findUnique({ where: { key: TIME_24H } });
+  return row?.value === "1";
 }
 
 export async function getFamilyAvatar(): Promise<{

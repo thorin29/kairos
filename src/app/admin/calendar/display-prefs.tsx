@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Card } from "@/components/ui";
-import { setCalendarPrefs } from "@/lib/actions/events";
+import { setCalendarPrefs, setTime24h } from "@/lib/actions/events";
 
 const NOW_COLORS = [
   { value: "#ef4444", label: "Red" },
@@ -32,16 +32,19 @@ export function DisplayPrefs({
   resetSec,
   blockMinutes,
   sharedStyle,
+  time24h,
 }: {
   nowColor: string;
   resetSec: number;
   blockMinutes: number;
   sharedStyle: "bands" | "blend";
+  time24h: boolean;
 }) {
   const [color, setColor] = useState(nowColor);
   const [sec, setSec] = useState(resetSec);
   const [block, setBlock] = useState(blockMinutes);
   const [style, setStyle] = useState<"bands" | "blend">(sharedStyle);
+  const [is24, setIs24] = useState(time24h);
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();
 
@@ -167,6 +170,45 @@ export function DisplayPrefs({
         <p className="mt-2 text-xs text-muted">
           When an event is shared with more than one person, show it as vertical
           stripes of each person&rsquo;s color, or as a single blended color.
+        </p>
+      </div>
+
+      <div className="mt-4 border-t border-hairline pt-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
+          Time format
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {(
+            [
+              { value: false, label: "12-hour" },
+              { value: true, label: "24-hour" },
+            ] as const
+          ).map((o) => (
+            <button
+              key={String(o.value)}
+              type="button"
+              onClick={() => {
+                setIs24(o.value);
+                setSaved(false);
+                start(async () => {
+                  await setTime24h(o.value);
+                  setSaved(true);
+                });
+              }}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                is24 === o.value
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-hairline text-muted hover:border-accent"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          How times show when you pick or type one. In 24-hour mode, type 2315
+          for 11:15 PM; in 12-hour mode, type 1115 and add &ldquo;p&rdquo; (11:15p).
+          Applies after a refresh.
         </p>
       </div>
 

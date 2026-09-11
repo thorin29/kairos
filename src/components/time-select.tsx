@@ -13,9 +13,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
  * when given a `name`, so it drops straight into a plain form.
  */
 
-function to12h(hhmm: string): string {
+function fmt(hhmm: string, h24: boolean): string {
   const [h, m] = hhmm.split(":").map(Number);
   if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm;
+  if (h24) return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   const mer = h < 12 ? "AM" : "PM";
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return `${h12}:${String(m).padStart(2, "0")} ${mer}`;
@@ -23,12 +24,11 @@ function to12h(hhmm: string): string {
 
 type Opt = { value: string; label: string };
 
-const GRID: Opt[] = (() => {
-  const out: Opt[] = [];
+const GRID_VALUES: string[] = (() => {
+  const out: string[] = [];
   for (let h = 0; h < 24; h++) {
     for (const m of [0, 30]) {
-      const v = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-      out.push({ value: v, label: to12h(v) });
+      out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     }
   }
   return out;
@@ -72,20 +72,25 @@ export function TimeSelect({
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [highlight, setHighlight] = useState(0);
+  const [use24h] = useState(
+    () =>
+      typeof document !== "undefined" &&
+      document.cookie.split("; ").includes("time24h=1"),
+  );
   const wrapRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const label = to12h(value);
+  const label = fmt(value, use24h);
 
   const options = useMemo<Opt[]>(() => {
     // The half-hour grid, plus the current value if it sits off-grid so it's
     // always visible and selectable.
-    const base = GRID.some((o) => o.value === value)
-      ? GRID
-      : [{ value, label }, ...GRID].sort((a, b) =>
-          a.value.localeCompare(b.value),
-        );
+    const base: Opt[] = (
+      GRID_VALUES.includes(value)
+        ? GRID_VALUES
+        : [...GRID_VALUES, value].sort((a, b) => a.localeCompare(b))
+    ).map((v) => ({ value: v, label: fmt(v, use24h) }));
 
     const q = text.trim();
     if (!q) return base;
@@ -105,11 +110,11 @@ export function TimeSelect({
         seen.has(o.value) ? false : seen.add(o.value),
       );
       if (!list.some((o) => o.value === parsed)) {
-        list = [{ value: parsed, label: to12h(parsed) }, ...list];
+        list = [{ value: parsed, label: fmt(parsed, use24h) }, ...list];
       }
     }
     return list.length ? list : base;
-  }, [text, value, label]);
+  }, [text, value, label, use24h]);
 
   // Close and revert when clicking away.
   useEffect(() => {
