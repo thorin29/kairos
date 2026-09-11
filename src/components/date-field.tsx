@@ -95,17 +95,20 @@ export function DateField({
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
+    // Capture-phase pointerdown: fires before any element (including buttons
+    // that stopPropagation) can swallow the event, so a click ANYWHERE outside
+    // the calendar closes it — on mouse and touch alike.
+    const onDoc = (e: PointerEvent) => {
       if (boxRef.current && !boxRef.current.contains(e.target as Node))
         setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("pointerdown", onDoc, true);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("pointerdown", onDoc, true);
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);

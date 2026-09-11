@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.330.0";
+export const APP_VERSION = "0.331.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -102,6 +102,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.331.0",
+    summary: [
+      "The calendar date picker now closes whenever you click anywhere outside it \u2014 including on buttons and other controls \u2014 instead of sometimes staying open. Works on touch and mouse.",
+    ],
+  },
   {
     version: "0.330.0",
     summary: [
