@@ -66,7 +66,7 @@ export function Subscriptions({
 
           <div className="min-w-[11rem]">
             <label htmlFor="name" className="mb-1.5 block text-sm font-medium">
-              Show it as
+              Display name
             </label>
             <input
               id="name"
@@ -107,8 +107,7 @@ export function Subscriptions({
 
           <label className="flex w-full items-center gap-2 text-sm text-muted">
             <input type="checkbox" name="sportWorkout" className="h-4 w-4" />
-            Counts as a sport workout (auto-logs a workout on the event&rsquo;s
-            day)
+            Sends an attendance confirmation to count as a workout
           </label>
         </form>
 
@@ -207,7 +206,7 @@ export function Subscriptions({
                     }
                     className="h-3.5 w-3.5"
                   />
-                  Counts as a sport workout
+                  Sends an attendance confirmation to count as a workout
                 </label>
               </div>
 
