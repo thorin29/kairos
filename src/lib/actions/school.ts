@@ -331,7 +331,7 @@ export async function saveClassFromCalendar(
   return persistClass(formData, forcedOwnerId);
 }
 
-async function persistClass(
+export async function persistClass(
   formData: FormData,
   forcedOwnerId?: string,
 ): Promise<SchoolActionState> {
