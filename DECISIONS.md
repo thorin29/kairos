@@ -1,5 +1,145 @@
 # Decisions
 
+## 2026-09 — Game time becomes monitoring-only; a collector container is the ingest boundary (pre-build)
+
+Game time is being stripped down to **passive monitoring of minutes played by
+children** — by game or in total, either is fine. The token / daily-allowance /
+bonus-minute / manual-logging machinery is retired: it was web-only and already
+hidden from web nav and the app sidebar, so nothing external calls it. No
+enforcement or control; just an honest record of time played.
+
+Collection is deliberately **decoupled** from Kairos behind a stable,
+source-agnostic ingest contract, because every upstream Xbox source is fragile.
+Microsoft is actively moving Family Safety's private APIs — in mid-2026 Xbox was
+pulled out of the Family Safety mobile app into a separate **Xbox Family
+Settings** app; the reporting data (daily/weekly totals, per-game, screen time)
+still exists, but every reader of it is unofficial and breakable. Kairos never
+holds Microsoft or Steam credentials and never talks to those services directly.
+
+**The boundary is a small dedicated "playtime collector" container** — not Home
+Assistant talking to Kairos directly, and not brittle HA YAML automations. The
+collector owns every per-source adapter and emits one fixed JSON shape to Kairos
+(`{child, date, source, game?, minutes}`); Kairos owns the history and the UI.
+HA is used *as a source* the collector reads (so we don't hand-maintain the
+Microsoft reverse-engineering, and MS credentials stay in HA's `.storage`, off
+Kairos), but HA is not the contract — if HAFamilySafety breaks, that one adapter
+is swapped inside the collector and Kairos never notices. Steam is its own
+adapter polled directly (official Steam Web API `playtime_forever` deltas — no
+reverse engineering). The weekly Xbox email is a reconciliation cross-check.
+Kairos ingest needs a **new shared-secret service token**: no external-ingest
+auth exists today (only per-device bearer + Authelia session). Data model +
+contract land after direction is confirmed. (See ROADMAP → Game time.)
+
+## 2026-09 — v0.301–0.349 decision log (reconstructed after the git slip)
+
+DECISIONS.md fell ~69 versions behind when uncommitted entries were lost to a
+stray `git checkout`; reconstructed from `version.ts` CHANGES and current code,
+grouped by theme.
+
+**Saved addresses (0.301–0.312).** A shared address book so event locations are
+picked, not retyped, and carry a full address for phone navigation.
+Self-contained — no external geocoder; type-ahead runs over the saved list.
+Parent/admin submissions land approved; members' land pending an admin queue
+(0.304–0.305). Simplified from categorized to a **single flat searchable list**
+(0.308) — categories weren't earning their keep. Calendar "Where" is a
+saved-address combobox with a "did you mean?" dedup (0.303); a matched location
+shows its friendly name over the raw address (0.309), with a per-address "open
+in maps by name" toggle (on for businesses, off for homes). Addresses is its own
+page under Calendar admin, edit-gated with pencil/trash per row (0.310–0.312).
+
+**Admin menu + lock (0.311, 0.313).** Admin menu reordered to follow the
+sidebar; Device/appearance/email/household/season grouped under Settings. The
+lock icon now does a **full page load** after the PIN so the admin session is
+recognized on the current page's section — a soft navigation was bouncing back
+to the general hub. (Same class as the existing "full navigation after
+auth/admin-lock" rule.)
+
+**Calendar & class overlays, and an app-styled date picker (0.314–0.328,
+0.331, 0.335).** Event and class overlays unified: same width, side-by-side
+sections (Share with beside Reminders, Starts beside Ends), the same pill
+dropdowns with one inset chevron everywhere, explanatory paragraphs removed.
+Share-with/Reminders became class-style toggle buttons across every event type,
+the bell shown only once a person is selected, the owner dropped from the share
+list. Classes gained reminders (saved onto the class's meeting event, reusing
+the notification pipeline), a Subject type-or-pick combobox, a Where field, and
+a Color dropdown with swatches. The browser's native date popup was replaced by
+an **app-styled DateField** — first in the calendar, then everywhere it appears
+(School, Tasks, Money, Chores, Bible plans, exercise logs, profile birthday,
+calendar pause); it closes on any outside click. Custom reminder lead times
+replaced the fixed "1 day".
+
+**Event types (0.282, 0.306).** "Other" → "Medical / Dental" (red by default).
+"Appointment" → "Event" everywhere it shows; the underlying type is unchanged so
+existing events keep their color and behavior.
+
+**Recurring tasks (0.285, 0.293–0.298).** Repeating to-dos (daily /
+weekly-on-days / monthly; end never / after-N / on-date) render on the right
+days from a template. Recurring history is capped to the **last 2 completed
+occurrences** per template (older pruned). Editing edits the **series in place**
+(completed occurrences preserved); a recurring occurrence resolves to its whole
+series for edit/delete. Recurrence is creatable from the app (task-add endpoint
+takes frequency/interval/weekdays/ends; admin form and app share one core).
+Optional per-task alert time flows to the app's scheduler.
+
+**Onboarding: 8-character invitation codes (0.287–0.292).** Invitations are a
+short 8-char code you can text, read aloud, or paste; entering it runs the full
+setup (new password / confirm / reset) then enrolls the device — replacing email
+links, which clients strip. Each person has an "Add a phone" action distinct from
+"Reset password". (Web `/join` and the legacy enrollment-code path were retired
+— see the `/join` entry below.)
+
+**Workout integrity (0.329–0.332).** Fixed workouts silently disappearing:
+rest-day / mark-done / log-scheduled were grabbing the day's *first* session and
+overwriting it, clobbering a separately-logged workout. Those actions now only
+ever reuse the day's own bare/scheduled placeholder and never touch a
+separately-logged workout, sport confirmation, or rest marker. Logging the
+**same movement** twice in a day now prompts update-or-cancel instead of
+silently duplicating; a different movement still logs on its own.
+
+**Subscribed calendars (0.323–0.324, 0.333, 0.342–0.345).** Feed names are
+edit-gated with inline rename + remove. A subscribed event can carry per-phone
+reminders and — briefly — a manual address; the **web** manual-address/reminder
+editor was then **removed (0.333)**: reminders on feeds are set from the app,
+and most feeds already include an address. A feed can be **shared with several
+people** (names and profile colors blend on its events, like shared events).
+**Retiring** a finished feed (all events past) converts its events to permanent
+regular events, keeping owner + shared-with members as attendees so names
+persist, then removes the subscription. Reminders on subscribed events are **per
+person** — each phone keeps its own minutes.
+
+**Subscribed-calendar internals.** Retiring converts owner + shared-with members
+to `EventParticipant` rows first (names persist); feed members' profile colors
+are added to `memberColors` (blend); reminders are per-person via
+`SubscribedReminder(eventId, userId, minutes Int[])` with
+`@@unique([eventId,userId])` and an Event back-relation. The app's calendar
+payload builder (`calendar-page.ts`) overrides each feed event's `reminders`
+with the viewer's own.
+
+**Tasks screen collapse (0.346).** The tasks screen (web + `/api/v1/tasks`)
+shows **one line per recurring template** with a repeat label ("Every week ·
+Mon"), not a row per occurrence. The **web** tasks screen has **no check-off** —
+ticking happens on the home card or a person's app; the web screen is a clean
+overview.
+
+**Shared-device "Family" profile (0.339–0.341).** A shared web device shows a
+**Family** profile in the sidebar (family color + family picture, both set in
+Appearance) instead of the signed-in admin; signing out is gated behind the
+admin PIN. Tapping Family opens a page listing each phone and the app version it
+runs. The family calendar color moved from Calendar settings into **Appearance**
+(0.339).
+
+**Time format (0.344).** A 12-/24-hour setting under Calendar settings; in
+24-hour mode the picker reads a typed `2315` as 11:15 PM.
+
+**Auth cleanup (0.347).** The legacy `loginToken` was removed from the login
+response now that every phone is on a current build; the login route stays (it's
+the phone-unlock password check) and still returns the person, just without the
+unused token. `src/lib/api/login-proof.ts` deleted. Web-only.
+
+**Event form (0.349).** The weekly "On these days" selector defaults to and
+follows the **start date's weekday** until the user manually toggles days; a
+manual pick stops the auto-follow.
+
 ## 2026-09 — Retired the web `/join` page; onboarding is app-only
 
 Onboarding moved fully into the Kairos app (enter an invitation code → set/confirm
