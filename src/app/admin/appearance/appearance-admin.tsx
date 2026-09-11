@@ -8,14 +8,17 @@ import {
 import { THEME_NAMES, THEME_LABEL, THEME_SWATCH, type ThemeName } from "@/lib/themes";
 import { Card } from "@/components/ui";
 import { CheckIcon } from "@/components/icons";
+import { FamilyColorPicker } from "@/app/setup/family-color-picker";
 
 
 export function AppearanceAdmin({
   theme,
   dark,
+  familyColor,
 }: {
   theme: ThemeName;
   dark: boolean;
+  familyColor: string;
 }) {
   const [pending, start] = useTransition();
 
@@ -80,6 +83,18 @@ export function AppearanceAdmin({
             );
           })}
         </div>
+      </section>
+
+      <section>
+        <h3 className="mb-1 font-display text-base font-semibold">
+          Family calendar color
+        </h3>
+        <p className="mb-3 max-w-xl text-sm text-muted">
+          The shared color for family events, birthdays, and holidays on the
+          calendar &mdash; it&rsquo;s the color of the Family filter, and the
+          default everyone&rsquo;s app uses for family events.
+        </p>
+        <FamilyColorPicker current={familyColor} />
       </section>
     </div>
   );

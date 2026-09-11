@@ -12,7 +12,6 @@ import { PauseForm } from "./pause-form";
 import { Holidays } from "./holidays";
 import { loadHolidayList, getHolidayColor } from "@/lib/holidays";
 import { loadPauses } from "@/lib/actions/pauses";
-import { FamilyColorPicker } from "@/app/setup/family-color-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -112,16 +111,6 @@ export default async function AdminCalendarPage() {
           blockMinutes={calPrefs.blockMinutes}
           sharedStyle={calPrefs.sharedStyle}
         />
-      </div>
-
-      <div className="mt-10">
-        <SectionHeading>Family calendar color</SectionHeading>
-        <p className="mb-3 max-w-xl text-sm text-muted">
-          The shared color for family events, birthdays, and holidays on the
-          calendar &mdash; it&rsquo;s the color of the Family filter, and the
-          default everyone&rsquo;s app uses for family events.
-        </p>
-        <FamilyColorPicker current={familyColor} />
       </div>
 
       <div className="mt-10">
