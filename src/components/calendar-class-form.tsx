@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { DateField } from "@/components/date-field";
+import { ReminderPicker } from "@/components/reminder-picker";
 import { useRouter } from "next/navigation";
 import { TimeSelect } from "@/components/time-select";
 import { LocationCombobox } from "@/components/location-combobox";
@@ -371,22 +372,8 @@ export function CalendarClassForm({
 
         <div>
           <label className="block text-sm font-medium">Reminders</label>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {REMINDER_PRESETS.map(([min, label]) => (
-              <button
-                key={min}
-                type="button"
-                onClick={() => toggleReminder(min)}
-                aria-pressed={reminders.has(min)}
-                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  reminders.has(min)
-                    ? "border-accent bg-accent/10 text-accent"
-                    : "border-hairline text-muted hover:border-accent"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="mt-1.5">
+            <ReminderPicker reminders={reminders} onToggle={toggleReminder} />
           </div>
         </div>
       </div>

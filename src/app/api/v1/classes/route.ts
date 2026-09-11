@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
   const setIf = (k: string, v: string) => {
     if (v) fd.set(k, v);
   };
+  setIf("replaceEventId", str("replaceEventId"));
   setIf("newSubject", str("newSubject"));
   setIf("subjectId", str("subjectId"));
   setIf("userId", str("userId")); // owner/student — used only when admin
