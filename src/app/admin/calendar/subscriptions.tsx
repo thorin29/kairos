@@ -6,6 +6,8 @@ import {
   refreshCalendars,
   removeCalendar,
   renameCalendar,
+  editCalendarPeople,
+  retireCalendar,
   setCalendarSport,
   type CalendarState,
 } from "@/lib/actions/calendars";
@@ -27,9 +29,14 @@ export type Subscription = {
   id: string;
   name: string;
   url: string;
+  userId: string | null;
+  isFamily: boolean;
   ownerName: string;
   ownerColor: string;
+  memberIds: string[];
+  memberNames: string[];
   eventCount: number;
+  canRetire: boolean;
   sportWorkout: boolean;
   lastFetchedAt: string | null;
   lastError: string | null;
@@ -46,6 +53,21 @@ export function Subscriptions({
   const [busy, startTransition] = useTransition();
   const [editing, setEditing] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [editingPeople, setEditingPeople] = useState<string | null>(null);
+  const [draftOwner, setDraftOwner] = useState("");
+  const [draftMembers, setDraftMembers] = useState<Set<string>>(new Set());
+
+  const openPeople = (s: Subscription) => {
+    setEditingPeople(s.id);
+    setDraftOwner(s.isFamily ? "family" : (s.userId ?? ""));
+    setDraftMembers(new Set(s.memberIds));
+  };
+  const savePeople = (id: string) => {
+    setEditingPeople(null);
+    startTransition(
+      () => void editCalendarPeople(id, draftOwner, [...draftMembers]),
+    );
+  };
 
   return (
     <div className="space-y-5">
@@ -94,6 +116,18 @@ export function Subscriptions({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="w-full">
+            <p className="mb-1.5 text-sm font-medium">Also shared with</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+              {people.map((p) => (
+                <label key={p.id} className="flex items-center gap-1.5 text-sm">
+                  <input type="checkbox" name="memberIds" value={p.id} className="h-4 w-4" />
+                  {p.name}
+                </label>
+              ))}
+            </div>
           </div>
 
           <button
@@ -185,7 +219,10 @@ export function Subscriptions({
                 )}
                 <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
                   <LinkIcon className="h-3 w-3" />
-                  <span className="truncate">{s.ownerName}</span>
+                  <span className="truncate">
+                    {s.ownerName}
+                    {s.memberNames.length > 0 && `, ${s.memberNames.join(", ")}`}
+                  </span>
                   <span>&middot;</span>
                   <span className="tabular">{s.eventCount} events</span>
                 </p>
@@ -208,6 +245,99 @@ export function Subscriptions({
                   />
                   Sends an attendance confirmation to count as a workout
                 </label>
+
+                {editMode && (
+                  <div className="mt-2">
+                    {editingPeople === s.id ? (
+                      <div className="rounded-lg border border-hairline p-3 text-sm">
+                        <label className="block text-xs font-medium text-muted">
+                          Belongs to
+                        </label>
+                        <select
+                          value={draftOwner}
+                          onChange={(e) => setDraftOwner(e.target.value)}
+                          className="mt-1 h-9 w-full rounded-full border border-hairline bg-surface px-4 text-sm select-caret"
+                        >
+                          <option value="family">Family (shared)</option>
+                          {people.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-2 text-xs font-medium text-muted">
+                          Also shared with
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                          {people
+                            .filter((p) => p.id !== draftOwner)
+                            .map((p) => (
+                              <label key={p.id} className="flex items-center gap-1.5 text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={draftMembers.has(p.id)}
+                                  onChange={(e) =>
+                                    setDraftMembers((prev) => {
+                                      const n = new Set(prev);
+                                      if (e.target.checked) n.add(p.id);
+                                      else n.delete(p.id);
+                                      return n;
+                                    })
+                                  }
+                                  className="h-3.5 w-3.5"
+                                />
+                                {p.name}
+                              </label>
+                            ))}
+                        </div>
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => savePeople(s.id)}
+                            className="h-8 rounded-full bg-accent px-4 text-xs font-medium text-on-accent"
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPeople(null)}
+                            className="h-8 rounded-full px-4 text-xs font-medium text-muted"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openPeople(s)}
+                          className="inline-flex h-8 items-center rounded-full border border-hairline px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+                        >
+                          Edit people
+                        </button>
+                        {s.canRetire && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Retire "${s.name}"? Its events stay on the calendar as regular events and the subscription is removed.`,
+                                )
+                              ) {
+                                startTransition(() => void retireCalendar(s.id));
+                              }
+                            }}
+                            className="inline-flex h-8 items-center rounded-full border border-hairline px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+                          >
+                            Retire
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {editMode && (

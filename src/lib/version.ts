@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.343.0";
+export const APP_VERSION = "0.344.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -99,11 +99,21 @@ export const MIGRATIONS = [
   "88_event_location_override",
   "89_pending_school_items",
   "90_device_client_build",
+  "91_subscription_members",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.344.0",
+    summary: [
+      "Subscribed calendars can now be shared with several people \u2014 everyone's name shows on the feed's events in the agenda and detail views. Editing a subscription lets you change who it belongs to and who else it's shared with.",
+      "Retire a finished subscription: once all its events are in the past, a Retire button turns them into regular calendar events (kept for good) and removes the subscription.",
+      "Per-phone reminders on subscribed events, set from the app.",
+      "New 12- / 24-hour time format setting under Calendar settings \u2014 in 24-hour mode the picker reads a typed 2315 as 11:15 PM.",
+    ],
+  },
   {
     version: "0.343.0",
     summary: [

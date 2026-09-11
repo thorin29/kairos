@@ -437,6 +437,9 @@ model ExternalCalendar {
   userId        String?
   user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   isFamily      Boolean   @default(false)
+  // Additional people this feed is shared with, beyond the owner (userId).
+  // Their names show on the feed's events; the owner stays the primary.
+  memberIds     String[]  @default([])
   name          String
   url           String // webcal/ICS
   color         String?

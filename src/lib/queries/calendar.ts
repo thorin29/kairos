@@ -322,6 +322,16 @@ export async function loadRange(
 
   const familyColor = await getFamilyColor();
 
+  // Names for resolving a subscribed feed's extra members (see memberIds below).
+  const memberNameById = new Map<string, string>(
+    (
+      await prisma.user.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true, displayName: true },
+      })
+    ).map((u) => [u.id, u.displayName ?? u.name] as const),
+  );
+
   // Sport prompts the person answered "No" to: shown as "did not attend".
   // Per-person sport attendance for this range: a workout session linked to the
   // event = attended; a SportSkip = declined; neither = unknown. Fetched for the
@@ -384,7 +394,7 @@ export async function loadRange(
     orderBy: { startsAt: "asc" },
     include: {
       user: { select: { name: true, displayName: true, color: true } },
-      externalCalendar: { select: { name: true } },
+      externalCalendar: { select: { name: true, memberIds: true } },
       eventType: { select: { id: true, name: true, color: true, sportWorkout: true, defaultReminder: true } },
       schoolClass: { select: { id: true } },
       participants: { select: { userId: true, user: { select: { color: true, name: true, displayName: true } } } },
@@ -498,9 +508,20 @@ export async function loadRange(
         .participants?.map((p) => p.user?.displayName ?? p.user?.name)
         .filter((n): n is string => Boolean(n)) ?? [];
     const ownerNm = e.user?.displayName ?? e.user?.name;
+    const subMemberNames = (
+      (e.externalCalendar as { memberIds?: string[] } | null)?.memberIds ?? []
+    )
+      .map((id) => memberNameById.get(id))
+      .filter((n): n is string => Boolean(n));
     const memberNames = e.isFamily
       ? []
-      : Array.from(new Set([...(ownerNm ? [ownerNm] : []), ...participantNames]));
+      : Array.from(
+          new Set([
+            ...(ownerNm ? [ownerNm] : []),
+            ...participantNames,
+            ...subMemberNames,
+          ]),
+        );
     const whoLabel = e.isFamily ? "Family" : whoLabelFrom(memberNames);
 
     // Per-member attendance (owner + participants), for sport and class events,
@@ -516,6 +537,11 @@ export async function loadRange(
             participants?: { userId: string; user?: { name?: string; displayName?: string } | null }[];
           }).participants ?? [])
             .map((p) => ({ id: p.userId, name: p.user?.displayName ?? p.user?.name ?? "" }))
+            .filter((p) => p.name),
+          ...(
+            (e.externalCalendar as { memberIds?: string[] } | null)?.memberIds ?? []
+          )
+            .map((id) => ({ id, name: memberNameById.get(id) ?? "" }))
             .filter((p) => p.name),
         ];
     const seenMember = new Set<string>();
