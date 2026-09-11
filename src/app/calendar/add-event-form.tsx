@@ -15,6 +15,7 @@ import { addDays, dayOfWeek, daysBetween } from "@/lib/dates";
 import { PlusIcon } from "@/components/icons";
 import { TimeSelect } from "@/components/time-select";
 import { DateField } from "@/components/date-field";
+import { ReminderPicker } from "@/components/reminder-picker";
 import { PinPad } from "@/components/pin-pad";
 import { useRouter } from "next/navigation";
 import {
@@ -705,23 +706,7 @@ function EventModal({
                 <label className="mb-1.5 block text-sm font-medium">
                   Reminders
                 </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {REMINDER_PRESETS.map((r) => (
-                    <button
-                      key={r.min}
-                      type="button"
-                      onClick={() => toggleReminderMin(r.min)}
-                      aria-pressed={reminders.has(r.min)}
-                      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                        reminders.has(r.min)
-                          ? "border-accent bg-accent/10 text-accent"
-                          : "border-hairline text-muted hover:border-accent"
-                      }`}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
+                <ReminderPicker reminders={reminders} onToggle={toggleReminderMin} />
               </div>
             </div>
 
