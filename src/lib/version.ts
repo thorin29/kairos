@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.335.0";
+export const APP_VERSION = "0.336.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -102,6 +102,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.336.0",
+    summary: [
+      "Class form: Semester now offers \u201c+ Add a new semester\u201d (name + dates) in place of the no-term option; custom reminders default to minutes; and converting an existing event reads \u201cConvert to a class event\u201d with clearer wording.",
+    ],
+  },
   {
     version: "0.335.0",
     summary: [

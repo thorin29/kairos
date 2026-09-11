@@ -198,6 +198,7 @@ export function CalendarClassForm({
     ? subjects.find((sub) => sub.id === editing.subjectId)?.name ?? ""
     : "";
   const [color, setColor] = useState(editing?.color ?? "");
+  const [termSel, setTermSel] = useState(editing?.termId ?? terms[0]?.id ?? "__new__");
   const startInit = editing?.meetingStart || start || "";
   const [startTime, setStartTime] = useState(startInit);
   const [endTime, setEndTime] = useState(
@@ -469,26 +470,34 @@ export function CalendarClassForm({
 
         <div>
           <label className="block text-sm font-medium">Semester</label>
-          {terms.length > 0 ? (
-            <select
-              name="termId"
-              defaultValue={editing?.termId ?? ""}
-              className={`${FIELD} select-caret`}
-            >
-              <option value="">
-                {days.length > 0 ? "Repeats with no end date" : "No term"}
+          <select
+            value={termSel}
+            onChange={(e) => setTermSel(e.target.value)}
+            className={`${FIELD} select-caret`}
+          >
+            {terms.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
               </option>
-              {terms.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <>
-              <input type="hidden" name="termId" value="" />
-              <p className="mt-2.5 text-sm text-muted">No semesters yet</p>
-            </>
+            ))}
+            <option value="__new__">+ Add a new semester</option>
+          </select>
+          <input
+            type="hidden"
+            name="termId"
+            value={termSel === "__new__" ? "" : termSel}
+          />
+          {termSel === "__new__" && (
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              <input
+                name="newTermName"
+                maxLength={60}
+                placeholder="Semester name"
+                className={FIELD}
+              />
+              <DateField name="newTermStart" wrapperClassName="" />
+              <DateField name="newTermEnd" wrapperClassName="" />
+            </div>
           )}
         </div>
 
