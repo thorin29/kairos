@@ -182,12 +182,10 @@ request:  { "identifier": "ellie or ellie@…" }
 returns the matching person. This is **not** an enrollment step: it backs the
 app's **unlock** flow, where a locked phone re-confirms its enrolled person's
 password before unlocking (the device token is kept across a lock). It never
-says which of identifier/password was wrong. The `loginToken` is a legacy proof
-retained only because the client's `LoginResponse` DTO still requires the field;
-no current client reads its value.
+says which of identifier/password was wrong.
 ```
 request:  { "identifier": "ellie or ellie@…", "password": "…" }
-200:      { "loginToken": "<proof>", "person": { …see /me… } }
+200:      { "person": { …see /me… } }
 401:      unauthenticated — wrong username or password
 422:      validation      — identifier/password missing
 429:      rate_limited

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.346.0";
+export const APP_VERSION = "0.347.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -106,6 +106,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.347.0",
+    summary: [
+      "Removed the legacy login-proof token from the app login response now that every phone is on a current build \u2014 the login route (used by the phone unlock flow) still verifies the password and returns the person, just without the unused token. Web-only cleanup.",
+    ],
+  },
   {
     version: "0.346.0",
     summary: [
