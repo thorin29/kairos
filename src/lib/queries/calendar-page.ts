@@ -272,6 +272,24 @@ export async function loadCalendarPagePayload(
   const allDay = rawRange.allDay.filter(keep).map(recolor);
   const events = [...allDay, ...timed].map(toWire);
 
+  // Subscribed (feed) events store reminders per person, so swap in this
+  // viewer's own minutes (empty if they haven't set any).
+  const feedIds = [
+    ...new Set(events.filter((e) => e.external).map((e) => e.eventId)),
+  ];
+  if (feedIds.length > 0) {
+    const rows = await prisma.subscribedReminder.findMany({
+      where: { userId, eventId: { in: feedIds } },
+      select: { eventId: true, minutes: true },
+    });
+    const byId = new Map<string, number[]>(
+      rows.map((r) => [r.eventId, (r.minutes as number[]) ?? []]),
+    );
+    for (const e of events) {
+      if (e.external) e.reminders = byId.get(e.eventId) ?? [];
+    }
+  }
+
   // Month grid + dots. When the view already spans the month grid we reuse the
   // events; otherwise load the month separately (matches the web).
   const monthDays = monthGridDays(date);

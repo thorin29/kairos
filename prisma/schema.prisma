@@ -419,6 +419,7 @@ model Event {
   task Task?
   sportSkips SportSkip[]
   participants EventParticipant[]
+  subscribedReminders SubscribedReminder[]
   schoolClass SchoolClass? @relation("ClassMeeting")
 
   createdAt DateTime @default(now())
@@ -775,6 +776,19 @@ model EventParticipant {
   event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
   userId  String
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId])
+}
+
+// Per-person reminder minutes on a subscribed (feed) event. Feed events are
+// shared, so each person keeps their own minutes here rather than on the event.
+model SubscribedReminder {
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId  String
+  minutes Int[]  @default([])
 
   @@unique([eventId, userId])
   @@index([userId])

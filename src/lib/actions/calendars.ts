@@ -140,6 +140,35 @@ export async function retireCalendar(id: string): Promise<void> {
     where: { externalCalendarId: id, endsAt: { gte: new Date() } },
   });
   if (upcoming > 0) return;
+
+  const cal = await prisma.externalCalendar.findUnique({
+    where: { id },
+    select: { userId: true, memberIds: true },
+  });
+  const events = await prisma.event.findMany({
+    where: { externalCalendarId: id },
+    select: { id: true },
+  });
+  // Turn everyone the feed was shared with (owner + extra members) into real
+  // attendees before cutting the events loose, so their names stay on the
+  // events after the subscription is gone.
+  const keep = Array.from(
+    new Set(
+      [
+        cal?.userId ?? null,
+        ...((cal as { memberIds?: string[] } | null)?.memberIds ?? []),
+      ].filter((u): u is string => Boolean(u)),
+    ),
+  );
+  if (keep.length > 0 && events.length > 0) {
+    await prisma.eventParticipant.createMany({
+      data: events.flatMap((e) =>
+        keep.map((userId) => ({ eventId: e.id, userId })),
+      ),
+      skipDuplicates: true,
+    });
+  }
+
   await prisma.event.updateMany({
     where: { externalCalendarId: id },
     data: { externalCalendarId: null, externalUid: null },
@@ -148,9 +177,9 @@ export async function retireCalendar(id: string): Promise<void> {
   revalidatePath("/calendar");
 }
 
-/** Set the current user's reminders on a subscribed feed event. Reminders live
- *  on the event; reminderUserIds says who is notified, so this is per-user (the
- *  minutes themselves are shared across whoever set them). Feed events only. */
+/** Set the current user's own reminder minutes on a subscribed feed event.
+ *  Stored per-person (SubscribedReminder), so each person keeps their own
+ *  minutes. Empty clears them. Feed events only. */
 export async function setSubscribedRemindersCore(
   userId: string,
   eventId: string,
@@ -158,19 +187,21 @@ export async function setSubscribedRemindersCore(
 ): Promise<void> {
   const ev = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { externalCalendarId: true, reminderUserIds: true },
+    select: { externalCalendarId: true },
   });
   if (!ev || !ev.externalCalendarId) return;
   const mins = [
     ...new Set(reminders.filter((m) => Number.isFinite(m) && m >= 0)),
   ].sort((a, b) => a - b);
-  const users = new Set(ev.reminderUserIds ?? []);
-  if (mins.length > 0) users.add(userId);
-  else users.delete(userId);
-  await prisma.event.update({
-    where: { id: eventId },
-    data: { reminders: mins, reminderUserIds: [...users] },
-  });
+  if (mins.length === 0) {
+    await prisma.subscribedReminder.deleteMany({ where: { eventId, userId } });
+  } else {
+    await prisma.subscribedReminder.upsert({
+      where: { eventId_userId: { eventId, userId } },
+      create: { eventId, userId, minutes: mins },
+      update: { minutes: mins },
+    });
+  }
 }
 
 export async function refreshCalendars(): Promise<void> {
