@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
   const canAct = privileged;
   const today = todayISO();
 
-  const [users, tasks] = await Promise.all([
+  const [users, tasks, templates] = await Promise.all([
     prisma.user.findMany({
       where: { id: { in: visible } },
       select: { id: true, name: true, displayName: true, color: true },
@@ -42,7 +42,28 @@ export async function GET(req: NextRequest) {
       select: { id: true, userId: true, title: true, dueDate: true, status: true, completedAt: true, generatedFrom: true },
       orderBy: [{ dueDate: "asc" }],
     }),
+    prisma.recurringTask.findMany({
+      where: { userId: { in: visible }, active: true },
+      select: { id: true, freq: true, interval: true, byday: true },
+    }),
   ]);
+  const DOW: Record<string, string> = {
+    SU: "Sun", MO: "Mon", TU: "Tue", WE: "Wed", TH: "Thu", FR: "Fri", SA: "Sat",
+  };
+  const recurLabel = (freq: string, interval: number, byday: string | null): string => {
+    const unit = freq === "DAILY" ? "day" : freq === "MONTHLY" ? "month" : "week";
+    const every = interval > 1 ? `Every ${interval} ${unit}s` : `Every ${unit}`;
+    if (freq === "WEEKLY" && byday) {
+      const days = byday.split(",").map((d) => DOW[d.trim()] ?? d).filter(Boolean);
+      if (days.length) return `${every} \u00b7 ${days.join(", ")}`;
+    }
+    return every;
+  };
+  const repeatById = new Map<string, string>(
+    (templates as { id: string; freq: string; interval: number; byday: string | null }[]).map(
+      (t) => [`rtask:${t.id}`, recurLabel(t.freq, t.interval, t.byday)] as const,
+    ),
+  );
   type UserRow = { id: string; name: string; displayName: string | null; color: string | null };
   const byUser = new Map<string, UserRow>((users as UserRow[]).map((u) => [u.id, u]));
 
@@ -51,16 +72,36 @@ export async function GET(req: NextRequest) {
       const u = byUser.get(uid);
       if (!u) return null;
       const mine = tasks.filter((t) => t.userId === uid);
-      const open = mine
-        .filter((t) => t.status !== TaskStatus.COMPLETE)
+      const isRt = (t: (typeof mine)[number]) => t.generatedFrom?.startsWith("rtask:") ?? false;
+      // Recurring tasks collapse to one line each (their repeat schedule stands
+      // in for a due date); one-off tasks stay individual.
+      const seenRt = new Set<string>();
+      const recurring = mine
+        .filter((t) => isRt(t) && t.status !== TaskStatus.COMPLETE)
+        .filter((t) => {
+          const gf = t.generatedFrom!;
+          if (seenRt.has(gf)) return false;
+          seenRt.add(gf);
+          return true;
+        })
+        .map((t) => ({
+          id: t.id, // soonest open occurrence — completing ticks off this cycle
+          title: t.title,
+          dueISO: "",
+          overdue: false,
+          recurring: true,
+          repeat: repeatById.get(t.generatedFrom!) ?? "Repeats",
+        }));
+      const oneOffOpen = mine
+        .filter((t) => !isRt(t) && t.status !== TaskStatus.COMPLETE)
         .map((t) => {
           const dueISO = fromDateColumn(t.dueDate);
-          const recurring = t.generatedFrom?.startsWith("rtask:") ?? false;
-          return { id: t.id, title: t.title, dueISO, overdue: dueISO < today, recurring };
+          return { id: t.id, title: t.title, dueISO, overdue: dueISO < today, recurring: false, repeat: "" };
         });
+      const open = [...recurring, ...oneOffOpen];
       const done = mine
-        .filter((t) => t.status === TaskStatus.COMPLETE)
-        .map((t) => ({ id: t.id, title: t.title, dueISO: fromDateColumn(t.dueDate), recurring: t.generatedFrom?.startsWith("rtask:") ?? false }));
+        .filter((t) => !isRt(t) && t.status === TaskStatus.COMPLETE)
+        .map((t) => ({ id: t.id, title: t.title, dueISO: fromDateColumn(t.dueDate), recurring: false, repeat: "" }));
       return {
         userId: uid,
         name: u.displayName ?? u.name,

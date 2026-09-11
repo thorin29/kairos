@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui";
 import { PersonAvatar } from "@/components/person-filter";
 import { AddTaskForm } from "@/components/add-task-form";
-import { toggleTask } from "@/lib/actions/tasks";
 import { formatShort } from "@/lib/dates";
 
-export type TaskLite = { id: string; title: string; dueISO: string; overdue?: boolean };
+export type TaskLite = { id: string; title: string; dueISO: string; overdue?: boolean; recurring?: boolean; repeat?: string };
 export type TaskPerson = {
   id: string;
   name: string;
@@ -72,7 +71,6 @@ export function TasksClient({
       {selected && (
         <TasksModal
           person={selected}
-          canAct={canActIds.includes(selected.id)}
           onClose={() => setSelectedId(null)}
         />
       )}
@@ -82,15 +80,12 @@ export function TasksClient({
 
 function TasksModal({
   person,
-  canAct,
   onClose,
 }: {
   person: TaskPerson;
-  canAct: boolean;
   onClose: () => void;
 }) {
   const [showDone, setShowDone] = useState(false);
-  const [pending, start] = useTransition();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -138,21 +133,24 @@ function TasksModal({
           <ul className="space-y-2">
             {person.open.map((t) => (
               <li key={t.id} className="flex items-center gap-2.5 text-sm">
-                {canAct ? (
-                  <button
-                    type="button"
-                    aria-label="Mark done"
-                    disabled={pending}
-                    onClick={() => start(() => void toggleTask(t.id))}
-                    className="h-5 w-5 shrink-0 rounded-full border-2 border-hairline transition-colors hover:border-accent"
-                  />
+                {t.recurring ? (
+                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-label="Repeats">
+                    <path d="M17 2l4 4-4 4" />
+                    <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+                    <path d="M7 22l-4-4 4-4" />
+                    <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+                  </svg>
                 ) : (
-                  <span className="h-5 w-5 shrink-0 rounded-full border-2 border-hairline" />
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-hairline" />
                 )}
                 <span className="flex-1 font-medium">{t.title}</span>
-                <span className={`tabular text-xs ${t.overdue ? "font-medium text-red-700" : "text-muted"}`}>
-                  due {formatShort(t.dueISO)}
-                </span>
+                {t.recurring ? (
+                  <span className="text-xs text-muted">{t.repeat}</span>
+                ) : (
+                  <span className={`tabular text-xs ${t.overdue ? "font-medium text-red-700" : "text-muted"}`}>
+                    due {formatShort(t.dueISO)}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -170,21 +168,11 @@ function TasksModal({
                 <ul className="mt-2 space-y-2">
                   {person.done.map((t) => (
                     <li key={t.id} className="flex items-center gap-2.5 text-sm">
-                      {canAct ? (
-                        <button
-                          type="button"
-                          aria-label="Mark not done"
-                          disabled={pending}
-                          onClick={() => start(() => void toggleTask(t.id))}
-                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"
-                        >
-                          <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m5 12.5 4.5 4.5L19 7" />
-                          </svg>
-                        </button>
-                      ) : (
-                        <span className="h-5 w-5 shrink-0 rounded-full bg-emerald-500" />
-                      )}
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                        <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="m5 12.5 4.5 4.5L19 7" />
+                        </svg>
+                      </span>
                       <span className="flex-1 text-muted line-through">{t.title}</span>
                     </li>
                   ))}
