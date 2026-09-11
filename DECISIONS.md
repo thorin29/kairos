@@ -680,3 +680,47 @@ only breaking change is a Node-20 floor (we run Node 22) with no functional gain
 TypeScript-migration that could disturb the `@types/nodemailer` setup. 9.1.1 is a plain
 drop-in: no code change, `@types/nodemailer ^8.0.1` kept, and nodemailer has zero runtime
 deps so the lockfile delta is a single entry. `npm ci` stays valid.
+
+## 2026-09 — Calendar UX, DateField, and workout integrity (v0.318–0.333)
+
+**One `DateField` calendar, no native pickers.** Every `<input type="date">` across
+the app was replaced with a single `src/components/date-field.tsx` — a styled popup
+calendar (month nav, Today/Clear) so the picker matches the app instead of the
+browser's chrome, which isn't CSS-styleable. Drop-in: `name`+`defaultValue` for
+uncontrolled form fields, `value`+`onChange` for controlled, plus `min`/`max`/
+`disabled`/`wrapperClassName`. All date math is on `YYYY-MM-DD` strings and local
+`(y,m,d)` ints — never `new Date(iso)` — to avoid the UTC off-by-one. Outside-click
+close uses a **capture-phase `pointerdown`** listener so a click on any element
+(even one that stops bubbling) closes it, on touch and mouse.
+
+**One global caret for every `<select>`.** The `.select-caret` rule was broadened to
+`select, .select-caret` (unlayered, so it wins over Tailwind utilities) — every
+dropdown app-wide gets the same inset chevron with no per-file class; the class is
+kept for non-select triggers (the color-picker button).
+
+**Subscribed-event reminders + address.** Migration 88 adds `Event.locationOverride`;
+sync never writes it, so a manual address survives feed refreshes, and display/nav
+resolve `locationOverride ?? location`. Reminders on external events already survived
+refresh (sync doesn't touch `reminders`), so the `/notifications/upcoming` route was
+opened to external-with-reminders. The **web** editor for these was then removed:
+reminders on subscribed feeds are app-only by design, and the address editor was
+dropped (most feeds already carry addresses). The backend (`saveSubscribedExtras`,
+migration 88, pipeline) stays for the app to consume later.
+
+**Workout session integrity.** A day can hold several sessions (custom logs each make
+their own), but `findOrCreateSession` returned the day's *oldest* session and
+`setRestDay`/`logPlannedWorkout`/`logWorkoutSession` mutated it in place — so resting
+a day, marking it done, or logging a scheduled/planned workout could overwrite or hide
+a real custom log (the oldest). Fixes: `findOrCreateSession` reuses only a day's
+bare/scheduled session (null name/category/source); `setRestDay` converts only an
+empty placeholder, else adds a separate rest marker; `logPlannedWorkout` reuses its
+own plan-named session; `setWorkedOut(false)`'s delete is placeholder-only.
+
+**Duplicate-workout prompt.** Logging a movement/plan already logged that day reports a
+conflict (`{name, summary}`) instead of silently duplicating or overwriting; the client
+shows "Update or Cancel." Date-scoped (works for backfilled past days). On the app the
+log endpoints gate this behind a `detectConflict` flag for back-compat with old clients.
+
+**Birthday type switch.** Selecting Birthday forces all-day + yearly; switching to a
+non-birthday type now undoes them (web `chooseKind`, app kind selector) so an event
+doesn't stay locked as all-day/annual.

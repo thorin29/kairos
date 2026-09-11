@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.332.0";
+export const APP_VERSION = "0.333.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -102,6 +102,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.333.0",
+    summary: [
+      "Removed the subscribed-event reminders/address editor from the web calendar \u2014 reminders on subscribed feeds are set from the app, and most feeds already include an address. And the schedule-pause form now needs both a start and end date before it can be submitted.",
+    ],
+  },
   {
     version: "0.332.0",
     summary: [
