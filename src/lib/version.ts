@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.345.0";
+export const APP_VERSION = "0.346.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -106,6 +106,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.346.0",
+    summary: [
+      "The tasks screen now shows one line per recurring task with its repeat schedule (e.g. \u201cEvery week \u00b7 Mon\u201d) instead of a separate row for every upcoming occurrence.",
+      "Removed the check-off control from the tasks screen \u2014 tasks are ticked off from the home card or a person\u2019s own app; the tasks screen is now a clean overview.",
+    ],
+  },
   {
     version: "0.345.0",
     summary: [
