@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     return apiError("validation", "An exercise, workout, or category is required.");
   }
 
-  await logCustomEntry(authed.device.person.id, date, {
+  const result = await logCustomEntry(authed.device.person.id, date, {
     hiitWorkoutId,
     poolExerciseId,
     category,
@@ -53,6 +53,11 @@ export async function POST(req: NextRequest) {
     unit: typeof raw?.unit === "string" ? raw.unit : "",
     load: num(raw?.load),
     notes: typeof raw?.notes === "string" ? raw.notes : undefined,
+    replace: raw?.replace === true,
+    detectConflict: raw?.detectConflict === true,
   });
+  if (result?.conflict) {
+    return apiOk({ date, status: "conflict", conflict: result.conflict });
+  }
   return apiOk({ date, status: "worked" });
 }

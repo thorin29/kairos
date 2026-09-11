@@ -49,6 +49,15 @@ export async function POST(req: NextRequest) {
       unit: typeof e.unit === "string" ? (e.unit as string) : "",
     }));
 
-  await logPlannedWorkout(authed.device.person.id, date, plannedWorkoutId, entries);
+  const result = await logPlannedWorkout(
+    authed.device.person.id,
+    date,
+    plannedWorkoutId,
+    entries,
+    { replace: raw?.replace === true, detectConflict: raw?.detectConflict === true },
+  );
+  if (result?.conflict) {
+    return apiOk({ date, status: "conflict", conflict: result.conflict });
+  }
   return apiOk({ date, status: "worked" });
 }
