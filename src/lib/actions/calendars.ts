@@ -204,6 +204,26 @@ export async function setSubscribedRemindersCore(
   }
 }
 
+/** Set (or clear) a subscribed feed event's location override. A place is a
+ *  property of the event, not per-person, so this is shared across everyone the
+ *  feed is shared with. Empty clears it (falls back to the feed's own location).
+ *  Feed events only. */
+export async function setSubscribedLocationCore(
+  eventId: string,
+  address: string,
+): Promise<void> {
+  const ev = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { externalCalendarId: true },
+  });
+  if (!ev || !ev.externalCalendarId) return;
+  const clean = address.trim().slice(0, 200);
+  await prisma.event.update({
+    where: { id: eventId },
+    data: { locationOverride: clean.length > 0 ? clean : null },
+  });
+}
+
 export async function refreshCalendars(): Promise<void> {
   await requireInteractive();
   await syncStaleCalendars(true);
