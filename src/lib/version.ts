@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.336.0";
+export const APP_VERSION = "0.337.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -97,11 +97,18 @@ export const MIGRATIONS = [
   "86_drop_address_category",
   "87_address_nav_by_name",
   "88_event_location_override",
+  "89_pending_school_items",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.337.0",
+    summary: [
+      "Subjects and semesters a family member adds now wait for admin approval \u2014 they work for that person right away but stay hidden from everyone else\u2019s pickers until an admin approves them (with a spelling/date check) or merges them into an existing one, from a new \u201cNeeds approval\u201d panel on the School admin page.",
+    ],
+  },
   {
     version: "0.336.0",
     summary: [

@@ -179,6 +179,8 @@ export type TermRow = {
   name: string;
   startISO: string;
   endISO: string;
+  pending: boolean;
+  proposedBy: string | null;
 };
 
 export type ClassRow = {
@@ -219,8 +221,15 @@ export type PersonClasses = {
   classes: ClassRow[];
 };
 
-export type SubjectRow = { id: string; name: string };
+export type SubjectRow = { id: string; name: string; pending: boolean; proposedBy: string | null };
 export type ClassTypeRow = { id: string; name: string };
+
+function proposerName(
+  id: string | null | undefined,
+  nameById: Map<string, string>,
+): string | null {
+  return id ? nameById.get(id) ?? null : null;
+}
 
 export async function loadSchoolStructure(): Promise<{
   terms: TermRow[];
@@ -270,7 +279,7 @@ export async function loadSchoolStructure(): Promise<{
     prisma.subject.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true },
+      select: { id: true, name: true, pending: true, proposedById: true },
     }),
     prisma.classType.findMany({
       where: { isActive: true },
@@ -336,6 +345,8 @@ export async function loadSchoolStructure(): Promise<{
       name: t.name,
       startISO: fromDateColumn(t.startDate),
       endISO: fromDateColumn(t.endDate),
+      pending: (t as { pending?: boolean }).pending ?? false,
+      proposedBy: proposerName((t as { proposedById?: string | null }).proposedById, nameById),
     })),
     people: people.map((p) => ({
       id: p.id,
@@ -345,7 +356,12 @@ export async function loadSchoolStructure(): Promise<{
       avatarPosition: p.avatarPosition,
       classes: byUser.get(p.id) ?? [],
     })),
-    subjects,
+    subjects: subjects.map((sub) => ({
+      id: sub.id,
+      name: sub.name,
+      pending: (sub as { pending?: boolean }).pending ?? false,
+      proposedBy: proposerName((sub as { proposedById?: string | null }).proposedById, nameById),
+    })),
     classTypes,
   };
 }

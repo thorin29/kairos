@@ -10,6 +10,10 @@ import {
   addSubject,
   renameSubject,
   deleteSubject,
+  approveSubject,
+  mergeSubject,
+  approveTerm,
+  mergeTerm,
   addClassType,
   renameClassType,
   deleteClassType,
@@ -62,14 +66,26 @@ export function SchoolStructure({
   classTypes: ClassTypeRow[];
   today: string;
 }) {
+  const pendingSubjects = subjects.filter((sub) => sub.pending);
+  const pendingTerms = terms.filter((t) => t.pending);
+  const okSubjects = subjects.filter((sub) => !sub.pending);
+  const okTerms = terms.filter((t) => !t.pending);
   return (
     <div className="space-y-10">
-      <Terms terms={terms} today={today} />
-      <Pools subjects={subjects} classTypes={classTypes} />
+      {(pendingSubjects.length > 0 || pendingTerms.length > 0) && (
+        <PendingApprovals
+          subjects={pendingSubjects}
+          terms={pendingTerms}
+          okSubjects={okSubjects}
+          okTerms={okTerms}
+        />
+      )}
+      <Terms terms={okTerms} today={today} />
+      <Pools subjects={okSubjects} classTypes={classTypes} />
       <Classes
-        terms={terms}
+        terms={okTerms}
         people={people}
-        subjects={subjects}
+        subjects={okSubjects}
         classTypes={classTypes}
       />
     </div>
@@ -256,6 +272,193 @@ function PoolRowView({
       >
         <TrashIcon className="h-4 w-4" />
       </button>
+    </div>
+  );
+}
+
+// --- Needs-approval panel: user-proposed subjects & semesters ----------------
+
+function PendingApprovals({
+  subjects,
+  terms,
+  okSubjects,
+  okTerms,
+}: {
+  subjects: SubjectRow[];
+  terms: TermRow[];
+  okSubjects: SubjectRow[];
+  okTerms: TermRow[];
+}) {
+  return (
+    <section>
+      <h2 className="font-display text-lg font-semibold">Needs approval</h2>
+      <p className="mb-3 mt-1 text-sm text-muted">
+        Subjects and semesters added by family members. Fix the spelling, then
+        approve to add them to the shared lists \u2014 or merge into one that
+        already exists.
+      </p>
+      {terms.length > 0 && (
+        <div className="mb-4">
+          <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-widest text-muted">
+            Semesters
+          </h3>
+          <Card className="divide-y divide-hairline">
+            {terms.map((t) => (
+              <PendingTermRow key={t.id} term={t} others={okTerms} />
+            ))}
+          </Card>
+        </div>
+      )}
+      {subjects.length > 0 && (
+        <div>
+          <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-widest text-muted">
+            Subjects
+          </h3>
+          <Card className="divide-y divide-hairline">
+            {subjects.map((sub) => (
+              <PendingSubjectRow key={sub.id} subject={sub} others={okSubjects} />
+            ))}
+          </Card>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PendingSubjectRow({
+  subject,
+  others,
+}: {
+  subject: SubjectRow;
+  others: SubjectRow[];
+}) {
+  const [pending, start] = useTransition();
+  const [name, setName] = useState(subject.name);
+  const [target, setTarget] = useState("");
+  return (
+    <div className={`p-3 ${pending ? "opacity-50" : ""}`}>
+      <p className="mb-1 text-xs text-muted">
+        Proposed{subject.proposedBy ? ` by ${subject.proposedBy}` : ""}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={name}
+          maxLength={60}
+          onChange={(e) => setName(e.target.value)}
+          className="min-w-[8rem] flex-1 rounded-md border border-hairline bg-surface px-2 py-1 text-sm outline-none focus:border-accent"
+        />
+        <button
+          type="button"
+          disabled={pending || name.trim().length < 2}
+          onClick={() => start(() => void approveSubject(subject.id, name.trim()))}
+          className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-on-accent disabled:opacity-50"
+        >
+          Approve
+        </button>
+      </div>
+      {others.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted">or merge into</span>
+          <select
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            className="select-caret rounded-md border border-hairline bg-surface px-2 py-1 text-sm"
+          >
+            <option value="">Choose\u2026</option>
+            {others.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={pending || !target}
+            onClick={() => start(() => void mergeSubject(subject.id, target))}
+            className="rounded-md border border-hairline px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          >
+            Merge
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PendingTermRow({
+  term,
+  others,
+}: {
+  term: TermRow;
+  others: TermRow[];
+}) {
+  const [pending, start] = useTransition();
+  const [name, setName] = useState(term.name);
+  const [startISO, setStartISO] = useState(term.startISO);
+  const [endISO, setEndISO] = useState(term.endISO);
+  const [target, setTarget] = useState("");
+  const datesOk =
+    /^\d{4}-\d{2}-\d{2}$/.test(startISO) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(endISO) &&
+    endISO >= startISO;
+  const valid = name.trim().length >= 2 && datesOk;
+  return (
+    <div className={`p-3 ${pending ? "opacity-50" : ""}`}>
+      <p className="mb-1 text-xs text-muted">
+        Proposed{term.proposedBy ? ` by ${term.proposedBy}` : ""}
+      </p>
+      <div className="flex flex-col gap-2">
+        <input
+          value={name}
+          maxLength={60}
+          onChange={(e) => setName(e.target.value)}
+          className="rounded-md border border-hairline bg-surface px-2 py-1 text-sm outline-none focus:border-accent"
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <DateField value={startISO} onChange={setStartISO} ariaLabel="Start date" />
+          <DateField value={endISO} onChange={setEndISO} ariaLabel="End date" />
+        </div>
+        {!datesOk && (
+          <p className="text-xs text-red-700">Set a start and end date.</p>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={pending || !valid}
+            onClick={() =>
+              start(() => void approveTerm(term.id, name.trim(), startISO, endISO))
+            }
+            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-on-accent disabled:opacity-50"
+          >
+            Approve
+          </button>
+          {others.length > 0 && (
+            <>
+              <span className="text-xs text-muted">or merge into</span>
+              <select
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                className="select-caret rounded-md border border-hairline bg-surface px-2 py-1 text-sm"
+              >
+                <option value="">Choose\u2026</option>
+                {others.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={pending || !target}
+                onClick={() => start(() => void mergeTerm(term.id, target))}
+                className="rounded-md border border-hairline px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+              >
+                Merge
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
