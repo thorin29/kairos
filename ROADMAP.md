@@ -1279,3 +1279,17 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       which is still a custom selector, not RollPicker), bible (PlanWizard,
       PersonalPlanSection), recent workouts, AppRoot, and the workout create/edit +
       wizard confirms.
+
+## Pending — app parity (from the Sept web run, v0.318–0.333)
+
+- [ ] **App UI for subscribed-event reminders** — the server side is live (migration
+  88 `locationOverride`, `/notifications/upcoming` includes external-with-reminders,
+  `saveSubscribedExtras`); the app needs a screen to set per-event reminders on a
+  subscribed feed. (Reminders on subscribed feeds are app-only by design; the web
+  editor was removed.)
+- [ ] **App class form parity** — bring the app's class creation to match the web's
+  rebuilt class form (Subject combobox, Student, Type, Shared-with/Reminders, Meets-on,
+  Start/End/Runs, Class type, Semester, Color, homework) with the same defaults, and a
+  one-time pop-up when switching a new event's type to Class.
+- [ ] **App class-form + share-with layout** — the owner-excluded Share-with and the
+  reordered class form are web-only.

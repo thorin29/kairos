@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { DateField } from "@/components/date-field";
 import {
   createPause,
@@ -26,6 +26,9 @@ export function PauseForm({ pauses }: { pauses: PauseRow[] }) {
     error: null as string | null,
   });
   const [removing, startRemove] = useTransition();
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+  const datesMissing = !start || !end;
 
   return (
     <div>
@@ -86,15 +89,29 @@ export function PauseForm({ pauses }: { pauses: PauseRow[] }) {
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium">From</label>
-          <DateField name="start" ariaLabel="Start" className={`tabular ${field}`} />
+          <DateField
+            name="start"
+            value={start}
+            onChange={setStart}
+            ariaLabel="Start"
+            className={`tabular ${field}`}
+          />
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium">To</label>
-          <DateField name="end" ariaLabel="End" className={`tabular ${field}`} />
+          <DateField
+            name="end"
+            value={end}
+            onChange={setEnd}
+            min={start || undefined}
+            ariaLabel="End"
+            className={`tabular ${field}`}
+          />
         </div>
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || datesMissing}
+          title={datesMissing ? "Pick a start and end date first" : undefined}
           className="inline-flex h-11 items-center gap-1.5 rounded-full bg-accent px-5 font-semibold text-on-accent disabled:opacity-40"
         >
           <PlusIcon className="h-4 w-4" />
