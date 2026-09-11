@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.348.0";
+export const APP_VERSION = "0.349.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -107,9 +107,9 @@ export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
-    version: "0.348.0",
+    version: "0.349.0",
     summary: [
-      "You can now set a location on a subscribed (feed) event from the phone \u2014 handy when a feed carries no address. It\u2019s shared across everyone the feed is shared with, shows as the event\u2019s location, and feeds the reminder\u2019s Navigate action. Clearing it falls back to the feed\u2019s own address.",
+      "When you create a repeating event, the weekly \u201cOn these days\u201d selector now follows the start date \u2014 it highlights the weekday you actually start on and updates if you change the date, instead of sticking to a fixed default. Picking your own days still works and stops the auto-follow.",
     ],
   },
   {

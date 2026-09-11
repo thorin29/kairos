@@ -384,7 +384,12 @@ function EventModal({
       ? [...editRec.byday]
       : [WEEKDAY_TOKENS[dayOfWeek(date)]],
   );
-  const toggleDay = (token: string) =>
+  // Once the user picks days themselves, stop auto-following the start date.
+  const bydayTouched = useRef(
+    Boolean(editRec?.byday && editRec.byday.length > 0),
+  );
+  const toggleDay = (token: string) => {
+    bydayTouched.current = true;
     setByday((prev) =>
       prev.includes(token)
         ? // Never let the last day be turned off — a weekly event needs one.
@@ -393,6 +398,7 @@ function EventModal({
           : prev
         : [...prev, token],
     );
+  };
   // For a recurring event, an edit applies to just this occurrence or the
   // whole series. Default to the single occurrence — the safer, smaller change.
   const [scope, setScope] = useState<"single" | "series">(
@@ -400,6 +406,14 @@ function EventModal({
   );
 
   const [startDate, setStartDate] = useState(date);
+  // Keep the weekly "On these days" default in step with the start date's
+  // weekday (until the user picks days themselves), so it always highlights the
+  // day the event actually starts on rather than a stale default.
+  useEffect(() => {
+    if (!bydayTouched.current) {
+      setByday([WEEKDAY_TOKENS[dayOfWeek(startDate)]]);
+    }
+  }, [startDate]);
   const [endDate, setEndDate] = useState(() => addDays(date, endDayOffset ?? 0));
   const [startTime, setStartTime] = useState(start);
   const [endTime, setEndTime] = useState(end ?? addHour(start));
