@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.344.0";
+export const APP_VERSION = "0.345.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -100,11 +100,20 @@ export const MIGRATIONS = [
   "89_pending_school_items",
   "90_device_client_build",
   "91_subscription_members",
+  "92_subscribed_reminder",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.345.0",
+    summary: [
+      "Retiring a subscription now keeps everyone it was shared with (owner + extra members) as attendees on its events, so their names stay after the subscription is gone.",
+      "Subscribed events shared with several people now blend everyone's profile colors on the calendar, matching how shared events look.",
+      "Reminders on subscribed events are now per person \u2014 each phone keeps its own minutes instead of sharing one set.",
+    ],
+  },
   {
     version: "0.344.0",
     summary: [

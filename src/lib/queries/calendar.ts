@@ -322,14 +322,20 @@ export async function loadRange(
 
   const familyColor = await getFamilyColor();
 
-  // Names for resolving a subscribed feed's extra members (see memberIds below).
-  const memberNameById = new Map<string, string>(
+  // Name + color for resolving a subscribed feed's extra members (memberIds).
+  const memberInfoById = new Map<string, { name: string; color: string | null }>(
     (
       await prisma.user.findMany({
         where: { isActive: true },
-        select: { id: true, name: true, displayName: true },
+        select: { id: true, name: true, displayName: true, color: true },
       })
-    ).map((u) => [u.id, u.displayName ?? u.name] as const),
+    ).map(
+      (u) =>
+        [u.id, { name: u.displayName ?? u.name, color: u.color }] as const,
+    ),
+  );
+  const memberNameById = new Map(
+    [...memberInfoById].map(([id, v]) => [id, v.name] as const),
   );
 
   // Sport prompts the person answered "No" to: shown as "did not attend".
@@ -480,9 +486,17 @@ export async function loadRange(
       (e as { participants?: { userId: string }[] }).participants?.map(
         (p) => p.userId,
       ) ?? [];
+    const subMemberIds =
+      (e.externalCalendar as { memberIds?: string[] } | null)?.memberIds ?? [];
     const memberIds = e.isFamily
       ? []
-      : Array.from(new Set([...(e.userId ? [e.userId] : []), ...participantIds]));
+      : Array.from(
+          new Set([
+            ...(e.userId ? [e.userId] : []),
+            ...participantIds,
+            ...subMemberIds,
+          ]),
+        );
 
     // Distinct profile colors of everyone on a shared event (owner +
     // participants). Two or more → the block paints their colors; otherwise the
@@ -491,12 +505,15 @@ export async function loadRange(
       (e as { participants?: { user?: { color?: string } | null }[] })
         .participants?.map((p) => p.user?.color)
         .filter((c): c is string => Boolean(c)) ?? [];
+    const subMemberColors = subMemberIds
+      .map((id) => memberInfoById.get(id)?.color)
+      .filter((c): c is string => Boolean(c));
     const memberColors = e.isFamily
       ? []
       : Array.from(
           new Set(
-            [e.user?.color, ...participantColors].filter((c): c is string =>
-              Boolean(c),
+            [e.user?.color, ...participantColors, ...subMemberColors].filter(
+              (c): c is string => Boolean(c),
             ),
           ),
         );
