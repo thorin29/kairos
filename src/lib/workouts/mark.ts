@@ -4,6 +4,27 @@ import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
 import { CATEGORY_LABEL, type WorkoutCategory } from "@/lib/workouts/catalog";
 
+/** Reported back when a movement/plan is already logged that day, so the caller
+ *  can ask "update or cancel" instead of silently duplicating or overwriting.
+ *  Only surfaced to conflict-aware callers (detectConflict); others log as before. */
+export type LogConflict = { name: string; summary: string };
+
+function summarizeSet(s: {
+  weight: number | null;
+  reps: number | null;
+  distance: number | null;
+  meters: number | null;
+  seconds: number | null;
+  unit: string | null;
+}): string {
+  if (s.weight != null) return `${s.weight}${s.unit ? ` ${s.unit}` : ""}`;
+  if (s.distance != null) return `${s.distance} ${s.unit || "mi"}`;
+  if (s.meters != null) return `${s.meters} m`;
+  if (s.seconds != null) return `${Math.round(s.seconds / 60)} min`;
+  if (s.reps != null) return `${s.reps} reps`;
+  return "logged";
+}
+
 /**
  * The guard-free core of workout completion, shared by the web server action
  * (src/lib/actions/workouts.ts) and the mobile API (/api/v1/workouts/*), so the
@@ -295,12 +316,13 @@ export async function logPlannedWorkout(
   dateISO: string,
   plannedWorkoutId: string,
   entries: PlannedLogEntry[],
-): Promise<void> {
+  opts?: { replace?: boolean; detectConflict?: boolean },
+): Promise<{ conflict: LogConflict } | null> {
   const plan = await prisma.plannedWorkout.findUnique({
     where: { id: plannedWorkoutId },
     select: { name: true, category: true, userId: true },
   });
-  if (!plan || plan.userId !== userId) return;
+  if (!plan || plan.userId !== userId) return null;
 
   const date = toDateColumn(dateISO);
   // Reuse THIS plan's own session for the day (so re-logging edits it), never
@@ -314,8 +336,26 @@ export async function logPlannedWorkout(
       category: plan.category,
     },
     orderBy: { createdAt: "asc" },
-    select: { id: true },
+    select: {
+      id: true,
+      sets: {
+        orderBy: { setNumber: "asc" },
+        take: 1,
+        select: {
+          weight: true,
+          reps: true,
+          distance: true,
+          meters: true,
+          seconds: true,
+          unit: true,
+        },
+      },
+    },
   });
+  if (own && opts?.detectConflict && !opts?.replace) {
+    const summary = own.sets[0] ? summarizeSet(own.sets[0]) : "logged";
+    return { conflict: { name: plan.name, summary } };
+  }
   const sessionId =
     own?.id ??
     (
@@ -384,6 +424,7 @@ export async function logPlannedWorkout(
   }
 
   await completeWorkoutTask(userId, dateISO);
+  return null;
 }
 
 /** Delete one of the caller's own workout sessions (for the Recent page's
@@ -411,6 +452,8 @@ export type CustomLogInput = {
   unit: string;
   load?: number | null;
   notes?: string;
+  replace?: boolean; // overwrite the same movement already logged that day
+  detectConflict?: boolean; // report a same-movement conflict instead of writing
 };
 
 /**
@@ -422,8 +465,8 @@ export async function logCustomEntry(
   userId: string,
   dateISO: string,
   input: CustomLogInput,
-): Promise<void> {
-  if (!Number.isFinite(input.value) || input.value <= 0) return;
+): Promise<{ conflict: LogConflict } | null> {
+  if (!Number.isFinite(input.value) || input.value <= 0) return null;
 
   let name: string;
   let category: WorkoutCategory;
@@ -436,7 +479,7 @@ export async function logCustomEntry(
       },
       select: { name: true },
     });
-    if (!w) return;
+    if (!w) return null;
     name = w.name;
     category = "HIIT" as WorkoutCategory;
   } else if (input.poolExerciseId) {
@@ -444,7 +487,7 @@ export async function logCustomEntry(
       where: { id: input.poolExerciseId },
       select: { name: true, category: true },
     });
-    if (!pool) return;
+    if (!pool) return null;
     name = pool.name;
     category = pool.category as WorkoutCategory;
     poolExerciseId = input.poolExerciseId;
@@ -452,22 +495,63 @@ export async function logCustomEntry(
     category = input.category as WorkoutCategory;
     name = CATEGORY_LABEL[category];
   } else {
-    return;
+    return null;
   }
 
   const unit = input.unit.trim().slice(0, 8);
   const date = toDateColumn(dateISO);
-  const session = await prisma.workoutSession.create({
-    data: {
-      userId,
-      date,
-      name,
-      category,
-      finished: true,
-      isRest: false,
-      notes: input.notes?.slice(0, 300) || null,
+
+  const existing = await prisma.workoutSession.findFirst({
+    where: { userId, date, isRest: false, name },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      sets: {
+        orderBy: { setNumber: "asc" },
+        take: 1,
+        select: {
+          weight: true,
+          reps: true,
+          distance: true,
+          meters: true,
+          seconds: true,
+          unit: true,
+        },
+      },
     },
   });
+  if (existing && input.detectConflict && !input.replace) {
+    const summary = existing.sets[0] ? summarizeSet(existing.sets[0]) : name;
+    return { conflict: { name, summary } };
+  }
+
+  let sessionId: string;
+  if (existing && input.replace) {
+    sessionId = existing.id;
+    await prisma.workoutSession.update({
+      where: { id: sessionId },
+      data: {
+        category,
+        finished: true,
+        isRest: false,
+        notes: input.notes?.slice(0, 300) || null,
+      },
+    });
+    await prisma.sessionSet.deleteMany({ where: { sessionId } });
+  } else {
+    const session = await prisma.workoutSession.create({
+      data: {
+        userId,
+        date,
+        name,
+        category,
+        finished: true,
+        isRest: false,
+        notes: input.notes?.slice(0, 300) || null,
+      },
+    });
+    sessionId = session.id;
+  }
 
   const set: {
     sessionId: string;
@@ -481,7 +565,7 @@ export async function logCustomEntry(
     meters?: number;
     seconds?: number;
   } = {
-    sessionId: session.id,
+    sessionId,
     poolExerciseId,
     setNumber: 1,
     unit: unit || null,
@@ -510,4 +594,5 @@ export async function logCustomEntry(
   await prisma.sessionSet.create({ data: set });
 
   await completeWorkoutTask(userId, dateISO);
+  return null;
 }
