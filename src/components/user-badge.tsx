@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/avatar";
@@ -118,7 +119,7 @@ export function UserBadge({
         )}
       </div>
 
-      {confirm && (
+      {confirm && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={() => setConfirm(false)}
@@ -175,7 +176,8 @@ export function UserBadge({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
