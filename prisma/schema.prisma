@@ -351,6 +351,7 @@ enum EventKind {
   BIRTHDAY
   EXTERNAL // pulled from a subscribed ICS feed
   OTHER
+  PAUSE // the all-day marker event a household pause (vacation/break) generates
 }
 
 // Admin-managed custom event types (e.g. "Hockey game") with their own colour.

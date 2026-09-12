@@ -62,7 +62,7 @@ export async function createPause(
   const event = await prisma.event.create({
     data: {
       isFamily: true,
-      kind: EventKind.OTHER,
+      kind: EventKind.PAUSE,
       title: label,
       startsAt: toDateColumn(startISO),
       endsAt: toDateColumn(addDays(endISO, 1)),
