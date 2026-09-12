@@ -182,7 +182,7 @@ export function EventDetail({
               aria-hidden
               className="absolute inset-0 h-full w-full object-cover"
             />
-            <span className="absolute inset-0 bg-gradient-to-b from-black/25 to-black/55" />
+            <span className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/30" />
             <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
               {actionButtons(true)}
             </div>
@@ -467,8 +467,8 @@ function IconBtn({
       className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
         overlay
           ? danger
-            ? "bg-black/30 text-white hover:bg-red-600/80"
-            : "bg-black/30 text-white hover:bg-black/55"
+            ? "bg-black/45 text-white hover:bg-red-600/85"
+            : "bg-black/45 text-white hover:bg-black/65"
           : danger
             ? "text-muted hover:bg-red-50 hover:text-red-700"
             : "text-muted hover:bg-ground hover:text-ink"
