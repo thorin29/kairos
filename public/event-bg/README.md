@@ -7,14 +7,15 @@ is missing, the item just shows its colour — so you can add these one at a tim
 ## Format
 
 - **File type:** JPG, named exactly as listed below (e.g. `birthday.jpg`).
-- **Size:** about **1200×400** (wide banner). Landscape.
+- **Aspect / size:** **16:9**, generated at that ratio. Store at about
+  **1280x720**. The event-detail banner shows the image at 16:9, so a 16:9
+  file displays whole with no cropping — generate at 16:9 and it just fits.
 - **Legibility:** don't worry about it — a dark scrim is layered over every
-  image automatically, and event text is white, so even bright images stay
-  readable. Busier/brighter images just get a slightly darker scrim.
+  image automatically and event text is white, so images stay readable.
 
 ## Files to create
 
-Filename → used for:
+Filename -> used for:
 
 - `birthday.jpg` — birthdays
 - `christmas.jpg` — Christmas Day and Christmas Eve
@@ -25,19 +26,16 @@ Filename → used for:
 - `valentines.jpg` — Valentine's Day
 - `independence.jpg` — Independence Day
 - `stpatricks.jpg` — St. Patrick's Day
-- `hockey.jpg` — hockey events (an event type named "Hockey")
+- `hockey.jpg` — an event type named "Hockey"
 - `class.jpg` — class meetings (school)
 - `church.jpg` — an event type named "Church"
 - `appointment.jpg` — appointments
-- `vacation.jpg` — an event type named "Vacation", "Trip", or "Travel"
+- `vacation.jpg` — event types "Vacation", "Trip", "Travel", and household pauses
 - `default.jpg` — fallback for any holiday without its own image above
 
 ## Notes
 
-- Holidays without a specific file (e.g. Memorial Day, MLK Day) use
-  `default.jpg` if present, otherwise just their colour.
-- Regular events only get a background when their kind/type matches one of the
-  keys above; anything else shows colour only.
-- Custom event types match by name, case-insensitively (so an event type called
-  "Hockey" uses `hockey.jpg`). Game-vs-practice or per-event images can be added
-  later.
+- Composition tip: keep the main subject roughly centered with a little room
+  on all sides. The image shows whole at 16:9, and tiny calendar chips crop to
+  their center, so nothing critical should sit hard against an edge.
+- Custom event types match by name, case-insensitively.
