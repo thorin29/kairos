@@ -23,6 +23,7 @@ const KIND_LABEL: Record<string, string> = {
   BIRTHDAY: "Birthday",
   EXTERNAL: "Subscribed",
   OTHER: "Medical / Dental",
+  PAUSE: "Vacation / Break",
   HOLIDAY: "Holiday",
   SCHOOLWORK: "School work",
 };

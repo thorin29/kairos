@@ -43,6 +43,7 @@ export function bgKeyForKind(kind: string | null | undefined): string | null {
     trip: "vacation",
     travel: "vacation",
     birthday: "birthday",
+    pause: "vacation",
   };
   return map[k] ?? null;
 }

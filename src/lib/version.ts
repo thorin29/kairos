@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.349.0";
+export const APP_VERSION = "0.350.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -101,11 +101,19 @@ export const MIGRATIONS = [
   "90_device_client_build",
   "91_subscription_members",
   "92_subscribed_reminder",
+  "93_pause_event_kind",
+  "94_retag_pause_events",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.350.0",
+    summary: [
+      "Family vacations and other calendar pauses no longer show up as red \u201cMedical / Dental\u201d events. Pauses now have their own type and colour (and a vacation background), and any existing ones on your calendar are fixed automatically.",
+    ],
+  },
   {
     version: "0.349.0",
     summary: [
