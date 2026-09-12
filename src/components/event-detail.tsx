@@ -174,7 +174,7 @@ export function EventDetail({
         {banner ? (
           // Art present: a taller banner with the actions overlaid top-right, so the
           // image gets the room instead of a separate control row beneath it.
-          <div className="relative h-28 w-full shrink-0">
+          <div className="relative aspect-video w-full shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={bgUrl(event.bgKey!)}
