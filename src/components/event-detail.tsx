@@ -28,7 +28,7 @@ const KIND_LABEL: Record<string, string> = {
   SCHOOLWORK: "School work",
 };
 
-const W = 300;
+const W = 340;
 const GAP = 6;
 
 /** A small copy-of-an-svg duplicate glyph (two offset rounded rects). */
@@ -90,6 +90,39 @@ export function EventDetail({
   const readOnly = event.external || noEventRow;
   const isClass = event.kind === "CLASS";
 
+  const actionButtons = (overlay: boolean) => (
+    <>
+      {!readOnly && (
+        <>
+          <IconBtn
+            overlay={overlay}
+            label="Edit"
+            onClick={() =>
+              event.recurring ? setEditScope(true) : onEdit("series")
+            }
+          >
+            <PencilIcon className="h-4 w-4" />
+          </IconBtn>
+          <IconBtn overlay={overlay} label="Duplicate" onClick={onDuplicate}>
+            <CopyIcon className="h-4 w-4" />
+          </IconBtn>
+          <IconBtn
+            overlay={overlay}
+            label="Delete"
+            onClick={() => setConfirming(true)}
+            danger
+          >
+            <TrashIcon className="h-4 w-4" />
+          </IconBtn>
+          {!overlay && <span className="mx-1 h-5 w-px bg-hairline" />}
+        </>
+      )}
+      <IconBtn overlay={overlay} label="Close" onClick={onClose}>
+        <CloseIcon className="h-4 w-4" />
+      </IconBtn>
+    </>
+  );
+
   // Re-place once we know the real height, and again whenever the delete
   // confirm box opens or swaps size — otherwise a popup anchored near the
   // bottom would grow its options off the bottom of the screen.
@@ -125,62 +158,40 @@ export function EventDetail({
         className="absolute flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xl"
       >
         {event.bgKey && (
-          <>
-            {/* Preload to decide whether the banner has art; a 1px hidden probe
-                avoids the broken-image icon while it resolves. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={bgUrl(event.bgKey)}
-              alt=""
-              aria-hidden
-              onLoad={() => setBanner(true)}
-              onError={() => setBanner(false)}
-              style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
-            />
-            {banner && (
-              <div className="relative h-20 w-full shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={bgUrl(event.bgKey)}
-                  alt=""
-                  aria-hidden
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-                <span className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/45" />
-              </div>
-            )}
-          </>
+          // Hidden probe: only reveal the banner once the art actually loads, so a
+          // missing image never flashes a broken-image icon.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={bgUrl(event.bgKey)}
+            alt=""
+            aria-hidden
+            onLoad={() => setBanner(true)}
+            onError={() => setBanner(false)}
+            style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+          />
         )}
 
-        {/* Action bar */}
-        <div className="flex items-center justify-end gap-0.5 px-2 pt-2">
-          {!readOnly && (
-            <>
-              <IconBtn
-                label="Edit"
-                onClick={() =>
-                  event.recurring ? setEditScope(true) : onEdit("series")
-                }
-              >
-                <PencilIcon className="h-4 w-4" />
-              </IconBtn>
-              <IconBtn label="Duplicate" onClick={onDuplicate}>
-                <CopyIcon className="h-4 w-4" />
-              </IconBtn>
-              <IconBtn
-                label="Delete"
-                onClick={() => setConfirming(true)}
-                danger
-              >
-                <TrashIcon className="h-4 w-4" />
-              </IconBtn>
-              <span className="mx-1 h-5 w-px bg-hairline" />
-            </>
-          )}
-          <IconBtn label="Close" onClick={onClose}>
-            <CloseIcon className="h-4 w-4" />
-          </IconBtn>
-        </div>
+        {banner ? (
+          // Art present: a taller banner with the actions overlaid top-right, so the
+          // image gets the room instead of a separate control row beneath it.
+          <div className="relative h-28 w-full shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={bgUrl(event.bgKey!)}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <span className="absolute inset-0 bg-gradient-to-b from-black/25 to-black/55" />
+            <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
+              {actionButtons(true)}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-end gap-0.5 px-2 pt-2">
+            {actionButtons(false)}
+          </div>
+        )}
 
         <div className="overflow-y-auto px-4 pb-4 pt-1">
           <div className="flex gap-3">
@@ -244,16 +255,6 @@ export function EventDetail({
             <ClassDue eventId={event.eventId} dayISO={event.dayISO} />
           )}
 
-          {event.kind === "BIRTHDAY" && (
-            <p className="mt-3 text-xs text-muted">
-              Birthdays are edited on the person&rsquo;s profile.
-            </p>
-          )}
-          {isSchoolWork && (
-            <p className="mt-3 text-xs text-muted">
-              Manage this from the School page.
-            </p>
-          )}
 
           {editScope && (
             <div className="mt-4 rounded-lg border border-hairline bg-ground p-3">
@@ -448,11 +449,13 @@ function IconBtn({
   label,
   onClick,
   danger,
+  overlay,
   children,
 }: {
   label: string;
   onClick: () => void;
   danger?: boolean;
+  overlay?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -462,9 +465,13 @@ function IconBtn({
       title={label}
       onClick={onClick}
       className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-        danger
-          ? "text-muted hover:bg-red-50 hover:text-red-700"
-          : "text-muted hover:bg-ground hover:text-ink"
+        overlay
+          ? danger
+            ? "bg-black/30 text-white hover:bg-red-600/80"
+            : "bg-black/30 text-white hover:bg-black/55"
+          : danger
+            ? "text-muted hover:bg-red-50 hover:text-red-700"
+            : "text-muted hover:bg-ground hover:text-ink"
       }`}
     >
       {children}

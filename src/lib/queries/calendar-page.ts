@@ -45,6 +45,7 @@ export type CalEvent = {
   isFamily: boolean;
   shade: boolean;
   kind: string;
+  bgKey: string | null;
   ownerName: string;
   whoLabel: string;
   notes: string | null;
@@ -160,6 +161,7 @@ function toWire(e: GridEvent): CalEvent {
     isFamily: e.isFamily,
     shade: e.shade,
     kind: e.kind,
+    bgKey: e.bgKey ?? null,
     ownerName: e.ownerName,
     whoLabel: e.whoLabel,
     notes: e.notes,
