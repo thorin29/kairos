@@ -212,7 +212,7 @@ export default async function CalendarPage({
             <MiniMonth
               monthISO={startOfMonth(date)}
               todayISO={today}
-              selectedDays={days}
+              selectedDays={view === "month" ? [] : days}
               dayHref={(iso) => link({ view, date: iso, who: whoEncoded })}
               prevHref={link({
                 view,
