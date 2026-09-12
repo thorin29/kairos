@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.354.0";
+export const APP_VERSION = "0.355.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -108,6 +108,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.355.0",
+    summary: [
+      "On the month view, the little sidebar calendar no longer highlights every day of the month \u2014 the day highlight now only appears in week and day views, where it\u2019s useful. Today is still marked.",
+    ],
+  },
   {
     version: "0.354.0",
     summary: [
