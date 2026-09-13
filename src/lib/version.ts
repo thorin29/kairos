@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.359.0";
+export const APP_VERSION = "0.360.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -109,6 +109,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.360.0",
+    summary: [
+      "New Game time page: each person\u2019s time played today, this week, and this month, their top games, and their Xbox gamerscore / Game Pass / Microsoft balance \u2014 all pulled automatically. Added it back to the sidebar.",
+    ],
+  },
   {
     version: "0.359.0",
     summary: [
