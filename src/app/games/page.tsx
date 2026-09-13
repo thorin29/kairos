@@ -30,7 +30,7 @@ export default async function GamesPage() {
             No game time yet
           </h2>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-            Once the kids play, their time and games show up here \u2014 pulled
+            Once the kids play, their time and games show up here — pulled
             automatically from Xbox and Steam.
           </p>
         </div>
