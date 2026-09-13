@@ -3,6 +3,7 @@ import { loadGameMonitor } from "@/lib/queries/game-monitor";
 import { personalVisibleIds } from "@/lib/personal-scope";
 import { Card, SectionHeading } from "@/components/ui";
 import { Avatar } from "@/components/avatar";
+import { GamepadIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -22,13 +23,20 @@ export default async function GamesPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-6">
-      <SectionHeading>Game time</SectionHeading>
-
       {scoped.length === 0 ? (
-        <Card className="p-6 text-sm text-muted">
-          No game time recorded yet.
-        </Card>
+        <div className="rounded-xl border border-hairline bg-surface p-8 text-center">
+          <GamepadIcon className="mx-auto h-8 w-8 text-muted" />
+          <h2 className="mt-3 font-display text-lg font-semibold">
+            No game time yet
+          </h2>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
+            Once the kids play, their time and games show up here \u2014 pulled
+            automatically from Xbox and Steam.
+          </p>
+        </div>
       ) : (
+        <>
+        <SectionHeading>Game time</SectionHeading>
         <div className="space-y-4">
           {scoped.map((r) => (
             <Card key={r.userId} className="p-5">
@@ -97,6 +105,7 @@ export default async function GamesPage() {
             </Card>
           ))}
         </div>
+        </>
       )}
     </main>
   );
