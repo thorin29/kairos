@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.357.0";
+export const APP_VERSION = "0.358.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -110,7 +110,7 @@ export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
-    version: "0.357.0",
+    version: "0.358.0",
     summary: [
       "Groundwork for game-time monitoring: Kairos can now receive each person\u2019s daily play totals, game breakdown, and profile status (gamerscore, Game Pass, Microsoft balance) from the collector. Nothing visible yet \u2014 the screens come next.",
     ],
