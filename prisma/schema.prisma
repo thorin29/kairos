@@ -68,8 +68,15 @@ model User {
   bibleRewardEnabled Boolean @default(false)
   bibleRewardCents   Int     @default(0)
 
+  // Game-time monitoring: how the collector maps this person to their platforms.
+  gamertag        String?
+  steamId         String?
+
   gameProfile     GameProfile?
   gameSessions    GameSession[]
+  gameDays        GameDay[]
+  gameDayTitles   GameDayTitle[]
+  playerCard      PlayerCard?
   tasks           Task[]         @relation("TaskOwner")
   schoolClasses   SchoolClass[]
   createdTasks    Task[]         @relation("TaskCreator")
@@ -1439,4 +1446,42 @@ model RecurringTask {
   createdAt   DateTime  @default(now())
 
   @@index([active])
+}
+
+/// A person's total game/console time for one local day, already resolved by the
+/// collector (e.g. Steam-primary merge applied). Upserted idempotently as the day
+/// fills in, so the collector can keep re-sending "today so far".
+model GameDay {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  minutes   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+}
+
+/// Per-game minutes for one person on one local day.
+model GameDayTitle {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date    DateTime @db.Date
+  game    String
+  minutes Int      @default(0)
+
+  @@unique([userId, date, game])
+}
+
+/// Latest profile status for a person, synced from the collector and shown on
+/// their own app view. Not historical — always the current values.
+model PlayerCard {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gamerscore  Int?
+  gamerpic    String?
+  hasGamePass Boolean?
+  msBalance   String? // display string, e.g. "$12.50", from Family Safety
+  updatedAt   DateTime @updatedAt
 }
