@@ -17,6 +17,7 @@ import {
   DollarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  GamepadIcon,
 } from "@/components/icons";
 import { UserBadge } from "@/components/user-badge";
 import { APP_VERSION } from "@/lib/version";
@@ -40,6 +41,7 @@ const NAV: NavItem[] = [
   { href: "/exercise", label: "Workouts", color: "#dc2626", icon: <DumbbellIcon className="h-6 w-6" /> },
   { href: "/groceries", label: "Groceries", color: "#0d9488", icon: <CartIcon className="h-6 w-6" /> },
   { href: "/money", label: "Money", color: "#15803d", icon: <DollarIcon className="h-6 w-6" /> },
+  { href: "/games", label: "Game time", color: "#4338ca", icon: <GamepadIcon className="h-6 w-6" /> },
   { href: "/summary", label: "Characters", color: "#db2777", icon: <TrophyIcon className="h-6 w-6" /> },
 ];
 
