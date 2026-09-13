@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return apiError("bad_request", "Invalid JSON.");
+    return apiError("validation", "Invalid JSON.");
   }
   const days = Array.isArray(body?.days) ? body.days : [];
 
