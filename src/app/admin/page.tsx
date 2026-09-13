@@ -12,7 +12,6 @@ import {
   BibleIcon,
   DumbbellIcon,
   SchoolIcon,
-  GamepadIcon,
   CartIcon,
   LockIcon,
   MailIcon,
@@ -96,13 +95,6 @@ const TILES: Tile[] = [
     label: "Money",
     blurb: "Approve transactions, edit rows, and reconcile balances",
     icon: <DollarIcon className="h-7 w-7" />,
-    ready: true,
-  },
-  {
-    href: "/admin/games",
-    label: "Game time",
-    blurb: "Daily limits and weekly tokens",
-    icon: <GamepadIcon className="h-7 w-7" />,
     ready: true,
   },
   {

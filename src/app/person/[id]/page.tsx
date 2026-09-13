@@ -23,8 +23,6 @@ import {
   todayISO,
 } from "@/lib/dates";
 
-import { loadGameStatus } from "@/lib/queries/games";
-import { GameTimeCard } from "@/components/game-time-card";
 import { generateChores } from "@/lib/chores/generate";
 import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
@@ -148,7 +146,6 @@ export default async function PersonPage({
     };
   }
 
-  const [gameStatus] = await loadGameStatus(today, id);
 
   const rows = tasks.map((t) => {
     const dueISO = fromDateColumn(t.dueDate);
@@ -558,11 +555,6 @@ export default async function PersonPage({
         </section>
       )}
 
-      {gameStatus?.enabled && (
-        <div className="mt-8">
-          <GameTimeCard status={gameStatus} />
-        </div>
-      )}
 
       <div className="mt-8 flex flex-wrap gap-3">
         <AddTaskForm
