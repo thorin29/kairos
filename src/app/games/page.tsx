@@ -52,14 +52,16 @@ export default async function GamesPage() {
                   <div className="truncate text-sm font-semibold">{r.name}</div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                     {r.gamerscore != null && (
-                      <span className="tabular">G {r.gamerscore.toLocaleString()}</span>
+                      <span className="tabular">Gamerscore {r.gamerscore.toLocaleString()}</span>
                     )}
                     {r.hasGamePass && (
                       <span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent">
                         Game Pass
                       </span>
                     )}
-                    {r.msBalance && <span className="tabular">{r.msBalance}</span>}
+                    {r.msBalance && (
+                      <span className="tabular">Microsoft balance {r.msBalance}</span>
+                    )}
                   </div>
                 </div>
                 {r.gamerpic && (
