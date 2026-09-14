@@ -7,6 +7,8 @@ import { GamepadIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
+const XBOX_GREEN = "#107C10";
+
 function hhmm(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -52,7 +54,15 @@ export default async function GamesPage() {
                   <div className="truncate text-sm font-semibold">{r.name}</div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                     {r.gamerscore != null && (
-                      <span className="tabular">Gamerscore {r.gamerscore.toLocaleString()}</span>
+                      <span className="flex items-center gap-1.5" title="Gamerscore">
+                        <span
+                          className="flex h-4 w-4 items-center justify-center rounded-full text-[0.6rem] font-bold text-white"
+                          style={{ backgroundColor: XBOX_GREEN }}
+                        >
+                          G
+                        </span>
+                        <span className="tabular">{r.gamerscore.toLocaleString()}</span>
+                      </span>
                     )}
                     {r.hasGamePass && (
                       <span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent">
@@ -60,7 +70,24 @@ export default async function GamesPage() {
                       </span>
                     )}
                     {r.msBalance && (
-                      <span className="tabular">Microsoft balance {r.msBalance}</span>
+                      <span className="flex items-center gap-1.5" title="Wallet balance">
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          style={{ color: XBOX_GREEN }}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-label="Wallet"
+                        >
+                          <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                          <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                          <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+                        </svg>
+                        <span className="tabular">{r.msBalance}</span>
+                      </span>
                     )}
                   </div>
                 </div>
