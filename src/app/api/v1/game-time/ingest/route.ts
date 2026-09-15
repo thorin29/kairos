@@ -111,14 +111,14 @@ export async function POST(req: NextRequest) {
       update: { minutes },
     });
 
-    for (const g of Array.isArray(e.games) ? e.games : []) {
-      if (!g?.game) continue;
-      const m = clampMin(g.minutes);
-      await prisma.gameDayTitle.upsert({
-        where: { userId_date_game: { userId: user.id, date, game: g.game } },
-        create: { userId: user.id, date, game: g.game, minutes: m },
-        update: { minutes: m },
-      });
+    // Replace the whole day's game breakdown so a corrected push (fewer/no games)
+    // clears anything stale — each push is authoritative for that day.
+    await prisma.gameDayTitle.deleteMany({ where: { userId: user.id, date } });
+    const titles = (Array.isArray(e.games) ? e.games : [])
+      .filter((g) => g?.game)
+      .map((g) => ({ userId: user.id, date, game: g.game, minutes: clampMin(g.minutes) }));
+    if (titles.length > 0) {
+      await prisma.gameDayTitle.createMany({ data: titles });
     }
 
     if (e.status) {
