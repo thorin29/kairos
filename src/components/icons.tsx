@@ -528,6 +528,7 @@ export function WaterBottleIcon({ className = "h-5 w-5" }: IconProps) {
 const GLYPH_IMAGES: Record<string, string> = {
   "ic:napkin": "/grocery-icons/napkin.png",
   "ic:papertowel": "/grocery-icons/paper-towel.png",
+  "ic:sorbet": "/grocery-icons/sorbet.png",
   "ic:waterbottle": "/grocery-icons/water-bottle.png",
   "ic:protein": "/grocery-icons/protein.png",
 };
