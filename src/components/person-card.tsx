@@ -10,7 +10,7 @@ import { ClassPrompts, type ClassPromptItem } from "./class-prompts";
 import { ShoppingReminder } from "./shopping-reminder";
 import type { DashboardTrip } from "@/lib/queries/groceries";
 
-type Prompt = { eventId: string; userId: string; title: string };
+type Prompt = { eventId: string; userId: string; title: string; dateISO: string };
 
 export function PersonCard({
   person,
