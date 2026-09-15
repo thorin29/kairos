@@ -229,8 +229,10 @@ export async function loadCalendarPagePayload(
   // Defaults resolve here, exactly like the web: unset people → just me; unset
   // subscriptions → the ones I own; an explicit empty list means "show none".
   const shownPeople = prefs.shownPeople ?? [userId];
-  const shownSubs =
-    prefs.shownSubs ?? subs.filter((s) => s.userId === userId).map((s) => s.id);
+  // Opt-out default: with no saved preference, every active feed is visible
+  // (not just your own), so new household calendars show for everyone until
+  // they choose to hide one. School work stays governed by showSchoolWork.
+  const shownSubs = prefs.shownSubs ?? subs.map((s) => s.id);
   const subsSet = new Set(shownSubs);
 
   const days =

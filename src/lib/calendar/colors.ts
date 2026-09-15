@@ -47,8 +47,12 @@ export function recolorForPersonal(
     return p.kindColors.BIRTHDAY ? paint(e, p.kindColors.BIRTHDAY) : e;
   }
 
-  // Subscribed feeds → my per-feed color.
+  // Subscribed feeds: my per-feed color only if I'm actually on the event
+  // (owner or participant). If it isn't mine it's like anyone else's event —
+  // grey, so a subscribed feed I'm not part of doesn't show in colour.
   if (e.external) {
+    const iAmOn = e.memberIds?.includes(meId) ?? false;
+    if (!iAmOn) return paint(e, p.othersColor ?? GREY);
     const c = e.externalCalendarId ? p.subColors[e.externalCalendarId] : undefined;
     return c ? paint(e, c) : e;
   }
