@@ -235,6 +235,82 @@ export async function loadTodayPlannedWorkout(
   return { plannedWorkoutId: plan.id, name: plan.name, exercises };
 }
 
+/** All of a person's planned workouts for the day (a day can have several, e.g.
+ *  Core AND Arms). Same per-plan shape as loadTodayPlannedWorkout, but every
+ *  non-empty plan is returned so the card/logger can show them all. */
+export async function loadTodayPlannedWorkouts(
+  userId: string,
+  dayISO: string,
+): Promise<NonNullable<TodayPlanned>[]> {
+  const dow = dayOfWeek(dayISO);
+  const system = await loadWorkoutUnitSystem();
+
+  const plans = await prisma.plannedWorkout.findMany({
+    where: { userId, dayOfWeek: dow, isRest: false },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      id: true,
+      name: true,
+      hiitWorkoutId: true,
+      hiitWorkout: { select: { type: true } },
+      exercises: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          poolExerciseId: true,
+          metric: true,
+          poolExercise: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  const out: NonNullable<TodayPlanned>[] = [];
+  for (const plan of plans) {
+    const hiit = plan as unknown as {
+      hiitWorkoutId: string | null;
+      hiitWorkout: { type: string } | null;
+    };
+    if (hiit.hiitWorkoutId && hiit.hiitWorkout) {
+      const res = hiitResult(hiit.hiitWorkout.type as WorkoutType);
+      const unit = metricUnit(res.metric, system);
+      const prior = await prisma.sessionSet.findFirst({
+        where: { session: { userId, date: toDateColumn(dayISO) }, poolExerciseId: null },
+        select: { weight: true, reps: true, distance: true, meters: true, seconds: true },
+      });
+      const value = prior ? valueForMetric(prior, res.metric) : null;
+      out.push({
+        plannedWorkoutId: plan.id,
+        name: plan.name,
+        exercises: [{ poolExerciseId: "", name: res.label, metric: res.metric, unit, value }],
+      });
+      continue;
+    }
+    if (plan.exercises.length === 0) continue;
+
+    const sets = await prisma.sessionSet.findMany({
+      where: { session: { userId, date: toDateColumn(dayISO) }, poolExerciseId: { not: null } },
+      select: { poolExerciseId: true, weight: true, reps: true, distance: true, meters: true, seconds: true },
+    });
+    const loggedByPool = new Map<string, LoggedSet>(
+      sets.filter((s) => s.poolExerciseId).map((s) => [s.poolExerciseId as string, s as LoggedSet]),
+    );
+    const exercises: PlannedMovement[] = plan.exercises.map((pe) => {
+      const metric = (pe.metric ?? "WEIGHT") as string;
+      const unit = metricUnit(metric as Metric, system);
+      const logged = loggedByPool.get(pe.poolExerciseId);
+      return {
+        poolExerciseId: pe.poolExerciseId,
+        name: pe.poolExercise.name,
+        metric,
+        unit,
+        value: logged ? valueForMetric(logged, metric) : null,
+      };
+    });
+    out.push({ plannedWorkoutId: plan.id, name: plan.name, exercises });
+  }
+  return out;
+}
+
 /**
  * A person's workout history and per-movement weight progress, for the Workouts
  * page. Series = max weight per day per pool movement (the graph); history =

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { loadTodayPlannedWorkout } from "@/lib/queries/workout-log";
+import { loadTodayPlannedWorkout, loadTodayPlannedWorkouts } from "@/lib/queries/workout-log";
 import { todayISO } from "@/lib/dates";
 
 export const runtime = "nodejs";
@@ -19,12 +19,16 @@ export async function GET(req: NextRequest) {
     return apiError("validation", "date must be YYYY-MM-DD.");
   }
 
-  const planned = await loadTodayPlannedWorkout(authed.device.person.id, date);
+  const workouts = await loadTodayPlannedWorkouts(authed.device.person.id, date);
+  const first = workouts[0] ?? null;
   return apiOk({
     date,
-    loggable: planned != null,
-    plannedWorkoutId: planned?.plannedWorkoutId ?? null,
-    name: planned?.name ?? null,
-    exercises: planned?.exercises ?? [],
+    loggable: workouts.length > 0,
+    // All of the day's planned workouts (Core, Arms, ...). Older clients that
+    // read the single fields still get the first one.
+    workouts,
+    plannedWorkoutId: first?.plannedWorkoutId ?? null,
+    name: first?.name ?? null,
+    exercises: first?.exercises ?? [],
   });
 }
