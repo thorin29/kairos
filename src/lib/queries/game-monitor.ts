@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { startOfWeek, startOfMonth } from "@/lib/dates";
+import { startOfWeek, startOfMonth, addDays } from "@/lib/dates";
 
 export type GameMonitorRow = {
   userId: string;
@@ -15,6 +15,7 @@ export type GameMonitorRow = {
   gamerpic: string | null;
   hasGamePass: boolean | null;
   msBalance: string | null;
+  weekDaily: { label: string; minutes: number }[];
 };
 
 const asDate = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
@@ -23,9 +24,15 @@ const asDate = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
  *  this month totals, the week's top games, and current profile status —
  *  all from the collector-fed GameDay / GameDayTitle / PlayerCard tables. */
 export async function loadGameMonitor(todayIso: string): Promise<GameMonitorRow[]> {
-  const monthStart = asDate(startOfMonth(todayIso));
-  const weekStart = asDate(startOfWeek(todayIso));
+  const monthStartIso = startOfMonth(todayIso);
+  const weekStartIso = startOfWeek(todayIso);
+  const rangeStartIso = weekStartIso < monthStartIso ? weekStartIso : monthStartIso;
+  const monthStart = asDate(monthStartIso);
+  const weekStart = asDate(weekStartIso);
+  const rangeStart = asDate(rangeStartIso);
   const today = asDate(todayIso);
+  const weekDayIsos = Array.from({ length: 7 }, (_, i) => addDays(weekStartIso, i));
+  const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const users = await prisma.user.findMany({
     where: { isActive: true },
@@ -41,7 +48,7 @@ export async function loadGameMonitor(todayIso: string): Promise<GameMonitorRow[
         select: { gamerscore: true, gamerpic: true, hasGamePass: true, msBalance: true },
       },
       gameDays: {
-        where: { date: { gte: monthStart, lte: today } },
+        where: { date: { gte: rangeStart, lte: today } },
         select: { date: true, minutes: true },
       },
       gameDayTitles: {
@@ -58,12 +65,20 @@ export async function loadGameMonitor(todayIso: string): Promise<GameMonitorRow[
     let todayMin = 0;
     let weekMin = 0;
     let monthMin = 0;
+    const monthT = monthStart.getTime();
+    const perDay = new Map<string, number>();
     for (const g of u.gameDays) {
-      monthMin += g.minutes;
       const t = g.date.getTime();
+      if (t >= monthT) monthMin += g.minutes;
       if (t >= weekT) weekMin += g.minutes;
       if (t === todayT) todayMin += g.minutes;
+      const iso = g.date.toISOString().slice(0, 10);
+      perDay.set(iso, (perDay.get(iso) ?? 0) + g.minutes);
     }
+    const weekDaily = weekDayIsos.map((iso) => ({
+      label: DOW[new Date(`${iso}T12:00:00.000Z`).getUTCDay()],
+      minutes: perDay.get(iso) ?? 0,
+    }));
     const map = new Map<string, number>();
     for (const t of u.gameDayTitles) map.set(t.game, (map.get(t.game) ?? 0) + t.minutes);
     const games = [...map.entries()]
@@ -85,6 +100,7 @@ export async function loadGameMonitor(todayIso: string): Promise<GameMonitorRow[
       gamerpic: pc?.gamerpic ?? null,
       hasGamePass: pc?.hasGamePass ?? null,
       msBalance: pc?.msBalance ?? null,
+      weekDaily,
     };
   });
 
