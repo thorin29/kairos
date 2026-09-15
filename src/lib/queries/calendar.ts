@@ -400,7 +400,7 @@ export async function loadRange(
     orderBy: { startsAt: "asc" },
     include: {
       user: { select: { name: true, displayName: true, color: true } },
-      externalCalendar: { select: { name: true, memberIds: true } },
+      externalCalendar: { select: { name: true, memberIds: true, sportWorkout: true } },
       eventType: { select: { id: true, name: true, color: true, sportWorkout: true, defaultReminder: true } },
       schoolClass: { select: { id: true } },
       participants: { select: { userId: true, user: { select: { color: true, name: true, displayName: true } } } },
@@ -543,7 +543,7 @@ export async function loadRange(
 
     // Per-member attendance (owner + participants), for sport and class events,
     // never for family events. state is "" for others (name shown, no icon).
-    const isSport = Boolean(eventType?.sportWorkout);
+    const isSport = Boolean(eventType?.sportWorkout || e.externalCalendar?.sportWorkout);
     const classId = (e as { schoolClass?: { id: string } | null }).schoolClass?.id ?? null;
     const isClass = (e.kind as string) === "CLASS" && classId != null;
     const memberPairs: { id: string; name: string }[] = e.isFamily
