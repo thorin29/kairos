@@ -66,6 +66,23 @@ export async function addCalendar(
     data: { userId, isFamily, memberIds, name, url, sportWorkout },
   });
 
+  // Opt-out visibility: make the new calendar visible to everyone. Users who
+  // never customized their filter already see all feeds by default; append it
+  // to anyone with an explicit shown list so it shows for them too.
+  const allPrefs = await prisma.userCalendarPref.findMany({
+    select: { userId: true, shownSubs: true },
+  });
+  for (const pref of allPrefs) {
+    if (pref.shownSubs == null) continue;
+    const list = Array.isArray(pref.shownSubs) ? (pref.shownSubs as string[]) : [];
+    if (!list.includes(created.id)) {
+      await prisma.userCalendarPref.update({
+        where: { userId: pref.userId },
+        data: { shownSubs: [...list, created.id] },
+      });
+    }
+  }
+
   // Pull it straight away so the calendar isn't empty after adding.
   await syncCalendar(created.id);
 
