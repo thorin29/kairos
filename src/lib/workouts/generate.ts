@@ -332,17 +332,18 @@ export async function pendingSportPrompts(
     // Who gets asked. For an event on a sport-flagged type, whoever's going
     // (participants, else the owner). For an event from a sport-flagged
     // subscribed feed, the feed's owner. An event can be both.
+    // Everyone included in a sport event gets asked: the owner AND every added
+    // participant (the owner was previously dropped whenever participants
+    // existed, so an added kid was asked but the owner wasn't), plus a
+    // sport-flagged subscribed feed's owner. Covers custom sport events and
+    // subscribed sport feeds alike.
     const targets = new Set<string>();
-    if (e.eventType?.sportWorkout) {
-      const going = e.participants.length
-        ? e.participants.map((p) => p.userId)
-        : e.userId
-          ? [e.userId]
-          : [];
-      for (const id of going) targets.add(id);
-    }
-    if (e.externalCalendar?.sportWorkout && e.externalCalendar.userId) {
-      targets.add(e.externalCalendar.userId);
+    if (e.eventType?.sportWorkout || e.externalCalendar?.sportWorkout) {
+      if (e.userId) targets.add(e.userId);
+      for (const p of e.participants) targets.add(p.userId);
+      if (e.externalCalendar?.sportWorkout && e.externalCalendar.userId) {
+        targets.add(e.externalCalendar.userId);
+      }
     }
     for (const userId of targets) {
       const key = `${userId}|${e.id}`;
