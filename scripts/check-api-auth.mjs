@@ -20,6 +20,7 @@ const PUBLIC = new Set([
   "auth/join/route.ts",
   "auth/join/check/route.ts",
   "auth/forgot/route.ts",
+  "auth/recover/route.ts",
   "game-time/ingest/route.ts", // service-token (GAMETIME_INGEST_TOKEN), not device auth
 ]);
 

@@ -164,6 +164,59 @@ export async function sendResetEmail(
   }
 }
 
+/** Mail a single-use join code for self-service phone recovery. Same code path
+ *  as an admin invite, but requested by the account owner (password already
+ *  verified) so they can re-enroll a phone without an admin/browser/PC. */
+export async function sendRecoveryEmail(
+  to: string,
+  name: string,
+  code: string,
+  appLink: string,
+): Promise<{ sent: boolean; error?: string }> {
+  const cfg = await resolveSmtp();
+  if (!cfg.configured) return { sent: false };
+
+  const text = [
+    `Hi ${name},`,
+    "",
+    "Someone asked to set up the Kairos app on a phone using your account.",
+    "If that was you, open the app and, on the \"Set up this phone\" screen,",
+    "enter this code:",
+    "",
+    `    ${code}`,
+    "",
+    `(Or paste this link instead: ${appLink})`,
+    "",
+    "If you didn't ask for this, ignore this email — the code is single-use,",
+    "expires, and can't be used without your password.",
+  ].join("\n");
+
+  const html = `
+    <div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:#111">
+      <p>Hi ${escapeHtml(name)},</p>
+      <p>Someone asked to set up the Kairos app on a phone using your account.
+         If that was you, enter this code on the &ldquo;Set up this phone&rdquo; screen:</p>
+      <p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:600;text-align:center;background:#f3f4f6;padding:16px;border-radius:8px;color:#111">${escapeHtml(code)}</p>
+      <p style="font-size:13px;color:#666">Or paste this link instead:
+         <span style="font-family:ui-monospace,monospace;word-break:break-all">${escapeHtml(appLink)}</span></p>
+      <p style="font-size:13px;color:#666">If you didn't ask for this, ignore this email —
+         the code is single-use, expires, and can't be used without your password.</p>
+    </div>`;
+
+  try {
+    await transportFor(cfg).sendMail({
+      from: fromLine(cfg),
+      to,
+      subject: "Set up the Kairos app on your phone",
+      text,
+      html,
+    });
+    return { sent: true };
+  } catch (e) {
+    return { sent: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /** Alert a person that a new device was just enrolled to their account — the
  *  tripwire for an unexpected enrollment. No-op when SMTP isn't configured or
  *  the person has no email. */

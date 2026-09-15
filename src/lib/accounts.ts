@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { sendResetEmail } from "@/lib/mail/send";
+import { sendResetEmail, sendRecoveryEmail } from "@/lib/mail/send";
 import { appJoinLink } from "@/lib/url";
 import {
   hashPassword,
@@ -187,6 +187,32 @@ export async function requestPasswordReset(identifier: string): Promise<void> {
 /** Turn a login off: clear the password and bump the credential version, which
  *  voids any live session, and drop any pending invite. The profile itself is
  *  untouched — the person still exists on the wall tablet. */
+/** Self-service phone recovery: verify the account's own password, then mail a
+ *  single-use join code to the address on file. Enrollment itself happens via
+ *  the normal /auth/join step (code + password). Silent on every failure so it
+ *  can't be used to probe for accounts, passwords, or emails. */
+export async function startDeviceRecovery(
+  identifier: string,
+  password: string,
+): Promise<void> {
+  const id = identifier.trim();
+  if (!id || !password) return;
+  const user = await prisma.user.findFirst({
+    where: {
+      isActive: true,
+      OR: [
+        { name: { equals: id, mode: "insensitive" } },
+        { email: { equals: id, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, email: true, name: true, displayName: true, passwordHash: true },
+  });
+  if (!user || !user.email || !user.passwordHash) return;
+  if (!verifyPassword(password, user.passwordHash)) return;
+  const { token } = await issueInvite(user.id, "join");
+  await sendRecoveryEmail(user.email, user.displayName ?? user.name, token, appJoinLink(token));
+}
+
 export async function disableLogin(userId: string): Promise<void> {
   await prisma.$transaction([
     prisma.user.update({
