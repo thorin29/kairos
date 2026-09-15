@@ -6,6 +6,21 @@ import {
   type GridEvent,
 } from "@/lib/queries/calendar";
 import { syncStaleCalendars } from "@/lib/calendar/sync";
+
+// Refresh stale ICS feeds without blocking the calendar response. The GET
+// returns what PostgreSQL already holds immediately; feeds catch up in the
+// background and the next load picks them up. Single-flight so a burst of
+// calendar loads can't stampede the external fetches.
+let icsRefreshInFlight = false;
+function refreshCalendarsInBackground(): void {
+  if (icsRefreshInFlight) return;
+  icsRefreshInFlight = true;
+  void syncStaleCalendars()
+    .catch(() => {})
+    .finally(() => {
+      icsRefreshInFlight = false;
+    });
+}
 import {
   addDays,
   addMonths,
@@ -253,7 +268,7 @@ export async function loadCalendarPagePayload(
           ? addDays(date, n * 3)
           : addDays(date, n);
 
-  await syncStaleCalendars();
+  refreshCalendarsInBackground();
 
   const colorPrefs = {
     personalizeColors: prefs.personalizeColors,
