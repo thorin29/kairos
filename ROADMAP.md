@@ -1187,6 +1187,18 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [ ] Phone layout throughout — the top bar behaves differently on narrow
       screens and each page needs checking on a handset
 
+## Offline-first (potential — not committed)
+- [ ] Room (on-device SQLite database) as the durable source of truth for
+      screen data on Android. Repositories would read the local DB instantly and
+      refresh it from the API in the background, so every screen — including a
+      cold start after the app is killed — renders immediately from last-known
+      data and updates when the network responds. Large change (an entity + DAO
+      per screen, ViewModel/repository rewrite, migrations), so do it
+      incrementally, calendar first, only if cold-start latency still bothers us
+      after the lighter cache-first + nav-state work lands. The lighter pass
+      (preserve navigation state, cache-first rendering, background-refresh
+      indicator) covers in-session instant navigation without it.
+
 ## Onboarding
 - [ ] First-run setup wizard for a brand-new Kairos: create the first person
       (the admin), optionally set a shared admin PIN (PIN is optional), and add
