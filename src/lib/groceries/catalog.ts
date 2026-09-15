@@ -17,6 +17,7 @@ const ICONS: [RegExp, string][] = [
   // Order matters — first match wins, so keep specific terms above general ones
   // (e.g. "sweet potato" before "potato", "peanut butter" before "butter").
   // Fruit
+  [/\bsorbet\b|island way/, "🍧"],
   [/\bsweet potato|\byams?\b/, "🍠"],
   [/\bapples?\b/, "🍎"],
   [/\bbananas?\b/, "🍌"],
