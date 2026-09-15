@@ -8,11 +8,12 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (Sept 2026, web v0.347 / app v0.182)
+## Current status (Sept 2026, web v0.368 / app v0.197)
 
 The web is mature and the **Android app has reached parity** across every
 daily-use section (Home, Calendar, Chores, Bible, Reading, School, Workouts,
-Groceries, Money, Characters; Game time is parked). Since the last status note
+Groceries, Money, Characters; Game time is now a live monitoring feature).
+Since the last status note
 the following large efforts shipped:
 
 - **App offline support** (the whole optimism effort): a read-through HTTP cache
@@ -220,9 +221,9 @@ Characters. Each drawer entry keeps its web brand colour.
       able to **ask whether sporting calendar events were completed** (it's
       calendar-event-driven — see Dashboard).
 - [x] **Remaining sections to parity:** School and Characters (CharacterScreen)
-      shipped; **Game time** is deliberately parked (the Xbox/Family Safety API is
-      fragile and Steam needs per-kid setup) — hidden from the app sidebar and web
-      nav, code kept for a future revisit.
+      shipped; **Game time** was rebuilt from the retired allowance model into an
+      automatic monitoring feature (collector container → Kairos → web + app),
+      un-parked and back in the nav.
       - [x] **Reading** (web v0.250 / app v0.74): strictly self-only leisure
         book-tracker (`GET /api/v1/books`, no one sees anyone else's). A book has
         a title, optional **author**, and a size in **pages and/or chapters**
@@ -930,31 +931,30 @@ own exercises, optionally schedules them, and records what they did.
 
 ## Game time
 
-- [x] Daily allowance per person
-- [x] Weekly tokens buying extra minutes, spent on the day they raise
-- [x] Admin configuration of limits, tokens, and bonus minutes
-- [x] Household view and per-person tracker
-- [x] Over-allowance recorded rather than blocked
-- [ ] Award a token for winning the week
-- [ ] Timer rather than manual logging
-- [ ] Pull console/PC time automatically instead of logging it by hand
-      (researched Jul 2026):
-  - [ ] Steam — official Steam Web API (`IPlayerService/GetOwnedGames` gives
-        `playtime_forever` and `playtime_2weeks` per game). Needs a free API
-        key and the child's game-details set to public. No per-day history, so
-        poll on a schedule and store the deltas. The one sanctioned, stable
-        option.
-  - [ ] Xbox per-game playtime — no official consumer API (Microsoft's XSAPI
-        is for in-title dev use). Only via unofficial third parties like
-        OpenXBL (xbl.io) or the xbox-webapi-python library; may break anytime.
-  - [ ] Total screen time per child across Xbox + Windows PC — Microsoft
-        Family Safety already tracks this (we have a family account), but there
-        is no official API. An unofficial, reverse-engineered library
-        (`pyfamilysafety`, as used by a Home Assistant integration) reads
-        screen time / app usage read-only. Best coverage, but undocumented and
-        breakable, and needs parent-account credentials stored securely.
-  - [ ] Decide route(s), weigh the ToS / privacy / credential-storage risk of
-        the unofficial ones before building
+Monitoring only — the old allowance/token model was **retired** (Sep 2026). Time
+is pulled automatically and shown for awareness, not enforced. A standalone
+collector container is the only thing holding game-service credentials; it pushes
+resolved daily totals to Kairos. See the collector repo's `README.md` /
+`DECISIONS.md` for the source-side design.
+
+- [x] Automatic collection: Xbox (via Home Assistant), Steam (official Web API),
+      Microsoft balance (Family Safety) → collector → `/api/v1/game-time/ingest`
+      (service-token auth, idempotent upsert, day breakdown replaced authoritatively)
+- [x] Online-authoritative Xbox time, coalescing, `in_game`+`now_playing` games,
+      `last_online` end cross-check, in-progress sessions counted
+- [x] Steam-primary merge (union of Steam + non-overlapping Xbox) for PC kids
+- [x] Postgres history: `GameDay` / `GameDayTitle` / `PlayerCard`; daily / weekly
+      / monthly totals + top games
+- [x] Web `/games` + app Game time screen: household list, zoomed overlay with a
+      Sun–Sat bar chart, status (gamerscore / Game Pass / Microsoft balance /
+      gamerpic). App: parents tap a card for detail; a child sees their own
+      detail as the main view
+- [x] Per-system Xbox/Steam icon per person, automatic from the collector
+- [ ] Minecraft Java — invisible to both Xbox presence and Steam; cleanest is the
+      server log / RCON if we host the server, else Family Safety PC time or a
+      PC process-watcher
+- [ ] (Retired) daily allowance, weekly tokens, timer, award-a-token — replaced
+      by monitoring
 
 ## Groceries
 
