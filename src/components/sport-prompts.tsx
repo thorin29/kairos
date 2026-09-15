@@ -7,7 +7,7 @@ import {
   declineSportWorkout,
 } from "@/lib/actions/sport";
 
-type Prompt = { eventId: string; userId: string; title: string };
+type Prompt = { eventId: string; userId: string; title: string; dateISO: string };
 
 /**
  * "Did you do it?" for each of a person's sport events today. Yes logs the
@@ -24,25 +24,36 @@ export function SportPrompts({
   const [pending, start] = useTransition();
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
+  const keyOf = (p: Prompt) => `${p.eventId}|${p.dateISO}`;
   const act = (p: Prompt, done: boolean) =>
     start(async () => {
-      setHidden((s) => new Set(s).add(p.eventId));
-      if (done) await confirmSportWorkout(p.eventId, p.userId, dateISO);
-      else await declineSportWorkout(p.eventId, p.userId, dateISO);
+      setHidden((s) => new Set(s).add(keyOf(p)));
+      // Confirm/decline for the occurrence the prompt is actually about, which
+      // may be an earlier day carried forward — not necessarily today.
+      if (done) await confirmSportWorkout(p.eventId, p.userId, p.dateISO);
+      else await declineSportWorkout(p.eventId, p.userId, p.dateISO);
     });
 
-  const visible = prompts.filter((p) => !hidden.has(p.eventId));
+  const dayLabel = (iso: string) =>
+    iso === dateISO
+      ? null
+      : new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: "short" });
+
+  const visible = prompts.filter((p) => !hidden.has(keyOf(p)));
   if (visible.length === 0) return null;
 
   return (
     <div className="space-y-2">
       {visible.map((p) => (
         <div
-          key={p.eventId}
+          key={keyOf(p)}
           className="rounded-lg border border-accent/30 bg-accent/5 px-3 py-2"
         >
           <p className="mb-2 text-xs font-medium">
             Did you do {p.title}?
+            {dayLabel(p.dateISO) && (
+              <span className="ml-1 font-normal text-muted">· {dayLabel(p.dateISO)}</span>
+            )}
           </p>
           <div className="flex gap-2">
             <button
