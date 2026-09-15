@@ -87,7 +87,7 @@ export type ApiDashboard = {
    *  have no personal plan or no reading due today. */
   personalReading: { passage: string; read: boolean } | null;
   /** "Did you do X?" prompts for finished sport events today (this person only). */
-  sportPrompts: { eventId: string; title: string }[];
+  sportPrompts: { eventId: string; title: string; dateISO: string }[];
   /** Household chores anyone can take today (chores only — never other
    *  categories). Claimed for the enrolled person via /chores/claim. */
   upForGrabs: {
@@ -284,7 +284,7 @@ export async function loadApiDashboard(
   const sportP = await pendingSportPrompts(dayISO);
   const sportPrompts = sportP
     .filter((p) => p.userId === userId)
-    .map((p) => ({ eventId: p.eventId, title: p.title }));
+    .map((p) => ({ eventId: p.eventId, title: p.title, dateISO: p.dateISO }));
 
   // Admin devices see the household money queue on their home banner, mirroring
   // the web MoneyReminder. Same counts for every admin, so acting clears it once.

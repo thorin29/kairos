@@ -267,7 +267,13 @@ export type SportPrompt = {
   eventId: string;
   userId: string;
   title: string;
+  /** The occurrence date this prompt is for (YYYY-MM-DD) — so a carried-over
+   *  prompt confirms the right day, not today. */
+  dateISO: string;
 };
+
+/** How many days an unanswered sport prompt keeps showing before it drops. */
+const SPORT_LOOKBACK_DAYS = 7;
 
 export async function pendingSportPrompts(
   dateISO: string = todayISO(),
@@ -298,37 +304,55 @@ export async function pendingSportPrompts(
   // Only ask after the event has actually happened — its occurrence today must
   // have ended (start + duration ≤ now), matching how class prompts work.
   const now = Date.now();
-  const due = events.filter((e) => {
+
+  // Carry unanswered prompts forward: gather every ended occurrence from the
+  // lookback window up to the dashboard day, not just that single day, so a
+  // practice nobody confirmed keeps a pending prompt until it's answered.
+  const fromISO = addDays(dateISO, -(SPORT_LOOKBACK_DAYS - 1));
+  const occs: { e: (typeof events)[number]; iso: string }[] = [];
+  for (const e of events) {
     const durationMs = e.endsAt.getTime() - e.startsAt.getTime();
     if (e.rrule) {
-      return occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz).some(
-        (s) => s.getTime() + durationMs <= now,
-      );
+      for (const start of occurrencesIn(e.startsAt, e.rrule, fromISO, dateISO, tz)) {
+        if (start.getTime() + durationMs <= now) {
+          occs.push({ e, iso: localParts(start).iso });
+        }
+      }
+    } else {
+      const iso = localParts(e.startsAt).iso;
+      if (iso >= fromISO && iso <= dateISO && e.endsAt.getTime() <= now) {
+        occs.push({ e, iso });
+      }
     }
-    return (
-      localParts(e.startsAt).iso === dateISO && e.endsAt.getTime() <= now
-    );
-  });
-  if (due.length === 0) return [];
+  }
+  if (occs.length === 0) return [];
 
-  const date = toDateColumn(dateISO);
-  const ids = due.map((e) => e.id);
-
+  const ids = [...new Set(occs.map((o) => o.e.id))];
   const [done, skipped] = await Promise.all([
     prisma.workoutSession.findMany({
-      where: { date, sourceEventId: { in: ids } },
-      select: { userId: true, sourceEventId: true },
+      where: {
+        date: { gte: toDateColumn(fromISO), lte: toDateColumn(dateISO) },
+        sourceEventId: { in: ids },
+      },
+      select: { userId: true, sourceEventId: true, date: true },
     }),
     prisma.sportSkip.findMany({
-      where: { date, eventId: { in: ids } },
-      select: { userId: true, eventId: true },
+      where: {
+        date: { gte: toDateColumn(fromISO), lte: toDateColumn(dateISO) },
+        eventId: { in: ids },
+      },
+      select: { userId: true, eventId: true, date: true },
     }),
   ]);
-  const doneSet = new Set(done.map((s) => `${s.userId}|${s.sourceEventId}`));
-  const skipSet = new Set(skipped.map((s) => `${s.userId}|${s.eventId}`));
+  const doneSet = new Set(
+    done.map((s) => `${s.userId}|${s.sourceEventId}|${fromDateColumn(s.date)}`),
+  );
+  const skipSet = new Set(
+    skipped.map((s) => `${s.userId}|${s.eventId}|${fromDateColumn(s.date)}`),
+  );
 
   const prompts: SportPrompt[] = [];
-  for (const e of due) {
+  for (const { e, iso } of occs) {
     // Who gets asked. For an event on a sport-flagged type, whoever's going
     // (participants, else the owner). For an event from a sport-flagged
     // subscribed feed, the feed's owner. An event can be both.
@@ -350,9 +374,9 @@ export async function pendingSportPrompts(
       }
     }
     for (const userId of targets) {
-      const key = `${userId}|${e.id}`;
+      const key = `${userId}|${e.id}|${iso}`;
       if (!doneSet.has(key) && !skipSet.has(key)) {
-        prompts.push({ eventId: e.id, userId, title: e.title || "Sport" });
+        prompts.push({ eventId: e.id, userId, title: e.title || "Sport", dateISO: iso });
       }
     }
   }
