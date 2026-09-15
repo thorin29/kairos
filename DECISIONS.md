@@ -864,3 +864,32 @@ log endpoints gate this behind a `detectConflict` flag for back-compat with old 
 **Birthday type switch.** Selecting Birthday forces all-day + yearly; switching to a
 non-birthday type now undoes them (web `chooseKind`, app kind selector) so an event
 doesn't stay locked as all-day/annual.
+
+## Game-time monitoring (Sep 2026)
+
+The allowance/token model was retired; Game time is now automatic monitoring fed
+by a standalone collector container. Source-side design lives in the collector
+repo's DECISIONS.md — this covers the Kairos side.
+
+- **Ingest is a service-token route.** `POST /api/v1/game-time/ingest` is authed
+  by `GAMETIME_INGEST_TOKEN` (Bearer or `X-Ingest-Token`), not device auth — the
+  only external-ingest auth in the app. It's allowlisted in
+  `scripts/check-api-auth.mjs` (the build gate that requires every `/api/v1`
+  route to be device-authed or explicitly public).
+- **Idempotent + authoritative per day.** `GameDay` is upsert-**replace** (not
+  increment) on `(userId, date)`, so the collector re-sending "today so far"
+  every 5 min never accumulates. The day's `GameDayTitle` breakdown is
+  delete-then-insert, so a corrected push clears stale games. (A collector bug
+  that inflated a kid to ~6h was purely the collector including a bogus
+  in-memory session — Kairos was replacing correctly.)
+- **Data model:** `GameDay` (per person/day total), `GameDayTitle` (per
+  person/day/game), `PlayerCard` (current gamerscore / gamerpic / hasGamePass /
+  msBalance / platforms). Identity resolved by gamertag → steamId → name.
+- **Device route for the app.** `GET /api/v1/game-time` returns the same rows as
+  the web page, scoped by the enrolled person: a PARENT sees the household, a
+  child sees only themselves. The app decides list-vs-detail from the count.
+- **Weekly chart data is already stored** (`GameDay` per date), so the Sun–Sat
+  bar chart needs no new backend — the query widens its fetch to cover the week
+  even at a month boundary.
+- **Per-system icon** comes from `PlayerCard.platforms` (comma-joined), set by
+  the collector; the web/app just render Xbox/Steam logos.
