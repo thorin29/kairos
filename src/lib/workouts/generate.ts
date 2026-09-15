@@ -290,7 +290,7 @@ export async function pendingSportPrompts(
       rrule: true,
       participants: { select: { userId: true } },
       eventType: { select: { sportWorkout: true } },
-      externalCalendar: { select: { sportWorkout: true, userId: true } },
+      externalCalendar: { select: { sportWorkout: true, userId: true, memberIds: true } },
     },
   });
   if (events.length === 0) return [];
@@ -341,8 +341,12 @@ export async function pendingSportPrompts(
     if (e.eventType?.sportWorkout || e.externalCalendar?.sportWorkout) {
       if (e.userId) targets.add(e.userId);
       for (const p of e.participants) targets.add(p.userId);
-      if (e.externalCalendar?.sportWorkout && e.externalCalendar.userId) {
-        targets.add(e.externalCalendar.userId);
+      if (e.externalCalendar?.sportWorkout) {
+        // A subscribed sport feed: everyone it belongs to — the feed's owner and
+        // everyone it's shared with (memberIds) — same set the calendar shows,
+        // so an added kid gets the prompt too, not just the owner.
+        if (e.externalCalendar.userId) targets.add(e.externalCalendar.userId);
+        for (const m of e.externalCalendar.memberIds ?? []) targets.add(m);
       }
     }
     for (const userId of targets) {
