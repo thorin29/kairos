@@ -10,7 +10,7 @@ export async function confirmSportCore(
 ): Promise<void> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { title: true, startsAt: true, rrule: true },
+    select: { title: true, startsAt: true, endsAt: true, rrule: true },
   });
   if (!event) return;
   const occurrenceISO = event.rrule ? dateISO : localParts(event.startsAt).iso;
@@ -21,12 +21,19 @@ export async function confirmSportCore(
     select: { id: true },
   });
   if (!existing) {
+    // Log the workout for as long as the event actually ran (a 60-minute
+    // practice logs 60 minutes), not a placeholder minute.
+    const durationMin = Math.max(
+      1,
+      Math.round((event.endsAt.getTime() - event.startsAt.getTime()) / 60000),
+    );
     await prisma.workoutSession.create({
       data: {
         userId,
         date,
         name: (event.title || "Sport").slice(0, 60),
         category: "SPORT",
+        durationMin,
         finished: true,
         isRest: false,
         sourceEventId: eventId,
