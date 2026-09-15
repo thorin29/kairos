@@ -326,6 +326,20 @@ export async function markWorkedOut(
   refresh();
 }
 
+/** Manually close a missed/overdue workout (SKIPPED): it stops showing as
+ *  pending or overdue and no longer counts, for the case where the plan
+ *  changed so it will never come due again on its own. */
+export async function expireWorkoutTask(
+  userId: string,
+  dateISO: string,
+): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
+  await skipWorkoutTask(userId, dateISO);
+  refresh();
+}
+
 // --- workout plan (named workouts per weekday) ---------------------------
 
 export async function addPlannedWorkout(
