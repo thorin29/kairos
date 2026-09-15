@@ -35,6 +35,7 @@ type DayEntry = {
   date: string;
   minutes?: number;
   games?: { game: string; minutes?: number }[];
+  platforms?: string[];
   status?: {
     gamerscore?: number | null;
     gamerpic?: string | null;
@@ -121,8 +122,11 @@ export async function POST(req: NextRequest) {
       await prisma.gameDayTitle.createMany({ data: titles });
     }
 
-    if (e.status) {
-      const s = e.status;
+    const platforms = Array.isArray(e.platforms) && e.platforms.length > 0
+      ? e.platforms.join(",")
+      : undefined;
+    if (e.status || platforms) {
+      const s = e.status ?? {};
       await prisma.playerCard.upsert({
         where: { userId: user.id },
         create: {
@@ -131,12 +135,14 @@ export async function POST(req: NextRequest) {
           gamerpic: s.gamerpic ?? null,
           hasGamePass: s.hasGamePass ?? null,
           msBalance: s.msBalance ?? null,
+          platforms: platforms ?? null,
         },
         update: {
           gamerscore: s.gamerscore ?? undefined,
           gamerpic: s.gamerpic ?? undefined,
           hasGamePass: s.hasGamePass ?? undefined,
           msBalance: s.msBalance ?? undefined,
+          platforms: platforms ?? undefined,
         },
       });
     }

@@ -15,6 +15,7 @@ export type GameMonitorRow = {
   gamerpic: string | null;
   hasGamePass: boolean | null;
   msBalance: string | null;
+  platforms: string[];
   weekDaily: { label: string; minutes: number }[];
 };
 
@@ -45,7 +46,7 @@ export async function loadGameMonitor(todayIso: string): Promise<GameMonitorRow[
       avatarPath: true,
       avatarPosition: true,
       playerCard: {
-        select: { gamerscore: true, gamerpic: true, hasGamePass: true, msBalance: true },
+        select: { gamerscore: true, gamerpic: true, hasGamePass: true, msBalance: true, platforms: true },
       },
       gameDays: {
         where: { date: { gte: rangeStart, lte: today } },
@@ -100,6 +101,7 @@ export async function loadGameMonitor(todayIso: string): Promise<GameMonitorRow[
       gamerpic: pc?.gamerpic ?? null,
       hasGamePass: pc?.hasGamePass ?? null,
       msBalance: pc?.msBalance ?? null,
+      platforms: pc?.platforms ? pc.platforms.split(",").filter(Boolean) : [],
       weekDaily,
     };
   });

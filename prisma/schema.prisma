@@ -1483,5 +1483,6 @@ model PlayerCard {
   gamerpic    String?
   hasGamePass Boolean?
   msBalance   String? // display string, e.g. "$12.50", from Family Safety
+  platforms   String? // comma-joined systems used, e.g. "xbox" or "steam"
   updatedAt   DateTime @updatedAt
 }
