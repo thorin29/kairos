@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.387.0";
+export const APP_VERSION = "0.388.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -114,6 +114,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.388.0",
+    summary: [
+      "Year calendar reworked: semesters are stacked (Fall, then Spring, then Summer only if you add one) and months wrap to fit \u2014 no more sideways scrolling. Hovering a day shows the date as DD MMM YYYY, with the holiday or break name. The final day of the school year is marked green (\u201cFinal school day\u201d), and planned breaks show in their own tentative color, separate from holidays and vacations.",
+      "Fixed a vacation showing one day too long on the calendar (an all-day end-date rounding issue).",
+    ],
+  },
   {
     version: "0.387.0",
     summary: [

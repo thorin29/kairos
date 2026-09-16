@@ -892,14 +892,15 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       `noSchoolDaysFor`. Full class delete (`deleteSchoolClass`) removes the class,
       plan, generated work, members and check-ins.
       *Next for this area (Phase 2):* the month-strip **calendar view**
-      *(empty windows shipped v0.387: months with semester bands, day squares,
-      weekends shaded, holidays/breaks marked, on the Set up school year screen)* —
-      next, classes coloured per-subject on it with past-term overflow in red;
-      admin reorg into buttons/sections; then the dynamic
-      reconciliation (get-ahead shifts remaining work earlier; overdue never
-      auto-shifts; planned-break reminders + "no vacation \u2192 reclaim the time";
-      "added a vacation \u2192 shift or keep?"; finish-by = Spring end target +
-      student School card).
+      *(v0.387 empty windows; v0.388 stacked per-semester rows that wrap (no
+      scroll), DD-MMM-YYYY + name hovers, green final school day, planned breaks
+      in a distinct tentative colour, all-day vacation end-date fixed)* —
+      still to do here: a **holiday "no school" picker** (not every enabled
+      holiday is a day off), classes coloured per-subject on the calendar with
+      past-term overflow in red; admin reorg into buttons/sections; then the
+      dynamic reconciliation (planned break ⇄ real vacation linking + reminders;
+      get-ahead shifts remaining work earlier; overdue never auto-shifts;
+      finish-by = Spring end target + student School card).
 - [ ] **Wizard form** (the non-CSV intake path; paste + file-upload exist).
 - [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
       keep tweaks, highlight changes). Would need a term-level draft/published
