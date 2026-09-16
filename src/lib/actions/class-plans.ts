@@ -262,6 +262,10 @@ export async function publishClassPlan(planId: string): Promise<PublishResult> {
     .map((u, i) => ({ unit: u, date: sched[i]?.date ?? null }))
     .filter((x): x is { unit: (typeof undoneUnits)[number]; date: string } => x.date != null);
   const unscheduled = undoneUnits.length - placed.length;
+  // Undone units that no longer fit the term this time. On a republish these may
+  // still carry a date + work from a previous publish, which must be cleared so
+  // they read as "won't fit" rather than keeping a stale scheduled date.
+  const overflowUnits = undoneUnits.filter((_u, i) => sched[i]?.date == null);
 
   if (placed.length === 0) {
     return {
@@ -320,6 +324,18 @@ export async function publishClassPlan(planId: string): Promise<PublishResult> {
       await tx.classPlanUnit.update({
         where: { id: unit.id },
         data: { scheduledDate: toDateColumn(date), workId: task.schoolWork!.id },
+      });
+    }
+
+    for (const unit of overflowUnits) {
+      // Deleting the task cascades to its SchoolWork, which SetNulls workId; we
+      // also clear scheduledDate so the unit shows as "won't fit".
+      if (unit.workId && unit.work?.taskId) {
+        await tx.task.delete({ where: { id: unit.work.taskId } });
+      }
+      await tx.classPlanUnit.update({
+        where: { id: unit.id },
+        data: { scheduledDate: null, workId: null },
       });
     }
 

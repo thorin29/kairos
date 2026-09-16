@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.401.0";
+export const APP_VERSION = "0.403.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,6 +116,22 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.403.0",
+    summary: [
+      "Home category headers now use the side-menu icons (Bible reading, Chores, School, Workouts) and line up correctly; sections are ordered Bible reading, Chores, School, Workouts.",
+      "The School button shows \u201cComplete for today!\u201d in green once the day\u0027s school work is done.",
+      "The \u201cadd assignment or test\u201d button moved off the bottom of the home screen into the School overlay, top-right.",
+      "Fixed a stray bullet that appeared next to the workout row.",
+    ],
+  },
+  {
+    version: "0.402.0",
+    summary: [
+      "Fixed a scheduling bug where republishing a class could leave lessons that no longer fit the term still carrying a date from a previous publish \u2014 so two students in the same class could show different \u201cwon\u2019t fit\u201d lists. Overflow lessons are now consistently cleared on every publish.",
+      "The view-class screen now has a link back to Curriculum \u0026 schedule.",
+    ],
+  },
   {
     version: "0.401.0",
     summary: [

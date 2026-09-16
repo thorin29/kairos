@@ -48,7 +48,7 @@ export function WorkoutLauncher({
   const [open, setOpen] = useState(false);
 
   return (
-    <li className="px-4 py-3">
+    <div className="px-4 py-3">
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -148,6 +148,6 @@ export function WorkoutLauncher({
           </div>
         </div>
       )}
-    </li>
+    </div>
   );
 }
