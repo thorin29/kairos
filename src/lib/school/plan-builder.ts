@@ -82,20 +82,19 @@ export function spreadUnits(
     opts.terms[0]?.end ?? opts.startDate,
   );
   const inTerm = (day: string) => opts.terms.some((t) => day >= t.start && day <= t.end);
-  const isSchoolDay = (day: string) =>
-    wd.has(isoWeekday(day)) && inTerm(day) && !opts.holidays.has(day);
+  // Within the term, only real school days count. Once we run past the last term
+  // day, work keeps landing on weekdays so a class that won't finish in time
+  // shows real later dates instead of vanishing as "won't fit".
+  const usable = (day: string) =>
+    wd.has(isoWeekday(day)) && !opts.holidays.has(day) && (day > lastEnd || inTerm(day));
 
   const out: Scheduled[] = [];
   let day = opts.startDate;
   let onDay = 0;
   for (const unit of units) {
-    while (day <= lastEnd && (!isSchoolDay(day) || onDay >= perDay)) {
+    while (!usable(day) || onDay >= perDay) {
       day = addDays(day, 1);
       onDay = 0;
-    }
-    if (day > lastEnd) {
-      out.push({ unit, date: null });
-      continue;
     }
     out.push({ unit, date: day });
     onDay += 1;

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.403.0";
+export const APP_VERSION = "0.404.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,6 +116,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.404.0",
+    summary: [
+      "Fixed the scheduler so lessons that don\u0027t fit the semester get real dates past the term end instead of being dropped as \u201cwon\u2019t fit.\u201d With \u201cFinish by term end\u201d off, the extra lessons now spill onto the next weekdays (shown in amber in the view-class list, with a \u201cland after the term ends\u201d note) \u2014 matching the finish date on the home card. With it on, they\u0027re front-loaded to finish within the term as before.",
+      "Republish any class that was showing \u201cwon\u2019t fit\u201d so its later lessons pick up their real dates.",
+    ],
+  },
   {
     version: "0.403.0",
     summary: [
