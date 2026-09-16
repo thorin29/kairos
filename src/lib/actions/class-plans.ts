@@ -110,9 +110,8 @@ export async function importClassPlansFromCsv(csvText: string): Promise<ImportRe
 
 export async function deleteClassPlan(id: string): Promise<void> {
   await requireAdmin();
-  // Remove the SchoolWork/Tasks this plan generated at publish time before
-  // dropping the plan — otherwise they'd be orphaned on the student's card
-  // (deleting the plan only cascades its units, not the generated work).
+  // Remove the SchoolWork/Tasks this plan generated before dropping the plan —
+  // otherwise they'd be orphaned on the student's card.
   const plan = await prisma.classPlan.findUnique({
     where: { id },
     select: {
@@ -123,14 +122,10 @@ export async function deleteClassPlan(id: string): Promise<void> {
   const taskIds = (plan?.units ?? [])
     .map((u) => u.work?.taskId)
     .filter((t): t is string => Boolean(t));
-
   await prisma.$transaction([
-    ...(taskIds.length
-      ? [prisma.task.deleteMany({ where: { id: { in: taskIds } } })] // cascades SchoolWork
-      : []),
-    prisma.classPlan.delete({ where: { id } }), // cascades units
+    ...(taskIds.length ? [prisma.task.deleteMany({ where: { id: { in: taskIds } } })] : []),
+    prisma.classPlan.delete({ where: { id } }),
   ]);
-
   revalidatePath("/");
   if (plan?.class.userId) revalidatePath(`/person/${plan.class.userId}`);
   revalidatePath("/admin/school");

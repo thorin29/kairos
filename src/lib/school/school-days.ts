@@ -48,6 +48,17 @@ export async function noSchoolDaysFor(
     }
   }
 
+  // Planned breaks (fall/spring break, estimated vacations) from school-year setup.
+  const breaks = await prisma.schoolBreak.findMany({ select: { startDate: true, endDate: true } });
+  for (const b of breaks) {
+    let d = dISO(b.startDate);
+    const end = dISO(b.endDate);
+    while (d <= end) {
+      skip.add(d);
+      d = addDay(d);
+    }
+  }
+
   // Enabled built-in holidays that land inside the term windows.
   if (windows.length) {
     const holidays = await holidayEntries(enumerateDays(windows));

@@ -134,6 +134,20 @@ model Term {
   classes      SchoolClass[]
 }
 
+/// A planned week (or so) off inside the school year — a fall/spring break or an
+/// estimated vacation. Treated as a no-school block by scheduling and drawn on
+/// the calendar. `planned` marks an estimate that may later be confirmed or
+/// dropped (the reconciliation flow); Phase 1 treats planned and confirmed the
+/// same for scheduling.
+model SchoolBreak {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  planned   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
 // A reusable class name, managed like the chore master list. A class picks its
 // name from this pool, so the same subject can be reused term to term (and
 // ticked off when spinning up a new semester).

@@ -50,6 +50,21 @@ export default async function AdminSchoolPage() {
       {rollover.needed && <RolloverBanner state={rollover} />}
 
       <section className="mb-12">
+        <Link
+          href="/admin/school/year"
+          className="flex items-center justify-between rounded-lg border border-accent bg-accent/10 px-4 py-3 text-sm hover:brightness-105"
+        >
+          <span>
+            <span className="font-medium text-accent">Set up school year</span>
+            <span className="ml-2 text-xs text-muted">
+              semesters, breaks &amp; the calendar &mdash; define these before adding classes
+            </span>
+          </span>
+          <span className="text-accent">&rarr;</span>
+        </Link>
+      </section>
+
+      <section className="mb-12">
         <SectionHeading>Terms &amp; classes</SectionHeading>
         <div className="mt-3 space-y-4">
           <ClassAccessToggle mode={classMode} />
