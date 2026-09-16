@@ -96,6 +96,12 @@ export function SchoolCard({
               </button>
             </div>
 
+            {targetISO && (
+              <p className="mb-4 text-sm text-muted">
+                School year ends <span className="font-medium text-ink">{formatShort(targetISO)}</span>
+              </p>
+            )}
+
             <div className="space-y-6">
               {overdue.length > 0 && (
                 <div>
@@ -123,9 +129,6 @@ export function SchoolCard({
                 <div>
                   {label("Progress")}
                   <div className="rounded-lg border border-hairline bg-surface p-4">
-                    {targetISO && (
-                      <p className="mb-2 text-xs text-muted">Goal: finish by {formatShort(targetISO)}</p>
-                    )}
                     <ul className="space-y-1.5 text-sm">
                       {progress.map((p) => (
                         <li key={p.className} className="flex items-center justify-between gap-3">
@@ -137,11 +140,7 @@ export function SchoolCard({
                             <span className="truncate">{p.className}</span>
                           </span>
                           <span className={`shrink-0 text-xs ${p.onTrack ? "text-muted" : "text-amber-600"}`}>
-                            {p.overflow > 0
-                              ? "won\u2019t fit \u2014 get ahead"
-                              : p.finishISO
-                                ? `finishes ${formatShort(p.finishISO)}${p.onTrack ? "" : " \u2014 get ahead"}`
-                                : "\u2014"}
+                            {p.finishISO ? `finishes ${formatShort(p.finishISO)}` : "\u2014"}
                           </span>
                         </li>
                       ))}
@@ -152,7 +151,7 @@ export function SchoolCard({
 
               {ahead.length > 0 && (
                 <div>
-                  {label("Get ahead")}
+                  {label("Do some extra work")}
                   <SchoolGetAhead subjects={ahead} />
                 </div>
               )}

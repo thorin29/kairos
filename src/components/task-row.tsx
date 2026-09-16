@@ -89,7 +89,7 @@ export function TaskRow({ task }: { task: Row }) {
         </button>
       )}
 
-      {!task.locked && (
+      {!task.locked && task.category !== "SCHOOL" && (
         <button
           type="button"
           aria-label={`Delete ${task.title}`}

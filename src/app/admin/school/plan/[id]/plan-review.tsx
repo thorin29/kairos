@@ -140,7 +140,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
         `Published — ${res.created} item${res.created === 1 ? "" : "s"} scheduled` +
           (res.unscheduled > 0 ? `, ${res.unscheduled} left unscheduled (didn't fit).` : "."),
       );
-      router.refresh();
+      router.push("/admin/school/curriculum");
     });
 
   const remove = () =>

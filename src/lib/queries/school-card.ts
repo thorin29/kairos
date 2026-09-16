@@ -3,6 +3,15 @@ import { prisma } from "@/lib/prisma";
 function dISO(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
+function addDayISO(iso: string): string {
+  const x = new Date(`${iso}T00:00:00Z`);
+  x.setUTCDate(x.getUTCDate() + 1);
+  return x.toISOString().slice(0, 10);
+}
+function isoDow(iso: string): number {
+  const wd = new Date(`${iso}T00:00:00Z`).getUTCDay();
+  return wd === 0 ? 7 : wd;
+}
 
 export type SchoolProgress = {
   className: string;
@@ -31,7 +40,7 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
         units: { select: { scheduledDate: true, done: true } },
       },
     }),
-    prisma.term.findMany({ select: { name: true, endDate: true } }),
+    prisma.term.findMany({ select: { name: true, startDate: true, endDate: true } }),
   ]);
 
   const spring = terms.find((t) => t.name.toLowerCase().includes("spring"));
@@ -40,6 +49,9 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
     : terms.length
       ? dISO(terms.reduce((m, t) => (t.endDate > m.endDate ? t : m)).endDate)
       : null;
+  const lastTermEnd = terms.length
+    ? dISO(terms.reduce((m, t) => (t.endDate > m.endDate ? t : m)).endDate)
+    : null;
 
   const progress: SchoolProgress[] = plans
     .map((p) => {
@@ -47,11 +59,26 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
         .filter((u) => u.scheduledDate)
         .map((u) => dISO(u.scheduledDate as Date))
         .sort();
-      const finishISO = dates.length ? dates[dates.length - 1] : null;
+      const lastScheduled = dates.length ? dates[dates.length - 1] : null;
       const remaining = p.units.filter((u) => !u.done).length;
       const overflow = p.units.filter((u) => !u.done && !u.scheduledDate).length;
-      const onTrack =
-        overflow === 0 && (finishISO && targetISO ? finishISO <= targetISO : true);
+
+      // Projected finish: the last scheduled day, plus any overflow projected
+      // forward on weekdays (so a class that won't fit shows a real late date).
+      let finishISO = lastScheduled;
+      if (overflow > 0) {
+        let d = lastScheduled ?? lastTermEnd ?? null;
+        let left = overflow;
+        while (d && left > 0) {
+          d = addDayISO(d);
+          if (isoDow(d) <= 5) {
+            finishISO = d;
+            left -= 1;
+          }
+        }
+      }
+      const onTrack = finishISO && targetISO ? finishISO <= targetISO : true;
+
       return {
         className: p.class.name,
         subject: p.class.subject?.name ?? null,

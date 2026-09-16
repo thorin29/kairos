@@ -43,11 +43,11 @@ export default async function SchoolCurriculumPage() {
       <section className="mb-10">
         <SectionHeading>Curriculum plans</SectionHeading>
         <div className="mt-3 space-y-4">
+          <CurriculumPlans plans={classPlans} />
           <ClassPlanForm
             students={structure.people.map((p) => ({ id: p.id, name: p.name }))}
             subjects={structure.subjects.map((s) => s.name)}
           />
-          <CurriculumPlans plans={classPlans} />
         </div>
       </section>
 

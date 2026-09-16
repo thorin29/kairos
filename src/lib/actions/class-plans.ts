@@ -582,3 +582,39 @@ export async function compressClass(classId: string): Promise<void> {
   if (cls?.userId) revalidatePath(`/person/${cls.userId}`);
   revalidatePath("/admin/school");
 }
+
+/** Pull an upcoming piece of school work into today (from "do some extra work"),
+ *  then compress the class's remaining future work so the finish pulls in. The
+ *  item lands in today's list to be ticked off like anything else. */
+export async function addSchoolWorkToToday(taskId: string): Promise<void> {
+  await requireInteractive();
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: {
+      userId: true,
+      schoolWork: {
+        select: { id: true, dateSpecific: true, planUnit: { select: { id: true, planId: true } } },
+      },
+    },
+  });
+  if (!task) return;
+  await requireCanActFor(task.userId);
+
+  const today = todayISO();
+  const d = toDateColumn(today);
+  await prisma.$transaction(async (tx) => {
+    await tx.task.update({ where: { id: taskId }, data: { dueDate: d } });
+    const sw = task.schoolWork;
+    if (sw) {
+      if (!sw.dateSpecific) await tx.schoolWork.update({ where: { id: sw.id }, data: { startDate: d } });
+      if (sw.planUnit) await tx.classPlanUnit.update({ where: { id: sw.planUnit.id }, data: { scheduledDate: d } });
+    }
+  });
+
+  const planId = task.schoolWork?.planUnit?.planId;
+  if (planId) await reschedulePlanForward(planId, today);
+
+  revalidatePath("/");
+  revalidatePath(`/person/${task.userId}`);
+  revalidatePath("/tasks");
+}

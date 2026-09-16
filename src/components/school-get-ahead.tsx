@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { completeSchoolAhead } from "@/lib/actions/class-plans";
+import { addSchoolWorkToToday } from "@/lib/actions/class-plans";
 import { formatShort } from "@/lib/dates";
+import { ChevronLeftIcon } from "@/components/icons";
 import type { SchoolAheadSubject } from "@/lib/queries/school-get-ahead";
 
 export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] }) {
   const [picked, setPicked] = useState<string | null>(null);
   const [idx, setIdx] = useState(0);
-  const [doneCount, setDoneCount] = useState(0);
+  const [added, setAdded] = useState(0);
   const [pending, start] = useTransition();
 
   const current = subjects.find((s) => s.subject === picked) ?? null;
@@ -17,19 +18,19 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
   const pick = (subject: string) => {
     setPicked(subject);
     setIdx(0);
-    setDoneCount(0);
+    setAdded(0);
   };
   const back = () => {
     setPicked(null);
     setIdx(0);
-    setDoneCount(0);
+    setAdded(0);
   };
-  const complete = () => {
+  const addToday = () => {
     if (!item) return;
     const id = item.taskId;
     start(async () => {
-      await completeSchoolAhead(id);
-      setDoneCount((n) => n + 1);
+      await addSchoolWorkToToday(id);
+      setAdded((n) => n + 1);
       setIdx((i) => i + 1);
     });
   };
@@ -38,7 +39,8 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
     return (
       <div className="rounded-lg border border-hairline bg-surface p-4">
         <p className="mb-2 text-sm text-muted">
-          Finished today&rsquo;s work? Pick a subject to work ahead.
+          Pick a subject to pull its next lesson into today &mdash; do a little extra to finish on
+          time.
         </p>
         <div className="flex flex-wrap gap-2">
           {subjects.map((s) => (
@@ -49,7 +51,6 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
               className="rounded-full border border-hairline px-4 py-2 text-sm font-medium hover:border-accent"
             >
               {s.subject}
-              <span className="ml-1.5 text-xs text-muted">{s.items.length} ahead</span>
             </button>
           ))}
         </div>
@@ -61,8 +62,13 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
     <div className="rounded-lg border border-hairline bg-surface p-4">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-medium">{current.subject}</p>
-        <button type="button" onClick={back} className="text-xs text-muted hover:text-ink">
-          Back to subjects
+        <button
+          type="button"
+          onClick={back}
+          className="inline-flex items-center gap-1 rounded-full border border-hairline px-3 py-1 text-xs font-medium text-muted hover:border-accent hover:text-ink"
+        >
+          <ChevronLeftIcon className="h-3.5 w-3.5" />
+          Subjects
         </button>
       </div>
 
@@ -75,17 +81,17 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
           <button
             type="button"
             disabled={pending}
-            onClick={complete}
+            onClick={addToday}
             className="inline-flex h-9 shrink-0 items-center rounded-full bg-accent px-4 text-sm font-medium text-on-accent shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
           >
-            Mark done
+            Add to today
           </button>
         </div>
       ) : (
         <div>
           <p className="text-sm">
-            {doneCount > 0
-              ? `Nice — ${doneCount} ahead in ${current.subject}. That\u2019s everything queued up here.`
+            {added > 0
+              ? `Added ${added} to today in ${current.subject}. That\u2019s everything queued up here.`
               : `Nothing more queued up in ${current.subject} right now.`}
           </p>
           <button
@@ -98,8 +104,10 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
         </div>
       )}
 
-      {item && doneCount > 0 && (
-        <p className="mt-2 text-xs text-muted">{doneCount} done ahead so far.</p>
+      {item && added > 0 && (
+        <p className="mt-2 text-xs text-muted">
+          {added} added to today &mdash; tick them off in Today above.
+        </p>
       )}
     </div>
   );

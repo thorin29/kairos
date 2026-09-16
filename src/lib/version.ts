@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.397.0";
+export const APP_VERSION = "0.398.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,6 +116,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.398.0",
+    summary: [
+      "School card polish: the school-year end date shows at the top, each subject shows its projected finish date (orange when it lands after the year ends), and \u201cGet ahead\u201d is now \u201cDo some extra work.\u201d Working ahead pulls a lesson into today (\u201cAdd to today\u201d) to tick off with the rest \u2014 tap the subject again to add another. School work can't be deleted from the home page (admin-only). The back-to-subjects control is clearer.",
+      "Publishing a plan now returns you to Curriculum & schedule, and on that screen the import section sits above the build-a-class form.",
+    ],
+  },
   {
     version: "0.397.0",
     summary: [
