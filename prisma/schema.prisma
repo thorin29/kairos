@@ -185,6 +185,7 @@ model SchoolClass {
   work      SchoolWork[]
   members   ClassMember[]
   checkins  ClassCheckin[]
+  plan      ClassPlan?
 
   @@index([userId])
   @@index([termId])
@@ -254,6 +255,7 @@ model SchoolWork {
   dueMinutes   Int?
   classId   String?
   class     SchoolClass?   @relation(fields: [classId], references: [id], onDelete: SetNull)
+  planUnit  ClassPlanUnit?
   createdAt DateTime       @default(now())
 
   @@index([classId])
@@ -1485,4 +1487,54 @@ model PlayerCard {
   msBalance   String? // display string, e.g. "$12.50", from Family Safety
   platforms   String? // comma-joined systems used, e.g. "xbox" or "steam"
   updatedAt   DateTime @updatedAt
+}
+
+
+enum ClassPlanStatus {
+  DRAFT
+  PUBLISHED
+}
+
+/// A class's curriculum: an ordered list of units (lessons, tests, ...) that the
+/// builder spreads across the term's school days into SchoolWork. One per class.
+model ClassPlan {
+  id        String          @id @default(cuid())
+  classId   String          @unique
+  class     SchoolClass     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  /// Spans both semesters (spread across the whole school year) vs the class's
+  /// single term. When true, each term-build locks the slice inside its dates.
+  bothTerms Boolean         @default(false)
+  /// Items scheduled per school day (usually 1).
+  perDay    Int             @default(1)
+  /// Weekdays this class runs, ISO digits 1=Mon..7=Sun, e.g. "12345".
+  weekdays  String          @default("12345")
+  /// Sequence index of the first not-yet-done unit — scheduling starts here.
+  startIndex Int            @default(0)
+  status    ClassPlanStatus @default(DRAFT)
+  units     ClassPlanUnit[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+/// One ordered unit of a ClassPlan (a lesson, a test, ...). On publish each
+/// scheduled unit becomes a SchoolWork item on the student's card.
+model ClassPlanUnit {
+  id       String         @id @default(cuid())
+  planId   String
+  plan     ClassPlan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  seq      Int
+  label    String
+  /// Reuses the SchoolWork types; a lesson unit is stored as ASSIGNMENT, a test
+  /// as TEST (its label carries "Lesson N" / "Test N").
+  type     SchoolWorkType @default(ASSIGNMENT)
+  load     Int            @default(1)
+  done     Boolean        @default(false)
+  /// Assigned when the term is built/published; null until then.
+  scheduledDate DateTime? @db.Date
+  /// The generated SchoolWork once published; null while a draft.
+  workId   String?        @unique
+  work     SchoolWork?    @relation(fields: [workId], references: [id], onDelete: SetNull)
+
+  @@unique([planId, seq])
+  @@index([planId])
 }
