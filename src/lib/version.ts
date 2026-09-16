@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.391.0";
+export const APP_VERSION = "0.392.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -114,6 +114,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.392.0",
+    summary: [
+      "Working ahead now compresses the schedule: when a student completes upcoming school work early, the rest of that class's remaining work slides earlier so it finishes sooner (and a class that was overflowing can re-fit). Overdue work never reshuffles the schedule \u2014 only getting ahead does.",
+    ],
+  },
   {
     version: "0.391.0",
     summary: [
