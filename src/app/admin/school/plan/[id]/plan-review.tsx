@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { spreadUnits, spreadUnitsFit, type PlanUnit } from "@/lib/school/plan-builder";
-import { saveClassPlanDraft, publishClassPlan, deleteClassPlan } from "@/lib/actions/class-plans";
+import { saveClassPlanDraft, publishClassPlan, unpublishClassPlan, deleteClassPlan } from "@/lib/actions/class-plans";
 import type { PlanDetail, PlanUnitRow } from "@/lib/queries/class-plan";
 
 const WEEKDAYS: { n: number; label: string }[] = [
@@ -149,6 +149,12 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
       router.push("/admin/school");
     });
 
+  const unpublish = () =>
+    start(async () => {
+      await unpublishClassPlan(plan.id);
+      router.refresh();
+    });
+
   const weekdaysEmpty = weekdays.size === 0;
   const noTerm = windows.length === 0;
 
@@ -175,8 +181,16 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
         <div className="rounded-lg border border-hairline bg-surface p-4 text-sm">
           <p className="text-muted">
             This plan is <span className="font-medium text-ink">published</span> — its schoolwork is on{" "}
-            {plan.student}&rsquo;s card. To change it, delete this plan and re-import.
+            {plan.student}&rsquo;s card. Unpublish to reorder or re-time it, then publish again;
+            completed work is kept.
           </p>
+          <button
+            onClick={unpublish}
+            disabled={pending}
+            className="mt-3 rounded-md border border-accent px-3 py-1.5 text-sm font-medium text-accent disabled:opacity-50"
+          >
+            {pending ? "Unpublishing\u2026" : "Unpublish to edit"}
+          </button>
         </div>
       ) : (
         <>

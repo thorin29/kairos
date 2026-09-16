@@ -166,20 +166,19 @@ export default async function PersonPage({
     // (e.g. "Biology · Test · due 5/9") — handy while a window item sits as a
     // reminder before its due date.
     const sw = t.schoolWork;
+    // School rows read subject-first: the class/subject is the headline, and the
+    // lesson + type + due date are the detail line underneath.
+    const schoolSubject = sw ? (sw.class?.name ?? sw.subject) : null;
     const subtitle =
       t.category === "SCHOOL" && sw
-        ? [
-            sw.class?.name ?? sw.subject,
-            SCHOOL_TYPE_LABEL[sw.type],
-            `due ${formatShort(dueISO)}`,
-          ]
+        ? [t.title, SCHOOL_TYPE_LABEL[sw.type], `due ${formatShort(dueISO)}`]
             .filter(Boolean)
-            .join(" · ")
+            .join(" \u00b7 ")
         : undefined;
 
     return {
       id: t.id,
-      title,
+      title: t.category === "SCHOOL" && schoolSubject ? schoolSubject : title,
       category: t.category as keyof typeof CATEGORY_LABELS,
       status: t.status as string,
       dueDateISO: dueISO,

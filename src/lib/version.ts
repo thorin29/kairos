@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.398.0";
+export const APP_VERSION = "0.399.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,6 +116,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.399.0",
+    summary: [
+      "School card: each item now reads subject-first (class on top, lesson details below), the school-year end date is in the theme color, and each subject shows a \u201cfalling behind\u201d (orange) or \u201cgetting ahead!\u201d (green) tag once there's a real gap. For a class that won't finish in time, tap its projected finish date for a catch-up tip (e.g. \u201cdo 2 a day for the next 10 school days\u201d).",
+      "Published plans can be unpublished to edit and republished without losing completed work \u2014 republishing moves dates on the existing assignments instead of recreating them.",
+    ],
+  },
   {
     version: "0.398.0",
     summary: [

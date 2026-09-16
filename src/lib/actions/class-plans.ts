@@ -217,7 +217,16 @@ export async function publishClassPlan(planId: string): Promise<PublishResult> {
       },
       units: {
         orderBy: { seq: "asc" },
-        select: { id: true, label: true, type: true, load: true, done: true },
+        select: {
+          id: true,
+          label: true,
+          type: true,
+          load: true,
+          done: true,
+          workId: true,
+          scheduledDate: true,
+          work: { select: { taskId: true } },
+        },
       },
     },
   });
@@ -277,6 +286,19 @@ export async function publishClassPlan(planId: string): Promise<PublishResult> {
 
     for (const { unit, date } of placed) {
       const isTest = unit.type === "TEST";
+      if (unit.workId && unit.work?.taskId) {
+        // Republish: the unit already has work — move its dates, keep completion.
+        await tx.task.update({ where: { id: unit.work.taskId }, data: { dueDate: toDateColumn(date) } });
+        await tx.schoolWork.update({
+          where: { id: unit.workId },
+          data: { startDate: isTest ? null : toDateColumn(date) },
+        });
+        await tx.classPlanUnit.update({
+          where: { id: unit.id },
+          data: { scheduledDate: toDateColumn(date) },
+        });
+        continue;
+      }
       const task = await tx.task.create({
         data: {
           userId,
@@ -617,4 +639,19 @@ export async function addSchoolWorkToToday(taskId: string): Promise<void> {
   revalidatePath("/");
   revalidatePath(`/person/${task.userId}`);
   revalidatePath("/tasks");
+}
+
+/** Unpublish a plan back to draft so it can be edited and republished without
+ *  losing progress: the generated work (and any completions) stays put, and
+ *  republishing moves dates on the existing tasks rather than duplicating them. */
+export async function unpublishClassPlan(planId: string): Promise<void> {
+  await requireAdmin();
+  const plan = await prisma.classPlan.findUnique({
+    where: { id: planId },
+    select: { class: { select: { userId: true } } },
+  });
+  await prisma.classPlan.update({ where: { id: planId }, data: { status: "DRAFT" } });
+  revalidatePath("/admin/school");
+  revalidatePath(`/admin/school/plan/${planId}`);
+  if (plan?.class.userId) revalidatePath(`/person/${plan.class.userId}`);
 }
