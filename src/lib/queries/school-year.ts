@@ -331,3 +331,37 @@ export async function loadBreakReminders(
 
   return upcoming.filter((b) => !covered(b)).sort((a, b) => a.start.localeCompare(b.start));
 }
+
+export type VacationPrompt = { eventId: string; title: string; start: string; end: string };
+
+/** Vacations (PAUSE events) that touch the school year and haven't been decided
+ *  yet — the admin should choose whether school shifts around them or runs
+ *  through. Past vacations are ignored. */
+export async function loadVacationPrompts(today: string): Promise<VacationPrompt[]> {
+  const terms = await prisma.term.findMany({ select: { startDate: true, endDate: true } });
+  if (terms.length === 0) return [];
+  const winStart = terms.reduce((m, t) => (dISO(t.startDate) < m ? dISO(t.startDate) : m), dISO(terms[0].startDate));
+  const winEnd = terms.reduce((m, t) => (dISO(t.endDate) > m ? dISO(t.endDate) : m), dISO(terms[0].endDate));
+
+  const [pauses, decided] = await Promise.all([
+    prisma.event.findMany({ where: { kind: "PAUSE" }, select: { id: true, title: true, startsAt: true, endsAt: true } }),
+    prisma.schoolVacationDecision.findMany({ select: { eventId: true } }),
+  ]);
+  const decidedIds = new Set(decided.map((d) => d.eventId));
+
+  return pauses
+    .map((p) => ({
+      eventId: p.id,
+      title: p.title || "Vacation",
+      start: localParts(p.startsAt).iso,
+      end: localParts(new Date(p.endsAt.getTime() - 1)).iso,
+    }))
+    .filter(
+      (p) =>
+        !decidedIds.has(p.eventId) &&
+        p.end >= today && // not entirely in the past
+        p.start <= winEnd &&
+        p.end >= winStart, // overlaps the school year
+    )
+    .sort((a, b) => a.start.localeCompare(b.start));
+}

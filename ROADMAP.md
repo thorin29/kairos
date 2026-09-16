@@ -908,9 +908,10 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       (admin override / extend Spring only); planned break ⇄ real vacation
       **linking + reminders** *(v0.393: reminder banner before an unconfirmed
       planned break \u2014 confirm keeps it, cancel removes it and reclaims the days;
-      a break covered by a real vacation is auto-skipped)*. Remaining: the
-      "added an unplanned vacation \u2192 shift published work off those days, or keep
-      it?" prompt (needs a per-vacation school-continues flag + reconciled state).
+      a break covered by a real vacation is auto-skipped)*. *v0.394: adding a
+      vacation that overlaps the school year prompts shift-work-off (default) vs
+      keep-school-on, remembered per vacation; all-day vacation end-date fixed in
+      scheduling too.* Dynamic-scheduling phase complete.
 - [ ] **Wizard form** (the non-CSV intake path; paste + file-upload exist).
 - [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
       keep tweaks, highlight changes). Would need a term-level draft/published

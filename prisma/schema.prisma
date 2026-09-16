@@ -151,6 +151,17 @@ model SchoolBreak {
   createdAt DateTime @default(now())
 }
 
+/// The admin's decision for a vacation (PAUSE event) that overlaps school work:
+/// schoolContinues=false shifts work off those days (the default), true keeps
+/// school running through the vacation. A row means the vacation has been
+/// decided, so it stops prompting.
+model SchoolVacationDecision {
+  id              String   @id @default(cuid())
+  eventId         String   @unique
+  schoolContinues Boolean  @default(false)
+  createdAt       DateTime @default(now())
+}
+
 // A reusable class name, managed like the chore master list. A class picks its
 // name from this pool, so the same subject can be reused term to term (and
 // ticked off when spinning up a new semester).
