@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { importClassPlansFromCsv, deleteClassPlan } from "@/lib/actions/class-plans";
 import type { PlanRow } from "@/lib/queries/class-plan";
 
@@ -8,6 +9,7 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
   const [csv, setCsv] = useState("");
   const [messages, setMessages] = useState<string[]>([]);
   const [pending, start] = useTransition();
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const doImport = () => {
     if (!csv.trim()) return;
@@ -21,13 +23,28 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
     });
   };
 
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      setCsv(text);
+      setMessages([`Loaded "${file.name}" — review below and press Import.`]);
+    } catch {
+      setMessages(["Couldn't read that file."]);
+    } finally {
+      if (fileRef.current) fileRef.current.value = ""; // allow re-picking the same file
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-hairline bg-surface p-4">
         <p className="mb-1 text-sm font-medium">Import a curriculum CSV</p>
         <p className="mb-2 text-xs text-muted">
-          Paste a CSV — shorthand (one row per class with unitCount / testsAfterLesson) or
-          expanded (one row per unit). Creates draft plans; review the schedule below, then publish.
+          Upload a .csv file or paste rows — shorthand (one row per class with unitCount /
+          testsAfterLesson) or expanded (one row per unit). Creates draft plans; review the schedule
+          and publish from each plan.
         </p>
         <textarea
           value={csv}
@@ -36,7 +53,7 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
           placeholder="student,class,subject,term,perDay,weekdays,startFrom,unitNoun,unitCount,unitSize,testsAfterLesson"
           className="w-full rounded-md border border-hairline bg-bg px-3 py-2 font-mono text-xs outline-none focus:border-accent"
         />
-        <div className="mt-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <button
             onClick={doImport}
             disabled={pending || !csv.trim()}
@@ -44,6 +61,21 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
           >
             {pending ? "Importing\u2026" : "Import"}
           </button>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={pending}
+            className="rounded-md border border-hairline px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          >
+            Upload CSV file
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv,text/plain"
+            onChange={onFile}
+            className="hidden"
+          />
         </div>
         {messages.length > 0 && (
           <ul className="mt-3 space-y-1 text-xs text-muted">
@@ -64,7 +96,11 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
                 <div>
                   <p className="text-sm font-medium">
                     {p.student} &mdash; {p.className}
-                    <span className="ml-2 rounded bg-bg px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">
+                    <span
+                      className={`ml-2 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide ${
+                        p.status === "PUBLISHED" ? "bg-accent/15 text-accent" : "bg-bg text-muted"
+                      }`}
+                    >
                       {p.status}
                     </span>
                   </p>
@@ -73,12 +109,20 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
                     {p.term} \u00b7 {p.total} items ({p.done} done, {p.remaining} to schedule)
                   </p>
                 </div>
-                <button
-                  onClick={() => start(async () => { await deleteClassPlan(p.id); })}
-                  className="text-xs text-muted hover:text-danger"
-                >
-                  Delete
-                </button>
+                <div className="flex shrink-0 items-center gap-3">
+                  <Link
+                    href={`/admin/school/plan/${p.id}`}
+                    className="text-xs font-medium text-accent hover:underline"
+                  >
+                    {p.status === "PUBLISHED" ? "View" : "Review & publish"}
+                  </Link>
+                  <button
+                    onClick={() => start(async () => { await deleteClassPlan(p.id); })}
+                    className="text-xs text-muted hover:text-danger"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
               {p.remaining > 0 && (
                 <div className="mt-2 border-t border-hairline pt-2 text-xs">
