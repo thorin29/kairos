@@ -107,6 +107,7 @@ export async function GET(req: NextRequest) {
 
   return apiOk({
     meId: me.id,
+    today,
     seasonHint: selected ? selected.name : "All time",
     terms: terms.map((t) => ({ id: t.id, name: t.name })),
     selectedTermId: selected ? selected.id : null,
