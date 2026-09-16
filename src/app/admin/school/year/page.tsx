@@ -1,4 +1,5 @@
 import { AdminBack } from "@/components/admin-back";
+import Link from "next/link";
 import { SectionHeading } from "@/components/ui";
 import { loadSchoolYear, loadYearCalendar, loadStudentBars } from "@/lib/queries/school-year";
 import { SchoolYearSetup } from "./school-year-setup";
@@ -15,6 +16,9 @@ export default async function SchoolYearPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <AdminBack />
+      <Link href="/admin/school" className="mt-3 inline-block text-sm text-muted hover:text-ink">
+        &lsaquo; School
+      </Link>
       <SchoolYearSetup year={year} />
       <section className="mt-10">
         <SectionHeading>Year calendar</SectionHeading>

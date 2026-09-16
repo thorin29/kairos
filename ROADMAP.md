@@ -898,7 +898,8 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       still to do here: classes coloured per-subject on the calendar with
       past-term overflow in red *(v0.389: per-student class overlay + red
       overflow; holiday "no school" picker also shipped)*; admin reorg into
-      buttons/sections; then the dynamic reconciliation (planned break ⇄ real
+      buttons/sections *(v0.390: /admin/school is a hub \u2192 School year, Terms &
+      classes, Curriculum & schedule, Open work)*; then the dynamic reconciliation (planned break ⇄ real
       vacation linking + reminders; get-ahead shifts remaining work earlier;
       overdue never auto-shifts; finish-by = Spring end target + student School
       card).
