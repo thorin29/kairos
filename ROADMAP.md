@@ -903,9 +903,11 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       *v0.391: student School card on the home page (overdue + today + per-subject
       projected finish vs the finish-by = Spring-end target + get-ahead) shipped.*
       Still to do: get-ahead **shifts remaining work earlier** so a plan re-fits
-      as you work ahead; overdue never auto-shifts (admin override / extend Spring
-      only); planned break ⇄ real vacation **linking + reminders** ("no vacation
-      \u2192 reclaim the time", "added a vacation \u2192 shift or keep?").
+      as you work ahead *(v0.392: completing get-ahead work re-spreads the class's
+      future units earlier; overdue/today untouched)*; overdue never auto-shifts
+      (admin override / extend Spring only); planned break ⇄ real vacation
+      **linking + reminders** ("no vacation \u2192 reclaim the time", "added a
+      vacation \u2192 shift or keep?").
 - [ ] **Wizard form** (the non-CSV intake path; paste + file-upload exist).
 - [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
       keep tweaks, highlight changes). Would need a term-level draft/published

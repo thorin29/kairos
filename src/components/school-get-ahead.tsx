@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { toggleTask } from "@/lib/actions/tasks";
+import { completeSchoolAhead } from "@/lib/actions/class-plans";
 import { formatShort } from "@/lib/dates";
 import type { SchoolAheadSubject } from "@/lib/queries/school-get-ahead";
 
@@ -28,7 +28,7 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
     if (!item) return;
     const id = item.taskId;
     start(async () => {
-      await toggleTask(id);
+      await completeSchoolAhead(id);
       setDoneCount((n) => n + 1);
       setIdx((i) => i + 1);
     });
