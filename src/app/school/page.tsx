@@ -7,6 +7,7 @@ import {
   loadSchoolMetrics,
   loadClassOptions,
   type ClassRow,
+  type SchoolItem,
 } from "@/lib/queries/school";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { todayISO, formatShort } from "@/lib/dates";
@@ -62,9 +63,19 @@ export default async function SchoolPage({
     ? people.filter((p) => visible.includes(p.id))
     : people;
 
-  const anyWork =
-    shownPeople.some((p) => p.items.length > 0) ||
-    shownPeople.some((p) => (classesByPerson.get(p.id)?.length ?? 0) > 0);
+  // Each card shows only what matters day-to-day: overdue work, what's due
+  // today, and this week's classes that meet on the calendar — not every lesson.
+  const cards = shownPeople
+    .map((person) => ({
+      person,
+      overdueItems: person.items.filter((it) => it.overdue),
+      todayItems: person.items.filter((it) => !it.overdue && it.dueISO === today),
+      meetingClasses: (classesByPerson.get(person.id) ?? []).filter((c) => c.meeting),
+    }))
+    .filter(
+      (c) => c.overdueItems.length > 0 || c.todayItems.length > 0 || c.meetingClasses.length > 0,
+    );
+  const anyWork = cards.length > 0;
   const anyStats = metrics.some((m) => m.total > 0);
 
   return (
@@ -87,125 +98,68 @@ export default async function SchoolPage({
 
         {!anyWork ? (
           <Card className="p-6 text-sm text-muted">
-            Nothing due right now. Assignments and tests will show here as they
-            get added.
+            Nothing due right now. Overdue work, today&rsquo;s work, and this week&rsquo;s classes
+            will show here.
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {shownPeople
-              .filter(
-                (p) =>
-                  p.items.length > 0 ||
-                  (classesByPerson.get(p.id)?.length ?? 0) > 0,
-              )
-              .map((person) => {
-                const classes = classesByPerson.get(person.id) ?? [];
-                return (
-                  <Card key={person.id} className="p-5">
-                    <Link
-                      href={`/person/${person.id}`}
-                      className="flex items-center gap-3"
-                    >
-                      <Avatar
-                        name={person.name}
-                        color={person.color}
-                        avatarPath={person.avatarPath} avatarPosition={person.avatarPosition}
-                        size="sm"
-                      />
-                      <span className="font-display font-semibold">
-                        {person.name}
-                      </span>
-                      <span className="ml-auto text-xs text-muted">
-                        {person.pending === 0
-                          ? "all caught up"
-                          : `${person.pending} open${
-                              person.overdue > 0
-                                ? ` \u00b7 ${person.overdue} late`
-                                : ""
-                            }`}
-                      </span>
-                    </Link>
+            {cards.map(({ person, overdueItems, todayItems, meetingClasses }) => (
+              <Card key={person.id} className="p-5">
+                <Link href={`/person/${person.id}`} className="flex items-center gap-3">
+                  <Avatar
+                    name={person.name}
+                    color={person.color}
+                    avatarPath={person.avatarPath}
+                    avatarPosition={person.avatarPosition}
+                    size="sm"
+                  />
+                  <span className="font-display font-semibold">{person.name}</span>
+                  <span className="ml-auto text-xs text-muted">
+                    {person.pending === 0
+                      ? "all caught up"
+                      : `${person.pending} open${person.overdue > 0 ? ` \u00b7 ${person.overdue} late` : ""}`}
+                  </span>
+                </Link>
 
-                    {classes.length > 0 && (
-                      <ul className="mt-4 space-y-1.5">
-                        {classes.map((c) => (
-                          <li
-                            key={c.id}
-                            className="flex items-center gap-2 text-sm"
-                          >
-                            <span
-                              className="h-2.5 w-2.5 shrink-0 rounded-full"
-                              style={{
-                                backgroundColor:
-                                  c.color ?? "var(--color-hairline)",
-                              }}
-                            />
-                            <span className="font-medium">{c.name}</span>
-                            {c.meeting && (
-                              <span className="truncate text-xs text-muted">
-                                {c.meeting}
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                {overdueItems.length > 0 && (
+                  <div className="mt-4 border-t border-hairline pt-3">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-red-700">
+                      Overdue
+                    </p>
+                    <ul className="space-y-1">{overdueItems.map((it) => renderItem(it))}</ul>
+                  </div>
+                )}
 
-                    {person.items.length > 0 &&
-                      (() => {
-                        const groups = new Map<
-                          string,
-                          { color: string | null; items: typeof person.items }
-                        >();
-                        for (const it of person.items) {
-                          const key = it.className ?? "Other work";
-                          if (!groups.has(key))
-                            groups.set(key, { color: it.classColor, items: [] });
-                          groups.get(key)!.items.push(it);
-                        }
-                        return (
-                          <div className="mt-4 space-y-3 border-t border-hairline pt-4">
-                            {[...groups.entries()].map(([name, g]) => (
-                              <div key={name}>
-                                <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-muted">
-                                  <span
-                                    className="h-2 w-2 rounded-full"
-                                    style={{
-                                      backgroundColor:
-                                        g.color ?? "var(--color-hairline)",
-                                    }}
-                                  />
-                                  {name}
-                                </p>
-                                <ul className="space-y-1.5">
-                                  {g.items.map((it) => (
-                                    <li key={it.id} className="text-sm">
-                                      <span className="font-medium">
-                                        {it.title}
-                                      </span>
-                                      <span className="ml-2 text-xs text-muted">
-                                        {SCHOOL_TYPE_LABEL[it.type]}
-                                        <span
-                                          className={`tabular ml-2 ${
-                                            it.overdue
-                                              ? "font-medium text-red-700"
-                                              : ""
-                                          }`}
-                                        >
-                                          due {formatShort(it.dueISO)}
-                                        </span>
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                  </Card>
-                );
-              })}
+                {todayItems.length > 0 && (
+                  <div className="mt-4 border-t border-hairline pt-3">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
+                      Due today
+                    </p>
+                    <ul className="space-y-1">{todayItems.map((it) => renderItem(it))}</ul>
+                  </div>
+                )}
+
+                {meetingClasses.length > 0 && (
+                  <div className="mt-4 border-t border-hairline pt-3">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
+                      This week&rsquo;s classes
+                    </p>
+                    <ul className="space-y-1.5">
+                      {meetingClasses.map((c) => (
+                        <li key={c.id} className="flex items-center gap-2 text-sm">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: c.color ?? "var(--color-hairline)" }}
+                          />
+                          <span className="font-medium">{c.name}</span>
+                          {c.meeting && <span className="truncate text-xs text-muted">{c.meeting}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </Card>
+            ))}
           </div>
         )}
 
@@ -304,6 +258,20 @@ export default async function SchoolPage({
         </section>
       </main>
     </>
+  );
+}
+
+function renderItem(it: SchoolItem) {
+  return (
+    <li key={it.id} className="text-sm">
+      <span className="font-medium">{it.className ?? it.subject ?? "School"}</span>
+      <span className="ml-2 text-xs text-muted">
+        {it.title} &middot; {SCHOOL_TYPE_LABEL[it.type]} &middot;{" "}
+        <span className={`tabular ${it.overdue ? "font-medium text-red-700" : ""}`}>
+          due {formatShort(it.dueISO)}
+        </span>
+      </span>
+    </li>
   );
 }
 
