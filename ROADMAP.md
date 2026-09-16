@@ -891,9 +891,11 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       and re-opens to edit or to add another student's classes. Breaks feed
       `noSchoolDaysFor`. Full class delete (`deleteSchoolClass`) removes the class,
       plan, generated work, members and check-ins.
-      *Next for this area (Phase 2):* the month-strip **calendar view** (terms/
-      breaks/holidays/weekends, then classes coloured per-subject with past-term
-      overflow in red); admin reorg into buttons/sections; then the dynamic
+      *Next for this area (Phase 2):* the month-strip **calendar view**
+      *(empty windows shipped v0.387: months with semester bands, day squares,
+      weekends shaded, holidays/breaks marked, on the Set up school year screen)* —
+      next, classes coloured per-subject on it with past-term overflow in red;
+      admin reorg into buttons/sections; then the dynamic
       reconciliation (get-ahead shifts remaining work earlier; overdue never
       auto-shifts; planned-break reminders + "no vacation \u2192 reclaim the time";
       "added a vacation \u2192 shift or keep?"; finish-by = Spring end target +
