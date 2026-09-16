@@ -2,9 +2,10 @@ import Link from "next/link";
 import { AdminBack } from "@/components/admin-back";
 import { todayISO } from "@/lib/dates";
 import { loadRolloverState } from "@/lib/queries/school";
-import { loadBreakReminders } from "@/lib/queries/school-year";
+import { loadBreakReminders, loadVacationPrompts } from "@/lib/queries/school-year";
 import { RolloverBanner } from "./rollover-banner";
 import { BreakReminders } from "./break-reminders";
+import { VacationPrompts } from "./vacation-prompts";
 
 export const dynamic = "force-dynamic";
 
@@ -33,9 +34,10 @@ const CARDS = [
 
 export default async function AdminSchoolPage() {
   const today = todayISO();
-  const [rollover, breakReminders] = await Promise.all([
+  const [rollover, breakReminders, vacationPrompts] = await Promise.all([
     loadRolloverState(today),
     loadBreakReminders(today),
+    loadVacationPrompts(today),
   ]);
 
   return (
@@ -52,6 +54,7 @@ export default async function AdminSchoolPage() {
 
       {rollover.needed && <RolloverBanner state={rollover} />}
       <BreakReminders breaks={breakReminders} />
+      <VacationPrompts vacations={vacationPrompts} />
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {CARDS.map((c) => (

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { schoolClosedHolidayEntries } from "@/lib/holidays";
+import { localParts } from "@/lib/dates";
 
 function dISO(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -34,14 +35,21 @@ export async function noSchoolDaysFor(
 ): Promise<Set<string>> {
   const skip = new Set<string>();
 
-  // PAUSE events — every day the vacation covers is a no-school day.
-  const pauses = await prisma.event.findMany({
-    where: { kind: "PAUSE" },
-    select: { startsAt: true, endsAt: true },
-  });
+  // PAUSE events (vacations) — a no-school block unless the admin chose to keep
+  // school running through it. All-day events store an exclusive end, so the last
+  // covered day is the household-local day of (end - 1ms).
+  const [pauses, keep] = await Promise.all([
+    prisma.event.findMany({ where: { kind: "PAUSE" }, select: { id: true, startsAt: true, endsAt: true } }),
+    prisma.schoolVacationDecision.findMany({
+      where: { schoolContinues: true },
+      select: { eventId: true },
+    }),
+  ]);
+  const keepIds = new Set(keep.map((k) => k.eventId));
   for (const e of pauses) {
-    let d = dISO(e.startsAt);
-    const end = dISO(e.endsAt);
+    if (keepIds.has(e.id)) continue;
+    let d = localParts(e.startsAt).iso;
+    const end = localParts(new Date(e.endsAt.getTime() - 1)).iso;
     while (d <= end) {
       skip.add(d);
       d = addDay(d);

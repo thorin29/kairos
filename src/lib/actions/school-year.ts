@@ -131,3 +131,18 @@ export async function cancelSchoolBreak(id: string): Promise<void> {
   revalidatePath("/admin/school");
   revalidatePath("/admin/school/year");
 }
+
+/** Decide a vacation that overlaps school work: schoolContinues=false shifts the
+ *  work off those days (default), true keeps school running through it. Either way
+ *  the vacation stops prompting. */
+export async function decideVacation(eventId: string, schoolContinues: boolean): Promise<void> {
+  await requireAdmin();
+  await prisma.schoolVacationDecision.upsert({
+    where: { eventId },
+    update: { schoolContinues },
+    create: { eventId, schoolContinues },
+  });
+  if (!schoolContinues) await rescheduleAllPublishedPlansForward();
+  revalidatePath("/admin/school");
+  revalidatePath("/admin/school/year");
+}
