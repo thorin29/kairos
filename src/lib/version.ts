@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.392.0";
+export const APP_VERSION = "0.393.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -109,11 +109,18 @@ export const MIGRATIONS = [
   "98_class_plan_start_date",
   "99_class_plan_fit_term",
   "100_school_break",
+  "101_school_break_confirmed",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.393.0",
+    summary: [
+      "Planned break reminders: before a planned break arrives, School admin shows a reminder to confirm it. \u201cTaking it\u201d keeps the days off; \u201cNot taking it\u201d cancels the break and pulls school work into those days so the plans re-fit. A break already covered by a real vacation is skipped (no nagging).",
+    ],
+  },
   {
     version: "0.392.0",
     summary: [

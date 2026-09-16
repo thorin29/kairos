@@ -5,6 +5,11 @@ import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
 import { setSchoolClosedHolidayKeys } from "@/lib/holidays";
+import { rescheduleAllPublishedPlansForward } from "@/lib/actions/class-plans";
+
+function dISO(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
 
 type TermInput = { start: string; end: string } | null;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -54,17 +59,28 @@ export async function saveSchoolYear(input: SaveYearInput): Promise<{ error: str
   await upsertTerm("summer", "Summer", 2, input.summer);
 
   const breaks = input.breaks.filter((b) => ISO.test(b.start) && ISO.test(b.end) && b.end >= b.start);
+  const existing = await prisma.schoolBreak.findMany({
+    select: { name: true, startDate: true, endDate: true, confirmed: true },
+  });
+  const wasConfirmed = (name: string, start: string, end: string) =>
+    existing.some(
+      (e) => e.name === name && dISO(e.startDate) === start && dISO(e.endDate) === end && e.confirmed,
+    );
   await prisma.$transaction([
     prisma.schoolBreak.deleteMany({}),
     ...(breaks.length
       ? [
           prisma.schoolBreak.createMany({
-            data: breaks.map((b) => ({
-              name: b.name.trim() || "Break",
-              startDate: toDateColumn(b.start),
-              endDate: toDateColumn(b.end),
-              planned: true,
-            })),
+            data: breaks.map((b) => {
+              const name = b.name.trim() || "Break";
+              return {
+                name,
+                startDate: toDateColumn(b.start),
+                endDate: toDateColumn(b.end),
+                planned: true,
+                confirmed: wasConfirmed(name, b.start, b.end),
+              };
+            }),
           }),
         ]
       : []),
@@ -95,4 +111,23 @@ export async function deleteSchoolClass(classId: string): Promise<void> {
   revalidatePath("/");
   revalidatePath(`/person/${cls.userId}`);
   revalidatePath("/admin/school");
+}
+
+/** Mark a planned break as happening — stops the reminder; it stays a no-school
+ *  block on the calendar and in scheduling. */
+export async function confirmSchoolBreak(id: string): Promise<void> {
+  await requireAdmin();
+  await prisma.schoolBreak.update({ where: { id }, data: { confirmed: true } });
+  revalidatePath("/admin/school");
+  revalidatePath("/admin/school/year");
+}
+
+/** Cancel a planned break that isn't happening: remove it and pull school work
+ *  into the days it had reserved (re-fits the plans a little earlier). */
+export async function cancelSchoolBreak(id: string): Promise<void> {
+  await requireAdmin();
+  await prisma.schoolBreak.delete({ where: { id } });
+  await rescheduleAllPublishedPlansForward();
+  revalidatePath("/admin/school");
+  revalidatePath("/admin/school/year");
 }

@@ -452,3 +452,17 @@ export async function completeSchoolAhead(taskId: string): Promise<void> {
   revalidatePath(`/person/${task.userId}`);
   revalidatePath("/tasks");
 }
+
+/** Re-spread every published plan's future work forward — used to reclaim days
+ *  when a planned break is cancelled (its days become school days again). */
+export async function rescheduleAllPublishedPlansForward(): Promise<void> {
+  await requireAdmin();
+  const plans = await prisma.classPlan.findMany({
+    where: { status: "PUBLISHED" },
+    select: { id: true },
+  });
+  const today = todayISO();
+  for (const p of plans) await reschedulePlanForward(p.id, today);
+  revalidatePath("/");
+  revalidatePath("/admin/school");
+}
