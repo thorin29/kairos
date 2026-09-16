@@ -15,6 +15,7 @@ import { generateReadingTasks } from "@/lib/bible/generate";
 import { loadPersonalPlan } from "@/lib/queries/personal-plan";
 import { loadOpenTasks } from "@/lib/queries/overview";
 import { loadAlwaysOpenChores } from "@/lib/queries/chores-summary";
+import { loadGetAhead } from "@/lib/queries/get-ahead";
 import { loadDaySchedule } from "@/lib/queries/calendar";
 import { pendingMoneyCount } from "@/lib/queries/money";
 import { pendingBibleRewards } from "@/lib/bible-rewards";
@@ -88,6 +89,8 @@ export type ApiDashboard = {
   personalReading: { passage: string; read: boolean } | null;
   /** "Did you do X?" prompts for finished sport events today (this person only). */
   sportPrompts: { eventId: string; title: string; dateISO: string }[];
+  /** Upcoming chores this person is next up for and can do early for a bonus. */
+  getAhead: { taskId: string; title: string; dueDateISO: string; bonus: number }[];
   /** Household chores anyone can take today (chores only — never other
    *  categories). Claimed for the enrolled person via /chores/claim. */
   upForGrabs: {
@@ -140,6 +143,7 @@ export async function loadApiDashboard(
   isAdmin = false,
 ): Promise<ApiDashboard> {
   await ensureGenerated(dayISO, today);
+  const getAhead = dayISO === today ? await loadGetAhead(userId, today) : [];
 
   const [tasks, workoutNames] = await Promise.all([
     loadPersonDay(userId, dayISO),
@@ -307,6 +311,7 @@ export async function loadApiDashboard(
     personalReading,
     upForGrabs,
     alwaysOpen,
+    getAhead: getAhead.map((c) => ({ taskId: c.taskId, title: c.title, dueDateISO: c.dueDateISO, bonus: c.bonus })),
     schedule,
     sportPrompts,
   };
