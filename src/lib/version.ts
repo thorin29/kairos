@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.394.0";
+export const APP_VERSION = "0.395.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,6 +116,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.395.0",
+    summary: [
+      "Build a class without a CSV: Curriculum & schedule has a form to set up a class \u2014 pick the student, term, days and start, then either generate numbered lessons (with a test every N) or type a list of items (prefix a line with TEST: for a quiz). It creates a draft you review and publish like any other.",
+    ],
+  },
   {
     version: "0.394.0",
     summary: [

@@ -912,7 +912,9 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       vacation that overlaps the school year prompts shift-work-off (default) vs
       keep-school-on, remembered per vacation; all-day vacation end-date fixed in
       scheduling too.* Dynamic-scheduling phase complete.
-- [ ] **Wizard form** (the non-CSV intake path; paste + file-upload exist).
+- [x] **Wizard form (v0.395):** Curriculum & schedule has a "Build a class" form
+      (student/term/days/start + numbered-lessons or a typed list with TEST: lines)
+      that creates a draft plan, no CSV needed. Paste + file-upload still there.
 - [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
       keep tweaks, highlight changes). Would need a term-level draft/published
       status, which Stage 2's in-place rebalance intentionally didn't add.

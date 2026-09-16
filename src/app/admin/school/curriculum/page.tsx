@@ -3,12 +3,18 @@ import { AdminBack } from "@/components/admin-back";
 import { SectionHeading } from "@/components/ui";
 import { loadClassPlans } from "@/lib/queries/class-plan";
 import { loadTermCompileOptions } from "@/lib/queries/term-compile";
+import { loadSchoolStructure } from "@/lib/queries/school";
 import { CurriculumPlans } from "../curriculum-plans";
+import { ClassPlanForm } from "../class-plan-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function SchoolCurriculumPage() {
-  const [classPlans, termOptions] = await Promise.all([loadClassPlans(), loadTermCompileOptions()]);
+  const [classPlans, termOptions, structure] = await Promise.all([
+    loadClassPlans(),
+    loadTermCompileOptions(),
+    loadSchoolStructure(),
+  ]);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -22,7 +28,11 @@ export default async function SchoolCurriculumPage() {
 
       <section className="mb-10">
         <SectionHeading>Curriculum plans</SectionHeading>
-        <div className="mt-3">
+        <div className="mt-3 space-y-4">
+          <ClassPlanForm
+            students={structure.people.map((p) => ({ id: p.id, name: p.name }))}
+            subjects={structure.subjects.map((s) => s.name)}
+          />
           <CurriculumPlans plans={classPlans} />
         </div>
       </section>

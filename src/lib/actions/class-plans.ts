@@ -466,3 +466,103 @@ export async function rescheduleAllPublishedPlansForward(): Promise<void> {
   revalidatePath("/");
   revalidatePath("/admin/school");
 }
+
+export type ClassFormInput = {
+  studentId: string;
+  className: string;
+  subject: string;
+  term: "fall" | "spring" | "summer" | "both";
+  perDay: number;
+  weekdays: number[]; // ISO 1..7
+  startDate: string; // "" or YYYY-MM-DD
+  startFrom: string; // "" or a number / label
+  fitToTerm: boolean;
+  units: PlanUnit[]; // generated on the client (numbered or a typed list)
+};
+
+/** Create a draft class plan from the wizard form (the non-CSV path). Mirrors the
+ *  CSV import: resolves the student/term/subject, finds or creates the class,
+ *  replaces any existing draft, and creates the plan + units. */
+export async function createClassPlanFromForm(
+  input: ClassFormInput,
+): Promise<{ error: string | null }> {
+  await requireAdmin();
+  const name = input.className.trim();
+  if (!input.studentId) return { error: "Pick a student." };
+  if (!name) return { error: "Give the class a name." };
+  if (input.units.length === 0) return { error: "Add at least one lesson." };
+
+  const student = await prisma.user.findUnique({
+    where: { id: input.studentId },
+    select: { id: true },
+  });
+  if (!student) return { error: "That student no longer exists." };
+
+  const terms = await prisma.term.findMany({
+    orderBy: { startDate: "asc" },
+    select: { id: true, name: true },
+  });
+  const both = input.term === "both";
+  const termId = both
+    ? terms[0]?.id ?? null
+    : terms.find((t) => t.name.toLowerCase().includes(input.term))?.id ?? terms[0]?.id ?? null;
+
+  let subjectId: string | null = null;
+  if (input.subject.trim()) {
+    const subj = await prisma.subject.upsert({
+      where: { name: input.subject.trim() },
+      update: {},
+      create: { name: input.subject.trim() },
+      select: { id: true },
+    });
+    subjectId = subj.id;
+  }
+
+  let cls = await prisma.schoolClass.findFirst({
+    where: { userId: input.studentId, name, termId },
+    select: { id: true, plan: { select: { id: true, status: true } } },
+  });
+  if (!cls) {
+    cls = await prisma.schoolClass.create({
+      data: { userId: input.studentId, name, termId, subjectId },
+      select: { id: true, plan: { select: { id: true, status: true } } },
+    });
+  }
+  if (cls.plan) {
+    if (cls.plan.status === "PUBLISHED") {
+      return { error: `${name} already has a published plan — delete it first to rebuild it.` };
+    }
+    await prisma.classPlan.delete({ where: { id: cls.plan.id } });
+  }
+
+  const weekdays = input.weekdays.filter((n) => n >= 1 && n <= 7);
+  const perDay = Math.min(Math.max(1, Math.round(input.perDay) || 1), 20);
+  const startIndex = startIndexOf(input.units, input.startFrom);
+  const startDate = /^\d{4}-\d{2}-\d{2}$/.test(input.startDate) ? input.startDate : "";
+
+  await prisma.classPlan.create({
+    data: {
+      classId: cls.id,
+      bothTerms: both,
+      perDay,
+      weekdays: weekdays.join("") || "12345",
+      startIndex,
+      startDate: startDate ? toDateColumn(startDate) : null,
+      fitToTerm: input.fitToTerm,
+      status: "DRAFT",
+      units: {
+        create: input.units.map((u, i) => ({
+          seq: i,
+          label: u.label,
+          type: u.type as SchoolWorkType,
+          load: u.load,
+          done: i < startIndex,
+        })),
+      },
+    },
+  });
+
+  revalidatePath("/admin/school");
+  revalidatePath("/admin/school/curriculum");
+  return { error: null };
+}
