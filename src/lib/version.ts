@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.388.0";
+export const APP_VERSION = "0.389.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -114,6 +114,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.389.0",
+    summary: [
+      "Holidays off school: the Set up school year screen now lists the year's holidays with a checkbox for each \u2014 uncheck the ones that aren't school days off, and scheduling/the calendar respect it.",
+      "Classes on the calendar: pick a student, then a class, to overlay that class's days on the year calendar in its own color, with any days past the term end shown in red.",
+      "Date pickers on the school-year screen now match the rest of the app, and a planned break with no name saves fine (it just needs dates).",
+    ],
+  },
   {
     version: "0.388.0",
     summary: [

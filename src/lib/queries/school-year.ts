@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { holidayEntries } from "@/lib/holidays";
+import {
+  holidayEntries,
+  schoolClosedHolidayEntries,
+  getSchoolClosedHolidayKeys,
+} from "@/lib/holidays";
 import { localParts } from "@/lib/dates";
 
 function addDayISO(iso: string): string {
@@ -44,6 +48,10 @@ export type SchoolYear = {
   totalWeeks: number;
   /** The gap between fall end and spring start, if any (the winter break). */
   winterBreak: { start: string; end: string; days: number } | null;
+  /** Enabled holidays that fall in the year, for the no-school picker. */
+  holidayOptions: { key: string; name: string; iso: string }[];
+  /** Which holiday keys are currently marked no-school. */
+  schoolClosedKeys: string[];
 };
 
 function classify(name: string): "fall" | "spring" | "summer" | null {
@@ -90,6 +98,22 @@ export async function loadSchoolYear(): Promise<SchoolYear> {
     };
   }
 
+  // Enabled holidays within the school year, for the no-school picker.
+  const allStarts = [fall, spring, summer].filter(Boolean) as YearTerm[];
+  let holidayOptions: { key: string; name: string; iso: string }[] = [];
+  if (allStarts.length) {
+    const rStart = allStarts.reduce((m, t) => (t.start < m ? t.start : m), allStarts[0].start);
+    const rEnd = allStarts.reduce((m, t) => (t.end > m ? t.end : m), allStarts[0].end);
+    const seen = new Set<string>();
+    for (const h of await holidayEntries(enumerateDays(rStart, rEnd))) {
+      if (seen.has(h.key)) continue;
+      seen.add(h.key);
+      holidayOptions.push({ key: h.key, name: h.label, iso: h.iso });
+    }
+    holidayOptions = holidayOptions.sort((a, b) => a.iso.localeCompare(b.iso));
+  }
+  const schoolClosedKeys = [...(await getSchoolClosedHolidayKeys())];
+
   return {
     fall,
     spring,
@@ -100,6 +124,8 @@ export async function loadSchoolYear(): Promise<SchoolYear> {
     summerWeeks,
     totalWeeks: fallWeeks + springWeeks + summerWeeks,
     winterBreak,
+    holidayOptions,
+    schoolClosedKeys,
   };
 }
 
@@ -166,7 +192,7 @@ export async function loadYearCalendar(): Promise<YearCalendar> {
     }))
     .filter((b) => b.end >= b.start && b.end >= start && b.start <= end);
 
-  const holidays = (await holidayEntries(enumerateDays(start, end))).map((h) => ({
+  const holidays = (await schoolClosedHolidayEntries(enumerateDays(start, end))).map((h) => ({
     iso: h.iso,
     name: h.label,
   }));
@@ -186,4 +212,86 @@ export async function loadYearCalendar(): Promise<YearCalendar> {
     vacations,
     plannedBreaks,
   };
+}
+
+export type ClassBar = {
+  className: string;
+  subject: string | null;
+  color: string;
+  scheduledDays: string[]; // dated units (class color)
+  overflowDays: string[]; // projected days past the term end (red)
+};
+export type StudentBars = { studentId: string; studentName: string; bars: ClassBar[] };
+
+const BAR_PALETTE = [
+  "#2563eb", "#dc2626", "#16a34a", "#9333ea", "#ea580c",
+  "#0891b2", "#c026d3", "#65a30d", "#e11d48", "#0d9488",
+];
+function dowOf(s: string): number {
+  const wd = new Date(`${s}T00:00:00Z`).getUTCDay();
+  return wd === 0 ? 7 : wd;
+}
+
+/** Per student, one bar per published class: the days it's scheduled (its color)
+ *  and any overflow projected past the term end (red). Powers the calendar's
+ *  per-class overlay. */
+export async function loadStudentBars(): Promise<StudentBars[]> {
+  const [plans, allTerms] = await Promise.all([
+    prisma.classPlan.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: { createdAt: "asc" },
+      select: {
+        bothTerms: true,
+        class: {
+          select: {
+            name: true,
+            color: true,
+            termId: true,
+            user: { select: { id: true, name: true } },
+            subject: { select: { name: true } },
+          },
+        },
+        units: { select: { scheduledDate: true, done: true } },
+      },
+    }),
+    prisma.term.findMany({ orderBy: { startDate: "asc" }, select: { id: true, endDate: true } }),
+  ]);
+
+  const maxEnd = allTerms.reduce((m, t) => (dISO(t.endDate) > m ? dISO(t.endDate) : m), "");
+  const byStudent = new Map<string, StudentBars>();
+  let ci = 0;
+
+  for (const p of plans) {
+    const st = p.class.user;
+    const bucket: StudentBars =
+      byStudent.get(st.id) ?? { studentId: st.id, studentName: st.name, bars: [] };
+    byStudent.set(st.id, bucket);
+
+    const termEnd = p.bothTerms
+      ? maxEnd
+      : dISO(allTerms.find((t) => t.id === p.class.termId)?.endDate ?? new Date(0)) || maxEnd;
+
+    const scheduledDays = p.units
+      .filter((u) => u.scheduledDate)
+      .map((u) => dISO(u.scheduledDate as Date));
+    const overflowCount = p.units.filter((u) => !u.done && !u.scheduledDate).length;
+
+    const overflowDays: string[] = [];
+    let d = termEnd ? addDayISO(termEnd) : "";
+    while (d && overflowDays.length < overflowCount) {
+      if (dowOf(d) <= 5) overflowDays.push(d);
+      d = addDayISO(d);
+    }
+
+    bucket.bars.push({
+      className: p.class.name,
+      subject: p.class.subject?.name ?? null,
+      color: p.class.color || BAR_PALETTE[ci % BAR_PALETTE.length],
+      scheduledDays,
+      overflowDays,
+    });
+    ci += 1;
+  }
+
+  return [...byStudent.values()].sort((a, b) => a.studentName.localeCompare(b.studentName));
 }

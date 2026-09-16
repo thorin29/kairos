@@ -159,6 +159,37 @@ export async function setEnabledHolidayKeys(keys: string[]): Promise<void> {
   await setSetting(HOLIDAY_SETTING, JSON.stringify(clean));
 }
 
+const SCHOOL_CLOSED_SETTING = "school_closed_holidays";
+
+/** Which enabled holidays are no-school days. Defaults (when never set) to every
+ *  enabled holiday, so behavior is unchanged until an admin picks a subset. */
+export async function getSchoolClosedHolidayKeys(): Promise<Set<string>> {
+  const raw = await getSetting(SCHOOL_CLOSED_SETTING);
+  if (raw == null) return await getEnabledHolidayKeys();
+  try {
+    const arr: unknown = JSON.parse(raw);
+    if (Array.isArray(arr)) return new Set(arr.filter((k): k is string => typeof k === "string"));
+  } catch {
+    // fall through
+  }
+  return await getEnabledHolidayKeys();
+}
+
+export async function setSchoolClosedHolidayKeys(keys: string[]): Promise<void> {
+  const valid = new Set(HOLIDAYS.map((h) => h.key));
+  const clean = [...new Set(keys)].filter((k) => valid.has(k));
+  await setSetting(SCHOOL_CLOSED_SETTING, JSON.stringify(clean));
+}
+
+/** Enabled holidays in `days` that are also marked no-school. */
+export async function schoolClosedHolidayEntries(
+  days: string[],
+): Promise<{ key: string; label: string; iso: string }[]> {
+  const closed = await getSchoolClosedHolidayKeys();
+  const all = await holidayEntries(days);
+  return all.filter((h) => closed.has(h.key));
+}
+
 /** All holidays with their on/off state and next upcoming date, for the admin
  *  toggle list. */
 export type HolidayRow = {
