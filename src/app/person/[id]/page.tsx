@@ -5,6 +5,8 @@ import { loadPersonDay } from "@/lib/queries/overview";
 import { loadPersonProgress } from "@/lib/queries/progression";
 import { loadGetAhead } from "@/lib/queries/get-ahead";
 import { GetAheadRow } from "@/components/get-ahead-row";
+import { loadSchoolGetAhead } from "@/lib/queries/school-get-ahead";
+import { SchoolGetAhead } from "@/components/school-get-ahead";
 import {
   loadWorkoutPlanNames,
   loadWorkoutsBoard,
@@ -111,6 +113,7 @@ export default async function PersonPage({
   const subjectNames = await loadSubjectNames();
   const progress = await loadPersonProgress(id);
   const getAhead = await loadGetAhead(id, today);
+  const schoolAhead = await loadSchoolGetAhead(id, today);
 
   // Workout board data so a workout on the dashboard opens the same log step
   // as the Workouts page, scoped to each prompt's own day.
@@ -552,6 +555,13 @@ export default async function PersonPage({
             you&rsquo;re next up for. It still counts toward its own week; the
             bonus is on top, this week.
           </p>
+        </section>
+      )}
+
+      {schoolAhead.length > 0 && (
+        <section className="mt-8">
+          <SectionHeading>Get ahead in school</SectionHeading>
+          <SchoolGetAhead subjects={schoolAhead} />
         </section>
       )}
 
