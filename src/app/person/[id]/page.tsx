@@ -59,7 +59,40 @@ import { pendingBibleRewards } from "@/lib/bible-rewards";
 import { loadDashboardTrips } from "@/lib/queries/groceries";
 import { Avatar } from "@/components/avatar";
 import { LockIcon, MoonIcon, FlameIcon, StarIcon } from "@/components/icons";
-import { CATEGORY_COLORS } from "@/lib/colors";
+import {
+  ChoresIcon,
+  BibleIcon,
+  SchoolIcon,
+  DumbbellIcon,
+  TasksIcon,
+  CalendarIcon,
+} from "@/components/icons";
+
+// Category headers use the same icons + colors as the side menu, so the home
+// sections read consistently with the nav.
+const CAT_ICON: Record<string, { Icon: typeof ChoresIcon; color: string }> = {
+  BIBLE: { Icon: BibleIcon, color: "#7c3aed" },
+  CHORE: { Icon: ChoresIcon, color: "#d97706" },
+  SCHOOL: { Icon: SchoolIcon, color: "#4f46e5" },
+  EXERCISE: { Icon: DumbbellIcon, color: "#dc2626" },
+  WORK: { Icon: TasksIcon, color: "#334155" },
+  APPOINTMENT: { Icon: CalendarIcon, color: "#2563eb" },
+  OTHER: { Icon: TasksIcon, color: "#64748b" },
+};
+function CategoryHeader({ category }: { category: string }) {
+  const cfg = CAT_ICON[category] ?? CAT_ICON.OTHER;
+  const Icon = cfg.Icon;
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <span aria-hidden style={{ color: cfg.color }} className="flex">
+        <Icon className="h-5 w-5" />
+      </span>
+      <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">
+        {CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS]}
+      </h2>
+    </div>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -489,7 +522,7 @@ export default async function PersonPage({
       )}
 
       {(() => {
-        const DAY_ORDER = ["CHORE", "BIBLE", "SCHOOL", "EXERCISE", "WORK", "APPOINTMENT", "OTHER"] as const;
+        const DAY_ORDER = ["BIBLE", "CHORE", "SCHOOL", "EXERCISE", "WORK", "APPOINTMENT", "OTHER"] as const;
         const catItems = (c: string) => todayRows.filter((r) => r.category === c);
         const schoolHasContent =
           schoolOverdue.length > 0 ||
@@ -518,6 +551,12 @@ export default async function PersonPage({
                     progress={schoolProgress.progress}
                     targetISO={schoolProgress.targetISO}
                     ahead={schoolAhead}
+                    addWork={{
+                      userId: person.id,
+                      classesByUser: classOptions,
+                      subjects: subjectNames,
+                      defaultDate: today,
+                    }}
                   />
                 );
               }
@@ -526,14 +565,7 @@ export default async function PersonPage({
               if (items.length === 0 && !showBible) return null;
               return (
                 <section key={c}>
-                  <div className="mb-3 flex items-center gap-2">
-                    <span
-                      aria-hidden
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: CATEGORY_COLORS[c as keyof typeof CATEGORY_COLORS] }}
-                    />
-                    <SectionHeading>{CATEGORY_LABELS[c as keyof typeof CATEGORY_LABELS]}</SectionHeading>
-                  </div>
+                  <CategoryHeader category={c} />
                   <Card className="divide-y divide-hairline">
                     {items.map(renderRow)}
                     {c === "BIBLE" && personalToday && (
@@ -572,12 +604,6 @@ export default async function PersonPage({
         <AddTaskForm
           people={[{ id: person.id, name: person.name, color: person.color }]}
           defaultUserId={person.id}
-          defaultDate={today}
-        />
-        <AddSchoolWork
-          userId={person.id}
-          classesByUser={classOptions}
-          subjects={subjectNames}
           defaultDate={today}
         />
       </div>

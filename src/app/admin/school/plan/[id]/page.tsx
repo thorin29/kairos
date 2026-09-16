@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { AdminBack } from "@/components/admin-back";
 import { loadClassPlanDetail } from "@/lib/queries/class-plan";
 import { PlanReview } from "./plan-review";
@@ -17,6 +18,12 @@ export default async function ClassPlanReviewPage({
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <AdminBack />
+      <Link
+        href="/admin/school/curriculum"
+        className="mt-3 inline-block text-sm text-muted hover:text-ink"
+      >
+        &lsaquo; Curriculum &amp; schedule
+      </Link>
       <PlanReview plan={plan} />
     </main>
   );

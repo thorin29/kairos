@@ -5,7 +5,8 @@ import { TaskRow, type Row } from "@/components/task-row";
 import { SchoolGetAhead } from "@/components/school-get-ahead";
 import { formatShort } from "@/lib/dates";
 import { CATEGORY_COLORS } from "@/lib/colors";
-import { XIcon } from "@/components/icons";
+import { XIcon, SchoolIcon } from "@/components/icons";
+import { AddSchoolWork } from "@/components/add-school-work";
 import type { SchoolAheadSubject } from "@/lib/queries/school-get-ahead";
 import type { SchoolProgress } from "@/lib/queries/school-card";
 
@@ -15,12 +16,19 @@ export function SchoolCard({
   progress,
   targetISO,
   ahead,
+  addWork,
 }: {
   overdue: Row[];
   today: Row[];
   progress: SchoolProgress[];
   targetISO: string | null;
   ahead: SchoolAheadSubject[];
+  addWork?: {
+    userId: string;
+    classesByUser: Record<string, { id: string; name: string }[]>;
+    subjects: string[];
+    defaultDate: string;
+  };
 }) {
   const [open, setOpen] = useState(false);
   const [catchUpFor, setCatchUpFor] = useState<string | null>(null);
@@ -47,6 +55,8 @@ export function SchoolCard({
     ]
       .filter(Boolean)
       .join(" \u00b7 ") || "All caught up";
+  const completeForToday =
+    overdue.length === 0 && today.length === 0 && progress.length > 0;
 
   const label = (t: string) => (
     <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{t}</p>
@@ -55,18 +65,18 @@ export function SchoolCard({
   return (
     <section>
       <div className="mb-3 flex items-center gap-2">
-        <span
-          aria-hidden
-          className="h-2.5 w-2.5 rounded-full"
-          style={{ backgroundColor: CATEGORY_COLORS.SCHOOL }}
-        />
+        <span aria-hidden style={{ color: CATEGORY_COLORS.SCHOOL }} className="flex">
+          <SchoolIcon className="h-5 w-5" />
+        </span>
         <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">School</h2>
       </div>
       <button
         onClick={() => setOpen(true)}
         className="flex w-full items-center justify-between rounded-lg border border-hairline bg-surface px-4 py-3 text-left hover:border-accent"
       >
-        <span className="text-sm">{summary}</span>
+        <span className={`text-sm ${completeForToday ? "font-medium text-emerald-600" : ""}`}>
+          {completeForToday ? "Complete for today!" : summary}
+        </span>
         <span className="text-xs font-medium text-accent">Open</span>
       </button>
 
@@ -81,20 +91,28 @@ export function SchoolCard({
           >
             <div className="mb-4 flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <span
-                  aria-hidden
-                  className="h-3 w-3 rounded-full"
-                  style={{ backgroundColor: CATEGORY_COLORS.SCHOOL }}
-                />
+                <span aria-hidden style={{ color: CATEGORY_COLORS.SCHOOL }} className="flex">
+                  <SchoolIcon className="h-5 w-5" />
+                </span>
                 <h2 className="font-display text-lg font-semibold">School</h2>
               </span>
-              <button
-                onClick={() => setOpen(false)}
-                aria-label="Close"
-                className="rounded-full p-1 text-muted transition-colors hover:bg-ground hover:text-ink"
-              >
-                <XIcon className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                {addWork && (
+                  <AddSchoolWork
+                    userId={addWork.userId}
+                    classesByUser={addWork.classesByUser}
+                    subjects={addWork.subjects}
+                    defaultDate={addWork.defaultDate}
+                  />
+                )}
+                <button
+                  onClick={() => setOpen(false)}
+                  aria-label="Close"
+                  className="rounded-full p-1 text-muted transition-colors hover:bg-ground hover:text-ink"
+                >
+                  <XIcon className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {targetISO && (
