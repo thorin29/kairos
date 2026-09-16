@@ -22,7 +22,7 @@ export default async function SchoolClassesPage() {
         &lsaquo; School
       </Link>
       <header className="mb-6 mt-3 border-b border-hairline pb-4">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">Terms &amp; classes</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">Classes &amp; subjects</h1>
       </header>
       <div className="space-y-4">
         <ClassAccessToggle mode={classMode} />

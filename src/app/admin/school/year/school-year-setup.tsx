@@ -129,11 +129,11 @@ export function SchoolYearSetup({ year }: { year: SchoolYear }) {
 
       {existing && (
         <Link
-          href="/admin/school"
+          href="/admin/school/curriculum"
           className="flex items-center justify-between rounded-lg border border-accent bg-accent/10 px-4 py-3 text-sm hover:brightness-105"
         >
           <span className="font-medium text-accent">Add classes for a student</span>
-          <span className="text-xs text-muted">upload a CSV &amp; publish &rarr;</span>
+          <span className="text-xs text-muted">build or upload a class &amp; publish &rarr;</span>
         </Link>
       )}
 

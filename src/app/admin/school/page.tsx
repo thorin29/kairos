@@ -6,29 +6,39 @@ import { loadBreakReminders, loadVacationPrompts } from "@/lib/queries/school-ye
 import { RolloverBanner } from "./rollover-banner";
 import { BreakReminders } from "./break-reminders";
 import { VacationPrompts } from "./vacation-prompts";
+import {
+  CalendarPlusIcon,
+  SlidersIcon,
+  BookIcon,
+  AssignmentIcon,
+} from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
-const CARDS = [
+const TILES = [
   {
     href: "/admin/school/year",
-    title: "Set up school year",
-    desc: "Semesters, breaks, holidays & the year calendar",
+    label: "Set up school year",
+    blurb: "Semesters, breaks, holidays & the year calendar",
+    icon: <CalendarPlusIcon className="h-7 w-7" />,
   },
   {
     href: "/admin/school/classes",
-    title: "Terms & classes",
-    desc: "Classes, subjects, class types & who can edit",
+    label: "Classes & subjects",
+    blurb: "Class names, subjects, class types & who can edit",
+    icon: <SlidersIcon className="h-7 w-7" />,
   },
   {
     href: "/admin/school/curriculum",
-    title: "Curriculum & schedule",
-    desc: "Import curriculum, review & publish, compile a term",
+    label: "Curriculum & schedule",
+    blurb: "Build or import a class, review & publish, compile a term",
+    icon: <BookIcon className="h-7 w-7" />,
   },
   {
     href: "/admin/school/work",
-    title: "Open work",
-    desc: "Assignments & tests across the household",
+    label: "Open work",
+    blurb: "Assignments & tests across the household",
+    icon: <AssignmentIcon className="h-7 w-7" />,
   },
 ];
 
@@ -41,7 +51,7 @@ export default async function AdminSchoolPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
+    <main className="mx-auto max-w-4xl px-6 py-8">
       <AdminBack />
 
       <header className="mb-8 mt-5 border-b border-hairline pb-5">
@@ -56,21 +66,20 @@ export default async function AdminSchoolPage() {
       <BreakReminders breaks={breakReminders} />
       <VacationPrompts vacations={vacationPrompts} />
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {CARDS.map((c) => (
-          <Link
-            key={c.href}
-            href={c.href}
-            className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-surface px-4 py-4 hover:border-accent"
-          >
-            <span>
-              <span className="block text-sm font-medium">{c.title}</span>
-              <span className="mt-0.5 block text-xs text-muted">{c.desc}</span>
-            </span>
-            <span className="shrink-0 text-accent">&rarr;</span>
-          </Link>
+      <ul className="grid gap-4 sm:grid-cols-2">
+        {TILES.map((tile) => (
+          <li key={tile.href}>
+            <Link
+              href={tile.href}
+              className="flex h-full flex-col gap-3 rounded-2xl border border-hairline bg-surface p-5 transition-all hover:border-accent hover:shadow-sm"
+            >
+              <span className="text-accent">{tile.icon}</span>
+              <span className="font-display text-lg font-semibold">{tile.label}</span>
+              <span className="text-sm text-muted">{tile.blurb}</span>
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </main>
   );
 }
