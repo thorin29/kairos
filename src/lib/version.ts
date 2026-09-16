@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.379.0";
+export const APP_VERSION = "0.380.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -105,11 +105,19 @@ export const MIGRATIONS = [
   "94_retag_pause_events",
   "95_game_time_monitoring",
   "96_player_platforms",
+  "97_class_plans",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.380.0",
+    summary: [
+      "Curriculum planner \u2014 review & publish: open a draft class plan to reorder its lessons/tests (drag or arrows), skip ones already done, and tune per-day / weekdays / both-semesters while the schedule updates live. Publish generates the student\u2019s schoolwork on the scheduled dates. The plan schedule now also skips enabled holidays, not just vacation days.",
+      "You can now upload a curriculum CSV file in admin \u2192 School instead of only pasting it.",
+    ],
+  },
   {
     version: "0.379.0",
     summary: [
