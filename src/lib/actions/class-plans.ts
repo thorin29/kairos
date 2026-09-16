@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { parseClassPlanCsv, startIndexOf } from "@/lib/school/plan-csv";
 import { Category, SchoolWorkType } from "@/generated/prisma/client";
 import { todayISO, toDateColumn } from "@/lib/dates";
-import { spreadUnits, type PlanUnit } from "@/lib/school/plan-builder";
+import { spreadUnits, spreadUnitsFit, type PlanUnit } from "@/lib/school/plan-builder";
 import { noSchoolDaysFor } from "@/lib/school/school-days";
 
 function dISO(d: Date): string {
@@ -88,6 +88,7 @@ export async function importClassPlansFromCsv(csvText: string): Promise<ImportRe
         weekdays: p.weekdays.join(""),
         startIndex,
         startDate: p.startDate ? toDateColumn(p.startDate) : null,
+        fitToTerm: p.fitToTerm,
         status: "DRAFT",
         units: {
           create: p.units.map((u, i) => ({
@@ -121,6 +122,7 @@ export type SaveDraftInput = {
   weekdays: number[]; // ISO 1..7
   bothTerms: boolean;
   startDate: string; // YYYY-MM-DD, or "" to clear (start today)
+  fitToTerm: boolean;
 };
 
 /** Persist a draft plan's manual edits: the reordered unit list, which units are
@@ -164,6 +166,7 @@ export async function saveClassPlanDraft(input: SaveDraftInput): Promise<{ error
         bothTerms: input.bothTerms,
         startIndex,
         startDate: startDate ? toDateColumn(startDate) : null,
+        fitToTerm: input.fitToTerm,
       },
     }),
   ]);
@@ -190,6 +193,7 @@ export async function publishClassPlan(planId: string): Promise<PublishResult> {
       perDay: true,
       weekdays: true,
       startDate: true,
+      fitToTerm: true,
       class: {
         select: { id: true, userId: true, termId: true, subject: { select: { name: true } } },
       },
@@ -216,16 +220,16 @@ export async function publishClassPlan(planId: string): Promise<PublishResult> {
   const skip = await noSchoolDaysFor(terms);
 
   const undoneUnits = plan.units.filter((u) => !u.done);
-  const sched = spreadUnits(
-    undoneUnits.map((u) => ({ label: u.label, type: u.type as PlanUnit["type"], load: u.load })),
-    {
-      startDate: plan.startDate ? dISO(plan.startDate) : todayISO(),
-      weekdays: plan.weekdays.split("").map(Number),
-      holidays: skip,
-      terms,
-      perDay: plan.perDay,
-    },
-  );
+  const undonePlan = undoneUnits.map((u) => ({
+    label: u.label,
+    type: u.type as PlanUnit["type"],
+    load: u.load,
+  }));
+  const start = plan.startDate ? dISO(plan.startDate) : todayISO();
+  const weekdays = plan.weekdays.split("").map(Number);
+  const sched = plan.fitToTerm
+    ? spreadUnitsFit(undonePlan, { startDate: start, weekdays, holidays: skip, terms })
+    : spreadUnits(undonePlan, { startDate: start, weekdays, holidays: skip, terms, perDay: plan.perDay });
 
   const placed = undoneUnits
     .map((u, i) => ({ unit: u, date: sched[i]?.date ?? null }))

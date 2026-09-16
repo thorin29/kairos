@@ -2,18 +2,18 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { spreadUnits, type PlanUnit } from "@/lib/school/plan-builder";
+import { spreadUnits, spreadUnitsFit, type PlanUnit } from "@/lib/school/plan-builder";
 import { saveClassPlanDraft, publishClassPlan, deleteClassPlan } from "@/lib/actions/class-plans";
 import type { PlanDetail, PlanUnitRow } from "@/lib/queries/class-plan";
 
 const WEEKDAYS: { n: number; label: string }[] = [
+  { n: 7, label: "S" },
   { n: 1, label: "M" },
   { n: 2, label: "T" },
   { n: 3, label: "W" },
   { n: 4, label: "T" },
   { n: 5, label: "F" },
   { n: 6, label: "S" },
-  { n: 7, label: "S" },
 ];
 
 function fmt(iso: string | null): string {
@@ -42,6 +42,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
   const [weekdays, setWeekdays] = useState<Set<number>>(new Set(plan.weekdays));
   const [bothTerms, setBothTerms] = useState(plan.bothTerms);
   const [startDate, setStartDate] = useState(plan.startDate);
+  const [fitToTerm, setFitToTerm] = useState(plan.fitToTerm);
   const [msg, setMsg] = useState<string | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [pending, start] = useTransition();
@@ -56,18 +57,17 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
   // so dates update as the list is reordered or the settings change.
   const { dateByUnit, slices, finish, overflow, scheduledCount } = useMemo(() => {
     const undone = units.filter((u) => !u.done);
-    const built = windows.length
-      ? spreadUnits(
-          undone.map((u) => ({ label: u.label, type: u.type as PlanUnit["type"], load: u.load })),
-          {
-            startDate: startDate,
-            weekdays: [...weekdays],
-            holidays,
-            terms: windows.map((w) => ({ start: w.start, end: w.end })),
-            perDay,
-          },
-        )
-      : [];
+    const planUnits = undone.map((u) => ({
+      label: u.label,
+      type: u.type as PlanUnit["type"],
+      load: u.load,
+    }));
+    const terms = windows.map((w) => ({ start: w.start, end: w.end }));
+    const built = !windows.length
+      ? []
+      : fitToTerm
+        ? spreadUnitsFit(planUnits, { startDate, weekdays: [...weekdays], holidays, terms })
+        : spreadUnits(planUnits, { startDate, weekdays: [...weekdays], holidays, terms, perDay });
     const map = new Map<string, string | null>();
     undone.forEach((u, i) => map.set(u.id, built[i]?.date ?? null));
     const placed = [...map.values()].filter((d): d is string => d != null);
@@ -84,7 +84,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
       overflow: undone.length - placed.length,
       scheduledCount: placed.length,
     };
-  }, [units, weekdays, perDay, windows, holidays, startDate]);
+  }, [units, weekdays, perDay, windows, holidays, startDate, fitToTerm]);
 
   const move = (from: number, to: number) => {
     if (to < 0 || to >= units.length) return;
@@ -113,6 +113,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
     weekdays: [...weekdays],
     bothTerms,
     startDate,
+    fitToTerm,
   });
 
   const save = () =>
@@ -233,7 +234,22 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
                   <span className="text-muted">Spread across both semesters</span>
                 </label>
               )}
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={fitToTerm}
+                  onChange={(e) => setFitToTerm(e.target.checked)}
+                  className="h-4 w-4 accent-[var(--color-accent)]"
+                />
+                <span className="text-muted">Finish by term end (front-load extra)</span>
+              </label>
             </div>
+            {fitToTerm && (
+              <p className="mt-2 text-xs text-muted">
+                Extra items are front-loaded onto the earliest school days so the plan lands by the
+                last term day &mdash; &ldquo;per school day&rdquo; is ignored while this is on.
+              </p>
+            )}
             {weekdaysEmpty && (
               <p className="mt-2 text-xs text-red-600">Pick at least one weekday.</p>
             )}

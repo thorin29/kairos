@@ -20,6 +20,8 @@ export type ClassPlanInput = {
   startFrom: string;
   /** ISO date (YYYY-MM-DD) to begin scheduling on; "" = start today at publish. */
   startDate: string;
+  /** Front-load extra so it finishes by the last term day. */
+  fitToTerm: boolean;
   units: PlanUnit[];
 };
 
@@ -58,6 +60,10 @@ function termOf(v: string | undefined): "fall" | "spring" | "both" {
 function dateOf(v: string | undefined): string {
   const s = (v ?? "").trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
+}
+/** A truthy flag column (yes/true/1/y/on) → true, anything else false. */
+function boolOf(v: string | undefined): boolean {
+  return /^(y|yes|true|1|on)$/i.test((v ?? "").trim());
 }
 function typeOf(v: string | undefined): PlanUnitType {
   const t = (v ?? "").trim().toLowerCase();
@@ -104,6 +110,7 @@ export function parseClassPlanCsv(text: string): { plans: ClassPlanInput[]; erro
         weekdays: weekdaysOf(col(first, "weekdays")),
         startFrom: (col(first, "startfrom") ?? "").trim(),
         startDate: dateOf(col(first, "startdate")),
+        fitToTerm: boolOf(col(first, "fit")),
         units,
       });
     }
@@ -132,6 +139,7 @@ export function parseClassPlanCsv(text: string): { plans: ClassPlanInput[]; erro
       weekdays: weekdaysOf(col(row, "weekdays")),
       startFrom: (col(row, "startfrom") ?? "").trim(),
       startDate: dateOf(col(row, "startdate")),
+      fitToTerm: boolOf(col(row, "fit")),
       units: expandShorthand({
         unitCount,
         unitNoun: (col(row, "unitnoun") ?? "Lesson").trim() || "Lesson",
