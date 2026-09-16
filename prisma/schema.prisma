@@ -1510,6 +1510,9 @@ model ClassPlan {
   weekdays  String          @default("12345")
   /// Sequence index of the first not-yet-done unit — scheduling starts here.
   startIndex Int            @default(0)
+  /// The calendar day scheduling begins on (a DATE). Null means "start from
+  /// today" when the plan is published.
+  startDate DateTime?       @db.Date
   status    ClassPlanStatus @default(DRAFT)
   units     ClassPlanUnit[]
   createdAt DateTime        @default(now())

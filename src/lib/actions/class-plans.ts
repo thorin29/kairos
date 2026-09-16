@@ -87,6 +87,7 @@ export async function importClassPlansFromCsv(csvText: string): Promise<ImportRe
         perDay: p.perDay,
         weekdays: p.weekdays.join(""),
         startIndex,
+        startDate: p.startDate ? toDateColumn(p.startDate) : null,
         status: "DRAFT",
         units: {
           create: p.units.map((u, i) => ({
@@ -119,6 +120,7 @@ export type SaveDraftInput = {
   perDay: number;
   weekdays: number[]; // ISO 1..7
   bothTerms: boolean;
+  startDate: string; // YYYY-MM-DD, or "" to clear (start today)
 };
 
 /** Persist a draft plan's manual edits: the reordered unit list, which units are
@@ -145,6 +147,7 @@ export async function saveClassPlanDraft(input: SaveDraftInput): Promise<{ error
   const perDay = Math.min(Math.max(1, Math.round(input.perDay) || 1), 20);
   const firstUndone = order.findIndex((id) => !doneSet.has(id));
   const startIndex = firstUndone < 0 ? order.length : firstUndone;
+  const startDate = /^\d{4}-\d{2}-\d{2}$/.test(input.startDate) ? input.startDate : "";
 
   // Reassign seq in two phases so the @@unique([planId, seq]) never collides
   // mid-update: park every row at a distinct negative seq first, then set finals.
@@ -155,7 +158,13 @@ export async function saveClassPlanDraft(input: SaveDraftInput): Promise<{ error
     ),
     prisma.classPlan.update({
       where: { id: plan.id },
-      data: { perDay, weekdays, bothTerms: input.bothTerms, startIndex },
+      data: {
+        perDay,
+        weekdays,
+        bothTerms: input.bothTerms,
+        startIndex,
+        startDate: startDate ? toDateColumn(startDate) : null,
+      },
     }),
   ]);
 
@@ -180,6 +189,7 @@ export async function publishClassPlan(planId: string): Promise<PublishResult> {
       bothTerms: true,
       perDay: true,
       weekdays: true,
+      startDate: true,
       class: {
         select: { id: true, userId: true, termId: true, subject: { select: { name: true } } },
       },
@@ -209,7 +219,7 @@ export async function publishClassPlan(planId: string): Promise<PublishResult> {
   const sched = spreadUnits(
     undoneUnits.map((u) => ({ label: u.label, type: u.type as PlanUnit["type"], load: u.load })),
     {
-      startDate: todayISO(),
+      startDate: plan.startDate ? dISO(plan.startDate) : todayISO(),
       weekdays: plan.weekdays.split("").map(Number),
       holidays: skip,
       terms,

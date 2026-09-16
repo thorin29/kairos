@@ -18,6 +18,8 @@ export type ClassPlanInput = {
   weekdays: number[];
   /** First unit to schedule, e.g. "L9" or a 1-based seq; "" = from the start. */
   startFrom: string;
+  /** ISO date (YYYY-MM-DD) to begin scheduling on; "" = start today at publish. */
+  startDate: string;
   units: PlanUnit[];
 };
 
@@ -51,6 +53,11 @@ function weekdaysOf(v: string | undefined): number[] {
 function termOf(v: string | undefined): "fall" | "spring" | "both" {
   const t = (v ?? "").trim().toLowerCase();
   return t === "spring" ? "spring" : t === "fall" ? "fall" : "both";
+}
+/** An ISO date (YYYY-MM-DD) if valid-looking, else "" (meaning start today). */
+function dateOf(v: string | undefined): string {
+  const s = (v ?? "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
 }
 function typeOf(v: string | undefined): PlanUnitType {
   const t = (v ?? "").trim().toLowerCase();
@@ -96,6 +103,7 @@ export function parseClassPlanCsv(text: string): { plans: ClassPlanInput[]; erro
         perDay: num(col(first, "perday"), 1),
         weekdays: weekdaysOf(col(first, "weekdays")),
         startFrom: (col(first, "startfrom") ?? "").trim(),
+        startDate: dateOf(col(first, "startdate")),
         units,
       });
     }
@@ -123,6 +131,7 @@ export function parseClassPlanCsv(text: string): { plans: ClassPlanInput[]; erro
       perDay: num(col(row, "perday"), 1),
       weekdays: weekdaysOf(col(row, "weekdays")),
       startFrom: (col(row, "startfrom") ?? "").trim(),
+      startDate: dateOf(col(row, "startdate")),
       units: expandShorthand({
         unitCount,
         unitNoun: (col(row, "unitnoun") ?? "Lesson").trim() || "Lesson",
