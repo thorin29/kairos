@@ -295,3 +295,39 @@ export async function loadStudentBars(): Promise<StudentBars[]> {
 
   return [...byStudent.values()].sort((a, b) => a.studentName.localeCompare(b.studentName));
 }
+
+export type BreakReminder = { id: string; name: string; start: string; end: string };
+
+/** Planned breaks starting within the horizon that aren't confirmed and aren't
+ *  already covered by a real vacation — the admin should confirm or cancel them
+ *  before they arrive. */
+export async function loadBreakReminders(
+  today: string,
+  horizonDays = 14,
+): Promise<BreakReminder[]> {
+  const lim = new Date(`${today}T00:00:00Z`);
+  lim.setUTCDate(lim.getUTCDate() + horizonDays);
+  const limit = lim.toISOString().slice(0, 10);
+
+  const breaks = await prisma.schoolBreak.findMany({
+    where: { confirmed: false },
+    select: { id: true, name: true, startDate: true, endDate: true },
+  });
+  const upcoming = breaks
+    .map((b) => ({ id: b.id, name: b.name, start: dISO(b.startDate), end: dISO(b.endDate) }))
+    .filter((b) => b.start >= today && b.start <= limit);
+  if (upcoming.length === 0) return [];
+
+  const pauses = await prisma.event.findMany({
+    where: { kind: "PAUSE" },
+    select: { startsAt: true, endsAt: true },
+  });
+  const pauseRanges = pauses.map((p) => ({
+    start: localParts(p.startsAt).iso,
+    end: localParts(new Date(p.endsAt.getTime() - 1)).iso,
+  }));
+  const covered = (b: { start: string; end: string }) =>
+    pauseRanges.some((pr) => pr.start <= b.start && pr.end >= b.end);
+
+  return upcoming.filter((b) => !covered(b)).sort((a, b) => a.start.localeCompare(b.start));
+}

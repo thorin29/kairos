@@ -906,8 +906,11 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       as you work ahead *(v0.392: completing get-ahead work re-spreads the class's
       future units earlier; overdue/today untouched)*; overdue never auto-shifts
       (admin override / extend Spring only); planned break ⇄ real vacation
-      **linking + reminders** ("no vacation \u2192 reclaim the time", "added a
-      vacation \u2192 shift or keep?").
+      **linking + reminders** *(v0.393: reminder banner before an unconfirmed
+      planned break \u2014 confirm keeps it, cancel removes it and reclaims the days;
+      a break covered by a real vacation is auto-skipped)*. Remaining: the
+      "added an unplanned vacation \u2192 shift published work off those days, or keep
+      it?" prompt (needs a per-vacation school-continues flag + reconciled state).
 - [ ] **Wizard form** (the non-CSV intake path; paste + file-upload exist).
 - [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
       keep tweaks, highlight changes). Would need a term-level draft/published

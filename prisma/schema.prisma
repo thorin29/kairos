@@ -145,6 +145,9 @@ model SchoolBreak {
   startDate DateTime @db.Date
   endDate   DateTime @db.Date
   planned   Boolean  @default(true)
+  /// Whether the admin has confirmed the break is happening (or a real vacation
+  /// covers it). Unconfirmed planned breaks trigger a reminder before they start.
+  confirmed Boolean  @default(false)
   createdAt DateTime @default(now())
 }
 
