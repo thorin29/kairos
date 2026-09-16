@@ -10,6 +10,8 @@ import {
   loadClassOptions,
   type ClassRow,
 } from "@/lib/queries/school";
+import { loadSchoolProgress } from "@/lib/queries/school-card";
+import { loadSchoolGetAhead } from "@/lib/queries/school-get-ahead";
 import { SCHOOL_TYPE_LABEL, SCHOOL_TYPES } from "@/lib/school";
 
 export const runtime = "nodejs";
@@ -69,6 +71,40 @@ export async function GET(req: NextRequest) {
   const shownPeople = people.filter((p) => visibleSet.has(p.id));
   const actForIds = canAct ? visible : [me.id];
 
+  // Per-child "card" payload for the app's School overlay: the same dynamic
+  // progress (pace / projected finish / catch-up) and get-ahead the web card
+  // shows. Overdue/today rows come from each person's `items`.
+  const cardEntries = await Promise.all(
+    shownPeople.map(async (p) => {
+      const [prog, ahead] = await Promise.all([
+        loadSchoolProgress(p.id),
+        loadSchoolGetAhead(p.id, today),
+      ]);
+      return [
+        p.id,
+        {
+          targetISO: prog.targetISO,
+          progress: prog.progress.map((c) => ({
+            className: c.className,
+            subject: c.subject,
+            color: c.color,
+            finishISO: c.finishISO,
+            remaining: c.remaining,
+            onTrack: c.onTrack,
+            pace: c.pace, // "ahead" | "behind" | null
+            catchUpRate: c.catchUp?.rate ?? null,
+            catchUpDays: c.catchUp?.days ?? null,
+          })),
+          getAhead: ahead.map((s) => ({
+            subject: s.subject,
+            items: s.items.map((it) => ({ taskId: it.taskId, title: it.label, dueISO: it.dueISO })),
+          })),
+        },
+      ] as const;
+    }),
+  );
+  const cardByUser = new Map(cardEntries);
+
   return apiOk({
     meId: me.id,
     seasonHint: selected ? selected.name : "All time",
@@ -104,6 +140,7 @@ export async function GET(req: NextRequest) {
         dueISO: it.dueISO,
         overdue: it.overdue,
       })),
+      card: cardByUser.get(p.id) ?? null,
     })),
     progress: structure.people
       .filter((p) => visibleSet.has(p.id))
@@ -114,12 +151,21 @@ export async function GET(req: NextRequest) {
           id: p.id,
           name: p.name,
           color: p.color,
-          pct: Math.round((s.completed / s.total) * 100),
+          pct: s.dueSoFar ? Math.round((s.completedDue / s.dueSoFar) * 100) : 0,
           completed: s.completed,
           total: s.total,
+          dueSoFar: s.dueSoFar,
+          completedDue: s.completedDue,
           onTime: s.onTime,
           overdue: s.overdue,
-          byClass: s.byClass.map((c) => ({ key: c.key, color: c.color, completed: c.completed, total: c.total })),
+          byClass: s.byClass.map((c) => ({
+            key: c.key,
+            color: c.color,
+            completed: c.completed,
+            total: c.total,
+            completedDue: c.completedDue,
+            dueSoFar: c.dueSoFar,
+          })),
         };
       })
       .filter((x) => x != null),

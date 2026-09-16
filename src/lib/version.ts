@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.405.0";
+export const APP_VERSION = "0.406.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,6 +116,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.406.0",
+    summary: [
+      "App API: the School endpoint now returns each child's live card data \u2014 per-class projected finish, ahead/behind pace, and catch-up, plus get-ahead work and the school-year end date \u2014 and its stats report progress against work due so far. (Backs the Android School cards; no web change.)",
+    ],
+  },
   {
     version: "0.405.0",
     summary: [
