@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { holidayEntries } from "@/lib/holidays";
+import { localParts } from "@/lib/dates";
 
 function addDayISO(iso: string): string {
   const x = new Date(`${iso}T00:00:00Z`);
@@ -108,51 +109,81 @@ export type CalTerm = {
   start: string;
   end: string;
 };
+export type CalBlock = { name: string; start: string; end: string };
 export type YearCalendar = {
   hasYear: boolean;
   rangeStart: string;
   rangeEnd: string;
+  finalDay: string; // last day of the school year (latest term end)
   terms: CalTerm[];
-  offBlocks: { name: string; start: string; end: string }[]; // breaks + vacations
-  holidays: string[]; // ISO dates
+  holidays: { iso: string; name: string }[];
+  vacations: CalBlock[]; // confirmed vacation PAUSE events
+  plannedBreaks: CalBlock[]; // estimated breaks (planning only)
 };
 
-/** Everything the month-strip calendar needs: the term windows, the off blocks
- *  (planned breaks + vacation pauses), and the enabled holidays, over the full
- *  span of the school year. */
+/** Everything the month-strip calendar needs: term windows, enabled holidays
+ *  (with names), confirmed vacations, and planned breaks — over the full span of
+ *  the school year. Event instants are resolved to household-local days. */
 export async function loadYearCalendar(): Promise<YearCalendar> {
   const terms = await prisma.term.findMany({
     orderBy: { startDate: "asc" },
     select: { name: true, startDate: true, endDate: true },
   });
   if (terms.length === 0) {
-    return { hasYear: false, rangeStart: "", rangeEnd: "", terms: [], offBlocks: [], holidays: [] };
+    return {
+      hasYear: false,
+      rangeStart: "",
+      rangeEnd: "",
+      finalDay: "",
+      terms: [],
+      holidays: [],
+      vacations: [],
+      plannedBreaks: [],
+    };
   }
   const start = dISO(terms[0].startDate);
   const end = terms.reduce((m, t) => (dISO(t.endDate) > m ? dISO(t.endDate) : m), dISO(terms[0].endDate));
 
   const [breaks, pauses] = await Promise.all([
     prisma.schoolBreak.findMany({ select: { name: true, startDate: true, endDate: true } }),
-    prisma.event.findMany({ where: { kind: "PAUSE" }, select: { title: true, startsAt: true, endsAt: true } }),
+    prisma.event.findMany({
+      where: { kind: "PAUSE" },
+      select: { title: true, startsAt: true, endsAt: true },
+    }),
   ]);
-  const offBlocks = [
-    ...breaks.map((b) => ({ name: b.name, start: dISO(b.startDate), end: dISO(b.endDate) })),
-    ...pauses.map((p) => ({ name: p.title || "Vacation", start: dISO(p.startsAt), end: dISO(p.endsAt) })),
-  ].filter((b) => b.end >= start && b.start <= end);
 
-  const holidays = (await holidayEntries(enumerateDays(start, end))).map((h) => h.iso);
+  const plannedBreaks = breaks
+    .map((b) => ({ name: b.name, start: dISO(b.startDate), end: dISO(b.endDate) }))
+    .filter((b) => b.end >= start && b.start <= end);
+
+  // All-day PAUSE events store an exclusive end; the last covered day is the
+  // household-local day of (end − 1ms). Match how the family calendar renders.
+  const vacations = pauses
+    .map((p) => ({
+      name: p.title || "Vacation",
+      start: localParts(p.startsAt).iso,
+      end: localParts(new Date(p.endsAt.getTime() - 1)).iso,
+    }))
+    .filter((b) => b.end >= b.start && b.end >= start && b.start <= end);
+
+  const holidays = (await holidayEntries(enumerateDays(start, end))).map((h) => ({
+    iso: h.iso,
+    name: h.label,
+  }));
 
   return {
     hasYear: true,
     rangeStart: start,
     rangeEnd: end,
+    finalDay: end,
     terms: terms.map((t) => ({
       name: t.name,
       kind: classify(t.name) ?? "other",
       start: dISO(t.startDate),
       end: dISO(t.endDate),
     })),
-    offBlocks,
     holidays,
+    vacations,
+    plannedBreaks,
   };
 }
