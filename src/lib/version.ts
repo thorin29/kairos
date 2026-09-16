@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.396.0";
+export const APP_VERSION = "0.397.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,6 +116,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.397.0",
+    summary: [
+      "The School section on the home page is now a pop-up card: tapping it opens an overlay with overdue, today, progress, and get-ahead all in one place, instead of expanding inline. It sits right below Bible reading and above Workouts, and the colored dots on the home page now match each section's side-menu icon color.",
+    ],
+  },
   {
     version: "0.396.0",
     summary: [
