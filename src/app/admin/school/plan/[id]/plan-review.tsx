@@ -55,7 +55,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
 
   // Live schedule: the same builder the server publishes with, run in the browser
   // so dates update as the list is reordered or the settings change.
-  const { dateByUnit, slices, finish, overflow, scheduledCount } = useMemo(() => {
+  const { dateByUnit, slices, finish, afterTerm, termEnd, scheduledCount } = useMemo(() => {
     const undone = units.filter((u) => !u.done);
     const planUnits = undone.map((u) => ({
       label: u.label,
@@ -71,6 +71,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
     const map = new Map<string, string | null>();
     undone.forEach((u, i) => map.set(u.id, built[i]?.date ?? null));
     const placed = [...map.values()].filter((d): d is string => d != null);
+    const termEnd = terms.reduce((m, t) => (t.end > m ? t.end : m), terms[0]?.end ?? "");
     const sl = windows.map((w) => ({
       term: w.name,
       count: placed.filter((d) => d >= w.start && d <= w.end).length,
@@ -81,7 +82,8 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
       dateByUnit: map,
       slices: sl,
       finish: placed.length ? placed[placed.length - 1] : null,
-      overflow: undone.length - placed.length,
+      afterTerm: termEnd ? placed.filter((d) => d > termEnd).length : 0,
+      termEnd,
       scheduledCount: placed.length,
     };
   }, [units, weekdays, perDay, windows, holidays, startDate, fitToTerm]);
@@ -282,8 +284,8 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
               {" \u00b7 "}
               <span className="text-muted">finishes </span>
               <span className="font-medium">{fmt(finish)}</span>
-              {overflow > 0 && (
-                <span className="text-red-600"> \u00b7 {overflow} won&rsquo;t fit by term end</span>
+              {afterTerm > 0 && (
+                <span className="text-amber-600"> \u00b7 {afterTerm} land after the term ends</span>
               )}
             </p>
             {slices.length > 1 && (
@@ -303,7 +305,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
       <ul className="space-y-1">
         {units.map((u, i) => {
           const date = u.done ? null : published ? u.scheduledDate : dateByUnit.get(u.id) ?? null;
-          const unfit = !u.done && date === null && !published;
+          const afterTermRow = !u.done && date !== null && Boolean(termEnd) && date > termEnd;
           return (
             <li
               key={u.id}
@@ -335,8 +337,8 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
                   </span>
                 )}
               </span>
-              <span className={`shrink-0 text-xs tabular ${unfit ? "text-red-600" : "text-muted"}`}>
-                {u.done ? "skipped" : unfit ? "won\u2019t fit" : fmt(date)}
+              <span className={`shrink-0 text-xs tabular ${afterTermRow ? "text-amber-600" : "text-muted"}`}>
+                {u.done ? "skipped" : date === null ? "\u2014" : fmt(date)}
               </span>
               {!published && (
                 <span className="flex shrink-0 items-center gap-1">
