@@ -47,16 +47,22 @@ export function SchoolCard({
     overdue.length === 0 && today.length === 0 && progress.length === 0 && ahead.length === 0;
   if (nothing) return null;
 
+  // Completed items stay in the list (checked), so gauge "done" by what's still
+  // pending, not by whether the list is empty.
+  const pendingOverdue = overdue.filter((r) => r.status !== "COMPLETE");
+  const pendingToday = today.filter((r) => r.status !== "COMPLETE");
   const summary =
     [
-      overdue.length ? `${overdue.length} overdue` : null,
-      today.length ? `${today.length} due today` : null,
-      !overdue.length && !today.length && aheadCount ? `${aheadCount} to get ahead` : null,
+      pendingOverdue.length ? `${pendingOverdue.length} overdue` : null,
+      pendingToday.length ? `${pendingToday.length} due today` : null,
+      !pendingOverdue.length && !pendingToday.length && aheadCount ? `${aheadCount} to get ahead` : null,
     ]
       .filter(Boolean)
       .join(" \u00b7 ") || "All caught up";
   const completeForToday =
-    overdue.length === 0 && today.length === 0 && progress.length > 0;
+    pendingOverdue.length === 0 &&
+    pendingToday.length === 0 &&
+    (today.length > 0 || overdue.length > 0);
 
   const label = (t: string) => (
     <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{t}</p>

@@ -4,10 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadPersonProgress } from "@/lib/queries/progression";
 import { loadGetAhead } from "@/lib/queries/get-ahead";
-import { GetAheadRow } from "@/components/get-ahead-row";
 import { loadSchoolGetAhead } from "@/lib/queries/school-get-ahead";
 import { loadSchoolProgress } from "@/lib/queries/school-card";
 import { SchoolCard } from "@/components/school-card";
+import { ChoresCard } from "@/components/chores-card";
 import {
   loadWorkoutPlanNames,
   loadWorkoutsBoard,
@@ -36,7 +36,7 @@ import { PersonalDayReading } from "@/app/bible/personal-plan-section";
 import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
 import { AddSchoolWork } from "@/components/add-school-work";
-import { Card, SectionHeading } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { Companion } from "@/components/companion";
 import { HatchControls } from "@/components/hatch-controls";
 import { deviceMode } from "@/lib/device";
@@ -248,7 +248,6 @@ export default async function PersonPage({
   // per-category day sections.
   const schoolOverdue = overdue.filter((r) => r.category === "SCHOOL");
   const schoolToday = todayRows.filter((r) => r.category === "SCHOOL");
-  const nonSchoolOverdue = overdue.filter((r) => r.category !== "SCHOOL");
 
   // Per-category completeness bars for the top of the personal home. Mirrors the
   // dashboard card's bars, computed from the same rows (school excluded, like
@@ -510,34 +509,32 @@ export default async function PersonPage({
         </div>
       )}
 
-      {nonSchoolOverdue.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-red-700">
-            Carried over
-          </h2>
-          <Card className="divide-y divide-hairline border-red-200">
-            {nonSchoolOverdue.map(renderRow)}
-          </Card>
-        </section>
-      )}
-
       {(() => {
         const DAY_ORDER = ["BIBLE", "CHORE", "SCHOOL", "EXERCISE", "WORK", "APPOINTMENT", "OTHER"] as const;
-        const catItems = (c: string) => todayRows.filter((r) => r.category === c);
+        const byDate = (a: (typeof rows)[number], b: (typeof rows)[number]) =>
+          a.dueDateISO.localeCompare(b.dueDateISO);
+        // Overdue ("carried over") work now sits under its own category, oldest
+        // first, above today's items — rather than one lumped list.
+        const catOverdue = (c: string) => overdue.filter((r) => r.category === c).sort(byDate);
+        const catToday = (c: string) => todayRows.filter((r) => r.category === c);
+        const catRows = (c: string) => [...catOverdue(c), ...catToday(c)];
+
         const schoolHasContent =
           schoolOverdue.length > 0 ||
           schoolToday.length > 0 ||
           schoolProgress.progress.length > 0 ||
           schoolAhead.length > 0;
+        const choreHasContent =
+          catOverdue("CHORE").length > 0 || catToday("CHORE").length > 0 || getAhead.length > 0;
         const anyBlock = DAY_ORDER.some((c) =>
           c === "SCHOOL"
             ? schoolHasContent
-            : catItems(c).length > 0 || (c === "BIBLE" && Boolean(personalToday)),
+            : c === "CHORE"
+              ? choreHasContent
+              : catRows(c).length > 0 || (c === "BIBLE" && Boolean(personalToday)),
         );
         if (!anyBlock) {
-          return nonSchoolOverdue.length === 0 ? (
-            <Card className="p-6 text-sm text-muted">Nothing scheduled today.</Card>
-          ) : null;
+          return <Card className="p-6 text-sm text-muted">Nothing scheduled today.</Card>;
         }
         return (
           <div className="space-y-8">
@@ -546,7 +543,7 @@ export default async function PersonPage({
                 return (
                   <SchoolCard
                     key="school"
-                    overdue={schoolOverdue}
+                    overdue={[...schoolOverdue].sort(byDate)}
                     today={schoolToday}
                     progress={schoolProgress.progress}
                     targetISO={schoolProgress.targetISO}
@@ -560,7 +557,18 @@ export default async function PersonPage({
                   />
                 );
               }
-              const items = catItems(c);
+              if (c === "CHORE") {
+                if (!choreHasContent) return null;
+                return (
+                  <ChoresCard
+                    key="chore"
+                    overdue={catOverdue("CHORE")}
+                    today={catToday("CHORE")}
+                    getAhead={getAhead}
+                  />
+                );
+              }
+              const items = catRows(c);
               const showBible = c === "BIBLE" && Boolean(personalToday);
               if (items.length === 0 && !showBible) return null;
               return (
@@ -582,22 +590,6 @@ export default async function PersonPage({
           </div>
         );
       })()}
-
-      {getAhead.length > 0 && (
-        <section className="mt-8">
-          <SectionHeading>Get ahead</SectionHeading>
-          <Card className="divide-y divide-hairline">
-            {getAhead.map((c) => (
-              <GetAheadRow key={c.taskId} chore={c} />
-            ))}
-          </Card>
-          <p className="mt-2 text-xs text-muted">
-            Jump on an upcoming chore for a small bonus &mdash; only ones
-            you&rsquo;re next up for. It still counts toward its own week; the
-            bonus is on top, this week.
-          </p>
-        </section>
-      )}
 
 
       <div className="mt-8 flex flex-wrap gap-3">

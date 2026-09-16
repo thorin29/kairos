@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.404.0";
+export const APP_VERSION = "0.405.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -117,10 +117,18 @@ export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
+    version: "0.405.0",
+    summary: [
+      "Chores now have a pop-up card like School: overdue (carried-over) chores at the top, then today's, then get-ahead \u2014 with \u201cComplete for today!\u201d in green once they're cleared. This declutters the home screen.",
+      "Overdue items no longer pile into one \u201cCarried over\u201d list \u2014 an overdue Bible reading, task, or workout now sits under its own category, oldest first, above today's items.",
+      "Fixed \u201cComplete for today!\u201d on the School card (it now goes by what's still pending, so finishing the day's work shows it).",
+      "The add assignment/test button is now in the theme color.",
+    ],
+  },
+  {
     version: "0.404.0",
     summary: [
-      "Fixed the scheduler so lessons that don\u0027t fit the semester get real dates past the term end instead of being dropped as \u201cwon\u2019t fit.\u201d With \u201cFinish by term end\u201d off, the extra lessons now spill onto the next weekdays (shown in amber in the view-class list, with a \u201cland after the term ends\u201d note) \u2014 matching the finish date on the home card. With it on, they\u0027re front-loaded to finish within the term as before.",
-      "Republish any class that was showing \u201cwon\u2019t fit\u201d so its later lessons pick up their real dates.",
+      "Lessons that don't fit the semester now get real dates past the term end (spilling onto the next weekdays, shown in amber in the view-class list) instead of being dropped as \u201cwon't fit,\u201d matching the finish date on the home card. Republish a class to apply it.",
     ],
   },
   {
