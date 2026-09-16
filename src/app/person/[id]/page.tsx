@@ -218,14 +218,6 @@ export default async function PersonPage({
   const schoolToday = todayRows.filter((r) => r.category === "SCHOOL");
   const nonSchoolOverdue = overdue.filter((r) => r.category !== "SCHOOL");
 
-  // Grouped so the day reads as sections rather than one long list.
-  const groups = ORDER.filter((c) => c !== "SCHOOL")
-    .map((category) => ({
-      category,
-      items: todayRows.filter((r) => r.category === category),
-    }))
-    .filter((g) => g.items.length > 0);
-
   // Per-category completeness bars for the top of the personal home. Mirrors the
   // dashboard card's bars, computed from the same rows (school excluded, like
   // the header percent).
@@ -497,62 +489,68 @@ export default async function PersonPage({
         </section>
       )}
 
-      {groups.length > 0 ? (
-        <div className="space-y-8">
-          {groups.map((g) => (
-            <section key={g.category}>
-              <div className="mb-3 flex items-center gap-2">
-                <span
-                  aria-hidden
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: CATEGORY_COLORS[g.category] }}
-                />
-                <SectionHeading>{CATEGORY_LABELS[g.category]}</SectionHeading>
-              </div>
-              <Card className="divide-y divide-hairline">
-                {g.items.map(renderRow)}
-                {g.category === "BIBLE" && personalToday && (
-                  <PersonalDayReading
-                    userId={id}
-                    passage={personalToday.passage}
-                    read={personalToday.read}
+      {(() => {
+        const DAY_ORDER = ["CHORE", "BIBLE", "SCHOOL", "EXERCISE", "WORK", "APPOINTMENT", "OTHER"] as const;
+        const catItems = (c: string) => todayRows.filter((r) => r.category === c);
+        const schoolHasContent =
+          schoolOverdue.length > 0 ||
+          schoolToday.length > 0 ||
+          schoolProgress.progress.length > 0 ||
+          schoolAhead.length > 0;
+        const anyBlock = DAY_ORDER.some((c) =>
+          c === "SCHOOL"
+            ? schoolHasContent
+            : catItems(c).length > 0 || (c === "BIBLE" && Boolean(personalToday)),
+        );
+        if (!anyBlock) {
+          return nonSchoolOverdue.length === 0 ? (
+            <Card className="p-6 text-sm text-muted">Nothing scheduled today.</Card>
+          ) : null;
+        }
+        return (
+          <div className="space-y-8">
+            {DAY_ORDER.map((c) => {
+              if (c === "SCHOOL") {
+                return (
+                  <SchoolCard
+                    key="school"
+                    overdue={schoolOverdue}
+                    today={schoolToday}
+                    progress={schoolProgress.progress}
+                    targetISO={schoolProgress.targetISO}
+                    ahead={schoolAhead}
                   />
-                )}
-              </Card>
-            </section>
-          ))}
-        </div>
-      ) : (
-        nonSchoolOverdue.length === 0 &&
-        schoolOverdue.length === 0 &&
-        schoolToday.length === 0 &&
-        !personalToday && (
-          <Card className="p-6 text-sm text-muted">
-            Nothing scheduled today.
-          </Card>
-        )
-      )}
-
-      {personalToday &&
-        !groups.some((g) => g.category === "BIBLE") && (
-          <section className="mt-8">
-            <div className="mb-3 flex items-center gap-2">
-              <span
-                aria-hidden
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: CATEGORY_COLORS.BIBLE }}
-              />
-              <SectionHeading>{CATEGORY_LABELS.BIBLE}</SectionHeading>
-            </div>
-            <Card className="divide-y divide-hairline">
-              <PersonalDayReading
-                userId={id}
-                passage={personalToday.passage}
-                read={personalToday.read}
-              />
-            </Card>
-          </section>
-        )}
+                );
+              }
+              const items = catItems(c);
+              const showBible = c === "BIBLE" && Boolean(personalToday);
+              if (items.length === 0 && !showBible) return null;
+              return (
+                <section key={c}>
+                  <div className="mb-3 flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: CATEGORY_COLORS[c as keyof typeof CATEGORY_COLORS] }}
+                    />
+                    <SectionHeading>{CATEGORY_LABELS[c as keyof typeof CATEGORY_LABELS]}</SectionHeading>
+                  </div>
+                  <Card className="divide-y divide-hairline">
+                    {items.map(renderRow)}
+                    {c === "BIBLE" && personalToday && (
+                      <PersonalDayReading
+                        userId={id}
+                        passage={personalToday.passage}
+                        read={personalToday.read}
+                      />
+                    )}
+                  </Card>
+                </section>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {getAhead.length > 0 && (
         <section className="mt-8">
@@ -569,14 +567,6 @@ export default async function PersonPage({
           </p>
         </section>
       )}
-
-      <SchoolCard
-        overdue={schoolOverdue}
-        today={schoolToday}
-        progress={schoolProgress.progress}
-        targetISO={schoolProgress.targetISO}
-        ahead={schoolAhead}
-      />
 
 
       <div className="mt-8 flex flex-wrap gap-3">

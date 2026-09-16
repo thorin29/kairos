@@ -12,12 +12,12 @@ import type { Category } from "@/generated/prisma/client";
  * for every person, so making them editable per-row invites drift.
  */
 export const CATEGORY_COLORS: Record<Category, string> = {
-  SCHOOL:      "#2563eb",
+  SCHOOL:      "#4f46e5",
   WORK:        "#7c3aed",
-  APPOINTMENT: "#db2777",
+  APPOINTMENT: "#2563eb",
   CHORE:       "#d97706",
-  EXERCISE:    "#059669",
-  BIBLE:       "#0891b2",
+  EXERCISE:    "#dc2626",
+  BIBLE:       "#7c3aed",
   OTHER:       "#64748b",
 };
 
