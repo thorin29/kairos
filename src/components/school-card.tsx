@@ -23,6 +23,7 @@ export function SchoolCard({
   ahead: SchoolAheadSubject[];
 }) {
   const [open, setOpen] = useState(false);
+  const [catchUpFor, setCatchUpFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -98,7 +99,7 @@ export function SchoolCard({
 
             {targetISO && (
               <p className="mb-4 text-sm text-muted">
-                School year ends <span className="font-medium text-ink">{formatShort(targetISO)}</span>
+                School year ends <span className="font-medium text-accent">{formatShort(targetISO)}</span>
               </p>
             )}
 
@@ -138,10 +139,34 @@ export function SchoolCard({
                               style={{ backgroundColor: p.color || "#94a3b8" }}
                             />
                             <span className="truncate">{p.className}</span>
+                            {p.pace === "behind" && (
+                              <span className="shrink-0 rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                                falling behind
+                              </span>
+                            )}
+                            {p.pace === "ahead" && (
+                              <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                                getting ahead!
+                              </span>
+                            )}
                           </span>
-                          <span className={`shrink-0 text-xs ${p.onTrack ? "text-muted" : "text-amber-600"}`}>
-                            {p.finishISO ? `finishes ${formatShort(p.finishISO)}` : "\u2014"}
-                          </span>
+                          {p.finishISO ? (
+                            p.catchUpDays ? (
+                              <button
+                                type="button"
+                                onClick={() => setCatchUpFor(p.className)}
+                                className="shrink-0 text-xs font-medium text-amber-600 underline decoration-dotted underline-offset-2"
+                              >
+                                finishes {formatShort(p.finishISO)}
+                              </button>
+                            ) : (
+                              <span className={`shrink-0 text-xs ${p.onTrack ? "text-muted" : "text-amber-600"}`}>
+                                finishes {formatShort(p.finishISO)}
+                              </span>
+                            )
+                          ) : (
+                            <span className="shrink-0 text-xs text-muted">{"\u2014"}</span>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -159,6 +184,46 @@ export function SchoolCard({
           </div>
         </div>
       )}
+
+      {catchUpFor &&
+        (() => {
+          const p = progress.find((x) => x.className === catchUpFor);
+          if (!p || !p.catchUpDays) return null;
+          return (
+            <div
+              className="animate-backdrop-fade fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+              onClick={() => setCatchUpFor(null)}
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl border border-hairline bg-surface p-5 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="font-display text-base font-semibold">Catch up in {p.className}</h3>
+                  <button
+                    onClick={() => setCatchUpFor(null)}
+                    aria-label="Close"
+                    className="rounded-full p-1 text-muted transition-colors hover:bg-ground hover:text-ink"
+                  >
+                    <XIcon className="h-5 w-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-muted">
+                  At the current pace it finishes{" "}
+                  <span className="font-medium text-amber-600">
+                    {p.finishISO ? formatShort(p.finishISO) : ""}
+                  </span>
+                  {targetISO ? `, after the ${formatShort(targetISO)} goal` : ""}. Do{" "}
+                  <span className="font-medium text-ink">
+                    2 lessons a day for the next {p.catchUpDays} school day
+                    {p.catchUpDays === 1 ? "" : "s"}
+                  </span>{" "}
+                  to finish on time.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
     </section>
   );
 }
