@@ -890,6 +890,9 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       status, which Stage 2's in-place rebalance intentionally didn't add.
 - [ ] **Schoolwork card** (overdue + today + get-ahead), **catch-up math**
       (extra/day to finish by term end), and **admin bulk-mark**.
+      *Get-ahead shipped (v0.383):* the person dashboard shows a "Get ahead in
+      school" card — pick a subject, see the next upcoming lesson, complete it
+      early; steps through future window items per subject (tests excluded).
 
 (Reuses the existing school model: `Term`, `Subject`, `SchoolClass`,
 `SchoolWork`, `ClassMember`, `ClassCheckin`.)
