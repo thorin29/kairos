@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (Sept 2026, web v0.368 / app v0.197)
+## Current status (Sept 2026, web v0.379 / app v0.209)
 
 The web is mature and the **Android app has reached parity** across every
 daily-use section (Home, Calendar, Chores, Bible, Reading, School, Workouts,
@@ -35,6 +35,21 @@ the following large efforts shipped:
   re-date, reassign, delete) and **editable school assignments** in Admin → School.
 - **Companions**: the full 52-creature roster art across all six eras is in;
   incubate → hatch → choose collection shipped earlier.
+- **Curriculum planner (in progress, v0.378–0.379)**: the class-plan data model +
+  schedule builder and a CSV intake in Admin → School that drafts class plans and
+  shows each one's spread across the terms. Review/reorder and publish-class are
+  the next increments (full spec under School below).
+- **Sport attendance rework (v0.371–0.377)**: attendance prompts now go to
+  **everyone** on an event (owner + added people + subscribed-team-calendar
+  members), persist until answered (up to a week, with the day shown), and log
+  the event's real duration on confirm. Subscribed sport calendars get prompts +
+  icons when flagged sport in admin; non-participant subscribed events show grey;
+  new calendars default visible (opt-out).
+- **App instant return + cache fallback (app v0.204–0.209)**: sections show their
+  last data immediately from in-memory snapshots and refresh in the background
+  (a thin top line shows the refresh); screens fall back to cached data when the
+  server is unreachable even if the phone reports online. (The 0.204 nav-state
+  approach broke navigation and was reverted — see the app DECISIONS.md.)
 
 Next up, roughly in order:
 - **Saved addresses** (shipped) — a shared address book so event locations
@@ -654,6 +669,18 @@ the remaining personal-view items:
       "who's going?" picker for sport types, and each participant gets their own
       prompt. Empty picker falls back to the owner, so older events are
       unchanged. Prompts remain per-person, per-occurrence.
+- [x] Sport-attendance rework (v0.371–0.377): the prompt reaches **everyone** on
+      the event, not just the owner — the owner, every added participant, and
+      **every member subscribed to a sport-flagged team calendar** (added kids
+      included). Subscribed sport calendars get attendance prompts and icons too,
+      once the feed is flagged as **sport in admin**. Confirming logs the event's
+      **real duration** (not a one-minute stub). Unanswered prompts **persist up
+      to 7 days with the day shown** instead of vanishing after the day. Related
+      calendar-visibility changes shipped alongside: non-participant subscribed
+      events render **grey** (under custom colours), and **newly added calendars
+      default visible** to everyone (opt-out) rather than hidden — except school
+      work. The calendar also loads instantly from stored events while subscribed
+      feeds refresh in the background (v0.377).
 - [x] All-day events shade their whole day column in a light tint of their
       colour, decided per event: a "Shade this day" box on the add-event form
       and a per-person "shade this birthday" toggle. Several shaded events on one
@@ -789,6 +816,68 @@ the remaining personal-view items:
       each assignment or test done on time, no difficulty weighting (v0.106.0)
 - [x] Admin → School: assignments/tests are **editable** (title, type, subject or
       class, due date), not just deletable
+
+### Curriculum planner (in progress)
+
+Turn a curriculum (a book's lessons, a list of assignments, a test schedule)
+into dated schoolwork, spread across the school days of a term, per student. All
+intake is **self-hosted text — wizard, paste, or CSV — no PDF/AI in the app**
+(data stays on the server; Claude formats a PDF into clean CSV in a chat, the app
+only parses). School days = weekdays minus household PAUSE events + holidays.
+
+**Locked spec — three stages:**
+- **Stage 1 — build each class.** Wizard *or* CSV → auto-spread across the term's
+  school days → review/reorder → **publish class** (generates the SchoolWork
+  rows). Cross-semester ("both") classes spread across the whole year; each
+  term-build locks the slice inside its own dates — split at the calendar
+  boundary, never divided by hand.
+- **Stage 2 — compile a term.** Combine all of a student's published classes into
+  a day-by-day term schedule (one item per weekday across subjects, heavy days
+  highlighted, drag to redistribute) → **publish term**.
+- **Stage 3 — re-open on change.** Adding/editing a class later re-opens the
+  affected term as a **draft** (keeps manual tweaks, highlights what changed,
+  nothing hits the cards until re-publish).
+
+**Behind/catch-up model:** items are fixed to dates; overdue accumulates; an
+on-demand "extra per day to finish by term end"; admin re-distribute. Grades:
+completion for lessons/assignments, tests keep a score. Generated work lands
+under **School** on each kid's card; a schoolwork card shows overdue + today +
+"get ahead".
+
+**CSV (grain auto-detected):**
+- *shorthand* — `student,class,subject,term,perDay,weekdays,startFrom,unitNoun,
+  unitCount,unitSize,testsAfterLesson` (tests `;`-separated; `startFrom` like
+  `L9`; term `fall|spring|both`).
+- *expanded* — `student,class,subject,term,perDay,weekdays,startFrom,seq,label,
+  type,load` (grouped by student+class).
+
+**Shipped:**
+- [x] **Data model + schedule builder (v0.378):** `ClassPlan` + `ClassPlanUnit`
+      (migration 97); the verified `plan-builder.ts` (`expandShorthand` +
+      `spreadUnits` + `sliceByTerm`). Algorithm verified on a student's TT
+      Pre-Algebra (156 items, from Lesson 9 → 147 scheduled; Fall ends ~Lesson
+      70; finishes ~Apr 21). No screens yet.
+- [x] **CSV intake (v0.379):** `plan-csv.ts` parser, `class-plans.ts` import
+      action, `class-plan.ts` preview query, and the Admin → School "Curriculum
+      plans" UI — paste CSV → draft plans with the computed per-term schedule
+      (per-term item counts + projected finish).
+
+**Next to build (in order):**
+- [ ] **Review/reorder UI** for a draft plan (see the spread, move/renumber
+      units before publishing).
+- [ ] **Publish-class** — generate one `SchoolWork` row per scheduled unit on its
+      computed date, under the class/subject/student.
+- [ ] **Wizard form** (the non-CSV intake path) and **CSV file-upload** (paste is
+      the only path today).
+- [ ] **Stage 2** — term compile (one item/weekday across subjects) + heavy-day
+      highlight + drag-to-redistribute → publish term.
+- [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
+      keep tweaks, highlight changes).
+- [ ] **Schoolwork card** (overdue + today + get-ahead), **catch-up math**
+      (extra/day to finish by term end), and **admin bulk-mark**.
+
+(Reuses the existing school model: `Term`, `Subject`, `SchoolClass`,
+`SchoolWork`, `ClassMember`, `ClassCheckin`.)
 
 ## Calendar &amp; holidays
 - [x] Built-in US/Texas holidays — computed from rules for any year (no feed, no
@@ -1188,16 +1277,25 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       screens and each page needs checking on a handset
 
 ## Offline-first (potential — not committed)
+- [x] **Lighter cache-first pass shipped (app v0.204–0.209).** In-session instant
+      return via **in-memory per-section snapshots** (calendar view-keyed +
+      pager-seeded; chores/tasks/groceries/reading/school/bible; Money excluded;
+      cleared on sign-out) + **cache fallback** when the server is unreachable
+      even if the phone reports online + a **thin top background-refresh line**.
+      NB: the mechanism is snapshots, **not** nav-state preservation — the
+      original 0.204 save/restore-navigation-state attempt broke navigation
+      (stuck on the first-visited page, incompatible with the shared section
+      route) and was reverted in 0.205. Don't reattempt nav-state preservation
+      without first giving each section its own nav destination (app DECISIONS.md).
 - [ ] Room (on-device SQLite database) as the durable source of truth for
       screen data on Android. Repositories would read the local DB instantly and
       refresh it from the API in the background, so every screen — including a
       cold start after the app is killed — renders immediately from last-known
       data and updates when the network responds. Large change (an entity + DAO
       per screen, ViewModel/repository rewrite, migrations), so do it
-      incrementally, calendar first, only if cold-start latency still bothers us
-      after the lighter cache-first + nav-state work lands. The lighter pass
-      (preserve navigation state, cache-first rendering, background-refresh
-      indicator) covers in-session instant navigation without it.
+      incrementally, calendar first, only if **cold-start** latency still bothers
+      us after the lighter cache-first pass above (which covers in-session instant
+      navigation but not a fresh cold start from a killed process).
 
 ## Onboarding
 - [ ] First-run setup wizard for a brand-new Kairos: create the first person
