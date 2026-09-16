@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.383.0";
+export const APP_VERSION = "0.384.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -107,11 +107,19 @@ export const MIGRATIONS = [
   "96_player_platforms",
   "97_class_plans",
   "98_class_plan_start_date",
+  "99_class_plan_fit_term",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.384.0",
+    summary: [
+      "Curriculum planner \u2014 finish by term end: a new option front-loads extra work early so a plan that wouldn\u2019t fit at one a day still finishes on time (turn it on from the review screen, or add a fit column to the CSV). The schedule recomputes live so you can see the doubled-up early days.",
+      "Self-paced courses: quizzes/tests from a published class plan can now be done early through \u201cGet ahead in school\u201d, alongside the lessons.",
+    ],
+  },
   {
     version: "0.383.0",
     summary: [

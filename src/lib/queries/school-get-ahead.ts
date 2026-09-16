@@ -11,9 +11,11 @@ const MAX_PER_SUBJECT = 30;
 
 /**
  * A student's upcoming school work they can complete early, grouped by subject
- * and ordered by date. Only future window items (lessons/assignments) — today's
- * and overdue work is just today's work, and date-specific items (tests) aren't
- * something you do ahead of their day.
+ * and ordered by date. Future items only — today's and overdue work is just
+ * today's work. Window items (lessons/assignments) are always eligible; a
+ * date-specific item (a quiz/test) is eligible when it comes from a published
+ * class plan, since those courses are self-paced. A standalone, hand-added
+ * test keeps a fixed date and is excluded.
  */
 export async function loadSchoolGetAhead(
   userId: string,
@@ -25,7 +27,9 @@ export async function loadSchoolGetAhead(
       category: "SCHOOL",
       status: TaskStatus.PENDING,
       dueDate: { gt: toDateColumn(dayISO) }, // strictly future
-      schoolWork: { is: { dateSpecific: false } }, // window items only
+      schoolWork: {
+        is: { OR: [{ dateSpecific: false }, { planUnit: { isNot: null } }] },
+      },
     },
     orderBy: { dueDate: "asc" },
     select: {

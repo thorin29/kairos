@@ -851,7 +851,8 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
 - *expanded* — `student,class,subject,term,perDay,weekdays,startFrom,seq,label,
   type,load` (grouped by student+class).
 - Optional on either grain: `startDate` (YYYY-MM-DD) — the day scheduling begins
-  (v0.382); blank = start today. Also editable on the review screen.
+  (v0.382); blank = start today. `fit` (yes/true) — front-load to finish by term
+  end (v0.384). Both also editable on the review screen.
   Multi-part days go in the expanded `label` (e.g. `Read pp. 21-22; Ex. 1; Ex. 2`);
   a scored quiz/test is its own row with `type=test`.
 
@@ -888,11 +889,17 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
 - [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
       keep tweaks, highlight changes). Would need a term-level draft/published
       status, which Stage 2's in-place rebalance intentionally didn't add.
-- [ ] **Schoolwork card** (overdue + today + get-ahead), **catch-up math**
-      (extra/day to finish by term end), and **admin bulk-mark**.
+- [ ] **Schoolwork card** (overdue + today + get-ahead) and **admin bulk-mark**.
       *Get-ahead shipped (v0.383):* the person dashboard shows a "Get ahead in
-      school" card — pick a subject, see the next upcoming lesson, complete it
-      early; steps through future window items per subject (tests excluded).
+      school" card — pick a subject, see the next upcoming item, complete it
+      early; steps through future items per subject. *v0.384:* quizzes/tests from
+      a published plan are eligible too (self-paced courses); standalone
+      hand-added tests stay excluded.
+- [x] **Catch-up / finish-by-term-end (v0.384):** `fitToTerm` on a plan
+      (`spreadUnitsFit`) front-loads extra items onto the earliest school days so
+      a plan that wouldn't fit at one a day lands on the last term day instead.
+      Toggle on the review screen (live recompute) or `fit` column in the CSV.
+      Still open: a chosen finish-*date* target and even (non-front) distribution.
 
 (Reuses the existing school model: `Term`, `Subject`, `SchoolClass`,
 `SchoolWork`, `ClassMember`, `ClassCheckin`.)

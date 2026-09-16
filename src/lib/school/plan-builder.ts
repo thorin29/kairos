@@ -103,6 +103,67 @@ export function spreadUnits(
   return out;
 }
 
+/** Every school day in the term windows, in order: weekday in `weekdays`, not a
+ *  holiday, inside a term, from startDate to the last term end. */
+function schoolDaysIn(opts: {
+  startDate: string;
+  weekdays: number[];
+  holidays: Set<string>;
+  terms: Term[];
+}): string[] {
+  const wd = new Set(opts.weekdays);
+  const lastEnd = opts.terms.reduce(
+    (m, t) => (t.end > m ? t.end : m),
+    opts.terms[0]?.end ?? opts.startDate,
+  );
+  const inTerm = (day: string) => opts.terms.some((t) => day >= t.start && day <= t.end);
+  const days: string[] = [];
+  let day = opts.startDate;
+  while (day <= lastEnd) {
+    if (wd.has(isoWeekday(day)) && inTerm(day) && !opts.holidays.has(day)) days.push(day);
+    day = addDays(day, 1);
+  }
+  return days;
+}
+
+/**
+ * Spread units to finish by the last term day, front-loading the extra when the
+ * work won't fit at one a day. Every school day carries `base` items and the
+ * first `extra` days carry one more, so a plan that would overflow instead lands
+ * on the last school day with the heavier days at the start. If it already fits
+ * at one a day this is just one a day (finishing early), so it's safe to leave
+ * on. Ignores perDay — it computes the rate needed to fit.
+ */
+export function spreadUnitsFit(
+  units: PlanUnit[],
+  opts: { startDate: string; weekdays: number[]; holidays: Set<string>; terms: Term[] },
+): Scheduled[] {
+  const days = schoolDaysIn(opts);
+  const D = days.length;
+  const N = units.length;
+  if (D === 0) return units.map((u) => ({ unit: u, date: null }));
+  const base = Math.floor(N / D);
+  const extra = N - base * D; // the first `extra` days carry base + 1
+  const capAt = (i: number) => (i < extra ? base + 1 : base);
+
+  const out: Scheduled[] = [];
+  let di = 0;
+  let onDay = 0;
+  for (const unit of units) {
+    while (di < D && onDay >= capAt(di)) {
+      di += 1;
+      onDay = 0;
+    }
+    if (di >= D) {
+      out.push({ unit, date: null });
+      continue;
+    }
+    out.push({ unit, date: days[di] });
+    onDay += 1;
+  }
+  return out;
+}
+
 /** Split a spread at a term boundary: which items fall inside a given term
  *  (locked when that term is published) vs after it (still provisional). */
 export function sliceByTerm(scheduled: Scheduled[], term: Term) {

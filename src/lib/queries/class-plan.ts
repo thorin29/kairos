@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { todayISO } from "@/lib/dates";
-import { spreadUnits, type PlanUnit } from "@/lib/school/plan-builder";
+import { spreadUnits, spreadUnitsFit, type PlanUnit } from "@/lib/school/plan-builder";
 import { noSchoolDaysFor } from "@/lib/school/school-days";
 
 function dISO(d: Date): string {
@@ -36,6 +36,7 @@ export async function loadClassPlans(): Promise<PlanRow[]> {
         perDay: true,
         weekdays: true,
         startDate: true,
+        fitToTerm: true,
         class: {
           select: {
             name: true,
@@ -66,15 +67,19 @@ export async function loadClassPlans(): Promise<PlanRow[]> {
     const undone: PlanUnit[] = p.units
       .filter((u) => !u.done)
       .map((u) => ({ label: u.label, type: u.type as PlanUnit["type"], load: u.load }));
-    const sched = terms.length
-      ? spreadUnits(undone, {
-          startDate: p.startDate ? dISO(p.startDate) : start,
-          weekdays: p.weekdays.split("").map(Number),
-          holidays,
-          terms,
-          perDay: p.perDay,
-        })
-      : [];
+    const planStart = p.startDate ? dISO(p.startDate) : start;
+    const planWeekdays = p.weekdays.split("").map(Number);
+    const sched = !terms.length
+      ? []
+      : p.fitToTerm
+        ? spreadUnitsFit(undone, { startDate: planStart, weekdays: planWeekdays, holidays, terms })
+        : spreadUnits(undone, {
+            startDate: planStart,
+            weekdays: planWeekdays,
+            holidays,
+            terms,
+            perDay: p.perDay,
+          });
     const placed = sched.filter((s) => s.date);
     const slices = windows.map((t) => {
       const s = dISO(t.startDate);
@@ -123,6 +128,7 @@ export type PlanDetail = {
   subject: string | null;
   bothTerms: boolean;
   hasTwoTerms: boolean; // whether a "both semesters" toggle is meaningful
+  fitToTerm: boolean;
   perDay: number;
   weekdays: number[]; // ISO 1..7
   units: PlanUnitRow[];
@@ -147,6 +153,7 @@ export async function loadClassPlanDetail(id: string): Promise<PlanDetail | null
       perDay: true,
       weekdays: true,
       startDate: true,
+      fitToTerm: true,
       class: {
         select: {
           name: true,
@@ -186,6 +193,7 @@ export async function loadClassPlanDetail(id: string): Promise<PlanDetail | null
     subject: p.class.subject?.name ?? null,
     bothTerms: p.bothTerms,
     hasTwoTerms: allTermsRows.length > 1,
+    fitToTerm: p.fitToTerm,
     perDay: p.perDay,
     weekdays: p.weekdays.split("").map(Number),
     units: p.units.map((u) => ({
