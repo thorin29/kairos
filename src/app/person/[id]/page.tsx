@@ -6,7 +6,8 @@ import { loadPersonProgress } from "@/lib/queries/progression";
 import { loadGetAhead } from "@/lib/queries/get-ahead";
 import { GetAheadRow } from "@/components/get-ahead-row";
 import { loadSchoolGetAhead } from "@/lib/queries/school-get-ahead";
-import { SchoolGetAhead } from "@/components/school-get-ahead";
+import { loadSchoolProgress } from "@/lib/queries/school-card";
+import { SchoolCard } from "@/components/school-card";
 import {
   loadWorkoutPlanNames,
   loadWorkoutsBoard,
@@ -114,6 +115,7 @@ export default async function PersonPage({
   const progress = await loadPersonProgress(id);
   const getAhead = await loadGetAhead(id, today);
   const schoolAhead = await loadSchoolGetAhead(id, today);
+  const schoolProgress = await loadSchoolProgress(id);
 
   // Workout board data so a workout on the dashboard opens the same log step
   // as the Workouts page, scoped to each prompt's own day.
@@ -210,11 +212,19 @@ export default async function PersonPage({
   const overdue = rows.filter((r) => r.isOverdue);
   const todayRows = rows.filter((r) => !r.isOverdue && !r.stale);
 
+  // School gets its own card, so keep it out of the general overdue list and the
+  // per-category day sections.
+  const schoolOverdue = overdue.filter((r) => r.category === "SCHOOL");
+  const schoolToday = todayRows.filter((r) => r.category === "SCHOOL");
+  const nonSchoolOverdue = overdue.filter((r) => r.category !== "SCHOOL");
+
   // Grouped so the day reads as sections rather than one long list.
-  const groups = ORDER.map((category) => ({
-    category,
-    items: todayRows.filter((r) => r.category === category),
-  })).filter((g) => g.items.length > 0);
+  const groups = ORDER.filter((c) => c !== "SCHOOL")
+    .map((category) => ({
+      category,
+      items: todayRows.filter((r) => r.category === category),
+    }))
+    .filter((g) => g.items.length > 0);
 
   // Per-category completeness bars for the top of the personal home. Mirrors the
   // dashboard card's bars, computed from the same rows (school excluded, like
@@ -476,13 +486,13 @@ export default async function PersonPage({
         </div>
       )}
 
-      {overdue.length > 0 && (
+      {nonSchoolOverdue.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-red-700">
             Carried over
           </h2>
           <Card className="divide-y divide-hairline border-red-200">
-            {overdue.map(renderRow)}
+            {nonSchoolOverdue.map(renderRow)}
           </Card>
         </section>
       )}
@@ -513,7 +523,9 @@ export default async function PersonPage({
           ))}
         </div>
       ) : (
-        overdue.length === 0 &&
+        nonSchoolOverdue.length === 0 &&
+        schoolOverdue.length === 0 &&
+        schoolToday.length === 0 &&
         !personalToday && (
           <Card className="p-6 text-sm text-muted">
             Nothing scheduled today.
@@ -558,12 +570,13 @@ export default async function PersonPage({
         </section>
       )}
 
-      {schoolAhead.length > 0 && (
-        <section className="mt-8">
-          <SectionHeading>Get ahead in school</SectionHeading>
-          <SchoolGetAhead subjects={schoolAhead} />
-        </section>
-      )}
+      <SchoolCard
+        overdue={schoolOverdue}
+        today={schoolToday}
+        progress={schoolProgress.progress}
+        targetISO={schoolProgress.targetISO}
+        ahead={schoolAhead}
+      />
 
 
       <div className="mt-8 flex flex-wrap gap-3">
