@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { todayISO } from "@/lib/dates";
+import { noSchoolDaysFor } from "@/lib/school/school-days";
+import { spreadUnits, spreadUnitsFit } from "@/lib/school/plan-builder";
 
 function dISO(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -13,13 +15,24 @@ function isoDow(iso: string): number {
   const wd = new Date(`${iso}T00:00:00Z`).getUTCDay();
   return wd === 0 ? 7 : wd;
 }
-/** School days (weekdays in `set`) in [a, b] inclusive. Rough — ignores holidays. */
-function countSchoolDays(a: string, b: string, set: Set<number>): number {
-  if (!a || !b || b < a) return 0;
+type Win = { start: string; end: string };
+function isSchoolDay(day: string, weekdays: Set<number>, skip: Set<string>, wins: Win[]): boolean {
+  return weekdays.has(isoDow(day)) && !skip.has(day) && wins.some((w) => day >= w.start && day <= w.end);
+}
+/** School days (in the plan's weekdays, within its terms, minus no-school days)
+ *  in [fromISO, toISO] inclusive. */
+function countSchoolDays(
+  fromISO: string,
+  toISO: string,
+  weekdays: Set<number>,
+  skip: Set<string>,
+  wins: Win[],
+): number {
+  if (!fromISO || !toISO || toISO < fromISO) return 0;
   let n = 0;
-  let d = a;
-  while (d <= b) {
-    if (set.has(isoDow(d))) n += 1;
+  let d = fromISO;
+  while (d <= toISO) {
+    if (isSchoolDay(d, weekdays, skip, wins)) n += 1;
     d = addDayISO(d);
   }
   return n;
@@ -29,24 +42,24 @@ export type SchoolProgress = {
   className: string;
   subject: string | null;
   color: string | null;
-  finishISO: string | null; // projected finish at the current pace
-  remaining: number; // undone units
-  overflow: number;
+  finishISO: string | null; // projected finish for the remaining work, from today
+  remaining: number;
   onTrack: boolean; // projected to finish on or before the target
   pace: "ahead" | "behind" | null; // vs where the plan expects them by today
-  catchUpDays: number | null; // school days needing an extra lesson to finish on time
+  catchUp: { rate: number; days: number | null } | null; // suggested pace if behind
 };
 export type SchoolProgressData = {
   targetISO: string | null; // the finish-by date (end of Spring)
   progress: SchoolProgress[];
 };
 
-/** Per published class for a student: projected finish vs the finish-by target,
- *  whether they're ahead/behind pace, and how many catch-up days a behind class
- *  needs. Drives the School card. */
+/** Per published class for a student: a dynamic projected finish (the remaining
+ *  units spread from today at the plan's rate, overflow projected past the term
+ *  end), whether they're ahead/behind the plan's expected pace, and — if behind
+ *  — how hard they'd have to push to finish on time. Drives the School card. */
 export async function loadSchoolProgress(userId: string): Promise<SchoolProgressData> {
   const today = todayISO();
-  const [plans, terms] = await Promise.all([
+  const [plans, allTerms] = await Promise.all([
     prisma.classPlan.findMany({
       where: { status: "PUBLISHED", class: { userId } },
       orderBy: { createdAt: "asc" },
@@ -54,66 +67,98 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
         perDay: true,
         weekdays: true,
         startDate: true,
-        class: { select: { name: true, color: true, subject: { select: { name: true } } } },
-        units: { select: { scheduledDate: true, done: true } },
+        fitToTerm: true,
+        bothTerms: true,
+        class: {
+          select: { name: true, color: true, termId: true, subject: { select: { name: true } } },
+        },
+        units: { select: { seq: true, type: true, load: true, scheduledDate: true, done: true } },
       },
     }),
-    prisma.term.findMany({ select: { name: true, startDate: true, endDate: true } }),
+    prisma.term.findMany({
+      orderBy: { startDate: "asc" },
+      select: { id: true, name: true, startDate: true, endDate: true },
+    }),
   ]);
 
-  const spring = terms.find((t) => t.name.toLowerCase().includes("spring"));
-  const targetISO = spring
-    ? dISO(spring.endDate)
-    : terms.length
-      ? dISO(terms.reduce((m, t) => (t.endDate > m.endDate ? t : m)).endDate)
-      : null;
-  const lastTermEnd = terms.length
-    ? dISO(terms.reduce((m, t) => (t.endDate > m.endDate ? t : m)).endDate)
+  const spring = allTerms.find((t) => t.name.toLowerCase().includes("spring"));
+  const lastTerm = allTerms.length
+    ? allTerms.reduce((m, t) => (t.endDate > m.endDate ? t : m))
     : null;
+  const targetISO = spring ? dISO(spring.endDate) : lastTerm ? dISO(lastTerm.endDate) : null;
+
+  // No-school days across the whole year (a superset — the spread only checks
+  // the days it actually visits, all inside a plan's own windows).
+  const allWins: Win[] = allTerms.map((t) => ({ start: dISO(t.startDate), end: dISO(t.endDate) }));
+  const skip = allWins.length ? await noSchoolDaysFor(allWins) : new Set<string>();
 
   const progress: SchoolProgress[] = plans
     .map((p) => {
       const weekdays = new Set<number>(p.weekdays.split("").map(Number));
       const perDay = Math.max(1, p.perDay);
-      const dates = p.units
-        .filter((u) => u.scheduledDate)
-        .map((u) => dISO(u.scheduledDate as Date))
-        .sort();
-      const lastScheduled = dates.length ? dates[dates.length - 1] : null;
-      const doneCount = p.units.filter((u) => u.done).length;
-      const remaining = p.units.filter((u) => !u.done).length;
-      const overflow = p.units.filter((u) => !u.done && !u.scheduledDate).length;
+      const wins: Win[] = p.bothTerms
+        ? allWins
+        : allTerms
+            .filter((t) => t.id === p.class.termId)
+            .map((t) => ({ start: dISO(t.startDate), end: dISO(t.endDate) }));
+      const winsEnd = wins.length ? wins.reduce((m, w) => (w.end > m ? w.end : m), wins[0].end) : today;
 
-      // Projected finish: last scheduled day, plus overflow projected on weekdays.
-      let finishISO = lastScheduled;
-      if (overflow > 0) {
-        let d = lastScheduled ?? lastTermEnd ?? null;
-        let left = overflow;
-        while (d && left > 0) {
-          d = addDayISO(d);
-          if (isoDow(d) <= 5) {
-            finishISO = d;
-            left -= 1;
+      const undone = p.units.filter((u) => !u.done).sort((a, b) => a.seq - b.seq);
+      const remaining = undone.length;
+      const doneCount = p.units.length - remaining;
+
+      // Dynamic projected finish: spread the remaining units from today at the
+      // plan's rate; anything that doesn't fit the term is projected past its end.
+      let finishISO: string | null = null;
+      if (remaining > 0 && wins.length) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const dummy = undone as any;
+        const sched = p.fitToTerm
+          ? spreadUnitsFit(dummy, { startDate: today, weekdays: [...weekdays], holidays: skip, terms: wins })
+          : spreadUnits(dummy, { startDate: today, weekdays: [...weekdays], holidays: skip, terms: wins, perDay });
+        const placed = sched.filter((s) => s.date).map((s) => s.date as string);
+        finishISO = placed.length ? placed[placed.length - 1] : null;
+        let overflow = sched.filter((s) => !s.date).length;
+        if (overflow > 0) {
+          let d = finishISO ?? winsEnd;
+          while (overflow > 0) {
+            d = addDayISO(d);
+            if (weekdays.has(isoDow(d)) && !skip.has(d)) {
+              finishISO = d;
+              overflow -= 1;
+            }
           }
         }
       }
       const onTrack = finishISO && targetISO ? finishISO <= targetISO : true;
 
-      // Pace: done vs how many the plan expected done by today (from its start).
-      const firstDate = p.startDate ? dISO(p.startDate) : dates[0] ?? null;
+      // Pace: done so far vs what the plan expected done by today (its starting
+      // offset of pre-completed units, plus elapsed school days at the rate).
+      const scheduledDates = p.units
+        .filter((u) => u.scheduledDate)
+        .map((u) => dISO(u.scheduledDate as Date))
+        .sort();
+      const effectiveStart = p.startDate ? dISO(p.startDate) : scheduledDates[0] ?? null;
+      const preDone = p.units.filter((u) => u.done && !u.scheduledDate).length;
       let pace: "ahead" | "behind" | null = null;
-      if (firstDate && firstDate <= today) {
-        const elapsed = countSchoolDays(firstDate, today, weekdays);
-        const expected = Math.min(elapsed * perDay, p.units.length);
+      if (effectiveStart && effectiveStart <= today && wins.length) {
+        const elapsed = countSchoolDays(effectiveStart, today, weekdays, skip, wins);
+        const expected = Math.min(preDone + elapsed * perDay, p.units.length);
         const diff = doneCount - expected;
         pace = diff >= 2 ? "ahead" : diff <= -2 ? "behind" : null;
       }
 
-      // Catch-up: if it won't fit, how many school days need an extra lesson.
-      let catchUpDays: number | null = null;
-      if (!onTrack && targetISO && today <= targetISO) {
-        const available = countSchoolDays(addDayISO(today), targetISO, weekdays);
-        if (remaining > available) catchUpDays = remaining - available;
+      // Catch-up: if it won't finish by the target, the pace that would.
+      let catchUp: { rate: number; days: number | null } | null = null;
+      if (!onTrack && targetISO && today < targetISO && wins.length) {
+        const available = countSchoolDays(addDayISO(today), targetISO, weekdays, skip, wins);
+        if (remaining > available && available > 0) {
+          const deficit = remaining - available;
+          catchUp =
+            deficit <= available
+              ? { rate: perDay + 1, days: deficit }
+              : { rate: Math.ceil(remaining / available), days: null };
+        }
       }
 
       return {
@@ -122,10 +167,9 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
         color: p.class.color,
         finishISO,
         remaining,
-        overflow,
         onTrack,
         pace,
-        catchUpDays,
+        catchUp,
       };
     })
     .sort((a, b) => a.className.localeCompare(b.className));

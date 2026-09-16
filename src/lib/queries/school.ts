@@ -403,6 +403,8 @@ export type SchoolClassStat = {
   color: string | null;
   total: number;
   completed: number;
+  dueSoFar: number; // assignments whose due date is on or before today
+  completedDue: number; // of those, how many are done
 };
 
 export type SchoolMetrics = {
@@ -411,6 +413,8 @@ export type SchoolMetrics = {
   completed: number;
   onTime: number;
   overdue: number;
+  dueSoFar: number; // assignments due on or before today
+  completedDue: number; // of those, how many are done
   byClass: SchoolClassStat[];
 };
 
@@ -456,7 +460,7 @@ export async function loadSchoolMetrics(
   const get = (userId: string) => {
     let row = byUser.get(userId);
     if (!row) {
-      row = { userId, total: 0, completed: 0, onTime: 0, overdue: 0, byClass: [] };
+      row = { userId, total: 0, completed: 0, onTime: 0, overdue: 0, dueSoFar: 0, completedDue: 0, byClass: [] };
       byUser.set(userId, row);
       classes.set(userId, new Map());
     }
@@ -469,6 +473,13 @@ export async function loadSchoolMetrics(
     const dueISO = fromDateColumn(t.dueDate);
     const done = t.status === "COMPLETE";
     row.total += 1;
+    // Work that was actually due by today — the denominator for "how am I doing
+    // so far", so a freshly-loaded semester of future work doesn't read as 0%.
+    const dueByNow = dueISO <= today;
+    if (dueByNow) {
+      row.dueSoFar += 1;
+      if (done) row.completedDue += 1;
+    }
     if (done) {
       row.completed += 1;
       const doneISO = t.completedAt
@@ -482,9 +493,20 @@ export async function loadSchoolMetrics(
     const label = t.schoolWork.class?.name ?? t.schoolWork.subject ?? "Other";
     const color = t.schoolWork.class?.color ?? null;
     const cmap = classes.get(t.userId)!;
-    const c = cmap.get(label) ?? { key: label, color, total: 0, completed: 0 };
+    const c = cmap.get(label) ?? {
+      key: label,
+      color,
+      total: 0,
+      completed: 0,
+      dueSoFar: 0,
+      completedDue: 0,
+    };
     c.total += 1;
     if (done) c.completed += 1;
+    if (dueByNow) {
+      c.dueSoFar += 1;
+      if (done) c.completedDue += 1;
+    }
     cmap.set(label, c);
   }
 

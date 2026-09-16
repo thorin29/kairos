@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.400.0";
+export const APP_VERSION = "0.401.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,6 +116,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.401.0",
+    summary: [
+      "Projected finish dates on the School card are now computed from the real remaining schedule: the leftover work is laid out from today at the class's pace, and anything that won't fit the semester projects to a real later date \u2014 so a class that runs long shows when it will actually finish, and finishing work early pulls the date in.",
+      "\u201cGetting ahead\u201d / \u201cfalling behind\u201d now compares completed work against where the plan expects you to be by today, not whether the class happens to end early \u2014 so a class that's simply scheduled to finish early no longer reads as \u201cahead.\u201d",
+      "Fixed the catch-up tip math (it accounts for no-school days and only suggests a pace that actually lands on time).",
+      "School page stats now show progress against work due so far, not the whole year: each person and subject reads completed-of-due-to-date (e.g. \u201c3 of 4 due so far\u201d), with overdue called out \u2014 so a freshly-loaded semester no longer looks like \u201c0 of 256.\u201d",
+    ],
+  },
   {
     version: "0.400.0",
     summary: [
