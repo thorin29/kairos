@@ -156,7 +156,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
           {plan.student} &mdash; {plan.className}
           <span
             className={`ml-3 rounded px-1.5 py-0.5 align-middle text-[10px] uppercase tracking-wide ${
-              published ? "bg-accent/15 text-accent" : "bg-bg text-muted"
+              published ? "bg-accent/15 text-accent" : "bg-ground text-muted"
             }`}
           >
             {plan.status}
@@ -171,7 +171,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
       {published ? (
         <div className="rounded-lg border border-hairline bg-surface p-4 text-sm">
           <p className="text-muted">
-            This plan is <span className="font-medium text-fg">published</span> — its schoolwork is on{" "}
+            This plan is <span className="font-medium text-ink">published</span> — its schoolwork is on{" "}
             {plan.student}&rsquo;s card. To change it, delete this plan and re-import.
           </p>
         </div>
@@ -189,7 +189,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
                   max={20}
                   value={perDay}
                   onChange={(e) => setPerDay(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
-                  className="w-16 rounded-md border border-hairline bg-bg px-2 py-1 tabular outline-none focus:border-accent"
+                  className="w-16 rounded-md border border-hairline bg-surface px-2 py-1 tabular outline-none focus:border-accent"
                 />
               </label>
               <div className="flex items-center gap-2">
@@ -224,10 +224,10 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
               )}
             </div>
             {weekdaysEmpty && (
-              <p className="mt-2 text-xs text-danger">Pick at least one weekday.</p>
+              <p className="mt-2 text-xs text-red-600">Pick at least one weekday.</p>
             )}
             {noTerm && (
-              <p className="mt-2 text-xs text-danger">
+              <p className="mt-2 text-xs text-red-600">
                 This class has no term dates — set the class&rsquo;s term in Terms &amp; classes first.
               </p>
             )}
@@ -242,7 +242,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
               <span className="text-muted">finishes </span>
               <span className="font-medium">{fmt(finish)}</span>
               {overflow > 0 && (
-                <span className="text-danger"> \u00b7 {overflow} won&rsquo;t fit by term end</span>
+                <span className="text-red-600"> \u00b7 {overflow} won&rsquo;t fit by term end</span>
               )}
             </p>
             {slices.length > 1 && (
@@ -289,12 +289,12 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
               <span className="min-w-0 flex-1 truncate text-sm">
                 {u.label}
                 {TYPE_TAG[u.type] && (
-                  <span className="ml-2 rounded bg-bg px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted">
+                  <span className="ml-2 rounded bg-ground px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted">
                     {TYPE_TAG[u.type]}
                   </span>
                 )}
               </span>
-              <span className={`shrink-0 text-xs tabular ${unfit ? "text-danger" : "text-muted"}`}>
+              <span className={`shrink-0 text-xs tabular ${unfit ? "text-red-600" : "text-muted"}`}>
                 {u.done ? "skipped" : unfit ? "won\u2019t fit" : fmt(date)}
               </span>
               {!published && (
@@ -320,7 +320,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
                   <button
                     type="button"
                     onClick={() => toggleDone(u.id)}
-                    className="rounded px-1.5 text-xs text-muted hover:text-fg"
+                    className="rounded px-1.5 text-xs text-muted hover:text-ink"
                     title={u.done ? "Include in the schedule" : "Skip (already done)"}
                   >
                     {u.done ? "include" : "skip"}
@@ -357,7 +357,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
         <button
           onClick={remove}
           disabled={pending}
-          className="ml-auto text-xs text-muted hover:text-danger disabled:opacity-50"
+          className="ml-auto text-xs text-muted hover:text-red-600 disabled:opacity-50"
         >
           Delete plan
         </button>

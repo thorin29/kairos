@@ -51,7 +51,7 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
           onChange={(e) => setCsv(e.target.value)}
           rows={4}
           placeholder="student,class,subject,term,perDay,weekdays,startFrom,unitNoun,unitCount,unitSize,testsAfterLesson"
-          className="w-full rounded-md border border-hairline bg-bg px-3 py-2 font-mono text-xs outline-none focus:border-accent"
+          className="w-full rounded-md border border-hairline bg-surface px-3 py-2 font-mono text-xs outline-none focus:border-accent"
         />
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <button
@@ -98,7 +98,7 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
                     {p.student} &mdash; {p.className}
                     <span
                       className={`ml-2 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide ${
-                        p.status === "PUBLISHED" ? "bg-accent/15 text-accent" : "bg-bg text-muted"
+                        p.status === "PUBLISHED" ? "bg-accent/15 text-accent" : "bg-ground text-muted"
                       }`}
                     >
                       {p.status}
@@ -118,7 +118,7 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
                   </Link>
                   <button
                     onClick={() => start(async () => { await deleteClassPlan(p.id); })}
-                    className="text-xs text-muted hover:text-danger"
+                    className="text-xs text-muted hover:text-red-600"
                   >
                     Delete
                   </button>
@@ -127,10 +127,10 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
               {p.remaining > 0 && (
                 <div className="mt-2 border-t border-hairline pt-2 text-xs">
                   <p className="text-muted">
-                    Starts at <span className="font-medium text-fg">{p.firstItem}</span> &middot; projected finish{" "}
-                    <span className="font-medium text-fg">{p.finish ?? "\u2014"}</span>
+                    Starts at <span className="font-medium text-ink">{p.firstItem}</span> &middot; projected finish{" "}
+                    <span className="font-medium text-ink">{p.finish ?? "\u2014"}</span>
                     {p.overflow > 0 && (
-                      <span className="text-danger"> &middot; {p.overflow} won&rsquo;t fit by term end</span>
+                      <span className="text-red-600"> &middot; {p.overflow} won&rsquo;t fit by term end</span>
                     )}
                   </p>
                   <ul className="mt-1 space-y-0.5">

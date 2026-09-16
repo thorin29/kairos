@@ -35,7 +35,7 @@ the following large efforts shipped:
   re-date, reassign, delete) and **editable school assignments** in Admin → School.
 - **Companions**: the full 52-creature roster art across all six eras is in;
   incubate → hatch → choose collection shipped earlier.
-- **Curriculum planner (in progress, v0.378–0.379)**: the class-plan data model +
+- **Curriculum planner (in progress, v0.378–0.381)**: the class-plan data model +
   schedule builder and a CSV intake in Admin → School that drafts class plans and
   shows each one's spread across the terms. Review/reorder and publish-class are
   the next increments (full spec under School below).
@@ -817,7 +817,7 @@ the remaining personal-view items:
 - [x] Admin → School: assignments/tests are **editable** (title, type, subject or
       class, due date), not just deletable
 
-### Curriculum planner (in progress)
+### Curriculum planner (in progress, Stages 1–2 shipped)
 
 Turn a curriculum (a book's lessons, a list of assignments, a test schedule)
 into dated schoolwork, spread across the school days of a term, per student. All
@@ -862,17 +862,28 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       plans" UI — paste CSV → draft plans with the computed per-term schedule
       (per-term item counts + projected finish).
 
+- [x] **Review/reorder + publish-class (v0.380):** open a draft plan
+      (`/admin/school/plan/[id]`) to drag/renumber units, skip done ones, and tune
+      per-day / weekdays / both-terms with a live recompute; publish generates one
+      `SchoolWork` per scheduled unit (lessons = window items, tests date-specific).
+      Also added CSV **file-upload** alongside paste, and the schedule now skips
+      enabled holidays (not just PAUSE days). Registered the `97_class_plans`
+      migration that had been missing from the manifest.
+- [x] **Stage 2 — term compile (v0.381):** Admin → School "Term schedule" →
+      `/admin/school/term/[termId]/[studentId]`. Lays a student's published term
+      out day-by-day across all subjects, flags days heavier than their usual
+      daily load (+ a distinct 2+-tests flag), and lets you move items to another
+      school day (tap-then-tap or drag) and publish the rebalanced dates. Because
+      class-publish already writes work to the cards, "publish term" here
+      **rebalances in place** (writes each moved unit + its Task/SchoolWork date) —
+      no separate term draft/publish gate. Coursework-only classes are fully
+      supported (heavy flag is count-based, not test-based).
+
 **Next to build (in order):**
-- [ ] **Review/reorder UI** for a draft plan (see the spread, move/renumber
-      units before publishing).
-- [ ] **Publish-class** — generate one `SchoolWork` row per scheduled unit on its
-      computed date, under the class/subject/student.
-- [ ] **Wizard form** (the non-CSV intake path) and **CSV file-upload** (paste is
-      the only path today).
-- [ ] **Stage 2** — term compile (one item/weekday across subjects) + heavy-day
-      highlight + drag-to-redistribute → publish term.
+- [ ] **Wizard form** (the non-CSV intake path; paste + file-upload exist).
 - [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
-      keep tweaks, highlight changes).
+      keep tweaks, highlight changes). Would need a term-level draft/published
+      status, which Stage 2's in-place rebalance intentionally didn't add.
 - [ ] **Schoolwork card** (overdue + today + get-ahead), **catch-up math**
       (extra/day to finish by term end), and **admin bulk-mark**.
 

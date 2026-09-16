@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.380.0";
+export const APP_VERSION = "0.381.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -111,6 +111,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.381.0",
+    summary: [
+      "Curriculum planner \u2014 compile a term: Admin \u2192 School now has a Term schedule view that lays out a student\u2019s whole published term day by day across every subject, highlights days that are heavier than usual (and days with 2+ tests), and lets you move items to another day (tap an item then tap a day, or drag) and publish the rebalanced schedule to their card.",
+      "Fixed some school-planner labels (overdue/\u201cwon\u2019t fit\u201d warnings, delete controls) that weren\u2019t showing in their intended red.",
+    ],
+  },
   {
     version: "0.380.0",
     summary: [

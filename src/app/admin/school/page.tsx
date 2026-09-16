@@ -12,14 +12,16 @@ import { SchoolAdmin } from "./school-admin";
 import { SchoolStructure } from "./school-structure";
 import { ClassAccessToggle } from "./class-access-toggle";
 import { RolloverBanner } from "./rollover-banner";
+import Link from "next/link";
 import { loadClassPlans } from "@/lib/queries/class-plan";
+import { loadTermCompileOptions } from "@/lib/queries/term-compile";
 import { CurriculumPlans } from "./curriculum-plans";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSchoolPage() {
   const today = todayISO();
-  const [people, structure, classOptions, rollover, classMode, classPlans] =
+  const [people, structure, classOptions, rollover, classMode, classPlans, termOptions] =
     await Promise.all([
       loadSchoolAdmin(),
       loadSchoolStructure(),
@@ -27,6 +29,7 @@ export default async function AdminSchoolPage() {
       loadRolloverState(today),
       getClassFromCalendarMode(),
       loadClassPlans(),
+      loadTermCompileOptions(),
     ]);
 
   return (
@@ -64,6 +67,34 @@ export default async function AdminSchoolPage() {
         <SectionHeading>Curriculum plans</SectionHeading>
         <div className="mt-3">
           <CurriculumPlans plans={classPlans} />
+        </div>
+      </section>
+
+      <section className="mb-12">
+        <SectionHeading>Term schedule</SectionHeading>
+        <div className="mt-3">
+          {termOptions.length === 0 ? (
+            <p className="text-sm text-muted">
+              Publish a class plan to compile a student&rsquo;s whole-term schedule here.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {termOptions.map((o) => (
+                <li key={`${o.termId}|${o.studentId}`}>
+                  <Link
+                    href={`/admin/school/term/${o.termId}/${o.studentId}`}
+                    className="flex items-center justify-between rounded-lg border border-hairline bg-surface px-4 py-3 text-sm hover:border-accent"
+                  >
+                    <span>
+                      <span className="font-medium">{o.studentName}</span>
+                      <span className="text-muted"> &middot; {o.termName}</span>
+                    </span>
+                    <span className="text-xs font-medium text-accent">Compile &amp; balance</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
 
