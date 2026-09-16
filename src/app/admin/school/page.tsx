@@ -12,18 +12,21 @@ import { SchoolAdmin } from "./school-admin";
 import { SchoolStructure } from "./school-structure";
 import { ClassAccessToggle } from "./class-access-toggle";
 import { RolloverBanner } from "./rollover-banner";
+import { loadClassPlans } from "@/lib/queries/class-plan";
+import { CurriculumPlans } from "./curriculum-plans";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSchoolPage() {
   const today = todayISO();
-  const [people, structure, classOptions, rollover, classMode] =
+  const [people, structure, classOptions, rollover, classMode, classPlans] =
     await Promise.all([
       loadSchoolAdmin(),
       loadSchoolStructure(),
       loadClassOptions(),
       loadRolloverState(today),
       getClassFromCalendarMode(),
+      loadClassPlans(),
     ]);
 
   return (
@@ -54,6 +57,13 @@ export default async function AdminSchoolPage() {
             classTypes={structure.classTypes}
             today={today}
           />
+        </div>
+      </section>
+
+      <section className="mb-12">
+        <SectionHeading>Curriculum plans</SectionHeading>
+        <div className="mt-3">
+          <CurriculumPlans plans={classPlans} />
         </div>
       </section>
 
