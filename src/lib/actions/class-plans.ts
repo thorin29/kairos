@@ -566,3 +566,19 @@ export async function createClassPlanFromForm(
   revalidatePath("/admin/school/curriculum");
   return { error: null };
 }
+
+/** Compress a class's remaining schedule: pull its future work earlier so it
+ *  finishes sooner / closes gaps. Published plans only. */
+export async function compressClass(classId: string): Promise<void> {
+  await requireAdmin();
+  const cls = await prisma.schoolClass.findUnique({
+    where: { id: classId },
+    select: { userId: true, plan: { select: { id: true, status: true } } },
+  });
+  if (cls?.plan && cls.plan.status === "PUBLISHED") {
+    await reschedulePlanForward(cls.plan.id, todayISO());
+  }
+  revalidatePath("/");
+  if (cls?.userId) revalidatePath(`/person/${cls.userId}`);
+  revalidatePath("/admin/school");
+}

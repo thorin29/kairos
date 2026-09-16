@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.395.0";
+export const APP_VERSION = "0.396.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,6 +116,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.396.0",
+    summary: [
+      "School admin tidied: the landing page uses the standard admin tiles with icons, and \u201cTerms & classes\u201d is now \u201cClasses & subjects.\u201d Setting up the year, the \u201cadd classes\u201d step now opens the upload/build screen, which shows the year calendar on top so you can see how a class lays out once imported.",
+      "Open work is now collapsible \u2014 tap a student to see their subjects, expand a subject for its scheduled work. Lines are clean until you hit Edit; each subject also has a Compress schedule button to pull its remaining work earlier.",
+    ],
+  },
   {
     version: "0.395.0",
     summary: [

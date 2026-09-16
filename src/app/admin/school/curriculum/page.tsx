@@ -4,16 +4,20 @@ import { SectionHeading } from "@/components/ui";
 import { loadClassPlans } from "@/lib/queries/class-plan";
 import { loadTermCompileOptions } from "@/lib/queries/term-compile";
 import { loadSchoolStructure } from "@/lib/queries/school";
+import { loadYearCalendar, loadStudentBars } from "@/lib/queries/school-year";
 import { CurriculumPlans } from "../curriculum-plans";
 import { ClassPlanForm } from "../class-plan-form";
+import { YearCalendar } from "../year/year-calendar";
 
 export const dynamic = "force-dynamic";
 
 export default async function SchoolCurriculumPage() {
-  const [classPlans, termOptions, structure] = await Promise.all([
+  const [classPlans, termOptions, structure, cal, students] = await Promise.all([
     loadClassPlans(),
     loadTermCompileOptions(),
     loadSchoolStructure(),
+    loadYearCalendar(),
+    loadStudentBars(),
   ]);
 
   return (
@@ -25,6 +29,16 @@ export default async function SchoolCurriculumPage() {
       <header className="mb-6 mt-3 border-b border-hairline pb-4">
         <h1 className="font-display text-2xl font-semibold tracking-tight">Curriculum &amp; schedule</h1>
       </header>
+
+      {cal.hasYear && (
+        <section className="mb-10">
+          <SectionHeading>Year calendar</SectionHeading>
+          <p className="mb-3 mt-1 text-xs text-muted">
+            Pick a student, then a class, to see how it lays out over the year.
+          </p>
+          <YearCalendar cal={cal} students={students} />
+        </section>
+      )}
 
       <section className="mb-10">
         <SectionHeading>Curriculum plans</SectionHeading>

@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react";
 import { DateField } from "@/components/date-field";
 import { deleteSchoolWork, editSchoolWork } from "@/lib/actions/school";
+import { compressClass } from "@/lib/actions/class-plans";
 import { SCHOOL_TYPES, SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { formatShort } from "@/lib/dates";
 import { AddSchoolWork } from "@/components/add-school-work";
-import { Card } from "@/components/ui";
-import { TrashIcon, PencilIcon } from "@/components/icons";
-import type { PersonSchool } from "@/lib/queries/school";
+import { TrashIcon, PencilIcon, ChevronDownIcon, ChevronRightIcon } from "@/components/icons";
+import type { PersonSchool, SchoolItem } from "@/lib/queries/school";
 
 const FIELD =
   "w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm outline-none focus:border-accent";
@@ -25,9 +25,21 @@ export function SchoolAdmin({
   today: string;
 }) {
   const pickList = people.map((p) => ({ id: p.id, name: p.name }));
+  const [openUsers, setOpenUsers] = useState<Set<string>>(new Set());
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const [editGroups, setEditGroups] = useState<Set<string>>(new Set());
+  const [pending, start] = useTransition();
+
+  const flip = (setSet: (fn: (p: Set<string>) => Set<string>) => void, key: string) =>
+    setSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <AddSchoolWork
         people={pickList}
         classesByUser={classesByUser}
@@ -35,37 +47,129 @@ export function SchoolAdmin({
         defaultDate={today}
       />
 
-      {people.map((person) => (
-        <section key={person.id}>
-          <div className="mb-2 flex items-center gap-2">
-            <span
-              className="h-3 w-3 rounded-full"
-              style={{ backgroundColor: person.color }}
-            />
-            <h3 className="font-display text-sm font-semibold">{person.name}</h3>
-            <span className="text-xs text-muted">
-              {person.pending === 0
-                ? "nothing due"
-                : `${person.pending} open${
-                    person.overdue > 0 ? ` \u00b7 ${person.overdue} late` : ""
-                  }`}
-            </span>
-          </div>
+      <div className="space-y-2">
+        {people.map((person) => {
+          const open = openUsers.has(person.id);
+          const groups = groupItems(person.items);
+          return (
+            <div key={person.id} className="overflow-hidden rounded-lg border border-hairline bg-surface">
+              <button
+                onClick={() => flip(setOpenUsers, person.id)}
+                className="flex w-full items-center gap-2 px-4 py-3 text-left"
+              >
+                {open ? <ChevronDownIcon className="h-4 w-4 text-muted" /> : <ChevronRightIcon className="h-4 w-4 text-muted" />}
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: person.color }} />
+                <span className="text-sm font-semibold">{person.name}</span>
+                <span className="ml-auto text-xs text-muted">
+                  {person.pending === 0
+                    ? "nothing due"
+                    : `${person.pending} open${person.overdue > 0 ? ` \u00b7 ${person.overdue} late` : ""}`}
+                </span>
+              </button>
 
-          {person.items.length > 0 && (
-            <Card className="divide-y divide-hairline">
-              {person.items.map((it) => (
-                <ItemRow
-                  key={it.id}
-                  item={it}
-                  classes={classesByUser[person.id] ?? []}
-                  subjects={subjects}
-                />
-              ))}
-            </Card>
-          )}
-        </section>
-      ))}
+              {open && (
+                <div className="space-y-1.5 border-t border-hairline p-3">
+                  {groups.length === 0 ? (
+                    <p className="px-1 py-2 text-xs text-muted">Nothing open.</p>
+                  ) : (
+                    groups.map((g) => {
+                      const gkey = `${person.id}|${g.key}`;
+                      const gOpen = openGroups.has(gkey);
+                      const editing = editGroups.has(gkey);
+                      return (
+                        <div key={gkey} className="overflow-hidden rounded-md border border-hairline">
+                          <button
+                            onClick={() => flip(setOpenGroups, gkey)}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
+                          >
+                            {gOpen ? <ChevronDownIcon className="h-4 w-4 text-muted" /> : <ChevronRightIcon className="h-4 w-4 text-muted" />}
+                            <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: g.color || "#94a3b8" }} />
+                            <span className="font-medium">{g.label}</span>
+                            <span className="ml-auto text-xs text-muted">{g.items.length}</span>
+                          </button>
+
+                          {gOpen && (
+                            <div className="border-t border-hairline">
+                              <div className="flex items-center gap-4 px-3 py-2">
+                                <button
+                                  onClick={() => flip(setEditGroups, gkey)}
+                                  className="text-xs font-medium text-accent hover:underline"
+                                >
+                                  {editing ? "Done" : "Edit"}
+                                </button>
+                                {g.classId && (
+                                  <button
+                                    disabled={pending}
+                                    onClick={() =>
+                                      start(async () => {
+                                        await compressClass(g.classId as string);
+                                      })
+                                    }
+                                    className="text-xs text-muted hover:text-ink disabled:opacity-50"
+                                    title="Pull this class's remaining work earlier"
+                                  >
+                                    Compress schedule
+                                  </button>
+                                )}
+                              </div>
+                              <div className="divide-y divide-hairline border-t border-hairline">
+                                {g.items.map((it) =>
+                                  editing ? (
+                                    <ItemRow
+                                      key={it.id}
+                                      item={it}
+                                      classes={classesByUser[person.id] ?? []}
+                                      subjects={subjects}
+                                    />
+                                  ) : (
+                                    <ReadOnlyLine key={it.id} item={it} />
+                                  ),
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type Group = { key: string; label: string; color: string | null; classId: string | null; items: SchoolItem[] };
+
+/** Group a person's open work by class (falling back to subject), earliest first. */
+function groupItems(items: SchoolItem[]): Group[] {
+  const map = new Map<string, Group>();
+  for (const it of items) {
+    const label = it.className ?? it.subject ?? "Other";
+    const key = it.classId ?? `subject:${label}`;
+    const g = map.get(key) ?? { key, label, color: it.classColor, classId: it.classId, items: [] };
+    g.items.push(it);
+    map.set(key, g);
+  }
+  return [...map.values()].sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/** A read-only work line — no edit/delete icons until the subject's Edit is on. */
+function ReadOnlyLine({ item }: { item: SchoolItem }) {
+  return (
+    <div className="flex items-center gap-3 px-3 py-2.5">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm">{item.title}</p>
+        <p className="mt-0.5 text-xs text-muted">
+          {SCHOOL_TYPE_LABEL[item.type]}
+          <span className={`tabular ml-2 ${item.overdue ? "font-medium text-red-700" : ""}`}>
+            due {formatShort(item.dueISO)}
+          </span>
+        </p>
+      </div>
     </div>
   );
 }
