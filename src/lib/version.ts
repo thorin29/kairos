@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.384.0";
+export const APP_VERSION = "0.387.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -114,6 +114,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.387.0",
+    summary: [
+      "Year calendar: the Set up school year screen now shows a month-by-month calendar of the whole year \u2014 semesters labeled across the top, small day squares with weekends shaded, and holidays and breaks marked \u2014 so you can see the windows before scheduling any classes.",
+      "Fixed the version number shown on the About page and side menu (it was still reading an older release).",
+    ],
+  },
   {
     version: "0.386.0",
     summary: [

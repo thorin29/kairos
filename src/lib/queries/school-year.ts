@@ -1,4 +1,20 @@
 import { prisma } from "@/lib/prisma";
+import { holidayEntries } from "@/lib/holidays";
+
+function addDayISO(iso: string): string {
+  const x = new Date(`${iso}T00:00:00Z`);
+  x.setUTCDate(x.getUTCDate() + 1);
+  return x.toISOString().slice(0, 10);
+}
+function enumerateDays(start: string, end: string): string[] {
+  const out: string[] = [];
+  let d = start;
+  while (d <= end) {
+    out.push(d);
+    d = addDayISO(d);
+  }
+  return out;
+}
 
 function dISO(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -83,5 +99,60 @@ export async function loadSchoolYear(): Promise<SchoolYear> {
     summerWeeks,
     totalWeeks: fallWeeks + springWeeks + summerWeeks,
     winterBreak,
+  };
+}
+
+export type CalTerm = {
+  name: string;
+  kind: "fall" | "spring" | "summer" | "other";
+  start: string;
+  end: string;
+};
+export type YearCalendar = {
+  hasYear: boolean;
+  rangeStart: string;
+  rangeEnd: string;
+  terms: CalTerm[];
+  offBlocks: { name: string; start: string; end: string }[]; // breaks + vacations
+  holidays: string[]; // ISO dates
+};
+
+/** Everything the month-strip calendar needs: the term windows, the off blocks
+ *  (planned breaks + vacation pauses), and the enabled holidays, over the full
+ *  span of the school year. */
+export async function loadYearCalendar(): Promise<YearCalendar> {
+  const terms = await prisma.term.findMany({
+    orderBy: { startDate: "asc" },
+    select: { name: true, startDate: true, endDate: true },
+  });
+  if (terms.length === 0) {
+    return { hasYear: false, rangeStart: "", rangeEnd: "", terms: [], offBlocks: [], holidays: [] };
+  }
+  const start = dISO(terms[0].startDate);
+  const end = terms.reduce((m, t) => (dISO(t.endDate) > m ? dISO(t.endDate) : m), dISO(terms[0].endDate));
+
+  const [breaks, pauses] = await Promise.all([
+    prisma.schoolBreak.findMany({ select: { name: true, startDate: true, endDate: true } }),
+    prisma.event.findMany({ where: { kind: "PAUSE" }, select: { title: true, startsAt: true, endsAt: true } }),
+  ]);
+  const offBlocks = [
+    ...breaks.map((b) => ({ name: b.name, start: dISO(b.startDate), end: dISO(b.endDate) })),
+    ...pauses.map((p) => ({ name: p.title || "Vacation", start: dISO(p.startsAt), end: dISO(p.endsAt) })),
+  ].filter((b) => b.end >= start && b.start <= end);
+
+  const holidays = (await holidayEntries(enumerateDays(start, end))).map((h) => h.iso);
+
+  return {
+    hasYear: true,
+    rangeStart: start,
+    rangeEnd: end,
+    terms: terms.map((t) => ({
+      name: t.name,
+      kind: classify(t.name) ?? "other",
+      start: dISO(t.startDate),
+      end: dISO(t.endDate),
+    })),
+    offBlocks,
+    holidays,
   };
 }
