@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.381.0";
+export const APP_VERSION = "0.382.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -106,11 +106,18 @@ export const MIGRATIONS = [
   "95_game_time_monitoring",
   "96_player_platforms",
   "97_class_plans",
+  "98_class_plan_start_date",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.382.0",
+    summary: [
+      "Curriculum planner \u2014 start date: a class plan can now begin on a chosen day instead of always today. Set it on the review screen (with the schedule recomputing live) or add a startDate column to the CSV. Handy for \u201cpick up here tomorrow\u201d.",
+    ],
+  },
   {
     version: "0.381.0",
     summary: [

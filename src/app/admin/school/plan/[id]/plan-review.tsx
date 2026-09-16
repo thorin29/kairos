@@ -41,6 +41,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
   const [perDay, setPerDay] = useState(plan.perDay);
   const [weekdays, setWeekdays] = useState<Set<number>>(new Set(plan.weekdays));
   const [bothTerms, setBothTerms] = useState(plan.bothTerms);
+  const [startDate, setStartDate] = useState(plan.startDate);
   const [msg, setMsg] = useState<string | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [pending, start] = useTransition();
@@ -59,7 +60,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
       ? spreadUnits(
           undone.map((u) => ({ label: u.label, type: u.type as PlanUnit["type"], load: u.load })),
           {
-            startDate: plan.startDate,
+            startDate: startDate,
             weekdays: [...weekdays],
             holidays,
             terms: windows.map((w) => ({ start: w.start, end: w.end })),
@@ -83,7 +84,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
       overflow: undone.length - placed.length,
       scheduledCount: placed.length,
     };
-  }, [units, weekdays, perDay, windows, holidays, plan.startDate]);
+  }, [units, weekdays, perDay, windows, holidays, startDate]);
 
   const move = (from: number, to: number) => {
     if (to < 0 || to >= units.length) return;
@@ -111,6 +112,7 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
     perDay,
     weekdays: [...weekdays],
     bothTerms,
+    startDate,
   });
 
   const save = () =>
@@ -190,6 +192,15 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
                   value={perDay}
                   onChange={(e) => setPerDay(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
                   className="w-16 rounded-md border border-hairline bg-surface px-2 py-1 tabular outline-none focus:border-accent"
+                />
+              </label>
+              <label className="flex items-center gap-2">
+                <span className="text-muted">Start date</span>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="rounded-md border border-hairline bg-surface px-2 py-1 tabular outline-none focus:border-accent"
                 />
               </label>
               <div className="flex items-center gap-2">

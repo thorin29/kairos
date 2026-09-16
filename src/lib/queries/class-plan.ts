@@ -35,6 +35,7 @@ export async function loadClassPlans(): Promise<PlanRow[]> {
         bothTerms: true,
         perDay: true,
         weekdays: true,
+        startDate: true,
         class: {
           select: {
             name: true,
@@ -67,7 +68,7 @@ export async function loadClassPlans(): Promise<PlanRow[]> {
       .map((u) => ({ label: u.label, type: u.type as PlanUnit["type"], load: u.load }));
     const sched = terms.length
       ? spreadUnits(undone, {
-          startDate: start,
+          startDate: p.startDate ? dISO(p.startDate) : start,
           weekdays: p.weekdays.split("").map(Number),
           holidays,
           terms,
@@ -145,6 +146,7 @@ export async function loadClassPlanDetail(id: string): Promise<PlanDetail | null
       bothTerms: true,
       perDay: true,
       weekdays: true,
+      startDate: true,
       class: {
         select: {
           name: true,
@@ -199,6 +201,6 @@ export async function loadClassPlanDetail(id: string): Promise<PlanDetail | null
     allTerms,
     classTerm: classTermRow ? mapTerm(classTermRow) : null,
     skipDays: [...skip],
-    startDate: todayISO(),
+    startDate: p.startDate ? dISO(p.startDate) : todayISO(),
   };
 }

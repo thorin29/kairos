@@ -850,6 +850,10 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
   `L9`; term `fall|spring|both`).
 - *expanded* — `student,class,subject,term,perDay,weekdays,startFrom,seq,label,
   type,load` (grouped by student+class).
+- Optional on either grain: `startDate` (YYYY-MM-DD) — the day scheduling begins
+  (v0.382); blank = start today. Also editable on the review screen.
+  Multi-part days go in the expanded `label` (e.g. `Read pp. 21-22; Ex. 1; Ex. 2`);
+  a scored quiz/test is its own row with `type=test`.
 
 **Shipped:**
 - [x] **Data model + schedule builder (v0.378):** `ClassPlan` + `ClassPlanUnit`
