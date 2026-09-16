@@ -885,6 +885,19 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       supported (heavy flag is count-based, not test-based).
 
 **Next to build (in order):**
+- [x] **School-year setup (v0.386):** `/admin/school/year` wizard defines Fall/Spring
+      (+ optional Summer) terms and planned breaks (new `SchoolBreak` table; winter
+      break = the gap between Fall end and Spring start), shows weeks per semester,
+      and re-opens to edit or to add another student's classes. Breaks feed
+      `noSchoolDaysFor`. Full class delete (`deleteSchoolClass`) removes the class,
+      plan, generated work, members and check-ins.
+      *Next for this area (Phase 2):* the month-strip **calendar view** (terms/
+      breaks/holidays/weekends, then classes coloured per-subject with past-term
+      overflow in red); admin reorg into buttons/sections; then the dynamic
+      reconciliation (get-ahead shifts remaining work earlier; overdue never
+      auto-shifts; planned-break reminders + "no vacation \u2192 reclaim the time";
+      "added a vacation \u2192 shift or keep?"; finish-by = Spring end target +
+      student School card).
 - [ ] **Wizard form** (the non-CSV intake path; paste + file-upload exist).
 - [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
       keep tweaks, highlight changes). Would need a term-level draft/published

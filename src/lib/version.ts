@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.385.0";
+export const APP_VERSION = "0.384.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -108,15 +108,17 @@ export const MIGRATIONS = [
   "97_class_plans",
   "98_class_plan_start_date",
   "99_class_plan_fit_term",
+  "100_school_break",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
-    version: "0.385.0",
+    version: "0.386.0",
     summary: [
-      "Deleting a class plan now also removes the schoolwork it had generated, so a student's card is left clean instead of holding orphaned assignments.",
+      "Set up your school year: a new setup screen (School admin \u2192 Set up school year) defines the Fall and Spring semesters, an optional Summer term, and planned breaks (spring break, a fall week off, estimated vacations), showing how many weeks each semester runs. Classes get scheduled into these windows, and school work skips the breaks. Re-open it any time to edit the dates or add another student's classes.",
+      "Deleting a class now removes it completely \u2014 the class, its plan, and every assignment it generated \u2014 so nothing is left orphaned on a student's card.",
     ],
   },
   {

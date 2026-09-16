@@ -2,7 +2,8 @@
 
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { importClassPlansFromCsv, deleteClassPlan } from "@/lib/actions/class-plans";
+import { importClassPlansFromCsv } from "@/lib/actions/class-plans";
+import { deleteSchoolClass } from "@/lib/actions/school-year";
 import type { PlanRow } from "@/lib/queries/class-plan";
 
 export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
@@ -117,7 +118,16 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
                     {p.status === "PUBLISHED" ? "View" : "Review & publish"}
                   </Link>
                   <button
-                    onClick={() => start(async () => { await deleteClassPlan(p.id); })}
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Delete ${p.student}'s ${p.className} completely? This removes the class, its plan, and any assignments it created.`,
+                        )
+                      )
+                        start(async () => {
+                          await deleteSchoolClass(p.classId);
+                        });
+                    }}
                     className="text-xs text-muted hover:text-red-600"
                   >
                     Delete

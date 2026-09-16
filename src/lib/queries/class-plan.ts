@@ -9,6 +9,7 @@ function dISO(d: Date): string {
 
 export type PlanRow = {
   id: string;
+  classId: string;
   student: string;
   className: string;
   subject: string | null;
@@ -31,6 +32,7 @@ export async function loadClassPlans(): Promise<PlanRow[]> {
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
+        classId: true,
         status: true,
         bothTerms: true,
         perDay: true,
@@ -94,6 +96,7 @@ export async function loadClassPlans(): Promise<PlanRow[]> {
     });
     return {
       id: p.id,
+      classId: p.classId,
       student: p.class.user.name,
       className: p.class.name,
       subject: p.class.subject?.name ?? null,
