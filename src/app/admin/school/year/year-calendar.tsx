@@ -1,10 +1,13 @@
-import type { YearCalendar, CalTerm } from "@/lib/queries/school-year";
+"use client";
+
+import { useState } from "react";
+import type { YearCalendar as YearCal, CalTerm, StudentBars } from "@/lib/queries/school-year";
 
 function iso(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 function dow(s: string): number {
-  return new Date(`${s}T00:00:00Z`).getUTCDay(); // 0=Sun..6=Sat
+  return new Date(`${s}T00:00:00Z`).getUTCDay();
 }
 function ym(s: string): [number, number] {
   return [Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1];
@@ -29,14 +32,14 @@ const MONTH = [
 ];
 function fmtDMY(s: string): string {
   return new Intl.DateTimeFormat("en-GB", {
-    timeZone: "UTC",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+    timeZone: "UTC", day: "2-digit", month: "short", year: "numeric",
   }).format(new Date(`${s}T00:00:00Z`));
 }
 
-export function YearCalendar({ cal }: { cal: YearCalendar }) {
+export function YearCalendar({ cal, students }: { cal: YearCal; students: StudentBars[] }) {
+  const [studentId, setStudentId] = useState<string | null>(null);
+  const [classIdx, setClassIdx] = useState<number | null>(null);
+
   if (!cal.hasYear) {
     return (
       <p className="rounded-lg border border-hairline bg-surface p-4 text-sm text-muted">
@@ -45,13 +48,19 @@ export function YearCalendar({ cal }: { cal: YearCalendar }) {
     );
   }
 
+  const student = students.find((s) => s.studentId === studentId) ?? null;
+  const bar = student && classIdx !== null ? student.bars[classIdx] ?? null : null;
+  const overlay = bar
+    ? { sched: new Set(bar.scheduledDays), over: new Set(bar.overflowDays), color: bar.color, name: bar.className }
+    : null;
+
   const holidayName = new Map(cal.holidays.map((h) => [h.iso, h.name]));
   const inB = (s: string, b: { start: string; end: string }) => s >= b.start && s <= b.end;
   const termKind = (s: string) => cal.terms.find((t) => inB(s, t))?.kind ?? "other";
   const vacationAt = (s: string) => cal.vacations.find((b) => inB(s, b));
   const breakAt = (s: string) => cal.plannedBreaks.find((b) => inB(s, b));
 
-  const dayColor = (s: string): string => {
+  const baseColor = (s: string): string => {
     if (s === cal.finalDay) return "bg-emerald-500/80";
     if (holidayName.has(s) || vacationAt(s)) return "bg-amber-400/60";
     if (breakAt(s)) return "bg-sky-400/50";
@@ -59,7 +68,7 @@ export function YearCalendar({ cal }: { cal: YearCalendar }) {
     if (termKind(s) !== "other") return "bg-ink/15";
     return "bg-ink/5";
   };
-  const dayTitle = (s: string): string => {
+  const baseTitle = (s: string): string => {
     const base = fmtDMY(s);
     if (s === cal.finalDay) return `${base} \u2014 Final school day`;
     const h = holidayName.get(s);
@@ -71,15 +80,23 @@ export function YearCalendar({ cal }: { cal: YearCalendar }) {
     return base;
   };
 
+  const daySquare = (s: string, key: string | number) => {
+    if (overlay) {
+      if (overlay.over.has(s))
+        return <span key={key} className="h-3 w-3 rounded-sm" style={{ backgroundColor: "#dc2626" }} title={`${fmtDMY(s)} \u2014 ${overlay.name} (past term end)`} />;
+      if (overlay.sched.has(s))
+        return <span key={key} className="h-3 w-3 rounded-sm" style={{ backgroundColor: overlay.color }} title={`${fmtDMY(s)} \u2014 ${overlay.name}`} />;
+      return <span key={key} className={`h-3 w-3 rounded-sm opacity-40 ${baseColor(s)}`} title={baseTitle(s)} />;
+    }
+    return <span key={key} className={`h-3 w-3 rounded-sm ${baseColor(s)}`} title={baseTitle(s)} />;
+  };
+
   const monthCard = ({ y, m }: { y: number; m: number }, showYear: boolean) => {
     const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-    const lead = dow(iso(y, m, 1)); // Sunday-first
+    const lead = dow(iso(y, m, 1));
     const sq: React.ReactNode[] = [];
     for (let i = 0; i < lead; i++) sq.push(<span key={`b${i}`} className="h-3 w-3" />);
-    for (let d = 1; d <= days; d++) {
-      const s = iso(y, m, d);
-      sq.push(<span key={d} className={`h-3 w-3 rounded-sm ${dayColor(s)}`} title={dayTitle(s)} />);
-    }
+    for (let d = 1; d <= days; d++) sq.push(daySquare(iso(y, m, d), d));
     return (
       <div key={`${y}-${m}`} className="shrink-0">
         <div className="mb-1 text-[11px] font-medium text-muted">
@@ -95,12 +112,8 @@ export function YearCalendar({ cal }: { cal: YearCalendar }) {
     if (!term || months.length === 0) return null;
     return (
       <div key={term.kind}>
-        <div className="mb-2 border-b border-hairline pb-1 text-sm font-semibold tracking-tight">
-          {term.name}
-        </div>
-        <div className="flex flex-wrap gap-x-5 gap-y-4">
-          {months.map((mc, i) => monthCard(mc, i === 0))}
-        </div>
+        <div className="mb-2 border-b border-hairline pb-1 text-sm font-semibold tracking-tight">{term.name}</div>
+        <div className="flex flex-wrap gap-x-5 gap-y-4">{months.map((mc, i) => monthCard(mc, i === 0))}</div>
       </div>
     );
   };
@@ -108,19 +121,10 @@ export function YearCalendar({ cal }: { cal: YearCalendar }) {
   const fall = cal.terms.find((t) => t.kind === "fall");
   const spring = cal.terms.find((t) => t.kind === "spring");
   const summer = cal.terms.find((t) => t.kind === "summer");
-
   const rows: React.ReactNode[] = [];
-  if (fall) {
-    const endYM = spring ? prevMonth(...ym(spring.start)) : ym(fall.end);
-    rows.push(semesterRow(fall, monthsFromTo(...ym(fall.start), ...endYM)));
-  }
-  if (spring) {
-    const endYM = summer ? prevMonth(...ym(summer.start)) : ym(spring.end);
-    rows.push(semesterRow(spring, monthsFromTo(...ym(spring.start), ...endYM)));
-  }
-  if (summer) {
-    rows.push(semesterRow(summer, monthsFromTo(...ym(summer.start), ...ym(summer.end))));
-  }
+  if (fall) rows.push(semesterRow(fall, monthsFromTo(...ym(fall.start), ...(spring ? prevMonth(...ym(spring.start)) : ym(fall.end)))));
+  if (spring) rows.push(semesterRow(spring, monthsFromTo(...ym(spring.start), ...(summer ? prevMonth(...ym(summer.start)) : ym(spring.end)))));
+  if (summer) rows.push(semesterRow(summer, monthsFromTo(...ym(summer.start), ...ym(summer.end))));
 
   const swatch = (cls: string, label: string) => (
     <span className="inline-flex items-center gap-1.5">
@@ -130,15 +134,73 @@ export function YearCalendar({ cal }: { cal: YearCalendar }) {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {students.length > 0 && (
+        <div className="space-y-2 rounded-lg border border-hairline bg-surface p-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-xs text-muted">Overlay a class:</span>
+            {students.map((st) => (
+              <button
+                key={st.studentId}
+                type="button"
+                onClick={() => { setStudentId(st.studentId === studentId ? null : st.studentId); setClassIdx(null); }}
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${st.studentId === studentId ? "border-accent bg-accent/10 text-accent" : "border-hairline"}`}
+              >
+                {st.studentName}
+              </button>
+            ))}
+            {overlay && (
+              <button type="button" onClick={() => { setStudentId(null); setClassIdx(null); }} className="text-xs text-muted hover:text-ink">
+                clear
+              </button>
+            )}
+          </div>
+          {student && (
+            <div className="flex flex-wrap gap-2">
+              {student.bars.length === 0 ? (
+                <span className="text-xs text-muted">No published classes yet.</span>
+              ) : (
+                student.bars.map((b, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setClassIdx(i === classIdx ? null : i)}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${i === classIdx ? "border-accent" : "border-hairline"}`}
+                  >
+                    <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: b.color }} />
+                    {b.className}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {rows}
+
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-        {swatch("bg-ink/15", "school day")}
-        {swatch("bg-ink/30", "weekend")}
-        {swatch("bg-amber-400/60", "holiday / vacation")}
-        {swatch("bg-sky-400/50", "planned break")}
-        {swatch("bg-emerald-500/80", "final day")}
-        {swatch("bg-ink/5", "out of term")}
+        {overlay ? (
+          <>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: overlay.color }} />
+              <span>{overlay.name}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: "#dc2626" }} />
+              <span>past term end</span>
+            </span>
+          </>
+        ) : (
+          <>
+            {swatch("bg-ink/15", "school day")}
+            {swatch("bg-ink/30", "weekend")}
+            {swatch("bg-amber-400/60", "holiday / vacation")}
+            {swatch("bg-sky-400/50", "planned break")}
+            {swatch("bg-emerald-500/80", "final day")}
+            {swatch("bg-ink/5", "out of term")}
+          </>
+        )}
       </div>
     </div>
   );

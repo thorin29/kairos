@@ -895,12 +895,13 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       *(v0.387 empty windows; v0.388 stacked per-semester rows that wrap (no
       scroll), DD-MMM-YYYY + name hovers, green final school day, planned breaks
       in a distinct tentative colour, all-day vacation end-date fixed)* —
-      still to do here: a **holiday "no school" picker** (not every enabled
-      holiday is a day off), classes coloured per-subject on the calendar with
-      past-term overflow in red; admin reorg into buttons/sections; then the
-      dynamic reconciliation (planned break ⇄ real vacation linking + reminders;
-      get-ahead shifts remaining work earlier; overdue never auto-shifts;
-      finish-by = Spring end target + student School card).
+      still to do here: classes coloured per-subject on the calendar with
+      past-term overflow in red *(v0.389: per-student class overlay + red
+      overflow; holiday "no school" picker also shipped)*; admin reorg into
+      buttons/sections; then the dynamic reconciliation (planned break ⇄ real
+      vacation linking + reminders; get-ahead shifts remaining work earlier;
+      overdue never auto-shifts; finish-by = Spring end target + student School
+      card).
 - [ ] **Wizard form** (the non-CSV intake path; paste + file-upload exist).
 - [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
       keep tweaks, highlight changes). Would need a term-level draft/published

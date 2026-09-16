@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { holidayEntries } from "@/lib/holidays";
+import { schoolClosedHolidayEntries } from "@/lib/holidays";
 
 function dISO(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -59,9 +59,9 @@ export async function noSchoolDaysFor(
     }
   }
 
-  // Enabled built-in holidays that land inside the term windows.
+  // Enabled built-in holidays that are marked no-school, inside the term windows.
   if (windows.length) {
-    const holidays = await holidayEntries(enumerateDays(windows));
+    const holidays = await schoolClosedHolidayEntries(enumerateDays(windows));
     for (const h of holidays) skip.add(h.iso);
   }
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
+import { setSchoolClosedHolidayKeys } from "@/lib/holidays";
 
 type TermInput = { start: string; end: string } | null;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -36,6 +37,7 @@ export type SaveYearInput = {
   spring: TermInput;
   summer: TermInput;
   breaks: { name: string; start: string; end: string }[];
+  schoolHolidayKeys: string[];
 };
 
 /** Create or edit the school year: Fall / Spring / (optional) Summer terms plus
@@ -51,14 +53,14 @@ export async function saveSchoolYear(input: SaveYearInput): Promise<{ error: str
   await upsertTerm("spring", "Spring", 1, input.spring);
   await upsertTerm("summer", "Summer", 2, input.summer);
 
-  const breaks = input.breaks.filter((b) => b.name.trim() && ISO.test(b.start) && ISO.test(b.end) && b.end >= b.start);
+  const breaks = input.breaks.filter((b) => ISO.test(b.start) && ISO.test(b.end) && b.end >= b.start);
   await prisma.$transaction([
     prisma.schoolBreak.deleteMany({}),
     ...(breaks.length
       ? [
           prisma.schoolBreak.createMany({
             data: breaks.map((b) => ({
-              name: b.name.trim(),
+              name: b.name.trim() || "Break",
               startDate: toDateColumn(b.start),
               endDate: toDateColumn(b.end),
               planned: true,
@@ -67,6 +69,8 @@ export async function saveSchoolYear(input: SaveYearInput): Promise<{ error: str
         ]
       : []),
   ]);
+
+  await setSchoolClosedHolidayKeys(input.schoolHolidayKeys ?? []);
 
   revalidatePath("/admin/school");
   revalidatePath("/admin/school/year");

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { saveSchoolYear, type SaveYearInput } from "@/lib/actions/school-year";
 import type { SchoolYear } from "@/lib/queries/school-year";
+import { DateField } from "@/components/date-field";
 
 function weeks(a: string, b: string): number {
   if (!a || !b || b < a) return 0;
@@ -25,7 +26,7 @@ type Range = { start: string; end: string };
 type BreakRow = { name: string; start: string; end: string };
 
 const field =
-  "rounded-md border border-hairline bg-surface px-2 py-1 text-sm tabular outline-none focus:border-accent";
+  "rounded-md border border-hairline bg-surface px-3 py-1.5 text-sm tabular";
 
 function DateRange({
   value,
@@ -36,18 +37,18 @@ function DateRange({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <input
-        type="date"
+      <DateField
         value={value.start}
-        onChange={(e) => onChange({ ...value, start: e.target.value })}
-        className={field}
+        onChange={(v) => onChange({ ...value, start: v })}
+        className={`${field} w-36`}
+        ariaLabel="Start date"
       />
       <span className="text-muted">to</span>
-      <input
-        type="date"
+      <DateField
         value={value.end}
-        onChange={(e) => onChange({ ...value, end: e.target.value })}
-        className={field}
+        onChange={(v) => onChange({ ...value, end: v })}
+        className={`${field} w-36`}
+        ariaLabel="End date"
       />
     </div>
   );
@@ -67,6 +68,9 @@ export function SchoolYearSetup({ year }: { year: SchoolYear }) {
   });
   const [breaks, setBreaks] = useState<BreakRow[]>(
     year.breaks.map((b) => ({ name: b.name, start: b.start, end: b.end })),
+  );
+  const [closedHolidays, setClosedHolidays] = useState<Set<string>>(
+    new Set(year.schoolClosedKeys),
   );
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -89,6 +93,13 @@ export function SchoolYearSetup({ year }: { year: SchoolYear }) {
   const setBreak = (i: number, patch: Partial<BreakRow>) =>
     setBreaks((b) => b.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const rmBreak = (i: number) => setBreaks((b) => b.filter((_, j) => j !== i));
+  const toggleHoliday = (key: string) =>
+    setClosedHolidays((prev) => {
+      const n = new Set(prev);
+      if (n.has(key)) n.delete(key);
+      else n.add(key);
+      return n;
+    });
 
   const save = () =>
     start(async () => {
@@ -96,7 +107,8 @@ export function SchoolYearSetup({ year }: { year: SchoolYear }) {
         fall: fall.start && fall.end ? fall : null,
         spring: spring.start && spring.end ? spring : null,
         summer: hasSummer && summer.start && summer.end ? summer : null,
-        breaks: breaks.filter((b) => b.name.trim() && b.start && b.end),
+        breaks: breaks.filter((b) => b.start && b.end),
+        schoolHolidayKeys: [...closedHolidays],
       };
       const res = await saveSchoolYear(payload);
       setMsg(res.error ?? "Saved.");
@@ -182,7 +194,8 @@ export function SchoolYearSetup({ year }: { year: SchoolYear }) {
         </div>
         <p className="mb-3 text-xs text-muted">
           A week off inside a semester (spring break, a fall week off, an estimated vacation). School
-          work skips these days. Winter break between semesters is set by the dates above.
+          work skips these days. Winter break between semesters is set by the dates above. A name is
+          optional. Breaks are saved when you press Save below.
         </p>
         {breaks.length === 0 ? (
           <p className="text-xs text-muted">No breaks yet.</p>
@@ -210,6 +223,33 @@ export function SchoolYearSetup({ year }: { year: SchoolYear }) {
           </ul>
         )}
       </section>
+
+      {/* Holidays off school */}
+      {year.holidayOptions.length > 0 && (
+        <section className="rounded-lg border border-hairline bg-surface p-4">
+          <p className="mb-1 text-sm font-medium">Holidays off school</p>
+          <p className="mb-3 text-xs text-muted">
+            Check the holidays that are no-school days. Unchecked ones still show on the family
+            calendar, but school continues.
+          </p>
+          <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            {year.holidayOptions.map((h) => (
+              <li key={h.key}>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={closedHolidays.has(h.key)}
+                    onChange={() => toggleHoliday(h.key)}
+                    className="h-4 w-4 accent-[var(--color-accent)]"
+                  />
+                  <span>{h.name}</span>
+                  <span className="text-xs text-muted">{fmt(h.iso)}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Summary + save */}
       <div className="rounded-lg border border-hairline bg-surface p-4 text-sm">
