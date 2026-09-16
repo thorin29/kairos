@@ -899,10 +899,13 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       past-term overflow in red *(v0.389: per-student class overlay + red
       overflow; holiday "no school" picker also shipped)*; admin reorg into
       buttons/sections *(v0.390: /admin/school is a hub \u2192 School year, Terms &
-      classes, Curriculum & schedule, Open work)*; then the dynamic reconciliation (planned break ⇄ real
-      vacation linking + reminders; get-ahead shifts remaining work earlier;
-      overdue never auto-shifts; finish-by = Spring end target + student School
-      card).
+      classes, Curriculum & schedule, Open work)*; then the dynamic reconciliation.
+      *v0.391: student School card on the home page (overdue + today + per-subject
+      projected finish vs the finish-by = Spring-end target + get-ahead) shipped.*
+      Still to do: get-ahead **shifts remaining work earlier** so a plan re-fits
+      as you work ahead; overdue never auto-shifts (admin override / extend Spring
+      only); planned break ⇄ real vacation **linking + reminders** ("no vacation
+      \u2192 reclaim the time", "added a vacation \u2192 shift or keep?").
 - [ ] **Wizard form** (the non-CSV intake path; paste + file-upload exist).
 - [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
       keep tweaks, highlight changes). Would need a term-level draft/published

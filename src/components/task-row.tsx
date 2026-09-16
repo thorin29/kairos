@@ -7,7 +7,7 @@ import { formatShort } from "@/lib/dates";
 import { ReleaseIcon, TrashIcon } from "@/components/icons";
 import { TestScore } from "@/components/test-score";
 
-type Row = {
+export type Row = {
   id: string;
   title: string;
   category: keyof typeof CATEGORY_LABELS;
