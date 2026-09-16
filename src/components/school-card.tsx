@@ -151,7 +151,7 @@ export function SchoolCard({
                             )}
                           </span>
                           {p.finishISO ? (
-                            p.catchUpDays ? (
+                            p.catchUp ? (
                               <button
                                 type="button"
                                 onClick={() => setCatchUpFor(p.className)}
@@ -188,7 +188,8 @@ export function SchoolCard({
       {catchUpFor &&
         (() => {
           const p = progress.find((x) => x.className === catchUpFor);
-          if (!p || !p.catchUpDays) return null;
+          if (!p || !p.catchUp) return null;
+          const { rate, days } = p.catchUp;
           return (
             <div
               className="animate-backdrop-fade fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
@@ -213,12 +214,22 @@ export function SchoolCard({
                   <span className="font-medium text-amber-600">
                     {p.finishISO ? formatShort(p.finishISO) : ""}
                   </span>
-                  {targetISO ? `, after the ${formatShort(targetISO)} goal` : ""}. Do{" "}
-                  <span className="font-medium text-ink">
-                    2 lessons a day for the next {p.catchUpDays} school day
-                    {p.catchUpDays === 1 ? "" : "s"}
-                  </span>{" "}
-                  to finish on time.
+                  {targetISO ? `, past the ${formatShort(targetISO)} goal` : ""}.{" "}
+                  {days != null ? (
+                    <>
+                      Do{" "}
+                      <span className="font-medium text-ink">
+                        {rate} lessons a day for the next {days} school day{days === 1 ? "" : "s"}
+                      </span>{" "}
+                      to finish on time.
+                    </>
+                  ) : (
+                    <>
+                      Do{" "}
+                      <span className="font-medium text-ink">{rate} lessons every school day</span> to
+                      finish on time.
+                    </>
+                  )}
                 </p>
               </div>
             </div>

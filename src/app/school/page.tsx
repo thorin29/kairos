@@ -200,7 +200,7 @@ export default async function SchoolPage({
               {structure.people.map((p) => {
                 const s = statsByUser.get(p.id);
                 if (!s || s.total === 0) return null;
-                const pct = Math.round((s.completed / s.total) * 100);
+                const pct = s.dueSoFar ? Math.round((s.completedDue / s.dueSoFar) * 100) : null;
                 return (
                   <Card key={p.id} className="p-5">
                     <div className="flex items-center gap-3">
@@ -214,12 +214,14 @@ export default async function SchoolPage({
                         {p.name}
                       </span>
                       <span className="tabular ml-auto text-lg font-medium">
-                        {pct}%
+                        {pct === null ? "\u2014" : `${pct}%`}
                       </span>
                     </div>
                     <p className="mt-2 text-sm text-muted">
-                      {s.completed} of {s.total} done &middot; {s.onTime} on
-                      time
+                      {s.dueSoFar > 0
+                        ? `${s.completedDue} of ${s.dueSoFar} due so far`
+                        : "nothing due yet"}
+                      {s.onTime > 0 && ` \u00b7 ${s.onTime} on time`}
                       {s.overdue > 0 && (
                         <span className="ml-1 font-medium text-red-700">
                           {" "}
@@ -244,7 +246,7 @@ export default async function SchoolPage({
                             />
                             <span className="flex-1 truncate">{c.key}</span>
                             <span className="tabular text-xs text-muted">
-                              {c.completed}/{c.total}
+                              {c.completedDue}/{c.dueSoFar}
                             </span>
                           </li>
                         ))}
