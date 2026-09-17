@@ -141,13 +141,24 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
       const effectiveStart = p.startDate ? dISO(p.startDate) : scheduledDates[0] ?? null;
       const preDone = p.units.filter((u) => u.done && !u.scheduledDate).length;
       let pace: "ahead" | "behind" | null = null;
-      if (effectiveStart && effectiveStart <= today && wins.length) {
+      const scheduled = p.units.filter((u) => u.scheduledDate);
+      if (scheduled.length) {
+        // Precise pace from the plan's real schedule: behind only if a unit
+        // dated BEFORE today is still undone (today's work isn't due yet, so
+        // pending/just-done today is on schedule), and ahead if a unit dated
+        // AFTER today is already done. Otherwise on schedule (no tag).
+        const behindCount = scheduled.filter(
+          (u) => !u.done && dISO(u.scheduledDate as Date) < today,
+        ).length;
+        const aheadCount = scheduled.filter(
+          (u) => u.done && dISO(u.scheduledDate as Date) > today,
+        ).length;
+        if (behindCount > 0) pace = "behind";
+        else if (aheadCount > 0) pace = "ahead";
+      } else if (effectiveStart && effectiveStart <= today && wins.length) {
+        // Fallback for a plan whose units aren't date-scheduled: rate-based,
+        // measured against the END OF YESTERDAY (today isn't due yet).
         const elapsed = countSchoolDays(effectiveStart, today, weekdays, skip, wins);
-        // Today's work isn't due yet — the user has all day — so "behind" is
-        // judged against what the plan expected done by the END OF YESTERDAY,
-        // not today. If they're merely on today's tasks (or have done them),
-        // they're on schedule and get no tag. "Ahead" means doing more than
-        // today's cumulative — i.e., pulling future work in early.
         const isSchoolToday = isSchoolDay(today, weekdays, skip, wins);
         const elapsedPrior = Math.max(0, elapsed - (isSchoolToday ? 1 : 0));
         const expectedPrior = Math.min(

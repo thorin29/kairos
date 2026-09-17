@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AdminBack } from "@/components/admin-back";
 import { loadClassPlanDetail } from "@/lib/queries/class-plan";
 import { PlanReview } from "./plan-review";
+import { todayISO } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export default async function ClassPlanReviewPage({
       >
         &lsaquo; Curriculum &amp; schedule
       </Link>
-      <PlanReview plan={plan} />
+      <PlanReview plan={plan} today={todayISO()} />
     </main>
   );
 }
