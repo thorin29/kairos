@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.418.0";
+export const APP_VERSION = "0.419.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -117,6 +117,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.419.0",
+    summary: [
+      "Year-calendar overlay, take two: past-term-end days now key off each class's term-end date, so scheduled days that land after the term end show red (previously only unscheduled overflow did, which was empty here), and the calendar extends to the last day a class actually occupies \u2014 so an overflow into June now renders June.",
+    ],
+  },
   {
     version: "0.418.0",
     summary: [
