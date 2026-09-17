@@ -1178,3 +1178,26 @@ export async function deleteWorkoutSession(sessionId: string): Promise<void> {
   }
   refresh();
 }
+
+/** Weights already logged for a person on a date, keyed by pool-exercise id, so
+ *  Log workout can pre-fill them when back-dating an earlier day (like the app). */
+export async function loadLoggedWeights(
+  userId: string,
+  dateISO: string,
+): Promise<Record<string, string>> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const sessions = await prisma.workoutSession.findMany({
+    where: { userId, date: toDateColumn(dateISO) },
+    select: { sets: { select: { poolExerciseId: true, weight: true } } },
+  });
+  const out: Record<string, string> = {};
+  for (const session of sessions) {
+    for (const set of session.sets) {
+      if (set.poolExerciseId != null && set.weight != null) {
+        out[set.poolExerciseId] = String(set.weight);
+      }
+    }
+  }
+  return out;
+}
