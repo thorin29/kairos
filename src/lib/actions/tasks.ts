@@ -98,6 +98,29 @@ export async function claimTask(
   return claimTaskCore(id, userId);
 }
 
+/**
+ * One-click "up for grabs": claim an open task for a person AND mark it done in
+ * a single tap. Used on each person's Chores card so grabbing a pool chore and
+ * completing it is one action, attributed to whoever's card is open.
+ */
+export async function claimAndCompleteTask(
+  id: string,
+  userId: string,
+): Promise<ClaimState> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const res = await claimTaskCore(id, userId);
+  if (res.error) return res;
+  await prisma.task.update({
+    where: { id },
+    data: { status: TaskStatus.COMPLETE, completedAt: new Date() },
+  });
+  revalidatePath("/");
+  revalidatePath(`/person/${userId}`);
+  revalidatePath("/tasks");
+  return { error: null };
+}
+
 export async function deleteTask(id: string): Promise<void> {
   await requireInteractive();
   const task = await prisma.task.findUnique({ where: { id } });

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { loadDay, loadOpenTasks } from "@/lib/queries/overview";
+import { loadDay } from "@/lib/queries/overview";
 import { addDays, formatLong, todayISO } from "@/lib/dates";
 import { PersonCard } from "@/components/person-card";
 import { AddTaskForm } from "@/components/add-task-form";
@@ -10,9 +10,6 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { AlertIcon } from "@/components/icons";
-import { OpenTasks } from "@/components/open-tasks";
-import { AlwaysOpenChores } from "@/components/always-open-chores";
-import { loadAlwaysOpenChores } from "@/lib/queries/chores-summary";
 
 import { DaySchedule } from "@/components/day-schedule";
 import { loadDaySchedule } from "@/lib/queries/calendar";
@@ -98,8 +95,6 @@ export default async function Home({
     if (arr) arr.push(p);
     else promptsByUser.set(p.userId, [p]);
   }
-  const openTasks = await loadOpenTasks(today);
-  const alwaysOpenChores = await loadAlwaysOpenChores(today);
   const todaySchedule = await loadDaySchedule(scheduleDay);
 
   // The "start a new semester" reminder rides each admin's card. It's the same
@@ -177,18 +172,6 @@ export default async function Home({
           />
         ))}
       </div>
-
-      {!personal && (
-        <div className="mt-8">
-          <OpenTasks tasks={openTasks} people={roster} />
-        </div>
-      )}
-
-      {!personal && (
-        <div className="mt-8">
-          <AlwaysOpenChores chores={alwaysOpenChores} people={roster} />
-        </div>
-      )}
 
       <div className="mt-10">
         <DaySchedule

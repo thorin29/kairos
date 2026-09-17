@@ -14,10 +14,14 @@ type Person = { id: string; name: string; color: string };
  *  (or steps aside for its cooldown, then comes back). */
 export function AlwaysOpenChores({
   chores,
-  people,
+  people = [],
+  owner,
 }: {
   chores: AlwaysOpenChore[];
-  people: Person[];
+  people?: Person[];
+  /** When set, the card belongs to one person: a single tap logs one
+   *  completion for them (with their running ×N count) — no name-picker. */
+  owner?: Person;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -84,35 +88,58 @@ export function AlwaysOpenChores({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  {people.map((p) => {
-                    const n = countFor(c, p.id);
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        disabled={pending || cooling}
-                        onClick={() => {
-                          setError(null);
-                          start(async () => {
-                            const res = await completeAlwaysOpenChore(c.id, p.id);
-                            if (res.error) setError(res.error);
-                            else router.refresh();
-                          });
-                        }}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline bg-surface px-3.5 text-sm font-medium transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
-                      >
-                        <span
-                          aria-hidden
-                          className="h-3.5 w-1 rounded-full"
-                          style={{ backgroundColor: p.color }}
-                        />
-                        {p.name}
-                        {n > 0 && (
-                          <span className="tabular font-semibold text-muted">{n}</span>
-                        )}
-                      </button>
-                    );
-                  })}
+                  {owner ? (
+                    <button
+                      type="button"
+                      disabled={pending || cooling}
+                      onClick={() => {
+                        setError(null);
+                        start(async () => {
+                          const res = await completeAlwaysOpenChore(c.id, owner.id);
+                          if (res.error) setError(res.error);
+                          else router.refresh();
+                        });
+                      }}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline bg-surface px-4 text-sm font-medium transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+                    >
+                      Done
+                      {countFor(c, owner.id) > 0 && (
+                        <span className="tabular font-semibold text-muted">
+                          &times;{countFor(c, owner.id)}
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    people.map((p) => {
+                      const n = countFor(c, p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          disabled={pending || cooling}
+                          onClick={() => {
+                            setError(null);
+                            start(async () => {
+                              const res = await completeAlwaysOpenChore(c.id, p.id);
+                              if (res.error) setError(res.error);
+                              else router.refresh();
+                            });
+                          }}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline bg-surface px-3.5 text-sm font-medium transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+                        >
+                          <span
+                            aria-hidden
+                            className="h-3.5 w-1 rounded-full"
+                            style={{ backgroundColor: p.color }}
+                          />
+                          {p.name}
+                          {n > 0 && (
+                            <span className="tabular font-semibold text-muted">{n}</span>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </Card>

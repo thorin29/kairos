@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.411.0";
+export const APP_VERSION = "0.412.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,6 +116,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.412.0",
+    summary: [
+      "Up for grabs and Always open now live on each person's Chores card instead of the home dashboard: a single \u201cDone\u201d on your card claims and completes a pool chore for you in one tap \u2014 no name-picker, no separate claim step \u2014 and Always open logs one completion for you with a running \u00d7N count.",
+      "App API: added a chore \"claim-complete\" endpoint so the phone can one-tap an up-for-grabs chore the same way.",
+      "Added grass and water chore-badge icons (green / blue) ahead of the completed-today badges.",
+    ],
+  },
   {
     version: "0.411.0",
     summary: [
