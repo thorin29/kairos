@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.419.0";
+export const APP_VERSION = "0.420.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -117,6 +117,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.420.0",
+    summary: [
+      "Student work (formerly \u201cOpen work\u201d) now shows completed work too: inside each student's subject, completed work is listed first (green, \u201ccomplete\u201d), then late (orange), then upcoming. A pencil in the top right turns on a completion-edit mode whose only control is a checkbox to mark each item complete or reopen it \u2014 nothing else is editable there.",
+    ],
+  },
   {
     version: "0.419.0",
     summary: [

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { DateField } from "@/components/date-field";
-import { deleteSchoolWork, editSchoolWork } from "@/lib/actions/school";
+import { deleteSchoolWork, editSchoolWork, setSchoolWorkComplete } from "@/lib/actions/school";
 import { compressClass } from "@/lib/actions/class-plans";
 import { SCHOOL_TYPES, SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { formatShort } from "@/lib/dates";
@@ -28,6 +28,7 @@ export function SchoolAdmin({
   const [openUsers, setOpenUsers] = useState<Set<string>>(new Set());
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [editGroups, setEditGroups] = useState<Set<string>>(new Set());
+  const [completionEdit, setCompletionEdit] = useState(false);
   const [pending, start] = useTransition();
 
   const flip = (setSet: (fn: (p: Set<string>) => Set<string>) => void, key: string) =>
@@ -40,12 +41,39 @@ export function SchoolAdmin({
 
   return (
     <div className="space-y-6">
-      <AddSchoolWork
-        people={pickList}
-        classesByUser={classesByUser}
-        subjects={subjects}
-        defaultDate={today}
-      />
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted">
+          {completionEdit
+            ? "Editing completion \u2014 check to mark complete, uncheck to reopen. Nothing else changes."
+            : "Completed, late, and open work by student."}
+        </p>
+        <button
+          type="button"
+          onClick={() => setCompletionEdit((v) => !v)}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
+            completionEdit ? "border-accent text-accent" : "border-hairline text-muted hover:text-ink"
+          }`}
+          title="Edit whether work is complete"
+        >
+          {completionEdit ? (
+            "Done"
+          ) : (
+            <>
+              <PencilIcon className="h-3.5 w-3.5" />
+              Edit completion
+            </>
+          )}
+        </button>
+      </div>
+
+      {!completionEdit && (
+        <AddSchoolWork
+          people={pickList}
+          classesByUser={classesByUser}
+          subjects={subjects}
+          defaultDate={today}
+        />
+      )}
 
       <div className="space-y-2">
         {people.map((person) => {
@@ -70,7 +98,7 @@ export function SchoolAdmin({
               {open && (
                 <div className="space-y-1.5 border-t border-hairline p-3">
                   {groups.length === 0 ? (
-                    <p className="px-1 py-2 text-xs text-muted">Nothing open.</p>
+                    <p className="px-1 py-2 text-xs text-muted">No school work.</p>
                   ) : (
                     groups.map((g) => {
                       const gkey = `${person.id}|${g.key}`;
@@ -90,31 +118,35 @@ export function SchoolAdmin({
 
                           {gOpen && (
                             <div className="border-t border-hairline">
-                              <div className="flex items-center gap-4 px-3 py-2">
-                                <button
-                                  onClick={() => flip(setEditGroups, gkey)}
-                                  className="text-xs font-medium text-accent hover:underline"
-                                >
-                                  {editing ? "Done" : "Edit"}
-                                </button>
-                                {g.classId && (
+                              {!completionEdit && (
+                                <div className="flex items-center gap-4 px-3 py-2">
                                   <button
-                                    disabled={pending}
-                                    onClick={() =>
-                                      start(async () => {
-                                        await compressClass(g.classId as string);
-                                      })
-                                    }
-                                    className="text-xs text-muted hover:text-ink disabled:opacity-50"
-                                    title="Pull this class's remaining work earlier"
+                                    onClick={() => flip(setEditGroups, gkey)}
+                                    className="text-xs font-medium text-accent hover:underline"
                                   >
-                                    Compress schedule
+                                    {editing ? "Done" : "Edit"}
                                   </button>
-                                )}
-                              </div>
+                                  {g.classId && (
+                                    <button
+                                      disabled={pending}
+                                      onClick={() =>
+                                        start(async () => {
+                                          await compressClass(g.classId as string);
+                                        })
+                                      }
+                                      className="text-xs text-muted hover:text-ink disabled:opacity-50"
+                                      title="Pull this class's remaining work earlier"
+                                    >
+                                      Compress schedule
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                               <div className="divide-y divide-hairline border-t border-hairline">
                                 {g.items.map((it) =>
-                                  editing ? (
+                                  completionEdit ? (
+                                    <CompletionLine key={it.id} item={it} />
+                                  ) : editing ? (
                                     <ItemRow
                                       key={it.id}
                                       item={it}
@@ -154,23 +186,82 @@ function groupItems(items: SchoolItem[]): Group[] {
     g.items.push(it);
     map.set(key, g);
   }
+  for (const g of map.values()) {
+    // Completed work first (in date order), then late + upcoming in date order.
+    g.items.sort((a, b) =>
+      a.complete !== b.complete
+        ? a.complete
+          ? -1
+          : 1
+        : a.dueISO.localeCompare(b.dueISO),
+    );
+  }
   return [...map.values()].sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/** Row tint + status text for a work item: green when complete, amber when
+ *  overdue, plain otherwise — shared by the read-only and completion-edit lines. */
+function statusTone(item: SchoolItem): string {
+  if (item.complete) return "bg-green-50";
+  if (item.overdue) return "bg-amber-50";
+  return "";
+}
+function statusText(item: SchoolItem): string {
+  if (item.complete) return "font-medium text-green-700";
+  if (item.overdue) return "font-medium text-amber-700";
+  return "";
+}
+function statusLabel(item: SchoolItem): string {
+  if (item.complete) return `complete \u00b7 ${formatShort(item.dueISO)}`;
+  if (item.overdue) return `overdue \u00b7 ${formatShort(item.dueISO)}`;
+  return `due ${formatShort(item.dueISO)}`;
 }
 
 /** A read-only work line — no edit/delete icons until the subject's Edit is on. */
 function ReadOnlyLine({ item }: { item: SchoolItem }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5">
+    <div className={`flex items-center gap-3 px-3 py-2.5 ${statusTone(item)}`}>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm">{item.title}</p>
+        <p className={`truncate text-sm ${item.complete ? "text-muted" : ""}`}>{item.title}</p>
         <p className="mt-0.5 text-xs text-muted">
           {SCHOOL_TYPE_LABEL[item.type]}
-          <span className={`tabular ml-2 ${item.overdue ? "font-medium text-red-700" : ""}`}>
-            due {formatShort(item.dueISO)}
-          </span>
+          <span className={`tabular ml-2 ${statusText(item)}`}>{statusLabel(item)}</span>
         </p>
       </div>
     </div>
+  );
+}
+
+/** Completion-edit line: the only editable control is the checkbox for whether
+ *  the work is complete. Nothing else can be changed here. */
+function CompletionLine({ item }: { item: SchoolItem }) {
+  const [pending, start] = useTransition();
+  return (
+    <label
+      className={`flex cursor-pointer items-center gap-3 px-3 py-2.5 ${statusTone(item)} ${
+        pending ? "opacity-50" : ""
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={item.complete}
+        disabled={pending}
+        onChange={(e) => {
+          const complete = e.target.checked;
+          start(() => void setSchoolWorkComplete(item.id, complete));
+        }}
+        className="h-4 w-4 shrink-0 rounded border-hairline text-accent"
+      />
+      <div className="min-w-0 flex-1">
+        <p className={`truncate text-sm ${item.complete ? "text-muted line-through" : ""}`}>
+          {item.title}
+        </p>
+        <p className="mt-0.5 text-xs text-muted">
+          {SCHOOL_TYPE_LABEL[item.type]}
+          <span className={`tabular ml-2 ${statusText(item)}`}>{statusLabel(item)}</span>
+        </p>
+      </div>
+    </label>
   );
 }
 

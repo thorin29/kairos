@@ -27,6 +27,7 @@ export type SchoolItem = {
   classId: string | null;
   dueISO: string;
   status: string;
+  complete: boolean;
   overdue: boolean;
 };
 
@@ -63,7 +64,6 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
     prisma.task.findMany({
       where: {
         category: "SCHOOL",
-        status: { not: "COMPLETE" },
         schoolWork: { isNot: null },
       },
       orderBy: [{ dueDate: "asc" }],
@@ -98,7 +98,8 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
       classId: t.schoolWork.class?.id ?? null,
       dueISO,
       status: t.status as string,
-      overdue: dueISO < today,
+      complete: t.status === "COMPLETE",
+      overdue: t.status !== "COMPLETE" && dueISO < today,
     };
     const list = byUser.get(t.userId) ?? [];
     list.push(item);
@@ -113,8 +114,8 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
       color: p.color,
       avatarPath: p.avatarPath,
       avatarPosition: p.avatarPosition,
-      pending: items.length,
-      overdue: items.filter((i) => i.overdue).length,
+      pending: items.filter((i) => !i.complete).length,
+      overdue: items.filter((i) => !i.complete && i.overdue).length,
       items,
     };
   });
