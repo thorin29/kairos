@@ -139,12 +139,19 @@ export async function loadWorkoutPlanNames(
     select: { dayOfWeek: true, name: true },
   });
 
-  const byDay = new Map<number, string>();
+  // Join every named planned workout for the day (in order) so a Legs + Chest
+  // day reads "Legs · Chest" rather than just the first block.
+  const byDay = new Map<number, string[]>();
   for (const p of planned) {
     const name = p.name.trim();
-    if (name && !byDay.has(p.dayOfWeek)) byDay.set(p.dayOfWeek, name);
+    if (!name) continue;
+    const list = byDay.get(p.dayOfWeek) ?? [];
+    list.push(name);
+    byDay.set(p.dayOfWeek, list);
   }
-  return byDay;
+  const out = new Map<number, string>();
+  for (const [day, names] of byDay) out.set(day, names.join(" \u00b7 "));
+  return out;
 }
 
 export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard> {
