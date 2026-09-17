@@ -346,6 +346,8 @@ export default async function PersonPage({
           pool={pool}
           hiitWorkouts={hiitWorkouts}
           unitSystem={unitSystem}
+          weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
+          todayISO={today}
         />
       );
     }
