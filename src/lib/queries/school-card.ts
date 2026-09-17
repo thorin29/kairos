@@ -143,9 +143,23 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
       let pace: "ahead" | "behind" | null = null;
       if (effectiveStart && effectiveStart <= today && wins.length) {
         const elapsed = countSchoolDays(effectiveStart, today, weekdays, skip, wins);
-        const expected = Math.min(preDone + elapsed * perDay, p.units.length);
-        const diff = doneCount - expected;
-        pace = diff >= 2 ? "ahead" : diff <= -2 ? "behind" : null;
+        // Today's work isn't due yet — the user has all day — so "behind" is
+        // judged against what the plan expected done by the END OF YESTERDAY,
+        // not today. If they're merely on today's tasks (or have done them),
+        // they're on schedule and get no tag. "Ahead" means doing more than
+        // today's cumulative — i.e., pulling future work in early.
+        const isSchoolToday = isSchoolDay(today, weekdays, skip, wins);
+        const elapsedPrior = Math.max(0, elapsed - (isSchoolToday ? 1 : 0));
+        const expectedPrior = Math.min(
+          preDone + elapsedPrior * perDay,
+          p.units.length,
+        );
+        const expectedToday = Math.min(
+          preDone + elapsed * perDay,
+          p.units.length,
+        );
+        if (doneCount < expectedPrior) pace = "behind";
+        else if (doneCount > expectedToday) pace = "ahead";
       }
 
       // Catch-up: if it won't finish by the target, the pace that would.
