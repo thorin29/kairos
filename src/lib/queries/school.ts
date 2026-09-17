@@ -19,6 +19,8 @@ import type { SchoolWorkType } from "@/generated/prisma/client";
 
 export type SchoolItem = {
   id: string;
+  taskId: string | null;
+  unitId: string | null;
   title: string;
   type: SchoolWorkType;
   subject: string | null;
@@ -90,6 +92,8 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
     const dueISO = fromDateColumn(t.dueDate);
     const item: SchoolItem = {
       id: t.id,
+      taskId: t.id,
+      unitId: null,
       title: t.title,
       type: t.schoolWork.type,
       subject: t.schoolWork.subject,
@@ -104,6 +108,54 @@ export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
     const list = byUser.get(t.userId) ?? [];
     list.push(item);
     byUser.set(t.userId, list);
+  }
+
+  // Lessons marked done on upload are "skipped" plan units with no generated
+  // task \u2014 the task query above misses them, so pull them in as completed items
+  // so every lesson shows.
+  const preCompleted = await prisma.classPlanUnit.findMany({
+    where: { done: true, workId: null, plan: { status: "PUBLISHED" } },
+    orderBy: { seq: "asc" },
+    select: {
+      id: true,
+      label: true,
+      type: true,
+      plan: {
+        select: {
+          class: {
+            select: {
+              id: true,
+              name: true,
+              color: true,
+              userId: true,
+              subject: { select: { name: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+  for (const u of preCompleted) {
+    const cls = u.plan.class;
+    if (!cls.userId) continue;
+    const item: SchoolItem = {
+      id: `unit:${u.id}`,
+      taskId: null,
+      unitId: u.id,
+      title: u.label,
+      type: u.type,
+      subject: cls.subject?.name ?? null,
+      className: cls.name,
+      classColor: cls.color,
+      classId: cls.id,
+      dueISO: "",
+      status: "COMPLETE",
+      complete: true,
+      overdue: false,
+    };
+    const list = byUser.get(cls.userId) ?? [];
+    list.push(item);
+    byUser.set(cls.userId, list);
   }
 
   return people.map((p) => {

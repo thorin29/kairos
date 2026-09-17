@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { DateField } from "@/components/date-field";
-import { deleteSchoolWork, editSchoolWork, setSchoolWorkComplete } from "@/lib/actions/school";
+import { deleteSchoolWork, editSchoolWork, setSchoolWorkComplete, setPlanUnitDone } from "@/lib/actions/school";
 import { compressClass } from "@/lib/actions/class-plans";
 import { SCHOOL_TYPES, SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { formatShort } from "@/lib/dates";
@@ -29,6 +29,7 @@ export function SchoolAdmin({
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [editGroups, setEditGroups] = useState<Set<string>>(new Set());
   const [completionEdit, setCompletionEdit] = useState(false);
+  const [hideComplete, setHideComplete] = useState(false);
   const [pending, start] = useTransition();
 
   const flip = (setSet: (fn: (p: Set<string>) => Set<string>) => void, key: string) =>
@@ -47,23 +48,34 @@ export function SchoolAdmin({
             ? "Editing completion \u2014 check to mark complete, uncheck to reopen. Nothing else changes."
             : "Completed, late, and open work by student."}
         </p>
-        <button
-          type="button"
-          onClick={() => setCompletionEdit((v) => !v)}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
-            completionEdit ? "border-accent text-accent" : "border-hairline text-muted hover:text-ink"
-          }`}
-          title="Edit whether work is complete"
-        >
-          {completionEdit ? (
-            "Done"
-          ) : (
-            <>
-              <PencilIcon className="h-3.5 w-3.5" />
-              Edit completion
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setHideComplete((v) => !v)}
+            className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium ${
+              hideComplete ? "border-accent text-accent" : "border-hairline text-muted hover:text-ink"
+            }`}
+          >
+            {hideComplete ? "Show complete" : "Hide complete"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setCompletionEdit((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
+              completionEdit ? "border-accent text-accent" : "border-hairline text-muted hover:text-ink"
+            }`}
+            title="Edit whether work is complete"
+          >
+            {completionEdit ? (
+              "Done"
+            ) : (
+              <>
+                <PencilIcon className="h-3.5 w-3.5" />
+                Edit completion
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {!completionEdit && (
@@ -78,7 +90,9 @@ export function SchoolAdmin({
       <div className="space-y-2">
         {people.map((person) => {
           const open = openUsers.has(person.id);
-          const groups = groupItems(person.items);
+          const groups = groupItems(
+            hideComplete ? person.items.filter((i) => !i.complete) : person.items,
+          );
           return (
             <div key={person.id} className="overflow-hidden rounded-lg border border-hairline bg-surface">
               <button
@@ -146,7 +160,7 @@ export function SchoolAdmin({
                                 {g.items.map((it) =>
                                   completionEdit ? (
                                     <CompletionLine key={it.id} item={it} />
-                                  ) : editing ? (
+                                  ) : editing && it.taskId ? (
                                     <ItemRow
                                       key={it.id}
                                       item={it}
@@ -212,7 +226,8 @@ function statusText(item: SchoolItem): string {
   return "";
 }
 function statusLabel(item: SchoolItem): string {
-  if (item.complete) return `complete \u00b7 ${formatShort(item.dueISO)}`;
+  if (item.complete)
+    return item.dueISO ? `complete \u00b7 ${formatShort(item.dueISO)}` : "complete";
   if (item.overdue) return `overdue \u00b7 ${formatShort(item.dueISO)}`;
   return `due ${formatShort(item.dueISO)}`;
 }
@@ -248,7 +263,10 @@ function CompletionLine({ item }: { item: SchoolItem }) {
         disabled={pending}
         onChange={(e) => {
           const complete = e.target.checked;
-          start(() => void setSchoolWorkComplete(item.id, complete));
+          start(() => {
+            if (item.taskId) void setSchoolWorkComplete(item.taskId, complete);
+            else if (item.unitId) void setPlanUnitDone(item.unitId, complete);
+          });
         }}
         className="h-4 w-4 shrink-0 rounded border-hairline text-accent"
       />

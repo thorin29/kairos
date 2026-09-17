@@ -1173,3 +1173,18 @@ export async function setSchoolWorkComplete(
   revalidatePath(`/person/${task.userId}`);
   revalidatePath("/tasks");
 }
+
+/** Admin toggle for a pre-completed ("skipped on upload") plan unit that has no
+ *  task — flips its done flag so it shows complete or reopens for scheduling. */
+export async function setPlanUnitDone(unitId: string, done: boolean): Promise<void> {
+  await requireAdmin();
+  const unit = await prisma.classPlanUnit.findUnique({
+    where: { id: unitId },
+    select: { plan: { select: { class: { select: { userId: true } } } } },
+  });
+  await prisma.classPlanUnit.update({ where: { id: unitId }, data: { done } });
+  revalidatePath("/admin/school/work");
+  const userId = unit?.plan.class.userId;
+  if (userId) revalidatePath(`/person/${userId}`);
+  revalidatePath("/");
+}
