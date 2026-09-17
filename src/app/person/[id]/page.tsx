@@ -567,7 +567,7 @@ export default async function PersonPage({
                     getAhead={getAhead}
                     alwaysOpen={home?.alwaysOpen}
                     openTasks={home?.openTasks}
-                    people={home?.roster}
+                    owner={{ id: person.id, name: person.name, color: person.color }}
                   />
                 );
               }

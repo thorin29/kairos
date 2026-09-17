@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { claimTask } from "@/lib/actions/tasks";
+import { claimTask, claimAndCompleteTask } from "@/lib/actions/tasks";
 import { formatShort } from "@/lib/dates";
 import { Card } from "@/components/ui";
 import { HandIcon } from "@/components/icons";
@@ -11,10 +11,14 @@ type Person = { id: string; name: string; color: string };
 
 export function OpenTasks({
   tasks,
-  people,
+  people = [],
+  owner,
 }: {
   tasks: OpenTask[];
-  people: Person[];
+  people?: Person[];
+  /** When set, the card belongs to one person: a single tap claims AND
+   *  completes the chore for them — no name-picker, no separate claim step. */
+  owner?: Person;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -51,28 +55,45 @@ export function OpenTasks({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {people.map((p) => (
+              {owner ? (
                 <button
-                  key={p.id}
                   type="button"
                   disabled={pending}
                   onClick={() => {
                     setError(null);
                     startTransition(async () => {
-                      const res = await claimTask(t.id, p.id);
+                      const res = await claimAndCompleteTask(t.id, owner.id);
                       if (res.error) setError(res.error);
                     });
                   }}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline bg-surface px-3.5 text-sm font-medium transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-4 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50"
                 >
-                  <span
-                    aria-hidden
-                    className="h-3.5 w-1 rounded-full"
-                    style={{ backgroundColor: p.color }}
-                  />
-                  {p.name}
+                  Done
                 </button>
-              ))}
+              ) : (
+                people.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      setError(null);
+                      startTransition(async () => {
+                        const res = await claimTask(t.id, p.id);
+                        if (res.error) setError(res.error);
+                      });
+                    }}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline bg-surface px-3.5 text-sm font-medium transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+                  >
+                    <span
+                      aria-hidden
+                      className="h-3.5 w-1 rounded-full"
+                      style={{ backgroundColor: p.color }}
+                    />
+                    {p.name}
+                  </button>
+                ))
+              )}
             </div>
           </div>
         ))}

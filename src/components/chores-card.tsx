@@ -19,14 +19,16 @@ export function ChoresCard({
   getAhead,
   alwaysOpen = [],
   openTasks = [],
-  people = [],
+  owner,
 }: {
   overdue: Row[];
   today: Row[];
   getAhead: GetAheadChore[];
   alwaysOpen?: React.ComponentProps<typeof AlwaysOpenChores>["chores"];
   openTasks?: React.ComponentProps<typeof OpenTasks>["tasks"];
-  people?: React.ComponentProps<typeof AlwaysOpenChores>["people"];
+  /** The person whose card this is — always-open and up-for-grabs are
+   *  one-tap completions attributed to them. */
+  owner?: React.ComponentProps<typeof OpenTasks>["owner"];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -144,11 +146,11 @@ export function ChoresCard({
               )}
 
               {alwaysOpen.length > 0 && (
-                <AlwaysOpenChores chores={alwaysOpen} people={people} />
+                <AlwaysOpenChores chores={alwaysOpen} owner={owner} />
               )}
 
               {openTasks.length > 0 && (
-                <OpenTasks tasks={openTasks} people={people} />
+                <OpenTasks tasks={openTasks} owner={owner} />
               )}
 
               {getAhead.length > 0 && (
