@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { TaskRow, type Row } from "@/components/task-row";
 import { GetAheadRow } from "@/components/get-ahead-row";
+import { AlwaysOpenChores } from "@/components/always-open-chores";
+import { OpenTasks } from "@/components/open-tasks";
 import { ChoresIcon, XIcon } from "@/components/icons";
 import type { GetAheadChore } from "@/lib/queries/get-ahead";
 
@@ -15,10 +17,16 @@ export function ChoresCard({
   overdue,
   today,
   getAhead,
+  alwaysOpen = [],
+  openTasks = [],
+  people = [],
 }: {
   overdue: Row[];
   today: Row[];
   getAhead: GetAheadChore[];
+  alwaysOpen?: React.ComponentProps<typeof AlwaysOpenChores>["chores"];
+  openTasks?: React.ComponentProps<typeof OpenTasks>["tasks"];
+  people?: React.ComponentProps<typeof AlwaysOpenChores>["people"];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -33,7 +41,18 @@ export function ChoresCard({
 
   const pendingOverdue = overdue.filter((r) => r.status !== "COMPLETE");
   const pendingToday = today.filter((r) => r.status !== "COMPLETE");
-  const nothing = overdue.length === 0 && today.length === 0 && getAhead.length === 0;
+  const nothing =
+    overdue.length === 0 &&
+    today.length === 0 &&
+    getAhead.length === 0 &&
+    alwaysOpen.length === 0 &&
+    openTasks.length === 0;
+  const poolText =
+    openTasks.length === 1
+      ? openTasks[0].title
+      : openTasks.length > 1
+        ? "Up for grabs chores are available"
+        : null;
   if (nothing) return null;
 
   const completeForToday =
@@ -67,8 +86,11 @@ export function ChoresCard({
         onClick={() => setOpen(true)}
         className="flex w-full items-center justify-between rounded-lg border border-hairline bg-surface px-4 py-3 text-left hover:border-accent"
       >
-        <span className={`text-sm ${completeForToday ? "font-medium text-emerald-600" : ""}`}>
-          {completeForToday ? "Complete for today!" : summary}
+        <span className="flex min-w-0 flex-col">
+          <span className={`text-sm ${completeForToday ? "font-medium text-emerald-600" : ""}`}>
+            {completeForToday ? "Complete for today!" : summary}
+          </span>
+          {poolText && <span className="truncate text-xs text-muted">{poolText}</span>}
         </span>
         <span className="text-xs font-medium text-accent">Open</span>
       </button>
@@ -119,6 +141,14 @@ export function ChoresCard({
                     ))}
                   </div>
                 </div>
+              )}
+
+              {alwaysOpen.length > 0 && (
+                <AlwaysOpenChores chores={alwaysOpen} people={people} />
+              )}
+
+              {openTasks.length > 0 && (
+                <OpenTasks tasks={openTasks} people={people} />
               )}
 
               {getAhead.length > 0 && (
