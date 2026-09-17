@@ -624,8 +624,9 @@ export async function compressClass(classId: string): Promise<void> {
 /** Pull an upcoming piece of school work into today (from "do some extra work"),
  *  then compress the class's remaining future work so the finish pulls in. The
  *  item lands in today's list to be ticked off like anything else. */
-export async function addSchoolWorkToToday(taskId: string): Promise<void> {
-  await requireInteractive();
+/** Moves a school task's due date to today and reschedules its plan. No auth —
+ *  callers must authorize first (the server action and the device API route do). */
+export async function addSchoolWorkToTodayCore(taskId: string): Promise<string | null> {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     select: {
@@ -635,8 +636,7 @@ export async function addSchoolWorkToToday(taskId: string): Promise<void> {
       },
     },
   });
-  if (!task) return;
-  await requireCanActFor(task.userId);
+  if (!task) return null;
 
   const today = todayISO();
   const d = toDateColumn(today);
@@ -655,6 +655,15 @@ export async function addSchoolWorkToToday(taskId: string): Promise<void> {
   revalidatePath("/");
   revalidatePath(`/person/${task.userId}`);
   revalidatePath("/tasks");
+  return task.userId;
+}
+
+export async function addSchoolWorkToToday(taskId: string): Promise<void> {
+  await requireInteractive();
+  const task = await prisma.task.findUnique({ where: { id: taskId }, select: { userId: true } });
+  if (!task) return;
+  await requireCanActFor(task.userId);
+  await addSchoolWorkToTodayCore(taskId);
 }
 
 /** Unpublish a plan back to draft so it can be edited and republished without
