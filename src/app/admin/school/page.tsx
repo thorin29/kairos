@@ -36,8 +36,8 @@ const TILES = [
   },
   {
     href: "/admin/school/work",
-    label: "Open work",
-    blurb: "Assignments & tests across the household",
+    label: "Student work",
+    blurb: "Completed, late & open assignments across the household",
     icon: <AssignmentIcon className="h-7 w-7" />,
   },
 ];

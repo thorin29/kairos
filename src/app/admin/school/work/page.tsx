@@ -21,7 +21,7 @@ export default async function SchoolWorkPage() {
         &lsaquo; School
       </Link>
       <header className="mb-6 mt-3 border-b border-hairline pb-4">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">Open work</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">Student work</h1>
       </header>
       <SchoolAdmin
         people={people}

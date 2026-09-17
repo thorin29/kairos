@@ -5,7 +5,7 @@ import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { requireAdmin, isAdmin } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
 import { getClassFromCalendarMode, SCHOOL_CLASS_FROM_CALENDAR } from "@/lib/settings";
-import { Category, SchoolWorkType } from "@/generated/prisma/client";
+import { Category, SchoolWorkType, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   addDays,
@@ -1136,4 +1136,40 @@ export async function setTestScore(input: {
 
   revalidatePath("/", "layout");
   return { error: null };
+}
+
+/** Admin toggle for whether a piece of school work is completed. Sets the task
+ *  status and keeps the linked plan unit's done flag in sync (it drives pace and
+ *  the plan view). Used by the completion-edit mode on the School work page. */
+export async function setSchoolWorkComplete(
+  taskId: string,
+  complete: boolean,
+): Promise<void> {
+  await requireAdmin();
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: {
+      userId: true,
+      schoolWork: { select: { planUnit: { select: { id: true } } } },
+    },
+  });
+  if (!task) return;
+  await prisma.task.update({
+    where: { id: taskId },
+    data: {
+      status: complete ? TaskStatus.COMPLETE : TaskStatus.PENDING,
+      completedAt: complete ? new Date() : null,
+    },
+  });
+  const unitId = task.schoolWork?.planUnit?.id;
+  if (unitId) {
+    await prisma.classPlanUnit.update({
+      where: { id: unitId },
+      data: { done: complete },
+    });
+  }
+  revalidatePath("/admin/school/work");
+  revalidatePath("/");
+  revalidatePath(`/person/${task.userId}`);
+  revalidatePath("/tasks");
 }
