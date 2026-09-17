@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.407.0";
+export const APP_VERSION = "0.408.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,6 +116,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.408.0",
+    summary: [
+      "App API: the dashboard now includes the person's school card (per-class progress, get-ahead, and the school-year end date), so the Android home School screen can show the full detail. (No web change.)",
+    ],
+  },
   {
     version: "0.407.0",
     summary: [

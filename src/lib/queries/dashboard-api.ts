@@ -16,6 +16,8 @@ import { loadPersonalPlan } from "@/lib/queries/personal-plan";
 import { loadOpenTasks } from "@/lib/queries/overview";
 import { loadAlwaysOpenChores } from "@/lib/queries/chores-summary";
 import { loadGetAhead } from "@/lib/queries/get-ahead";
+import { loadSchoolProgress } from "@/lib/queries/school-card";
+import { loadSchoolGetAhead } from "@/lib/queries/school-get-ahead";
 import { loadDaySchedule } from "@/lib/queries/calendar";
 import { pendingMoneyCount } from "@/lib/queries/money";
 import { pendingBibleRewards } from "@/lib/bible-rewards";
@@ -91,6 +93,15 @@ export type ApiDashboard = {
   sportPrompts: { eventId: string; title: string; dateISO: string }[];
   /** Upcoming chores this person is next up for and can do early for a bonus. */
   getAhead: { taskId: string; title: string; dueDateISO: string; bonus: number }[];
+  school: {
+    targetISO: string | null;
+    progress: {
+      className: string; subject: string | null; color: string | null;
+      finishISO: string | null; remaining: number; onTrack: boolean;
+      pace: "ahead" | "behind" | null; catchUpRate: number | null; catchUpDays: number | null;
+    }[];
+    getAhead: { subject: string; items: { taskId: string; title: string; dueISO: string }[] }[];
+  } | null;
   /** Household chores anyone can take today (chores only — never other
    *  categories). Claimed for the enrolled person via /chores/claim. */
   upForGrabs: {
@@ -144,6 +155,9 @@ export async function loadApiDashboard(
 ): Promise<ApiDashboard> {
   await ensureGenerated(dayISO, today);
   const getAhead = dayISO === today ? await loadGetAhead(userId, today) : [];
+  const [schoolProg, schoolAhead] = dayISO === today
+    ? await Promise.all([loadSchoolProgress(userId), loadSchoolGetAhead(userId, today)])
+    : [null, [] as Awaited<ReturnType<typeof loadSchoolGetAhead>>];
 
   const [tasks, workoutNames] = await Promise.all([
     loadPersonDay(userId, dayISO),
@@ -312,6 +326,20 @@ export async function loadApiDashboard(
     upForGrabs,
     alwaysOpen,
     getAhead: getAhead.map((c) => ({ taskId: c.taskId, title: c.title, dueDateISO: c.dueDateISO, bonus: c.bonus })),
+    school: schoolProg
+      ? {
+          targetISO: schoolProg.targetISO,
+          progress: schoolProg.progress.map((c) => ({
+            className: c.className, subject: c.subject, color: c.color,
+            finishISO: c.finishISO, remaining: c.remaining, onTrack: c.onTrack,
+            pace: c.pace, catchUpRate: c.catchUp?.rate ?? null, catchUpDays: c.catchUp?.days ?? null,
+          })),
+          getAhead: schoolAhead.map((sub) => ({
+            subject: sub.subject,
+            items: sub.items.map((it) => ({ taskId: it.taskId, title: it.label, dueISO: it.dueISO })),
+          })),
+        }
+      : null,
     schedule,
     sportPrompts,
   };
