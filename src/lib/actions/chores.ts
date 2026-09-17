@@ -47,6 +47,19 @@ export async function setChoreEffort(id: string, effort: number): Promise<void> 
   revalidatePath("/admin/chores");
 }
 
+/** Set (or clear) a chore's badge glyph. Pass "" or null to remove it. */
+export async function setChoreIcon(
+  id: string,
+  icon: string | null,
+): Promise<void> {
+  await requireAdmin();
+  await prisma.chore.update({
+    where: { id },
+    data: { icon: icon || null },
+  });
+  revalidatePath("/admin/chores");
+}
+
 /** Lock or unlock a chore's effort so it isn't changed by accident. */
 export async function setChoreEffortLocked(id: string, locked: boolean): Promise<void> {
   await requireAdmin();

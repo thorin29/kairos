@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.412.0";
+export const APP_VERSION = "0.413.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -111,11 +111,18 @@ export const MIGRATIONS = [
   "100_school_break",
   "101_school_break_confirmed",
   "102_school_vacation_decision",
+  "103_chore_icon",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.413.0",
+    summary: [
+      "Chore badges: a chore can now carry a small glyph \u2014 grass or water \u2014 set in the Chores admin (on the master list or a pool chore). It shows after the Chores summary line on the day the chore is done: once for a one-time chore, \u00d7N for an always-open one done several times. Appears on both the web card and the phone.",
+    ],
+  },
   {
     version: "0.412.0",
     summary: [

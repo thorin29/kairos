@@ -6,6 +6,7 @@ import { GetAheadRow } from "@/components/get-ahead-row";
 import { AlwaysOpenChores } from "@/components/always-open-chores";
 import { OpenTasks } from "@/components/open-tasks";
 import { ChoresIcon, XIcon } from "@/components/icons";
+import { ChoreBadges, type ChoreBadge } from "@/lib/chore-icons";
 import type { GetAheadChore } from "@/lib/queries/get-ahead";
 
 const CHORE_COLOR = "#d97706";
@@ -20,6 +21,7 @@ export function ChoresCard({
   alwaysOpen = [],
   openTasks = [],
   owner,
+  badges = [],
 }: {
   overdue: Row[];
   today: Row[];
@@ -29,6 +31,8 @@ export function ChoresCard({
   /** The person whose card this is — always-open and up-for-grabs are
    *  one-tap completions attributed to them. */
   owner?: React.ComponentProps<typeof OpenTasks>["owner"];
+  /** Glyphs for chores completed today, shown after the summary line. */
+  badges?: ChoreBadge[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -89,8 +93,9 @@ export function ChoresCard({
         className="flex w-full items-center justify-between rounded-lg border border-hairline bg-surface px-4 py-3 text-left hover:border-accent"
       >
         <span className="flex min-w-0 flex-col">
-          <span className={`text-sm ${completeForToday ? "font-medium text-emerald-600" : ""}`}>
-            {completeForToday ? "Complete for today!" : summary}
+          <span className={`flex items-center gap-2 text-sm ${completeForToday ? "font-medium text-emerald-600" : ""}`}>
+            <span>{completeForToday ? "Complete for today!" : summary}</span>
+            <ChoreBadges badges={badges} />
           </span>
           {poolText && <span className="truncate text-xs text-muted">{poolText}</span>}
         </span>

@@ -12,6 +12,7 @@ import {
 import { Card } from "@/components/ui";
 import { PlusIcon } from "@/components/icons";
 import { EffortControl } from "./effort-control";
+import { ChoreIconControl } from "./chore-icon-control";
 import { DeleteChoreButton } from "./row-actions";
 
 const initial: ChoreActionState = { error: null };
@@ -19,6 +20,7 @@ const initial: ChoreActionState = { error: null };
 export type PoolChore = {
   id: string;
   title: string;
+  icon: string | null;
   intervalDays: number;
   isPaused: boolean;
   nextDueISO: string | null;
@@ -174,6 +176,7 @@ function PoolRow({
     <div className="p-4">
       <div className="flex flex-wrap items-center gap-3">
         <EffortControl id={c.id} value={c.effort} locked={c.effortLocked} />
+        <ChoreIconControl id={c.id} value={c.icon} />
         <div className="min-w-[11rem] flex-1">
           <p className="text-sm font-medium">{c.title}</p>
           <p className="tabular mt-0.5 text-xs text-muted">

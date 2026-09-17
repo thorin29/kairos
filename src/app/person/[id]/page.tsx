@@ -50,7 +50,7 @@ import { ClassPrompts } from "@/components/class-prompts";
 import { MoneyReminder } from "@/components/money-reminder";
 import { RolloverReminder } from "@/components/rollover-reminder";
 import { loadOpenTasks } from "@/lib/queries/overview";
-import { loadAlwaysOpenChores } from "@/lib/queries/chores-summary";
+import { loadAlwaysOpenChores, loadChoreBadges } from "@/lib/queries/chores-summary";
 import { loadDaySchedule } from "@/lib/queries/calendar";
 import { pendingSportPrompts } from "@/lib/workouts/generate";
 import { pendingClassPrompts, loadRolloverState } from "@/lib/queries/school";
@@ -147,6 +147,7 @@ export default async function PersonPage({
   const subjectNames = await loadSubjectNames();
   const progress = await loadPersonProgress(id);
   const getAhead = await loadGetAhead(id, today);
+  const choreBadges = await loadChoreBadges(id, today);
   const schoolAhead = await loadSchoolGetAhead(id, today);
   const schoolProgress = await loadSchoolProgress(id);
 
@@ -568,6 +569,7 @@ export default async function PersonPage({
                     alwaysOpen={home?.alwaysOpen}
                     openTasks={home?.openTasks}
                     owner={{ id: person.id, name: person.name, color: person.color }}
+                    badges={choreBadges}
                   />
                 );
               }
