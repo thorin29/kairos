@@ -39,10 +39,10 @@ import { pendingBibleRewards } from "@/lib/bible-rewards";
 
 // Same order the personal page reads the day in.
 const ORDER: Category[] = [
-  Category.CHORE,
   Category.BIBLE,
-  Category.EXERCISE,
+  Category.CHORE,
   Category.SCHOOL,
+  Category.EXERCISE,
   Category.WORK,
   Category.APPOINTMENT,
   Category.OTHER,
@@ -212,10 +212,11 @@ export async function loadApiDashboard(
     };
   });
 
-  // Overall percent and per-category bars: school excluded, skipped/stale
-  // excluded — identical to the personal page's header and bars.
+  // Overall percent and per-category bars: skipped/stale excluded — identical
+  // to the personal page's header and bars (school counts, per the scoring
+  // rework).
   const counted = rows.filter(
-    (r) => r.status !== "SKIPPED" && !r.stale && r.category !== Category.SCHOOL,
+    (r) => r.status !== "SKIPPED" && !r.stale,
   );
   const done = counted.filter((r) => r.status === "COMPLETE").length;
   const percent = counted.length
@@ -227,8 +228,7 @@ export async function loadApiDashboard(
       (r) =>
         r.category === category &&
         r.status !== "SKIPPED" &&
-        !r.stale &&
-        r.category !== Category.SCHOOL,
+        !r.stale,
     );
     const total = items.length;
     const complete = items.filter((r) => r.status === "COMPLETE").length;
