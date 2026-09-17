@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.413.0";
+export const APP_VERSION = "0.414.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -117,6 +117,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.414.0",
+    summary: [
+      "Fix: Up for grabs and Always open chores now show on each person's Chores card on every device \u2014 they were only loading on personal (phone) devices, so they were missing when viewing a person's card on the shared dashboard. The card also opens when a person has only those (no assigned chores due today).",
+    ],
+  },
   {
     version: "0.413.0",
     summary: [

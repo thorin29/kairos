@@ -148,6 +148,10 @@ export default async function PersonPage({
   const progress = await loadPersonProgress(id);
   const getAhead = await loadGetAhead(id, today);
   const choreBadges = await loadChoreBadges(id, today);
+  // Up-for-grabs + always-open are household pool chores shown on every person's
+  // card (one-tap complete for them), so load them regardless of device.
+  const choreOpenTasks = await loadOpenTasks(today);
+  const choreAlwaysOpen = await loadAlwaysOpenChores(today);
   const schoolAhead = await loadSchoolGetAhead(id, today);
   const schoolProgress = await loadSchoolProgress(id);
 
@@ -526,7 +530,11 @@ export default async function PersonPage({
           schoolProgress.progress.length > 0 ||
           schoolAhead.length > 0;
         const choreHasContent =
-          catOverdue("CHORE").length > 0 || catToday("CHORE").length > 0 || getAhead.length > 0;
+          catOverdue("CHORE").length > 0 ||
+          catToday("CHORE").length > 0 ||
+          getAhead.length > 0 ||
+          choreOpenTasks.length > 0 ||
+          choreAlwaysOpen.length > 0;
         const anyBlock = DAY_ORDER.some((c) =>
           c === "SCHOOL"
             ? schoolHasContent
@@ -566,8 +574,8 @@ export default async function PersonPage({
                     overdue={catOverdue("CHORE")}
                     today={catToday("CHORE")}
                     getAhead={getAhead}
-                    alwaysOpen={home?.alwaysOpen}
-                    openTasks={home?.openTasks}
+                    alwaysOpen={choreAlwaysOpen}
+                    openTasks={choreOpenTasks}
                     owner={{ id: person.id, name: person.name, color: person.color }}
                     badges={choreBadges}
                   />
