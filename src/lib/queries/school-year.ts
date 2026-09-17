@@ -219,8 +219,9 @@ export type ClassBar = {
   className: string;
   subject: string | null;
   color: string;
-  scheduledDays: string[]; // dated units (class color)
+  scheduledDays: string[]; // dated units (class colour up to term end, red past it)
   overflowDays: string[]; // projected days past the term end (red)
+  termEnd: string; // the class's term end — days after this are "past term end"
 };
 export type StudentBars = { studentId: string; studentName: string; bars: ClassBar[] };
 
@@ -302,6 +303,7 @@ export async function loadStudentBars(): Promise<StudentBars[]> {
       color: p.class.color || BAR_PALETTE[ci % BAR_PALETTE.length],
       scheduledDays,
       overflowDays,
+      termEnd,
     });
     ci += 1;
   }

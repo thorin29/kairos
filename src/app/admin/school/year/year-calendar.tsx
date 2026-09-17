@@ -66,7 +66,7 @@ export function YearCalendar({ cal, students }: { cal: YearCal; students: Studen
   const student = students.find((s) => s.studentId === studentId) ?? null;
   const bar = student && classIdx !== null ? student.bars[classIdx] ?? null : null;
   const overlay = bar
-    ? { sched: new Set(bar.scheduledDays), over: new Set(bar.overflowDays), color: displayColor(bar.color), name: bar.className }
+    ? { sched: new Set(bar.scheduledDays), over: new Set(bar.overflowDays), color: displayColor(bar.color), name: bar.className, termEnd: bar.termEnd }
     : null;
 
   const holidayName = new Map(cal.holidays.map((h) => [h.iso, h.name]));
@@ -97,9 +97,13 @@ export function YearCalendar({ cal, students }: { cal: YearCal; students: Studen
 
   const daySquare = (s: string, key: string | number) => {
     if (overlay) {
-      if (overlay.over.has(s))
+      const scheduled = overlay.sched.has(s);
+      const overflow = overlay.over.has(s);
+      // A class day that lands after the term end is "past term end" whether it
+      // was given a real date or projected as overflow — both show red.
+      if (overflow || (scheduled && s > overlay.termEnd))
         return <span key={key} className="h-3 w-3 rounded-sm ring-1 ring-inset ring-white" style={{ backgroundColor: "#dc2626" }} title={`${fmtDMY(s)} \u2014 ${overlay.name} (past term end)`} />;
-      if (overlay.sched.has(s))
+      if (scheduled)
         return <span key={key} className="h-3 w-3 rounded-sm" style={{ backgroundColor: overlay.color }} title={`${fmtDMY(s)} \u2014 ${overlay.name}`} />;
       return <span key={key} className={`h-3 w-3 rounded-sm opacity-40 ${baseColor(s)}`} title={baseTitle(s)} />;
     }
@@ -138,10 +142,12 @@ export function YearCalendar({ cal, students }: { cal: YearCal; students: Studen
   const summer = cal.terms.find((t) => t.kind === "summer");
   // If the overlaid class overflows past the last term, stretch the final row so
   // those (red) days are actually on the calendar.
-  const overflowMax =
-    overlay && overlay.over.size ? [...overlay.over].sort().at(-1) ?? null : null;
+  const overlayMax =
+    overlay && (overlay.sched.size || overlay.over.size)
+      ? [...overlay.sched, ...overlay.over].sort().at(-1) ?? null
+      : null;
   const endOf = (termEnd: string) =>
-    overflowMax && overflowMax > termEnd ? overflowMax : termEnd;
+    overlayMax && overlayMax > termEnd ? overlayMax : termEnd;
   const rows: React.ReactNode[] = [];
   if (fall) rows.push(semesterRow(fall, monthsFromTo(...ym(fall.start), ...(spring ? prevMonth(...ym(spring.start)) : ym(endOf(fall.end))))));
   if (spring) rows.push(semesterRow(spring, monthsFromTo(...ym(spring.start), ...(summer ? prevMonth(...ym(summer.start)) : ym(endOf(spring.end))))));
