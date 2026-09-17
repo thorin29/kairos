@@ -72,7 +72,16 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
         class: {
           select: { name: true, color: true, termId: true, subject: { select: { name: true } } },
         },
-        units: { select: { seq: true, type: true, load: true, scheduledDate: true, done: true } },
+        units: {
+          select: {
+            seq: true,
+            type: true,
+            load: true,
+            scheduledDate: true,
+            done: true,
+            work: { select: { task: { select: { status: true } } } },
+          },
+        },
       },
     }),
     prisma.term.findMany({
@@ -103,7 +112,13 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
             .map((t) => ({ start: dISO(t.startDate), end: dISO(t.endDate) }));
       const winsEnd = wins.length ? wins.reduce((m, w) => (w.end > m ? w.end : m), wins[0].end) : today;
 
-      const undone = p.units.filter((u) => !u.done).sort((a, b) => a.seq - b.seq);
+      // A lesson is done if it was pre-completed on upload (unit.done) OR its
+      // generated task has been completed. The two aren't kept in sync, so a
+      // normally-completed lesson has done=false but a COMPLETE task — check both,
+      // or past lessons the student finished get counted as "behind".
+      const isDone = (u: { done: boolean; work: { task: { status: string } | null } | null }) =>
+        u.done || u.work?.task?.status === "COMPLETE";
+      const undone = p.units.filter((u) => !isDone(u)).sort((a, b) => a.seq - b.seq);
       const remaining = undone.length;
       const doneCount = p.units.length - remaining;
 
@@ -148,10 +163,10 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
         // pending/just-done today is on schedule), and ahead if a unit dated
         // AFTER today is already done. Otherwise on schedule (no tag).
         const behindCount = scheduled.filter(
-          (u) => !u.done && dISO(u.scheduledDate as Date) < today,
+          (u) => !isDone(u) && dISO(u.scheduledDate as Date) < today,
         ).length;
         const aheadCount = scheduled.filter(
-          (u) => u.done && dISO(u.scheduledDate as Date) > today,
+          (u) => isDone(u) && dISO(u.scheduledDate as Date) > today,
         ).length;
         if (behindCount > 0) pace = "behind";
         else if (aheadCount > 0) pace = "ahead";

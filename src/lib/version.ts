@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.420.0";
+export const APP_VERSION = "0.421.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -117,6 +117,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.421.0",
+    summary: [
+      "School pace fix (root cause): \u201cfalling behind\u201d now treats a lesson as done when its task is complete \u2014 not just the plan's internal skip flag, which normal completions never set, so finished past lessons were being counted as behind.",
+      "Student work: lessons marked done on upload (skipped units that have no task) now show as completed items, so every lesson appears. Added a \u201cHide complete\u201d toggle next to Edit completion.",
+    ],
+  },
   {
     version: "0.420.0",
     summary: [
