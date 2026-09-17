@@ -33,7 +33,7 @@ const TYPE_TAG: Record<PlanUnitRow["type"], string> = {
   PROJECT: "Project",
 };
 
-export function PlanReview({ plan }: { plan: PlanDetail }) {
+export function PlanReview({ plan, today }: { plan: PlanDetail; today: string }) {
   const router = useRouter();
   const published = plan.status === "PUBLISHED";
 
@@ -159,6 +159,12 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
 
   const weekdaysEmpty = weekdays.size === 0;
   const noTerm = windows.length === 0;
+
+  // Published plans read as a record: completed work first (in sequence), then
+  // the remaining schedule. Drafts keep their editable order.
+  const displayUnits = published
+    ? [...units.filter((u) => u.done), ...units.filter((u) => !u.done)]
+    : units;
 
   return (
     <div className="space-y-5">
@@ -303,9 +309,20 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
 
       {/* Unit list */}
       <ul className="space-y-1">
-        {units.map((u, i) => {
-          const date = u.done ? null : published ? u.scheduledDate : dateByUnit.get(u.id) ?? null;
+        {displayUnits.map((u, i) => {
+          const date = published
+            ? u.scheduledDate
+            : u.done
+              ? null
+              : dateByUnit.get(u.id) ?? null;
+          const overdue =
+            published && !u.done && u.scheduledDate !== null && u.scheduledDate < today;
           const afterTermRow = !u.done && date !== null && Boolean(termEnd) && date > termEnd;
+          const rowTone = u.done
+            ? "border-green-300 bg-green-50"
+            : overdue
+              ? "border-amber-300 bg-amber-50"
+              : "border-hairline bg-surface";
           return (
             <li
               key={u.id}
@@ -319,8 +336,8 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
                 }
               }}
               onDragEnd={() => setDragIdx(null)}
-              className={`flex items-center gap-3 rounded-md border border-hairline bg-surface px-3 py-2 ${
-                u.done ? "opacity-50" : ""
+              className={`flex items-center gap-3 rounded-md border px-3 py-2 ${rowTone} ${
+                u.done && !published ? "opacity-50" : ""
               }`}
             >
               {!published && (
@@ -337,8 +354,28 @@ export function PlanReview({ plan }: { plan: PlanDetail }) {
                   </span>
                 )}
               </span>
-              <span className={`shrink-0 text-xs tabular ${afterTermRow ? "text-amber-600" : "text-muted"}`}>
-                {u.done ? "skipped" : date === null ? "\u2014" : fmt(date)}
+              <span
+                className={`shrink-0 text-xs tabular ${
+                  u.done && published
+                    ? "font-medium text-green-700"
+                    : overdue
+                      ? "font-medium text-amber-700"
+                      : afterTermRow
+                        ? "text-amber-600"
+                        : "text-muted"
+                }`}
+              >
+                {u.done
+                  ? published
+                    ? date
+                      ? `complete \u00b7 ${fmt(date)}`
+                      : "complete"
+                    : "skipped"
+                  : overdue
+                    ? `overdue \u00b7 ${fmt(date)}`
+                    : date === null
+                      ? "\u2014"
+                      : fmt(date)}
               </span>
               {!published && (
                 <span className="flex shrink-0 items-center gap-1">
