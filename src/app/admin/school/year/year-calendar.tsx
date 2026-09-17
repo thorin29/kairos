@@ -15,6 +15,21 @@ function ym(s: string): [number, number] {
 function prevMonth(y: number, m: number): [number, number] {
   return m === 0 ? [y - 1, 11] : [y, m - 1];
 }
+// Red (#dc2626) means "past term end" on this calendar, so if a class's own
+// colour is reddish we show it in a distinct substitute everywhere here.
+function isReddish(hex: string): boolean {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return r > 150 && g < 105 && b < 105;
+}
+function displayColor(hex: string): string {
+  return isReddish(hex) ? "#0891b2" : hex;
+}
+
 function monthsFromTo(y1: number, m1: number, y2: number, m2: number): { y: number; m: number }[] {
   const out: { y: number; m: number }[] = [];
   let y = y1;
@@ -51,7 +66,7 @@ export function YearCalendar({ cal, students }: { cal: YearCal; students: Studen
   const student = students.find((s) => s.studentId === studentId) ?? null;
   const bar = student && classIdx !== null ? student.bars[classIdx] ?? null : null;
   const overlay = bar
-    ? { sched: new Set(bar.scheduledDays), over: new Set(bar.overflowDays), color: bar.color, name: bar.className }
+    ? { sched: new Set(bar.scheduledDays), over: new Set(bar.overflowDays), color: displayColor(bar.color), name: bar.className }
     : null;
 
   const holidayName = new Map(cal.holidays.map((h) => [h.iso, h.name]));
@@ -83,7 +98,7 @@ export function YearCalendar({ cal, students }: { cal: YearCal; students: Studen
   const daySquare = (s: string, key: string | number) => {
     if (overlay) {
       if (overlay.over.has(s))
-        return <span key={key} className="h-3 w-3 rounded-sm" style={{ backgroundColor: "#dc2626" }} title={`${fmtDMY(s)} \u2014 ${overlay.name} (past term end)`} />;
+        return <span key={key} className="h-3 w-3 rounded-sm ring-1 ring-inset ring-white" style={{ backgroundColor: "#dc2626" }} title={`${fmtDMY(s)} \u2014 ${overlay.name} (past term end)`} />;
       if (overlay.sched.has(s))
         return <span key={key} className="h-3 w-3 rounded-sm" style={{ backgroundColor: overlay.color }} title={`${fmtDMY(s)} \u2014 ${overlay.name}`} />;
       return <span key={key} className={`h-3 w-3 rounded-sm opacity-40 ${baseColor(s)}`} title={baseTitle(s)} />;
@@ -121,10 +136,16 @@ export function YearCalendar({ cal, students }: { cal: YearCal; students: Studen
   const fall = cal.terms.find((t) => t.kind === "fall");
   const spring = cal.terms.find((t) => t.kind === "spring");
   const summer = cal.terms.find((t) => t.kind === "summer");
+  // If the overlaid class overflows past the last term, stretch the final row so
+  // those (red) days are actually on the calendar.
+  const overflowMax =
+    overlay && overlay.over.size ? [...overlay.over].sort().at(-1) ?? null : null;
+  const endOf = (termEnd: string) =>
+    overflowMax && overflowMax > termEnd ? overflowMax : termEnd;
   const rows: React.ReactNode[] = [];
-  if (fall) rows.push(semesterRow(fall, monthsFromTo(...ym(fall.start), ...(spring ? prevMonth(...ym(spring.start)) : ym(fall.end)))));
-  if (spring) rows.push(semesterRow(spring, monthsFromTo(...ym(spring.start), ...(summer ? prevMonth(...ym(summer.start)) : ym(spring.end)))));
-  if (summer) rows.push(semesterRow(summer, monthsFromTo(...ym(summer.start), ...ym(summer.end))));
+  if (fall) rows.push(semesterRow(fall, monthsFromTo(...ym(fall.start), ...(spring ? prevMonth(...ym(spring.start)) : ym(endOf(fall.end))))));
+  if (spring) rows.push(semesterRow(spring, monthsFromTo(...ym(spring.start), ...(summer ? prevMonth(...ym(summer.start)) : ym(endOf(spring.end))))));
+  if (summer) rows.push(semesterRow(summer, monthsFromTo(...ym(summer.start), ...ym(endOf(summer.end)))));
 
   const swatch = (cls: string, label: string) => (
     <span className="inline-flex items-center gap-1.5">
@@ -167,7 +188,7 @@ export function YearCalendar({ cal, students }: { cal: YearCal; students: Studen
                     onClick={() => setClassIdx(i === classIdx ? null : i)}
                     className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${i === classIdx ? "border-accent" : "border-hairline"}`}
                   >
-                    <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: b.color }} />
+                    <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: displayColor(b.color) }} />
                     {b.className}
                   </button>
                 ))
@@ -187,7 +208,7 @@ export function YearCalendar({ cal, students }: { cal: YearCal; students: Studen
               <span>{overlay.name}</span>
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: "#dc2626" }} />
+              <span className="inline-block h-3 w-3 rounded-sm ring-1 ring-inset ring-white" style={{ backgroundColor: "#dc2626" }} />
               <span>past term end</span>
             </span>
           </>

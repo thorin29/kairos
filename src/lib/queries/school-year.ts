@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { noSchoolDaysFor } from "@/lib/school/school-days";
 import {
   holidayEntries,
   schoolClosedHolidayEntries,
@@ -258,6 +259,16 @@ export async function loadStudentBars(): Promise<StudentBars[]> {
   ]);
 
   const maxEnd = allTerms.reduce((m, t) => (dISO(t.endDate) > m ? dISO(t.endDate) : m), "");
+  // No-school days across the overflow horizon (past the last term), so projected
+  // overflow lands on real school days — same weekend + holiday/vacation logic as
+  // in-term scheduling.
+  let noSchool = new Set<string>();
+  if (maxEnd) {
+    const he = new Date(`${maxEnd}T00:00:00Z`);
+    he.setUTCMonth(he.getUTCMonth() + 8);
+    const horizonEnd = he.toISOString().slice(0, 10);
+    noSchool = await noSchoolDaysFor([{ start: maxEnd, end: horizonEnd }]);
+  }
   const byStudent = new Map<string, StudentBars>();
   let ci = 0;
 
@@ -278,9 +289,11 @@ export async function loadStudentBars(): Promise<StudentBars[]> {
 
     const overflowDays: string[] = [];
     let d = termEnd ? addDayISO(termEnd) : "";
-    while (d && overflowDays.length < overflowCount) {
-      if (dowOf(d) <= 5) overflowDays.push(d);
+    let guard = 0;
+    while (d && overflowDays.length < overflowCount && guard < 500) {
+      if (dowOf(d) <= 5 && !noSchool.has(d)) overflowDays.push(d);
       d = addDayISO(d);
+      guard += 1;
     }
 
     bucket.bars.push({
