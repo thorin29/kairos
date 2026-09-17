@@ -23,7 +23,7 @@ import {
   restDay,
   markWorkedOut,
 } from "@/lib/actions/workouts";
-import { addDays } from "@/lib/dates";
+import { addDays, dayOfWeek } from "@/lib/dates";
 import { PlanBuilder } from "./plan-builder";
 import { RotationBuilder } from "./rotation-builder";
 import { TodayPlan } from "./workout-card";
@@ -467,6 +467,17 @@ export function WorkoutsGrid({
                     </>
                   ) : (
                     <>
+                      <TodayPlan
+                        userId={open.user.id}
+                        dateISO={logDate}
+                        workouts={open.plan[dayOfWeek(logDate)]?.workouts ?? []}
+                        doneLabels={[]}
+                        paused={null}
+                        rested={false}
+                        unitSystem={unitSystem}
+                        heading="Plan for this day"
+                      />
+
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
