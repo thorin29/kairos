@@ -42,6 +42,7 @@ export function TodayPlan({
   rested,
   unitSystem,
   heading = "Today\u2019s plan",
+  loggedByPool = {},
 }: {
   userId: string;
   dateISO: string;
@@ -51,6 +52,8 @@ export function TodayPlan({
   rested: boolean;
   unitSystem: UnitSystem;
   heading?: string;
+  /** Already-logged weights for this date, keyed by pool-exercise id. */
+  loggedByPool?: Record<string, string>;
 }) {
   const todays = paused ? [] : workouts.filter((w) => !w.isRest);
   const done = new Set(doneLabels.map((l) => l.trim().toLowerCase()));
@@ -82,6 +85,7 @@ export function TodayPlan({
               dateISO={dateISO}
               unitSystem={unitSystem}
               done={done.has(w.name.trim().toLowerCase())}
+              loggedByPool={loggedByPool}
             />
           ))}
         </div>
@@ -96,14 +100,24 @@ function PlanRow({
   dateISO,
   unitSystem,
   done,
+  loggedByPool = {},
 }: {
   workout: PlanWorkout;
   userId: string;
   dateISO: string;
   unitSystem: UnitSystem;
   done: boolean;
+  loggedByPool?: Record<string, string>;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const e of workout.exercises) {
+      if (e.poolExerciseId && loggedByPool[e.poolExerciseId]) {
+        init[e.id] = loggedByPool[e.poolExerciseId];
+      }
+    }
+    return init;
+  });
   const [pending, startTransition] = useTransition();
 
   const category: WorkoutCategory = workout.category ?? "WEIGHTS";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { DateField } from "@/components/date-field";
 import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
@@ -22,6 +22,7 @@ import {
   requestShareHiitWorkout,
   restDay,
   markWorkedOut,
+  loadLoggedWeights,
 } from "@/lib/actions/workouts";
 import { addDays, dayOfWeek } from "@/lib/dates";
 import { PlanBuilder } from "./plan-builder";
@@ -82,6 +83,10 @@ export function WorkoutsGrid({
   // Which day the log step writes to. Defaults to today; can be set back to a
   // recent past day to record a workout that wasn't logged at the time.
   const [logDate, setLogDate] = useState(todayISO);
+  // Weights already logged for the picked earlier day (pool-exercise id -> value),
+  // so the plan pre-fills them like the phone does.
+  const [loggedByPool, setLoggedByPool] = useState<Record<string, string>>({});
+  const [loadingLogged, setLoadingLogged] = useState(false);
   const [browseFilter, setBrowseFilter] = useState<"regular" | "hero">(
     "regular",
   );
@@ -105,6 +110,29 @@ export function WorkoutsGrid({
   };
 
   const open = people.find((p) => p.user.id === openId) ?? null;
+  const openUserId = open?.user.id ?? null;
+  useEffect(() => {
+    let cancelled = false;
+    if (openUserId && logDate !== todayISO) {
+      setLoadingLogged(true);
+      loadLoggedWeights(openUserId, logDate)
+        .then((m) => {
+          if (!cancelled) setLoggedByPool(m);
+        })
+        .catch(() => {
+          if (!cancelled) setLoggedByPool({});
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingLogged(false);
+        });
+    } else {
+      setLoggedByPool({});
+      setLoadingLogged(false);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [openUserId, logDate, todayISO]);
   const hasPlan = open ? open.plan.some((d) => d.workouts.length > 0) : false;
   // Named workouts available to this person: the shared library plus their own.
   const browsable = open
@@ -428,7 +456,11 @@ export function WorkoutsGrid({
                       value={logDate}
                       max={todayISO}
                       min={addDays(todayISO, -90)}
-                      onChange={(v) => setLogDate(v || todayISO)}
+                      onChange={(v) => {
+                        const d = v || todayISO;
+                        setLogDate(d);
+                        if (d !== todayISO) setLoadingLogged(true);
+                      }}
                       ariaLabel="Date"
                       className="tabular h-11 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
                     />
@@ -467,16 +499,24 @@ export function WorkoutsGrid({
                     </>
                   ) : (
                     <>
-                      <TodayPlan
-                        userId={open.user.id}
-                        dateISO={logDate}
-                        workouts={open.plan[dayOfWeek(logDate)]?.workouts ?? []}
-                        doneLabels={[]}
-                        paused={null}
-                        rested={false}
-                        unitSystem={unitSystem}
-                        heading="Plan for this day"
-                      />
+                      {loadingLogged ? (
+                        <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
+                          Loading logged weights\u2026
+                        </p>
+                      ) : (
+                        <TodayPlan
+                          key={logDate}
+                          userId={open.user.id}
+                          dateISO={logDate}
+                          workouts={open.plan[dayOfWeek(logDate)]?.workouts ?? []}
+                          doneLabels={[]}
+                          paused={null}
+                          rested={false}
+                          unitSystem={unitSystem}
+                          heading="Plan for this day"
+                          loggedByPool={loggedByPool}
+                        />
+                      )}
 
                       <div className="flex flex-wrap gap-2">
                         <button
