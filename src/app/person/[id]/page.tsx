@@ -565,6 +565,9 @@ export default async function PersonPage({
                     overdue={catOverdue("CHORE")}
                     today={catToday("CHORE")}
                     getAhead={getAhead}
+                    alwaysOpen={home?.alwaysOpen}
+                    openTasks={home?.openTasks}
+                    people={home?.roster}
                   />
                 );
               }
@@ -602,12 +605,6 @@ export default async function PersonPage({
 
       {home && (
         <>
-          <div className="mt-8">
-            <OpenTasks tasks={home.openTasks} people={home.roster} />
-          </div>
-          <div className="mt-8">
-            <AlwaysOpenChores chores={home.alwaysOpen} people={home.roster} />
-          </div>
           <div className="mt-10">
             <DaySchedule
               events={[...home.schedule.allDay, ...home.schedule.timed]}
