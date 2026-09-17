@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckIcon, DumbbellIcon } from "@/components/icons";
-import { formatShort } from "@/lib/dates";
+import { formatShort, addDays, dayOfWeek } from "@/lib/dates";
+import { DateField } from "@/components/date-field";
+import { loadLoggedWeights } from "@/lib/actions/workouts";
 import { TodayPlan } from "@/app/exercise/workout-card";
 import { CustomWorkoutForm } from "@/app/exercise/workouts-grid";
 import type {
@@ -31,6 +33,8 @@ export function WorkoutLauncher({
   pool,
   hiitWorkouts,
   unitSystem,
+  weekPlan,
+  todayISO,
 }: {
   userId: string;
   dateISO: string;
@@ -44,14 +48,52 @@ export function WorkoutLauncher({
   pool: PoolEntry[];
   hiitWorkouts: BoardHiitWorkout[];
   unitSystem: UnitSystem;
+  /** The person's weekly plan, indexed by ISO weekday, so a picked day shows
+   *  that day's scheduled workout. */
+  weekPlan: PlanWorkout[][];
+  todayISO: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [logDate, setLogDate] = useState(dateISO);
+  const [loggedByPool, setLoggedByPool] = useState<Record<string, string>>({});
+  const [loadingLogged, setLoadingLogged] = useState(false);
+
+  // Pull already-logged weights for a back-dated day so the plan pre-fills them.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    if (logDate !== todayISO) {
+      setLoadingLogged(true);
+      loadLoggedWeights(userId, logDate)
+        .then((m) => {
+          if (!cancelled) setLoggedByPool(m);
+        })
+        .catch(() => {
+          if (!cancelled) setLoggedByPool({});
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingLogged(false);
+        });
+    } else {
+      setLoggedByPool({});
+      setLoadingLogged(false);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [open, userId, logDate, todayISO]);
+
+  const onOriginal = logDate === dateISO;
+  const dayWorkouts = onOriginal ? workouts : weekPlan[dayOfWeek(logDate)] ?? [];
 
   return (
     <div className="px-4 py-3">
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setLogDate(dateISO);
+          setOpen(true);
+        }}
         className="flex w-full items-center gap-3 text-left"
       >
         <span
@@ -105,7 +147,7 @@ export function WorkoutLauncher({
                 <div>
                   <h3 className="font-display text-lg font-semibold">{title}</h3>
                   <p className="mt-0.5 text-sm text-muted">
-                    Logging for {formatShort(dateISO)}
+                    Logging for {formatShort(logDate)}
                   </p>
                 </div>
                 <button
@@ -119,16 +161,50 @@ export function WorkoutLauncher({
               </div>
 
               <div className="mt-5 space-y-6">
-                <TodayPlan
-                  userId={userId}
-                  dateISO={dateISO}
-                  workouts={workouts}
-                  doneLabels={doneLabels}
-                  paused={paused}
-                  rested={rested}
-                  unitSystem={unitSystem}
-                  heading="Scheduled"
-                />
+                <div>
+                  <label
+                    htmlFor="launcher-log-date"
+                    className="mb-1.5 block text-sm font-medium"
+                  >
+                    Date
+                  </label>
+                  <DateField
+                    value={logDate}
+                    max={todayISO}
+                    min={addDays(todayISO, -90)}
+                    onChange={(v) => {
+                      const d = v || dateISO;
+                      setLogDate(d);
+                      if (d !== todayISO) setLoadingLogged(true);
+                    }}
+                    ariaLabel="Date"
+                    className="tabular h-11 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
+                  />
+                  {logDate !== dateISO && (
+                    <p className="mt-1 text-xs text-muted">
+                      Recording a workout for a different day.
+                    </p>
+                  )}
+                </div>
+
+                {loadingLogged ? (
+                  <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
+                    Loading logged weights\u2026
+                  </p>
+                ) : (
+                  <TodayPlan
+                    key={logDate}
+                    userId={userId}
+                    dateISO={logDate}
+                    workouts={dayWorkouts}
+                    doneLabels={onOriginal ? doneLabels : []}
+                    paused={onOriginal ? paused : null}
+                    rested={onOriginal ? rested : false}
+                    unitSystem={unitSystem}
+                    heading="Scheduled"
+                    loggedByPool={loggedByPool}
+                  />
+                )}
 
                 <div className="border-t border-hairline pt-5">
                   <h4 className="mb-3 font-display text-sm font-semibold">
@@ -139,7 +215,7 @@ export function WorkoutLauncher({
                     unitSystem={unitSystem}
                     pool={pool}
                     hiitWorkouts={hiitWorkouts}
-                    dateISO={dateISO}
+                    dateISO={logDate}
                     onDone={() => setOpen(false)}
                   />
                 </div>
