@@ -130,7 +130,15 @@ export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
       avatarPath: person.avatarPath,
       avatarPosition: person.avatarPosition,
       role: person.role,
-      categories: categories.filter((c) => c.total > 0),
+      categories: categories
+        .filter((c) => c.total > 0)
+        .sort((a, b) => {
+          // Bible, Chores, School, Workouts, then the rest — matches the app.
+          const order = ["BIBLE", "CHORE", "SCHOOL", "EXERCISE", "WORK", "APPOINTMENT", "OTHER"];
+          const ai = order.indexOf(String(a.category));
+          const bi = order.indexOf(String(b.category));
+          return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+        }),
       total,
       complete,
       overdue,
