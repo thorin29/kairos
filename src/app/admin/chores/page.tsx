@@ -202,6 +202,7 @@ export default async function ChoresPage() {
                     isAnytime: c.isAnytime,
                     effort: c.effort,
                     effortLocked: c.effortLocked,
+                    icon: c.icon,
                   }))}
                 />
               )}

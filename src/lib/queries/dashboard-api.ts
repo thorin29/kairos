@@ -14,7 +14,7 @@ import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { loadPersonalPlan } from "@/lib/queries/personal-plan";
 import { loadOpenTasks } from "@/lib/queries/overview";
-import { loadAlwaysOpenChores } from "@/lib/queries/chores-summary";
+import { loadAlwaysOpenChores, loadChoreBadges } from "@/lib/queries/chores-summary";
 import { loadGetAhead } from "@/lib/queries/get-ahead";
 import { loadSchoolProgress } from "@/lib/queries/school-card";
 import { loadSchoolGetAhead } from "@/lib/queries/school-get-ahead";
@@ -120,6 +120,9 @@ export type ApiDashboard = {
     readyAtMs: number | null;
     myCount: number;
   }[];
+  /** Glyphs for chores this person completed today (one per icon, count for
+   *  always-open repeats), shown after the Chores summary line. */
+  choreBadges: { icon: string; count: number }[];
   /** The whole household's events today ("Today's schedule"), all-day first then
    *  by start. Empty unless `date` is today. */
   schedule: {
@@ -315,6 +318,9 @@ export async function loadApiDashboard(
     money = { pendingApprovals, rewardMonths: rewards.count };
   }
 
+  const choreBadges =
+    dayISO === today ? await loadChoreBadges(userId, dayISO) : [];
+
   return {
     date: dayISO,
     percent,
@@ -325,6 +331,7 @@ export async function loadApiDashboard(
     personalReading,
     upForGrabs,
     alwaysOpen,
+    choreBadges,
     getAhead: getAhead.map((c) => ({ taskId: c.taskId, title: c.title, dueDateISO: c.dueDateISO, bonus: c.bonus })),
     school: schoolProg
       ? {

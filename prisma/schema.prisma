@@ -568,6 +568,9 @@ model Chore {
   id        String  @id @default(cuid())
   title     String  @unique
   notes     String?
+  // Optional badge glyph shown after the Chores summary line when this chore is
+  // done today (e.g. "grass", "water"). Rendered from the CHORE_ICONS registry.
+  icon      String?
   sortOrder Int     @default(0)
   isActive  Boolean @default(true)
 

@@ -17,6 +17,7 @@ export type AssignmentRow = {
 export type ChoreSummary = {
   id: string;
   title: string;
+  icon: string | null;
   assignments: AssignmentRow[];
   /** Gaps in days between consecutive occurrences, wrapping the week. */
   gaps: number[];
@@ -37,6 +38,7 @@ export type ChoreSummary = {
 export type PoolChoreRow = {
   id: string;
   title: string;
+  icon: string | null;
   intervalDays: number;
   isPaused: boolean;
   nextDueISO: string | null;
@@ -88,6 +90,7 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
     return {
       id: c.id,
       title: c.title,
+      icon: c.icon,
       intervalDays: interval,
       isPaused: c.isPaused,
       nextDueISO,
@@ -171,6 +174,7 @@ export async function loadChoreSummary(
     return {
       id: c.id,
       title: c.title,
+      icon: c.icon,
       assignments,
       gaps,
       unassigned: assignments.length === 0,
@@ -274,4 +278,32 @@ export async function loadAlwaysOpenChores(
       readyAtMs,
     };
   });
+}
+
+/** Icons to show after the Chores summary line: for a person on a day, one entry
+ *  per distinct chore-icon completed (dueToday + COMPLETE), counted so always-open
+ *  chores done N times read as \u00d7N. Chores with no icon are ignored. */
+export async function loadChoreBadges(
+  userId: string,
+  dayISO: string,
+): Promise<import("@/lib/chore-icons").ChoreBadge[]> {
+  const { toDateColumn } = await import("@/lib/dates");
+  const tasks = await prisma.task.findMany({
+    where: {
+      userId,
+      status: "COMPLETE",
+      dueDate: toDateColumn(dayISO),
+      chore: { icon: { not: null } },
+    },
+    select: { chore: { select: { icon: true } } },
+  });
+  const counts = new Map<string, number>();
+  for (const t of tasks) {
+    const icon = t.chore?.icon;
+    if (!icon) continue;
+    counts.set(icon, (counts.get(icon) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([icon, count]) => ({ icon, count }))
+    .sort((a, b) => a.icon.localeCompare(b.icon));
 }

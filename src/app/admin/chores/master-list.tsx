@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { renameChore } from "@/lib/actions/chores";
 import { PencilIcon, PeopleIcon } from "@/components/icons";
 import { EffortControl } from "./effort-control";
+import { ChoreIconControl } from "./chore-icon-control";
 import { DeleteChoreButton } from "./row-actions";
 
 type ChoreRow = {
@@ -14,6 +15,7 @@ type ChoreRow = {
   isAnytime: boolean;
   effort: number;
   effortLocked: boolean;
+  icon: string | null;
 };
 
 export function MasterList({ chores }: { chores: ChoreRow[] }) {
@@ -68,6 +70,7 @@ function ChoreChip({ chore }: { chore: ChoreRow }) {
   return (
     <li className="inline-flex items-center gap-1 rounded-full bg-ground py-1 pl-2 pr-1 text-sm">
       <EffortControl id={chore.id} value={chore.effort} locked={chore.effortLocked} />
+      <ChoreIconControl id={chore.id} value={chore.icon} />
       {chore.isCollaborative && (
         <PeopleIcon className="h-3.5 w-3.5 text-accent" />
       )}
