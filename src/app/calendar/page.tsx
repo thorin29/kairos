@@ -19,6 +19,7 @@ import {
 } from "@/lib/dates";
 import { CalendarView } from "@/components/calendar-view";
 import { WeekGrid } from "@/components/week-grid";
+import { EventSearch } from "@/components/event-search";
 import { DaySchedule } from "@/components/day-schedule";
 import { MonthGrid } from "@/components/month-grid";
 import { MiniMonth } from "@/components/mini-month";
@@ -208,6 +209,7 @@ export default async function CalendarPage({
         <div className="flex flex-col gap-6 lg:flex-row">
           <aside className="flex flex-col gap-5 lg:w-60 lg:shrink-0">
             <AddEventButton wide />
+            <EventSearch chip={chip} wide />
 
             <MiniMonth
               monthISO={startOfMonth(date)}
