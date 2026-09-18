@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.435.0";
+export const APP_VERSION = "0.436.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -120,6 +120,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.436.0",
+    summary: [
+      "\u201cThis and future events\u201d now reconnects the whole series: it consolidates every split-off piece from the edit date forward into one series and restores occurrences that had been moved or deleted in that range, so a series with changes in the middle resets cleanly (previously it could leave the series disconnected). A warning on the edit form notes that later moved/deleted occurrences will be reset.",
+    ],
+  },
   {
     version: "0.435.0",
     summary: [

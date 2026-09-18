@@ -1028,9 +1028,11 @@ function EventModal({
                     </p>
                   )}
                   {scope === "future" && (
-                    <p className="mt-2 text-xs text-muted">
-                      Events before this one stay as they were; this one and all
-                      later ones get the change.
+                    <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      Events before this one stay as they were; this one and every
+                      later one get this change. If you&apos;d moved or deleted any
+                      of those later occurrences, they&apos;re reset to match the
+                      series again.
                     </p>
                   )}
                 </div>
