@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { searchEvents, type EventSearchResult } from "@/lib/actions/event-search";
+import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  searchEvents,
+  type EventSearchResult,
+} from "@/lib/actions/event-search";
+import { eventCopyData, deleteEvent } from "@/lib/actions/events";
+import { useAddEvent } from "@/app/calendar/add-event-form";
+import { TrashIcon } from "@/components/icons";
 
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -46,11 +52,14 @@ function SearchGlyph({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
-export function EventSearch({ chip }: { chip: string }) {
+export function EventSearch({ chip, wide = false }: { chip: string; wide?: boolean }) {
+  const { openEdit } = useAddEvent();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [results, setResults] = useState<EventSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -91,6 +100,30 @@ export function EventSearch({ chip }: { chip: string }) {
     setOpen(false);
     setQ("");
     setResults([]);
+    setConfirmId(null);
+  }
+
+  async function editResult(r: EventSearchResult) {
+    const data = await eventCopyData(r.id);
+    if (!data) return;
+    close();
+    openEdit(
+      { ...data, date: r.repeats ? r.dateISO : data.date },
+      {
+        eventId: r.id,
+        occurrenceISO: r.dateISO,
+        recurring: r.repeats,
+        scope: r.repeats ? "series" : "single",
+      },
+    );
+  }
+
+  function removeResult(r: EventSearchResult) {
+    startTransition(async () => {
+      await deleteEvent(r.id, "all", r.dateISO).catch(() => {});
+      setResults((rs) => rs.filter((x) => x.id !== r.id));
+      setConfirmId(null);
+    });
   }
 
   const groups: { year: string; items: EventSearchResult[] }[] = [];
@@ -108,14 +141,24 @@ export function EventSearch({ chip }: { chip: string }) {
 
   return (
     <>
-      <button
-        type="button"
-        aria-label="Search events"
-        onClick={() => setOpen(true)}
-        className={`${chip} px-2.5`}
-      >
-        <SearchGlyph />
-      </button>
+      {wide ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-hairline bg-surface px-4 font-medium text-ink transition-colors hover:border-accent hover:text-accent"
+        >
+          <SearchGlyph /> Search
+        </button>
+      ) : (
+        <button
+          type="button"
+          aria-label="Search events"
+          onClick={() => setOpen(true)}
+          className={`${chip} px-2.5`}
+        >
+          <SearchGlyph />
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex flex-col bg-ground">
@@ -171,27 +214,68 @@ export function EventSearch({ chip }: { chip: string }) {
                         return (
                           <div
                             key={r.id}
-                            className="flex items-center gap-4 px-4 py-3"
+                            className="flex items-center gap-2 px-2 py-1"
                           >
-                            <div className="w-12 shrink-0 text-center">
-                              <div className="text-xs text-muted">{d.weekday}</div>
-                              <div className="text-lg font-semibold leading-none">
-                                {d.day}
+                            <button
+                              type="button"
+                              onClick={() => editResult(r)}
+                              className="flex min-w-0 flex-1 items-center gap-4 rounded-xl px-2 py-2 text-left hover:bg-ground"
+                            >
+                              <div className="w-12 shrink-0 text-center">
+                                <div className="text-xs text-muted">
+                                  {d.weekday}
+                                </div>
+                                <div className="text-lg font-semibold leading-none">
+                                  {d.day}
+                                </div>
+                                <div className="text-xs text-muted">
+                                  {d.month}
+                                </div>
                               </div>
-                              <div className="text-xs text-muted">{d.month}</div>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate font-medium">{r.title}</div>
-                              <div className="truncate text-xs text-muted">
-                                {r.startMin === null
-                                  ? "All day"
-                                  : `${fmtTime(r.startMin)}${
-                                      r.endMin !== null ? ` – ${fmtTime(r.endMin)}` : ""
-                                    }`}
-                                {r.repeats ? " · repeats" : ""}
-                                {r.ownerName ? ` · ${r.ownerName}` : ""}
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate font-medium">
+                                  {r.title}
+                                </div>
+                                <div className="truncate text-xs text-muted">
+                                  {r.startMin === null
+                                    ? "All day"
+                                    : `${fmtTime(r.startMin)}${
+                                        r.endMin !== null
+                                          ? ` – ${fmtTime(r.endMin)}`
+                                          : ""
+                                      }`}
+                                  {r.repeats ? " · repeats (first shown)" : ""}
+                                  {r.ownerName ? ` · ${r.ownerName}` : ""}
+                                </div>
                               </div>
-                            </div>
+                            </button>
+                            {confirmId === r.id ? (
+                              <div className="flex shrink-0 items-center gap-1 pr-2">
+                                <button
+                                  type="button"
+                                  onClick={() => removeResult(r)}
+                                  className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+                                >
+                                  {r.repeats ? "Delete series" : "Delete"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmId(null)}
+                                  className="rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:text-ink"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                aria-label="Delete"
+                                onClick={() => setConfirmId(r.id)}
+                                className="mr-2 shrink-0 rounded-full p-2 text-muted hover:bg-ground hover:text-red-600"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         );
                       })}
