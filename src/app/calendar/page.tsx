@@ -209,7 +209,6 @@ export default async function CalendarPage({
         <div className="flex flex-col gap-6 lg:flex-row">
           <aside className="flex flex-col gap-5 lg:w-60 lg:shrink-0">
             <AddEventButton wide />
-            <EventSearch chip={chip} wide />
 
             <MiniMonth
               monthISO={startOfMonth(date)}
@@ -297,7 +296,8 @@ export default async function CalendarPage({
               <span className="font-display ml-1 text-xl font-semibold tracking-tight">
                 {heading}
               </span>
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                <EventSearch chip={`${chip} ${idle}`} />
                 <CalendarViewSelect
                   view={view}
                   options={VIEWS.map((v) => ({
