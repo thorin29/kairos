@@ -963,3 +963,36 @@ export async function loadOverdueWorkoutDays(
   }
   return out;
 }
+
+/** Just the dates of a person's still-pending, not-yet-cleared overdue workouts
+ *  (newest-missed last). The web already has the weekly plan, so it only needs
+ *  the dates and renders each day's plan itself. */
+export async function loadOverdueWorkoutDates(
+  userId: string,
+  beforeISO: string,
+): Promise<string[]> {
+  const [tasks, stale] = await Promise.all([
+    prisma.task.findMany({
+      where: {
+        userId,
+        category: "EXERCISE",
+        generatedFrom: { startsWith: "workout:" },
+        status: "PENDING",
+        dueDate: { lt: toDateColumn(beforeISO) },
+      },
+      orderBy: { dueDate: "asc" },
+      select: { dueDate: true },
+    }),
+    loadStaleContext(beforeISO),
+  ]);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of tasks) {
+    const iso = fromDateColumn(t.dueDate);
+    if (daysBetween(iso, beforeISO) > stale.workoutOverdueDays) continue;
+    if (seen.has(iso)) continue;
+    seen.add(iso);
+    out.push(iso);
+  }
+  return out;
+}

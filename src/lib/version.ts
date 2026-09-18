@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.427.0";
+export const APP_VERSION = "0.428.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -117,6 +117,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.428.0",
+    summary: [
+      "Web log workout now shows an Overdue section too (matching the phone): past days whose workout is still pending appear at the top with a light-red tint, each logging to its own day, on both the dashboard workout card and the Workouts page. Honours the same clearing rule, so aged-out workouts drop off.",
+    ],
+  },
   {
     version: "0.427.0",
     summary: [
