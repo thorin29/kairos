@@ -245,7 +245,20 @@ export async function updatePersonalEvent(
 
   // A series edit keeps the series anchored to its original start date and only
   // changes the time of day; single / non-recurring edits use the form's date.
-  const dateForRow = seriesEdit ? localParts(ev.startsAt).iso : input.date;
+  let seriesPieces: { id: string; startsAt: Date; rrule: string | null }[] = [];
+  let seriesStartISO = localParts(ev.startsAt).iso;
+  if (seriesEdit) {
+    const gid = ev.seriesId ?? ev.id;
+    seriesPieces = await prisma.event.findMany({
+      where: { OR: [{ id: gid }, { seriesId: gid }] },
+      select: { id: true, startsAt: true, rrule: true },
+    });
+    for (const p of seriesPieces) {
+      const pIso = localParts(p.startsAt).iso;
+      if (pIso < seriesStartISO) seriesStartISO = pIso;
+    }
+  }
+  const dateForRow = seriesEdit ? seriesStartISO : input.date;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateForRow)) return { error: "Pick a date." };
 
   const t = computeTimes({ ...input, date: dateForRow, endDate: dateForRow });
@@ -359,6 +372,37 @@ export async function updatePersonalEvent(
           input.date,
         ),
         seriesId: sid,
+      },
+      select: { id: true },
+    });
+    await setParticipants(created.id, input.participants, ownerAfter);
+  } else if (seriesEdit) {
+    // "All events": consolidate every piece into one fresh series at the earliest
+    // occurrence, clearing per-occurrence changes/deletions. Use the ongoing
+    // (latest) piece's rule so the real end date is kept, not a capped one.
+    const gid = ev.seriesId ?? ev.id;
+    const ownerAfter = nextIsFamily ? null : ev.userId ?? userId;
+    const latest = seriesPieces.reduce(
+      (a, b) => (localParts(b.startsAt).iso > localParts(a.startsAt).iso ? b : a),
+      seriesPieces[0] ?? { id: ev.id, startsAt: ev.startsAt, rrule: ev.rrule },
+    );
+    const lr = parseRule(latest.rrule);
+    for (const p of seriesPieces) {
+      await prisma.event.deleteMany({ where: { recurrenceId: p.id } });
+      await prisma.event.delete({ where: { id: p.id } });
+    }
+    const created = await prisma.event.create({
+      data: {
+        ...fields,
+        userId: nextIsFamily ? null : ev.userId ?? userId,
+        isFamily: nextIsFamily,
+        kind: nextKind,
+        ...(nextTypeId !== undefined ? { eventTypeId: nextTypeId } : {}),
+        rrule: alignWeeklyByday(
+          lr ? buildRule(lr.freq, lr.interval, lr.until, lr.count, lr.byday) : ev.rrule,
+          dateForRow,
+        ),
+        seriesId: gid,
       },
       select: { id: true },
     });
