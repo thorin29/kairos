@@ -385,10 +385,13 @@ export async function updateEvent(
 
   // A whole-series edit consolidates every piece of the logical series (any split
   // off by earlier "this and future" edits) and anchors to the EARLIEST
-  // occurrence, so the rebuilt series covers the whole range. Single and one-off
-  // edits use the form's date.
+  // occurrence, so the rebuilt series covers the whole range — but it still
+  // honors a start-date / weekday change by shifting the whole series by however
+  // many days the user moved the start off the occurrence they opened. Single and
+  // one-off edits use the form's date.
   let seriesPieces: { id: string; startsAt: Date; rrule: string | null }[] = [];
-  let seriesStartISO = localParts(target.startsAt).iso;
+  const openedISO = localParts(target.startsAt).iso;
+  let seriesStartISO = openedISO;
   if (seriesEdit) {
     const gid = target.seriesId ?? target.id;
     seriesPieces = await prisma.event.findMany({
@@ -400,7 +403,10 @@ export async function updateEvent(
       if (pIso < seriesStartISO) seriesStartISO = pIso;
     }
   }
-  const dateForRow = seriesEdit ? seriesStartISO : formDate;
+  const seriesShiftDays = seriesEdit ? daysBetween(openedISO, formDate) : 0;
+  const dateForRow = seriesEdit
+    ? addDays(seriesStartISO, seriesShiftDays)
+    : formDate;
 
   let startsAt: Date;
   let endsAt: Date;
