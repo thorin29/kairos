@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.438.0";
+export const APP_VERSION = "0.439.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -120,6 +120,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.439.0",
+    summary: [
+      "Editing a repeating event no longer requires admin unlock \u2014 removed the \u201conly a parent can edit a repeating event or a birthday\u201d block that was stopping edits. Editing also can no longer blank an event\u2019s owner (\u201cWhose\u201d): if the form doesn\u2019t send one, the existing owner is kept.",
+    ],
+  },
   {
     version: "0.438.0",
     summary: [
