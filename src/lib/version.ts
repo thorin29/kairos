@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.445.0";
+export const APP_VERSION = "0.446.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -120,6 +120,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.446.0",
+    summary: [
+      "Week/day view now keeps the hours where you left them when you page between weeks or days, instead of re-scrolling to each week's earliest event \u2014 so a recurring meeting stays at the same spot and you can flick through weeks to see when it moves. (All-day events still nudge the grid down as before.)",
+    ],
+  },
   {
     version: "0.445.0",
     summary: [
