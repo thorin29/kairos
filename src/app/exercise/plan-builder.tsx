@@ -175,9 +175,10 @@ function DayRow({
             <button
               type="button"
               aria-label={`Remove ${w.name}`}
-              onClick={() =>
-                startTransition(() => removePlannedWorkout(w.id))
-              }
+              onClick={() => {
+                if (confirm(`Remove "${w.name}" from this day?`))
+                  startTransition(() => removePlannedWorkout(w.id));
+              }}
               className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-red-700"
             >
               <TrashIcon className="h-3.5 w-3.5" />
