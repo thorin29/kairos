@@ -8,6 +8,7 @@ import {
   loadSchoolStructure,
   loadSchoolMetrics,
   loadClassOptions,
+  pendingClassPrompts,
   type ClassRow,
 } from "@/lib/queries/school";
 import { loadSchoolProgress } from "@/lib/queries/school-card";
@@ -42,6 +43,8 @@ export async function GET(req: NextRequest) {
 
   const today = todayISO();
   const [people, structure] = await Promise.all([loadSchoolAdmin(), loadSchoolStructure()]);
+  const attendPrompts = await pendingClassPrompts(today);
+  const needsAttendanceSet = new Set(attendPrompts.map((p) => p.userId));
   const classOptions = await loadClassOptions();
   const terms = structure.terms.filter((t) => !t.pending);
 
@@ -140,8 +143,10 @@ export async function GET(req: NextRequest) {
         classColor: it.classColor,
         dueISO: it.dueISO,
         overdue: it.overdue,
+        complete: it.complete,
       })),
       card: cardByUser.get(p.id) ?? null,
+      needsAttendance: needsAttendanceSet.has(p.id),
     })),
     progress: structure.people
       .filter((p) => visibleSet.has(p.id))

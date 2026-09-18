@@ -265,12 +265,30 @@ export default async function SchoolPage({
 
 function renderItem(it: SchoolItem) {
   return (
-    <li key={it.id} className="text-sm">
-      <span className="font-medium">{it.className ?? it.subject ?? "School"}</span>
-      <span className="ml-2 text-xs text-muted">
-        {it.title} &middot; {SCHOOL_TYPE_LABEL[it.type]} &middot;{" "}
-        <span className={`tabular ${it.overdue ? "font-medium text-red-700" : ""}`}>
-          due {formatShort(it.dueISO)}
+    <li key={it.id} className="flex items-start gap-1.5 text-sm">
+      {it.complete && (
+        <svg
+          viewBox="0 0 20 20"
+          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          aria-label="Completed"
+        >
+          <path
+            d="M4.5 10.5l3.5 3.5L15.5 6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+      <span className="min-w-0">
+        <span className="font-medium">{it.className ?? it.subject ?? "School"}</span>
+        <span className="ml-2 text-xs text-muted">
+          {it.title} &middot; {SCHOOL_TYPE_LABEL[it.type]} &middot;{" "}
+          <span className={`tabular ${it.overdue ? "font-medium text-red-700" : ""}`}>
+            due {formatShort(it.dueISO)}
+          </span>
         </span>
       </span>
     </li>
