@@ -17,6 +17,8 @@ export function Combobox({
   required,
   maxLength,
   fieldClassName,
+  id,
+  autoFocus,
 }: {
   name: string;
   options: string[];
@@ -25,6 +27,8 @@ export function Combobox({
   required?: boolean;
   maxLength?: number;
   fieldClassName?: string;
+  id?: string;
+  autoFocus?: boolean;
 }) {
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
@@ -47,6 +51,7 @@ export function Combobox({
   return (
     <div ref={wrap} className="relative">
       <input
+        id={id}
         name={name}
         value={value}
         onChange={(e) => {
@@ -58,6 +63,7 @@ export function Combobox({
         maxLength={maxLength}
         placeholder={placeholder}
         autoComplete="off"
+        autoFocus={autoFocus}
         className={fieldClassName}
       />
       {open && filtered.length > 0 && (

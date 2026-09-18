@@ -10,6 +10,7 @@ import {
 } from "react";
 import { addEvent, updateEvent, type EventState } from "@/lib/actions/events";
 import { LocationCombobox } from "@/components/location-combobox";
+import { EventNameCombobox } from "@/components/event-name-combobox";
 import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
 import { addDays, dayOfWeek, daysBetween } from "@/lib/dates";
 import { PlusIcon } from "@/components/icons";
@@ -615,7 +616,7 @@ function EventModal({
               <label htmlFor="ev-title" className="mb-1.5 block text-sm font-medium">
                 Event
               </label>
-              <input
+              <EventNameCombobox
                 id="ev-title"
                 name="title"
                 required
@@ -623,7 +624,7 @@ function EventModal({
                 autoFocus
                 defaultValue={title ?? ""}
                 placeholder="Orthodontist, piano lesson, shift…"
-                className={field}
+                fieldClassName={field}
               />
             </div>
 

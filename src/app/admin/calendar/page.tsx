@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
-import { MapPinIcon } from "@/components/icons";
+import { MapPinIcon, TasksIcon } from "@/components/icons";
 import { loadEventTypes } from "@/lib/queries/calendar";
 import { getCalendarPrefs, getFamilyColor, getUse24HourTime } from "@/lib/settings";
 import { Subscriptions } from "./subscriptions";
@@ -100,6 +100,21 @@ export default async function AdminCalendarPage() {
           <span className="block font-display text-lg font-semibold">Addresses</span>
           <span className="block text-sm text-muted">
             Saved places events reuse as locations — opens its own page.
+          </span>
+        </span>
+      </Link>
+
+      <Link
+        href="/admin/event-names"
+        className="mb-8 flex items-center gap-4 rounded-2xl border border-hairline bg-surface p-5 transition-all hover:border-accent hover:shadow-sm"
+      >
+        <span className="text-accent">
+          <TasksIcon className="h-7 w-7" />
+        </span>
+        <span className="min-w-0">
+          <span className="block font-display text-lg font-semibold">Event names</span>
+          <span className="block text-sm text-muted">
+            The names offered when creating an event — tidy and normalize the list.
           </span>
         </span>
       </Link>

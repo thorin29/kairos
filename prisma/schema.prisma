@@ -523,6 +523,15 @@ enum AddressStatus {
   PENDING
 }
 
+/// A remembered calendar event name, so new events can pick from names already
+/// used in the household. Grows as events are created; admins normalize
+/// spelling and casing on the /admin/event-names page. Alphabetical everywhere.
+model EventName {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
 // Per-user personal-calendar preferences (docs/API.md, DECISIONS.md "Personal
 // calendar…"). Only used by the signed-in personal view and the mobile app;
 // the shared wall tablet ignores this entirely and keeps the household-wide
