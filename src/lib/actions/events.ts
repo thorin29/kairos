@@ -385,9 +385,24 @@ export async function updateEvent(
     eventTypeId = t?.id ?? null;
   }
 
-  // A whole-series edit keeps the series anchored to its original start date and
-  // only changes the time of day; single and one-off edits use the form's date.
-  const dateForRow = seriesEdit ? localParts(target.startsAt).iso : formDate;
+  // A whole-series edit consolidates every piece of the logical series (any split
+  // off by earlier "this and future" edits) and anchors to the EARLIEST
+  // occurrence, so the rebuilt series covers the whole range. Single and one-off
+  // edits use the form's date.
+  let seriesPieces: { id: string; startsAt: Date; rrule: string | null }[] = [];
+  let seriesStartISO = localParts(target.startsAt).iso;
+  if (seriesEdit) {
+    const gid = target.seriesId ?? target.id;
+    seriesPieces = await prisma.event.findMany({
+      where: { OR: [{ id: gid }, { seriesId: gid }] },
+      select: { id: true, startsAt: true, rrule: true },
+    });
+    for (const p of seriesPieces) {
+      const pIso = localParts(p.startsAt).iso;
+      if (pIso < seriesStartISO) seriesStartISO = pIso;
+    }
+  }
+  const dateForRow = seriesEdit ? seriesStartISO : formDate;
 
   let startsAt: Date;
   let endsAt: Date;
@@ -549,10 +564,26 @@ export async function updateEvent(
       select: { id: true },
     });
     targetEventId = created.id;
+  } else if (seriesEdit) {
+    // "All events in the series": consolidate every piece — and clear any
+    // per-occurrence changes or deletions — into one fresh series anchored at
+    // the earliest occurrence, so the whole series ends up on one clean rule.
+    const gid = target.seriesId ?? target.id;
+    for (const p of seriesPieces) {
+      await prisma.event.deleteMany({ where: { recurrenceId: p.id } });
+      await prisma.event.delete({ where: { id: p.id } });
+    }
+    const created = await prisma.event.create({
+      data: {
+        ...fields,
+        rrule: alignWeeklyByday(newRrule ?? null, dateForRow),
+        seriesId: gid,
+      },
+      select: { id: true },
+    });
+    targetEventId = created.id;
   } else {
-    // Series or non-recurring: update in place. The recurrence rule changes
-    // only on a series edit; a non-recurring edit leaves it (and the guest
-    // list) untouched.
+    // Non-recurring: update in place.
     await prisma.event.update({
       where: { id },
       data: newRrule !== undefined ? { ...fields, rrule: newRrule } : fields,
