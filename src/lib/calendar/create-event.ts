@@ -4,7 +4,7 @@ import { rememberEventName } from "@/lib/event-names-core";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { householdTz, localParts, toDateColumn, zonedToUtc, addDays } from "@/lib/dates";
-import { buildRule, parseRule } from "@/lib/calendar/recur";
+import { buildRule, parseRule, alignWeeklyByday } from "@/lib/calendar/recur";
 
 /**
  * Create / update a basic personal calendar event for the app (Phase 3a-b).
@@ -322,12 +322,16 @@ export async function updatePersonalEvent(
       await setParticipants(eventId, input.participants, ownerAfter);
     } else {
       const r = parseRule(ev.rrule);
+      const sid = ev.seriesId ?? ev.id;
       await prisma.event.deleteMany({
         where: { recurrenceId: eventId, recurrenceDate: { gte: toDateColumn(occ) } },
       });
       await prisma.event.update({
         where: { id: eventId },
-        data: { rrule: r ? buildRule(r.freq, r.interval, untilISO, null, r.byday) : ev.rrule },
+        data: {
+          rrule: r ? buildRule(r.freq, r.interval, untilISO, null, r.byday) : ev.rrule,
+          seriesId: sid,
+        },
       });
       const created = await prisma.event.create({
         data: {
@@ -336,7 +340,11 @@ export async function updatePersonalEvent(
           isFamily: nextIsFamily,
           kind: nextKind,
           ...(nextTypeId !== undefined ? { eventTypeId: nextTypeId } : {}),
-          rrule: r ? buildRule(r.freq, r.interval, r.until, null, r.byday) : ev.rrule,
+          rrule: alignWeeklyByday(
+            r ? buildRule(r.freq, r.interval, r.until, null, r.byday) : ev.rrule,
+            input.date,
+          ),
+          seriesId: sid,
         },
         select: { id: true },
       });

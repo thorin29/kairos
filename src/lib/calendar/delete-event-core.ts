@@ -57,7 +57,18 @@ export async function deleteEventCore(
 
   if (!event.rrule || scope === "all" || !validOccurrence) {
     if (event.rrule) {
-      await prisma.event.deleteMany({ where: { recurrenceId: id } });
+      // Whole series: gather every split-off piece (from "this and future"
+      // edits) that shares this logical series, plus their overrides, so none
+      // are left behind on a stale date/time.
+      const sid = event.seriesId ?? event.id;
+      const pieces = await prisma.event.findMany({
+        where: { OR: [{ id: sid }, { seriesId: sid }] },
+        select: { id: true },
+      });
+      const ids = pieces.length ? pieces.map((p) => p.id) : [id];
+      await prisma.event.deleteMany({ where: { recurrenceId: { in: ids } } });
+      await prisma.event.deleteMany({ where: { id: { in: ids } } });
+      return done();
     }
     await prisma.event.delete({ where: { id } });
     return done();

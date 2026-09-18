@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.433.0";
+export const APP_VERSION = "0.434.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -114,11 +114,18 @@ export const MIGRATIONS = [
   "103_chore_icon",
   "104_game_title_platform",
   "105_event_names",
+  "106_event_series_id",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.434.0",
+    summary: [
+      "Fixed two repeating-event bugs. Deleting a whole series now removes every part of it, including pieces split off by earlier \u201cthis and future\u201d edits (previously only the matching-time occurrences were deleted). And a \u201cthis and future\u201d edit that moves the event to a different weekday now works \u2014 the series repeats on the new day instead of losing the moved occurrence.",
+    ],
+  },
   {
     version: "0.433.0",
     summary: [

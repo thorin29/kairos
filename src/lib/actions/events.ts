@@ -14,7 +14,7 @@ import {
   addDays,
   daysBetween,
 } from "@/lib/dates";
-import { buildRule, parseRule } from "@/lib/calendar/recur";
+import { buildRule, parseRule, alignWeeklyByday } from "@/lib/calendar/recur";
 import { deleteEventCore } from "@/lib/calendar/delete-event-core";
 import { isAdmin, requireAdmin } from "@/lib/session";
 import { isHexColor } from "@/lib/palette";
@@ -332,6 +332,7 @@ export async function updateEvent(
       startsAt: true,
       endsAt: true,
       allDay: true,
+      seriesId: true,
     },
   });
   if (!target) return { error: "That event no longer exists.", saved: false };
@@ -520,15 +521,23 @@ export async function updateEvent(
       const cappedRule = r
         ? buildRule(r.freq, r.interval, untilISO, null, r.byday)
         : target.rrule;
+      const sid = target.seriesId ?? target.id;
       await prisma.event.deleteMany({
         where: {
           recurrenceId: id,
           recurrenceDate: { gte: toDateColumn(occurrenceISO) },
         },
       });
-      await prisma.event.update({ where: { id }, data: { rrule: cappedRule } });
+      await prisma.event.update({
+        where: { id },
+        data: { rrule: cappedRule, seriesId: sid },
+      });
       const created = await prisma.event.create({
-        data: { ...fields, rrule: newRrule ?? null },
+        data: {
+          ...fields,
+          rrule: alignWeeklyByday(newRrule ?? null, dateForRow),
+          seriesId: sid,
+        },
         select: { id: true },
       });
       targetEventId = created.id;
