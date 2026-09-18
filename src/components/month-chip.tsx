@@ -25,7 +25,7 @@ export function MonthChip({
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const { openAt, openEdit } = useAddEvent();
 
-  const editEvent = async (scope: "single" | "series") => {
+  const editEvent = async (scope: "single" | "series" | "future") => {
     const data = await eventCopyData(event.eventId);
     if (!data) return;
     openEdit(

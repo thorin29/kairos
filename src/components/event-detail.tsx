@@ -69,7 +69,7 @@ export function EventDetail({
   event: GridEvent;
   anchor: DOMRect;
   onClose: () => void;
-  onEdit: (scope: "single" | "series") => void;
+  onEdit: (scope: "single" | "series" | "future") => void;
   onDuplicate: () => void;
   onDelete: (
     scope: "all" | "future" | "one",
@@ -268,6 +268,13 @@ export function EventDetail({
                   className="inline-flex h-9 w-full items-center justify-center rounded-full bg-accent text-xs font-medium text-on-accent transition-opacity hover:opacity-90"
                 >
                   This event only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onEdit("future")}
+                  className="inline-flex h-9 w-full items-center justify-center rounded-full bg-accent text-xs font-medium text-on-accent transition-opacity hover:opacity-90"
+                >
+                  This and future events
                 </button>
                 <button
                   type="button"
