@@ -49,7 +49,11 @@ export async function POST(req: NextRequest) {
         : undefined,
     },
     authed.device.person.role === "ADMIN" || authed.device.person.kind === "PARENT",
-    str("scope") === "single" ? "single" : "series",
+    str("scope") === "single"
+      ? "single"
+      : str("scope") === "future"
+        ? "future"
+        : "series",
   );
   if (res.error) return apiError("validation", res.error);
   return apiOk({ status: "ok" });

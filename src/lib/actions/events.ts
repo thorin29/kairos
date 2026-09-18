@@ -342,9 +342,10 @@ export async function updateEvent(
   const recurring = Boolean(target.rrule);
   const singleEdit = recurring && scope === "single";
   const seriesEdit = recurring && scope === "series";
+  const futureEdit = recurring && scope === "future";
 
   // Changing a whole series or a birthday reaches beyond the day in view.
-  if ((seriesEdit || target.kind === "BIRTHDAY") && !(await isAdmin())) {
+  if ((seriesEdit || futureEdit || target.kind === "BIRTHDAY") && !(await isAdmin())) {
     return {
       error: "Only a parent can edit a repeating event or a birthday.",
       saved: false,
@@ -438,7 +439,7 @@ export async function updateEvent(
   // rule from the form (anchored to the kept start date); "Does not repeat"
   // turns it into a one-off. Single and non-recurring edits leave the rule be.
   let newRrule: string | null | undefined = undefined;
-  if (seriesEdit) {
+  if (seriesEdit || futureEdit) {
     const repeat = String(formData.get("repeat") ?? "NONE");
     const interval = Number(formData.get("interval") ?? 1);
     const until = String(formData.get("until") ?? "").trim();
@@ -494,6 +495,40 @@ export async function updateEvent(
           recurrenceId: id,
           recurrenceDate: overrideDate,
         },
+        select: { id: true },
+      });
+      targetEventId = created.id;
+    }
+  } else if (futureEdit) {
+    // "This and future events": preserve the past by capping the original series
+    // to end just before this occurrence, then start a fresh series from this
+    // occurrence with the edits. Overrides from here on are dropped.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(occurrenceISO)) {
+      return { error: "Couldn't tell which occurrence to edit.", saved: false };
+    }
+    const untilISO = addDays(occurrenceISO, -1);
+    const parentStartISO = localParts(target.startsAt).iso;
+    if (untilISO < parentStartISO) {
+      // Editing from the very first occurrence — nothing in the past to keep, so
+      // this is just a whole-series edit in place.
+      await prisma.event.update({
+        where: { id },
+        data: newRrule !== undefined ? { ...fields, rrule: newRrule } : fields,
+      });
+    } else {
+      const r = parseRule(target.rrule);
+      const cappedRule = r
+        ? buildRule(r.freq, r.interval, untilISO, null, r.byday)
+        : target.rrule;
+      await prisma.event.deleteMany({
+        where: {
+          recurrenceId: id,
+          recurrenceDate: { gte: toDateColumn(occurrenceISO) },
+        },
+      });
+      await prisma.event.update({ where: { id }, data: { rrule: cappedRule } });
+      const created = await prisma.event.create({
+        data: { ...fields, rrule: newRrule ?? null },
         select: { id: true },
       });
       targetEventId = created.id;
