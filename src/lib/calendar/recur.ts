@@ -1,5 +1,6 @@
 import {
   addDays,
+  dayOfWeek,
   localParts,
   shiftMonths,
   shiftYears,
@@ -22,6 +23,24 @@ import {
 
 /** iCalendar weekday tokens, in Sunday-first order to match the week grid. */
 export const WEEKDAY_TOKENS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const;
+
+/**
+ * For a "this and future" split: if a weekly rule's BYDAY no longer includes the
+ * (possibly moved) start date's weekday, the edited occurrence — now on a new
+ * day — would never be generated. In that case, drop BYDAY so the series simply
+ * repeats on the new start date's weekday. Multi-day rules whose start day is
+ * still covered, and non-weekly rules, are returned unchanged.
+ */
+export function alignWeeklyByday(
+  rrule: string | null,
+  startISO: string,
+): string | null {
+  const r = parseRule(rrule);
+  if (!r || r.freq !== "WEEKLY" || !r.byday || r.byday.length === 0) return rrule;
+  const startTok = WEEKDAY_TOKENS[dayOfWeek(startISO)];
+  if (r.byday.includes(startTok)) return rrule;
+  return buildRule(r.freq, r.interval, r.until, r.count, null);
+}
 const WEEKDAY_NUM: Record<string, number> = {
   SU: 0,
   MO: 1,

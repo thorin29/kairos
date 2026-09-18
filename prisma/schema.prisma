@@ -452,6 +452,11 @@ model Event {
 
   externalCalendarId String?
   externalCalendar   ExternalCalendar? @relation(fields: [externalCalendarId], references: [id], onDelete: Cascade)
+  // Links every piece of a logically-single series that has been split by a
+  // "this and future" edit, so the whole thing can be deleted together. Null
+  // until the first split; then all pieces (including the original) share the
+  // original series' id.
+  seriesId String?
   externalUid        String? // ICS UID, for dedupe across refetches
 
   task Task?
@@ -467,6 +472,7 @@ model Event {
   @@index([userId, startsAt])
   @@index([startsAt, endsAt])
   @@index([eventTypeId])
+  @@index([seriesId])
 }
 
 model ExternalCalendar {
