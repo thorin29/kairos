@@ -8,6 +8,10 @@ import { NextResponse } from "next/server";
  */
 export type ApiErrorCode =
   | "unauthenticated"
+  | "missing_bearer"
+  | "invalid_token"
+  | "device_revoked"
+  | "device_expired"
   | "forbidden"
   | "not_found"
   | "rate_limited"
@@ -18,6 +22,10 @@ export type ApiErrorCode =
 
 const STATUS: Record<ApiErrorCode, number> = {
   unauthenticated: 401,
+  missing_bearer: 401,
+  invalid_token: 401,
+  device_revoked: 401,
+  device_expired: 401,
   forbidden: 403,
   not_found: 404,
   rate_limited: 429,

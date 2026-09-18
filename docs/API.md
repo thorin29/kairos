@@ -91,10 +91,20 @@ Uniform envelope, so the client has one error path:
 { "error": { "code": "forbidden", "message": "human readable" } }
 ```
 
-Codes: `unauthenticated`, `forbidden`, `not_found`, `rate_limited`,
-`validation`, `conflict`, `server`. HTTP status mirrors the code. `validation`
-carries a `fields` map. Never leak stack traces or which of identifier/secret
-was wrong (matches the existing login behaviour).
+Codes: `unauthenticated`, `missing_bearer`, `invalid_token`, `device_revoked`,
+`device_expired`, `forbidden`, `not_found`, `rate_limited`, `validation`,
+`conflict`, `server`. HTTP status mirrors the code. `validation` carries a
+`fields` map. Never leak stack traces or which of identifier/secret was wrong
+(matches the existing login behaviour).
+
+Device-token rejection is split so clients (and logs) can tell a missing
+credential from a dead one: `missing_bearer` (no Authorization header — a
+transient/client-state issue, never a reason to drop enrollment), `invalid_token`
+(unknown/inactive), `device_revoked`, `device_expired`. Login/reauth
+wrong-password failures and the ingest-token check keep the generic
+`unauthenticated`. Older clients that don't know the new codes treat any
+unrecognised 401 as a recoverable server error, so the split is safe to roll out
+before the app updates.
 
 ## Versioning & compatibility
 
@@ -216,9 +226,10 @@ request:  { "password": "…" }
 422:      validation      — password missing
 429:      rate_limited
 ```
-Clients treat `reauth_required` differently from `unauthenticated`: keep the
-device token, show a password prompt, call `/auth/reauth`. Only a plain
-`unauthenticated` (bad/expired/revoked token) means re-enroll from scratch.
+Clients treat `reauth_required` differently from a dead token: keep the device
+token, show a password prompt, call `/auth/reauth`. A dead device token
+(`invalid_token` / `device_revoked` / `device_expired`) means re-enroll; a
+`missing_bearer` is a missing/racing credential and must NOT drop enrollment.
 
 **`GET /me`** — bearer required. The person this device is enrolled to.
 ```
