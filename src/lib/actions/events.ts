@@ -14,7 +14,7 @@ import {
   addDays,
   daysBetween,
 } from "@/lib/dates";
-import { buildRule, parseRule, alignWeeklyByday } from "@/lib/calendar/recur";
+import { buildRule, parseRule, alignWeeklyByday, occurrencesIn } from "@/lib/calendar/recur";
 import { deleteEventCore } from "@/lib/calendar/delete-event-core";
 import { isAdmin, requireAdmin } from "@/lib/session";
 import { isHexColor } from "@/lib/palette";
@@ -526,10 +526,12 @@ export async function updateEvent(
     const untilISO = addDays(occurrenceISO, -1);
     const sid = target.seriesId ?? target.id;
     const Dcol = toDateColumn(occurrenceISO);
+    const tz = householdTz();
     const pieces = await prisma.event.findMany({
       where: { OR: [{ id: sid }, { seriesId: sid }] },
       select: { id: true, startsAt: true, rrule: true },
     });
+    let pastCount = 0;
     for (const p of pieces) {
       const pStart = localParts(p.startsAt).iso;
       if (pStart >= occurrenceISO) {
@@ -537,26 +539,41 @@ export async function updateEvent(
         await prisma.event.delete({ where: { id: p.id } });
       } else {
         const pr = parseRule(p.rrule);
+        let cappedRule = p.rrule;
         if (pr) {
           const cappedUntil =
             pr.until && pr.until < untilISO ? pr.until : untilISO;
+          cappedRule = buildRule(pr.freq, pr.interval, cappedUntil, null, pr.byday);
           await prisma.event.update({
             where: { id: p.id },
-            data: {
-              rrule: buildRule(pr.freq, pr.interval, cappedUntil, null, pr.byday),
-              seriesId: sid,
-            },
+            data: { rrule: cappedRule, seriesId: sid },
           });
+        }
+        if (cappedRule) {
+          pastCount += occurrencesIn(p.startsAt, cappedRule, pStart, untilISO, tz).length;
         }
         await prisma.event.deleteMany({
           where: { recurrenceId: p.id, recurrenceDate: { gte: Dcol } },
         });
       }
     }
+    // Keep a count-limited series' total intact: the forward part gets the
+    // count that remains after the past occurrences, not a fresh full count.
+    let futureRule = alignWeeklyByday(newRrule ?? null, dateForRow);
+    const fr = parseRule(futureRule);
+    if (fr && fr.count && fr.count > 0 && pastCount > 0) {
+      futureRule = buildRule(
+        fr.freq,
+        fr.interval,
+        fr.until,
+        Math.max(fr.count - pastCount, 1),
+        fr.byday,
+      );
+    }
     const created = await prisma.event.create({
       data: {
         ...fields,
-        rrule: alignWeeklyByday(newRrule ?? null, dateForRow),
+        rrule: futureRule,
         seriesId: sid,
       },
       select: { id: true },

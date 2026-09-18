@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.439.0";
+export const APP_VERSION = "0.440.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -120,6 +120,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.440.0",
+    summary: [
+      "Count-limited repeating events (\u201crepeat N times\u201d) now keep their total when edited with \u201cthis and future\u201d: the forward part gets the remaining count after the occurrences already past, instead of restarting the full count from the edit date (and the app no longer drops the count entirely).",
+    ],
+  },
   {
     version: "0.439.0",
     summary: [
