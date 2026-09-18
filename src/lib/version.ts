@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.428.0";
+export const APP_VERSION = "0.429.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -112,11 +112,18 @@ export const MIGRATIONS = [
   "101_school_break_confirmed",
   "102_school_vacation_decision",
   "103_chore_icon",
+  "104_game_title_platform",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.429.0",
+    summary: [
+      "Game-time ingest now stores a per-title platform (e.g. PC vs console) sent by the collector, so the PC/console split is queryable. Additive \u2014 existing rows stay null and older collectors are unaffected.",
+    ],
+  },
   {
     version: "0.428.0",
     summary: [

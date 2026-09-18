@@ -34,7 +34,7 @@ type DayEntry = {
   steamId?: string;
   date: string;
   minutes?: number;
-  games?: { game: string; minutes?: number }[];
+  games?: { game: string; minutes?: number; platform?: string | null }[];
   platforms?: string[];
   status?: {
     gamerscore?: number | null;
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     await prisma.gameDayTitle.deleteMany({ where: { userId: user.id, date } });
     const titles = (Array.isArray(e.games) ? e.games : [])
       .filter((g) => g?.game)
-      .map((g) => ({ userId: user.id, date, game: g.game, minutes: clampMin(g.minutes) }));
+      .map((g) => ({ userId: user.id, date, game: g.game, minutes: clampMin(g.minutes), platform: g.platform ?? null }));
     if (titles.length > 0) {
       await prisma.gameDayTitle.createMany({ data: titles });
     }
