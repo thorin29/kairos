@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { rememberEventName } from "@/lib/event-names-core";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { householdTz, localParts, toDateColumn, zonedToUtc, addDays } from "@/lib/dates";
+import { householdTz, localParts, toDateColumn, zonedToUtc, addDays, daysBetween } from "@/lib/dates";
 import { buildRule, parseRule, alignWeeklyByday, occurrencesIn } from "@/lib/calendar/recur";
 
 /**
@@ -240,10 +240,13 @@ export async function updatePersonalEvent(
     }
   }
 
-  // A series edit keeps the series anchored to its original start date and only
-  // changes the time of day; single / non-recurring edits use the form's date.
+  // A series edit keeps the series anchored to its earliest occurrence, but still
+  // honors a start-date / weekday change by shifting the whole series by however
+  // many days the user moved the start; single / non-recurring edits use the
+  // form's date.
   let seriesPieces: { id: string; startsAt: Date; rrule: string | null }[] = [];
-  let seriesStartISO = localParts(ev.startsAt).iso;
+  const openedISO = localParts(ev.startsAt).iso;
+  let seriesStartISO = openedISO;
   if (seriesEdit) {
     const gid = ev.seriesId ?? ev.id;
     seriesPieces = await prisma.event.findMany({
@@ -255,7 +258,10 @@ export async function updatePersonalEvent(
       if (pIso < seriesStartISO) seriesStartISO = pIso;
     }
   }
-  const dateForRow = seriesEdit ? seriesStartISO : input.date;
+  const seriesShiftDays = seriesEdit ? daysBetween(openedISO, input.date) : 0;
+  const dateForRow = seriesEdit
+    ? addDays(seriesStartISO, seriesShiftDays)
+    : input.date;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateForRow)) return { error: "Pick a date." };
 
   const t = computeTimes({ ...input, date: dateForRow, endDate: dateForRow });
