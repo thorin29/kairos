@@ -332,7 +332,10 @@ export async function updatePersonalEvent(
       const created = await prisma.event.create({
         data: {
           ...fields,
-          ...ownerFields,
+          userId: nextIsFamily ? null : ev.userId ?? userId,
+          isFamily: nextIsFamily,
+          kind: nextKind,
+          ...(nextTypeId !== undefined ? { eventTypeId: nextTypeId } : {}),
           rrule: r ? buildRule(r.freq, r.interval, r.until, null, r.byday) : ev.rrule,
         },
         select: { id: true },
