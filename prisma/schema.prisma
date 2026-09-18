@@ -1503,6 +1503,8 @@ model GameDayTitle {
   date    DateTime @db.Date
   game    String
   minutes Int      @default(0)
+  // Which platform the title ran on (e.g. "PC" vs a console), from the collector.
+  platform String?
 
   @@unique([userId, date, game])
 }
