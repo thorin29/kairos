@@ -638,6 +638,7 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
       allDay: true,
       shadeDay: true,
       rrule: true,
+      seriesId: true,
       startsAt: true,
       endsAt: true,
       reminders: true,
@@ -649,6 +650,35 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
 
   const s = localParts(e.startsAt);
   const en = localParts(e.endsAt);
+
+  // A series split by "this and future" edits lives as several pieces; an older
+  // piece's rule is capped to end before the split. When editing, show the
+  // ongoing series' end (from the latest piece) with this occurrence's own
+  // cadence, so the end date the user set is what they see — not a cap.
+  let rrule = e.rrule ?? null;
+  const seriesId = (e as { seriesId?: string | null }).seriesId ?? null;
+  if (rrule && seriesId) {
+    const latest = await prisma.event.findFirst({
+      where: {
+        OR: [{ id: seriesId }, { seriesId }],
+        rrule: { not: null },
+      },
+      orderBy: { startsAt: "desc" },
+      select: { rrule: true },
+    });
+    const clicked = parseRule(rrule);
+    const latestR = parseRule(latest?.rrule ?? null);
+    if (clicked && latestR) {
+      rrule = buildRule(
+        clicked.freq,
+        clicked.interval,
+        latestR.until,
+        latestR.count,
+        clicked.byday,
+      );
+    }
+  }
+
   return {
     title: e.title,
     userId: e.isFamily ? "family" : (e.userId ?? ""),
@@ -656,7 +686,7 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
     location: e.location ?? "",
     allDay: e.allDay,
     shadeDay: (e as { shadeDay?: boolean }).shadeDay ?? true,
-    rrule: e.rrule ?? null,
+    rrule,
     start: hhmm(s.minutes),
     end: hhmm(en.minutes),
     date: s.iso,
