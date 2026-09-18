@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { CheckIcon, DumbbellIcon } from "@/components/icons";
 import { formatShort, addDays, dayOfWeek } from "@/lib/dates";
 import { DateField } from "@/components/date-field";
-import { loadLoggedWeights } from "@/lib/actions/workouts";
+import { loadLoggedWeights, overdueWorkoutDates } from "@/lib/actions/workouts";
 import { TodayPlan } from "@/app/exercise/workout-card";
 import { CustomWorkoutForm } from "@/app/exercise/workouts-grid";
 import type {
@@ -56,7 +56,25 @@ export function WorkoutLauncher({
   const [open, setOpen] = useState(false);
   const [logDate, setLogDate] = useState(dateISO);
   const [loggedByPool, setLoggedByPool] = useState<Record<string, string>>({});
-  const [loadingLogged, setLoadingLogged] = useState(false);
+  const [loadingLogged, setLoadingLogged] = useState(false)
+  const [overdueDates, setOverdueDates] = useState<string[]>([]);
+
+  // Overdue workouts (past days still pending) to show at the top.
+  useEffect(() => {
+    if (!open) {
+      setOverdueDates([]);
+      return;
+    }
+    let cancelled = false;
+    overdueWorkoutDates(userId)
+      .then((d) => {
+        if (!cancelled) setOverdueDates(d);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, userId]);
 
   // Pull already-logged weights for a back-dated day so the plan pre-fills them.
   useEffect(() => {
@@ -161,6 +179,35 @@ export function WorkoutLauncher({
               </div>
 
               <div className="mt-5 space-y-6">
+                {logDate === todayISO && overdueDates.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-display text-sm font-semibold text-red-700">
+                      Overdue
+                    </h4>
+                    {overdueDates.map((od) => {
+                      const w = weekPlan[dayOfWeek(od)] ?? [];
+                      if (w.length === 0) return null;
+                      return (
+                        <div
+                          key={od}
+                          className="rounded-xl border border-red-200 bg-red-50 p-3"
+                        >
+                          <TodayPlan
+                            userId={userId}
+                            dateISO={od}
+                            workouts={w}
+                            doneLabels={[]}
+                            paused={null}
+                            rested={false}
+                            unitSystem={unitSystem}
+                            heading={`Missed ${formatShort(od)}`}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <div>
                   <label
                     htmlFor="launcher-log-date"

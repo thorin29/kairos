@@ -23,8 +23,9 @@ import {
   restDay,
   markWorkedOut,
   loadLoggedWeights,
+  overdueWorkoutDates,
 } from "@/lib/actions/workouts";
-import { addDays, dayOfWeek } from "@/lib/dates";
+import { addDays, dayOfWeek, formatShort } from "@/lib/dates";
 import { PlanBuilder } from "./plan-builder";
 import { RotationBuilder } from "./rotation-builder";
 import { TodayPlan } from "./workout-card";
@@ -87,6 +88,7 @@ export function WorkoutsGrid({
   // so the plan pre-fills them like the phone does.
   const [loggedByPool, setLoggedByPool] = useState<Record<string, string>>({});
   const [loadingLogged, setLoadingLogged] = useState(false);
+  const [overdueDates, setOverdueDates] = useState<string[]>([]);
   const [browseFilter, setBrowseFilter] = useState<"regular" | "hero">(
     "regular",
   );
@@ -111,6 +113,21 @@ export function WorkoutsGrid({
 
   const open = people.find((p) => p.user.id === openId) ?? null;
   const openUserId = open?.user.id ?? null;
+  useEffect(() => {
+    if (!openUserId) {
+      setOverdueDates([]);
+      return;
+    }
+    let cancelled = false;
+    overdueWorkoutDates(openUserId)
+      .then((d) => {
+        if (!cancelled) setOverdueDates(d);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [openUserId]);
   useEffect(() => {
     let cancelled = false;
     if (openUserId && logDate !== todayISO) {
@@ -473,6 +490,34 @@ export function WorkoutsGrid({
 
                   {logDate === todayISO ? (
                     <>
+                      {overdueDates.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="font-display text-sm font-semibold text-red-700">
+                            Overdue
+                          </h4>
+                          {overdueDates.map((od) => {
+                            const w = open.plan[dayOfWeek(od)]?.workouts ?? [];
+                            if (w.length === 0) return null;
+                            return (
+                              <div
+                                key={od}
+                                className="rounded-xl border border-red-200 bg-red-50 p-3"
+                              >
+                                <TodayPlan
+                                  userId={open.user.id}
+                                  dateISO={od}
+                                  workouts={w}
+                                  doneLabels={[]}
+                                  paused={null}
+                                  rested={false}
+                                  unitSystem={unitSystem}
+                                  heading={`Missed ${formatShort(od)}`}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                       <TodayPlan
                         userId={open.user.id}
                         dateISO={todayISO}

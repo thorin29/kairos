@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { setSetting, WORKOUT_OVERDUE_DAYS, WORKOUT_OVERDUE_MAX } from "@/lib/settings";
 import { toDateColumn, todayISO } from "@/lib/dates";
+import { loadOverdueWorkoutDates } from "@/lib/queries/workout-log";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import {
   CATEGORY_LABEL,
@@ -1200,4 +1201,12 @@ export async function loadLoggedWeights(
     }
   }
   return out;
+}
+
+/** Overdue workout dates for a person (today's overdue window), for the web's
+ *  Overdue section. */
+export async function overdueWorkoutDates(userId: string): Promise<string[]> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return loadOverdueWorkoutDates(userId, todayISO());
 }
