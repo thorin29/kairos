@@ -11,6 +11,7 @@ import {
 import { addEvent, updateEvent, type EventState } from "@/lib/actions/events";
 import { LocationCombobox } from "@/components/location-combobox";
 import { EventNameCombobox } from "@/components/event-name-combobox";
+import { SelectField } from "@/components/select-field";
 import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
 import { addDays, dayOfWeek, daysBetween, startOfWeek } from "@/lib/dates";
 import { PlusIcon } from "@/components/icons";
@@ -647,48 +648,31 @@ function EventModal({
             </div>
 
             <div>
-              <label htmlFor="ev-user" className="mb-1.5 block text-sm font-medium">
-                Whose
-              </label>
-              <select
-                id="ev-user"
+              <label className="mb-1.5 block text-sm font-medium">Whose</label>
+              <SelectField
                 name="userId"
-                required
+                ariaLabel="Whose"
                 value={owner}
-                onChange={(e) => changeOwner(e.target.value)}
-                className={`${field} select-caret`}
-              >
-                <option value="">Choose</option>
-                <option value="family">Family (shared)</option>
-                {people.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={changeOwner}
+                placeholder="Choose"
+                options={[
+                  { value: "family", label: "Family (shared)" },
+                  ...people.map((p) => ({ value: p.id, label: p.name })),
+                ]}
+              />
             </div>
 
             <div>
-              <label htmlFor="ev-kind" className="mb-1.5 block text-sm font-medium">
-                Type
-              </label>
-              <select
-                id="ev-kind"
+              <label className="mb-1.5 block text-sm font-medium">Type</label>
+              <SelectField
+                ariaLabel="Type"
                 value={kind}
-                onChange={(e) => chooseKind(e.target.value)}
-                className={`${field} select-caret`}
-              >
-                {kindOptions.map((k) => (
-                  <option key={k.value} value={k.value}>
-                    {k.label}
-                  </option>
-                ))}
-                {types.map((t) => (
-                  <option key={t.id} value={`type:${t.id}`}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+                onChange={chooseKind}
+                options={[
+                  ...kindOptions.map((k) => ({ value: k.value, label: k.label })),
+                  ...types.map((t) => ({ value: `type:${t.id}`, label: t.name })),
+                ]}
+              />
               <input type="hidden" name="kind" value={kindForSubmit} />
               <input type="hidden" name="eventTypeId" value={eventTypeId} />
             </div>
@@ -842,18 +826,12 @@ function EventModal({
                   <label htmlFor="ev-repeat" className="mb-1.5 block text-sm font-medium">
                     Repeats
                   </label>
-              <select
-                id="ev-repeat"
+              <SelectField
+                ariaLabel="Repeats"
                 value={repeat}
-                onChange={(e) => setRepeat(e.target.value)}
-                className={`${field} select-caret`}
-              >
-                {REPEATS.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setRepeat}
+                options={REPEATS.map((r) => ({ value: r.value, label: r.label }))}
+              />
             </div>
 
                 {repeat !== "NONE" && (
@@ -861,18 +839,18 @@ function EventModal({
                     <label htmlFor="ev-endmode" className="mb-1.5 block text-sm font-medium">
                       Ends
                     </label>
-                    <select
-                      id="ev-endmode"
+                    <SelectField
+                      ariaLabel="Ends"
                       value={endMode}
-                      onChange={(e) =>
-                        setEndMode(e.target.value as "never" | "until" | "count")
+                      onChange={(v) =>
+                        setEndMode(v as "never" | "until" | "count")
                       }
-                      className={`${field} select-caret`}
-                    >
-                      <option value="never">Never</option>
-                      <option value="until">On a date</option>
-                      <option value="count">After a number of times</option>
-                    </select>
+                      options={[
+                        { value: "never", label: "Never" },
+                        { value: "until", label: "On a date" },
+                        { value: "count", label: "After a number of times" },
+                      ]}
+                    />
                     {endMode === "until" && (
                       <DateField
                         name="until"
@@ -955,17 +933,17 @@ function EventModal({
                   <label htmlFor="ev-freq" className="mb-1.5 block text-sm font-medium">
                     Unit
                   </label>
-                  <select
-                    id="ev-freq"
+                  <SelectField
+                    ariaLabel="Unit"
                     value={customFreq}
-                    onChange={(e) => setCustomFreq(e.target.value)}
-                    className={`${field} select-caret`}
-                  >
-                    <option value="DAILY">days</option>
-                    <option value="WEEKLY">weeks</option>
-                    <option value="MONTHLY">months</option>
-                    <option value="YEARLY">years</option>
-                  </select>
+                    onChange={setCustomFreq}
+                    options={[
+                      { value: "DAILY", label: "days" },
+                      { value: "WEEKLY", label: "weeks" },
+                      { value: "MONTHLY", label: "months" },
+                      { value: "YEARLY", label: "years" },
+                    ]}
+                  />
                 </div>
               </>
             )}

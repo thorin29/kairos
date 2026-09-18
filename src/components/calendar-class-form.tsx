@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { TimeSelect } from "@/components/time-select";
 import { LocationCombobox } from "@/components/location-combobox";
 import { Combobox } from "@/components/combobox";
+import { SelectField } from "@/components/select-field";
 import {
   saveClassFromCalendar,
   type SchoolActionState,
@@ -199,6 +200,7 @@ export function CalendarClassForm({
     ? subjects.find((sub) => sub.id === editing.subjectId)?.name ?? ""
     : "";
   const [color, setColor] = useState(editing?.color ?? "");
+  const [classTypeId, setClassTypeId] = useState(editing?.classTypeId ?? "");
   const [termSel, setTermSel] = useState(editing?.termId ?? terms[0]?.id ?? "__new__");
   const startInit = editing?.meetingStart || start || "";
   const [startTime, setStartTime] = useState(startInit);
@@ -282,18 +284,14 @@ export function CalendarClassForm({
         {isAdmin && !editing ? (
           <div>
             <label className="block text-sm font-medium">Student</label>
-            <select
+            <SelectField
               name="userId"
+              ariaLabel="Student"
               value={owner}
-              onChange={(e) => setOwner(e.target.value)}
-              className={`${FIELD} select-caret`}
-            >
-              {people.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onChange={setOwner}
+              className="mt-1.5"
+              options={people.map((p) => ({ value: p.id, label: p.name }))}
+            />
           </div>
         ) : (
           <div
@@ -307,17 +305,13 @@ export function CalendarClassForm({
         {showKind && (
           <div>
             <label className="block text-sm font-medium">Type</label>
-            <select
-              value={kindValue}
-              onChange={(e) => onKindChange!(e.target.value)}
-              className={`${FIELD} select-caret`}
-            >
-              {kindOptions!.map((k) => (
-                <option key={k.value} value={k.value}>
-                  {k.label}
-                </option>
-              ))}
-            </select>
+            <SelectField
+              ariaLabel="Type"
+              value={kindValue ?? ""}
+              onChange={(v) => onKindChange!(v)}
+              className="mt-1.5"
+              options={kindOptions!.map((k) => ({ value: k.value, label: k.label }))}
+            />
           </div>
         )}
       </div>
@@ -450,34 +444,29 @@ export function CalendarClassForm({
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
           <label className="block text-sm font-medium">Class type</label>
-          <select
+          <SelectField
             name="classTypeId"
-            defaultValue={editing?.classTypeId ?? ""}
-            className={`${FIELD} select-caret`}
-          >
-            <option value="">Choose a type…</option>
-            {classTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+            ariaLabel="Class type"
+            value={classTypeId}
+            onChange={setClassTypeId}
+            placeholder="Choose a type…"
+            className="mt-1.5"
+            options={classTypes.map((t) => ({ value: t.id, label: t.name }))}
+          />
         </div>
 
         <div>
           <label className="block text-sm font-medium">Semester</label>
-          <select
+          <SelectField
+            ariaLabel="Semester"
             value={termSel}
-            onChange={(e) => setTermSel(e.target.value)}
-            className={`${FIELD} select-caret`}
-          >
-            {terms.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-            <option value="__new__">+ Add a new semester</option>
-          </select>
+            onChange={setTermSel}
+            className="mt-1.5"
+            options={[
+              ...terms.map((t) => ({ value: t.id, label: t.name })),
+              { value: "__new__", label: "+ Add a new semester" },
+            ]}
+          />
           <input
             type="hidden"
             name="termId"
