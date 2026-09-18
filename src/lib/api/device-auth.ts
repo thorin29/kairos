@@ -224,17 +224,18 @@ export async function personPayloadById(userId: string) {
  * revoked, expired, and inactive-person tokens. Full identity lives here on the
  * server, never trusted from the client.
  */
+export type DeviceInvalidReason = "unknown" | "revoked" | "expired" | "inactive";
 export type DeviceAuthResult =
   | { status: "ok"; device: AuthedDevice }
   /** Valid token, but a password account rotated its password — the device stays
    *  enrolled and must re-authenticate (POST /auth/reauth) to continue. */
   | { status: "reauth"; device: AuthedDevice }
-  | { status: "invalid" };
+  | { status: "invalid"; reason: DeviceInvalidReason };
 
 export async function authenticateDevice(
   token: string,
 ): Promise<DeviceAuthResult> {
-  if (!token) return { status: "invalid" };
+  if (!token) return { status: "invalid", reason: "unknown" };
   const device = await prisma.device.findUnique({
     where: { tokenHash: hashToken(token) },
     select: {
@@ -247,10 +248,10 @@ export async function authenticateDevice(
       },
     },
   });
-  if (!device) return { status: "invalid" };
-  if (device.revokedAt) return { status: "invalid" };
-  if (device.expiresAt < new Date()) return { status: "invalid" };
-  if (!device.user.isActive) return { status: "invalid" };
+  if (!device) return { status: "invalid", reason: "unknown" };
+  if (device.revokedAt) return { status: "invalid", reason: "revoked" };
+  if (device.expiresAt < new Date()) return { status: "invalid", reason: "expired" };
+  if (!device.user.isActive) return { status: "invalid", reason: "inactive" };
 
   const authed: AuthedDevice = {
     deviceId: device.id,
@@ -413,6 +414,21 @@ export async function listDevices(userId: string): Promise<DeviceSummary[]> {
   });
 }
 
+/** Map an invalid-token reason to the split error code, so the client can tell a
+ *  genuinely dead credential (re-enroll) from a missing/transient one, and so logs
+ *  distinguish a revoked device from an expired or unknown token. `inactive`
+ *  (the person's account was disabled) folds into the generic invalid_token. */
+function invalidTokenResponse(reason: DeviceInvalidReason): NextResponse {
+  switch (reason) {
+    case "revoked":
+      return apiError("device_revoked", "This device was removed. Set it up again.");
+    case "expired":
+      return apiError("device_expired", "This device's session expired. Set it up again.");
+    default:
+      return apiError("invalid_token", "Invalid or expired token.");
+  }
+}
+
 /**
  * Route guard: pull the bearer token, resolve it, and mark the device seen.
  * Returns the authed device or a ready-to-return error response, so a handler
@@ -423,13 +439,11 @@ export async function requireDevice(
 ): Promise<{ device: AuthedDevice } | { response: NextResponse }> {
   const token = bearerToken(req);
   if (!token) {
-    return { response: apiError("unauthenticated", "Missing bearer token.") };
+    return { response: apiError("missing_bearer", "Missing bearer token.") };
   }
   const result = await authenticateDevice(token);
   if (result.status === "invalid") {
-    return {
-      response: apiError("unauthenticated", "Invalid or expired token."),
-    };
+    return { response: invalidTokenResponse(result.reason) };
   }
   if (result.status === "reauth") {
     return {
@@ -481,13 +495,11 @@ export async function requireDeviceForReauth(
 ): Promise<{ device: AuthedDevice } | { response: NextResponse }> {
   const token = bearerToken(req);
   if (!token) {
-    return { response: apiError("unauthenticated", "Missing bearer token.") };
+    return { response: apiError("missing_bearer", "Missing bearer token.") };
   }
   const result = await authenticateDevice(token);
   if (result.status === "invalid") {
-    return {
-      response: apiError("unauthenticated", "Invalid or expired token."),
-    };
+    return { response: invalidTokenResponse(result.reason) };
   }
   await touchDevice(result.device.deviceId);
   return { device: result.device };

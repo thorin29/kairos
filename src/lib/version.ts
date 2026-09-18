@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.429.0";
+export const APP_VERSION = "0.430.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -118,6 +118,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.430.0",
+    summary: [
+      "Device-token rejection now returns split error codes (missing_bearer / invalid_token / device_revoked / device_expired) instead of a single unauthenticated, so the phone can tell a missing/racing credential (never drop enrollment) from a genuinely dead one, and logs show which. Login/reauth wrong-password and ingest keep unauthenticated. Additive \u2014 older apps treat unknown 401 codes as recoverable, so it is safe to deploy before the app updates.",
+    ],
+  },
   {
     version: "0.429.0",
     summary: [
