@@ -17,6 +17,7 @@ import {
   weekDays,
 } from "@/lib/dates";
 import { CalendarView } from "@/components/calendar-view";
+import { EventSearch } from "@/components/event-search";
 import { MonthGrid } from "@/components/month-grid";
 import { DaySchedule } from "@/components/day-schedule";
 import { AddEventProvider, AddEventButton } from "./add-event-form";
@@ -240,6 +241,7 @@ export async function PersonalCalendar({
               />
             )}
           </div>
+          <EventSearch chip={chip} />
           <AddEventButton />
           <CalendarOptionsDrawer
             view={view}
