@@ -307,49 +307,62 @@ export async function updatePersonalEvent(
     }
     await setParticipants(targetId, input.participants, ev.isFamily ? null : ev.userId);
   } else if (futureEdit) {
-    // "This and future events": cap the original series before this occurrence
-    // (past preserved) and start a fresh series from this occurrence with the
-    // edits. Overrides from here on are dropped.
+    // "This and future events": consolidate every piece of this logical series
+    // from this occurrence forward into one fresh series with the edits, so a
+    // series that was split, moved, or had occurrences deleted is reconnected.
+    // Occurrences before this date keep their settings; per-occurrence changes
+    // and deletions from this date on are reset and regenerated.
     const occ =
       input.occurrenceISO && /^\d{4}-\d{2}-\d{2}$/.test(input.occurrenceISO)
         ? input.occurrenceISO
         : input.date;
     const untilISO = addDays(occ, -1);
     const ownerAfter = nextIsFamily ? null : ev.userId ?? userId;
-    if (untilISO < localParts(ev.startsAt).iso) {
-      // First occurrence — nothing in the past to keep; edit the series in place.
-      await prisma.event.update({ where: { id: eventId }, data: { ...fields, ...ownerFields } });
-      await setParticipants(eventId, input.participants, ownerAfter);
-    } else {
-      const r = parseRule(ev.rrule);
-      const sid = ev.seriesId ?? ev.id;
-      await prisma.event.deleteMany({
-        where: { recurrenceId: eventId, recurrenceDate: { gte: toDateColumn(occ) } },
-      });
-      await prisma.event.update({
-        where: { id: eventId },
-        data: {
-          rrule: r ? buildRule(r.freq, r.interval, untilISO, null, r.byday) : ev.rrule,
-          seriesId: sid,
-        },
-      });
-      const created = await prisma.event.create({
-        data: {
-          ...fields,
-          userId: nextIsFamily ? null : ev.userId ?? userId,
-          isFamily: nextIsFamily,
-          kind: nextKind,
-          ...(nextTypeId !== undefined ? { eventTypeId: nextTypeId } : {}),
-          rrule: alignWeeklyByday(
-            r ? buildRule(r.freq, r.interval, r.until, null, r.byday) : ev.rrule,
-            input.date,
-          ),
-          seriesId: sid,
-        },
-        select: { id: true },
-      });
-      await setParticipants(created.id, input.participants, ownerAfter);
+    const sid = ev.seriesId ?? ev.id;
+    const r = parseRule(ev.rrule);
+    const Dcol = toDateColumn(occ);
+    const pieces = await prisma.event.findMany({
+      where: { OR: [{ id: sid }, { seriesId: sid }] },
+      select: { id: true, startsAt: true, rrule: true },
+    });
+    for (const p of pieces) {
+      const pStart = localParts(p.startsAt).iso;
+      if (pStart >= occ) {
+        await prisma.event.deleteMany({ where: { recurrenceId: p.id } });
+        await prisma.event.delete({ where: { id: p.id } });
+      } else {
+        const pr = parseRule(p.rrule);
+        if (pr) {
+          const cappedUntil = pr.until && pr.until < untilISO ? pr.until : untilISO;
+          await prisma.event.update({
+            where: { id: p.id },
+            data: {
+              rrule: buildRule(pr.freq, pr.interval, cappedUntil, null, pr.byday),
+              seriesId: sid,
+            },
+          });
+        }
+        await prisma.event.deleteMany({
+          where: { recurrenceId: p.id, recurrenceDate: { gte: Dcol } },
+        });
+      }
     }
+    const created = await prisma.event.create({
+      data: {
+        ...fields,
+        userId: nextIsFamily ? null : ev.userId ?? userId,
+        isFamily: nextIsFamily,
+        kind: nextKind,
+        ...(nextTypeId !== undefined ? { eventTypeId: nextTypeId } : {}),
+        rrule: alignWeeklyByday(
+          r ? buildRule(r.freq, r.interval, r.until, null, r.byday) : ev.rrule,
+          input.date,
+        ),
+        seriesId: sid,
+      },
+      select: { id: true },
+    });
+    await setParticipants(created.id, input.participants, ownerAfter);
   } else {
     await prisma.event.update({ where: { id: eventId }, data: { ...fields, ...ownerFields } });
     const ownerAfter = nextIsFamily ? null : ev.userId ?? userId;
