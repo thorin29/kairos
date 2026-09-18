@@ -333,6 +333,8 @@ export async function updateEvent(
       endsAt: true,
       allDay: true,
       seriesId: true,
+      userId: true,
+      isFamily: true,
     },
   });
   if (!target) return { error: "That event no longer exists.", saved: false };
@@ -345,15 +347,11 @@ export async function updateEvent(
   const seriesEdit = recurring && scope === "series";
   const futureEdit = recurring && scope === "future";
 
-  // Changing a whole series or a birthday reaches beyond the day in view.
-  if ((seriesEdit || futureEdit || target.kind === "BIRTHDAY") && !(await isAdmin())) {
-    return {
-      error: "Only a parent can edit a repeating event or a birthday.",
-      saved: false,
-    };
-  }
-
-  const owner = String(formData.get("userId") ?? "");
+  const rawOwner = String(formData.get("userId") ?? "");
+  // Never blank the owner on an edit: if the form didn't send one, keep the
+  // event's existing owner (or family) rather than orphaning it.
+  const owner =
+    rawOwner || (target.isFamily ? "family" : (target.userId ?? ""));
   const isFamily = owner === "family";
   const title = String(formData.get("title") ?? "").trim().slice(0, 120);
   const rawKind = String(formData.get("kind") ?? "");

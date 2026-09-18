@@ -206,9 +206,6 @@ export async function updatePersonalEvent(
   const seriesEdit = recurring && scope === "series";
   const futureEdit = recurring && scope === "future";
 
-  if ((seriesEdit || futureEdit || ev.kind === "BIRTHDAY") && !canManageFamily) {
-    return { error: "Only a parent can edit a repeating event or a birthday." };
-  }
   if (!ev.isFamily && ev.userId !== userId && !canManageFamily) {
     return { error: "You can only edit your own events." };
   }
