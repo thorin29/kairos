@@ -921,3 +921,38 @@ export async function loadRotation(userId: string): Promise<RotationView> {
 
   return { active: true, anchorISO, restMask: row.restMask, slots, preview };
 }
+
+export type OverdueWorkoutDay = {
+  date: string;
+  workouts: Awaited<ReturnType<typeof loadTodayPlannedWorkouts>>;
+};
+
+/** Past days whose "Worked out?" prompt is still pending — the overdue workouts
+ *  that piled up — each with that day's scheduled plan, newest-missed last, for
+ *  the Overdue section on the log page. */
+export async function loadOverdueWorkoutDays(
+  userId: string,
+  beforeISO: string,
+): Promise<OverdueWorkoutDay[]> {
+  const tasks = await prisma.task.findMany({
+    where: {
+      userId,
+      category: "EXERCISE",
+      generatedFrom: { startsWith: "workout:" },
+      status: "PENDING",
+      dueDate: { lt: toDateColumn(beforeISO) },
+    },
+    orderBy: { dueDate: "asc" },
+    select: { dueDate: true },
+  });
+  const seen = new Set<string>();
+  const out: OverdueWorkoutDay[] = [];
+  for (const t of tasks) {
+    const iso = fromDateColumn(t.dueDate);
+    if (seen.has(iso)) continue;
+    seen.add(iso);
+    const workouts = await loadTodayPlannedWorkouts(userId, iso);
+    if (workouts.length > 0) out.push({ date: iso, workouts });
+  }
+  return out;
+}
