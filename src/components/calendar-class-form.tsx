@@ -6,6 +6,7 @@ import { ReminderPicker } from "@/components/reminder-picker";
 import { useRouter } from "next/navigation";
 import { TimeSelect } from "@/components/time-select";
 import { LocationCombobox } from "@/components/location-combobox";
+import { Combobox } from "@/components/combobox";
 import {
   saveClassFromCalendar,
   type SchoolActionState,
@@ -265,20 +266,15 @@ export function CalendarClassForm({
       {/* Subject */}
       <div>
         <label className="block text-sm font-medium">Subject</label>
-        <input
+        <Combobox
           name="newSubject"
-          list="class-subjects"
+          options={subjects.map((sub) => sub.name)}
           defaultValue={subjectDefault}
           required
           maxLength={60}
           placeholder="Biology, Math, Piano…"
-          className={FIELD}
+          fieldClassName={FIELD}
         />
-        <datalist id="class-subjects">
-          {subjects.map((sub) => (
-            <option key={sub.id} value={sub.name} />
-          ))}
-        </datalist>
       </div>
 
       {/* Student | Type */}

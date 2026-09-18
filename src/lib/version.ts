@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.430.0";
+export const APP_VERSION = "0.431.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -118,6 +118,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.431.0",
+    summary: [
+      "Removing a workout from a plan in the plan builder now asks for confirmation first. The class Subject field is now a styled dropdown (matching the Student picker) instead of the raw browser autocomplete list \u2014 you can still type a brand-new subject to create it.",
+    ],
+  },
   {
     version: "0.430.0",
     summary: [
