@@ -220,7 +220,7 @@ export function WeekGrid({
     openAt({ ...data, date: ev.dayISO });
   };
 
-  const editEvent = async (ev: GridEvent, scope: "single" | "series") => {
+  const editEvent = async (ev: GridEvent, scope: "single" | "series" | "future") => {
     const data = await eventCopyData(ev.eventId);
     if (!data) return;
     // Recurring: edit the occurrence that was clicked. Non-recurring (incl. a
