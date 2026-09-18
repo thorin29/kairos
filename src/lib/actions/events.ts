@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { rememberEventName } from "@/lib/event-names-core";
 import { requireInteractive } from "@/lib/gate";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -307,6 +308,7 @@ export async function addEvent(
   revalidatePath("/calendar");
   revalidatePath("/");
   if (!isFamily) revalidatePath(`/person/${owner}`);
+  await rememberEventName(title);
   return { error: null, saved: true };
 }
 
@@ -541,6 +543,7 @@ export async function updateEvent(
   revalidatePath("/calendar");
   revalidatePath("/");
   if (!isFamily) revalidatePath(`/person/${owner}`);
+  await rememberEventName(title);
   return { error: null, saved: true };
 }
 

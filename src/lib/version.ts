@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.431.0";
+export const APP_VERSION = "0.432.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -113,11 +113,18 @@ export const MIGRATIONS = [
   "102_school_vacation_decision",
   "103_chore_icon",
   "104_game_title_platform",
+  "105_event_names",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.432.0",
+    summary: [
+      "Calendar event names are now a combobox: type anything (it saves), and matching names you've used before appear below as you type. The list of names is remembered automatically from every event and can be tidied \u2014 fixed spelling, merged, normalized \u2014 on the new Admin \u2192 Event names page (alphabetical, web-only). Classes keep their subject dropdown, unchanged.",
+    ],
+  },
   {
     version: "0.431.0",
     summary: [

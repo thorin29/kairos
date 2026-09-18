@@ -1,5 +1,6 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
+import { rememberEventName } from "@/lib/event-names-core";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { householdTz, localParts, toDateColumn, zonedToUtc } from "@/lib/dates";
@@ -160,6 +161,7 @@ export async function createPersonalEvent(
   revalidatePath("/calendar");
   revalidatePath("/");
   if (!isFamily) revalidatePath(`/person/${actorUserId}`);
+  await rememberEventName(title);
   return { error: null };
 }
 
@@ -312,5 +314,6 @@ export async function updatePersonalEvent(
   revalidatePath("/calendar");
   revalidatePath("/");
   revalidatePath(`/person/${ev.userId}`);
+  await rememberEventName(title);
   return { error: null };
 }
