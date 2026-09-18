@@ -492,11 +492,17 @@ export function WeekGrid({
   // per-minute nowMin ticks don't re-anchor and yank a manual scroll back.
   const clockReady = !todayInView || nowMin != null;
 
+  // Anchor the hours ONCE, when the clock is first known — not on every events
+  // change. Paging weeks/days re-renders this grid in place (same scroller DOM),
+  // so leaving the scroll alone keeps the hour rows fixed across pages: a
+  // recurring meeting stays at the same vertical spot, so you can flick through
+  // weeks and see whether/when it moves. (All-day rows still change the header
+  // height and nudge the grid down — accepted.)
   useEffect(() => {
     if (!clockReady) return;
     scrollToAnchor(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timed, clockReady]);
+  }, [clockReady]);
 
   const onScroll = () => {
     if (programmatic.current || resetSec <= 0) return;
