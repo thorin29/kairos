@@ -163,7 +163,7 @@ export type EditTarget = {
   // Which way a recurring edit was opened: just the clicked occurrence, or the
   // whole series. Chosen up front (the pop-up on Edit) and pre-selects the
   // in-form radio, which can still be changed before saving.
-  scope?: "single" | "series";
+  scope?: "single" | "series" | "future";
 };
 
 const AddEventContext = createContext<{
@@ -402,7 +402,7 @@ function EventModal({
   };
   // For a recurring event, an edit applies to just this occurrence or the
   // whole series. Default to the single occurrence — the safer, smaller change.
-  const [scope, setScope] = useState<"single" | "series">(
+  const [scope, setScope] = useState<"single" | "series" | "future">(
     editing?.scope ?? "single",
   );
 
@@ -809,7 +809,8 @@ function EventModal({
             </div>
           </div>
 
-          {(!editing || (editing.recurring && scope === "series")) && (
+          {(!editing ||
+            (editing.recurring && (scope === "series" || scope === "future"))) && (
             <>
               <input type="hidden" name="repeat" value={effectiveRepeat} />
               <input
@@ -976,6 +977,16 @@ function EventModal({
                       <input
                         type="radio"
                         name="scopeChoice"
+                        checked={scope === "future"}
+                        onChange={() => setScope("future")}
+                        className="h-4 w-4 accent-[var(--color-accent)]"
+                      />
+                      This and future events
+                    </label>
+                    <label className="flex items-center gap-2.5">
+                      <input
+                        type="radio"
+                        name="scopeChoice"
                         checked={scope === "series"}
                         onChange={() => setScope("series")}
                         className="h-4 w-4 accent-[var(--color-accent)]"
@@ -987,6 +998,12 @@ function EventModal({
                     <p className="mt-2 text-xs text-muted">
                       Series edits keep each occurrence on its own date and change
                       the time and details.
+                    </p>
+                  )}
+                  {scope === "future" && (
+                    <p className="mt-2 text-xs text-muted">
+                      Events before this one stay as they were; this one and all
+                      later ones get the change.
                     </p>
                   )}
                 </div>

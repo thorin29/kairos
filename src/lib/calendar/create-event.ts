@@ -3,8 +3,8 @@ import { revalidatePath } from "next/cache";
 import { rememberEventName } from "@/lib/event-names-core";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { householdTz, localParts, toDateColumn, zonedToUtc } from "@/lib/dates";
-import { buildRule } from "@/lib/calendar/recur";
+import { householdTz, localParts, toDateColumn, zonedToUtc, addDays } from "@/lib/dates";
+import { buildRule, parseRule } from "@/lib/calendar/recur";
 
 /**
  * Create / update a basic personal calendar event for the app (Phase 3a-b).
@@ -195,7 +195,7 @@ export async function updatePersonalEvent(
   eventId: string,
   input: EventInput,
   canManageFamily: boolean,
-  scope: "single" | "series" = "series",
+  scope: "single" | "series" | "future" = "series",
 ): Promise<{ error: string | null }> {
   const ev = await prisma.event.findUnique({ where: { id: eventId } });
   if (!ev) return { error: "That event is gone." };
@@ -204,8 +204,9 @@ export async function updatePersonalEvent(
   const recurring = Boolean(ev.rrule);
   const singleEdit = recurring && scope === "single";
   const seriesEdit = recurring && scope === "series";
+  const futureEdit = recurring && scope === "future";
 
-  if ((seriesEdit || ev.kind === "BIRTHDAY") && !canManageFamily) {
+  if ((seriesEdit || futureEdit || ev.kind === "BIRTHDAY") && !canManageFamily) {
     return { error: "Only a parent can edit a repeating event or a birthday." };
   }
   if (!ev.isFamily && ev.userId !== userId && !canManageFamily) {
@@ -305,6 +306,39 @@ export async function updatePersonalEvent(
       targetId = created.id;
     }
     await setParticipants(targetId, input.participants, ev.isFamily ? null : ev.userId);
+  } else if (futureEdit) {
+    // "This and future events": cap the original series before this occurrence
+    // (past preserved) and start a fresh series from this occurrence with the
+    // edits. Overrides from here on are dropped.
+    const occ =
+      input.occurrenceISO && /^\d{4}-\d{2}-\d{2}$/.test(input.occurrenceISO)
+        ? input.occurrenceISO
+        : input.date;
+    const untilISO = addDays(occ, -1);
+    const ownerAfter = nextIsFamily ? null : ev.userId ?? userId;
+    if (untilISO < localParts(ev.startsAt).iso) {
+      // First occurrence — nothing in the past to keep; edit the series in place.
+      await prisma.event.update({ where: { id: eventId }, data: { ...fields, ...ownerFields } });
+      await setParticipants(eventId, input.participants, ownerAfter);
+    } else {
+      const r = parseRule(ev.rrule);
+      await prisma.event.deleteMany({
+        where: { recurrenceId: eventId, recurrenceDate: { gte: toDateColumn(occ) } },
+      });
+      await prisma.event.update({
+        where: { id: eventId },
+        data: { rrule: r ? buildRule(r.freq, r.interval, untilISO, null, r.byday) : ev.rrule },
+      });
+      const created = await prisma.event.create({
+        data: {
+          ...fields,
+          ...ownerFields,
+          rrule: r ? buildRule(r.freq, r.interval, r.until, null, r.byday) : ev.rrule,
+        },
+        select: { id: true },
+      });
+      await setParticipants(created.id, input.participants, ownerAfter);
+    }
   } else {
     await prisma.event.update({ where: { id: eventId }, data: { ...fields, ...ownerFields } });
     const ownerAfter = nextIsFamily ? null : ev.userId ?? userId;
