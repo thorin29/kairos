@@ -4,7 +4,7 @@ import { rememberEventName } from "@/lib/event-names-core";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { householdTz, localParts, toDateColumn, zonedToUtc, addDays } from "@/lib/dates";
-import { buildRule, parseRule, alignWeeklyByday } from "@/lib/calendar/recur";
+import { buildRule, parseRule, alignWeeklyByday, occurrencesIn } from "@/lib/calendar/recur";
 
 /**
  * Create / update a basic personal calendar event for the app (Phase 3a-b).
@@ -331,10 +331,12 @@ export async function updatePersonalEvent(
     const sid = ev.seriesId ?? ev.id;
     const r = parseRule(ev.rrule);
     const Dcol = toDateColumn(occ);
+    const tz = householdTz();
     const pieces = await prisma.event.findMany({
       where: { OR: [{ id: sid }, { seriesId: sid }] },
       select: { id: true, startsAt: true, rrule: true },
     });
+    let pastCount = 0;
     for (const p of pieces) {
       const pStart = localParts(p.startsAt).iso;
       if (pStart >= occ) {
@@ -342,21 +344,28 @@ export async function updatePersonalEvent(
         await prisma.event.delete({ where: { id: p.id } });
       } else {
         const pr = parseRule(p.rrule);
+        let cappedRule = p.rrule;
         if (pr) {
           const cappedUntil = pr.until && pr.until < untilISO ? pr.until : untilISO;
+          cappedRule = buildRule(pr.freq, pr.interval, cappedUntil, null, pr.byday);
           await prisma.event.update({
             where: { id: p.id },
-            data: {
-              rrule: buildRule(pr.freq, pr.interval, cappedUntil, null, pr.byday),
-              seriesId: sid,
-            },
+            data: { rrule: cappedRule, seriesId: sid },
           });
+        }
+        if (cappedRule) {
+          pastCount += occurrencesIn(p.startsAt, cappedRule, pStart, untilISO, tz).length;
         }
         await prisma.event.deleteMany({
           where: { recurrenceId: p.id, recurrenceDate: { gte: Dcol } },
         });
       }
     }
+    // Keep a count-limited series intact: the forward part keeps the remaining
+    // count (and count isn't dropped as it was before).
+    const remaining = r && r.count && r.count > 0
+      ? Math.max(r.count - pastCount, 1)
+      : null;
     const created = await prisma.event.create({
       data: {
         ...fields,
@@ -365,7 +374,7 @@ export async function updatePersonalEvent(
         kind: nextKind,
         ...(nextTypeId !== undefined ? { eventTypeId: nextTypeId } : {}),
         rrule: alignWeeklyByday(
-          r ? buildRule(r.freq, r.interval, r.until, null, r.byday) : ev.rrule,
+          r ? buildRule(r.freq, r.interval, r.until, remaining, r.byday) : ev.rrule,
           input.date,
         ),
         seriesId: sid,
