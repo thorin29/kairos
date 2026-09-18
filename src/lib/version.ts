@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.434.0";
+export const APP_VERSION = "0.435.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -120,6 +120,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.435.0",
+    summary: [
+      "Weekly events: \u201cOn these days\u201d is now single-select and moves the start/end date to the day you pick, so the whole series (and future occurrences) actually shift to that weekday \u2014 fixing \u201cthis and future\u201d edits that change the day. A new \u201cAllow multiple days\u201d tickbox restores multi-day selection when you want it.",
+    ],
+  },
   {
     version: "0.434.0",
     summary: [

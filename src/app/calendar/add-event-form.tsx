@@ -12,7 +12,7 @@ import { addEvent, updateEvent, type EventState } from "@/lib/actions/events";
 import { LocationCombobox } from "@/components/location-combobox";
 import { EventNameCombobox } from "@/components/event-name-combobox";
 import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
-import { addDays, dayOfWeek, daysBetween } from "@/lib/dates";
+import { addDays, dayOfWeek, daysBetween, startOfWeek } from "@/lib/dates";
 import { PlusIcon } from "@/components/icons";
 import { TimeSelect } from "@/components/time-select";
 import { DateField } from "@/components/date-field";
@@ -389,16 +389,32 @@ function EventModal({
   const bydayTouched = useRef(
     Boolean(editRec?.byday && editRec.byday.length > 0),
   );
+  // Single day by default: a weekly event repeats on one weekday, kept locked to
+  // the start date. Ticking this lets you pick several weekdays (web only).
+  const [allowMultipleDays, setAllowMultipleDays] = useState<boolean>(
+    Boolean(editRec?.byday && editRec.byday.length > 1),
+  );
   const toggleDay = (token: string) => {
     bydayTouched.current = true;
-    setByday((prev) =>
-      prev.includes(token)
-        ? // Never let the last day be turned off — a weekly event needs one.
-          prev.length > 1
-          ? prev.filter((d) => d !== token)
-          : prev
-        : [...prev, token],
-    );
+    if (allowMultipleDays) {
+      setByday((prev) =>
+        prev.includes(token)
+          ? // Never let the last day be turned off — a weekly event needs one.
+            prev.length > 1
+            ? prev.filter((d) => d !== token)
+            : prev
+          : [...prev, token],
+      );
+      return;
+    }
+    // Single day: move the event to this weekday within its week, so the start
+    // and end dates — and every future occurrence — follow. The start-date
+    // effect re-derives byday, keeping the two in lock-step.
+    const idx = WEEKDAY_TOKENS.findIndex((t) => t === token);
+    if (idx < 0) return;
+    const newStart = addDays(startOfWeek(startDate), idx);
+    if (newStart === startDate) setByday([token]);
+    else onStartDateChange(newStart);
   };
   // For a recurring event, an edit applies to just this occurrence or the
   // whole series. Default to the single occurrence — the safer, smaller change.
@@ -411,10 +427,12 @@ function EventModal({
   // weekday (until the user picks days themselves), so it always highlights the
   // day the event actually starts on rather than a stale default.
   useEffect(() => {
-    if (!bydayTouched.current) {
+    // Single-day mode: the weekday always follows the start date. Multi-day
+    // mode: follow the start date only until the user picks days themselves.
+    if (!allowMultipleDays || !bydayTouched.current) {
       setByday([WEEKDAY_TOKENS[dayOfWeek(startDate)]]);
     }
-  }, [startDate]);
+  }, [startDate, allowMultipleDays]);
   const [endDate, setEndDate] = useState(() => addDays(date, endDayOffset ?? 0));
   const [startTime, setStartTime] = useState(start);
   const [endTime, setEndTime] = useState(end ?? addHour(start));
@@ -882,6 +900,15 @@ function EventModal({
               <div className="sm:col-span-2">
                 <label className="mb-1.5 block text-sm font-medium">
                   On these days
+                </label>
+                <label className="mb-2 flex items-center gap-2 text-xs text-muted">
+                  <input
+                    type="checkbox"
+                    checked={allowMultipleDays}
+                    onChange={(e) => setAllowMultipleDays(e.target.checked)}
+                    className="h-4 w-4 accent-[var(--color-accent)]"
+                  />
+                  Allow multiple days
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {WEEKDAY_TOKENS.map((tok, i) => {
