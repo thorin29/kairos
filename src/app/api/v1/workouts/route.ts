@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { loadTodayPlannedWorkout, loadTodayPlannedWorkouts } from "@/lib/queries/workout-log";
+import { loadTodayPlannedWorkout, loadTodayPlannedWorkouts, loadOverdueWorkoutDays } from "@/lib/queries/workout-log";
 import { todayISO } from "@/lib/dates";
 
 export const runtime = "nodejs";
@@ -20,6 +20,9 @@ export async function GET(req: NextRequest) {
   }
 
   const workouts = await loadTodayPlannedWorkouts(authed.device.person.id, date);
+  const overdue = date === todayISO()
+    ? await loadOverdueWorkoutDays(authed.device.person.id, date)
+    : [];
   const first = workouts[0] ?? null;
   return apiOk({
     date,
@@ -27,6 +30,8 @@ export async function GET(req: NextRequest) {
     // All of the day's planned workouts (Core, Arms, ...). Older clients that
     // read the single fields still get the first one.
     workouts,
+    // Past days whose workout is still pending, each with its own plan.
+    overdue,
     plannedWorkoutId: first?.plannedWorkoutId ?? null,
     name: first?.name ?? null,
     exercises: first?.exercises ?? [],
