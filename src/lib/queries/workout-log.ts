@@ -3,9 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { slotForDate } from "@/lib/workouts/rotation";
 import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES, hiitResult } from "@/lib/workouts/catalog";
 import type { WorkoutType } from "@/generated/prisma/client";
-import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
+import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween } from "@/lib/dates";
 import { metricUnit, type Metric } from "@/lib/workouts/catalog";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
+import { loadStaleContext } from "@/lib/chores/stale";
 
 /**
  * The exercises scheduled for a person on a day, with any weight/reps already
@@ -934,21 +935,27 @@ export async function loadOverdueWorkoutDays(
   userId: string,
   beforeISO: string,
 ): Promise<OverdueWorkoutDay[]> {
-  const tasks = await prisma.task.findMany({
-    where: {
-      userId,
-      category: "EXERCISE",
-      generatedFrom: { startsWith: "workout:" },
-      status: "PENDING",
-      dueDate: { lt: toDateColumn(beforeISO) },
-    },
-    orderBy: { dueDate: "asc" },
-    select: { dueDate: true },
-  });
+  const [tasks, stale] = await Promise.all([
+    prisma.task.findMany({
+      where: {
+        userId,
+        category: "EXERCISE",
+        generatedFrom: { startsWith: "workout:" },
+        status: "PENDING",
+        dueDate: { lt: toDateColumn(beforeISO) },
+      },
+      orderBy: { dueDate: "asc" },
+      select: { dueDate: true },
+    }),
+    loadStaleContext(beforeISO),
+  ]);
   const seen = new Set<string>();
   const out: OverdueWorkoutDay[] = [];
   for (const t of tasks) {
     const iso = fromDateColumn(t.dueDate);
+    // Same rule the dashboard uses: once a missed workout ages past the overdue
+    // window it has cleared (its weekday came around again), so drop it.
+    if (daysBetween(iso, beforeISO) > stale.workoutOverdueDays) continue;
     if (seen.has(iso)) continue;
     seen.add(iso);
     const workouts = await loadTodayPlannedWorkouts(userId, iso);

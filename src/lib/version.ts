@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.426.0";
+export const APP_VERSION = "0.427.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -117,6 +117,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.427.0",
+    summary: [
+      "Overdue workouts on the log page now honour the same clearing rule as the dashboard: a missed workout that has aged past the overdue window (its weekday came around again) no longer shows as overdue.",
+    ],
+  },
   {
     version: "0.426.0",
     summary: [
