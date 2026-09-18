@@ -640,7 +640,6 @@ function EventModal({
                 name="title"
                 required
                 maxLength={120}
-                autoFocus
                 defaultValue={title ?? ""}
                 placeholder="Orthodontist, piano lesson, shift…"
                 fieldClassName={field}
