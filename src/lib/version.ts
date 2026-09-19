@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.448.0";
+export const APP_VERSION = "0.449.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -120,6 +120,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.449.0",
+    summary: [
+      "Chores page (app): the shared-chore section is now \u201cUp for grabs\u201d and, on parent/admin phones, sits right under \u201cThis week\u201d above the weekly rotation. Each up-for-grabs chore lists everyone who has done it with how many times (last 90 days) and when they last did it, most-recent first \u2014 so whoever's overdue to pitch in sinks to the bottom. Always-open chores become a simple per-person weekly tally. No web UI change; this adds the data the app reads (per-chore participation + always-open weekly tally).",
+    ],
+  },
   {
     version: "0.448.0",
     summary: [
