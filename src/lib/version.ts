@@ -115,7 +115,7 @@ export const MIGRATIONS = [
   "104_game_title_platform",
   "105_event_names",
   "106_event_series_id",
-  "107_pool_eligibility",
+  "100_pool_eligibility",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
@@ -124,7 +124,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.452.0",
     summary: [
-      "Up-for-grabs chores can now be limited to who they're available for. New PoolEligibility table (migration 107) and an admin \"Available for\" picker per shared chore; no rows means everyone. The Chores-page roster now lists every eligible person (even those who've never done it, shown with no last-done), and the app home card only shows a shared chore to people it's available for, tells them if they've never done it, and flags whoever is furthest behind (never counts as furthest) so the app can badge \"your turn\".",
+      "Up-for-grabs chores can now be limited to who they're available for. New PoolEligibility table (migration 100) and an admin \"Available for\" picker per shared chore; no rows means everyone. The Chores-page roster now lists every eligible person (even those who've never done it, shown with no last-done), and the app home card only shows a shared chore to people it's available for, tells them if they've never done it, and flags whoever is furthest behind (never counts as furthest) so the app can badge \"your turn\".",
     ],
   },
   {
