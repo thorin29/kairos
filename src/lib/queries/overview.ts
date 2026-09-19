@@ -157,6 +157,11 @@ export type OpenTask = {
   releasedByName: string;
   /** Shared chores were never anyone's, so they read differently. */
   isShared: boolean;
+  /** For shared (pool) chores only: the most recent day anyone completed this
+   *  chore, plus its cadence, so the client can show "last done Nd ago" and
+   *  flag when it's stale relative to the interval. null / 0 otherwise. */
+  lastDoneISO: string | null;
+  intervalDays: number;
 };
 
 /** Chores handed back to the household and waiting for someone to claim. */
@@ -178,19 +183,45 @@ export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
     },
   });
 
-  return rows
+  const visible = rows
     .filter((t) => !t.chore?.alwaysOpen)
     .filter((t) => !isStale(t, dayISO, stale))
-    .filter((t) => !(activePause && PAUSABLE_CATEGORIES.includes(t.category)))
-    .map((t) => ({
-      id: t.id,
-      title: t.title,
-      category: t.category as string,
-      dueDateISO: fromDateColumn(t.dueDate),
-      isOverdue: fromDateColumn(t.dueDate) < dayISO,
-      releasedByName: t.user.displayName ?? t.user.name,
-      isShared: Boolean(t.chore?.isPool),
-    }));
+    .filter((t) => !(activePause && PAUSABLE_CATEGORIES.includes(t.category)));
+
+  // Most recent completion day per shared chore (any person), so the client can
+  // show how long ago it was last done and colour a stale one.
+  const poolChoreIds = [
+    ...new Set(
+      visible
+        .filter((t) => t.chore?.isPool && t.choreId)
+        .map((t) => t.choreId as string),
+    ),
+  ];
+  const lastByChore = new Map<string, string>();
+  if (poolChoreIds.length > 0) {
+    const done = await prisma.task.findMany({
+      where: { choreId: { in: poolChoreIds }, status: TaskStatus.COMPLETE },
+      select: { choreId: true, dueDate: true },
+    });
+    for (const d of done) {
+      if (!d.choreId) continue;
+      const iso = fromDateColumn(d.dueDate);
+      const cur = lastByChore.get(d.choreId);
+      if (!cur || iso > cur) lastByChore.set(d.choreId, iso);
+    }
+  }
+
+  return visible.map((t) => ({
+    id: t.id,
+    title: t.title,
+    category: t.category as string,
+    dueDateISO: fromDateColumn(t.dueDate),
+    isOverdue: fromDateColumn(t.dueDate) < dayISO,
+    releasedByName: t.user.displayName ?? t.user.name,
+    isShared: Boolean(t.chore?.isPool),
+    lastDoneISO: t.chore?.isPool ? (lastByChore.get(t.choreId ?? "") ?? null) : null,
+    intervalDays: t.chore?.intervalDays ?? 0,
+  }));
 }
 
 /** Full task rows for one person on one day, overdue items first. */

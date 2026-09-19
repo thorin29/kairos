@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.449.0";
+export const APP_VERSION = "0.450.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -120,6 +120,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.450.0",
+    summary: [
+      "More chores data for the app: up-for-grabs home cards now include how long ago the chore was last done (any person) and its cadence; the Chores-page always-open section is now per-chore participation for the week (counted from actual completions, not the unused ChoreLog); and shared/always-open chores carry their icon so the app can show a badge. No web UI change.",
+    ],
+  },
   {
     version: "0.449.0",
     summary: [

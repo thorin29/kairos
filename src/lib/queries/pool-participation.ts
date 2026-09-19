@@ -83,37 +83,68 @@ export async function loadPoolParticipation(
   return out;
 }
 
-export type AlwaysOpenTallyRow = { name: string; color: string; count: number };
+export type AlwaysOpenWeekly = {
+  id: string;
+  title: string;
+  icon: string | null;
+  /** Who has done this always-open chore this week, most first. */
+  people: { name: string; color: string; count: number }[];
+};
 
 /**
- * This week's per-person tally across all always-open chores — a simple running
- * count of who's been doing them. Always-open taps write `ChoreLog` rows, so
- * this counts those for the current week; it empties out on its own each week.
+ * Per-chore weekly participation for always-open chores. Always-open "Done"
+ * taps are recorded as COMPLETE `Task` rows (see completeAlwaysOpenChoreCore),
+ * so this counts those for the current week — NOT `ChoreLog`, which nothing
+ * writes. Only chores done at least once this week are returned, so the section
+ * empties itself each week.
  */
-export async function loadAlwaysOpenTally(
+export async function loadAlwaysOpenWeekly(
   todayISO: string,
-): Promise<AlwaysOpenTallyRow[]> {
+): Promise<AlwaysOpenWeekly[]> {
   const chores = await prisma.chore.findMany({
     where: { alwaysOpen: true },
-    select: { id: true },
+    orderBy: { title: "asc" },
+    select: { id: true, title: true, icon: true },
   });
   if (chores.length === 0) return [];
 
   const days = weekDays(todayISO);
-  const logs = await prisma.choreLog.findMany({
+  const tasks = await prisma.task.findMany({
     where: {
+      status: "COMPLETE",
       choreId: { in: chores.map((c) => c.id) },
-      day: { gte: toDateColumn(days[0]), lte: toDateColumn(days[6]) },
+      dueDate: { gte: toDateColumn(days[0]), lte: toDateColumn(days[6]) },
     },
-    select: { user: { select: { id: true, name: true, displayName: true, color: true } } },
+    select: {
+      choreId: true,
+      user: { select: { id: true, name: true, displayName: true, color: true } },
+    },
   });
 
-  const counts = new Map<string, { name: string; color: string; count: number }>();
-  for (const l of logs) {
-    const name = l.user.displayName ?? l.user.name;
-    const cur = counts.get(l.user.id) ?? { name, color: l.user.color, count: 0 };
+  const byChore = new Map<
+    string,
+    Map<string, { name: string; color: string; count: number }>
+  >();
+  for (const t of tasks) {
+    if (!t.choreId) continue;
+    const per = byChore.get(t.choreId) ?? new Map();
+    const name = t.user.displayName ?? t.user.name;
+    const cur = per.get(t.user.id) ?? { name, color: t.user.color, count: 0 };
     cur.count += 1;
-    counts.set(l.user.id, cur);
+    per.set(t.user.id, cur);
+    byChore.set(t.choreId, per);
   }
-  return [...counts.values()].sort((a, b) => b.count - a.count);
+
+  const out: AlwaysOpenWeekly[] = [];
+  for (const c of chores) {
+    const per = byChore.get(c.id);
+    if (!per) continue; // only chores actually done this week
+    out.push({
+      id: c.id,
+      title: c.title,
+      icon: c.icon,
+      people: [...per.values()].sort((a, b) => b.count - a.count),
+    });
+  }
+  return out;
 }
