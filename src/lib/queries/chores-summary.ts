@@ -27,8 +27,6 @@ export type ChoreSummary = {
   intervalWeeks: number;
   effort: number;
   effortLocked: boolean;
-  /** People this shared chore is available for; empty means everyone. */
-  eligibleUserIds: string[];
 };
 
 /**
@@ -50,6 +48,8 @@ export type PoolChoreRow = {
   cooldownMinutes: number;
   effort: number;
   effortLocked: boolean;
+  /** People this shared chore is available for; empty means everyone. */
+  eligibleUserIds: string[];
 };
 
 /** Shared chores, with where each one currently stands. */
