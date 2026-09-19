@@ -13,6 +13,12 @@ import {
   loadAlwaysOpenCounts,
   type AlwaysOpenCount,
 } from "@/lib/queries/always-open-counts";
+import {
+  loadPoolParticipation,
+  loadAlwaysOpenTally,
+  type PoolParticipant,
+  type AlwaysOpenTallyRow,
+} from "@/lib/queries/pool-participation";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { personPayloadById } from "@/lib/api/device-auth";
 
@@ -46,7 +52,13 @@ export type ChoresPagePayload = {
   pause: { name: string; startISO: string; endISO: string } | null;
   people: ChorePersonRow[];
   alwaysOpen: AlwaysOpenCount[];
-  pool: { chores: PoolChoreRow[]; tally: SharedTallyRow[] };
+  pool: {
+    chores: (PoolChoreRow & { people: PoolParticipant[] })[];
+    /** Kept for older app builds; the current app reads `chores[].people`. */
+    tally: SharedTallyRow[];
+    /** This week's per-person tally across always-open chores. */
+    alwaysOpenTally: AlwaysOpenTallyRow[];
+  };
 };
 
 export async function loadChoresPagePayload(
@@ -71,15 +83,25 @@ export async function loadChoresPagePayload(
   const visibleIds = household ? active.map((u) => u.id) : [viewerId];
   const visibleSet = new Set(visibleIds);
 
-  const [metrics, summary, poolChores, activePause, tally, alwaysOpen] =
-    await Promise.all([
-      loadChoreMetrics(todayISO),
-      loadChoreSummary(todayISO),
-      loadPoolChores(),
-      loadActivePause(todayISO),
-      loadSharedChoreTally(),
-      loadAlwaysOpenCounts(todayISO),
-    ]);
+  const [
+    metrics,
+    summary,
+    poolChores,
+    activePause,
+    tally,
+    alwaysOpen,
+    participation,
+    alwaysOpenTally,
+  ] = await Promise.all([
+    loadChoreMetrics(todayISO),
+    loadChoreSummary(todayISO),
+    loadPoolChores(),
+    loadActivePause(todayISO),
+    loadSharedChoreTally(),
+    loadAlwaysOpenCounts(todayISO),
+    loadPoolParticipation(90),
+    loadAlwaysOpenTally(todayISO),
+  ]);
 
   const orderedVisible = active
     .filter((u) => visibleSet.has(u.id))
@@ -124,8 +146,11 @@ export async function loadChoresPagePayload(
     people,
     alwaysOpen,
     pool: {
-      chores: poolChores.filter((c) => !c.alwaysOpen),
+      chores: poolChores
+        .filter((c) => !c.alwaysOpen)
+        .map((c) => ({ ...c, people: participation.get(c.id) ?? [] })),
       tally,
+      alwaysOpenTally,
     },
   };
 }
