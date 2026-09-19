@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.451.0";
+export const APP_VERSION = "0.452.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -120,6 +120,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.452.0",
+    summary: [
+      "Up-for-grabs chores can now be limited to who they're available for. New PoolEligibility table (migration 100) and an admin \"Available for\" picker per shared chore; no rows means everyone. The Chores-page roster now lists every eligible person (even those who've never done it, shown with no last-done), and the app home card only shows a shared chore to people it's available for, tells them if they've never done it, and flags whoever is furthest behind (never counts as furthest) so the app can badge \"your turn\".",
+    ],
+  },
   {
     version: "0.451.0",
     summary: [
@@ -3106,4 +3112,5 @@ export const CHANGES: Change[] = [
       "Event recurrence and birthdays as events",
     ],
   },
+  "100_pool_eligibility",
 ];

@@ -113,6 +113,7 @@ export type ApiDashboard = {
     dueDate: string;
     lastDoneISO: string | null;
     intervalDays: number;
+    furthestBehind: boolean;
   }[];
   /** Always-open chores, tap-to-complete for the enrolled person via
    *  /chores/always-open. `readyAtMs` set means it's on cooldown until then. */
@@ -283,6 +284,7 @@ export async function loadApiDashboard(
         dueDate: t.dueDateISO,
         lastDoneISO: t.lastDoneISO,
         intervalDays: t.intervalDays,
+        furthestBehind: t.furthestBehind,
       }));
     alwaysOpen = alwaysOpenChores.map((c) => ({
       id: c.id,

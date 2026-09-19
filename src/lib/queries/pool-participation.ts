@@ -8,9 +8,10 @@ export type PoolParticipant = {
   color: string;
   /** Times completed inside the rolling window (default 90 days). */
   count: number;
-  /** Most recent completion ever (YYYY-MM-DD), so someone who has drifted off
-   *  still shows with a stale date rather than vanishing. */
-  lastDoneISO: string;
+  /** Most recent completion ever (YYYY-MM-DD), or null if this person has never
+   *  done the chore. Someone who's drifted off keeps a stale date rather than
+   *  vanishing. */
+  lastDoneISO: string | null;
 };
 
 /**
@@ -26,59 +27,76 @@ export type PoolParticipant = {
 export async function loadPoolParticipation(
   windowDays = 90,
 ): Promise<Map<string, PoolParticipant[]>> {
+  // The shared chores whose roster we show, and who each is available for.
+  const chores = await prisma.chore.findMany({
+    where: { isActive: true, isPool: true, alwaysOpen: false, perpetual: false },
+    select: { id: true, poolEligibility: { select: { userId: true } } },
+  });
+  if (chores.length === 0) return new Map();
+
+  // Everyone who could be on a roster — the "available to everyone" default, and
+  // needed to render people who've never done a chore.
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, displayName: true, color: true },
+    orderBy: { sortOrder: "asc" },
+  });
+  const userById = new Map(users.map((u) => [u.id, u] as const));
+  const allUserIds = users.map((u) => u.id);
+
   const rows = await prisma.task.findMany({
-    where: {
-      status: "COMPLETE",
-      chore: { is: { isPool: true, alwaysOpen: false, perpetual: false } },
-    },
-    select: {
-      choreId: true,
-      completedAt: true,
-      dueDate: true,
-      user: { select: { id: true, name: true, displayName: true, color: true } },
-    },
+    where: { status: "COMPLETE", choreId: { in: chores.map((c) => c.id) } },
+    select: { choreId: true, userId: true, completedAt: true, dueDate: true },
   });
 
   const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
 
-  // choreId -> userId -> accumulator
-  const byChore = new Map<
-    string,
-    Map<string, { name: string; color: string; count: number; lastMs: number }>
-  >();
-
+  // choreId -> userId -> { window count, all-time last-done ms }
+  const stats = new Map<string, Map<string, { count: number; lastMs: number }>>();
   for (const r of rows) {
-    if (!r.choreId) continue;
+    if (!r.choreId || !r.userId) continue;
     // completedAt is the real event time; fall back to the due date for any
     // older row that predates completedAt being recorded.
-    const when = r.completedAt ?? r.dueDate;
-    const ms = when.getTime();
-    const perUser = byChore.get(r.choreId) ?? new Map();
-    const name = r.user.displayName ?? r.user.name;
-    const cur = perUser.get(r.user.id) ?? {
-      name,
-      color: r.user.color,
-      count: 0,
-      lastMs: 0,
-    };
+    const ms = (r.completedAt ?? r.dueDate).getTime();
+    const perUser = stats.get(r.choreId) ?? new Map();
+    const cur = perUser.get(r.userId) ?? { count: 0, lastMs: 0 };
     if (ms >= cutoffMs) cur.count += 1; // window-scoped count
     if (ms > cur.lastMs) cur.lastMs = ms; // all-time last-done
-    perUser.set(r.user.id, cur);
-    byChore.set(r.choreId, perUser);
+    perUser.set(r.userId, cur);
+    stats.set(r.choreId, perUser);
   }
 
   const out = new Map<string, PoolParticipant[]>();
-  for (const [choreId, perUser] of byChore) {
-    const people = [...perUser.values()]
-      .map((v) => ({
-        name: v.name,
-        color: v.color,
-        count: v.count,
-        lastDoneISO: new Date(v.lastMs).toISOString().slice(0, 10),
-      }))
-      // Most recent at the top; longest-ago at the bottom.
-      .sort((a, b) => (a.lastDoneISO < b.lastDoneISO ? 1 : a.lastDoneISO > b.lastDoneISO ? -1 : 0));
-    out.set(choreId, people);
+  for (const c of chores) {
+    // No eligibility rows means the chore is available to everyone.
+    const eligibleIds = c.poolEligibility.length
+      ? c.poolEligibility.map((e) => e.userId)
+      : allUserIds;
+    const perUser = stats.get(c.id);
+
+    const people = eligibleIds
+      .map((uid) => {
+        const u = userById.get(uid);
+        if (!u) return null; // an inactive/removed person left on a roster
+        const s = perUser?.get(uid);
+        return {
+          name: u.displayName ?? u.name,
+          color: u.color,
+          count: s?.count ?? 0,
+          lastDoneISO:
+            s && s.lastMs > 0 ? new Date(s.lastMs).toISOString().slice(0, 10) : null,
+        };
+      })
+      .filter((p): p is PoolParticipant => p !== null)
+      // Most recent at the top; never-done (null) sinks to the bottom.
+      .sort((a, b) => {
+        if (a.lastDoneISO === b.lastDoneISO) return 0;
+        if (a.lastDoneISO === null) return 1;
+        if (b.lastDoneISO === null) return -1;
+        return a.lastDoneISO < b.lastDoneISO ? 1 : -1;
+      });
+
+    out.set(c.id, people);
   }
   return out;
 }

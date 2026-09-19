@@ -506,3 +506,30 @@ export async function completeAlwaysOpenChore(
   await requireCanActFor(userId);
   return completeAlwaysOpenChoreCore(choreId, userId);
 }
+
+/** Set which people a shared (up-for-grabs) chore is available for. An empty
+ *  list clears the restriction, so it's available to everyone. Admin only. */
+export async function setPoolEligibility(
+  choreId: string,
+  userIds: string[],
+): Promise<{ error: string | null }> {
+  if (!(await isAdmin())) {
+    return { error: "Only a parent can change this. Switch profiles first." };
+  }
+  const ids = [...new Set(userIds)];
+  await prisma.$transaction([
+    prisma.poolEligibility.deleteMany({ where: { choreId } }),
+    ...(ids.length > 0
+      ? [
+          prisma.poolEligibility.createMany({
+            data: ids.map((userId) => ({ choreId, userId })),
+            skipDuplicates: true,
+          }),
+        ]
+      : []),
+  ]);
+  revalidatePath("/admin/chores");
+  revalidatePath("/chores");
+  revalidatePath("/");
+  return { error: null };
+}

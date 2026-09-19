@@ -150,7 +150,7 @@ export default async function PersonPage({
   const choreBadges = await loadChoreBadges(id, today);
   // Up-for-grabs + always-open are household pool chores shown on every person's
   // card (one-tap complete for them), so load them regardless of device.
-  const choreOpenTasks = await loadOpenTasks(today);
+  const choreOpenTasks = await loadOpenTasks(today, id);
   const choreAlwaysOpen = await loadAlwaysOpenChores(today);
   const schoolAhead = await loadSchoolGetAhead(id, today);
   const schoolProgress = await loadSchoolProgress(id);
@@ -297,7 +297,7 @@ export default async function PersonPage({
   if (onPersonalDevice) {
     const [openTasks, alwaysOpen, roster, schedule, trips, sport, classP] =
       await Promise.all([
-        loadOpenTasks(today),
+        loadOpenTasks(today, id),
         loadAlwaysOpenChores(today),
         prisma.user.findMany({
           where: { isActive: true },

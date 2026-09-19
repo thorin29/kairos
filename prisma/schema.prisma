@@ -83,6 +83,7 @@ model User {
   events          Event[]
   recurringTasks  RecurringTask[]   @relation("RecurringTaskOwner")
   choreAssignments ChoreAssignment[]
+  poolEligibility  PoolEligibility[]
   calendars       ExternalCalendar[]
   groceryItems    ShoppingItem[]    @relation("GroceryAssignee")
   workoutExercises Exercise[]        @relation("WorkoutExercises")
@@ -626,6 +627,9 @@ model Chore {
   assignments ChoreAssignment[]
   tasks       Task[]
   logs        ChoreLog[]
+  // Which people a shared (up-for-grabs) chore is available for. Empty means
+  // everyone; a non-empty set is the curated list of eligible people.
+  poolEligibility PoolEligibility[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -650,6 +654,18 @@ model ChoreAssignment {
 
   @@unique([choreId, userId, dayOfWeek])
   @@index([dayOfWeek, isActive])
+}
+
+/// Membership list for a shared/up-for-grabs chore: the people it is available
+/// for. No rows for a chore means it is available to everyone (unconfigured).
+model PoolEligibility {
+  choreId String
+  chore   Chore  @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([choreId, userId])
+  @@index([userId])
 }
 
 // ---------------------------------------------------------------

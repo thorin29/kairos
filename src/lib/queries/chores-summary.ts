@@ -27,6 +27,8 @@ export type ChoreSummary = {
   intervalWeeks: number;
   effort: number;
   effortLocked: boolean;
+  /** People this shared chore is available for; empty means everyone. */
+  eligibleUserIds: string[];
 };
 
 /**
@@ -61,6 +63,7 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
         take: 1,
         include: { user: { select: { name: true, displayName: true } } },
       },
+      poolEligibility: { select: { userId: true } },
     },
   });
 
@@ -100,6 +103,7 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
       cooldownMinutes: c.cooldownMinutes,
       effort: c.effort,
       effortLocked: c.effortLocked,
+      eligibleUserIds: c.poolEligibility.map((e) => e.userId),
     };
   });
 }

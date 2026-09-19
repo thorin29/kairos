@@ -164,10 +164,15 @@ export type OpenTask = {
    *  date. null / 0 otherwise (or when the viewer has never done it). */
   lastDoneISO: string | null;
   intervalDays: number;
+  /** For shared (pool) chores: true when the viewing user is the eligible person
+   *  who last did this chore furthest in the past — never-done counts as
+   *  furthest. Drives the "your turn" badge. false otherwise. */
+  furthestBehind: boolean;
 };
 
 /** Chores handed back to the household and waiting for someone to claim.
- *  Pass `userId` to include that person's own last-done per shared chore. */
+ *  Pass `userId` to scope shared chores to who they're available for, to include
+ *  that person's own last-done, and to flag when it's most their turn. */
 export async function loadOpenTasks(
   dayISO: string,
   userId?: string,
@@ -194,10 +199,6 @@ export async function loadOpenTasks(
     .filter((t) => !isStale(t, dayISO, stale))
     .filter((t) => !(activePause && PAUSABLE_CATEGORIES.includes(t.category)));
 
-  // The viewing user's own most recent completion per shared chore, so the
-  // client can say how long ago THEY last did it. Matches the chores-page table:
-  // completedAt is the real event time (the scheduled dueDate would be wrong for
-  // a chore done late), falling back to dueDate only for pre-completedAt rows.
   const poolChoreIds = [
     ...new Set(
       visible
@@ -205,29 +206,85 @@ export async function loadOpenTasks(
         .map((t) => t.choreId as string),
     ),
   ];
+
+  // For shared chores: who each is available for, everyone's last-done, and from
+  // those the viewer's own last-done (for "you last did this Nd ago") plus
+  // whether the viewer is furthest behind (for the "your turn" badge). Chores the
+  // viewer isn't eligible for drop out entirely. completedAt is the real event
+  // time, matching the chores-page table; dueDate is only a legacy fallback.
+  const dropChoreIds = new Set<string>();
+  const furthestChoreIds = new Set<string>();
   const lastIsoByChore = new Map<string, string>();
-  if (userId && poolChoreIds.length > 0) {
-    const done = await prisma.task.findMany({
-      where: {
-        choreId: { in: poolChoreIds },
-        status: TaskStatus.COMPLETE,
-        userId,
-      },
-      select: { choreId: true, completedAt: true, dueDate: true },
-    });
-    const lastMsByChore = new Map<string, number>();
-    for (const d of done) {
-      if (!d.choreId) continue;
-      const ms = (d.completedAt ?? d.dueDate).getTime();
-      const cur = lastMsByChore.get(d.choreId);
-      if (cur === undefined || ms > cur) lastMsByChore.set(d.choreId, ms);
+
+  if (poolChoreIds.length > 0) {
+    const [elig, done, activeUsers] = await Promise.all([
+      prisma.poolEligibility.findMany({
+        where: { choreId: { in: poolChoreIds } },
+        select: { choreId: true, userId: true },
+      }),
+      prisma.task.findMany({
+        where: { choreId: { in: poolChoreIds }, status: TaskStatus.COMPLETE },
+        select: { choreId: true, userId: true, completedAt: true, dueDate: true },
+      }),
+      prisma.user.findMany({ where: { isActive: true }, select: { id: true } }),
+    ]);
+
+    const allActiveIds = activeUsers.map((u) => u.id);
+    const eligibleByChore = new Map<string, Set<string>>();
+    for (const e of elig) {
+      const set = eligibleByChore.get(e.choreId) ?? new Set<string>();
+      set.add(e.userId);
+      eligibleByChore.set(e.choreId, set);
     }
-    for (const [cid, ms] of lastMsByChore) {
-      lastIsoByChore.set(cid, new Date(ms).toISOString().slice(0, 10));
+    // choreId -> userId -> most recent completion ms
+    const lastMs = new Map<string, Map<string, number>>();
+    for (const d of done) {
+      if (!d.choreId || !d.userId) continue;
+      const per = lastMs.get(d.choreId) ?? new Map<string, number>();
+      const ms = (d.completedAt ?? d.dueDate).getTime();
+      const cur = per.get(d.userId);
+      if (cur === undefined || ms > cur) per.set(d.userId, ms);
+      lastMs.set(d.choreId, per);
+    }
+
+    if (userId) {
+      const now = Date.now();
+      for (const cid of poolChoreIds) {
+        const configured = eligibleByChore.get(cid);
+        const eligibleIds =
+          configured && configured.size > 0 ? [...configured] : allActiveIds;
+
+        // Not available to this person — hide the chore from their card.
+        if (!eligibleIds.includes(userId)) {
+          dropChoreIds.add(cid);
+          continue;
+        }
+
+        const per = lastMs.get(cid);
+        const viewerMs = per?.get(userId);
+        if (viewerMs !== undefined) {
+          lastIsoByChore.set(cid, new Date(viewerMs).toISOString().slice(0, 10));
+        }
+
+        // Days-behind; never-done is furthest (Infinity). Ties all count.
+        const behind = (uid: string) => {
+          const ms = per?.get(uid);
+          return ms === undefined ? Infinity : now - ms;
+        };
+        const viewerBehind = behind(userId);
+        let maxBehind = 0;
+        for (const uid of eligibleIds) {
+          const b = behind(uid);
+          if (b > maxBehind) maxBehind = b;
+        }
+        if (viewerBehind >= maxBehind) furthestChoreIds.add(cid);
+      }
     }
   }
 
-  return visible.map((t) => ({
+  return visible
+    .filter((t) => !(t.chore?.isPool && dropChoreIds.has(t.choreId ?? "")))
+    .map((t) => ({
     id: t.id,
     title: t.title,
     category: t.category as string,
@@ -237,6 +294,7 @@ export async function loadOpenTasks(
     isShared: Boolean(t.chore?.isPool),
     lastDoneISO: t.chore?.isPool ? (lastIsoByChore.get(t.choreId ?? "") ?? null) : null,
     intervalDays: t.chore?.intervalDays ?? 0,
+    furthestBehind: t.chore?.isPool ? furthestChoreIds.has(t.choreId ?? "") : false,
   }));
 }
 

@@ -7,6 +7,7 @@ import {
   setChorePaused,
   reopenPoolChore,
   markPoolChoreDone,
+  setPoolEligibility,
   type ChoreActionState,
 } from "@/lib/actions/chores";
 import { Card } from "@/components/ui";
@@ -30,6 +31,7 @@ export type PoolChore = {
   cooldownMinutes?: number;
   effort: number;
   effortLocked: boolean;
+  eligibleUserIds: string[];
 };
 
 export function PoolChores({
@@ -162,6 +164,29 @@ function PoolRow({
   const [when, setWhen] = useState(today);
   const disabled = busy || pending;
 
+  // Which people this chore is up for grabs for. Stored empty means everyone, so
+  // an unconfigured chore starts with all selected; at least one stays on.
+  const [eligible, setEligible] = useState<Set<string>>(
+    () => new Set(c.eligibleUserIds.length ? c.eligibleUserIds : people.map((p) => p.id)),
+  );
+  const [savingElig, startElig] = useTransition();
+
+  function toggleEligible(id: string) {
+    const next = new Set(eligible);
+    if (next.has(id)) {
+      if (next.size <= 1) return; // keep at least one; empty would mean everyone
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setEligible(next);
+    const ids = [...next];
+    startElig(async () => {
+      const r = await setPoolEligibility(c.id, ids);
+      if (r.error) alert(r.error);
+    });
+  }
+
   const status = c.isPaused
     ? "paused"
     : c.outstanding
@@ -212,6 +237,39 @@ function PoolRow({
         </button>
         <DeleteChoreButton id={c.id} title={c.title} />
       </div>
+
+      {/* Who this chore is up for grabs for. Off-list people never see it. */}
+      {!c.alwaysOpen && (
+        <div className="mt-3 border-t border-hairline pt-3">
+          <p className="mb-2 text-xs font-medium text-muted">Available for</p>
+          <div className="flex flex-wrap gap-2">
+            {people.map((p) => {
+              const on = eligible.has(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  disabled={disabled || savingElig}
+                  onClick={() => toggleEligible(p.id)}
+                  aria-pressed={on}
+                  className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors disabled:opacity-50 ${
+                    on
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-hairline text-muted hover:border-accent hover:text-accent"
+                  }`}
+                >
+                  {p.name}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-xs text-muted">
+            {eligible.size >= people.length
+              ? "Everyone can do this chore."
+              : "Only the highlighted people are in the up-for-grabs list."}
+          </p>
+        </div>
+      )}
 
       {/* Record a completion — set who did it and when, to fix the countdown. */}
       {!c.alwaysOpen && (
