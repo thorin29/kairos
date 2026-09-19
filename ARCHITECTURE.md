@@ -138,6 +138,27 @@ That per-request self-authentication is also what makes a scoped Authelia
 unauthenticated endpoint, `/auth/enroll`, is public by design and guarded
 instead by a one-time, short-lived, rate-limited code.
 
+## Game-time monitoring spans three repos
+
+Game time is **monitoring only** (the allowance/token model was retired) and is
+fed by a subsystem that lives across three repositories:
+
+- **Web (`kairos`, this repo)** — display + source of truth. Owns durable history
+  (`GameDay` / `GameDayTitle` / `PlayerCard`), the `/games` page, and the
+  `/api/v1/game-time` read API for the app. It holds **no** game-service
+  credentials and does no merge logic — it just upserts what it's given at
+  `POST /api/v1/game-time/ingest` (auth `X-Ingest-Token`; contract in docs/API.md).
+- **Collector (`kairos-game-collector`)** — the only thing that talks to Xbox (via
+  Home Assistant) and Steam. It resolves each kid's actual game-session time
+  (online presence is *not* counted), applies the Steam-primary merge, and pushes
+  resolved daily rollups to the ingest endpoint. Its own repo holds the detection
+  model and decisions.
+- **App (`kairos-app`)** — a read client of the web `/api/v1/game-time` surface;
+  it has no game-source knowledge.
+
+So credited minutes are computed once, in the collector, and flow one way:
+collector → web (store) → app/web (display).
+
 ## Layout
 
 ```

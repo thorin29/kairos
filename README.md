@@ -27,8 +27,12 @@ schedule.
   tracks how far the household has actually come.
 - **Workouts.** Per-person routines of movements assigned by weekday, with the
   sets, reps, and weight you actually did logged against each one.
-- **Game time.** A daily screen-time allowance per person, with weekly tokens
-  that buy extra minutes.
+- **Game time.** A per-person view of how much each kid actually played today,
+  this week, and this month, with a per-game breakdown and per-system icons.
+  Monitoring only — the numbers are pulled automatically for awareness, not
+  enforced (the old allowance/token model was retired). A standalone collector
+  service watches Xbox (via Home Assistant) and Steam and pushes resolved daily
+  totals to `/api/v1/game-time/ingest`; Kairos owns the durable history.
 - **Groceries.** A shared shopping list that learns the items you buy and their
   icons. Drag items to reorder them or move them between stores. Tap **Shop** on
   a store and pick who's going: that store becomes their trip, with a line on
@@ -58,7 +62,7 @@ Built:
 - [x] Chores — weekly patterns, shared and collaborative, daily generation
 - [x] Bible reading plan generator with progress tracking
 - [x] Workouts — routines assigned by weekday, logged with sets and reps
-- [x] Game time — daily limits and weekly tokens
+- [x] Game time — automatic monitoring, fed by the game-time collector
 - [x] Groceries — a learning shared list, with per-store shopping trips
 - [x] Week and month calendar views, plus a signed-in **personal calendar**
       (its own day/3-day/week/month/agenda views, per-user filters and colours)

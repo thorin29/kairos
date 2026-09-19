@@ -686,6 +686,64 @@ this server. `minClient` is the lowest client build this server still accepts
 
 ---
 
+### School — student view — **built; `complete` + `needsAttendance` added v0.448**
+
+`GET /api/v1/school` returns each person's school work for today. Two fields the
+app's completion UI depends on (app 0.252 needs server 0.448 — deploy both):
+
+- **`complete`** — per work item, a boolean: whether that assignment is marked
+  done. Drives the green check in front of a completed item in the student's
+  Today list. A completed item still appears (it isn't filtered out) so the list
+  shows done-vs-still-due at a glance.
+- **`needsAttendance`** — per person, a boolean derived from
+  `pendingClassPrompts(today)`: an after-class "did you attend?" check-in is still
+  open. While this is true the client holds off on "Complete for today!" even if
+  every assignment is done, so the check-in isn't skipped.
+
+"Complete for today!" is shown only when everything still *due today* is done
+(it counts what's left, not the day's total) and no attendance prompt is pending.
+
+### Game time — ingest (collector → server) — **built**
+
+`POST /api/v1/game-time/ingest`. This is **not** a mobile endpoint — it's the
+service contract for the standalone game-time collector
+(`thorin29/kairos-game-collector`), which owns all Xbox/Steam integration and
+sends Kairos only resolved numbers. Documented here because the collector depends
+on this shape.
+
+- **Auth:** a shared service secret in `GAMETIME_INGEST_TOKEN`, sent as
+  `X-Ingest-Token: <token>` (or `Authorization: Bearer <token>`). This is the only
+  external-ingest auth in the app — not a device/person session.
+- **Body:** per-person **daily rollups** the collector has already resolved
+  (Steam-primary merge applied):
+
+```jsonc
+{
+  "days": [
+    {
+      "friend": "Ethan",              // matched by gamertag -> steamId -> name
+      "gamertag": "honda_c_type_r",   // optional
+      "steamId": "765...",            // optional
+      "date": "2026-09-19",
+      "minutes": 143,
+      "games": [ { "game": "Grounded", "minutes": 143, "platform": "Windows" } ],
+      "platforms": ["steam"],         // per-system icons = merge winners
+      "status": { "gamerscore": 1240, "gamerpic": "https://...",
+                  "hasGamePass": true, "msBalance": "$12.50" }
+    }
+  ]
+}
+```
+
+- **Storage:** upserts `GameDay` (the day's `minutes`), **replaces** the whole
+  `GameDayTitle` breakdown for that day (so a corrected push clears stale games),
+  and upserts the person's `PlayerCard` (status + platforms).
+- **Idempotent:** re-sending "today so far" repeatedly never accumulates. The
+  collector includes in-progress sessions, so a still-playing kid shows current
+  time.
+- **Response:** `{ "matched": [...names], "unmatched": [...] }`. An entry that
+  resolves to no Kairos person comes back as `unmatched`.
+
 ## Deep links (notification -> screen)
 
 Notifications carry a typed target so a tap opens the right screen:
