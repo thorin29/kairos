@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.450.0";
+export const APP_VERSION = "0.451.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -120,6 +120,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.451.0",
+    summary: [
+      "Fix the app home-page up-for-grabs \"last done\" value: it now reports the viewing user's OWN most recent completion using the real completion time (completedAt), matching the chores-page table, instead of the household's most recent scheduled due date (which read too many days ago).",
+    ],
+  },
   {
     version: "0.450.0",
     summary: [
