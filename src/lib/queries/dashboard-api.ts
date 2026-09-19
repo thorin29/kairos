@@ -268,7 +268,7 @@ export async function loadApiDashboard(
   let schedule: ApiDashboard["schedule"] = [];
   if (dayISO === today) {
     const [openTasks, alwaysOpenChores, daySchedule] = await Promise.all([
-      loadOpenTasks(today),
+      loadOpenTasks(today, userId),
       loadAlwaysOpenChores(today),
       loadDaySchedule(today),
     ]);

@@ -157,15 +157,21 @@ export type OpenTask = {
   releasedByName: string;
   /** Shared chores were never anyone's, so they read differently. */
   isShared: boolean;
-  /** For shared (pool) chores only: the most recent day anyone completed this
-   *  chore, plus its cadence, so the client can show "last done Nd ago" and
-   *  flag when it's stale relative to the interval. null / 0 otherwise. */
+  /** For shared (pool) chores only: the viewing user's OWN most recent
+   *  completion day, plus the chore's cadence, so the client can show "you last
+   *  did this Nd ago" and flag it stale. Uses the real completion time
+   *  (completedAt) to match the chores-page table — never the scheduled due
+   *  date. null / 0 otherwise (or when the viewer has never done it). */
   lastDoneISO: string | null;
   intervalDays: number;
 };
 
-/** Chores handed back to the household and waiting for someone to claim. */
-export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
+/** Chores handed back to the household and waiting for someone to claim.
+ *  Pass `userId` to include that person's own last-done per shared chore. */
+export async function loadOpenTasks(
+  dayISO: string,
+  userId?: string,
+): Promise<OpenTask[]> {
   const stale = await loadStaleContext(dayISO);
   const activePause = await loadActivePause(dayISO);
   const day = toDateColumn(dayISO);
@@ -188,8 +194,10 @@ export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
     .filter((t) => !isStale(t, dayISO, stale))
     .filter((t) => !(activePause && PAUSABLE_CATEGORIES.includes(t.category)));
 
-  // Most recent completion day per shared chore (any person), so the client can
-  // show how long ago it was last done and colour a stale one.
+  // The viewing user's own most recent completion per shared chore, so the
+  // client can say how long ago THEY last did it. Matches the chores-page table:
+  // completedAt is the real event time (the scheduled dueDate would be wrong for
+  // a chore done late), falling back to dueDate only for pre-completedAt rows.
   const poolChoreIds = [
     ...new Set(
       visible
@@ -197,17 +205,25 @@ export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
         .map((t) => t.choreId as string),
     ),
   ];
-  const lastByChore = new Map<string, string>();
-  if (poolChoreIds.length > 0) {
+  const lastIsoByChore = new Map<string, string>();
+  if (userId && poolChoreIds.length > 0) {
     const done = await prisma.task.findMany({
-      where: { choreId: { in: poolChoreIds }, status: TaskStatus.COMPLETE },
-      select: { choreId: true, dueDate: true },
+      where: {
+        choreId: { in: poolChoreIds },
+        status: TaskStatus.COMPLETE,
+        userId,
+      },
+      select: { choreId: true, completedAt: true, dueDate: true },
     });
+    const lastMsByChore = new Map<string, number>();
     for (const d of done) {
       if (!d.choreId) continue;
-      const iso = fromDateColumn(d.dueDate);
-      const cur = lastByChore.get(d.choreId);
-      if (!cur || iso > cur) lastByChore.set(d.choreId, iso);
+      const ms = (d.completedAt ?? d.dueDate).getTime();
+      const cur = lastMsByChore.get(d.choreId);
+      if (cur === undefined || ms > cur) lastMsByChore.set(d.choreId, ms);
+    }
+    for (const [cid, ms] of lastMsByChore) {
+      lastIsoByChore.set(cid, new Date(ms).toISOString().slice(0, 10));
     }
   }
 
@@ -219,7 +235,7 @@ export async function loadOpenTasks(dayISO: string): Promise<OpenTask[]> {
     isOverdue: fromDateColumn(t.dueDate) < dayISO,
     releasedByName: t.user.displayName ?? t.user.name,
     isShared: Boolean(t.chore?.isPool),
-    lastDoneISO: t.chore?.isPool ? (lastByChore.get(t.choreId ?? "") ?? null) : null,
+    lastDoneISO: t.chore?.isPool ? (lastIsoByChore.get(t.choreId ?? "") ?? null) : null,
     intervalDays: t.chore?.intervalDays ?? 0,
   }));
 }
