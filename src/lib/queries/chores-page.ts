@@ -15,9 +15,9 @@ import {
 } from "@/lib/queries/always-open-counts";
 import {
   loadPoolParticipation,
-  loadAlwaysOpenTally,
+  loadAlwaysOpenWeekly,
   type PoolParticipant,
-  type AlwaysOpenTallyRow,
+  type AlwaysOpenWeekly,
 } from "@/lib/queries/pool-participation";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { personPayloadById } from "@/lib/api/device-auth";
@@ -56,8 +56,8 @@ export type ChoresPagePayload = {
     chores: (PoolChoreRow & { people: PoolParticipant[] })[];
     /** Kept for older app builds; the current app reads `chores[].people`. */
     tally: SharedTallyRow[];
-    /** This week's per-person tally across always-open chores. */
-    alwaysOpenTally: AlwaysOpenTallyRow[];
+    /** Per-chore weekly participation for always-open chores. */
+    alwaysOpenWeekly: AlwaysOpenWeekly[];
   };
 };
 
@@ -91,7 +91,7 @@ export async function loadChoresPagePayload(
     tally,
     alwaysOpen,
     participation,
-    alwaysOpenTally,
+    alwaysOpenWeekly,
   ] = await Promise.all([
     loadChoreMetrics(todayISO),
     loadChoreSummary(todayISO),
@@ -100,7 +100,7 @@ export async function loadChoresPagePayload(
     loadSharedChoreTally(),
     loadAlwaysOpenCounts(todayISO),
     loadPoolParticipation(90),
-    loadAlwaysOpenTally(todayISO),
+    loadAlwaysOpenWeekly(todayISO),
   ]);
 
   const orderedVisible = active
@@ -150,7 +150,7 @@ export async function loadChoresPagePayload(
         .filter((c) => !c.alwaysOpen)
         .map((c) => ({ ...c, people: participation.get(c.id) ?? [] })),
       tally,
-      alwaysOpenTally,
+      alwaysOpenWeekly,
     },
   };
 }
