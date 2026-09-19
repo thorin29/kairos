@@ -31,7 +31,7 @@ export type PoolChore = {
   cooldownMinutes?: number;
   effort: number;
   effortLocked: boolean;
-  eligibleUserIds: string[];
+  eligibleUserIds?: string[];
 };
 
 export function PoolChores({
@@ -166,9 +166,10 @@ function PoolRow({
 
   // Which people this chore is up for grabs for. Stored empty means everyone, so
   // an unconfigured chore starts with all selected; at least one stays on.
-  const [eligible, setEligible] = useState<Set<string>>(
-    () => new Set(c.eligibleUserIds.length ? c.eligibleUserIds : people.map((p) => p.id)),
-  );
+  const [eligible, setEligible] = useState<Set<string>>(() => {
+    const configured = c.eligibleUserIds ?? [];
+    return new Set(configured.length ? configured : people.map((p) => p.id));
+  });
   const [savingElig, startElig] = useTransition();
 
   function toggleEligible(id: string) {
