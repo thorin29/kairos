@@ -49,7 +49,11 @@ export function TaskRow({ task }: { task: Row }) {
           {task.title}
         </p>
         <p className="mt-0.5 text-xs text-muted">
-          {task.subtitle ?? CATEGORY_LABELS[task.category]}
+          {/* School subtitles already end with "· due M/D"; when overdue the red
+              badge below shows the due, so drop it here to avoid showing it twice. */}
+          {task.isOverdue && task.subtitle
+            ? task.subtitle.replace(/ · due .*$/, "")
+            : (task.subtitle ?? CATEGORY_LABELS[task.category])}
           {task.stale && <span className="ml-2">expired</span>}
           {task.isOverdue && (
             <span className="tabular ml-2 font-medium text-red-700">

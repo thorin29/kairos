@@ -63,11 +63,16 @@ export function AddSchoolWork({
   }
 
   return (
-    <form
-      ref={formRef}
-      action={formAction}
-      className="w-full rounded-xl border border-hairline bg-surface p-5"
+    <div
+      className="animate-backdrop-fade fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
+      onClick={() => setOpen(false)}
     >
+      <form
+        ref={formRef}
+        action={formAction}
+        onClick={(e) => e.stopPropagation()}
+        className="my-8 w-full max-w-lg rounded-2xl border border-hairline bg-surface p-5 shadow-xl"
+      >
       {people ? null : <input type="hidden" name="userId" value={userId} />}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
@@ -272,5 +277,6 @@ export function AddSchoolWork({
         </button>
       </div>
     </form>
+    </div>
   );
 }

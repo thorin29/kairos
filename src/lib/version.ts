@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.454.0";
+export const APP_VERSION = "0.455.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,6 +121,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.455.0",
+    summary: [
+      "School card fixes: an overdue assignment no longer shows its due date twice \u2014 the grey \u201cdue\u201d in the detail line is dropped when the red overdue \u201cdue\u201d is shown (the app already showed it once). And \u201cAdd assignment or test\u201d now opens as its own overlay on top of the School card, instead of an inline box that overlapped the card behind it.",
+    ],
+  },
   {
     version: "0.454.0",
     summary: [
