@@ -16,7 +16,7 @@ export default async function SchoolYearPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <AdminBack />
-      <Link href="/admin/school" className="mt-3 inline-flex items-center gap-1 rounded-full border border-hairline px-3 py-1.5 text-sm text-muted transition-colors hover:border-muted hover:text-ink">
+      <Link href="/admin/school" className="mt-3 inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent/5 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/10 hover:border-accent">
         &lsaquo; School
       </Link>
       <SchoolYearSetup year={year} />

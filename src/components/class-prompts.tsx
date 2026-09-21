@@ -53,6 +53,20 @@ export function ClassPrompts({
 const INPUT =
   "w-full rounded-md border border-hairline bg-surface px-2 py-1 text-xs outline-none focus:border-accent";
 
+/** Human "when" for a class meeting whose name repeats every week: Today,
+ *  Yesterday, the weekday for this past week, "last week" for the one before,
+ *  and an explicit date once it's been sitting a couple of weeks or more. */
+function whenLabel(iso: string, today: string): string {
+  const a = new Date(`${iso}T00:00:00`);
+  const b = new Date(`${today}T00:00:00`);
+  const diff = Math.round((b.getTime() - a.getTime()) / 86400000);
+  if (diff <= 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 7) return a.toLocaleDateString(undefined, { weekday: "long" });
+  if (diff < 14) return "last week";
+  return a.toLocaleDateString(undefined, { month: "numeric", day: "numeric", year: "2-digit" });
+}
+
 function PromptCard({
   prompt,
   today,
@@ -97,7 +111,10 @@ function PromptCard({
 
   return (
     <div className="rounded-lg border border-accent/30 bg-accent/5 px-3 py-2">
-      <p className="mb-2 text-xs font-medium">After {prompt.className}</p>
+      <p className="mb-2 text-xs font-medium">
+        After {prompt.className}
+        <span className="ml-1 font-normal text-muted">· {whenLabel(prompt.dateISO, today)}</span>
+      </p>
 
       <p className="mb-1 text-[0.7rem] text-muted">Did you attend?</p>
       <div className="mb-2 flex gap-2">

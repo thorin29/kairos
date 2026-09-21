@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { noSchoolDaysFor } from "@/lib/school/school-days";
+import { pickClassColor } from "@/lib/palette";
+import { getHolidayColor } from "@/lib/holidays";
 import {
   holidayEntries,
   schoolClosedHolidayEntries,
@@ -225,10 +227,6 @@ export type ClassBar = {
 };
 export type StudentBars = { studentId: string; studentName: string; bars: ClassBar[] };
 
-const BAR_PALETTE = [
-  "#2563eb", "#dc2626", "#16a34a", "#9333ea", "#ea580c",
-  "#0891b2", "#c026d3", "#65a30d", "#e11d48", "#0d9488",
-];
 function dowOf(s: string): number {
   const wd = new Date(`${s}T00:00:00Z`).getUTCDay();
   return wd === 0 ? 7 : wd;
@@ -250,7 +248,7 @@ export async function loadStudentBars(): Promise<StudentBars[]> {
             color: true,
             termId: true,
             user: { select: { id: true, name: true } },
-            subject: { select: { name: true } },
+            subject: { select: { name: true, sortOrder: true, createdAt: true } },
           },
         },
         units: { select: { scheduledDate: true, done: true } },
@@ -270,45 +268,82 @@ export async function loadStudentBars(): Promise<StudentBars[]> {
     const horizonEnd = he.toISOString().slice(0, 10);
     noSchool = await noSchoolDaysFor([{ start: maxEnd, end: horizonEnd }]);
   }
-  const byStudent = new Map<string, StudentBars>();
-  let ci = 0;
+  const holidayColor = await getHolidayColor();
 
-  for (const p of plans) {
-    const st = p.class.user;
-    const bucket: StudentBars =
-      byStudent.get(st.id) ?? { studentId: st.id, studentName: st.name, bars: [] };
-    byStudent.set(st.id, bucket);
-
-    const termEnd = p.bothTerms
-      ? maxEnd
-      : dISO(allTerms.find((t) => t.id === p.class.termId)?.endDate ?? new Date(0)) || maxEnd;
-
-    const scheduledDays = p.units
-      .filter((u) => u.scheduledDate)
-      .map((u) => dISO(u.scheduledDate as Date));
-    const overflowCount = p.units.filter((u) => !u.done && !u.scheduledDate).length;
-
-    const overflowDays: string[] = [];
+  const buildOverflow = (termEnd: string, count: number): string[] => {
+    const days: string[] = [];
     let d = termEnd ? addDayISO(termEnd) : "";
     let guard = 0;
-    while (d && overflowDays.length < overflowCount && guard < 500) {
-      if (dowOf(d) <= 5 && !noSchool.has(d)) overflowDays.push(d);
+    while (d && days.length < count && guard < 500) {
+      if (dowOf(d) <= 5 && !noSchool.has(d)) days.push(d);
       d = addDayISO(d);
       guard += 1;
     }
+    return days;
+  };
 
-    bucket.bars.push({
-      className: p.class.name,
-      subject: p.class.subject?.name ?? null,
-      color: p.class.color || BAR_PALETTE[ci % BAR_PALETTE.length],
-      scheduledDays,
-      overflowDays,
-      termEnd,
-    });
-    ci += 1;
+  // Group plans per student, so each student's classes can be ordered the same
+  // way (by the shared subject order — the overlay list shouldn't reshuffle when
+  // you switch students) and coloured independently of the other students.
+  const grouped = new Map<string, { student: { id: string; name: string }; plans: typeof plans }>();
+  for (const p of plans) {
+    const st = p.class.user;
+    const g = grouped.get(st.id) ?? { student: st, plans: [] as typeof plans };
+    g.plans.push(p);
+    grouped.set(st.id, g);
   }
 
-  return [...byStudent.values()].sort((a, b) => a.studentName.localeCompare(b.studentName));
+  const out: StudentBars[] = [];
+  for (const { student, plans: sp } of grouped.values()) {
+    const ordered = [...sp].sort((a, b) => {
+      const oa = a.class.subject?.sortOrder ?? 0;
+      const ob = b.class.subject?.sortOrder ?? 0;
+      if (oa !== ob) return oa - ob;
+      // Imported subjects all sit at sortOrder 0, so fall back to when the
+      // subject was first set up (its creation order) before the name.
+      const ca = a.class.subject?.createdAt?.getTime() ?? 0;
+      const cb = b.class.subject?.createdAt?.getTime() ?? 0;
+      if (ca !== cb) return ca - cb;
+      const na = a.class.subject?.name ?? "";
+      const nb = b.class.subject?.name ?? "";
+      if (na !== nb) return na.localeCompare(nb);
+      return a.class.name.localeCompare(b.class.name);
+    });
+
+    // A class's own colour wins; any class still without one (older imports)
+    // gets the next distinct non-reserved palette colour, so a student's classes
+    // never share a colour and never land on a reserved calendar colour.
+    const used = ordered.map((p) => p.class.color).filter((c): c is string => !!c);
+
+    const bars: ClassBar[] = ordered.map((p) => {
+      const termEnd = p.bothTerms
+        ? maxEnd
+        : dISO(allTerms.find((t) => t.id === p.class.termId)?.endDate ?? new Date(0)) || maxEnd;
+      const scheduledDays = p.units
+        .filter((u) => u.scheduledDate)
+        .map((u) => dISO(u.scheduledDate as Date));
+      const overflowCount = p.units.filter((u) => !u.done && !u.scheduledDate).length;
+
+      let color = p.class.color;
+      if (!color) {
+        color = pickClassColor(used, [holidayColor]);
+        used.push(color);
+      }
+
+      return {
+        className: p.class.name,
+        subject: p.class.subject?.name ?? null,
+        color,
+        scheduledDays,
+        overflowDays: buildOverflow(termEnd, overflowCount),
+        termEnd,
+      };
+    });
+
+    out.push({ studentId: student.id, studentName: student.name, bars });
+  }
+
+  return out.sort((a, b) => a.studentName.localeCompare(b.studentName));
 }
 
 export type BreakReminder = { id: string; name: string; start: string; end: string };

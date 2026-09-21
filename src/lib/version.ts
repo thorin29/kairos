@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.453.0";
+export const APP_VERSION = "0.454.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,6 +121,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.454.0",
+    summary: [
+      "School admin: the \u201c\u2039 School\u201d back link is now a coloured button, not faint text. On the year calendar, a student's classes keep the same order no matter which student you're viewing (by subject setup order), and each class is guaranteed its own colour \u2014 older classes that shared a colour now get distinct, non-reserved colours per student on the overlay. And the \u201cafter class\u201d attendance prompt on a student's card now shows when it met (Today, Yesterday, the weekday, \u201clast week\u201d, or a date once it's a couple of weeks old), while a sport/subscribed-event prompt shows the date next to the day.",
+    ],
+  },
   {
     version: "0.453.0",
     summary: [

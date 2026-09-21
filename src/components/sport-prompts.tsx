@@ -37,7 +37,11 @@ export function SportPrompts({
   const dayLabel = (iso: string) =>
     iso === dateISO
       ? null
-      : new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: "short" });
+      : new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "numeric",
+          day: "numeric",
+        });
 
   const visible = prompts.filter((p) => !hidden.has(keyOf(p)));
   if (visible.length === 0) return null;
