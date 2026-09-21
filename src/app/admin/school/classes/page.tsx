@@ -18,7 +18,7 @@ export default async function SchoolClassesPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <AdminBack />
-      <Link href="/admin/school" className="mt-3 inline-block text-sm text-muted hover:text-ink">
+      <Link href="/admin/school" className="mt-3 inline-flex items-center gap-1 rounded-full border border-hairline px-3 py-1.5 text-sm text-muted transition-colors hover:border-muted hover:text-ink">
         &lsaquo; School
       </Link>
       <header className="mb-6 mt-3 border-b border-hairline pb-4">

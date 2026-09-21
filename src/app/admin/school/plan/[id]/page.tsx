@@ -21,7 +21,7 @@ export default async function ClassPlanReviewPage({
       <AdminBack />
       <Link
         href="/admin/school/curriculum"
-        className="mt-3 inline-block text-sm text-muted hover:text-ink"
+        className="mt-3 inline-flex items-center gap-1 rounded-full border border-hairline px-3 py-1.5 text-sm text-muted transition-colors hover:border-muted hover:text-ink"
       >
         &lsaquo; Curriculum &amp; schedule
       </Link>

@@ -9,6 +9,8 @@ import { Category, SchoolWorkType, TaskStatus } from "@/generated/prisma/client"
 import { todayISO, toDateColumn, addDays } from "@/lib/dates";
 import { spreadUnits, spreadUnitsFit, type PlanUnit } from "@/lib/school/plan-builder";
 import { noSchoolDaysFor } from "@/lib/school/school-days";
+import { pickClassColor } from "@/lib/palette";
+import { getHolidayColor } from "@/lib/holidays";
 
 function dISO(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -34,6 +36,7 @@ export async function importClassPlansFromCsv(csvText: string): Promise<ImportRe
     orderBy: { startDate: "asc" },
     select: { id: true, name: true },
   });
+  const holidayColor = await getHolidayColor();
 
   for (const p of plans) {
     const userId = byName.get(p.student.trim().toLowerCase());
@@ -66,8 +69,19 @@ export async function importClassPlansFromCsv(csvText: string): Promise<ImportRe
       select: { id: true, plan: { select: { id: true, status: true } } },
     });
     if (!cls) {
+      const siblings = await prisma.schoolClass.findMany({
+        where: { userId },
+        select: { color: true },
+      });
+      const taken = siblings.map((s) => s.color).filter((c): c is string => !!c);
       cls = await prisma.schoolClass.create({
-        data: { userId, name: p.className, termId, subjectId },
+        data: {
+          userId,
+          name: p.className,
+          termId,
+          subjectId,
+          color: pickClassColor(taken, [holidayColor]),
+        },
         select: { id: true, plan: { select: { id: true, status: true } } },
       });
     }
@@ -561,8 +575,20 @@ export async function createClassPlanFromForm(
     select: { id: true, plan: { select: { id: true, status: true } } },
   });
   if (!cls) {
+    const siblings = await prisma.schoolClass.findMany({
+      where: { userId: input.studentId },
+      select: { color: true },
+    });
+    const taken = siblings.map((s) => s.color).filter((c): c is string => !!c);
+    const holidayColor = await getHolidayColor();
     cls = await prisma.schoolClass.create({
-      data: { userId: input.studentId, name, termId, subjectId },
+      data: {
+        userId: input.studentId,
+        name,
+        termId,
+        subjectId,
+        color: pickClassColor(taken, [holidayColor]),
+      },
       select: { id: true, plan: { select: { id: true, status: true } } },
     });
   }

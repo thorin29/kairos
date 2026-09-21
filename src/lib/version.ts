@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.452.0";
+export const APP_VERSION = "0.453.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,6 +121,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.453.0",
+    summary: [
+      "School admin: the \u201c\u2039 School\u201d back link (Curriculum, Year calendar, Classes and Work pages) is now a bordered pill button so it's easier to spot as a way back. And imported classes are now given a distinct colour per student automatically \u2014 chosen to avoid that student's other class colours and to stay clear of the reserved calendar colours (past-term-end red, and holiday/vacation amber), so two of a student's classes no longer land on the same colour.",
+    ],
+  },
   {
     version: "0.452.0",
     summary: [
