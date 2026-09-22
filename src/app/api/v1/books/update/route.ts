@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { bookOwnerId, updateBookCore } from "@/lib/books-core";
+import { bookOwnerId, updateBookCore, parseGoalsInput } from "@/lib/books-core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,12 +27,14 @@ export async function POST(req: NextRequest) {
     pages?: unknown;
     chapters?: unknown;
     position?: unknown;
+    goals?: ReturnType<typeof parseGoalsInput>;
   } = {};
   if (typeof body.title === "string") patch.title = body.title;
   if ("author" in body) patch.author = typeof body.author === "string" ? body.author : null;
   if ("pages" in body) patch.pages = body.pages;
   if ("chapters" in body) patch.chapters = body.chapters;
   if ("position" in body) patch.position = body.position;
+  if ("goals" in body) patch.goals = parseGoalsInput(body.goals);
   const res = await updateBookCore(id, patch);
   if (!res.ok) return apiError("validation", res.error);
   return apiOk({ status: "ok" });

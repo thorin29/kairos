@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { addBookCore } from "@/lib/books-core";
+import { addBookCore, parseGoalsInput } from "@/lib/books-core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     author: typeof body.author === "string" ? body.author : null,
     pages: body.pages ?? null,
     chapters: body.chapters ?? null,
+    goals: parseGoalsInput(body.goals),
   });
   if (!res.ok) return apiError("validation", res.error);
   return apiOk({ status: "ok" });

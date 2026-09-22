@@ -1,5 +1,13 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { getReadingReminderLeadDays } from "@/lib/settings";
+
+export type ReadingGoalView = {
+  id: string;
+  target: number; // the position (page/chapter) to reach
+  dueDate: string; // ISO date to reach it by
+  completed: boolean;
+};
 
 export type BookProgress = {
   id: string;
@@ -13,6 +21,7 @@ export type BookProgress = {
   read: number; // min(position, length)
   finished: boolean;
   shelved: boolean;
+  goals: ReadingGoalView[];
 };
 
 export type PersonBooks = {
@@ -36,6 +45,7 @@ type BookRow = {
   position: number;
   finishedAt: Date | null;
   shelved: boolean;
+  goals: { id: string; target: number; dueDate: Date; completed: boolean }[];
 };
 
 const bookSelect = {
@@ -50,6 +60,10 @@ const bookSelect = {
   position: true,
   finishedAt: true,
   shelved: true,
+  goals: {
+    select: { id: true, target: true, dueDate: true, completed: true },
+    orderBy: { dueDate: "asc" },
+  },
 } as const;
 
 function toProgress(b: BookRow): BookProgress {
@@ -65,6 +79,12 @@ function toProgress(b: BookRow): BookProgress {
     read: Math.min(b.position, b.length),
     finished: b.finishedAt != null,
     shelved: b.shelved,
+    goals: b.goals.map((g) => ({
+      id: g.id,
+      target: g.target,
+      dueDate: g.dueDate.toISOString(),
+      completed: g.completed,
+    })),
   };
 }
 
@@ -117,4 +137,71 @@ export async function loadMyBooks(
     select: bookSelect,
   });
   return { books: (books as BookRow[]).map(toProgress) };
+}
+
+export type ReadingGoalItem = {
+  bookId: string;
+  bookTitle: string;
+  unit: "PAGES" | "CHAPTERS";
+  length: number;
+  position: number;
+  goalId: string;
+  target: number;
+  dueDate: string; // ISO
+  /** True when it's surfaced early by the reminder lead rather than being the
+   *  current (earliest unfinished) goal for its book. */
+  upcoming: boolean;
+};
+
+/** The reading action items for the reading button: the current goal for each
+ *  book (its earliest unfinished one), plus any later unfinished goal already
+ *  within the reminder lead of its due date — a heads-up that more is coming.
+ *  Empty when the person has no live goals, so the button can hide itself. */
+export async function loadReadingGoalItems(userId: string): Promise<ReadingGoalItem[]> {
+  const leadDays = await getReadingReminderLeadDays();
+  const books = await prisma.book.findMany({
+    where: {
+      userId,
+      finishedAt: null,
+      shelved: false,
+      goals: { some: { completed: false } },
+    },
+    select: {
+      id: true,
+      title: true,
+      unit: true,
+      length: true,
+      position: true,
+      goals: {
+        where: { completed: false },
+        select: { id: true, target: true, dueDate: true },
+        orderBy: { dueDate: "asc" },
+      },
+    },
+  });
+
+  const now = Date.now();
+  const leadMs = leadDays * 24 * 60 * 60 * 1000;
+  const items: ReadingGoalItem[] = [];
+  for (const b of books) {
+    b.goals.forEach((g, i) => {
+      const isCurrent = i === 0;
+      const withinLead = leadDays > 0 && g.dueDate.getTime() - now <= leadMs;
+      if (isCurrent || withinLead) {
+        items.push({
+          bookId: b.id,
+          bookTitle: b.title,
+          unit: b.unit,
+          length: b.length,
+          position: b.position,
+          goalId: g.id,
+          target: g.target,
+          dueDate: g.dueDate.toISOString(),
+          upcoming: !isCurrent,
+        });
+      }
+    });
+  }
+  items.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  return items;
 }

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.466.0";
+export const APP_VERSION = "0.467.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -122,6 +122,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.467.0",
+    summary: [
+      "Reading-goals server API (part 2). Books now carry their goals in the reading payload; adding or editing a book can create, update or remove goals, and an edit preserves a goal's completion. Saving progress auto-completes any goal whose page you've reached (and un-completes it if you page back). A new endpoint returns the reading action items \u2014 the current goal per book plus any already inside the reminder lead. No visible change yet; the app UI is next.",
+    ],
+  },
   {
     version: "0.466.0",
     summary: [
