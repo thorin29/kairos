@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { currentSeasonWindow } from "@/lib/season";
 import { loadProgression } from "@/lib/queries/progression";
-import { pickHatch, COMPANIONS } from "@/lib/companions";
+import { pickHatch, COMPANIONS, luckFromStreak } from "@/lib/companions";
 
 /**
  * Hatch a ready egg — the auth-free core shared by the web action and the app's
@@ -23,16 +23,26 @@ export async function hatchEggCore(
   if (!me.companion.eggReady) return { error: "The egg isn't ready to hatch yet." };
 
   const lifetimeXp = me.lifetimeXp;
-  const tier = me.season.tier;
+  const luck = luckFromStreak(me.currentStreak);
   const seasonKey = (await currentSeasonWindow()).startISO;
 
   const [state, ownedRows, active] = await Promise.all([
     prisma.companionState.findUnique({ where: { userId } }),
-    prisma.companion.findMany({ where: { userId }, select: { species: true } }),
+    prisma.companion.findMany({
+      where: { userId },
+      select: { species: true },
+      orderBy: { acquiredAt: "desc" },
+    }),
     prisma.companion.findFirst({ where: { userId, isActive: true } }),
   ]);
 
   const owned = ownedRows.map((r) => r.species);
+  // Commons hatched in a row (most recent first) — feeds the pity timer.
+  let commonsInRow = 0;
+  for (const r of ownedRows) {
+    if (COMPANIONS[r.species]?.rarity === "common") commonsInRow += 1;
+    else break;
+  }
   const eggsHatched = state?.eggsHatched ?? 0;
   const eggsThisSeason =
     state && state.seasonKey === seasonKey ? state.eggsThisSeason : 0;
@@ -40,7 +50,7 @@ export async function hatchEggCore(
   let hatched: string | undefined;
 
   if (mode === "new") {
-    const pick = pickHatch(owned, tier);
+    const pick = pickHatch(owned, luck, commonsInRow);
     if (!pick) {
       return { error: "You've hatched every creature! Try deepening instead." };
     }

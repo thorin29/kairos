@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.460.0";
+export const APP_VERSION = "0.461.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,6 +121,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.461.0",
+    summary: [
+      "Egg rarity reworked (companion rework, part 3). Which creature you get is still random and never a duplicate, but the odds of a rarer one now rise with your current streak instead of a season tier, on a steeper curve \u2014 and rares and legendaries stay genuinely special even at a long streak, so pulling one is a moment. A pity rule guarantees a non-common after four commons in a row, so dry spells always break. The tell is visual, not text: the next-egg meter glows in the rarity colour your streak is unlocking \u2014 slate, then blue, purple, gold \u2014 so a strong streak visibly makes the egg more promising.",
+    ],
+  },
   {
     version: "0.460.0",
     summary: [

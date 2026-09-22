@@ -12,6 +12,7 @@ export type CompanionView = {
   shiny: boolean;
   incubationPct: number;
   eggReady: boolean;
+  luck: number;
 };
 
 /**
@@ -38,6 +39,16 @@ export function Companion({
 
   const box = size === "sm" ? "h-14 w-24 shrink-0" : "min-h-[9rem] w-full max-w-[16rem]";
   const imgBox = size === "sm" ? "h-9" : "h-24";
+  // Text-free odds cue: the egg meter glows in the rarity colour the current
+  // streak is unlocking — plain slate, then blue, purple, gold as luck climbs.
+  const luckColor =
+    companion.luck >= 0.75
+      ? "#eab308" // legendary — gold
+      : companion.luck >= 0.5
+        ? "#7c3aed" // rare — purple
+        : companion.luck >= 0.25
+          ? "#2563eb" // uncommon — blue
+          : "#94a3b8"; // low streak — slate
 
   return (
     <div
@@ -83,8 +94,8 @@ export function Companion({
                 <div className="flex w-32 flex-col items-center gap-0.5">
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-hairline">
                     <div
-                      className="h-full rounded-full bg-accent"
-                      style={{ width: `${companion.incubationPct}%` }}
+                      className="h-full rounded-full"
+                      style={{ width: `${companion.incubationPct}%`, background: luckColor }}
                     />
                   </div>
                   <p className="tabular text-[0.65rem] text-muted">
@@ -101,7 +112,7 @@ export function Companion({
               <div className="h-2 w-32 overflow-hidden rounded-full bg-hairline">
                 <div
                   className="h-full rounded-full"
-                  style={{ width: `${companion.incubationPct}%`, background: colorHex }}
+                  style={{ width: `${companion.incubationPct}%`, background: luckColor }}
                 />
               </div>
               <p className="tabular text-xs text-muted">{companion.incubationPct}% incubated</p>

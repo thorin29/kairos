@@ -10,7 +10,7 @@ import {
 } from "@/lib/dates";
 import { getScoringStart } from "@/lib/settings";
 import { currentSeasonWindow } from "@/lib/season";
-import { blendPalette, eggCostFor, stageFromGrowth, EGGS_PER_SEASON_CAP } from "@/lib/companions";
+import { blendPalette, eggCostFor, stageFromGrowth, luckFromStreak, EGGS_PER_SEASON_CAP } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
 import { readingXpForBook, bibleXpForChapters } from "@/lib/scoring/reading";
 import { loadBonuses } from "@/lib/queries/bonus";
@@ -70,6 +70,9 @@ export type PersonProgress = {
     shiny: boolean;
     incubationPct: number;
     eggReady: boolean;
+    /** 0..1 streak-driven odds; the higher it is, the rarer the next hatch can be.
+     *  Drives the egg meter's colour so a strong streak shows without any text. */
+    luck: number;
   };
   /** Proportional XP by domain, for the pixel XP bar (sums to ~1, or all 0). */
   statShares: Record<StatKey, number>;
@@ -379,6 +382,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
             shiny: active.shiny,
             incubationPct,
             eggReady,
+            luck: luckFromStreak(current),
           };
         }
         return {
@@ -388,6 +392,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
           shiny: false,
           incubationPct,
           eggReady,
+          luck: luckFromStreak(current),
         };
       })(),
       statShares: (() => {

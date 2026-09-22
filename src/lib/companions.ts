@@ -237,37 +237,47 @@ export function stageFromGrowth(cleanDays: number, perfectWeeks: number): number
 
 type Rarity = CompanionSpecies["rarity"];
 
-/** Rarity odds shift with how high you climbed your season (tier 1–10). Higher
- *  tiers raise the shot at rare/legendary — same work, better pulls for going
- *  above and beyond. */
-export function rarityWeights(tier: number): Record<Rarity, number> {
-  const t = Math.max(0, Math.min(10, tier)) / 10; // 0..1
+/** How strongly a child's current streak tilts the odds toward rarer creatures:
+ *  0 at no streak, 1 at a long (30-day) streak. Keeping a streak visibly pays off. */
+export function luckFromStreak(streak: number): number {
+  return Math.max(0, Math.min(1, streak / 30));
+}
+
+/** Hatch odds by luck (0..1, from the streak). Rares stay genuinely special even
+ *  at max luck — a long streak roughly quadruples the shot at rare and legendary
+ *  but they're still the minority, so pulling one is a moment. */
+export function rarityWeights(luck: number): Record<Rarity, number> {
+  const l = Math.max(0, Math.min(1, luck));
   return {
-    common: 70 - 30 * t,
-    uncommon: 22 + 6 * t,
-    rare: 7 + 16 * t,
-    legendary: 1 + 8 * t,
+    common: 74 - 36 * l, // 74 -> 38
+    uncommon: 18 + 8 * l, // 18 -> 26
+    rare: 6 + 18 * l, // 6 -> 24
+    legendary: 2 + 10 * l, // 2 -> 12
   };
 }
 
-/**
- * Draw a species the person does NOT already own (no duplicates, ever),
- * weighted by rarity for their tier. Falls back across rarities if a tier is
- * exhausted. Returns null only when the whole roster is collected.
- */
+/** After this many commons hatched in a row, the next hatch skips common
+ *  entirely (if anything rarer is still unowned), so a dry spell always breaks. */
+export const PITY_AFTER = 4;
+
 export function pickHatch(
   owned: string[],
-  tier: number,
+  luck: number,
+  commonsInRow = 0,
   rand: () => number = Math.random,
 ): string | null {
   const ownedSet = new Set(owned);
   const pool = Object.values(COMPANIONS).filter((s) => !ownedSet.has(s.id));
   if (pool.length === 0) return null;
 
-  const weights = rarityWeights(tier);
+  const weights = rarityWeights(luck);
   const order: Rarity[] = ["legendary", "rare", "uncommon", "common"];
-  // Weighted pick of a rarity that still has unowned members.
-  const available = order.filter((r) => pool.some((s) => s.rarity === r));
+  let available = order.filter((r) => pool.some((s) => s.rarity === r));
+  // Pity: a long run of commons drops common from the roll while anything rarer
+  // is still unowned.
+  if (commonsInRow >= PITY_AFTER && available.some((r) => r !== "common")) {
+    available = available.filter((r) => r !== "common");
+  }
   const total = available.reduce((n, r) => n + weights[r], 0);
   let roll = rand() * total;
   let chosen: Rarity = available[available.length - 1];
