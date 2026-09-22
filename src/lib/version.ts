@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.464.0";
+export const APP_VERSION = "0.465.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,6 +121,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.465.0",
+    summary: [
+      "The app's family-goal API now sends the monthly clean-days model (each child's clean days, the month target, and the family progress bar), so the Android co-op screen can match the web instead of showing the old tier language. No visible change on the web.",
+    ],
+  },
   {
     version: "0.464.0",
     summary: [

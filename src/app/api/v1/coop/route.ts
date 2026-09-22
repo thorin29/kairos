@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
   return apiOk({
     seasonLabel: data.seasonLabel,
     floor: data.floor,
+    target: data.target,
+    familyPct: data.familyPct,
     childrenMeeting: data.childrenMeeting,
     childrenTotal: data.childrenTotal,
     gateMet: data.gateMet,
@@ -27,6 +29,7 @@ export async function GET(req: NextRequest) {
       name: c.name,
       color: c.color,
       tier: c.tier,
+      cleanDays: c.cleanDays,
       meets: c.meets,
     })),
     proposals: data.proposals.map((p) => ({
