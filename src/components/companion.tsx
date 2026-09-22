@@ -36,7 +36,7 @@ export function Companion({
   const asset =
     companion.active && sp ? stageAsset(sp.id, companion.stage) : MYSTERY_EGG;
 
-  const box = size === "sm" ? "h-14 w-24 shrink-0" : "h-36 w-full max-w-[16rem]";
+  const box = size === "sm" ? "h-14 w-24 shrink-0" : "min-h-[9rem] w-full max-w-[16rem]";
   const imgBox = size === "sm" ? "h-9" : "h-24";
 
   return (
