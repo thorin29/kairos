@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { currentAdmin } from "@/lib/session";
 import { currentSeasonWindow } from "@/lib/season";
-import { getScoringStart } from "@/lib/settings";
+import { getScoringStart, getMonthGoalDays } from "@/lib/settings";
 import { AdminBack } from "@/components/admin-back";
 import { ResetScoringButton } from "@/app/setup/reset-scoring-button";
-import { ScoringSnapshot } from "./planner-client";
+import { ScoringSnapshot, MonthGoalControl } from "./planner-client";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +12,10 @@ export default async function ScoringRewardsPage() {
   const admin = await currentAdmin();
   if (!admin) redirect("/unlock");
 
-  const [season, scoringStart] = await Promise.all([
+  const [season, scoringStart, goalDays] = await Promise.all([
     currentSeasonWindow(),
     getScoringStart(),
+    getMonthGoalDays(),
   ]);
 
   return (
@@ -31,21 +32,30 @@ export default async function ScoringRewardsPage() {
           &mdash; that&rsquo;s each kid&rsquo;s character, earned by doing their
           work. The family reward runs{" "}
           <span className="font-medium text-ink">this month</span> ({season.label}),
-          resets on the 1st, and everyone starts it even. All of this runs on its
-          own with sensible defaults &mdash; nothing here needs setting up. The
-          controls below are only if you want them.
+          resets on the 1st, and everyone starts it even. It all runs on sensible
+          defaults &mdash; the two settings below are the only knobs, and both are
+          admin-only, here where a child can&rsquo;t reach them.
         </p>
       </header>
 
-      {/* The all-time clock: when scores and levels started counting. The one
-          real tweak — a clean start — lives here. */}
+      {/* The monthly family reward — how many clean days finish the month. */}
+      <section className="mb-6">
+        <p className="mb-2 text-sm font-medium">Family reward</p>
+        <p className="mb-3 text-sm text-muted">
+          How far a child has to get each month to finish it and share in the
+          family reward. This is the goal shown on everyone&rsquo;s family-goal
+          screen.
+        </p>
+        <MonthGoalControl target={goalDays} />
+      </section>
+
+      {/* The all-time clock: when scores and levels started counting. */}
       <section className="mb-6">
         <p className="mb-2 text-sm font-medium">All-time scoring</p>
         <p className="mb-3 text-sm text-muted">
           Want a clean slate &mdash; say, after a testing stretch, or to kick off
           a new year? Reset scores, levels, streaks and badges to start from
-          today. (The monthly reward and its &ldquo;days to finish the
-          month&rdquo; target are set on the family goal itself.)
+          today.
         </p>
         <ResetScoringButton current={scoringStart} />
       </section>

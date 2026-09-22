@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.463.0";
+export const APP_VERSION = "0.464.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,6 +121,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.464.0",
+    summary: [
+      "Moved the \u201cdays to finish the month\u201d control off the family-goal screen \u2014 where a child could change it \u2014 onto the admin-only \u201cScoring & rewards\u201d page, next to the reset. Both real settings now sit behind admin auth in one place, and the page says so. The family-goal screen just shows the goal.",
+    ],
+  },
   {
     version: "0.463.0",
     summary: [
