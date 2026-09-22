@@ -55,6 +55,9 @@ export type PersonProgress = {
   longestStreak: number;
   milestones: number[];
   perfectWeeks: number;
+  /** Clean days completed so far this month — resolved past days where the child
+   *  finished everything assigned that day. Accumulates; never drops. */
+  monthlyCleanDays: number;
   bestWeekPct: number | null;
   masteries: MasteryTitle[];
   /** The companion display: an incubating egg, or the active creature. Color
@@ -291,6 +294,18 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         b.assigned > 0 && b.complete === b.assigned && addDays(wkISO, 6) < today,
     ).length;
 
+    // Clean days this month so far: resolved past days (before today, so it can
+    // only climb) where the child finished everything assigned. Fair across
+    // loads — a light day still counts if you finish it.
+    const monthlyCleanDays = [...a.days.entries()].filter(
+      ([iso, b]) =>
+        iso >= seasonStart &&
+        iso < today &&
+        b.assigned > 0 &&
+        b.missed === 0 &&
+        b.complete === b.assigned,
+    ).length;
+
     // Best completed week (self-competition personal best).
     let bestWeekPct: number | null = null;
     for (const [wkISO, b] of a.weeks) {
@@ -324,6 +339,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
       longestStreak: longest,
       milestones: earnedMilestones(longest),
       perfectWeeks,
+      monthlyCleanDays,
       bestWeekPct,
       masteries,
       companionColor: blendPalette(signatureOf(a.statXp, baseline)),

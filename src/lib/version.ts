@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.456.0";
+export const APP_VERSION = "0.457.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,6 +121,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.457.0",
+    summary: [
+      "Family goal, reworked (part 1): it is now a monthly, sticky goal instead of a live tier that flickered. A child \u201cfinishes their month\u201d by building up clean days \u2014 days where they completed everything assigned \u2014 which only ever counts up, never drops, and is fair whatever the load, since every child has daily chores and Bible to finish. The family bar climbs steadily toward everyone finishing and no longer swings from \u201c3 of 4\u201d to \u201c2 of 4\u201d on an off day. The admin control now sets \u201cdays to finish the month\u201d instead of a season tier.",
+    ],
+  },
   {
     version: "0.456.0",
     summary: [

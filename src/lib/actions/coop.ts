@@ -9,7 +9,7 @@ import {
   grantCoopCore,
   removeCoopCore,
 } from "@/lib/coop-core";
-import { setSetting, SEASON_COOP_FLOOR } from "@/lib/settings";
+import { setSetting, SEASON_COOP_FLOOR, MONTH_GOAL_DAYS } from "@/lib/settings";
 
 function bump() {
   revalidatePath("/coop");
@@ -60,6 +60,15 @@ export async function setCoopFloor(tier: number): Promise<{ error: string | null
   await requireAdmin();
   const n = Math.min(10, Math.max(1, Math.round(tier)));
   await setSetting(SEASON_COOP_FLOOR, String(n));
+  bump();
+  return { error: null };
+}
+
+/** Admin sets how many clean days a child needs to finish the month. */
+export async function setMonthGoalDays(days: number): Promise<{ error: string | null }> {
+  await requireAdmin();
+  const n = Math.min(28, Math.max(1, Math.round(days)));
+  await setSetting(MONTH_GOAL_DAYS, String(n));
   bump();
   return { error: null };
 }

@@ -49,6 +49,20 @@ export async function getCoopFloor(): Promise<number> {
   return Math.min(10, Math.max(1, n));
 }
 
+// How many "clean days" (a day where a child finished everything assigned that
+// day) it takes to finish the month for the family goal. It accumulates and
+// never drops, and is fair across loads — every child has daily chores and
+// Bible to finish, whatever else lives in their account.
+export const MONTH_GOAL_DAYS = "month.goalCleanDays";
+export const MONTH_GOAL_DAYS_DEFAULT = 15;
+
+export async function getMonthGoalDays(): Promise<number> {
+  const raw = await getSetting(MONTH_GOAL_DAYS);
+  const n = Number.parseInt(raw ?? "", 10);
+  if (!Number.isFinite(n)) return MONTH_GOAL_DAYS_DEFAULT;
+  return Math.min(28, Math.max(1, n));
+}
+
 export type SharedStyle = "bands" | "blend";
 
 export type CalendarPrefs = {

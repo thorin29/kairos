@@ -2,7 +2,7 @@ import "server-only";
 import { CoopStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { currentSeasonWindow } from "@/lib/season";
-import { getCoopFloor } from "@/lib/settings";
+import { getCoopFloor, getMonthGoalDays } from "@/lib/settings";
 import { loadProgression, type PersonProgress } from "@/lib/queries/progression";
 
 export type CoopChild = {
@@ -12,6 +12,8 @@ export type CoopChild = {
   avatarPath: string | null;
   avatarPosition: string | null;
   tier: number;
+  /** Clean days finished this month so far (accumulates, never drops). */
+  cleanDays: number;
   meets: boolean;
 };
 
@@ -37,6 +39,10 @@ export type CoopData = {
   seasonKey: string;
   seasonLabel: string;
   floor: number;
+  /** Clean days a child needs to finish the month (the family-goal target). */
+  target: number;
+  /** 0-100 shared family progress toward everyone finishing the month. */
+  familyPct: number;
   children: CoopChild[];
   childrenMeeting: number;
   childrenTotal: number;
@@ -59,8 +65,9 @@ export async function loadCoop(
   const season = await currentSeasonWindow();
   const seasonKey = season.startISO;
 
-  const [floor, users, progression, proposals] = await Promise.all([
+  const [floor, target, users, progression, proposals] = await Promise.all([
     getCoopFloor(),
+    getMonthGoalDays(),
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -89,24 +96,33 @@ export async function loadCoop(
   ]);
 
   const tierById = new Map(progression.map((p) => [p.id, p.season.tier]));
+  const cleanById = new Map(progression.map((p) => [p.id, p.monthlyCleanDays]));
 
   const children: CoopChild[] = users
     .filter((u) => u.kind === "CHILD")
     .map((u) => {
-      const tier = tierById.get(u.id) ?? 0;
+      const cleanDays = cleanById.get(u.id) ?? 0;
       return {
         id: u.id,
         name: u.displayName ?? u.name,
         color: u.color,
         avatarPath: u.avatarPath,
         avatarPosition: u.avatarPosition,
-        tier,
-        meets: tier >= floor,
+        tier: tierById.get(u.id) ?? 0,
+        cleanDays,
+        meets: cleanDays >= target,
       };
     });
 
   const childrenMeeting = children.filter((c) => c.meets).length;
   const gateMet = children.length > 0 && childrenMeeting === children.length;
+  const familyPct = children.length
+    ? Math.round(
+        (children.reduce((n, c) => n + Math.min(c.cleanDays, target), 0) /
+          (target * children.length)) *
+          100,
+      )
+    : 0;
 
   const people: CoopPerson[] = users.map((u) => ({
     id: u.id,
@@ -130,6 +146,8 @@ export async function loadCoop(
     seasonKey,
     seasonLabel: season.label,
     floor,
+    target,
+    familyPct,
     children,
     childrenMeeting,
     childrenTotal: children.length,

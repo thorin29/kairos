@@ -9,14 +9,12 @@ import {
   selectCoopReward,
   grantCoopReward,
   removeCoopProposal,
-  setCoopFloor,
+  setMonthGoalDays,
 } from "@/lib/actions/coop";
 import type { CoopData, CoopProposalView } from "@/lib/queries/coop";
 
 export function CoopBoard({ data, isAdmin }: { data: CoopData; isAdmin: boolean }) {
-  const meterPct = data.childrenTotal
-    ? Math.round((data.childrenMeeting / data.childrenTotal) * 100)
-    : 0;
+  const meterPct = data.familyPct;
 
   return (
     <div className="space-y-8">
@@ -25,7 +23,7 @@ export function CoopBoard({ data, isAdmin }: { data: CoopData; isAdmin: boolean 
         <div className="mb-1 flex items-center justify-between">
           <p className="font-display text-lg font-semibold">Family goal</p>
           <span className="tabular text-sm text-muted">
-            {data.childrenMeeting} of {data.childrenTotal} kids at tier {data.floor}+
+            {data.childrenMeeting} of {data.childrenTotal} finished their month
           </span>
         </div>
 
@@ -45,11 +43,11 @@ export function CoopBoard({ data, isAdmin }: { data: CoopData; isAdmin: boolean 
                   ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                   : "border-hairline text-muted"
               }`}
-              title={`Season tier ${c.tier}`}
+              title={`${c.cleanDays} of ${data.target} clean days this month`}
             >
               <Avatar name={c.name} color={c.color} avatarPath={c.avatarPath} avatarPosition={c.avatarPosition} size="xs" />
               {c.name}
-              {c.meets ? <CheckIcon className="h-3.5 w-3.5" /> : <span className="tabular">t{c.tier}</span>}
+              {c.meets ? <CheckIcon className="h-3.5 w-3.5" /> : <span className="tabular">{c.cleanDays}/{data.target}</span>}
             </span>
           ))}
           {data.childrenTotal === 0 && (
@@ -89,7 +87,7 @@ export function CoopBoard({ data, isAdmin }: { data: CoopData; isAdmin: boolean 
         <ProposeForm people={data.people} />
       </section>
 
-      {isAdmin && <FloorControl floor={data.floor} />}
+      {isAdmin && <FloorControl target={data.target} />}
     </div>
   );
 }
@@ -140,7 +138,7 @@ function StatusLine({ data, isAdmin }: { data: CoopData; isAdmin: boolean }) {
         )
       ) : (
         <p className="mt-1 text-xs text-muted">
-          Unlocks when every kid reaches tier {data.floor}.
+          Unlocks when every kid finishes their month.
         </p>
       )}
     </div>
@@ -307,24 +305,25 @@ function ProposeForm({ people }: { people: CoopData["people"] }) {
   );
 }
 
-function FloorControl({ floor }: { floor: number }) {
-  const [value, setValue] = useState(floor);
+function FloorControl({ target }: { target: number }) {
+  const [value, setValue] = useState(target);
   const [pending, start] = useTransition();
   const [saved, setSaved] = useState(false);
 
   return (
     <section className="rounded-2xl border border-hairline bg-surface p-5">
-      <p className="text-sm font-medium">Participation floor</p>
+      <p className="text-sm font-medium">Days to finish the month</p>
       <p className="mt-1 text-sm text-muted">
-        Every child must reach this season tier for the reward to unlock. Doing
-        all of your own work reaches tier 8, so 6 leaves headroom for the
-        youngest. Check the Season planner to see what&rsquo;s reachable.
+        A child finishes the month once they&rsquo;ve had this many clean days &mdash;
+        days where they completed everything assigned. It counts up and never
+        drops, and every child can reach it whatever their load, since everyone
+        has daily chores and Bible to finish.
       </p>
       <div className="mt-3 flex items-center gap-4">
         <input
           type="range"
           min={1}
-          max={10}
+          max={28}
           step={1}
           value={value}
           onChange={(e) => {
@@ -333,13 +332,13 @@ function FloorControl({ floor }: { floor: number }) {
           }}
           className="flex-1 accent-[var(--color-accent)]"
         />
-        <span className="tabular w-16 text-right text-sm font-semibold">Tier {value}</span>
+        <span className="tabular w-20 text-right text-sm font-semibold">{value} days</span>
         <button
           type="button"
-          disabled={pending || value === floor}
+          disabled={pending || value === target}
           onClick={() =>
             start(async () => {
-              const r = await setCoopFloor(value);
+              const r = await setMonthGoalDays(value);
               if (r.error) alert(r.error);
               else setSaved(true);
             })
