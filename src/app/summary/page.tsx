@@ -45,7 +45,7 @@ export default async function SummaryPage() {
 
       <main className="mx-auto max-w-3xl px-6 py-6">
         <div className="mb-4">
-          <SectionHeading>Season &middot; {season}</SectionHeading>
+          <SectionHeading>This month &middot; {season}</SectionHeading>
         </div>
 
         <Link
@@ -162,7 +162,7 @@ function PersonCard({ p, full = false }: { p: PersonProgress; full?: boolean }) 
       <div className="mt-4 rounded-xl border border-hairline p-3">
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-sm font-medium">
-            Season &middot; Tier {p.season.tier}
+            This month &middot; Tier {p.season.tier}
             <span className="text-muted"> / {SEASON_MAX_TIER}</span>
           </span>
           {p.season.complete ? (

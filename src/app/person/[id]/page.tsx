@@ -453,7 +453,7 @@ export default async function PersonPage({
             <span className="font-medium">Level {progress.level.level}</span>
             <span className="text-muted">{progress.className}</span>
             <span className="tabular text-muted">
-              &middot; Season tier {progress.season.tier}/{progress.season.maxTier}
+              &middot; This month {progress.season.tier}/{progress.season.maxTier}
             </span>
             {progress.currentStreak > 0 && (
               <span

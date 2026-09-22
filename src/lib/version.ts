@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.461.0";
+export const APP_VERSION = "0.462.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,6 +121,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.462.0",
+    summary: [
+      "Clarified scoring, dropped the \u201cseason\u201d jargon (stage 3). The admin page is now \u201cScoring & rewards\u201d and spells out the two clocks in one place: levels, XP, streaks and companions are all-time and never reset, while the family reward runs this month and starts fresh on the 1st. The \u201cscores count from\u2026\u201d control moved off the setup page into that admin page, next to the reward-window length. And \u201cSeason \u00b7 Tier\u201d on the summary and person pages now reads \u201cThis month.\u201d",
+    ],
+  },
   {
     version: "0.461.0",
     summary: [

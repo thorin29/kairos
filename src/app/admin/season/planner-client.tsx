@@ -137,7 +137,7 @@ export function SeasonPlanner({ plan }: { plan: SeasonPlan }) {
 
       {/* Apply a season length */}
       <div className="rounded-2xl border border-hairline bg-surface p-5">
-        <p className="text-sm font-medium">Set the season length</p>
+        <p className="text-sm font-medium">Reward window length</p>
         <p className="mt-1 text-sm text-muted">
           Changes only the season tier ladder. Character levels and stats are
           untouched.

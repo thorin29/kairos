@@ -6,8 +6,6 @@ import { AdminBack } from "@/components/admin-back";
 import { AdminPinControls } from "./admin-pin-controls";
 import { AdminToggle } from "./admin-toggle";
 import { KindToggle } from "./kind-toggle";
-import { ResetScoringButton } from "./reset-scoring-button";
-import { getScoringStart } from "@/lib/settings";
 import { listAccounts } from "@/lib/accounts";
 import { liveDeviceCounts } from "@/lib/api/device-auth";
 import { AccountRow } from "./account-row";
@@ -29,7 +27,6 @@ export default async function SetupPage() {
       </main>
     );
   }
-  const scoringStart = await getScoringStart();
   const hasAdmin = people.some((p) => p.role === "ADMIN");
   const pinSet = await adminPinSet();
   const adminCount = people.filter(
@@ -119,11 +116,6 @@ export default async function SetupPage() {
               simply opens admin.
             </p>
             <AdminPinControls pinSet={pinSet} />
-          </section>
-
-          <section className="mt-10">
-            <SectionHeading>Scoring</SectionHeading>
-            <ResetScoringButton current={scoringStart} />
           </section>
 
           <p className="mt-6 text-sm text-muted">

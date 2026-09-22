@@ -10,7 +10,7 @@ export function ResetScoringButton({ current }: { current: string | null }) {
   const confirmText =
     "Start a new game from today?\n\n" +
     "This resets everything the scoreboard tracks — scores, character levels, " +
-    "stats, streaks, badges and the season — and clears the overdue-chore " +
+    "" +
     "backlog. Schedules, assignments and the money ledger are kept; nothing " +
     "is deleted. This can't be undone.";
 
@@ -24,7 +24,7 @@ export function ResetScoringButton({ current }: { current: string | null }) {
       </p>
       <p className="mt-2 max-w-xl text-sm text-muted">
         A clean slate from today: scores, character levels, stats, streaks,
-        badges and the season all start over, and the overdue-chore backlog is
+        badges and this month's reward all start over, and the overdue-chore backlog is
         cleared. Schedules, assignments, workouts and the money ledger are
         untouched &mdash; nothing is deleted. Use it once to wipe a testing
         period, or for a true fresh start.
