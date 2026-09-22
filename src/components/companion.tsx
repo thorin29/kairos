@@ -73,6 +73,25 @@ export function Companion({
                 </span>
               </p>
               {pct != null && shares && <XpBar pct={pct} shares={shares} />}
+              {/* Next-egg progress, always visible so a new egg is earned, not
+                  a surprise. */}
+              {companion.eggReady ? (
+                <p className="text-xs font-medium text-emerald-700">
+                  A new egg is ready!
+                </p>
+              ) : (
+                <div className="flex w-32 flex-col items-center gap-0.5">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-hairline">
+                    <div
+                      className="h-full rounded-full bg-accent"
+                      style={{ width: `${companion.incubationPct}%` }}
+                    />
+                  </div>
+                  <p className="tabular text-[0.65rem] text-muted">
+                    Next egg {companion.incubationPct}%
+                  </p>
+                </div>
+              )}
             </>
           ) : (
             <>

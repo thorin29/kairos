@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.457.0";
+export const APP_VERSION = "0.458.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,6 +121,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.458.0",
+    summary: [
+      "Companions now show a \u201cNext egg\u201d meter under the active creature, so a new egg is something you watch fill and earn rather than something that appears out of nowhere. First piece of the companion rework.",
+    ],
+  },
   {
     version: "0.457.0",
     summary: [
