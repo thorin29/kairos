@@ -39,8 +39,8 @@ const TILES: Tile[] = [
   },
   {
     href: "/admin/season",
-    label: "Season planner",
-    blurb: "Project leveling at the loaded workload; set season length",
+    label: "Scoring & rewards",
+    blurb: "How scoring works, the two clocks, and a fresh-start reset",
     icon: <StarIcon className="h-7 w-7" />,
   },
 ];

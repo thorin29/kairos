@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.462.0";
+export const APP_VERSION = "0.463.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,6 +121,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.463.0",
+    summary: [
+      "Simplified the scoring admin page and fixed its navigation. Removed the projection sliders and the reward-window-length setting: they only existed to help pick a season length, and the reward is now simply monthly, so they were redundant and confusing. The page \u2014 renamed \u201cScoring & rewards,\u201d including its menu card \u2014 now explains the two clocks plainly, says outright that it all runs on sensible defaults with nothing to set up, and keeps only the two real controls: a fresh-start reset and a read-only tuning snapshot. Its back button now returns to the admin menu instead of the home screen.",
+    ],
+  },
   {
     version: "0.462.0",
     summary: [
