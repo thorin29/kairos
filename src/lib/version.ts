@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.455.0";
+export const APP_VERSION = "0.456.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,6 +121,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.456.0",
+    summary: [
+      "Season planner: added a \u201cScoring snapshot\u201d button that dumps everyone's live scoring numbers \u2014 level and XP, this season's tier and completion, streaks, companion, and each person's weekly XP broken down by domain \u2014 as JSON to copy out for tuning. Also clarified the two season-length controls: the top slider is now \u201cPreview a length\u201d (a projection that sets nothing), and the box below is \u201cSet the season length\u201d (the one that actually applies).",
+    ],
+  },
   {
     version: "0.455.0",
     summary: [

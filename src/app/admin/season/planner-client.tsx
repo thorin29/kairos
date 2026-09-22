@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { levelFromXp } from "@/lib/scoring/progression";
 import { setSeasonLength } from "@/lib/actions/settings";
+import { exportScoringSnapshot } from "@/lib/actions/scoring-export";
 import type { SeasonPlan } from "@/lib/queries/season-planner";
 
 const REFERENCE_WEEKS = [4, 6, 8, 13];
@@ -16,6 +17,10 @@ export function SeasonPlanner({ plan }: { plan: SeasonPlan }) {
   );
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
+  const [snapshot, setSnapshot] = useState<string | null>(null);
+  const [snapPending, startSnap] = useTransition();
+  const getSnapshot = () =>
+    startSnap(async () => setSnapshot(await exportScoringSnapshot()));
 
   const levelAt = (weeklyXp: number, w: number) =>
     levelFromXp(Math.round(weeklyXp * w * rate)).level;
@@ -79,7 +84,7 @@ export function SeasonPlanner({ plan }: { plan: SeasonPlan }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium">Season length: {weeks} weeks</span>
+          <span className="text-sm font-medium">Preview a length: {weeks} weeks</span>
           <input
             type="range"
             min={1}
@@ -132,7 +137,7 @@ export function SeasonPlanner({ plan }: { plan: SeasonPlan }) {
 
       {/* Apply a season length */}
       <div className="rounded-2xl border border-hairline bg-surface p-5">
-        <p className="text-sm font-medium">Season length</p>
+        <p className="text-sm font-medium">Set the season length</p>
         <p className="mt-1 text-sm text-muted">
           Changes only the season tier ladder. Character levels and stats are
           untouched.
@@ -191,6 +196,37 @@ export function SeasonPlanner({ plan }: { plan: SeasonPlan }) {
           <p className="mt-2 text-xs text-muted">
             A new {applyWeeks}-week season starts today when you apply.
           </p>
+        )}
+      </div>
+
+      {/* Scoring snapshot — live numbers to copy out for tuning. */}
+      <div className="rounded-2xl border border-hairline bg-surface p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Scoring snapshot</p>
+            <p className="mt-1 text-sm text-muted">
+              Everyone&rsquo;s live numbers &mdash; level and XP, this
+              season&rsquo;s tier and completion, streaks, companion, and where
+              each person&rsquo;s weekly XP comes from &mdash; as JSON to copy and
+              share for tuning. Reads only; changes nothing.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={snapPending}
+            onClick={getSnapshot}
+            className="inline-flex h-10 shrink-0 items-center rounded-full border border-accent/40 bg-accent/5 px-4 text-sm font-medium text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+          >
+            {snapPending ? "Building\u2026" : snapshot ? "Refresh" : "Get snapshot"}
+          </button>
+        </div>
+        {snapshot && (
+          <textarea
+            readOnly
+            value={snapshot}
+            onFocus={(e) => e.currentTarget.select()}
+            className="mt-3 h-56 w-full resize-y rounded-lg border border-hairline bg-ground p-3 font-mono text-[0.7rem] leading-relaxed"
+          />
         )}
       </div>
     </div>
