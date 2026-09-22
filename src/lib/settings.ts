@@ -63,6 +63,21 @@ export async function getMonthGoalDays(): Promise<number> {
   return Math.min(28, Math.max(1, n));
 }
 
+// How many days before a reading goal's due date it surfaces as an action item
+// on the reading button — a lead time, stored in days (the UI offers days/weeks/
+// months and converts). 0 means no early surfacing: only the current (earliest
+// unfinished) goal per book shows; a positive lead also floats a later goal once
+// it's within that many days of its due date, as a heads-up that more is coming.
+export const READING_REMINDER_LEAD_DAYS = "reading.reminderLeadDays";
+export const READING_REMINDER_LEAD_DAYS_DEFAULT = 0;
+
+export async function getReadingReminderLeadDays(): Promise<number> {
+  const raw = await getSetting(READING_REMINDER_LEAD_DAYS);
+  const n = Number.parseInt(raw ?? "", 10);
+  if (!Number.isFinite(n)) return READING_REMINDER_LEAD_DAYS_DEFAULT;
+  return Math.min(365, Math.max(0, n));
+}
+
 export type SharedStyle = "bands" | "blend";
 
 export type CalendarPrefs = {

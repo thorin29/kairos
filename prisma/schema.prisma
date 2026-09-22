@@ -773,8 +773,26 @@ model Book {
   finishedAt DateTime?
   createdAt  DateTime    @default(now())
   logs       BookLog[]
+  goals      ReadingGoal[]
 
   @@index([userId])
+}
+
+// Optional, sequential reading goals for a book: reach `target` (a page/chapter
+// in the book's unit) by `dueDate`. Goals are partial — they need not cover the
+// whole book — and purely a planning aid: a goal is met once the book's position
+// reaches its target, and reading's own Scholar XP is unaffected by them.
+model ReadingGoal {
+  id          String    @id @default(cuid())
+  bookId      String
+  book        Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  target      Int
+  dueDate     DateTime
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([bookId])
 }
 
 model BookLog {

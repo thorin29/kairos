@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.465.0";
+export const APP_VERSION = "0.466.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -116,11 +116,18 @@ export const MIGRATIONS = [
   "105_event_names",
   "106_event_series_id",
   "100_pool_eligibility",
+  "107_reading_goals",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.466.0",
+    summary: [
+      "Groundwork for reading goals (part 1). Adds a reading-goal record to each book \u2014 reach a page by a date, optional and sequential \u2014 and a setting for how far ahead a goal surfaces as a reminder. Ships the database migration; no visible change yet. The fullscreen add/edit and the reading button follow in the app.",
+    ],
+  },
   {
     version: "0.465.0",
     summary: [
