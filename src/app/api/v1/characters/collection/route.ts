@@ -2,7 +2,8 @@ import type { NextRequest } from "next/server";
 import { apiOk } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { prisma } from "@/lib/prisma";
-import { COMPANIONS, type CompanionEra } from "@/lib/companions";
+import { COMPANIONS, STAGE_NAMES, type CompanionEra } from "@/lib/companions";
+import { loadProgression } from "@/lib/queries/progression";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,11 +28,22 @@ export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
 
-  const ownedRows = await prisma.companion.findMany({
-    where: { userId: authed.device.person.id },
-    select: { species: true },
-  });
+  const [ownedRows, progression] = await Promise.all([
+    prisma.companion.findMany({
+      where: { userId: authed.device.person.id },
+      select: { species: true, mintedStage: true, isActive: true },
+    }),
+    loadProgression(),
+  ]);
   const owned = new Set(ownedRows.map((r) => r.species));
+
+  // The stage to show each owned creature at: the active one at its live growth
+  // stage, a shelved one frozen at the stage it was raised to.
+  const me = progression.find((p) => p.id === authed.device.person.id);
+  const activeStage = me?.companion.stage ?? 0;
+  const stageBySpecies = new Map(
+    ownedRows.map((r) => [r.species, r.isActive ? activeStage : (r.mintedStage ?? 2)] as const),
+  );
 
   const roster = Object.values(COMPANIONS);
   const eras = ERAS.map((era) => {
@@ -39,12 +51,17 @@ export async function GET(req: NextRequest) {
       .filter((s) => s.era === era.key)
       .map((s) => {
         const isOwned = owned.has(s.id);
+        const stage = stageBySpecies.get(s.id) ?? 0;
         return {
           id: s.id,
           rarity: s.rarity,
           owned: isOwned,
           name: isOwned ? s.name : null,
-          image: isOwned ? `/api/v1/companion-sprite?p=${encodeURIComponent(`${s.id}/adult.png`)}` : null,
+          /** 0 hatchling, 1 juvenile, 2 adult — how far you've raised it. */
+          stage: isOwned ? stage : null,
+          image: isOwned
+            ? `/api/v1/companion-sprite?p=${encodeURIComponent(`${s.id}/${STAGE_NAMES[stage]}.png`)}`
+            : null,
         };
       });
     return {

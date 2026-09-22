@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { currentSeasonWindow } from "@/lib/season";
 import { loadProgression } from "@/lib/queries/progression";
-import { pickHatch, stageForTenure, COMPANIONS } from "@/lib/companions";
+import { pickHatch, COMPANIONS } from "@/lib/companions";
 
 /**
  * Hatch a ready egg — the auth-free core shared by the web action and the app's
@@ -46,7 +46,7 @@ export async function hatchEggCore(
     }
     const ops = [];
     if (active) {
-      const stg = stageForTenure(Math.max(0, lifetimeXp - active.activeSinceXp));
+      const stg = me.companion.stage;
       ops.push(
         prisma.companion.update({
           where: { id: active.id },

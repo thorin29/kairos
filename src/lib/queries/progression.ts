@@ -10,7 +10,7 @@ import {
 } from "@/lib/dates";
 import { getScoringStart } from "@/lib/settings";
 import { currentSeasonWindow } from "@/lib/season";
-import { blendPalette, eggCostFor, stageForTenure, EGGS_PER_SEASON_CAP } from "@/lib/companions";
+import { blendPalette, eggCostFor, stageFromGrowth, EGGS_PER_SEASON_CAP } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
 import { readingXpForBook, bibleXpForChapters } from "@/lib/scoring/reading";
 import { loadBonuses } from "@/lib/queries/bonus";
@@ -143,7 +143,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     seasonKey: string | null;
     eggsThisSeason: number;
   };
-  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number };
+  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number; acquiredAt: Date };
   const stateByUser = new Map(
     (compStates as StateRow[]).map((s) => [s.userId, s]),
   );
@@ -355,11 +355,27 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         const eggReady = progress >= cost && eggsThisSeason < EGGS_PER_SEASON_CAP;
         const active = activeByUser.get(person.id);
         if (active) {
-          const tenure = Math.max(0, totalXp - active.activeSinceXp);
+          // Grow on clean days (and perfect weeks) since this companion hatched.
+          const acquiredISO = active.acquiredAt.toISOString().slice(0, 10);
+          const grownCleanDays = [...a.days.entries()].filter(
+            ([iso, b]) =>
+              iso >= acquiredISO &&
+              iso < today &&
+              b.assigned > 0 &&
+              b.missed === 0 &&
+              b.complete === b.assigned,
+          ).length;
+          const grownPerfectWeeks = [...a.weeks.entries()].filter(
+            ([wkISO, b]) =>
+              wkISO >= acquiredISO &&
+              b.assigned > 0 &&
+              b.complete === b.assigned &&
+              addDays(wkISO, 6) < today,
+          ).length;
           return {
             active: true,
             species: active.species,
-            stage: stageForTenure(tenure),
+            stage: stageFromGrowth(grownCleanDays, grownPerfectWeeks),
             shiny: active.shiny,
             incubationPct,
             eggReady,

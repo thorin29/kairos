@@ -222,6 +222,19 @@ export function stageForTenure(tenureXp: number): number {
   return 0;
 }
 
+// A companion hatches as a baby and grows up on CLEAN DAYS since it hatched —
+// days the child finished everything assigned. About a week of clean days per
+// stage, so a steady kid reaches adult in ~two weeks and a spotty one takes
+// longer; a perfect week accelerates it. Growth only climbs — a missed day
+// pauses it, never turns an adult back into a baby.
+export const CLEAN_DAY_STAGES = [0, 6, 12];
+export function stageFromGrowth(cleanDays: number, perfectWeeks: number): number {
+  const growth = cleanDays + perfectWeeks * 2;
+  if (growth >= CLEAN_DAY_STAGES[2]) return 2;
+  if (growth >= CLEAN_DAY_STAGES[1]) return 1;
+  return 0;
+}
+
 type Rarity = CompanionSpecies["rarity"];
 
 /** Rarity odds shift with how high you climbed your season (tier 1–10). Higher
