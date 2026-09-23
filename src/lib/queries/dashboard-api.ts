@@ -3,6 +3,7 @@ import "server-only";
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadWorkoutPlanNames } from "@/lib/queries/workouts";
+import { loadOverdueWorkoutDates } from "@/lib/queries/workout-log";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import { dayOfWeek, formatShort, fromDateColumn } from "@/lib/dates";
@@ -84,6 +85,10 @@ export type ApiDashboard = {
   money?: { pendingApprovals: number; rewardMonths: number } | null;
   categories: ApiCategoryBar[];
   overdue: ApiTask[];
+  /** Count of overdue workouts by the scheduled-workout rule (a scheduled
+   *  workout whose exercises weren\u2019t logged) \u2014 matches the log screen, unlike
+   *  the task-status overdue above. Drives the home Workouts button. */
+  workoutOverdue: number;
   groups: { category: Category; label: string; items: ApiTask[] }[];
   /** The person's own reading-plan entry for the day, shown in the Bible group
    *  as "Personal bible reading" and toggled via /reading/mark. Null when they
@@ -326,6 +331,8 @@ export async function loadApiDashboard(
 
   const choreBadges =
     dayISO === today ? await loadChoreBadges(userId, dayISO) : [];
+  const workoutOverdue =
+    dayISO === today ? (await loadOverdueWorkoutDates(userId, today)).length : 0;
 
   return {
     date: dayISO,
@@ -333,6 +340,7 @@ export async function loadApiDashboard(
     money,
     categories,
     overdue,
+    workoutOverdue,
     groups,
     personalReading,
     upForGrabs,

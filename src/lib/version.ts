@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.476.0";
+export const APP_VERSION = "0.477.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -122,6 +122,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.477.0",
+    summary: [
+      "The dashboard now reports a workout overdue count by the scheduled-workout rule (a scheduled workout whose exercises weren't logged), so the app's Workouts home button shows the right number \u2014 matching the log screen \u2014 instead of the task-status count that missed a lift you skipped on a day you logged something else.",
+    ],
+  },
   {
     version: "0.476.0",
     summary: [
