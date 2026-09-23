@@ -36,6 +36,7 @@ export function WorkoutLauncher({
   weekPlan,
   todayISO,
   summaryNames,
+  overdueCount = 0,
 }: {
   userId: string;
   dateISO: string;
@@ -56,6 +57,9 @@ export function WorkoutLauncher({
   /** When set, render ONE summary button for all of the day's workouts (their
    *  names, with an "N overdue" tag) instead of a per-workout row. */
   summaryNames?: string[];
+  /** Server-computed count of overdue workouts, so the closed summary button can
+   *  show it without waiting for the overlay's own fetch. */
+  overdueCount?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [logDate, setLogDate] = useState(dateISO);
@@ -127,7 +131,7 @@ export function WorkoutLauncher({
           </span>
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center text-sm">
-              {(overdueDates.length > 0
+              {(overdueCount > 0
                 ? summaryNames.slice(0, 2)
                 : summaryNames.slice(0, 3)
               ).map((n, i) => (
@@ -144,9 +148,9 @@ export function WorkoutLauncher({
               {summaryNames.length === 0 && (
                 <span className="text-muted">No workout today</span>
               )}
-              {overdueDates.length > 0 && (
+              {overdueCount > 0 && (
                 <span className="ml-2 font-medium text-red-700">
-                  {overdueDates.length} overdue
+                  {overdueCount} overdue
                 </span>
               )}
             </span>

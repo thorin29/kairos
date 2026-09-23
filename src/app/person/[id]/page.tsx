@@ -14,6 +14,7 @@ import {
   loadExercisePool,
   loadHiitWorkoutsForBoard,
 } from "@/lib/queries/workouts";
+import { loadOverdueWorkoutDates } from "@/lib/queries/workout-log";
 import { WorkoutLauncher } from "./workout-launcher";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
@@ -157,10 +158,11 @@ export default async function PersonPage({
 
   // Workout board data so a workout on the dashboard opens the same log step
   // as the Workouts page, scoped to each prompt's own day.
-  const [board, pool, hiitWorkouts] = await Promise.all([
+  const [board, pool, hiitWorkouts, overdueWorkoutDays] = await Promise.all([
     loadWorkoutsBoard(today),
     loadExercisePool(),
     loadHiitWorkoutsForBoard(),
+    loadOverdueWorkoutDates(id, today),
   ]);
   const boardPerson = board.people.find((p) => p.user.id === id) ?? null;
   const unitSystem = board.unitSystem;
@@ -608,6 +610,7 @@ export default async function PersonPage({
                         weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
                         todayISO={today}
                         summaryNames={todayEx.map((r) => r.title)}
+                        overdueCount={overdueWorkoutDays.length}
                       />
                     </Card>
                   </section>

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.473.0";
+export const APP_VERSION = "0.474.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -122,6 +122,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.474.0",
+    summary: [
+      "The home Workouts button now shows its \u201cN overdue\u201d count in red right away, without having to open it \u2014 the count is computed on the server and passed in, instead of only being fetched once the overlay opens.",
+    ],
+  },
   {
     version: "0.473.0",
     summary: [
