@@ -182,7 +182,7 @@ export function WorkoutLauncher({
                 {logDate === todayISO && overdueDates.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="font-display text-sm font-semibold text-red-700">
-                      Overdue
+                      {overdueDates.length === 1 ? "Overdue workout" : "Overdue workouts"}
                     </h4>
                     {overdueDates.map((od) => {
                       const w = weekPlan[dayOfWeek(od)] ?? [];

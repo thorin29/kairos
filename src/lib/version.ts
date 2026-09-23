@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.467.0";
+export const APP_VERSION = "0.468.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -122,6 +122,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.468.0",
+    summary: [
+      "Workout logging: the overdue section now reads \u201cOverdue workout\u201d or \u201cOverdue workouts\u201d depending on how many there are, and the redundant \u201c(today\u2019s max)\u201d next to each weight field is gone \u2014 the placeholder inside the box already says it.",
+    ],
+  },
   {
     version: "0.467.0",
     summary: [

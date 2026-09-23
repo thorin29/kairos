@@ -361,10 +361,7 @@ function MetricField({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="min-w-[8rem] flex-1 text-sm font-medium">
-        {label}
-        {hint && <span className="ml-1 text-xs font-normal text-muted">({hint})</span>}
-      </span>
+      <span className="min-w-[8rem] flex-1 text-sm font-medium">{label}</span>
       <label className="flex items-center gap-1.5 text-xs text-muted">
         <input
           inputMode="decimal"
