@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.471.0";
+export const APP_VERSION = "0.472.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -122,6 +122,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.472.0",
+    summary: [
+      "Overdue workouts now track the scheduled workout itself, not just \u201cdid you work out that day.\u201d If a day's workout task was completed by something else \u2014 a sport confirmation, an ad-hoc log \u2014 the scheduled workout still shows as overdue when its own exercises were never logged. Fixes a missed lift being hidden because a sport was logged the same day.",
+    ],
+  },
   {
     version: "0.471.0",
     summary: [

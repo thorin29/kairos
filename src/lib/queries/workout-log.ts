@@ -941,7 +941,11 @@ export async function loadOverdueWorkoutDays(
         userId,
         category: "EXERCISE",
         generatedFrom: { startsWith: "workout:" },
-        status: "PENDING",
+        // Not just PENDING: a day whose task was completed by *something else*
+        // (a sport confirm, an ad-hoc log) can still have an untouched scheduled
+        // workout. We decide overdue by whether the scheduled workout itself was
+        // logged, below — not by the binary day task.
+        status: { in: ["PENDING", "COMPLETE"] },
         dueDate: { lt: toDateColumn(beforeISO) },
       },
       orderBy: { dueDate: "asc" },
@@ -959,40 +963,23 @@ export async function loadOverdueWorkoutDays(
     if (seen.has(iso)) continue;
     seen.add(iso);
     const workouts = await loadTodayPlannedWorkouts(userId, iso);
-    if (workouts.length > 0) out.push({ date: iso, workouts });
+    // A scheduled workout is still due if none of its exercises were logged,
+    // whatever else happened that day.
+    const unlogged = workouts.filter(
+      (w) => w.exercises.length > 0 && w.exercises.every((e) => e.value == null),
+    );
+    if (unlogged.length > 0) out.push({ date: iso, workouts: unlogged });
   }
   return out;
 }
 
-/** Just the dates of a person's still-pending, not-yet-cleared overdue workouts
- *  (newest-missed last). The web already has the weekly plan, so it only needs
- *  the dates and renders each day's plan itself. */
+/** Just the dates of a person's overdue workouts (a scheduled workout whose
+ *  exercises weren't logged), newest-missed last. The web has the weekly plan,
+ *  so it renders each day's plan itself. */
 export async function loadOverdueWorkoutDates(
   userId: string,
   beforeISO: string,
 ): Promise<string[]> {
-  const [tasks, stale] = await Promise.all([
-    prisma.task.findMany({
-      where: {
-        userId,
-        category: "EXERCISE",
-        generatedFrom: { startsWith: "workout:" },
-        status: "PENDING",
-        dueDate: { lt: toDateColumn(beforeISO) },
-      },
-      orderBy: { dueDate: "asc" },
-      select: { dueDate: true },
-    }),
-    loadStaleContext(beforeISO),
-  ]);
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const t of tasks) {
-    const iso = fromDateColumn(t.dueDate);
-    if (daysBetween(iso, beforeISO) > stale.workoutOverdueDays) continue;
-    if (seen.has(iso)) continue;
-    seen.add(iso);
-    out.push(iso);
-  }
-  return out;
+  const days = await loadOverdueWorkoutDays(userId, beforeISO);
+  return days.map((d) => d.date);
 }
