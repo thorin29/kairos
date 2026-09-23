@@ -583,6 +583,36 @@ export default async function PersonPage({
                   />
                 );
               }
+              if (c === "EXERCISE") {
+                const todayEx = catToday("EXERCISE");
+                const overdueEx = catOverdue("EXERCISE");
+                if (todayEx.length === 0 && overdueEx.length === 0) return null;
+                const wdToday = workoutDay(today);
+                return (
+                  <section key="exercise">
+                    <CategoryHeader category="EXERCISE" />
+                    <Card>
+                      <WorkoutLauncher
+                        userId={id}
+                        dateISO={today}
+                        title="Workouts"
+                        done={false}
+                        overdue={false}
+                        workouts={wdToday.workouts}
+                        doneLabels={wdToday.doneLabels}
+                        rested={wdToday.rested}
+                        paused={wdToday.paused}
+                        pool={pool}
+                        hiitWorkouts={hiitWorkouts}
+                        unitSystem={unitSystem}
+                        weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
+                        todayISO={today}
+                        summaryNames={todayEx.map((r) => r.title)}
+                      />
+                    </Card>
+                  </section>
+                );
+              }
               const items = catRows(c);
               const showBible = c === "BIBLE" && Boolean(personalToday);
               if (items.length === 0 && !showBible) return null;

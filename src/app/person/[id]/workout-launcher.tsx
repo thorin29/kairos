@@ -35,6 +35,7 @@ export function WorkoutLauncher({
   unitSystem,
   weekPlan,
   todayISO,
+  summaryNames,
 }: {
   userId: string;
   dateISO: string;
@@ -52,6 +53,9 @@ export function WorkoutLauncher({
    *  that day's scheduled workout. */
   weekPlan: PlanWorkout[][];
   todayISO: string;
+  /** When set, render ONE summary button for all of the day's workouts (their
+   *  names, with an "N overdue" tag) instead of a per-workout row. */
+  summaryNames?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [logDate, setLogDate] = useState(dateISO);
@@ -106,47 +110,95 @@ export function WorkoutLauncher({
 
   return (
     <div className="px-4 py-3">
-      <button
-        type="button"
-        onClick={() => {
-          setLogDate(dateISO);
-          setOpen(true);
-        }}
-        className="flex w-full items-center gap-3 text-left"
-      >
-        <span
-          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-            done
-              ? "bg-accent text-white"
-              : "border border-hairline text-muted"
-          }`}
-          aria-hidden
+      {summaryNames ? (
+        <button
+          type="button"
+          onClick={() => {
+            setLogDate(dateISO);
+            setOpen(true);
+          }}
+          className="flex w-full items-center gap-3 text-left"
         >
-          {done ? (
-            <CheckIcon className="h-4 w-4" />
-          ) : (
+          <span
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-hairline text-muted"
+            aria-hidden
+          >
             <DumbbellIcon className="h-3.5 w-3.5" />
-          )}
-        </span>
-
-        <span className="min-w-0 flex-1">
-          <span className={done ? "text-muted line-through" : undefined}>
-            {title}
           </span>
-          <span className="mt-0.5 block text-xs text-muted">
-            Workouts
-            {overdue && (
-              <span className="tabular ml-2 font-medium text-red-700">
-                due {formatShort(dateISO)}
-              </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center text-sm">
+              {(overdueDates.length > 0
+                ? summaryNames.slice(0, 2)
+                : summaryNames.slice(0, 3)
+              ).map((n, i) => (
+                <span key={`${n}-${i}`} className="flex items-center">
+                  {i > 0 && (
+                    <span
+                      className="mx-1.5 inline-block h-1 w-1 rounded-full bg-ink"
+                      aria-hidden
+                    />
+                  )}
+                  {n}
+                </span>
+              ))}
+              {summaryNames.length === 0 && (
+                <span className="text-muted">No workout today</span>
+              )}
+              {overdueDates.length > 0 && (
+                <span className="ml-2 font-medium text-red-700">
+                  {overdueDates.length} overdue
+                </span>
+              )}
+            </span>
+            <span className="mt-0.5 block text-xs text-muted">Workouts</span>
+          </span>
+          <span className="shrink-0 rounded-full border border-hairline px-3 py-1 text-xs font-medium text-muted">
+            Log
+          </span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setLogDate(dateISO);
+            setOpen(true);
+          }}
+          className="flex w-full items-center gap-3 text-left"
+        >
+          <span
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+              done
+                ? "bg-accent text-white"
+                : "border border-hairline text-muted"
+            }`}
+            aria-hidden
+          >
+            {done ? (
+              <CheckIcon className="h-4 w-4" />
+            ) : (
+              <DumbbellIcon className="h-3.5 w-3.5" />
             )}
           </span>
-        </span>
 
-        <span className="shrink-0 rounded-full border border-hairline px-3 py-1 text-xs font-medium text-muted">
-          {done ? "Edit" : "Log"}
-        </span>
-      </button>
+          <span className="min-w-0 flex-1">
+            <span className={done ? "text-muted line-through" : undefined}>
+              {title}
+            </span>
+            <span className="mt-0.5 block text-xs text-muted">
+              Workouts
+              {overdue && (
+                <span className="tabular ml-2 font-medium text-red-700">
+                  due {formatShort(dateISO)}
+                </span>
+              )}
+            </span>
+          </span>
+
+          <span className="shrink-0 rounded-full border border-hairline px-3 py-1 text-xs font-medium text-muted">
+            {done ? "Edit" : "Log"}
+          </span>
+        </button>
+      )}
 
       {open && (
         <div
