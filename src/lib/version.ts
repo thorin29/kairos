@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.478.0";
+export const APP_VERSION = "0.481.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -117,11 +117,18 @@ export const MIGRATIONS = [
   "106_event_series_id",
   "100_pool_eligibility",
   "107_reading_goals",
+  "108_reading_goal_start",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.481.0",
+    summary: [
+      "Reading goals now show on the home page. A \u201cBook reading\u201d section under Bible reading \u2014 on both the person page and the app home \u2014 lists each book with an active goal and a progress bar toward that goal's page, measured across the goal's segment (the previous goal's target up to this one's, or your position when the first goal was set). Once a goal's date passes without you reaching it, the bar and percentage go red. Adds the migration and moves reading off the character screen.",
+    ],
+  },
   {
     version: "0.478.0",
     summary: [

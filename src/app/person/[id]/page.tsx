@@ -15,6 +15,7 @@ import {
   loadHiitWorkoutsForBoard,
 } from "@/lib/queries/workouts";
 import { loadOverdueWorkoutDates } from "@/lib/queries/workout-log";
+import { loadReadingProgress } from "@/lib/queries/reading";
 import { WorkoutLauncher } from "./workout-launcher";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
@@ -59,7 +60,7 @@ import { pendingMoneyCount } from "@/lib/queries/money";
 import { pendingBibleRewards } from "@/lib/bible-rewards";
 import { loadDashboardTrips } from "@/lib/queries/groceries";
 import { Avatar } from "@/components/avatar";
-import { LockIcon, MoonIcon, FlameIcon, StarIcon } from "@/components/icons";
+import { LockIcon, MoonIcon, FlameIcon, StarIcon, BookIcon } from "@/components/icons";
 import {
   ChoresIcon,
   BibleIcon,
@@ -158,11 +159,12 @@ export default async function PersonPage({
 
   // Workout board data so a workout on the dashboard opens the same log step
   // as the Workouts page, scoped to each prompt's own day.
-  const [board, pool, hiitWorkouts, overdueWorkoutDays] = await Promise.all([
+  const [board, pool, hiitWorkouts, overdueWorkoutDays, readingProgress] = await Promise.all([
     loadWorkoutsBoard(today),
     loadExercisePool(),
     loadHiitWorkoutsForBoard(),
     loadOverdueWorkoutDates(id, today),
+    loadReadingProgress(id),
   ]);
   const boardPerson = board.people.find((p) => p.user.id === id) ?? null;
   const unitSystem = board.unitSystem;
@@ -519,7 +521,7 @@ export default async function PersonPage({
       )}
 
       {(() => {
-        const DAY_ORDER = ["BIBLE", "CHORE", "SCHOOL", "EXERCISE", "WORK", "APPOINTMENT", "OTHER"] as const;
+        const DAY_ORDER = ["BIBLE", "READING", "CHORE", "SCHOOL", "EXERCISE", "WORK", "APPOINTMENT", "OTHER"] as const;
         const byDate = (a: (typeof rows)[number], b: (typeof rows)[number]) =>
           a.dueDateISO.localeCompare(b.dueDateISO);
         // Overdue ("carried over") work now sits under its own category, oldest
@@ -544,7 +546,9 @@ export default async function PersonPage({
             ? schoolHasContent
             : c === "CHORE"
               ? choreHasContent
-              : catRows(c).length > 0 || (c === "BIBLE" && Boolean(personalToday)),
+              : c === "READING"
+                ? readingProgress.length > 0
+                : catRows(c).length > 0 || (c === "BIBLE" && Boolean(personalToday)),
         );
         if (!anyBlock) {
           return <Card className="p-6 text-sm text-muted">Nothing scheduled today.</Card>;
@@ -552,6 +556,40 @@ export default async function PersonPage({
         return (
           <div className="space-y-8">
             {DAY_ORDER.map((c) => {
+              if (c === "READING") {
+                if (readingProgress.length === 0) return null;
+                return (
+                  <section key="reading">
+                    <div className="mb-3 flex items-center gap-2">
+                      <span aria-hidden style={{ color: "#b45309" }} className="flex">
+                        <BookIcon className="h-5 w-5" />
+                      </span>
+                      <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">
+                        Book reading
+                      </h2>
+                    </div>
+                    <Card className="divide-y divide-hairline">
+                      {readingProgress.map((r) => (
+                        <div key={r.bookId} className="px-4 py-3">
+                          <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                            <span className="min-w-0 truncate pr-2">{r.title}</span>
+                            <span
+                              className={`tabular shrink-0 text-xs ${r.behind ? "font-medium text-red-700" : "text-muted"}`}
+                            >
+                              {r.pct}%
+                            </span>
+                          </div>
+                          <CompletionBar
+                            percent={r.pct >= 0 ? r.pct : 0}
+                            overdue={r.pct < 0 ? Math.abs(r.pct) : 0}
+                            total={100}
+                          />
+                        </div>
+                      ))}
+                    </Card>
+                  </section>
+                );
+              }
               if (c === "SCHOOL") {
                 return (
                   <SchoolCard

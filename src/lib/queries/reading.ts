@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { getReadingReminderLeadDays } from "@/lib/settings";
+import { todayISO } from "@/lib/dates";
 
 export type ReadingGoalView = {
   id: string;
@@ -204,4 +205,62 @@ export async function loadReadingGoalItems(userId: string): Promise<ReadingGoalI
   }
   items.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   return items;
+}
+
+export type ReadingProgress = {
+  bookId: string;
+  title: string;
+  unit: "PAGES" | "CHAPTERS";
+  /** Progress through the active goal's segment, -100..100. Negative means you've
+   *  fallen behind (past a goal's date without meeting it). */
+  pct: number;
+  behind: boolean;
+  target: number;
+  dueDate: string;
+};
+
+/** Per-book reading progress toward the currently-active goal. The active goal is
+ *  the earliest one whose date is today or later (else the last), and progress is
+ *  measured across its segment [startPage, target]. Books with no live goals are
+ *  omitted, so an empty result hides the Book reading section. */
+export async function loadReadingProgress(userId: string): Promise<ReadingProgress[]> {
+  const today = todayISO();
+  const books = await prisma.book.findMany({
+    where: {
+      userId,
+      finishedAt: null,
+      shelved: false,
+      goals: { some: { completed: false } },
+    },
+    select: {
+      id: true,
+      title: true,
+      unit: true,
+      position: true,
+      goals: {
+        select: { startPage: true, target: true, dueDate: true },
+        orderBy: { dueDate: "asc" },
+      },
+    },
+  });
+  const out: ReadingProgress[] = [];
+  for (const b of books) {
+    if (b.goals.length === 0) continue;
+    const active =
+      b.goals.find((g) => g.dueDate.toISOString().slice(0, 10) >= today) ??
+      b.goals[b.goals.length - 1];
+    const span = active.target - active.startPage;
+    const raw = span > 0 ? ((b.position - active.startPage) / span) * 100 : 100;
+    const pct = Math.max(-100, Math.min(100, Math.round(raw)));
+    out.push({
+      bookId: b.id,
+      title: b.title,
+      unit: b.unit as "PAGES" | "CHAPTERS",
+      pct,
+      behind: pct < 0,
+      target: active.target,
+      dueDate: active.dueDate.toISOString(),
+    });
+  }
+  return out;
 }

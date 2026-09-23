@@ -4,6 +4,7 @@ import { Category, TaskStatus } from "@/generated/prisma/client";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadWorkoutPlanNames } from "@/lib/queries/workouts";
 import { loadOverdueWorkoutDates } from "@/lib/queries/workout-log";
+import { loadReadingProgress, type ReadingProgress } from "@/lib/queries/reading";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { CATEGORY_LABELS } from "@/lib/colors";
 import { dayOfWeek, formatShort, fromDateColumn } from "@/lib/dates";
@@ -89,6 +90,8 @@ export type ApiDashboard = {
    *  workout whose exercises weren\u2019t logged) \u2014 matches the log screen, unlike
    *  the task-status overdue above. Drives the home Workouts button. */
   workoutOverdue: number;
+  /** Per-book reading-goal progress for the Book reading home section. */
+  reading: ReadingProgress[];
   groups: { category: Category; label: string; items: ApiTask[] }[];
   /** The person's own reading-plan entry for the day, shown in the Bible group
    *  as "Personal bible reading" and toggled via /reading/mark. Null when they
@@ -333,6 +336,7 @@ export async function loadApiDashboard(
     dayISO === today ? await loadChoreBadges(userId, dayISO) : [];
   const workoutOverdue =
     dayISO === today ? (await loadOverdueWorkoutDates(userId, today)).length : 0;
+  const reading = dayISO === today ? await loadReadingProgress(userId) : [];
 
   return {
     date: dayISO,
@@ -341,6 +345,7 @@ export async function loadApiDashboard(
     categories,
     overdue,
     workoutOverdue,
+    reading,
     groups,
     personalReading,
     upForGrabs,

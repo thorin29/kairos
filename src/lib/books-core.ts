@@ -61,24 +61,49 @@ export function parseGoalsInput(raw: unknown): GoalInput[] | undefined {
  *  and existing goals absent from the list are removed. Completion is recomputed
  *  separately, against the reader's position. */
 async function syncBookGoals(bookId: string, goals: GoalInput[]): Promise<void> {
-  const existing = await prisma.readingGoal.findMany({
-    where: { bookId },
-    select: { id: true },
-  });
+  const [book, existing] = await Promise.all([
+    prisma.book.findUnique({ where: { id: bookId }, select: { position: true } }),
+    prisma.readingGoal.findMany({ where: { bookId }, select: { id: true, startPage: true } }),
+  ]);
+  const bookPosition = book?.position ?? 0;
   const existingIds = new Set(existing.map((e) => e.id));
-  const keep = new Set<string>();
+  const existingStart = new Map(existing.map((e) => [e.id, e.startPage]));
 
-  for (const g of goals) {
-    const target = readCount(g.target);
-    const dueMs = Date.parse(String(g.dueDate));
-    if (target === null || !Number.isFinite(dueMs)) continue;
-    const dueDate = new Date(dueMs);
+  // Parse + validate, then order by due date so each goal's segment starts where
+  // the previous one ended.
+  const parsed = goals
+    .map((g) => {
+      const target = readCount(g.target);
+      const dueMs = Date.parse(String(g.dueDate));
+      if (target === null || !Number.isFinite(dueMs)) return null;
+      return { id: (g.id ?? null) as string | null, target, dueDate: new Date(dueMs) };
+    })
+    .filter((g): g is { id: string | null; target: number; dueDate: Date } => g !== null)
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+
+  const keep = new Set<string>();
+  let prevTarget: number | null = null;
+  for (const g of parsed) {
+    // First goal anchors at the reader's position when it was created (kept
+    // stable across edits); later goals start at the previous goal's target.
+    const startPage =
+      prevTarget === null
+        ? g.id && existingStart.has(g.id)
+          ? existingStart.get(g.id)!
+          : bookPosition
+        : prevTarget;
     if (g.id && existingIds.has(g.id)) {
       keep.add(g.id);
-      await prisma.readingGoal.update({ where: { id: g.id }, data: { target, dueDate } });
+      await prisma.readingGoal.update({
+        where: { id: g.id },
+        data: { target: g.target, dueDate: g.dueDate, startPage },
+      });
     } else {
-      await prisma.readingGoal.create({ data: { bookId, target, dueDate } });
+      await prisma.readingGoal.create({
+        data: { bookId, target: g.target, dueDate: g.dueDate, startPage },
+      });
     }
+    prevTarget = g.target;
   }
 
   const remove = [...existingIds].filter((id) => !keep.has(id));

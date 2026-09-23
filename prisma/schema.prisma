@@ -786,6 +786,10 @@ model ReadingGoal {
   id          String    @id @default(cuid())
   bookId      String
   book        Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  // The page this goal's segment starts from: the previous goal's target, or —
+  // for the first goal — the reader's position when the goals were set. Progress
+  // toward the goal is measured across [startPage, target].
+  startPage   Int       @default(0)
   target      Int
   dueDate     DateTime
   completed   Boolean   @default(false)
