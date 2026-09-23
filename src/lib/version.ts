@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.469.0";
+export const APP_VERSION = "0.470.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -122,6 +122,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.470.0",
+    summary: [
+      "Fixed overdue workouts. A scheduled day that passed without the app running the task generator that day never got its task, so it couldn't show as overdue \u2014 the generator now backfills the overdue window (guarded so a brand-new plan doesn't invent missed days), so multiple non-expired overdue workouts all show. Also, in \u201cLog a different workout\u201d the Type and Exercise pickers now sit on one row (Type narrow, Exercise wide) instead of stacked.",
+    ],
+  },
   {
     version: "0.469.0",
     summary: [

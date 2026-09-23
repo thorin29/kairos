@@ -14,6 +14,7 @@ import {
   isRotationWorkoutDay,
   type RotationShape,
 } from "@/lib/workouts/rotation";
+import { WORKOUT_OVERDUE_MAX } from "@/lib/settings";
 
 const HORIZON_DAYS = 14;
 
@@ -28,8 +29,8 @@ const HORIZON_DAYS = 14;
  * alone here.
  */
 export async function generateWorkoutTasks(
-  fromISO: string = todayISO(),
-  days: number = HORIZON_DAYS,
+  fromISO: string = addDays(todayISO(), -WORKOUT_OVERDUE_MAX),
+  days: number = HORIZON_DAYS + WORKOUT_OVERDUE_MAX,
 ): Promise<{ created: number; removed: number }> {
   const toISO = addDays(fromISO, days - 1);
 
@@ -51,7 +52,7 @@ export async function generateWorkoutTasks(
     }),
     prisma.plannedWorkout.findMany({
       where: { isRest: false },
-      select: { userId: true, dayOfWeek: true },
+      select: { userId: true, dayOfWeek: true, createdAt: true },
     }),
     // Household pauses (vacations) suppress workouts for everyone on the days
     // they cover — no prompt is generated, so nothing shows as due or overdue.
@@ -115,9 +116,14 @@ export async function generateWorkoutTasks(
   // A person trains on a weekday if they have a planned workout for it, or a
   // scheduled exercise still in its date window.
   const trains = new Set<string>();
+  const trainsSince = new Map<string, string>();
   for (const w of planned) {
     if (rotationUsers.has(w.userId)) continue;
-    trains.add(`${w.userId}|${w.dayOfWeek}`);
+    const key = `${w.userId}|${w.dayOfWeek}`;
+    trains.add(key);
+    const since = w.createdAt.toISOString().slice(0, 10);
+    const prev = trainsSince.get(key);
+    if (!prev || since < prev) trainsSince.set(key, since);
   }
 
   const expected = new Map<
@@ -149,6 +155,8 @@ export async function generateWorkoutTasks(
       const sep = key.lastIndexOf("|");
       const userId = key.slice(0, sep);
       if (Number(key.slice(sep + 1)) !== dow) continue;
+      const since = trainsSince.get(key);
+      if (since && iso < since) continue;
       expected.set(`${userId}|${iso}`, {
         userId,
         category: Category.EXERCISE,

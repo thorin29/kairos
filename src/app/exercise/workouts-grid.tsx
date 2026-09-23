@@ -1147,8 +1147,12 @@ export function CustomWorkoutForm({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div className={showRecordChoice ? "" : "col-span-2"}>
+      <div className="grid grid-cols-3 gap-3">
+        <div
+          className={
+            showRecordChoice || (!isHiit && isPoolCat) ? "" : "col-span-3"
+          }
+        >
           <label className={CAPTION}>Type</label>
           <select
             value={category}
@@ -1163,7 +1167,7 @@ export function CustomWorkoutForm({
           </select>
         </div>
         {showRecordChoice && (
-          <div>
+          <div className="col-span-2">
             <label className={CAPTION}>Record</label>
             <select
               value={metric}
@@ -1176,6 +1180,46 @@ export function CustomWorkoutForm({
                 </option>
               ))}
             </select>
+          </div>
+        )}
+        {!isHiit && isPoolCat && !showRecordChoice && (
+          <div className="col-span-2">
+            <label className={CAPTION}>Exercise</label>
+            {poolMissing ? (
+              <p className="rounded-xl border border-hairline bg-ground/40 px-3 py-2 text-sm text-muted">
+                No {CATEGORY_LABEL[category].toLowerCase()} exercises in the pool
+                yet — add them in the Workouts admin.
+              </p>
+            ) : (
+              <select
+                value={poolId}
+                onChange={(e) => setPoolId(e.target.value)}
+                className={FIELD}
+              >
+                {category === "WEIGHTS"
+                  ? [...MUSCLE_GROUPS, null].map((mg) => {
+                      const items = options.filter((o) => o.muscleGroup === mg);
+                      if (items.length === 0) return null;
+                      return (
+                        <optgroup
+                          key={mg ?? "other"}
+                          label={mg ? MUSCLE_GROUP_LABEL[mg] : "Other"}
+                        >
+                          {items.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })
+                  : options.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+              </select>
+            )}
           </div>
         )}
       </div>
@@ -1192,47 +1236,6 @@ export function CustomWorkoutForm({
         />
       ) : (
         <>
-      {isPoolCat && (
-        <div>
-          <label className={CAPTION}>Exercise</label>
-          {poolMissing ? (
-            <p className="rounded-xl border border-hairline bg-ground/40 px-3 py-2 text-sm text-muted">
-              No {CATEGORY_LABEL[category].toLowerCase()} exercises in the pool
-              yet — add them in the Workouts admin.
-            </p>
-          ) : (
-            <select
-              value={poolId}
-              onChange={(e) => setPoolId(e.target.value)}
-              className={FIELD}
-            >
-              {category === "WEIGHTS"
-                ? [...MUSCLE_GROUPS, null].map((mg) => {
-                    const items = options.filter((o) => o.muscleGroup === mg);
-                    if (items.length === 0) return null;
-                    return (
-                      <optgroup
-                        key={mg ?? "other"}
-                        label={mg ? MUSCLE_GROUP_LABEL[mg] : "Other"}
-                      >
-                        {items.map((o) => (
-                          <option key={o.id} value={o.id}>
-                            {o.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    );
-                  })
-                : options.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.name}
-                    </option>
-                  ))}
-            </select>
-          )}
-        </div>
-      )}
-
       <div>
         <label className={CAPTION}>Result</label>
         {isSport ? (
