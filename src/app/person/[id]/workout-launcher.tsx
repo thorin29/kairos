@@ -142,10 +142,7 @@ export function WorkoutLauncher({
               ).map((n, i) => (
                 <span key={`${n}-${i}`} className="flex items-center">
                   {(i > 0 || overdueCount > 0) && (
-                    <span
-                      className="mx-1.5 inline-block h-1 w-1 rounded-full bg-ink"
-                      aria-hidden
-                    />
+                    <span className="mx-1.5">&middot;</span>
                   )}
                   {n}
                 </span>
