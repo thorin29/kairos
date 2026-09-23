@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   if ("response" in authed) return authed.response;
   const body = (await req.json().catch(() => ({}))) as { leadDays?: unknown };
   const days = Number(body.leadDays);
-  if (!Number.isFinite(days)) return apiError("Invalid leadDays", 400);
+  if (!Number.isFinite(days)) return apiError("validation", "Invalid leadDays");
   await setReadingReminderLeadDays(days);
   return apiOk({ leadDays: await getReadingReminderLeadDays() });
 }
