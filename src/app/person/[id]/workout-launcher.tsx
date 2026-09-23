@@ -161,12 +161,23 @@ export function WorkoutLauncher({
             className="animate-card-zoom my-4 w-full max-w-2xl"
           >
             <div className="rounded-2xl border border-hairline bg-surface p-6 shadow-xl">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-display text-lg font-semibold">{title}</h3>
-                  <p className="mt-0.5 text-sm text-muted">
-                    Logging for {formatShort(logDate)}
-                  </p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <h3 className="font-display text-lg font-semibold">
+                    Log workout
+                  </h3>
+                  <DateField
+                    value={logDate}
+                    max={todayISO}
+                    min={addDays(todayISO, -90)}
+                    onChange={(v) => {
+                      const d = v || dateISO;
+                      setLogDate(d);
+                      if (d !== todayISO) setLoadingLogged(true);
+                    }}
+                    ariaLabel="Date"
+                    className="tabular h-11 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
+                  />
                 </div>
                 <button
                   type="button"
@@ -208,31 +219,11 @@ export function WorkoutLauncher({
                   </div>
                 )}
 
-                <div>
-                  <label
-                    htmlFor="launcher-log-date"
-                    className="mb-1.5 block text-sm font-medium"
-                  >
-                    Date
-                  </label>
-                  <DateField
-                    value={logDate}
-                    max={todayISO}
-                    min={addDays(todayISO, -90)}
-                    onChange={(v) => {
-                      const d = v || dateISO;
-                      setLogDate(d);
-                      if (d !== todayISO) setLoadingLogged(true);
-                    }}
-                    ariaLabel="Date"
-                    className="tabular h-11 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
-                  />
-                  {logDate !== dateISO && (
-                    <p className="mt-1 text-xs text-muted">
-                      Recording a workout for a different day.
-                    </p>
-                  )}
-                </div>
+                {logDate !== dateISO && (
+                  <p className="text-xs text-muted">
+                    Recording a workout for a different day.
+                  </p>
+                )}
 
                 {loadingLogged ? (
                   <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
