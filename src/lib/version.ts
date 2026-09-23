@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.474.0";
+export const APP_VERSION = "0.475.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -122,6 +122,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.475.0",
+    summary: [
+      "The home Workouts button now matches the School card: overdue first (in red), then today's workout names, separated by a small black dot \u2014 and the redundant \u201cWorkouts\u201d line beneath it (it's already the section header) is gone.",
+    ],
+  },
   {
     version: "0.474.0",
     summary: [

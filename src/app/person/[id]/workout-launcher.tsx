@@ -131,12 +131,17 @@ export function WorkoutLauncher({
           </span>
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center text-sm">
+              {overdueCount > 0 && (
+                <span className="font-medium text-red-700">
+                  {overdueCount} overdue
+                </span>
+              )}
               {(overdueCount > 0
                 ? summaryNames.slice(0, 2)
                 : summaryNames.slice(0, 3)
               ).map((n, i) => (
                 <span key={`${n}-${i}`} className="flex items-center">
-                  {i > 0 && (
+                  {(i > 0 || overdueCount > 0) && (
                     <span
                       className="mx-1.5 inline-block h-1 w-1 rounded-full bg-ink"
                       aria-hidden
@@ -145,16 +150,10 @@ export function WorkoutLauncher({
                   {n}
                 </span>
               ))}
-              {summaryNames.length === 0 && (
+              {summaryNames.length === 0 && overdueCount === 0 && (
                 <span className="text-muted">No workout today</span>
               )}
-              {overdueCount > 0 && (
-                <span className="ml-2 font-medium text-red-700">
-                  {overdueCount} overdue
-                </span>
-              )}
             </span>
-            <span className="mt-0.5 block text-xs text-muted">Workouts</span>
           </span>
           <span className="shrink-0 rounded-full border border-hairline px-3 py-1 text-xs font-medium text-muted">
             Log
