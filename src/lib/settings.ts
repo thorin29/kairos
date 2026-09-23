@@ -78,6 +78,11 @@ export async function getReadingReminderLeadDays(): Promise<number> {
   return Math.min(365, Math.max(0, n));
 }
 
+export async function setReadingReminderLeadDays(days: number): Promise<void> {
+  const n = Math.min(365, Math.max(0, Math.round(days)));
+  await setSetting(READING_REMINDER_LEAD_DAYS, String(n));
+}
+
 export type SharedStyle = "bands" | "blend";
 
 export type CalendarPrefs = {
