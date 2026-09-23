@@ -291,7 +291,7 @@ function PlanRow({
             </div>
           ) : metricOnly ? (
             <MetricField
-              label={workout.name}
+              label=""
               metric={soloMetric}
               unit={metricUnit(soloMetric, unitSystem)}
               value={values["_solo"] ?? ""}
@@ -308,7 +308,7 @@ function PlanRow({
                 return (
                   <MetricField
                     key={e.id}
-                    label={e.name}
+                    label={trackedExercises.length === 1 ? "" : e.name}
                     metric={m}
                     unit={unit}
                     hint={m === "WEIGHT" ? "today's max" : undefined}
@@ -361,7 +361,9 @@ function MetricField({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="min-w-[8rem] flex-1 text-sm font-medium">{label}</span>
+      {label && (
+        <span className="min-w-[8rem] flex-1 text-sm font-medium">{label}</span>
+      )}
       <label className="flex items-center gap-1.5 text-xs text-muted">
         <input
           inputMode="decimal"

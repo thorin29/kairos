@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   addDays,
   dayOfWeek,
+  daysBetween,
   fromDateColumn,
   householdTz,
   localParts,
@@ -29,10 +30,18 @@ const HORIZON_DAYS = 14;
  * alone here.
  */
 export async function generateWorkoutTasks(
-  fromISO: string = addDays(todayISO(), -WORKOUT_OVERDUE_MAX),
-  days: number = HORIZON_DAYS + WORKOUT_OVERDUE_MAX,
+  fromISO: string = todayISO(),
+  days: number = HORIZON_DAYS,
 ): Promise<{ created: number; removed: number }> {
   const toISO = addDays(fromISO, days - 1);
+  // Always cover the overdue window behind the requested start, whatever the
+  // caller passed — otherwise a scheduled day that slipped by (the generator
+  // didn't run that day) never gets its task and so can't show as overdue.
+  const backfillStart = addDays(todayISO(), -WORKOUT_OVERDUE_MAX);
+  if (backfillStart < fromISO) {
+    fromISO = backfillStart;
+    days = daysBetween(fromISO, toISO) + 1;
+  }
 
   const [schedules, planned, pauses, rotations] = await Promise.all([
     prisma.workoutSchedule.findMany({
