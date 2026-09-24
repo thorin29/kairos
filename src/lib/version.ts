@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.491.0";
+export const APP_VERSION = "0.492.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -121,11 +121,18 @@ export const MIGRATIONS = [
   "109_subject_base",
   "110_subject_color",
   "111_base_subject",
+  "112_subject_colour_group",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.492.0",
+    summary: [
+      "Subject colours editor reworked to the model you wanted: the SUBJECT is the colour group, and CLASS NAMES hang under it. Geometry + Pre-Algebra sit under Math and share its colour. Press Edit, then drag a class onto another subject, \u2191 to give a class its own colour, rename / add / recolour subjects; classes with no subject sit in an \u201cUnassigned\u201d bucket. Moving a class name moves it for every student who has it. Colours now live on the subject (the base-subject layer is retired) \u2014 a subject's colour may look different than before since grouping changed; re-pick any you want in the editor.",
+    ],
+  },
   {
     version: "0.491.0",
     summary: [

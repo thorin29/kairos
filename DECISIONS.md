@@ -973,3 +973,16 @@ repo's DECISIONS.md — this covers the Kairos side.
   renameBaseSubject, setBaseSubjectColor, deleteBaseSubject [empty only], assignSubjectToBase,
   promoteSubject). Editor: header-based, edit-mode toggle, HTML5 drag subject->group, promote,
   colour swatches per group. New subjects auto-create their own base.
+
+## Sept 24 2026 — subject IS the colour group; classes are members (web v0.492)
+
+- Collapsed to 2 levels: SUBJECT = colour group/header (colour on Subject.color,
+  else palette by subject order), CLASS (SchoolClass) = member, grouped by subjectId.
+  BaseSubject retired (table left in place, unused; migration 112 seeds Subject.color
+  from base colours). loadSubjectColors back to subject-level; loadSubjectGroups returns
+  subjects + distinct class names + an Unassigned bucket. New actions: assignClassToSubject
+  (updateMany by class name — moves for all students), promoteClass (own subject),
+  setSubjectColor, renameSubjectGroup (header only, does NOT rename classes),
+  createSubjectGroup, deleteSubjectGroup (empty only). Editor: subjects as headers,
+  draggable class rows (grip), promote, colour swatches per subject. Note: colours can
+  shift vs the base-subject era because grouping changed base-order -> subject-order.

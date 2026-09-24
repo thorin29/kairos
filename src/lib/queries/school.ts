@@ -1,5 +1,5 @@
 import "server-only";
-import { loadSubjectColors, loadBaseSubjectColors, displaySubjectColor } from "@/lib/school/subject-colors";
+import { loadSubjectColors, displaySubjectColor } from "@/lib/school/subject-colors";
 import { prisma } from "@/lib/prisma";
 import {
   addDays,
@@ -797,34 +797,40 @@ export async function pendingClassPrompts(
 }
 
 export type SubjectGroup = {
-  id: string;
+  id: string | null; // null = the "Unassigned" bucket (classes with no subject)
   name: string;
   color: string;
-  subjects: { id: string; name: string }[];
+  classes: string[]; // distinct class names under this subject
 };
 
-/** Base subjects (colour groups) with the subjects that hang under each, for the
- *  admin Subject colours editor. Groups and members alphabetical. */
+/** Subjects as colour-group headers with the class names that hang under each,
+ *  for the admin Subject colours editor. Groups and members alphabetical; classes
+ *  with no subject land in an "Unassigned" bucket. */
 export async function loadSubjectGroups(): Promise<SubjectGroup[]> {
-  const [baseColor, bases] = await Promise.all([
-    loadBaseSubjectColors(),
-    prisma.baseSubject.findMany({
+  const [subjectColor, subjects, classes] = await Promise.all([
+    loadSubjectColors(),
+    prisma.subject.findMany({
+      where: { isActive: true, pending: false },
       orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-        subjects: {
-          where: { isActive: true, pending: false },
-          select: { id: true, name: true },
-          orderBy: { name: "asc" },
-        },
-      },
+      select: { id: true, name: true },
     }),
+    prisma.schoolClass.findMany({ select: { name: true, subjectId: true } }),
   ]);
-  return bases.map((b) => ({
-    id: b.id,
-    name: b.name,
-    color: baseColor.get(b.id) ?? "#94a3b8",
-    subjects: b.subjects,
+  const bySub = new Map<string | null, Set<string>>();
+  for (const c of classes) {
+    const key = c.subjectId ?? null;
+    if (!bySub.has(key)) bySub.set(key, new Set());
+    bySub.get(key)!.add(c.name);
+  }
+  const groups: SubjectGroup[] = subjects.map((sub) => ({
+    id: sub.id,
+    name: sub.name,
+    color: subjectColor.get(sub.name) ?? "#94a3b8",
+    classes: [...(bySub.get(sub.id) ?? [])].sort((a, b) => a.localeCompare(b)),
   }));
+  const orphan = [...(bySub.get(null) ?? [])].sort((a, b) => a.localeCompare(b));
+  if (orphan.length) {
+    groups.push({ id: null, name: "Unassigned", color: "#94a3b8", classes: orphan });
+  }
+  return groups;
 }

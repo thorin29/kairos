@@ -767,6 +767,81 @@ export async function promoteSubject(subjectId: string): Promise<void> {
   schoolStructureRevalidate();
 }
 
+// --- subject colour groups (subject = group, class = member) -------------------
+
+/** Move every class with this name under a subject (affects all students). */
+export async function assignClassToSubject(
+  className: string,
+  subjectId: string,
+): Promise<void> {
+  await requireAdmin();
+  const name = className.trim();
+  if (!name) return;
+  await prisma.schoolClass
+    .updateMany({ where: { name }, data: { subjectId } })
+    .catch(() => {});
+  schoolStructureRevalidate();
+}
+
+/** Give a class its own colour: find/create a subject named after it, put the
+ *  class there. */
+export async function promoteClass(className: string): Promise<void> {
+  await requireAdmin();
+  const name = className.trim();
+  if (!name) return;
+  const count = await prisma.subject.count();
+  const subj = await prisma.subject.upsert({
+    where: { name },
+    update: {},
+    create: { name, sortOrder: count },
+    select: { id: true },
+  });
+  await prisma.schoolClass
+    .updateMany({ where: { name }, data: { subjectId: subj.id } })
+    .catch(() => {});
+  schoolStructureRevalidate();
+}
+
+export async function setSubjectColor(id: string, color: string | null): Promise<void> {
+  await requireAdmin();
+  const raw = (color ?? "").trim();
+  const col = isHexColor(raw) ? raw.toLowerCase() : null;
+  await prisma.subject.update({ where: { id }, data: { color: col } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+/** Rename a subject GROUP header — does not touch the class display names under it. */
+export async function renameSubjectGroup(id: string, name: string): Promise<void> {
+  await requireAdmin();
+  const clean = name.trim().slice(0, 60);
+  if (clean.length < 1) return;
+  await prisma.subject.update({ where: { id }, data: { name: clean } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+export async function createSubjectGroup(name: string): Promise<void> {
+  await requireAdmin();
+  const clean = name.trim().slice(0, 60);
+  if (clean.length < 1) return;
+  const existing = await prisma.subject.findFirst({
+    where: { name: { equals: clean, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (existing) return;
+  const count = await prisma.subject.count();
+  await prisma.subject.create({ data: { name: clean, sortOrder: count } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+/** Delete an empty subject group (no classes under it). */
+export async function deleteSubjectGroup(id: string): Promise<void> {
+  await requireAdmin();
+  const count = await prisma.schoolClass.count({ where: { subjectId: id } });
+  if (count > 0) return;
+  await prisma.subject.delete({ where: { id } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
 // --- approval of user-proposed subjects & terms -------------------------------
 
 // Auth-free cores so both the web admin actions and the app's device-auth API

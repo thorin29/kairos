@@ -10,12 +10,12 @@ import {
   addSubject,
   renameSubject,
   deleteSubject,
-  createBaseSubject,
-  renameBaseSubject,
-  setBaseSubjectColor,
-  deleteBaseSubject,
-  assignSubjectToBase,
-  promoteSubject,
+  assignClassToSubject,
+  promoteClass,
+  setSubjectColor,
+  renameSubjectGroup,
+  createSubjectGroup,
+  deleteSubjectGroup,
   approveSubject,
   mergeSubject,
   approveTerm,
@@ -1094,12 +1094,13 @@ function ClassRowView({
   );
 }
 
-/** Header-based editor: base subjects are colour groups; subjects hang under one.
- *  Read-only until Edit; then drag a subject onto another group, promote it to
- *  its own, rename/add/colour groups. */
+/** 2-level editor: subjects are colour groups; class names hang under one.
+ *  Read-only until Edit; then drag a class onto another subject, promote it to
+ *  its own (\u2191), rename / add / colour subjects. Moving a class name moves it
+ *  for every student who has it. */
 function SubjectGroupsEditor({ groups }: { groups: SubjectGroup[] }) {
   const [editing, setEditing] = useState(false);
-  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragName, setDragName] = useState<string | null>(null);
   const [, start] = useTransition();
   const run = (fn: () => Promise<void>) => start(() => void fn());
 
@@ -1111,9 +1112,9 @@ function SubjectGroupsEditor({ groups }: { groups: SubjectGroup[] }) {
             Subject colours
           </h3>
           <p className="mt-1 text-sm text-muted">
-            Each colour is a base subject; the subjects under it share that colour.
+            Each colour is a subject; the classes under it share that colour.
             {editing
-              ? " Drag a subject onto another group, or use \u2191 to give it its own."
+              ? " Drag a class onto another subject, or use \u2191 to give it its own."
               : ""}
           </p>
         </div>
@@ -1127,107 +1128,117 @@ function SubjectGroupsEditor({ groups }: { groups: SubjectGroup[] }) {
       </div>
 
       <div className="space-y-3">
-        {groups.map((g) => (
-          <div
-            key={g.id}
-            onDragOver={editing ? (e) => e.preventDefault() : undefined}
-            onDrop={
-              editing
-                ? (e) => {
-                    e.preventDefault();
-                    if (dragId) run(() => assignSubjectToBase(dragId, g.id));
-                    setDragId(null);
-                  }
-                : undefined
-            }
-            className={`rounded-lg border p-3 ${
-              editing ? "border-dashed border-hairline" : "border-hairline"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className="h-4 w-4 shrink-0 rounded-full"
-                style={{ backgroundColor: g.color }}
-              />
-              {editing ? (
-                <input
-                  defaultValue={g.name}
-                  onBlur={(e) => {
-                    const v = e.target.value.trim();
-                    if (v && v !== g.name) run(() => renameBaseSubject(g.id, v));
-                  }}
-                  className="min-w-0 flex-1 rounded-md border border-hairline bg-transparent px-2 py-1 text-sm font-semibold"
+        {groups.map((g) => {
+          const droppable = editing && g.id !== null;
+          return (
+            <div
+              key={g.id ?? "_unassigned"}
+              onDragOver={droppable ? (e) => e.preventDefault() : undefined}
+              onDrop={
+                droppable
+                  ? (e) => {
+                      e.preventDefault();
+                      if (dragName) run(() => assignClassToSubject(dragName, g.id as string));
+                      setDragName(null);
+                    }
+                  : undefined
+              }
+              className={`rounded-lg border p-3 ${
+                editing ? "border-dashed border-hairline" : "border-hairline"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="h-4 w-4 shrink-0 rounded-full"
+                  style={{ backgroundColor: g.color }}
                 />
-              ) : (
-                <span className="font-semibold">{g.name}</span>
-              )}
-              {editing && g.subjects.length === 0 && (
-                <button
-                  type="button"
-                  aria-label="Delete empty group"
-                  onClick={() => run(() => deleteBaseSubject(g.id))}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-red-50 hover:text-red-700"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            {editing && (
-              <div className="mt-2 flex flex-wrap items-center gap-1 pl-6">
-                <button
-                  type="button"
-                  onClick={() => run(() => setBaseSubjectColor(g.id, null))}
-                  className="rounded-md border border-hairline px-2 py-0.5 text-xs text-muted"
-                >
-                  Auto
-                </button>
-                {CLASS_PALETTE.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    aria-label={c}
-                    onClick={() => run(() => setBaseSubjectColor(g.id, c))}
-                    className="h-5 w-5 rounded-full border border-hairline"
-                    style={{ backgroundColor: c }}
+                {editing && g.id !== null ? (
+                  <input
+                    defaultValue={g.name}
+                    onBlur={(e) => {
+                      const v = e.target.value.trim();
+                      if (v && v !== g.name) run(() => renameSubjectGroup(g.id as string, v));
+                    }}
+                    className="min-w-0 flex-1 rounded-md border border-hairline bg-transparent px-2 py-1 text-sm font-semibold"
                   />
-                ))}
-              </div>
-            )}
-
-            <div className="mt-2 flex flex-wrap gap-1.5 pl-6">
-              {g.subjects.length === 0 ? (
-                <span className="text-xs text-muted">No subjects here</span>
-              ) : (
-                g.subjects.map((sub) => (
-                  <span
-                    key={sub.id}
-                    draggable={editing}
-                    onDragStart={editing ? () => setDragId(sub.id) : undefined}
-                    className={`inline-flex items-center gap-1 rounded-full border border-hairline px-2 py-0.5 text-sm ${
-                      editing ? "cursor-grab" : ""
-                    }`}
-                  >
-                    {sub.name}
-                    {editing && g.subjects.length > 1 && (
-                      <button
-                        type="button"
-                        title="Give it its own colour"
-                        onClick={() => run(() => promoteSubject(sub.id))}
-                        className="text-muted transition-colors hover:text-ink"
-                      >
-                        &uarr;
-                      </button>
-                    )}
+                ) : (
+                  <span className={`font-semibold ${g.id === null ? "text-muted" : ""}`}>
+                    {g.name}
                   </span>
-                ))
+                )}
+                {editing && g.id !== null && g.classes.length === 0 && (
+                  <button
+                    type="button"
+                    aria-label="Delete empty subject"
+                    onClick={() => run(() => deleteSubjectGroup(g.id as string))}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-red-50 hover:text-red-700"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {editing && g.id !== null && (
+                <div className="mt-2 flex flex-wrap items-center gap-1 pl-6">
+                  <button
+                    type="button"
+                    onClick={() => run(() => setSubjectColor(g.id as string, null))}
+                    className="rounded-md border border-hairline px-2 py-0.5 text-xs text-muted"
+                  >
+                    Auto
+                  </button>
+                  {CLASS_PALETTE.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      aria-label={c}
+                      onClick={() => run(() => setSubjectColor(g.id as string, c))}
+                      className="h-5 w-5 rounded-full border border-hairline"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
               )}
+
+              <div className="mt-2 space-y-1 pl-6">
+                {g.classes.length === 0 ? (
+                  <span className="text-xs text-muted">No classes here</span>
+                ) : (
+                  g.classes.map((cn) => (
+                    <div
+                      key={cn}
+                      draggable={editing}
+                      onDragStart={editing ? () => setDragName(cn) : undefined}
+                      className={`flex items-center gap-2 rounded-md border border-hairline px-2 py-1 text-sm ${
+                        editing ? "cursor-grab" : ""
+                      }`}
+                    >
+                      {editing && (
+                        <span className="select-none text-muted" aria-hidden>
+                          &#x2059;
+                        </span>
+                      )}
+                      <span className="flex-1 truncate">{cn}</span>
+                      {editing && g.id !== null && (
+                        <button
+                          type="button"
+                          title="Give it its own colour"
+                          onClick={() => run(() => promoteClass(cn))}
+                          className="text-muted transition-colors hover:text-ink"
+                        >
+                          &uarr;
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {editing && <AddGroupRow onAdd={(name) => run(() => createBaseSubject(name))} />}
+      {editing && <AddGroupRow onAdd={(name) => run(() => createSubjectGroup(name))} />}
     </Card>
   );
 }
@@ -1239,7 +1250,7 @@ function AddGroupRow({ onAdd }: { onAdd: (name: string) => void }) {
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="New group name"
+        placeholder="New subject name"
         className="w-44 rounded-md border border-hairline bg-transparent px-2 py-1 text-sm"
       />
       <button
@@ -1253,7 +1264,7 @@ function AddGroupRow({ onAdd }: { onAdd: (name: string) => void }) {
         }}
         className="rounded-md border border-hairline px-3 py-1 text-sm font-medium transition-colors hover:bg-hairline/40"
       >
-        Add group
+        Add subject
       </button>
     </div>
   );
