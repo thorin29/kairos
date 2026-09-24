@@ -100,6 +100,7 @@ export async function GET(req: NextRequest) {
       shiny: c.shiny,
       incubationPct: c.incubationPct,
       eggReady: c.eggReady,
+      eggCapped: c.eggCapped,
       luck: c.luck,
       image,
       color: p.companionColor,

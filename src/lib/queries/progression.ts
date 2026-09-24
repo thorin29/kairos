@@ -70,6 +70,8 @@ export type PersonProgress = {
     shiny: boolean;
     incubationPct: number;
     eggReady: boolean;
+    /** Egg is full but this month's hatch cap is used up — hatch opens next month. */
+    eggCapped: boolean;
     /** 0..1 streak-driven odds; the higher it is, the rarer the next hatch can be.
      *  Drives the egg meter's colour so a strong streak shows without any text. */
     luck: number;
@@ -356,6 +358,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         const eggsThisSeason =
           st && st.seasonKey === seasonWin.startISO ? st.eggsThisSeason : 0;
         const eggReady = progress >= cost && eggsThisSeason < EGGS_PER_SEASON_CAP;
+        const eggCapped = progress >= cost && eggsThisSeason >= EGGS_PER_SEASON_CAP;
         const active = activeByUser.get(person.id);
         if (active) {
           // Grow on clean days (and perfect weeks) since this companion hatched.
@@ -382,6 +385,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
             shiny: active.shiny,
             incubationPct,
             eggReady,
+            eggCapped,
             luck: luckFromStreak(current),
           };
         }
@@ -392,6 +396,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
           shiny: false,
           incubationPct,
           eggReady,
+          eggCapped,
           luck: luckFromStreak(current),
         };
       })(),

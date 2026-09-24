@@ -12,6 +12,7 @@ export type CompanionView = {
   shiny: boolean;
   incubationPct: number;
   eggReady: boolean;
+  eggCapped: boolean;
   luck: number;
 };
 
@@ -90,6 +91,10 @@ export function Companion({
                 <p className="text-xs font-medium text-emerald-700">
                   A new egg is ready!
                 </p>
+              ) : companion.eggCapped ? (
+                <p className="text-xs font-medium text-amber-700">
+                  Next egg ready — hatch it next month!
+                </p>
               ) : (
                 <div className="flex w-32 flex-col items-center gap-0.5">
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-hairline">
@@ -107,7 +112,7 @@ export function Companion({
           ) : (
             <>
               <p className="text-sm font-semibold">
-                {companion.eggReady ? "Ready to hatch!" : "Egg"}
+                {companion.eggReady ? "Ready to hatch!" : companion.eggCapped ? "Ready next month" : "Egg"}
               </p>
               <div className="h-2 w-32 overflow-hidden rounded-full bg-hairline">
                 <div
@@ -115,7 +120,9 @@ export function Companion({
                   style={{ width: `${companion.incubationPct}%`, background: luckColor }}
                 />
               </div>
-              <p className="tabular text-xs text-muted">{companion.incubationPct}% incubated</p>
+              <p className="tabular text-xs text-muted">
+                {companion.eggCapped ? "Hatch opens next month" : `${companion.incubationPct}% incubated`}
+              </p>
             </>
           )}
         </div>

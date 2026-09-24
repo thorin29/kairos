@@ -206,7 +206,7 @@ export function blendPalette(xpByStat: Record<string, number>): string {
 // calibrated against the Season planner once all events are locked in.
 export const FIRST_EGG_XP = 80;
 export const EGG_XP = 250;
-export const EGGS_PER_SEASON_CAP = 2;
+export const EGGS_PER_SEASON_CAP = 3;
 
 /** XP needed for the Nth egg (0-indexed): the first is cheap. */
 export function eggCostFor(eggsHatched: number): number {
