@@ -102,6 +102,7 @@ export function parseIcs(
   raw: string,
   fallbackTz: string,
   defaultDurationMin = 60,
+  forceDuration = false,
 ): IcsEvent[] {
   const lines = unfold(raw);
   const events: IcsEvent[] = [];
@@ -118,7 +119,7 @@ export function parseIcs(
 
     if (trimmed === "END:VEVENT") {
       if (current) {
-        const event = buildEvent(current, fallbackTz, defaultDurationMin);
+        const event = buildEvent(current, fallbackTz, defaultDurationMin, forceDuration);
         if (event) events.push(event);
       }
       current = null;
@@ -138,6 +139,7 @@ function buildEvent(
   fields: Record<string, Field>,
   fallbackTz: string,
   defaultDurationMin: number,
+  forceDuration: boolean,
 ): IcsEvent | null {
   const start = fields.DTSTART ? parseDate(fields.DTSTART, fallbackTz) : null;
   if (!start) return null;
@@ -158,6 +160,14 @@ function buildEvent(
   if (!end) {
     const ms = start.allDay ? 86_400_000 : defaultDurationMin * 60_000;
     end = { at: new Date(start.at.getTime() + ms), allDay: start.allDay };
+  }
+
+  // Force the configured length on timed events, overriding the feed's own end.
+  if (forceDuration && !start.allDay) {
+    end = {
+      at: new Date(start.at.getTime() + defaultDurationMin * 60_000),
+      allDay: false,
+    };
   }
 
   return {

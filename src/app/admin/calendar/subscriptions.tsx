@@ -11,6 +11,7 @@ import {
   setCalendarSport,
   type CalendarState,
   setCalendarDefaultDuration,
+  setCalendarForceDuration,
 } from "@/lib/actions/calendars";
 import { Card } from "@/components/ui";
 import {
@@ -40,6 +41,7 @@ export type Subscription = {
   canRetire: boolean;
   sportWorkout: boolean;
   defaultDurationMin: number | null;
+  forceDuration: boolean;
   lastFetchedAt: string | null;
   lastError: string | null;
 };
@@ -249,28 +251,44 @@ export function Subscriptions({
                 </label>
 
                 {editMode && (
-                  <label className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-                    Default length for events with no end time:
-                    <input
-                      type="number"
-                      min={5}
-                      step={5}
-                      defaultValue={s.defaultDurationMin ?? ""}
-                      placeholder="60"
-                      disabled={busy}
-                      onBlur={(e) =>
-                        startTransition(
-                          () =>
-                            void setCalendarDefaultDuration(
-                              s.id,
-                              e.target.value.trim() ? Number(e.target.value) : null,
-                            ),
-                        )
-                      }
-                      className="w-16 rounded-md border border-hairline px-2 py-1 text-xs"
-                    />
-                    min
-                  </label>
+                  <div className="mt-2 space-y-1">
+                    <label className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                      {s.forceDuration ? "Event length:" : "Default length for events with no end time:"}
+                      <input
+                        type="number"
+                        min={5}
+                        step={5}
+                        defaultValue={s.defaultDurationMin ?? ""}
+                        placeholder="60"
+                        disabled={busy}
+                        onBlur={(e) =>
+                          startTransition(
+                            () =>
+                              void setCalendarDefaultDuration(
+                                s.id,
+                                e.target.value.trim() ? Number(e.target.value) : null,
+                              ),
+                          )
+                        }
+                        className="w-16 rounded-md border border-hairline px-2 py-1 text-xs"
+                      />
+                      min
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-muted">
+                      <input
+                        type="checkbox"
+                        checked={s.forceDuration}
+                        disabled={busy}
+                        onChange={(e) =>
+                          startTransition(
+                            () => void setCalendarForceDuration(s.id, e.target.checked),
+                          )
+                        }
+                        className="h-3.5 w-3.5"
+                      />
+                      Force this length on every event (ignore the feed&apos;s own end times)
+                    </label>
+                  </div>
                 )}
                 {editMode && (
                   <div className="mt-2">

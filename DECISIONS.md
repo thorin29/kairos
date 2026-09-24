@@ -997,3 +997,13 @@ repo's DECISIONS.md — this covers the Kairos side.
   with no DTEND/DURATION (was hardcoded 60 in ics.ts). Threaded parseIcs -> buildEvent;
   sync passes calendar.defaultDurationMin ?? 60. Editable per feed in edit mode
   (setCalendarDefaultDuration, which re-syncs so existing events update).
+
+## Sept 24 2026 — feed force-duration (web v0.494)
+
+- ExternalCalendar.forceDuration (migration 114): when on, defaultDurationMin overrides
+  every timed feed event's own end (for feeds publishing a wrong/short end). Threaded
+  through parseIcs/buildEvent; sync passes calendar.forceDuration. Toggle in the feed
+  edit mode (setCalendarForceDuration, re-syncs). Sandbox note: could not fetch the
+  DigitalShift feed to confirm whether it sends DTEND (egress allowlist blocks
+  digitalshift.ca; web_fetch refused the constructed URL) — shipped force-length so
+  it works regardless.

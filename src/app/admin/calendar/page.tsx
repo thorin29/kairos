@@ -70,6 +70,7 @@ export default async function AdminCalendarPage() {
       canRetire: c._count.events > 0 && !hasUpcoming.has(c.id),
       sportWorkout: c.sportWorkout,
       defaultDurationMin: c.defaultDurationMin,
+      forceDuration: c.forceDuration,
       lastFetchedAt: c.lastFetchedAt?.toISOString() ?? null,
       lastError: c.lastError,
     };

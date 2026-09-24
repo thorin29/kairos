@@ -514,6 +514,9 @@ model ExternalCalendar {
   // own. Null falls back to 60. Useful for league feeds (e.g. 75-minute games)
   // that publish only a start time.
   defaultDurationMin Int?
+  // When on, apply defaultDurationMin to EVERY event from this feed, overriding
+  // any end time the feed sends (for feeds that publish a wrong/short end).
+  forceDuration      Boolean   @default(false)
   lastFetchedAt DateTime?
   lastError     String?
 

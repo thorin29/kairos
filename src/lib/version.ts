@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.493.0";
+export const APP_VERSION = "0.494.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -123,11 +123,18 @@ export const MIGRATIONS = [
   "111_base_subject",
   "112_subject_colour_group",
   "113_feed_default_duration",
+  "114_feed_force_duration",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.494.0",
+    summary: [
+      "Calendar subscriptions: a \u201cForce this length on every event\u201d toggle in edit mode. Turn it on and set the length (e.g. 75) and every event from that feed uses it, overriding whatever end time the feed publishes \u2014 for league feeds that send a wrong or short game length. Saving re-syncs the feed so games update immediately.",
+    ],
+  },
   {
     version: "0.493.0",
     summary: [

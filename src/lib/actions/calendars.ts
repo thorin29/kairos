@@ -149,6 +149,22 @@ export async function setCalendarDefaultDuration(
   revalidatePath("/calendar");
   revalidatePath("/");
 }
+
+/** Toggle whether the feed's default length overrides every event's own end. */
+export async function setCalendarForceDuration(
+  id: string,
+  force: boolean,
+): Promise<void> {
+  await requireAdmin();
+  await prisma.externalCalendar.update({
+    where: { id },
+    data: { forceDuration: force },
+  });
+  await syncCalendar(id).catch(() => {});
+  revalidatePath("/admin/calendar");
+  revalidatePath("/calendar");
+  revalidatePath("/");
+}
 export async function editCalendarPeople(
   id: string,
   owner: string,
