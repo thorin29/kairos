@@ -128,8 +128,27 @@ export async function setCalendarSport(
   revalidatePath("/");
 }
 
-/** Change who a subscription belongs to and who else it's shared with. The
- *  extra members' names show on the feed's events alongside the owner. */
+/** Set the length a feed gives events that have no end time of their own (e.g.
+ *  75-minute games from a feed that only publishes start times). Null = 60.
+ *  Re-syncs the feed so existing events pick up the new length immediately. */
+export async function setCalendarDefaultDuration(
+  id: string,
+  minutes: number | null,
+): Promise<void> {
+  await requireAdmin();
+  const m =
+    minutes != null && Number.isFinite(minutes)
+      ? Math.max(5, Math.min(600, Math.round(minutes)))
+      : null;
+  await prisma.externalCalendar.update({
+    where: { id },
+    data: { defaultDurationMin: m },
+  });
+  await syncCalendar(id).catch(() => {});
+  revalidatePath("/admin/calendar");
+  revalidatePath("/calendar");
+  revalidatePath("/");
+}
 export async function editCalendarPeople(
   id: string,
   owner: string,

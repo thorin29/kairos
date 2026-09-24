@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.492.0";
+export const APP_VERSION = "0.493.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -122,11 +122,18 @@ export const MIGRATIONS = [
   "110_subject_color",
   "111_base_subject",
   "112_subject_colour_group",
+  "113_feed_default_duration",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.493.0",
+    summary: [
+      "Two fixes. (1) School dots now match everywhere: the card, progress page and admin overlay use the subject's colour instead of a leftover per-class colour, so a subject looks the same in the editor and on the cards. (2) Calendar subscriptions: in edit mode you can set a \u201cdefault event length\u201d per feed \u2014 feed events that publish only a start time (like 75-minute hockey games) get that length instead of the old fixed 60 minutes. Saving re-syncs the feed so existing games update right away.",
+    ],
+  },
   {
     version: "0.492.0",
     summary: [

@@ -98,7 +98,11 @@ function parseDate(
   return { at: zonedToUtc(+y, +mo, +d, +h, +mi, +s, tz), allDay: false };
 }
 
-export function parseIcs(raw: string, fallbackTz: string): IcsEvent[] {
+export function parseIcs(
+  raw: string,
+  fallbackTz: string,
+  defaultDurationMin = 60,
+): IcsEvent[] {
   const lines = unfold(raw);
   const events: IcsEvent[] = [];
 
@@ -114,7 +118,7 @@ export function parseIcs(raw: string, fallbackTz: string): IcsEvent[] {
 
     if (trimmed === "END:VEVENT") {
       if (current) {
-        const event = buildEvent(current, fallbackTz);
+        const event = buildEvent(current, fallbackTz, defaultDurationMin);
         if (event) events.push(event);
       }
       current = null;
@@ -133,6 +137,7 @@ export function parseIcs(raw: string, fallbackTz: string): IcsEvent[] {
 function buildEvent(
   fields: Record<string, Field>,
   fallbackTz: string,
+  defaultDurationMin: number,
 ): IcsEvent | null {
   const start = fields.DTSTART ? parseDate(fields.DTSTART, fallbackTz) : null;
   if (!start) return null;
@@ -151,7 +156,7 @@ function buildEvent(
   }
 
   if (!end) {
-    const ms = start.allDay ? 86_400_000 : 3_600_000;
+    const ms = start.allDay ? 86_400_000 : defaultDurationMin * 60_000;
     end = { at: new Date(start.at.getTime() + ms), allDay: start.allDay };
   }
 

@@ -986,3 +986,14 @@ repo's DECISIONS.md — this covers the Kairos side.
   createSubjectGroup, deleteSubjectGroup (empty only). Editor: subjects as headers,
   draggable class rows (grip), promote, colour swatches per subject. Note: colours can
   shift vs the base-subject era because grouping changed base-order -> subject-order.
+
+## Sept 24 2026 — colour consistency + feed default length (web v0.493)
+
+- School surfaces (loadSchoolProgress, loadSchoolMetrics, loadStudentBars) now colour a
+  class purely by its subject (subjectColors.get(subject.name)); the legacy class.color
+  preference is dropped so cards match the subject-colours editor. class.color rows remain
+  in the DB, just no longer drive display.
+- ExternalCalendar.defaultDurationMin (migration 113): the length given to a feed event
+  with no DTEND/DURATION (was hardcoded 60 in ics.ts). Threaded parseIcs -> buildEvent;
+  sync passes calendar.defaultDurationMin ?? 60. Editable per feed in edit mode
+  (setCalendarDefaultDuration, which re-syncs so existing events update).

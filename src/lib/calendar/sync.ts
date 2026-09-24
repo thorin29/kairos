@@ -41,7 +41,7 @@ export async function syncCalendar(id: string): Promise<SyncResult> {
       throw new Error("That URL didn't return a calendar feed");
     }
 
-    const parsed = parseIcs(body, householdTz());
+    const parsed = parseIcs(body, householdTz(), calendar.defaultDurationMin ?? 60);
 
     const cutoff = new Date(Date.now() - KEEP_PAST_DAYS * 86_400_000);
     const fresh = parsed.filter((e) => e.endsAt >= cutoff);

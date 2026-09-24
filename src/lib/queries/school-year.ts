@@ -326,13 +326,10 @@ export async function loadStudentBars(): Promise<StudentBars[]> {
         .map((u) => dISO(u.scheduledDate as Date));
       const overflowCount = p.units.filter((u) => !u.done && !u.scheduledDate).length;
 
-      let color = p.class.color;
-      if (!color) {
-        color =
-          subjectColors.get(p.class.subject?.name ?? "") ??
-          pickClassColor(used, [holidayColor]);
-        used.push(color);
-      }
+      const color =
+        subjectColors.get(p.class.subject?.name ?? "") ??
+        pickClassColor(used, [holidayColor]);
+      used.push(color);
 
       return {
         className: p.class.name,

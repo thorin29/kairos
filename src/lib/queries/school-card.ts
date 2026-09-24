@@ -206,9 +206,7 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
       return {
         className: p.class.name,
         subject: p.class.subject?.name ?? null,
-        color: p.class.color
-          ? displaySubjectColor(p.class.color)
-          : (subjectColors.get(p.class.subject?.name ?? "") ?? null),
+        color: subjectColors.get(p.class.subject?.name ?? "") ?? null,
         finishISO,
         remaining,
         onTrack,

@@ -10,6 +10,7 @@ import {
   retireCalendar,
   setCalendarSport,
   type CalendarState,
+  setCalendarDefaultDuration,
 } from "@/lib/actions/calendars";
 import { Card } from "@/components/ui";
 import {
@@ -38,6 +39,7 @@ export type Subscription = {
   eventCount: number;
   canRetire: boolean;
   sportWorkout: boolean;
+  defaultDurationMin: number | null;
   lastFetchedAt: string | null;
   lastError: string | null;
 };
@@ -246,6 +248,30 @@ export function Subscriptions({
                   Sends an attendance confirmation to count as a workout
                 </label>
 
+                {editMode && (
+                  <label className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+                    Default length for events with no end time:
+                    <input
+                      type="number"
+                      min={5}
+                      step={5}
+                      defaultValue={s.defaultDurationMin ?? ""}
+                      placeholder="60"
+                      disabled={busy}
+                      onBlur={(e) =>
+                        startTransition(
+                          () =>
+                            void setCalendarDefaultDuration(
+                              s.id,
+                              e.target.value.trim() ? Number(e.target.value) : null,
+                            ),
+                        )
+                      }
+                      className="w-16 rounded-md border border-hairline px-2 py-1 text-xs"
+                    />
+                    min
+                  </label>
+                )}
                 {editMode && (
                   <div className="mt-2">
                     {editingPeople === s.id ? (

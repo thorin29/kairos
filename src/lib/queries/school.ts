@@ -550,9 +550,7 @@ export async function loadSchoolMetrics(
     }
 
     const label = t.schoolWork.class?.name ?? t.schoolWork.subject ?? "Other";
-    const color = t.schoolWork.class?.color
-      ? displaySubjectColor(t.schoolWork.class.color)
-      : (subjectColors.get(t.schoolWork.subject ?? "") ?? null);
+    const color = subjectColors.get(t.schoolWork.subject ?? "") ?? null;
     const cmap = classes.get(t.userId)!;
     const c = cmap.get(label) ?? {
       key: label,

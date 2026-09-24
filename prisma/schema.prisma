@@ -510,6 +510,10 @@ model ExternalCalendar {
   // When on, every event from this feed auto-logs a sport workout on its day
   // for the feed's owner (helpful for a hockey or game schedule).
   sportWorkout  Boolean   @default(false)
+  // Length (minutes) to give a feed event that has no end time / duration of its
+  // own. Null falls back to 60. Useful for league feeds (e.g. 75-minute games)
+  // that publish only a start time.
+  defaultDurationMin Int?
   lastFetchedAt DateTime?
   lastError     String?
 
