@@ -1,5 +1,5 @@
 import "server-only";
-import { loadSubjectColors, displaySubjectColor } from "@/lib/school/subject-colors";
+import { loadSubjectColors, loadBaseSubjectColors, displaySubjectColor } from "@/lib/school/subject-colors";
 import { prisma } from "@/lib/prisma";
 import {
   addDays,
@@ -794,4 +794,37 @@ export async function pendingClassPrompts(
     }
   }
   return prompts;
+}
+
+export type SubjectGroup = {
+  id: string;
+  name: string;
+  color: string;
+  subjects: { id: string; name: string }[];
+};
+
+/** Base subjects (colour groups) with the subjects that hang under each, for the
+ *  admin Subject colours editor. Groups and members alphabetical. */
+export async function loadSubjectGroups(): Promise<SubjectGroup[]> {
+  const [baseColor, bases] = await Promise.all([
+    loadBaseSubjectColors(),
+    prisma.baseSubject.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        subjects: {
+          where: { isActive: true, pending: false },
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
+        },
+      },
+    }),
+  ]);
+  return bases.map((b) => ({
+    id: b.id,
+    name: b.name,
+    color: baseColor.get(b.id) ?? "#94a3b8",
+    subjects: b.subjects,
+  }));
 }

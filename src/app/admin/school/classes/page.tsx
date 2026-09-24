@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AdminBack } from "@/components/admin-back";
 import { todayISO } from "@/lib/dates";
 import { getClassFromCalendarMode } from "@/lib/settings";
-import { loadSchoolStructure } from "@/lib/queries/school";
+import { loadSchoolStructure, loadSubjectGroups } from "@/lib/queries/school";
 import { SchoolStructure } from "../school-structure";
 import { ClassAccessToggle } from "../class-access-toggle";
 
@@ -10,8 +10,9 @@ export const dynamic = "force-dynamic";
 
 export default async function SchoolClassesPage() {
   const today = todayISO();
-  const [structure, classMode] = await Promise.all([
+  const [structure, groups, classMode] = await Promise.all([
     loadSchoolStructure(),
+    loadSubjectGroups(),
     getClassFromCalendarMode(),
   ]);
 
@@ -31,6 +32,7 @@ export default async function SchoolClassesPage() {
           people={structure.people}
           subjects={structure.subjects}
           classTypes={structure.classTypes}
+          groups={groups}
           today={today}
         />
       </div>

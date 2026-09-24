@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.490.0";
+export const APP_VERSION = "0.491.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -120,11 +120,18 @@ export const MIGRATIONS = [
   "108_reading_goal_start",
   "109_subject_base",
   "110_subject_color",
+  "111_base_subject",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.491.0",
+    summary: [
+      "The Subject colours editor is now organised by base subject. Base subjects are real, editable groups with a colour, and each subject hangs under one (Science \u2192 Biology, Geology, Science; Math \u2192 Geometry, Pre-Algebra). It's read-only until you press Edit; then you can drag a subject onto another group, promote it to its own colour, and rename / add / recolour groups \u2014 everything alphabetical. Colours flow to the school card, app home card, progress page and admin overlay. The migration builds the groups from your existing mapping.",
+    ],
+  },
   {
     version: "0.490.0",
     summary: [

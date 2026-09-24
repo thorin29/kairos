@@ -961,3 +961,15 @@ repo's DECISIONS.md — this covers the Kairos side.
   setSubjectMeta. loadSubjectColors resolves override ?? group colour, so all four
   surfaces update. This is the self-serve replacement for the baked-in migration-109
   mapping; that mapping stays as the seed.
+
+## Sept 24 2026 — base subjects are first-class (web v0.491)
+
+- Base subjects became a real table (BaseSubject: name, colour, sortOrder; migration 111)
+  and Subject.baseSubjectId FK. Migration builds a BaseSubject per existing base string
+  and per ungrouped subject, then links every subject. loadSubjectColors/loadBaseSubjectColors
+  resolve a subject's colour from its base (base.color, else palette by base order).
+  loadSubjectGroups feeds the admin editor. Legacy Subject.baseSubject/color columns kept
+  but unused; setSubjectMeta retired in favour of group actions (createBaseSubject,
+  renameBaseSubject, setBaseSubjectColor, deleteBaseSubject [empty only], assignSubjectToBase,
+  promoteSubject). Editor: header-based, edit-mode toggle, HTML5 drag subject->group, promote,
+  colour swatches per group. New subjects auto-create their own base.

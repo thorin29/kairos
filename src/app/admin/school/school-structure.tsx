@@ -10,7 +10,12 @@ import {
   addSubject,
   renameSubject,
   deleteSubject,
-  setSubjectMeta,
+  createBaseSubject,
+  renameBaseSubject,
+  setBaseSubjectColor,
+  deleteBaseSubject,
+  assignSubjectToBase,
+  promoteSubject,
   approveSubject,
   mergeSubject,
   approveTerm,
@@ -26,6 +31,7 @@ import type {
   ClassRow,
   SubjectRow,
   ClassTypeRow,
+  SubjectGroup,
 } from "@/lib/queries/school";
 import { Card } from "@/components/ui";
 import { CLASS_PALETTE } from "@/lib/palette";
@@ -60,12 +66,14 @@ export function SchoolStructure({
   people,
   subjects,
   classTypes,
+  groups,
   today,
 }: {
   terms: TermRow[];
   people: PersonClasses[];
   subjects: SubjectRow[];
   classTypes: ClassTypeRow[];
+  groups: SubjectGroup[];
   today: string;
 }) {
   const pendingSubjects = subjects.filter((sub) => sub.pending);
@@ -84,7 +92,7 @@ export function SchoolStructure({
       )}
       <Terms terms={okTerms} today={today} />
       <Pools subjects={okSubjects} classTypes={classTypes} />
-      <SubjectColors subjects={okSubjects} />
+      <SubjectGroupsEditor groups={groups} />
       <Classes
         terms={okTerms}
         people={people}
@@ -1086,94 +1094,167 @@ function ClassRowView({
   );
 }
 
-/** Set each subject's base-subject group (shared colour) and optional colour
- *  override. Colours flow to the school card, home card, progress page and the
- *  admin year-calendar overlay. */
-function SubjectColors({ subjects }: { subjects: SubjectRow[] }) {
-  const bases = Array.from(
-    new Set(subjects.map((s) => s.baseSubject).filter((b): b is string => !!b)),
-  ).sort();
+/** Header-based editor: base subjects are colour groups; subjects hang under one.
+ *  Read-only until Edit; then drag a subject onto another group, promote it to
+ *  its own, rename/add/colour groups. */
+function SubjectGroupsEditor({ groups }: { groups: SubjectGroup[] }) {
+  const [editing, setEditing] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [, start] = useTransition();
+  const run = (fn: () => Promise<void>) => start(() => void fn());
+
   return (
     <Card className="p-4">
-      <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">
-        Subject colours
-      </h3>
-      <p className="mb-3 mt-1 text-sm text-muted">
-        Give a subject a base subject to share one colour with everything under it
-        (Geometry + Pre-Algebra &rarr; Math). Leave the base blank for its own
-        colour, or pick an exact colour to break it out of the group.
-      </p>
-      <datalist id="base-subject-options">
-        {bases.map((b) => (
-          <option key={b} value={b} />
-        ))}
-      </datalist>
-      <div className="divide-y divide-hairline">
-        {subjects.map((sub) => (
-          <SubjectColorRow key={sub.id} subject={sub} />
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">
+            Subject colours
+          </h3>
+          <p className="mt-1 text-sm text-muted">
+            Each colour is a base subject; the subjects under it share that colour.
+            {editing
+              ? " Drag a subject onto another group, or use \u2191 to give it its own."
+              : ""}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setEditing((e) => !e)}
+          className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-sm font-medium transition-colors hover:bg-hairline/40"
+        >
+          {editing ? "Done" : "Edit"}
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {groups.map((g) => (
+          <div
+            key={g.id}
+            onDragOver={editing ? (e) => e.preventDefault() : undefined}
+            onDrop={
+              editing
+                ? (e) => {
+                    e.preventDefault();
+                    if (dragId) run(() => assignSubjectToBase(dragId, g.id));
+                    setDragId(null);
+                  }
+                : undefined
+            }
+            className={`rounded-lg border p-3 ${
+              editing ? "border-dashed border-hairline" : "border-hairline"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className="h-4 w-4 shrink-0 rounded-full"
+                style={{ backgroundColor: g.color }}
+              />
+              {editing ? (
+                <input
+                  defaultValue={g.name}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== g.name) run(() => renameBaseSubject(g.id, v));
+                  }}
+                  className="min-w-0 flex-1 rounded-md border border-hairline bg-transparent px-2 py-1 text-sm font-semibold"
+                />
+              ) : (
+                <span className="font-semibold">{g.name}</span>
+              )}
+              {editing && g.subjects.length === 0 && (
+                <button
+                  type="button"
+                  aria-label="Delete empty group"
+                  onClick={() => run(() => deleteBaseSubject(g.id))}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors hover:bg-red-50 hover:text-red-700"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {editing && (
+              <div className="mt-2 flex flex-wrap items-center gap-1 pl-6">
+                <button
+                  type="button"
+                  onClick={() => run(() => setBaseSubjectColor(g.id, null))}
+                  className="rounded-md border border-hairline px-2 py-0.5 text-xs text-muted"
+                >
+                  Auto
+                </button>
+                {CLASS_PALETTE.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-label={c}
+                    onClick={() => run(() => setBaseSubjectColor(g.id, c))}
+                    className="h-5 w-5 rounded-full border border-hairline"
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className="mt-2 flex flex-wrap gap-1.5 pl-6">
+              {g.subjects.length === 0 ? (
+                <span className="text-xs text-muted">No subjects here</span>
+              ) : (
+                g.subjects.map((sub) => (
+                  <span
+                    key={sub.id}
+                    draggable={editing}
+                    onDragStart={editing ? () => setDragId(sub.id) : undefined}
+                    className={`inline-flex items-center gap-1 rounded-full border border-hairline px-2 py-0.5 text-sm ${
+                      editing ? "cursor-grab" : ""
+                    }`}
+                  >
+                    {sub.name}
+                    {editing && g.subjects.length > 1 && (
+                      <button
+                        type="button"
+                        title="Give it its own colour"
+                        onClick={() => run(() => promoteSubject(sub.id))}
+                        className="text-muted transition-colors hover:text-ink"
+                      >
+                        &uarr;
+                      </button>
+                    )}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
         ))}
       </div>
+
+      {editing && <AddGroupRow onAdd={(name) => run(() => createBaseSubject(name))} />}
     </Card>
   );
 }
 
-function SubjectColorRow({ subject }: { subject: SubjectRow }) {
-  const [base, setBase] = useState(subject.baseSubject ?? "");
-  const [color, setColor] = useState(subject.color ?? "");
-  const [, start] = useTransition();
-  const persist = (nextBase: string, nextColor: string) =>
-    start(async () => {
-      await setSubjectMeta(subject.id, nextBase.trim() || null, nextColor || null);
-    });
+function AddGroupRow({ onAdd }: { onAdd: (name: string) => void }) {
+  const [name, setName] = useState("");
   return (
-    <div className="flex flex-wrap items-center gap-2 py-2">
-      <span
-        className="h-4 w-4 shrink-0 rounded-full"
-        style={{ backgroundColor: subject.resolvedColor ?? "var(--color-hairline)" }}
-      />
-      <span className="w-28 shrink-0 truncate text-sm font-medium">{subject.name}</span>
+    <div className="mt-3 flex items-center gap-2 pl-6">
       <input
-        value={base}
-        list="base-subject-options"
-        onChange={(e) => setBase(e.target.value)}
-        onBlur={() => persist(base, color)}
-        placeholder="Base subject"
-        className="w-36 rounded-md border border-hairline bg-transparent px-2 py-1 text-sm"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="New group name"
+        className="w-44 rounded-md border border-hairline bg-transparent px-2 py-1 text-sm"
       />
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => {
-            setColor("");
-            persist(base, "");
-          }}
-          className={`rounded-md border px-2 py-1 text-xs transition-colors ${
-            color ? "border-hairline text-muted" : "border-ink font-medium"
-          }`}
-        >
-          Auto
-        </button>
-        {CLASS_PALETTE.map((c) => (
-          <button
-            key={c}
-            type="button"
-            aria-label={c}
-            onClick={() => {
-              setColor(c);
-              persist(base, c);
-            }}
-            className="h-5 w-5 rounded-full border border-hairline"
-            style={{
-              backgroundColor: c,
-              outline:
-                color.toLowerCase() === c.toLowerCase()
-                  ? "2px solid var(--color-ink)"
-                  : undefined,
-              outlineOffset: "1px",
-            }}
-          />
-        ))}
-      </div>
+      <button
+        type="button"
+        onClick={() => {
+          const v = name.trim();
+          if (v) {
+            onAdd(v);
+            setName("");
+          }
+        }}
+        className="rounded-md border border-hairline px-3 py-1 text-sm font-medium transition-colors hover:bg-hairline/40"
+      >
+        Add group
+      </button>
     </div>
   );
 }

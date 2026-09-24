@@ -166,14 +166,26 @@ model SchoolVacationDecision {
 // A reusable class name, managed like the chore master list. A class picks its
 // name from this pool, so the same subject can be reused term to term (and
 // ticked off when spinning up a new semester).
+model BaseSubject {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  // Hex colour for the whole group. Null = auto-assigned from the palette by order.
+  color     String?
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  subjects  Subject[]
+}
+
 model Subject {
   id           String        @id @default(cuid())
   name         String        @unique
-  // Groups granular subjects (Geometry, Pre-Algebra) under a shared base subject
-  // (Math) so they colour the same everywhere. Null = the subject is its own group.
-  baseSubject  String?
-  // Optional exact colour override (hex). Wins over the base-subject group colour.
-  color        String?
+  // Legacy free-text base + per-subject override (superseded by baseSubjectId /
+  // BaseSubject.color in migration 111; kept only so old data isn't dropped).
+  baseSubject   String?
+  color         String?
+  // The colour group this subject belongs to. Its colour comes from the base.
+  baseSubjectId String?
+  base          BaseSubject? @relation(fields: [baseSubjectId], references: [id], onDelete: SetNull)
   sortOrder    Int           @default(0)
   isActive     Boolean       @default(true)
   pending      Boolean       @default(false)

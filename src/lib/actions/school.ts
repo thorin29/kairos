@@ -639,7 +639,18 @@ export async function addSubject(
   if (existing) return { error: "That subject already exists." };
 
   const count = await prisma.subject.count();
-  await prisma.subject.create({ data: { name, sortOrder: count } });
+  // A new subject starts in its own group (its own colour) — Marco can drag it
+  // under another base later.
+  const baseCount = await prisma.baseSubject.count();
+  const base = await prisma.baseSubject.upsert({
+    where: { name },
+    update: {},
+    create: { name, sortOrder: baseCount },
+    select: { id: true },
+  });
+  await prisma.subject.create({
+    data: { name, sortOrder: count, baseSubjectId: base.id },
+  });
   schoolStructureRevalidate();
   return { error: null };
 }
@@ -681,6 +692,77 @@ export async function setSubjectMeta(
   const col = isHexColor(raw) ? raw.toLowerCase() : null;
   await prisma.subject
     .update({ where: { id }, data: { baseSubject: base, color: col } })
+    .catch(() => {});
+  schoolStructureRevalidate();
+}
+
+// --- base subjects (colour groups) --------------------------------------------
+
+export async function createBaseSubject(name: string): Promise<void> {
+  await requireAdmin();
+  const clean = name.trim().slice(0, 60);
+  if (clean.length < 1) return;
+  const count = await prisma.baseSubject.count();
+  await prisma.baseSubject
+    .create({ data: { name: clean, sortOrder: count } })
+    .catch(() => {});
+  schoolStructureRevalidate();
+}
+
+export async function renameBaseSubject(id: string, name: string): Promise<void> {
+  await requireAdmin();
+  const clean = name.trim().slice(0, 60);
+  if (clean.length < 1) return;
+  await prisma.baseSubject.update({ where: { id }, data: { name: clean } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+export async function setBaseSubjectColor(id: string, color: string | null): Promise<void> {
+  await requireAdmin();
+  const raw = (color ?? "").trim();
+  const col = isHexColor(raw) ? raw.toLowerCase() : null;
+  await prisma.baseSubject.update({ where: { id }, data: { color: col } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+/** Delete a group. Only allowed when empty — move its subjects out first. */
+export async function deleteBaseSubject(id: string): Promise<void> {
+  await requireAdmin();
+  const count = await prisma.subject.count({ where: { baseSubjectId: id } });
+  if (count > 0) return;
+  await prisma.baseSubject.delete({ where: { id } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+/** Move a subject under a different group (the drag target). */
+export async function assignSubjectToBase(
+  subjectId: string,
+  baseSubjectId: string,
+): Promise<void> {
+  await requireAdmin();
+  await prisma.subject
+    .update({ where: { id: subjectId }, data: { baseSubjectId } })
+    .catch(() => {});
+  schoolStructureRevalidate();
+}
+
+/** Give a subject its own group (find or create a base named after it). */
+export async function promoteSubject(subjectId: string): Promise<void> {
+  await requireAdmin();
+  const sub = await prisma.subject.findUnique({
+    where: { id: subjectId },
+    select: { name: true },
+  });
+  if (!sub) return;
+  const count = await prisma.baseSubject.count();
+  const base = await prisma.baseSubject.upsert({
+    where: { name: sub.name },
+    update: {},
+    create: { name: sub.name, sortOrder: count },
+    select: { id: true },
+  });
+  await prisma.subject
+    .update({ where: { id: subjectId }, data: { baseSubjectId: base.id } })
     .catch(() => {});
   schoolStructureRevalidate();
 }
