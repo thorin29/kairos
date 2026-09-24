@@ -40,22 +40,25 @@ export const FAMILY_PALETTE = [
 export const DEFAULT_FAMILY_COLOR = FAMILY_PALETTE[0];
 
 /**
- * Distinct colors auto-assigned to a student's classes on import, so each of a
- * student's classes reads as its own color on the year calendar. Deliberately
+ * Distinct colors auto-assigned to a student's classes / subjects, so each reads
+ * as its own color on the year calendar and the school cards. Deliberately
  * excludes reds (reserved for "past term end") and ambers/oranges (holiday and
- * vacation markers), so a class colour never blends into those.
+ * vacation markers), so a class colour never blends into those. Spread across the
+ * cool arc plus lime and pink, and ordered so consecutive subjects land far apart
+ * in hue rather than in near-identical shades.
  */
 export const CLASS_PALETTE = [
   "#2563eb", // blue
-  "#0d9488", // teal
-  "#7c3aed", // purple
-  "#059669", // green
+  "#16a34a", // green
+  "#9333ea", // purple
   "#0891b2", // cyan
+  "#ec4899", // pink
+  "#65a30d", // lime
+  "#4f46e5", // indigo
+  "#0d9488", // teal
   "#c026d3", // fuchsia
-  "#db2777", // pink
-  "#4d7c0f", // olive
-  "#0284c7", // sky
-  "#6d28d9", // violet
+  "#0ea5e9", // sky
+  "#7c3aed", // violet
 ] as const;
 
 /**

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.487.0";
+export const APP_VERSION = "0.488.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -125,6 +125,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.488.0",
+    summary: [
+      "More variety in the subject-colour palette \u2014 spread across more distinct hues instead of clustering in near-identical blues, greens and purples (and the pink that was quietly collapsing into cyan is gone). Still steers clear of red and the holiday/vacation ambers.",
+    ],
+  },
   {
     version: "0.487.0",
     summary: [
