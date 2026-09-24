@@ -169,6 +169,9 @@ model SchoolVacationDecision {
 model Subject {
   id           String        @id @default(cuid())
   name         String        @unique
+  // Groups granular subjects (Geometry, Pre-Algebra) under a shared base subject
+  // (Math) so they colour the same everywhere. Null = the subject is its own group.
+  baseSubject  String?
   sortOrder    Int           @default(0)
   isActive     Boolean       @default(true)
   pending      Boolean       @default(false)

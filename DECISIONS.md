@@ -941,3 +941,14 @@ repo's DECISIONS.md — this covers the Kairos side.
 - **Monthly framing.** "Season" → "This month" across UI; scoring-start and
   days-to-finish controls moved to the admin "Scoring & rewards" page (off kid-reachable
   pages).
+
+## Sept 24 2026 — base-subject colours (web v0.486)
+
+- School colours key to a BASE SUBJECT, not the granular subject. Subject gained a
+  nullable `baseSubject` (migration 109), and `loadSubjectColors` groups subjects by
+  `baseSubject ?? name`, assigning one palette colour per group in first-appearance
+  order. So Geometry + Pre-Algebra (both Math) share a colour everywhere: card dots,
+  app home card, progress page, admin year-calendar overlay. Initial mapping baked into
+  the migration (Math, Science, Foreign Language, History, Writing). Grammar/Writing/
+  Handwriting currently share the Writing colour; per-subject override + an admin editor
+  to set base subjects are the next step (Marco: "use my mapping now, admin later").

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.484.0";
+export const APP_VERSION = "0.486.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -118,11 +118,18 @@ export const MIGRATIONS = [
   "100_pool_eligibility",
   "107_reading_goals",
   "108_reading_goal_start",
+  "109_subject_base",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.486.0",
+    summary: [
+      "School colours are now grouped by BASE SUBJECT. Different class names under the same base share a colour \u2014 Geometry and Pre-Algebra are both Math, Geology/Biology/Science are all Science, etc. \u2014 and the same colour is used everywhere it appears: the school card dots, the app home school card, the School progress page, and the admin year-calendar overlay. A subject with no base keeps its own colour. Ships the base-subject mapping (Math, Science, Foreign Language, History, Writing); a way to edit it in the admin is coming next.",
+    ],
+  },
   {
     version: "0.484.0",
     summary: [

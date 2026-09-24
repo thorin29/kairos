@@ -1,4 +1,5 @@
 import "server-only";
+import { loadSubjectColors, displaySubjectColor } from "@/lib/school/subject-colors";
 import { prisma } from "@/lib/prisma";
 import {
   addDays,
@@ -480,6 +481,7 @@ export async function loadSchoolMetrics(
   range: { startISO: string; endISO: string } | null,
 ): Promise<SchoolMetrics[]> {
   const today = todayISO();
+  const subjectColors = await loadSubjectColors();
   const rows = await prisma.task.findMany({
     where: {
       category: "SCHOOL",
@@ -544,7 +546,9 @@ export async function loadSchoolMetrics(
     }
 
     const label = t.schoolWork.class?.name ?? t.schoolWork.subject ?? "Other";
-    const color = t.schoolWork.class?.color ?? null;
+    const color = t.schoolWork.class?.color
+      ? displaySubjectColor(t.schoolWork.class.color)
+      : (subjectColors.get(t.schoolWork.subject ?? "") ?? null);
     const cmap = classes.get(t.userId)!;
     const c = cmap.get(label) ?? {
       key: label,

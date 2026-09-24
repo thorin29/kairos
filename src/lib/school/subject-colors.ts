@@ -6,27 +6,43 @@ import { CLASS_PALETTE } from "@/lib/palette";
  *  Kept here so the school card and the admin year calendar agree. */
 export function displaySubjectColor(hex: string): string {
   const h = hex.toLowerCase();
-  // #dc2626 / #db2777 / #e11d48 and similar reds/pinks.
   const reddish = /^#(d[0-9a-f]|e[0-2])/.test(h);
   return reddish ? "#0891b2" : hex;
 }
 
 /**
- * A stable colour per subject, keyed to the subject's GLOBAL position in the
- * shared subject order (sortOrder, then creation order, then name) — NOT to a
- * per-student ordering. So the same subject gets the same colour for every
- * student, a student missing a subject never shifts the others, and a subject
- * added later (e.g. Handwriting) simply takes the next palette slot without
- * recolouring the existing ones. Returns a map keyed by subject name.
+ * A stable colour per subject, grouped by BASE SUBJECT. Granular subjects that
+ * share a base (Geometry + Pre-Algebra under Math) get the same colour; a subject
+ * with no base is its own group. Each group takes a palette colour by the order
+ * it first appears in the shared subject order (sortOrder, then creation order,
+ * then name), so colours are consistent for every student, a student missing a
+ * subject never shifts the others, and adding a subject/base later just takes the
+ * next slot. Returns a map keyed by subject name.
  */
 export async function loadSubjectColors(): Promise<Map<string, string>> {
   const subjects = await prisma.subject.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { name: "asc" }],
-    select: { name: true },
+    select: { name: true, baseSubject: true },
   });
+
+  // Group key = base subject if set, else the subject's own name.
+  const groupOf = new Map<string, string>();
+  const groupOrder: string[] = [];
+  for (const s of subjects) {
+    const key = s.baseSubject?.trim() || s.name;
+    if (!groupOrder.includes(key)) groupOrder.push(key);
+    groupOf.set(s.name, key);
+  }
+
+  const groupColor = new Map<string, string>();
+  groupOrder.forEach((key, i) => {
+    groupColor.set(key, displaySubjectColor(CLASS_PALETTE[i % CLASS_PALETTE.length]));
+  });
+
   const map = new Map<string, string>();
-  subjects.forEach((s, i) => {
-    map.set(s.name, displaySubjectColor(CLASS_PALETTE[i % CLASS_PALETTE.length]));
-  });
+  for (const s of subjects) {
+    const c = groupColor.get(groupOf.get(s.name)!);
+    if (c) map.set(s.name, c);
+  }
   return map;
 }
