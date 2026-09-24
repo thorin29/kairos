@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.488.0";
+export const APP_VERSION = "0.490.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -125,6 +125,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.490.0",
+    summary: [
+      "Five more subject colours to choose from: light green, bright yellow, dark yellow, dark orange and brown. The warm ones sit near the holiday-marker amber, so they're kept distinct from it and placed last \u2014 auto-assignment still reaches the clearly-different cool colours first, and these are mainly there to pick in the Subject colours panel. (Bright yellow is faint on white, so use it sparingly.)",
+    ],
+  },
   {
     version: "0.488.0",
     summary: [
