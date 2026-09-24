@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { noSchoolDaysFor } from "@/lib/school/school-days";
 import { pickClassColor } from "@/lib/palette";
+import { loadSubjectColors } from "@/lib/school/subject-colors";
 import { getHolidayColor } from "@/lib/holidays";
 import {
   holidayEntries,
@@ -236,7 +237,8 @@ function dowOf(s: string): number {
  *  and any overflow projected past the term end (red). Powers the calendar's
  *  per-class overlay. */
 export async function loadStudentBars(): Promise<StudentBars[]> {
-  const [plans, allTerms] = await Promise.all([
+  const [subjectColors, plans, allTerms] = await Promise.all([
+    loadSubjectColors(),
     prisma.classPlan.findMany({
       where: { status: "PUBLISHED" },
       orderBy: { createdAt: "asc" },
@@ -326,7 +328,9 @@ export async function loadStudentBars(): Promise<StudentBars[]> {
 
       let color = p.class.color;
       if (!color) {
-        color = pickClassColor(used, [holidayColor]);
+        color =
+          subjectColors.get(p.class.subject?.name ?? "") ??
+          pickClassColor(used, [holidayColor]);
         used.push(color);
       }
 

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.482.0";
+export const APP_VERSION = "0.484.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -124,9 +124,15 @@ export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
-    version: "0.482.0",
+    version: "0.484.0",
     summary: [
-      "Companions: the monthly egg limit is now 3 (was 2). When an egg is full but you've used up the month's hatches, the character now says the next egg can be hatched next month, instead of showing a full bar with no hatch button.",
+      "School subjects now have a consistent colour. Each subject gets a fixed colour from its place in the shared subject order, so the same subject is the same colour for every student (a student missing a subject no longer shifts the others), and a subject added later just takes the next colour. The School card dots and the admin year-calendar overlay both use it, so they finally match instead of the card showing grey.",
+    ],
+  },
+  {
+    version: "0.483.0",
+    summary: [
+      "Companions: the monthly egg limit is now 3 (was 2). When an egg is full but you've used up the month's hatches, the character now says the next egg can be hatched next month, instead of a full bar with no hatch button.",
     ],
   },
   {

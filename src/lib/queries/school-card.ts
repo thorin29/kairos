@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { todayISO } from "@/lib/dates";
 import { noSchoolDaysFor } from "@/lib/school/school-days";
 import { spreadUnits, spreadUnitsFit } from "@/lib/school/plan-builder";
+import { loadSubjectColors, displaySubjectColor } from "@/lib/school/subject-colors";
 
 function dISO(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -59,7 +60,8 @@ export type SchoolProgressData = {
  *  — how hard they'd have to push to finish on time. Drives the School card. */
 export async function loadSchoolProgress(userId: string): Promise<SchoolProgressData> {
   const today = todayISO();
-  const [plans, allTerms] = await Promise.all([
+  const [subjectColors, plans, allTerms] = await Promise.all([
+    loadSubjectColors(),
     prisma.classPlan.findMany({
       where: { status: "PUBLISHED", class: { userId } },
       orderBy: { createdAt: "asc" },
@@ -204,7 +206,9 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
       return {
         className: p.class.name,
         subject: p.class.subject?.name ?? null,
-        color: p.class.color,
+        color: p.class.color
+          ? displaySubjectColor(p.class.color)
+          : (subjectColors.get(p.class.subject?.name ?? "") ?? null),
         finishISO,
         remaining,
         onTrack,

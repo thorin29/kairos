@@ -1457,3 +1457,25 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   one-time pop-up when switching a new event's type to Class.
 - [ ] **App class-form + share-with layout** — the owner-excluded Share-with and the
   reordered class form are web-only.
+
+## Shipped — Sept 23–24 2026 run (web v0.458–0.483, app v0.271–0.287)
+
+- [x] **Reading goals, end to end** — schema + migrations 107/108, goal segments with
+  `startPage`, `/api/v1/books/goals`, per-book progress calc, "Book reading" section on
+  the person page + app home, book reminder setting. App book form rebuilt as a
+  full-screen screen (not a Dialog) with an add-goal overlay + date picker.
+- [x] **Workout** — overdue backfill + sport-completes-task fix, home workout summary
+  button/card, `workoutOverdue` in the dashboard. App plate-calculator "Use this weight"
+  now writes back to the originating card (target survives nav via `rememberSaveable`).
+- [x] **Companions** — babies grow on clean days, streak-driven egg rarity + pity,
+  gallery shows real stage, egg cap 3/month with a "hatch next month" message.
+- [ ] **School catch-up note (OPEN)** — the "Do N a day…" pace note stopped showing for
+  behind subjects. Pace math verified consistent (orange ⇒ note); break is delivery or
+  data. The past-year-spring theory was wrong and reverted (year one). Needs live values.
+- [x] **Monthly framing + Scoring & rewards admin page** — season→month wording,
+  admin-only scoring-start and days-to-finish controls.
+
+## Known-good baselines (end of this run)
+
+- Web APP_VERSION 0.483.0 (egg-cap only; migrations through 108_reading_goal_start).
+- App versionName 0.287.0 / versionCode 339 / CLIENT_BUILD 339.

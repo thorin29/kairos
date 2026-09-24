@@ -893,3 +893,51 @@ repo's DECISIONS.md — this covers the Kairos side.
   even at a month boundary.
 - **Per-system icon** comes from `PlayerCard.platforms` (comma-joined), set by
   the collector; the web/app just render Xbox/Steam logos.
+
+## Sept 23–24 2026 run (web v0.458–0.483)
+
+- **Reading goals.** New `ReadingGoal` model on `Book` (migration 107); each goal
+  stores `startPage` (migration 108) so progress is measured across the goal's own
+  segment `[startPage, target]`, not from page 1. `startPage` = the previous goal's
+  target, or the reader's position when the first goal was set (captured in
+  `syncBookGoals`, kept stable across edits). `loadReadingProgress` picks the active
+  goal (earliest whose due date is today-or-later, else the last) and returns a pct
+  that goes negative when you've fallen behind. Surfaced in a "Book reading" section
+  on the person page and in the dashboard payload for the app home. Endpoints:
+  `/api/v1/books/goals`, goals folded into add/update; `/api/v1/settings/reading-reminder`.
+- **Workout overdue.** Root cause of vanishing scheduled lifts: `confirmSportCore`
+  marked the day's binary EXERCISE task COMPLETE, so `loadOverdueWorkoutDays` (which
+  only looked at PENDING) dropped it. Fixed by including COMPLETE tasks and filtering
+  on whether the scheduled workout's exercises were actually logged. Generator now
+  backfills `WORKOUT_OVERDUE_MAX` days internally. Dashboard exposes `workoutOverdue`.
+- **Companions.** Growth is clean-days-since-acquired (`stageFromGrowth`); egg rarity
+  is streak-driven (`luckFromStreak`) with a pity timer. **Egg cap raised 2→3 per
+  month**; added `eggCapped` to the companion payload so a full-but-capped egg shows
+  "hatch next month" instead of a dead full bar.
+- **School catch-up note — ROOT CAUSE FOUND + FIXED (app).** The app has TWO
+  school progress renderers: `SchoolScreen.ProgressRow` (has the "Do N a day…" note)
+  and `HomeScreen.SchoolProgressRow` (the home school-detail view — the one users
+  actually see). A refactor moved the detail to the home screen and never carried the
+  note across, so behind subjects showed the orange finish date with no note. Fixed by
+  adding the note to `HomeScreen.SchoolProgressRow` (app v0.288). The pace math and the
+  web were always correct; the earlier "past spring term" theory was fabricated and
+  reverted (first school year — impossible). Lesson: when a UI element "disappears,"
+  find WHICH renderer draws the screen in the screenshot before touching the data path.
+- **Subject colours are consistent per subject (web v0.484).** Class colours were manual
+  (null by default → grey card dots) while the admin overlay assigned palette colours
+  per student, by order — so a student missing a subject shifted everyone's colour.
+  New `loadSubjectColors()` keys `CLASS_PALETTE` to the GLOBAL subject order
+  (sortOrder, createdAt, name), so a subject is one fixed colour everywhere. Used by
+  both `loadSchoolProgress` (card dots) and `loadStudentBars` (admin overlay); a manual
+  class colour still wins.
+- **School catch-up note — (was) OPEN.** The "Do N a day…" pace note
+  stopped showing for behind subjects. A first theory (a past-year spring term skewing
+  `targetISO`) was wrong and reverted — this is year one, so there is no past spring
+  term. Verified the pace math is internally consistent: for a far-off target, any
+  subject projected past `targetISO` (orange) also gets a non-null `catchUp`, so the
+  computation is not the break. Remaining suspects: delivery (running server/app not
+  carrying `catchUpRate`) or the subjects computing as on-track. Needs the live
+  per-subject values (onTrack / finishISO / catchUp) to localize before any fix.
+- **Monthly framing.** "Season" → "This month" across UI; scoring-start and
+  days-to-finish controls moved to the admin "Scoring & rewards" page (off kid-reachable
+  pages).
