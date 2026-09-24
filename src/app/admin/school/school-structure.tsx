@@ -10,6 +10,7 @@ import {
   addSubject,
   renameSubject,
   deleteSubject,
+  setSubjectMeta,
   approveSubject,
   mergeSubject,
   approveTerm,
@@ -27,6 +28,7 @@ import type {
   ClassTypeRow,
 } from "@/lib/queries/school";
 import { Card } from "@/components/ui";
+import { CLASS_PALETTE } from "@/lib/palette";
 import { TrashIcon } from "@/components/icons";
 
 const initial: SchoolActionState = { error: null };
@@ -82,6 +84,7 @@ export function SchoolStructure({
       )}
       <Terms terms={okTerms} today={today} />
       <Pools subjects={okSubjects} classTypes={classTypes} />
+      <SubjectColors subjects={okSubjects} />
       <Classes
         terms={okTerms}
         people={people}
@@ -1079,6 +1082,98 @@ function ClassRowView({
       >
         <TrashIcon className="h-4 w-4" />
       </button>
+    </div>
+  );
+}
+
+/** Set each subject's base-subject group (shared colour) and optional colour
+ *  override. Colours flow to the school card, home card, progress page and the
+ *  admin year-calendar overlay. */
+function SubjectColors({ subjects }: { subjects: SubjectRow[] }) {
+  const bases = Array.from(
+    new Set(subjects.map((s) => s.baseSubject).filter((b): b is string => !!b)),
+  ).sort();
+  return (
+    <Card className="p-4">
+      <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">
+        Subject colours
+      </h3>
+      <p className="mb-3 mt-1 text-sm text-muted">
+        Give a subject a base subject to share one colour with everything under it
+        (Geometry + Pre-Algebra &rarr; Math). Leave the base blank for its own
+        colour, or pick an exact colour to break it out of the group.
+      </p>
+      <datalist id="base-subject-options">
+        {bases.map((b) => (
+          <option key={b} value={b} />
+        ))}
+      </datalist>
+      <div className="divide-y divide-hairline">
+        {subjects.map((sub) => (
+          <SubjectColorRow key={sub.id} subject={sub} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function SubjectColorRow({ subject }: { subject: SubjectRow }) {
+  const [base, setBase] = useState(subject.baseSubject ?? "");
+  const [color, setColor] = useState(subject.color ?? "");
+  const [, start] = useTransition();
+  const persist = (nextBase: string, nextColor: string) =>
+    start(async () => {
+      await setSubjectMeta(subject.id, nextBase.trim() || null, nextColor || null);
+    });
+  return (
+    <div className="flex flex-wrap items-center gap-2 py-2">
+      <span
+        className="h-4 w-4 shrink-0 rounded-full"
+        style={{ backgroundColor: subject.resolvedColor ?? "var(--color-hairline)" }}
+      />
+      <span className="w-28 shrink-0 truncate text-sm font-medium">{subject.name}</span>
+      <input
+        value={base}
+        list="base-subject-options"
+        onChange={(e) => setBase(e.target.value)}
+        onBlur={() => persist(base, color)}
+        placeholder="Base subject"
+        className="w-36 rounded-md border border-hairline bg-transparent px-2 py-1 text-sm"
+      />
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => {
+            setColor("");
+            persist(base, "");
+          }}
+          className={`rounded-md border px-2 py-1 text-xs transition-colors ${
+            color ? "border-hairline text-muted" : "border-ink font-medium"
+          }`}
+        >
+          Auto
+        </button>
+        {CLASS_PALETTE.map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-label={c}
+            onClick={() => {
+              setColor(c);
+              persist(base, c);
+            }}
+            className="h-5 w-5 rounded-full border border-hairline"
+            style={{
+              backgroundColor: c,
+              outline:
+                color.toLowerCase() === c.toLowerCase()
+                  ? "2px solid var(--color-ink)"
+                  : undefined,
+              outlineOffset: "1px",
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }

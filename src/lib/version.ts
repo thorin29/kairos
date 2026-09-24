@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.486.0";
+export const APP_VERSION = "0.487.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -119,11 +119,18 @@ export const MIGRATIONS = [
   "107_reading_goals",
   "108_reading_goal_start",
   "109_subject_base",
+  "110_subject_color",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.487.0",
+    summary: [
+      "Admin can now edit subject colours. A \u201cSubject colours\u201d panel on the school structure page sets each subject's base subject (share one colour with everything under it \u2014 Geometry + Pre-Algebra = Math) and, optionally, an exact colour that breaks a subject out of its group. So Grammar / Writing / Handwriting can each get their own colour while staying under Writing. Changes apply everywhere colours show.",
+    ],
+  },
   {
     version: "0.486.0",
     summary: [

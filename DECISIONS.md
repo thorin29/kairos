@@ -952,3 +952,12 @@ repo's DECISIONS.md — this covers the Kairos side.
   the migration (Math, Science, Foreign Language, History, Writing). Grammar/Writing/
   Handwriting currently share the Writing colour; per-subject override + an admin editor
   to set base subjects are the next step (Marco: "use my mapping now, admin later").
+
+## Sept 24 2026 — subject-colour admin editor (web v0.487)
+
+- Added a per-subject colour OVERRIDE (Subject.color, migration 110) that wins over
+  the base-subject group colour, and a "Subject colours" admin panel
+  (school-structure.tsx) to set each subject's baseSubject + colour. Server action
+  setSubjectMeta. loadSubjectColors resolves override ?? group colour, so all four
+  surfaces update. This is the self-serve replacement for the baked-in migration-109
+  mapping; that mapping stays as the seed.

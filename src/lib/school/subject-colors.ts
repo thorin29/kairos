@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { CLASS_PALETTE } from "@/lib/palette";
+import { CLASS_PALETTE, isHexColor } from "@/lib/palette";
 
 /** Reddish colours clash with the red "overdue" cue, so swap them for cyan.
  *  Kept here so the school card and the admin year calendar agree. */
@@ -22,7 +22,7 @@ export function displaySubjectColor(hex: string): string {
 export async function loadSubjectColors(): Promise<Map<string, string>> {
   const subjects = await prisma.subject.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { name: "asc" }],
-    select: { name: true, baseSubject: true },
+    select: { name: true, baseSubject: true, color: true },
   });
 
   // Group key = base subject if set, else the subject's own name.
@@ -41,7 +41,11 @@ export async function loadSubjectColors(): Promise<Map<string, string>> {
 
   const map = new Map<string, string>();
   for (const s of subjects) {
-    const c = groupColor.get(groupOf.get(s.name)!);
+    const override = s.color?.trim();
+    const c =
+      override && isHexColor(override)
+        ? displaySubjectColor(override)
+        : groupColor.get(groupOf.get(s.name)!);
     if (c) map.set(s.name, c);
   }
   return map;

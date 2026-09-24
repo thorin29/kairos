@@ -275,7 +275,7 @@ export type PersonClasses = {
   classes: ClassRow[];
 };
 
-export type SubjectRow = { id: string; name: string; pending: boolean; proposedBy: string | null };
+export type SubjectRow = { id: string; name: string; pending: boolean; proposedBy: string | null; baseSubject: string | null; color: string | null; resolvedColor: string | null };
 export type ClassTypeRow = { id: string; name: string };
 
 function proposerName(
@@ -291,7 +291,7 @@ export async function loadSchoolStructure(): Promise<{
   subjects: SubjectRow[];
   classTypes: ClassTypeRow[];
 }> {
-  const [terms, people, classes, subjects, classTypes] = await Promise.all([
+  const [terms, people, classes, subjects, classTypes, subjectColors] = await Promise.all([
     prisma.term.findMany({ orderBy: [{ startDate: "asc" }] }),
     prisma.user.findMany({
       where: { isActive: true },
@@ -333,13 +333,14 @@ export async function loadSchoolStructure(): Promise<{
     prisma.subject.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, pending: true, proposedById: true },
+      select: { id: true, name: true, pending: true, proposedById: true, baseSubject: true, color: true },
     }),
     prisma.classType.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true },
     }),
+    loadSubjectColors(),
   ]);
 
   const nameById = new Map<string, string>(
@@ -415,6 +416,9 @@ export async function loadSchoolStructure(): Promise<{
       name: sub.name,
       pending: (sub as { pending?: boolean }).pending ?? false,
       proposedBy: proposerName((sub as { proposedById?: string | null }).proposedById, nameById),
+      baseSubject: (sub as { baseSubject?: string | null }).baseSubject ?? null,
+      color: (sub as { color?: string | null }).color ?? null,
+      resolvedColor: subjectColors.get(sub.name) ?? null,
     })),
     classTypes,
   };

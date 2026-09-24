@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isHexColor } from "@/lib/palette";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { requireAdmin, isAdmin } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
@@ -663,6 +664,24 @@ export async function deleteSubject(id: string): Promise<void> {
   await requireAdmin();
   // Classes keep their name; only the pool link is cleared by the FK.
   await prisma.subject.delete({ where: { id } }).catch(() => {});
+  schoolStructureRevalidate();
+}
+
+/** Set (or clear) a subject's base-subject group and optional colour override.
+ *  Empty base groups the subject on its own; an empty/invalid colour clears the
+ *  override so it falls back to the group colour. */
+export async function setSubjectMeta(
+  id: string,
+  baseSubject: string | null,
+  color: string | null,
+): Promise<void> {
+  await requireAdmin();
+  const base = (baseSubject ?? "").trim().slice(0, 60) || null;
+  const raw = (color ?? "").trim();
+  const col = isHexColor(raw) ? raw.toLowerCase() : null;
+  await prisma.subject
+    .update({ where: { id }, data: { baseSubject: base, color: col } })
+    .catch(() => {});
   schoolStructureRevalidate();
 }
 
