@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.494.0";
+export const APP_VERSION = "0.495.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -129,6 +129,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.495.0",
+    summary: [
+      "Create endpoints (add book, grocery, money entry, task, school work) now return the new item\u2019s id. No visible change on the web; it lets the Android app reconcile an item created offline to its real server id, so a follow-up action can\u2019t reference an id the server never had.",
+    ],
+  },
   {
     version: "0.494.0",
     summary: [

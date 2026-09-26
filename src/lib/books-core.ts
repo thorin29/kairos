@@ -135,7 +135,7 @@ async function recomputeGoalCompletion(bookId: string, position: number): Promis
   }
 }
 
-export type BookResult = { ok: true } | { ok: false; error: string };
+export type BookResult = { ok: true; id?: string } | { ok: false; error: string };
 
 export async function addBookCore(input: {
   userId: string;
@@ -173,7 +173,7 @@ export async function addBookCore(input: {
     await syncBookGoals(book.id, input.goals);
     await recomputeGoalCompletion(book.id, 0);
   }
-  return { ok: true };
+  return { ok: true, id: book.id };
 }
 
 /** Owner id for a book, or null - the route uses it to enforce self-only. */

@@ -31,5 +31,5 @@ export async function POST(req: NextRequest) {
     classId: typeof body.classId === "string" ? body.classId : null,
   });
   if (r.error) return apiError("validation", r.error);
-  return apiOk({ status: "ok" });
+  return apiOk({ status: "ok", id: r.id });
 }

@@ -29,7 +29,7 @@ export type AddMoneyInput = {
   dateISO?: string | null;
 };
 
-export type AddMoneyResult = { ok: true } | { ok: false; error: string };
+export type AddMoneyResult = { ok: true; id?: string } | { ok: false; error: string };
 
 function readCategory(raw: string | null | undefined): DepositCategory | null {
   return (DEPOSIT_CATEGORIES as readonly string[]).includes(raw ?? "")
@@ -70,7 +70,7 @@ export async function addMoneyEntryCore(
   });
   if (!user) return { ok: false, error: "That person no longer exists." };
 
-  await prisma.moneyEntry.create({
+  const entry = await prisma.moneyEntry.create({
     data: {
       userId,
       date: toDateColumn(dateISO),
@@ -83,7 +83,7 @@ export async function addMoneyEntryCore(
     },
   });
 
-  return { ok: true };
+  return { ok: true, id: entry.id };
 }
 
 // ---------------------------------------------------------------------------

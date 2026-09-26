@@ -13,12 +13,12 @@ export async function addTaskCore(input: {
   title: string;
   dueDate?: string | null;
   notifyMinutes?: number | null;
-}): Promise<{ error: string | null }> {
+}): Promise<{ error: string | null; id?: string }> {
   const title = input.title.trim().slice(0, 120);
   if (!input.userId) return { error: "Pick who this is for." };
   if (title.length < 2) return { error: "Give the task a name." };
   const dueDate = input.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate) ? input.dueDate : todayISO();
-  await prisma.task.create({
+  const task = await prisma.task.create({
     data: {
       userId: input.userId,
       title,
@@ -27,5 +27,5 @@ export async function addTaskCore(input: {
       notifyMinutes: input.notifyMinutes ?? null,
     },
   });
-  return { error: null };
+  return { error: null, id: task.id };
 }

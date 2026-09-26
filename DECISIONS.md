@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-09 — Create endpoints return the created id (Android offline reconciliation)
+
+The create APIs (books/add, groceries/add, groceries/add-catalog, money/entry, tasks/add,
+school/add) returned only `{ status: "ok" }`, discarding the row they had just created. They
+now return the created id (books `book.id`, money `entry.id`, tasks/school the created
+`task.id`, groceries the `shoppingItem.id`). The success result types carry the id as
+OPTIONAL (`{ ok: true; id?: string }`) so the shared update paths and other callers are
+untouched, and because the Android client parses with `ignoreUnknownKeys` this is
+backward-compatible with existing app builds (they ignore the new field). Recurring-task
+creation is excluded — it can materialize multiple Task rows, so there is no single id to
+return. Purpose: the Android app can swap an optimistic `temp-<uuid>` id for the real id after
+an online create, so a later action (delete/move/complete) never references an id the server
+never had.
+
+
 ## 2026-09 — Game time becomes monitoring-only; a collector container is the ingest boundary (pre-build)
 
 Game time is being stripped down to **passive monitoring of minutes played by

@@ -15,7 +15,7 @@ export async function addSchoolWorkCore(input: {
   type?: string | null;
   dueDate: string;
   classId?: string | null;
-}): Promise<{ error: string | null }> {
+}): Promise<{ error: string | null; id?: string }> {
   const userId = input.userId;
   const title = input.title.trim().slice(0, 120);
   const subject = (input.subject ?? "").trim().slice(0, 60) || null;
@@ -39,7 +39,7 @@ export async function addSchoolWorkCore(input: {
     classId = member?.classId ?? null;
   }
 
-  await prisma.task.create({
+  const task = await prisma.task.create({
     data: {
       userId,
       title,
@@ -57,7 +57,7 @@ export async function addSchoolWorkCore(input: {
       },
     },
   });
-  return { error: null };
+  return { error: null, id: task.id };
 }
 
 /** Delete a school item. Returns the owner id (for an auth check) or null. */

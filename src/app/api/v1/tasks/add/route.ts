@@ -53,5 +53,5 @@ export async function POST(req: NextRequest) {
     notifyMinutes: typeof body.notifyMinutes === "number" ? body.notifyMinutes : null,
   });
   if (r.error) return apiError("validation", r.error);
-  return apiOk({ status: "ok" });
+  return apiOk({ status: "ok", id: r.id });
 }

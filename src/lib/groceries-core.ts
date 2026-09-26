@@ -46,12 +46,12 @@ export async function addItemCore(input: {
   storeId: string;
   requesterId?: string | null;
   note?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   const typed = normalizeName(input.name);
-  if (!typed || !input.storeId) return;
+  if (!typed || !input.storeId) return null;
 
   const store = await prisma.store.findUnique({ where: { id: input.storeId } });
-  if (!store) return;
+  if (!store) return null;
 
   // Match the catalog case-insensitively so "napkins" / "Napkins" / "NAPKINS"
   // are one item — the first spelling added wins as the canonical name.
@@ -72,7 +72,7 @@ export async function addItemCore(input: {
     });
   }
 
-  await prisma.shoppingItem.create({
+  const created = await prisma.shoppingItem.create({
     data: {
       name,
       icon,
@@ -83,6 +83,7 @@ export async function addItemCore(input: {
       note: input.note?.trim() || null,
     },
   });
+  return created.id;
 }
 
 /** Move a saved line to a different store. */
@@ -101,18 +102,18 @@ export async function addFromCatalogCore(
   catalogId: string,
   storeId: string | undefined,
   requesterId?: string | null,
-): Promise<void> {
+): Promise<string | null> {
   const item = await prisma.groceryItem.findUnique({ where: { id: catalogId } });
-  if (!item) return;
+  if (!item) return null;
   const targetStore = storeId || item.defaultStoreId;
-  if (!targetStore) return;
+  if (!targetStore) return null;
 
   await prisma.groceryItem.update({
     where: { id: item.id },
     data: { useCount: { increment: 1 }, lastUsedAt: new Date() },
   });
 
-  await prisma.shoppingItem.create({
+  const created = await prisma.shoppingItem.create({
     data: {
       name: item.name,
       icon: item.icon,
@@ -122,6 +123,7 @@ export async function addFromCatalogCore(
       assignedToId: requesterId ?? null,
     },
   });
+  return created.id;
 }
 
 export async function assignItemCore(itemId: string, userId: string | null): Promise<void> {

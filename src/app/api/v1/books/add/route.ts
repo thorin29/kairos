@@ -26,5 +26,5 @@ export async function POST(req: NextRequest) {
     goals: parseGoalsInput(body.goals),
   });
   if (!res.ok) return apiError("validation", res.error);
-  return apiOk({ status: "ok" });
+  return apiOk({ status: "ok", id: res.id });
 }
