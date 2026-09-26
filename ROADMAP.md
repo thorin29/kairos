@@ -51,6 +51,23 @@ the following large efforts shipped:
   server is unreachable even if the phone reports online. (The 0.204 nav-state
   approach broke navigation and was reverted — see the app DECISIONS.md.)
 
+> **Status audit — 25 Sep 2026 (verified against deployed code, web + app):** the
+> personal-view scoping epic is essentially shipped — a real personal-vs-shared-
+> wall-tablet **device mode** (`deviceMode()` / `personalUserId()` /
+> `personalVisibleIds()`) scopes Reading (#6), School (#7), Game time (#8),
+> Workouts (#9), Transactions (#11) and Character (#12) to the signed-in person;
+> the **Personal calendar** (per-person view/colours/filters via
+> `recolorForPersonal`) is live; **collaborative chores**, the **chore rotation
+> helper**, and the Bible **preset plans** + **importer** are all built; and the
+> **app** has a full Settings area (Appearance, Profile, Notifications, Default
+> reminders, Diagnostics, Update). Boxes below flipped to `[x]` accordingly.
+> Still genuinely OPEN: change-your-own-password, personal defaults (starting
+> page), a **web** personal settings page/sidebar icon (web still uses Admin →
+> Appearance), export-to-JSON, weather panel, month/week completion grid,
+> dnd-kit reordering, Kairos-side TOTP, admin audit trail, and Bible balance-by-
+> verse-count. #2 (home) and #4 (chores) self-scope, but some listed UI micro-
+> tweaks in those two weren't individually verified — left unchecked.
+
 Next up, roughly in order:
 - **Saved addresses** (shipped) — a shared address book so event locations
   are picked, not retyped, and carry a full address for phone navigation.
@@ -86,7 +103,7 @@ Next up, roughly in order:
       the palette moved behind CSS variables / a snapshot color state so a theme
       swaps them all. (The web put this in the admin area rather than a personal
       sidebar settings page.)
-- [ ] Personal calendar event colours, view, and filters — now specced as the
+- [x] Personal calendar event colours, view, and filters — now specced as the
       **Personal calendar** epic under "Personal-view scoping" below (model and
       precedence in DECISIONS.md). Your personal view is recoloured and
       filtered per-person; the shared wall-tablet view keeps the household-wide
@@ -421,16 +438,16 @@ the remaining personal-view items:
       chores that are currently missing from the personal home.
 - [ ] #4 (personal half): "This week" and "Weekly rotation" show only the
       signed-in user; keep shared chores; (always-open counts shipped in 0.159).
-- [ ] #6 Reading — only your own reading.
-- [ ] #7 School — only your classes, assignments, tests.
-- [ ] #8 Game time — only you.
-- [ ] #9 Workouts — only you, and open straight onto the workout overlay/page
+- [x] #6 Reading — only your own reading.
+- [x] #7 School — only your classes, assignments, tests.
+- [x] #8 Game time — only you.
+- [x] #9 Workouts — only you, and open straight onto the workout overlay/page
       rather than a card you then tap.
-- [ ] #11 Transactions — only your transactions; hide the page/menu entry
+- [x] #11 Transactions — only your transactions; hide the page/menu entry
       entirely if you have no data.
-- [ ] #12 Character — only you, and move the character onto this page from the
+- [x] #12 Character — only you, and move the character onto this page from the
       home card.
-- [ ] **Personal calendar (web first, then Kotlin app).** The signed-in
+- [x] **Personal calendar (web first, then Kotlin app).** The signed-in
       calendar becomes per-person: its own view, filters, and colours, stored
       server-side so a phone and the web personal view always match. The shared
       wall-tablet calendar is untouched — it keeps the household-wide settings.
@@ -501,8 +518,8 @@ the remaining personal-view items:
 - [x] Collaborative chores — one chore shared by several people, each doing
       their part, with a weekly / every-other-week / every-N-weeks frequency
 - [ ] Smooth animated card reordering with a dedicated drag library (dnd-kit)
-- [ ] Rotation helper — assign one chore across several people in sequence
-- [ ] Gate a collaborative chore as complete only once everyone has done it,
+- [x] Rotation helper — assign one chore across several people in sequence
+- [x] Gate a collaborative chore as complete only once everyone has done it,
       surfaced in a household view
 
 ## Bible reading
@@ -529,10 +546,10 @@ the remaining personal-view items:
 - [ ] Balance by verse count rather than chapter count so days stay even
 - [x] Per-weekday chapter counts, including a lighter Sunday as an option
 - [ ] Guarantee no passage is scheduled twice within a plan
-- [ ] Preset plans generated from book lists (canonical, historical,
+- [x] Preset plans generated from book lists (canonical, historical,
       chronological, New Testament only) — generated here, not copied from
       published plans
-- [ ] Importer: file upload, preview-before-commit, documented grammar
+- [x] Importer: file upload, preview-before-commit, documented grammar
 - [x] "Up for grabs" is claimable on the Chores page (tap who did it), above
       the weekly rotation (v0.119.0)
 - [x] Tap a person's card on Characters for a popup of what they completed that
@@ -859,7 +876,7 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
 **Shipped:**
 - [x] **Data model + schedule builder (v0.378):** `ClassPlan` + `ClassPlanUnit`
       (migration 97); the verified `plan-builder.ts` (`expandShorthand` +
-      `spreadUnits` + `sliceByTerm`). Algorithm verified on a student's TT
+      `spreadUnits` + `sliceByTerm`). Algorithm verified on Micah's TT
       Pre-Algebra (156 items, from Lesson 9 → 147 scheduled; Fall ends ~Lesson
       70; finishes ~Apr 21). No screens yet.
 - [x] **CSV intake (v0.379):** `plan-csv.ts` parser, `class-plans.ts` import
