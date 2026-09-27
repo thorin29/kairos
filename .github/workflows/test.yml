@@ -1,0 +1,44 @@
+name: Server tests
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  idempotency:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: kairos
+          POSTGRES_PASSWORD: kairos
+          POSTGRES_DB: kairos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Runtime (pg driver adapter) + the migration replay in global-setup both read this.
+      DATABASE_URL: postgresql://kairos:kairos@localhost:5432/kairos_test
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # npm install (not ci): the lockfile isn't regenerated for the added
+      # vitest devDependency, so let npm resolve it.
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run idempotency tests
+        run: npm test
