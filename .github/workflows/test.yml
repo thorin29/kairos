@@ -32,10 +32,8 @@ jobs:
         with:
           node-version: '22'
 
-      # npm install (not ci): the lockfile isn't regenerated for the added
-      # vitest devDependency, so let npm resolve it.
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Generate Prisma client
         run: npx prisma generate
