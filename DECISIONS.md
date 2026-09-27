@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-09 — Server idempotency regression tests (locking in the offline-create contract)
+
+The offline-create idempotency now spans eight independent create paths (book, grocery add,
+grocery catalog add, money, task, school, calendar event, recurring task) and exists for a failure
+mode manual testing can't reproduce on demand — "DB commit succeeds, HTTP response is lost, the
+client retries." Added a small vitest suite (test/idempotency.test.ts) that calls each core twice
+with the same clientId against a real disposable Postgres and asserts one row / one id (for
+recurring, one template, since a series has no single id to return). No production behavior changed
+and there is no migration, so APP_VERSION is intentionally NOT bumped — this is test-only tooling.
+The schema is built by replaying the project's own migration SQL in MIGRATIONS order via pg in a
+vitest global-setup (the datasource carries no url and production applies migrations with its own
+runner, so prisma db push isn't the mechanism here). server-only and next/cache are stubbed via
+vitest aliases so the cores load outside the Next runtime. CI: a new Server tests workflow spins up
+a Postgres service, runs prisma generate, and runs the suite; it uses npm install rather than npm
+ci because the lockfile wasn't regenerated for the added vitest devDependency. test/ and
+vitest.config.ts are excluded from tsconfig so the Docker/Next build ignores them.
+
 ## 2026-09 — Idempotency for calendar events and recurring tasks (completing the offline set)
 
 Migration 100 gave clientId idempotency to Book/Task/MoneyEntry/ShoppingItem but missed the two
