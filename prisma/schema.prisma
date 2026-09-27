@@ -429,6 +429,7 @@ model EventType {
 
 model Event {
   id     String  @id @default(cuid())
+  clientId String? @unique
   // Null when the event belongs to the shared "Family" identity rather than a
   // specific person (isFamily is true in that case).
   userId String?
@@ -1540,6 +1541,7 @@ model ChoreLog {
 
 model RecurringTask {
   id          String    @id @default(cuid())
+  clientId String?
   userId      String
   user        User      @relation("RecurringTaskOwner", fields: [userId], references: [id], onDelete: Cascade)
   title       String
@@ -1563,6 +1565,7 @@ model RecurringTask {
   createdAt   DateTime  @default(now())
 
   @@index([active])
+  @@unique([userId, clientId])
 }
 
 /// A person's total game/console time for one local day, already resolved by the

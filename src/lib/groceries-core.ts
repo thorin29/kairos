@@ -82,19 +82,29 @@ export async function addItemCore(input: {
     });
   }
 
-  const created = await prisma.shoppingItem.create({
-    data: {
-      name,
-      icon,
-      storeId: input.storeId,
-      tripId: await activeTripId(input.storeId),
-      sortOrder: await nextSortOrder(input.storeId),
-      assignedToId: input.requesterId ?? null,
-      note: input.note?.trim() || null,
-      clientId,
-    },
-  });
-  return created.id;
+  try {
+    const created = await prisma.shoppingItem.create({
+      data: {
+        name,
+        icon,
+        storeId: input.storeId,
+        tripId: await activeTripId(input.storeId),
+        sortOrder: await nextSortOrder(input.storeId),
+        assignedToId: input.requesterId ?? null,
+        note: input.note?.trim() || null,
+        clientId,
+      },
+    });
+    return created.id;
+  } catch (e) {
+    // Concurrent duplicate (both requests passed the pre-check, one lost the
+    // unique-index race): return the row that won instead of throwing.
+    if (clientId && (e as { code?: string } | null)?.code === "P2002") {
+      const dup = await prisma.shoppingItem.findFirst({ where: { clientId } });
+      if (dup) return dup.id;
+    }
+    throw e;
+  }
 }
 
 /** Move a saved line to a different store. */
@@ -133,18 +143,26 @@ export async function addFromCatalogCore(
     data: { useCount: { increment: 1 }, lastUsedAt: new Date() },
   });
 
-  const created = await prisma.shoppingItem.create({
-    data: {
-      name: item.name,
-      icon: item.icon,
-      storeId: targetStore,
-      tripId: await activeTripId(targetStore),
-      sortOrder: await nextSortOrder(targetStore),
-      assignedToId: requesterId ?? null,
-      clientId: cid,
-    },
-  });
-  return created.id;
+  try {
+    const created = await prisma.shoppingItem.create({
+      data: {
+        name: item.name,
+        icon: item.icon,
+        storeId: targetStore,
+        tripId: await activeTripId(targetStore),
+        sortOrder: await nextSortOrder(targetStore),
+        assignedToId: requesterId ?? null,
+        clientId: cid,
+      },
+    });
+    return created.id;
+  } catch (e) {
+    if (cid && (e as { code?: string } | null)?.code === "P2002") {
+      const dup = await prisma.shoppingItem.findFirst({ where: { clientId: cid } });
+      if (dup) return dup.id;
+    }
+    throw e;
+  }
 }
 
 export async function assignItemCore(itemId: string, userId: string | null): Promise<void> {

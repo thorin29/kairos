@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-09 — Idempotency for calendar events and recurring tasks (completing the offline set)
+
+Migration 100 gave clientId idempotency to Book/Task/MoneyEntry/ShoppingItem but missed the two
+other offline creates. Migration 101 closes them. Calendar: Event gains a global `clientId @unique`
+(family events have a null userId, so the key can't be per-owner; a random uuid is globally unique
+anyway), createPersonalEvent does a findFirst on clientId before inserting and now returns the
+event id, and the calendar route reads clientId and returns the id — so a calendar event created
+offline reconciles its temp id to the real one exactly like every other item. Recurring tasks:
+RecurringTask gains `clientId` + `@@unique([userId, clientId])`, and createRecurringTask recognizes
+a retried create and skips making a second series. Deliberately, the recurring route still returns
+only `{ status: "ok" }` with NO id: one recurring create fans out to many Task rows, and the
+Android SyncManager treats a returned `id` as the real replacement for a `temp-...` Task id, so
+returning a RecurringTask id there would mis-remap. The app needs no change for recurring — it
+already sends the clientId on the same AddTask request. A newly created recurring placeholder can
+still be acted on before it syncs; that is left as a known UX limitation rather than a queue
+redesign. Also hardened the grocery cores: on a rare concurrent duplicate (two identical adds race
+past the pre-check, one loses the unique-index insert) they now catch the unique conflict and
+return the winning row instead of throwing. The other cores are left as-is: without the catch a
+concurrent loser gets a 500, which the app already retries, and the retry's pre-check then finds
+the committed row — eventually idempotent, with the unique index still preventing any duplicate row.
+
 ## 2026-09 — Server-side idempotency key for offline creates (clientId)
 
 The Android app already sends a durable `clientId` (a random uuid, the client's temp-id) in the

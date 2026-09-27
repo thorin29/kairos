@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.496.0";
+export const APP_VERSION = "0.497.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -109,6 +109,7 @@ export const MIGRATIONS = [
   "98_class_plan_start_date",
   "99_class_plan_fit_term",
   "100_client_idempotency",
+  "101_calendar_recurring_idempotency",
   "100_school_break",
   "101_school_break_confirmed",
   "102_school_vacation_decision",
@@ -130,6 +131,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.497.0",
+    summary: [
+      "Extends offline-create idempotency to calendar events and recurring tasks, the two creates that were still outside it. A calendar event created offline now carries a client id, is de-duplicated on a retried/lost-response create, and returns its id so the app reconciles it like every other item. A recurring task retried after a lost response no longer creates a second series. Also returns the existing row instead of erroring on a rare concurrent duplicate grocery add.",
+    ],
+  },
   {
     version: "0.496.0",
     summary: [

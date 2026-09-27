@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
       : null;
   if (recur) {
     const res = await createRecurringTask({
+      clientId: typeof body.clientId === "string" ? body.clientId : null,
       userId,
       title: typeof body.title === "string" ? body.title : "",
       freq: typeof recur.freq === "string" ? recur.freq : "WEEKLY",

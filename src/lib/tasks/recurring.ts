@@ -212,6 +212,7 @@ const ENDS = ["NEVER", "COUNT", "UNTIL"];
 
 export type RecurringInput = {
   userId: string;
+  clientId?: string | null;
   title: string;
   freq: string;
   interval: number;
@@ -289,8 +290,17 @@ export async function createRecurringTask(
 ): Promise<{ error: string | null }> {
   const n = normalizeRecurring(input);
   if (n.error !== null) return { error: n.error };
+  // Idempotency: a retried offline create whose response was lost must not
+  // create a second series. Recognized by clientId; we deliberately do NOT
+  // return the template id as a task id (SyncManager would mistake it for a
+  // Task real-id), so both original and retry return { error: null }.
+  const clientId = (input.clientId ?? "").trim() || null;
+  if (clientId) {
+    const existing = await prisma.recurringTask.findFirst({ where: { userId: input.userId, clientId } });
+    if (existing) return { error: null };
+  }
   await prisma.recurringTask.create({
-    data: { ...n.data, createdById: input.createdById ?? null },
+    data: { ...n.data, createdById: input.createdById ?? null, clientId },
   });
   await generateRecurringTasks();
   return { error: null };

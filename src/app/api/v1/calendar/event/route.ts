@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     p.id,
     {
       title: str("title") ?? "",
+      clientId: str("clientId"),
       allDay: raw.allDay === true,
       date: str("date") ?? "",
       start: str("start"),
@@ -49,5 +50,5 @@ export async function POST(req: NextRequest) {
     p.role === "ADMIN" || p.kind === "PARENT",
   );
   if (res.error) return apiError("validation", res.error);
-  return apiOk({ status: "ok" });
+  return apiOk({ status: "ok", id: res.id });
 }

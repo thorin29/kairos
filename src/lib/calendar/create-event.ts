@@ -18,6 +18,7 @@ export type EventInput = {
   title: string;
   allDay: boolean;
   date: string;
+  clientId?: string | null;
   start?: string;
   end?: string;
   endDate?: string;
@@ -110,7 +111,7 @@ export async function createPersonalEvent(
   actorUserId: string,
   input: EventInput,
   canManageFamily: boolean,
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; id?: string }> {
   const isFamily = input.isFamily === true;
   if (isFamily && !canManageFamily) {
     return { error: "Only a parent can add to the family calendar." };
@@ -137,6 +138,14 @@ export async function createPersonalEvent(
   const rrule =
     input.repeat && isFreq(input.repeat) ? buildRule(input.repeat, 1, null) : null;
 
+  // Idempotency: a retried offline create whose response was lost returns the
+  // already-created event instead of duplicating it.
+  const clientId = (input.clientId ?? "").trim() || null;
+  if (clientId) {
+    const existing = await prisma.event.findFirst({ where: { clientId }, select: { id: true } });
+    if (existing) return { error: null, id: existing.id };
+  }
+
   const created = await prisma.event.create({
     data: {
       userId: isFamily ? null : actorUserId,
@@ -152,6 +161,7 @@ export async function createPersonalEvent(
       rrule,
       reminders: normalizeReminders(input.reminders),
       reminderUserIds: normalizeUserIds(input.reminderUserIds),
+      clientId,
     },
     select: { id: true },
   });
@@ -162,7 +172,7 @@ export async function createPersonalEvent(
   revalidatePath("/");
   if (!isFamily) revalidatePath(`/person/${actorUserId}`);
   await rememberEventName(title);
-  return { error: null };
+  return { error: null, id: created.id };
 }
 
 /** Replace an event's shared-with people (excluding the owner), validating ids. */
