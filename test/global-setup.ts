@@ -1,27 +1,23 @@
-import { Client } from "pg";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
-import { MIGRATIONS } from "@/lib/version";
+import { execSync } from "node:child_process";
 
 /**
- * Build the test schema the same way production does: replay the project's own
- * migration SQL, in the canonical MIGRATIONS order, against a throwaway Postgres.
- * No prisma-CLI url config needed (the datasource has none — production applies
- * these via its own runner), and it exercises the exact DDL that ships.
+ * Build the test schema straight from schema.prisma via `prisma db push` — the
+ * authoritative, complete definition the generated client and the cores are
+ * written against.
+ *
+ * We deliberately do NOT replay the migration files: their historical order
+ * alters some tables before creating them (e.g. UserCalendarPref is altered in
+ * migration 10 but created in 72), so they aren't a clean from-scratch build.
+ * prisma.config.ts supplies the connection from DATABASE_URL, exactly as
+ * production's `prisma migrate deploy` step does. --force-reset gives every run
+ * a clean schema; per-test row cleanup is handled by resetDb().
  */
-export default async function setup(): Promise<void> {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
+export default function setup(): void {
+  if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL must point at a disposable test Postgres for the idempotency tests.");
   }
-  const client = new Client({ connectionString: url });
-  await client.connect();
-  await client.query("DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;");
-  const dir = fileURLToPath(new URL("../prisma/migrations", import.meta.url));
-  for (const name of MIGRATIONS) {
-    const sql = readFileSync(path.join(dir, name, "migration.sql"), "utf8");
-    await client.query(sql);
-  }
-  await client.end();
+  execSync("npx prisma db push --skip-generate --force-reset --accept-data-loss", {
+    stdio: "inherit",
+    env: process.env,
+  });
 }
