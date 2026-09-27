@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-09 — Grocery catalog: icon picker, lock, and custom-image display in admin
+
+Three related admin improvements. (1) The item icon cell was a plain text input, so a custom image
+icon showed its raw token ("ic:protein") instead of the picture; it now renders via GroceryGlyph
+(image for ic:* tokens, emoji otherwise), same as the shopping board. (2) A picker on each row offers
+the palette the guesser knows (exported as ICON_CHOICES from groceries/catalog.ts, the distinct icons
+from the keyword map), rendered as their real glyphs; free-typing any emoji still works. (3) A new
+iconLocked column (migration 102) lets a locked icon survive a catalog re-sync: resyncCatalogCore uses
+the keeper's own icon when locked and re-guesses only unlocked items, while still merging duplicates.
+Choosing an icon by hand (picker or type) auto-locks it (setCatalogIcon sets iconLocked=true), since a
+deliberate choice shouldn't be re-guessed away; the per-row lock toggle (setCatalogIconLock) releases
+it back to re-sync. Web-only; no app change.
+
 ## 2026-09 — Server idempotency regression tests (locking in the offline-create contract)
 
 The offline-create idempotency now spans eight independent create paths (book, grocery add,

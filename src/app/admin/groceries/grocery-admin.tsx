@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Card, SectionHeading } from "@/components/ui";
-import { PlusIcon, TrashIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon, GroceryGlyph } from "@/components/icons";
 import {
   addCatalogItem,
   addStore,
@@ -13,11 +13,13 @@ import {
   renameStore,
   setCatalogActive,
   setCatalogIcon,
+  setCatalogIconLock,
   setCatalogStore,
   setStoreActive,
   setStoreIcon,
 } from "@/lib/actions/groceries";
 import type { AdminCatalogItem, AdminStore } from "@/lib/queries/groceries";
+import { ICON_CHOICES } from "@/lib/groceries/catalog";
 
 /**
  * A brief green wash on a row to confirm a save landed — appears at once,
@@ -108,13 +110,7 @@ export function GroceryAdmin({
 
         <Card className="mb-4 p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              value={itemIcon}
-              onChange={(e) => setItemIcon(e.target.value)}
-              placeholder="🍎"
-              aria-label="Item icon"
-              className="h-10 w-14 rounded-full border border-hairline bg-ground/40 text-center outline-none focus:border-accent"
-            />
+            <IconField current={itemIcon} onPick={setItemIcon} onClear={() => setItemIcon("")} />
             <input
               value={itemName}
               onChange={(e) => setItemName(e.target.value)}
@@ -268,6 +264,93 @@ function StoreRow({
   );
 }
 
+function IconField({
+  current,
+  onPick,
+  onClear,
+}: {
+  current: string;
+  onPick: (icon: string) => void;
+  onClear?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-label="Choose icon"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-9 w-12 items-center justify-center rounded-lg border border-hairline bg-ground/40 outline-none focus:border-accent"
+      >
+        {current ? (
+          <GroceryGlyph icon={current} className="h-6 w-6" emojiClassName="text-lg" />
+        ) : (
+          <PlusIcon className="h-4 w-4 text-muted" />
+        )}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden />
+          <div className="absolute left-0 top-11 z-20 w-64 rounded-xl border border-hairline bg-surface p-2 shadow-lg">
+            <div className="grid grid-cols-8 gap-1">
+              {ICON_CHOICES.map((ic) => (
+                <button
+                  key={ic}
+                  type="button"
+                  aria-label={ic}
+                  onClick={() => {
+                    onPick(ic);
+                    setOpen(false);
+                  }}
+                  className="flex h-7 w-7 items-center justify-center rounded hover:bg-ground/60"
+                >
+                  <GroceryGlyph icon={ic} className="h-5 w-5" emojiClassName="text-base" />
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 flex items-center gap-2 border-t border-hairline pt-2">
+              <input
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                placeholder="or type emoji"
+                aria-label="Type an emoji"
+                className="h-8 w-full rounded-lg border border-hairline bg-ground/40 px-2 text-center text-sm outline-none focus:border-accent"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const v = typed.trim();
+                  if (v) {
+                    onPick(v);
+                    setTyped("");
+                    setOpen(false);
+                  }
+                }}
+                className="h-8 shrink-0 rounded-lg border border-hairline px-3 text-sm hover:bg-ground/60"
+              >
+                Set
+              </button>
+            </div>
+            {onClear && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClear();
+                  setOpen(false);
+                }}
+                className="mt-2 w-full rounded-lg border border-hairline px-3 py-1 text-xs text-muted hover:bg-ground/60"
+              >
+                Clear (guess from name)
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function CatalogRow({
   item,
   stores,
@@ -297,21 +380,31 @@ function CatalogRow({
         flashed ? FLASH_CLASS : item.isActive ? "" : "opacity-50"
       }`}
     >
-      <input
-        defaultValue={item.icon}
-        key={`icon-${item.icon}`}
-        aria-label={`${item.name} icon`}
-        onBlur={(e) => {
-          const v = e.target.value.trim();
-          if (v && v !== item.icon) {
-            startTransition(() => {
-              setCatalogIcon(item.id, v);
-            });
+      <div className="flex items-center gap-1">
+        <IconField
+          current={item.icon}
+          onPick={(ic) => {
+            if (ic !== item.icon) {
+              startTransition(() => setCatalogIcon(item.id, ic));
+              flash();
+            }
+          }}
+        />
+        <button
+          type="button"
+          aria-label={item.iconLocked ? "Unlock icon so re-sync can manage it" : "Lock icon so re-sync keeps it"}
+          title={item.iconLocked ? "Locked \u2014 re-sync keeps this icon" : "Unlocked \u2014 re-sync may re-guess this icon"}
+          onClick={() => {
+            startTransition(() => setCatalogIconLock(item.id, !item.iconLocked));
             flash();
-          }
-        }}
-        className="h-9 w-12 rounded-lg border border-hairline bg-ground/40 text-center outline-none focus:border-accent"
-      />
+          }}
+          className={`flex h-9 w-8 items-center justify-center rounded-lg border text-sm ${
+            item.iconLocked ? "border-accent" : "border-hairline opacity-50"
+          }`}
+        >
+          {item.iconLocked ? "\uD83D\uDD12" : "\uD83D\uDD13"}
+        </button>
+      </div>
       <div className="min-w-[8rem] flex-1">
         <input
           defaultValue={item.name}

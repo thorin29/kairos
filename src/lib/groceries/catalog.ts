@@ -143,6 +143,10 @@ const ICONS: [RegExp, string][] = [
   [/\b(dog|cat|pet)\b/, "🐾"],
 ];
 
+/** Distinct icons the guesser knows, in first-seen order \u2014 the palette the
+ *  admin icon picker offers. An item can still be set to any typed emoji. */
+export const ICON_CHOICES: string[] = Array.from(new Set(ICONS.map(([, icon]) => icon)));
+
 export function guessIcon(name: string): string {
   const n = name.toLowerCase();
   for (const [re, icon] of ICONS) if (re.test(n)) return icon;

@@ -1026,6 +1026,7 @@ model GroceryItem {
   id             String   @id @default(cuid())
   name           String   @unique
   icon           String   @default("📦")
+  iconLocked     Boolean  @default(false)
   defaultStoreId String?
   defaultStore   Store?   @relation(fields: [defaultStoreId], references: [id], onDelete: SetNull)
   useCount       Int      @default(0)

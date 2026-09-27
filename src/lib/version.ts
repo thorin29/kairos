@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.497.0";
+export const APP_VERSION = "0.498.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -110,6 +110,7 @@ export const MIGRATIONS = [
   "99_class_plan_fit_term",
   "100_client_idempotency",
   "101_calendar_recurring_idempotency",
+  "102_grocery_icon_lock",
   "100_school_break",
   "101_school_break_confirmed",
   "102_school_vacation_decision",
@@ -131,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.498.0",
+    summary: [
+      "Grocery admin: pick an item\u2019s icon from a palette of the ones the app knows (custom images included, shown as images now instead of their \u201cic:\u2026\u201d code), and lock an icon so a catalog re-sync leaves it alone. Choosing an icon locks it automatically; the lock toggle on each row releases it back to re-sync.",
+    ],
+  },
   {
     version: "0.497.0",
     summary: [

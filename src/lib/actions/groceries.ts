@@ -156,13 +156,28 @@ export async function setCatalogIcon(
   await prisma.$transaction([
     prisma.groceryItem.update({
       where: { id: catalogId },
-      data: { icon: trimmed },
+      // Choosing an icon by hand locks it, so a re-sync won't re-guess it away.
+      data: { icon: trimmed, iconLocked: true },
     }),
     prisma.shoppingItem.updateMany({
       where: { name: item.name },
       data: { icon: trimmed },
     }),
   ]);
+  refresh();
+}
+
+/** Lock or unlock a catalog item's icon. A locked icon is kept as-is by a
+ *  catalog re-sync instead of being re-guessed from the name. */
+export async function setCatalogIconLock(
+  catalogId: string,
+  locked: boolean,
+): Promise<void> {
+  await requireAdmin();
+  await prisma.groceryItem.update({
+    where: { id: catalogId },
+    data: { iconLocked: locked },
+  });
   refresh();
 }
 

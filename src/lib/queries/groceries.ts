@@ -247,6 +247,7 @@ export type AdminCatalogItem = {
   id: string;
   name: string;
   icon: string;
+  iconLocked: boolean;
   defaultStoreId: string | null;
   useCount: number;
   isActive: boolean;
@@ -267,6 +268,7 @@ export async function loadGroceryAdmin(): Promise<{
         id: true,
         name: true,
         icon: true,
+        iconLocked: true,
         defaultStoreId: true,
         useCount: true,
         isActive: true,

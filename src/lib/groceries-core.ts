@@ -261,7 +261,8 @@ export async function resyncCatalogCore(): Promise<{ merged: number; reiconed: n
     grp.sort((a, b) => b.useCount - a.useCount || a.createdAt.getTime() - b.createdAt.getTime());
     const keeper = grp[0];
     const canonical = normalizeName(keeper.name);
-    const icon = guessIcon(canonical);
+    // A locked icon is kept as the admin set it; only unlocked items are re-guessed.
+    const icon = keeper.iconLocked ? keeper.icon : guessIcon(canonical);
     const totalUse = grp.reduce((sum, i) => sum + i.useCount, 0);
 
     for (const loser of grp.slice(1)) {
