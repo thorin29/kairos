@@ -16,7 +16,7 @@ export default function setup(): void {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL must point at a disposable test Postgres for the idempotency tests.");
   }
-  execSync("npx prisma db push --skip-generate --force-reset --accept-data-loss", {
+  execSync("npx prisma db push --force-reset --accept-data-loss", {
     stdio: "inherit",
     env: process.env,
   });
