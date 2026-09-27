@@ -19,6 +19,6 @@ export async function POST(req: NextRequest) {
   const catalogId = typeof body.catalogId === "string" ? body.catalogId : "";
   if (!catalogId) return apiError("validation", "catalogId is required.");
   const storeId = typeof body.storeId === "string" ? body.storeId : undefined;
-  const id = await addFromCatalogCore(catalogId, storeId, authed.device.person.id);
+  const id = await addFromCatalogCore(catalogId, storeId, authed.device.person.id, typeof body.clientId === "string" ? body.clientId : null);
   return apiOk({ status: "ok", id: id ?? undefined });
 }

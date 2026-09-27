@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.495.0";
+export const APP_VERSION = "0.496.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -108,6 +108,7 @@ export const MIGRATIONS = [
   "97_class_plans",
   "98_class_plan_start_date",
   "99_class_plan_fit_term",
+  "100_client_idempotency",
   "100_school_break",
   "101_school_break_confirmed",
   "102_school_vacation_decision",
@@ -129,6 +130,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.496.0",
+    summary: [
+      "Server-side idempotency for offline creates. A create the app retries after its response was lost (the row was saved but the id never made it back to the device) is now recognized by the client id it carries and returns the existing item instead of making a duplicate. Covers books, groceries, money entries, tasks, and school work. No visible change; it closes the last duplicate-on-reconnect edge in the Android offline sync.",
+    ],
+  },
   {
     version: "0.495.0",
     summary: [

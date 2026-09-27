@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     pages: body.pages ?? null,
     chapters: body.chapters ?? null,
     goals: parseGoalsInput(body.goals),
+    clientId: typeof body.clientId === "string" ? body.clientId : null,
   });
   if (!res.ok) return apiError("validation", res.error);
   return apiOk({ status: "ok", id: res.id });

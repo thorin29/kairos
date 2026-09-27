@@ -46,12 +46,22 @@ export async function addItemCore(input: {
   storeId: string;
   requesterId?: string | null;
   note?: string | null;
+  clientId?: string | null;
 }): Promise<string | null> {
   const typed = normalizeName(input.name);
   if (!typed || !input.storeId) return null;
 
   const store = await prisma.store.findUnique({ where: { id: input.storeId } });
   if (!store) return null;
+
+  // Idempotency: a retried offline create whose response was lost returns the
+  // already-created row (before touching the catalog use-count) rather than
+  // adding the line twice.
+  const clientId = (input.clientId ?? "").trim() || null;
+  if (clientId) {
+    const dup = await prisma.shoppingItem.findFirst({ where: { clientId } });
+    if (dup) return dup.id;
+  }
 
   // Match the catalog case-insensitively so "napkins" / "Napkins" / "NAPKINS"
   // are one item — the first spelling added wins as the canonical name.
@@ -81,6 +91,7 @@ export async function addItemCore(input: {
       sortOrder: await nextSortOrder(input.storeId),
       assignedToId: input.requesterId ?? null,
       note: input.note?.trim() || null,
+      clientId,
     },
   });
   return created.id;
@@ -102,11 +113,20 @@ export async function addFromCatalogCore(
   catalogId: string,
   storeId: string | undefined,
   requesterId?: string | null,
+  clientId?: string | null,
 ): Promise<string | null> {
   const item = await prisma.groceryItem.findUnique({ where: { id: catalogId } });
   if (!item) return null;
   const targetStore = storeId || item.defaultStoreId;
   if (!targetStore) return null;
+
+  // Idempotency: a retried offline create whose response was lost returns the
+  // already-created row instead of duplicating it.
+  const cid = (clientId ?? "").trim() || null;
+  if (cid) {
+    const dup = await prisma.shoppingItem.findFirst({ where: { clientId: cid } });
+    if (dup) return dup.id;
+  }
 
   await prisma.groceryItem.update({
     where: { id: item.id },
@@ -121,6 +141,7 @@ export async function addFromCatalogCore(
       tripId: await activeTripId(targetStore),
       sortOrder: await nextSortOrder(targetStore),
       assignedToId: requesterId ?? null,
+      clientId: cid,
     },
   });
   return created.id;

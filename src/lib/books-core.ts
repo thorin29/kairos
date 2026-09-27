@@ -144,6 +144,7 @@ export async function addBookCore(input: {
   pages?: unknown;
   chapters?: unknown;
   goals?: GoalInput[];
+  clientId?: string | null;
 }): Promise<BookResult> {
   const userId = (input.userId ?? "").trim();
   if (!userId) return { ok: false, error: "Whose book is this?" };
@@ -157,6 +158,14 @@ export async function addBookCore(input: {
 
   const author = (input.author ?? "").trim().slice(0, 120) || null;
 
+  // Idempotency: a retried offline create whose response was lost returns the
+  // already-created row instead of duplicating it.
+  const clientId = (input.clientId ?? "").trim() || null;
+  if (clientId) {
+    const existing = await prisma.book.findFirst({ where: { userId, clientId } });
+    if (existing) return { ok: true, id: existing.id };
+  }
+
   const book = await prisma.book.create({
     data: {
       userId,
@@ -167,6 +176,7 @@ export async function addBookCore(input: {
       pages,
       chapters,
       position: 0,
+      clientId,
     },
   });
   if (input.goals && input.goals.length) {

@@ -325,6 +325,7 @@ enum TaskStatus {
 
 model Task {
   id       String     @id @default(cuid())
+  clientId String?
   userId   String
   user     User       @relation("TaskOwner", fields: [userId], references: [id], onDelete: Cascade)
   category Category
@@ -393,6 +394,7 @@ model Task {
   @@index([userId, category, dueDate])
   @@index([choreId, dueDate])
   @@index([isOpen, dueDate])
+  @@unique([userId, clientId])
 }
 
 // ---------------------------------------------------------------
@@ -779,6 +781,7 @@ enum ReadingUnit {
 
 model Book {
   id         String      @id @default(cuid())
+  clientId String?
   userId     String
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   title      String
@@ -800,6 +803,7 @@ model Book {
   goals      ReadingGoal[]
 
   @@index([userId])
+  @@unique([userId, clientId])
 }
 
 // Optional, sequential reading goals for a book: reach `target` (a page/chapter
@@ -1036,6 +1040,7 @@ model GroceryItem {
 // rest to the saved list. Name and icon are snapshots that track the catalog.
 model ShoppingItem {
   id           String    @id @default(cuid())
+  clientId String? @unique
   name         String
   icon         String    @default("📦")
   storeId      String
@@ -1415,6 +1420,7 @@ enum MoneyKind {
 
 model MoneyEntry {
   id     String @id @default(cuid())
+  clientId String?
   userId String
   user   User   @relation("MoneyOwner", fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1451,6 +1457,7 @@ model MoneyEntry {
   @@index([status])
   // One reward and one bonus per person per month, at most.
   @@unique([userId, kind, periodKey])
+  @@unique([userId, clientId])
 }
 
 // ---- Family co-op -----------------------------------------------------------

@@ -20,6 +20,6 @@ export async function POST(req: NextRequest) {
   const storeId = typeof body.storeId === "string" ? body.storeId : "";
   if (!name.trim() || !storeId) return apiError("validation", "name and storeId are required.");
   const note = typeof body.note === "string" ? body.note : null;
-  const id = await addItemCore({ name, storeId, note, requesterId: authed.device.person.id });
+  const id = await addItemCore({ name, storeId, note, requesterId: authed.device.person.id, clientId: typeof body.clientId === "string" ? body.clientId : null });
   return apiOk({ status: "ok", id: id ?? undefined });
 }

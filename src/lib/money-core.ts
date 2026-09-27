@@ -27,6 +27,7 @@ export type AddMoneyInput = {
   category?: string | null;
   /** YYYY-MM-DD; defaults to today when missing or malformed. */
   dateISO?: string | null;
+  clientId?: string | null;
 };
 
 export type AddMoneyResult = { ok: true; id?: string } | { ok: false; error: string };
@@ -70,6 +71,14 @@ export async function addMoneyEntryCore(
   });
   if (!user) return { ok: false, error: "That person no longer exists." };
 
+  // Idempotency: a retried offline create whose response was lost returns the
+  // already-created row instead of duplicating it.
+  const clientId = (input.clientId ?? "").trim() || null;
+  if (clientId) {
+    const existing = await prisma.moneyEntry.findFirst({ where: { userId, clientId } });
+    if (existing) return { ok: true, id: existing.id };
+  }
+
   const entry = await prisma.moneyEntry.create({
     data: {
       userId,
@@ -80,6 +89,7 @@ export async function addMoneyEntryCore(
       amountCents,
       kind: "MANUAL",
       status: "PENDING",
+      clientId,
     },
   });
 

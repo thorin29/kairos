@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
     title: typeof body.title === "string" ? body.title : "",
     dueDate: typeof body.dueDate === "string" ? body.dueDate : null,
     notifyMinutes: typeof body.notifyMinutes === "number" ? body.notifyMinutes : null,
+    clientId: typeof body.clientId === "string" ? body.clientId : null,
   });
   if (r.error) return apiError("validation", r.error);
   return apiOk({ status: "ok", id: r.id });

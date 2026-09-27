@@ -15,6 +15,7 @@ export async function addSchoolWorkCore(input: {
   type?: string | null;
   dueDate: string;
   classId?: string | null;
+  clientId?: string | null;
 }): Promise<{ error: string | null; id?: string }> {
   const userId = input.userId;
   const title = input.title.trim().slice(0, 120);
@@ -39,12 +40,21 @@ export async function addSchoolWorkCore(input: {
     classId = member?.classId ?? null;
   }
 
+  // Idempotency: a retried offline create whose response was lost returns the
+  // already-created row instead of duplicating it.
+  const clientId = (input.clientId ?? "").trim() || null;
+  if (clientId) {
+    const existing = await prisma.task.findFirst({ where: { userId, clientId } });
+    if (existing) return { error: null, id: existing.id };
+  }
+
   const task = await prisma.task.create({
     data: {
       userId,
       title,
       category: Category.SCHOOL,
       dueDate: toDateColumn(dueDate),
+      clientId,
       schoolWork: {
         create: {
           type,

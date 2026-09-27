@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     type: typeof body.type === "string" ? body.type : null,
     dueDate: typeof body.dueDate === "string" ? body.dueDate : "",
     classId: typeof body.classId === "string" ? body.classId : null,
+    clientId: typeof body.clientId === "string" ? body.clientId : null,
   });
   if (r.error) return apiError("validation", r.error);
   return apiOk({ status: "ok", id: r.id });

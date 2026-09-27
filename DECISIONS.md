@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-09 — Server-side idempotency key for offline creates (clientId)
+
+The Android app already sends a durable `clientId` (a random uuid, the client's temp-id) in the
+body of every create it makes offline. The server now persists it and uses it as an idempotency
+key, so a create the app retries after its response was lost — the row was committed but the id
+never got back to the device — is recognized and returns the existing row instead of inserting a
+duplicate. Each create core (books, groceries add + add-catalog, money entry, tasks, school work)
+does a `findFirst` on the clientId before inserting and returns the existing id if found; the new
+row stores the clientId. Migration 100_client_idempotency adds a nullable `clientId` column plus a
+unique index to Book, Task, MoneyEntry and ShoppingItem. The column is nullable so every existing
+row is unaffected, and a plain unique index over a nullable column allows unlimited NULLs while
+enforcing uniqueness on real client ids (a race between two identical retries hits the index rather
+than double-inserting). Book/Task/MoneyEntry key on `(userId, clientId)` since they have an owner
+column; ShoppingItem keys on `clientId` alone (groceries are a shared household list with no direct
+user column, and clientId is globally unique by construction anyway). School work and plain tasks
+both write Task, so both are covered by the one Task key; recurring tasks never set a clientId and
+so are exempt (their NULLs don't collide). This is the server half of the Android 0.311/0.312
+offline-sync work; no app change is needed — the clientId was already on the wire.
+
 ## 2026-09 — Create endpoints return the created id (Android offline reconciliation)
 
 The create APIs (books/add, groceries/add, groceries/add-catalog, money/entry, tasks/add,

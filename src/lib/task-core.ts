@@ -13,11 +13,19 @@ export async function addTaskCore(input: {
   title: string;
   dueDate?: string | null;
   notifyMinutes?: number | null;
+  clientId?: string | null;
 }): Promise<{ error: string | null; id?: string }> {
   const title = input.title.trim().slice(0, 120);
   if (!input.userId) return { error: "Pick who this is for." };
   if (title.length < 2) return { error: "Give the task a name." };
   const dueDate = input.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate) ? input.dueDate : todayISO();
+  // Idempotency: a retried offline create whose response was lost returns the
+  // already-created row instead of duplicating it.
+  const clientId = (input.clientId ?? "").trim() || null;
+  if (clientId) {
+    const existing = await prisma.task.findFirst({ where: { userId: input.userId, clientId } });
+    if (existing) return { error: null, id: existing.id };
+  }
   const task = await prisma.task.create({
     data: {
       userId: input.userId,
@@ -25,6 +33,7 @@ export async function addTaskCore(input: {
       category: Category.OTHER,
       dueDate: toDateColumn(dueDate),
       notifyMinutes: input.notifyMinutes ?? null,
+      clientId,
     },
   });
   return { error: null, id: task.id };
