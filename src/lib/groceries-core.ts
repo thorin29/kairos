@@ -261,8 +261,21 @@ export async function resyncCatalogCore(): Promise<{ merged: number; reiconed: n
     grp.sort((a, b) => b.useCount - a.useCount || a.createdAt.getTime() - b.createdAt.getTime());
     const keeper = grp[0];
     const canonical = normalizeName(keeper.name);
-    // A locked icon is kept as the admin set it; only unlocked items are re-guessed.
-    const icon = keeper.iconLocked ? keeper.icon : guessIcon(canonical);
+    // Unlocked items are re-guessed from the name. A locked icon is the admin's
+    // hand-picked choice and is normally kept — but a pick made before the
+    // colorful kairos: icons existed is stale: if the name now guesses to a
+    // kairos: icon and the locked one is still a plain emoji/mdi/ic, upgrade it
+    // to the new art (the lock stays). Deliberate kairos: picks are left as-is.
+    let icon: string;
+    if (keeper.iconLocked) {
+      const guess = guessIcon(canonical);
+      icon =
+        guess.startsWith("kairos:") && !keeper.icon.startsWith("kairos:")
+          ? guess
+          : keeper.icon;
+    } else {
+      icon = guessIcon(canonical);
+    }
     const totalUse = grp.reduce((sum, i) => sum + i.useCount, 0);
 
     for (const loser of grp.slice(1)) {
