@@ -1,3 +1,5 @@
+import { MDI_PATHS } from "@/lib/groceries/mdi-paths";
+
 type IconProps = { className?: string };
 
 /**
