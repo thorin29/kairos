@@ -552,9 +552,22 @@ export function GroceryGlyph({
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={src} alt="" className={`${className} object-contain`} aria-hidden />;
   }
+  if (icon.startsWith("mdi:")) {
+    const path = MDI_PATHS[icon.slice(4)];
+    if (path) {
+      return (
+        <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+          <path d={path} />
+        </svg>
+      );
+    }
+  }
+  // A prefixed token we can't render (unknown ic:/mdi:/other) shows a box rather
+  // than the raw string like "mdi:foo".
+  const unknownToken = /^[a-z]+:/.test(icon);
   return (
     <span className={emojiClassName} aria-hidden>
-      {icon.startsWith("ic:") ? "📦" : icon}
+      {unknownToken ? "📦" : icon}
     </span>
   );
 }

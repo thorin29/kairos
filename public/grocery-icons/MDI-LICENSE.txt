@@ -1,0 +1,4 @@
+Grocery icons prefixed "mdi:" are from Material Design Icons (Pictogrammers),
+licensed under the Apache License 2.0. https://pictogrammers.com/library/mdi/
+Icon path data is bundled in src/lib/groceries/mdi-paths.ts (web) and
+app/src/main/res/drawable/mdi_*.xml (Android).

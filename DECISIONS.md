@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-09 - Grocery icons: bundled Material Design Icons for the emoji gaps (mdi: tokens)
+
+Items that emoji represented poorly now use Material Design Icons (Pictogrammers, Apache-2.0),
+stored as `mdi:<name>` tokens in the same icon string field: soda -> bottle-soda-classic, juice/oil
+-> bottle-tonic-outline, yogurt/creamer -> cup-outline, flour -> sack, sugar -> spoon-sugar, spices
+-> shaker-outline, sauces/condiments -> soy-sauce, cleaning -> spray-bottle, soap/shampoo -> pump,
+tissues -> box, diapers -> diaper-outline, pet -> bowl-mix-outline. Chips/crackers/gum keep emoji
+(MDI had nothing better) and the five ic:* customs stay. Rendering is bundled, not fetched (offline
+first): web inlines the path from src/lib/groceries/mdi-paths.ts with fill=currentColor; Android
+renders app res/drawable/mdi_*.xml vector drawables tinted to the content color. Both GroceryGlyphs
+now also fall back to a box for any unknown prefixed token instead of drawing the raw string. This
+is why the app (0.315) must ship before the web (0.501) emits mdi: tokens - an older app would draw
+the literal text. Room caching is unaffected: the icon is just a longer string on the same payload.
+
 ## 2026-09 - Grocery icon matching by head noun + confidence, and locks folded into "manual"
 
 The icon guesser was "first rule in the ICONS list whose keyword appears anywhere wins", so a

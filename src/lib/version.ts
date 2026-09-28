@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.500.0";
+export const APP_VERSION = "0.501.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.501.0",
+    summary: [
+      "Better grocery icons for the items emoji handled poorly: soda and juice are now bottles (not a fountain cup and a juice box), plus real product icons for yogurt, flour, sugar, spices, oil, sauces/condiments, cleaning spray, soap/shampoo, tissues, diapers, and pet food. These use bundled Material Design Icons (offline, no external service). Requires the Android app updated to 0.315+ to show them.",
+    ],
+  },
   {
     version: "0.500.0",
     summary: [
