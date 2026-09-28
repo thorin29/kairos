@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-09 - Rotation anchor (cycle start date) exposed to the Android app
+
+The web rotation builder already had a "Cycle starts on" date field (setRotationAnchor action); the
+Android editor had no equivalent, so a rotation user could only change slots/rest days, never the
+start. Added a workouts/rotation/anchor API route (POST { date } -> setAnchorCore) so the app can set
+the anchor, and a "Cycle starts on" control on RotationScreen that opens a date picker defaulting to
+today. Setting it to today is the one-tap way to start an edited plan immediately and let the
+generator sweep any stale overdue prompts - the deliberate version of the 0.502 re-anchor-on-edit fix.
+
 ## 2026-09 - Editing a rotation plan re-anchors it to today (no retroactive backlog)
 
 The workout generator backfills an overdue window behind today and rebuilds each person's expected

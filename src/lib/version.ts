@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.502.0";
+export const APP_VERSION = "0.503.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.503.0",
+    summary: [
+      "The Android rotation editor can now set the cycle start date (defaulting to today), matching the web. Setting it to today is the clean way to start an edited plan fresh and clear any leftover overdue prompts.",
+    ],
+  },
   {
     version: "0.502.0",
     summary: [
