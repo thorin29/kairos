@@ -40,9 +40,10 @@ export async function startRotationCore(userId: string): Promise<void> {
   await generateWorkoutTasks();
 }
 
-/** Remove the rotation, returning the person to the weekly plan (slots cascade). */
+/** Switch back to the weekly plan. Deactivates the rotation (keeping it and its
+ *  slots) rather than deleting, so it can be switched back to later. */
 export async function stopRotationCore(userId: string): Promise<void> {
-  await prisma.workoutRotation.deleteMany({ where: { userId } });
+  await prisma.workoutRotation.updateMany({ where: { userId }, data: { isActive: false } });
   await generateWorkoutTasks();
 }
 

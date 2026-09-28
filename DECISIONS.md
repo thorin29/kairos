@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-09 - Switching weekly <-> rotation preserves both (stop = deactivate)
+
+Stopping a rotation used to delete it (slots cascaded), so switching to the weekly plan lost the
+rotation. Both stop paths (stopRotation action, stopRotationCore) now set isActive=false instead,
+keeping the rotation and its slots; the generator already ignores inactive rotations and loadRotation
+already returns null when inactive, so nothing downstream changes. startRotation already reactivates
+an existing rotation, so switching back restores the saved cycle. The weekly plan (PlannedWorkouts)
+was always preserved across a rotation. Net: one active plan at a time, both saved, switch freely.
+Web gap closed: the weekly editor now has a "Use a rotation instead" switch (it already had "Back to
+weekly plan" on the rotation side); the app already had the Rotation entry + stop, so it inherits
+this with no app change. Deferred (need their own design + a migration): a user-set start date for
+the weekly plan, and running a rotation concurrently with the weekly plan (per-day source of truth).
+
 ## 2026-09 - Overdue workouts respect when a planned workout was added (weekly plans)
 
 loadOverdueWorkoutDays judged each past day by loadTodayPlannedWorkouts(userId, iso), which loaded

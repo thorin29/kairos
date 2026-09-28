@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.504.0";
+export const APP_VERSION = "0.505.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.505.0",
+    summary: [
+      "You can now switch between a weekly plan and a rotation without losing either \u2014 stopping a rotation keeps it (and its cycle) saved, and switching back restores it, and your weekly plan is preserved the whole time. Added a \u201cUse a rotation instead\u201d switch on the web weekly-plan editor (it already had \u201cBack to weekly plan\u201d).",
+    ],
+  },
   {
     version: "0.504.0",
     summary: [

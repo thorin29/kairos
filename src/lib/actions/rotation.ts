@@ -49,7 +49,9 @@ export async function stopRotation(userId: string): Promise<void> {
   await requireInteractive();
   await requireCanActFor(userId);
   if (!userId) return;
-  await prisma.workoutRotation.deleteMany({ where: { userId } });
+  // Deactivate rather than delete, so the rotation (and its slots) is saved and
+  // switching back restores it. The generator ignores inactive rotations.
+  await prisma.workoutRotation.updateMany({ where: { userId }, data: { isActive: false } });
   await generateWorkoutTasks();
   refresh();
 }

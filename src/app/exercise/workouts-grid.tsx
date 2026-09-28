@@ -402,17 +402,26 @@ export function WorkoutsGrid({
                     }
                     if (showWeekly) {
                       return (
-                        <PlanBuilder
-                          userId={open.user.id}
-                          plan={open.plan}
-                          todayDow={todayDow}
-                          pool={pool}
-                          hiitWorkouts={hiitWorkouts.filter(
-                            (w) =>
-                              w.ownerId === null ||
-                              w.ownerId === open.user.id,
-                          )}
-                        />
+                        <>
+                          <PlanBuilder
+                            userId={open.user.id}
+                            plan={open.plan}
+                            todayDow={todayDow}
+                            pool={pool}
+                            hiitWorkouts={hiitWorkouts.filter(
+                              (w) =>
+                                w.ownerId === null ||
+                                w.ownerId === open.user.id,
+                            )}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPlanMode("rotation")}
+                            className="mt-4 text-sm font-medium text-accent hover:underline"
+                          >
+                            Use a rotation instead →
+                          </button>
+                        </>
                       );
                     }
                     return (
