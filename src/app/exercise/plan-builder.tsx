@@ -52,6 +52,7 @@ export function PlanBuilder({
   todayDow,
   pool,
   hiitWorkouts,
+  weeklyStart,
 }: {
   userId: string;
   plan: PlanDay[];
