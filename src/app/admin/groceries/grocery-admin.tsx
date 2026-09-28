@@ -107,6 +107,12 @@ export function GroceryAdmin({
         >
           Re-sync catalog (merge duplicates &amp; refresh icons)
         </button>
+        {catalog.some((c) => c.needsReview) && (
+          <p className="mb-4 -mt-2 text-sm text-accent">
+            {catalog.filter((c) => c.needsReview).length}{" "}
+            {catalog.filter((c) => c.needsReview).length === 1 ? "icon" : "icons"} to review, marked below.
+          </p>
+        )}
 
         <Card className="mb-4 p-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -390,20 +396,20 @@ function CatalogRow({
             }
           }}
         />
-        <button
-          type="button"
-          aria-label={item.iconLocked ? "Unlock icon so re-sync can manage it" : "Lock icon so re-sync keeps it"}
-          title={item.iconLocked ? "Locked \u2014 re-sync keeps this icon" : "Unlocked \u2014 re-sync may re-guess this icon"}
-          onClick={() => {
-            startTransition(() => setCatalogIconLock(item.id, !item.iconLocked));
-            flash();
-          }}
-          className={`flex h-9 w-8 items-center justify-center rounded-lg border text-sm ${
-            item.iconLocked ? "border-accent" : "border-hairline opacity-50"
-          }`}
-        >
-          {item.iconLocked ? "\uD83D\uDD12" : "\uD83D\uDD13"}
-        </button>
+        {item.needsReview && (
+          <button
+            type="button"
+            aria-label="Confirm this icon"
+            title="Auto-guessed from a multi-word name. Click to confirm it, or pick a different icon."
+            onClick={() => {
+              startTransition(() => setCatalogIconLock(item.id, true));
+              flash();
+            }}
+            className="flex h-9 items-center rounded-lg border border-accent/60 bg-accent/10 px-2 text-xs font-medium text-accent"
+          >
+            Review
+          </button>
+        )}
       </div>
       <div className="min-w-[8rem] flex-1">
         <input

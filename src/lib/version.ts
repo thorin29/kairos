@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.499.0";
+export const APP_VERSION = "0.500.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.500.0",
+    summary: [
+      "Smarter grocery icon matching: a multi-word item now takes the icon of its main word, so \"cherry tomatoes\" is a tomato (not a cherry) and \"apple juice\" is juice. Items the matcher isn't sure about are flagged \"needs review\" in the grocery admin so you can confirm or fix them; anything you set or confirm is kept and never re-guessed. Removed the separate lock control (setting an icon now locks it on its own) and fixed custom icons being cut off when chosen from the picker.",
+    ],
+  },
   {
     version: "0.499.0",
     summary: [

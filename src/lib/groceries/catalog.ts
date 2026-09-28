@@ -147,8 +147,34 @@ const ICONS: [RegExp, string][] = [
  *  admin icon picker offers. An item can still be set to any typed emoji. */
 export const ICON_CHOICES: string[] = Array.from(new Set(ICONS.map(([, icon]) => icon)));
 
-export function guessIcon(name: string): string {
+export type IconGuess = { icon: string; confident: boolean };
+
+/**
+ * Pick an icon for an item name. Instead of "first rule in the list wins" (which
+ * let a modifier steal a compound name, e.g. "cherry tomatoes" -> cherry), collect
+ * every matching rule and prefer the one whose match ends latest -- the head noun
+ * of an English "modifier head" name ("cherry TOMATO", "fish SAUCE", "apple JUICE")
+ * -- breaking ties toward the longer, more specific match so a phrase rule like
+ * "peanut butter" beats bare "butter".
+ *
+ * `confident` is false when the name is genuinely ambiguous: nothing matched, or
+ * two disjoint rules did (a real compound). It stays true for a single match or a
+ * phrase rule that spans its components, so the admin only flags the real unknowns.
+ */
+export function guessIconInfo(name: string): IconGuess {
   const n = name.toLowerCase();
-  for (const [re, icon] of ICONS) if (re.test(n)) return icon;
-  return "📦";
+  const hits: { icon: string; start: number; end: number; len: number }[] = [];
+  for (const [re, icon] of ICONS) {
+    const m = re.exec(n);
+    if (m) hits.push({ icon, start: m.index, end: m.index + m[0].length, len: m[0].length });
+  }
+  if (hits.length === 0) return { icon: "📦", confident: false };
+  hits.sort((a, b) => b.end - a.end || b.len - a.len);
+  const top = hits[0];
+  const confident = hits.every((h) => h === top || (h.start >= top.start && h.end <= top.end));
+  return { icon: top.icon, confident };
+}
+
+export function guessIcon(name: string): string {
+  return guessIconInfo(name).icon;
 }

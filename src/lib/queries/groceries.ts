@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { guessIconInfo } from "@/lib/groceries/catalog";
 
 export type StoreView = {
   id: string;
@@ -248,6 +249,9 @@ export type AdminCatalogItem = {
   name: string;
   icon: string;
   iconLocked: boolean;
+  /** Auto-guessed icon the matcher wasn't sure about (a compound/unknown name);
+   *  surfaced in the admin so it can be confirmed or corrected. */
+  needsReview: boolean;
   defaultStoreId: string | null;
   useCount: number;
   isActive: boolean;
@@ -289,6 +293,11 @@ export async function loadGroceryAdmin(): Promise<{
       ...s,
       itemCount: countByStore.get(s.id) ?? 0,
     })),
-    catalog,
+    // A hand-set/confirmed icon (iconLocked) is never in review; otherwise flag
+    // the ones the matcher couldn't resolve confidently.
+    catalog: catalog.map((c) => ({
+      ...c,
+      needsReview: !c.iconLocked && !guessIconInfo(c.name).confident,
+    })),
   };
 }

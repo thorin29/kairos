@@ -146,7 +146,9 @@ export async function setCatalogIcon(
   icon: string,
 ): Promise<void> {
   await requireAdmin();
-  const trimmed = icon.trim().slice(0, 8);
+  // Long enough for prefixed tokens (ic:papertowel, mdi:paper-roll-outline),
+  // not just a bare emoji.
+  const trimmed = icon.trim().slice(0, 40);
   if (!trimmed) return;
   const item = await prisma.groceryItem.findUnique({ where: { id: catalogId } });
   if (!item) return;

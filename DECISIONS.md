@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-09 - Grocery icon matching by head noun + confidence, and locks folded into "manual"
+
+The icon guesser was "first rule in the ICONS list whose keyword appears anywhere wins", so a
+modifier stole compound names: "cherry tomatoes" -> cherry, "apple juice" -> apple, "fish sauce" ->
+fish. guessIconInfo() now collects every matching rule and prefers the match that ends latest (the
+head noun of a "modifier head" name), tie-broken toward the longer/more specific match so phrase
+rules like "peanut butter" and "sweet potato" still win. It returns a `confident` flag: false when
+nothing matched or two disjoint rules did (a real compound), true for a single match or a phrase
+rule that spans its components. The admin derives `needsReview = !iconLocked && !confident` (not
+stored, no migration) and surfaces those for one-tap confirm (setCatalogIconLock true) or correction
+(picking an icon, which also locks). The visible lock toggle is gone: iconLocked now simply means
+"set/confirmed by hand", which re-sync already skips -- so a manual icon is permanent without a
+button to reason about. Also raised the setCatalogIcon length cap from 8 to 40 chars, which was
+truncating prefixed tokens (ic:papertowel) picked from the palette. Verified the matcher on real
+compound names before shipping. This is server-only Release 1; MDI artwork for the weak icons
+(soda, juice, yogurt, flour, sauces, tissues, diapers, pet, ...) is the paired web+app Release 2.
+
 ## 2026-09 - Home card headline: "Nothing due today" instead of a get-ahead count
 
 The School and Chores home cards headlined the get-ahead backlog when nothing was overdue or due
