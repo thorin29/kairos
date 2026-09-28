@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-09 - Home card headline: "Nothing due today" instead of a get-ahead count
+
+The School and Chores home cards headlined the get-ahead backlog when nothing was overdue or due
+today, e.g. "180 to get ahead". That number is the sum of up to MAX_PER_SUBJECT (30) upcoming items
+per subject, so it read as a to-do count ("do 180 things") when most of it is simply the rest of the
+year's lessons - confusing and misleadingly large. Both cards now show "Nothing due today" in that
+state. The get-ahead items are unchanged and still listed in the card's Get ahead section; only the
+one-line headline changed. School's aheadCount, used only for that headline, was removed.
+
 ## 2026-09 — Grocery catalog: icon picker, lock, and custom-image display in admin
 
 Three related admin improvements. (1) The item icon cell was a plain text input, so a custom image

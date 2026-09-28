@@ -65,16 +65,17 @@ export function ChoresCard({
     pendingOverdue.length === 0 &&
     pendingToday.length === 0 &&
     (today.length > 0 || overdue.length > 0);
+  // When nothing is overdue or due today, say so plainly rather than headlining
+  // the get-ahead backlog (the old "N to get ahead" read as a to-do count).
   const summary =
-    [
-      pendingOverdue.length ? `${pendingOverdue.length} overdue` : null,
-      pendingToday.length ? `${pendingToday.length} today` : null,
-      !pendingOverdue.length && !pendingToday.length && getAhead.length
-        ? `${getAhead.length} to get ahead`
-        : null,
-    ]
-      .filter(Boolean)
-      .join(" \u00b7 ") || "All caught up";
+    pendingOverdue.length || pendingToday.length
+      ? [
+          pendingOverdue.length ? `${pendingOverdue.length} overdue` : null,
+          pendingToday.length ? `${pendingToday.length} today` : null,
+        ]
+          .filter(Boolean)
+          .join(" \u00b7 ")
+      : "Nothing due today";
 
   const label = (t: string) => (
     <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{t}</p>

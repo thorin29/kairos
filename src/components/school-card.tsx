@@ -42,7 +42,6 @@ export function SchoolCard({
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const aheadCount = ahead.reduce((n, s) => n + s.items.length, 0);
   const nothing =
     overdue.length === 0 && today.length === 0 && progress.length === 0 && ahead.length === 0;
   if (nothing) return null;
@@ -51,14 +50,18 @@ export function SchoolCard({
   // pending, not by whether the list is empty.
   const pendingOverdue = overdue.filter((r) => r.status !== "COMPLETE");
   const pendingToday = today.filter((r) => r.status !== "COMPLETE");
+  // When nothing is overdue or due today, say exactly that. We used to headline
+  // the get-ahead backlog here (e.g. "180 to get ahead"), a confusing and
+  // misleadingly large number since it sums up to 30 upcoming items per subject.
   const summary =
-    [
-      pendingOverdue.length ? `${pendingOverdue.length} overdue` : null,
-      pendingToday.length ? `${pendingToday.length} due today` : null,
-      !pendingOverdue.length && !pendingToday.length && aheadCount ? `${aheadCount} to get ahead` : null,
-    ]
-      .filter(Boolean)
-      .join(" \u00b7 ") || "All caught up";
+    pendingOverdue.length || pendingToday.length
+      ? [
+          pendingOverdue.length ? `${pendingOverdue.length} overdue` : null,
+          pendingToday.length ? `${pendingToday.length} due today` : null,
+        ]
+          .filter(Boolean)
+          .join(" \u00b7 ")
+      : "Nothing due today";
   const completeForToday =
     pendingOverdue.length === 0 &&
     pendingToday.length === 0 &&
