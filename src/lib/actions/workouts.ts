@@ -51,6 +51,18 @@ export async function setWorkoutOverdueDays(days: number): Promise<void> {
 
 // --- admin ---------------------------------------------------------------
 
+/** The weekly plan's start date (a future day to begin a new/edited plan on).
+ *  Stored per-user in settings; empty means "active now" (default). */
+export async function setWeeklyStart(userId: string, dateISO: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!userId) return;
+  const clean = /^\d{4}-\d{2}-\d{2}$/.test(dateISO) ? dateISO : "";
+  await setSetting(`weeklyStart:${userId}`, clean);
+  await generateWorkoutTasks();
+  refresh();
+}
+
 export async function setWeightUnit(
   muscleGroup: MuscleGroup,
   unit: WeightUnit,

@@ -94,6 +94,17 @@ export async function generateWorkoutTasks(
     }),
   ]);
 
+  // A user-set weekly start date (a future day) holds the weekly plan off until
+  // then — no prompts, nothing overdue, before it. Empty/absent means active now.
+  const weeklyStartRows = await prisma.appSetting.findMany({
+    where: { key: { startsWith: "weeklyStart:" } },
+    select: { key: true, value: true },
+  });
+  const weeklyStart = new Map<string, string>();
+  for (const r of weeklyStartRows) {
+    if (r.value) weeklyStart.set(r.key.slice("weeklyStart:".length), r.value);
+  }
+
   const pausedDates = new Set<string>();
   for (const p of pauses) {
     let d = fromDateColumn(p.startDate);
@@ -166,6 +177,8 @@ export async function generateWorkoutTasks(
       if (Number(key.slice(sep + 1)) !== dow) continue;
       const since = trainsSince.get(key);
       if (since && iso < since) continue;
+      const wStart = weeklyStart.get(userId);
+      if (wStart && iso < wStart) continue;
       expected.set(`${userId}|${iso}`, {
         userId,
         category: Category.EXERCISE,

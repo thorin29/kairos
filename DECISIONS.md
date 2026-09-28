@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-09 - Weekly plan optional start date (no migration; via settings)
+
+Weekly plans can now be scheduled to begin on a future day. Stored per-user as a `weeklyStart:<id>`
+key in the existing appSetting store (no migration). setWeeklyStart writes it; the generator loads
+all such keys and, in the weekly loop, skips any date before a user's weekly start (alongside the
+trainsSince/createdAt clamp). Empty/absent = active now (unchanged default). Because a start date is
+future-only, past overdue is unaffected. Web: a "Starts on" DateField on the plan editor. App control
+and the concurrent weekly+rotation work (each independently pausable, both workouts allowed on the
+same day - union, no per-day resolution) are the next releases; both also settings-based, no
+migration.
+
 ## 2026-09 - Switching weekly <-> rotation preserves both (stop = deactivate)
 
 Stopping a rotation used to delete it (slots cascaded), so switching to the weekly plan lost the

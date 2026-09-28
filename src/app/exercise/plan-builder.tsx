@@ -2,12 +2,14 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { DAY_NAMES } from "@/lib/days";
+import { DateField } from "@/components/date-field";
 import {
   addPlannedHiitWorkout,
   addPlannedRestDay,
   addPlannedWorkoutFromPool,
   copyDayPlan,
   removePlannedWorkout,
+  setWeeklyStart,
 } from "@/lib/actions/workouts";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import type {
@@ -56,7 +58,9 @@ export function PlanBuilder({
   todayDow: number;
   pool: PoolEntry[];
   hiitWorkouts: BoardHiitWorkout[];
+  weeklyStart: string;
 }) {
+  const [, startWeeklyStart] = useTransition();
   return (
     <div className="space-y-2">
       <p className="text-sm text-muted">
@@ -64,6 +68,26 @@ export function PlanBuilder({
         choose the exercises, and mark which ones you want to log a number for.
         A day can hold more than one workout; empty days are rest days.
       </p>
+      <div className="flex flex-wrap items-center gap-2 pb-1">
+        <label className="text-sm font-medium">Starts on</label>
+        <DateField
+          defaultValue={weeklyStart}
+          onChange={(v) => v && startWeeklyStart(() => void setWeeklyStart(userId, v))}
+          ariaLabel="Weekly plan starts on"
+          className="tabular h-9 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+        />
+        {weeklyStart ? (
+          <button
+            type="button"
+            onClick={() => startWeeklyStart(() => void setWeeklyStart(userId, ""))}
+            className="text-xs font-medium text-muted hover:underline"
+          >
+            Clear (start now)
+          </button>
+        ) : (
+          <span className="text-xs text-muted">Leave blank to start now.</span>
+        )}
+      </div>
       {plan.map((d) => (
         <DayRow
           key={d.day}

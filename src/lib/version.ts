@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.505.0";
+export const APP_VERSION = "0.506.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.506.0",
+    summary: [
+      "Weekly workout plans can be given a future start date (on the web plan editor): pick a day and the plan won't prompt or count as overdue until then. Default is unchanged \u2014 active now. Handy for scheduling a revised plan to kick in next week.",
+    ],
+  },
   {
     version: "0.505.0",
     summary: [

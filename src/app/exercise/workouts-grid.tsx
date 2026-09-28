@@ -408,6 +408,7 @@ export function WorkoutsGrid({
                             plan={open.plan}
                             todayDow={todayDow}
                             pool={pool}
+                            weeklyStart={open.weeklyStart}
                             hiitWorkouts={hiitWorkouts.filter(
                               (w) =>
                                 w.ownerId === null ||
