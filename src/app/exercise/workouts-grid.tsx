@@ -409,6 +409,7 @@ export function WorkoutsGrid({
                             todayDow={todayDow}
                             pool={pool}
                             weeklyStart={open.weeklyStart}
+                            weeklyActive={open.weeklyActive}
                             hiitWorkouts={hiitWorkouts.filter(
                               (w) =>
                                 w.ownerId === null ||

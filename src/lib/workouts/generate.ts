@@ -105,6 +105,17 @@ export async function generateWorkoutTasks(
     if (r.value) weeklyStart.set(r.key.slice("weeklyStart:".length), r.value);
   }
 
+  // A paused weekly plan (weeklyActive:"0") produces no weekly prompts, so it can
+  // sit alongside a rotation and be turned back on later. Default (absent) is on.
+  const weeklyPausedRows = await prisma.appSetting.findMany({
+    where: { key: { startsWith: "weeklyActive:" } },
+    select: { key: true, value: true },
+  });
+  const weeklyPaused = new Set<string>();
+  for (const r of weeklyPausedRows) {
+    if (r.value === "0") weeklyPaused.add(r.key.slice("weeklyActive:".length));
+  }
+
   const pausedDates = new Set<string>();
   for (const p of pauses) {
     let d = fromDateColumn(p.startDate);
@@ -131,14 +142,13 @@ export async function generateWorkoutTasks(
       })),
     } as RotationShape,
   }));
-  const rotationUsers = new Set(rotationShapes.map((r) => r.userId));
 
   // A person trains on a weekday if they have a planned workout for it, or a
   // scheduled exercise still in its date window.
   const trains = new Set<string>();
   const trainsSince = new Map<string, string>();
   for (const w of planned) {
-    if (rotationUsers.has(w.userId)) continue;
+    if (weeklyPaused.has(w.userId)) continue;
     const key = `${w.userId}|${w.dayOfWeek}`;
     trains.add(key);
     const since = w.createdAt.toISOString().slice(0, 10);
@@ -157,7 +167,7 @@ export async function generateWorkoutTasks(
     const dow = dayOfWeek(iso);
 
     for (const s of schedules) {
-      if (rotationUsers.has(s.userId)) continue;
+      if (weeklyPaused.has(s.userId)) continue;
       if (s.dayOfWeek !== dow) continue;
       if (fromDateColumn(s.effectiveFrom) > iso) continue;
       if (s.endDate && fromDateColumn(s.endDate) < iso) continue;

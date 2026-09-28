@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-09 - Concurrent weekly + rotation (union, each pausable)
+
+A rotation used to suppress the weekly plan in the generator (rotationUsers skip in the planned and
+schedule loops). Removed that: both plans now generate independently, so a weekly plan and a rotation
+run together and a day is prompted if either schedules it (one prompt per day; the two plans' details
+show/log in their own sections and screens). The weekly plan is gated by a per-user weeklyActive
+setting (default on); "0" pauses it (no weekly prompts) so it can sit dormant beside a rotation and be
+resumed later. The rotation's pause is the existing stop=deactivate (0.505). No migration (settings).
+Both plans logging differently (weekly = tracked exercises; rotation = a session/slot) means the
+overdue/day-detail merge stays weekly-centric for now; refine if needed after on-device use.
+
 ## 2026-09 - Weekly plan optional start date (no migration; via settings)
 
 Weekly plans can now be scheduled to begin on a future day. Stored per-user as a `weeklyStart:<id>`

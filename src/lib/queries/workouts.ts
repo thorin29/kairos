@@ -114,6 +114,8 @@ export type PersonWorkout = {
   rotation: RotationData | null;
   /** Optional future date the weekly plan begins on; "" = active now. */
   weeklyStart: string;
+  /** Whether the weekly plan is active (false = paused, can run alongside a rotation). */
+  weeklyActive: boolean;
   todayPlanned: { id: string; name: string }[];
   reminders: Reminder[];
 };
@@ -589,6 +591,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       plan,
       rotation,
       weeklyStart: (await getSetting(`weeklyStart:${person.id}`)) ?? "",
+      weeklyActive: (await getSetting(`weeklyActive:${person.id}`)) !== "0",
       todayPlanned: pausedName ? [] : todayPlanned,
       reminders,
     });

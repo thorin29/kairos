@@ -10,6 +10,7 @@ import {
   copyDayPlan,
   removePlannedWorkout,
   setWeeklyStart,
+  setWeeklyActive,
 } from "@/lib/actions/workouts";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import type {
@@ -53,6 +54,7 @@ export function PlanBuilder({
   pool,
   hiitWorkouts,
   weeklyStart,
+  weeklyActive,
 }: {
   userId: string;
   plan: PlanDay[];
@@ -60,6 +62,7 @@ export function PlanBuilder({
   pool: PoolEntry[];
   hiitWorkouts: BoardHiitWorkout[];
   weeklyStart: string;
+  weeklyActive: boolean;
 }) {
   const [, startWeeklyStart] = useTransition();
   return (
@@ -88,7 +91,19 @@ export function PlanBuilder({
         ) : (
           <span className="text-xs text-muted">Leave blank to start now.</span>
         )}
+        <button
+          type="button"
+          onClick={() => startWeeklyStart(() => void setWeeklyActive(userId, !weeklyActive))}
+          className="ml-auto text-sm font-medium text-accent hover:underline"
+        >
+          {weeklyActive ? "Pause weekly plan" : "Resume weekly plan"}
+        </button>
       </div>
+      {!weeklyActive && (
+        <p className="rounded-lg bg-surface px-3 py-2 text-sm text-muted">
+          Paused &mdash; no weekly prompts. A rotation, if any, still runs.
+        </p>
+      )}
       {plan.map((d) => (
         <DayRow
           key={d.day}

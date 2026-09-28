@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.507.0";
+export const APP_VERSION = "0.508.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.508.0",
+    summary: [
+      "A weekly plan and a rotation can now run at the same time \u2014 e.g. weights on the weekly plan and HIIT on the rotation, both on the same day. A rotation no longer replaces the weekly plan. Each can be paused independently (pause the weekly plan, or stop the rotation) and turned back on without losing it.",
+    ],
+  },
   {
     version: "0.507.0",
     summary: [

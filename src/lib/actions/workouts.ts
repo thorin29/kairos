@@ -63,6 +63,17 @@ export async function setWeeklyStart(userId: string, dateISO: string): Promise<v
   refresh();
 }
 
+/** Pause or resume the weekly plan (so it can run alongside a rotation, or be
+ *  turned off without deleting it). */
+export async function setWeeklyActive(userId: string, active: boolean): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!userId) return;
+  await setSetting(`weeklyActive:${userId}`, active ? "1" : "0");
+  await generateWorkoutTasks();
+  refresh();
+}
+
 export async function setWeightUnit(
   muscleGroup: MuscleGroup,
   unit: WeightUnit,
