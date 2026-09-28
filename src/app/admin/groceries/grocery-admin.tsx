@@ -19,7 +19,7 @@ import {
   setStoreIcon,
 } from "@/lib/actions/groceries";
 import type { AdminCatalogItem, AdminStore } from "@/lib/queries/groceries";
-import { ICON_CHOICES } from "@/lib/groceries/catalog";
+import { GROCERY_ICON_LIBRARY } from "@/lib/groceries/catalog";
 
 /**
  * A brief green wash on a row to confirm a save landed — appears at once,
@@ -299,45 +299,63 @@ function IconField({
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden />
           <div className="absolute left-0 top-11 z-20 w-64 rounded-xl border border-hairline bg-surface p-2 shadow-lg">
-            <div className="grid grid-cols-8 gap-1">
-              {ICON_CHOICES.map((ic) => (
-                <button
-                  key={ic}
-                  type="button"
-                  aria-label={ic}
-                  onClick={() => {
-                    onPick(ic);
-                    setOpen(false);
-                  }}
-                  className="flex h-7 w-7 items-center justify-center rounded hover:bg-ground/60"
-                >
-                  <GroceryGlyph icon={ic} className="h-5 w-5" emojiClassName="text-base" />
-                </button>
-              ))}
-            </div>
-            <div className="mt-2 flex items-center gap-2 border-t border-hairline pt-2">
-              <input
-                value={typed}
-                onChange={(e) => setTyped(e.target.value)}
-                placeholder="or type emoji"
-                aria-label="Type an emoji"
-                className="h-8 w-full rounded-lg border border-hairline bg-ground/40 px-2 text-center text-sm outline-none focus:border-accent"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const v = typed.trim();
-                  if (v) {
-                    onPick(v);
-                    setTyped("");
-                    setOpen(false);
-                  }
-                }}
-                className="h-8 shrink-0 rounded-lg border border-hairline px-3 text-sm hover:bg-ground/60"
-              >
-                Set
-              </button>
-            </div>
+            {(() => {
+              const q = typed.trim().toLowerCase();
+              const looksEmoji = q.length > 0 && !/[a-z]/i.test(typed);
+              const results =
+                q && !looksEmoji
+                  ? GROCERY_ICON_LIBRARY.filter((e) => e.keywords.includes(q))
+                  : GROCERY_ICON_LIBRARY;
+              return (
+                <>
+                  <input
+                    value={typed}
+                    onChange={(e) => setTyped(e.target.value)}
+                    placeholder="Search icons (or paste emoji)\u2026"
+                    aria-label="Search icons"
+                    autoFocus
+                    className="mb-2 h-8 w-full rounded-lg border border-hairline bg-ground/40 px-2 text-sm outline-none focus:border-accent"
+                  />
+                  {looksEmoji && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onPick(typed.trim());
+                        setTyped("");
+                        setOpen(false);
+                      }}
+                      className="mb-2 flex w-full items-center gap-2 rounded-lg border border-hairline px-2 py-1 text-sm hover:bg-ground/60"
+                    >
+                      <GroceryGlyph icon={typed.trim()} className="h-5 w-5" emojiClassName="text-base" />
+                      <span>Use this emoji</span>
+                    </button>
+                  )}
+                  <div className="grid max-h-56 grid-cols-8 gap-1 overflow-y-auto">
+                    {results.map((e) => (
+                      <button
+                        key={e.icon}
+                        type="button"
+                        aria-label={e.keywords}
+                        title={e.keywords}
+                        onClick={() => {
+                          onPick(e.icon);
+                          setTyped("");
+                          setOpen(false);
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded hover:bg-ground/60"
+                      >
+                        <GroceryGlyph icon={e.icon} className="h-5 w-5" emojiClassName="text-base" />
+                      </button>
+                    ))}
+                    {results.length === 0 && (
+                      <p className="col-span-8 py-3 text-center text-xs text-muted">
+                        No icons match. Paste an emoji above to use it.
+                      </p>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
             {onClear && (
               <button
                 type="button"

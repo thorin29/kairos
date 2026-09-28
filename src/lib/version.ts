@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.509.0";
+export const APP_VERSION = "0.510.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.510.0",
+    summary: [
+      "Grocery icon picker is now a searchable pool of ~125 icons \u2014 type \u201cfeta\u201d, \u201cvitamin\u201d, \u201cjuice\u201d etc. to find one (the box searches now; you can still paste an emoji). Auto-guess also recognizes more items: feta and other cheeses, magnesium and other supplements, and sports drinks.",
+    ],
+  },
   {
     version: "0.509.0",
     summary: [
