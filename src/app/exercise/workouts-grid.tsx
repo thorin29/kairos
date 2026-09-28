@@ -387,22 +387,30 @@ export function WorkoutsGrid({
                     const hasWeekly = open.plan.some((d) =>
                       d.workouts.some((w) => !w.isRest),
                     );
-                    const showRotation =
-                      hasRotation || planMode === "rotation";
-                    const showWeekly =
-                      !showRotation && (hasWeekly || planMode === "weekly");
-
-                    if (showRotation) {
-                      return (
-                        <RotationBuilder
-                          userId={open.user.id}
-                          rotation={open.rotation}
-                        />
-                      );
-                    }
-                    if (showWeekly) {
-                      return (
-                        <>
+                    // Weekly and rotation can both be active at once; this picks
+                    // which one to view/edit.
+                    const view: "weekly" | "rotation" =
+                      planMode ?? (hasRotation && !hasWeekly ? "rotation" : "weekly");
+                    const tab = (mode: "weekly" | "rotation", label: string) => (
+                      <button
+                        type="button"
+                        onClick={() => setPlanMode(mode)}
+                        className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                          view === mode
+                            ? "border-accent text-accent"
+                            : "border-hairline text-muted hover:border-accent"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                    return (
+                      <>
+                        <div className="mb-4 flex gap-2">
+                          {tab("weekly", "Weekly plan")}
+                          {tab("rotation", hasRotation ? "Rotation" : "Add a rotation")}
+                        </div>
+                        {view === "weekly" ? (
                           <PlanBuilder
                             userId={open.user.id}
                             plan={open.plan}
@@ -416,51 +424,13 @@ export function WorkoutsGrid({
                                 w.ownerId === open.user.id,
                             )}
                           />
-                          <button
-                            type="button"
-                            onClick={() => setPlanMode("rotation")}
-                            className="mt-4 text-sm font-medium text-accent hover:underline"
-                          >
-                            Use a rotation instead →
-                          </button>
-                        </>
-                      );
-                    }
-                    return (
-                      <div>
-                        <p className="mb-4 text-sm text-muted">
-                          How should this plan work?
-                        </p>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <button
-                            type="button"
-                            onClick={() => setPlanMode("weekly")}
-                            className="rounded-2xl border border-hairline p-4 text-left transition-colors hover:border-accent"
-                          >
-                            <span className="block font-display text-base font-semibold">
-                              Weekly plan
-                            </span>
-                            <span className="mt-1 block text-sm text-muted">
-                              The same workouts on set weekdays — e.g. legs every
-                              Monday, chest every Thursday.
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPlanMode("rotation")}
-                            className="rounded-2xl border border-hairline p-4 text-left transition-colors hover:border-accent"
-                          >
-                            <span className="block font-display text-base font-semibold">
-                              Rotation
-                            </span>
-                            <span className="mt-1 block text-sm text-muted">
-                              A repeating cycle of workouts (chest, legs, push…)
-                              that runs off the weekly grid, with rest days that
-                              pause it.
-                            </span>
-                          </button>
-                        </div>
-                      </div>
+                        ) : (
+                          <RotationBuilder
+                            userId={open.user.id}
+                            rotation={open.rotation}
+                          />
+                        )}
+                      </>
                     );
                   })()}
                 </div>

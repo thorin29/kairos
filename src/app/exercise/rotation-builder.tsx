@@ -50,7 +50,7 @@ export function RotationBuilder({
           onClick={() => run(() => startRotation(userId))}
           className="mt-3 inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent disabled:opacity-50"
         >
-          Start a rotation
+          Add a rotation
         </button>
       </section>
     );
@@ -96,7 +96,7 @@ export function RotationBuilder({
           onClick={() => run(() => stopRotation(userId))}
           className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-xs font-medium text-muted hover:text-ink disabled:opacity-50"
         >
-          Back to weekly plan
+          Stop rotation
         </button>
       </div>
 
