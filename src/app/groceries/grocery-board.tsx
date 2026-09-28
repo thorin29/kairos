@@ -374,9 +374,11 @@ function SavedStore({
       }}
     >
       <div className="flex items-center gap-3 border-b border-hairline px-4 py-3">
-        <span className="text-2xl" aria-hidden>
-          {store.icon}
-        </span>
+        <GroceryGlyph
+          icon={store.icon}
+          className="h-7 w-7"
+          emojiClassName="text-2xl"
+        />
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-lg font-semibold leading-tight">
             {store.name}

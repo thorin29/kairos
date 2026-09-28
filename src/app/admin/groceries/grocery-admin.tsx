@@ -19,7 +19,11 @@ import {
   setStoreIcon,
 } from "@/lib/actions/groceries";
 import type { AdminCatalogItem, AdminStore } from "@/lib/queries/groceries";
-import { GROCERY_ICON_LIBRARY } from "@/lib/groceries/catalog";
+import {
+  GROCERY_ICON_LIBRARY,
+  STORE_ICON_LIBRARY,
+  type IconLibraryEntry,
+} from "@/lib/groceries/catalog";
 
 /**
  * A brief green wash on a row to confirm a save landed — appears at once,
@@ -69,11 +73,10 @@ export function GroceryAdmin({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={storeIcon}
-            onChange={(e) => setNewStoreIcon(e.target.value)}
-            aria-label="Store icon"
-            className="h-10 w-14 rounded-full border border-hairline bg-ground/40 text-center outline-none focus:border-accent"
+          <IconField
+            current={storeIcon}
+            onPick={setNewStoreIcon}
+            library={STORE_ICON_LIBRARY}
           />
           <input
             value={storeName}
@@ -131,7 +134,7 @@ export function GroceryAdmin({
               <option value="">No default store</option>
               {stores.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.icon} {s.name}
+                  {s.icon.includes(":") ? s.name : `${s.icon} ${s.name}`}
                 </option>
               ))}
             </select>
@@ -208,12 +211,9 @@ function StoreRow({
         flashed ? FLASH_CLASS : ""
       }`}
     >
-      <input
-        defaultValue={store.icon}
-        key={`icon-${store.icon}`}
-        aria-label={`${store.name} icon`}
-        onBlur={(e) => {
-          const v = e.target.value.trim();
+      <IconField
+        current={store.icon}
+        onPick={(v) => {
           if (v && v !== store.icon) {
             startTransition(() => {
               setStoreIcon(store.id, v);
@@ -221,7 +221,7 @@ function StoreRow({
             flash();
           }
         }}
-        className="h-9 w-12 rounded-lg border border-hairline bg-ground/40 text-center outline-none focus:border-accent"
+        library={STORE_ICON_LIBRARY}
       />
       <input
         defaultValue={store.name}
@@ -274,10 +274,12 @@ function IconField({
   current,
   onPick,
   onClear,
+  library = GROCERY_ICON_LIBRARY,
 }: {
   current: string;
   onPick: (icon: string) => void;
   onClear?: () => void;
+  library?: IconLibraryEntry[];
 }) {
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
@@ -304,8 +306,8 @@ function IconField({
               const looksEmoji = q.length > 0 && !/[a-z]/i.test(typed);
               const results =
                 q && !looksEmoji
-                  ? GROCERY_ICON_LIBRARY.filter((e) => e.keywords.includes(q))
-                  : GROCERY_ICON_LIBRARY;
+                  ? library.filter((e) => e.keywords.includes(q))
+                  : library;
               return (
                 <>
                   <input
@@ -456,7 +458,7 @@ function CatalogRow({
         <option value="">No store</option>
         {stores.map((s) => (
           <option key={s.id} value={s.id}>
-            {s.icon} {s.name}
+            {s.icon.includes(":") ? s.name : `${s.icon} ${s.name}`}
           </option>
         ))}
       </select>

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.512.0";
+export const APP_VERSION = "0.513.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.513.0",
+    summary: [
+      "Store icons: pick from a set of colorful store icons (warehouse club, big-box, supermarket, pharmacy, farmers market, delivery, and more) in the store admin, and stores now show that icon everywhere instead of an emoji-only field. Assign e.g. Costco \u2192 warehouse club, Walmart \u2192 big-box.",
+    ],
+  },
   {
     version: "0.512.0",
     summary: [

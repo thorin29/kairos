@@ -637,6 +637,26 @@ export const GROCERY_ICON_LIBRARY: IconLibraryEntry[] = [
   { icon: "kairos:zucchini", keywords: "zucchini courgette" },
 ];
 
+/** Store/shop icons for the admin store picker (kairos: PNGs + a few emoji). */
+export const STORE_ICON_LIBRARY: IconLibraryEntry[] = [
+  { icon: "kairos:supermarket", keywords: "supermarket grocery store market" },
+  { icon: "kairos:warehouse-club", keywords: "warehouse club costco sams bulk" },
+  { icon: "kairos:big-box-store", keywords: "big box store walmart target department" },
+  { icon: "kairos:pharmacy", keywords: "pharmacy drugstore cvs walgreens" },
+  { icon: "kairos:farmers-market", keywords: "farmers market produce stand" },
+  { icon: "kairos:convenience-store", keywords: "convenience store corner gas" },
+  { icon: "kairos:delivery-truck", keywords: "delivery truck shipping" },
+  { icon: "kairos:online-order", keywords: "online order web amazon delivery" },
+  { icon: "kairos:hardware-store", keywords: "hardware home improvement" },
+  { icon: "kairos:butcher-shop", keywords: "butcher meat shop" },
+  { icon: "kairos:bakery-shop", keywords: "bakery bread shop" },
+  { icon: "kairos:liquor-store", keywords: "liquor wine beer store" },
+  { icon: "\ud83c\udfec", keywords: "store department building shop" },
+  { icon: "\ud83c\udfea", keywords: "convenience store shop" },
+  { icon: "\ud83d\uded2", keywords: "cart grocery shopping" },
+  { icon: "\ud83c\udfe5", keywords: "pharmacy hospital medical" },
+];
+
 export type IconGuess = { icon: string; confident: boolean };
 
 /**
