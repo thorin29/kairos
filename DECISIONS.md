@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-09 - Overdue workouts respect when a planned workout was added (weekly plans)
+
+loadOverdueWorkoutDays judged each past day by loadTodayPlannedWorkouts(userId, iso), which loaded
+the CURRENT weekly plan's exercises for that weekday with no time bound. So building or changing a
+weekly plan made earlier days - already worked out under the previous plan - look overdue, because
+the new plan's exercises hadn't been logged back then. (This was the actual bug behind the "overdue
+last week" report; the earlier 0.502/0.503 rotation re-anchor work fixed a real but different
+rotation path, not this - the user is on a weekly plan.) Fix: loadTodayPlannedWorkouts now filters
+plannedWorkout by createdAt < start of the next day, so a workout only counts for dates on/after it
+was added - the same trainsSince floor the task generator uses. The overdue list is computed live on
+each load, so this clears an existing false backlog immediately with no data change and no effect on
+logged history. Safe for the other caller (today's plan view): current workouts all have createdAt
+<= today.
+
 ## 2026-09 - Rotation anchor (cycle start date) exposed to the Android app
 
 The web rotation builder already had a "Cycle starts on" date field (setRotationAnchor action); the

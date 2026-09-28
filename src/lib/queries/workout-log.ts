@@ -247,7 +247,15 @@ export async function loadTodayPlannedWorkouts(
   const system = await loadWorkoutUnitSystem();
 
   const plans = await prisma.plannedWorkout.findMany({
-    where: { userId, dayOfWeek: dow, isRest: false },
+    // Only workouts that existed on this day count for it, so a plan built later
+    // never makes a past day look "overdue" (it was scheduled under a different,
+    // already-logged plan). Mirrors the generator's trainsSince clamp.
+    where: {
+      userId,
+      dayOfWeek: dow,
+      isRest: false,
+      createdAt: { lt: toDateColumn(addDays(dayISO, 1)) },
+    },
     orderBy: { sortOrder: "asc" },
     select: {
       id: true,
