@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-09 - Editing a rotation plan re-anchors it to today (no retroactive backlog)
+
+The workout generator backfills an overdue window behind today and rebuilds each person's expected
+workout days from their current plan. The weekly-schedule path clamps on effectiveFrom (reset to
+today by setScheduleDays) and the weekly-planned path clamps on the earliest plannedWorkout
+createdAt, but the rotation shape-edit cores (addSlot/removeSlot/moveSlot/setRestDays) changed the
+cycle while leaving anchorDate untouched. So editing a rotation that was anchored weeks ago made the
+generator recompute the whole backfill window under the NEW shape against the OLD anchor, inventing
+"overdue" prompts for days the old shape never scheduled - even though those days were already
+logged under the old plan. Fix: reanchorTodayIfPast() rolls a past anchorDate up to today on any
+shape edit, so an edited plan takes effect immediately (from slot 0 today) and the generator's sweep
+drops the phantom pending prompts. A future anchor the user set deliberately is left alone (only past
+anchors are moved). This is the "assume it starts immediately" behavior; the alternative the user
+floated - ask for a start date and keep the old plan running until then - needs the old shape kept
+alongside the new one and was deferred. No migration (uses the existing anchorDate).
+
 ## 2026-09 - Grocery icons: bundled Material Design Icons for the emoji gaps (mdi: tokens)
 
 Items that emoji represented poorly now use Material Design Icons (Pictogrammers, Apache-2.0),

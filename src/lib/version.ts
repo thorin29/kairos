@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.501.0";
+export const APP_VERSION = "0.502.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.502.0",
+    summary: [
+      "Fixes a false \"overdue last week\" workout backlog after editing a rotation plan. Changing your rotation (adding, removing, reordering, or re-resting a slot) now starts the edited plan from today instead of re-scoring already-passed days under the new shape. To clear an existing false backlog, re-save the plan or set its start date to today.",
+    ],
+  },
   {
     version: "0.501.0",
     summary: [
