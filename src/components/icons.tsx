@@ -554,6 +554,18 @@ export function GroceryGlyph({
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={src} alt="" className={`${className} object-contain`} aria-hidden />;
   }
+  if (icon.startsWith("kairos:")) {
+    // Bundled colorful PNGs under public/grocery-icons/kairos/<slug>.png.
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src={`/grocery-icons/kairos/${icon.slice(7)}.png`}
+        alt=""
+        className={`${className} object-contain`}
+        aria-hidden
+      />
+    );
+  }
   if (icon.startsWith("mdi:")) {
     const path = MDI_PATHS[icon.slice(4)];
     if (path) {

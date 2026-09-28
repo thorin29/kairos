@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.510.0";
+export const APP_VERSION = "0.511.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.511.0",
+    summary: [
+      "Added 173 colorful custom grocery icons (olive oil, ravioli, ziti, brisket, ribeye, cold cuts, italian bread, potato/onion varieties, cheeses, canned goods, prepared meals, household \u0026 personal care, and more). The list now auto-picks the specific icon for these items, and they\u2019re all in the icon search picker. 12 store icons are bundled for a stores update next.",
+    ],
+  },
   {
     version: "0.510.0",
     summary: [
