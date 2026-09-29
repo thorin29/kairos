@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.523.0";
+export const APP_VERSION = "0.524.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.524.0",
+    summary: [
+      "All-day events: a one-day all-day event now shows the same start and end date (not the next day), and multi-day all-day events (e.g. a vacation) now save their full span instead of collapsing to one day. Changing an event’s end date no longer drags the start date with it.",
+    ],
+  },
   {
     version: "0.523.0",
     summary: [

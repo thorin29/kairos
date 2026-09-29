@@ -85,7 +85,19 @@ function computeTimes(
 ): { startsAt: Date; endsAt: Date } | { error: string } {
   if (input.allDay) {
     const startsAt = toDateColumn(input.date);
-    return { startsAt, endsAt: new Date(startsAt.getTime() + 86_400_000) };
+    // Honor a multi-day span. The all-day end date is EXCLUSIVE (the day after
+    // the last covered day), matching how events read back — so a one-day
+    // event's stored end lands on the next day.
+    const endDate =
+      input.endDate && /^\d{4}-\d{2}-\d{2}$/.test(input.endDate)
+        ? input.endDate
+        : input.date;
+    const exclusiveEnd = toDateColumn(endDate);
+    const endsAt =
+      exclusiveEnd > startsAt
+        ? exclusiveEnd
+        : new Date(startsAt.getTime() + 86_400_000);
+    return { startsAt, endsAt };
   }
   const start = input.start ?? "";
   const end = input.end ?? "";
