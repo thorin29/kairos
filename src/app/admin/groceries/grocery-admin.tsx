@@ -77,6 +77,7 @@ export function GroceryAdmin({
             current={storeIcon}
             onPick={setNewStoreIcon}
             library={STORE_ICON_LIBRARY}
+            big
           />
           <input
             value={storeName}
@@ -222,6 +223,7 @@ function StoreRow({
           }
         }}
         library={STORE_ICON_LIBRARY}
+        big
       />
       <input
         defaultValue={store.name}
@@ -275,11 +277,13 @@ function IconField({
   onPick,
   onClear,
   library = GROCERY_ICON_LIBRARY,
+  big = false,
 }: {
   current: string;
   onPick: (icon: string) => void;
   onClear?: () => void;
   library?: IconLibraryEntry[];
+  big?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
@@ -300,7 +304,7 @@ function IconField({
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden />
-          <div className="absolute left-0 top-11 z-20 w-64 rounded-xl border border-hairline bg-surface p-2 shadow-lg">
+          <div className={`absolute left-0 top-11 z-20 ${big ? "w-80" : "w-64"} rounded-xl border border-hairline bg-surface p-2 shadow-lg`}>
             {(() => {
               const q = typed.trim().toLowerCase();
               const looksEmoji = q.length > 0 && !/[a-z]/i.test(typed);
@@ -332,7 +336,7 @@ function IconField({
                       <span>Use this emoji</span>
                     </button>
                   )}
-                  <div className="grid max-h-56 grid-cols-8 gap-1 overflow-y-auto">
+                  <div className={`grid gap-1 overflow-y-auto ${big ? "max-h-80 grid-cols-4" : "max-h-56 grid-cols-8"}`}>
                     {results.map((e) => (
                       <button
                         key={e.icon}
@@ -344,9 +348,13 @@ function IconField({
                           setTyped("");
                           setOpen(false);
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded hover:bg-ground/60"
+                        className={`flex items-center justify-center rounded hover:bg-ground/60 ${big ? "h-16 w-16" : "h-7 w-7"}`}
                       >
-                        <GroceryGlyph icon={e.icon} className="h-5 w-5" emojiClassName="text-base" />
+                        <GroceryGlyph
+                          icon={e.icon}
+                          className={big ? "h-12 w-12" : "h-5 w-5"}
+                          emojiClassName={big ? "text-3xl" : "text-base"}
+                        />
                       </button>
                     ))}
                     {results.length === 0 && (

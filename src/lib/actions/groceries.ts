@@ -256,12 +256,12 @@ export async function addCatalogItem(input: {
     where: { name },
     update: {
       isActive: true,
-      ...(input.icon ? { icon: input.icon.trim().slice(0, 8) } : {}),
+      ...(input.icon ? { icon: input.icon.trim().slice(0, 40) } : {}),
       ...(input.defaultStoreId ? { defaultStoreId: input.defaultStoreId } : {}),
     },
     create: {
       name,
-      icon: input.icon?.trim().slice(0, 8) || guessIcon(name),
+      icon: input.icon?.trim().slice(0, 40) || guessIcon(name),
       defaultStoreId: input.defaultStoreId || null,
     },
   });
@@ -275,10 +275,10 @@ export async function addStore(name: string, icon: string): Promise<void> {
   const count = await prisma.store.count();
   await prisma.store.upsert({
     where: { name: clean },
-    update: { isActive: true, icon: icon.trim().slice(0, 8) || "🛒" },
+    update: { isActive: true, icon: icon.trim().slice(0, 40) || "🛒" },
     create: {
       name: clean,
-      icon: icon.trim().slice(0, 8) || "🛒",
+      icon: icon.trim().slice(0, 40) || "🛒",
       sortOrder: count,
     },
   });
@@ -304,7 +304,7 @@ export async function setStoreIcon(
   icon: string,
 ): Promise<void> {
   await requireAdmin();
-  const trimmed = icon.trim().slice(0, 8) || "🛒";
+  const trimmed = icon.trim().slice(0, 40) || "🛒";
   await prisma.store.update({
     where: { id: storeId },
     data: { icon: trimmed },

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.516.0";
+export const APP_VERSION = "0.517.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.517.0",
+    summary: [
+      "Fixed store icons showing as a broken image — the icon value was being cut to 8 characters, which mangled the new icon names. Re-pick the icon for any affected store. The store icon picker now shows the icons much larger so they are easy to tell apart.",
+    ],
+  },
   {
     version: "0.516.0",
     summary: [
