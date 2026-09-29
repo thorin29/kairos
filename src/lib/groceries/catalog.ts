@@ -18,6 +18,18 @@ const ICONS: [RegExp, string][] = [
   // (e.g. "sweet potato" before "potato", "peanut butter" before "butter").
   // --- Kairos specific icons first: more-specific phrases win over the
   //     generic emoji rules below via the head-noun/length tie-break. ---
+  [/\b(orange\s+juice|oj)\b/, "kairos:orange-juice"],
+  [/\b(apple\s+juice)\b/, "kairos:apple-juice"],
+  [/\b(grape\s+juice)\b/, "kairos:grape-juice"],
+  [/\b(cranberry\s+juice)\b/, "kairos:cranberry-juice"],
+  [/\b(lemonade)\b/, "kairos:lemonade"],
+  [/\b(sweet\s+tea)\b/, "kairos:sweet-tea"],
+  [/\b(iced\s+tea|ice\s+tea)\b/, "kairos:iced-tea"],
+  [/\b(kombucha)\b/, "kairos:kombucha"],
+  [/\b(hot\s+chocolate|hot\s+cocoa|cocoa)\b/, "kairos:hot-chocolate"],
+  [/\b(chocolate\s+milk)\b/, "kairos:chocolate-milk"],
+  [/\b(apple\s+cider|cider)\b/, "kairos:apple-cider"],
+  [/\b(coconut\s+water)\b/, "kairos:coconut-water"],
   [/\b(milk\s+carton|gallon\s+of\s+milk|carton\s+of\s+milk)\b/, "kairos:milk-carton"],
   [/\b(coffee\s+bag|coffee|coffee\s+beans|ground\s+coffee|whole\s+bean)\b/, "kairos:coffee-bag"],
   [/\b(wine)\b/, "kairos:wine"],
@@ -681,6 +693,18 @@ export const GROCERY_ICON_LIBRARY: IconLibraryEntry[] = [
   { icon: "kairos:fish-sticks", keywords: "fish sticks" },
   { icon: "kairos:canned-tuna", keywords: "canned tuna tuna can" },
   { icon: "kairos:imitation-crab", keywords: "imitation crab surimi krab crab stick" },
+  { icon: "kairos:orange-juice", keywords: "orange juice oj" },
+  { icon: "kairos:apple-juice", keywords: "apple juice" },
+  { icon: "kairos:grape-juice", keywords: "grape juice" },
+  { icon: "kairos:cranberry-juice", keywords: "cranberry juice" },
+  { icon: "kairos:lemonade", keywords: "lemonade" },
+  { icon: "kairos:sweet-tea", keywords: "sweet tea sweetened iced" },
+  { icon: "kairos:iced-tea", keywords: "iced tea" },
+  { icon: "kairos:kombucha", keywords: "kombucha" },
+  { icon: "kairos:hot-chocolate", keywords: "hot chocolate cocoa hot cocoa" },
+  { icon: "kairos:chocolate-milk", keywords: "chocolate milk" },
+  { icon: "kairos:apple-cider", keywords: "apple cider cider" },
+  { icon: "kairos:coconut-water", keywords: "coconut water" },
 ];
 
 /** Store/shop icons for the admin store picker (kairos: PNGs + a few emoji). */
