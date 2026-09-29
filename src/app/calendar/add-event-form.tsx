@@ -1038,7 +1038,23 @@ function EventModal({
               type="checkbox"
               name="allDay"
               checked={allDay}
-              onChange={(e) => setAllDay(e.target.checked)}
+              onChange={(e) => {
+                const on = e.target.checked;
+                if (on && !allDay) {
+                  // timed -> all-day inclusive; a midnight (00:00) end is the
+                  // previous day's boundary, so it does not add a day.
+                  if (endTime === "00:00" && endDate > startDate) {
+                    setEndDate(addDays(endDate, -1));
+                  } else if (endDate < startDate) {
+                    setEndDate(startDate);
+                  }
+                } else if (!on && allDay) {
+                  // all-day -> timed: give it a real time span, keeping the dates.
+                  setStartTime(start);
+                  setEndTime(addHour(start));
+                }
+                setAllDay(on);
+              }}
               className="h-5 w-5 accent-[var(--color-accent)]"
             />
             All day

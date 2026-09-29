@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.525.0";
+export const APP_VERSION = "0.526.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.526.0",
+    summary: [
+      "Calendar: flipping the All-day switch now adjusts the dates/times sensibly — an all-day event turned timed gets a real time span instead of an invalid zero-length one, and a midnight-boundary timed event turned all-day no longer gains a day.",
+    ],
+  },
   {
     version: "0.525.0",
     summary: [
