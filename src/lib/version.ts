@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.520.0";
+export const APP_VERSION = "0.521.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.521.0",
+    summary: [
+      "Fixed store icons showing as raw text (like “kairos:warehouse-club”) instead of the picture on the shopping board, the store cart view, and the add-to-store picker.",
+    ],
+  },
   {
     version: "0.520.0",
     summary: [

@@ -56,9 +56,7 @@ export function CartView({
           List
         </Link>
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="text-2xl" aria-hidden>
-            {store.icon}
-          </span>
+          <GroceryGlyph icon={store.icon} className="h-7 w-7" emojiClassName="text-2xl" />
           <div className="min-w-0">
             <h1 className="truncate font-display text-xl font-semibold leading-tight">
               {store.name}
