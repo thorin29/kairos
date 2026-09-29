@@ -8,7 +8,25 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (Sept 2026, web v0.379 / app v0.209)
+## Current status (29 Sep 2026, web v0.526.0 / app v0.335.0, versionCode 387)
+
+**Most recent work (web v0.495–0.526, app v0.288–0.335):**
+
+- **Custom `kairos:` icon set** for groceries *and* stores — ~226 colourful PNGs
+  bundled in both repos, a searchable icon picker in admin, name-matching that
+  prefers a specific custom icon over a generic emoji, and the monochrome `mdi:`
+  set retired. See DECISIONS.md for the token contract and the creation pipeline.
+- **Calendar time model** settled end to end: events store real instants, the grid
+  DTO carries both per-day segments and the event's exact bounds, midnight is
+  00:00 of the next day, and all-day events are inclusive in the UI / exclusive in
+  storage with Starts + Ends fields on both clients.
+- **Workout plans**: a weekly plan and a rotation can now run concurrently, each
+  pausable; stopping a rotation deactivates rather than deletes it; weekly plans
+  take an optional future start date; editing a plan no longer manufactures a
+  false overdue backlog.
+- **Offline creates** finished their identity work — every create endpoint returns
+  the new id and honours a client-supplied idempotency key.
+
 
 The web is mature and the **Android app has reached parity** across every
 daily-use section (Home, Calendar, Chores, Bible, Reading, School, Workouts,
@@ -35,10 +53,12 @@ the following large efforts shipped:
   re-date, reassign, delete) and **editable school assignments** in Admin → School.
 - **Companions**: the full 52-creature roster art across all six eras is in;
   incubate → hatch → choose collection shipped earlier.
-- **Curriculum planner (in progress, v0.378–0.381)**: the class-plan data model +
-  schedule builder and a CSV intake in Admin → School that drafts class plans and
-  shows each one's spread across the terms. Review/reorder and publish-class are
-  the next increments (full spec under School below).
+- **Curriculum planner (v0.378–0.395, Stages 1–2 shipped)**: class-plan data model
+  + schedule builder, CSV/paste/file intake *and* a wizard "Build a class" form,
+  the review/reorder screen with publish-class, term compile with heavy-day flags
+  and drag-to-rebalance, school-year setup with breaks, and the get-ahead /
+  finish-by-term-end behaviour. Remaining: **Stage 3** (re-open an affected term as
+  a draft on later edits) and admin bulk-mark (full spec under School below).
 - **Sport attendance rework (v0.371–0.377)**: attendance prompts now go to
   **everyone** on an event (owner + added people + subscribed-team-calendar
   members), persist until answered (up to a week, with the day shown), and log
@@ -698,6 +718,19 @@ the remaining personal-view items:
       default visible** to everyone (opt-out) rather than hidden — except school
       work. The calendar also loads instantly from stored events while subscribed
       feeds refresh in the background (v0.377).
+- [x] **Time model, settled (v0.521–0.526)** — events store real instants; the grid
+      DTO flattens them into per-day segments *and* carries the event's exact
+      bounds (`startDayISO`/`startMinExact`/`endDayISO`/`endMinExact`), so the
+      editor always opens the whole event. Midnight is 00:00 of the next day (never
+      23:59); `1440` is a layout boundary only. An invalid interval disables Save
+      and reddens the offending field. Architecture is closed — see DECISIONS.md.
+- [x] **All-day events, inclusive dates (v0.524–0.526)** — a one-day all-day event
+      shows the same start and end; multi-day all-day events keep their full span;
+      storage still uses an exclusive end (last day + 1). Both clients have Starts
+      and Ends fields, and flipping the All-day switch normalises the dates/times.
+- [ ] **Web all-day cosmetics** — the web form still *displays* the exclusive end
+      date and lacks the app's red-field / disabled-Save feedback. Capability is
+      the same on both clients; only the polish differs. Small.
 - [x] All-day events shade their whole day column in a light tint of their
       colour, decided per event: a "Shade this day" box on the add-event form
       and a per-person "shade this birthday" toggle. Several shaded events on one
@@ -876,8 +909,8 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
 **Shipped:**
 - [x] **Data model + schedule builder (v0.378):** `ClassPlan` + `ClassPlanUnit`
       (migration 97); the verified `plan-builder.ts` (`expandShorthand` +
-      `spreadUnits` + `sliceByTerm`). Algorithm verified on Micah's TT
-      Pre-Algebra (156 items, from Lesson 9 → 147 scheduled; Fall ends ~Lesson
+      `spreadUnits` + `sliceByTerm`). Algorithm verified on a real
+      pre-algebra course (student P1) (156 items, from Lesson 9 → 147 scheduled; Fall ends ~Lesson
       70; finishes ~Apr 21). No screens yet.
 - [x] **CSV intake (v0.379):** `plan-csv.ts` parser, `class-plans.ts` import
       action, `class-plan.ts` preview query, and the Admin → School "Curriculum
@@ -953,7 +986,7 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
 ## Calendar &amp; holidays
 - [x] Built-in US/Texas holidays — computed from rules for any year (no feed, no
       year-end cutoff), toggled per-holiday in Admin → Calendar → Holidays,
-      shown as shared-colour all-day items. Marco's list on by default (v0.99.0)
+      shown as shared-colour all-day items. The owner's list on by default (v0.99.0)
 - [x] Detail popup in month view — month chips open the same click-to-open
       detail popup as week/day (v0.99.1)
 - [x] Event background images — per-kind/holiday background art on the event
@@ -1175,6 +1208,25 @@ until the run is finished:
       the saved list for next time
 - [x] One trip per store (a unique constraint), so two people can shop two
       stores at once without carts crossing
+
+### Custom icon set (done, v0.510–0.521)
+
+- [x] A custom **`kairos:<slug>`** icon set — ~226 colourful PNGs covering the
+      items and stores emoji handle badly (produce and cheese varieties, cuts of
+      meat, seafood, canned goods, prepared meals, drinks, household and personal
+      care, and the store types). Bundled in the web repo under
+      `public/grocery-icons/kairos/` and in the app as `drawable-nodpi/grocery_*`.
+- [x] A **searchable icon picker** in the grocery and store admin (type "feta",
+      "juice", "pharmacy"), pools defined as `GROCERY_ICON_LIBRARY` /
+      `STORE_ICON_LIBRARY`; a pasted emoji still works.
+- [x] **Stores** use the same tokens and the same renderer as items, so a store
+      shows its picture on the board, in the cart and in the add-to-store picker.
+- [x] Name matching prefers a specific custom icon over a generic emoji, and
+      **Re-sync catalog** upgrades an item to a custom icon when one now exists
+      (an icon deliberately locked or already custom is left alone).
+- [x] The monochrome **`mdi:` set is retired** — see DECISIONS.md, which also
+      records the token contract, the 📦 fallback, the 8-character truncation bug,
+      the server-before-app shipping rule, and the icon-sheet slicing pipeline.
 
 ### Later
 
@@ -1492,7 +1544,28 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] **Monthly framing + Scoring & rewards admin page** — season→month wording,
   admin-only scoring-start and days-to-finish controls.
 
+## Shipped — Sept 25–29 2026 run (web v0.495–0.526, app v0.288–0.335)
+
+- [x] **Offline-create identity, finished** — create endpoints return the new id
+  (v0.495) and de-duplicate a retried create by its client id, calendar events and
+  recurring tasks included (v0.496–0.497).
+- [x] **Workout plans** — weekly plan and rotation run concurrently and are each
+  pausable (v0.508–0.509); stopping a rotation keeps it (v0.505); optional future
+  start date for a weekly plan, web and app (v0.506–0.507); no more false overdue
+  backlog after editing a plan (v0.502/0.504).
+- [x] **Grocery + store icons** — the `kairos:` custom set, picker, matcher
+  improvements, store icons everywhere, `mdi:` retired (v0.498–0.521).
+- [x] **Calendar time model** — exact bounds in the DTO, midnight as next-day
+  00:00, inclusive all-day dates with Starts/Ends on both clients, All-day toggle
+  normalisation (v0.521–0.526).
+- [x] **Docs brought back in step with the code (29 Sep)** — the icon system and
+  the calendar time model are written up in DECISIONS.md (web + app), the calendar
+  surface is documented in `docs/API.md` along with a full endpoint inventory, the
+  app ARCHITECTURE theme section was corrected, and the collector roadmap was
+  re-baselined.
+
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.483.0 (egg-cap only; migrations through 108_reading_goal_start).
-- App versionName 0.287.0 / versionCode 339 / CLIENT_BUILD 339.
+- Web APP_VERSION 0.526.0 (migrations through 114_feed_force_duration).
+- App versionName 0.335.0 / versionCode 387 / CLIENT_BUILD 387.
+- Collector: deployed and running; Xbox totals come from real game sessions.

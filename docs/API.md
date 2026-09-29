@@ -549,6 +549,102 @@ POST /api/v1/coop/grant              { "proposalId" }                     // par
 POST /api/v1/coop/remove             { "proposalId" }                     // parents/admins: remove a proposal
 ```
 
+### Calendar — **built (personal calendar, editing, prefs; time model settled v0.521–0.526)**
+One read paints the whole Calendar screen for the enrolled person, mirroring
+`src/app/calendar/personal-calendar.tsx`: their saved view and filters, events with
+colours already resolved server-side from their colour prefs, the 42-day month grid
+and per-day dots, and the options-drawer data. Writes cover create, update and
+delete (including recurring scope) plus prefs and reminders on subscribed events.
+
+**Time model — read this before touching a date field.** Events are stored as real
+`startsAt`/`endsAt` instants. The payload flattens each event into **per-day
+segments** for layout (`dayISO`, `startMin`, `endMin`, where **`1440` means
+end-of-day and is never an editable clock value**) and separately carries the
+event's **true bounds** for editing (`startDayISO`, `startMinExact`, `endDayISO`,
+`endMinExact`). An editor must load the exact bounds, so an overnight event opens
+whole no matter which day-segment was tapped. **Midnight is `00:00` on the next
+day, never `23:59`**; clock values stay in 0–1439. All-day events are **inclusive**
+in the UI but **exclusive on the wire and in storage**: for `allDay: true` the
+`endDate` a client sends is the day *after* the last covered day, so a one-day
+all-day event on the 4th sends `date: "…-04"`, `endDate: "…-05"`. The client does
+the ±1 conversion (−1 when loading into the form, +1 when saving) — see
+`computeTimes()` in `src/lib/calendar/create-event.ts`. For a **timed** event
+`endDate` is the real end day (used for an overnight or multi-day span), not
+exclusive. The server rejects an end at or before the start.
+```
+GET  /api/v1/calendar?view=<month|week|three_day|day|agenda>&date=YYYY-MM-DD
+     // both params optional: view falls back to the person's saved view, date to today
+200: { "today","view","date","heading","timezone",
+       "rangeDays":[ISO],"prevDate","nextDate",
+       "events":[ CalEvent ],
+       "nowColor",
+       "monthDays":[ISO],                       // 42-day grid containing `date`
+       "monthDots":{ ISO: [color,...] },        // up to 3 colours per day
+       "options": CalendarOptions }
+
+CalEvent: { "id","eventId","title","location":str|null,
+            "dayISO","startMin","endMin","timeLabel",        // this day's segment (1440 = end of day)
+            "startDayISO","startMinExact",                   // the event's true bounds —
+            "endDayISO","endMinExact",                       //   use these to open the editor
+            "allDay":bool,"color","memberColors":[str],"isFamily":bool,"shade":bool,
+            "kind","bgKey":str|null,"ownerName","whoLabel","notes":str|null,
+            "didNotAttend":bool,"attendees":[{name,state}],
+            "ownerId":str|null,"eventTypeId":str|null,
+            "reminders":[int],"reminderUserIds":[str],"memberIds":[str],
+            "calendarName":str|null,"recurring":bool,"recurLabel":str|null,
+            "external":bool,"schoolType":str|null,"schoolClassName":str|null }
+
+CalendarOptions: { "people":[{id,name,color}],
+                   "subscriptions":[{id,name,ownerName,color}],
+                   "shownPeople":[id],"shownSubs":[id],
+                   "showFamily":bool,"showSchoolWork":bool,
+                   "canManageFamily":bool,                    // parent or admin
+                   "eventTypes":[{id,name,color,defaultMinutes,defaultReminder}],
+                   "colorPrefs":{ personalizeColors,othersMode,othersColor,holidayColor,
+                                  familyColor,nowColor,kindColors,eventTypeColors,subColors },
+                   "meColor","holidaySystemColor","familySystemColor","nowSystemColor" }
+
+POST /api/v1/calendar/event
+     { "title","date":"YYYY-MM-DD","allDay":bool,
+       "start"?:"HH:MM","end"?:"HH:MM","endDate"?:"YYYY-MM-DD",
+       //   timed:   endDate = the day the event actually ends (overnight/multi-day)
+       //   all-day: endDate = EXCLUSIVE — the day AFTER the last covered day
+       "location"?,"timezone"?,"repeat"?,"isFamily"?:bool,
+       "kind"?,"eventTypeId"?,"participants"?:[id],
+       "reminders"?:[minutesBefore],"reminderUserIds"?:[id],
+       "clientId"? }                                              // offline idempotency key
+     → { "status":"ok", "id" }        // validation error → { "error":"validation", ... }
+
+POST /api/v1/calendar/event/update
+     { "eventId", ...same fields as create...,
+       "occurrenceISO"?:"YYYY-MM-DD",                             // which occurrence was tapped
+       "scope"?:"series"|"single"|"future" }                      // default "series"
+     → { "status":"ok" }
+
+POST /api/v1/calendar/event/delete
+     { "eventId", "scope"?:"all"|"future"|"one", "occurrenceISO"? }   // default "all"
+     → { "status":"ok" }
+     // non-admins may delete only their own or family events; recurring events and
+     // birthdays stay admin/parent-only; feed (subscribed) events cannot be deleted here
+
+POST /api/v1/calendar/prefs
+     // every field optional; only the ones present are written
+     { "view"?, "shownPeople"?:[id], "shownSubs"?:[id],
+       "showFamily"?:bool, "showSchoolWork"?:bool,
+       "personalizeColors"?:bool, "othersMode"?:"own"|"grey"|"family",
+       "othersColor"?, "holidayColor"?, "familyColor"?, "nowColor"?,   // "#rrggbb" or null to clear
+       "kindColors"?, "eventTypeColors"?, "subColors"? }               // { key: "#rrggbb" }
+     → { "status":"ok" }
+
+POST /api/v1/calendar/subscribed-reminders
+     { "eventId", "reminders":[minutesBefore] }    // [] clears; reminders on feed events are app-only
+     → { "status":"ok" }
+```
+Notes: the GET refreshes stale ICS feeds **in the background** (single-flight) and
+returns what the database already holds, so a fresh feed shows up on the next load
+rather than blocking this one. Colours arrive resolved — the client should not
+re-derive them.
+
 ### Bible reading — **built (v0.204)**
 One aggregate read paints the whole Bible screen (mirrors src/app/bible/page.tsx
 on a personal device): the family reading deck + coverage, and this person's own
@@ -743,6 +839,26 @@ on this shape.
   time.
 - **Response:** `{ "matched": [...names], "unmatched": [...] }`. An entry that
   resolves to no Kairos person comes back as `unmatched`.
+
+## Endpoint inventory (what exists vs what is written up here)
+
+The sections above describe the surfaces in detail. The server currently exposes
+**132 route files** under `src/app/api/v1/`, and the detailed sections cover the
+ones a client needs to reason about; the rest are thin verbs over the same models
+(a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
+Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
+silently invisible:
+
+- **auth/** `login`, `join`, `join/check`, `forgot`, `recover`, `reauth`, `refresh`, `revoke` · **meta**, **me**, `me/avatar`, `me/color`, **devices**, `devices/[id]/revoke`, `avatars/[file]`
+- **dashboard**, **tasks** (`add`, `[id]/complete`, `[id]/uncomplete`, `[id]/update`, `[id]/edit-data`, `[id]/delete`), **chores** (`always-open`, `claim`, `claim-complete`, `release`)
+- **calendar** (`event`, `event/update`, `event/delete`, `prefs`, `subscribed-reminders`), **event-names**, **event-bg**, **addresses**, **sport/confirm**, **sport/decline**, **notifications/meta**, **notifications/upcoming**
+- **school** (`add`, `add-to-today`, `approvals`, `rename`, `delete`), **classes**, **classes/form**
+- **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
+- **groceries** (`add`, `add-catalog`, `move`, `purchased`, `remove`, `trip/start`, `trip/complete`)
+- **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `expire`, `log`, `log-custom`, `complete`, `uncomplete`, `movement*`, `personal*`, `plan*` (incl. `plan/active`, `plan/options`, `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
+- **characters** (`collection`, `hatch`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
+- **game-time**, **game-time/ingest** (collector → server)
 
 ## Deep links (notification -> screen)
 

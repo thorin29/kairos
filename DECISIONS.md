@@ -1,5 +1,91 @@
 # Decisions
 
+## 2026-09 — Custom `kairos:` grocery/store icon set (v0.510–0.521)
+
+Grocery and store icons are stored as a short **token** on the row and rendered by a single
+component per client. Three token forms exist:
+
+- a plain **emoji** (still the default for anything an emoji renders well);
+- **`ic:<name>`** — five legacy hand-made PNGs (napkin, papertowel, waterbottle, protein, sorbet);
+- **`kairos:<slug>`** — the custom colourful set (~226 PNGs today), which is where all new art goes.
+
+**MDI (`mdi:*`) is retired** (v0.516). The bundled Material Design Icons were monochrome and read as
+"black blobs" next to emoji; every generic item they covered now resolves to an emoji or a `kairos:`
+icon. Do not reintroduce a monochrome icon family. (The earlier "bundled MDI for the emoji gaps"
+decision below is superseded by this one; `public/grocery-icons/MDI-LICENSE.txt` is kept only as the
+attribution record for the retired set.)
+
+**Rendering.**
+- Web: `GroceryGlyph` in `src/components/icons.tsx`. `kairos:<slug>` →
+  `<img src="/grocery-icons/kairos/<slug>.png">`; `ic:*` → the map of legacy paths; a bare emoji is
+  printed as text. Any **prefixed token we can't resolve renders 📦**, never the raw string — that box
+  is the true fallback and the signal that art is missing on this client.
+- App: `GroceryGlyph.kt` (`ui/groceries/`) with two maps, `GLYPH_DRAWABLES` (`ic:*`) and
+  `KAIROS_DRAWABLES` (`kairos:*`) → `drawable-nodpi/grocery_<slug>.png`. Hyphens in the slug become
+  underscores in the Android resource name. Same 📦 fallback.
+- Store icons render through the **same** component as item icons (v0.513/0.521), so a store shows its
+  picture on the shopping board, the cart page and the add-to-store picker.
+
+**Matching and picking.** `src/lib/groceries/catalog.ts` holds all three: `ICONS` (the name → token
+matcher), `GROCERY_ICON_LIBRARY` and `STORE_ICON_LIBRARY` (the searchable picker pools the admin UI
+queries). Specific `kairos:` phrase rules are ordered **before** the generic emoji rules and win by
+phrase length, so "cherry tomatoes" matches the tomato rule rather than the cherry one.
+
+**Gotchas that cost real releases:**
+1. `setStoreIcon`/`setCatalogIcon` once truncated the saved value to **8 characters**, which silently
+   mangled every `kairos:` token into a broken image (v0.517). The cap is now 40 — never reintroduce a
+   short slice on an icon value.
+2. **Ship the server before the app.** The phone can only render art it has bundled, so a token the
+   server starts emitting before the matching APK is installed shows 📦. Server first, app second.
+3. An HTML `<option>` cannot contain an image, so store **dropdowns** show text; every other surface
+   shows the picture.
+
+**Icon creation pipeline (repeatable).** An image tool generates a labelled grid sheet; the sheet is
+sliced programmatically (border flood-fill background removal, connected-component detection,
+OCR/positional label stripping), each icon named by slug, verified to carry no baked-in label text
+(OCR plus an eyeball), downscaled to ~160px, and bundled to **both** repos with the token wired into
+`catalog.ts` and `KAIROS_DRAWABLES`. The generation prompt must demand the **label stay clear of the
+art** — bold labels touching the object get sliced in, which is exactly what forced the re-cuts in
+v0.514 (prepared meals) and v0.515 (stores).
+
+## 2026-09 — Calendar time model: real instants, day segments, exact bounds (v0.521–0.526)
+
+This is settled architecture. Do not reopen it; extend it.
+
+**Storage.** An event stores real `startsAt`/`endsAt` instants. Nothing stores a "day + minutes" pair.
+
+**Layout.** The grid DTO (`src/lib/queries/calendar-page.ts`, `CalEvent`) flattens an event into
+per-day **segments**: `dayISO`, `startMin`, `endMin`. In a segment, **`1440` means "the end of this
+day" and is a layout boundary only** — it is never an editable clock value and never round-trips to
+the server.
+
+**Editing.** The same DTO carries the event's **true bounds**: `startDayISO`, `startMinExact`,
+`endDayISO`, `endMinExact` (`toWire` falls back to the segment values when an event doesn't span
+days). The editor loads these, so an overnight event (10 PM → 1 AM) opens as the whole event no
+matter which day's segment was tapped, and saving a title-only change can't rewrite its end (v0.523).
+
+**Midnight is 00:00 on the next day, never 23:59.** Clock values stay in 0–1439. The app's
+`TimePickerDialog` clamps input to 0..23:59 purely as a crash guard (Material3's
+`rememberTimePickerState` throws on hour ≥ 24 — the original bug); the clamp is not the time model.
+
+**Two server paths — don't confuse them.**
+- The **app** posts to `/api/v1/calendar/event*`, which calls `computeTimes()` / `createPersonalEvent`
+  / `updatePersonalEvent` in `src/lib/calendar/create-event.ts`. That path honours `endDate` and
+  rejects an end at or before the start.
+- The **web** form uses its own server actions in `src/lib/actions/events.ts`, with separate all-day
+  handling; it does **not** call `computeTimes`. A change to one path is not automatically a change to
+  the other — this has been mis-stated in review before, so check the file.
+
+**All-day is inclusive in the UI, exclusive in storage.** A one-day all-day event shows the same start
+and end date; storage keeps the exclusive end (last day + 1). Convert −1 on load and +1 on save.
+Both clients have Starts/Ends date fields for multi-day all-day events (app v0.333, web v0.525), and
+flipping the All-day switch normalises the dates/times on both (v0.526) instead of producing a
+zero-length timed event or gaining a day at the midnight boundary.
+
+**Feedback.** An invalid interval disables Save and reddens the offending field. The app has this;
+the web form's version of the red-field/disable feedback, and hiding the exclusive end, are the small
+remaining cosmetic gaps (tracked in ROADMAP).
+
 ## 2026-09 - Concurrent weekly + rotation (union, each pausable)
 
 A rotation used to suppress the weekly plan in the generator (rotationUsers skip in the planned and
@@ -75,6 +161,9 @@ floated - ask for a start date and keep the old plan running until then - needs 
 alongside the new one and was deferred. No migration (uses the existing anchorDate).
 
 ## 2026-09 - Grocery icons: bundled Material Design Icons for the emoji gaps (mdi: tokens)
+
+> **Superseded (v0.516).** `mdi:` tokens are retired — see the `kairos:` icon-set decision at the
+> top of this file. Kept for the history of why a monochrome set was tried.
 
 Items that emoji represented poorly now use Material Design Icons (Pictogrammers, Apache-2.0),
 stored as `mdi:<name>` tokens in the same icon string field: soda -> bottle-soda-classic, juice/oil
@@ -883,7 +972,7 @@ false positives against bg-black/ink). settings.ts: APPEARANCE_THEME/APPEARANCE_
 getAppearance(); layout applies data-theme + .dark to <html> (force-dynamic already).
 actions/settings.ts: setAppearanceTheme/setAppearanceDark (requireAdmin, revalidate layout).
 New /admin/appearance page + tile (PaletteIcon). No migration (appSetting rows). Theme is
-household-wide per Marco; app theme stays per-device. Next epic items: profile (device
+household-wide by decision; app theme stays per-device. Next epic items: profile (device
 endpoints) + notifications.
 
 ## Web 0.276.1: server-only fix for the appearance client
@@ -917,7 +1006,7 @@ circular AvatarCropDialog (detectTransformGestures -> tx/ty % + scale, same tran
 reads bytes off-main-thread and uploads via setAvatar (multipart). Custom colour: HSV
 ColorPickerDialog (hue bar + SV square), last custom colour persisted per-device
 (SettingsStore.lastCustomColor) and shown as an extra swatch. Text: "User color" +
-"Avatar color shared across the platform" (US spelling per Marco). PROFILE COMPLETE.
+"Avatar color shared across the platform" (US spelling by decision). PROFILE COMPLETE.
 Remaining epic item: notifications.
 
 ## Web 0.276.4 + app 0.118.0: notifications - Phase 1 (settings + plumbing)
@@ -1150,7 +1239,7 @@ repo's DECISIONS.md — this covers the Kairos side.
   app home card, progress page, admin year-calendar overlay. Initial mapping baked into
   the migration (Math, Science, Foreign Language, History, Writing). Grammar/Writing/
   Handwriting currently share the Writing colour; per-subject override + an admin editor
-  to set base subjects are the next step (Marco: "use my mapping now, admin later").
+  to set base subjects are the next step (owner: "use my mapping now, admin later").
 
 ## Sept 24 2026 — subject-colour admin editor (web v0.487)
 

@@ -11,9 +11,10 @@ schedule.
 **[Roadmap](ROADMAP.md)** — everything planned, and what is already built.
 **[Architecture](ARCHITECTURE.md)** — how it works and why.
 
-> **Status:** in active use. The core modules — chores, Bible reading,
-> workouts, game time, groceries, calendar, and the summary — are built. A few
-> are still to come; see the roadmap below.
+> **Status:** in active use, web `0.526.0`. The core modules — chores, Bible
+> reading, workouts, game time, groceries, calendar, school with the curriculum
+> planner, and the summary — are built, and the companion Android app mirrors the
+> personal view. A few things are still to come; see the roadmap below.
 
 ## What it does
 
@@ -34,7 +35,8 @@ schedule.
   service watches Xbox (via Home Assistant) and Steam and pushes resolved daily
   totals to `/api/v1/game-time/ingest`; Kairos owns the durable history.
 - **Groceries.** A shared shopping list that learns the items you buy and their
-  icons. Drag items to reorder them or move them between stores. Tap **Shop** on
+  icons — including a custom set of ~226 colourful icons for the items and stores
+  that emoji handle badly, searchable from the admin picker. Drag items to reorder them or move them between stores. Tap **Shop** on
   a store and pick who's going: that store becomes their trip, with a line on
   their dashboard card that opens a big-tap checklist on its own page. Finishing
   keeps whatever wasn't bought for next time.
@@ -68,18 +70,26 @@ Built:
       (its own day/3-day/week/month/agenda views, per-user filters and colours)
 - [x] ICS calendar subscriptions
 - [x] School — assignments, tests, subjects and class schedules
+- [x] Curriculum planner — turn a book's lessons or a typed list into dated
+      schoolwork spread across a term's school days (wizard, paste, or CSV),
+      review and reorder it, publish it to the kids' cards, then compile and
+      rebalance a student's whole term day by day
 - [x] Seasons — a personal-progression RPG: character levels, per-category
       stats and class, a monthly season ladder, streaks, badges and mastery
       titles, all fuelled by fair, effort-weighted completion (nobody ranked)
 - [x] Mobile API — versioned `/api/v1` with per-person device-token sign-in,
       the foundation for the phone app
 
+- [x] **Native Android app** (Kotlin / Jetpack Compose) over the versioned API —
+      offline-first, with its own themes, profile editing and local reminders
+      (repo `kairos-app`; replaced the earlier PWA idea)
+
 Planned:
 
 - [ ] Weather panel and forecast
-- [ ] **Native Android app** (Kotlin / Jetpack Compose) over the versioned API —
-      replaces the earlier PWA idea; see the roadmap and DECISIONS.md
 - [ ] Smooth drag-and-drop reordering
+- [ ] Curriculum planner Stage 3 — editing a class re-opens the affected term as
+      a draft instead of rewriting dates in place
 
 ## Requirements
 
