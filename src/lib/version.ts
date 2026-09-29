@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.521.0";
+export const APP_VERSION = "0.523.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,18 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.523.0",
+    summary: [
+      "Calendar editing now uses the event’s real start and end (day + time), so an overnight event like 10 PM → 1 AM opens as the whole event instead of a single day’s slice. Save is disabled while the end is before the start.",
+    ],
+  },
+  {
+    version: "0.522.0",
+    summary: [
+      "Calendar: an event ending at midnight now edits correctly as 12:00 AM the next day instead of showing 11:59 PM, and saving a title-only change no longer alters the end time. Editing an overnight/multi-day event keeps its real end date. The offending time turns red when the end is before the start.",
+    ],
+  },
   {
     version: "0.521.0",
     summary: [

@@ -13,6 +13,12 @@ import { getHolidayColor, holidayEntries } from "@/lib/holidays";
 import { bgKeyForKind, bgKeyForHoliday } from "@/lib/event-bg";
 
 export type GridEvent = {
+  // The whole event's true local bounds (for editing; segments below are per-day).
+  //  Optional: only personal/editable events carry them.
+  startDayISO?: string;
+  startMinExact?: number;
+  endDayISO?: string;
+  endMinExact?: number;
   id: string;
   title: string;
   location: string | null;
@@ -575,6 +581,10 @@ export async function loadRange(
 
     const base = {
       id: `${e.id}${suffix}`,
+      startDayISO: start.iso,
+      startMinExact: start.minutes,
+      endDayISO: end.iso,
+      endMinExact: end.minutes,
       title: e.title,
       location:
         (e as { locationOverride?: string | null }).locationOverride ??

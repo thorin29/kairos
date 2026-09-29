@@ -274,7 +274,15 @@ export async function updatePersonalEvent(
     : input.date;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateForRow)) return { error: "Pick a date." };
 
-  const t = computeTimes({ ...input, date: dateForRow, endDate: dateForRow });
+  // Honor the event's own start→end day gap (overnight / multi-day / a
+  // midnight end that lives on the next day) instead of forcing a same-day end.
+  // For a recurring occurrence the row already shifted; the gap shifts with it.
+  const endOffset = input.endDate ? daysBetween(input.date, input.endDate) : 0;
+  const t = computeTimes({
+    ...input,
+    date: dateForRow,
+    endDate: addDays(dateForRow, endOffset),
+  });
   if ("error" in t) return { error: t.error };
 
   const fields = {

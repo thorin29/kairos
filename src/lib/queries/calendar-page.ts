@@ -47,6 +47,10 @@ import { householdTz } from "@/lib/dates";
 
 export type CalEvent = {
   id: string;
+  startDayISO: string;
+  startMinExact: number;
+  endDayISO: string;
+  endMinExact: number;
   eventId: string;
   title: string;
   location: string | null;
@@ -163,6 +167,10 @@ const valid = (v?: string): v is CalView =>
 function toWire(e: GridEvent): CalEvent {
   return {
     id: e.id,
+    startDayISO: e.startDayISO ?? e.dayISO,
+    startMinExact: e.startMinExact ?? e.startMin,
+    endDayISO: e.endDayISO ?? e.dayISO,
+    endMinExact: e.endMinExact ?? e.endMin,
     eventId: e.eventId,
     title: e.title,
     location: e.location,
