@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.515.0";
+export const APP_VERSION = "0.516.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.516.0",
+    summary: [
+      "Retired the old black monochrome icons: juice, oil, soda, sauce, and other generic items now show a colorful emoji (orange juice is a juice box now). Run Re-sync catalog once to update items still showing the old icon.",
+    ],
+  },
   {
     version: "0.515.0",
     summary: [

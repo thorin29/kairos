@@ -269,8 +269,11 @@ export async function resyncCatalogCore(): Promise<{ merged: number; reiconed: n
     let icon: string;
     if (keeper.iconLocked) {
       const guess = guessIcon(canonical);
-      icon =
-        guess.startsWith("kairos:") && !keeper.icon.startsWith("kairos:")
+      // A retired mdi: lock no longer renders, so always re-guess it. Otherwise a
+      // plain emoji/ic lock upgrades only when a new kairos: icon now exists.
+      icon = keeper.icon.startsWith("mdi:")
+        ? guess
+        : guess.startsWith("kairos:") && !keeper.icon.startsWith("kairos:")
           ? guess
           : keeper.icon;
     } else {

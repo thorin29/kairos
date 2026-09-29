@@ -1,4 +1,3 @@
-import { MDI_PATHS } from "@/lib/groceries/mdi-paths";
 
 type IconProps = { className?: string };
 
@@ -566,18 +565,8 @@ export function GroceryGlyph({
       />
     );
   }
-  if (icon.startsWith("mdi:")) {
-    const path = MDI_PATHS[icon.slice(4)];
-    if (path) {
-      return (
-        <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
-          <path d={path} />
-        </svg>
-      );
-    }
-  }
-  // A prefixed token we can't render (unknown ic:/mdi:/other) shows a box rather
-  // than the raw string like "mdi:foo".
+  // A prefixed token we can't render (unknown ic:/kairos:/other) shows a box
+  // rather than the raw string like "kairos:foo".
   const unknownToken = /^[a-z]+:/.test(icon);
   return (
     <span className={emojiClassName} aria-hidden>
