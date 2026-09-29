@@ -434,7 +434,12 @@ function EventModal({
       setByday([WEEKDAY_TOKENS[dayOfWeek(startDate)]]);
     }
   }, [startDate, allowMultipleDays]);
-  const [endDate, setEndDate] = useState(() => addDays(date, endDayOffset ?? 0));
+  const [endDate, setEndDate] = useState(() =>
+    addDays(
+      date,
+      allDayInit ? Math.max(0, (endDayOffset ?? 0) - 1) : (endDayOffset ?? 0),
+    ),
+  );
   const [startTime, setStartTime] = useState(start);
   const [endTime, setEndTime] = useState(end ?? addHour(start));
 
@@ -741,17 +746,28 @@ function EventModal({
             ))}
 
             {allDay ? (
-              <div>
-                <label htmlFor="ev-date" className="mb-1.5 block text-sm font-medium">
-                  Date
-                </label>
-                <DateField
-                  name="date"
-                  ariaLabel="Date"
-                  value={startDate}
-                  onChange={setStartDate}
-                  className={`tabular ${field}`}
-                />
+              <div className="grid gap-4 sm:grid-cols-2 sm:col-span-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Starts</label>
+                  <DateField
+                    name="date"
+                    ariaLabel="Start date"
+                    value={startDate}
+                    onChange={onStartDateChange}
+                    className={`tabular ${field}`}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Ends</label>
+                  <DateField
+                    name="endDate"
+                    ariaLabel="End date"
+                    min={startDate}
+                    value={endDate}
+                    onChange={setEndDate}
+                    className={`tabular ${field}`}
+                  />
+                </div>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 sm:col-span-2">

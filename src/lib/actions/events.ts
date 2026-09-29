@@ -207,7 +207,16 @@ export async function addEvent(
 
   if (allDay) {
     startsAt = toDateColumn(date);
-    endsAt = new Date(startsAt.getTime() + 86_400_000);
+    // The all-day "Ends" field is the inclusive last day; store the exclusive
+    // end (the day after) so a multi-day span is kept. Never less than one day.
+    const inclusiveEnd = /^\d{4}-\d{2}-\d{2}$/.test(endDate) ? endDate : date;
+    const exclusiveEnd = new Date(
+      toDateColumn(inclusiveEnd).getTime() + 86_400_000,
+    );
+    endsAt =
+      exclusiveEnd > startsAt
+        ? exclusiveEnd
+        : new Date(startsAt.getTime() + 86_400_000);
   } else {
     if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) {
       return { error: "Set a start and end time.", saved: false };
@@ -359,6 +368,7 @@ export async function updateEvent(
   const start = String(formData.get("start") ?? "");
   const end = String(formData.get("end") ?? "");
   const endDate = String(formData.get("endDate") ?? "") || formDate;
+  const rawEndDate = String(formData.get("endDate") ?? "");
   const allDay = formData.get("allDay") === "on";
   const shadeDay = allDay ? formData.get("shadeDay") === "on" : true;
   const location = String(formData.get("location") ?? "").trim().slice(0, 200);
@@ -412,12 +422,24 @@ export async function updateEvent(
   let endsAt: Date;
   if (allDay) {
     startsAt = toDateColumn(dateForRow);
-    // Keep a multi-day span (a vacation edited from a middle day stays its full
-    // length and just shifts); a single-day event keeps its one day.
-    const originalMs = target.endsAt.getTime() - target.startsAt.getTime();
-    const spanMs =
-      target.allDay && originalMs > 86_400_000 ? originalMs : 86_400_000;
-    endsAt = new Date(startsAt.getTime() + spanMs);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(rawEndDate)) {
+      // Honor the edited inclusive "Ends" date -> exclusive stored end (day
+      // after). The start->end day gap is preserved when an occurrence shifts.
+      const offset = Math.max(0, daysBetween(formDate, rawEndDate));
+      const exclusiveEnd = new Date(
+        toDateColumn(addDays(dateForRow, offset)).getTime() + 86_400_000,
+      );
+      endsAt =
+        exclusiveEnd > startsAt
+          ? exclusiveEnd
+          : new Date(startsAt.getTime() + 86_400_000);
+    } else {
+      // No end field (older form): keep the event's existing span.
+      const originalMs = target.endsAt.getTime() - target.startsAt.getTime();
+      const spanMs =
+        target.allDay && originalMs > 86_400_000 ? originalMs : 86_400_000;
+      endsAt = new Date(startsAt.getTime() + spanMs);
+    }
   } else {
     if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) {
       return { error: "Set a start and end time.", saved: false };
