@@ -107,7 +107,7 @@ export function GroceryAdmin({
         <button
           type="button"
           onClick={() => startTransition(() => { void resyncCatalog(); })}
-          className="mb-4 rounded-full border border-hairline px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-accent hover:text-accent"
+          className="mb-4 rounded-full border border-hairline bg-surface px-4 py-2 text-sm font-medium text-ink shadow-sm transition-colors hover:border-accent hover:text-accent"
         >
           Re-sync catalog (merge duplicates &amp; refresh icons)
         </button>

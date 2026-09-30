@@ -1229,6 +1229,11 @@ until the run is finished:
 - [x] Name matching prefers a specific custom icon over a generic emoji, and
       **Re-sync catalog** upgrades an item to a custom icon when one now exists
       (an icon deliberately locked or already custom is left alone).
+- [x] **Every custom-icon item is offerable when adding** (v0.528.0 / app 0.338.0):
+      all 244 `kairos:` items are listed alongside the household's catalog with
+      their canonical names, so a new item is picked (spelled right, right icon)
+      rather than typed. They are suggestions, not catalog rows — nothing extra
+      for "Re-sync catalog" to merge.
 - [x] The monochrome **`mdi:` set is retired** — see DECISIONS.md, which also
       records the token contract, the 📦 fallback, the 8-character truncation bug,
       the server-before-app shipping rule, and the icon-sheet slicing pipeline.

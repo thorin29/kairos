@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-09 — The shipped icon set is offerable as suggestions, without becoming catalog rows (v0.528.0)
+
+The add-an-item list is the household's own catalog, which means an item nobody has bought yet can
+only be typed — and a typo creates a second catalog row with a guessed icon instead of matching the
+custom art. `src/lib/groceries/suggestions.ts` now holds all 244 `kairos:` items with their canonical
+names, generated from the `kairos:` rules in `catalog.ts`, and both clients show catalog ∪
+suggestions with the catalog row winning a name clash (case-insensitive).
+
+**They are deliberately not rows.** Seeding them with a migration was the obvious alternative and was
+rejected: it would put ~244 unused rows in every household's catalog, and "Re-sync catalog" (which
+merges duplicates and refreshes icons) would then have real rows to reconcile against whatever the
+household had typed. A suggestion carries no `catalogId`, so picking one goes through the ordinary
+add-by-name path: the server creates the row and guesses the icon. Nothing to merge, nothing to
+de-conflict.
+
+That only works if a suggestion's name guesses back to its own icon. Every one of the 244 was
+round-trip checked through `guessIconInfo`; seven didn't resolve (milk, soda, soup, spices,
+mayonnaise, frozen vegetables, stir-fry — the first three matched an emoji rule, the rest nothing),
+and the fix was to **widen the matcher rules**, not to rename the items to something that happened
+to match. Bare "milk", "soda" and "soup" now resolve to the custom icon rather than 🥛/🥤/🥫; the
+kairos rules sit first in `ICONS`, so on an equal-length tie they win. Re-run that round-trip check
+after any icon batch — it is what caught the mismatch.
+
+The app carries the same list bundled (`GrocerySuggestions.kt`) so it works offline, which means an
+icon batch now touches `catalog.ts`, `suggestions.ts` and the Kotlin mirror together.
+
 ## 2026-09 — Custom `kairos:` grocery/store icon set (v0.510–0.521)
 
 Grocery and store icons are stored as a short **token** on the row and rendered by a single

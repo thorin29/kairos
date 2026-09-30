@@ -11,6 +11,7 @@ import {
   TrashIcon,
   GroceryGlyph,
 } from "@/components/icons";
+import { GROCERY_SUGGESTIONS } from "@/lib/groceries/suggestions";
 import {
   addFromCatalog,
   addItem,
@@ -134,7 +135,20 @@ export function GroceryBoard({
     if (!q) return [];
     return catalog.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 6);
   }, [catalog, q]);
-  const exact = catalog.some((c) => c.name.toLowerCase() === q);
+  // Items Kairos ships a custom icon for but this household hasn't bought yet:
+  // offered under the catalog matches so the whole icon set is pickable with the
+  // spelling the icon matcher expects. Not catalog rows — picking one adds by
+  // name, which creates the catalog entry and lands on this very icon.
+  const suggestions = useMemo(() => {
+    if (!q) return [];
+    const have = new Set(catalog.map((c) => c.name.toLowerCase()));
+    return GROCERY_SUGGESTIONS.filter(
+      (s) => !have.has(s.name.toLowerCase()) && s.name.toLowerCase().includes(q),
+    ).slice(0, Math.max(0, 8 - matches.length));
+  }, [catalog, matches.length, q]);
+  const exact =
+    catalog.some((c) => c.name.toLowerCase() === q) ||
+    GROCERY_SUGGESTIONS.some((s) => s.name.toLowerCase() === q);
   const common = useMemo(() => catalog.slice(0, 12), [catalog]);
   const only = stores.length === 1 ? stores[0].id : null;
 
@@ -197,6 +211,8 @@ export function GroceryBoard({
                       catalogId: matches[0].id,
                       defaultStoreId: matches[0].defaultStoreId,
                     });
+                  else if (suggestions.length && !exact)
+                    commit({ label: suggestions[0].name });
                   else submitTyped();
                 }
               }}
@@ -221,6 +237,19 @@ export function GroceryBoard({
                   >
                     <GroceryGlyph icon={c.icon} className="h-5 w-5" emojiClassName="text-lg" />
                     <span className="flex-1 truncate">{c.name}</span>
+                    <PlusIcon className="h-4 w-4 text-muted" />
+                  </button>
+                ))}
+                {suggestions.map((s) => (
+                  <button
+                    key={s.icon}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => commit({ label: s.name })}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm hover:bg-ink/5"
+                  >
+                    <GroceryGlyph icon={s.icon} className="h-5 w-5" emojiClassName="text-lg" />
+                    <span className="flex-1 truncate">{s.name}</span>
                     <PlusIcon className="h-4 w-4 text-muted" />
                   </button>
                 ))}
