@@ -118,6 +118,23 @@ export async function moveItemCore(itemId: string, storeId: string): Promise<voi
   });
 }
 
+/**
+ * Set (or clear) the quantity on a line. Anything outside 1-99 clears it, so an
+ * emptied box and a nonsense value both mean "no quantity" — the line then
+ * renders exactly as it did before quantities existed.
+ */
+export async function setItemQuantityCore(
+  itemId: string,
+  quantity: number | null,
+): Promise<void> {
+  if (!itemId) return;
+  const q =
+    quantity == null || !Number.isFinite(quantity) || quantity < 1 || quantity > 99
+      ? null
+      : Math.floor(quantity);
+  await prisma.shoppingItem.updateMany({ where: { id: itemId }, data: { quantity: q } });
+}
+
 /** Add straight from a catalog suggestion (its remembered store, unless told). */
 export async function addFromCatalogCore(
   catalogId: string,

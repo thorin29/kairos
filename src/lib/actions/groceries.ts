@@ -16,6 +16,7 @@ import {
   setPurchasedCore,
   completeTripCore,
   moveItemCore,
+  setItemQuantityCore,
   resyncCatalogCore,
 } from "@/lib/groceries-core";
 
@@ -104,6 +105,13 @@ export async function completeTrip(tripId: string): Promise<void> {
 export async function moveItem(itemId: string, storeId: string): Promise<void> {
   await requireInteractive();
   await moveItemCore(itemId, storeId);
+  refresh();
+}
+
+/** Set a line's quantity (1-99), or null to clear it. */
+export async function setItemQuantity(itemId: string, quantity: number | null): Promise<void> {
+  await requireInteractive();
+  await setItemQuantityCore(itemId, quantity);
   refresh();
 }
 

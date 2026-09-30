@@ -1052,6 +1052,8 @@ model ShoppingItem {
   assignedToId String?
   assignedTo   User?     @relation("GroceryAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   note         String?
+  /// Optional count for the line (1-99); null means no quantity is shown.
+  quantity     Int?
   boughtAt     DateTime?
   sortOrder    Int       @default(0)
   createdAt    DateTime  @default(now())

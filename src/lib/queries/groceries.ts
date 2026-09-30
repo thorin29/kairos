@@ -22,6 +22,8 @@ export type ShoppingItemView = {
   icon: string;
   storeId: string;
   note: string | null;
+  /** 1-99, or null for "no quantity" — which renders exactly as it always has. */
+  quantity: number | null;
   purchased: boolean;
   assignee: Person | null;
 };
@@ -64,6 +66,7 @@ function itemView(i: {
   icon: string;
   storeId: string;
   note: string | null;
+  quantity: number | null;
   boughtAt: Date | null;
   assignedTo: Person | null;
 }): ShoppingItemView {
@@ -73,6 +76,7 @@ function itemView(i: {
     icon: i.icon,
     storeId: i.storeId,
     note: i.note,
+    quantity: i.quantity,
     purchased: i.boughtAt !== null,
     assignee: i.assignedTo,
   };
@@ -101,6 +105,7 @@ export async function loadGroceries(): Promise<GroceriesData> {
         icon: true,
         storeId: true,
         note: true,
+        quantity: true,
         boughtAt: true,
         assignedTo: { select: PERSON_SELECT },
       },
@@ -119,6 +124,7 @@ export async function loadGroceries(): Promise<GroceriesData> {
             icon: true,
             storeId: true,
             note: true,
+            quantity: true,
             boughtAt: true,
             assignedTo: { select: PERSON_SELECT },
           },
@@ -182,6 +188,7 @@ export async function loadCart(storeId: string): Promise<CartData> {
           icon: true,
           storeId: true,
           note: true,
+          quantity: true,
           boughtAt: true,
           assignedTo: { select: PERSON_SELECT },
         },

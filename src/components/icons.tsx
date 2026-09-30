@@ -357,6 +357,14 @@ export function GripIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+export function HashIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M10 4 8 20M16 4l-2 16M4.5 9h15M3.5 15h15" />
+    </svg>
+  );
+}
+
 export function PencilIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>

@@ -1240,7 +1240,13 @@ until the run is finished:
 
 ### Later
 
-- [ ] Quantities on an item (2 dozen) — the note field exists on a line but
+- [x] **Quantities on an item** (v0.529.0 / app 0.339.0) — an optional 1-99
+      count per line, set from the `#` button on the web list or the box beside
+      an item while editing on the phone; the line then reads "Distilled water
+      × 10" on the board, in the cart and on the phone. No quantity renders
+      exactly as before. Free-text amounts ("2 dozen", "a bag") are still not
+      supported — the column is an integer on the line, deliberately kept out
+      of the item name so the catalog and icon matching are unaffected. — the note field exists on a line but
       isn't surfaced in the add form yet
 - [ ] Recurring staples that re-add themselves on a cadence
 - [ ] Installable on a phone as a PWA, so a shopper has the list in the aisle

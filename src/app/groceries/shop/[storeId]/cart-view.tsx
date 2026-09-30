@@ -104,7 +104,7 @@ export function CartView({
                       done ? "text-muted line-through" : "",
                     ].join(" ")}
                   >
-                    {item.name}
+                    {item.quantity ? `${item.name} \u00d7 ${item.quantity}` : item.name}
                   </span>
                   {item.note && (
                     <span className="block truncate text-sm text-muted">

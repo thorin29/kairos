@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.528.0";
+export const APP_VERSION = "0.529.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -127,11 +127,18 @@ export const MIGRATIONS = [
   "112_subject_colour_group",
   "113_feed_default_duration",
   "114_feed_force_duration",
+  "115_grocery_quantity",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.529.0",
+    summary: [
+      "Grocery lines can carry a quantity. On the list, the number button beside an item sets a count from 1 to 99; the line then reads \u201cDistilled water \u00d7 10\u201d on the board, in the cart and on the phone. Leave it blank and the item looks exactly as it did before.",
+    ],
+  },
   {
     version: "0.528.0",
     summary: [

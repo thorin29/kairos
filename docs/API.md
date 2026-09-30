@@ -524,6 +524,7 @@ GET  /api/v1/groceries
        "roster":[ Person ] }
 
 Item:   { "id","name","icon","storeId","note":str|null,
+          "quantity":int|null,                    // 1-99; null = no quantity, render the name alone
           "purchased":bool,"assignee":Person|null }
 Trip:   { "id","storeId","shopper":Person,"items":[ Item ],"total":int,"got":int }
 Person: { "id","name","color","avatarPath":str|null,"avatarPosition":str|null }
@@ -536,6 +537,8 @@ POST /api/v1/groceries/trip/start     { "storeId","shopperId"? }          // sho
      → { "ok":bool, "reason":str|null }                                   // reason "in-progress" if a run exists
 POST /api/v1/groceries/trip/complete  { "tripId" }
 POST /api/v1/groceries/move           { "id","storeId" }                 // move a saved line to another store
+POST /api/v1/groceries/quantity       { "id","quantity":int|null }        // 1-99; null (or out of range) clears it
+     // clients render a line with a quantity as "<name> \u00d7 <n>" and an item without one exactly as before
 
 GET  /api/v1/characters                                                   // your own character sheet (companion, level, season, stats, streak, mastery)
 GET  /api/v1/companion-sprite?p=<species>/<stage>.png                     // device-authed companion sprite (mirrors /public/companions)

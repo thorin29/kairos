@@ -7,6 +7,7 @@ import { Avatar } from "@/components/avatar";
 import {
   CartIcon,
   GripIcon,
+  HashIcon,
   PlusIcon,
   TrashIcon,
   GroceryGlyph,
@@ -17,6 +18,7 @@ import {
   addItem,
   removeItem,
   saveOrder,
+  setItemQuantity,
   startTrip,
 } from "@/lib/actions/groceries";
 import type {
@@ -316,6 +318,7 @@ export function GroceryBoard({
               key={s.id}
               store={s}
               items={lists.get(s.id) ?? []}
+              onQuantity={(id, q) => startTransition(() => setItemQuantity(id, q))}
               onShop={() => setWho(s.id)}
               onRemove={(id) => {
                 setLists((prev) => {
@@ -369,10 +372,76 @@ export function GroceryBoard({
 
 /* --------------------------- store: saved list --------------------------- */
 
+/**
+ * The quantity box on a line: a small button showing "× N", or a # when the line
+ * has no quantity. Clicking it swaps in a two-digit field; an empty or nonsense
+ * value clears the quantity, so the line goes back to reading as a plain name.
+ */
+function QuantityControl({
+  value,
+  onChange,
+}: {
+  value: number | null;
+  onChange: (quantity: number | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value ? String(value) : "");
+
+  useEffect(() => {
+    setDraft(value ? String(value) : "");
+  }, [value]);
+
+  const commit = () => {
+    const n = Number.parseInt(draft, 10);
+    const next = Number.isFinite(n) && n >= 1 && n <= 99 ? n : null;
+    setOpen(false);
+    if (next !== value) onChange(next);
+  };
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={value ? `Quantity ${value}, change it` : "Set a quantity"}
+        title={value ? "Change quantity" : "Set a quantity"}
+        className={[
+          "tabular flex h-8 shrink-0 items-center justify-center rounded-full border border-hairline text-xs font-medium transition-colors hover:border-accent hover:text-accent",
+          value ? "min-w-10 px-2 text-ink" : "w-8 text-muted",
+        ].join(" ")}
+      >
+        {value ? `\u00d7 ${value}` : <HashIcon className="h-3.5 w-3.5" />}
+      </button>
+    );
+  }
+
+  return (
+    <input
+      autoFocus
+      value={draft}
+      inputMode="numeric"
+      aria-label="Quantity"
+      onChange={(e) => setDraft(e.target.value.replace(/\D/g, "").slice(0, 2))}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        } else if (e.key === "Escape") {
+          setDraft(value ? String(value) : "");
+          setOpen(false);
+        }
+      }}
+      className="tabular h-8 w-12 shrink-0 rounded-full border border-accent bg-ground/40 text-center text-sm outline-none"
+    />
+  );
+}
+
 function SavedStore({
   store,
   items,
   onShop,
+  onQuantity,
   onRemove,
   onDragStartItem,
   onDragOverItem,
@@ -383,6 +452,7 @@ function SavedStore({
   store: StoreView;
   items: ShoppingItemView[];
   onShop: () => void;
+  onQuantity: (id: string, quantity: number | null) => void;
   onRemove: (id: string) => void;
   onDragStartItem: (id: string) => void;
   onDragOverItem: (index: number) => void;
@@ -453,11 +523,17 @@ function SavedStore({
               </span>
               <GroceryGlyph icon={item.icon} className="h-5 w-5" emojiClassName="text-xl" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{item.name}</p>
+                <p className="truncate text-sm font-medium">
+                  {item.quantity ? `${item.name} \u00d7 ${item.quantity}` : item.name}
+                </p>
                 {item.note && (
                   <p className="truncate text-xs text-muted">{item.note}</p>
                 )}
               </div>
+              <QuantityControl
+                value={item.quantity}
+                onChange={(q) => onQuantity(item.id, q)}
+              />
               {item.assignee && (
                 <Avatar
                   name={item.assignee.name}

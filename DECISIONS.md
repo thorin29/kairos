@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-09 — Grocery quantity lives on the line, not in the name (v0.529.0 / app 0.339.0)
+
+`ShoppingItem.quantity` is a nullable 1-99 integer (migration `115_grocery_quantity`). The obvious
+cheap alternative — letting people type "Distilled water x10" as the item name — was rejected: the
+name is what the catalog remembers and what the icon matcher reads, so a count baked into it creates a
+junk catalog entry with a 📦 icon and breaks the suggestion dedupe. Keeping it as its own column means
+the catalog, the icons and Re-sync are all untouched by it.
+
+- **Null is the whole "off" state.** `setItemQuantityCore` clears the value for null, a non-number, or
+  anything outside 1-99, so an emptied box, a typo and a hostile API caller all land on "no quantity",
+  and the line renders exactly as it did before the feature existed. There is no "× 0" and no "× 1"
+  special case to explain — 1 is a legal quantity and displays.
+- **One renderer rule, four surfaces**: `"<name> × <n>"` when set, the bare name when not — the web
+  board, the web cart, and both the saved list and the trip list on the phone.
+- The web puts it behind a small `#` button per line that swaps into a two-digit field (commit on
+  blur or Enter, Escape reverts); the app shows the box only in edit mode, beside the move/delete
+  icons, and commits **on focus loss rather than per keystroke**, so typing "10" is one write, not a
+  write for "1" and another for "10".
+- The app write goes through the same optimistic + offline queue path as move/purchase, with
+  `groceries/quantity` added to the pending-write replay so a change made offline survives a reload
+  instead of flickering back.
+
 ## 2026-09 — The shipped icon set is offerable as suggestions, without becoming catalog rows (v0.528.0)
 
 The add-an-item list is the household's own catalog, which means an item nobody has bought yet can
