@@ -57,8 +57,10 @@ the following large efforts shipped:
   + schedule builder, CSV/paste/file intake *and* a wizard "Build a class" form,
   the review/reorder screen with publish-class, term compile with heavy-day flags
   and drag-to-rebalance, school-year setup with breaks, and the get-ahead /
-  finish-by-term-end behaviour. Remaining: **Stage 3** (re-open an affected term as
-  a draft on later edits) and admin bulk-mark (full spec under School below).
+  finish-by-term-end behaviour. **In use and considered complete** — a class is
+  reopened for change by unpublishing it back to draft, editing and republishing,
+  which is what a term-level draft gate would have bought (full spec under School
+  below).
 - **Sport attendance rework (v0.371–0.377)**: attendance prompts now go to
   **everyone** on an event (owner + added people + subscribed-team-calendar
   members), persist until answered (up to a week, with the day shown), and log
@@ -867,7 +869,7 @@ the remaining personal-view items:
 - [x] Admin → School: assignments/tests are **editable** (title, type, subject or
       class, due date), not just deletable
 
-### Curriculum planner (in progress, Stages 1–2 shipped)
+### Curriculum planner (complete and in use)
 
 Turn a curriculum (a book's lessons, a list of assignments, a test schedule)
 into dated schoolwork, spread across the school days of a term, per student. All
@@ -875,7 +877,7 @@ intake is **self-hosted text — wizard, paste, or CSV — no PDF/AI in the app*
 (data stays on the server; Claude formats a PDF into clean CSV in a chat, the app
 only parses). School days = weekdays minus household PAUSE events + holidays.
 
-**Locked spec — three stages:**
+**Locked spec — three stages (all built):**
 - **Stage 1 — build each class.** Wizard *or* CSV → auto-spread across the term's
   school days → review/reorder → **publish class** (generates the SchoolWork
   rows). Cross-semester ("both") classes spread across the whole year; each
@@ -965,9 +967,12 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
 - [x] **Wizard form (v0.395):** Curriculum & schedule has a "Build a class" form
       (student/term/days/start + numbered-lessons or a typed list with TEST: lines)
       that creates a draft plan, no CSV needed. Paste + file-upload still there.
-- [ ] **Stage 3** — re-open recompute (edit a class → affected term back to draft,
-      keep tweaks, highlight changes). Would need a term-level draft/published
-      status, which Stage 2's in-place rebalance intentionally didn't add.
+- [x] **Stage 3 — re-open for change, at the plan level.** A published plan is
+      reopened with `unpublishClassPlan` (back to `ClassPlanStatus.DRAFT`), edited
+      on the review screen, and republished; `rescheduleAllPublishedPlansForward`
+      keeps the remaining work moving. The term-level draft/published gate
+      originally sketched here was **not** built and is not wanted — Stage 2
+      rebalances in place, and unpublish → edit → republish covers the case.
 - [ ] **Schoolwork card** (overdue + today + get-ahead) and **admin bulk-mark**.
       *Get-ahead shipped (v0.383):* the person dashboard shows a "Get ahead in
       school" card — pick a subject, see the next upcoming item, complete it
