@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.529.0";
+export const APP_VERSION = "0.530.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -133,6 +133,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.530.0",
+    summary: [
+      "Fixed grocery icons that were cut off at the bottom (the bottle/jar/glass icons — grape juice, the other juices, milk/creams, oils — lost their base during slicing) by re-cutting ~80 of them from the source art so the whole item shows, and stripped the leftover white card and label text from the household icons (soap, lotion, sunscreen, first-aid, batteries, and the rest).",
+    ],
+  },
   {
     version: "0.529.0",
     summary: [
