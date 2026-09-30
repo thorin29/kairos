@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.526.0";
+export const APP_VERSION = "0.527.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,6 +132,12 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.527.0",
+    summary: [
+      "Added 30 more grocery icons: chocolate chips, coffee filters, k-cups, plums, pomegranate, cannoli, doritos, sunflower seeds, almonds/cashews/walnuts/pistachios, beef & turkey jerky, protein bar, granola, cornmeal, heavy cream, whipped cream (can & tub), sliced cheese, black olives, distilled water, motor/avocado oil, car oil & air filters, birthday candles, iceberg lettuce, and backpacking food. Chocolate chips and coffee filters now get their own icon instead of a chip bag / coffee bag.",
+    ],
+  },
   {
     version: "0.526.0",
     summary: [
