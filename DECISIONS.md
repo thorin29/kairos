@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-10 — The display name is a parent's call, not self-service (v0.535.0)
+
+`updateProfile` is reachable by `requireAdminOrSelf`, which is right for a picture, a colour and a
+birthday — those are yours. The name shown on every board, card and task in the house is not: anyone
+could rename themselves to anything and it propagated everywhere (`displayName ?? name` is used
+throughout). It is now admin-only.
+
+The gate is in the **action**, not just the form: a non-admin's save writes back `user.displayName`
+unchanged no matter what the field contains, so a hand-posted `displayName` does nothing. The form
+shows the current name as read-only text with "Ask a parent to change this" for non-admins, and
+renders the input only for an admin — who can still set it for anyone from the same page, so nothing
+moved for parents.
+
+Note the dependency on `isAdmin()` semantics: with no admin PIN set and sign-in not required, it
+returns true, so a household running the open-tablet configuration is unchanged by design. Locking
+the name down in that configuration means setting an admin PIN.
+
 ## 2026-10 — Deepen costs the egg, not a monthly hatch (v0.534.0)
 
 "Deepen" consumed a ready egg **and** one of `EGGS_PER_SEASON_CAP` (3) hatches, in exchange for

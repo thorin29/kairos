@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { ProfileForm } from "./profile-form";
 import { BackLink } from "@/components/back-link";
@@ -29,6 +30,7 @@ export default async function ProfilePage({
       </header>
 
       <ProfileForm
+        canEditName={await isAdmin()}
         person={{
           id: person.id,
           name: person.name,

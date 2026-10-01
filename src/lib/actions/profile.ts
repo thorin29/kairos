@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { AVATAR_ICONS, ICON_PREFIX, isIcon } from "@/lib/avatars";
 import { toDateColumn } from "@/lib/dates";
 import { requireAdminOrSelf } from "@/lib/gate";
+import { isAdmin } from "@/lib/session";
 
 const UPLOADS = path.join(process.env.DATA_DIR || "/app/data", "uploads");
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -61,7 +62,13 @@ export async function updateProfile(
   // edit your own profile (an admin can edit anyone).
   await requireAdminOrSelf(id);
 
-  const displayName = String(formData.get("displayName") ?? "").trim().slice(0, 40);
+  // Who you are shown as is not self-service: a person editing their own profile
+  // picks a picture, a colour and a birthday, but the name on the board is set by
+  // a parent. Non-admins keep whatever is already stored, whatever the form says
+  // — the check lives here and not only in the UI, so a hand-posted field can't
+  // get round it.
+  const admin = await isAdmin();
+  const displayNameInput = String(formData.get("displayName") ?? "").trim().slice(0, 40);
   const color = String(formData.get("color") ?? "").trim();
   const icon = String(formData.get("icon") ?? "").trim();
   const birthday = String(formData.get("birthday") ?? "").trim();
@@ -123,7 +130,7 @@ export async function updateProfile(
   await prisma.user.update({
     where: { id },
     data: {
-      displayName: displayName || null,
+      displayName: admin ? displayNameInput || null : user.displayName,
       color,
       avatarPath,
       avatarPosition,

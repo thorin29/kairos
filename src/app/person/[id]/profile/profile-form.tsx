@@ -11,8 +11,11 @@ import { Card } from "@/components/ui";
 const initial: ProfileState = { error: null, saved: false };
 
 export function ProfileForm({
+  canEditName = false,
   person,
 }: {
+  /** Only a parent/admin sets the name shown on the board. */
+  canEditName?: boolean;
   person: {
     id: string;
     name: string;
@@ -54,20 +57,32 @@ export function ProfileForm({
       />
 
       <Card className="p-5">
-        <label htmlFor="displayName" className="block text-sm font-medium">
-          Display name
-        </label>
-        <input
-          id="displayName"
-          name="displayName"
-          maxLength={40}
-          defaultValue={person.displayName ?? ""}
-          placeholder={person.name}
-          className="mt-2 h-11 w-full rounded-full border border-hairline px-5 outline-none focus:border-accent"
-        />
-        <p className="mt-2 text-xs text-muted">
-          Leave empty to keep using {person.name}.
-        </p>
+        {/* The name on the board is a parent's call, so the field only appears
+            for an admin. The server ignores it for anyone else regardless. */}
+        {canEditName ? (
+          <>
+            <label htmlFor="displayName" className="block text-sm font-medium">
+              Display name
+            </label>
+            <input
+              id="displayName"
+              name="displayName"
+              maxLength={40}
+              defaultValue={person.displayName ?? ""}
+              placeholder={person.name}
+              className="mt-2 h-11 w-full rounded-full border border-hairline px-5 outline-none focus:border-accent"
+            />
+            <p className="mt-2 text-xs text-muted">
+              Leave empty to keep using {person.name}.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="block text-sm font-medium">Name</p>
+            <p className="mt-2 text-base">{person.displayName ?? person.name}</p>
+            <p className="mt-2 text-xs text-muted">Ask a parent to change this.</p>
+          </>
+        )}
 
         <label
           htmlFor="birthday"
