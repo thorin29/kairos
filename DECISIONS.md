@@ -1,5 +1,53 @@
 # Decisions
 
+## 2026-10 — Which dashboard sections are "the day's" and which are "now's" (v0.531.0)
+
+The app prefetches tomorrow so a morning outage still has a page. That only works if a dashboard
+asked for a future date is actually that day's page, so each section had to be classified rather than
+left on the blanket `dayISO === today` gate it had grown:
+
+- **Built for the requested day** (read-only, already take a date): the day's **schedule**,
+  **chore badges**, and **reading progress**. These were gated for no reason beyond the gate being
+  easy, and a prefetched tomorrow with no schedule on it is exactly what a user would notice.
+- **Still today-only, by meaning**: `getAhead`, school progress / get-ahead, `upForGrabs` and
+  `alwaysOpen` (a chore is up for grabs *now*, not on a day that hasn't arrived), `workoutOverdue`
+  (overdue is measured against the real today), and the admin money banner.
+
+**`ensureGenerated` keeps its `dayISO !== today` guard — do not remove it.** It looks like the reason
+a future day would be incomplete, and it isn't: `generateChores`, `generateRecurringTasks`,
+`generateWorkoutTasks` and `generateReadingTasks` each run with a **14–30 day horizon from today**, so
+tomorrow's rows already exist in the database by the time anyone asks for tomorrow. What the guard
+actually prevents is those generators being re-run with a *future* `fromISO`, where their prune step
+would be evaluated against a window that no longer starts at today — a mutation, triggered by a read,
+on data for a day that hasn't happened. The only single-day generators (`generatePoolChores`,
+`generateAnytimeChores`) feed exactly the two sections that remain today-only, so nothing is lost.
+## 2026-09 — Icon batches are checked before they ship (`tools/check-grocery-icons.py`)
+
+Two icon defects reached production because nothing looked at the art after slicing, and neither is
+visible at 20px in a list row:
+
+1. **The sheet's card and caption were kept** on 13 icons (sunscreen, sponges, plastic-cutlery,
+   paper-plates, pain-reliever, lotion, hand-soap, light-bulbs, batteries-pack, allergy-medicine,
+   air-freshener, first-aid, dryer-sheets) — the slice took the whole grid cell instead of the object,
+   so the white tile, its grey stroke and the printed label all shipped as part of the icon. Repaired
+   in v0.530.0 by removing the card's white fill (tight ≥242 threshold, seeded from the border so
+   white *objects* like plates and bulbs survive — a looser grey threshold eats them, which was tried
+   and rejected), clearing the 4px stroke ring, dropping the low-saturation caption glyphs in the
+   bottom third, then re-cropping. No re-generation needed; the art itself was intact.
+2. **Clipped art** — ~55 icons run off the bottom of their own canvas, so a bottle has no base
+   (grape-juice is the reported case). This one is **not repairable in post**: the pixels were never
+   in the PNG. It needs the affected items re-generated, or the original sheets re-sliced with a box
+   that follows the object rather than the cell.
+
+`tools/check-grocery-icons.py` now detects both and exits non-zero, so an icon batch can be gated on
+it. Clipping is detected by a **hard, fully-opaque run along a canvas edge** — a real silhouette
+fades to alpha 0 at its boundary, a cut does not, which is what distinguishes "the art was cut" from
+"a flat-bottomed object touches the edge". Run it against `public/grocery-icons/kairos` as the last
+step of every icon batch, before bundling to the app. Note the known false positives: shopfront icons
+(supermarket, convenience-store, delivery-truck, farmers-market, liquor-store, online-order) sit on a
+deliberate flat baseline, and paper-plates trips the white-area check because the plates really are
+white.
+
 ## 2026-09 — Grocery quantity lives on the line, not in the name (v0.529.0 / app 0.339.0)
 
 `ShoppingItem.quantity` is a nullable 1-99 integer (migration `115_grocery_quantity`). The obvious

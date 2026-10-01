@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.530.0";
+export const APP_VERSION = "0.531.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,9 +134,15 @@ export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
+    version: "0.531.0",
+    summary: [
+      "The phone can now hold a complete page for tomorrow: a dashboard requested for a specific day builds that day's schedule, chore badges and reading progress instead of only filling them in for today. Nothing changes on today's page.",
+    ],
+  },
+  {
     version: "0.530.0",
     summary: [
-      "Fixed grocery icons that were cut off at the bottom (the bottle/jar/glass icons — grape juice, the other juices, milk/creams, oils — lost their base during slicing) by re-cutting ~80 of them from the source art so the whole item shows, and stripped the leftover white card and label text from the household icons (soap, lotion, sunscreen, first-aid, batteries, and the rest).",
+      "Fixed 13 grocery icons that were showing the icon sheet's white card and its caption underneath the picture \u2014 sunscreen, sponges, plastic cutlery, paper plates, pain reliever, lotion, hand soap, light bulbs, batteries, allergy medicine, air freshener, first aid and dryer sheets are now just the object, like the rest of the set.",
     ],
   },
   {

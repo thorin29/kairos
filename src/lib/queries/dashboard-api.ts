@@ -269,17 +269,36 @@ export async function loadApiDashboard(
     ? { passage: personalDay.passage, read: personalDay.read }
     : null;
 
-  // Household shared chores anyone can pick up today. Only meaningful "now", so
-  // only on today's board. Chores only — schoolwork and the like are never
-  // released to the household.
+  // The day's schedule is a property of the DAY, not of "now": it is read-only
+  // and already takes the date, so it is built for whatever day was asked for.
+  // That matters because the app prefetches tomorrow while the server is up, and
+  // a prefetched page with no schedule on it is the one gap a user would notice
+  // on a morning when Kairos is down.
+  const daySchedule = await loadDaySchedule(dayISO);
+  const schedule: ApiDashboard["schedule"] = [...daySchedule.allDay, ...daySchedule.timed]
+    .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.startMin - b.startMin)
+    .map((e) => ({
+      title: e.title,
+      allDay: e.allDay,
+      timeLabel: e.timeLabel,
+      startMin: e.startMin,
+      color: e.color,
+      ownerName: e.whoLabel,
+      location: e.location,
+      notes: e.notes,
+      didNotAttend: e.didNotAttend,
+      attendees: e.attendees,
+    }));
+
+  // These two genuinely only mean something "now": a chore is up for grabs, or
+  // an always-open chore is ready, as of today — not on a day that hasn't
+  // arrived. They stay on today's board only.
   let upForGrabs: ApiDashboard["upForGrabs"] = [];
   let alwaysOpen: ApiDashboard["alwaysOpen"] = [];
-  let schedule: ApiDashboard["schedule"] = [];
   if (dayISO === today) {
-    const [openTasks, alwaysOpenChores, daySchedule] = await Promise.all([
+    const [openTasks, alwaysOpenChores] = await Promise.all([
       loadOpenTasks(today, userId),
       loadAlwaysOpenChores(today),
-      loadDaySchedule(today),
     ]);
     upForGrabs = openTasks
       .filter((t) => t.category === "CHORE")
@@ -300,20 +319,6 @@ export async function loadApiDashboard(
       readyAtMs: c.readyAtMs,
       myCount: c.byUser.find((u) => u.id === userId)?.count ?? 0,
     }));
-    schedule = [...daySchedule.allDay, ...daySchedule.timed]
-      .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.startMin - b.startMin)
-      .map((e) => ({
-        title: e.title,
-        allDay: e.allDay,
-        timeLabel: e.timeLabel,
-        startMin: e.startMin,
-        color: e.color,
-        ownerName: e.whoLabel,
-        location: e.location,
-        notes: e.notes,
-        didNotAttend: e.didNotAttend,
-        attendees: e.attendees,
-      }));
   }
 
   const sportP = await pendingSportPrompts(dayISO);
@@ -332,11 +337,14 @@ export async function loadApiDashboard(
     money = { pendingApprovals, rewardMonths: rewards.count };
   }
 
-  const choreBadges =
-    dayISO === today ? await loadChoreBadges(userId, dayISO) : [];
+  // Both of these already take the day (or are day-independent), so they are
+  // built for the requested day — again so a prefetched tomorrow is a real page.
+  const choreBadges = await loadChoreBadges(userId, dayISO);
+  const reading = await loadReadingProgress(userId);
+  // "Overdue" is measured against the real today by definition, so asking for a
+  // future day must not invent a number for it.
   const workoutOverdue =
     dayISO === today ? (await loadOverdueWorkoutDates(userId, today)).length : 0;
-  const reading = dayISO === today ? await loadReadingProgress(userId) : [];
 
   return {
     date: dayISO,
