@@ -8,8 +8,16 @@ import { pickHatch, COMPANIONS, luckFromStreak } from "@/lib/companions";
  * device endpoint. "new" draws a creature the person doesn't own yet (no
  * duplicates), weighted by their season tier, and makes it the active companion
  * (the previous one is minted onto the shelf at its current stage). "deepen"
- * instead makes the current companion shiny. Either way the egg is consumed and
- * the next one starts incubating. Callers own their own auth + cache refresh.
+ * instead makes the current companion shiny.
+ *
+ * Both consume the egg and start the next one incubating, but **only "new"
+ * spends one of the season's three hatches**. A shiny is a flourish on a
+ * companion you already have; charging a monthly hatch for it meant nobody would
+ * ever sensibly take it, which is why it needs the egg but not the allowance.
+ * That also means a deepen is available while the season cap is spent
+ * (`eggCapped`), not only while a hatch is.
+ *
+ * Callers own their own auth + cache refresh.
  */
 export async function hatchEggCore(
   userId: string,
@@ -20,7 +28,20 @@ export async function hatchEggCore(
   const rows = await loadProgression();
   const me = rows.find((p) => p.id === userId);
   if (!me) return { error: "That person no longer exists." };
-  if (!me.companion.eggReady) return { error: "The egg isn't ready to hatch yet." };
+  // A deepen needs a grown egg but not an unspent monthly hatch, so it is also
+  // allowed in the capped state, where the XP is there and only the allowance
+  // has run out.
+  const canDeepen = me.companion.eggReady || me.companion.eggCapped;
+  if (mode === "new" && !me.companion.eggReady) {
+    return {
+      error: me.companion.eggCapped
+        ? "You've hatched all three for this month — you can still deepen your companion."
+        : "The egg isn't ready to hatch yet.",
+    };
+  }
+  if (mode === "deepen" && !canDeepen) {
+    return { error: "The egg isn't ready to hatch yet." };
+  }
 
   const lifetimeXp = me.lifetimeXp;
   const luck = luckFromStreak(me.currentStreak);
@@ -75,26 +96,34 @@ export async function hatchEggCore(
     if (!active) {
       return { error: "Hatch your first companion before deepening." };
     }
+    // Writing shiny over shiny used to consume the egg for no change at all.
+    if (active.shiny) {
+      return { error: `${COMPANIONS[active.species]?.name ?? "That companion"} is already shiny.` };
+    }
     await prisma.companion.update({
       where: { id: active.id },
       data: { shiny: true },
     });
   }
 
+  // `eggsThisSeason` is read above as 0 when the stored key is a past season, so
+  // writing it back unchanged on a deepen both leaves the allowance alone and
+  // rolls the key forward correctly at a month boundary.
+  const spendsHatch = mode === "new";
   await prisma.companionState.upsert({
     where: { userId },
     update: {
       incubationBaseXp: lifetimeXp,
       eggsHatched: eggsHatched + 1,
       seasonKey,
-      eggsThisSeason: eggsThisSeason + 1,
+      eggsThisSeason: spendsHatch ? eggsThisSeason + 1 : eggsThisSeason,
     },
     create: {
       userId,
       incubationBaseXp: lifetimeXp,
       eggsHatched: 1,
       seasonKey,
-      eggsThisSeason: 1,
+      eggsThisSeason: spendsHatch ? 1 : 0,
     },
   });
 

@@ -81,8 +81,13 @@ export default async function SummaryPage() {
                     pct={p.level.pct}
                     shares={p.statShares}
                   />
-                  {p.companion.eggReady && (
-                    <HatchControls userId={p.id} hasActive={p.companion.active} />
+                  {(p.companion.eggReady || p.companion.eggCapped) && (
+                    <HatchControls
+                      userId={p.id}
+                      hasActive={p.companion.active}
+                      capped={!p.companion.eggReady}
+                      shiny={p.companion.shiny}
+                    />
                   )}
                 </div>
               )}

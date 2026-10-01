@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const [ownedRows, progression] = await Promise.all([
     prisma.companion.findMany({
       where: { userId: authed.device.person.id },
-      select: { species: true, mintedStage: true, isActive: true },
+      select: { species: true, mintedStage: true, isActive: true, shiny: true },
     }),
     loadProgression(),
   ]);
@@ -44,6 +44,9 @@ export async function GET(req: NextRequest) {
   const stageBySpecies = new Map(
     ownedRows.map((r) => [r.species, r.isActive ? activeStage : (r.mintedStage ?? 2)] as const),
   );
+  // A creature stays shiny on the shelf: deepening is permanent, so the gallery
+  // is where that shows for good. One shiny copy makes the species shiny.
+  const shinySpecies = new Set(ownedRows.filter((r) => r.shiny).map((r) => r.species));
 
   const roster = Object.values(COMPANIONS);
   const eras = ERAS.map((era) => {
@@ -59,6 +62,7 @@ export async function GET(req: NextRequest) {
           name: isOwned ? s.name : null,
           /** 0 hatchling, 1 juvenile, 2 adult — how far you've raised it. */
           stage: isOwned ? stage : null,
+          shiny: isOwned && shinySpecies.has(s.id),
           image: isOwned
             ? `/api/v1/companion-sprite?p=${encodeURIComponent(`${s.id}/${STAGE_NAMES[stage]}.png`)}`
             : null,

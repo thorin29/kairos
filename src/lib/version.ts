@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.533.0";
+export const APP_VERSION = "0.534.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -133,6 +133,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.534.0",
+    summary: [
+      "Making a companion shiny (\u201cdeepen\u201d) still costs the egg but no longer uses up one of your three hatches for the month \u2014 so you can take it without giving up a new creature. It is also offered once this month's three are gone, which is when it is worth taking.",
+      "A shiny companion now looks it: gold glow behind the creature, a gilded sprite and its name in gold, and it stays shiny in the gallery forever \u2014 gold frame, lit cell and a star \u2014 instead of being a star you had to go looking for.",
+      "Deepening a companion that is already shiny is no longer possible; it used to consume the egg and change nothing.",
+    ],
+  },
   {
     version: "0.533.0",
     summary: [

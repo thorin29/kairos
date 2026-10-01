@@ -4,6 +4,8 @@ import { COMPANIONS, stageAsset, STAGE_NAMES } from "@/lib/companions";
 import { XpBar } from "@/components/xp-bar";
 
 const MYSTERY_EGG = "/companions/eggs/mystery.png";
+/** The one shiny colour, shared by the card, the name and the app. */
+const SHINY = "#f5b400";
 
 export type CompanionView = {
   active: boolean;
@@ -60,25 +62,46 @@ export function Companion({
         boxShadow: `0 0 22px ${colorHex}33`,
       }}
     >
-      {companion.shiny && (
-        <span className="absolute right-2 top-1.5 text-sm" title="Shiny">
+      {companion.shiny && companion.active && (
+        <span
+          className="pointer-events-none absolute right-2 top-1.5 text-sm"
+          style={{ color: SHINY, textShadow: `0 0 6px ${SHINY}` }}
+          title="Shiny"
+        >
           &#10022;
         </span>
       )}
 
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={asset}
-        alt={companion.active && sp ? sp.name : "Incubating egg"}
-        className={`${imgBox} ${companion.active ? "companion-idle" : companion.eggReady ? "companion-thrive" : ""} pixelated max-w-full w-auto object-contain`}
-        draggable={false}
-      />
+      {/* A shiny creature is lit from behind and gilded, so it reads as rare at a
+          glance rather than needing the star to be noticed. The egg is never
+          shiny — only what hatched from it. */}
+      <div className="relative flex items-center justify-center">
+        {companion.shiny && companion.active && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -m-3 rounded-full"
+            style={{ background: `radial-gradient(circle, ${SHINY}59, transparent 68%)` }}
+          />
+        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={asset}
+          alt={companion.active && sp ? sp.name : "Incubating egg"}
+          className={`relative ${imgBox} ${companion.active ? "companion-idle" : companion.eggReady ? "companion-thrive" : ""} pixelated max-w-full w-auto object-contain`}
+          style={
+            companion.shiny && companion.active
+              ? { filter: `drop-shadow(0 0 5px ${SHINY}) saturate(1.2) brightness(1.06)` }
+              : undefined
+          }
+          draggable={false}
+        />
+      </div>
 
       {size !== "sm" && (
         <div className="mt-1.5 flex flex-col items-center gap-1.5">
           {companion.active && sp ? (
             <>
-              <p className="text-sm font-semibold">
+              <p className="text-sm font-semibold" style={companion.shiny ? { color: SHINY } : undefined}>
                 {sp.name}{" "}
                 <span className="font-normal text-muted">
                   &middot; {STAGE_NAMES[companion.stage]}

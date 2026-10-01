@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-10 — Deepen costs the egg, not a monthly hatch (v0.534.0)
+
+"Deepen" consumed a ready egg **and** one of `EGGS_PER_SEASON_CAP` (3) hatches, in exchange for
+`shiny = true` — which renders as a single ✦ beside the companion's name and nothing else. Nobody
+would rationally trade a new creature for that, so the button was a trap sitting next to the one
+people actually want.
+
+A deepen now consumes the egg (base XP reset, `eggsHatched + 1`) but leaves `eggsThisSeason`
+untouched, and is therefore offered in the **capped** state as well — all three hatched this month,
+XP for the next egg already earned, nothing else to spend it on. That is where it earns its keep.
+Writing `eggsThisSeason` back unchanged is also what keeps the month rollover correct: the value is
+read as 0 when the stored `seasonKey` is a past season, so a deepen on the 1st rolls the key forward
+without inventing a spend.
+
+Two guards came with it: the server rejects a deepen on an already-shiny companion (it previously
+wrote `shiny = true` over `shiny = true`, ate the egg and changed nothing), and both clients hide the
+control in that state rather than relying on the error.
+
+**Shiny is now visible, which is what makes the trade worth taking.** One gold, `#f5b400`, shared by
+both clients: a radial glow behind the creature, an Overlay tint on the sprite, the name in gold, and
+the star. `characters/collection` now selects `shiny` and marks a species shiny if any owned copy is,
+so a deepened creature keeps its gilding on the shelf — gold frame, lit cell, star — long after it
+stops being the active companion. The **egg** is never gilded; only what hatched from it. Shiny still
+has no effect on growth, rarity or luck, and that is deliberate: it is a trophy, not a stat.
+
 ## 2026-10 — The egg meter must not round up past the gate (v0.533.0)
 
 `incubationPct` was `Math.round(progress / cost * 100)` while the Hatch button is gated on
