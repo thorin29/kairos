@@ -223,8 +223,17 @@ export type ReadingProgress = {
  *  the earliest one whose date is today or later (else the last), and progress is
  *  measured across its segment [startPage, target]. Books with no live goals are
  *  omitted, so an empty result hides the Book reading section. */
-export async function loadReadingProgress(userId: string): Promise<ReadingProgress[]> {
-  const today = todayISO();
+/**
+ * Per-book goal progress. [asOfISO] is the day the "active goal" is judged
+ * against: a goal whose due date has passed is no longer the one being chased.
+ * It defaults to today, but the app asks for a specific day (it prefetches
+ * tomorrow), and a page labelled tomorrow must not carry today's goal maths.
+ */
+export async function loadReadingProgress(
+  userId: string,
+  asOfISO: string = todayISO(),
+): Promise<ReadingProgress[]> {
+  const today = asOfISO;
   const books = await prisma.book.findMany({
     where: {
       userId,

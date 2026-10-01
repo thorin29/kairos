@@ -332,15 +332,19 @@ export async function loadApiDashboard(
   if (isAdmin) {
     const [pendingApprovals, rewards] = await Promise.all([
       pendingMoneyCount(),
-      pendingBibleRewards(today),
+      // Judged against the REQUESTED day, not the server's today: which months
+      // count as ended changes on the 1st, so a page prefetched on the 30th for
+      // the 1st would otherwise miss rewards that become due that morning.
+      pendingBibleRewards(dayISO),
     ]);
     money = { pendingApprovals, rewardMonths: rewards.count };
   }
 
-  // Both of these already take the day (or are day-independent), so they are
-  // built for the requested day — again so a prefetched tomorrow is a real page.
+  // Built for the requested day, so a prefetched tomorrow is a real page.
+  // (`pendingMoneyCount` above has no date at all — a pending approval is a
+  // pending approval; it is current state, not a property of a day.)
   const choreBadges = await loadChoreBadges(userId, dayISO);
-  const reading = await loadReadingProgress(userId);
+  const reading = await loadReadingProgress(userId, dayISO);
   // "Overdue" is measured against the real today by definition, so asking for a
   // future day must not invent a number for it.
   const workoutOverdue =

@@ -9,6 +9,15 @@ left on the blanket `dayISO === today` gate it had grown:
 - **Built for the requested day** (read-only, already take a date): the day's **schedule**,
   **chore badges**, and **reading progress**. These were gated for no reason beyond the gate being
   easy, and a prefetched tomorrow with no schedule on it is exactly what a user would notice.
+- **Date-aware only after v0.532.0**: `loadReadingProgress` picked the active goal against
+  `todayISO()` internally and `pendingBibleRewards` was handed the server's `today`, so moving them
+  out of the gate in 0.531 made them *look* day-specific while still computing today's answer under
+  tomorrow's date. Both now take the requested day (the reward one matters at a month boundary: which
+  months count as ended changes on the 1st). The lesson: moving a call out of a `dayISO === today`
+  branch is not the same as making it date-aware — open the function and check what it does with the
+  date it isn't being given.
+- **Current state, no date at all**: `pendingMoneyCount` — a pending approval is pending whenever you
+  look; it is not a property of a day.
 - **Still today-only, by meaning**: `getAhead`, school progress / get-ahead, `upForGrabs` and
   `alwaysOpen` (a chore is up for grabs *now*, not on a day that hasn't arrived), `workoutOverdue`
   (overdue is measured against the real today), and the admin money banner.
