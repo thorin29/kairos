@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-10 — The egg meter must not round up past the gate (v0.533.0)
+
+`incubationPct` was `Math.round(progress / cost * 100)` while the Hatch button is gated on
+`progress >= cost`. Anything from 99.5% up therefore displayed **"Next egg 100%"** with no Hatch
+action anywhere on the screen — which reads as a broken feature, not as "nearly there". The meter now
+floors and holds at 99 until the egg is genuinely ready, so 100% means exactly one thing.
+
+The gate itself is unchanged and is deliberately two conditions: `eggReady = progress >= cost &&
+eggsThisSeason < EGGS_PER_SEASON_CAP`, and `eggCapped` is the same with the cap reached. Both false
+means the XP isn't there yet; `eggCapped` means it is, but this season's three are spent and the
+season (a calendar month by default) hasn't rolled. `eggsThisSeason` resets by comparison against
+`currentSeasonWindow().startISO`, so a month rollover frees the cap without a write.
+
+Diagnosing one of these is a data question, not a code one — the state lives in `CompanionState`
+(`incubationBaseXp`, `eggsHatched`, `seasonKey`, `eggsThisSeason`) against the person's lifetime XP,
+with the cost being `FIRST_EGG_XP` (80) for the first egg and `EGG_XP` (250) after. Read the row
+before theorising.
 ## 2026-10 — Which dashboard sections are "the day's" and which are "now's" (v0.531.0)
 
 The app prefetches tomorrow so a morning outage still has a page. That only works if a dashboard

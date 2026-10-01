@@ -354,7 +354,12 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         const eggsHatched = st?.eggsHatched ?? 0;
         const cost = eggCostFor(eggsHatched);
         const progress = Math.max(0, totalXp - baseXp);
-        const incubationPct = Math.min(100, Math.round((progress / cost) * 100));
+        // Floor, not round, and hold at 99 until the egg is genuinely ready:
+        // rounding let 99.5% of the cost display as "Next egg 100%" with no
+        // Hatch button anywhere, which reads as a broken feature rather than
+        // "nearly there". 100% now means exactly one thing — go and hatch it.
+        const rawPct = cost > 0 ? Math.floor((progress / cost) * 100) : 100;
+        const incubationPct = progress >= cost ? 100 : Math.min(99, Math.max(0, rawPct));
         const eggsThisSeason =
           st && st.seasonKey === seasonWin.startISO ? st.eggsThisSeason : 0;
         const eggReady = progress >= cost && eggsThisSeason < EGGS_PER_SEASON_CAP;
