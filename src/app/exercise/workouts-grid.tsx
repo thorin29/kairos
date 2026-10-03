@@ -89,6 +89,8 @@ export function WorkoutsGrid({
   const [loggedByPool, setLoggedByPool] = useState<Record<string, string>>({});
   const [loadingLogged, setLoadingLogged] = useState(false);
   const [overdueDates, setOverdueDates] = useState<string[]>([]);
+  // Bumped after skipping a missed day so the Overdue list re-reads itself.
+  const [overdueTick, setOverdueTick] = useState(0);
   const [browseFilter, setBrowseFilter] = useState<"regular" | "hero">(
     "regular",
   );
@@ -127,7 +129,7 @@ export function WorkoutsGrid({
     return () => {
       cancelled = true;
     };
-  }, [openUserId]);
+  }, [openUserId, overdueTick]);
   useEffect(() => {
     let cancelled = false;
     if (openUserId && logDate !== todayISO) {
@@ -494,6 +496,22 @@ export function WorkoutsGrid({
                                   unitSystem={unitSystem}
                                   heading={`Missed ${formatShort(od)}`}
                                 />
+                                {/* Log it, or be done with it. Without this the
+                                    only way to clear a missed day was to switch
+                                    the date picker to it — the Overdue list
+                                    showed the problem and not the way out. */}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    startTransition(async () => {
+                                      await restDay(open.user.id, od);
+                                      setOverdueTick((n) => n + 1);
+                                    })
+                                  }
+                                  className="mt-2 inline-flex h-9 items-center rounded-full border border-red-200 px-4 text-sm font-medium text-red-700 hover:bg-red-100"
+                                >
+                                  Skip this day
+                                </button>
                               </div>
                             );
                           })}

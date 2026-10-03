@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-10 — A missed workout must be clearable from where it is shown (v0.536.0)
+
+The Overdue list on the exercise pop-out rendered each missed day's plan so it could be *logged*, but
+offered no way to say "I'm not doing that". The only route was to switch the date picker to that day
+and use the Rest day button there — which nothing on the Overdue list pointed at. The quick **Rest**
+on the card header has always meant today (`restDay(user, todayISO)`), correctly, but that made it
+look as if skipping were already available and broken.
+
+Each overdue entry now carries **Skip this day**, calling `restDay(user, thatDate)` and bumping a
+tick that re-reads `overdueWorkoutDates`, so the row disappears as soon as it is cleared.
+
+This was the web half of the same mistake the app made (app 0.349.0): an action that can apply to
+more than one day has to carry the day, and the UI that *shows* a day's problem has to offer that
+day's resolution. Surfacing overdue work without a way to dismiss it just moves the nag.
+
 ## 2026-10 — The display name is a parent's call, not self-service (v0.535.0)
 
 `updateProfile` is reachable by `requireAdminOrSelf`, which is right for a picture, a colour and a
