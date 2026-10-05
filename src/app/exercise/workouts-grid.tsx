@@ -529,7 +529,7 @@ export function WorkoutsGrid({
 
                       <div className="border-t border-hairline pt-5">
                         <h4 className="mb-3 font-display text-sm font-semibold">
-                          Log a different workout
+                          Log something else you did
                         </h4>
                         <CustomWorkoutForm
                           userId={open.user.id}
@@ -545,7 +545,7 @@ export function WorkoutsGrid({
                     <>
                       {loadingLogged ? (
                         <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
-                          Loading logged weights\u2026
+                          Loading logged weights…
                         </p>
                       ) : (
                         <TodayPlan

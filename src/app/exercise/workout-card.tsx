@@ -335,7 +335,7 @@ function PlanRow({
                         identically and months of rep progress stay invisible. */}
                     {m === "WEIGHT" && (
                       <div className="flex items-center gap-1.5 pb-0.5">
-                        <span className="text-xs text-muted">\u00d7</span>
+                        <span className="text-xs text-muted">×</span>
                         <input
                           inputMode="numeric"
                           value={values[`${e.id}__reps`] ?? ""}
