@@ -303,6 +303,10 @@ export type PlannedLogEntry = {
   metric: string;
   value: number;
   unit: string;
+  /** For a WEIGHT entry: how many reps that top set was. The RECORD stays the
+   *  weight — reps are carried alongside it so "185 x 5" and "185 x 12" stop
+   *  being the same log. Optional, so older clients keep working unchanged. */
+  reps?: number | null;
 };
 
 /**
@@ -406,6 +410,9 @@ export async function logPlannedWorkout(
     switch (e.metric) {
       case "WEIGHT":
         set.weight = e.value;
+        if (e.reps != null && Number.isFinite(e.reps) && e.reps > 0) {
+          set.reps = Math.round(e.reps);
+        }
         break;
       case "REPS":
         set.reps = Math.round(e.value);

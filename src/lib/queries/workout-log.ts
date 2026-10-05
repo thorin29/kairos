@@ -325,12 +325,19 @@ export async function loadTodayPlannedWorkouts(
  * page. Series = max weight per day per pool movement (the graph); history =
  * recent sessions with a short label and result line.
  */
-export type GraphPoint = { date: string; value: number };
+/** value = the day's heaviest weight (the record); reps = that set's rep count
+ *  when it was logged, carried as context, never as the record itself. */
+export type GraphPoint = { date: string; value: number; reps?: number | null };
 export type ProgressSeries = {
   poolExerciseId: string;
   name: string;
   unit: string;
   points: GraphPoint[];
+  /** Heaviest set ever logged for this movement — the record, plus the reps it
+   *  was done for. Null until something is logged. */
+  best?: { date: string; value: number; reps: number | null } | null;
+  /** Best weight actually lifted at each rep count. Real sets only. */
+  repMaxes?: { reps: number; value: number; date: string }[];
 };
 export type WorkoutHistoryEntry = {
   id: string;
@@ -418,18 +425,31 @@ export async function loadWorkoutProgress(
         },
         select: {
           weight: true,
+          reps: true,
           poolExerciseId: true,
           session: { select: { date: true } },
         },
       })
     : [];
-  const perDay = new Map<string, Map<string, number>>();
+  const perDay = new Map<string, Map<string, { value: number; reps: number | null }>>();
+  // movement -> reps -> heaviest weight actually lifted at that rep count
+  const repMaxes = new Map<string, Map<number, { value: number; date: string }>>();
   for (const s of wSets) {
     if (s.weight == null || !s.poolExerciseId) continue;
     const d = fromDateColumn(s.session.date);
-    const m = perDay.get(s.poolExerciseId) ?? new Map<string, number>();
-    m.set(d, Math.max(m.get(d) ?? 0, s.weight));
+    const m = perDay.get(s.poolExerciseId) ?? new Map<string, { value: number; reps: number | null }>();
+    const prev = m.get(d);
+    // Heaviest wins the day; on a tie the set with more reps is the better one.
+    if (!prev || s.weight > prev.value || (s.weight === prev.value && (s.reps ?? 0) > (prev.reps ?? 0))) {
+      m.set(d, { value: s.weight, reps: s.reps });
+    }
     perDay.set(s.poolExerciseId, m);
+    if (s.reps != null && s.reps > 0) {
+      const rm = repMaxes.get(s.poolExerciseId) ?? new Map<number, { value: number; date: string }>();
+      const cur = rm.get(s.reps);
+      if (!cur || s.weight > cur.value) rm.set(s.reps, { value: s.weight, date: d });
+      repMaxes.set(s.poolExerciseId, rm);
+    }
   }
 
   const series: ProgressSeries[] = [...trackedNames.entries()]
@@ -438,8 +458,17 @@ export async function loadWorkoutProgress(
       name,
       unit: weightUnit,
       points: [...(perDay.get(id)?.entries() ?? [])]
-        .map(([date, value]) => ({ date, value }))
+        .map(([date, p]) => ({ date, value: p.value, reps: p.reps }))
         .sort((a, b) => (a.date < b.date ? -1 : 1)),
+      // The heaviest set ever: the headline number, with the reps it was done
+      // for as context. Never an estimate.
+      best:
+        [...(perDay.get(id)?.entries() ?? [])]
+          .map(([date, p]) => ({ date, value: p.value, reps: p.reps }))
+          .sort((a, b) => b.value - a.value || (b.reps ?? 0) - (a.reps ?? 0))[0] ?? null,
+      repMaxes: [...(repMaxes.get(id)?.entries() ?? [])]
+        .map(([reps, r]) => ({ reps, value: r.value, date: r.date }))
+        .sort((a, b) => a.reps - b.reps),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 

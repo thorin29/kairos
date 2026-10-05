@@ -26,7 +26,14 @@ export type GraphSeries = {
   name: string;
   unit: string;
   color: string;
-  points: { date: string; value: number }[];
+  /** value = the day's heaviest weight (the record). reps = how many that set
+   *  was, when it was logged — never part of the record, only context. */
+  points: { date: string; value: number; reps?: number | null }[];
+  /** The heaviest set ever logged for this movement. */
+  best?: { value: number; reps: number | null; date: string } | null;
+  /** Best weight actually lifted at each rep count — real lifts, no estimates.
+   *  Only rep counts that have been logged appear. */
+  repMaxes?: { reps: number; value: number; date: string }[];
 };
 
 export type ExerciseDef = {
@@ -205,6 +212,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         select: {
           poolExerciseId: true,
           weight: true,
+          reps: true,
           session: { select: { date: true } },
           poolExercise: { select: { name: true, muscleGroup: true } },
         },
@@ -350,6 +358,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     const wSets = weightSets as unknown as {
       poolExerciseId: string;
       weight: number | null;
+      reps: number | null;
       session: { date: Date };
       poolExercise: { name: string; muscleGroup: MuscleGroup | null } | null;
     }[];
@@ -390,7 +399,9 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     // today's planned movements when there's a plan (so the card shows where
     // you're at for today's lifts); otherwise every movement they've logged.
     const movMeta = new Map<string, { name: string; muscleGroup: MuscleGroup | null }>();
-    const perMovementDay = new Map<string, Map<string, number>>();
+    const perMovementDay = new Map<string, Map<string, { value: number; reps: number | null }>>();
+    // movementId -> reps -> best weight at that rep count
+    const repMaxes = new Map<string, Map<number, { value: number; date: string }>>();
     for (const set of wSets) {
       if (set.weight == null || !set.poolExercise) continue;
       const id = set.poolExerciseId;
@@ -401,9 +412,22 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         });
       }
       const d = fromDateColumn(set.session.date);
-      const m = perMovementDay.get(id) ?? new Map<string, number>();
-      m.set(d, Math.max(m.get(d) ?? 0, set.weight));
+      const m = perMovementDay.get(id) ?? new Map<string, { value: number; reps: number | null }>();
+      const prev = m.get(d);
+      // Heaviest wins the day; on equal weight the one with more reps wins,
+      // because that is the better set.
+      if (!prev || set.weight > prev.value || (set.weight === prev.value && (set.reps ?? 0) > (prev.reps ?? 0))) {
+        m.set(d, { value: set.weight, reps: set.reps });
+      }
       perMovementDay.set(id, m);
+
+      // Best weight at each rep count, from real logged sets only.
+      if (set.reps != null && set.reps > 0) {
+        const rm = repMaxes.get(id) ?? new Map<number, { value: number; date: string }>();
+        const cur = rm.get(set.reps);
+        if (!cur || set.weight > cur.value) rm.set(set.reps, { value: set.weight, date: d });
+        repMaxes.set(id, rm);
+      }
     }
 
     const allSeries: GraphSeries[] = [...movMeta.entries()]
@@ -414,8 +438,14 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         unit: meta.muscleGroup ? weightUnits[meta.muscleGroup] : "",
         color: LINE_COLORS[i % LINE_COLORS.length],
         points: [...perMovementDay.get(id)!.entries()]
-          .map(([date, value]) => ({ date, value }))
+          .map(([date, p]) => ({ date, value: p.value, reps: p.reps }))
           .sort((a, b) => (a.date < b.date ? -1 : 1)),
+        best: [...perMovementDay.get(id)!.entries()]
+          .map(([date, p]) => ({ date, value: p.value, reps: p.reps }))
+          .sort((a, b) => b.value - a.value || (b.reps ?? 0) - (a.reps ?? 0))[0] ?? null,
+        repMaxes: [...(repMaxes.get(id)?.entries() ?? [])]
+          .map(([reps, r]) => ({ reps, value: r.value, date: r.date }))
+          .sort((a, b) => a.reps - b.reps),
       }))
       .filter((s) => s.points.length > 0);
 

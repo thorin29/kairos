@@ -1,5 +1,33 @@
 # Decisions
 
+## 2026-10 — Reps ride along with the weight; the record stays the weight (v0.537.0)
+
+Progress was `Math.max(weight)` per movement per day with reps discarded, so 185x5 and 185x12 logged
+identically and every week of rep progress between weight jumps was invisible. `SessionSet` has
+always had `reps` and `setNumber` — the gap was in what the log UI collected, not the schema, so this
+needed no migration.
+
+The design decision, and it is the owner's: **the record is the weight.** Reps are context carried
+beside it, not a number that redefines the record. Estimated 1RM is explicitly rejected as a stat —
+its only acceptable use is as a "you could try this" hint when choosing a load, never stored and
+never charted.
+
+What that unlocks, all from real logged sets:
+
+- **Day points carry their reps.** On a tie in weight the set with more reps wins the day, because it
+  is the better set.
+- **The record per movement**: the heaviest set ever, shown with the reps it was done for.
+- **A rep-max table**: best weight actually lifted at each rep count that has been logged. No
+  interpolation, no estimates, only rep counts that exist.
+
+Deliberately NOT done: per-set logging. The schema supports it, but five sets x two fields per
+session is friction that stops people logging at all. One top set with an optional rep count is two
+taps and captures most of the signal. An optional "add set" can come later if it is ever wanted.
+
+Both progress paths were updated — the web's `weightSeries` in `queries/workouts.ts` and the device
+payload's `ProgressSeries` in `queries/workout-log.ts`. They are separate queries doing the same
+thing; a change to one needs the other.
+
 ## 2026-10 — A missed workout must be clearable from where it is shown (v0.536.0)
 
 The Overdue list on the exercise pop-out rendered each missed day's plan so it could be *logged*, but

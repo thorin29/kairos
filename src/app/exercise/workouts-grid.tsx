@@ -861,6 +861,43 @@ function PersonalTop({
               points: s.points,
             }))}
           />
+          {/* The record for each lift, in real numbers: the heaviest set, the
+              reps it was done for, and the best weight at each rep count that
+              has actually been logged. The line answers "over time"; this
+              answers "where am I now", which is the question people ask. */}
+          <div className="mt-3 space-y-2">
+            {graph.series
+              .filter((s) => s.best)
+              .map((s) => (
+                <div
+                  key={s.exerciseId}
+                  className="rounded-xl border border-hairline bg-ground/40 px-3 py-2"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="truncate text-sm font-medium">{s.name}</span>
+                    <span className="tabular shrink-0 text-sm font-semibold">
+                      {s.best!.value}
+                      {s.unit}
+                      {s.best!.reps ? ` \u00d7 ${s.best!.reps}` : ""}
+                    </span>
+                  </div>
+                  {(s.repMaxes?.length ?? 0) > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {s.repMaxes!.map((r) => (
+                        <span
+                          key={r.reps}
+                          className="tabular rounded-full border border-hairline px-2 py-0.5 text-xs text-muted"
+                          title={`Best at ${r.reps} reps — ${r.date}`}
+                        >
+                          {r.reps}r · {r.value}
+                          {s.unit}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
         </div>
       )}
 

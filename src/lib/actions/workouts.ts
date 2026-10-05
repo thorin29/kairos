@@ -563,6 +563,8 @@ export async function completePlannedWorkout(input: {
     metric: Metric;
     value: number;
     unit: string;
+    /** Reps for a WEIGHT entry; the record is still the weight. */
+    reps?: number | null;
   }[];
 }): Promise<void> {
   await requireInteractive();

@@ -173,6 +173,7 @@ function PlanRow({
       metric: Metric;
       value: number;
       unit: string;
+      reps?: number | null;
     }[] = [];
 
     const push = (
@@ -180,11 +181,17 @@ function PlanRow({
       metric: Metric,
       raw: string,
       unit: string,
+      repsRaw?: string,
     ) => {
       const num = Number(raw);
       if (!raw || !Number.isFinite(num) || num <= 0) return;
       const value = metric === "DURATION" ? num * 60 : num;
-      entries.push({ poolExerciseId, metric, value, unit });
+      const repsNum = Number(repsRaw);
+      const reps =
+        metric === "WEIGHT" && repsRaw && Number.isFinite(repsNum) && repsNum > 0
+          ? Math.round(repsNum)
+          : null;
+      entries.push({ poolExerciseId, metric, value, unit, reps });
     };
 
     const resolveUnit = (m: Metric, exUnit?: string): string =>
@@ -199,7 +206,13 @@ function PlanRow({
     } else {
       for (const e of trackedExercises) {
         const m = metricFor(e.metric);
-        push(e.poolExerciseId, m, values[e.id] ?? "", resolveUnit(m, e.unit));
+        push(
+          e.poolExerciseId,
+          m,
+          values[e.id] ?? "",
+          resolveUnit(m, e.unit),
+          values[`${e.id}__reps`],
+        );
       }
     }
 
@@ -306,15 +319,34 @@ function PlanRow({
                     ? e.unit || metricUnit(m, unitSystem)
                     : metricUnit(m, unitSystem);
                 return (
-                  <MetricField
-                    key={e.id}
-                    label={trackedExercises.length === 1 ? "" : e.name}
-                    metric={m}
-                    unit={unit}
-                    hint={m === "WEIGHT" ? "today's max" : undefined}
-                    value={values[e.id] ?? ""}
-                    onChange={(v) => setVal(e.id, v)}
-                  />
+                  <div key={e.id} className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <MetricField
+                        label={trackedExercises.length === 1 ? "" : e.name}
+                        metric={m}
+                        unit={unit}
+                        hint={m === "WEIGHT" ? "today's max" : undefined}
+                        value={values[e.id] ?? ""}
+                        onChange={(v) => setVal(e.id, v)}
+                      />
+                    </div>
+                    {/* Reps for the top set. Optional: the record is still the
+                        weight, but without this "185 x 5" and "185 x 12" log
+                        identically and months of rep progress stay invisible. */}
+                    {m === "WEIGHT" && (
+                      <div className="flex items-center gap-1.5 pb-0.5">
+                        <span className="text-xs text-muted">\u00d7</span>
+                        <input
+                          inputMode="numeric"
+                          value={values[`${e.id}__reps`] ?? ""}
+                          onChange={(v) => setVal(`${e.id}__reps`, v.target.value)}
+                          placeholder="reps"
+                          aria-label={`${e.name} reps`}
+                          className="tabular h-9 w-16 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                        />
+                      </div>
+                    )}
+                  </div>
                 );
               })}
               {untracked.length > 0 && (

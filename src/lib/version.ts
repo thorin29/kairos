@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.536.0";
+export const APP_VERSION = "0.537.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -133,6 +133,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.537.0",
+    summary: [
+      "Logging a lift now takes an optional rep count next to the weight. The record is still the weight \u2014 reps ride along so that 185 \u00d7 5 and 185 \u00d7 12 stop looking identical, which is where most of the progress between weight jumps was hiding.",
+      "Under the lift chart you now get the record for each movement (heaviest set and the reps it was done for) and the best weight you have actually lifted at each rep count. Real logged sets only, no estimates.",
+    ],
+  },
   {
     version: "0.536.0",
     summary: [
