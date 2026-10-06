@@ -303,6 +303,10 @@ export type PlannedLogEntry = {
   metric: string;
   value: number;
   unit: string;
+  /** Set when this movement was swapped in for a planned one for this day only:
+   *  the PLANNED movement's id. Stored on the set so the day's plan can show
+   *  what was actually done in that slot instead of a blank row. */
+  swappedFrom?: string | null;
   /** For a WEIGHT entry: how many reps that top set was. The RECORD stays the
    *  weight — reps are carried alongside it so "185 x 5" and "185 x 12" stop
    *  being the same log. Optional, so older clients keep working unchanged. */
@@ -392,6 +396,7 @@ export async function logPlannedWorkout(
     const set: {
       sessionId: string;
       poolExerciseId: string | null;
+      swappedFromId: string | null;
       setNumber: number;
       unit: string | null;
       finished: boolean;
@@ -403,6 +408,9 @@ export async function logPlannedWorkout(
     } = {
       sessionId,
       poolExerciseId: e.poolExerciseId,
+      // Only meaningful when it differs from the movement actually logged.
+      swappedFromId:
+        e.swappedFrom && e.swappedFrom !== e.poolExerciseId ? e.swappedFrom : null,
       setNumber,
       unit: e.unit || null,
       finished: true,

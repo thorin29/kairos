@@ -565,6 +565,8 @@ export async function completePlannedWorkout(input: {
     unit: string;
     /** Reps for a WEIGHT entry; the record is still the weight. */
     reps?: number | null;
+    /** Planned movement this entry was swapped in for, that day only. */
+    swappedFrom?: string | null;
   }[];
 }): Promise<void> {
   await requireInteractive();

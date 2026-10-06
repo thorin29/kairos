@@ -47,6 +47,8 @@ export async function POST(req: NextRequest) {
       metric: e.metric as string,
       value: e.value as number,
       unit: typeof e.unit === "string" ? (e.unit as string) : "",
+      // The planned movement this one stands in for, when swapped for the day.
+      swappedFrom: typeof e.swappedFrom === "string" ? (e.swappedFrom as string) : null,
       // Reps on a WEIGHT entry: the set's rep count, not the record itself.
       reps:
         typeof e.reps === "number" && Number.isFinite(e.reps) && e.reps > 0

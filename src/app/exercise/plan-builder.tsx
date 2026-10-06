@@ -425,7 +425,7 @@ function AddWorkoutModal({
             hiitWorkouts.length === 0 ? (
               <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
                 No HIIT/CrossFit workouts yet. Build one in the Workouts admin,
-                or log one from &ldquo;Log something else&rdquo; to add your own.
+                or log one from &ldquo;Log an additional workout&rdquo; to add your own.
               </p>
             ) : (
               <div>

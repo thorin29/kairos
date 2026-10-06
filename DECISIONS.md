@@ -1,5 +1,42 @@
 # Decisions
 
+## 2026-10 — A one-day swap is remembered on the set, not inferred (v0.538.0)
+
+The app can swap a planned movement for a variation for one day (app 0.353). The set lands under the
+variation's id, so the planned slot came back blank on the next load: the log was right, the screen
+looked wrong. Inferring "this unplanned set must have replaced that planned one" is guesswork, so the
+link is now **stored**: `SessionSet.swappedFromId` (migration `116_set_swapped_from`) holds the
+planned movement's id, written only when it differs from what was logged.
+
+`loadTodayPlannedWorkouts` keys the day's sets by `swappedFromId ?? poolExerciseId`, so a swapped set
+fills the slot it replaced, and the movement reports `loggedAs: { poolExerciseId, name }` — what was
+actually done. Clients show the slot with the variation's name and its value instead of a blank row.
+
+## 2026-10 — Same-muscle plans share a card (v0.538.0)
+
+Two chest plans on a Monday used to be two separate cards with nothing saying they were the same
+session's work. They now group: one card, the muscle group named once at the top, each workout with
+its own fields and buttons below a divider. Grouping is by `PlannedWorkout.muscleGroup` only —
+grouping by name would merge two unrelated plans both called "Workout" — and a plan without a muscle
+group keeps its own card. `muscleGroup` now rides along on the planned-day payload so the phone can
+group identically.
+
+## 2026-10 — The lift view answers "where am I now" first (v0.538.0)
+
+A line over all history answers a question people rarely ask. Each tracked lift now leads with its
+**record** (heaviest set and the reps it was done for), then **change over 30 days**, **how long
+since that best** (a stall is information), **session count**, the **last five sessions** as
+weight×reps chips, and the **rep-max row**. The chart stays underneath for the long view.
+
+Three rules behind it: every number is a real logged set (no estimated 1RM, anywhere); nothing is
+compared across lifts, because a deadlift and a shoulder press share no scale; and the 30-day delta
+is **null**, not zero, when there is nothing that old to compare against — a first session is not a
+gain.
+
+The web's graphable universe is now **tracked planned movements**, matching the phone, which has
+always filtered that way. Before this the web also charted anything ever logged, so the same person
+saw different lifts on the two clients.
+
 ## 2026-10 — Reps ride along with the weight; the record stays the weight (v0.537.0)
 
 Progress was `Math.max(weight)` per movement per day with reps discarded, so 185x5 and 185x12 logged

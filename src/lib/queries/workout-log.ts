@@ -113,13 +113,25 @@ export type PlannedMovement = {
   metric: string;
   unit: string;
   value: number | null;
+  /** When this slot was logged with a SWAPPED movement for the day, what was
+   *  actually done. Null means the planned movement itself. Lets the client show
+   *  "Front squat (instead of Back squat)" with its value rather than a blank. */
+  loggedAs?: { poolExerciseId: string; name: string } | null;
 };
 
 export type TodayPlanned = {
   plannedWorkoutId: string;
   name: string;
+  /** Used to group same-muscle plans onto one card (Chest + Chest together). */
+  muscleGroup: string | null;
   exercises: PlannedMovement[];
 } | null;
+
+type SlotLog = LoggedSet & {
+  poolExerciseId: string | null;
+  swappedFromId: string | null;
+  poolExercise: { name: string } | null;
+};
 
 type LoggedSet = {
   weight: number | null;
@@ -162,6 +174,7 @@ export async function loadTodayPlannedWorkout(
     select: {
       id: true,
       name: true,
+      muscleGroup: true,
       hiitWorkoutId: true,
       hiitWorkout: { select: { type: true } },
       exercises: {
@@ -194,6 +207,7 @@ export async function loadTodayPlannedWorkout(
     return {
       plannedWorkoutId: plan.id,
       name: plan.name,
+      muscleGroup: (plan as { muscleGroup?: string | null }).muscleGroup ?? null,
       exercises: [{ poolExerciseId: "", name: res.label, metric: res.metric, unit, value }],
     };
   }
@@ -233,7 +247,12 @@ export async function loadTodayPlannedWorkout(
     };
   });
 
-  return { plannedWorkoutId: plan.id, name: plan.name, exercises };
+  return {
+    plannedWorkoutId: plan.id,
+    name: plan.name,
+    muscleGroup: (plan as { muscleGroup?: string | null }).muscleGroup ?? null,
+    exercises,
+  };
 }
 
 /** All of a person's planned workouts for the day (a day can have several, e.g.
@@ -260,6 +279,7 @@ export async function loadTodayPlannedWorkouts(
     select: {
       id: true,
       name: true,
+      muscleGroup: true,
       hiitWorkoutId: true,
       hiitWorkout: { select: { type: true } },
       exercises: {
@@ -290,7 +310,8 @@ export async function loadTodayPlannedWorkouts(
       out.push({
         plannedWorkoutId: plan.id,
         name: plan.name,
-        exercises: [{ poolExerciseId: "", name: res.label, metric: res.metric, unit, value }],
+        muscleGroup: (plan as { muscleGroup?: string | null }).muscleGroup ?? null,
+      exercises: [{ poolExerciseId: "", name: res.label, metric: res.metric, unit, value }],
       });
       continue;
     }
@@ -298,24 +319,51 @@ export async function loadTodayPlannedWorkouts(
 
     const sets = await prisma.sessionSet.findMany({
       where: { session: { userId, date: toDateColumn(dayISO) }, poolExerciseId: { not: null } },
-      select: { poolExerciseId: true, weight: true, reps: true, distance: true, meters: true, seconds: true },
+      select: {
+        poolExerciseId: true,
+        swappedFromId: true,
+        poolExercise: { select: { name: true } },
+        weight: true,
+        reps: true,
+        distance: true,
+        meters: true,
+        seconds: true,
+      },
     });
-    const loggedByPool = new Map<string, LoggedSet>(
-      sets.filter((s) => s.poolExerciseId).map((s) => [s.poolExerciseId as string, s as LoggedSet]),
+    // A set logged for a one-day swap belongs to the PLANNED slot it replaced,
+    // so key by that; otherwise the planned row comes back blank and the day
+    // looks unlogged even though it isn't.
+    const loggedBySlot = new Map<string, SlotLog>(
+      sets
+        .filter((s) => s.poolExerciseId)
+        .map((s) => [
+          (s.swappedFromId ?? s.poolExerciseId) as string,
+          s as unknown as SlotLog,
+        ]),
     );
     const exercises: PlannedMovement[] = plan.exercises.map((pe) => {
       const metric = (pe.metric ?? "WEIGHT") as string;
       const unit = metricUnit(metric as Metric, system);
-      const logged = loggedByPool.get(pe.poolExerciseId);
+      const logged = loggedBySlot.get(pe.poolExerciseId);
+      const swapped =
+        logged && logged.poolExerciseId && logged.poolExerciseId !== pe.poolExerciseId
+          ? { poolExerciseId: logged.poolExerciseId, name: logged.poolExercise?.name ?? "" }
+          : null;
       return {
         poolExerciseId: pe.poolExerciseId,
         name: pe.poolExercise.name,
         metric,
         unit,
         value: logged ? valueForMetric(logged, metric) : null,
+        loggedAs: swapped,
       };
     });
-    out.push({ plannedWorkoutId: plan.id, name: plan.name, exercises });
+    out.push({
+      plannedWorkoutId: plan.id,
+      name: plan.name,
+      muscleGroup: (plan as { muscleGroup?: string | null }).muscleGroup ?? null,
+      exercises,
+    });
   }
   return out;
 }

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.537.1";
+export const APP_VERSION = "0.538.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -128,11 +128,22 @@ export const MIGRATIONS = [
   "113_feed_default_duration",
   "114_feed_force_duration",
   "115_grocery_quantity",
+  "116_set_swapped_from",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.538.0",
+    summary: [
+      "Two workouts for the same muscle group now share one card \u2014 \u201cChest\u201d once at the top, then each workout with its own fields and buttons underneath. Different muscle groups still get their own card.",
+      "A movement swapped for the day (front squat instead of back squat on the phone) now shows in the planned slot it replaced, with what you lifted, instead of leaving that row blank.",
+      "The lift section now leads with what you are lifting now: each movement's record, how much it moved in the last 30 days, how long since that best, and your last five sessions \u2014 with the best weight at each rep count underneath. Every number is a real logged set.",
+      "The lift chart now shows the same movements the phone does (the ones your plan tracks), so the two no longer disagree.",
+      "\u201cLog a different workout\u201d is now \u201cLog an additional workout\u201d, matching the phone.",
+    ],
+  },
   {
     version: "0.537.1",
     summary: [

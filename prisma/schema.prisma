@@ -1346,6 +1346,10 @@ model SessionSet {
   exercise   Exercise? @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   poolExerciseId String?
   poolExercise   PoolExercise? @relation(fields: [poolExerciseId], references: [id], onDelete: SetNull)
+  /// When this set was logged in place of a planned movement (a swap for the
+  /// day — front squat instead of back squat), the planned movement's id. Lets
+  /// the day's plan show what was actually done in the slot it belongs to.
+  swappedFromId  String?
   setNumber  Int     @default(1)
   reps       Int?
   weight     Float?

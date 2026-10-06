@@ -529,7 +529,7 @@ export function WorkoutsGrid({
 
                       <div className="border-t border-hairline pt-5">
                         <h4 className="mb-3 font-display text-sm font-semibold">
-                          Log something else you did
+                          Log an additional workout
                         </h4>
                         <CustomWorkoutForm
                           userId={open.user.id}
@@ -833,6 +833,46 @@ function chooseGraph(open: PersonWorkout, todayDow: number): GraphChoice {
   return { kind: "chart", label: "Recent lifts", series: open.weightSeries };
 }
 
+/**
+ * The three numbers that tell a lifter where they are, all from real logged
+ * sets: how much the best set moved in the last 30 days, how long since that
+ * best was set (a stall is information), and the recent sessions in order.
+ */
+function liftStats(s: {
+  points: { date: string; value: number; reps?: number | null }[];
+  best?: { date: string; value: number; reps: number | null } | null;
+}): {
+  delta: number | null;
+  sincePR: string;
+  sessions: number;
+  recent: { date: string; value: number; reps?: number | null }[];
+} {
+  const pts = [...s.points].sort((a, b) => (a.date < b.date ? -1 : 1));
+  const recent = pts.slice(-5);
+
+  // Change over 30 days: today's best set against the best on or before the
+  // cutoff. Null when there is nothing that old to compare with, rather than
+  // pretending the first ever session was a gain.
+  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const before = pts.filter((p) => p.date <= cutoff);
+  const latest = pts[pts.length - 1]?.value ?? null;
+  const base = before.length ? Math.max(...before.map((p) => p.value)) : null;
+  const delta = latest != null && base != null ? Math.round(latest - base) : null;
+
+  let sincePR = "no best yet";
+  if (s.best) {
+    const days = Math.max(
+      0,
+      Math.round((Date.now() - new Date(`${s.best.date}T12:00:00Z`).getTime()) / 86400000),
+    );
+    const weeks = Math.floor(days / 7);
+    sincePR =
+      days <= 1 ? "best today" : weeks < 1 ? `best ${days} days ago` : `best ${weeks}w ago`;
+  }
+
+  return { delta, sincePR, sessions: pts.length, recent };
+}
+
 function PersonalTop({
   open,
   todayDow,
@@ -861,42 +901,73 @@ function PersonalTop({
               points: s.points,
             }))}
           />
-          {/* The record for each lift, in real numbers: the heaviest set, the
-              reps it was done for, and the best weight at each rep count that
-              has actually been logged. The line answers "over time"; this
-              answers "where am I now", which is the question people ask. */}
+          {/* The lift dashboard. The line answers "over months"; these answer the
+              two questions people actually ask — what am I lifting now, and is it
+              still moving. Each lift keeps its own numbers; nothing is compared
+              across lifts, because a deadlift and a shoulder press share no
+              scale. All real logged sets; no estimated maxes anywhere. */}
           <div className="mt-3 space-y-2">
             {graph.series
               .filter((s) => s.best)
-              .map((s) => (
-                <div
-                  key={s.exerciseId}
-                  className="rounded-xl border border-hairline bg-ground/40 px-3 py-2"
-                >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="truncate text-sm font-medium">{s.name}</span>
-                    <span className="tabular shrink-0 text-sm font-semibold">
-                      {s.best!.value}
-                      {s.unit}
-                      {s.best!.reps ? ` \u00d7 ${s.best!.reps}` : ""}
-                    </span>
-                  </div>
-                  {(s.repMaxes?.length ?? 0) > 0 && (
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {s.repMaxes!.map((r) => (
-                        <span
-                          key={r.reps}
-                          className="tabular rounded-full border border-hairline px-2 py-0.5 text-xs text-muted"
-                          title={`Best at ${r.reps} reps — ${r.date}`}
-                        >
-                          {r.reps}r · {r.value}
-                          {s.unit}
-                        </span>
-                      ))}
+              .map((s) => {
+                const stats = liftStats(s);
+                return (
+                  <div
+                    key={s.exerciseId}
+                    className="rounded-xl border border-hairline bg-ground/40 px-3 py-2"
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="truncate text-sm font-medium">{s.name}</span>
+                      <span className="tabular shrink-0 text-sm font-semibold">
+                        {s.best!.value}
+                        {s.unit}
+                        {s.best!.reps ? ` \u00d7 ${s.best!.reps}` : ""}
+                      </span>
                     </div>
-                  )}
-                </div>
-              ))}
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                      {stats.delta !== null && (
+                        <span className={stats.delta > 0 ? "text-emerald-600" : undefined}>
+                          {stats.delta > 0 ? "+" : ""}
+                          {stats.delta}
+                          {s.unit} in 30 days
+                        </span>
+                      )}
+                      <span>{stats.sincePR}</span>
+                      <span>
+                        {stats.sessions} session{stats.sessions === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    {stats.recent.length > 1 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {stats.recent.map((p) => (
+                          <span
+                            key={p.date}
+                            className="tabular rounded-full bg-surface px-2 py-0.5 text-xs text-muted"
+                            title={p.date}
+                          >
+                            {p.value}
+                            {p.reps ? `\u00d7${p.reps}` : ""}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {(s.repMaxes?.length ?? 0) > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {s.repMaxes!.map((r) => (
+                          <span
+                            key={r.reps}
+                            className="tabular rounded-full border border-hairline px-2 py-0.5 text-xs text-muted"
+                            title={`Best at ${r.reps} reps \u2014 ${r.date}`}
+                          >
+                            {r.reps}r \u00b7 {r.value}
+                            {s.unit}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}

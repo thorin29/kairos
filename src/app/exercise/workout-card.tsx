@@ -5,6 +5,7 @@ import { completePlannedWorkout, logHiitWorkout } from "@/lib/actions/workouts";
 import { CheckIcon } from "@/components/icons";
 import {
   METRIC_LABEL_SHORT,
+  MUSCLE_GROUP_LABEL,
   WORKOUT_TYPE_LABEL,
   formatHiitMovement,
   defaultMetricFor,
@@ -73,25 +74,76 @@ export function TodayPlan({
         </p>
       ) : todays.length === 0 ? (
         <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
-          Nothing scheduled. Log something else below.
+          Nothing scheduled. Log an additional workout below.
         </p>
       ) : (
         <div className="space-y-2">
-          {todays.map((w) => (
-            <PlanRow
-              key={w.id}
-              workout={w}
-              userId={userId}
-              dateISO={dateISO}
-              unitSystem={unitSystem}
-              done={done.has(w.name.trim().toLowerCase())}
-              loggedByPool={loggedByPool}
-            />
-          ))}
+          {groupByMuscle(todays).map((group) => {
+            const row = (w: PlanWorkout, bare: boolean) => (
+              <PlanRow
+                key={w.id}
+                workout={w}
+                userId={userId}
+                dateISO={dateISO}
+                unitSystem={unitSystem}
+                done={done.has(w.name.trim().toLowerCase())}
+                loggedByPool={loggedByPool}
+                bare={bare}
+                hideName={bare && w.name.trim().toLowerCase() === group.label.toLowerCase()}
+              />
+            );
+            // One plan for this muscle group: the plan is the card, as before.
+            if (group.items.length === 1) return row(group.items[0], false);
+            // Several (two chest workouts): one card, the group named once at the
+            // top, each workout keeping its own fields and buttons below it.
+            return (
+              <div
+                key={group.key}
+                className="rounded-xl border border-hairline bg-ground/30 p-3"
+              >
+                <div className="text-sm font-semibold">{group.label}</div>
+                <div className="mt-2 space-y-3">
+                  {group.items.map((w) => (
+                    <div
+                      key={w.id}
+                      className="border-t border-hairline pt-3 first:border-t-0 first:pt-0"
+                    >
+                      {row(w, true)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
+}
+
+/** Same-muscle plans share a card; anything without a muscle group stands alone
+ *  (grouping by name would merge two unrelated "Workout" plans). */
+function groupByMuscle(
+  workouts: PlanWorkout[],
+): { key: string; label: string; items: PlanWorkout[] }[] {
+  const out: { key: string; label: string; items: PlanWorkout[] }[] = [];
+  const byKey = new Map<string, { key: string; label: string; items: PlanWorkout[] }>();
+  for (const w of workouts) {
+    const key = w.muscleGroup ? `mg:${w.muscleGroup}` : `solo:${w.id}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.items.push(w);
+      continue;
+    }
+    const group = {
+      key,
+      label: w.muscleGroup ? MUSCLE_GROUP_LABEL[w.muscleGroup] : w.name,
+      items: [w],
+    };
+    byKey.set(key, group);
+    out.push(group);
+  }
+  return out;
 }
 
 function PlanRow({
@@ -108,6 +160,10 @@ function PlanRow({
   unitSystem: UnitSystem;
   done: boolean;
   loggedByPool?: Record<string, string>;
+  /** Rendered inside a shared muscle-group card: drop this row's own card. */
+  bare?: boolean;
+  /** Hide the plan name when the group heading already says it. */
+  hideName?: boolean;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
@@ -238,10 +294,10 @@ function PlanRow({
   }
 
   return (
-    <div className="rounded-xl border border-hairline bg-ground/30 p-3">
+    <div className={bare ? "" : "rounded-xl border border-hairline bg-ground/30 p-3"}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold">{workout.name}</div>
+          {!hideName && <div className="text-sm font-semibold">{workout.name}</div>}
           {hiit ? (
             <div className="mt-0.5 text-xs text-muted">
               {WORKOUT_TYPE_LABEL[hiit.type]}

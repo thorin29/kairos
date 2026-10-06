@@ -450,18 +450,29 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       .filter((s) => s.points.length > 0);
 
     const todayPoolIds = new Set<string>();
+    // Graphable universe = movements a plan marks TRACKED, matching the phone,
+    // which has always graphed tracked movements only. Without this the web also
+    // charted anything ever logged (an extra/custom workout), so the same person
+    // saw different lifts on the two clients.
+    const trackedPoolIds = new Set<string>();
     for (const w of plannedRows as unknown as {
       dayOfWeek: number;
-      exercises: { poolExerciseId: string }[];
+      exercises: { poolExerciseId: string; tracked: boolean }[];
     }[]) {
+      for (const e of w.exercises) {
+        if (e.tracked) trackedPoolIds.add(e.poolExerciseId);
+      }
       if (w.dayOfWeek === dow) {
         for (const e of w.exercises) todayPoolIds.add(e.poolExerciseId);
       }
     }
 
-    let weightSeries: GraphSeries[] = allSeries;
+    let weightSeries: GraphSeries[] =
+      trackedPoolIds.size > 0
+        ? allSeries.filter((s) => trackedPoolIds.has(s.exerciseId))
+        : allSeries;
     if (todayPoolIds.size > 0) {
-      const scoped = allSeries.filter((s) => todayPoolIds.has(s.exerciseId));
+      const scoped = weightSeries.filter((s) => todayPoolIds.has(s.exerciseId));
       if (scoped.length > 0) weightSeries = scoped;
     }
 
