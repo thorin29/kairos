@@ -12,6 +12,25 @@ planned movement's id, written only when it differs from what was logged.
 fills the slot it replaced, and the movement reports `loggedAs: { poolExerciseId, name }` — what was
 actually done. Clients show the slot with the variation's name and its value instead of a blank row.
 
+## 2026-10 — The sandbox can typecheck after all; use it (v0.538.1)
+
+0.538.0 failed its Docker build on a one-word mistake: `PlanRow` gained a `bare` prop in its type
+and at every call site, but not in the destructuring, so `bare` was an undeclared name (`TS2304`).
+Brace-balance and symbol greps — the verification relied on until now — cannot see that, and it
+cost a build.
+
+`npm ci` **does** work in the sandbox (~45s, 247 packages), so `npx tsc --noEmit` runs. What still
+does not work is `prisma generate`: the schema engine comes from `binaries.prisma.sh`, which the
+sandbox proxy refuses with 403 (`PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` and `--no-engine` do not
+get around it). Without the generated client every Prisma result is `any` or `{}`, so the repo
+reports ~459 errors that are pure cascade. The usable check is therefore a **filtered** one: run
+`tsc --noEmit` and discard `TS7006`/`TS7031`, `TS2307` on `@/generated`, and the `unknown`/`{}`
+errors downstream of them. Whatever survives the filter is real — and crucially the errors that
+break builds (`TS2304` undeclared name, `TS2322` bad prop type, `TS2554` wrong arity) do survive it,
+because none of them depend on Prisma types.
+
+Run it before packaging any web release. Inspection is the fallback, not the method.
+
 ## 2026-10 — Same-muscle plans share a card (v0.538.0)
 
 Two chest plans on a Monday used to be two separate cards with nothing saying they were the same

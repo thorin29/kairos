@@ -153,6 +153,8 @@ function PlanRow({
   unitSystem,
   done,
   loggedByPool = {},
+  bare = false,
+  hideName = false,
 }: {
   workout: PlanWorkout;
   userId: string;
