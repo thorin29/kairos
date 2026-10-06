@@ -98,7 +98,10 @@ export function TodayPlan({
                 done={done.has(w.name.trim().toLowerCase())}
                 loggedByPool={loggedByPool}
                 bare={bare}
-                hideName={bare && w.name.trim().toLowerCase() === group.label.toLowerCase()}
+                // Inside a group card the muscle group is already named at the
+                // top and every movement names itself, so the plan name is a
+                // third copy. "Chest / Chest / bench press" was the result.
+                hideName={bare}
               />
             );
             // One plan for this muscle group: the plan is the card, as before.
@@ -113,10 +116,9 @@ export function TodayPlan({
                 <div className="text-sm font-semibold">{group.label}</div>
                 <div className="mt-2 space-y-3">
                   {group.items.map((w) => (
-                    <div
-                      key={w.id}
-                      className="border-t border-hairline pt-3 first:border-t-0 first:pt-0"
-                    >
+                    // No rule here: PlanRow draws its own above the fields, and
+                    // two stacked rules read as a double line.
+                    <div key={w.id}>
                       {row(w, true)}
                     </div>
                   ))}
@@ -332,9 +334,10 @@ function PlanRow({
                   .join(", ")}`}
             </div>
           ) : workout.exercises.length > 0 ? (
-            <div className="mt-0.5 text-xs text-muted">
-              {workout.exercises.map((e) => e.name).join(" · ")}
-            </div>
+            // Deliberately nothing: every movement names itself directly above
+            // its own entry field. A summary list here repeated those names a
+            // second time under the muscle group for no gain.
+            null
           ) : (
             <div className="mt-0.5 text-xs text-muted">
               Log {METRIC_LABEL_SHORT[soloMetric].toLowerCase()}
@@ -393,7 +396,7 @@ function PlanRow({
             />
           ) : (
             <>
-              {trackedExercises.map((e) => {
+              {trackedExercises.map((e, i) => {
                 const m = metricFor(e.metric);
                 const unit =
                   m === "WEIGHT"
@@ -401,9 +404,14 @@ function PlanRow({
                     : metricUnit(m, unitSystem);
                 const sw = swaps[e.id];
                 return (
-                  <div key={e.id}>
+                  // One rule between movements in a card, none above the first
+                  // (the card's own rule already sits under the muscle group).
+                  <div
+                    key={e.id}
+                    className={i > 0 ? "border-t border-hairline pt-2.5" : ""}
+                  >
                   <div className="mb-1 flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                    <span className="min-w-0 flex-1 truncate text-sm">
                       {sw ? sw.name : e.name}
                       {sw && (
                         <span className="ml-1 font-normal text-muted">

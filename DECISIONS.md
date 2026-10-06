@@ -12,6 +12,23 @@ planned movement's id, written only when it differs from what was logged.
 fills the slot it replaced, and the movement reports `loggedAs: { poolExerciseId, name }` — what was
 actually done. Clients show the slot with the variation's name and its value instead of a blank row.
 
+## 2026-10 — A name belongs in exactly one place on a card (v0.540.0)
+
+The card had grown three places that print a name: the plan name under the muscle group, a
+summary line listing every movement in the plan, and — added with the swap control — a name
+above each movement's own fields. Together they read "Core / deadlift / deadlift". Reported as
+a regression, which it was not; it was a new row landing on top of two that were already there.
+Worth remembering before adding any label: check what the surrounding component already prints.
+
+The layout now is one muscle group at the top, one rule, then each movement named once directly
+above its fields with its swap control on the same line, and one rule between movements. The
+plan name is hidden inside a group card entirely, since the group heads the card and every
+movement names itself.
+
+The doubled rules came from the same kind of overlap: the group wrapper drew a divider between
+plans and `PlanRow` drew its own above the fields, so the two sat together. Only one owner of a
+rule per seam.
+
 ## 2026-10 — The swap list is grouped, and a log clears only what it sent (v0.539.0)
 
 Two fixes that belong together.
