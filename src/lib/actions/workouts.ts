@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/session";
 import { setSetting, WORKOUT_OVERDUE_DAYS, WORKOUT_OVERDUE_MAX } from "@/lib/settings";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { loadOverdueWorkoutDates } from "@/lib/queries/workout-log";
+import { loadExercisePool, type PoolEntry } from "@/lib/queries/workouts";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import {
   CATEGORY_LABEL,
@@ -546,6 +547,16 @@ export async function restDay(userId: string, dateISO: string): Promise<void> {
   if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
   await setRestDay(userId, dateISO);
   refresh();
+}
+
+/**
+ * The movement pool, for the swap picker. Fetched when the dialog opens rather
+ * than threaded through every screen that renders a plan, since swapping is
+ * rare and the list is only wanted once someone asks for it.
+ */
+export async function listExercisePool(): Promise<PoolEntry[]> {
+  await requireInteractive();
+  return loadExercisePool();
 }
 
 /**

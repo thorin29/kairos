@@ -12,6 +12,28 @@ planned movement's id, written only when it differs from what was logged.
 fills the slot it replaced, and the movement reports `loggedAs: { poolExerciseId, name }` — what was
 actually done. Clients show the slot with the variation's name and its value instead of a blank row.
 
+## 2026-10 — The swap list is grouped, and a log clears only what it sent (v0.539.0)
+
+Two fixes that belong together.
+
+**The picker.** Both clients sorted the pool with the current movement's muscle group floated to
+the top and everything else alphabetical. That is not grouping: below the first few rows, chest,
+calves and shoulders ran together in one list. Both now render a heading per muscle group — the
+movement's own group first, then the rest alphabetically, unassigned last under "Other". The
+lesson is that "sorted so the relevant ones are near the top" is not what people mean by grouped;
+they mean they can see where one group ends.
+
+**The log.** `logPlannedWorkout` did `deleteMany({ sessionId })` before rewriting, which is correct
+only while every one of a plan's movements is always submitted together. It now clears just the
+movements the submission covers, matched on **both** `poolExerciseId` and `swappedFromId` so a
+swapped set does not survive alongside its replacement as a double. This is what makes a plan
+splittable across several cards without one card wiping another's work.
+
+Note the two clients still differ here: the web action creates a fresh session per planned log
+while the phone reuses the day's session for that plan. The scoped delete fixes the phone's path;
+the web's duplicate-session behaviour is untouched and is the thing to settle before cards are
+split by movement.
+
 ## 2026-10 — The sandbox can typecheck after all; use it (v0.538.1)
 
 0.538.0 failed its Docker build on a one-word mistake: `PlanRow` gained a `bare` prop in its type

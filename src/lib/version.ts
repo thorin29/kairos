@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.538.1";
+export const APP_VERSION = "0.539.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.539.0",
+    summary: [
+      "Swapping a movement now works on the web, not just the phone. Each movement in the day's plan has a Swap button; the weight you log goes under what you actually lifted, and the plan keeps the movement it always had.",
+      "The swap list is grouped by muscle group with a heading for each, instead of one long alphabetical run \u2014 your movement's own group first, then the rest.",
+      "Logging part of a plan no longer clears the rest of it. A log now replaces only the movements it covers, so splitting a plan across cards is safe.",
+    ],
+  },
   {
     version: "0.538.1",
     summary: [

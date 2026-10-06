@@ -387,7 +387,30 @@ export async function logPlannedWorkout(
       isRest: false,
     },
   });
-  await prisma.sessionSet.deleteMany({ where: { sessionId } });
+  // Clear only the movements this submission covers, not the whole session.
+  // Re-logging a plan still replaces what it sends, but a card that holds part
+  // of a plan (one muscle group of several) no longer wipes the rest of the
+  // day's work on its way in. A swapped set occupies its planned movement's
+  // slot, so both ids have to be matched or the old set survives as a double.
+  const touched = new Set<string>();
+  for (const e of entries) {
+    if (e.poolExerciseId) touched.add(e.poolExerciseId);
+    if (e.swappedFrom) touched.add(e.swappedFrom);
+  }
+  if (touched.size > 0) {
+    const ids = [...touched];
+    await prisma.sessionSet.deleteMany({
+      where: {
+        sessionId,
+        OR: [
+          { poolExerciseId: { in: ids } },
+          { swappedFromId: { in: ids } },
+        ],
+      },
+    });
+  } else {
+    await prisma.sessionSet.deleteMany({ where: { sessionId } });
+  }
 
   let setNumber = 0;
   for (const e of entries) {

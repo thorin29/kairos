@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { completePlannedWorkout, logHiitWorkout } from "@/lib/actions/workouts";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  completePlannedWorkout,
+  listExercisePool,
+  logHiitWorkout,
+} from "@/lib/actions/workouts";
 import { CheckIcon } from "@/components/icons";
 import {
   METRIC_LABEL_SHORT,
@@ -12,10 +16,15 @@ import {
   hiitResult,
   metricUnit,
   type Metric,
+  type MuscleGroup,
   type UnitSystem,
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
-import type { PlanWorkout } from "@/lib/queries/workouts";
+import type {
+  PlanExercise,
+  PlanWorkout,
+  PoolEntry,
+} from "@/lib/queries/workouts";
 
 // Verb-noun for the log button, so it reads "Log weight" / "Log time" rather
 // than a generic "Complete workout".
@@ -167,6 +176,13 @@ function PlanRow({
   /** Hide the plan name when the group heading already says it. */
   hideName?: boolean;
 }) {
+  /** Today-only substitutions, keyed by planned-exercise id. Never written to
+   *  the plan — they only change what the Log button sends. */
+  const [swaps, setSwaps] = useState<Record<string, PoolPick | null>>({});
+  const [picking, setPicking] = useState<string | null>(null);
+  const setSwap = (exerciseId: string, pick: PoolPick | null) =>
+    setSwaps((s) => ({ ...s, [exerciseId]: pick }));
+
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const e of workout.exercises) {
@@ -232,6 +248,7 @@ function PlanRow({
       value: number;
       unit: string;
       reps?: number | null;
+      swappedFrom?: string | null;
     }[] = [];
 
     const push = (
@@ -240,6 +257,7 @@ function PlanRow({
       raw: string,
       unit: string,
       repsRaw?: string,
+      swappedFrom?: string | null,
     ) => {
       const num = Number(raw);
       if (!raw || !Number.isFinite(num) || num <= 0) return;
@@ -249,7 +267,7 @@ function PlanRow({
         metric === "WEIGHT" && repsRaw && Number.isFinite(repsNum) && repsNum > 0
           ? Math.round(repsNum)
           : null;
-      entries.push({ poolExerciseId, metric, value, unit, reps });
+      entries.push({ poolExerciseId, metric, value, unit, reps, swappedFrom });
     };
 
     const resolveUnit = (m: Metric, exUnit?: string): string =>
@@ -264,12 +282,17 @@ function PlanRow({
     } else {
       for (const e of trackedExercises) {
         const m = metricFor(e.metric);
+        // A movement swapped for today logs under the variation actually
+        // lifted, carrying the planned movement's id so the slot it fills is
+        // still known on the way back.
+        const sw = swaps[e.id];
         push(
-          e.poolExerciseId,
+          sw ? sw.id : e.poolExerciseId,
           m,
           values[e.id] ?? "",
-          resolveUnit(m, e.unit),
+          resolveUnit(m, sw?.unit || e.unit),
           values[`${e.id}__reps`],
+          sw ? e.poolExerciseId : null,
         );
       }
     }
@@ -376,13 +399,42 @@ function PlanRow({
                   m === "WEIGHT"
                     ? e.unit || metricUnit(m, unitSystem)
                     : metricUnit(m, unitSystem);
+                const sw = swaps[e.id];
                 return (
-                  <div key={e.id} className="flex items-end gap-2">
+                  <div key={e.id}>
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                      {sw ? sw.name : e.name}
+                      {sw && (
+                        <span className="ml-1 font-normal text-muted">
+                          for {e.name}
+                        </span>
+                      )}
+                    </span>
+                    {sw ? (
+                      <button
+                        type="button"
+                        onClick={() => setSwap(e.id, null)}
+                        className="shrink-0 rounded-full border border-hairline px-2.5 py-1 text-xs text-muted hover:border-accent hover:text-accent"
+                      >
+                        Undo
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setPicking(e.id)}
+                        className="shrink-0 rounded-full border border-hairline px-2.5 py-1 text-xs text-accent hover:bg-accent/5"
+                      >
+                        Swap
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-end gap-2">
                     <div className="flex-1">
                       <MetricField
-                        label={trackedExercises.length === 1 ? "" : e.name}
+                        label=""
                         metric={m}
-                        unit={unit}
+                        unit={sw && m === "WEIGHT" ? sw.unit || unit : unit}
                         hint={m === "WEIGHT" ? "today's max" : undefined}
                         value={values[e.id] ?? ""}
                         onChange={(v) => setVal(e.id, v)}
@@ -404,6 +456,17 @@ function PlanRow({
                         />
                       </div>
                     )}
+                  </div>
+                  {picking === e.id && (
+                    <SwapPicker
+                      exercise={e}
+                      onPick={(p) => {
+                        setSwap(e.id, p);
+                        setPicking(null);
+                      }}
+                      onClose={() => setPicking(null)}
+                    />
+                  )}
                   </div>
                 );
               })}
@@ -430,6 +493,143 @@ function PlanRow({
             {pending ? "Logging…" : logLabel}
           </button>
         </div>
+    </div>
+  );
+}
+
+type PoolPick = {
+  id: string;
+  name: string;
+  unit: string;
+  muscleGroup: MuscleGroup | null;
+};
+
+/**
+ * Pick a variation for one movement, for today only. The list is **grouped by
+ * muscle group** with a heading per group — a flat alphabetical pool mixes
+ * chest and calves together and is unusable once there are more than a dozen
+ * movements. The movement's own group comes first, then the rest alphabetically,
+ * and only same-category movements are offered (swapping a bench press for a
+ * plank is not the point).
+ */
+function SwapPicker({
+  exercise,
+  onPick,
+  onClose,
+}: {
+  exercise: PlanExercise;
+  onPick: (p: PoolPick) => void;
+  onClose: () => void;
+}) {
+  const [pool, setPool] = useState<PoolEntry[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    let live = true;
+    listExercisePool()
+      .then((rows) => {
+        if (live) setPool(rows);
+      })
+      .catch(() => {
+        if (live) setFailed(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const groups = useMemo(() => {
+    if (!pool) return [];
+    const needle = q.trim().toLowerCase();
+    const mine = pool.find((p) => p.id === exercise.poolExerciseId);
+    const byGroup = new Map<string, { label: string; items: PoolEntry[] }>();
+
+    for (const p of pool) {
+      if (!p.isActive || p.id === exercise.poolExerciseId) continue;
+      if (mine && p.category !== mine.category) continue;
+      if (needle && !p.name.toLowerCase().includes(needle)) continue;
+      const key = p.muscleGroup ?? "_other";
+      const label = p.muscleGroup ? MUSCLE_GROUP_LABEL[p.muscleGroup] : "Other";
+      const bucket = byGroup.get(key);
+      if (bucket) bucket.items.push(p);
+      else byGroup.set(key, { label, items: [p] });
+    }
+
+    const own = exercise.muscleGroup ?? mine?.muscleGroup ?? null;
+    return [...byGroup.entries()]
+      .map(([key, g]) => ({
+        key,
+        label: g.label,
+        items: g.items.sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+      .sort((a, b) => {
+        if (own && a.key === own) return -1;
+        if (own && b.key === own) return 1;
+        if (a.key === "_other") return 1;
+        if (b.key === "_other") return -1;
+        return a.label.localeCompare(b.label);
+      });
+  }, [pool, q, exercise.poolExerciseId, exercise.muscleGroup]);
+
+  return (
+    <div className="mt-2 rounded-xl border border-hairline bg-surface p-2.5">
+      <div className="mb-2 flex items-center gap-2">
+        <input
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search movements"
+          aria-label="Search movements"
+          className="h-8 min-w-0 flex-1 rounded-lg border border-hairline bg-ground/30 px-2.5 text-sm outline-none focus:border-accent"
+        />
+        <button
+          type="button"
+          onClick={onClose}
+          className="shrink-0 text-xs text-muted hover:text-ink"
+        >
+          Cancel
+        </button>
+      </div>
+      <p className="mb-1.5 text-xs text-muted">
+        Today only — your plan keeps {exercise.name}.
+      </p>
+      <div className="max-h-64 overflow-y-auto">
+        {failed ? (
+          <p className="px-1 py-2 text-xs text-muted">
+            Couldn&rsquo;t load the movement list.
+          </p>
+        ) : pool === null ? (
+          <p className="px-1 py-2 text-xs text-muted">Loading movements…</p>
+        ) : groups.length === 0 ? (
+          <p className="px-1 py-2 text-xs text-muted">No movements match.</p>
+        ) : (
+          groups.map((g) => (
+            <div key={g.key} className="mb-1.5">
+              <p className="px-1 pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
+                {g.label}
+              </p>
+              {g.items.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() =>
+                    onPick({
+                      id: p.id,
+                      name: p.name,
+                      unit: p.unit,
+                      muscleGroup: p.muscleGroup,
+                    })
+                  }
+                  className="block w-full truncate rounded-lg px-2 py-1.5 text-left text-sm hover:bg-ground/50"
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
