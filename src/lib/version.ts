@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.540.0";
+export const APP_VERSION = "0.540.1";
 
 export const MIGRATIONS = [
   "0_init",
@@ -135,11 +135,12 @@ export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
-    version: "0.540.0",
+    version: "0.540.1",
     summary: [
       "Each movement is named once now, right above its own entry fields, instead of twice \u2014 once under the muscle group and again over the fields.",
       "A muscle group is named once per card. Two chest workouts on the same day no longer read \u201cChest / Chest\u201d.",
       "One rule between movements instead of two stacked together.",
+      "The workouts row on a person's board lists a muscle group once. Two Core workouts read \u201cCore \u00b7 Core \u00b7 Legs\u201d; it now reads \u201cCore \u00b7 Legs\u201d.",
     ],
   },
   {

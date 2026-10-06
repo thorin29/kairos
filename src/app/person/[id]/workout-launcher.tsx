@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckIcon, DumbbellIcon } from "@/components/icons";
 import { formatShort, addDays, dayOfWeek } from "@/lib/dates";
 import { DateField } from "@/components/date-field";
@@ -61,6 +61,21 @@ export function WorkoutLauncher({
    *  show it without waiting for the overlay's own fetch. */
   overdueCount?: number;
 }) {
+  // Two plans for the same muscle group are two rows upstream, but this strip
+  // names the group, so they arrived as "Core \u00b7 Core \u00b7 Legs". Collapse
+  // repeats before slicing, or a duplicate also eats one of the three slots.
+  const names = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const n of summaryNames ?? []) {
+      const key = n.trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push(n.trim());
+    }
+    return out;
+  }, [summaryNames]);
+
   const [open, setOpen] = useState(false);
   const [logDate, setLogDate] = useState(dateISO);
   const [loggedByPool, setLoggedByPool] = useState<Record<string, string>>({});
@@ -136,18 +151,17 @@ export function WorkoutLauncher({
                   {overdueCount} overdue
                 </span>
               )}
-              {(overdueCount > 0
-                ? summaryNames.slice(0, 2)
-                : summaryNames.slice(0, 3)
-              ).map((n, i) => (
+              {(overdueCount > 0 ? names.slice(0, 2) : names.slice(0, 3)).map(
+                (n, i) => (
                 <span key={`${n}-${i}`} className="flex items-center">
                   {(i > 0 || overdueCount > 0) && (
                     <span className="mx-1.5">&middot;</span>
                   )}
                   {n}
                 </span>
-              ))}
-              {summaryNames.length === 0 && overdueCount === 0 && (
+                ),
+              )}
+              {names.length === 0 && overdueCount === 0 && (
                 <span className="text-muted">No workout today</span>
               )}
             </span>

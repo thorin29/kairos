@@ -25,6 +25,11 @@ above its fields with its swap control on the same line, and one rule between mo
 plan name is hidden inside a group card entirely, since the group heads the card and every
 movement names itself.
 
+The same duplicate reached the board's workouts strip from a different direction: that row lists
+the day's plan names, and two plans for one muscle group are two rows upstream, so it printed
+"Core \u00b7 Core \u00b7 Legs". It now collapses repeats before truncating to three, since a duplicate
+otherwise also costs one of the three slots.
+
 The doubled rules came from the same kind of overlap: the group wrapper drew a divider between
 plans and `PlanRow` drew its own above the fields, so the two sat together. Only one owner of a
 rule per seam.
