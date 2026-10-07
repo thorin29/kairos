@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.554.0";
+export const APP_VERSION = "0.555.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.555.0",
+    summary: [
+      "Compare reads in real gym numbers now \u2014 45, 95, 135, 185 down the side instead of quarters of the maximum \u2014 with wider bars, centred in the card.",
+      "A muscle group with several movements has one \u201cAdditional charts\u201d at the foot of the group, holding one plot with a line per movement, instead of a link and a chart under every exercise.",
+    ],
+  },
   {
     version: "0.554.0",
     summary: [

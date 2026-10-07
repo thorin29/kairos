@@ -1052,6 +1052,7 @@ function LiftBlocks({
             {g.label}
           </p>
           <LiftHeadline series={g.items} />
+          <GroupCharts series={g.items} groupKey={g.key} />
         </div>
       ))}
     </div>
@@ -1122,7 +1123,6 @@ function LiftHeadline({ series }: { series: LiftSeries[] }) {
                 sub={last ? formatShort(last.date) : ""}
               />
             </div>
-            <MovementCharts series={s} />
           </div>
         );
       })}
@@ -1131,17 +1131,22 @@ function LiftHeadline({ series }: { series: LiftSeries[] }) {
 }
 
 /**
- * The one disclosure that remains, directly under a movement's six tiles.
+ * One disclosure per MUSCLE GROUP, at the foot of its movements.
  *
- * It holds charts about THIS movement and nothing else. "Show details" used to
- * hide the whole-plan cards too, which buried them under a phrase that got lost
- * on the page; those are always visible at the bottom now.
+ * Arms with a close-grip bench and an EZ bar curl was two "Additional charts"
+ * links and two near-identical plots; the group is the thing being looked at,
+ * so its movements share one chart with a line each.
  */
-function MovementCharts({ series }: { series: LiftSeries }) {
+function GroupCharts({
+  series,
+  groupKey,
+}: {
+  series: LiftSeries[];
+  groupKey: string;
+}) {
   const [open, setOpen] = useState(false);
-  const reps = series.repMaxes ?? [];
-  const tone =
-    (series.muscleGroup ? MG_COLOR[series.muscleGroup] : null) ?? series.color;
+  const withReps = series.filter((s) => (s.repMaxes?.length ?? 0) > 0);
+  const tone = MG_COLOR[groupKey] ?? series[0]?.color ?? "var(--color-accent)";
   return (
     <div className="mt-2">
       <button
@@ -1153,31 +1158,31 @@ function MovementCharts({ series }: { series: LiftSeries }) {
       </button>
       {open && (
         <div className="mt-2">
+          {/* One plot for the group, a line per movement. Separate charts per
+              exercise drew the same axis twice to say less. */}
           <LineChart
             weight
             dots
-            series={[
-              {
-                id: series.exerciseId,
-                name: series.name,
-                // The muscle group's colour, not the movement's own: the dots
-                // should read as the same thing the body map just highlighted.
-                color: tone,
-                unit: series.unit,
-                points: series.points,
-              },
-            ]}
+            series={series.map((s) => ({
+              id: s.exerciseId,
+              name: s.name,
+              color: s.color,
+              unit: s.unit,
+              points: s.points,
+            }))}
           />
-          {reps.length > 0 && (
-            <div className="mt-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-                Best reps per weight
-              </p>
-              {[...reps]
-                .sort((a, b) => a.reps - b.reps)
-                .map((r) => {
-                  const max = Math.max(...reps.map((x) => x.value), 1);
-                  return (
+          {withReps.map((s) => {
+            const reps = s.repMaxes ?? [];
+            const max = Math.max(...reps.map((x) => x.value), 1);
+            return (
+              <div key={s.exerciseId} className="mt-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+                  Best reps per weight
+                </p>
+                <p className="text-sm">{s.name}</p>
+                {[...reps]
+                  .sort((a, b) => a.reps - b.reps)
+                  .map((r) => (
                     <div key={r.reps} className="mt-1 flex items-center gap-2">
                       <span className="w-14 shrink-0 text-xs text-muted">
                         {r.reps} rep{r.reps === 1 ? "" : "s"}
@@ -1192,13 +1197,13 @@ function MovementCharts({ series }: { series: LiftSeries }) {
                         />
                       </span>
                       <span className="tabular w-20 shrink-0 text-right text-xs font-semibold">
-                        {r.value} {series.unit}
+                        {r.value} {s.unit}
                       </span>
                     </div>
-                  );
-                })}
-            </div>
-          )}
+                  ))}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

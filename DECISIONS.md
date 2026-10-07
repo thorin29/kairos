@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-10 — One axis, one chart per group (v0.555.0 / app 0.369.0)
+
+**The axis is the dot chart's axis.** Compare was dividing its maximum into quarters and rounding,
+which produced 0 / 44 / 88 / 131 / 175 — numbers nobody loads onto a bar. `weightGrid` in
+`line-chart.tsx` already solved this for the dot plots: plate-step gridlines labelled at the common
+loads. It is now exported and shared. Compare passes `lo = 0` so the bars keep a zero baseline — a
+bar chart with a floating baseline lies about proportion — while the labels stay numbers a person
+actually lifts.
+
+**Charts belong to the group, not the movement.** Arms with a close-grip bench and an EZ bar curl
+drew two "Additional charts" links and two near-identical plots with the same axis. The group is
+what is being looked at, so one disclosure sits at the foot of it holding one plot with a line per
+movement. Rep-max bars stay per movement inside it, since a rep-max table is about one lift.
+
+**Width.** Bars went 16 to 26 with wider group gaps, and the SVG is centred and allowed to scale to
+1.7x its natural width. Capped rather than unbounded: `width: 100%` on a wide screen scales the
+labels along with the bars, and a chart whose text grows to 25px because the window is wide is not
+better, only bigger.
+
 ## 2026-10 — Compare: a bar per weight, fixed width (v0.554.0)
 
 One bar per person threw away the thing worth seeing. Someone who has worked up through 155, 175

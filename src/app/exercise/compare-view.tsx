@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { weightGrid } from "@/components/line-chart";
 import type { MovementComparison } from "@/lib/queries/workouts";
 
 /**
@@ -19,13 +20,13 @@ import type { MovementComparison } from "@/lib/queries/workouts";
 
 /** Total bars drawn. Beyond this the axis labels collide and nothing reads. */
 const MAX_BARS = 18;
-const BAR_W = 16;
-const BAR_GAP = 5;
-const GROUP_GAP = 26;
-const PAD_L = 44;
+const BAR_W = 26;
+const BAR_GAP = 6;
+const GROUP_GAP = 44;
+const PAD_L = 48;
 const PAD_R = 8;
 const PAD_T = 26;
-const PLOT_H = 190;
+const PLOT_H = 200;
 const LABEL_H = 26;
 
 export function CompareView({ movements }: { movements: MovementComparison[] }) {
@@ -58,9 +59,14 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
     );
   }
 
-  // A bar chart that does not start at zero lies about proportion.
+  // The same axis the dot charts use — plate-step gridlines labelled at the
+  // common loads (45, 95, 135, 185). Passing 0 as the low keeps the bars on a
+  // zero baseline, because a bar chart that floats lies about proportion,
+  // while the labels stay numbers a person actually loads.
   const top = Math.max(...all.map((b) => b.value));
-  const ceil = Math.max(niceCeil(top), 1);
+  const grid = weightGrid(0, top, current.unit);
+  const ceil = Math.max(grid.yMax, 1);
+  const ticks = grid.major;
 
   const width =
     PAD_L +
@@ -71,8 +77,6 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
     ) +
     GROUP_GAP * Math.max(groups.length - 1, 0);
   const height = PAD_T + PLOT_H + LABEL_H;
-
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(ceil * f));
 
   let x = PAD_L;
   const placed = groups.map((g) => {
@@ -92,7 +96,16 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
       <div className="overflow-x-auto">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          style={{ width: Math.max(width, 280), maxWidth: "100%", height: "auto" }}
+          /* Centred and allowed to grow into spare room, but only so far: an
+             unbounded stretch on a wide screen blows the labels up with it. */
+          style={{
+            width: "100%",
+            maxWidth: Math.round(width * 1.7),
+            minWidth: Math.min(width, 320),
+            height: "auto",
+            display: "block",
+            margin: "0 auto",
+          }}
           role="img"
           aria-label={`Best sets for ${current.name}`}
         >
@@ -167,13 +180,6 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
       </div>
     </Shell>
   );
-}
-
-/** Round the axis top up to something a person would have chosen. */
-function niceCeil(v: number): number {
-  if (v <= 0) return 1;
-  const step = v > 400 ? 50 : v > 100 ? 25 : v > 40 ? 10 : 5;
-  return Math.ceil(v / step) * step;
 }
 
 function Shell({

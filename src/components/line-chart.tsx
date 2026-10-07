@@ -24,7 +24,7 @@ const COMMON_KG = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 140, 160, 180,
  * common loads (45, 95, 135, 185…) labeled. Starts at the lowest logged lift and
  * clears the highest; an odd max just floats between lines.
  */
-function weightGrid(lo: number, hi: number, unit: string) {
+export function weightGrid(lo: number, hi: number, unit: string) {
   const kg = unit === "kg";
   const minorStep = kg ? 5 : 10;
   const common = kg ? COMMON_KG : COMMON_LB;
