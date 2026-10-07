@@ -18,6 +18,36 @@ import type { MuscleGroup } from "@/lib/workouts/catalog";
  * and biceps are both ARMS and lats and traps are both BACK, so this is as
  * precise as the vocabulary allows. Treat it as a sensible default, not fact.
  */
+/**
+ * A tap target on the body map. Six of these are muscle groups; POSTERIOR_HIP
+ * is not, and that is the point of it.
+ *
+ * The artwork's lower back and glutes form one obvious place to press, but the
+ * pixels under it belong to two different groups — the obliques and lumbar
+ * erectors are Core (the lower back IS part of the core, not a thing beside
+ * it), the glutes are Legs. Selection and shading are therefore separate:
+ * `navRegionFor` answers "what did they click", `groupsFor` answers "what does
+ * it work".
+ */
+export type NavRegion =
+  | "CHEST"
+  | "CORE"
+  | "SHOULDERS"
+  | "ARMS"
+  | "LEGS"
+  | "BACK"
+  | "POSTERIOR_HIP";
+
+export const NAV_LABEL: Record<NavRegion, string> = {
+  CHEST: "Chest",
+  CORE: "Core",
+  SHOULDERS: "Shoulders",
+  ARMS: "Arms",
+  LEGS: "Legs",
+  BACK: "Back",
+  POSTERIOR_HIP: "Lower back & glutes",
+};
+
 export type Involvement = {
   suggestedPrimary: MuscleGroup;
   secondary: MuscleGroup[];
@@ -34,6 +64,12 @@ export type Involvement = {
    * already set on the planned movement wins.
    */
   suggestedMetric?: "WEIGHT" | "DURATION" | "REPS";
+  /**
+   * The one region on the body map that selects this movement. Defaults to the
+   * primary group's own region; set it only where that would be wrong — a
+   * hip hinge is reached from the lower back and glutes, not from the thigh.
+   */
+  navRegion?: NavRegion;
 };
 
 /** Keyword rules, first match wins — order matters. */
@@ -102,6 +138,7 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
       suggestedPrimary: "LEGS",
       secondary: ["BACK", "CORE"],
       view: "back",
+      navRegion: "POSTERIOR_HIP",
     },
   },
   {
@@ -114,6 +151,7 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
       suggestedPrimary: "LEGS",
       secondary: ["BACK", "CORE", "ARMS"],
       view: "back",
+      navRegion: "POSTERIOR_HIP",
     },
   },
   {
@@ -136,7 +174,12 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
   },
   {
     match: /\b(hip thrust|glute bridge)/,
-    involvement: { suggestedPrimary: "LEGS", secondary: ["CORE"], view: "back" },
+    involvement: {
+      suggestedPrimary: "LEGS",
+      secondary: ["CORE"],
+      view: "back",
+      navRegion: "POSTERIOR_HIP",
+    },
   },
   {
     match: /\bleg curl|\bhamstring curl/,
@@ -219,4 +262,23 @@ export function groupsFor(
   const all = inv ? [...inv.secondary, inv.suggestedPrimary] : [];
   const secondary = all.filter((g, i) => g !== primary && all.indexOf(g) === i);
   return { primary, secondary, view: inv?.view ?? "both" };
+}
+
+/**
+ * Which body-map region selects this movement.
+ *
+ * Explicit wins; otherwise the movement is reached from whatever group it is
+ * filed under. A movement filed under nothing has no region, and is reached
+ * from its own progress block instead of from the body.
+ */
+export function navRegionFor(
+  name: string,
+  filed: MuscleGroup | null,
+): NavRegion | null {
+  const inv = involvementFor(name);
+  if (inv?.navRegion) return inv.navRegion;
+  const g = filed ?? inv?.suggestedPrimary ?? null;
+  if (g === null) return null;
+  // FULL_BODY has no single place on the body to press.
+  return g === "FULL_BODY" ? null : (g as NavRegion);
 }

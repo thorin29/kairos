@@ -51,6 +51,13 @@ import {
   type WorkoutCategory,
   type WorkoutType,
 } from "@/lib/workouts/catalog";
+import BodyMap from "@/components/body-map";
+import {
+  groupsFor,
+  navRegionFor,
+  NAV_LABEL,
+  type NavRegion,
+} from "@/lib/workouts/involvement";
 
 type Step = "menu" | "plan" | "log" | "history" | "browse";
 
@@ -891,11 +898,82 @@ function byMuscleGroup(series: LiftSeries[]): { key: string; label: string; item
  * why there is no movement picker any more — a picker hid everything but one.
  */
 function LiftBlocks({ series }: { series: LiftSeries[] }) {
-  const groups = byMuscleGroup(series.filter((s) => s.best));
-  if (groups.length === 0) return null;
+  const withBest = useMemo(() => series.filter((s) => s.best), [series]);
+
+  // Which region selects each movement, and which groups it lights up. These
+  // are different questions: a deadlift is selected from the lower back and
+  // glutes, and lights Legs, Back and Core.
+  const meta = useMemo(
+    () =>
+      withBest.map((s) => ({
+        s,
+        nav: navRegionFor(s.name, s.muscleGroup ?? null),
+        ...groupsFor(s.name, s.muscleGroup ?? null),
+      })),
+    [withBest],
+  );
+
+  // Only regions you actually train are live. A Chest you have never pressed
+  // is drawn, but inert — a target that selects nothing is a dead end.
+  const available = useMemo(
+    () =>
+      [...new Set(meta.map((m) => m.nav).filter(Boolean))] as NavRegion[],
+    [meta],
+  );
+
+  // Opens on the region you trained most recently, which is the one you are
+  // most likely to be asking about.
+  const latestNav = useMemo(() => {
+    let best: { nav: NavRegion; date: string } | null = null;
+    for (const m of meta) {
+      if (!m.nav) continue;
+      const last = m.s.points.at(-1)?.date;
+      if (!last) continue;
+      if (!best || last > best.date) best = { nav: m.nav, date: last };
+    }
+    return best?.nav ?? available[0] ?? null;
+  }, [meta, available]);
+
+  const [picked, setPicked] = useState<NavRegion | null>(null);
+  const active = picked ?? latestNav;
+
+  const shown = active ? meta.filter((m) => m.nav === active) : [];
+  // Nothing on the body selects an ungrouped movement or a full-body lift, so
+  // those keep their own blocks below rather than becoming unreachable.
+  const orphans = meta.filter((m) => !m.nav);
+
+  const groups = byMuscleGroup(shown.map((m) => m.s));
+  const orphanGroups = byMuscleGroup(orphans.map((m) => m.s));
+
+  if (meta.length === 0) return null;
+
   return (
     <div className="space-y-4">
-      {groups.map((g) => (
+      {available.length > 0 && (
+        <div>
+          <BodyMap
+            selected={active}
+            onSelect={setPicked}
+            available={available}
+            primary={shown.map((m) => m.primary).filter(Boolean) as string[]}
+            secondary={shown.flatMap((m) => m.secondary)}
+            view={
+              shown.length > 0 &&
+              shown.every((m) => m.view === "back")
+                ? "back"
+                : shown.length > 0 && shown.every((m) => m.view === "front")
+                  ? "front"
+                  : "both"
+            }
+          />
+          {active && (
+            <p className="mt-1 text-center text-sm font-semibold text-accent">
+              {NAV_LABEL[active]}
+            </p>
+          )}
+        </div>
+      )}
+      {[...groups, ...orphanGroups].map((g) => (
         <div key={g.key}>
           <p className="text-sm font-semibold text-accent">{g.label}</p>
           <LiftHeadline series={g.items} />

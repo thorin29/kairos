@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-10 — The body map: selection and shading are different fields (v0.549.0)
+
+The progress page showed every muscle group at once, which was too much. A body you tap is the
+replacement, and building it forced the question the deadlift had been asking all along.
+
+**Selection is not shading.** Each traced region carries two attributes:
+- `nav` — which tap target a click resolves to. One per region.
+- `group` — which muscle group it lights up when a movement works it.
+
+They diverge exactly where it matters. The lower back and glutes are one obvious place to press,
+but the pixels under it belong to two groups: the obliques and lumbar erectors are CORE, the glutes
+are LEGS. `navRegionFor()` answers "what did they click"; `groupsFor()` answers "what does it work".
+Forcing one field to do both jobs is what made the deadlift unfileable for three releases.
+
+**The lower back is part of the core.** Core is the whole trunk — rectus abdominis and obliques in
+front, erector spinae and multifidus behind — not just the abs. Treating "core" as "abs" had led to
+the conclusion that Core could not be shown on the posterior figure at all. It can: it is the
+erectors. A plank now correctly lights the lower back on the back view.
+
+**The artwork did the anatomy.** The source PNG has white separator strokes between individual
+muscles, so flood-filling inside them yields real regions — traps, lats, erectors, glutes — rather
+than one green mass to slice with an arbitrary horizontal line. Traced with cv2.findContours +
+approxPolyDP into `body-map-paths.ts` (~16 KB, 81 paths). Nothing is hand-drawn.
+
+**Selection rings trace the union, not each path.** Stroking every path in a target drew a ring
+around all thirteen leg muscles and read as scribble. Each target therefore ships a separate
+outline path, traced from the union of its regions after a binary closing to bridge the white seams.
+
+**What the body cannot reach keeps its own block.** A movement with no muscle group, or a FULL_BODY
+lift, has no region to be selected from, so those render below the map instead of becoming
+unreachable. `navRegionFor` returns null for both.
+
+Keyboard: one tab stop per TARGET, not per path — thirteen focusable leg regions per figure would
+put seventy tab stops between the keyboard and the rest of the page.
+
 ## 2026-10 — Typechecking: excuse the noise, not the unknown (v0.548.1)
 
 `prisma generate` cannot run in the sandbox — binaries.prisma.sh is unreachable — so
