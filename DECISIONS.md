@@ -17,6 +17,29 @@ keeps the same weakness.
 The general shape: a label is a rendering of a thing, not the thing. Any time two rows can carry
 the same label, matching on it is a coin flip that happens to be right while the data is sparse.
 
+The same mistake, one line further on: the logged row rendered `workout.name` — the muscle-group
+label again — so a Back card holding two logged plans read "Back / Back / Back". It names the
+movements now, falling back to the plan name only for HIIT and metric-only workouts, which have no
+movements to name.
+
+### Recent workouts excluded today
+
+`where: { userId, date: { lt: today } }`. Not a sync problem and not a caching problem: the web's
+history query asked for everything BEFORE today, so a session logged this morning could not appear
+in it however many times the page reloaded. The phone reads `loadWorkoutProgress`, a different
+query without that bound, which is exactly why the two disagreed — the phone was right. Now `lte`.
+
+### The overlay kept its scroll between steps
+
+The person card is one `overflow-y-auto` container with the steps swapped inside it. Scrolling down
+the menu to reach "Recent workouts" and opening it left the new screen at the old offset, which
+reads as the list opening at its bottom. A ref on the pane and a `scrollTo({ top: 0 })` on every
+step change.
+
+Not fixed because it is already fixed: the phone showing "Log weight" on an already-logged movement
+is 0.351.0 behaviour. Current code reads `block.logged -> "edit weight"`. That device needs the
+update, not a patch.
+
 ## 2026-10 — Gridlines, the rep floor, and the reset icon (v0.556.0 / app 0.370.0)
 
 **The minor gridlines were invisible, not subtle.** They were `--color-hairline` — already a

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.557.0";
+export const APP_VERSION = "0.558.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -135,9 +135,12 @@ export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
-    version: "0.557.0",
+    version: "0.558.0",
     summary: [
       "Fixes two workouts with the same name on one day being ticked off together \u2014 logging one Back workout marked both, and the second could only be recorded through \u201clog a different workout\u201d.",
+      "A logged row now names the movements you did rather than repeating the muscle group, so a Back card reads \u201cbent over row\u201d instead of \u201cBack, Back\u201d.",
+      "Workouts logged today appear in Recent workouts. They were being excluded outright, which is why your phone showed them and the web did not.",
+      "Opening Recent workouts starts at the top instead of wherever the previous screen was scrolled to.",
       "On Compare, \u00d71 is no longer written on every bar (a bar exists because a set was done), the rep count is lighter and tucked against the bar, and the top gridline is solid and labelled when it lands on a round load.",
     ],
   },
