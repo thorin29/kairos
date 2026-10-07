@@ -64,6 +64,40 @@ function tsc() {
   }
 }
 
+/**
+ * The line ranges this change actually touches, per file, from `git diff -U0`.
+ *
+ * "Any error in a touched file is fatal" is right for a small component and
+ * wrong for a 1200-line query file where ten lines moved: it resurfaces
+ * pre-existing cascade noise as if it were new. Noise is excused away from the
+ * hunks and still fatal inside them.
+ */
+function changedRanges() {
+  const ranges = new Map();
+  try {
+    const out = execSync("git diff -U0", { encoding: "utf8", maxBuffer: 1 << 26 });
+    let file = null;
+    for (const line of out.split("\n")) {
+      const f = /^\+\+\+ b\/(.+)$/.exec(line);
+      if (f) {
+        file = f[1];
+        if (!ranges.has(file)) ranges.set(file, []);
+        continue;
+      }
+      const h = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
+      if (h && file) {
+        const start = Number(h[1]);
+        const count = h[2] === undefined ? 1 : Number(h[2]);
+        // A pad either side: an error often points just outside the edit.
+        ranges.get(file).push([start - 3, start + Math.max(count, 1) + 3]);
+      }
+    }
+  } catch {
+    /* no git, or no diff: fall back to whole-file strictness */
+  }
+  return ranges;
+}
+
 function changedFiles() {
   try {
     const out = execSync(
@@ -83,6 +117,7 @@ function changedFiles() {
 
 const onlyChanged = process.argv.includes("--changed");
 const dirty = changedFiles();
+const ranges = changedRanges();
 
 const errors = [];
 for (const line of tsc().split("\n")) {
@@ -99,12 +134,22 @@ for (const line of tsc().split("\n")) {
 
 const touched = (e) => [...dirty].some((f) => e.file.endsWith(f) || f.endsWith(e.file));
 
-// Fatal unless attributable to the missing client — and never excused in a file
-// this change touches, however familiar the error code looks.
-const fatal = errors.filter((e) => !isNoise(e) || touched(e));
+/** Is this error inside (or beside) a line this change actually edited? */
+const inHunk = (e) => {
+  for (const [f, rs] of ranges) {
+    if (!(e.file.endsWith(f) || f.endsWith(e.file))) continue;
+    if (rs.some(([a, b]) => e.line >= a && e.line <= b)) return true;
+  }
+  // An untracked file is new in its entirety, so all of it counts as changed.
+  return touched(e) && !ranges.has([...dirty].find((f) => e.file.endsWith(f)) ?? "");
+};
+
+// Fatal unless attributable to the missing client — and never excused where
+// this change actually edited, however familiar the error code looks.
+const fatal = errors.filter((e) => !isNoise(e) || inHunk(e));
 const noise = errors.filter((e) => !fatal.includes(e));
 
-const inDirty = fatal.filter(touched);
+const inDirty = fatal.filter(inHunk);
 
 console.log(`tsc errors: ${errors.length} total — ${fatal.length} fatal, ${noise.length} attributed to the missing Prisma client`);
 
@@ -117,7 +162,7 @@ if (inDirty.length > 0) {
   for (const e of inDirty) console.log(`  ${e.raw}`);
 }
 
-const elsewhere = fatal.filter((e) => !touched(e));
+const elsewhere = fatal.filter((e) => !inHunk(e));
 if (elsewhere.length > 0) {
   console.log(`\nELSEWHERE (${elsewhere.length}) — not attributable to the missing client:`);
   for (const e of elsewhere) console.log(`  ${e.raw}`);

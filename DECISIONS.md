@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-10 — The body map needs the whole plan, not today (v0.550.1)
+
+Tapping Legs on a Shoulders day did nothing. Not a click handler bug: `loadWorkouts` narrowed
+`weightSeries` twice — to tracked movements, and then **to today's movements only** — so the page
+was never sent a leg movement at all. Every region but today's was inert because it had nothing
+behind it.
+
+That narrowing was correct when the thing below the card was "today's chart". A body map is
+navigation: its whole purpose is reaching a muscle group you are not training today. The payload
+now carries `trackedSeries` (everything tracked, whatever day it belongs to) alongside the existing
+`weightSeries` (today's slice, left intact for the places that really do mean today). The body map
+and the whole-plan cards read `trackedSeries`; as a side effect the Workout days grid now spans the
+whole plan instead of one muscle group.
+
+The general shape of the mistake is worth naming: a UI that filters needs the unfiltered set.
+Filtering upstream *and* downstream looks like defence in depth and is actually a dead end, because
+the downstream filter can only ever narrow what it was given.
+
+### typecheck-report.mjs: strict at the lines you edited, not across the file
+
+"Any error in a touched file is fatal" resurfaced five pre-existing cascade errors in a 1200-line
+query file where ten lines moved. The rule now uses `git diff -U0` hunk ranges (padded three lines
+either side): noise is excused away from the hunks and still fatal inside them. Verified by
+reintroducing a break at an edited line and confirming it is reported.
+
 ## 2026-10 — Body map: today first, one colour per group (v0.550.0)
 
 **The bug.** 0.549.0 shipped two solid black figures. The component asked for `var(--accent)`,

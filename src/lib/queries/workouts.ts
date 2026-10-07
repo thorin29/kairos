@@ -111,6 +111,8 @@ export type PersonWorkout = {
   categories: WorkoutCategory[];
   exercises: ExerciseDef[];
   weightSeries: GraphSeries[];
+  /** Every tracked movement, not just today's. What the body map navigates. */
+  trackedSeries: GraphSeries[];
   /** Weekdays (0 = Sunday) the plan uses, with the muscle groups on each, so
    *  the attendance grid only draws rows that mean something. */
   planDays: { day: number; groups: string[] }[];
@@ -477,12 +479,19 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       }
     }
 
-    let weightSeries: GraphSeries[] =
+    // Everything the person tracks, whatever day it belongs to. The body map
+    // navigates by muscle, not by date, so narrowing this to today would make
+    // every other region unreachable — not merely unselected, but absent from
+    // the payload and therefore dead on the page.
+    const trackedSeries: GraphSeries[] =
       trackedPoolIds.size > 0
         ? allSeries.filter((s) => trackedPoolIds.has(s.exerciseId))
         : allSeries;
+
+    // Today's slice, kept for the places that really do mean "today".
+    let weightSeries = trackedSeries;
     if (todayPoolIds.size > 0) {
-      const scoped = weightSeries.filter((s) => todayPoolIds.has(s.exerciseId));
+      const scoped = trackedSeries.filter((s) => todayPoolIds.has(s.exerciseId));
       if (scoped.length > 0) weightSeries = scoped;
     }
 
@@ -645,6 +654,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       categories,
       exercises: defs,
       weightSeries,
+      trackedSeries,
       planDays,
       today: {
         scheduled: pausedName ? [] : scheduled,

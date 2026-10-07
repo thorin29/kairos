@@ -316,15 +316,15 @@ export function WorkoutsGrid({
                   {!personal && open.weightSeries.length > 0 && (
                     <div>
                       <LiftBlocks
-                        series={open.weightSeries}
+                        series={open.trackedSeries}
                         todayGroups={
                           open.planDays.find((d) => d.day === todayDow)
                             ?.groups ?? []
                         }
                       />
                       <LiftDetailPanel
-                        scoped={open.weightSeries}
-                        all={open.weightSeries}
+                        scoped={open.trackedSeries}
+                        all={open.trackedSeries}
                         planDays={open.planDays}
                       />
                     </div>
@@ -1534,14 +1534,14 @@ function PersonalTop({
             {graph.label}
           </p>
           <LiftBlocks
-            series={graph.series}
+            series={open.trackedSeries}
             todayGroups={
               open.planDays.find((d) => d.day === todayDow)?.groups ?? []
             }
           />
           <LiftDetailPanel
-            scoped={graph.series}
-            all={open.weightSeries}
+            scoped={open.trackedSeries}
+            all={open.trackedSeries}
             planDays={open.planDays}
           />
         </div>
