@@ -323,7 +323,6 @@ export function WorkoutsGrid({
                         }
                       />
                       <LiftDetailPanel
-                        scoped={open.trackedSeries}
                         all={open.trackedSeries}
                         planDays={open.planDays}
                       />
@@ -991,30 +990,34 @@ function LiftBlocks({
 
   // Primary wins over secondary: a muscle a movement trains should not be
   // dimmed because some other shown movement merely assists with it.
-  const fills = useMemo(() => {
-    const out: Record<string, string> = {};
+  // Per figure, because both are always drawn now. A movement's `view` decides
+  // which figure it paints: a deadlift lights the back and leaves the front
+  // grey, a squat lights both. That is what separates them on the body without
+  // ever taking a figure away from the reader.
+  const [fillsFront, fillsBack] = useMemo(() => {
+    const front: Record<string, string> = {};
+    const back: Record<string, string> = {};
+    const targets = (v: string) =>
+      v === "front" ? [front] : v === "back" ? [back] : [front, back];
     for (const m of shown) {
-      for (const g of m.secondary) {
-        if (!out[g] && MG_COLOR[g]) out[g] = faded(MG_COLOR[g]);
+      for (const t of targets(m.view)) {
+        for (const g of m.secondary) {
+          if (!t[g] && MG_COLOR[g]) t[g] = faded(MG_COLOR[g]);
+        }
       }
     }
     for (const m of shown) {
-      if (m.primary && MG_COLOR[m.primary]) out[m.primary] = MG_COLOR[m.primary];
+      for (const t of targets(m.view)) {
+        if (m.primary && MG_COLOR[m.primary]) t[m.primary] = MG_COLOR[m.primary];
+      }
     }
-    return out;
+    return [front, back];
   }, [shown]);
 
   const groups = byMuscleGroup(shown.map((m) => m.s));
   const orphanGroups = byMuscleGroup(orphans.map((m) => m.s));
 
   if (meta.length === 0) return null;
-
-  const view =
-    shown.length > 0 && shown.every((m) => m.view === "back")
-      ? "back"
-      : shown.length > 0 && shown.every((m) => m.view === "front")
-        ? "front"
-        : "both";
 
   return (
     <div className="space-y-4">
@@ -1035,8 +1038,8 @@ function LiftBlocks({
             selected={active}
             onSelect={setPicked}
             available={available}
-            fills={fills}
-            view={view}
+            fillsFront={fillsFront}
+            fillsBack={fillsBack}
           />
         </div>
       )}
@@ -1049,19 +1052,6 @@ function LiftBlocks({
             {g.label}
           </p>
           <LiftHeadline series={g.items} />
-          <div className="mt-2">
-            <LineChart
-              weight
-              dots
-              series={g.items.map((s) => ({
-                id: s.exerciseId,
-                name: s.name,
-                color: s.color,
-                unit: s.unit,
-                points: s.points,
-              }))}
-            />
-          </div>
         </div>
       ))}
     </div>
@@ -1132,9 +1122,78 @@ function LiftHeadline({ series }: { series: LiftSeries[] }) {
                 sub={last ? formatShort(last.date) : ""}
               />
             </div>
+            <MovementCharts series={s} />
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * The one disclosure that remains, directly under a movement's six tiles.
+ *
+ * It holds charts about THIS movement and nothing else. "Show details" used to
+ * hide the whole-plan cards too, which buried them under a phrase that got lost
+ * on the page; those are always visible at the bottom now.
+ */
+function MovementCharts({ series }: { series: LiftSeries }) {
+  const [open, setOpen] = useState(false);
+  const reps = series.repMaxes ?? [];
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-sm font-semibold text-accent"
+      >
+        {open ? "Hide charts" : "Additional charts"}
+      </button>
+      {open && (
+        <div className="mt-2">
+          <LineChart
+            weight
+            dots
+            series={[
+              {
+                id: series.exerciseId,
+                name: series.name,
+                color: series.color,
+                unit: series.unit,
+                points: series.points,
+              },
+            ]}
+          />
+          {reps.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+                Best weight at each rep count
+              </p>
+              {[...reps]
+                .sort((a, b) => a.reps - b.reps)
+                .map((r) => {
+                  const max = Math.max(...reps.map((x) => x.value), 1);
+                  return (
+                    <div key={r.reps} className="mt-1 flex items-center gap-2">
+                      <span className="w-14 shrink-0 text-xs text-muted">
+                        {r.reps} rep{r.reps === 1 ? "" : "s"}
+                      </span>
+                      <span className="h-2 min-w-0 flex-1 rounded-full bg-surface">
+                        <span
+                          className="block h-2 rounded-full bg-accent"
+                          style={{ width: `${(r.value / max) * 100}%` }}
+                        />
+                      </span>
+                      <span className="tabular w-20 shrink-0 text-right text-xs font-semibold">
+                        {r.value} {series.unit}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1183,12 +1242,10 @@ type LiftSeries = PersonWorkout["weightSeries"][number];
  * there are no estimated maxes anywhere, and no two lifts share a weight axis.
  */
 function LiftDetailPanel({
-  scoped,
   all,
   planDays,
   chart,
 }: {
-  scoped: LiftSeries[];
   all: LiftSeries[];
   /** Weekdays the plan uses, so the grid only draws rows that mean something. */
   planDays?: { day: number; groups: string[] }[];
@@ -1196,9 +1253,6 @@ function LiftDetailPanel({
    *  view and does not need to be the first thing on the page. */
   chart?: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-
-  const withReps = scoped.filter((s) => (s.repMaxes?.length ?? 0) > 0);
 
   // Change over 90 days per lift. Percent is the only honest way to put a
   // deadlift and an overhead press on one axis; the real weights stay in the
@@ -1295,75 +1349,20 @@ function LiftDetailPanel({
     return { background: `linear-gradient(135deg, ${c1} 0 50%, ${c2} 50% 100%)` };
   };
 
-  if (movement.length === 0 && trained.size === 0 && withReps.length === 0) {
+  if (movement.length === 0 && trained.size === 0) {
     return null;
   }
 
   return (
-    <div className="mt-2">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="text-xs font-medium text-accent underline-offset-2 hover:underline"
-      >
-        {open ? "Hide details" : "Show details"}
-      </button>
-
-      {open && (
-        <div className="mt-2 space-y-2">
-          {withReps.length === 0 && (
-            <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Best weight at each rep count
-              </p>
-              {/* Say why it is empty. A card that simply disappears reads as a
-                  feature that was never built. */}
-              <p className="mt-1 text-xs text-muted">
-                Nothing yet — this fills in as you log reps beside the weight.
-              </p>
-            </div>
-          )}
-          {withReps.length > 0 && (
-            <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Best weight at each rep count
-              </p>
-              {withReps.map((s) => {
-                const max = Math.max(...s.repMaxes!.map((r) => r.value), 1);
-                return (
-                  <div key={s.exerciseId} className="mt-2">
-                    <p className="text-sm">{s.name}</p>
-                    <div className="mt-1 space-y-1">
-                      {[...s.repMaxes!]
-                        .sort((a, b) => a.reps - b.reps)
-                        .map((r) => (
-                          <div key={r.reps} className="flex items-center gap-2">
-                            <span className="tabular w-12 shrink-0 text-xs text-muted">
-                              {r.reps} rep{r.reps === 1 ? "" : "s"}
-                            </span>
-                            <span className="h-2 min-w-0 flex-1 rounded-full bg-surface">
-                              <span
-                                className="block h-2 rounded-full bg-accent"
-                                style={{ width: `${(r.value / max) * 100}%` }}
-                              />
-                            </span>
-                            <span className="tabular w-16 shrink-0 text-right text-xs">
-                              {r.value}
-                              {s.unit}
-                            </span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
+    // Always visible. These two describe the WHOLE plan, and hiding them behind
+    // a phrase that got lost on the page is exactly what buried them. The only
+    // disclosure left is per movement, under its own six tiles.
+    <div className="mt-3">
+      <div className="space-y-2">
           {movement.length > 0 && (
             <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Which lifts are moving
+                Lift progress
               </p>
               <p className="mt-0.5 text-xs text-muted">Change over 90 days</p>
               <div className="mt-2 space-y-1.5">
@@ -1474,8 +1473,7 @@ function LiftDetailPanel({
               <div className="mt-2">{chart}</div>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -1540,7 +1538,6 @@ function PersonalTop({
             }
           />
           <LiftDetailPanel
-            scoped={open.trackedSeries}
             all={open.trackedSeries}
             planDays={open.planDays}
           />

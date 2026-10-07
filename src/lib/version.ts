@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.551.0";
+export const APP_VERSION = "0.552.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.552.0",
+    summary: [
+      "Both bodies stay on screen now. A lift that only works the back leaves the front grey instead of taking the figure away.",
+      "\u201cShow details\u201d is now \u201cAdditional charts\u201d, sits under each movement's numbers, and holds that movement's chart and nothing else.",
+      "\u201cWhich lifts are moving\u201d is now \u201cLift progress\u201d. It and Workout days are always visible at the bottom, and both cover every movement rather than only the muscle you have selected.",
+    ],
+  },
   {
     version: "0.551.0",
     summary: ["Sends the phone what it needs to draw the body map: which region selects each movement, and which muscles it works."],

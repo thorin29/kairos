@@ -30,20 +30,18 @@ export type { NavRegion };
  * the muscle-group headings above the charts cannot drift apart.
  */
 
-/** Which figure a view shows. A deadlift is posterior-only; a squat is both. */
-export type BodyView = "front" | "back" | "both";
-
 type Props = {
   /** Tap targets currently selected. Several at once on a multi-group day. */
   selected?: NavRegion[];
   onSelect?: (nav: NavRegion) => void;
   /**
-   * Muscle group -> the colour to paint it. A group absent from this map is
-   * drawn inert. The caller owns the palette.
+   * Muscle group -> the colour to paint it, PER FIGURE. Both figures are always
+   * drawn; a movement that only shows on one of them simply leaves the other's
+   * groups grey. That is what separates a deadlift (posterior) from a squat
+   * (both) without ever taking a figure away from the reader.
    */
-  fills?: Record<string, string>;
-  /** Which figures to draw. "both" is the default and right for most. */
-  view?: BodyView;
+  fillsFront?: Record<string, string>;
+  fillsBack?: Record<string, string>;
   /** Tap targets with nothing behind them are drawn inert and not clickable. */
   available?: NavRegion[];
   className?: string;
@@ -161,8 +159,8 @@ function Figure({
 export default function BodyMap({
   selected = [],
   onSelect,
-  fills = {},
-  view = "both",
+  fillsFront = {},
+  fillsBack = {},
   available,
   className,
 }: Props) {
@@ -173,38 +171,34 @@ export default function BodyMap({
     [available],
   );
 
-  const showFront = view === "front" || view === "both";
-  const showBack = view === "back" || view === "both";
-
   const shared = {
     selected: sel,
     focused,
     setFocused,
     onSelect,
-    fills,
     available: avail,
   };
 
+  // Both figures, always. Hiding one on a posterior-only lift made the layout
+  // jump and took away context the reader had just been looking at.
   return (
     <div className={`flex items-start justify-center gap-3 ${className ?? ""}`}>
-      {showFront && (
-        <Figure
-          {...shared}
-          paths={FRONT_PATHS}
-          outlines={FRONT_OUTLINES}
-          box={FRONT_VIEWBOX}
-          label="Front of the body"
-        />
-      )}
-      {showBack && (
-        <Figure
-          {...shared}
-          paths={BACK_PATHS}
-          outlines={BACK_OUTLINES}
-          box={BACK_VIEWBOX}
-          label="Back of the body"
-        />
-      )}
+      <Figure
+        {...shared}
+        fills={fillsFront}
+        paths={FRONT_PATHS}
+        outlines={FRONT_OUTLINES}
+        box={FRONT_VIEWBOX}
+        label="Front of the body"
+      />
+      <Figure
+        {...shared}
+        fills={fillsBack}
+        paths={BACK_PATHS}
+        outlines={BACK_OUTLINES}
+        box={BACK_VIEWBOX}
+        label="Back of the body"
+      />
     </div>
   );
 }

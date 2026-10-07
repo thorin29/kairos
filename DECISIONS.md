@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-10 — Both figures always; one disclosure, per movement (v0.552.0 / app 0.366.0)
+
+**Both bodies stay.** `view` used to remove a figure — a deadlift showed only the back. Taking a
+figure away made the layout jump and removed context the reader was looking at. Both are drawn
+now, and `view` instead decides WHICH figure a movement paints: fills are computed per figure, so a
+deadlift lights the back and leaves the front grey, a squat lights both, a bench press lights only
+the front. The squat/deadlift distinction survives; the disappearing figure does not.
+
+**One disclosure, and it is per movement.** The web had every section — rep maxes, lift progress,
+workout days — behind a single "Show details" that got lost on the page; the app had already split
+them. Both now agree:
+
+- Under each movement's six tiles: **"Additional charts"**, holding that movement's dot plot (and
+  its rep-max bars when it has any; the empty-state card is gone, because an empty card inside a
+  disclosure called "Additional charts" is a chart that isn't one).
+- Below everything, always visible: **"Lift progress"** (renamed from "Which lifts are moving")
+  and **"Workout days"**.
+
+**The whole-plan cards get the whole plan.** Both were being handed the body map's filtered
+selection, so they shrank to whichever muscle was tapped. They describe the plan, so they take
+every tracked movement. The web's dot chart also moved from per-group to per-movement, which is
+where the app already had it.
+
 ## 2026-10 — The involvement table stays on the server (v0.551.0 / app 0.365.0)
 
 Porting the body map to the app raised the obvious question: reimplement `involvement.ts` in
