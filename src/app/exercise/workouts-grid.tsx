@@ -315,23 +315,11 @@ export function WorkoutsGrid({
 
                   {!personal && open.weightSeries.length > 0 && (
                     <div>
-                      <LiftHeadline series={open.weightSeries} />
+                      <LiftBlocks series={open.weightSeries} />
                       <LiftDetailPanel
                         scoped={open.weightSeries}
                         all={open.weightSeries}
-                        chart={
-                          <LineChart
-                            weight
-                            dots
-                            series={open.weightSeries.map((s) => ({
-                              id: s.exerciseId,
-                              name: s.name,
-                              color: s.color,
-                              unit: s.unit,
-                              points: s.points,
-                            }))}
-                          />
-                        }
+                        planDays={open.planDays}
                       />
                     </div>
                   )}
@@ -856,31 +844,100 @@ function chooseGraph(open: PersonWorkout, todayDow: number): GraphChoice {
  * long view. Nothing is compared across lifts, because a deadlift and an
  * overhead press share no scale, and every figure is a real logged set.
  */
+/** Validated categorical steps; identity, never a ramp. */
+const GRID_COLORS = [
+  "#2a78d6", "#eb6834", "#1baf7a", "#eda100",
+  "#e87ba4", "#008300", "#4a3aa7", "#e34948",
+];
+
+const MG_LABEL: Record<string, string> = {
+  CHEST: "Chest", BACK: "Back", LEGS: "Legs", SHOULDERS: "Shoulders",
+  ARMS: "Arms", CORE: "Core", GLUTES: "Glutes", CALVES: "Calves",
+  FOREARMS: "Forearms", UPPER_BACK: "Upper back", FULL_BODY: "Full body",
+};
+
+/** Series grouped by the muscle group they are planned under, alphabetically. */
+function byMuscleGroup(series: LiftSeries[]): { key: string; label: string; items: LiftSeries[] }[] {
+  const map = new Map<string, LiftSeries[]>();
+  for (const s of series) {
+    const key = s.muscleGroup ?? "_other";
+    map.set(key, [...(map.get(key) ?? []), s]);
+  }
+  return [...map.entries()]
+    .map(([key, items]) => ({
+      key,
+      label: key === "_other" ? "Other" : (MG_LABEL[key] ?? key),
+      items: items.sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .sort((a, b) =>
+      a.key === "_other" ? 1 : b.key === "_other" ? -1 : a.label.localeCompare(b.label),
+    );
+}
+
+/**
+ * One progress block per muscle group: its headline numbers and its own plot,
+ * stacked. A day with Core and Legs reads as two blocks you scroll, which is
+ * why there is no movement picker any more — a picker hid everything but one.
+ */
+function LiftBlocks({ series }: { series: LiftSeries[] }) {
+  const groups = byMuscleGroup(series.filter((s) => s.best));
+  if (groups.length === 0) return null;
+  return (
+    <div className="space-y-4">
+      {groups.map((g) => (
+        <div key={g.key}>
+          <p className="text-sm font-semibold text-accent">{g.label}</p>
+          <LiftHeadline series={g.items} />
+          <div className="mt-2">
+            <LineChart
+              weight
+              dots
+              series={g.items.map((s) => ({
+                id: s.exerciseId,
+                name: s.name,
+                color: s.color,
+                unit: s.unit,
+                points: s.points,
+              }))}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function LiftHeadline({ series }: { series: LiftSeries[] }) {
   const lifts = series.filter((s) => s.best);
   if (lifts.length === 0) return null;
-  // Numbers first, no chart. A single current value is a stat tile, not a
-  // plot — "what can I lift" and "is it moving" are the two things checked
-  // most, and neither needs a line to answer.
+  // Numbers first, no chart. Six equal tiles in a fixed grid: they used to be
+  // fixed-width in a wrapping row, which left them bunched to the left with
+  // ragged gaps.
   return (
     <div className="mt-3 space-y-2">
       {lifts.map((s) => {
         const stats = liftStats(s);
-        const first = [...s.points].sort((a, b) => (a.date < b.date ? -1 : 1))[0];
+        const sorted = [...s.points].sort((a, b) => (a.date < b.date ? -1 : 1));
+        const first = sorted[0];
+        const last = sorted[sorted.length - 1];
         return (
           <div
             key={s.exerciseId}
             className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5"
           >
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-              {s.name}
-            </p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <p className="mb-2 text-sm font-semibold">{s.name}</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               <StatTile
                 k="record"
                 v={`${s.best!.value}`}
-                unit={`${s.unit}${s.best!.reps ? ` \u00d7 ${s.best!.reps}` : ""}`}
+                unit={s.unit}
                 sub={formatShort(s.best!.date)}
+              />
+              <StatTile
+                k="reps"
+                v={s.best!.reps ? `${s.best!.reps}` : "\u2014"}
+                unit={s.best!.reps ? "reps" : ""}
+                sub={s.best!.reps ? "at the record" : "none logged yet"}
               />
               <StatTile
                 k="30 days"
@@ -906,6 +963,12 @@ function LiftHeadline({ series }: { series: LiftSeries[] }) {
                 v={`${stats.sessions}`}
                 unit=""
                 sub={first ? `since ${formatShort(first.date)}` : ""}
+              />
+              <StatTile
+                k="last"
+                v={last ? `${last.value}` : "\u2014"}
+                unit={last ? `${s.unit}${last.reps ? ` \u00d7 ${last.reps}` : ""}` : ""}
+                sub={last ? formatShort(last.date) : ""}
               />
             </div>
           </div>
@@ -946,6 +1009,8 @@ function StatTile({
   );
 }
 
+const DOW_ABBR = ["S", "M", "T", "W", "T", "F", "S"];
+
 const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 type LiftSeries = PersonWorkout["weightSeries"][number];
@@ -959,10 +1024,13 @@ type LiftSeries = PersonWorkout["weightSeries"][number];
 function LiftDetailPanel({
   scoped,
   all,
+  planDays,
   chart,
 }: {
   scoped: LiftSeries[];
   all: LiftSeries[];
+  /** Weekdays the plan uses, so the grid only draws rows that mean something. */
+  planDays?: { day: number; groups: string[] }[];
   /** The session plot, shown last. The numbers lead; the chart is the long
    *  view and does not need to be the first thing on the page. */
   chart?: React.ReactNode;
@@ -998,48 +1066,67 @@ function LiftDetailPanel({
 
   // Did you train? Built from the days that carry a logged set, so it says
   // "sessions logged" and not "sessions" — a rested day leaves no mark here.
-  // Each day carries WHICH movements were logged, not just whether anything
-  // was, so one grid shows every workout at once. A day with two movements is
-  // split between their two colours.
-  const byDate = new Map<string, LiftSeries[]>();
+  // Workout days: one square per day, coloured by MUSCLE GROUP rather than by
+  // movement — the question is which day you trained, not which bar you held.
+  const groupOf = (s: LiftSeries) => s.muscleGroup ?? "_other";
+  const groupsSeen: string[] = [];
   for (const s of all) {
+    if (s.points.length === 0) continue;
+    const g = groupOf(s);
+    if (!groupsSeen.includes(g)) groupsSeen.push(g);
+  }
+  groupsSeen.sort((a, b) =>
+    a === "_other" ? 1 : b === "_other" ? -1 : (MG_LABEL[a] ?? a).localeCompare(MG_LABEL[b] ?? b),
+  );
+  const groupColor = new Map<string, string>(
+    groupsSeen.map((g, i) => [g, GRID_COLORS[i % GRID_COLORS.length]]),
+  );
+
+  const byDate = new Map<string, string[]>();
+  for (const s of all) {
+    const g = groupOf(s);
     for (const p of s.points) {
       const list = byDate.get(p.date) ?? [];
-      if (!list.some((x) => x.exerciseId === s.exerciseId)) list.push(s);
+      if (!list.includes(g)) list.push(g);
       byDate.set(p.date, list);
     }
   }
   const trained = byDate;
-  const legend = all.filter((s) => s.points.length > 0).slice(0, 8);
 
-  type Cell = { date: string; hits: LiftSeries[] };
+  // Only weekdays the plan uses get a row. A row for a day you never train is
+  // noise, and the grid is about whether the plan was kept.
+  const rows = planDays && planDays.length > 0
+    ? [...planDays].map((d) => d.day).sort((a, b) => a - b)
+    : [0, 1, 2, 3, 4, 5, 6];
+
+  type Cell = { date: string; groups: string[] };
   const weeks: Cell[][] = [];
   {
     const end = new Date();
     end.setHours(12, 0, 0, 0);
     const start = new Date(end.getTime() - 111 * 86400000);
-    start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // back to Monday
+    start.setDate(start.getDate() - start.getDay()); // back to Sunday
     for (let w = 0; w < 16; w++) {
-      const row: Cell[] = [];
-      for (let d = 0; d < 7; d++) {
-        const day = new Date(start.getTime() + (w * 7 + d) * 86400000);
+      const col: Cell[] = [];
+      for (const dow of rows) {
+        const day = new Date(start.getTime() + (w * 7 + dow) * 86400000);
         const iso = day.toISOString().slice(0, 10);
-        row.push({ date: iso, hits: byDate.get(iso) ?? [] });
+        col.push({ date: iso, groups: byDate.get(iso) ?? [] });
       }
-      weeks.push(row);
+      weeks.push(col);
     }
   }
 
-  /** Up to two colours per square; more than that is mud at 16px. */
-  const cellStyle = (hits: LiftSeries[]): React.CSSProperties => {
-    if (hits.length === 0) return {};
-    if (hits.length === 1) return { background: hits[0].color };
-    return {
-      background: `linear-gradient(135deg, ${hits[0].color} 0 50%, ${hits[1].color} 50% 100%)`,
-    };
+  /** Up to two colours per square; three slices at this size is mud. */
+  const cellStyle = (groups: string[]): React.CSSProperties => {
+    if (groups.length === 0) return {};
+    const c1 = groupColor.get(groups[0]) ?? "var(--accent)";
+    if (groups.length === 1) return { background: c1 };
+    const c2 = groupColor.get(groups[1]) ?? c1;
+    return { background: `linear-gradient(135deg, ${c1} 0 50%, ${c2} 50% 100%)` };
   };
 
-  if (withReps.length === 0 && movement.length === 0 && trained.size === 0) {
+  if (movement.length === 0 && trained.size === 0 && withReps.length === 0) {
     return null;
   }
 
@@ -1055,10 +1142,22 @@ function LiftDetailPanel({
 
       {open && (
         <div className="mt-2 space-y-2">
+          {withReps.length === 0 && (
+            <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                Best weight at each rep count
+              </p>
+              {/* Say why it is empty. A card that simply disappears reads as a
+                  feature that was never built. */}
+              <p className="mt-1 text-xs text-muted">
+                Nothing yet — this fills in as you log reps beside the weight.
+              </p>
+            </div>
+          )}
           {withReps.length > 0 && (
             <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                What you can lift
+                Best weight at each rep count
               </p>
               {withReps.map((s) => {
                 const max = Math.max(...s.repMaxes!.map((r) => r.value), 1);
@@ -1140,52 +1239,41 @@ function LiftDetailPanel({
 
           <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Did you show up
-            </p>
-            <p className="mt-0.5 text-xs text-muted">
-              One square per day, coloured by movement
+              Workout days
             </p>
             <div className="mt-2 flex gap-2 overflow-x-auto">
-              {/* Weekday rail, so a row of squares means something. */}
               <div className="flex shrink-0 flex-col gap-[4px] pt-[18px]">
-                {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-                  <span
-                    key={i}
-                    className="h-4 text-[10px] leading-4 text-muted"
-                  >
-                    {i % 2 === 0 ? d : ""}
+                {rows.map((d) => (
+                  <span key={d} className="h-5 text-[11px] leading-5 text-muted">
+                    {DOW_ABBR[d]}
                   </span>
                 ))}
               </div>
               <div>
-                {/* Month markers across the top. */}
                 <div className="flex gap-[4px]">
-                  {weeks.map((row, wi) => {
-                    const m = row[0].date.slice(5, 7);
-                    const prev = wi > 0 ? weeks[wi - 1][0].date.slice(5, 7) : "";
+                  {weeks.map((col, wi) => {
+                    const m = col[0]?.date.slice(5, 7) ?? "";
+                    const prev = wi > 0 ? weeks[wi - 1][0]?.date.slice(5, 7) : "";
                     return (
-                      <span
-                        key={wi}
-                        className="w-4 text-[10px] leading-4 text-muted"
-                      >
-                        {m !== prev ? MONTH_ABBR[Number(m) - 1] : ""}
+                      <span key={wi} className="w-5 text-[11px] leading-4 text-muted">
+                        {m && m !== prev ? MONTH_ABBR[Number(m) - 1] : ""}
                       </span>
                     );
                   })}
                 </div>
                 <div className="flex gap-[4px]">
-                  {weeks.map((row, wi) => (
+                  {weeks.map((col, wi) => (
                     <div key={wi} className="flex flex-col gap-[4px]">
-                      {row.map((cell) => (
+                      {col.map((cell) => (
                         <span
                           key={cell.date}
                           title={
-                            cell.hits.length
-                              ? `${cell.date} \u2014 ${cell.hits.map((h) => h.name).join(", ")}`
+                            cell.groups.length
+                              ? `${cell.date} \u2014 ${cell.groups.map((g) => MG_LABEL[g] ?? "Other").join(", ")}`
                               : cell.date
                           }
-                          style={cellStyle(cell.hits)}
-                          className={`h-4 w-4 rounded-[3px] ${cell.hits.length === 0 ? "bg-surface" : ""}`}
+                          style={cellStyle(cell.groups)}
+                          className={`h-5 w-5 rounded-[4px] ${cell.groups.length === 0 ? "bg-surface" : ""}`}
                         />
                       ))}
                     </div>
@@ -1194,16 +1282,13 @@ function LiftDetailPanel({
               </div>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
-              <span className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded-[3px] bg-surface" /> no session
-              </span>
-              {legend.map((s) => (
-                <span key={s.exerciseId} className="flex items-center gap-1.5">
+              {groupsSeen.map((g) => (
+                <span key={g} className="flex items-center gap-1.5">
                   <span
                     className="h-3 w-3 rounded-[3px]"
-                    style={{ background: s.color }}
+                    style={{ background: groupColor.get(g) }}
                   />
-                  {s.name}
+                  {g === "_other" ? "Other" : (MG_LABEL[g] ?? g)}
                 </span>
               ))}
             </div>
@@ -1279,23 +1364,11 @@ function PersonalTop({
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
             {graph.label}
           </p>
-          <LiftHeadline series={graph.series} />
+          <LiftBlocks series={graph.series} />
           <LiftDetailPanel
             scoped={graph.series}
             all={open.weightSeries}
-            chart={
-              <LineChart
-                weight
-                dots
-                series={graph.series.map((s) => ({
-                  id: s.exerciseId,
-                  name: s.name,
-                  color: s.color,
-                  unit: s.unit,
-                  points: s.points,
-                }))}
-              />
-            }
+            planDays={open.planDays}
           />
         </div>
       )}

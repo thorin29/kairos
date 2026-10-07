@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.544.0";
+export const APP_VERSION = "0.545.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.545.0",
+    summary: [
+      "Progress is split into one block per muscle group, each with its own numbers and its own plot, so a Core + Legs day reads as two sections instead of hiding movements behind a picker.",
+      "Six equal tiles per movement \u2014 record, reps at that record, 30-day change, time since best, sessions (with the date they start from) and your last session. Dates read \u201c29 Sep\u201d.",
+      "\u201cDid you show up\u201d is now \u201cWorkout days\u201d: squares coloured by muscle group, a row only for weekdays your plan uses, Sunday first, month labels across the top and bigger squares.",
+      "The rep-count card now says why it is empty instead of disappearing \u2014 it fills in as reps get logged.",
+    ],
+  },
   {
     version: "0.544.0",
     summary: [

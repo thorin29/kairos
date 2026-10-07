@@ -379,6 +379,8 @@ export type GraphPoint = { date: string; value: number; reps?: number | null };
 export type ProgressSeries = {
   poolExerciseId: string;
   name: string;
+  /** The muscle group this movement is planned under, for grouping. */
+  muscleGroup?: string | null;
   unit: string;
   points: GraphPoint[];
   /** Heaviest set ever logged for this movement — the record, plus the reps it
@@ -396,6 +398,8 @@ export type WorkoutHistoryEntry = {
 };
 export type WorkoutProgress = {
   series: ProgressSeries[];
+  /** Weekdays (0 = Sunday) the plan uses, with the muscle groups on each. */
+  planDays?: { day: number; groups: string[] }[];
   /** Which movement to show by default: today's tracked weights, or the next
    *  day that has one. Null when there's nothing to graph. */
   defaultId: string | null;
@@ -417,13 +421,16 @@ export async function loadWorkoutProgress(
         dayOfWeek: true,
         isRest: true,
         category: true,
+        muscleGroup: true,
         exercises: {
           orderBy: { sortOrder: "asc" },
           select: {
             poolExerciseId: true,
             tracked: true,
             metric: true,
-            poolExercise: { select: { name: true, category: true } },
+            poolExercise: {
+              select: { name: true, category: true, muscleGroup: true },
+            },
           },
         },
       },
@@ -454,12 +461,37 @@ export async function loadWorkoutProgress(
   const isWeight = (poolCat: string | null, metric: string | null) =>
     poolCat === "WEIGHTS" || metric === "WEIGHT";
   const trackedNames = new Map<string, string>();
+  // The plan's muscle group names the card on the logging screen ("Core"), so
+  // it names the progress block too; the movement's own group is the fallback
+  // for a plan that never set one.
+  const trackedGroups = new Map<string, string | null>();
   for (const p of plans) {
+    const planGroup = (p as { muscleGroup?: string | null }).muscleGroup ?? null;
     for (const e of p.exercises) {
       if (e.tracked && isWeight(e.poolExercise.category, e.metric)) {
         trackedNames.set(e.poolExerciseId, e.poolExercise.name);
+        const own =
+          (e.poolExercise as { muscleGroup?: string | null }).muscleGroup ?? null;
+        if (!trackedGroups.get(e.poolExerciseId)) {
+          trackedGroups.set(e.poolExerciseId, planGroup ?? own);
+        }
       }
     }
+  }
+
+  // Which weekdays the plan actually uses, and the muscle groups on each. The
+  // attendance grid draws a row per planned weekday only — a row for a day you
+  // never train is noise, and a rotation plan has no weekday shape at all.
+  const planDays: { day: number; groups: string[] }[] = [];
+  for (let d = 0; d < 7; d++) {
+    const onDay = plans.filter((p) => p.dayOfWeek === d && !p.isRest);
+    if (onDay.length === 0) continue;
+    const groups: string[] = [];
+    for (const p of onDay) {
+      const g = (p as { muscleGroup?: string | null }).muscleGroup ?? null;
+      if (g && !groups.includes(g)) groups.push(g);
+    }
+    planDays.push({ day: d, groups });
   }
   const trackedIds = [...trackedNames.keys()];
 
@@ -504,6 +536,7 @@ export async function loadWorkoutProgress(
     .map(([id, name]) => ({
       poolExerciseId: id,
       name,
+      muscleGroup: trackedGroups.get(id) ?? null,
       unit: weightUnit,
       points: [...(perDay.get(id)?.entries() ?? [])]
         .map(([date, p]) => ({ date, value: p.value, reps: p.reps }))
@@ -554,7 +587,7 @@ export async function loadWorkoutProgress(
     isRest: s.isRest,
   }));
 
-  return { series, defaultId, history };
+  return { series, defaultId, history, planDays };
 }
 
 function historyResult(

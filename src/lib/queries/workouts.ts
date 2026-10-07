@@ -24,6 +24,8 @@ import {
 export type GraphSeries = {
   exerciseId: string;
   name: string;
+  /** For stacking one progress block per muscle group. */
+  muscleGroup?: MuscleGroup | null;
   unit: string;
   color: string;
   /** value = the day's heaviest weight (the record). reps = how many that set
@@ -109,6 +111,9 @@ export type PersonWorkout = {
   categories: WorkoutCategory[];
   exercises: ExerciseDef[];
   weightSeries: GraphSeries[];
+  /** Weekdays (0 = Sunday) the plan uses, with the muscle groups on each, so
+   *  the attendance grid only draws rows that mean something. */
+  planDays: { day: number; groups: string[] }[];
   today: {
     scheduled: TodayExercise[];
     workedOut: boolean;
@@ -439,6 +444,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       .map(([id, meta], i) => ({
         exerciseId: id, // pool movement id — the legend/series key
         name: meta.name,
+        muscleGroup: meta.muscleGroup ?? null,
         unit: meta.muscleGroup ? weightUnits[meta.muscleGroup] : "",
         color: LINE_COLORS[i % LINE_COLORS.length],
         points: [...perMovementDay.get(id)!.entries()]
@@ -614,6 +620,20 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     }));
     const todayPlanned = (plan[dow]?.workouts ?? []).filter((w) => !w.isRest);
 
+    // Weekdays the plan actually uses, with the muscle groups on each. The
+    // attendance grid draws a row per planned weekday only; a row for a day
+    // nobody trains is noise.
+    const planDays: { day: number; groups: string[] }[] = [];
+    for (let d = 0; d < 7; d++) {
+      const onDay = pRows.filter((p) => p.dayOfWeek === d && !p.isRest);
+      if (onDay.length === 0) continue;
+      const groups: string[] = [];
+      for (const p of onDay) {
+        if (p.muscleGroup && !groups.includes(p.muscleGroup)) groups.push(p.muscleGroup);
+      }
+      planDays.push({ day: d, groups });
+    }
+
     cards.push({
       user: {
         id: person.id,
@@ -625,6 +645,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       categories,
       exercises: defs,
       weightSeries,
+      planDays,
       today: {
         scheduled: pausedName ? [] : scheduled,
         workedOut,
