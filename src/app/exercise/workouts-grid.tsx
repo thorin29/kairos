@@ -857,21 +857,32 @@ const MG_LABEL: Record<string, string> = {
 };
 
 /** Series grouped by the muscle group they are planned under, alphabetically. */
+/**
+ * One block per muscle group — plus one block per movement that has no group.
+ *
+ * A deadlift is not a back lift or a leg lift, and filing it as either puts a
+ * 300 lb hinge in the same chart as a lat pulldown or a leg extension. A
+ * movement with no group is therefore its own block, titled with its own name,
+ * and it sorts alphabetically among the groups rather than being swept into an
+ * "Other" bucket: it is a peer, not a leftover.
+ */
 function byMuscleGroup(series: LiftSeries[]): { key: string; label: string; items: LiftSeries[] }[] {
-  const map = new Map<string, LiftSeries[]>();
+  const map = new Map<string, { label: string; items: LiftSeries[] }>();
   for (const s of series) {
-    const key = s.muscleGroup ?? "_other";
-    map.set(key, [...(map.get(key) ?? []), s]);
+    // No group: keyed by the movement, so each gets a block of its own.
+    const grouped = s.muscleGroup != null;
+    const key = grouped ? s.muscleGroup! : `__mv:${s.poolExerciseId}`;
+    const label = grouped ? (MG_LABEL[s.muscleGroup!] ?? s.muscleGroup!) : s.name;
+    const cur = map.get(key);
+    map.set(key, { label, items: [...(cur?.items ?? []), s] });
   }
   return [...map.entries()]
-    .map(([key, items]) => ({
+    .map(([key, { label, items }]) => ({
       key,
-      label: key === "_other" ? "Other" : (MG_LABEL[key] ?? key),
+      label,
       items: items.sort((a, b) => a.name.localeCompare(b.name)),
     }))
-    .sort((a, b) =>
-      a.key === "_other" ? 1 : b.key === "_other" ? -1 : a.label.localeCompare(b.label),
-    );
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /**
@@ -1068,16 +1079,21 @@ function LiftDetailPanel({
   // "sessions logged" and not "sessions" — a rested day leaves no mark here.
   // Workout days: one square per day, coloured by MUSCLE GROUP rather than by
   // movement — the question is which day you trained, not which bar you held.
-  const groupOf = (s: LiftSeries) => s.muscleGroup ?? "_other";
+  // Matches byMuscleGroup: an ungrouped movement is its own series on the
+  // attendance grid too, so it gets its own colour rather than sharing one.
+  const groupOf = (s: LiftSeries) => s.muscleGroup ?? `__mv:${s.poolExerciseId}`;
+  // One label resolver for the sort, the tooltips and the legend, so an
+  // ungrouped movement reads as its own name everywhere instead of its key.
+  const gLabels = new Map<string, string>();
   const groupsSeen: string[] = [];
   for (const s of all) {
     if (s.points.length === 0) continue;
     const g = groupOf(s);
+    if (!gLabels.has(g)) gLabels.set(g, s.muscleGroup != null ? (MG_LABEL[g] ?? g) : s.name);
     if (!groupsSeen.includes(g)) groupsSeen.push(g);
   }
-  groupsSeen.sort((a, b) =>
-    a === "_other" ? 1 : b === "_other" ? -1 : (MG_LABEL[a] ?? a).localeCompare(MG_LABEL[b] ?? b),
-  );
+  const labelOf = (g: string) => gLabels.get(g) ?? MG_LABEL[g] ?? g;
+  groupsSeen.sort((a, b) => labelOf(a).localeCompare(labelOf(b)));
   const groupColor = new Map<string, string>(
     groupsSeen.map((g, i) => [g, GRID_COLORS[i % GRID_COLORS.length]]),
   );
@@ -1269,7 +1285,7 @@ function LiftDetailPanel({
                           key={cell.date}
                           title={
                             cell.groups.length
-                              ? `${cell.date} \u2014 ${cell.groups.map((g) => MG_LABEL[g] ?? "Other").join(", ")}`
+                              ? `${cell.date} \u2014 ${cell.groups.map((g) => labelOf(g)).join(", ")}`
                               : cell.date
                           }
                           style={cellStyle(cell.groups)}
@@ -1288,7 +1304,7 @@ function LiftDetailPanel({
                     className="h-3 w-3 rounded-[3px]"
                     style={{ background: groupColor.get(g) }}
                   />
-                  {g === "_other" ? "Other" : (MG_LABEL[g] ?? g)}
+                  {labelOf(g)}
                 </span>
               ))}
             </div>

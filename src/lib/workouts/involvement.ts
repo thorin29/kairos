@@ -117,11 +117,12 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
     },
   },
   {
-    // Front-loaded: the upper back and shoulders hold the rack position.
+    // Front-loaded, so the upper back holds the rack position. The delts are
+    // loaded isometrically too, but calling that shoulder work is a stretch.
     match: /\bfront squat/,
     involvement: {
       suggestedPrimary: "LEGS",
-      secondary: ["CORE", "BACK", "SHOULDERS"],
+      secondary: ["CORE", "BACK"],
       view: "both",
     },
   },

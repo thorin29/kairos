@@ -265,7 +265,7 @@ function AddWorkoutModal({
   onClose: () => void;
 }) {
   const [category, setCategory] = useState<WorkoutCategory>("WEIGHTS");
-  const [muscle, setMuscle] = useState<MuscleGroup>("CHEST");
+  const [muscle, setMuscle] = useState<MuscleGroup | null>("CHEST");
   const [picked, setPicked] = useState<Record<string, Picked>>({});
   const [hiitId, setHiitId] = useState("");
   const [rest, setRest] = useState(false);
@@ -286,7 +286,7 @@ function AddWorkoutModal({
         (p) =>
           p.isActive &&
           p.category === category &&
-          (!isWeights || p.muscleGroup === muscle),
+          (!isWeights || (p.muscleGroup ?? null) === muscle),
       ),
     [pool, category, isWeights, muscle],
   );
@@ -342,7 +342,7 @@ function AddWorkoutModal({
     setPicked({});
     setHiitId("");
   };
-  const changeMuscle = (m: MuscleGroup) => {
+  const changeMuscle = (m: MuscleGroup | null) => {
     setMuscle(m);
     setPicked({});
   };
@@ -403,8 +403,10 @@ function AddWorkoutModal({
                 Muscle group
               </label>
               <select
-                value={muscle}
-                onChange={(e) => changeMuscle(e.target.value as MuscleGroup)}
+                value={muscle ?? ""}
+                onChange={(e) =>
+                  changeMuscle(e.target.value ? (e.target.value as MuscleGroup) : null)
+                }
                 className="h-10 w-full rounded-xl border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
               >
                 {MUSCLE_GROUPS.map((m) => (
@@ -412,6 +414,10 @@ function AddWorkoutModal({
                     {MUSCLE_GROUP_LABEL[m]}
                   </option>
                 ))}
+                {/* A deadlift is not a back lift or a leg lift; it is a
+                    deadlift. Movements that refuse to sit in one group get
+                    their own progress block, titled with their own name. */}
+                <option value="">No group — its own chart</option>
               </select>
             </div>
           )}

@@ -12,6 +12,38 @@ planned movement's id, written only when it differs from what was logged.
 fills the slot it replaced, and the movement reports `loggedAs: { poolExerciseId, name }` — what was
 actually done. Clients show the slot with the variation's name and its value instead of a blank row.
 
+## 2026-10 — A movement can belong to no muscle group (v0.548.0)
+
+Seven muscle groups cannot file a deadlift. The EMG literature is no help: the 2020 PLOS ONE
+systematic review found erector spinae and quadriceps *more* activated than glutes and hamstrings,
+with glute-vs-hamstring results contradicting each other between studies. The biomechanical reading
+cuts the other way — the erectors are near-isometric, holding the spine while the hip and knee do
+the moving. Both are true; they measure different things. There is no filing that is simply correct.
+
+So the model stopped requiring one. `muscleGroup` was already nullable; now the UI can actually set
+it to null, and **a movement with no group charts as its own block, titled with its own name**,
+sorted alphabetically among the groups rather than swept into an "Other" bucket. It is a peer, not
+a leftover.
+
+This matters beyond tidiness. Filing a deadlift under CORE puts a 300 lb hinge in the same progress
+block as a 45-second plank and the chart stops meaning anything; filing it under BACK sits it with
+rows and pull-ups, which share no joint action with it, and would have a rotation put a Back day
+next to a Leg day while both tax the same glutes and erectors. Its own block avoids choosing.
+
+Selection and highlighting are now deliberately separate concerns:
+- **Highlighting** is `involvement.ts`: a deadlift shades glutes, lower back, legs and core, on the
+  posterior figure only. Many regions, derived from the movement.
+- **Selection** is one nav region per movement — for the deadlift, lower back/glutes. One region,
+  chosen for navigation, not anatomy.
+  Forcing these to be the same field is what made the deadlift awkward in the first place.
+
+Rotation slots keep requiring a muscle group. A slot is a *day* and a day has a theme; `defaultGroup`
+reads `slot.muscleGroup` to decide what opens. A day having a theme and a movement having an
+identity are different questions.
+
+Also: front squat's SHOULDERS secondary dropped. The delts are loaded isometrically in the rack
+position, which is not shoulder training.
+
 ## 2026-10 — Three kinds of person, one progress view (v0.547.0)
 
 A rotation and a weekly plan are not variants of one thing. `loadTodayPlannedWorkouts` queries

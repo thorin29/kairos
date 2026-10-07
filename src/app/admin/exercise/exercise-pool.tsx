@@ -32,7 +32,7 @@ export function ExercisePool({
   weightUnits: WeightUnits;
 }) {
   const [category, setCategory] = useState<WorkoutCategory>("WEIGHTS");
-  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>("CHEST");
+  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | null>("CHEST");
   const [name, setName] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -84,8 +84,10 @@ export function ExercisePool({
                 Muscle group
               </span>
               <select
-                value={muscleGroup}
-                onChange={(e) => setMuscleGroup(e.target.value as MuscleGroup)}
+                value={muscleGroup ?? ""}
+                onChange={(e) =>
+                  setMuscleGroup(e.target.value ? (e.target.value as MuscleGroup) : null)
+                }
                 className={FIELD}
               >
                 {MUSCLE_GROUPS.map((m) => (
@@ -93,6 +95,10 @@ export function ExercisePool({
                     {MUSCLE_GROUP_LABEL[m]}
                   </option>
                 ))}
+                {/* Some lifts refuse to sit in one group. A deadlift is a
+                    deadlift \u2014 it gets its own progress block, named after
+                    itself, instead of distorting Back or Legs. */}
+                <option value="">No group \u2014 its own chart</option>
               </select>
             </label>
           )}
@@ -172,8 +178,9 @@ function PoolCategory({
             items: entries.filter((e) => e.muscleGroup === m),
           })),
           {
+            // Not a leftovers bin: these chart as their own progress blocks.
             key: "none",
-            label: "Other",
+            label: "No group \u2014 their own charts",
             mg: null,
             items: entries.filter((e) => !e.muscleGroup),
           },

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.547.0";
+export const APP_VERSION = "0.548.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.548.0",
+    summary: [
+      "A movement can now sit in no muscle group at all. Pick \u201cNo group\u201d on it and it charts as its own progress block, named after itself \u2014 for lifts like the deadlift that are neither a back lift nor a leg lift.",
+      "Ungrouped movements get their own colour and their own name on the Workout days grid instead of sharing an \u201cOther\u201d.",
+    ],
+  },
   {
     version: "0.547.0",
     summary: [
