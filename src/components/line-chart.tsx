@@ -150,7 +150,7 @@ export function LineChart({
             stroke="var(--color-muted)"
             strokeWidth={1}
             strokeDasharray="2 4"
-            opacity={0.28}
+            opacity={0.22}
           />
         ))}
 

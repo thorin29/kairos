@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { DateField } from "@/components/date-field";
 import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
@@ -84,6 +84,15 @@ export function WorkoutsGrid({
     personal ? (people[0]?.user.id ?? null) : null,
   );
   const [step, setStep] = useState<Step>("menu");
+
+  // The overlay is one scrolling container and the steps swap inside it, so
+  // scrolling down the menu to reach "Recent workouts" and then opening it
+  // left the new screen scrolled to the same offset — which reads as the list
+  // opening at its bottom. Every step starts at the top.
+  const paneRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    paneRef.current?.scrollTo({ top: 0 });
+  }, [step]);
   const [calcOpen, setCalcOpen] = useState(false);
   // When creating a plan from scratch, which kind the person chose (before one
   // exists). Once a plan or rotation exists, that decides what's shown instead.
@@ -212,6 +221,7 @@ export function WorkoutsGrid({
 
       {open && (
         <div
+          ref={paneRef}
           className={
             personal
               ? ""

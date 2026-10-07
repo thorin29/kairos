@@ -70,6 +70,27 @@ export function TodayPlan({
   const todays = paused ? [] : workouts.filter((w) => !w.isRest);
   const done = new Set(doneLabels.map((l) => l.trim().toLowerCase()));
 
+  /**
+   * Whether THIS planned workout has been logged.
+   *
+   * Matching on the session's label marked every planned workout sharing a
+   * name as done at once: two "Back" workouts on a day are indistinguishable
+   * by label, so logging one ticked both, and the second could only be
+   * recorded through "Log a different workout". Identity has been available
+   * all along — `loggedByPool` is keyed by pool-exercise id and already
+   * prefills the weights.
+   *
+   * A workout with no pool exercises (HIIT, metric-only) has nothing to match
+   * on but its label, so that path is unchanged.
+   */
+  const isDone = (w: PlanWorkout) => {
+    const ex = w.exercises ?? [];
+    if (ex.length === 0) return done.has(w.name.trim().toLowerCase());
+    return ex.every(
+      (e) => e.poolExerciseId && loggedByPool[e.poolExerciseId],
+    );
+  };
+
   return (
     <div>
       <p className="mb-2 font-display text-sm font-semibold">{heading}</p>
@@ -97,7 +118,7 @@ export function TodayPlan({
                 userId={userId}
                 dateISO={dateISO}
                 unitSystem={unitSystem}
-                done={done.has(w.name.trim().toLowerCase())}
+                done={isDone(w)}
                 loggedByPool={loggedByPool}
                 bare={bare}
                 // Inside a group card the muscle group is already named at the

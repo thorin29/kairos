@@ -66,7 +66,14 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
   const top = Math.max(...all.map((b) => b.value));
   const grid = weightGrid(0, top, current.unit);
   const ceil = Math.max(grid.yMax, 1);
-  const ticks = grid.major;
+  // The top line, when yMax lands on a round load (ending 0 or 5), is drawn
+  // solid and labelled like the others — otherwise the tallest bar ends against
+  // a dotted line with no number to read it against.
+  const topIsRound = grid.yMax % 5 === 0;
+  const ticks =
+    topIsRound && !grid.major.includes(grid.yMax)
+      ? [...grid.major, grid.yMax]
+      : grid.major;
   // The dotted lines between the labelled loads. Without them a bar that tops
   // out above the last common load floats over blank space with nothing to
   // read it against.
@@ -125,7 +132,7 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
                 stroke="var(--color-muted)"
                 strokeWidth={1}
                 strokeDasharray="2 4"
-                opacity={0.28}
+                opacity={0.22}
               />
             );
           })}
@@ -172,16 +179,24 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
                       {/* Hover gives the weight, which the axis only approximates. */}
                       <title>{`${g.name} — ${b.value} ${current.unit} × ${b.reps} on ${b.date}`}</title>
                     </rect>
-                    <text
-                      x={b.x + BAR_W / 2}
-                      y={y - 5}
-                      textAnchor="middle"
-                      fontSize={10}
-                      fontWeight={600}
-                      fill="var(--color-ink)"
-                    >
-                      {b.reps > 0 ? `×${b.reps}` : ""}
-                    </text>
+                    {/* A bar exists because a set was done, so x1 is implied.
+                        Only a count worth noticing is written. Muted, but still
+                        darker than any gridline, and tucked against the bar. */}
+                    {b.reps > 1 && (
+                      <text
+                        x={b.x + BAR_W / 2}
+                        y={y - 3}
+                        textAnchor="middle"
+                        fontSize={10}
+                        fontWeight={600}
+                        fill="var(--color-muted)"
+                      >
+                        <tspan fontSize={7} fontWeight={500}>
+                          ×
+                        </tspan>
+                        {b.reps}
+                      </text>
+                    )}
                   </g>
                 );
               })}

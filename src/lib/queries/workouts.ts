@@ -288,7 +288,10 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         },
       }),
       prisma.workoutSession.findMany({
-        where: { userId: person.id, date: { lt: today } },
+        // `lt: today` meant a session logged today could never appear in Recent
+        // workouts — the web showed yesterday onwards while the phone, which
+        // reads a different query, showed the same day correctly.
+        where: { userId: person.id, date: { lte: today } },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
         take: 30,
         select: {

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.556.0";
+export const APP_VERSION = "0.557.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.557.0",
+    summary: [
+      "Fixes two workouts with the same name on one day being ticked off together \u2014 logging one Back workout marked both, and the second could only be recorded through \u201clog a different workout\u201d.",
+      "On Compare, \u00d71 is no longer written on every bar (a bar exists because a set was done), the rep count is lighter and tucked against the bar, and the top gridline is solid and labelled when it lands on a round load.",
+    ],
+  },
   {
     version: "0.556.0",
     summary: [

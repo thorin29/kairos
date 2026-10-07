@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-10 — Completion is identity, not a label (v0.557.0)
+
+Two planned workouts on one day both filed under Back are both *named* "Back", because a planned
+workout's name is its muscle-group label. `TodayPlan` decided whether a row was logged with
+`done.has(w.name.trim().toLowerCase())` against `doneLabels`, which is a list of session LABELS.
+So logging one Back workout ticked both, the second could not be recorded through its own row, and
+the only way to get it in was "Log a different workout".
+
+Identity had been available the whole time: `loggedByPool` is keyed by pool-exercise id and was
+already being used two functions away to prefill the weight fields. A planned workout is now done
+when every one of its exercises has a logged weight for that date. A workout with no pool exercises
+(HIIT, metric-only) still has nothing but its label to match on, so that path is unchanged and
+keeps the same weakness.
+
+The general shape: a label is a rendering of a thing, not the thing. Any time two rows can carry
+the same label, matching on it is a coin flip that happens to be right while the data is sparse.
+
 ## 2026-10 — Gridlines, the rep floor, and the reset icon (v0.556.0 / app 0.370.0)
 
 **The minor gridlines were invisible, not subtle.** They were `--color-hairline` — already a
