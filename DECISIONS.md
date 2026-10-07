@@ -12,6 +12,41 @@ planned movement's id, written only when it differs from what was logged.
 fills the slot it replaced, and the movement reports `loggedAs: { poolExerciseId, name }` — what was
 actually done. Clients show the slot with the variation's name and its value instead of a blank row.
 
+## 2026-10 — Movement involvement, and why a deadlift is a leg exercise (v0.546.0)
+
+`src/lib/workouts/involvement.ts` maps a movement name to the groups it works beyond the one it is
+filed under. Three rules keep it honest:
+
+**The group a person filed a movement under always wins for primary.** The table only adds
+secondaries, so it can never re-file someone's pool behind their back. Where the filing disagrees
+with the anatomy — a deadlift kept under Core — the suggested primary demotes to a secondary
+rather than vanishing, because otherwise that deadlift would shade no legs at all.
+
+**Matched on name, not id.** The pool is user-created, so there are no fixed ids to key on. That
+means no migration and it applies to existing data immediately; the cost is no per-exercise
+override until a column earns its place.
+
+**The deadlift is primarily LEGS.** Hip extension makes the gluteus maximus the prime mover; the
+lumbar erectors and lats hold an isometric contraction. EMG work finds erector activity in
+deadlifts comparable to hip thrusts and other lower-body lifts, so it is not uniquely a back
+exercise however it feels afterwards.
+
+That left squats and deadlifts both on LEGS with no way to tell them apart. The fix is not another
+muscle group — it is the artwork: the body map has a front and a back, so each rule carries a
+`view`. Hip-dominant pulls light the posterior legs, knee-dominant squats light both, leg
+extensions the front. Seven groups stay seven groups and the body still distinguishes them.
+
+Two bugs the table caught only because it was run against the real movement names rather than
+invented ones: the deadlift demotion above, and `/\bplank\b/` failing on "planks" — the trailing
+word boundary broke every plural. Test fixtures should be the user's own data.
+
+## 2026-10 — A weights plan may hold something that is not a weight (v0.546.0)
+
+`metricChoicesFor("WEIGHTS")` returned `["WEIGHT"]`, so every movement in a weights plan had to be
+logged as a load. A plank in a Core session therefore asked for pounds. It now offers DURATION and
+REPS as well, and the involvement table suggests which: holds are time, counted core work is reps.
+Category sets the default, never the ceiling.
+
 ## 2026-10 — Shipped is not the same as reachable (v0.542.0)
 
 The detail cards went into `PersonalTop`, which renders only when `personal` is true, the person's

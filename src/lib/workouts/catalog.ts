@@ -264,7 +264,10 @@ export function defaultMetricFor(category: WorkoutCategory): Metric {
 export function metricChoicesFor(category: WorkoutCategory): Metric[] {
   switch (category) {
     case "WEIGHTS":
-      return ["WEIGHT"];
+      // Weight first, but a weights session routinely holds a plank or counts
+      // sit-ups. Locking the category to WEIGHT forced those to be logged as a
+      // load, which is why a plank asked for pounds.
+      return ["WEIGHT", "DURATION", "REPS"];
     case "RUNNING":
       return ["DISTANCE", "METERS"];
     case "RUCKING":
