@@ -12,6 +12,30 @@ planned movement's id, written only when it differs from what was logged.
 fills the slot it replaced, and the movement reports `loggedAs: { poolExerciseId, name }` — what was
 actually done. Clients show the slot with the variation's name and its value instead of a blank row.
 
+## 2026-10 — The lift detail: three cards, no new queries (v0.541.0)
+
+Behind the headline numbers, "Show details" opens three cards, each answering one question:
+**what you can lift** (best real weight at each rep count, bars per movement), **which lifts are
+moving** (percent change over 90 days across every tracked lift), and **did you show up** (a
+16-week grid of days with a logged set).
+
+All three come from data already on the wire. The 90-day change is computed from the series
+points, which carry full history rather than a window. The consistency grid is the union of dates
+that carry a logged set — which is why it is labelled "sessions logged" and not "sessions": a
+rested or untracked day leaves no mark on it, and the label has to say so rather than imply the
+person did nothing.
+
+Percent is used for the cross-lift card because it is the one honest way to put a deadlift and an
+overhead press on a shared axis, and the real weights stay in the row so a 5 lb gain on a 95 lb
+press cannot pass for a big one. Still no estimated 1RM anywhere.
+
+Two fixes found while reading that code. A rep-max chip printed `\u00b7` as JSX **text**, where it
+is not an escape, so it rendered as those six characters — the same bug already fixed once for
+`\u00d7`. In JSX, an escape only works inside a string or template literal, never as element text.
+And the web logging page grew the phone's three labelled tiles: `ActionButton` in `workouts-grid`
+has the right shape but cannot be imported here, because that module already imports this one, so
+the tile is defined locally rather than creating a cycle.
+
 ## 2026-10 — A name belongs in exactly one place on a card (v0.540.0)
 
 The card had grown three places that print a name: the plan name under the muscle group, a

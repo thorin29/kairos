@@ -152,11 +152,15 @@ export async function loadWorkoutPlanNames(
 
   // Join every named planned workout for the day (in order) so a Legs + Chest
   // day reads "Legs · Chest" rather than just the first block.
+  // Each name once per day: two chest plans on a Monday are two rows here but
+  // one muscle group to the reader, and "Chest \u00b7 Chest \u00b7 Legs" said nothing
+  // the single "Chest" did not.
   const byDay = new Map<number, string[]>();
   for (const p of planned) {
     const name = p.name.trim();
     if (!name) continue;
     const list = byDay.get(p.dayOfWeek) ?? [];
+    if (list.some((n) => n.toLowerCase() === name.toLowerCase())) continue;
     list.push(name);
     byDay.set(p.dayOfWeek, list);
   }

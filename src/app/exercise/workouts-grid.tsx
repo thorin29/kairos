@@ -838,6 +838,192 @@ function chooseGraph(open: PersonWorkout, todayDow: number): GraphChoice {
  * sets: how much the best set moved in the last 30 days, how long since that
  * best was set (a stall is information), and the recent sessions in order.
  */
+
+type LiftSeries = PersonWorkout["weightSeries"][number];
+
+/**
+ * The three views behind the headline numbers, each on its own card:
+ * what you can lift for a given rep count, which lifts are still moving, and
+ * whether you have been turning up. Everything is derived from logged sets —
+ * there are no estimated maxes anywhere, and no two lifts share a weight axis.
+ */
+function LiftDetailPanel({
+  scoped,
+  all,
+}: {
+  scoped: LiftSeries[];
+  all: LiftSeries[];
+}) {
+  const [open, setOpen] = useState(false);
+
+  const withReps = scoped.filter((s) => (s.repMaxes?.length ?? 0) > 0);
+
+  // Change over 90 days per lift. Percent is the only honest way to put a
+  // deadlift and an overhead press on one axis; the real weights stay in the
+  // label so a 5lb gain on a light lift cannot masquerade as a big one.
+  const movement = all
+    .map((s) => {
+      const cutoff = new Date(Date.now() - 90 * 86400000)
+        .toISOString()
+        .slice(0, 10);
+      const window = s.points.filter((p) => p.date >= cutoff);
+      if (window.length < 2) return null;
+      const from = window[0].value;
+      const to = window.reduce((m, p) => Math.max(m, p.value), 0);
+      if (!from || to <= 0) return null;
+      return {
+        id: s.exerciseId,
+        name: s.name,
+        unit: s.unit,
+        from,
+        to,
+        pct: Math.round(((to - from) / from) * 100),
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .sort((a, b) => b.pct - a.pct);
+
+  // Did you train? Built from the days that carry a logged set, so it says
+  // "sessions logged" and not "sessions" — a rested day leaves no mark here.
+  const trained = new Set<string>();
+  for (const s of all) for (const p of s.points) trained.add(p.date);
+  const weeks: { date: string; on: boolean }[][] = [];
+  {
+    const end = new Date();
+    end.setHours(12, 0, 0, 0);
+    const start = new Date(end.getTime() - 111 * 86400000);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // back to Monday
+    for (let w = 0; w < 16; w++) {
+      const row: { date: string; on: boolean }[] = [];
+      for (let d = 0; d < 7; d++) {
+        const day = new Date(start.getTime() + (w * 7 + d) * 86400000);
+        const iso = day.toISOString().slice(0, 10);
+        row.push({ date: iso, on: trained.has(iso) });
+      }
+      weeks.push(row);
+    }
+  }
+
+  if (withReps.length === 0 && movement.length === 0 && trained.size === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-xs font-medium text-accent underline-offset-2 hover:underline"
+      >
+        {open ? "Hide details" : "Show details"}
+      </button>
+
+      {open && (
+        <div className="mt-2 space-y-2">
+          {withReps.length > 0 && (
+            <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                What you can lift
+              </p>
+              {withReps.map((s) => {
+                const max = Math.max(...s.repMaxes!.map((r) => r.value), 1);
+                return (
+                  <div key={s.exerciseId} className="mt-2">
+                    <p className="text-sm">{s.name}</p>
+                    <div className="mt-1 space-y-1">
+                      {[...s.repMaxes!]
+                        .sort((a, b) => a.reps - b.reps)
+                        .map((r) => (
+                          <div key={r.reps} className="flex items-center gap-2">
+                            <span className="tabular w-12 shrink-0 text-xs text-muted">
+                              {r.reps} rep{r.reps === 1 ? "" : "s"}
+                            </span>
+                            <span className="h-3 min-w-0 flex-1 rounded-full bg-surface">
+                              <span
+                                className="block h-3 rounded-full bg-accent"
+                                style={{ width: `${(r.value / max) * 100}%` }}
+                              />
+                            </span>
+                            <span className="tabular w-16 shrink-0 text-right text-xs">
+                              {r.value}
+                              {s.unit}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {movement.length > 0 && (
+            <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                Which lifts are moving
+              </p>
+              <p className="mt-0.5 text-xs text-muted">Change over 90 days</p>
+              <div className="mt-2 space-y-1.5">
+                {movement.map((m) => {
+                  const span = Math.max(...movement.map((x) => Math.abs(x.pct)), 1);
+                  const stalled = m.pct < 10;
+                  return (
+                    <div key={m.id} className="flex items-center gap-2">
+                      <span className="w-24 shrink-0 truncate text-xs">
+                        {m.name}
+                      </span>
+                      <span className="h-3 min-w-0 flex-1 rounded-full bg-surface">
+                        <span
+                          className={`block h-3 rounded-full ${stalled ? "bg-amber-500" : "bg-accent"}`}
+                          style={{
+                            width: `${(Math.abs(m.pct) / span) * 100}%`,
+                          }}
+                        />
+                      </span>
+                      <span className="tabular w-10 shrink-0 text-right text-xs font-medium">
+                        {m.pct > 0 ? "+" : ""}
+                        {m.pct}%
+                      </span>
+                      <span className="tabular hidden w-24 shrink-0 text-right text-xs text-muted sm:block">
+                        {m.from}
+                        {"\u2192"}
+                        {m.to}
+                        {m.unit}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Did you show up
+            </p>
+            <p className="mt-0.5 text-xs text-muted">
+              Sessions logged, last 16 weeks
+            </p>
+            <div className="mt-2 flex gap-[3px] overflow-x-auto">
+              {weeks.map((row, wi) => (
+                <div key={wi} className="flex flex-col gap-[3px]">
+                  {row.map((cell) => (
+                    <span
+                      key={cell.date}
+                      title={`${cell.date}${cell.on ? " \u2014 logged" : ""}`}
+                      className={`h-3 w-3 rounded-[3px] ${cell.on ? "bg-accent" : "bg-surface"}`}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function liftStats(s: {
   points: { date: string; value: number; reps?: number | null }[];
   best?: { date: string; value: number; reps: number | null } | null;
@@ -959,7 +1145,7 @@ function PersonalTop({
                             className="tabular rounded-full border border-hairline px-2 py-0.5 text-xs text-muted"
                             title={`Best at ${r.reps} reps \u2014 ${r.date}`}
                           >
-                            {r.reps}r \u00b7 {r.value}
+                            {r.reps}r · {r.value}
                             {s.unit}
                           </span>
                         ))}
@@ -969,6 +1155,7 @@ function PersonalTop({
                 );
               })}
           </div>
+          <LiftDetailPanel scoped={graph.series} all={open.weightSeries} />
         </div>
       )}
 

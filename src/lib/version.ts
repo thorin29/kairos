@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.540.1";
+export const APP_VERSION = "0.541.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,18 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.541.0",
+    summary: [
+      "The logging page now uses the same three labelled buttons as the phone \u2014 Rest / skip, Calculator and Log weight \u2014 in the same square tiles.",
+      "Swap sits in a fixed spot to the right of every movement, so it is in the same place whatever the movement is called.",
+      "The weight box is smaller and the same size everywhere, its hint reads \u201cweight\u201d, and reps sit at the right edge.",
+      "Behind the lift numbers there is a Show details link with three new views: best weight at each rep count, which lifts have moved in 90 days, and a 16-week grid of the days you logged a session.",
+      "The swap list is in plain alphabetical order by muscle group, with each group named in bold.",
+      "A muscle group is counted once in the day's workout summary, so two Core workouts no longer read \u201cCore \u00b7 Core \u00b7 Legs\u201d.",
+      "Fixed a rep-count chip that printed a raw character code instead of a separator.",
+    ],
+  },
   {
     version: "0.540.1",
     summary: [

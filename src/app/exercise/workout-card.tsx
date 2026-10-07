@@ -5,8 +5,9 @@ import {
   completePlannedWorkout,
   listExercisePool,
   logHiitWorkout,
+  restDay,
 } from "@/lib/actions/workouts";
-import { CheckIcon } from "@/components/icons";
+import { CheckIcon, DumbbellIcon, MoonIcon } from "@/components/icons";
 import {
   METRIC_LABEL_SHORT,
   MUSCLE_GROUP_LABEL,
@@ -20,6 +21,7 @@ import {
   type UnitSystem,
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
+import { WeightCalculator } from "./weight-calculator";
 import type {
   PlanExercise,
   PlanWorkout,
@@ -182,6 +184,7 @@ function PlanRow({
    *  the plan — they only change what the Log button sends. */
   const [swaps, setSwaps] = useState<Record<string, PoolPick | null>>({});
   const [picking, setPicking] = useState<string | null>(null);
+  const [calcOpen, setCalcOpen] = useState(false);
   const setSwap = (exerciseId: string, pick: PoolPick | null) =>
     setSwaps((s) => ({ ...s, [exerciseId]: pick }));
 
@@ -410,49 +413,46 @@ function PlanRow({
                     key={e.id}
                     className={i > 0 ? "border-t border-hairline pt-2.5" : ""}
                   >
-                  <div className="mb-1 flex items-center gap-2">
+                  {/* The name truncates inside a flexible cell and Swap owns a
+                      fixed column, so the button lands in the same spot whether
+                      the movement is "planks" or "two arm dumbbell extension". */}
+                  <div className="mb-1.5 flex items-center gap-2">
                     <span className="min-w-0 flex-1 truncate text-sm">
                       {sw ? sw.name : e.name}
                       {sw && (
-                        <span className="ml-1 font-normal text-muted">
-                          for {e.name}
-                        </span>
+                        <span className="ml-1 text-muted">for {e.name}</span>
                       )}
                     </span>
-                    {sw ? (
+                    <span className="w-[4.5rem] shrink-0 text-right">
                       <button
                         type="button"
-                        onClick={() => setSwap(e.id, null)}
-                        className="shrink-0 rounded-full border border-hairline px-2.5 py-1 text-xs text-muted hover:border-accent hover:text-accent"
+                        onClick={() =>
+                          sw ? setSwap(e.id, null) : setPicking(e.id)
+                        }
+                        className={`w-full rounded-lg border px-2 py-1 text-xs ${
+                          sw
+                            ? "border-hairline text-muted hover:border-accent hover:text-accent"
+                            : "border-hairline text-accent hover:bg-accent/5"
+                        }`}
                       >
-                        Undo
+                        {sw ? "Undo" : "Swap"}
                       </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setPicking(e.id)}
-                        className="shrink-0 rounded-full border border-hairline px-2.5 py-1 text-xs text-accent hover:bg-accent/5"
-                      >
-                        Swap
-                      </button>
-                    )}
+                    </span>
                   </div>
                   <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                      <MetricField
-                        label=""
-                        metric={m}
-                        unit={sw && m === "WEIGHT" ? sw.unit || unit : unit}
-                        hint={m === "WEIGHT" ? "today's max" : undefined}
-                        value={values[e.id] ?? ""}
-                        onChange={(v) => setVal(e.id, v)}
-                      />
-                    </div>
+                    <MetricField
+                      label=""
+                      metric={m}
+                      unit={sw && m === "WEIGHT" ? sw.unit || unit : unit}
+                      hint={m === "WEIGHT" ? "weight" : undefined}
+                      value={values[e.id] ?? ""}
+                      onChange={(v) => setVal(e.id, v)}
+                    />
                     {/* Reps for the top set. Optional: the record is still the
                         weight, but without this "185 x 5" and "185 x 12" log
                         identically and months of rep progress stay invisible. */}
                     {m === "WEIGHT" && (
-                      <div className="flex items-center gap-1.5 pb-0.5">
+                      <div className="ml-auto flex items-center gap-1.5 pb-0.5">
                         <span className="text-xs text-muted">×</span>
                         <input
                           inputMode="numeric"
@@ -491,17 +491,64 @@ function PlanRow({
             </>
           )}
 
-          <button
-            type="button"
-            onClick={complete}
-            disabled={pending}
-            className="mt-1 inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm hover:shadow-md disabled:opacity-40"
-          >
-            <CheckIcon className="h-4 w-4" />
-            {pending ? "Logging…" : logLabel}
-          </button>
+          {/* Three labelled tiles, same shape and wording as the phone, so the
+              two logging screens read as one feature. */}
+          <div className="mt-1 grid grid-cols-3 gap-2">
+            <PlanActionTile
+              icon={MoonIcon}
+              label="Rest / skip"
+              disabled={pending}
+              onClick={() => startTransition(async () => {
+                await restDay(userId, dateISO);
+              })}
+            />
+            <PlanActionTile
+              icon={DumbbellIcon}
+              label="Calculator"
+              disabled={false}
+              onClick={() => setCalcOpen(true)}
+            />
+            <PlanActionTile
+              icon={CheckIcon}
+              label={pending ? "Logging…" : logLabel}
+              disabled={pending}
+              primary
+              onClick={complete}
+            />
+          </div>
+          {calcOpen && <WeightCalculator onClose={() => setCalcOpen(false)} />}
         </div>
     </div>
+  );
+}
+
+function PlanActionTile({
+  icon: Icon,
+  label,
+  onClick,
+  disabled,
+  primary,
+}: {
+  icon: (p: { className?: string }) => React.ReactElement;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  primary?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center text-xs font-semibold transition-colors disabled:opacity-40 ${
+        primary
+          ? "border-accent bg-accent text-on-accent"
+          : "border-hairline text-ink hover:border-accent hover:text-accent"
+      }`}
+    >
+      <Icon className="h-5 w-5" />
+      {label}
+    </button>
   );
 }
 
@@ -564,7 +611,9 @@ function SwapPicker({
       else byGroup.set(key, { label, items: [p] });
     }
 
-    const own = exercise.muscleGroup ?? mine?.muscleGroup ?? null;
+    // Straight alphabetical by muscle group, movements alphabetical inside
+    // each. Floating the current group to the top meant the list started
+    // somewhere different every time it opened.
     return [...byGroup.entries()]
       .map(([key, g]) => ({
         key,
@@ -572,13 +621,11 @@ function SwapPicker({
         items: g.items.sort((a, b) => a.name.localeCompare(b.name)),
       }))
       .sort((a, b) => {
-        if (own && a.key === own) return -1;
-        if (own && b.key === own) return 1;
         if (a.key === "_other") return 1;
         if (b.key === "_other") return -1;
         return a.label.localeCompare(b.label);
       });
-  }, [pool, q, exercise.poolExerciseId, exercise.muscleGroup]);
+  }, [pool, q, exercise.poolExerciseId]);
 
   return (
     <div className="mt-2 rounded-xl border border-hairline bg-surface p-2.5">
@@ -614,7 +661,7 @@ function SwapPicker({
         ) : (
           groups.map((g) => (
             <div key={g.key} className="mb-1.5">
-              <p className="px-1 pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <p className="px-1 pb-0.5 pt-1.5 text-xs font-bold uppercase tracking-wide text-accent">
                 {g.label}
               </p>
               {g.items.map((p) => (
