@@ -1141,13 +1141,15 @@ export type CompareSeries = {
   unit: string;
   points: { date: string; value: number }[];
   /**
-   * The two things worth comparing across people, each carrying the other as
-   * context: the heaviest set they managed (and the reps they got at it), and
-   * the most reps they managed (and the weight they did them at). A bar is one
-   * number; the other number is what makes it mean anything.
+   * One entry per distinct WEIGHT this person has lifted, carrying the best
+   * reps they managed at it and the last time they did.
+   *
+   * Deliberately not one entry per set: 175x2 and 175x3 are the same bar drawn
+   * twice, and the honest answer for a weight is the best you did at it. The
+   * client caps the list; the server sends it newest-first so the cap keeps
+   * what is current rather than whatever happens to be heaviest.
    */
-  bestWeight?: { value: number; reps: number | null } | null;
-  bestReps?: { reps: number; value: number } | null;
+  bars?: { value: number; reps: number; date: string }[];
 };
 
 export type MovementComparison = {
@@ -1252,13 +1254,7 @@ export async function loadMovementComparisons(): Promise<MovementComparison[]> {
     }
   >();
 
-  const bestSets = new Map<
-    string,
-    {
-      bestWeight: { value: number; reps: number | null };
-      bestReps: { reps: number; value: number };
-    }
-  >();
+  const barSets = new Map<string, Map<number, { reps: number; date: string }>>();
 
   for (const r of rows) {
     if (!r.poolExercise) continue;
@@ -1284,24 +1280,18 @@ export async function loadMovementComparisons(): Promise<MovementComparison[]> {
     perDay.set(day, Math.max(perDay.get(day) ?? 0, value));
     m.perUser.set(uid, perDay);
 
-    // Heaviest set, and most reps, tracked as whole sets so each keeps the
-    // other number with it. Weights only: reps mean nothing against a distance.
+    // One bar per WEIGHT, keeping the best reps at it and the latest date it
+    // was lifted. Weights only: reps mean nothing against a distance.
     if (metric === "WEIGHT" && r.weight != null) {
       const key = `${r.poolExerciseId}:${uid}`;
-      const cur = bestSets.get(key);
+      const byWeight = barSets.get(key) ?? new Map<number, { reps: number; date: string }>();
+      const cur = byWeight.get(r.weight);
       const reps = r.reps ?? 0;
-      const heavier =
-        !cur ||
-        r.weight > cur.bestWeight.value ||
-        (r.weight === cur.bestWeight.value && reps > (cur.bestWeight.reps ?? 0));
-      const repsier =
-        !cur ||
-        reps > cur.bestReps.reps ||
-        (reps === cur.bestReps.reps && r.weight > cur.bestReps.value);
-      bestSets.set(key, {
-        bestWeight: heavier ? { value: r.weight, reps: r.reps } : cur!.bestWeight,
-        bestReps: repsier ? { reps, value: r.weight } : cur!.bestReps,
+      byWeight.set(r.weight, {
+        reps: Math.max(reps, cur?.reps ?? 0),
+        date: !cur || day > cur.date ? day : cur.date,
       });
+      barSets.set(key, byWeight);
     }
   }
 
@@ -1318,8 +1308,10 @@ export async function loadMovementComparisons(): Promise<MovementComparison[]> {
         points: [...days.entries()]
           .map(([date, value]) => ({ date, value }))
           .sort((a, b) => (a.date < b.date ? -1 : 1)),
-        bestWeight: bestSets.get(`${poolExerciseId}:${uid}`)?.bestWeight ?? null,
-        bestReps: bestSets.get(`${poolExerciseId}:${uid}`)?.bestReps ?? null,
+        // Newest first, so a cap on the client keeps what is current.
+        bars: [...(barSets.get(`${poolExerciseId}:${uid}`)?.entries() ?? [])]
+          .map(([value, b]) => ({ value, reps: b.reps, date: b.date }))
+          .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.value - a.value)),
       }))
       .filter((s) => s.points.length > 0);
 

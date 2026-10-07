@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-10 — Compare: a bar per weight, fixed width (v0.554.0)
+
+One bar per person threw away the thing worth seeing. Someone who has worked up through 155, 175
+and 185 has a progression; flattening it to a single "best" hides it, and the heaviest-weight /
+most-reps toggle was two half-answers to a question better answered by showing the sets.
+
+A bar is now one WEIGHT, carrying the best reps achieved at it. Not one bar per set: 175x2 and
+175x3 are the same bar drawn twice, and for a given weight the honest number is the best you did.
+`CompareSeries.bars` is therefore distinct weights, each with its best reps and the last date it
+was lifted, sent newest-first so a cap on the client keeps what is current.
+
+**Fixed width, never stretched.** A chart whose bars thicken as people are removed is a chart where
+thickness means something it does not; the eye reads it anyway. Bars are 16px, gaps are constant,
+and the SVG grows horizontally with scroll rather than redistributing.
+
+**The budget is shared, not first-come.** `MAX_BARS / people` per person, so one prolific lifter
+cannot crowd the others out. Within a person the slice is newest-first, then sorted lightest to
+heaviest for display: a person's bars should climb rather than jump about in log order.
+
+The axis starts at zero and the top rounds to something a person would have chosen (5/10/25/50),
+because a bar chart with a floating baseline lies about proportion. Hover gives the exact weight,
+reps and date, which the axis only approximates.
+
 ## 2026-10 — Compare as bars; colour follows the muscle (v0.553.0 / app 0.367.0)
 
 **Compare is a bar per person.** It was a dot plot of everyone's sessions over time, which answered
