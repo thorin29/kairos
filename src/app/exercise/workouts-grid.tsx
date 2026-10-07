@@ -998,24 +998,46 @@ function LiftDetailPanel({
 
   // Did you train? Built from the days that carry a logged set, so it says
   // "sessions logged" and not "sessions" — a rested day leaves no mark here.
-  const trained = new Set<string>();
-  for (const s of all) for (const p of s.points) trained.add(p.date);
-  const weeks: { date: string; on: boolean }[][] = [];
+  // Each day carries WHICH movements were logged, not just whether anything
+  // was, so one grid shows every workout at once. A day with two movements is
+  // split between their two colours.
+  const byDate = new Map<string, LiftSeries[]>();
+  for (const s of all) {
+    for (const p of s.points) {
+      const list = byDate.get(p.date) ?? [];
+      if (!list.some((x) => x.exerciseId === s.exerciseId)) list.push(s);
+      byDate.set(p.date, list);
+    }
+  }
+  const trained = byDate;
+  const legend = all.filter((s) => s.points.length > 0).slice(0, 8);
+
+  type Cell = { date: string; hits: LiftSeries[] };
+  const weeks: Cell[][] = [];
   {
     const end = new Date();
     end.setHours(12, 0, 0, 0);
     const start = new Date(end.getTime() - 111 * 86400000);
     start.setDate(start.getDate() - ((start.getDay() + 6) % 7)); // back to Monday
     for (let w = 0; w < 16; w++) {
-      const row: { date: string; on: boolean }[] = [];
+      const row: Cell[] = [];
       for (let d = 0; d < 7; d++) {
         const day = new Date(start.getTime() + (w * 7 + d) * 86400000);
         const iso = day.toISOString().slice(0, 10);
-        row.push({ date: iso, on: trained.has(iso) });
+        row.push({ date: iso, hits: byDate.get(iso) ?? [] });
       }
       weeks.push(row);
     }
   }
+
+  /** Up to two colours per square; more than that is mud at 16px. */
+  const cellStyle = (hits: LiftSeries[]): React.CSSProperties => {
+    if (hits.length === 0) return {};
+    if (hits.length === 1) return { background: hits[0].color };
+    return {
+      background: `linear-gradient(135deg, ${hits[0].color} 0 50%, ${hits[1].color} 50% 100%)`,
+    };
+  };
 
   if (withReps.length === 0 && movement.length === 0 && trained.size === 0) {
     return null;
@@ -1121,7 +1143,7 @@ function LiftDetailPanel({
               Did you show up
             </p>
             <p className="mt-0.5 text-xs text-muted">
-              One square per day. Filled means a set was logged.
+              One square per day, coloured by movement
             </p>
             <div className="mt-2 flex gap-2 overflow-x-auto">
               {/* Weekday rail, so a row of squares means something. */}
@@ -1157,8 +1179,13 @@ function LiftDetailPanel({
                       {row.map((cell) => (
                         <span
                           key={cell.date}
-                          title={`${cell.date}${cell.on ? " \u2014 logged" : ""}`}
-                          className={`h-4 w-4 rounded-[3px] ${cell.on ? "bg-accent" : "bg-surface"}`}
+                          title={
+                            cell.hits.length
+                              ? `${cell.date} \u2014 ${cell.hits.map((h) => h.name).join(", ")}`
+                              : cell.date
+                          }
+                          style={cellStyle(cell.hits)}
+                          className={`h-4 w-4 rounded-[3px] ${cell.hits.length === 0 ? "bg-surface" : ""}`}
                         />
                       ))}
                     </div>
@@ -1166,13 +1193,19 @@ function LiftDetailPanel({
                 </div>
               </div>
             </div>
-            <div className="mt-2 flex items-center gap-3 text-[11px] text-muted">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
               <span className="flex items-center gap-1.5">
                 <span className="h-3 w-3 rounded-[3px] bg-surface" /> no session
               </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded-[3px] bg-accent" /> logged
-              </span>
+              {legend.map((s) => (
+                <span key={s.exerciseId} className="flex items-center gap-1.5">
+                  <span
+                    className="h-3 w-3 rounded-[3px]"
+                    style={{ background: s.color }}
+                  />
+                  {s.name}
+                </span>
+              ))}
             </div>
           </div>
 
