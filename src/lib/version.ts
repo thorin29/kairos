@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.562.0";
+export const APP_VERSION = "0.563.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -129,11 +129,19 @@ export const MIGRATIONS = [
   "114_feed_force_duration",
   "115_grocery_quantity",
   "116_set_swapped_from",
+  "117_session_completed_on",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.563.0",
+    summary: [
+      "An overdue workout now counts for the day it was due but shows as done on the day you actually did it \u2014 in the workout-days grid, the progress charts and Recent workouts.",
+      "Before this, logging Monday's workout on Tuesday put Tuesday's weights on Monday's square and dated it 10/5. Adherence still reads the due day, so a missed Monday stays missed.",
+    ],
+  },
   {
     version: "0.562.0",
     summary: [

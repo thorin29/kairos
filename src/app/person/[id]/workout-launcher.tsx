@@ -280,6 +280,9 @@ export function WorkoutLauncher({
                             rested={false}
                             unitSystem={unitSystem}
                             heading={`Missed ${formatShort(od)}`}
+                            // Counts for the day it was due; recorded as done
+                            // today. The card itself is unchanged.
+                            completedOnISO={todayISO}
                           />
                         </div>
                       );

@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-10 — A session has a due day and a done day (v0.563.0)
+
+`WorkoutSession.date` is the day a workout *counts for*. Adherence is built on it:
+`loadOverdueWorkoutDays` walks back through the plan and asks `loadTodayPlannedWorkouts(iso)`
+whether that day's session exists, so moving `date` to the day someone caught up on would make a
+missed Monday retroactively not missed. That is the one thing the column must never do.
+
+But a chart that draws Tuesday's weights on Monday's square is lying about when the work happened,
+and Recent workouts dating it 10/5 reads as a bug because it is one.
+
+So: a second nullable column, `completedOn DATE`, written only when the two differ. `date` stays
+the due day and keeps owning adherence; every DISPLAY read resolves `completedOn ?? date`. One
+helper, `doneOn()` in `workout-log.ts`, so the fallback is written once rather than at each of the
+four series sites.
+
+`createdAt` was considered and rejected: it is when the row was inserted, which is right for a
+catch-up and wrong for deliberate backdating — logging Saturday's lift on Sunday morning from the
+date picker would move it to Sunday. The ISO date the UI was actually logging *for* is the only
+honest source, so `completePlannedWorkout` takes `completedOnISO` and stores it only when it
+differs from `dateISO`.
+
+The overdue cards were left alone on purpose. `TodayPlan` and `PlanRow` thread the new prop
+through and render nothing new from it — the request was for the data to be right, not for the
+cards to grow a second date.
+
+No app release. The app's attendance grid (`byDate.getOrPut(p.date)`) and its history list read
+dates the server already resolved, so the field name is unchanged and only the value moves. Room
+caches the payload verbatim and refreshes on next sync, so there is no schema change there either.
+
 ## 2026-10 — Two plans on one page, one of them unwired (v0.562.0)
 
 `workouts-grid.tsx` renders `TodayPlan` twice: once for today on the main Log workout step, and

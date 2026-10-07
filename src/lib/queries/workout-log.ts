@@ -469,11 +469,17 @@ export async function loadWorkoutProgress(
     }),
     prisma.workoutSession.findMany({
       where: { userId },
+      // Ordered and taken by DUE date because that is all Postgres can sort on
+      // here (no COALESCE in a Prisma orderBy). Over-fetched, then re-sorted
+      // and trimmed below on the day each one was actually done — a workout due
+      // three weeks ago but caught up on yesterday has to survive the `take` to
+      // appear at the top of the list where it belongs.
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      take: 20,
+      take: 60,
       select: {
         id: true,
         date: true,
+        completedOn: true,
         name: true,
         isRest: true,
         sets: {
@@ -542,7 +548,7 @@ export async function loadWorkoutProgress(
       reps: true,
       poolExerciseId: true,
       poolExercise: { select: { name: true, muscleGroup: true } },
-      session: { select: { date: true } },
+      session: { select: { date: true, completedOn: true } },
     },
   });
   // A movement seen only in history still needs a name and a group.
@@ -607,7 +613,7 @@ export async function loadWorkoutProgress(
   }
   if (planDays.length === 0) {
     const seen = new Set<number>();
-    for (const s2 of wSets) seen.add(dayOfWeek(fromDateColumn(s2.session.date)));
+    for (const s2 of wSets) seen.add(dayOfWeek(doneOn(s2.session)));
     for (const d of [...seen].sort((a, b) => a - b)) planDays.push({ day: d, groups: [] });
   }
 
@@ -628,7 +634,7 @@ export async function loadWorkoutProgress(
     let latest = "";
     for (const s2 of wSets) {
       if (!s2.poolExercise) continue;
-      const d = fromDateColumn(s2.session.date);
+      const d = doneOn(s2.session);
       const g = (s2.poolExercise as { muscleGroup?: string | null }).muscleGroup ?? null;
       if (g && d > latest) { latest = d; defaultGroup = g; }
     }
@@ -639,7 +645,7 @@ export async function loadWorkoutProgress(
   const repMaxes = new Map<string, Map<number, { value: number; date: string }>>();
   for (const s of wSets) {
     if (s.weight == null || !s.poolExerciseId) continue;
-    const d = fromDateColumn(s.session.date);
+    const d = doneOn(s.session);
     const m = perDay.get(s.poolExerciseId) ?? new Map<string, { value: number; reps: number | null }>();
     const prev = m.get(d);
     // Heaviest wins the day; on a tie the set with more reps is the better one.
@@ -704,13 +710,25 @@ export async function loadWorkoutProgress(
       null;
   }
 
-  const history: WorkoutHistoryEntry[] = recent.map((s) => ({
+  // Typed off the query rather than left implicit: real in the Docker build,
+  // `any` in a sandbox with no generated client, and explicit in both.
+  // Annotated into its own binding before sorting: chaining .sort() straight
+  // off .map() leaves the comparator's parameters untyped whenever the query
+  // row type is unavailable, and the annotation on `history` lands too late to
+  // help. This way the array being sorted is the typed one.
+  const rows: WorkoutHistoryEntry[] = recent.map((s: (typeof recent)[number]) => ({
     id: s.id,
-    date: fromDateColumn(s.date),
+    // The day it was done, not the day it counts for.
+    date: doneOn(s as unknown as { date: Date; completedOn?: Date | null }),
     label: s.isRest ? "Rest day" : s.name?.trim() || "Workout",
     result: s.isRest ? "" : historyResult(s.sets),
     isRest: s.isRest,
   }));
+  // Newest-first by the date now being SHOWN. Leaving the due-date order in
+  // place would print Monday's catch-up under its real 10/6 label but below a
+  // 10/6 entry, and a list whose dates do not descend reads as broken.
+  rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  const history: WorkoutHistoryEntry[] = rows.slice(0, 20);
 
   return { series, defaultId, history, planDays, defaultGroup };
 }
@@ -1178,6 +1196,13 @@ export type OverdueWorkoutDay = {
 /** Past days whose "Worked out?" prompt is still pending — the overdue workouts
  *  that piled up — each with that day's scheduled plan, newest-missed last, for
  *  the Overdue section on the log page. */
+/** The day a session was actually done. `date` is the day it COUNTS for —
+ *  adherence is keyed on it — so an overdue workout logged later carries the
+ *  real day here, and charts and history should use this. */
+function doneOn(sess: { date: Date; completedOn?: Date | null }): string {
+  return fromDateColumn(sess.completedOn ?? sess.date);
+}
+
 export async function loadOverdueWorkoutDays(
   userId: string,
   beforeISO: string,

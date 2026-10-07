@@ -56,6 +56,7 @@ export function TodayPlan({
   unitSystem,
   heading = "Today\u2019s plan",
   loggedByPool = {},
+  completedOnISO,
 }: {
   userId: string;
   dateISO: string;
@@ -67,6 +68,13 @@ export function TodayPlan({
   heading?: string;
   /** Already-logged sets for this date, keyed by pool-exercise id. */
   loggedByPool?: Record<string, LoggedSet>;
+  /**
+   * The day these are actually being logged on, when that is not `dateISO`.
+   * Set by the overdue section: the workout still counts for the day it was
+   * due, but the history and attendance grid should say when it was really
+   * done. Purely data — it changes nothing about how the card is drawn.
+   */
+  completedOnISO?: string;
 }) {
   const todays = paused ? [] : workouts.filter((w) => !w.isRest);
   const done = new Set(doneLabels.map((l) => l.trim().toLowerCase()));
@@ -121,6 +129,7 @@ export function TodayPlan({
                 unitSystem={unitSystem}
                 done={isDone(w)}
                 loggedByPool={loggedByPool}
+                completedOnISO={completedOnISO}
                 bare={bare}
                 // Inside a group card the muscle group is already named at the
                 // top and every movement names itself, so the plan name is a
@@ -188,6 +197,7 @@ function PlanRow({
   unitSystem,
   done,
   loggedByPool = {},
+  completedOnISO,
   bare = false,
   hideName = false,
 }: {
@@ -197,6 +207,8 @@ function PlanRow({
   unitSystem: UnitSystem;
   done: boolean;
   loggedByPool?: Record<string, LoggedSet>;
+  /** The day this is really being logged on, when it is not `dateISO`. */
+  completedOnISO?: string;
   /** Rendered inside a shared muscle-group card: drop this row's own card. */
   bare?: boolean;
   /** Hide the plan name when the group heading already says it. */
@@ -363,6 +375,7 @@ function PlanRow({
         dateISO,
         plannedWorkoutId: workout.id,
         entries,
+        completedOnISO,
       });
       setValues({});
     });

@@ -579,6 +579,16 @@ export async function completePlannedWorkout(input: {
     /** Planned movement this entry was swapped in for, that day only. */
     swappedFrom?: string | null;
   }[];
+  /**
+   * The day this was actually done, when it is not `dateISO`.
+   *
+   * Only the overdue path sets it: `dateISO` stays the day the workout counts
+   * for, because adherence is keyed on it, and this records when it really
+   * happened so the attendance grid and history can say so. Omitted for an
+   * ordinary log and for a deliberately back-dated one — in both of those
+   * `dateISO` already IS the day it was done.
+   */
+  completedOnISO?: string | null;
 }): Promise<void> {
   await requireInteractive();
   await requireCanActFor(input.userId);
@@ -595,10 +605,19 @@ export async function completePlannedWorkout(input: {
   if (!plan || plan.userId !== input.userId) return;
 
   const date = toDateColumn(input.dateISO);
+  // Stored only when it genuinely differs, so "null means same as date" stays
+  // true and an ordinary log is indistinguishable from one before this existed.
+  const completedOn =
+    input.completedOnISO &&
+    /^\d{4}-\d{2}-\d{2}$/.test(input.completedOnISO) &&
+    input.completedOnISO !== input.dateISO
+      ? toDateColumn(input.completedOnISO)
+      : null;
   const session = await prisma.workoutSession.create({
     data: {
       userId: input.userId,
       date,
+      completedOn,
       name: plan.name,
       category: plan.category,
       finished: true,

@@ -1324,6 +1324,12 @@ model WorkoutSession {
   isRest      Boolean  @default(false)
   notes       String?
   sourceEventId String?  // the calendar event this was auto-logged from
+  // The day the workout was actually DONE, when that differs from `date`.
+  // `date` stays the day it counts for, because adherence is keyed on it —
+  // loadOverdueWorkoutDays asks whether that day's planned exercises have
+  // values. Null means "same as date", which is true of every ordinary log and
+  // every deliberately back-dated one; only logging a missed day sets it.
+  completedOn DateTime? @db.Date
   createdAt   DateTime @default(now())
 
   sets SessionSet[]

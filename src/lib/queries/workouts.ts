@@ -224,7 +224,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           poolExerciseId: true,
           weight: true,
           reps: true,
-          session: { select: { date: true } },
+          session: { select: { date: true, completedOn: true } },
           poolExercise: { select: { name: true, muscleGroup: true } },
         },
       }),
@@ -301,6 +301,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           workoutType: true,
           isRest: true,
           date: true,
+          completedOn: true,
           sets: {
             select: {
               exerciseId: true,
@@ -425,7 +426,11 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           muscleGroup: set.poolExercise.muscleGroup,
         });
       }
-      const d = fromDateColumn(set.session.date);
+      // The day it was actually done. An overdue workout keeps `date` as the
+      // day it counts for; the chart should mark the day you trained.
+      const d = fromDateColumn(
+        (set.session as { completedOn?: Date | null }).completedOn ?? set.session.date,
+      );
       const m = perMovementDay.get(id) ?? new Map<string, { value: number; reps: number | null }>();
       const prev = m.get(d);
       // Heaviest wins the day; on equal weight the one with more reps wins,
@@ -534,7 +539,9 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     const recent = (recentSessions ?? []) as unknown as (SessShape & { date: Date })[];
     const history: HistoryEntry[] = recent.map((s) => ({
       id: s.id,
-      dateISO: fromDateColumn(s.date),
+      dateISO: fromDateColumn(
+        (s as { completedOn?: Date | null }).completedOn ?? s.date,
+      ),
       label: s.isRest ? "Rest day" : workoutLabel(s),
       result: s.isRest ? "" : workoutResult(s),
       isRest: s.isRest,
@@ -914,6 +921,7 @@ export async function loadPersonWorkoutRecords(
           category: true,
           isRest: true,
           date: true,
+          completedOn: true,
           sets: {
             select: {
               exerciseId: true,
@@ -1019,7 +1027,9 @@ export async function loadPersonWorkoutRecords(
     planned: planned as unknown as { id: string; dayOfWeek: number; name: string }[],
     sessions: sessRows.map((s) => ({
       id: s.id,
-      dateISO: fromDateColumn(s.date),
+      dateISO: fromDateColumn(
+        (s as { completedOn?: Date | null }).completedOn ?? s.date,
+      ),
       label: s.isRest ? "Rest day" : workoutLabel(s),
       result: s.isRest ? "" : workoutResult(s),
       isRest: s.isRest,
@@ -1189,7 +1199,7 @@ export async function loadMovementComparisons(): Promise<MovementComparison[]> {
         distance: true,
         meters: true,
         seconds: true,
-        session: { select: { userId: true, date: true } },
+        session: { select: { userId: true, date: true, completedOn: true } },
         poolExercise: {
           select: { name: true, category: true, muscleGroup: true },
         },
@@ -1278,7 +1288,9 @@ export async function loadMovementComparisons(): Promise<MovementComparison[]> {
     }
 
     const uid = r.session.userId;
-    const day = fromDateColumn(r.session.date);
+    const day = fromDateColumn(
+      (r.session as { completedOn?: Date | null }).completedOn ?? r.session.date,
+    );
     const perDay = m.perUser.get(uid) ?? new Map<string, number>();
     perDay.set(day, Math.max(perDay.get(day) ?? 0, value));
     m.perUser.set(uid, perDay);
