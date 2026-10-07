@@ -48,9 +48,14 @@ function weightGrid(lo: number, hi: number, unit: string) {
 export function LineChart({
   series,
   weight = false,
+  dots = false,
 }: {
   series: Series[];
   weight?: boolean;
+  /** Draw the sessions as discrete points with no connecting stroke. A line
+   *  between two sessions claims a weight on the days between them, which for
+   *  lifting is a day nobody trained. */
+  dots?: boolean;
 }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
@@ -183,7 +188,7 @@ export function LineChart({
           {fmtDate(xMax)}
         </text>
 
-        {/* lines */}
+        {/* marks: a stroke through the points, or the points alone */}
         {visible.map((s) => {
           const d = s.points
             .map((p, i) => {
@@ -194,14 +199,18 @@ export function LineChart({
             .join(" ");
           return (
             <g key={s.id}>
-              <path d={d} fill="none" stroke={s.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+              {!dots && (
+                <path d={d} fill="none" stroke={s.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+              )}
               {s.points.map((p, i) => (
                 <circle
                   key={i}
                   cx={x(Date.parse(`${p.date}T00:00:00Z`))}
                   cy={y(p.value)}
-                  r={3}
+                  r={dots ? 4.5 : 3}
                   fill={s.color}
+                  stroke={dots ? "var(--surface)" : undefined}
+                  strokeWidth={dots ? 1.5 : undefined}
                 >
                   <title>
                     {s.name}: {p.value}

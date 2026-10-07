@@ -33,7 +33,11 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
         </select>
       </div>
 
-      <LineChart series={current.series} weight />
+      {/* Points, not a line: each series is a person's logged sessions, and a
+          stroke between two of them draws a lift on a day nobody trained. The
+          lift headline and detail cards do not belong here — the series are
+          people on one movement, so "which lifts are moving" has no meaning. */}
+      <LineChart series={current.series} weight dots />
     </div>
   );
 }

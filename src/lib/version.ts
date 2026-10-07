@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.541.0";
+export const APP_VERSION = "0.542.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.542.0",
+    summary: [
+      "The lift numbers and the Show details views now appear on each person's workout card on the exercise page, where the graph already was. In 0.541 they were only inside the personal menu, which is why they could not be found.",
+      "Weight charts draw one point per session instead of a connecting line \u2014 a line claimed a lift on the days between sessions, which were days nobody trained.",
+      "The Compare chart uses points too. It keeps its line-per-person shape; the lift detail cards do not apply there.",
+    ],
+  },
   {
     version: "0.541.0",
     summary: [

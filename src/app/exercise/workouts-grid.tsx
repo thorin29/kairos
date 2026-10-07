@@ -314,16 +314,24 @@ export function WorkoutsGrid({
                   </div>
 
                   {!personal && open.weightSeries.length > 0 && (
-                    <LineChart
-                      weight
-                      series={open.weightSeries.map((s) => ({
-                        id: s.exerciseId,
-                        name: s.name,
-                        color: s.color,
-                        unit: s.unit,
-                        points: s.points,
-                      }))}
-                    />
+                    <div>
+                      <LiftHeadline series={open.weightSeries} />
+                      <LineChart
+                        weight
+                        dots
+                        series={open.weightSeries.map((s) => ({
+                          id: s.exerciseId,
+                          name: s.name,
+                          color: s.color,
+                          unit: s.unit,
+                          points: s.points,
+                        }))}
+                      />
+                      <LiftDetailPanel
+                        scoped={open.weightSeries}
+                        all={open.weightSeries}
+                      />
+                    </div>
                   )}
 
                   <div className="grid grid-cols-3 gap-3">
@@ -839,6 +847,84 @@ function chooseGraph(open: PersonWorkout, todayDow: number): GraphChoice {
  * best was set (a stall is information), and the recent sessions in order.
  */
 
+
+/**
+ * The headline for a set of lifts: the record first, then whether it is still
+ * moving. These are the numbers people check; the chart underneath is for the
+ * long view. Nothing is compared across lifts, because a deadlift and an
+ * overhead press share no scale, and every figure is a real logged set.
+ */
+function LiftHeadline({ series }: { series: LiftSeries[] }) {
+  if (series.filter((s) => s.best).length === 0) return null;
+  // The chart answers "over months"; these answer the two questions people
+  // actually ask — what am I lifting now, and is it still moving.
+  return (
+          <div className="mt-3 space-y-2">
+            {series
+              .filter((s) => s.best)
+              .map((s) => {
+                const stats = liftStats(s);
+                return (
+                  <div
+                    key={s.exerciseId}
+                    className="rounded-xl border border-hairline bg-ground/40 px-3 py-2"
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="truncate text-sm font-medium">{s.name}</span>
+                      <span className="tabular shrink-0 text-sm font-semibold">
+                        {s.best!.value}
+                        {s.unit}
+                        {s.best!.reps ? ` \u00d7 ${s.best!.reps}` : ""}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                      {stats.delta !== null && (
+                        <span className={stats.delta > 0 ? "text-emerald-600" : undefined}>
+                          {stats.delta > 0 ? "+" : ""}
+                          {stats.delta}
+                          {s.unit} in 30 days
+                        </span>
+                      )}
+                      <span>{stats.sincePR}</span>
+                      <span>
+                        {stats.sessions} session{stats.sessions === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    {stats.recent.length > 1 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {stats.recent.map((p) => (
+                          <span
+                            key={p.date}
+                            className="tabular rounded-full bg-surface px-2 py-0.5 text-xs text-muted"
+                            title={p.date}
+                          >
+                            {p.value}
+                            {p.reps ? `\u00d7${p.reps}` : ""}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {(s.repMaxes?.length ?? 0) > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {s.repMaxes!.map((r) => (
+                          <span
+                            key={r.reps}
+                            className="tabular rounded-full border border-hairline px-2 py-0.5 text-xs text-muted"
+                            title={`Best at ${r.reps} reps \u2014 ${r.date}`}
+                          >
+                            {r.reps}r · {r.value}
+                            {s.unit}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+  );
+}
+
 type LiftSeries = PersonWorkout["weightSeries"][number];
 
 /**
@@ -1079,6 +1165,7 @@ function PersonalTop({
           </p>
           <LineChart
             weight
+            dots
             series={graph.series.map((s) => ({
               id: s.exerciseId,
               name: s.name,
@@ -1087,74 +1174,7 @@ function PersonalTop({
               points: s.points,
             }))}
           />
-          {/* The lift dashboard. The line answers "over months"; these answer the
-              two questions people actually ask — what am I lifting now, and is it
-              still moving. Each lift keeps its own numbers; nothing is compared
-              across lifts, because a deadlift and a shoulder press share no
-              scale. All real logged sets; no estimated maxes anywhere. */}
-          <div className="mt-3 space-y-2">
-            {graph.series
-              .filter((s) => s.best)
-              .map((s) => {
-                const stats = liftStats(s);
-                return (
-                  <div
-                    key={s.exerciseId}
-                    className="rounded-xl border border-hairline bg-ground/40 px-3 py-2"
-                  >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="truncate text-sm font-medium">{s.name}</span>
-                      <span className="tabular shrink-0 text-sm font-semibold">
-                        {s.best!.value}
-                        {s.unit}
-                        {s.best!.reps ? ` \u00d7 ${s.best!.reps}` : ""}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-                      {stats.delta !== null && (
-                        <span className={stats.delta > 0 ? "text-emerald-600" : undefined}>
-                          {stats.delta > 0 ? "+" : ""}
-                          {stats.delta}
-                          {s.unit} in 30 days
-                        </span>
-                      )}
-                      <span>{stats.sincePR}</span>
-                      <span>
-                        {stats.sessions} session{stats.sessions === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                    {stats.recent.length > 1 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {stats.recent.map((p) => (
-                          <span
-                            key={p.date}
-                            className="tabular rounded-full bg-surface px-2 py-0.5 text-xs text-muted"
-                            title={p.date}
-                          >
-                            {p.value}
-                            {p.reps ? `\u00d7${p.reps}` : ""}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {(s.repMaxes?.length ?? 0) > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {s.repMaxes!.map((r) => (
-                          <span
-                            key={r.reps}
-                            className="tabular rounded-full border border-hairline px-2 py-0.5 text-xs text-muted"
-                            title={`Best at ${r.reps} reps \u2014 ${r.date}`}
-                          >
-                            {r.reps}r · {r.value}
-                            {s.unit}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-          </div>
+          <LiftHeadline series={graph.series} />
           <LiftDetailPanel scoped={graph.series} all={open.weightSeries} />
         </div>
       )}

@@ -12,6 +12,22 @@ planned movement's id, written only when it differs from what was logged.
 fills the slot it replaced, and the movement reports `loggedAs: { poolExerciseId, name }` — what was
 actually done. Clients show the slot with the variation's name and its value instead of a blank row.
 
+## 2026-10 — Shipped is not the same as reachable (v0.542.0)
+
+The detail cards went into `PersonalTop`, which renders only when `personal` is true, the person's
+overlay is open, and the overlay is on its menu step. The exercise page renders the per-person
+cards with `personal` defaulting to **false**, so the work was live and invisible, and it was
+reported as missing because it effectively was.
+
+The check that would have caught it is tracing the component up to a route before claiming it is
+done, not grepping that the symbol exists. A typecheck proves a component compiles; it says nothing
+about whether anything renders it.
+
+The headline is now its own `LiftHeadline` component used at both sites rather than markup living
+inside one of them. Charts draw points with no connecting stroke (`dots` on `LineChart`), including
+the Compare card. Compare keeps the chart only: its series are **people** on one movement, so the
+per-lift cards ("which lifts are moving") would be meaningless there.
+
 ## 2026-10 — The lift detail: three cards, no new queries (v0.541.0)
 
 Behind the headline numbers, "Show details" opens three cards, each answering one question:
