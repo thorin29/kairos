@@ -1140,6 +1140,8 @@ function LiftHeadline({ series }: { series: LiftSeries[] }) {
 function MovementCharts({ series }: { series: LiftSeries }) {
   const [open, setOpen] = useState(false);
   const reps = series.repMaxes ?? [];
+  const tone =
+    (series.muscleGroup ? MG_COLOR[series.muscleGroup] : null) ?? series.color;
   return (
     <div className="mt-2">
       <button
@@ -1158,7 +1160,9 @@ function MovementCharts({ series }: { series: LiftSeries }) {
               {
                 id: series.exerciseId,
                 name: series.name,
-                color: series.color,
+                // The muscle group's colour, not the movement's own: the dots
+                // should read as the same thing the body map just highlighted.
+                color: tone,
                 unit: series.unit,
                 points: series.points,
               },
@@ -1167,7 +1171,7 @@ function MovementCharts({ series }: { series: LiftSeries }) {
           {reps.length > 0 && (
             <div className="mt-3">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-                Best weight at each rep count
+                Best reps per weight
               </p>
               {[...reps]
                 .sort((a, b) => a.reps - b.reps)
@@ -1180,8 +1184,11 @@ function MovementCharts({ series }: { series: LiftSeries }) {
                       </span>
                       <span className="h-2 min-w-0 flex-1 rounded-full bg-surface">
                         <span
-                          className="block h-2 rounded-full bg-accent"
-                          style={{ width: `${(r.value / max) * 100}%` }}
+                          className="block h-2 rounded-full"
+                          style={{
+                            width: `${(r.value / max) * 100}%`,
+                            background: tone,
+                          }}
                         />
                       </span>
                       <span className="tabular w-20 shrink-0 text-right text-xs font-semibold">

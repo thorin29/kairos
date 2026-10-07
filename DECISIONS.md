@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-10 — Compare as bars; colour follows the muscle (v0.553.0 / app 0.367.0)
+
+**Compare is a bar per person.** It was a dot plot of everyone's sessions over time, which answered
+a question nobody asks here: between people, the interesting thing is their best, not the shape of
+their history. One bar each on one scale reads at a glance, and a toggle switches the scale between
+heaviest weight and most reps.
+
+Each bar carries the OTHER number above it — the reps at that weight, or the weight at those reps.
+A bar alone is one number, and one number cannot tell you whether 175 for 2 beats 155 for 8.
+`CompareSeries` therefore gained `bestWeight` and `bestReps` as whole sets rather than bare maxima,
+so neither figure arrives without its context.
+
+**Colour follows the muscle, not the theme.** Chart dots and rep-max bars now take the muscle
+group's colour on both clients. That palette is a shared constant, identical on web and Android and
+independent of the theme accent, so the chart reads as the same thing the body map just highlighted
+and the two platforms agree regardless of which theme a device is set to.
+
+Worth recording, because it looked like a bug and is not: the app's accent differs from the web's
+because `ThemeScheme` is a LOCAL device setting in `SettingsStore`, not synced from the server. A
+phone on OLIVE and a browser on TEAL are both behaving correctly.
+
+Also: the rep-max pills under the app's chart said the same thing as the card directly above them,
+detached from any chart and from each other. Removed. And "Best weight at each rep count" is now
+"Best reps per weight" on both — note the rows are still keyed by rep count, so if the new name
+means the data should pivot to one row per weight, that is a further change.
+
 ## 2026-10 — Both figures always; one disclosure, per movement (v0.552.0 / app 0.366.0)
 
 **Both bodies stay.** `view` used to remove a figure — a deadlift showed only the back. Taking a
