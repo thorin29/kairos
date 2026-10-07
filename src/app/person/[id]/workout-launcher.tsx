@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckIcon, DumbbellIcon } from "@/components/icons";
 import { formatShort, addDays, dayOfWeek } from "@/lib/dates";
 import { DateField } from "@/components/date-field";
-import { loadLoggedWeights, overdueWorkoutDates } from "@/lib/actions/workouts";
+import {
+  loadLoggedWeights,
+  overdueWorkoutDates,
+  type LoggedSet,
+} from "@/lib/actions/workouts";
 import { TodayPlan } from "@/app/exercise/workout-card";
 import { CustomWorkoutForm } from "@/app/exercise/workouts-grid";
 import type {
@@ -78,7 +82,7 @@ export function WorkoutLauncher({
 
   const [open, setOpen] = useState(false);
   const [logDate, setLogDate] = useState(dateISO);
-  const [loggedByPool, setLoggedByPool] = useState<Record<string, string>>({});
+  const [loggedByPool, setLoggedByPool] = useState<Record<string, LoggedSet>>({});
   const [loadingLogged, setLoadingLogged] = useState(false)
   const [overdueDates, setOverdueDates] = useState<string[]>([]);
 

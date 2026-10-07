@@ -1223,23 +1223,34 @@ export async function deleteWorkoutSession(sessionId: string): Promise<void> {
 export async function loadLoggedWeights(
   userId: string,
   dateISO: string,
-): Promise<Record<string, string>> {
+): Promise<Record<string, LoggedSet>> {
   await requireInteractive();
   await requireCanActFor(userId);
   const sessions = await prisma.workoutSession.findMany({
     where: { userId, date: toDateColumn(dateISO) },
-    select: { sets: { select: { poolExerciseId: true, weight: true } } },
+    // Reps as well as weight. Without them the plan could prefill what you
+    // lifted but not how many times, so reopening a logged day showed a
+    // half-filled row and a button offering to log it again.
+    select: {
+      sets: { select: { poolExerciseId: true, weight: true, reps: true } },
+    },
   });
-  const out: Record<string, string> = {};
+  const out: Record<string, LoggedSet> = {};
   for (const session of sessions) {
     for (const set of session.sets) {
       if (set.poolExerciseId != null && set.weight != null) {
-        out[set.poolExerciseId] = String(set.weight);
+        out[set.poolExerciseId] = {
+          weight: String(set.weight),
+          reps: set.reps != null ? String(set.reps) : "",
+        };
       }
     }
   }
   return out;
 }
+
+/** A set already logged for a date, for prefilling the plan's fields. */
+export type LoggedSet = { weight: string; reps: string };
 
 /** Overdue workout dates for a person (today's overdue window), for the web's
  *  Overdue section. */

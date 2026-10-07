@@ -6,6 +6,7 @@ import {
   listExercisePool,
   logHiitWorkout,
   restDay,
+  type LoggedSet,
 } from "@/lib/actions/workouts";
 import { CheckIcon, DumbbellIcon, MoonIcon } from "@/components/icons";
 import {
@@ -64,8 +65,8 @@ export function TodayPlan({
   rested: boolean;
   unitSystem: UnitSystem;
   heading?: string;
-  /** Already-logged weights for this date, keyed by pool-exercise id. */
-  loggedByPool?: Record<string, string>;
+  /** Already-logged sets for this date, keyed by pool-exercise id. */
+  loggedByPool?: Record<string, LoggedSet>;
 }) {
   const todays = paused ? [] : workouts.filter((w) => !w.isRest);
   const done = new Set(doneLabels.map((l) => l.trim().toLowerCase()));
@@ -195,7 +196,7 @@ function PlanRow({
   dateISO: string;
   unitSystem: UnitSystem;
   done: boolean;
-  loggedByPool?: Record<string, string>;
+  loggedByPool?: Record<string, LoggedSet>;
   /** Rendered inside a shared muscle-group card: drop this row's own card. */
   bare?: boolean;
   /** Hide the plan name when the group heading already says it. */
@@ -212,8 +213,11 @@ function PlanRow({
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const e of workout.exercises) {
-      if (e.poolExerciseId && loggedByPool[e.poolExerciseId]) {
-        init[e.id] = loggedByPool[e.poolExerciseId];
+      const logged = e.poolExerciseId ? loggedByPool[e.poolExerciseId] : null;
+      if (logged) {
+        init[e.id] = logged.weight;
+        // Reps live under a suffixed key, the same one the log action reads.
+        if (logged.reps) init[`${e.id}__reps`] = logged.reps;
       }
     }
     return init;
@@ -243,6 +247,17 @@ function PlanRow({
       }
     }
   }
+
+  // Already recorded for this date: the fields are prefilled with what was
+  // logged, so the button saves a correction rather than a first entry. The
+  // phone has said "edit weight" for a while; the web still offered to log
+  // something that was plainly sitting in the boxes.
+  const alreadyLogged =
+    workout.exercises.length > 0 &&
+    workout.exercises.every(
+      (e) => e.poolExerciseId && loggedByPool[e.poolExerciseId],
+    );
+  if (alreadyLogged) logLabel = "Edit";
 
   const setVal = (key: string, v: string) =>
     setValues((prev) => ({ ...prev, [key]: v.replace(/[^\d.]/g, "") }));

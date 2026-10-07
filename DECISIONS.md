@@ -1,5 +1,36 @@
 # Decisions
 
+## 2026-10 — The attendance grid never reached this week (v0.559.0 / app 0.371.0)
+
+Both clients built the window as `today - 111 days`, then snapped that start back to Sunday, then
+drew 16 weeks. Snapping moved the START earlier without moving the END, so the range finished at
+`today - dayOfWeek`. On a Wednesday it stopped the previous Saturday and today could not appear at
+all; only on a Sunday was it correct. Verified against 2026-10-07: the old window ran to Oct 3, the
+new one to Oct 10.
+
+Both now anchor to the current week and count back — `startOfWeek(today) - 15 weeks` — so the last
+column is always the week in progress.
+
+### Three or more muscle groups in a day
+
+Two reads best as a diagonal split and that stays. Three cannot extend it, and wedges or quarters
+in an 18px square turn to mud, so 3+ becomes equal vertical bands with hard stops. One rule that
+degrades predictably, and the change of grammar is itself a signal that the day holds more than two.
+
+### Prefilling a logged day
+
+`loadLoggedWeights` selected `poolExerciseId` and `weight` only. Reopening a logged day therefore
+filled in what was lifted but not how many times, under a button still offering to "Log weight" —
+for something plainly already in the boxes. It returns `{ weight, reps }` now, both prefill, and the
+button reads "Edit" when every movement in the workout is already recorded. The phone has behaved
+this way for a while; this is the web catching up.
+
+### Compare's top gridline
+
+Adding the rounded ceiling unconditionally put a 190 label on top of a 185 one when the tallest bar
+was itself a common load. It is only added when something actually rises above the highest labelled
+line.
+
 ## 2026-10 — Completion is identity, not a label (v0.557.0)
 
 Two planned workouts on one day both filed under Back are both *named* "Back", because a planned

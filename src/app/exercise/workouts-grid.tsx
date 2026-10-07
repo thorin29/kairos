@@ -25,6 +25,7 @@ import {
   markWorkedOut,
   loadLoggedWeights,
   overdueWorkoutDates,
+  type LoggedSet,
 } from "@/lib/actions/workouts";
 import { addDays, dayOfWeek, formatShort } from "@/lib/dates";
 import { PlanBuilder } from "./plan-builder";
@@ -102,7 +103,7 @@ export function WorkoutsGrid({
   const [logDate, setLogDate] = useState(todayISO);
   // Weights already logged for the picked earlier day (pool-exercise id -> value),
   // so the plan pre-fills them like the phone does.
-  const [loggedByPool, setLoggedByPool] = useState<Record<string, string>>({});
+  const [loggedByPool, setLoggedByPool] = useState<Record<string, LoggedSet>>({});
   const [loadingLogged, setLoadingLogged] = useState(false);
   const [overdueDates, setOverdueDates] = useState<string[]>([]);
   // Bumped after skipping a missed day so the Overdue list re-reads itself.
@@ -1349,8 +1350,13 @@ function LiftDetailPanel({
   {
     const end = new Date();
     end.setHours(12, 0, 0, 0);
-    const start = new Date(end.getTime() - 111 * 86400000);
-    start.setDate(start.getDate() - start.getDay()); // back to Sunday
+    // Anchor to THIS week and count back, so the last column is the week in
+    // progress. Going back 111 days and then snapping to Sunday moved the
+    // window's start earlier without moving its end, so it finished at
+    // today minus the weekday — on a Wednesday the current week was missing
+    // and today never appeared at all.
+    const start = new Date(end);
+    start.setDate(start.getDate() - start.getDay() - 15 * 7);
     for (let w = 0; w < 16; w++) {
       const col: Cell[] = [];
       for (const dow of rows) {
@@ -1365,10 +1371,21 @@ function LiftDetailPanel({
   /** Up to two colours per square; three slices at this size is mud. */
   const cellStyle = (groups: string[]): React.CSSProperties => {
     if (groups.length === 0) return {};
-    const c1 = groupColor.get(groups[0]) ?? "var(--accent)";
-    if (groups.length === 1) return { background: c1 };
-    const c2 = groupColor.get(groups[1]) ?? c1;
-    return { background: `linear-gradient(135deg, ${c1} 0 50%, ${c2} 50% 100%)` };
+    const cs = groups.map((g) => groupColor.get(g) ?? "var(--color-accent)");
+    if (cs.length === 1) return { background: cs[0] };
+    // Two reads best as a diagonal split. Three or more cannot extend that, so
+    // they become equal vertical bands: one rule that degrades predictably,
+    // where wedges or quarters at 18px turn to mud.
+    if (cs.length === 2) {
+      return {
+        background: `linear-gradient(135deg, ${cs[0]} 0 50%, ${cs[1]} 50% 100%)`,
+      };
+    }
+    const n = cs.length;
+    const stops = cs
+      .map((c, i) => `${c} ${(i / n) * 100}% ${((i + 1) / n) * 100}%`)
+      .join(", ");
+    return { background: `linear-gradient(90deg, ${stops})` };
   };
 
   if (movement.length === 0 && trained.size === 0) {

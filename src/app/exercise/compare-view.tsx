@@ -69,9 +69,12 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
   // The top line, when yMax lands on a round load (ending 0 or 5), is drawn
   // solid and labelled like the others — otherwise the tallest bar ends against
   // a dotted line with no number to read it against.
-  const topIsRound = grid.yMax % 5 === 0;
+  // Only when something actually rises above the highest labelled load. A
+  // tallest bar of 185 already has 185 drawn through its top, so adding the
+  // rounded ceiling put a 190 label on top of it saying nothing.
+  const highestMajor = grid.major.length ? Math.max(...grid.major) : 0;
   const ticks =
-    topIsRound && !grid.major.includes(grid.yMax)
+    top > highestMajor && grid.yMax % 5 === 0 && !grid.major.includes(grid.yMax)
       ? [...grid.major, grid.yMax]
       : grid.major;
   // The dotted lines between the labelled loads. Without them a bar that tops
