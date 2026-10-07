@@ -207,10 +207,10 @@ export function LineChart({
                   key={i}
                   cx={x(Date.parse(`${p.date}T00:00:00Z`))}
                   cy={y(p.value)}
-                  r={dots ? 4.5 : 3}
+                  r={dots ? 3 : 3}
                   fill={s.color}
                   stroke={dots ? "var(--surface)" : undefined}
-                  strokeWidth={dots ? 1.5 : undefined}
+                  strokeWidth={dots ? 1 : undefined}
                 >
                   <title>
                     {s.name}: {p.value}

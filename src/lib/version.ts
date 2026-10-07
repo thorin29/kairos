@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.542.0";
+export const APP_VERSION = "0.543.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.543.0",
+    summary: [
+      "The lift section leads with the numbers \u2014 record, 30-day change, time since your best and session count, each in its own tile. No chart until you ask for one.",
+      "The session plot moved under Show details, as the last card.",
+      "Points on every weight chart are smaller.",
+      "\u201cWhich lifts are moving\u201d uses a fixed scale, so one movement no longer fills the whole bar.",
+      "The attendance grid has weekday and month labels, a legend and larger squares, and says what a filled square means.",
+    ],
+  },
   {
     version: "0.542.0",
     summary: [

@@ -316,20 +316,22 @@ export function WorkoutsGrid({
                   {!personal && open.weightSeries.length > 0 && (
                     <div>
                       <LiftHeadline series={open.weightSeries} />
-                      <LineChart
-                        weight
-                        dots
-                        series={open.weightSeries.map((s) => ({
-                          id: s.exerciseId,
-                          name: s.name,
-                          color: s.color,
-                          unit: s.unit,
-                          points: s.points,
-                        }))}
-                      />
                       <LiftDetailPanel
                         scoped={open.weightSeries}
                         all={open.weightSeries}
+                        chart={
+                          <LineChart
+                            weight
+                            dots
+                            series={open.weightSeries.map((s) => ({
+                              id: s.exerciseId,
+                              name: s.name,
+                              color: s.color,
+                              unit: s.unit,
+                              points: s.points,
+                            }))}
+                          />
+                        }
                       />
                     </div>
                   )}
@@ -855,75 +857,96 @@ function chooseGraph(open: PersonWorkout, todayDow: number): GraphChoice {
  * overhead press share no scale, and every figure is a real logged set.
  */
 function LiftHeadline({ series }: { series: LiftSeries[] }) {
-  if (series.filter((s) => s.best).length === 0) return null;
-  // The chart answers "over months"; these answer the two questions people
-  // actually ask — what am I lifting now, and is it still moving.
+  const lifts = series.filter((s) => s.best);
+  if (lifts.length === 0) return null;
+  // Numbers first, no chart. A single current value is a stat tile, not a
+  // plot — "what can I lift" and "is it moving" are the two things checked
+  // most, and neither needs a line to answer.
   return (
-          <div className="mt-3 space-y-2">
-            {series
-              .filter((s) => s.best)
-              .map((s) => {
-                const stats = liftStats(s);
-                return (
-                  <div
-                    key={s.exerciseId}
-                    className="rounded-xl border border-hairline bg-ground/40 px-3 py-2"
-                  >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="truncate text-sm font-medium">{s.name}</span>
-                      <span className="tabular shrink-0 text-sm font-semibold">
-                        {s.best!.value}
-                        {s.unit}
-                        {s.best!.reps ? ` \u00d7 ${s.best!.reps}` : ""}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-                      {stats.delta !== null && (
-                        <span className={stats.delta > 0 ? "text-emerald-600" : undefined}>
-                          {stats.delta > 0 ? "+" : ""}
-                          {stats.delta}
-                          {s.unit} in 30 days
-                        </span>
-                      )}
-                      <span>{stats.sincePR}</span>
-                      <span>
-                        {stats.sessions} session{stats.sessions === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                    {stats.recent.length > 1 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {stats.recent.map((p) => (
-                          <span
-                            key={p.date}
-                            className="tabular rounded-full bg-surface px-2 py-0.5 text-xs text-muted"
-                            title={p.date}
-                          >
-                            {p.value}
-                            {p.reps ? `\u00d7${p.reps}` : ""}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {(s.repMaxes?.length ?? 0) > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {s.repMaxes!.map((r) => (
-                          <span
-                            key={r.reps}
-                            className="tabular rounded-full border border-hairline px-2 py-0.5 text-xs text-muted"
-                            title={`Best at ${r.reps} reps \u2014 ${r.date}`}
-                          >
-                            {r.reps}r · {r.value}
-                            {s.unit}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+    <div className="mt-3 space-y-2">
+      {lifts.map((s) => {
+        const stats = liftStats(s);
+        const first = [...s.points].sort((a, b) => (a.date < b.date ? -1 : 1))[0];
+        return (
+          <div
+            key={s.exerciseId}
+            className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5"
+          >
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              {s.name}
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <StatTile
+                k="record"
+                v={`${s.best!.value}`}
+                unit={`${s.unit}${s.best!.reps ? ` \u00d7 ${s.best!.reps}` : ""}`}
+                sub={formatShort(s.best!.date)}
+              />
+              <StatTile
+                k="30 days"
+                v={stats.delta === null ? "\u2014" : `${stats.delta > 0 ? "+" : ""}${stats.delta}`}
+                unit={stats.delta === null ? "" : s.unit}
+                sub={
+                  stats.delta === null
+                    ? "no older session"
+                    : stats.delta > 0
+                      ? "still climbing"
+                      : "flat"
+                }
+                tone={stats.delta !== null && stats.delta > 0 ? "up" : undefined}
+              />
+              <StatTile
+                k="since best"
+                v={stats.sincePR.replace(/^best /, "").replace(/ ago$/, "")}
+                unit=""
+                sub="last record"
+              />
+              <StatTile
+                k="sessions"
+                v={`${stats.sessions}`}
+                unit=""
+                sub={first ? `since ${formatShort(first.date)}` : ""}
+              />
+            </div>
           </div>
+        );
+      })}
+    </div>
   );
 }
+
+function StatTile({
+  k,
+  v,
+  unit,
+  sub,
+  tone,
+}: {
+  k: string;
+  v: string;
+  unit: string;
+  sub: string;
+  tone?: "up";
+}) {
+  return (
+    <div className="rounded-lg border border-hairline bg-surface px-2.5 py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+        {k}
+      </p>
+      <p
+        className={`tabular font-display text-xl font-semibold leading-tight ${
+          tone === "up" ? "text-emerald-600" : ""
+        }`}
+      >
+        {v}
+        {unit && <span className="ml-0.5 text-xs font-normal text-muted">{unit}</span>}
+      </p>
+      {sub && <p className="text-[11px] text-muted">{sub}</p>}
+    </div>
+  );
+}
+
+const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 type LiftSeries = PersonWorkout["weightSeries"][number];
 
@@ -936,9 +959,13 @@ type LiftSeries = PersonWorkout["weightSeries"][number];
 function LiftDetailPanel({
   scoped,
   all,
+  chart,
 }: {
   scoped: LiftSeries[];
   all: LiftSeries[];
+  /** The session plot, shown last. The numbers lead; the chart is the long
+   *  view and does not need to be the first thing on the page. */
+  chart?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -1024,9 +1051,9 @@ function LiftDetailPanel({
                             <span className="tabular w-12 shrink-0 text-xs text-muted">
                               {r.reps} rep{r.reps === 1 ? "" : "s"}
                             </span>
-                            <span className="h-3 min-w-0 flex-1 rounded-full bg-surface">
+                            <span className="h-2 min-w-0 flex-1 rounded-full bg-surface">
                               <span
-                                className="block h-3 rounded-full bg-accent"
+                                className="block h-2 rounded-full bg-accent"
                                 style={{ width: `${(r.value / max) * 100}%` }}
                               />
                             </span>
@@ -1051,16 +1078,22 @@ function LiftDetailPanel({
               <p className="mt-0.5 text-xs text-muted">Change over 90 days</p>
               <div className="mt-2 space-y-1.5">
                 {movement.map((m) => {
-                  const span = Math.max(...movement.map((x) => Math.abs(x.pct)), 1);
+                  // A fixed 30% scale, widened only if something beat it. With a
+                  // scale set by the best lift, a single movement always filled
+                  // the whole track and looked like a bar chart of one thing.
+                  const span = Math.max(
+                    30,
+                    ...movement.map((x) => Math.abs(x.pct)),
+                  );
                   const stalled = m.pct < 10;
                   return (
                     <div key={m.id} className="flex items-center gap-2">
                       <span className="w-24 shrink-0 truncate text-xs">
                         {m.name}
                       </span>
-                      <span className="h-3 min-w-0 flex-1 rounded-full bg-surface">
+                      <span className="h-2 min-w-0 flex-1 rounded-full bg-surface">
                         <span
-                          className={`block h-3 rounded-full ${stalled ? "bg-amber-500" : "bg-accent"}`}
+                          className={`block h-2 rounded-full ${stalled ? "bg-amber-500" : "bg-accent"}`}
                           style={{
                             width: `${(Math.abs(m.pct) / span) * 100}%`,
                           }}
@@ -1088,22 +1121,72 @@ function LiftDetailPanel({
               Did you show up
             </p>
             <p className="mt-0.5 text-xs text-muted">
-              Sessions logged, last 16 weeks
+              One square per day. Filled means a set was logged.
             </p>
-            <div className="mt-2 flex gap-[3px] overflow-x-auto">
-              {weeks.map((row, wi) => (
-                <div key={wi} className="flex flex-col gap-[3px]">
-                  {row.map((cell) => (
-                    <span
-                      key={cell.date}
-                      title={`${cell.date}${cell.on ? " \u2014 logged" : ""}`}
-                      className={`h-3 w-3 rounded-[3px] ${cell.on ? "bg-accent" : "bg-surface"}`}
-                    />
+            <div className="mt-2 flex gap-2 overflow-x-auto">
+              {/* Weekday rail, so a row of squares means something. */}
+              <div className="flex shrink-0 flex-col gap-[4px] pt-[18px]">
+                {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+                  <span
+                    key={i}
+                    className="h-4 text-[10px] leading-4 text-muted"
+                  >
+                    {i % 2 === 0 ? d : ""}
+                  </span>
+                ))}
+              </div>
+              <div>
+                {/* Month markers across the top. */}
+                <div className="flex gap-[4px]">
+                  {weeks.map((row, wi) => {
+                    const m = row[0].date.slice(5, 7);
+                    const prev = wi > 0 ? weeks[wi - 1][0].date.slice(5, 7) : "";
+                    return (
+                      <span
+                        key={wi}
+                        className="w-4 text-[10px] leading-4 text-muted"
+                      >
+                        {m !== prev ? MONTH_ABBR[Number(m) - 1] : ""}
+                      </span>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-[4px]">
+                  {weeks.map((row, wi) => (
+                    <div key={wi} className="flex flex-col gap-[4px]">
+                      {row.map((cell) => (
+                        <span
+                          key={cell.date}
+                          title={`${cell.date}${cell.on ? " \u2014 logged" : ""}`}
+                          className={`h-4 w-4 rounded-[3px] ${cell.on ? "bg-accent" : "bg-surface"}`}
+                        />
+                      ))}
+                    </div>
                   ))}
                 </div>
-              ))}
+              </div>
+            </div>
+            <div className="mt-2 flex items-center gap-3 text-[11px] text-muted">
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-[3px] bg-surface" /> no session
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-[3px] bg-accent" /> logged
+              </span>
             </div>
           </div>
+
+          {chart && (
+            <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                Every session
+              </p>
+              <p className="mt-0.5 text-xs text-muted">
+                One point per logged set
+              </p>
+              <div className="mt-2">{chart}</div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1163,19 +1246,24 @@ function PersonalTop({
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
             {graph.label}
           </p>
-          <LineChart
-            weight
-            dots
-            series={graph.series.map((s) => ({
-              id: s.exerciseId,
-              name: s.name,
-              color: s.color,
-              unit: s.unit,
-              points: s.points,
-            }))}
-          />
           <LiftHeadline series={graph.series} />
-          <LiftDetailPanel scoped={graph.series} all={open.weightSeries} />
+          <LiftDetailPanel
+            scoped={graph.series}
+            all={open.weightSeries}
+            chart={
+              <LineChart
+                weight
+                dots
+                series={graph.series.map((s) => ({
+                  id: s.exerciseId,
+                  name: s.name,
+                  color: s.color,
+                  unit: s.unit,
+                  points: s.points,
+                }))}
+              />
+            }
+          />
         </div>
       )}
 
