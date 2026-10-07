@@ -144,10 +144,13 @@ export function LineChart({
             x2={W - PAD.right}
             y1={y(t)}
             y2={y(t)}
-            stroke="var(--color-hairline)"
+            // --color-hairline is already near-white; dashed at half opacity it
+            // was invisible. A mid grey at low opacity reads about as strong as
+            // a solid hairline, which keeps minor lines under major ones.
+            stroke="var(--color-muted)"
             strokeWidth={1}
             strokeDasharray="2 4"
-            opacity={0.5}
+            opacity={0.28}
           />
         ))}
 

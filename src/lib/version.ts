@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.555.0";
+export const APP_VERSION = "0.556.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.556.0",
+    summary: [
+      "The dotted gridlines on every chart are dark enough to see now, and Compare draws them too, so a bar never tops out over blank space.",
+      "A set with no rep count shows as \u00d71 rather than \u00d70 \u2014 the set happened, so zero was never the right word for it.",
+      "The reset button on the body map is a reset icon instead of a calendar.",
+    ],
+  },
   {
     version: "0.555.0",
     summary: [

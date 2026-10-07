@@ -6,13 +6,13 @@ import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
 import {
   CheckIcon,
-  CalendarIcon,
   CalendarPlusIcon,
   DumbbellIcon,
   BookIcon,
   MoonIcon,
   PlusIcon,
   TrashIcon,
+  RefreshIcon,
   TrophyIcon,
 } from "@/components/icons";
 import {
@@ -1031,7 +1031,7 @@ function LiftBlocks({
               aria-label="Back to today's workout"
               title="Back to today's workout"
             >
-              <CalendarIcon className="h-4 w-4" />
+              <RefreshIcon className="h-4 w-4" />
             </button>
           )}
           <BodyMap

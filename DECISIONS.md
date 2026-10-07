@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-10 — Gridlines, the rep floor, and the reset icon (v0.556.0 / app 0.370.0)
+
+**The minor gridlines were invisible, not subtle.** They were `--color-hairline` — already a
+near-white #dce3ea — dashed at 0.5 opacity, which on white is almost nothing. They are now a mid
+grey at 0.28. Dashes read lighter than a solid line of the same colour, so this lands just under
+the solid major lines rather than above them, keeping the hierarchy intact.
+
+Compare draws them too. Without minor lines a bar that tops out above the highest common load (175
+against a 155 label) floats over blank space with nothing to measure it by. `weightGrid` already
+returned `minor`; Compare was only using `major`.
+
+**A logged set is at least one rep.** `r.reps ?? 0` produced "175 lb × 0" for rows that predate
+rep logging. Zero reps says the lift was not completed, which is the opposite of what a row in
+`SessionSet` means — the set exists because it was done. The floor is 1.
+
+**The reset button is a reset icon.** It was a calendar on both clients, which suggests opening a
+date. The button undoes a selection and returns to today's plan, so `RefreshIcon` / `KairosIcons.Refresh`.
+
 ## 2026-10 — One axis, one chart per group (v0.555.0 / app 0.369.0)
 
 **The axis is the dot chart's axis.** Compare was dividing its maximum into quarters and rounding,

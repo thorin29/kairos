@@ -67,6 +67,10 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
   const grid = weightGrid(0, top, current.unit);
   const ceil = Math.max(grid.yMax, 1);
   const ticks = grid.major;
+  // The dotted lines between the labelled loads. Without them a bar that tops
+  // out above the last common load floats over blank space with nothing to
+  // read it against.
+  const minorTicks = grid.minor.filter((v) => !grid.major.includes(v));
 
   const width =
     PAD_L +
@@ -109,6 +113,22 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
           role="img"
           aria-label={`Best sets for ${current.name}`}
         >
+          {minorTicks.map((t) => {
+            const y = PAD_T + PLOT_H - (t / ceil) * PLOT_H;
+            return (
+              <line
+                key={`m${t}`}
+                x1={PAD_L - 4}
+                x2={width - PAD_R}
+                y1={y}
+                y2={y}
+                stroke="var(--color-muted)"
+                strokeWidth={1}
+                strokeDasharray="2 4"
+                opacity={0.28}
+              />
+            );
+          })}
           {ticks.map((t) => {
             const y = PAD_T + PLOT_H - (t / ceil) * PLOT_H;
             return (

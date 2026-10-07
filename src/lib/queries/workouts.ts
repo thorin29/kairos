@@ -1286,7 +1286,10 @@ export async function loadMovementComparisons(): Promise<MovementComparison[]> {
       const key = `${r.poolExerciseId}:${uid}`;
       const byWeight = barSets.get(key) ?? new Map<number, { reps: number; date: string }>();
       const cur = byWeight.get(r.weight);
-      const reps = r.reps ?? 0;
+      // A set exists because it was done, so the floor is one rep. Older rows
+      // predate rep logging and carry null; showing "175 x 0" says the lift
+      // was not completed, which is the opposite of what the row means.
+      const reps = Math.max(r.reps ?? 1, 1);
       byWeight.set(r.weight, {
         reps: Math.max(reps, cur?.reps ?? 0),
         date: !cur || day > cur.date ? day : cur.date,
