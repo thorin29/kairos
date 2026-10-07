@@ -65,22 +65,28 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
   // while the labels stay numbers a person actually loads.
   const top = Math.max(...all.map((b) => b.value));
   const grid = weightGrid(0, top, current.unit);
-  const ceil = Math.max(grid.yMax, 1);
+  // The tallest bar defines the top of the plot. Using the rounded ceiling left
+  // headroom above the highest lift and then drew lines into it — solid at
+  // first, dotted after that, both saying nothing. Nothing is charted above the
+  // heaviest thing anyone lifted.
+  const ceil = Math.max(top, 1);
   // The top line, when yMax lands on a round load (ending 0 or 5), is drawn
   // solid and labelled like the others — otherwise the tallest bar ends against
   // a dotted line with no number to read it against.
   // Only when something actually rises above the highest labelled load. A
   // tallest bar of 185 already has 185 drawn through its top, so adding the
   // rounded ceiling put a 190 label on top of it saying nothing.
-  const highestMajor = grid.major.length ? Math.max(...grid.major) : 0;
+  const majors = grid.major.filter((v) => v <= top);
+  // The top gets its own labelled line only when it is a load someone would
+  // recognise; an odd number just leaves the bar standing above the last line.
   const ticks =
-    top > highestMajor && grid.yMax % 5 === 0 && !grid.major.includes(grid.yMax)
-      ? [...grid.major, grid.yMax]
-      : grid.major;
+    top % 5 === 0 && !majors.includes(top) ? [...majors, top] : majors;
   // The dotted lines between the labelled loads. Without them a bar that tops
   // out above the last common load floats over blank space with nothing to
   // read it against.
-  const minorTicks = grid.minor.filter((v) => !grid.major.includes(v));
+  const minorTicks = grid.minor.filter(
+    (v) => v <= top && !ticks.includes(v),
+  );
 
   const width =
     PAD_L +

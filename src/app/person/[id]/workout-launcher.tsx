@@ -103,26 +103,24 @@ export function WorkoutLauncher({
     };
   }, [open, userId]);
 
-  // Pull already-logged weights for a back-dated day so the plan pre-fills them.
+  // Pull already-logged weights for the day being shown, TODAY INCLUDED, so the
+  // plan pre-fills what was recorded. Today used to be excluded outright, which
+  // meant the one day you are most likely to be correcting was the one day the
+  // fields came up blank under a button offering to log it afresh.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    if (logDate !== todayISO) {
-      setLoadingLogged(true);
-      loadLoggedWeights(userId, logDate)
-        .then((m) => {
-          if (!cancelled) setLoggedByPool(m);
-        })
-        .catch(() => {
-          if (!cancelled) setLoggedByPool({});
-        })
-        .finally(() => {
-          if (!cancelled) setLoadingLogged(false);
-        });
-    } else {
-      setLoggedByPool({});
-      setLoadingLogged(false);
-    }
+    setLoadingLogged(true);
+    loadLoggedWeights(userId, logDate)
+      .then((m) => {
+        if (!cancelled) setLoggedByPool(m);
+      })
+      .catch(() => {
+        if (!cancelled) setLoggedByPool({});
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingLogged(false);
+      });
     return () => {
       cancelled = true;
     };

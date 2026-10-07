@@ -1,5 +1,39 @@
 # Decisions
 
+## 2026-10 — Today was the one day excluded from its own prefill (v0.560.0 / app 0.372.0)
+
+Adding `reps` to `loadLoggedWeights` in 0.559 changed nothing, because the fetch never ran for
+today. Both call sites were guarded:
+
+```ts
+if (logDate !== todayISO) { loadLoggedWeights(...) } else { setLoggedByPool({}); }
+```
+
+The launcher's comment said it outright — "already-logged weights for a BACK-DATED day". Today was
+deliberately excluded, so the one day you are most likely to be correcting was the only day whose
+fields came up blank, under a button offering to log it afresh. Both now fetch for the date being
+shown, today included.
+
+Worth noting how this hid: 0.559's change was real and correct, and verifying it by reading the
+query would have shown reps coming back. The thing that was broken sat one layer up, in a
+condition that decided whether to ask at all. A fix to the right function is still no fix when
+nothing calls it.
+
+### Compare tops out at the heaviest lift
+
+The plot ceiling was the ROUNDED top (`grid.yMax`), leaving headroom above the heaviest lift and
+then drawing lines into it — a solid one first, and after that was suppressed, a dotted one. The
+ceiling is now the tallest bar itself, and both tick lists are filtered to it. The top gets a
+labelled line only when it is a load someone would recognise; an odd number leaves the bar standing
+above the last line, which is honest.
+
+### Three, four, five muscle groups
+
+Three and four cut from the centre — thirds as wedges, four as true quadrants (`from 0deg`, so the
+boundaries land on the axes). Every piece meets in the middle, which is what keeps them legible at
+18px. Five or more would be slivers from a centre point, so those become equal vertical bands.
+Verified by rendering all six cases at 18px before shipping.
+
 ## 2026-10 — The attendance grid never reached this week (v0.559.0 / app 0.371.0)
 
 Both clients built the window as `today - 111 days`, then snapped that start back to Sunday, then

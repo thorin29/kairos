@@ -149,7 +149,7 @@ export function WorkoutsGrid({
   }, [openUserId, overdueTick]);
   useEffect(() => {
     let cancelled = false;
-    if (openUserId && logDate !== todayISO) {
+    if (openUserId) {
       setLoadingLogged(true);
       loadLoggedWeights(openUserId, logDate)
         .then((m) => {
@@ -1380,6 +1380,19 @@ function LiftDetailPanel({
       return {
         background: `linear-gradient(135deg, ${cs[0]} 0 50%, ${cs[1]} 50% 100%)`,
       };
+    }
+    // Three and four cut the square from its centre — thirds as wedges, four as
+    // quadrants — which stays legible at this size because every piece meets in
+    // the middle. Five or more would be slivers, so those become bands instead.
+    if (cs.length === 3 || cs.length === 4) {
+      const n = cs.length;
+      // from 0deg points up, so four pieces land as true quadrants and three as
+      // even wedges. Both meet in the middle, which is what keeps them readable
+      // at 18px where slivers would not be.
+      const wedges = cs
+        .map((c, i) => `${c} ${(i / n) * 360}deg ${((i + 1) / n) * 360}deg`)
+        .join(", ");
+      return { background: `conic-gradient(from 0deg, ${wedges})` };
     }
     const n = cs.length;
     const stops = cs
