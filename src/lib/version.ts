@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.563.0";
+export const APP_VERSION = "0.564.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -135,6 +135,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.564.0",
+    summary: [
+      "The same overdue fix now applies to workouts logged from the phone. The app posts to /api/v1/workouts/log, a different path from the web's, which had no completedOn \u2014 so a catch-up logged on a phone still landed on the due day.",
+      "Needs app 0.374.0 to take effect. An older phone omits the field and behaves exactly as before.",
+    ],
+  },
   {
     version: "0.563.0",
     summary: [

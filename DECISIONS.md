@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-10 — Two log paths, not one (v0.564.0)
+
+`completedOn` was wired through `completePlannedWorkout` (the web server action)
+and that looked complete, because the app's charts and history read dates the
+server already resolves — so no app change appeared necessary.
+
+It was not complete. The app does not use that action. It posts to
+`/api/v1/workouts/log`, which calls `logPlannedWorkout` in `lib/workouts/mark.ts`
+— a separate implementation whose own doc comment says it "mirrors the web's
+completePlannedWorkout". A mirror is not the same object, and only one of the two
+had been changed.
+
+Both now take the day actually logged on. The route reads it as an optional body
+field so a phone on an older build omits it and is unaffected instead of failing
+validation.
+
+One asymmetry worth keeping: on the edit path `logPlannedWorkout` only ever SETS
+`completedOn`, never clears it. That path also runs when an existing session is
+re-logged, and a client sending no `completedOn` — an older app, or a same-day
+edit from the web — must not erase the day a catch-up was recorded on.
+
 ## 2026-10 — A session has a due day and a done day (v0.563.0)
 
 `WorkoutSession.date` is the day a workout *counts for*. Adherence is built on it:

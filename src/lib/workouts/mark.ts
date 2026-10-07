@@ -324,7 +324,16 @@ export async function logPlannedWorkout(
   dateISO: string,
   plannedWorkoutId: string,
   entries: PlannedLogEntry[],
-  opts?: { replace?: boolean; detectConflict?: boolean },
+  opts?: {
+    replace?: boolean;
+    detectConflict?: boolean;
+    /** The day this was ACTUALLY logged, when it differs from `dateISO`.
+     *  `dateISO` stays the day the workout counts for (adherence is keyed on
+     *  it); this is only what gets DISPLAYED. The client has to tell us —
+     *  inferring "past date means catch-up" would stamp today onto a
+     *  deliberately back-dated log from the app's own date picker. */
+    completedOnISO?: string | null;
+  },
 ): Promise<{ conflict: LogConflict } | null> {
   const plan = await prisma.plannedWorkout.findUnique({
     where: { id: plannedWorkoutId },
@@ -333,6 +342,14 @@ export async function logPlannedWorkout(
   if (!plan || plan.userId !== userId) return null;
 
   const date = toDateColumn(dateISO);
+  // Null whenever the two agree, which is every same-day log and every
+  // deliberate back-date — so there is nothing to store and nothing to undo.
+  const completedOn =
+    opts?.completedOnISO &&
+    /^\d{4}-\d{2}-\d{2}$/.test(opts.completedOnISO) &&
+    opts.completedOnISO !== dateISO
+      ? toDateColumn(opts.completedOnISO)
+      : null;
   // Reuse THIS plan's own session for the day (so re-logging edits it), never
   // whichever session happens to be first — that could be a custom log.
   const own = await prisma.workoutSession.findFirst({
@@ -371,6 +388,7 @@ export async function logPlannedWorkout(
         data: {
           userId,
           date,
+          completedOn,
           name: plan.name,
           category: plan.category,
           finished: true,
@@ -385,6 +403,11 @@ export async function logPlannedWorkout(
       category: plan.category,
       finished: true,
       isRest: false,
+      // Only ever SET, never cleared. This path also runs when an existing
+      // session is edited, and a client that sends no completedOn (an older
+      // app, or a same-day edit) must not erase the day a catch-up was
+      // actually done on.
+      ...(completedOn ? { completedOn } : {}),
     },
   });
   // Clear only the movements this submission covers, not the whole session.

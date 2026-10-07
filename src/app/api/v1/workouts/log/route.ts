@@ -25,6 +25,14 @@ export async function POST(req: NextRequest) {
       ? raw.date
       : null;
   if (!date) return apiError("validation", "date must be YYYY-MM-DD.");
+  // The day the client was actually logging ON, when it differs from `date`.
+  // Optional on purpose: an app build that predates this simply omits it and
+  // behaves exactly as before rather than failing validation.
+  const completedOn =
+    typeof raw?.completedOn === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(raw.completedOn)
+      ? raw.completedOn
+      : null;
   const plannedWorkoutId =
     typeof raw?.plannedWorkoutId === "string" ? raw.plannedWorkoutId : null;
   if (!plannedWorkoutId) {
@@ -61,7 +69,11 @@ export async function POST(req: NextRequest) {
     date,
     plannedWorkoutId,
     entries,
-    { replace: raw?.replace === true, detectConflict: raw?.detectConflict === true },
+    {
+      replace: raw?.replace === true,
+      detectConflict: raw?.detectConflict === true,
+      completedOnISO: completedOn,
+    },
   );
   if (result?.conflict) {
     return apiOk({ date, status: "conflict", conflict: result.conflict });
