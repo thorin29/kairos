@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-10 — Body map: today first, one colour per group (v0.550.0)
+
+**The bug.** 0.549.0 shipped two solid black figures. The component asked for `var(--accent)`,
+`var(--hairline)`, `var(--surface)` and `var(--fg)`; the app defines `--color-accent`,
+`--color-hairline`, `--color-surface` and `--color-ink`. An invalid `fill` is not ignored — SVG
+falls back to black — so every region painted black and the whole map looked like a silhouette.
+The lesson is narrow and worth keeping: a CSS variable name is an API, and this one was assumed
+rather than read. The stray rectangle across the thigh in the same screenshot was the browser's
+default focus ring on a focused `<path>`, which is drawn around its BOUNDING BOX; `outline: none`
+is now set inline, and keyboard focus is shown as a dashed version of the selection ring instead.
+
+**Today is the default, not a single group.** A day that trains Core and Legs is a Core-and-Legs
+day, so the map opens with both lit and both sets of charts shown. Picking a region narrows to it;
+a calendar button returns to today. With nothing planned — a rotation, or no plan — it falls back
+to the most recently trained region, which is the same answer the server gives for `defaultGroup`.
+
+**One fixed colour per muscle group** (`MG_COLOR`), used by the body, the heading above each chart,
+and the Workout days legend. `GRID_COLORS` was positional: a group's colour depended on which
+other groups happened to be present, which is tolerable for an ad-hoc legend and useless once the
+colour has to mean something. Ungrouped movements still fall back to the positional list, having no
+fixed colour of their own. The hues echo the source artwork's key, so the map reads like the
+reference illustration rather than a recolour of it.
+
+Shading resolves primary over secondary: a muscle one shown movement trains is not dimmed because
+another shown movement merely assists with it.
+
+**Said once.** The muscle group was named three times on screen — today's chips, a label under the
+map, and the heading above the charts. The heading stays; the other two are gone. The highlight
+says which group is meant, and the heading names it.
+
 ## 2026-10 — The body map: selection and shading are different fields (v0.549.0)
 
 The progress page showed every muscle group at once, which was too much. A body you tap is the

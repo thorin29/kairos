@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.549.0";
+export const APP_VERSION = "0.550.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.550.0",
+    summary: [
+      "Fixes the body map rendering as two black silhouettes \u2014 it was asking for colours by the wrong names, and nothing was being painted.",
+      "The body now opens on everything today asks for, so a day that trains Core and Legs lights both. Tap a muscle to narrow to it, and the calendar button comes back to today.",
+      "Each muscle group has its own fixed colour now, the same one on the body, in the heading above its charts, and in the Workout days legend.",
+    ],
+  },
   {
     version: "0.549.0",
     summary: [

@@ -6,6 +6,7 @@ import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
 import {
   CheckIcon,
+  CalendarIcon,
   CalendarPlusIcon,
   DumbbellIcon,
   BookIcon,
@@ -55,7 +56,6 @@ import BodyMap from "@/components/body-map";
 import {
   groupsFor,
   navRegionFor,
-  NAV_LABEL,
   type NavRegion,
 } from "@/lib/workouts/involvement";
 
@@ -303,16 +303,9 @@ export function WorkoutsGrid({
                         Paused for {open.today.paused}
                       </p>
                     ) : open.todayPlanned.length > 0 ? (
-                      <p className="mt-1 flex flex-wrap gap-1.5">
-                        {open.todayPlanned.map((w) => (
-                          <span
-                            key={w.id}
-                            className="rounded-full bg-ground px-3 py-1 text-sm font-medium"
-                          >
-                            {w.name}
-                          </span>
-                        ))}
-                      </p>
+                      // The body map below highlights today's muscle groups,
+                      // so naming them here said the same word three times.
+                      null
                     ) : hasPlan ? (
                       <p className="mt-1 text-lg font-semibold">Rest day</p>
                     ) : (
@@ -322,7 +315,13 @@ export function WorkoutsGrid({
 
                   {!personal && open.weightSeries.length > 0 && (
                     <div>
-                      <LiftBlocks series={open.weightSeries} />
+                      <LiftBlocks
+                        series={open.weightSeries}
+                        todayGroups={
+                          open.planDays.find((d) => d.day === todayDow)
+                            ?.groups ?? []
+                        }
+                      />
                       <LiftDetailPanel
                         scoped={open.weightSeries}
                         all={open.weightSeries}
@@ -852,6 +851,34 @@ function chooseGraph(open: PersonWorkout, todayDow: number): GraphChoice {
  * overhead press share no scale, and every figure is a real logged set.
  */
 /** Validated categorical steps; identity, never a ramp. */
+/**
+ * One fixed colour per muscle group, so the body map and the heading above its
+ * charts always agree. GRID_COLORS is positional — a group's colour there
+ * depends on which other groups happen to be present — which is fine for an
+ * ad-hoc legend and useless for "the pink on the body means Core".
+ *
+ * The hues echo the source artwork's own key, so the map reads like the
+ * reference illustration rather than like a recolour of it.
+ */
+const MG_COLOR: Record<string, string> = {
+  CHEST: "#e34948",
+  BACK: "#1baf7a",
+  LEGS: "#2a78d6",
+  SHOULDERS: "#eb6834",
+  ARMS: "#8a5cd6",
+  CORE: "#eda100",
+  GLUTES: "#d6568f",
+  CALVES: "#2f9bb5",
+  FOREARMS: "#7a6ad8",
+  UPPER_BACK: "#139c86",
+  FULL_BODY: "#e87ba4",
+};
+
+/** The same colour, faded, for a muscle a movement only assists with. */
+function faded(hex: string): string {
+  return `color-mix(in srgb, ${hex} 32%, var(--color-surface))`;
+}
+
 const GRID_COLORS = [
   "#2a78d6", "#eb6834", "#1baf7a", "#eda100",
   "#e87ba4", "#008300", "#4a3aa7", "#e34948",
@@ -897,7 +924,14 @@ function byMuscleGroup(series: LiftSeries[]): { key: string; label: string; item
  * stacked. A day with Core and Legs reads as two blocks you scroll, which is
  * why there is no movement picker any more — a picker hid everything but one.
  */
-function LiftBlocks({ series }: { series: LiftSeries[] }) {
+function LiftBlocks({
+  series,
+  todayGroups = [],
+}: {
+  series: LiftSeries[];
+  /** Muscle groups today's plan asks for. The map opens on these. */
+  todayGroups?: string[];
+}) {
   const withBest = useMemo(() => series.filter((s) => s.best), [series]);
 
   // Which region selects each movement, and which groups it lights up. These
@@ -916,13 +950,23 @@ function LiftBlocks({ series }: { series: LiftSeries[] }) {
   // Only regions you actually train are live. A Chest you have never pressed
   // is drawn, but inert — a target that selects nothing is a dead end.
   const available = useMemo(
-    () =>
-      [...new Set(meta.map((m) => m.nav).filter(Boolean))] as NavRegion[],
+    () => [...new Set(meta.map((m) => m.nav).filter(Boolean))] as NavRegion[],
     [meta],
   );
 
-  // Opens on the region you trained most recently, which is the one you are
-  // most likely to be asking about.
+  // What the map opens on: everything today asks for. A day that trains Core
+  // and Legs lights both, because that is what the day is.
+  const todayNavs = useMemo(() => {
+    const want = new Set(todayGroups);
+    const navs = meta
+      .filter((m) => m.primary && want.has(m.primary))
+      .map((m) => m.nav)
+      .filter(Boolean) as NavRegion[];
+    return [...new Set(navs)];
+  }, [meta, todayGroups]);
+
+  // Nothing planned today — fall back to whatever was trained most recently,
+  // which is what someone on a rotation or no plan at all still has.
   const latestNav = useMemo(() => {
     let best: { nav: NavRegion; date: string } | null = null;
     for (const m of meta) {
@@ -934,48 +978,76 @@ function LiftBlocks({ series }: { series: LiftSeries[] }) {
     return best?.nav ?? available[0] ?? null;
   }, [meta, available]);
 
+  // null means "today". Picking a region narrows to it; the button comes back.
   const [picked, setPicked] = useState<NavRegion | null>(null);
-  const active = picked ?? latestNav;
+  const openOn = todayNavs.length > 0 ? todayNavs : latestNav ? [latestNav] : [];
+  const active = picked ? [picked] : openOn;
+  const activeSet = useMemo(() => new Set(active), [active]);
 
-  const shown = active ? meta.filter((m) => m.nav === active) : [];
+  const shown = meta.filter((m) => m.nav && activeSet.has(m.nav));
   // Nothing on the body selects an ungrouped movement or a full-body lift, so
   // those keep their own blocks below rather than becoming unreachable.
   const orphans = meta.filter((m) => !m.nav);
+
+  // Primary wins over secondary: a muscle a movement trains should not be
+  // dimmed because some other shown movement merely assists with it.
+  const fills = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const m of shown) {
+      for (const g of m.secondary) {
+        if (!out[g] && MG_COLOR[g]) out[g] = faded(MG_COLOR[g]);
+      }
+    }
+    for (const m of shown) {
+      if (m.primary && MG_COLOR[m.primary]) out[m.primary] = MG_COLOR[m.primary];
+    }
+    return out;
+  }, [shown]);
 
   const groups = byMuscleGroup(shown.map((m) => m.s));
   const orphanGroups = byMuscleGroup(orphans.map((m) => m.s));
 
   if (meta.length === 0) return null;
 
+  const view =
+    shown.length > 0 && shown.every((m) => m.view === "back")
+      ? "back"
+      : shown.length > 0 && shown.every((m) => m.view === "front")
+        ? "front"
+        : "both";
+
   return (
     <div className="space-y-4">
       {available.length > 0 && (
-        <div>
+        <div className="relative">
+          {picked && (
+            <button
+              type="button"
+              onClick={() => setPicked(null)}
+              className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-muted transition-colors hover:border-accent hover:text-accent"
+              aria-label="Back to today's workout"
+              title="Back to today's workout"
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </button>
+          )}
           <BodyMap
             selected={active}
             onSelect={setPicked}
             available={available}
-            primary={shown.map((m) => m.primary).filter(Boolean) as string[]}
-            secondary={shown.flatMap((m) => m.secondary)}
-            view={
-              shown.length > 0 &&
-              shown.every((m) => m.view === "back")
-                ? "back"
-                : shown.length > 0 && shown.every((m) => m.view === "front")
-                  ? "front"
-                  : "both"
-            }
+            fills={fills}
+            view={view}
           />
-          {active && (
-            <p className="mt-1 text-center text-sm font-semibold text-accent">
-              {NAV_LABEL[active]}
-            </p>
-          )}
         </div>
       )}
       {[...groups, ...orphanGroups].map((g) => (
         <div key={g.key}>
-          <p className="text-sm font-semibold text-accent">{g.label}</p>
+          <p
+            className="text-sm font-semibold"
+            style={{ color: MG_COLOR[g.key] ?? "var(--color-accent)" }}
+          >
+            {g.label}
+          </p>
           <LiftHeadline series={g.items} />
           <div className="mt-2">
             <LineChart
@@ -1172,8 +1244,11 @@ function LiftDetailPanel({
   }
   const labelOf = (g: string) => gLabels.get(g) ?? MG_LABEL[g] ?? g;
   groupsSeen.sort((a, b) => labelOf(a).localeCompare(labelOf(b)));
+  // Muscle groups keep their fixed colour so the legend, the body map and the
+  // heading above each chart all say the same thing. Only ungrouped movements,
+  // which have no fixed colour of their own, fall back to the positional list.
   const groupColor = new Map<string, string>(
-    groupsSeen.map((g, i) => [g, GRID_COLORS[i % GRID_COLORS.length]]),
+    groupsSeen.map((g, i) => [g, MG_COLOR[g] ?? GRID_COLORS[i % GRID_COLORS.length]]),
   );
 
   const byDate = new Map<string, string[]>();
@@ -1458,7 +1533,12 @@ function PersonalTop({
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
             {graph.label}
           </p>
-          <LiftBlocks series={graph.series} />
+          <LiftBlocks
+            series={graph.series}
+            todayGroups={
+              open.planDays.find((d) => d.day === todayDow)?.groups ?? []
+            }
+          />
           <LiftDetailPanel
             scoped={graph.series}
             all={open.weightSeries}
