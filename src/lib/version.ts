@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.546.1";
+export const APP_VERSION = "0.547.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.547.0",
+    summary: [
+      "Progress now reads your logged history rather than only your plan, so a rotation or no plan at all still shows what you have lifted. A weekly plan still leads with its own movements.",
+      "The server works out which weekdays the attendance grid should draw \u2014 your plan's days, a rotation's working days, or the days you actually trained \u2014 so both clients agree.",
+    ],
+  },
   {
     version: "0.546.1",
     summary: [

@@ -381,6 +381,9 @@ export type ProgressSeries = {
   name: string;
   /** The muscle group this movement is planned under, for grouping. */
   muscleGroup?: string | null;
+  /** True when a plan marks this movement tracked; false for history-only
+   *  movements (a rotation or plan-less person has only these). */
+  tracked?: boolean;
   unit: string;
   points: GraphPoint[];
   /** Heaviest set ever logged for this movement — the record, plus the reps it
@@ -398,8 +401,12 @@ export type WorkoutHistoryEntry = {
 };
 export type WorkoutProgress = {
   series: ProgressSeries[];
-  /** Weekdays (0 = Sunday) the plan uses, with the muscle groups on each. */
+  /** Weekdays (0 = Sunday) that get a grid row: the plan's days, or the
+   *  rotation's working days, or the days actually trained. Empty = hide. */
   planDays?: { day: number; groups: string[] }[];
+  /** Muscle group the body map opens on: today's plan, today's rotation slot,
+   *  or the most recently trained group. */
+  defaultGroup?: string | null;
   /** Which movement to show by default: today's tracked weights, or the next
    *  day that has one. Null when there's nothing to graph. */
   defaultId: string | null;
@@ -414,7 +421,7 @@ export async function loadWorkoutProgress(
   const weightUnit = metricUnit("WEIGHT" as Metric, system);
   const dow = dayOfWeek(todayISO);
 
-  const [plans, recent] = await Promise.all([
+  const [plans, recent, rotationRow] = await Promise.all([
     prisma.plannedWorkout.findMany({
       where: { userId },
       select: {
@@ -455,6 +462,18 @@ export async function loadWorkoutProgress(
         },
       },
     }),
+    prisma.workoutRotation.findUnique({
+      where: { userId },
+      select: {
+        isActive: true,
+        anchorDate: true,
+        restMask: true,
+        slots: {
+          orderBy: { position: "asc" },
+          select: { position: true, name: true, category: true, muscleGroup: true, isRest: true },
+        },
+      },
+    }),
   ]);
 
   // The person's tracked weight movements (the only ones graphed / selectable).
@@ -479,9 +498,71 @@ export async function loadWorkoutProgress(
     }
   }
 
-  // Which weekdays the plan actually uses, and the muscle groups on each. The
-  // attendance grid draws a row per planned weekday only — a row for a day you
-  // never train is noise, and a rotation plan has no weekday shape at all.
+  // Snapshot of what the PLAN tracks, taken before history widens the map
+  // below, so `tracked` means "a plan asked for this" and not "this exists".
+  const plannedIds = new Set(trackedNames.keys());
+  const trackedIds = [...trackedNames.keys()];
+
+  // Max weight per day. The universe is every movement with a logged weight
+  // set, NOT just the ones a plan marks tracked: a person on a rotation has no
+  // planned movements at all (a rotation slot carries a muscle group and no
+  // exercises), and a person with no plan has nothing either. Restricting to
+  // tracked left both with an empty progress view while their history sat in
+  // the table. `tracked` survives as a flag on each series so a planned
+  // movement can still be preferred in the UI.
+  const wSets = await prisma.sessionSet.findMany({
+    where: { session: { userId }, weight: { not: null } },
+    select: {
+      weight: true,
+      reps: true,
+      poolExerciseId: true,
+      poolExercise: { select: { name: true, muscleGroup: true } },
+      session: { select: { date: true } },
+    },
+  });
+  // A movement seen only in history still needs a name and a group.
+  for (const s of wSets) {
+    if (!s.poolExerciseId || !s.poolExercise) continue;
+    if (!trackedNames.has(s.poolExerciseId)) {
+      trackedNames.set(s.poolExerciseId, s.poolExercise.name);
+    }
+    if (!trackedGroups.get(s.poolExerciseId)) {
+      trackedGroups.set(
+        s.poolExerciseId,
+        (s.poolExercise as { muscleGroup?: string | null }).muscleGroup ?? null,
+      );
+    }
+  }
+
+  // Which weekdays get a row in the attendance grid, worked out once here so
+  // both clients agree. Three kinds of person, three sources:
+  //   weekly plan  -> the weekdays the plan uses
+  //   rotation     -> every weekday that is not a fixed rest day (a rotation is
+  //                   still a plan; what it lacks is a weekly shape)
+  //   neither      -> the weekdays that actually carry a logged session, so it
+  //                   is not seven mostly-empty rows
+  // Nothing at all leaves this empty and the clients hide the card.
+  const rot = rotationRow as unknown as {
+    isActive: boolean;
+    anchorDate: Date;
+    restMask: number;
+    slots: { position: number; name: string; category: string | null; muscleGroup: string | null; isRest: boolean }[];
+  } | null;
+  const rotationShape =
+    rot && rot.isActive && rot.slots.length > 0
+      ? {
+          anchorISO: fromDateColumn(rot.anchorDate),
+          restMask: rot.restMask,
+          slots: rot.slots.map((sl) => ({
+            position: sl.position,
+            name: sl.name,
+            category: sl.category,
+            muscleGroup: sl.muscleGroup,
+            isRest: sl.isRest,
+          })),
+        }
+      : null;
+
   const planDays: { day: number; groups: string[] }[] = [];
   for (let d = 0; d < 7; d++) {
     const onDay = plans.filter((p) => p.dayOfWeek === d && !p.isRest);
@@ -493,24 +574,41 @@ export async function loadWorkoutProgress(
     }
     planDays.push({ day: d, groups });
   }
-  const trackedIds = [...trackedNames.keys()];
+  if (planDays.length === 0 && rotationShape) {
+    for (let d = 0; d < 7; d++) {
+      if ((rotationShape.restMask & (1 << d)) !== 0) continue;
+      planDays.push({ day: d, groups: [] });
+    }
+  }
+  if (planDays.length === 0) {
+    const seen = new Set<number>();
+    for (const s2 of wSets) seen.add(dayOfWeek(fromDateColumn(s2.session.date)));
+    for (const d of [...seen].sort((a, b) => a - b)) planDays.push({ day: d, groups: [] });
+  }
 
-  // Max weight per day for those movements.
-  const wSets = trackedIds.length
-    ? await prisma.sessionSet.findMany({
-        where: {
-          session: { userId },
-          weight: { not: null },
-          poolExerciseId: { in: trackedIds },
-        },
-        select: {
-          weight: true,
-          reps: true,
-          poolExerciseId: true,
-          session: { select: { date: true } },
-        },
-      })
-    : [];
+  // Which muscle group the body map opens on. Today's plan first, then today's
+  // rotation slot, then whatever was trained most recently — a person with no
+  // plan still has a last workout, and that is the one they want.
+  let defaultGroup: string | null = null;
+  const todaysPlans = plans.filter((p) => p.dayOfWeek === dow && !p.isRest);
+  for (const p of todaysPlans) {
+    const g = (p as { muscleGroup?: string | null }).muscleGroup ?? null;
+    if (g) { defaultGroup = g; break; }
+  }
+  if (!defaultGroup && rotationShape) {
+    const r = slotForDate(rotationShape, todayISO);
+    if (r.kind === "workout") defaultGroup = r.slot.muscleGroup ?? null;
+  }
+  if (!defaultGroup) {
+    let latest = "";
+    for (const s2 of wSets) {
+      if (!s2.poolExercise) continue;
+      const d = fromDateColumn(s2.session.date);
+      const g = (s2.poolExercise as { muscleGroup?: string | null }).muscleGroup ?? null;
+      if (g && d > latest) { latest = d; defaultGroup = g; }
+    }
+  }
+
   const perDay = new Map<string, Map<string, { value: number; reps: number | null }>>();
   // movement -> reps -> heaviest weight actually lifted at that rep count
   const repMaxes = new Map<string, Map<number, { value: number; date: string }>>();
@@ -537,6 +635,7 @@ export async function loadWorkoutProgress(
       poolExerciseId: id,
       name,
       muscleGroup: trackedGroups.get(id) ?? null,
+      tracked: plannedIds.has(id),
       unit: weightUnit,
       points: [...(perDay.get(id)?.entries() ?? [])]
         .map(([date, p]) => ({ date, value: p.value, reps: p.reps }))
@@ -587,7 +686,7 @@ export async function loadWorkoutProgress(
     isRest: s.isRest,
   }));
 
-  return { series, defaultId, history, planDays };
+  return { series, defaultId, history, planDays, defaultGroup };
 }
 
 function historyResult(

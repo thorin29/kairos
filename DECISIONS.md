@@ -12,6 +12,29 @@ planned movement's id, written only when it differs from what was logged.
 fills the slot it replaced, and the movement reports `loggedAs: { poolExerciseId, name }` — what was
 actually done. Clients show the slot with the variation's name and its value instead of a blank row.
 
+## 2026-10 — Three kinds of person, one progress view (v0.547.0)
+
+A rotation and a weekly plan are not variants of one thing. `loadTodayPlannedWorkouts` queries
+`plannedWorkout` by `dayOfWeek` and never consults the rotation, and **`RotationSlot` has no
+exercises relation at all** — a slot is a name, a category, a muscle group and a rest flag. So a
+person on a rotation has no planned movements in the database, and a person with no plan has
+nothing either. Driving progress off the plan gave both of them an empty view while their logged
+history sat in `SessionSet`.
+
+Progress is now built from **logged sets**, with `tracked` kept as a flag per series rather than as
+the filter. Clients prefer tracked movements when any exist, so a weekly plan still leads with its
+own lifts; everyone else now has something instead of nothing. This deliberately softens the
+earlier "only tracked movements should appear" rule, which was correct for the person who set it
+and wrong for the two cases that have no tracked movements to show.
+
+Three decisions the server now makes once, so the clients cannot drift:
+- **Grid rows**: the plan's weekdays, else the rotation's non-rest weekdays, else the weekdays that
+  carry a logged session, else empty and the card hides. A rotation is still a plan — what it
+  lacks is a weekly shape, not meaning.
+- **Opening group**: today's plan, else today's rotation slot, else the most recently trained
+  group. Someone with no plan still has a last workout, and that is the one they want.
+- **Muscle group per movement**: the plan's filing where there is one, the movement's own otherwise.
+
 ## 2026-10 — Movement involvement, and why a deadlift is a leg exercise (v0.546.0)
 
 `src/lib/workouts/involvement.ts` maps a movement name to the groups it works beyond the one it is
