@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-10 — Typechecking: excuse the noise, not the unknown (v0.548.1)
+
+`prisma generate` cannot run in the sandbox — binaries.prisma.sh is unreachable — so
+`src/generated/prisma` is absent and `tsc` reports ~460 cascade errors where Prisma row types
+collapsed to `any`/`unknown`. The habit had been to grep the report for the error codes that look
+build-breaking.
+
+That is an **allowlist**, and it fails silently in the only way that matters: the first error code
+nobody thought to list goes straight through. It let two real breaks reach a Docker build —
+`TS2538: Type 'null' cannot be used as an index type` (from widening `muscle` to `MuscleGroup | null`
+without guarding `MUSCLE_GROUP_LABEL[muscle]`), and two `TS2551`s where client code used the
+server's field name `poolExerciseId` on `GraphSeries`, whose field is `exerciseId`.
+
+`scripts/typecheck-report.mjs` inverts it. An error is excused only when it can be ATTRIBUTED to the
+missing client: a known cascade code whose message actually names `unknown` or `{}`. Everything else
+is fatal, including codes never seen before. And **any** error in a file the working tree has
+touched is fatal regardless of code, because those are the files under test.
+
+The distinction that matters: `TS2538` naming `'{}'` is a collapsed Prisma row and is excused;
+`TS2538` naming `'null'` is a real bug and is not. Attribution is by message, not code alone.
+
+The script is checked in and verified by reintroducing the 0.548.0 break and confirming it exits 1.
+Run `node scripts/typecheck-report.mjs --changed` before packaging any web release.
+
 ## 2026-10 — A one-day swap is remembered on the set, not inferred (v0.538.0)
 
 The app can swap a planned movement for a variation for one day (app 0.353). The set lands under the

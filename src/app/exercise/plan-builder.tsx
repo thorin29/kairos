@@ -473,7 +473,10 @@ function AddWorkoutModal({
             </p>
           ) : options.length === 0 ? (
             <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
-              No {isWeights ? MUSCLE_GROUP_LABEL[muscle].toLowerCase() + " " : ""}
+              No{" "}
+              {isWeights
+                ? (muscle ? MUSCLE_GROUP_LABEL[muscle].toLowerCase() : "ungrouped") + " "
+                : ""}
               {CATEGORY_LABEL[category].toLowerCase()} movements in the pool yet.
               Add some under Admin &rarr; Workouts &rarr; Exercise pool.
             </p>

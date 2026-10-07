@@ -871,7 +871,7 @@ function byMuscleGroup(series: LiftSeries[]): { key: string; label: string; item
   for (const s of series) {
     // No group: keyed by the movement, so each gets a block of its own.
     const grouped = s.muscleGroup != null;
-    const key = grouped ? s.muscleGroup! : `__mv:${s.poolExerciseId}`;
+    const key = grouped ? s.muscleGroup! : `__mv:${s.exerciseId}`;
     const label = grouped ? (MG_LABEL[s.muscleGroup!] ?? s.muscleGroup!) : s.name;
     const cur = map.get(key);
     map.set(key, { label, items: [...(cur?.items ?? []), s] });
@@ -1081,7 +1081,7 @@ function LiftDetailPanel({
   // movement — the question is which day you trained, not which bar you held.
   // Matches byMuscleGroup: an ungrouped movement is its own series on the
   // attendance grid too, so it gets its own colour rather than sharing one.
-  const groupOf = (s: LiftSeries) => s.muscleGroup ?? `__mv:${s.poolExerciseId}`;
+  const groupOf = (s: LiftSeries) => s.muscleGroup ?? `__mv:${s.exerciseId}`;
   // One label resolver for the sort, the tooltips and the legend, so an
   // ungrouped movement reads as its own name everywhere instead of its key.
   const gLabels = new Map<string, string>();
