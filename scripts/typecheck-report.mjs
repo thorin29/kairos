@@ -144,9 +144,19 @@ const inHunk = (e) => {
   return touched(e) && !ranges.has([...dirty].find((f) => e.file.endsWith(f)) ?? "");
 };
 
+/**
+ * The one unconditional excuse: a missing-module error for the generated Prisma
+ * client itself. That module's absence is a property of this sandbox, not of
+ * the code — it exists in the Docker build — so proximity to an edit cannot
+ * make it real, and the hunk padding would otherwise flag it as new.
+ */
+const isMissingClient = (e) => e.code === 2307 && /@\/generated/.test(e.message);
+
 // Fatal unless attributable to the missing client — and never excused where
 // this change actually edited, however familiar the error code looks.
-const fatal = errors.filter((e) => !isNoise(e) || inHunk(e));
+const fatal = errors.filter(
+  (e) => !isMissingClient(e) && (!isNoise(e) || inHunk(e)),
+);
 const noise = errors.filter((e) => !fatal.includes(e));
 
 const inDirty = fatal.filter(inHunk);

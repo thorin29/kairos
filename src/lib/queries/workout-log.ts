@@ -4,9 +4,10 @@ import { slotForDate } from "@/lib/workouts/rotation";
 import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES, hiitResult } from "@/lib/workouts/catalog";
 import type { WorkoutType } from "@/generated/prisma/client";
 import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween } from "@/lib/dates";
-import { metricUnit, type Metric } from "@/lib/workouts/catalog";
+import { metricUnit, type Metric, type MuscleGroup } from "@/lib/workouts/catalog";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
 import { loadStaleContext } from "@/lib/chores/stale";
+import { groupsFor, navRegionFor } from "@/lib/workouts/involvement";
 
 /**
  * The exercises scheduled for a person on a day, with any weight/reps already
@@ -376,6 +377,17 @@ export async function loadTodayPlannedWorkouts(
 /** value = the day's heaviest weight (the record); reps = that set's rep count
  *  when it was logged, carried as context, never as the record itself. */
 export type GraphPoint = { date: string; value: number; reps?: number | null };
+/** Body-map facts for one movement, in the shape the clients consume. */
+function bodyMapFor(name: string, filed: string | null) {
+  const g = groupsFor(name, filed as MuscleGroup | null);
+  return {
+    navRegion: navRegionFor(name, filed as MuscleGroup | null),
+    shadePrimary: g.primary,
+    shadeSecondary: g.secondary,
+    view: g.view,
+  };
+}
+
 export type ProgressSeries = {
   poolExerciseId: string;
   name: string;
@@ -391,6 +403,19 @@ export type ProgressSeries = {
   best?: { date: string; value: number; reps: number | null } | null;
   /** Best weight actually lifted at each rep count. Real sets only. */
   repMaxes?: { reps: number; value: number; date: string }[];
+  /**
+   * Body-map facts, resolved HERE so the two clients cannot drift. The
+   * involvement table is a single TypeScript file; reimplementing it in Kotlin
+   * would mean two tables to keep honest about what a deadlift works.
+   *
+   * navRegion — the one region that selects this movement.
+   * shadePrimary / shadeSecondary — the groups it lights, strongly and faintly.
+   * view — which figure it shows on.
+   */
+  navRegion?: string | null;
+  shadePrimary?: string | null;
+  shadeSecondary?: string[];
+  view?: string;
 };
 export type WorkoutHistoryEntry = {
   id: string;
@@ -636,6 +661,7 @@ export async function loadWorkoutProgress(
       name,
       muscleGroup: trackedGroups.get(id) ?? null,
       tracked: plannedIds.has(id),
+      ...bodyMapFor(name, trackedGroups.get(id) ?? null),
       unit: weightUnit,
       points: [...(perDay.get(id)?.entries() ?? [])]
         .map(([date, p]) => ({ date, value: p.value, reps: p.reps }))

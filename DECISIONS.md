@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-10 — The involvement table stays on the server (v0.551.0 / app 0.365.0)
+
+Porting the body map to the app raised the obvious question: reimplement `involvement.ts` in
+Kotlin, or send its answers? Send them. That table encodes what a deadlift works and which figure
+it shows on — contested, researched, and already revised twice this month. Two copies would mean
+two things to correct every time, and they would diverge silently, because nothing compares them.
+
+`ProgressSeries` therefore carries `navRegion`, `shadePrimary`, `shadeSecondary` and `view`,
+resolved once in `bodyMapFor()`. The clients render what they are told. The geometry is shared the
+same way: one Python pass traces the artwork and emits both `body-map-paths.ts` and
+`BodyMapPaths.kt`, so the two clients cannot show different bodies either.
+
+What stays per-client is only what is genuinely per-platform: SVG paths and CSS variables on the
+web, `PathParser` and `android.graphics.Region` on Android.
+
 ## 2026-10 — The body map needs the whole plan, not today (v0.550.1)
 
 Tapping Legs on a Shoulders day did nothing. Not a click handler bug: `loadWorkouts` narrowed
