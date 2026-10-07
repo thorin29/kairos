@@ -295,7 +295,7 @@ export function WorkoutLauncher({
 
                 {loadingLogged ? (
                   <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
-                    Loading logged weights\u2026
+                    Loading logged weights&hellip;
                   </p>
                 ) : (
                   <TodayPlan

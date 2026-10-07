@@ -101,6 +101,12 @@ export function WorkoutsGrid({
   // Which day the log step writes to. Defaults to today; can be set back to a
   // recent past day to record a workout that wasn't logged at the time.
   const [logDate, setLogDate] = useState(todayISO);
+  // TODAY's logged sets, kept apart from `loggedByPool`. That one follows the
+  // date picker on the "plan for this day" step, and the main Log workout step
+  // is always about today — handing it the picker's data would prefill the
+  // wrong day the moment someone looked at another one.
+  const [loggedToday, setLoggedToday] = useState<Record<string, LoggedSet>>({});
+  const [loadingToday, setLoadingToday] = useState(false);
   // Weights already logged for the picked earlier day (pool-exercise id -> value),
   // so the plan pre-fills them like the phone does.
   const [loggedByPool, setLoggedByPool] = useState<Record<string, LoggedSet>>({});
@@ -169,6 +175,27 @@ export function WorkoutsGrid({
       cancelled = true;
     };
   }, [openUserId, logDate, todayISO]);
+  useEffect(() => {
+    let cancelled = false;
+    if (!openUserId) {
+      setLoggedToday({});
+      return;
+    }
+    setLoadingToday(true);
+    loadLoggedWeights(openUserId, todayISO)
+      .then((m) => {
+        if (!cancelled) setLoggedToday(m);
+      })
+      .catch(() => {
+        if (!cancelled) setLoggedToday({});
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingToday(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [openUserId, todayISO, overdueTick]);
   const hasPlan = open ? open.plan.some((d) => d.workouts.length > 0) : false;
   // Named workouts available to this person: the shared library plus their own.
   const browsable = open
@@ -531,15 +558,25 @@ export function WorkoutsGrid({
                           })}
                         </div>
                       )}
-                      <TodayPlan
-                        userId={open.user.id}
-                        dateISO={todayISO}
-                        workouts={open.plan[todayDow]?.workouts ?? []}
-                        doneLabels={open.todayWorkouts.map((w) => w.label)}
-                        paused={open.today.paused}
-                        rested={open.today.rested}
-                        unitSystem={unitSystem}
-                      />
+                      {/* Gated the same way the home page gates its copy: the
+                          prefill is read once when the rows mount, so mounting
+                          before the fetch returns captures nothing. */}
+                      {loadingToday ? (
+                        <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
+                          Loading logged weights&hellip;
+                        </p>
+                      ) : (
+                        <TodayPlan
+                          userId={open.user.id}
+                          dateISO={todayISO}
+                          workouts={open.plan[todayDow]?.workouts ?? []}
+                          doneLabels={open.todayWorkouts.map((w) => w.label)}
+                          paused={open.today.paused}
+                          rested={open.today.rested}
+                          unitSystem={unitSystem}
+                          loggedByPool={loggedToday}
+                        />
+                      )}
 
                       <div className="border-t border-hairline pt-5">
                         <h4 className="mb-3 font-display text-sm font-semibold">

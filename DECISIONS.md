@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-10 — Two plans on one page, one of them unwired (v0.562.0)
+
+`workouts-grid.tsx` renders `TodayPlan` twice: once for today on the main Log workout step, and
+once for a chosen date on "plan for this day". Only the second was passed `loggedByPool`, so the
+one people actually use had no prefill at all — while the home page's single copy worked, which is
+exactly why it looked like a sync problem rather than a missing prop.
+
+The main step gets its own `loggedToday`, loaded for `todayISO` and deliberately NOT shared with
+the date picker's state: that follows whatever day is being browsed, and handing it to a card about
+today would prefill the wrong day the moment someone looked at another one.
+
+It is also gated on its own loading flag. The prefill is read once in a `useState` initialiser when
+the rows mount, so a card that mounts before the fetch returns captures nothing and never recovers.
+Toggling between the loading line and the plan unmounts and remounts it, which is what makes the
+home page work and what this copy was missing.
+
+### `\u2026` in JSX text
+
+Two "Loading logged weights\u2026" strings rendered the escape literally. Inside a JSX text node
+`\u2026` is six characters, not an ellipsis — only a JS string literal interprets it. `version.ts`
+records a fix for this exact class before, so it has now regressed once; `&hellip;` is used instead.
+
+### The attendance window advances
+
+Confirmed by simulation across several dates on both clients: the window is derived from
+`today` at render, so it rolls forward a week at a time and the oldest week falls off the left.
+Checked 2026-10-07 through 2027-06-30 — the current week is in range on every date tested, and the
+start advances exactly 7 days per week elapsed.
+
 ## 2026-10 — Logged rows keep their fields (v0.561.0 / app 0.373.0)
 
 The compact "✓ bent over row — Logged" row goes away. It was a reasonable-looking idea and the
