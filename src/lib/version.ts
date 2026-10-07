@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.546.0";
+export const APP_VERSION = "0.546.1";
 
 export const MIGRATIONS = [
   "0_init",
@@ -135,9 +135,10 @@ export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
-    version: "0.546.0",
+    version: "0.546.1",
     summary: [
       "A movement in a weights plan can now be logged as time or reps, not only as a weight \u2014 so a plank asks for a hold and sit-ups ask for a count instead of pounds.",
+      "A held movement is logged as minutes and seconds rather than one \u201ctime\u201d box. A single box could not say whether 2 meant minutes or seconds, and the phone read it the other way round \u2014 the same plank logged on each differed sixtyfold.",
       "Added a movement involvement table: what each lift works beyond the group it is filed under, for shading the body map. The group you filed a movement under is still what decides its charts.",
     ],
   },

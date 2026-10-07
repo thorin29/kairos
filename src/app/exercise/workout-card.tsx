@@ -266,7 +266,11 @@ function PlanRow({
     ) => {
       const num = Number(raw);
       if (!raw || !Number.isFinite(num) || num <= 0) return;
-      const value = metric === "DURATION" ? num * 60 : num;
+      // `raw` already carries seconds for DURATION (the field is min + sec), so
+      // there is nothing to convert. A single box asking for "time" could not
+      // say whether 2 meant two minutes or two seconds, and the phone read it
+      // the other way: the same plank logged twice differed by 60x.
+      const value = num;
       const repsNum = Number(repsRaw);
       const reps =
         metric === "WEIGHT" && repsRaw && Number.isFinite(repsNum) && repsNum > 0
@@ -283,7 +287,15 @@ function PlanRow({
           : metricUnit(m, unitSystem);
 
     if (metricOnly) {
-      push(null, soloMetric, values["_solo"] ?? "", resolveUnit(soloMetric));
+      // Same min + sec convention as the planned rows, so every DURATION on
+      // this screen is submitted in seconds and none of them is implied.
+      const soloRaw =
+        soloMetric === "DURATION"
+          ? String(
+              Number(values["_min"] || 0) * 60 + Number(values["_sec"] || 0) || "",
+            )
+          : (values["_solo"] ?? "");
+      push(null, soloMetric, soloRaw, resolveUnit(soloMetric));
     } else {
       for (const e of trackedExercises) {
         const m = metricFor(e.metric);
@@ -291,10 +303,17 @@ function PlanRow({
         // lifted, carrying the planned movement's id so the slot it fills is
         // still known on the way back.
         const sw = swaps[e.id];
+        const raw =
+          m === "DURATION"
+            ? String(
+                Number(values[`${e.id}__min`] || 0) * 60 +
+                  Number(values[`${e.id}__sec`] || 0) || "",
+              )
+            : (values[e.id] ?? "");
         push(
           sw ? sw.id : e.poolExerciseId,
           m,
-          values[e.id] ?? "",
+          raw,
           resolveUnit(m, sw?.unit || e.unit),
           values[`${e.id}__reps`],
           sw ? e.poolExerciseId : null,
@@ -390,6 +409,28 @@ function PlanRow({
               )}
             </div>
           ) : metricOnly ? (
+            soloMetric === "DURATION" ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  inputMode="numeric"
+                  value={values["_min"] ?? ""}
+                  onChange={(v) => setVal("_min", v.target.value)}
+                  placeholder="0"
+                  aria-label="Minutes"
+                  className="tabular h-9 w-14 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                />
+                <span className="text-xs text-muted">min</span>
+                <input
+                  inputMode="numeric"
+                  value={values["_sec"] ?? ""}
+                  onChange={(v) => setVal("_sec", v.target.value)}
+                  placeholder="00"
+                  aria-label="Seconds"
+                  className="tabular h-9 w-14 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                />
+                <span className="text-xs text-muted">sec</span>
+              </div>
+            ) : (
             <MetricField
               label=""
               metric={soloMetric}
@@ -397,6 +438,7 @@ function PlanRow({
               value={values["_solo"] ?? ""}
               onChange={(v) => setVal("_solo", v)}
             />
+            )
           ) : (
             <>
               {trackedExercises.map((e, i) => {
@@ -440,6 +482,28 @@ function PlanRow({
                     </span>
                   </div>
                   <div className="flex items-end gap-2">
+                    {m === "DURATION" ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          inputMode="numeric"
+                          value={values[`${e.id}__min`] ?? ""}
+                          onChange={(v) => setVal(`${e.id}__min`, v.target.value)}
+                          placeholder="0"
+                          aria-label={`${e.name} minutes`}
+                          className="tabular h-9 w-14 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                        />
+                        <span className="text-xs text-muted">min</span>
+                        <input
+                          inputMode="numeric"
+                          value={values[`${e.id}__sec`] ?? ""}
+                          onChange={(v) => setVal(`${e.id}__sec`, v.target.value)}
+                          placeholder="00"
+                          aria-label={`${e.name} seconds`}
+                          className="tabular h-9 w-14 rounded-lg border border-hairline bg-surface text-center text-sm outline-none focus:border-accent"
+                        />
+                        <span className="text-xs text-muted">sec</span>
+                      </div>
+                    ) : (
                     <MetricField
                       label=""
                       metric={m}
@@ -448,6 +512,7 @@ function PlanRow({
                       value={values[e.id] ?? ""}
                       onChange={(v) => setVal(e.id, v)}
                     />
+                    )}
                     {/* Reps for the top set. Optional: the record is still the
                         weight, but without this "185 x 5" and "185 x 12" log
                         identically and months of rep progress stay invisible. */}

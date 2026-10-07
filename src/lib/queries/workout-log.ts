@@ -672,7 +672,11 @@ const CAT_CFG: Record<
   string,
   { locked?: string; choices?: string[]; load?: boolean; pool: boolean }
 > = {
-  WEIGHTS: { locked: "WEIGHT", pool: true },
+  // Not locked: a weights session routinely holds a plank or counts sit-ups.
+  // This table feeds the phone's catalogue, so leaving it locked here while
+  // widening metricChoicesFor() would let the web offer a choice the phone could
+  // not. Two tables, one answer.
+  WEIGHTS: { choices: ["WEIGHT", "DURATION", "REPS"], pool: true },
   HIIT: { choices: ["DURATION", "REPS"], pool: true },
   RUNNING: { choices: ["DISTANCE", "METERS"], pool: false },
   ROWING: { locked: "METERS", pool: false },
