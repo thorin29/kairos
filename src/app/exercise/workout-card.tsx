@@ -257,7 +257,7 @@ function PlanRow({
     workout.exercises.every(
       (e) => e.poolExerciseId && loggedByPool[e.poolExerciseId],
     );
-  if (alreadyLogged) logLabel = "Edit";
+  if (alreadyLogged || done) logLabel = "Edit weight";
 
   const setVal = (key: string, v: string) =>
     setValues((prev) => ({ ...prev, [key]: v.replace(/[^\d.]/g, "") }));
@@ -368,22 +368,9 @@ function PlanRow({
     });
   };
 
-  if (done) {
-    // Name the movements, not the plan. A planned workout's name is its
-    // muscle-group label, so a Back card listing two logged plans read
-    // "Back / Back / Back" and told you nothing about what was actually done.
-    // HIIT and metric-only workouts have no movements, so they keep their name.
-    const movements = workout.exercises.map((e) => e.name).filter(Boolean);
-    return (
-      <div className="flex items-center gap-2 rounded-xl border border-accent/40 bg-accent/5 px-3 py-2.5">
-        <CheckIcon className="h-4 w-4 shrink-0 text-accent" />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">
-          {movements.length > 0 ? movements.join(", ") : workout.name}
-        </span>
-        <span className="ml-auto shrink-0 text-xs text-accent">Logged</span>
-      </div>
-    );
-  }
+  // A logged movement keeps its ordinary row \u2014 weight and reps filled in, with
+  // the button reading "Edit weight". Collapsing it to a tick and the word
+  // "Logged" hid the numbers, which are the thing you reopen the day to check.
 
   return (
     <div className={bare ? "" : "rounded-xl border border-hairline bg-ground/30 p-3"}>

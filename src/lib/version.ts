@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.560.0";
+export const APP_VERSION = "0.561.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -134,6 +134,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.561.0",
+    summary: [
+      "A logged movement keeps its normal row with the weight and reps filled in and the button reading \u201cEdit weight\u201d, instead of collapsing to a tick that hid the numbers.",
+      "Compare orders each person's bars by date, so they read as that person's progression rather than a tidy staircase.",
+    ],
+  },
   {
     version: "0.560.0",
     summary: [

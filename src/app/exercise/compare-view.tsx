@@ -45,9 +45,12 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
     id: s.id,
     name: s.name,
     color: s.color,
-    // Shown lightest to heaviest: a person's bars should climb, not jump about
-    // in whatever order they were logged.
-    bars: [...(s.bars ?? [])].slice(0, perPerson).sort((a, b) => a.value - b.value),
+    // Chronological: the bars read as that person's progression through the
+    // weeks, which is the story worth telling. Sorting by weight instead made
+    // every lifter look like a tidy staircase regardless of what happened.
+    bars: [...(s.bars ?? [])]
+      .slice(0, perPerson)
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.value - b.value)),
   }));
 
   const all = groups.flatMap((g) => g.bars);

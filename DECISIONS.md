@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-10 — Logged rows keep their fields (v0.561.0 / app 0.373.0)
+
+The compact "✓ bent over row — Logged" row goes away. It was a reasonable-looking idea and the
+wrong one: the reason you reopen a day is to see WHAT you lifted, and collapsing the row to a tick
+hid exactly that. A logged movement keeps its ordinary row with weight and reps prefilled and the
+button reading "Edit weight", which is how the phone has always behaved.
+
+Worth recording as a pattern, since this is the second time: "it is done, so show less" removed
+information at the moment it became most useful. Done is a reason to show the numbers, not to
+replace them with a word.
+
+### Compare orders by date, not by weight
+
+Sorting each person's bars lightest-to-heaviest made every lifter look like a neat staircase
+whatever actually happened. Chronological order shows the progression — including a week that went
+backwards, which is the part a tidy sort was quietly hiding.
+
 ## 2026-10 — Today was the one day excluded from its own prefill (v0.560.0 / app 0.372.0)
 
 Adding `reps` to `loadLoggedWeights` in 0.559 changed nothing, because the fetch never ran for
