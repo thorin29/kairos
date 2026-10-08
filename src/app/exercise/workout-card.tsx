@@ -8,7 +8,7 @@ import {
   restDay,
   type LoggedSet,
 } from "@/lib/actions/workouts";
-import { CheckIcon, DumbbellIcon, MoonIcon } from "@/components/icons";
+import { CheckIcon, DumbbellIcon, MoonIcon, SwapIcon } from "@/components/icons";
 import {
   METRIC_LABEL_SHORT,
   MUSCLE_GROUP_LABEL,
@@ -377,7 +377,11 @@ function PlanRow({
         entries,
         completedOnISO,
       });
-      setValues({});
+      // Deliberately NOT cleared. What is in these boxes is now what the server
+      // holds, so wiping them makes a successful save look like a failed one —
+      // the numbers vanished and only came back on a full refresh. The prefill
+      // runs in a useState initialiser, which does not re-run on revalidation,
+      // so nothing was going to put them back until the component remounted.
     });
   };
 
@@ -498,31 +502,32 @@ function PlanRow({
                     key={e.id}
                     className={i > 0 ? "border-t border-hairline pt-2.5" : ""}
                   >
-                  {/* The name truncates inside a flexible cell and Swap owns a
-                      fixed column, so the button lands in the same spot whether
-                      the movement is "planks" or "two arm dumbbell extension". */}
+                  {/* Swap belongs to the movement, so it sits against the name
+                      rather than across the card. The name still truncates (it
+                      can shrink but not grow), and the trailing spacer absorbs
+                      the rest of the row so the button stays put. */}
                   <div className="mb-1.5 flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-sm">
+                    <span className="min-w-0 truncate text-sm">
                       {sw ? sw.name : e.name}
                       {sw && (
                         <span className="ml-1 text-muted">for {e.name}</span>
                       )}
                     </span>
-                    <span className="w-[4.5rem] shrink-0 text-right">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          sw ? setSwap(e.id, null) : setPicking(e.id)
-                        }
-                        className={`w-full rounded-lg border px-2 py-1 text-xs ${
-                          sw
-                            ? "border-hairline text-muted hover:border-accent hover:text-accent"
-                            : "border-hairline text-accent hover:bg-accent/5"
-                        }`}
-                      >
-                        {sw ? "Undo" : "Swap"}
-                      </button>
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        sw ? setSwap(e.id, null) : setPicking(e.id)
+                      }
+                      className={`inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-xs ${
+                        sw
+                          ? "border-hairline text-muted hover:border-accent hover:text-accent"
+                          : "border-hairline text-accent hover:bg-accent/5"
+                      }`}
+                    >
+                      <SwapIcon className="h-3.5 w-3.5" />
+                      {sw ? "Undo" : "Swap"}
+                    </button>
+                    <span className="flex-1" />
                   </div>
                   <div className="flex items-end gap-2">
                     {m === "DURATION" ? (
@@ -560,7 +565,7 @@ function PlanRow({
                         weight, but without this "185 x 5" and "185 x 12" log
                         identically and months of rep progress stay invisible. */}
                     {m === "WEIGHT" && (
-                      <div className="ml-auto flex items-center gap-1.5 pb-0.5">
+                      <div className="flex items-center gap-1.5 pb-0.5">
                         <span className="text-xs text-muted">×</span>
                         <input
                           inputMode="numeric"

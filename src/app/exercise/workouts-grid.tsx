@@ -536,9 +536,9 @@ export function WorkoutsGrid({
                                   rested={false}
                                   unitSystem={unitSystem}
                                   heading={`Missed ${formatShort(od)}`}
-                            // Counts for the day it was due; recorded as done
-                            // today. The card itself is unchanged.
-                            completedOnISO={todayISO}
+                                  // Counts for the day it was due; recorded as
+                                  // done today. The card itself is unchanged.
+                                  completedOnISO={todayISO}
                                 />
                                 {/* Log it, or be done with it. Without this the
                                     only way to clear a missed day was to switch

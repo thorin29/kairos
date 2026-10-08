@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-10 — Clearing the fields made a save look like a failure (v0.567.0)
+
+`completePlannedWorkout` finished with `setValues({})`. The numbers vanished the
+instant they were saved, and only came back on a full page refresh.
+
+The clear was wrong on its own terms: what is in those boxes after a successful
+save IS what the server holds, so emptying them reports the opposite of what
+happened. And nothing was going to refill them, because the prefill runs in a
+`useState` initialiser — that does not re-run when revalidation delivers new
+props, only on remount, which is exactly why navigating away and back "fixed" it.
+
+So the save no longer clears. No syncing effect was added to chase the
+revalidated props: an effect that writes into the same state the user is typing
+into can clobber an edit in progress, and it buys nothing here, since a remount
+already re-reads from the server.
+
+The overdue cards still get no `loggedByPool`, which is correct and worth not
+"fixing" later: that map holds TODAY's logged sets, and a card about a missed
+Monday would prefill Monday with today's numbers.
+
 ## 2026-10 — One logging function, not two (v0.566.0)
 
 Reps typed on the web never reached the database. `completePlannedWorkout` built
