@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { logPlannedWorkout } from "@/lib/workouts/mark";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
@@ -594,80 +595,22 @@ export async function completePlannedWorkout(input: {
   await requireCanActFor(input.userId);
   if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
 
-  const plan = (await prisma.plannedWorkout.findUnique({
-    where: { id: input.plannedWorkoutId },
-    select: { name: true, category: true, userId: true },
-  })) as unknown as {
-    name: string;
-    category: WorkoutCategory | null;
-    userId: string;
-  } | null;
-  if (!plan || plan.userId !== input.userId) return;
-
-  const date = toDateColumn(input.dateISO);
-  // Stored only when it genuinely differs, so "null means same as date" stays
-  // true and an ordinary log is indistinguishable from one before this existed.
-  const completedOn =
-    input.completedOnISO &&
-    /^\d{4}-\d{2}-\d{2}$/.test(input.completedOnISO) &&
-    input.completedOnISO !== input.dateISO
-      ? toDateColumn(input.completedOnISO)
-      : null;
-  const session = await prisma.workoutSession.create({
-    data: {
-      userId: input.userId,
-      date,
-      completedOn,
-      name: plan.name,
-      category: plan.category,
-      finished: true,
-      isRest: false,
-    },
-  });
-
-  let setNumber = 0;
-  for (const e of input.entries) {
-    if (!Number.isFinite(e.value) || e.value <= 0) continue;
-    setNumber++;
-    const set: {
-      sessionId: string;
-      poolExerciseId: string | null;
-      setNumber: number;
-      unit: string | null;
-      finished: boolean;
-      weight?: number;
-      reps?: number;
-      distance?: number;
-      meters?: number;
-      seconds?: number;
-    } = {
-      sessionId: session.id,
-      poolExerciseId: e.poolExerciseId,
-      setNumber,
-      unit: e.unit || null,
-      finished: true,
-    };
-    switch (e.metric) {
-      case "WEIGHT":
-        set.weight = e.value;
-        break;
-      case "REPS":
-        set.reps = Math.round(e.value);
-        break;
-      case "DISTANCE":
-        set.distance = e.value;
-        break;
-      case "METERS":
-        set.meters = e.value;
-        break;
-      case "DURATION":
-        set.seconds = Math.round(e.value);
-        break;
-    }
-    await prisma.sessionSet.create({ data: set });
-  }
-
-  await completeWorkoutTask(input.userId, input.dateISO);
+  // Delegates rather than reimplementing. This used to be its own copy of the
+  // same logic, and the copy fell behind in three separate ways: it dropped the
+  // reps on a WEIGHT entry, dropped `swappedFrom`, and created a NEW session on
+  // every save, so "Edit weight" appended a duplicate instead of editing.
+  //
+  // The entry shapes already matched exactly, which is the tell that these were
+  // one function wearing two hats. Permissions and revalidation stay here,
+  // because those are the web's concern; what a logged workout IS belongs in
+  // one place.
+  await logPlannedWorkout(
+    input.userId,
+    input.dateISO,
+    input.plannedWorkoutId,
+    input.entries,
+    { completedOnISO: input.completedOnISO ?? null },
+  );
   refresh();
 }
 

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.565.0";
+export const APP_VERSION = "0.566.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -135,6 +135,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.566.0",
+    summary: [
+      "Reps now save when you log a workout on the web. The box was being filled in and thrown away on the server, which is why the charts showed \u00d71, Recent workouts showed only a weight, and reopening the day left Reps empty.",
+      "\u201cEdit weight\u201d now actually edits. It was creating a second session for the same day instead of updating the first.",
+      "A swapped movement now keeps the slot it was swapped into, instead of losing it on save.",
+      "All three came from the web having its own copy of the logging code, which had drifted from the one the phone uses. It now calls the same function, so there is only one.",
+      "Reps logged on the web before this were never stored and can't be recovered \u2014 reopen the day and enter them, which will now update the entry in place.",
+    ],
+  },
   {
     version: "0.565.0",
     summary: [

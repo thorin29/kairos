@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-10 — One logging function, not two (v0.566.0)
+
+Reps typed on the web never reached the database. `completePlannedWorkout` built
+its set with `switch (e.metric) { case "WEIGHT": set.weight = e.value; }` and
+never read `e.reps` — a field its own input type declared. `mark.ts`, which the
+phone goes through, had handled it correctly the whole time.
+
+Hunting that turned up two more holes in the same function: it dropped
+`swappedFrom` as well (also declared, also ignored), and it called
+`workoutSession.create` unconditionally, so "Edit weight" appended a second
+session for the day rather than editing the first.
+
+Three bugs, one cause: two implementations of the same operation, one of which
+quietly fell behind. Yesterday's `completedOn` work hit this exact seam from the
+other direction — the web action had the feature and `mark.ts` did not. That
+made it the second time in two days, which is the point at which patching the
+symptom is the wrong move.
+
+So `completePlannedWorkout` no longer implements anything. It does the two things
+that are genuinely the web's business — `requireCanActFor` and `refresh()` —
+and delegates to `logPlannedWorkout`. The entry shapes already matched field for
+field, which is the tell that these were one function wearing two hats. About
+sixty lines of parallel logic are gone, and there is now no copy left to drift.
+
+Two behaviour changes fall out of it, both wanted. Re-logging edits the day's
+existing session instead of adding another, which is what the button has said
+since it was relabelled "Edit weight". And a web log now reuses a session the
+phone created, and vice versa, because both finally agree on what a session for a
+plan on a day is.
+
+Reps logged on the web before this are gone. They were discarded server-side
+rather than stored wrongly, so there is nothing to recover from — no backfill
+is possible, unlike the `completedOn` repair where `createdAt` still held the
+answer.
+
 ## 2026-10 — A goal outlives its month (v0.565.0)
 
 September's family goal "ended" on October 1. Nothing expired it. `seasonKey` is a
