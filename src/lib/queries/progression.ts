@@ -8,8 +8,8 @@ import {
   toDateColumn,
   todayISO,
 } from "@/lib/dates";
-import { getScoringStart } from "@/lib/settings";
-import { currentSeasonWindow } from "@/lib/season";
+import { getScoringStart, getSeasonConfig } from "@/lib/settings";
+import { resolveSeasonWindow } from "@/lib/season";
 import { blendPalette, eggCostFor, stageFromGrowth, luckFromStreak, EGGS_PER_SEASON_CAP } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
 import { readingXpForBook, bibleXpForChapters } from "@/lib/scoring/reading";
@@ -58,6 +58,11 @@ export type PersonProgress = {
   /** Clean days completed so far this month — resolved past days where the child
    *  finished everything assigned that day. Accumulates; never drops. */
   monthlyCleanDays: number;
+  /** The same count, bucketed by the season window each day falls in. A family
+   *  goal carried over from an earlier month has to be judged on ITS month, not
+   *  on the current one: the question "did everyone finish September?" cannot be
+   *  answered by a counter that reset on October 1. Keyed by window startISO. */
+  cleanDaysBySeason: Record<string, number>;
   bestWeekPct: number | null;
   masteries: MasteryTitle[];
   /** The companion display: an incubating egg, or the active creature. Color
@@ -94,7 +99,8 @@ const EPOCH = "2000-01-01";
  */
 export async function loadProgression(): Promise<PersonProgress[]> {
   const today = todayISO();
-  const seasonWin = await currentSeasonWindow(today);
+  const seasonCfg = await getSeasonConfig();
+  const seasonWin = resolveSeasonWindow(seasonCfg, today);
   const seasonStart = seasonWin.startISO;
   const startISO = await getScoringStart();
   const dueFloor = startISO ? { gte: toDateColumn(startISO) } : {};
@@ -299,17 +305,27 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         b.assigned > 0 && b.complete === b.assigned && addDays(wkISO, 6) < today,
     ).length;
 
-    // Clean days this month so far: resolved past days (before today, so it can
-    // only climb) where the child finished everything assigned. Fair across
-    // loads — a light day still counts if you finish it.
-    const monthlyCleanDays = [...a.days.entries()].filter(
-      ([iso, b]) =>
-        iso >= seasonStart &&
+    // Clean days: resolved past days (before today, so it can only climb) where
+    // the child finished everything assigned. Fair across loads — a light day
+    // still counts if you finish it.
+    //
+    // Bucketed by the season window each day belongs to, rather than filtered to
+    // the current one, so an earlier month's total is still answerable. Uses the
+    // same resolver as the live window, so it stays right in "weeks" mode too
+    // instead of assuming a calendar month.
+    const cleanDaysBySeason: Record<string, number> = {};
+    for (const [iso, b] of a.days) {
+      if (
         iso < today &&
         b.assigned > 0 &&
         b.missed === 0 &&
-        b.complete === b.assigned,
-    ).length;
+        b.complete === b.assigned
+      ) {
+        const key = resolveSeasonWindow(seasonCfg, iso).startISO;
+        cleanDaysBySeason[key] = (cleanDaysBySeason[key] ?? 0) + 1;
+      }
+    }
+    const monthlyCleanDays = cleanDaysBySeason[seasonStart] ?? 0;
 
     // Best completed week (self-competition personal best).
     let bestWeekPct: number | null = null;
@@ -345,6 +361,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
       milestones: earnedMilestones(longest),
       perfectWeeks,
       monthlyCleanDays,
+      cleanDaysBySeason,
       bestWeekPct,
       masteries,
       companionColor: blendPalette(signatureOf(a.statXp, baseline)),

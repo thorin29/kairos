@@ -17,6 +17,8 @@ export function CoopBoard({ data, isAdmin }: { data: CoopData; isAdmin: boolean 
 
   return (
     <div className="space-y-8">
+      {data.carried && <CarriedGoal goal={data.carried} isAdmin={isAdmin} />}
+
       {/* Meter */}
       <section className="rounded-2xl border border-hairline bg-surface p-5">
         <div className="mb-1 flex items-center justify-between">
@@ -87,6 +89,64 @@ export function CoopBoard({ data, isAdmin }: { data: CoopData; isAdmin: boolean 
       </section>
 
     </div>
+  );
+}
+
+/**
+ * A goal chosen in an earlier month and never checked off.
+ *
+ * Shown first and framed as outstanding, not as history. Its gate is the one
+ * for ITS month, already decided — so either a parent can check it off now, or
+ * that month genuinely wasn't finished and it says so.
+ */
+function CarriedGoal({
+  goal,
+  isAdmin,
+}: {
+  goal: CoopProposalView;
+  isAdmin: boolean;
+}) {
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <section className="rounded-2xl border border-amber-300 bg-amber-50 p-5">
+      <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-amber-800">
+        Still to check off &mdash; {goal.seasonLabel}
+      </p>
+      <p className="mt-1 font-display text-lg font-semibold">{goal.title}</p>
+      {goal.detail && <p className="mt-0.5 text-sm text-muted">{goal.detail}</p>}
+
+      {goal.gateMet ? (
+        isAdmin ? (
+          <>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  const r = await grantCoopReward(goal.id);
+                  setError(r.error);
+                })
+              }
+              className="mt-3 inline-flex h-10 items-center gap-1.5 rounded-full bg-emerald-600 px-5 text-sm font-medium text-white shadow-sm hover:brightness-110 disabled:opacity-50"
+            >
+              <TrophyIcon className="h-4 w-4" />
+              {pending ? "Saving\u2026" : "We did it"}
+            </button>
+            {error && <p className="mt-1.5 text-sm text-red-700">{error}</p>}
+          </>
+        ) : (
+          <p className="mt-2 text-sm font-medium text-emerald-700">
+            Everyone finished {goal.seasonLabel} &mdash; waiting for a parent to hand it out.
+          </p>
+        )
+      ) : (
+        <p className="tabular mt-2 text-sm text-muted">
+          {goal.childrenMeeting} finished {goal.seasonLabel}, so this one never unlocked.
+        </p>
+      )}
+    </section>
   );
 }
 

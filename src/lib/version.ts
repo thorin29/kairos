@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.564.0";
+export const APP_VERSION = "0.565.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -135,6 +135,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.565.0",
+    summary: [
+      "The family goal no longer disappears when the month turns. A goal that was picked but never checked off carries forward and shows until a parent marks it done \u2014 September's is back, with its votes.",
+      "The goal now shows on the home page for everyone, with this month's progress and, for a parent, a \u201cWe did it\u201d button once every kid has finished their month.",
+      "A carried goal is judged on ITS month, not the current one. September's goal unlocks on September's clean days; October starting over doesn't move the finish line.",
+      "Checking off a goal is now enforced on the server. Previously the button was hidden when the gate wasn't met, but the API would still grant it.",
+    ],
+  },
   {
     version: "0.564.0",
     summary: [

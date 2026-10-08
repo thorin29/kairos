@@ -41,5 +41,19 @@ export async function GET(req: NextRequest) {
       votes: p.votes,
       iVoted: p.voterIds.includes(me.id),
     })),
+    // A goal picked in an earlier window and never checked off. Appended at the
+    // END and nullable, so an app build that predates it decodes and ignores it
+    // rather than failing. Carries its own month label and its own gate,
+    // because it is judged on the month it belonged to.
+    carried: data.carried
+      ? {
+          id: data.carried.id,
+          title: data.carried.title,
+          detail: data.carried.detail,
+          seasonLabel: data.carried.seasonLabel,
+          gateMet: data.carried.gateMet,
+          childrenMeeting: data.carried.childrenMeeting,
+        }
+      : null,
   });
 }

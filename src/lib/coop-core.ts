@@ -1,6 +1,7 @@
 import { CoopStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { currentSeasonWindow } from "@/lib/season";
+import { coopGateFor } from "@/lib/queries/coop";
 
 async function seasonKey(): Promise<string> {
   return (await currentSeasonWindow()).startISO;
@@ -66,11 +67,32 @@ export async function selectCoopCore(proposalId: string): Promise<{ error: strin
   return { error: null };
 }
 
-/** Admin hands out the selected reward. */
+/**
+ * Admin checks off the selected reward.
+ *
+ * The gate is enforced HERE, not just in the UI. The rule the family actually
+ * agreed to is "nobody gets it until everyone finished their month", and a rule
+ * that lives only in a disabled button is enforced on the web and nowhere else
+ * — the API route and the app reach this same function.
+ *
+ * The gate is measured against the proposal's OWN window. A goal carried over
+ * from September is judged on September, which is the month the family earned
+ * (or didn't); re-testing it against October would move the finish line after
+ * the race.
+ */
 export async function grantCoopCore(proposalId: string): Promise<{ error: string | null }> {
   const proposal = await prisma.coopProposal.findUnique({ where: { id: proposalId } });
   if (!proposal || proposal.status !== CoopStatus.SELECTED) {
     return { error: "Choose it as the season reward first." };
+  }
+  const gate = await coopGateFor(proposal.seasonKey);
+  if (!gate.met) {
+    return {
+      error:
+        gate.total === 0
+          ? "No child accounts yet, so there's nothing to finish."
+          : `Not yet — ${gate.meeting} of ${gate.total} have finished their month.`,
+    };
   }
   await prisma.coopProposal.update({
     where: { id: proposalId },

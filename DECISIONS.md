@@ -1,5 +1,46 @@
 # Decisions
 
+## 2026-10 — A goal outlives its month (v0.565.0)
+
+September's family goal "ended" on October 1. Nothing expired it. `seasonKey` is a
+plain string (`"2026-09-01"`) and `loadCoop()` filters on whichever key is current,
+so on October 1 the query started asking for `"2026-10-01"` and found nothing. The
+proposals and votes were never deleted — they became unreachable, which looked
+identical to being gone.
+
+A `SELECTED` proposal from an earlier window now loads alongside the current
+window's, as `carried`, and stays live until a parent checks it off. `PROPOSED`
+rows do not carry (a losing idea is just a past idea) and `GRANTED` ones do not
+(they are finished). Only one carries, newest first, so an abandoned goal from
+months back cannot outrank a more recent one.
+
+The hard part was the gate, not the carry. "Everyone finished their month" was
+computed as a single number for the current window, and a carried goal needs the
+answer for ITS window — a question October's counter cannot answer. So
+`monthlyCleanDays` is now derived from a new `cleanDaysBySeason` map: the same
+one pass over day buckets, keyed by the window each day resolves into rather than
+filtered to the current one. It uses `resolveSeasonWindow`, the same resolver the
+live window uses, so it stays correct in "weeks" mode instead of assuming calendar
+months.
+
+This matters for fairness in a specific way. If the kids finished September and a
+parent simply forgot to hand out the reward, re-testing the gate against October
+would close a gate the family had already earned — moving the finish line after
+the race. The gate for a past window is a settled fact, so it is read as one.
+
+No migration. The carry is a different query against rows that were already there.
+
+`grantCoopCore` now enforces the gate itself. It only checked status before; the
+web UI hid the button when the gate wasn't met, which meant the rule held on the
+web and nowhere else — the `/api/v1` route and the app call the same function
+directly. A rule that lives in a disabled button is not enforced.
+
+The home banner streams inside a Suspense boundary. It needs `loadProgression()`,
+the heaviest read in the app, and the home page is the most-visited page; awaiting
+it there would have made every visit pay for the goal card. `bump()` also
+revalidates `/` now, or checking the goal off from the banner would leave the
+banner stale — the one thing the person who just pressed the button is looking at.
+
 ## 2026-10 — Two log paths, not one (v0.564.0)
 
 `completedOn` was wired through `completePlannedWorkout` (the web server action)

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadDay } from "@/lib/queries/overview";
@@ -10,6 +11,7 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { AlertIcon } from "@/components/icons";
+import { FamilyGoalBanner } from "@/components/family-goal-banner";
 
 import { DaySchedule } from "@/components/day-schedule";
 import { loadDaySchedule } from "@/lib/queries/calendar";
@@ -150,6 +152,17 @@ export default async function Home({
   return (
     <>
       <main className="mx-auto max-w-6xl px-6 py-6">
+        {/* Streamed, not awaited: the goal needs the progression query, which is
+            the heaviest read here. The person cards paint first and this drops
+            in. The skeleton reserves the same height so nothing jumps. */}
+        <Suspense
+          fallback={
+            <div className="mb-4 h-[5.5rem] animate-pulse rounded-2xl border border-hairline bg-surface" />
+          }
+        >
+          <FamilyGoalBanner />
+        </Suspense>
+
         {!personal && totalOverdue > 0 && (
           <p className="tabular mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-red-700">
             <AlertIcon className="h-4 w-4" />

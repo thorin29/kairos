@@ -14,6 +14,10 @@ import { setSetting, SEASON_COOP_FLOOR, MONTH_GOAL_DAYS } from "@/lib/settings";
 function bump() {
   revalidatePath("/coop");
   revalidatePath("/summary");
+  // The goal also shows on the home page now. Without this, checking it off
+  // from the home banner leaves the banner itself stale — the one place the
+  // person who just pressed the button is looking.
+  revalidatePath("/");
 }
 
 export async function proposeCoopReward(input: {
