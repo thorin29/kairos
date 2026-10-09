@@ -856,7 +856,7 @@ function MetricField({
  *   Best weight — the heaviest ever lifted, weight only.
  *   Best reps   — the MOST reps ever done, with the weight they were done at.
  *                 Usually a lighter bar than the record, which is the point.
- *   Most recent — the last session, even when it is below both records.
+ *   Latest      — the last session, even when it is below both records.
  *
  * Labels in the accent colour, numbers in the ordinary text colour.
  */
@@ -882,20 +882,21 @@ function MovementHistory({
         : dash,
     ],
     [
-      "Most recent",
+      "Latest",
       `${trimNum(stats.lastWeight)} ${unit}${
         stats.lastReps ? ` \u00d7 ${stats.lastReps}` : ""
       }  \u00b7  ${mdSlash(stats.lastOn)}`,
     ],
   ];
 
-  // A two-column grid rather than three right-aligned rows: with rows, each
-  // label floats to wherever its own value ends and the labels come out ragged.
+  // A two-column grid, not three rows: in rows each label floats to wherever
+  // its own value ends. Labels left in their column so the first letters line
+  // up, values right in theirs so the last characters do.
   return (
-    <dl className="grid grid-cols-[auto_auto] gap-x-2 text-xs leading-tight">
+    <dl className="grid grid-cols-[auto_auto] gap-x-3 text-xs leading-tight">
       {lines.map(([k, v]) => (
         <Fragment key={k}>
-          <dt className="text-right font-semibold text-accent">{k}</dt>
+          <dt className="text-left font-semibold text-accent">{k}</dt>
           <dd className="tabular whitespace-nowrap text-right">{v}</dd>
         </Fragment>
       ))}
