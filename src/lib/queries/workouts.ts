@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
 import { getSetting } from "@/lib/settings";
+import { loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
 import {
   CATEGORY_LABEL,
   LINE_COLORS,
@@ -83,6 +84,9 @@ export type PlanExercise = {
   tracked: boolean;
   metric: Metric | null;
   unit: string;
+  /** Record / best reps / last, for the summary under the entry fields. Shared
+   *  with the phone's plan query so both report the same record. */
+  stats?: MovementStats | null;
 };
 
 export type PlanWorkout = {
@@ -600,6 +604,13 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         poolExercise: { name: string; muscleGroup: MuscleGroup | null } | null;
       }[];
     }[];
+    // One read for every movement in this person's week. The stats only exist
+    // for sets that carried a weight, so a duration movement simply has no
+    // entry and the card shows nothing — no metric test needed here.
+    const planStats = await loadMovementStats(
+      person.id,
+      [...new Set(pRows.flatMap((w) => w.exercises.map((e) => e.poolExerciseId)).filter(Boolean))],
+    );
     const plan = Array.from({ length: 7 }, (_, day) => ({
       day,
       workouts: pRows
@@ -633,6 +644,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
               tracked: e.tracked,
               metric: e.metric,
               unit: mg ? weightUnits[mg] : "",
+              stats: planStats[e.poolExerciseId] ?? null,
             };
           }),
         })),

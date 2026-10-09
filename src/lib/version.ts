@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.567.0";
+export const APP_VERSION = "0.568.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -135,6 +135,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.568.0",
+    summary: [
+      "Recent workouts now reads the same on both: the weekday above a 10/5 date, both hard left. The web said \u201cOct 7\u201d where the phone said 10/7 for the same workout.",
+      "Under each movement on the log card: Best, Best reps and Last. Computed on the server and shared with the phone, so the two can't disagree about your record.",
+      "The REPS tile no longer says \u201cnone logged yet\u201d while LAST, two tiles over, shows the same lift at \u00d72. It means reps AT the record, and the record predates reps being stored \u2014 it now falls back to the best rep count logged at any weight.",
+    ],
+  },
   {
     version: "0.567.0",
     summary: [

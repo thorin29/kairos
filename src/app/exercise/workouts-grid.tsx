@@ -780,8 +780,16 @@ export function WorkoutsGrid({
                           key={h.id}
                           className="flex items-center gap-2 rounded-xl border border-hairline bg-ground/40 px-3 py-2"
                         >
-                          <span className="w-16 shrink-0 text-xs font-medium text-muted">
-                            {fmtHistoryDate(h.dateISO)}
+                          {/* Weekday over the date, both hard left. Matching
+                              the app, which already said 10/7 while the web
+                              said Oct 7 for the same workout. */}
+                          <span className="w-14 shrink-0 text-xs leading-tight text-muted">
+                            <span className="block font-medium">
+                              {weekdayAbbr(h.dateISO)}
+                            </span>
+                            <span className="tabular block">
+                              {fmtHistoryDate(h.dateISO)}
+                            </span>
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold">
@@ -1136,12 +1144,31 @@ function LiftHeadline({ series }: { series: LiftSeries[] }) {
                 unit={s.unit}
                 sub={formatShort(s.best!.date)}
               />
-              <StatTile
-                k="reps"
-                v={s.best!.reps ? `${s.best!.reps}` : "\u2014"}
-                unit={s.best!.reps ? "reps" : ""}
-                sub={s.best!.reps ? "at the record" : "none logged yet"}
-              />
+              {/* Reps at the record, falling back to the best rep count
+                  logged at any weight. The record predates reps being stored,
+                  so this tile read "none logged yet" while LAST, two tiles
+                  over, showed the same movement at x2. */}
+              {(() => {
+                const topRep = (s.repMaxes ?? []).reduce<
+                  { reps: number; value: number } | null
+                >((a, b) => (a && a.reps >= b.reps ? a : b), null);
+                const atRecord = s.best!.reps;
+                const shown = atRecord ?? topRep?.reps ?? null;
+                return (
+                  <StatTile
+                    k="reps"
+                    v={shown ? `${shown}` : "\u2014"}
+                    unit={shown ? "reps" : ""}
+                    sub={
+                      atRecord
+                        ? "at the record"
+                        : topRep
+                          ? `best, at ${topRep.value} ${s.unit}`
+                          : "none logged yet"
+                    }
+                  />
+                );
+              })()}
               <StatTile
                 k="30 days"
                 v={stats.delta === null ? "\u2014" : `${stats.delta > 0 ? "+" : ""}${stats.delta}`}
@@ -1805,12 +1832,19 @@ const FIELD =
   "h-9 w-full rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent";
 
 /** YYYY-MM-DD → "Jul 21", parsed locally to avoid an off-by-one. */
-function fmtHistoryDate(iso: string): string {
+/** "Mon". Parsed as a local date, not `new Date(iso)`, which reads a bare
+ *  YYYY-MM-DD as UTC midnight and lands on the previous day west of Greenwich. */
+function weekdayAbbr(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "short" });
+}
+
+/** "10/5" — the same numeric form the app uses, so one workout reads the same
+ *  way on both. Built from the parts rather than a locale format, because a
+ *  locale that prints 5/10 would silently disagree with the phone. */
+function fmtHistoryDate(iso: string): string {
+  const [, m, d] = iso.split("-").map(Number);
+  return `${m}/${d}`;
 }
 
 // Order shown in the log picker. Pool categories get an exercise dropdown;

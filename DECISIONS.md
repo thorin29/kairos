@@ -1,5 +1,39 @@
 # Decisions
 
+## 2026-10 — One record, two plan queries (v0.568.0)
+
+The log card needed Best / Best reps / Last per movement. The two clients reach
+the log card through *different* queries — the web renders the weekly plan from
+`loadWorkoutsBoard`, the phone reads the day's plan from
+`loadTodayPlannedWorkouts` — so the obvious move was to compute the summary in
+each. That is how the web and the phone ended up disagreeing about reps, swaps
+and sessions over the last two days.
+
+So the computation went into `queries/movement-stats.ts` and both call it.
+`workout-log.ts` already imports `workouts.ts`, so putting it in either would
+have made them import each other; a third module costs nothing and ends the
+question. `doneOn` moved there too, since the summary has to report the day a
+workout was DONE, the same rule the charts use — and it was private to
+`workout-log.ts`, which is how a second copy starts.
+
+The API route needed no change at all: it passes `workouts` through wholesale,
+so the new field reached the phone the moment the query produced it.
+
+The summary attaches to the MOVEMENT, not the card. "Best bench" is meaningless
+on a card holding three lifts. On a single-movement card — most of them — that
+puts it exactly in the empty space above the action row, which is where it was
+asked for.
+
+The REPS tile was not broken. It means reps AT the record, and the record
+predates reps being stored, so it honestly said "none logged yet" while LAST,
+two tiles away, showed the same lift at ×2. Honest and still wrong to read, so
+it now falls back to the best rep count logged at any weight and says which
+weight that was.
+
+Dates: the web was formatting with `toLocaleDateString`, which prints "Oct 7"
+and, in another locale, could print 5/10 where the phone prints 10/5. Both now
+build the string from the ISO parts.
+
 ## 2026-10 — Clearing the fields made a save look like a failure (v0.567.0)
 
 `completePlannedWorkout` finished with `setValues({})`. The numbers vanished the

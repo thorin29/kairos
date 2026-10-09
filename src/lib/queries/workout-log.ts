@@ -6,6 +6,7 @@ import type { WorkoutType } from "@/generated/prisma/client";
 import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween } from "@/lib/dates";
 import { metricUnit, type Metric, type MuscleGroup } from "@/lib/workouts/catalog";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
+import { doneOn, loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
 import { loadStaleContext } from "@/lib/chores/stale";
 import { groupsFor, navRegionFor } from "@/lib/workouts/involvement";
 
@@ -118,7 +119,15 @@ export type PlannedMovement = {
    *  actually done. Null means the planned movement itself. Lets the client show
    *  "Front squat (instead of Back squat)" with its value rather than a blank. */
   loggedAs?: { poolExerciseId: string; name: string } | null;
+  /** A three-line history summary for the card: the record, the best rep count
+   *  at any weight, and the most recent set. Null for anything not measured in
+   *  weight, and for a movement with nothing logged yet.
+   *
+   *  Computed here rather than in each client so the web and the phone can't
+   *  disagree about what someone's best lift is. */
+  stats?: MovementStats | null;
 };
+
 
 export type TodayPlanned = {
   plannedWorkoutId: string;
@@ -294,6 +303,17 @@ export async function loadTodayPlannedWorkouts(
     },
   });
 
+  // Every weight movement in the day's plans, in one read. Per-plan or
+  // per-movement queries would multiply by however many cards the day holds.
+  const statIds = [
+    ...new Set(
+      (plans as unknown as { exercises: { poolExerciseId: string }[] }[])
+        .flatMap((p) => p.exercises.map((e) => e.poolExerciseId))
+        .filter(Boolean),
+    ),
+  ];
+  const statsById = await loadMovementStats(userId, statIds);
+
   const out: NonNullable<TodayPlanned>[] = [];
   for (const plan of plans) {
     const hiit = plan as unknown as {
@@ -357,6 +377,9 @@ export async function loadTodayPlannedWorkouts(
         unit,
         value: logged ? valueForMetric(logged, metric) : null,
         loggedAs: swapped,
+        // Only weights carry a record worth printing; a plank's "best" is a
+        // duration and belongs in a different shape than this card has.
+        stats: metric === "WEIGHT" ? (statsById[pe.poolExerciseId] ?? null) : null,
       };
     });
     out.push({
@@ -1199,9 +1222,6 @@ export type OverdueWorkoutDay = {
 /** The day a session was actually done. `date` is the day it COUNTS for —
  *  adherence is keyed on it — so an overdue workout logged later carries the
  *  real day here, and charts and history should use this. */
-function doneOn(sess: { date: Date; completedOn?: Date | null }): string {
-  return fromDateColumn(sess.completedOn ?? sess.date);
-}
 
 export async function loadOverdueWorkoutDays(
   userId: string,

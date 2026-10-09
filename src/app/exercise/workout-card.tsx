@@ -578,6 +578,12 @@ function PlanRow({
                       </div>
                     )}
                   </div>
+                  {/* Record / best reps / last, under this movement's fields.
+                      Attached to the MOVEMENT, not the card: "best bench" means
+                      nothing on a card holding three different lifts. On a
+                      one-movement card that puts it exactly in the empty space
+                      above the Calculator and Log row. */}
+                  {e.stats && <MovementHistory stats={e.stats} unit={unit} />}
                   {picking === e.id && (
                     <SwapPicker
                       exercise={e}
@@ -834,4 +840,56 @@ function MetricField({
       </label>
     </div>
   );
+}
+
+/**
+ * Three lines of history for one movement. Labels in the accent colour, numbers
+ * in the ordinary text colour, so the block reads as a small table without
+ * needing rules or a heading of its own.
+ */
+function MovementHistory({
+  stats,
+  unit,
+}: {
+  stats: NonNullable<PlanExercise["stats"]>;
+  unit: string;
+}) {
+  const lines: [string, string][] = [
+    [
+      "Best",
+      `${trimNum(stats.bestWeight)} ${unit}${stats.bestWeightReps ? ` \u00d7 ${stats.bestWeightReps}` : ""}  \u00b7  ${mdSlash(stats.bestOn)}`,
+    ],
+  ];
+  if (stats.bestReps) {
+    lines.push([
+      "Best reps",
+      `${stats.bestReps}${stats.bestRepsWeight != null ? ` at ${trimNum(stats.bestRepsWeight)} ${unit}` : ""}`,
+    ]);
+  }
+  lines.push([
+    "Last",
+    `${trimNum(stats.lastWeight)} ${unit}${stats.lastReps ? ` \u00d7 ${stats.lastReps}` : ""}  \u00b7  ${mdSlash(stats.lastOn)}`,
+  ]);
+
+  return (
+    <dl className="mt-1.5 space-y-0.5 text-xs">
+      {lines.map(([k, v]) => (
+        <div key={k} className="flex gap-2">
+          <dt className="w-16 shrink-0 font-semibold text-accent">{k}</dt>
+          <dd className="tabular min-w-0 truncate">{v}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** 105, not 105.0 — which JS numbers already give; this just names the intent. */
+function trimNum(v: number): string {
+  return String(v);
+}
+
+/** "10/5" — the same numeric date the phone and Recent workouts use. */
+function mdSlash(iso: string): string {
+  const [, m, d] = iso.split("-").map(Number);
+  return `${m}/${d}`;
 }
