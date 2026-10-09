@@ -22,6 +22,8 @@ export type MovementStats = {
   /** Highest rep count logged at any weight, with the weight it was done at. */
   bestReps: number | null;
   bestRepsWeight: number | null;
+  /** The day that best rep count was done. Null when no reps are logged. */
+  bestRepsOn: string | null;
   lastWeight: number;
   lastReps: number | null;
   lastOn: string;
@@ -70,6 +72,7 @@ export async function loadMovementStats(
         bestOn: on,
         bestReps: r.reps,
         bestRepsWeight: r.reps != null ? r.weight : null,
+        bestRepsOn: r.reps != null ? on : null,
         lastWeight: r.weight,
         lastReps: r.reps,
         lastOn: on,
@@ -88,6 +91,7 @@ export async function loadMovementStats(
     if (r.reps != null && r.reps > (cur.bestReps ?? 0)) {
       cur.bestReps = r.reps;
       cur.bestRepsWeight = r.weight;
+      cur.bestRepsOn = on;
     }
     // Ties on the same day go to the later row, which is the later edit.
     if (on >= cur.lastOn) {

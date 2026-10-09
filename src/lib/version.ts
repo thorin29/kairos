@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.568.0";
+export const APP_VERSION = "0.569.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -135,6 +135,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.569.0",
+    summary: [
+      "The movement history moved to the right of the entry fields, on the same row, instead of sitting underneath them.",
+      "Three fixed lines now, each answering a different question: Best weight is the heaviest ever lifted (weight only), Best reps is the MOST reps ever done with the weight they were done at \u2014 usually a lighter bar \u2014 and Most recent is the last session even when it is below both.",
+      "A line with nothing behind it shows a dash rather than disappearing, so the block keeps its shape as you log.",
+    ],
+  },
   {
     version: "0.568.0",
     summary: [

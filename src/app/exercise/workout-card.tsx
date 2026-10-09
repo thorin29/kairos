@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 import {
   completePlannedWorkout,
   listExercisePool,
@@ -577,13 +577,16 @@ function PlanRow({
                         />
                       </div>
                     )}
+                    {/* History for THIS movement, hard right of its own entry
+                        fields. Attached to the movement rather than the card:
+                        "best bench" means nothing on a card holding three
+                        different lifts. */}
+                    {e.stats && (
+                      <div className="ml-auto pb-0.5">
+                        <MovementHistory stats={e.stats} unit={unit} />
+                      </div>
+                    )}
                   </div>
-                  {/* Record / best reps / last, under this movement's fields.
-                      Attached to the MOVEMENT, not the card: "best bench" means
-                      nothing on a card holding three different lifts. On a
-                      one-movement card that puts it exactly in the empty space
-                      above the Calculator and Log row. */}
-                  {e.stats && <MovementHistory stats={e.stats} unit={unit} />}
                   {picking === e.id && (
                     <SwapPicker
                       exercise={e}
@@ -843,9 +846,19 @@ function MetricField({
 }
 
 /**
- * Three lines of history for one movement. Labels in the accent colour, numbers
- * in the ordinary text colour, so the block reads as a small table without
- * needing rules or a heading of its own.
+ * Three lines of history for one movement, to the right of its entry fields.
+ *
+ * Always three, with an em dash where there is nothing yet: a line that
+ * disappears moves the other two, and a card that changes shape as you log is
+ * harder to read at a glance than one with a gap in it.
+ *
+ * They answer three different questions and must not be collapsed:
+ *   Best weight — the heaviest ever lifted, weight only.
+ *   Best reps   — the MOST reps ever done, with the weight they were done at.
+ *                 Usually a lighter bar than the record, which is the point.
+ *   Most recent — the last session, even when it is below both records.
+ *
+ * Labels in the accent colour, numbers in the ordinary text colour.
  */
 function MovementHistory({
   stats,
@@ -854,30 +867,37 @@ function MovementHistory({
   stats: NonNullable<PlanExercise["stats"]>;
   unit: string;
 }) {
+  const dash = "\u2014";
   const lines: [string, string][] = [
     [
-      "Best",
-      `${trimNum(stats.bestWeight)} ${unit}${stats.bestWeightReps ? ` \u00d7 ${stats.bestWeightReps}` : ""}  \u00b7  ${mdSlash(stats.bestOn)}`,
+      "Best weight",
+      `${trimNum(stats.bestWeight)} ${unit}  \u00b7  ${mdSlash(stats.bestOn)}`,
+    ],
+    [
+      "Best reps",
+      stats.bestReps && stats.bestRepsWeight != null
+        ? `${trimNum(stats.bestRepsWeight)} ${unit} \u00d7 ${stats.bestReps}${
+            stats.bestRepsOn ? `  \u00b7  ${mdSlash(stats.bestRepsOn)}` : ""
+          }`
+        : dash,
+    ],
+    [
+      "Most recent",
+      `${trimNum(stats.lastWeight)} ${unit}${
+        stats.lastReps ? ` \u00d7 ${stats.lastReps}` : ""
+      }  \u00b7  ${mdSlash(stats.lastOn)}`,
     ],
   ];
-  if (stats.bestReps) {
-    lines.push([
-      "Best reps",
-      `${stats.bestReps}${stats.bestRepsWeight != null ? ` at ${trimNum(stats.bestRepsWeight)} ${unit}` : ""}`,
-    ]);
-  }
-  lines.push([
-    "Last",
-    `${trimNum(stats.lastWeight)} ${unit}${stats.lastReps ? ` \u00d7 ${stats.lastReps}` : ""}  \u00b7  ${mdSlash(stats.lastOn)}`,
-  ]);
 
+  // A two-column grid rather than three right-aligned rows: with rows, each
+  // label floats to wherever its own value ends and the labels come out ragged.
   return (
-    <dl className="mt-1.5 space-y-0.5 text-xs">
+    <dl className="grid grid-cols-[auto_auto] gap-x-2 text-xs leading-tight">
       {lines.map(([k, v]) => (
-        <div key={k} className="flex gap-2">
-          <dt className="w-16 shrink-0 font-semibold text-accent">{k}</dt>
-          <dd className="tabular min-w-0 truncate">{v}</dd>
-        </div>
+        <Fragment key={k}>
+          <dt className="text-right font-semibold text-accent">{k}</dt>
+          <dd className="tabular whitespace-nowrap text-right">{v}</dd>
+        </Fragment>
       ))}
     </dl>
   );

@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-10 — Best weight and best reps are different questions (v0.569.0)
+
+The first cut of this block showed "Best" as the record set, weight AND the reps
+done at it, and then only showed a reps line when those reps existed. That
+collapses two questions into one and answers neither well.
+
+They are now three fixed lines:
+
+  Best weight  the heaviest ever lifted, weight alone. Whatever reps happened to
+               go with it are noise against the number being asked for.
+  Best reps    the MOST reps ever done, with the weight they were done at. This
+               is usually a LIGHTER bar than the record, which is the whole
+               point of having the line — deriving it from the record set would
+               make it the record over again.
+  Most recent  the last session, even when below both records. A summary that
+               only ever shows personal bests cannot tell you where you are now.
+
+All three render always, with an em dash when empty. A line that disappears
+shifts the two below it, so the block changed shape as a movement accumulated
+history.
+
+Placement is to the right of the movement's own entry fields, in the same row.
+Under them was wrong: it pushed the action tiles down and read as a footnote to
+the card rather than as information about that one movement.
+
+`bestRepsOn` was added for the web's date column. The app omits dates and the
+repeated unit entirely — it has a third of a phone's width to work in, and the
+unit is already printed beside the weight box on the same row.
+
 ## 2026-10 — One record, two plan queries (v0.568.0)
 
 The log card needed Best / Best reps / Last per movement. The two clients reach
