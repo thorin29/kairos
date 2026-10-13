@@ -1325,10 +1325,9 @@ export async function setSchoolWorkComplete(
   await requireAdmin();
   const task = await prisma.task.findUnique({
     where: { id: taskId },
-    select: {
-      userId: true,
-      schoolWork: { select: { planUnit: { select: { id: true } } } },
-    },
+    // Only userId now: the plan unit is resolved by syncPlanUnitDone, which
+    // does its own lookup so every completion path gets the same behaviour.
+    select: { userId: true },
   });
   if (!task) return;
   await prisma.task.update({
@@ -1338,7 +1337,9 @@ export async function setSchoolWorkComplete(
       completedAt: complete ? new Date() : null,
     },
   });
-  await syncPlanUnitDone(task.id, complete);
+  // The parameter, not `task.id` — this `select` does not include `id`, and a
+  // field missing from a select is invisible until the real build typechecks it.
+  await syncPlanUnitDone(taskId, complete);
   revalidatePath("/admin/school/work");
   revalidatePath("/");
   revalidatePath(`/person/${task.userId}`);

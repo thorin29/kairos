@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-10 — The sandbox cannot see Prisma types, so a script has to (v0.572.0)
+
+0.571.0 failed to build on `task.id`, where the `select` had only asked for
+`userId`. It typechecked locally because this sandbox cannot generate the Prisma
+client — every query result is `any` here, so any property access on one is
+accepted. The Docker build generates the client and is therefore the first place
+the mistake exists at all.
+
+That is the second deploy lost to this blind spot (the first was a nullable
+muscle group used as an index). The gap is structural, not carelessness, so the
+answer is a check rather than more care: `scripts/check-prisma-select.py` reads
+each `findUnique`/`findFirst` with a flat `select`, collects its keys, and flags
+reads of anything else off that variable.
+
+It is deliberately conservative — it skips selects containing a spread, stops at
+any rebinding of the name including a loop variable, blanks comments so it
+cannot flag its own prose, and ignores `prisma.task.update` when a variable
+happens to be called `task`. Each of those was a false positive it produced
+first. A clean run is therefore weak evidence; a hit is nearly always real.
+Verified by reinstating the exact line that broke the build and watching it fail.
+
+It is not in `npm run build`. The builder image is node:22-alpine and may not
+have Python; a check that breaks the deploy it exists to protect is worse than
+no check. It runs in `scripts/preflight.sh`, alongside the typecheck report and
+the JSX-escape scan, before a zip goes out.
+
 ## 2026-10 — A stored flag with one writer out of four (v0.571.0)
 
 `ClassPlanUnit.done` is stored, not derived from the task behind it. Four paths
