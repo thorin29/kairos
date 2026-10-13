@@ -22,9 +22,13 @@ const CELLS = 20;
 export function XpBar({
   pct,
   shares,
+  gapsAfter,
 }: {
   pct: number;
   shares: Record<StatKey, number>;
+  /** Cell indices (1-based count of cells) to put a wider gap after, so one row
+   *  of squares can show where a stage ends without a second bar underneath. */
+  gapsAfter?: number[];
 }) {
   const filled = Math.max(0, Math.min(CELLS, Math.round((pct / 100) * CELLS)));
 
@@ -56,13 +60,21 @@ export function XpBar({
   while (cells.length < filled) cells.push("#94a3b8");
   while (cells.length < CELLS) cells.push(null);
 
+  const gaps = new Set(gapsAfter ?? []);
   return (
-    <div className="flex gap-[2px]" aria-label={`${pct}% into this level`}>
+    <div className="flex gap-[2px]" aria-label={`${pct}%`}>
       {cells.map((c, i) => (
         <span
           key={i}
           className="h-2.5 w-2.5 rounded-[2px]"
-          style={{ background: c ?? "var(--color-hairline)", opacity: c ? 1 : 0.5 }}
+          style={{
+            background: c ?? "var(--color-hairline)",
+            opacity: c ? 1 : 0.5,
+            // The divider is margin on the cell before it, not an extra
+            // element: an element would need its own width in the flex row and
+            // would shift the cells out of a clean grid.
+            marginRight: gaps.has(i + 1) ? 7 : undefined,
+          }}
         />
       ))}
     </div>

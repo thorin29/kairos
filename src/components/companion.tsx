@@ -1,6 +1,6 @@
 "use client";
 
-import { COMPANIONS, stageAsset, STAGE_NAMES, STAGE_SPANS, spanFills } from "@/lib/companions";
+import { COMPANIONS, stageAsset, STAGE_NAMES, STAGE_SPANS } from "@/lib/companions";
 import { XpBar } from "@/components/xp-bar";
 
 const MYSTERY_EGG = "/companions/eggs/mystery.png";
@@ -109,12 +109,29 @@ export function Companion({
                   &middot; {STAGE_NAMES[companion.stage]}
                 </span>
               </p>
-              {/* Two bars, each now saying what it is. The XP bar is the skill
-                  blend and stays — it was always deliberate. Below it, growth,
-                  split into one segment per stage so the stages are visible
-                  before anyone reads anything. */}
-              {pct != null && shares && <XpBar pct={pct} shares={shares} />}
-              <PhaseBar companion={companion} luckColor={luckColor} />
+              {/* ONE row of cells. It fills with GROWTH and breaks at each
+                  stage, so the squares tie directly to raising the creature
+                  rather than needing a second rail underneath saying so. The
+                  colours still come from what earned it, which was always the
+                  point of them. */}
+              {shares && (
+                <XpBar
+                  pct={companion.incubationPct}
+                  shares={shares}
+                  gapsAfter={growthCellGaps()}
+                />
+              )}
+              {/* Deepening is the exception: a smaller, separate job, so it gets
+                  its own short rail in place of nothing rather than reusing the
+                  stage row, which is about growth it has already finished. */}
+              {companion.phase === "deepening" && (
+                <PhaseBar companion={companion} luckColor={luckColor} />
+              )}
+              {companion.eggReady && (
+                <p className="text-[0.65rem] font-medium text-emerald-700">
+                  A new egg is ready!
+                </p>
+              )}
             </>
           ) : (
             <>
@@ -134,12 +151,12 @@ export function Companion({
 }
 
 /**
- * Growth, drawn as one segment per stage with a gap between them.
+ * The deepening rail: one short bar, shown only while a companion is being
+ * deepened.
  *
- * The gaps are the whole point: a hairline tick on a continuous rail read as a
- * scratch in the bar, where separate spans say "there are stages here" without
- * a legend or a label. While deepening there is one span, because deepening is
- * one span of work.
+ * Deliberately narrower than the stage row above it. Deepening is a smaller,
+ * separate job, and at full width it looked like the growth journey starting
+ * over.
  */
 function PhaseBar({
   companion,
@@ -148,43 +165,33 @@ function PhaseBar({
   companion: CompanionView;
   luckColor: string;
 }) {
-  const growing = companion.phase === "growing";
-  const deepening = companion.phase === "deepening";
-  const spans = growing ? STAGE_SPANS : [100];
-  const fills = spanFills(companion.incubationPct, spans);
-  const fill = companion.phase === "shiny" ? SHINY : luckColor;
-  // One sentence when something is waiting, whichever way it was earned. Saying
-  // "deepened" there described how it got here rather than what to do next, and
-  // what to do next is the same either way.
-  const caption = growing ? "growing" : deepening ? "deepening" : "A new egg is ready!";
-
   return (
-    // Deepening gets a visibly shorter rail in place of the growth one: it is a
-    // smaller, separate job, and reusing the full-width bar made it look like
-    // the same journey starting over.
-    <div className={`flex flex-col items-center gap-0.5 ${deepening ? "w-20" : "w-32"}`}>
-      {/* A 4px gap, not 2: at this bar height 2px read as a rendering seam
-          rather than a deliberate division between stages. */}
-      <div className="flex w-full gap-1">
-        {spans.map((w, i) => (
-          <div
-            key={i}
-            className="h-2 overflow-hidden rounded-full bg-hairline"
-            style={{ flex: `${w} 0 0%` }}
-          >
-            <div
-              className="h-full rounded-full"
-              style={{ width: `${Math.round(fills[i] * 100)}%`, background: fill }}
-            />
-          </div>
-        ))}
+    <div className="flex w-20 flex-col items-center gap-0.5">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-hairline">
+        <div
+          className="h-full rounded-full"
+          style={{ width: `${companion.incubationPct}%`, background: luckColor }}
+        />
       </div>
-      <p
-        className="text-[0.65rem] font-medium"
-        style={companion.eggReady ? { color: "#047857" } : undefined}
-      >
-        {caption}
-      </p>
+      <p className="text-[0.65rem] font-medium text-muted">deepening</p>
     </div>
   );
+}
+
+/**
+ * Which cells of the 20 get a divider after them, from the stage spans.
+ *
+ * Derived rather than hardcoded: the thresholds live in CLEAN_DAY_STAGES, and a
+ * divider drawn at a different place than the stage actually ends would be
+ * worse than no divider at all.
+ */
+function growthCellGaps(): number[] {
+  const CELLS = 20;
+  const out: number[] = [];
+  let acc = 0;
+  for (const span of STAGE_SPANS.slice(0, -1)) {
+    acc += span;
+    out.push(Math.round((acc / 100) * CELLS));
+  }
+  return out;
 }

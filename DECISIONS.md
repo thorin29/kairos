@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-10 — One row of squares, broken at the stages (v0.578.0)
+
+The card had drifted to two bars again: the cell row for the skill blend, and a
+separate segmented rail underneath for growth. Two bars is what started this
+whole thread, and adding the second one back was me solving "show the stages" by
+adding furniture rather than by making the existing bar mean something.
+
+The cell row now fills with GROWTH and breaks where each stage ends. The domain
+colours stay, because they were never the problem — they say what earned the
+progress, while the count says how much. One object, two honest readings.
+
+The break is extra margin on the cell before it, not an inserted element. An
+element needs its own width in the row and knocks the squares out of their grid.
+
+The break positions are derived from CLEAN_DAY_STAGES and sent to the phone
+rather than hardcoded in both. A divider drawn somewhere other than the real
+boundary would be worse than no divider.
+
+The "growing" caption is gone: a bar that is filling already says it. Only two
+captions remain, and both say something a bar cannot — "A new egg is ready!"
+and "deepening".
+
+Deepening keeps a separate short rail. It is the one thing on this card that is
+NOT the growth the row measures, so sharing the row would misstate it.
+
 ## 2026-10 — Shiny is not finished (v0.577.0)
 
 Second time in three releases the same mistake: treating a PHASE as if it

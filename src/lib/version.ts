@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.577.0";
+export const APP_VERSION = "0.578.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -139,6 +139,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.578.0",
+    summary: [
+      "One bar on the companion card instead of two. The row of squares now fills with growth and breaks where each stage ends, so the squares tie straight to raising the creature. The colours still show what earned it.",
+      "Dropped the \u201cgrowing\u201d caption \u2014 a bar that is filling says that already.",
+      "Deepening keeps its own short rail, since it is a separate job from the growth the row is about.",
+    ],
+  },
   {
     version: "0.577.0",
     summary: [

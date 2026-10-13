@@ -3,7 +3,7 @@ import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { loadProgression } from "@/lib/queries/progression";
 import { loadCoop } from "@/lib/queries/coop";
-import { COMPANIONS, STAGE_NAMES } from "@/lib/companions";
+import { COMPANIONS, STAGE_NAMES, STAGE_SPANS } from "@/lib/companions";
 import { STAT_ORDER, type StatKey } from "@/lib/scoring/progression";
 import { currentSeasonWindow } from "@/lib/season";
 
@@ -23,7 +23,21 @@ const STAT_HEX: Record<StatKey, string> = {
   TASK: "#14b8a6",
 };
 
-/** A 20-cell level bar colored by where the XP came from (grouped by domain),
+/** Which cells get a divider after them, so one row of squares shows where each
+ *  stage ends. Derived from CLEAN_DAY_STAGES, never hardcoded: a divider drawn
+ *  somewhere other than the real boundary is worse than none. */
+function growthCellGaps(): number[] {
+  const CELLS = 20;
+  const out: number[] = [];
+  let acc = 0;
+  for (const span of STAGE_SPANS.slice(0, -1)) {
+    acc += span;
+    out.push(Math.round((acc / 100) * CELLS));
+  }
+  return out;
+}
+
+/** A 20-cell bar colored by where the XP came from (grouped by domain),
  *  mirroring the web's XpBar. Empty cells are "". */
 function xpCells(pct: number, shares: Record<string, number>): string[] {
   const CELLS = 20;
@@ -107,7 +121,12 @@ export async function GET(req: NextRequest) {
       luck: c.luck,
       image,
       color: p.companionColor,
-      xpCells: xpCells(p.level.pct, p.statShares),
+      // Filled by GROWTH, not level XP: on this card the squares are how far
+      // the companion has been raised, and the colours are what earned it.
+      xpCells: xpCells(c.incubationPct, p.statShares),
+      // Where to break the row so it reads as stages. Derived from the same
+      // thresholds the web uses, sent rather than duplicated as a constant.
+      cellGaps: growthCellGaps(),
     },
   });
 }
