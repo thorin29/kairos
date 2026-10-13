@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.578.0";
+export const APP_VERSION = "0.579.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -139,6 +139,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.579.0",
+    summary: [
+      "Every movement on the Log workout page now carries its own Rest / skip, Calculator and Log buttons, under a rule of its own. Two movements added to a plan in one go look exactly like two added separately \u2014 how they got there no longer changes how they are logged.",
+      "Logging one movement no longer touches the others on the same card: the bench press saves while the incline press stays open, and only the button you pressed says \u201cLogging\u2026\u201d.",
+      "The button names what it is logging \u2014 Log weight, Log time \u2014 and switches to Edit for a movement already recorded today.",
+    ],
+  },
   {
     version: "0.578.0",
     summary: [

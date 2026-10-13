@@ -29,6 +29,10 @@ import type {
   PoolEntry,
 } from "@/lib/queries/workouts";
 
+/** `savingKey` for the one button that belongs to the whole card rather than to
+ *  a movement (HIIT, a metric-only log, a plan with nothing to enter). */
+const CARD_KEY = "_card";
+
 // Verb-noun for the log button, so it reads "Log weight" / "Log time" rather
 // than a generic "Complete workout".
 const LOG_NOUN: Record<Metric, string> = {
@@ -235,6 +239,10 @@ function PlanRow({
     return init;
   });
   const [pending, startTransition] = useTransition();
+  /** Which movement's Log button was pressed, so only that one says "Logging…".
+   *  `pending` is one flag for the whole row, and a card holding two movements
+   *  put both buttons into the saving state when either was used. */
+  const [savingKey, setSavingKey] = useState<string | null>(null);
 
   const category: WorkoutCategory = workout.category ?? "WEIGHTS";
   const hiit = workout.hiit;
@@ -246,35 +254,45 @@ function PlanRow({
   const metricFor = (m: Metric | null): Metric => m ?? defaultMetricFor(category);
 
   // Name the log button after what's being logged where that's unambiguous.
+  // Only the whole-card button uses this: HIIT, a metric-only log, or a plan
+  // with nothing to enter. Movements name their own buttons below.
   let logLabel = "Log workout";
   if (!hiit) {
     if (metricOnly) {
       logLabel = `Log ${LOG_NOUN[soloMetric]}`;
     } else if (trackedExercises.length === 0) {
       logLabel = "Mark complete";
-    } else {
-      const metrics = new Set(trackedExercises.map((e) => metricFor(e.metric)));
-      if (metrics.size === 1) {
-        logLabel = `Log ${LOG_NOUN[[...metrics][0]]}`;
-      }
     }
   }
+  // Already recorded: the field is prefilled with what was logged, so the
+  // button saves a correction rather than a first entry.
+  if (done && metricOnly) logLabel = `Edit ${LOG_NOUN[soloMetric]}`;
 
-  // Already recorded for this date: the fields are prefilled with what was
-  // logged, so the button saves a correction rather than a first entry. The
-  // phone has said "edit weight" for a while; the web still offered to log
-  // something that was plainly sitting in the boxes.
-  const alreadyLogged =
-    workout.exercises.length > 0 &&
-    workout.exercises.every(
-      (e) => e.poolExerciseId && loggedByPool[e.poolExerciseId],
-    );
-  if (alreadyLogged || done) logLabel = "Edit weight";
+  /**
+   * The button that belongs to ONE movement.
+   *
+   * Already recorded for this date: the fields are prefilled with what was
+   * logged, so the button saves a correction rather than a first entry. Read
+   * per movement, not per plan — logging the bench press on a two-movement
+   * chest plan must not relabel the incline press as an edit.
+   */
+  const movementLogLabel = (e: PlanExercise): string => {
+    const verb =
+      e.poolExerciseId && loggedByPool[e.poolExerciseId] ? "Edit" : "Log";
+    return `${verb} ${LOG_NOUN[metricFor(e.metric)]}`;
+  };
 
   const setVal = (key: string, v: string) =>
     setValues((prev) => ({ ...prev, [key]: v.replace(/[^\d.]/g, "") }));
 
-  const complete = () => {
+  /**
+   * Log this plan. `only` names a single movement's planned-exercise id, which
+   * is how every weights card now submits: one movement, its own button. The
+   * server clears just the movements a submission covers, so logging the bench
+   * press leaves the incline press sitting there unlogged rather than wiping
+   * it. `only` omitted still sends the whole plan (HIIT, metric-only).
+   */
+  const complete = (only?: string) => {
     // A named HIIT workout logs a single result via logHiitWorkout.
     if (hiit) {
       const r = hiitResult(hiit.type);
@@ -283,6 +301,7 @@ function PlanRow({
           ? (Number(values["_min"] || 0) * 60 + Number(values["_sec"] || 0))
           : Number(values["_count"] || 0);
       if (!(value > 0)) return;
+      setSavingKey(CARD_KEY);
       startTransition(async () => {
         await logHiitWorkout({
           userId,
@@ -291,6 +310,7 @@ function PlanRow({
           value,
         });
         setValues({});
+        setSavingKey(null);
       });
       return;
     }
@@ -345,7 +365,9 @@ function PlanRow({
           : (values["_solo"] ?? "");
       push(null, soloMetric, soloRaw, resolveUnit(soloMetric));
     } else {
-      for (const e of trackedExercises) {
+      for (const e of only
+        ? trackedExercises.filter((t) => t.id === only)
+        : trackedExercises) {
         const m = metricFor(e.metric);
         // A movement swapped for today logs under the variation actually
         // lifted, carrying the planned movement's id so the slot it fills is
@@ -369,6 +391,7 @@ function PlanRow({
       }
     }
 
+    setSavingKey(only ?? CARD_KEY);
     startTransition(async () => {
       await completePlannedWorkout({
         userId,
@@ -377,6 +400,7 @@ function PlanRow({
         entries,
         completedOnISO,
       });
+      setSavingKey(null);
       // Deliberately NOT cleared. What is in these boxes is now what the server
       // holds, so wiping them makes a successful save look like a failed one —
       // the numbers vanished and only came back on a full refresh. The prefill
@@ -498,9 +522,12 @@ function PlanRow({
                 return (
                   // One rule between movements in a card, none above the first
                   // (the card's own rule already sits under the muscle group).
+                  // The rule now separates one movement's buttons from the next
+                  // movement's name, so it gets a little more air than it did
+                  // when it only ever came between two field rows.
                   <div
                     key={e.id}
-                    className={i > 0 ? "border-t border-hairline pt-2.5" : ""}
+                    className={i > 0 ? "border-t border-hairline pt-3.5" : ""}
                   >
                   {/* Swap belongs to the movement, so it sits against the name
                       rather than across the card. The name still truncates (it
@@ -597,6 +624,22 @@ function PlanRow({
                       onClose={() => setPicking(null)}
                     />
                   )}
+                  {/* This movement's own buttons. Every movement gets a set,
+                      whether it arrived as a plan of its own or alongside
+                      others in one plan — so two chest presses added together
+                      read exactly like two added one at a time. */}
+                  <PlanActions
+                    logLabel={movementLogLabel(e)}
+                    saving={pending && savingKey === e.id}
+                    disabled={pending}
+                    onRest={() =>
+                      startTransition(async () => {
+                        await restDay(userId, dateISO);
+                      })
+                    }
+                    onCalc={() => setCalcOpen(true)}
+                    onLog={() => complete(e.id)}
+                  />
                   </div>
                 );
               })}
@@ -613,33 +656,70 @@ function PlanRow({
             </>
           )}
 
-          {/* Three labelled tiles, same shape and wording as the phone, so the
-              two logging screens read as one feature. */}
-          <div className="mt-1 grid grid-cols-3 gap-2">
-            <PlanActionTile
-              icon={MoonIcon}
-              label="Rest / skip"
+          {/* The card's own buttons, for the shapes with no movement to hang
+              them on: a HIIT result, a metric-only log, or a plan with nothing
+              to enter. A weights plan has none of these — its buttons sit with
+              each movement above. */}
+          {(hiit || metricOnly || trackedExercises.length === 0) && (
+            <PlanActions
+              logLabel={logLabel}
+              saving={pending && savingKey === CARD_KEY}
               disabled={pending}
-              onClick={() => startTransition(async () => {
-                await restDay(userId, dateISO);
-              })}
+              onRest={() =>
+                startTransition(async () => {
+                  await restDay(userId, dateISO);
+                })
+              }
+              onCalc={() => setCalcOpen(true)}
+              onLog={() => complete()}
             />
-            <PlanActionTile
-              icon={DumbbellIcon}
-              label="Calculator"
-              disabled={false}
-              onClick={() => setCalcOpen(true)}
-            />
-            <PlanActionTile
-              icon={CheckIcon}
-              label={pending ? "Logging…" : logLabel}
-              disabled={pending}
-              primary
-              onClick={complete}
-            />
-          </div>
+          )}
           {calcOpen && <WeightCalculator onClose={() => setCalcOpen(false)} />}
         </div>
+    </div>
+  );
+}
+
+/** Three labelled tiles, same shape and wording as the phone, so the two
+ *  logging screens read as one feature. */
+function PlanActions({
+  logLabel,
+  saving,
+  disabled,
+  onRest,
+  onCalc,
+  onLog,
+}: {
+  logLabel: string;
+  /** This button's own save is running — not merely "something is saving",
+   *  so the other movements on the card keep their labels. */
+  saving: boolean;
+  disabled: boolean;
+  onRest: () => void;
+  onCalc: () => void;
+  onLog: () => void;
+}) {
+  return (
+    <div className="mt-1 grid grid-cols-3 gap-2">
+      <PlanActionTile
+        icon={MoonIcon}
+        label="Rest / skip"
+        disabled={disabled}
+        onClick={onRest}
+      />
+      <PlanActionTile
+        icon={DumbbellIcon}
+        label="Calculator"
+        disabled={false}
+        onClick={onCalc}
+      />
+      <PlanActionTile
+        icon={CheckIcon}
+        label={saving ? "Logging…" : logLabel}
+        disabled={disabled}
+        primary
+        onClick={onLog}
+      />
     </div>
   );
 }
