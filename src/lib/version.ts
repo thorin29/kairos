@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.574.0";
+export const APP_VERSION = "0.575.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -138,6 +138,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.575.0",
+    summary: [
+      "Fixes a companion deepened before it was grown being redrawn as an adult. 0.574.0 treated \u201cshiny\u201d as implying adult, so a shiny hatchling got an adult sprite it had never grown into. The stage now always comes from the growth actually done.",
+      "The skill-blend XP bar is back \u2014 it was deliberate. Growth sits below it as one segment per stage with a gap between, so the stages read without a label.",
+    ],
+  },
   {
     version: "0.574.0",
     summary: [

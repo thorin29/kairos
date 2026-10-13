@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-10 — A phase is not a stage (v0.575.0)
+
+`companionPhase` returned `stage: 2` for anything shiny or deepening, on the
+reasoning that only an adult can reach those phases. True going forward, and
+false for data already in the database: the old rules let a hatchling be
+deepened, so a shiny hatchling exists — and 0.574.0 redrew it with the adult
+sprite, crediting growth that was never done.
+
+The stage now always comes from growth, in every branch. A phase describes what
+a companion is DOING; the stage is what it has become, and only one of those is
+allowed to pick the picture.
+
+The XP bar is back. It was removed as part of "three progress ideas, one bar",
+but it was the one deliberate thing of the three — the problem was never that
+it existed, it was that nothing on the card showed growth. So: XP cells on top,
+growth below, each saying what it is.
+
+Growth is drawn as one segment per stage with a gap, rather than a tick on a
+continuous rail. The tick read as a seam in the bar; the gap reads as a
+division. 4px, because 2px read as a rendering artifact at this bar height.
+
 ## 2026-10 — Three progress ideas, one bar (v0.574.0)
 
 The companion card showed one bar and the feature had three unrelated notions of

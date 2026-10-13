@@ -1,6 +1,7 @@
 "use client";
 
-import { COMPANIONS, stageAsset, STAGE_NAMES, STAGE_TICK_PCT } from "@/lib/companions";
+import { COMPANIONS, stageAsset, STAGE_NAMES, STAGE_SPANS, spanFills } from "@/lib/companions";
+import { XpBar } from "@/components/xp-bar";
 
 const MYSTERY_EGG = "/companions/eggs/mystery.png";
 /** The one shiny colour, shared by the card, the name and the app. */
@@ -108,10 +109,11 @@ export function Companion({
                   &middot; {STAGE_NAMES[companion.stage]}
                 </span>
               </p>
-              {/* ONE bar, measuring the phase it is in. The card used to show
-                  the skill-blend XP bar here and the egg meter below it, and
-                  neither of them was the thing people read it as — how grown
-                  the creature is. */}
+              {/* Two bars, each now saying what it is. The XP bar is the skill
+                  blend and stays — it was always deliberate. Below it, growth,
+                  split into one segment per stage so the stages are visible
+                  before anyone reads anything. */}
+              {pct != null && shares && <XpBar pct={pct} shares={shares} />}
               <PhaseBar companion={companion} luckColor={luckColor} />
             </>
           ) : (
@@ -132,13 +134,12 @@ export function Companion({
 }
 
 /**
- * The one bar on the card: progress through whatever the companion is doing
- * now, with a tick where each stage begins.
+ * Growth, drawn as one segment per stage with a gap between them.
  *
- * The ticks carry no labels on purpose — they show the shape of the journey
- * (two marks, three stages) without a legend a child has to be taught. They
- * only appear while growing, because once a companion is grown the bar is
- * measuring something else and a stage mark on it would be a lie.
+ * The gaps are the whole point: a hairline tick on a continuous rail read as a
+ * scratch in the bar, where separate spans say "there are stages here" without
+ * a legend or a label. While deepening there is one span, because deepening is
+ * one span of work.
  */
 function PhaseBar({
   companion,
@@ -148,6 +149,9 @@ function PhaseBar({
   luckColor: string;
 }) {
   const growing = companion.phase === "growing";
+  const spans = growing ? STAGE_SPANS : [100];
+  const fills = spanFills(companion.incubationPct, spans);
+  const fill = companion.phase === "shiny" ? SHINY : luckColor;
   const caption =
     companion.phase === "growing"
       ? "growing"
@@ -159,22 +163,21 @@ function PhaseBar({
 
   return (
     <div className="flex w-32 flex-col items-center gap-0.5">
-      <div className="relative h-2 w-full overflow-hidden rounded-full bg-hairline">
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${companion.incubationPct}%`,
-            background: companion.phase === "shiny" ? SHINY : luckColor,
-          }}
-        />
-        {growing &&
-          STAGE_TICK_PCT.filter((t) => t < 100).map((t) => (
-            <span
-              key={t}
-              className="absolute top-0 h-full w-px bg-surface/80"
-              style={{ left: `${t}%` }}
+      {/* A 4px gap, not 2: at this bar height 2px read as a rendering seam
+          rather than a deliberate division between stages. */}
+      <div className="flex w-full gap-1">
+        {spans.map((w, i) => (
+          <div
+            key={i}
+            className="h-2 overflow-hidden rounded-full bg-hairline"
+            style={{ flex: `${w} 0 0%` }}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${Math.round(fills[i] * 100)}%`, background: fill }}
             />
-          ))}
+          </div>
+        ))}
       </div>
       <p
         className="text-[0.65rem] font-medium"

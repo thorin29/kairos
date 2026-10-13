@@ -271,8 +271,12 @@ export function companionPhase(input: {
 }): { phase: CompanionPhase; stage: number; pct: number; eggReady: boolean } {
   const stage = stageFromGrowth(input.growth, 0);
 
+  // `stage` is ALWAYS what growth says, never implied by a phase. Forcing it to
+  // adult for anything shiny redrew a companion that had been deepened as a
+  // hatchling under the old rules — where that was possible — as a full adult
+  // it had never grown into. The sprite has to follow the work done.
   if (input.shiny) {
-    return { phase: "shiny", stage: 2, pct: 100, eggReady: true };
+    return { phase: "shiny", stage, pct: 100, eggReady: true };
   }
   if (input.deepening) {
     const done = input.deepenGrowth >= DEEPEN_GROWTH;
@@ -281,13 +285,13 @@ export function companionPhase(input: {
     const raw = Math.floor((input.deepenGrowth / DEEPEN_GROWTH) * 100);
     return {
       phase: done ? "shiny" : "deepening",
-      stage: 2,
+      stage,
       pct: done ? 100 : Math.min(99, Math.max(0, raw)),
       eggReady: done,
     };
   }
   if (stage >= 2) {
-    return { phase: "adult", stage: 2, pct: 100, eggReady: true };
+    return { phase: "adult", stage, pct: 100, eggReady: true };
   }
   const target = CLEAN_DAY_STAGES[2];
   const raw = Math.floor((input.growth / target) * 100);
@@ -299,11 +303,30 @@ export function companionPhase(input: {
   };
 }
 
-/** Where the stage ticks sit along the growth bar, as percentages. Drawn as
- *  marks with no text: the shape of the journey without a legend. */
-export const STAGE_TICK_PCT = CLEAN_DAY_STAGES.slice(1).map((g) =>
-  Math.round((g / CLEAN_DAY_STAGES[2]) * 100),
-);
+/**
+ * The growth bar drawn as one span per stage, with a gap between them.
+ *
+ * A hairline tick on a continuous rail was too easy to read as a scratch in the
+ * bar. Separate segments say "there are stages here" before anyone reads a
+ * number, which is the whole job.
+ *
+ * Each entry is that span's share of the whole, in percent.
+ */
+export const STAGE_SPANS: number[] = CLEAN_DAY_STAGES.slice(1).map((g, i) => {
+  const from = CLEAN_DAY_STAGES[i];
+  return ((g - from) / CLEAN_DAY_STAGES[CLEAN_DAY_STAGES.length - 1]) * 100;
+});
+
+/** How full each stage span is, given overall progress through growth (0-100).
+ *  Returns one 0-1 fill per span, so the bar fills left to right across them. */
+export function spanFills(pct: number, spans: number[] = STAGE_SPANS): number[] {
+  let left = Math.max(0, Math.min(100, pct));
+  return spans.map((w) => {
+    const take = Math.max(0, Math.min(w, left));
+    left -= take;
+    return w > 0 ? take / w : 0;
+  });
+}
 export function stageFromGrowth(cleanDays: number, perfectWeeks: number): number {
   const growth = cleanDays + perfectWeeks * 2;
   if (growth >= CLEAN_DAY_STAGES[2]) return 2;
