@@ -1532,6 +1532,12 @@ model Companion {
   /// acquiredAt. `shiny` is the finished state; this is the in-progress one.
   /// Null means not deepening — including for one already shiny.
   deepeningStartedAt DateTime?
+  /// Growth earned in PREVIOUS tenures, banked when it went to the gallery.
+  /// Lets a companion be brought back without losing what it had grown.
+  growthBanked  Int      @default(0)
+  /// When the current tenure began. Null for a companion that has only ever had
+  /// one, where `acquiredAt` is the same thing.
+  tenureStartedAt DateTime?
 
   @@unique([userId, species])
   @@index([userId])

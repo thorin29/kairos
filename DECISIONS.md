@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-10 — Growth has to survive the shelf (v0.576.0)
+
+Bringing a companion back out of the gallery breaks the assumption the growth
+model was built on: that a companion has exactly one tenure, so measuring from
+`acquiredAt` is the same as measuring its whole life.
+
+Both obvious fixes are wrong. Measuring from `acquiredAt` credits a returning
+companion with every clean day since it first hatched, including the months it
+spent shelved — a hatchling put away in spring comes back a full adult.
+Measuring from the day it returns throws away everything it earned.
+
+So growth is banked on retirement and the current tenure is measured from when
+it started; total growth is the sum. Simulated across a shelf trip: seven days
+earned, thirty-three shelved, and it returns as the juvenile it was rather than
+the adult the naive version would have handed over.
+
+One helper owns taking a companion out of the slot, and both paths that do it —
+hatching something new, and activating an old one — call it. That is the same
+rule as `syncPlanUnitDone` and `logPlannedWorkout`: the second implementation is
+the one that drifts.
+
+A returning companion has `deepeningStartedAt` cleared. It is not mid-deepen; if
+it was deepened before it is still shiny, and if it was not, it gets that choice
+fresh when it reaches adult again.
+
+The gallery dialog says what the swap costs before the tap rather than after it.
+Activating retires whoever is in the slot, and that is not obvious from a button
+labelled "make this my companion".
+
 ## 2026-10 — A phase is not a stage (v0.575.0)
 
 `companionPhase` returned `stage: 2` for anything shiny or deepening, on the

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.575.0";
+export const APP_VERSION = "0.576.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -133,11 +133,19 @@ export const MIGRATIONS = [
   "118_plan_unit_done_backfill",
   "119_task_original_due",
   "120_companion_deepening",
+  "121_companion_tenure",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.576.0",
+    summary: [
+      "A companion in the gallery can be brought back and made your active one again. Whoever was with you goes back to the gallery keeping everything it grew, and the returning one picks up exactly where it left off \u2014 then deepens normally once fully grown.",
+      "Growth now survives a spell on the shelf. It is banked when a companion retires and resumed when it returns, so swapping back and forth neither loses progress nor invents it.",
+    ],
+  },
   {
     version: "0.575.0",
     summary: [

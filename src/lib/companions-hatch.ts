@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { currentSeasonWindow } from "@/lib/season";
 import { loadProgression } from "@/lib/queries/progression";
 import { pickHatch, COMPANIONS, luckFromStreak } from "@/lib/companions";
+import { retireActiveCompanionOp } from "@/lib/companions-tenure";
 
 /**
  * Spend the egg — the auth-free core shared by the web action and the app's
@@ -84,25 +85,24 @@ export async function hatchEggCore(
     }
     const ops = [];
     if (active) {
-      const stg = me.companion.stage;
       ops.push(
-        prisma.companion.update({
-          where: { id: active.id },
-          data: {
-            isActive: false,
-            mintedStage: stg,
-            // Freeze the finished state. `shiny` is derived from growth while a
-            // companion is yours; once it is on the shelf there is no growth to
-            // measure, so the flag has to hold the answer.
-            shiny: me.companion.shiny,
-            deepeningStartedAt: null,
-          },
+        retireActiveCompanionOp({
+          companionId: active.id,
+          totalGrowth: me.companion.growth,
+          stage: me.companion.stage,
+          shiny: me.companion.shiny,
         }),
       );
     }
     ops.push(
       prisma.companion.create({
-        data: { userId, species: pick, isActive: true, activeSinceXp: lifetimeXp },
+        data: {
+          userId,
+          species: pick,
+          isActive: true,
+          activeSinceXp: lifetimeXp,
+          tenureStartedAt: new Date(),
+        },
       }),
     );
     await prisma.$transaction(ops);

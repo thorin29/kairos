@@ -3,7 +3,7 @@ import { apiOk } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { prisma } from "@/lib/prisma";
 import { COMPANIONS, STAGE_NAMES, type CompanionEra } from "@/lib/companions";
-import { loadProgression } from "@/lib/queries/progression";
+import { loadProgression, type PersonProgress } from "@/lib/queries/progression";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,18 +35,31 @@ export async function GET(req: NextRequest) {
     }),
     loadProgression(),
   ]);
-  const owned = new Set(ownedRows.map((r) => r.species));
+  // Named before use: the rows are untyped without a generated Prisma client,
+  // and everything derived from them (including the stage used to index
+  // STAGE_NAMES) inherits that.
+  type OwnedRow = {
+    species: string;
+    mintedStage: number | null;
+    isActive: boolean;
+    shiny: boolean;
+  };
+  const rows: OwnedRow[] = ownedRows as OwnedRow[];
+  const owned = new Set(rows.map((r) => r.species));
 
   // The stage to show each owned creature at: the active one at its live growth
   // stage, a shelved one frozen at the stage it was raised to.
-  const me = progression.find((p) => p.id === authed.device.person.id);
+  const me = (progression as PersonProgress[]).find(
+    (p) => p.id === authed.device.person.id,
+  );
   const activeStage = me?.companion.stage ?? 0;
   const stageBySpecies = new Map(
-    ownedRows.map((r) => [r.species, r.isActive ? activeStage : (r.mintedStage ?? 2)] as const),
+    rows.map((r) => [r.species, r.isActive ? activeStage : (r.mintedStage ?? 2)] as const),
   );
   // A creature stays shiny on the shelf: deepening is permanent, so the gallery
   // is where that shows for good. One shiny copy makes the species shiny.
-  const shinySpecies = new Set(ownedRows.filter((r) => r.shiny).map((r) => r.species));
+  const shinySpecies = new Set(rows.filter((r) => r.shiny).map((r) => r.species));
+  const activeSpecies = new Set(rows.filter((r) => r.isActive).map((r) => r.species));
 
   const roster = Object.values(COMPANIONS);
   const eras = ERAS.map((era) => {
@@ -63,6 +76,9 @@ export async function GET(req: NextRequest) {
           /** 0 hatchling, 1 juvenile, 2 adult — how far you've raised it. */
           stage: isOwned ? stage : null,
           shiny: isOwned && shinySpecies.has(s.id),
+          /** The one currently with you. It cannot be "made active" again, and
+           *  it is the only one the character screen's actions apply to. */
+          isActive: isOwned && activeSpecies.has(s.id),
           image: isOwned
             ? `/api/v1/companion-sprite?p=${encodeURIComponent(`${s.id}/${STAGE_NAMES[stage]}.png`)}`
             : null,

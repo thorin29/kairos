@@ -84,6 +84,10 @@ export type PersonProgress = {
     /** Kept so older clients keep decoding; nothing sets it now that growth,
      *  not a monthly allowance, paces hatching. */
     eggCapped: boolean;
+    /** Total growth this companion has earned, banked tenures included. Written
+     *  back when it retires, so bringing it out of the gallery resumes rather
+     *  than restarting. Zero when there is no companion. */
+    growth: number;
     /** 0..1 streak-driven odds; the higher it is, the rarer the next hatch can be.
      *  Drives the egg meter's colour so a strong streak shows without any text. */
     luck: number;
@@ -161,7 +165,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     seasonKey: string | null;
     eggsThisSeason: number;
   };
-  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number; acquiredAt: Date; deepeningStartedAt: Date | null };
+  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number; acquiredAt: Date; deepeningStartedAt: Date | null; growthBanked: number; tenureStartedAt: Date | null };
   const stateByUser = new Map(
     (compStates as StateRow[]).map((s) => [s.userId, s]),
   );
@@ -408,24 +412,33 @@ export async function loadProgression(): Promise<PersonProgress[]> {
             incubationPct: 100,
             eggReady: true,
             eggCapped: false,
+            growth: 0,
             luck: luckFromStreak(current),
           };
         }
 
-        const acquiredISO = active.acquiredAt.toISOString().slice(0, 10);
+        // Growth = what it banked in earlier tenures + what it has done in this
+        // one. A companion brought back from the gallery keeps what it earned
+        // and nothing more: measuring from `acquiredAt` would credit it every
+        // clean day since it first hatched, including the ones it spent shelved.
+        const tenureISO = (active.tenureStartedAt ?? active.acquiredAt)
+          .toISOString()
+          .slice(0, 10);
         const deepFromISO = active.deepeningStartedAt
           ? active.deepeningStartedAt.toISOString().slice(0, 10)
           : null;
         const ph = companionPhase({
-          growth: growthSince(acquiredISO),
+          growth: active.growthBanked + growthSince(tenureISO),
           deepenGrowth: deepFromISO ? growthSince(deepFromISO) : 0,
           deepening: deepFromISO !== null,
           shiny: active.shiny,
         });
 
+        const totalGrowth = active.growthBanked + growthSince(tenureISO);
         return {
           active: true as const,
           species: active.species,
+          growth: totalGrowth,
           stage: ph.stage,
           // Finishing the deepen IS being shiny; the column catches up when the
           // companion retires, so the gallery copy is right without this view
