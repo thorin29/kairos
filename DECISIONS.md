@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-10 — A stored flag with one writer out of four (v0.571.0)
+
+`ClassPlanUnit.done` is stored, not derived from the task behind it. Four paths
+complete a task — `toggleTask` (ticking it on a card), `claimAndCompleteTask`,
+`api/day.ts` (the phone), and `setSchoolWorkComplete` (the admin school-work
+screen) — and only the last one wrote the flag. So every lesson the children
+actually finished stayed `done = false` and the plan review printed it as
+overdue, indefinitely, while the task sat there COMPLETE.
+
+The flag could have been dropped and the status derived from the task on read,
+which would make this class of bug impossible. It was not, because a unit can be
+marked done with no task behind it at all — work skipped at upload time, via
+`setPlanUnitDone` — so the flag carries information the tasks do not.
+
+Instead `syncPlanUnitDone` lives in `lib/school/plan-unit-sync.ts` and every
+completion path calls it, including the one that already worked: its inline copy
+was deleted in favour of the shared call. A no-op for any task that isn't
+schoolwork, so callers invoke it unconditionally rather than testing first.
+
+Migration 118 repairs the existing rows. Recoverable, unlike the lost reps in
+0.566, because the Task rows still hold the answer. It sets `done` and never
+clears it: a unit flagged complete with no task is the admin-marked case above,
+and clearing those would re-open work that was finished off the books. Verified
+against a scratch Postgres over all five shapes — already-true, card-completed,
+pending, skipped, and admin-marked-without-task — and it is idempotent.
+
+Separately: ten screens were printing `\u00b7` and `\u2014` as literal text. The
+detector added after the first two of these only looked at lines containing a
+`>`, and every one of these sat on a line starting with `{` or a bare word. It is
+now `scripts/check-jsx-escapes.py`, which strips comments, template literals and
+strings and inspects what is left.
+
 ## 2026-10 — Best weight and best reps are different questions (v0.569.0)
 
 The first cut of this block showed "Best" as the record set, weight AND the reps

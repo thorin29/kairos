@@ -98,7 +98,7 @@ export function ExercisePool({
                 {/* Some lifts refuse to sit in one group. A deadlift is a
                     deadlift \u2014 it gets its own progress block, named after
                     itself, instead of distorting Back or Legs. */}
-                <option value="">No group \u2014 its own chart</option>
+                <option value="">No group &mdash; its own chart</option>
               </select>
             </label>
           )}

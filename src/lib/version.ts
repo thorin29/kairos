@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.570.0";
+export const APP_VERSION = "0.571.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -130,11 +130,20 @@ export const MIGRATIONS = [
   "115_grocery_quantity",
   "116_set_swapped_from",
   "117_session_completed_on",
+  "118_plan_unit_done_backfill",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.571.0",
+    summary: [
+      "Schoolwork completed on a person's card now marks its curriculum plan unit done. Only the admin school-work screen did that, so work finished on the card or the phone stayed \u201coverdue\u201d in the plan review forever.",
+      "Migration 118 repairs the units already in that state, from the task rows that recorded the completion. It only ever sets done, never clears it.",
+      "Fixed ten places in the school and exercise admin screens printing a raw escape (\u201cBoth semesters \\u00b7 180 items\u201d) instead of the character.",
+    ],
+  },
   {
     version: "0.570.0",
     summary: [

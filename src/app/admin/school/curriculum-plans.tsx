@@ -107,7 +107,7 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
                   </p>
                   <p className="text-xs text-muted">
                     {p.subject ? `${p.subject} \u00b7 ` : ""}
-                    {p.term} \u00b7 {p.total} items ({p.done} done, {p.remaining} to schedule)
+                    {p.term} &middot; {p.total} items ({p.done} done, {p.remaining} to schedule)
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">

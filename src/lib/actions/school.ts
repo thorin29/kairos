@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { syncPlanUnitDone } from "@/lib/school/plan-unit-sync";
 import { isHexColor } from "@/lib/palette";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { requireAdmin, isAdmin } from "@/lib/session";
@@ -1337,13 +1338,7 @@ export async function setSchoolWorkComplete(
       completedAt: complete ? new Date() : null,
     },
   });
-  const unitId = task.schoolWork?.planUnit?.id;
-  if (unitId) {
-    await prisma.classPlanUnit.update({
-      where: { id: unitId },
-      data: { done: complete },
-    });
-  }
+  await syncPlanUnitDone(task.id, complete);
   revalidatePath("/admin/school/work");
   revalidatePath("/");
   revalidatePath(`/person/${task.userId}`);

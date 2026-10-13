@@ -1,5 +1,6 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
+import { syncPlanUnitDone } from "@/lib/school/plan-unit-sync";
 import type { NextRequest } from "next/server";
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -49,8 +50,12 @@ export async function apiSetTaskComplete(
       completedAt: complete ? new Date() : null,
     },
   });
+  // Same rule as the web: schoolwork carries a plan unit whose done flag is
+  // stored, so completing from the phone has to update it too.
+  await syncPlanUnitDone(taskId, complete);
 
   revalidatePath("/");
+  revalidatePath("/admin/school");
   revalidatePath(`/person/${task.userId}`);
 
   return { ok: true, id: taskId, status: status as string };

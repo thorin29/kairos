@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { syncPlanUnitDone } from "@/lib/school/plan-unit-sync";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { addTaskCore } from "@/lib/task-core";
@@ -62,10 +63,14 @@ export async function toggleTask(id: string): Promise<void> {
       completedAt: nowComplete ? new Date() : null,
     },
   });
+  // Schoolwork also owns a plan unit, whose done flag is stored rather than
+  // derived. No-op for every other kind of task.
+  await syncPlanUnitDone(id, nowComplete);
 
   revalidatePath("/");
   revalidatePath(`/person/${task.userId}`);
   revalidatePath("/tasks");
+  revalidatePath("/admin/school");
 }
 
 /**
@@ -115,9 +120,11 @@ export async function claimAndCompleteTask(
     where: { id },
     data: { status: TaskStatus.COMPLETE, completedAt: new Date() },
   });
+  await syncPlanUnitDone(id, true);
   revalidatePath("/");
   revalidatePath(`/person/${userId}`);
   revalidatePath("/tasks");
+  revalidatePath("/admin/school");
   return { error: null };
 }
 

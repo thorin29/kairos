@@ -170,10 +170,10 @@ export function TermCompileView({ data }: { data: TermCompileData }) {
           {data.studentName} &mdash; {data.termName}
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Term schedule \u00b7 {data.items.length} items across {subjects}{" "}
+          Term schedule &middot; {data.items.length} items across {subjects}{" "}
           subject{subjects === 1 ? "" : "s"}
           {heavyCount > 0 && (
-            <span className="text-amber-600"> \u00b7 {heavyCount} heavy day{heavyCount === 1 ? "" : "s"}</span>
+            <span className="text-amber-600"> &middot; {heavyCount} heavy day{heavyCount === 1 ? "" : "s"}</span>
           )}
         </p>
       </header>
@@ -187,7 +187,7 @@ export function TermCompileView({ data }: { data: TermCompileData }) {
         <>
           <div className="rounded-lg border border-hairline bg-surface p-4 text-sm">
             <p className="text-muted">
-              Tap an item, then tap a day to move it there \u2014 or drag it. Weekends and holidays
+              Tap an item, then tap a day to move it there &mdash; or drag it. Weekends and holidays
               aren&rsquo;t shown.
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
@@ -206,7 +206,7 @@ export function TermCompileView({ data }: { data: TermCompileData }) {
             <div className="sticky top-2 z-10 flex items-center justify-between gap-3 rounded-lg border border-accent bg-accent/10 px-3 py-2 text-sm">
               <span className="min-w-0 truncate">
                 Moving <span className="font-medium">{selectedItem.subject}: {selectedItem.label}</span>{" "}
-                \u2014 tap a day
+                &mdash; tap a day
               </span>
               <button onClick={() => setSelected(null)} className="shrink-0 text-xs text-muted hover:text-ink">
                 Cancel

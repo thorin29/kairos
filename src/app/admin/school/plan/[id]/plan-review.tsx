@@ -181,7 +181,7 @@ export function PlanReview({ plan, today }: { plan: PlanDetail; today: string })
         </h1>
         <p className="mt-1 text-sm text-muted">
           {plan.subject ? `${plan.subject} \u00b7 ` : ""}
-          {bothTerms ? "Both semesters" : plan.classTerm?.name ?? "No term"} \u00b7 {units.length} items
+          {bothTerms ? "Both semesters" : plan.classTerm?.name ?? "No term"}{" \u00b7 "}{units.length} items
         </p>
       </header>
 
@@ -291,7 +291,7 @@ export function PlanReview({ plan, today }: { plan: PlanDetail; today: string })
               <span className="text-muted">finishes </span>
               <span className="font-medium">{fmt(finish)}</span>
               {afterTerm > 0 && (
-                <span className="text-amber-600"> \u00b7 {afterTerm} land after the term ends</span>
+                <span className="text-amber-600"> &middot; {afterTerm} land after the term ends</span>
               )}
             </p>
             {slices.length > 1 && (

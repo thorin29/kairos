@@ -305,7 +305,7 @@ function PendingApprovals({
       <h2 className="font-display text-lg font-semibold">Needs approval</h2>
       <p className="mb-3 mt-1 text-sm text-muted">
         Subjects and semesters added by family members. Fix the spelling, then
-        approve to add them to the shared lists \u2014 or merge into one that
+        approve to add them to the shared lists &mdash; or merge into one that
         already exists.
       </p>
       {terms.length > 0 && (
@@ -375,7 +375,7 @@ function PendingSubjectRow({
             onChange={(e) => setTarget(e.target.value)}
             className="select-caret rounded-md border border-hairline bg-surface px-2 py-1 text-sm"
           >
-            <option value="">Choose\u2026</option>
+            <option value="">Choose&hellip;</option>
             {others.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.name}
@@ -451,7 +451,7 @@ function PendingTermRow({
                 onChange={(e) => setTarget(e.target.value)}
                 className="select-caret rounded-md border border-hairline bg-surface px-2 py-1 text-sm"
               >
-                <option value="">Choose\u2026</option>
+                <option value="">Choose&hellip;</option>
                 {others.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.name}
