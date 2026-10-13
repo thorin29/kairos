@@ -334,6 +334,10 @@ model Task {
 
   // Date only, no timezone. A chore is due "Tuesday", not "Tuesday 00:00 UTC".
   dueDate     DateTime   @db.Date
+  /// The day this was FIRST scheduled for, kept when the task is moved — pulled
+  /// into today to work ahead, or pushed back. Written once and never updated,
+  /// so it is the original rather than the previous. Null means never moved.
+  originalDueDate DateTime? @db.Date
   // For "do anytime" chores: the task shows from its dueDate but isn't late
   // until after this date (the end of its period). Null for ordinary tasks,
   // which are late the day after dueDate.

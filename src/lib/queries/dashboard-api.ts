@@ -59,6 +59,9 @@ export type ApiTask = {
   subtitle: string | null;
   isOverdue: boolean;
   stale: boolean;
+  /** The day it was FIRST scheduled for, when it has since been moved. Null
+   *  otherwise. Lets a client say "ahead of" rather than just showing a date. */
+  originalDue: string | null;
   /** Generated from a chore — a parent removes it from the Chores page. */
   locked: boolean;
   /** A workout prompt: shown, but completed via the workout logger, not a tap. */
@@ -188,12 +191,22 @@ export async function loadApiDashboard(
       : t.title;
 
     const sw = t.schoolWork;
+    // Same wording as the web, built from the same two dates, so a lesson pulled
+    // forward reads identically on a phone and on the dashboard.
+    const originalISO = t.originalDueDate ? fromDateColumn(t.originalDueDate) : null;
+    const moved =
+      originalISO && originalISO !== dueISO
+        ? dueISO < originalISO
+          ? `ahead of ${formatShort(originalISO)}`
+          : `moved from ${formatShort(originalISO)}`
+        : null;
     const subtitle =
       t.category === Category.SCHOOL && sw
         ? [
             sw.class?.name ?? sw.subject,
             SCHOOL_TYPE_LABEL[sw.type],
             `due ${formatShort(dueISO)}`,
+            moved,
           ]
             .filter(Boolean)
             .join(" · ")
@@ -213,6 +226,7 @@ export async function loadApiDashboard(
       subtitle,
       isOverdue,
       stale: t.stale,
+      originalDue: originalISO,
       locked: Boolean(t.choreId),
       isWorkout,
       completable: !isWorkout && !t.stale,

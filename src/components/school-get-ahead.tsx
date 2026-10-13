@@ -3,41 +3,55 @@
 import { useState, useTransition } from "react";
 import { addSchoolWorkToToday } from "@/lib/actions/class-plans";
 import { formatShort } from "@/lib/dates";
-import { ChevronLeftIcon } from "@/components/icons";
+import { CheckIcon, ChevronLeftIcon } from "@/components/icons";
 import type { SchoolAheadSubject } from "@/lib/queries/school-get-ahead";
 
 export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] }) {
   const [picked, setPicked] = useState<string | null>(null);
-  const [idx, setIdx] = useState(0);
-  const [added, setAdded] = useState(0);
+  /** What the last Add put into today, so the subject list can confirm it. */
+  const [justAdded, setJustAdded] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const current = subjects.find((s) => s.subject === picked) ?? null;
-  const item = current ? current.items[idx] ?? null : null;
+  // Always the soonest item still queued. There is no index to keep: the list
+  // is "strictly future, still pending", so adding one to today removes it from
+  // this list on the next read and the next item becomes first by itself.
+  //
+  // It used to hold an index AND advance it on add, which double-counted — the
+  // server dropped the added item and the index stepped past the one that moved
+  // up, so every add skipped an assignment.
+  const item = current?.items[0] ?? null;
 
   const pick = (subject: string) => {
     setPicked(subject);
-    setIdx(0);
-    setAdded(0);
+    setJustAdded(null);
   };
   const back = () => {
     setPicked(null);
-    setIdx(0);
-    setAdded(0);
+    setJustAdded(null);
   };
   const addToday = () => {
     if (!item) return;
     const id = item.taskId;
+    const label = item.label;
     start(async () => {
       await addSchoolWorkToToday(id);
-      setAdded((n) => n + 1);
-      setIdx((i) => i + 1);
+      // Back to the subject list. Adding one thing is the whole errand; staying
+      // on the subject invited a second add nobody asked for.
+      setJustAdded(label);
+      setPicked(null);
     });
   };
 
   if (!current) {
     return (
       <div className="rounded-lg border border-hairline bg-surface p-4">
+        {justAdded && (
+          <p className="mb-2 flex items-start gap-1.5 text-sm font-medium text-emerald-700">
+            <CheckIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <span className="min-w-0">Added to today: {justAdded}</span>
+          </p>
+        )}
         <p className="mb-2 text-sm text-muted">
           Pick a subject to pull its next lesson into today &mdash; do a little extra to finish on
           time.
@@ -90,9 +104,7 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
       ) : (
         <div>
           <p className="text-sm">
-            {added > 0
-              ? `Added ${added} to today in ${current.subject}. That\u2019s everything queued up here.`
-              : `Nothing more queued up in ${current.subject} right now.`}
+            Nothing more queued up in {current.subject} right now.
           </p>
           <button
             type="button"
@@ -104,11 +116,6 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
         </div>
       )}
 
-      {item && added > 0 && (
-        <p className="mt-2 text-xs text-muted">
-          {added} added to today &mdash; tick them off in Today above.
-        </p>
-      )}
     </div>
   );
 }

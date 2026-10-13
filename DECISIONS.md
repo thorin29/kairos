@@ -1,5 +1,38 @@
 # Decisions
 
+## 2026-10 — An index over a list that removes its own items (v0.573.0)
+
+The extra-work picker kept an index and advanced it after each add. The list it
+indexed is "strictly future, still pending", and adding a lesson to today moves
+its due date to today — so the server drops that item on the next read and
+everything below shifts up one. The index then stepped past the item that had
+just moved into the vacated slot, so every single add skipped an assignment.
+
+Two counters for one movement. The index is gone entirely: the soonest item is
+always `items[0]`, because the list maintains that by construction.
+
+Adding also returns to the subject list now, naming what went in. Staying on the
+subject offered a second add nobody asked for, and was how the skipping got
+noticed in the first place.
+
+Separately, `originalDueDate` on Task. Pulling work forward overwrote `dueDate`,
+the SchoolWork `startDate` and the plan unit's `scheduledDate` with today, so the
+planned date simply ceased to exist and nothing could say whether you were early.
+It is written once, the first time a task moves, and never again — the ORIGINAL,
+not the previous, or a second move would quietly redefine it as "wherever it was
+last". Null for every existing row and for anything that never moves, so there is
+nothing to backfill.
+
+Direction matters in the wording: "ahead of Oct 20" and "moved from Oct 8" are
+different situations, and a bare second date says neither. Built once in each of
+the two row builders, from the same two dates, so the phone and the web read the
+same.
+
+Behind work is tinted on the row rather than only grouped under a heading. The
+heading leaves the screen as soon as the list scrolls, which is exactly when
+being behind matters most. The tint clears when the row is completed — a
+finished assignment is not behind anything.
+
 ## 2026-10 — The sandbox cannot see Prisma types, so a script has to (v0.572.0)
 
 0.571.0 failed to build on `task.id`, where the `select` had only asked for

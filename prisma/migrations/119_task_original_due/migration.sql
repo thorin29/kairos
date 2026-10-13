@@ -1,0 +1,11 @@
+-- The date a school task was FIRST scheduled for.
+--
+-- Pulling work into today overwrites `Task.dueDate` (and the plan unit's
+-- scheduledDate) with today, so the planned date was gone and nothing could say
+-- "this was due the 20th, you did it on the 13th". This keeps the first one.
+--
+-- Written once, the first time a task's date moves, and never again — it is the
+-- ORIGINAL, not the previous. Null means the task has never been moved, which
+-- is true of every existing row and of every task that stays where it was put,
+-- so there is nothing to backfill.
+ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "originalDueDate" DATE;

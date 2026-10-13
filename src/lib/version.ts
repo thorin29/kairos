@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.572.0";
+export const APP_VERSION = "0.573.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -131,11 +131,21 @@ export const MIGRATIONS = [
   "116_set_swapped_from",
   "117_session_completed_on",
   "118_plan_unit_done_backfill",
+  "119_task_original_due",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.573.0",
+    summary: [
+      "Do some extra work: adding a lesson now returns to the subject list and confirms what went in, instead of staying put.",
+      "It also no longer skips an assignment. The list drops the item you just added AND the picker was stepping its own index past the one that moved up, so every add advanced twice.",
+      "School work pulled into today keeps the date it was first scheduled for, and says \u201cahead of Oct 20\u201d (or \u201cmoved from\u201d) alongside its due date.",
+      "Work you are behind on is tinted red on the card itself, not only grouped under an Overdue heading that scrolls away.",
+    ],
+  },
   {
     version: "0.572.0",
     summary: [

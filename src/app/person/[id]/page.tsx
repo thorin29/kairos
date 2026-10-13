@@ -211,9 +211,19 @@ export default async function PersonPage({
     // School rows read subject-first: the class/subject is the headline, and the
     // lesson + type + due date are the detail line underneath.
     const schoolSubject = sw ? (sw.class?.name ?? sw.subject) : null;
+    // Where it was first scheduled, when that is not where it sits now. Says
+    // which direction it moved: pulling work in to get ahead and having it
+    // pushed back read very differently, and a bare second date says neither.
+    const originalISO = t.originalDueDate ? fromDateColumn(t.originalDueDate) : null;
+    const moved =
+      originalISO && originalISO !== dueISO
+        ? dueISO < originalISO
+          ? `ahead of ${formatShort(originalISO)}`
+          : `moved from ${formatShort(originalISO)}`
+        : null;
     const subtitle =
       t.category === "SCHOOL" && sw
-        ? [t.title, SCHOOL_TYPE_LABEL[sw.type], `due ${formatShort(dueISO)}`]
+        ? [t.title, SCHOOL_TYPE_LABEL[sw.type], `due ${formatShort(dueISO)}`, moved]
             .filter(Boolean)
             .join(" \u00b7 ")
         : undefined;
@@ -232,6 +242,7 @@ export default async function PersonPage({
         t.status === "PENDING" &&
         !t.stale,
       stale: t.stale,
+      originalDueISO: originalISO,
       locked: Boolean(t.choreId),
       isWorkout: isWorkoutPrompt,
       test:

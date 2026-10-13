@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/session";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { parseClassPlanCsv, startIndexOf } from "@/lib/school/plan-csv";
-import { Category, SchoolWorkType, TaskStatus } from "@/generated/prisma/client";
+import { Category, Prisma, SchoolWorkType, TaskStatus } from "@/generated/prisma/client";
 import { todayISO, toDateColumn, addDays } from "@/lib/dates";
 import { spreadUnits, spreadUnitsFit, type PlanUnit } from "@/lib/school/plan-builder";
 import { noSchoolDaysFor } from "@/lib/school/school-days";
@@ -657,6 +657,8 @@ export async function addSchoolWorkToTodayCore(taskId: string): Promise<string |
     where: { id: taskId },
     select: {
       userId: true,
+      dueDate: true,
+      originalDueDate: true,
       schoolWork: {
         select: { id: true, dateSpecific: true, planUnit: { select: { id: true, planId: true } } },
       },
@@ -666,8 +668,19 @@ export async function addSchoolWorkToTodayCore(taskId: string): Promise<string |
 
   const today = todayISO();
   const d = toDateColumn(today);
-  await prisma.$transaction(async (tx) => {
-    await tx.task.update({ where: { id: taskId }, data: { dueDate: d } });
+  // Remember where it was PLANNED, once. Already set means this has been moved
+  // before, and the first date is the one worth keeping — otherwise a second
+  // move would quietly redefine "original" as "wherever it was last".
+  const keepOriginal = task.originalDueDate ?? task.dueDate;
+  // `tx` annotated because this callback now sits in changed code: its type
+  // comes from the generated Prisma client, which does not exist in the
+  // sandbox, so it reads as an implicit any here and as the real client in the
+  // Docker build. Naming the type satisfies both.
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.task.update({
+      where: { id: taskId },
+      data: { dueDate: d, originalDueDate: keepOriginal },
+    });
     const sw = task.schoolWork;
     if (sw) {
       if (!sw.dateSpecific) await tx.schoolWork.update({ where: { id: sw.id }, data: { startDate: d } });

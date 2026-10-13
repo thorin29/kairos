@@ -21,6 +21,9 @@ export type Row = {
   locked?: boolean;
   /** Present for tests — enables the score control. */
   test?: { score: number | null; scoreMax: number };
+  /** Set when this task was moved off the day it was first scheduled for.
+   *  Null for anything that has never moved, which is most tasks. */
+  originalDueISO?: string | null;
 };
 
 export function TaskRow({ task }: { task: Row }) {
@@ -29,7 +32,13 @@ export function TaskRow({ task }: { task: Row }) {
 
   return (
     <li
-      className={`flex items-center gap-3 px-4 py-3 ${pending ? "opacity-50" : ""}`}
+      /* Behind work is tinted, not just grouped under a heading. The heading is
+         off-screen once the list is long enough to scroll, and the whole point
+         is that falling behind should be visible at a glance. Completed rows
+         keep the plain background: they are no longer behind anything. */
+      className={`flex items-center gap-3 px-4 py-3 ${pending ? "opacity-50" : ""} ${
+        task.isOverdue && !done ? "bg-red-50" : ""
+      }`}
     >
       <input
         type="checkbox"
