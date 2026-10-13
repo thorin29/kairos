@@ -275,10 +275,17 @@ export function companionPhase(input: {
   // adult for anything shiny redrew a companion that had been deepened as a
   // hatchling under the old rules — where that was possible — as a full adult
   // it had never grown into. The sprite has to follow the work done.
-  if (input.shiny) {
+  //
+  // And being shiny does not hand it an egg either. A shiny hatchling exists
+  // only because the old rules allowed deepening before growing; it keeps the
+  // glow, but it still has to be raised to adult before there is anything to
+  // hatch. Falling through to the growing branch is what makes that true.
+  if (input.shiny && stage >= 2) {
     return { phase: "shiny", stage, pct: 100, eggReady: true };
   }
-  if (input.deepening) {
+  // A shiny companion that is not grown yet falls past this, into `growing`:
+  // the deepening branch is for one actively being deepened, which it is not.
+  if (input.deepening && !input.shiny) {
     const done = input.deepenGrowth >= DEEPEN_GROWTH;
     // Finishing the deepen IS the glow, and the glow is what says an egg is
     // there. Held at 99 until genuinely done, so 100 only ever means "go".

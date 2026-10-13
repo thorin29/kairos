@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-10 — Shiny is not finished (v0.577.0)
+
+Second time in three releases the same mistake: treating a PHASE as if it
+implied a stage. 0.575.0 fixed the sprite — a shiny hatchling was being drawn
+as an adult — but left `eggReady: true` in the same branch, so it was still
+being treated as a completed companion with an egg waiting.
+
+The shiny branch now requires adulthood. A companion deepened under the old
+rules keeps its glow and falls through to `growing`, which is exactly right: it
+has not been raised, so it is still being raised. The side effect is that its
+bar shows stage segments again, which is why they appeared to be missing — the
+segments were only ever drawn while growing, and it was never classed as
+growing.
+
+Worth stating plainly because it keeps recurring: `stage` is earned, `phase` is
+current activity, and NOTHING about a phase may be inferred from the other. Each
+time these have been collapsed, legacy data has been credited with work nobody
+did.
+
+Deepening gets a shorter bar. Reusing the full-width growth rail made a smaller,
+separate job look like the same journey starting over.
+
+The caption no longer says "deepened". It described how the egg was earned, and
+what to do next is the same either way.
+
 ## 2026-10 — Growth has to survive the shelf (v0.576.0)
 
 Bringing a companion back out of the gallery breaks the assumption the growth

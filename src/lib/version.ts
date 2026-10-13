@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.576.0";
+export const APP_VERSION = "0.577.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -139,6 +139,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.577.0",
+    summary: [
+      "A companion deepened before it was grown no longer holds an egg it never earned. It keeps the glow, but has to be raised to adult before there is anything to hatch \u2014 so it reads hatchling, juvenile, adult, then the egg.",
+      "The growth bar shows its stage segments again. They were hidden because a shiny companion was being treated as finished regardless of how little it had grown.",
+      "Deepening now gets a visibly shorter bar in its own right, rather than reusing the full-width growth one.",
+      "The caption just says \u201cA new egg is ready!\u201d \u2014 it was describing how the egg was earned rather than what to do next.",
+    ],
+  },
   {
     version: "0.576.0",
     summary: [

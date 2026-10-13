@@ -149,20 +149,20 @@ function PhaseBar({
   luckColor: string;
 }) {
   const growing = companion.phase === "growing";
+  const deepening = companion.phase === "deepening";
   const spans = growing ? STAGE_SPANS : [100];
   const fills = spanFills(companion.incubationPct, spans);
   const fill = companion.phase === "shiny" ? SHINY : luckColor;
-  const caption =
-    companion.phase === "growing"
-      ? "growing"
-      : companion.phase === "deepening"
-        ? "deepening"
-        : companion.phase === "shiny"
-          ? "deepened \u2014 a new egg is ready!"
-          : "fully grown \u2014 a new egg is ready!";
+  // One sentence when something is waiting, whichever way it was earned. Saying
+  // "deepened" there described how it got here rather than what to do next, and
+  // what to do next is the same either way.
+  const caption = growing ? "growing" : deepening ? "deepening" : "A new egg is ready!";
 
   return (
-    <div className="flex w-32 flex-col items-center gap-0.5">
+    // Deepening gets a visibly shorter rail in place of the growth one: it is a
+    // smaller, separate job, and reusing the full-width bar made it look like
+    // the same journey starting over.
+    <div className={`flex flex-col items-center gap-0.5 ${deepening ? "w-20" : "w-32"}`}>
       {/* A 4px gap, not 2: at this bar height 2px read as a rendering seam
           rather than a deliberate division between stages. */}
       <div className="flex w-full gap-1">
