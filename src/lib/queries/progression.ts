@@ -10,7 +10,7 @@ import {
 } from "@/lib/dates";
 import { getScoringStart, getSeasonConfig } from "@/lib/settings";
 import { resolveSeasonWindow } from "@/lib/season";
-import { blendPalette, eggCostFor, stageFromGrowth, luckFromStreak, EGGS_PER_SEASON_CAP } from "@/lib/companions";
+import { blendPalette, companionPhase, luckFromStreak, type CompanionPhase } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
 import { readingXpForBook, bibleXpForChapters } from "@/lib/scoring/reading";
 import { loadBonuses } from "@/lib/queries/bonus";
@@ -73,9 +73,16 @@ export type PersonProgress = {
     species: string | null;
     stage: number;
     shiny: boolean;
+    /** Where it is in its life: growing, adult, deepening, shiny. One phase at a
+     *  time, and the end of each one unlocks something. */
+    phase: CompanionPhase;
+    /** Progress through the CURRENT phase, 0-100. Growth toward adult while
+     *  growing; toward the glow while deepening; 100 when something is waiting
+     *  to be spent. */
     incubationPct: number;
     eggReady: boolean;
-    /** Egg is full but this month's hatch cap is used up — hatch opens next month. */
+    /** Kept so older clients keep decoding; nothing sets it now that growth,
+     *  not a monthly allowance, paces hatching. */
     eggCapped: boolean;
     /** 0..1 streak-driven odds; the higher it is, the rarer the next hatch can be.
      *  Drives the egg meter's colour so a strong streak shows without any text. */
@@ -154,7 +161,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     seasonKey: string | null;
     eggsThisSeason: number;
   };
-  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number; acquiredAt: Date };
+  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number; acquiredAt: Date; deepeningStartedAt: Date | null };
   const stateByUser = new Map(
     (compStates as StateRow[]).map((s) => [s.userId, s]),
   );
@@ -366,59 +373,68 @@ export async function loadProgression(): Promise<PersonProgress[]> {
       masteries,
       companionColor: blendPalette(signatureOf(a.statXp, baseline)),
       companion: (() => {
-        const st = stateByUser.get(person.id);
-        const baseXp = st?.incubationBaseXp ?? 0;
-        const eggsHatched = st?.eggsHatched ?? 0;
-        const cost = eggCostFor(eggsHatched);
-        const progress = Math.max(0, totalXp - baseXp);
-        // Floor, not round, and hold at 99 until the egg is genuinely ready:
-        // rounding let 99.5% of the cost display as "Next egg 100%" with no
-        // Hatch button anywhere, which reads as a broken feature rather than
-        // "nearly there". 100% now means exactly one thing — go and hatch it.
-        const rawPct = cost > 0 ? Math.floor((progress / cost) * 100) : 100;
-        const incubationPct = progress >= cost ? 100 : Math.min(99, Math.max(0, rawPct));
-        const eggsThisSeason =
-          st && st.seasonKey === seasonWin.startISO ? st.eggsThisSeason : 0;
-        const eggReady = progress >= cost && eggsThisSeason < EGGS_PER_SEASON_CAP;
-        const eggCapped = progress >= cost && eggsThisSeason >= EGGS_PER_SEASON_CAP;
         const active = activeByUser.get(person.id);
-        if (active) {
-          // Grow on clean days (and perfect weeks) since this companion hatched.
-          const acquiredISO = active.acquiredAt.toISOString().slice(0, 10);
-          const grownCleanDays = [...a.days.entries()].filter(
+        // Growth is the ONLY currency now. The old incubation meter ran on
+        // lifetime XP, which accrues from everything and so filled eggs while
+        // the creature in front of you had not grown — that is where "a new egg
+        // is ready" under a hatchling came from.
+        const growthSince = (fromISO: string) =>
+          [...a.days.entries()].filter(
             ([iso, b]) =>
-              iso >= acquiredISO &&
+              iso >= fromISO &&
               iso < today &&
               b.assigned > 0 &&
               b.missed === 0 &&
               b.complete === b.assigned,
-          ).length;
-          const grownPerfectWeeks = [...a.weeks.entries()].filter(
+          ).length +
+          [...a.weeks.entries()].filter(
             ([wkISO, b]) =>
-              wkISO >= acquiredISO &&
+              wkISO >= fromISO &&
               b.assigned > 0 &&
               b.complete === b.assigned &&
               addDays(wkISO, 6) < today,
-          ).length;
+          ).length *
+            2;
+
+        if (!active) {
+          // No companion yet: the first egg is simply there to hatch, so a new
+          // person is not staring at an empty card with nothing to do.
           return {
-            active: true,
-            species: active.species,
-            stage: stageFromGrowth(grownCleanDays, grownPerfectWeeks),
-            shiny: active.shiny,
-            incubationPct,
-            eggReady,
-            eggCapped,
+            active: false as const,
+            species: null,
+            stage: 0,
+            shiny: false,
+            phase: "adult" as const,
+            incubationPct: 100,
+            eggReady: true,
+            eggCapped: false,
             luck: luckFromStreak(current),
           };
         }
+
+        const acquiredISO = active.acquiredAt.toISOString().slice(0, 10);
+        const deepFromISO = active.deepeningStartedAt
+          ? active.deepeningStartedAt.toISOString().slice(0, 10)
+          : null;
+        const ph = companionPhase({
+          growth: growthSince(acquiredISO),
+          deepenGrowth: deepFromISO ? growthSince(deepFromISO) : 0,
+          deepening: deepFromISO !== null,
+          shiny: active.shiny,
+        });
+
         return {
-          active: false,
-          species: null,
-          stage: 0,
-          shiny: false,
-          incubationPct,
-          eggReady,
-          eggCapped,
+          active: true as const,
+          species: active.species,
+          stage: ph.stage,
+          // Finishing the deepen IS being shiny; the column catches up when the
+          // companion retires, so the gallery copy is right without this view
+          // having to write on read.
+          shiny: ph.phase === "shiny",
+          phase: ph.phase,
+          incubationPct: ph.pct,
+          eggReady: ph.eggReady,
+          eggCapped: false,
           luck: luckFromStreak(current),
         };
       })(),

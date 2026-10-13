@@ -1527,6 +1527,11 @@ model Companion {
   activeSinceXp Int      @default(0) // lifetime XP when it became active (drives tenure)
   mintedStage   Int? // frozen stage when it was retired to the shelf
   acquiredAt    DateTime @default(now())
+  /// When this companion started deepening, if it is. Deepening is a phase with
+  /// its own growth cost, measured from here exactly as a stage is measured from
+  /// acquiredAt. `shiny` is the finished state; this is the in-progress one.
+  /// Null means not deepening — including for one already shiny.
+  deepeningStartedAt DateTime?
 
   @@unique([userId, species])
   @@index([userId])

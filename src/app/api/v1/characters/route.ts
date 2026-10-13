@@ -101,6 +101,9 @@ export async function GET(req: NextRequest) {
       incubationPct: c.incubationPct,
       eggReady: c.eggReady,
       eggCapped: c.eggCapped,
+      // What the bar is measuring, so the phone can caption it the same way the
+      // web does instead of inferring a phase from flags.
+      phase: c.phase,
       luck: c.luck,
       image,
       color: p.companionColor,

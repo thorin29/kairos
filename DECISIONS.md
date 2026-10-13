@@ -1,5 +1,43 @@
 # Decisions
 
+## 2026-10 — Three progress ideas, one bar (v0.574.0)
+
+The companion card showed one bar and the feature had three unrelated notions of
+progress behind it:
+
+  stage       clean days + perfect weeks×2 since that companion hatched
+  egg         LIFETIME XP since the last hatch, against a cost that rose
+  the bar     neither — it was the skill-blend XP bar, coloured by domain
+
+Nobody could say what filled what, which is the whole complaint. XP accrues from
+everything, so eggs filled while the creature in front of you had not grown at
+all: hence "a new egg is ready" under a hatchling, and a shiny hatchling, since
+deepening only ever checked for an egg and never for a stage.
+
+Now there is one currency. Growth raises the companion; reaching fully grown IS
+the egg. Deepening is a second growth phase on top, and the glow appearing is
+both "deepening finished" and "there is an egg again" — one event, not two
+things to correlate. `companionPhase()` returns the phase, the stage and the
+percentage through the CURRENT phase, so the bar measures one thing at a time
+and 100% always means something is waiting to be spent.
+
+The per-season hatch cap is gone. Growth already paces hatching, and the second
+limiter is what produced `eggCapped` — a state whose UI had to apologise for
+itself in three places.
+
+`shiny` is now derived from growth while a companion is active, and written to
+the column when it retires. A shelved companion has no growth left to measure,
+so the flag has to hold the answer there; deriving it while active avoids a
+write-on-read to flip it the moment the phase completes.
+
+Cost of the change: a hatchling can no longer be made shiny. Existing shiny
+companions keep their glow — the flag is still honoured — but that combination
+cannot be created again, which is the point.
+
+The dead constants (`EGGS_PER_SEASON_CAP`, `eggCostFor`) were left in place and
+marked, not deleted. This feature already collapsed under three overlapping
+progress ideas; quietly removing the names is how the next one gets reinvented.
+
 ## 2026-10 — An index over a list that removes its own items (v0.573.0)
 
 The extra-work picker kept an index and advanced it after each add. The list it

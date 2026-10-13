@@ -1,7 +1,6 @@
 "use client";
 
-import { COMPANIONS, stageAsset, STAGE_NAMES } from "@/lib/companions";
-import { XpBar } from "@/components/xp-bar";
+import { COMPANIONS, stageAsset, STAGE_NAMES, STAGE_TICK_PCT } from "@/lib/companions";
 
 const MYSTERY_EGG = "/companions/eggs/mystery.png";
 /** The one shiny colour, shared by the card, the name and the app. */
@@ -12,6 +11,8 @@ export type CompanionView = {
   species: string | null;
   stage: number;
   shiny: boolean;
+  /** growing | adult | deepening | shiny — what the bar is measuring. */
+  phase: "growing" | "adult" | "deepening" | "shiny";
   incubationPct: number;
   eggReady: boolean;
   eggCapped: boolean;
@@ -107,49 +108,80 @@ export function Companion({
                   &middot; {STAGE_NAMES[companion.stage]}
                 </span>
               </p>
-              {pct != null && shares && <XpBar pct={pct} shares={shares} />}
-              {/* Next-egg progress, always visible so a new egg is earned, not
-                  a surprise. */}
-              {companion.eggReady ? (
-                <p className="text-xs font-medium text-emerald-700">
-                  A new egg is ready!
-                </p>
-              ) : companion.eggCapped ? (
-                <p className="text-xs font-medium text-amber-700">
-                  Next egg ready — hatch it next month!
-                </p>
-              ) : (
-                <div className="flex w-32 flex-col items-center gap-0.5">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-hairline">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${companion.incubationPct}%`, background: luckColor }}
-                    />
-                  </div>
-                  <p className="tabular text-[0.65rem] text-muted">
-                    Next egg {companion.incubationPct}%
-                  </p>
-                </div>
-              )}
+              {/* ONE bar, measuring the phase it is in. The card used to show
+                  the skill-blend XP bar here and the egg meter below it, and
+                  neither of them was the thing people read it as — how grown
+                  the creature is. */}
+              <PhaseBar companion={companion} luckColor={luckColor} />
             </>
           ) : (
             <>
-              <p className="text-sm font-semibold">
-                {companion.eggReady ? "Ready to hatch!" : companion.eggCapped ? "Ready next month" : "Egg"}
-              </p>
+              <p className="text-sm font-semibold">Ready to hatch!</p>
               <div className="h-2 w-32 overflow-hidden rounded-full bg-hairline">
                 <div
                   className="h-full rounded-full"
-                  style={{ width: `${companion.incubationPct}%`, background: luckColor }}
+                  style={{ width: "100%", background: luckColor }}
                 />
               </div>
-              <p className="tabular text-xs text-muted">
-                {companion.eggCapped ? "Hatch opens next month" : `${companion.incubationPct}% incubated`}
-              </p>
             </>
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The one bar on the card: progress through whatever the companion is doing
+ * now, with a tick where each stage begins.
+ *
+ * The ticks carry no labels on purpose — they show the shape of the journey
+ * (two marks, three stages) without a legend a child has to be taught. They
+ * only appear while growing, because once a companion is grown the bar is
+ * measuring something else and a stage mark on it would be a lie.
+ */
+function PhaseBar({
+  companion,
+  luckColor,
+}: {
+  companion: CompanionView;
+  luckColor: string;
+}) {
+  const growing = companion.phase === "growing";
+  const caption =
+    companion.phase === "growing"
+      ? "growing"
+      : companion.phase === "deepening"
+        ? "deepening"
+        : companion.phase === "shiny"
+          ? "deepened \u2014 a new egg is ready!"
+          : "fully grown \u2014 a new egg is ready!";
+
+  return (
+    <div className="flex w-32 flex-col items-center gap-0.5">
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-hairline">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${companion.incubationPct}%`,
+            background: companion.phase === "shiny" ? SHINY : luckColor,
+          }}
+        />
+        {growing &&
+          STAGE_TICK_PCT.filter((t) => t < 100).map((t) => (
+            <span
+              key={t}
+              className="absolute top-0 h-full w-px bg-surface/80"
+              style={{ left: `${t}%` }}
+            />
+          ))}
+      </div>
+      <p
+        className="text-[0.65rem] font-medium"
+        style={companion.eggReady ? { color: "#047857" } : undefined}
+      >
+        {caption}
+      </p>
     </div>
   );
 }

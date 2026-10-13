@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.573.0";
+export const APP_VERSION = "0.574.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -132,11 +132,22 @@ export const MIGRATIONS = [
   "117_session_completed_on",
   "118_plan_unit_done_backfill",
   "119_task_original_due",
+  "120_companion_deepening",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.574.0",
+    summary: [
+      "Companions now run on one thing: growth. Raise it to fully grown, and that is when an egg appears \u2014 never before, so \u201ca new egg is ready\u201d can no longer show up under a hatchling.",
+      "One bar on the card, with a tick where each stage begins. It used to show the skill-blend XP bar, which was neither growth nor eggs, with a separate egg meter underneath.",
+      "Deepening is a phase you work through rather than an instant flourish. Choose it on a grown companion, keep working, and the glow tells you it is finished \u2014 which is also when the next egg arrives.",
+      "The three-hatches-a-month cap is gone. Growth paces hatching on its own, and the second limiter only produced states nobody could explain.",
+      "A hatchling can no longer become shiny. Companions already shiny keep their glow.",
+    ],
+  },
   {
     version: "0.573.0",
     summary: [

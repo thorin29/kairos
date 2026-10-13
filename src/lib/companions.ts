@@ -206,9 +206,19 @@ export function blendPalette(xpByStat: Record<string, number>): string {
 // calibrated against the Season planner once all events are locked in.
 export const FIRST_EGG_XP = 80;
 export const EGG_XP = 250;
+/**
+ * DEAD as of the growth-only loop. Eggs no longer cost XP and there is no
+ * per-season hatch allowance: a companion earns an egg by being raised, and
+ * again by finishing a deepen. Kept only so an older stored CompanionState
+ * still parses; nothing reads them to decide anything.
+ *
+ * Left in place rather than deleted because this feature already had three
+ * overlapping progress ideas and silently removing names is how the next person
+ * ends up reinventing one.
+ */
 export const EGGS_PER_SEASON_CAP = 3;
 
-/** XP needed for the Nth egg (0-indexed): the first is cheap. */
+/** @deprecated See EGGS_PER_SEASON_CAP — the egg is not bought with XP now. */
 export function eggCostFor(eggsHatched: number): number {
   return eggsHatched === 0 ? FIRST_EGG_XP : EGG_XP;
 }
@@ -228,6 +238,72 @@ export function stageForTenure(tenureXp: number): number {
 // longer; a perfect week accelerates it. Growth only climbs — a missed day
 // pauses it, never turns an adult back into a baby.
 export const CLEAN_DAY_STAGES = [0, 6, 12];
+
+/** Growth needed to finish deepening, once a companion is adult. Half an
+ *  adulthood: enough to be a real choice against hatching something new,
+ *  short enough that a child can see the glow coming. */
+export const DEEPEN_GROWTH = 6;
+
+/**
+ * Where a companion is in its life, from one number.
+ *
+ * The whole loop runs on `growth` — clean days plus perfect weeks, doubled —
+ * because two currencies is what made this unreadable. Lifetime XP no longer
+ * enters into it: XP accrues from everything, so it filled eggs while the
+ * creature in front of you had not grown at all.
+ *
+ *   growing    raising it to adult. No egg exists yet.
+ *   adult      grown. An egg is ready: hatch something new, or deepen this one.
+ *   deepening  chose to deepen. More growth, then the glow.
+ *   shiny      deepened and finished. An egg is ready; only hatching is left.
+ *
+ * `pct` is always progress through the CURRENT phase, so the bar means one
+ * thing at a time and reaching the end of it always unlocks something.
+ */
+export type CompanionPhase = "growing" | "adult" | "deepening" | "shiny";
+
+export function companionPhase(input: {
+  growth: number;
+  /** Growth accrued since deepening began; ignored unless deepening. */
+  deepenGrowth: number;
+  deepening: boolean;
+  shiny: boolean;
+}): { phase: CompanionPhase; stage: number; pct: number; eggReady: boolean } {
+  const stage = stageFromGrowth(input.growth, 0);
+
+  if (input.shiny) {
+    return { phase: "shiny", stage: 2, pct: 100, eggReady: true };
+  }
+  if (input.deepening) {
+    const done = input.deepenGrowth >= DEEPEN_GROWTH;
+    // Finishing the deepen IS the glow, and the glow is what says an egg is
+    // there. Held at 99 until genuinely done, so 100 only ever means "go".
+    const raw = Math.floor((input.deepenGrowth / DEEPEN_GROWTH) * 100);
+    return {
+      phase: done ? "shiny" : "deepening",
+      stage: 2,
+      pct: done ? 100 : Math.min(99, Math.max(0, raw)),
+      eggReady: done,
+    };
+  }
+  if (stage >= 2) {
+    return { phase: "adult", stage: 2, pct: 100, eggReady: true };
+  }
+  const target = CLEAN_DAY_STAGES[2];
+  const raw = Math.floor((input.growth / target) * 100);
+  return {
+    phase: "growing",
+    stage,
+    pct: Math.min(99, Math.max(0, raw)),
+    eggReady: false,
+  };
+}
+
+/** Where the stage ticks sit along the growth bar, as percentages. Drawn as
+ *  marks with no text: the shape of the journey without a legend. */
+export const STAGE_TICK_PCT = CLEAN_DAY_STAGES.slice(1).map((g) =>
+  Math.round((g / CLEAN_DAY_STAGES[2]) * 100),
+);
 export function stageFromGrowth(cleanDays: number, perfectWeeks: number): number {
   const growth = cleanDays + perfectWeeks * 2;
   if (growth >= CLEAN_DAY_STAGES[2]) return 2;

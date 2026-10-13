@@ -510,13 +510,8 @@ export default async function PersonPage({
             pct={progress.level.pct}
             shares={progress.statShares}
           />
-          {(progress.companion.eggReady || progress.companion.eggCapped) && (
-            <HatchControls
-              userId={person.id}
-              hasActive={progress.companion.active}
-              capped={!progress.companion.eggReady}
-              shiny={progress.companion.shiny}
-            />
+          {progress.companion.eggReady && (
+            <HatchControls userId={person.id} phase={progress.companion.phase} />
           )}
         </div>
       )}

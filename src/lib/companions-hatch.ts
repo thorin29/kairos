@@ -4,18 +4,18 @@ import { loadProgression } from "@/lib/queries/progression";
 import { pickHatch, COMPANIONS, luckFromStreak } from "@/lib/companions";
 
 /**
- * Hatch a ready egg — the auth-free core shared by the web action and the app's
- * device endpoint. "new" draws a creature the person doesn't own yet (no
- * duplicates), weighted by their season tier, and makes it the active companion
- * (the previous one is minted onto the shelf at its current stage). "deepen"
- * instead makes the current companion shiny.
+ * Spend the egg — the auth-free core shared by the web action and the app's
+ * device endpoint.
  *
- * Both consume the egg and start the next one incubating, but **only "new"
- * spends one of the season's three hatches**. A shiny is a flourish on a
- * companion you already have; charging a monthly hatch for it meant nobody would
- * ever sensibly take it, which is why it needs the egg but not the allowance.
- * That also means a deepen is available while the season cap is spent
- * (`eggCapped`), not only while a hatch is.
+ * An egg exists in exactly two situations: the companion is fully grown, or it
+ * has finished deepening. Both are reached by growth, so growth alone paces how
+ * often anyone hatches and there is no separate monthly allowance.
+ *
+ * "new" draws a creature the person doesn't own yet, weighted by their season
+ * tier, and retires the current one to the gallery at the state it finished in.
+ * "deepen" BEGINS deepening on a fully grown companion — it no longer flips the
+ * glow on immediately, because the glow is the signal that the phase is done
+ * and the next egg is there.
  *
  * Callers own their own auth + cache refresh.
  */
@@ -28,19 +28,26 @@ export async function hatchEggCore(
   const rows = await loadProgression();
   const me = rows.find((p) => p.id === userId);
   if (!me) return { error: "That person no longer exists." };
-  // A deepen needs a grown egg but not an unspent monthly hatch, so it is also
-  // allowed in the capped state, where the XP is there and only the allowance
-  // has run out.
-  const canDeepen = me.companion.eggReady || me.companion.eggCapped;
-  if (mode === "new" && !me.companion.eggReady) {
+  // One rule for both now: an egg exists once the companion is fully grown, and
+  // again once a deepen has finished. There is no separate monthly allowance —
+  // growth paces it, and a second limiter was what produced "capped" states
+  // nobody could explain.
+  const phase = me.companion.phase;
+  if (!me.companion.eggReady) {
     return {
-      error: me.companion.eggCapped
-        ? "You've hatched all three for this month — you can still deepen your companion."
-        : "The egg isn't ready to hatch yet.",
+      error:
+        phase === "deepening"
+          ? "Still deepening — the glow will show when it's done."
+          : "Keep going — the egg comes when your companion is fully grown.",
     };
   }
-  if (mode === "deepen" && !canDeepen) {
-    return { error: "The egg isn't ready to hatch yet." };
+  if (mode === "deepen" && phase !== "adult") {
+    return {
+      error:
+        phase === "shiny"
+          ? "This one is already deepened — hatch a new companion."
+          : "Only a fully grown companion can be deepened.",
+    };
   }
 
   const lifetimeXp = me.lifetimeXp;
@@ -81,7 +88,15 @@ export async function hatchEggCore(
       ops.push(
         prisma.companion.update({
           where: { id: active.id },
-          data: { isActive: false, mintedStage: stg },
+          data: {
+            isActive: false,
+            mintedStage: stg,
+            // Freeze the finished state. `shiny` is derived from growth while a
+            // companion is yours; once it is on the shelf there is no growth to
+            // measure, so the flag has to hold the answer.
+            shiny: me.companion.shiny,
+            deepeningStartedAt: null,
+          },
         }),
       );
     }
@@ -96,34 +111,35 @@ export async function hatchEggCore(
     if (!active) {
       return { error: "Hatch your first companion before deepening." };
     }
-    // Writing shiny over shiny used to consume the egg for no change at all.
     if (active.shiny) {
       return { error: `${COMPANIONS[active.species]?.name ?? "That companion"} is already shiny.` };
     }
+    // Starts the phase; it does not finish it. The glow arrives when the
+    // deepening growth is done, which is the signal that there is an egg again.
     await prisma.companion.update({
       where: { id: active.id },
-      data: { shiny: true },
+      data: { deepeningStartedAt: new Date() },
     });
   }
 
-  // `eggsThisSeason` is read above as 0 when the stored key is a past season, so
-  // writing it back unchanged on a deepen both leaves the allowance alone and
-  // rolls the key forward correctly at a month boundary.
-  const spendsHatch = mode === "new";
+  // `eggsHatched` is still counted — it is the lifetime tally, and the hatch
+  // odds read it. The XP baseline and the per-season allowance are written for
+  // the benefit of nothing now: growth decides when an egg exists, and it is
+  // measured from the companion's own dates, not from a stored checkpoint.
   await prisma.companionState.upsert({
     where: { userId },
     update: {
       incubationBaseXp: lifetimeXp,
       eggsHatched: eggsHatched + 1,
       seasonKey,
-      eggsThisSeason: spendsHatch ? eggsThisSeason + 1 : eggsThisSeason,
+      eggsThisSeason,
     },
     create: {
       userId,
       incubationBaseXp: lifetimeXp,
       eggsHatched: 1,
       seasonKey,
-      eggsThisSeason: spendsHatch ? 1 : 0,
+      eggsThisSeason: 0,
     },
   });
 

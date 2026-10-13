@@ -1,0 +1,15 @@
+-- Deepening becomes a phase you work through, not an instant flourish.
+--
+-- Before: "deepen" flipped `shiny` immediately and consumed an egg, and an egg
+-- came from lifetime XP — which had nothing to do with raising the companion.
+-- That is how a hatchling could be shiny and how "a new egg is ready" showed up
+-- under a creature that was nowhere near grown.
+--
+-- Now one currency (growth) runs the whole loop, and a companion that is
+-- deepening records when it started so its progress can be measured the same
+-- way its growth is.
+--
+-- Null means "not deepening", which is true of every existing row: the ones
+-- already shiny keep `shiny = true` and read as finished, and the rest have
+-- simply never started. Nothing to backfill.
+ALTER TABLE "Companion" ADD COLUMN IF NOT EXISTS "deepeningStartedAt" TIMESTAMP(3);
