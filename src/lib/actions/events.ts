@@ -15,6 +15,7 @@ import {
   daysBetween,
 } from "@/lib/dates";
 import { buildRule, parseRule, alignWeeklyByday, occurrencesIn } from "@/lib/calendar/recur";
+import { cleanNotes } from "@/lib/calendar/event-notes";
 import { deleteEventCore } from "@/lib/calendar/delete-event-core";
 import { isAdmin, requireAdmin } from "@/lib/session";
 import { isHexColor } from "@/lib/palette";
@@ -270,6 +271,9 @@ export async function addEvent(
       eventTypeId,
       title,
       location: location || null,
+      // Null unless this kind takes a note, so a note typed before the type was
+      // switched is never saved invisibly.
+      notes: cleanNotes(String(formData.get("notes") ?? ""), kind, eventTypeId),
       startsAt,
       endsAt,
       allDay,
@@ -471,6 +475,7 @@ export async function updateEvent(
     eventTypeId,
     title,
     location: location || null,
+    notes: cleanNotes(String(formData.get("notes") ?? ""), kind, eventTypeId),
     startsAt,
     endsAt,
     allDay,
@@ -680,6 +685,7 @@ export type EventCopyData = {
   allDay: boolean;
   shadeDay: boolean;
   rrule: string | null;
+  notes: string;
   start: string;
   end: string;
   date: string;
@@ -709,6 +715,7 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
       eventTypeId: true,
       kind: true,
       location: true,
+      notes: true,
       allDay: true,
       shadeDay: true,
       rrule: true,
@@ -758,6 +765,7 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
     userId: e.isFamily ? "family" : (e.userId ?? ""),
     kind: e.eventTypeId ? `type:${e.eventTypeId}` : (e.kind as string),
     location: e.location ?? "",
+    notes: e.notes ?? "",
     allDay: e.allDay,
     shadeDay: (e as { shadeDay?: boolean }).shadeDay ?? true,
     rrule,

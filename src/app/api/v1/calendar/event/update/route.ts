@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
       isFamily: raw.isFamily === true,
       kind: str("kind"),
       eventTypeId: str("eventTypeId"),
+      notes: str("notes"),
+      ownerId: str("ownerId"),
       participants: Array.isArray(raw.participants)
         ? raw.participants.filter((x): x is string => typeof x === "string")
         : undefined,

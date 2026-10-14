@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.579.0";
+export const APP_VERSION = "0.580.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -139,6 +139,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.580.0",
+    summary: [
+      "Events and medical appointments take a short note \u2014 flight numbers, a confirmation code, what to bring. The box sits in the empty space beside the All day switch, so the add and edit windows are the same size and shape they were.",
+      "The note shows on the event when you click it, under the location.",
+      "On the phone, a parent can now file an event under anyone else in the house. The Calendar picker lists My calendar, Family calendar, and each person \u2014 the same choice the web\u2019s Whose dropdown has always offered, which is what a child\u2019s appointment or practice needed.",
+    ],
+  },
   {
     version: "0.579.0",
     summary: [

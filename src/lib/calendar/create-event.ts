@@ -5,6 +5,7 @@ import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { householdTz, localParts, toDateColumn, zonedToUtc, addDays, daysBetween } from "@/lib/dates";
 import { buildRule, parseRule, alignWeeklyByday, occurrencesIn } from "@/lib/calendar/recur";
+import { cleanNotes } from "@/lib/calendar/event-notes";
 
 /**
  * Create / update a basic personal calendar event for the app (Phase 3a-b).
@@ -34,6 +35,13 @@ export type EventInput = {
   kind?: string;
   /** Create only: a custom EventType id whose color wins. */
   eventTypeId?: string;
+  /** A short free-text note. Kept only on the kinds that take one; see
+   *  `cleanNotes`. Undefined leaves an existing note untouched on an update. */
+  notes?: string;
+  /** Whose event this is, when that is not the person making the request — the
+   *  phone's calendar picker letting a parent file a child's appointment. Only
+   *  a parent/admin may send someone else's id. */
+  ownerId?: string;
   /** People (user ids) to share this event with, besides the owner. */
   participants?: string[];
   /** Minutes-before reminders (e.g. [15, 60]). Undefined leaves them unchanged
@@ -144,6 +152,13 @@ export async function createPersonalEvent(
     eventTypeId = t?.id ?? null;
   }
 
+  // Whose event this is. A parent may file one under someone else (the phone's
+  // calendar picker — a child's doctor appointment, a hockey practice); anyone
+  // else only ever creates their own.
+  const ownerRes = await resolveOwner(input.ownerId, actorUserId, canManageFamily);
+  if ("error" in ownerRes) return { error: ownerRes.error };
+  const owner = ownerRes.id;
+
   const t = computeTimes(input);
   if ("error" in t) return { error: t.error };
 
@@ -160,12 +175,13 @@ export async function createPersonalEvent(
 
   const created = await prisma.event.create({
     data: {
-      userId: isFamily ? null : actorUserId,
+      userId: isFamily ? null : owner,
       isFamily,
       kind,
       eventTypeId,
       title,
       location,
+      notes: cleanNotes(input.notes, kind, eventTypeId),
       startsAt: t.startsAt,
       endsAt: t.endsAt,
       allDay: input.allDay,
@@ -178,13 +194,36 @@ export async function createPersonalEvent(
     select: { id: true },
   });
 
-  await setParticipants(created.id, input.participants, isFamily ? null : actorUserId);
+  await setParticipants(created.id, input.participants, isFamily ? null : owner);
 
   revalidatePath("/calendar");
   revalidatePath("/");
-  if (!isFamily) revalidatePath(`/person/${actorUserId}`);
+  if (!isFamily) revalidatePath(`/person/${owner}`);
   await rememberEventName(title);
   return { error: null, id: created.id };
+}
+
+/**
+ * Settle whose event this is. `requested` empty, or the actor's own id, keeps
+ * the actor. Anyone else is a parent-only move and the id has to be a real
+ * active member — the request names it, so it is never trusted on its own.
+ */
+async function resolveOwner(
+  requested: string | undefined,
+  actorUserId: string,
+  canManageFamily: boolean,
+): Promise<{ id: string } | { error: string }> {
+  const want = (requested ?? "").trim();
+  if (!want || want === actorUserId) return { id: actorUserId };
+  if (!canManageFamily) {
+    return { error: "Only a parent can file an event under someone else." };
+  }
+  const u = await prisma.user.findFirst({
+    where: { id: want, isActive: true },
+    select: { id: true },
+  });
+  if (!u) return { error: "That person isn't in the household." };
+  return { id: u.id };
 }
 
 /** Replace an event's shared-with people (excluding the owner), validating ids. */
@@ -247,6 +286,12 @@ export async function updatePersonalEvent(
   if (nextKind === "BIRTHDAY" && !canManageFamily) {
     return { error: "Only a parent can make an event a birthday." };
   }
+  // Whose it is afterwards. Resolved ONCE: the write paths below each used to
+  // re-derive the owner, which is exactly where two copies drift apart.
+  const ownerRes = await resolveOwner(input.ownerId, ev.userId ?? userId, canManageFamily);
+  if ("error" in ownerRes) return { error: ownerRes.error };
+  const ownerAfter = nextIsFamily ? null : ownerRes.id;
+
   let nextTypeId: string | null | undefined = undefined;
   if (input.kind !== undefined) {
     // The app sends kind + eventTypeId together as one type selection, so a
@@ -297,9 +342,25 @@ export async function updatePersonalEvent(
   });
   if ("error" in t) return { error: t.error };
 
+  // A note only ever lives on a kind that takes one: use what the client sent
+  // when it sent anything, keep what's there when it didn't, and drop it either
+  // way once the kind the event ends up with can't hold one. A single-occurrence
+  // override keeps the parent's kind, so it is judged by that.
+  const notesKind = singleEdit ? ev.kind : nextKind;
+  const notesTypeId = singleEdit
+    ? ev.eventTypeId
+    : nextTypeId !== undefined
+      ? nextTypeId
+      : ev.eventTypeId;
+
   const fields = {
     title,
     location,
+    notes: cleanNotes(
+      input.notes !== undefined ? input.notes : ev.notes,
+      notesKind,
+      notesTypeId,
+    ),
     startsAt: t.startsAt,
     endsAt: t.endsAt,
     allDay: input.allDay,
@@ -316,7 +377,7 @@ export async function updatePersonalEvent(
   const ownerFields = singleEdit
     ? {}
     : {
-        userId: nextIsFamily ? null : ev.userId ?? userId,
+        userId: ownerAfter,
         isFamily: nextIsFamily,
         kind: nextKind,
         ...(nextTypeId !== undefined ? { eventTypeId: nextTypeId } : {}),
@@ -363,7 +424,6 @@ export async function updatePersonalEvent(
         ? input.occurrenceISO
         : input.date;
     const untilISO = addDays(occ, -1);
-    const ownerAfter = nextIsFamily ? null : ev.userId ?? userId;
     const sid = ev.seriesId ?? ev.id;
     const r = parseRule(ev.rrule);
     const Dcol = toDateColumn(occ);
@@ -405,7 +465,7 @@ export async function updatePersonalEvent(
     const created = await prisma.event.create({
       data: {
         ...fields,
-        userId: nextIsFamily ? null : ev.userId ?? userId,
+        userId: ownerAfter,
         isFamily: nextIsFamily,
         kind: nextKind,
         ...(nextTypeId !== undefined ? { eventTypeId: nextTypeId } : {}),
@@ -423,7 +483,6 @@ export async function updatePersonalEvent(
     // occurrence, clearing per-occurrence changes/deletions. Use the ongoing
     // (latest) piece's rule so the real end date is kept, not a capped one.
     const gid = ev.seriesId ?? ev.id;
-    const ownerAfter = nextIsFamily ? null : ev.userId ?? userId;
     const latest = seriesPieces.reduce(
       (a, b) => (localParts(b.startsAt).iso > localParts(a.startsAt).iso ? b : a),
       seriesPieces[0] ?? { id: ev.id, startsAt: ev.startsAt, rrule: ev.rrule },
@@ -436,7 +495,7 @@ export async function updatePersonalEvent(
     const created = await prisma.event.create({
       data: {
         ...fields,
-        userId: nextIsFamily ? null : ev.userId ?? userId,
+        userId: ownerAfter,
         isFamily: nextIsFamily,
         kind: nextKind,
         ...(nextTypeId !== undefined ? { eventTypeId: nextTypeId } : {}),
@@ -451,7 +510,6 @@ export async function updatePersonalEvent(
     await setParticipants(created.id, input.participants, ownerAfter);
   } else {
     await prisma.event.update({ where: { id: eventId }, data: { ...fields, ...ownerFields } });
-    const ownerAfter = nextIsFamily ? null : ev.userId ?? userId;
     await setParticipants(eventId, input.participants, ownerAfter);
   }
 

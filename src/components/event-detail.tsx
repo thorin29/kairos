@@ -251,6 +251,21 @@ export function EventDetail({
             )}
           </div>
 
+          {/* The note, under the details and above anything else. Shown for any
+              event that has one — including a subscribed feed's description,
+              which is the same field — and the popup already scrolls, so a long
+              one can't push the actions off. */}
+          {event.notes && (
+            <div className="mt-3 border-t border-hairline pt-3">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
+                Notes
+              </p>
+              <p className="whitespace-pre-wrap break-words text-sm">
+                {event.notes}
+              </p>
+            </div>
+          )}
+
           {isClass && (
             <ClassDue eventId={event.eventId} dayISO={event.dayISO} />
           )}

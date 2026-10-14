@@ -13,6 +13,7 @@ import { LocationCombobox } from "@/components/location-combobox";
 import { EventNameCombobox } from "@/components/event-name-combobox";
 import { SelectField } from "@/components/select-field";
 import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
+import { NOTES_MAX, takesNotes } from "@/lib/calendar/event-notes";
 import { addDays, dayOfWeek, daysBetween, startOfWeek } from "@/lib/dates";
 import { PlusIcon } from "@/components/icons";
 import { TimeSelect } from "@/components/time-select";
@@ -151,6 +152,7 @@ type Prefill = {
   userId?: string;
   kind?: string;
   location?: string;
+  notes?: string;
   allDay?: boolean;
   shadeDay?: boolean;
   rrule?: string | null;
@@ -235,6 +237,7 @@ export function AddEventProvider({
           userId={prefill.userId}
           kindInit={prefill.kind}
           location={prefill.location}
+          notes={prefill.notes}
           allDayInit={prefill.allDay}
           shadeDayInit={prefill.shadeDay}
           rruleInit={prefill.rrule}
@@ -291,6 +294,7 @@ function EventModal({
   userId,
   kindInit,
   location,
+  notes,
   allDayInit,
   shadeDayInit,
   rruleInit,
@@ -317,6 +321,7 @@ function EventModal({
   userId?: string;
   kindInit?: string;
   location?: string;
+  notes?: string;
   allDayInit?: boolean;
   shadeDayInit?: boolean;
   rruleInit?: string | null;
@@ -492,6 +497,12 @@ function EventModal({
   const isCustomType = kind.startsWith("type:");
   const kindForSubmit = isCustomType ? "OTHER" : kind;
   const eventTypeId = isCustomType ? kind.slice(5) : "";
+  // Held in state rather than left to the textarea's own defaultValue: switching
+  // the type away unmounts the field, and an uncontrolled one would come back
+  // blank when the type was switched back. It still only SAVES on a kind that
+  // takes a note — the server applies the same rule.
+  const [notesText, setNotesText] = useState(notes ?? "");
+  const showNotes = takesNotes(kindForSubmit, eventTypeId || null);
 
   // "Class" is only offered when the household allows it (admins always). When
   // it's chosen for a NEW event, the overlay becomes the full class form and
@@ -1033,6 +1044,38 @@ function EventModal({
             </>
           )}
 
+          {/* The tail of the form in two columns: the switches and buttons stay
+              exactly where they were on the left, and the note fills the empty
+              space beside them. Nothing above this point moves, and the dialog
+              keeps its width. On a narrow screen the grid collapses to one
+              column — the note is placed first in the DOM so it lands above the
+              Save button there rather than below it. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {showNotes && (
+              <div className="sm:col-start-2 sm:row-start-1">
+                <label
+                  htmlFor="ev-notes"
+                  className="mb-1.5 block text-sm font-medium"
+                >
+                  Notes
+                </label>
+                <textarea
+                  id="ev-notes"
+                  name="notes"
+                  rows={5}
+                  maxLength={NOTES_MAX}
+                  value={notesText}
+                  onChange={(e) => setNotesText(e.target.value)}
+                  placeholder="Flight AA 1234, confirmation 7XQP2, bring insurance card…"
+                  className="w-full resize-none rounded-2xl border border-hairline bg-surface px-4 py-3 text-sm outline-none focus:border-accent"
+                />
+                <p className="mt-1 text-right text-xs text-muted">
+                  {notesText.length} / {NOTES_MAX}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-4 sm:col-start-1 sm:row-start-1">
           <label className="flex items-center gap-2.5 text-sm">
             <input
               type="checkbox"
@@ -1099,6 +1142,8 @@ function EventModal({
             >
               Cancel
             </button>
+          </div>
+            </div>
           </div>
         </form>
       </div>
