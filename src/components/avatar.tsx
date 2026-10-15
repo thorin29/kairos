@@ -1,8 +1,10 @@
 import {
   avatarUrl,
+  companionAvatarImage,
+  companionAvatarOf,
   iconGlyph,
   initialOf,
-  isIcon,
+  isUploaded,
   parseAvatarTransform,
   avatarTransformCss,
 } from "@/lib/avatars";
@@ -36,7 +38,8 @@ export function Avatar({
   avatarPosition?: string | null;
   size?: keyof typeof sizes;
 }) {
-  const isPhoto = !!avatarPath && !isIcon(avatarPath);
+  const isPhoto = isUploaded(avatarPath);
+  const companion = companionAvatarOf(avatarPath);
   const glyph = iconGlyph(avatarPath);
 
   return (
@@ -49,7 +52,16 @@ export function Avatar({
         color,
       }}
     >
-      {isPhoto ? (
+      {companion ? (
+        // A companion sprite is transparent art, not a photo: fit it whole with
+        // a little air rather than cropping it to the circle.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={companionAvatarImage(companion)}
+          alt=""
+          className="h-full w-full object-contain p-[12%]"
+        />
+      ) : isPhoto ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={avatarUrl(avatarPath)}

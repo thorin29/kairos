@@ -1,9 +1,8 @@
 import type { NextRequest } from "next/server";
 import { apiOk } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { prisma } from "@/lib/prisma";
 import { COMPANIONS, STAGE_NAMES, type CompanionEra } from "@/lib/companions";
-import { loadProgression, type PersonProgress } from "@/lib/queries/progression";
+import { loadOwnedCompanions } from "@/lib/companions-owned";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,38 +27,18 @@ export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
 
-  const [ownedRows, progression] = await Promise.all([
-    prisma.companion.findMany({
-      where: { userId: authed.device.person.id },
-      select: { species: true, mintedStage: true, isActive: true, shiny: true },
-    }),
-    loadProgression(),
-  ]);
-  // Named before use: the rows are untyped without a generated Prisma client,
-  // and everything derived from them (including the stage used to index
-  // STAGE_NAMES) inherits that.
-  type OwnedRow = {
-    species: string;
-    mintedStage: number | null;
-    isActive: boolean;
-    shiny: boolean;
-  };
-  const rows: OwnedRow[] = ownedRows as OwnedRow[];
-  const owned = new Set(rows.map((r) => r.species));
-
-  // The stage to show each owned creature at: the active one at its live growth
-  // stage, a shelved one frozen at the stage it was raised to.
-  const me = (progression as PersonProgress[]).find(
-    (p) => p.id === authed.device.person.id,
-  );
-  const activeStage = me?.companion.stage ?? 0;
-  const stageBySpecies = new Map(
-    rows.map((r) => [r.species, r.isActive ? activeStage : (r.mintedStage ?? 2)] as const),
-  );
+  // Owned creatures and the stage each counts as reached — the shared rule
+  // (src/lib/companions-owned.ts) that choosing a profile picture also reads.
+  const mine = await loadOwnedCompanions(authed.device.person.id);
+  const owned = new Set(mine.map((r) => r.species));
+  // (userId, species) is unique, so one row per species.
+  const stageBySpecies = new Map(mine.map((r) => [r.species, r.stage] as const));
   // A creature stays shiny on the shelf: deepening is permanent, so the gallery
   // is where that shows for good. One shiny copy makes the species shiny.
-  const shinySpecies = new Set(rows.filter((r) => r.shiny).map((r) => r.species));
-  const activeSpecies = new Set(rows.filter((r) => r.isActive).map((r) => r.species));
+  const shinySpecies = new Set(mine.filter((r) => r.shiny).map((r) => r.species));
+  const activeSpecies = new Set(mine.filter((r) => r.isActive).map((r) => r.species));
+  const sprite = (id: string, stage: number) =>
+    `/api/v1/companion-sprite?p=${encodeURIComponent(`${id}/${STAGE_NAMES[stage]}.png`)}`;
 
   const roster = Object.values(COMPANIONS);
   const eras = ERAS.map((era) => {
@@ -79,9 +58,13 @@ export async function GET(req: NextRequest) {
           /** The one currently with you. It cannot be "made active" again, and
            *  it is the only one the character screen's actions apply to. */
           isActive: isOwned && activeSpecies.has(s.id),
-          image: isOwned
-            ? `/api/v1/companion-sprite?p=${encodeURIComponent(`${s.id}/${STAGE_NAMES[stage]}.png`)}`
-            : null,
+          image: isOwned ? sprite(s.id, stage) : null,
+          /** Art for each stage reached so far (index = stage), for picking a
+           *  profile picture. Stages not yet reached are left out, so the
+           *  phone never sees art it hasn't earned. */
+          stageImages: isOwned
+            ? Array.from({ length: stage + 1 }, (_, i) => sprite(s.id, i))
+            : [],
         };
       });
     return {

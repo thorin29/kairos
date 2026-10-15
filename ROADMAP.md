@@ -1646,11 +1646,9 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Open — agreed, not built yet
 
-- [ ] **Companion profile icons** — pick any owned companion, at any stage you
-  own, as your profile image, chosen from the gallery. Needs a third avatar kind
-  alongside uploaded photos and built-in icons (`src/lib/avatars.ts`,
-  `src/components/avatar.tsx`, and the app); the collection API already exposes
-  `stage` and `isActive` per owned species.
+- [x] **Companion profile icons** (web 0.582 / app 0.392) — in the app's gallery,
+  tap an owned companion → Use as profile picture → pick a stage you've reached.
+  Phone-only to choose; shown everywhere. See DECISIONS.
 - [ ] **School catch-up note** — see "School catch-up note (OPEN)" above.
 - [ ] **Offline** — calendar *viewing* offline is still the top ask (see
   Offline-first).
@@ -1666,6 +1664,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.581.0 (migrations through 121_companion_tenure).
-- App versionName 0.389.0 / versionCode 446 / CLIENT_BUILD 446.
+- Web APP_VERSION 0.582.0 (migrations through 121_companion_tenure).
+- App versionName 0.392.0 / versionCode 449 / CLIENT_BUILD 449.
 - Collector: deployed and running; Xbox totals come from real game sessions.

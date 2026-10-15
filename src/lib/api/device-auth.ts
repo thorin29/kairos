@@ -3,7 +3,8 @@ import { randomBytes } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashToken, hashPassword, verifyPassword, normalizeInviteCode } from "@/lib/auth";
-import { avatarUrl, isIcon, iconGlyph } from "@/lib/avatars";
+import { companionAvatarOf, isIcon, iconGlyph, isUploaded } from "@/lib/avatars";
+import { STAGE_NAMES } from "@/lib/companions";
 import { apiError } from "@/lib/api/errors";
 import { bearerToken } from "@/lib/api/request";
 import { sendNewDeviceEmail } from "@/lib/mail/send";
@@ -84,7 +85,8 @@ function toPerson(row: PersonRow): EnrolledPerson {
  * emoji glyph when the person picked an icon rather than uploading a photo.
  */
 export function personPayload(p: EnrolledPerson) {
-  const uploaded = p.avatarPath && !isIcon(p.avatarPath);
+  const uploaded = isUploaded(p.avatarPath);
+  const companion = companionAvatarOf(p.avatarPath);
   return {
     id: p.id,
     name: p.displayName ?? p.name,
@@ -93,6 +95,17 @@ export function personPayload(p: EnrolledPerson) {
     avatarUrl: uploaded ? `/api/v1/avatars/${encodeURIComponent(p.avatarPath as string)}` : null,
     avatarPosition: uploaded ? p.avatarPosition : null,
     avatarIcon: isIcon(p.avatarPath) ? iconGlyph(p.avatarPath) : null,
+    // A companion chosen as the picture (app 0.392+): drawn whole, not cropped
+    // like a photo. An older app ignores it and shows initials.
+    avatarCompanion: companion
+      ? {
+          species: companion.species,
+          stage: companion.stage,
+          image: `/api/v1/companion-sprite?p=${encodeURIComponent(
+            `${companion.species}/${STAGE_NAMES[companion.stage]}.png`,
+          )}`,
+        }
+      : null,
     role: p.role,
     kind: p.kind,
   };

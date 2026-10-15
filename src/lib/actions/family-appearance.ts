@@ -6,7 +6,7 @@ import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/session";
 import { getSetting, setSetting, FAMILY_AVATAR, FAMILY_AVATAR_POS } from "@/lib/settings";
-import { AVATAR_ICONS, ICON_PREFIX, isIcon } from "@/lib/avatars";
+import { AVATAR_ICONS, ICON_PREFIX, isUploaded } from "@/lib/avatars";
 
 const UPLOADS = path.join(process.env.DATA_DIR || "/app/data", "uploads");
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -44,7 +44,7 @@ export async function updateFamilyAvatar(
 
   const current = await getSetting(FAMILY_AVATAR);
   let avatarPath: string | null = current;
-  const oldFile = current && !isIcon(current) ? current : null;
+  const oldFile = isUploaded(current) ? current : null;
 
   if (photo instanceof File && photo.size > 0) {
     if (photo.size > MAX_BYTES) {

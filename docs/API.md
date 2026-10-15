@@ -132,6 +132,8 @@ POST /api/v1/auth/reauth        re-confirm the password after a credential chang
 POST /api/v1/auth/refresh       rotate this device's token
 POST /api/v1/auth/revoke        revoke (sign out) this device
 GET  /api/v1/me                 the enrolled person
+POST /api/v1/me/avatar          set the photo and/or its framing (multipart: image?, position)
+POST /api/v1/me/avatar/companion  use an owned companion as the picture (v0.582, below)
 GET  /api/v1/meta               version handshake (no auth)
 ```
 
@@ -806,6 +808,7 @@ GET  /api/v1/characters/collection   this person's gallery: every creature by er
                                      mystery (rarity only). Self only.
 POST /api/v1/characters/hatch        { "mode":"new"|"deepen" } → { "hatched": … | null }
 POST /api/v1/characters/activate     { "species" } → { "activated": name }   (v0.576)
+POST /api/v1/me/avatar/companion     { "species", "stage":0|1|2 } → { "person": Person }   (v0.582)
 GET  /api/v1/companion-sprite        sprite art
 ```
 Progression (v0.574–0.578), settled after three bugs from conflating them:
@@ -815,6 +818,20 @@ shiny does not mean adult. An egg appears only once the active companion is
 fully grown; deepening is a phase worked through after that. Activating an
 older companion banks the current one's growth and resumes the returning one's
 (`companions-tenure.ts`, migration 121). There is no monthly hatch cap.
+
+**Companion as profile picture (v0.582, phone only).** Each owned gallery entry
+carries `stageImages` — sprite URLs for the stages reached so far (index =
+stage; unreached stages are absent, so their art is never sent). Choosing one
+posts `{ species, stage }`; the server re-checks with `loadOwnedCompanions`
+(src/lib/companions-owned.ts — the same rule the gallery's `stage` comes from)
+that you own it and have reached that stage, stores `companion:<species>:<stage
+name>` in `avatarPath`, deletes a replaced uploaded photo, and returns the
+person. The person object gains:
+```
+"avatarCompanion": { "species", "stage":0|1|2, "image":"/api/v1/companion-sprite?p=…" } | null
+```
+Draw it whole (fit, not crop; no `avatarPosition`). `avatarUrl`/`avatarIcon` are
+null when it is set, so an older app shows initials.
 
 ### Devices — **built (v0.189)**
 This person's own devices, so anyone can see what's enrolled and revoke a phone
@@ -920,13 +937,13 @@ on this shape.
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**134 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**135 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
 silently invisible:
 
-- **auth/** `login`, `join`, `join/check`, `forgot`, `recover`, `reauth`, `refresh`, `revoke` · **meta**, **me**, `me/avatar`, `me/color`, **devices**, `devices/[id]/revoke`, `avatars/[file]`
+- **auth/** `login`, `join`, `join/check`, `forgot`, `recover`, `reauth`, `refresh`, `revoke` · **meta**, **me**, `me/avatar`, `me/avatar/companion`, `me/color`, **devices**, `devices/[id]/revoke`, `avatars/[file]`
 - **dashboard**, **tasks** (`add`, `[id]/complete`, `[id]/uncomplete`, `[id]/update`, `[id]/edit-data`, `[id]/delete`), **chores** (`always-open`, `claim`, `claim-complete`, `release`)
 - **calendar** (`event`, `event/update`, `event/delete`, `prefs`, `subscribed-reminders`), **event-names**, **event-bg**, **addresses**, **sport/confirm**, **sport/decline**, **notifications/meta**, **notifications/upcoming**
 - **school** (`add`, `add-to-today`, `approvals`, `rename`, `delete`), **classes**, **classes/form**

@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { prisma } from "@/lib/prisma";
-import { isIcon } from "@/lib/avatars";
+import { isUploaded } from "@/lib/avatars";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   if (!user) return apiError("validation", "That person no longer exists.");
 
   let avatarPath = user.avatarPath;
-  const oldFile = avatarPath && !isIcon(avatarPath) ? avatarPath : null;
+  const oldFile = isUploaded(avatarPath) ? avatarPath : null;
 
   if (photo instanceof File && photo.size > 0) {
     if (photo.size > MAX_BYTES) return apiError("validation", "That image is larger than 5 MB.");

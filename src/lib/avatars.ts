@@ -1,10 +1,19 @@
 /**
- * A profile picture is either an uploaded file or one of the presets below.
- * Both live in User.avatarPath, distinguished by an "icon:" prefix — an
- * uploaded value is a bare filename, a preset is "icon:fox".
+ * A profile picture is one of three kinds, all stored in User.avatarPath and
+ * told apart by prefix:
+ *   - an uploaded photo — a bare filename ("abc-1f2e3d.jpg")
+ *   - a preset icon     — "icon:fox"
+ *   - a companion       — "companion:<species>:<stage name>", e.g.
+ *                         "companion:coincroc:adult" (chosen on the phone)
  *
- * No imports here on purpose: client components need the preset list.
+ * Always classify with isUploaded / isIcon / companionAvatarOf. "Not an icon"
+ * does NOT mean "a file" any more: treating a companion value as a filename
+ * would serve a broken image and hand it to unlink().
+ *
+ * Only imports the dependency-free companion roster: client components need
+ * this module.
  */
+import { COMPANIONS, STAGE_NAMES, stageAsset } from "@/lib/companions";
 
 export const AVATAR_ICONS: Record<string, string> = {
   // Understated marks and symbols
@@ -68,6 +77,39 @@ export function iconGlyph(avatarPath: string | null | undefined): string | null 
   if (!isIcon(avatarPath)) return null;
   const key = avatarPath!.slice(ICON_PREFIX.length);
   return AVATAR_ICONS[key] ?? null;
+}
+
+export const COMPANION_PREFIX = "companion:";
+
+export type CompanionAvatar = { species: string; stage: number };
+
+/** The companion and stage a "companion:" value names, or null when it isn't
+ *  one — or names a species or stage that doesn't exist (shown as initials). */
+export function companionAvatarOf(
+  avatarPath: string | null | undefined,
+): CompanionAvatar | null {
+  if (!avatarPath?.startsWith(COMPANION_PREFIX)) return null;
+  const [species, stageName] = avatarPath.slice(COMPANION_PREFIX.length).split(":");
+  const stage = (STAGE_NAMES as readonly string[]).indexOf(stageName ?? "");
+  if (!species || !COMPANIONS[species] || stage < 0) return null;
+  return { species, stage };
+}
+
+export function companionAvatarValue(species: string, stage: number): string {
+  return `${COMPANION_PREFIX}${species}:${STAGE_NAMES[stage]}`;
+}
+
+/** The web (public) art for a companion avatar. */
+export function companionAvatarImage(a: CompanionAvatar): string {
+  return stageAsset(a.species, a.stage);
+}
+
+/** True only for an uploaded photo — a file on disk that may be served or
+ *  deleted. Neither an icon nor a companion. */
+export function isUploaded(avatarPath: string | null | undefined): avatarPath is string {
+  return (
+    !!avatarPath && !isIcon(avatarPath) && !avatarPath.startsWith(COMPANION_PREFIX)
+  );
 }
 
 /** URL that serves an uploaded avatar. */

@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-10 — A companion can be the profile picture; a third avatar kind (v0.582.0 / app 0.392.0)
+
+Agreed earlier and built now: any owned companion, at any stage you've reached,
+as your profile picture. **Chosen only in the app** (the owner's call) — gallery
+→ tap an owned creature → Use as profile picture → pick one of three stages.
+The web shows it everywhere a picture appears but has no picker; picking a
+photo or an icon on the web replaces it, as either replaces the other.
+
+**Storage: a third kind in `User.avatarPath`**, `companion:<species>:<stage
+name>`, beside a bare upload filename and `icon:<key>`. No migration. The
+danger was every existing check: seven places decided "not an icon ⇒ an
+uploaded file", so a companion value would have been served as a broken photo
+and, on the next save, passed to `unlink()`. All now use one classifier in
+`src/lib/avatars.ts` — `isUploaded` (only a real file), `isIcon`,
+`companionAvatarOf` (null for an unknown species or stage, which then shows
+initials). New code must not test `!isIcon(x)` to mean "a file".
+
+**Which stages you may pick** comes from the same rule the gallery shows:
+`loadOwnedCompanions` (src/lib/companions-owned.ts), extracted from the
+collection route — the active companion at its live growth stage, a shelved one
+at its `mintedStage`. The route re-checks ownership and stage, so the phone's
+picker is a request, not an authority. A chosen stage is fixed; it doesn't grow
+with the companion.
+
+**Unreached stages aren't spoiled.** The gallery sends `stageImages` only for
+stages reached; the picker shows an egg and "Not yet" for the rest.
+
+**Rendering.** A sprite is transparent art, so it is fitted whole with some air
+(web `object-contain p-[12%]`, app 76% of the circle) instead of cropped and
+framed like a photo; `avatarPosition` is reset and ignored for it. The app
+draws it through one composable, `CompanionAvatarArt`, used by the rail, content
+avatars and the Profile preview. The person payload carries
+`avatarCompanion { species, stage, image }`; an older app ignores it and shows
+initials.
+
 ## 2026-10 — One calendar file, read in two places, held to one answer (v0.581.0 / app 0.389.0)
 
 An `.ics` invite from an email now opens New event filled in: on the phone by

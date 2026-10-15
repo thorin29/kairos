@@ -5,7 +5,7 @@ import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { AVATAR_ICONS, ICON_PREFIX, isIcon } from "@/lib/avatars";
+import { AVATAR_ICONS, ICON_PREFIX, isUploaded } from "@/lib/avatars";
 import { toDateColumn } from "@/lib/dates";
 import { requireAdminOrSelf } from "@/lib/gate";
 import { isAdmin } from "@/lib/session";
@@ -88,7 +88,7 @@ export async function updateProfile(
   }
 
   let avatarPath = user.avatarPath;
-  const oldFile = avatarPath && !isIcon(avatarPath) ? avatarPath : null;
+  const oldFile = isUploaded(avatarPath) ? avatarPath : null;
 
   if (photo instanceof File && photo.size > 0) {
     if (photo.size > MAX_BYTES) {

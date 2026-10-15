@@ -6,6 +6,7 @@ import {
   ICON_PREFIX,
   avatarUrl,
   isIcon,
+  isUploaded,
   parseAvatarTransform,
   avatarTransformCss,
 } from "@/lib/avatars";
@@ -40,7 +41,7 @@ export function FamilyAvatarForm({
     isIcon(avatarPath) ? avatarPath!.slice(ICON_PREFIX.length) : "",
   );
   const [preview, setPreview] = useState<string | null>(
-    avatarPath && !isIcon(avatarPath) ? avatarUrl(avatarPath) : null,
+    isUploaded(avatarPath) ? avatarUrl(avatarPath) : null,
   );
   const [removePhoto, setRemovePhoto] = useState(false);
 

@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { DateField } from "@/components/date-field";
 import { updateProfile, type ProfileState } from "@/lib/actions/profile";
-import { AVATAR_ICONS, ICON_PREFIX, avatarUrl, isIcon, parseAvatarTransform, avatarTransformCss } from "@/lib/avatars";
+import { AVATAR_ICONS, ICON_PREFIX, avatarUrl, companionAvatarImage, companionAvatarOf, isIcon, isUploaded, parseAvatarTransform, avatarTransformCss } from "@/lib/avatars";
 import { AvatarAdjuster } from "@/components/avatar-adjuster";
 import { PERSON_PALETTE } from "@/lib/palette";
 import { Card } from "@/components/ui";
@@ -38,11 +38,12 @@ export function ProfileForm({
       : "",
   );
   const [preview, setPreview] = useState<string | null>(
-    person.avatarPath && !isIcon(person.avatarPath)
-      ? avatarUrl(person.avatarPath)
-      : null,
+    isUploaded(person.avatarPath) ? avatarUrl(person.avatarPath) : null,
   );
   const [removePhoto, setRemovePhoto] = useState(false);
+  // A companion picture is chosen on the phone; here it is only shown, and is
+  // replaced if a photo or an icon is picked instead.
+  const companion = companionAvatarOf(person.avatarPath);
 
   return (
     <form action={formAction} className="space-y-8">
@@ -165,6 +166,13 @@ export function ProfileForm({
               />
             ) : icon ? (
               AVATAR_ICONS[icon]
+            ) : companion && !removePhoto ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={companionAvatarImage(companion)}
+                alt=""
+                className="h-full w-full object-contain p-[12%]"
+              />
             ) : (
               <span
                 className="font-display text-2xl font-semibold"

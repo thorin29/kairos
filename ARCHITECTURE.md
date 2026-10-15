@@ -154,6 +154,8 @@ production:
 | Which events take a note, and its length | `takesNotes` / `cleanNotes` in `src/lib/calendar/event-notes.ts` |
 | Whose calendar a new event lands on | `resolveOwner` in `src/lib/calendar/create-event.ts` (never trusted from the request) |
 | One event from an `.ics` file | `readIcsFile` in `src/lib/calendar/ics-import.ts` |
+| Which companions you own, at which stage | `loadOwnedCompanions` in `src/lib/companions-owned.ts` (gallery + profile picture) |
+| What kind of profile picture a value is | `isUploaded` / `isIcon` / `companionAvatarOf` in `src/lib/avatars.ts` |
 
 When a rule must also run on the phone — the notes rule (`NoteField.kt`) and the
 calendar-file import (`IcsImport.kt`, which reads the file on the device) — the

@@ -66,7 +66,8 @@ schedule.
   tinted red on the card.
 - **Family goals and companions.** A monthly family goal that carries forward
   until a parent signs it off, and collectible companions each person raises
-  through growth stages, deepens, and can swap back in from their gallery.
+  through growth stages, deepens, and can swap back in from their gallery — or
+  use as their profile picture, at any stage they've reached (chosen in the app).
 
 ## Roadmap
 
@@ -103,7 +104,6 @@ Built:
 
 Planned:
 
-- [ ] Companion profile icons — any owned companion as your profile picture
 - [ ] Weather panel and forecast
 - [ ] Smooth drag-and-drop reordering
 
