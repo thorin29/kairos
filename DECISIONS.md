@@ -1,5 +1,124 @@
 # Decisions
 
+## 2026-10 — One calendar file, read in two places, held to one answer (v0.581.0 / app 0.389.0)
+
+An `.ics` invite from an email now opens New event filled in: on the phone by
+tapping (or sharing) the attachment, on the web with **Import .ics** on the Add
+event form. It fills the form and nothing else — the save goes through the
+existing create path, so there is no new endpoint and no new data.
+
+**Where the file is read was the owner's call: on the phone.** It works with no
+connection and needs no server change. The web cannot do the same in the
+browser, because the times have to land on the household's clock and
+`HOUSEHOLD_TZ` is not exposed to the browser (`dates.ts` would quietly fall back
+to UTC there). So the web reads the file text in the browser and hands it to a
+server action (`readIcsUpload`, gated like saving an event) that returns the
+draft. Two readers, then — and that is exactly the situation that has bitten
+this project before.
+
+So the rule lives once in `src/lib/calendar/ics-import.ts`, with its rules
+written at the top; `IcsImport.kt` mirrors it line for line; and
+`scripts/ics-parity/check.sh` compiles the Kotlin with `kotlinc`, runs 43
+hand-written files plus a seeded random batch (thousands of files, CRLF / LF / CR,
+folding, BOMs, Windows and bogus TZIDs, DST edges, every RRULE shape the form
+can and can't hold) through both in four household zones, and diffs the
+drafts. On its first runs it found two real bugs that agreeing copies would
+have hidden from any example test: a note clipped at 500 characters could end on
+half an emoji (now `clip()` never splits a surrogate pair), and a start in the
+year 1000 shifted across zones to year 999, which **crashed** the Kotlin
+(`LocalDate.parse("999-12-31")`). Years outside 1900–2199 are now unreadable,
+and `readIcsFile` never throws on either side — a file it can't use is "no
+event".
+
+The shape of the answer:
+
+- **One event or nothing.** A file holding several events (counted by UID; a
+  `RECURRENCE-ID` override belongs to its series) is a schedule, and a schedule
+  belongs in a subscription — the form says how many it holds and points to
+  Admin → Calendar. Adding feeds stays a parent job on the web; phones can only
+  show or hide feeds that already exist. METHOD:CANCEL or an all-cancelled file
+  says so instead of adding anything.
+- **Times on the household clock.** A UTC time or a real TZID is converted; the
+  Windows zone names Outlook writes ("Central Standard Time") are mapped; an
+  unknown TZID or a floating time is read as already household time. The phone
+  form defaults new events to the household zone, so the draft lands as is.
+  Known edge, identical on both: a wall time that doesn't exist (02:30 on
+  spring-forward day) resolves an hour early, as `zonedToUtc` does everywhere.
+- **Repeats are carried or dropped, never approximated.** Plain daily / weekly /
+  monthly / yearly from the start date carries over. An interval, an end, a
+  second weekday, exceptions (EXDATE/RDATE) or changed occurrences drop the
+  repeat and the form says so — "every other Tuesday until June" quietly saved
+  as "every Tuesday forever" would be worse than asking.
+- **Only alarm-free, event-level properties count.** A VALARM's DESCRIPTION is
+  not the event's description; first value wins.
+- **The description becomes the note**, under the same 500-character rule as
+  typing one, and the type starts as Event so the note is kept.
+- **Whose calendar**: the file can't know. The web leaves Whose on "Choose" (the
+  save already refuses an unchosen owner); the phone defaults to the person
+  holding it, like any new event there.
+- **Not deduplicated.** Importing the same invite twice makes two events; the
+  file's UID is not stored. Fine for one-off invites; revisit if it bites.
+
+Android specifics: the activity declares VIEW and SEND filters for
+`text/calendar`, `text/x-vcalendar`, `application/ics`, `application/x-ical`.
+An app can't make itself the default — the first open shows the chooser, and
+"Always" is the user's to pick. The file is read off the main thread (a mail
+app may still be fetching it), capped at 1 MB, parked in
+`AppContainer.pendingIcs`, and picked up by the Calendar screen once the
+calendar has loaded (which also waits through sign-in). A recreated activity
+doesn't import the same file again, and an imported form counts as unsaved so
+closing it asks first.
+
+## 2026-10 — A note on two kinds of event; the owner decided once (v0.580.0 / app 0.387–0.388)
+
+**Notes.** Events (APPOINTMENT) and Medical / Dental (OTHER) take a short note —
+flight numbers, a confirmation code, what to bring. A custom event type stores
+as OTHER too but is deliberately excluded: a hockey game is its own category,
+and nobody asked for a note there. The rule is `takesNotes` / `cleanNotes` in
+`src/lib/calendar/event-notes.ts` (500 chars), read by the web form, both server
+actions and the device API, and ported to the phone's `NoteField.kt`. The two
+copies must agree exactly: a blank `eventTypeId` is "no type" on both, because
+a TS/Kotlin pair that disagreed on `""` would have shown a field whose contents
+the server then threw away. (The note cap is also checked by
+`scripts/ics-parity/check.sh`, which compares the two `NOTES_MAX` constants.)
+`cleanNotes` returns null for a kind that can't hold one, which also clears a
+note left behind when the type changes.
+
+On the web the box sits beside the All day switch so the add/edit windows keep
+their size; on the phone the note opens on its own screen like the address
+(0.388), and it displays only in the event detail, under the address — never on
+grid chips.
+
+**Owner.** A parent on the phone can now file an event under anyone in the
+house (My calendar / Family calendar / each person), matching the web's Whose.
+`ownerId` is resolved once in `create-event.ts` (`resolveOwner`) and re-checked:
+a non-parent can only ever file under themselves, whatever the request says.
+
+## 2026-10 — Every movement logs on its own (v0.579.0 / app 0.386.0)
+
+Two movements added to one plan used to render differently from two plans that
+share a muscle group: one Log button for the pair versus one each. How a
+movement got onto the card was deciding how it was logged. Now every movement
+on a weights card carries its own Rest / skip, Calculator and Log buttons under
+a rule of its own, and the card-level buttons remain only for shapes with no
+movement to hang them on (HIIT, a metric-only log, a plan with nothing to
+enter).
+
+It works because of v0.539's rule — the server clears only the movements a
+submission covers — so `complete(only)` sends one movement and the bench press
+saves while the incline press stays open. `useTransition`'s `pending` is one
+flag per row, so a `savingKey` records which button was pressed; only that one
+says "Logging…". The label is per movement too: Log weight / Log time, and Edit
+for a movement already recorded that day.
+
+## 2026-10 — History labels in one column, "Latest" on both (v0.570.0 / app 0.379.0)
+
+The three history lines lined labels and values up by their own lengths, so each
+pair drifted. Labels now start in one column and values end in another. "Most
+recent" became "Latest" — the phone had shortened it to "Recent" to fit, so the
+two clients named the same line differently. The phone made the same change in
+app 0.379.0.
+
 ## 2026-10 — One row of squares, broken at the stages (v0.578.0)
 
 The card had drifted to two bars again: the cell row for the skill blend, and a
@@ -549,7 +668,7 @@ Adding the rounded ceiling unconditionally put a 190 label on top of a 185 one w
 was itself a common load. It is only added when something actually rises above the highest labelled
 line.
 
-## 2026-10 — Completion is identity, not a label (v0.557.0)
+## 2026-10 — Completion is identity, not a label (v0.557.0, shipped in v0.558.0)
 
 Two planned workouts on one day both filed under Back are both *named* "Back", because a planned
 workout's name is its muscle-group label. `TodayPlan` decided whether a row was logged with
@@ -827,7 +946,7 @@ The distinction that matters: `TS2538` naming `'{}'` is a collapsed Prisma row a
 The script is checked in and verified by reintroducing the 0.548.0 break and confirming it exits 1.
 Run `node scripts/typecheck-report.mjs --changed` before packaging any web release.
 
-## 2026-10 — A one-day swap is remembered on the set, not inferred (v0.538.0)
+## 2026-10 — A one-day swap is remembered on the set, not inferred (v0.538.0, shipped in v0.538.1)
 
 The app can swap a planned movement for a variation for one day (app 0.353). The set lands under the
 variation's id, so the planned slot came back blank on the next load: the log was right, the screen
@@ -894,7 +1013,7 @@ Three decisions the server now makes once, so the clients cannot drift:
   group. Someone with no plan still has a last workout, and that is the one they want.
 - **Muscle group per movement**: the plan's filing where there is one, the movement's own otherwise.
 
-## 2026-10 — Movement involvement, and why a deadlift is a leg exercise (v0.546.0)
+## 2026-10 — Movement involvement, and why a deadlift is a leg exercise (v0.546.0, shipped in v0.546.1)
 
 `src/lib/workouts/involvement.ts` maps a movement name to the groups it works beyond the one it is
 filed under. Three rules keep it honest:
@@ -922,7 +1041,7 @@ Two bugs the table caught only because it was run against the real movement name
 invented ones: the deadlift demotion above, and `/\bplank\b/` failing on "planks" — the trailing
 word boundary broke every plural. Test fixtures should be the user's own data.
 
-## 2026-10 — A weights plan may hold something that is not a weight (v0.546.0)
+## 2026-10 — A weights plan may hold something that is not a weight (v0.546.0, shipped in v0.546.1)
 
 `metricChoicesFor("WEIGHTS")` returned `["WEIGHT"]`, so every movement in a weights plan had to be
 logged as a load. A plank in a Core session therefore asked for pounds. It now offers DURATION and
@@ -969,7 +1088,7 @@ And the web logging page grew the phone's three labelled tiles: `ActionButton` i
 has the right shape but cannot be imported here, because that module already imports this one, so
 the tile is defined locally rather than creating a cycle.
 
-## 2026-10 — A name belongs in exactly one place on a card (v0.540.0)
+## 2026-10 — A name belongs in exactly one place on a card (v0.540.0, shipped in v0.540.1)
 
 The card had grown three places that print a name: the plan name under the muscle group, a
 summary line listing every movement in the plan, and — added with the swap control — a name
@@ -1032,7 +1151,7 @@ because none of them depend on Prisma types.
 
 Run it before packaging any web release. Inspection is the fallback, not the method.
 
-## 2026-10 — Same-muscle plans share a card (v0.538.0)
+## 2026-10 — Same-muscle plans share a card (v0.538.0, shipped in v0.538.1)
 
 Two chest plans on a Monday used to be two separate cards with nothing saying they were the same
 session's work. They now group: one card, the muscle group named once at the top, each workout with
@@ -1041,7 +1160,7 @@ grouping by name would merge two unrelated plans both called "Workout" — and a
 group keeps its own card. `muscleGroup` now rides along on the planned-day payload so the phone can
 group identically.
 
-## 2026-10 — The lift view answers "where am I now" first (v0.538.0)
+## 2026-10 — The lift view answers "where am I now" first (v0.538.0, shipped in v0.538.1)
 
 A line over all history answers a question people rarely ask. Each tracked lift now leads with its
 **record** (heaviest set and the reps it was done for), then **change over 30 days**, **how long

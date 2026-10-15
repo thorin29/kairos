@@ -1,0 +1,10 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example//Kairos parity//EN
+BEGIN:VEVENT
+UID:i21
+DTSTART:20261115T170000Z
+SUMMARY:Very long title Very long title Very long title Very long title Very long title Very long title Very long title Very long title Very long title Very long title Very long title Very long title 
+DESCRIPTION:Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. Lorem ipsum dolor sit amet\, consectetur. 
+END:VEVENT
+END:VCALENDAR

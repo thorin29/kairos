@@ -138,6 +138,29 @@ That per-request self-authentication is also what makes a scoped Authelia
 unauthenticated endpoint, `/auth/enroll`, is public by design and guarded
 instead by a one-time, short-lived, rate-limited code.
 
+### A rule lives in one place; a phone copy is tested against it
+
+Every rule that decides what gets saved or shown has exactly one
+implementation on the server, and both the web pages and the device API call
+it. Each of these exists because a duplicated copy had already drifted in
+production:
+
+| Rule | Where it lives |
+|---|---|
+| Logging a planned workout (web and phone) | `logPlannedWorkout` in `src/lib/workouts/mark.ts` |
+| A movement's Best weight / Best reps / Latest | `src/lib/queries/movement-stats.ts` |
+| Schoolwork completion marks the plan unit done | `syncPlanUnitDone` in `src/lib/school/plan-unit-sync.ts` |
+| Companion growth banked across a shelf trip | `src/lib/companions-tenure.ts` |
+| Which events take a note, and its length | `takesNotes` / `cleanNotes` in `src/lib/calendar/event-notes.ts` |
+| Whose calendar a new event lands on | `resolveOwner` in `src/lib/calendar/create-event.ts` (never trusted from the request) |
+| One event from an `.ics` file | `readIcsFile` in `src/lib/calendar/ics-import.ts` |
+
+When a rule must also run on the phone — the notes rule (`NoteField.kt`) and the
+calendar-file import (`IcsImport.kt`, which reads the file on the device) — the
+Kotlin copy says so at the top, and the two are tested for parity across the
+whole input space, not a couple of examples: `scripts/ics-parity/check.sh` runs
+hand-written and seeded random files through both and diffs the drafts.
+
 ## Game-time monitoring spans three repos
 
 Game time is **monitoring only** (the allowance/token model was retired) and is
@@ -164,12 +187,17 @@ collector → web (store) → app/web (display).
 ```
 src/app/            routes; /admin/* is PIN-guarded by its layout
 src/components/     shared UI
+src/app/api/v1/     the device API the Android app talks to (docs/API.md)
 src/lib/
   actions/          "use server" mutations
-  queries/          read paths for pages
-  chores/ bible/ calendar/   domain logic
+  queries/          read paths for pages (incl. movement-stats.ts)
+  api/              device auth and error shapes for /api/v1
+  chores/ bible/ calendar/ school/ workouts/ groceries/ scoring/ tasks/
+                    domain logic
+  companions*.ts    roster, hatching, growth tenure
   dates.ts          every date conversion
 prisma/migrations/  hand-written SQL, applied on container start
+scripts/            preflight.sh and its checks; ics-parity/
 ```
 
 Each feature area has a read-only page anyone can see and an editor behind the
@@ -187,8 +215,18 @@ PIN — `/chores` and `/admin/chores`, `/bible` and `/admin/bible`.
   reverses, or narrows a standing decision — a security posture, an auth
   boundary, a scoring rule, the mobile contract — updates DECISIONS.md in the
   same release, the same way version.ts and ROADMAP.md are always touched.
-- Verify with `npx tsc --noEmit` before shipping. The generated Prisma client
-  won't exist until `prisma generate` runs, so errors mentioning
-  `@/generated/prisma` are expected locally and resolve during the build.
+- `scripts/preflight.sh` is the gate before shipping: `typecheck-report.mjs
+  --changed` (strict at the lines you edited, excusing only the noise the
+  missing Prisma client causes), `check-jsx-escapes.py` and
+  `check-prisma-select.py`. It is deliberately not part of `npm run build` —
+  the builder image may lack Python, and a check that breaks the deploy it
+  protects is worse than none.
+- Without a generated Prisma client every query result types as `any` locally,
+  so a field read that was never selected passes `tsc` and fails in Docker.
+  Hand-audit every new Prisma call against `schema.prisma`;
+  `check-prisma-select.py` catches the common shape of the mistake.
+- Migrations are idempotent (`IF NOT EXISTS`, guarded `CREATE TYPE`) and are
+  registered at the END of `MIGRATIONS` in `src/lib/version.ts` — the array is
+  order-sensitive. Derive at read time; never store computed values.
 - Numbers, times, and dates use the `.tabular` class so columns stay aligned
   as values change.

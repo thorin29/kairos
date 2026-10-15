@@ -291,6 +291,13 @@ request: { "choreId":"…" }
   "completable": bool,            // false for workout prompts and stale rows
   "test": { "score":int|null, "scoreMax":int } | null }
 ```
+**A specific day (v0.531–0.532).** `?date=` builds THAT day's page — schedule,
+chore badges, reading-goal progress and (for admins) ready Bible rewards — so a
+page the phone caches for tomorrow carries tomorrow's numbers. Sections that
+describe "now" rather than the day stay today-only: up-for-grabs, always-open,
+get-ahead / school progress, workoutOverdue and the admin money banner. Full
+classification: DECISIONS.md, "Which dashboard sections are the day's" (v0.531).
+
 Phase 1 is the grouped checklist + bars. The shared-dashboard extras (claimable
 pool, day schedule, reminders, companion, progression) and workout-prompt
 logging are later phases; the fields above are additive-only.
@@ -532,6 +539,7 @@ Person: { "id","name","color","avatarPath":str|null,"avatarPosition":str|null }
 POST /api/v1/groceries/add            { "name","storeId","note"? }        → { "status":"ok" }
 POST /api/v1/groceries/add-catalog    { "catalogId","storeId"? }
 POST /api/v1/groceries/remove         { "id" }                            // off the list / "got it"
+POST /api/v1/groceries/quantity       { "id","quantity":int|null }        // ×N on the line, 1–99; null or out of range clears (v0.529)
 POST /api/v1/groceries/purchased      { "id","purchased":bool }           // within a trip
 POST /api/v1/groceries/trip/start     { "storeId","shopperId"? }          // shopper defaults to caller
      → { "ok":bool, "reason":str|null }                                   // reason "in-progress" if a run exists
@@ -615,6 +623,8 @@ POST /api/v1/calendar/event
        "location"?,"timezone"?,"repeat"?,"isFamily"?:bool,
        "kind"?,"eventTypeId"?,"participants"?:[id],
        "reminders"?:[minutesBefore],"reminderUserIds"?:[id],
+       "notes"?:str,                  // Events (APPOINTMENT) and Medical (OTHER) only — see below
+       "ownerId"?:id,                 // whose calendar; default the caller (v0.580)
        "clientId"? }                                              // offline idempotency key
      → { "status":"ok", "id" }        // validation error → { "error":"validation", ... }
 
@@ -623,6 +633,18 @@ POST /api/v1/calendar/event/update
        "occurrenceISO"?:"YYYY-MM-DD",                             // which occurrence was tapped
        "scope"?:"series"|"single"|"future" }                      // default "series"
      → { "status":"ok" }
+
+// notes (v0.580): kept only when takesNotes(kind, eventTypeId) — kind APPOINTMENT
+//   or OTHER with NO custom eventTypeId (a custom type such as a hockey game
+//   stores as OTHER but is deliberately excluded). Trimmed, capped at 500 chars;
+//   anything else is stored as null, which also clears a note left by an
+//   earlier type. One rule: src/lib/calendar/event-notes.ts (phone: NoteField.kt).
+//   On update an omitted "notes" keeps the stored note.
+// ownerId (v0.580): resolved once in create-event.ts (resolveOwner) and
+//   re-checked — a non-parent can only file under themselves; never trusted
+//   from the request. Ignored when isFamily is true.
+// Importing an .ics (web 0.581 / app 0.389) adds no endpoint: the file only
+//   fills in the New event form, which saves through this same call.
 
 POST /api/v1/calendar/event/delete
      { "eventId", "scope"?:"all"|"future"|"one", "occurrenceISO"? }   // default "all"
@@ -709,7 +731,7 @@ Passages are addressed by body, not a `{ref}` path — they carry spaces and
 dashes ("Acts 27-28"). This supersedes the earlier `POST /reading/{ref}/complete`
 sketch.
 
-### Workouts — **built (v0.186, phase 1: day-level)**
+### Workouts — **built** (day-level v0.186; detailed logging v0.191; reworked v0.537–0.579)
 Day-level "did you work out / rest" — the lightweight path (no set-by-set
 detail). Body `{ "date": "YYYY-MM-DD" }` optional, defaults today. All idempotent.
 ```
@@ -720,27 +742,79 @@ POST /api/v1/workouts/rest         mark a rest day (excuses the workout task)
 ```
 Shares the exact web logic (src/lib/workouts/mark.ts).
 
-**Detailed logging — built (v0.191, phase 1: planned workouts).**
+**The day's plan to log.**
 ```
-GET  /api/v1/workouts?date=YYYY-MM-DD    today's planned workout to log
-200: { "date", "loggable": bool, "plannedWorkoutId": str|null, "name": str|null,
-       "exercises": [ { "poolExerciseId","name","metric","unit","value": num|null } ] }
+GET  /api/v1/workouts?date=YYYY-MM-DD
+200: { "date", "loggable": bool,
+       "workouts": [ TodayPlanned ],            // every planned workout that day (Core, Arms, …)
+       "overdue":  [ { "date", "workouts":[TodayPlanned] } ],  // only when date is today
+       "plannedWorkoutId","name","exercises" }  // = workouts[0], for older clients
+TodayPlanned:    { "plannedWorkoutId","name","muscleGroup":str|null,
+                   "exercises":[ PlannedMovement ] }
+PlannedMovement: { "poolExerciseId","name","metric","unit",
+                   "value":num|null,            // what is logged for this day (prefill + "Edit")
+                   "loggedAs":{ poolExerciseId,name }|null,   // swapped for the day
+                   "stats": MovementStats|null } // WEIGHT movements with history only
+MovementStats (src/lib/queries/movement-stats.ts — the history block, v0.568–0.570):
+  { bestWeight, bestWeightReps, bestOn,          // heaviest ever (weight only)
+    bestReps, bestRepsWeight, bestRepsOn,        // most reps ever, at the weight done
+    lastWeight, lastReps, lastOn }               // the latest session, even below both
+```
+Exact shapes: `TodayPlanned` / `PlannedMovement` / `OverdueWorkoutDay` in
+src/lib/queries/workout-log.ts.
 
-POST /api/v1/workouts/log                log one value per movement, complete it
-request: { "date","plannedWorkoutId","entries":[ { "poolExerciseId","metric","value":num,"unit" } ] }
-200:     { "date", "status": "worked" }
+**Logging.**
 ```
-A planned workout (e.g. "Legs") is a named plan of shared pool movements; each
-logs a single value typed by its `metric` (WEIGHT/REPS/DISTANCE/METERS/DURATION),
-with `unit` from the household unit system. `loggable` is false when nothing is
-planned today — the client falls back to the day-level actions. Edit-friendly:
-re-logging replaces the day's session. HIIT, custom, and per-exercise weekday
-"scheduled lifts" are later phases.
+POST /api/v1/workouts/log
+request: { "date":"YYYY-MM-DD",              // the day the workout was DUE
+           "completedOn"?:"YYYY-MM-DD",      // the day it was actually done (v0.564)
+           "plannedWorkoutId",
+           "entries":[ { "poolExerciseId","metric","value":num,"unit",
+                         "reps"?:int,         // on a WEIGHT entry: the set's reps (v0.537)
+                         "swappedFrom"?:id } ],   // the planned movement this stood in for
+           "replace"?:bool, "detectConflict"?:bool }
+200: { "date", "status":"worked" }  |  { "date", "status":"conflict", "conflict":{…} }
+```
+- **One implementation**: the web's logging calls the same `logPlannedWorkout`
+  (src/lib/workouts/mark.ts) — the web had its own copy until v0.566 and it had
+  drifted (reps dropped, "Edit weight" creating a second session).
+- A log replaces only the movements it sends (v0.539), so per-movement logging
+  (v0.579 — each movement has its own Log button) never touches the others.
+- `completedOn`: an overdue workout counts for its due day (adherence) but is
+  shown on the day it was done (grid, charts, Recent workouts). An older client
+  omits it and behaves as before.
+- metric is WEIGHT / REPS / DISTANCE / METERS / DURATION; a held movement in a
+  weights plan logs DURATION in seconds (entered as minutes:seconds, v0.546).
+
+**Progress (body map, charts).**
+```
+GET  /api/v1/workouts/progress   → WorkoutProgress (src/lib/queries/workout-log.ts)
+  series[]: { poolExerciseId,name,muscleGroup,tracked,unit,
+              points:[{date,value,reps}], best, repMaxes,
+              navRegion, shadePrimary, shadeSecondary[], view }   // body map, v0.549–0.551
+  planDays[]: { day, groups[] }   defaultGroup   defaultId   history[] …
+```
+Read from logged history, not only the plan (v0.547), so a rotation or no plan
+still shows what was lifted. The involvement table that decides `navRegion` and
+shading stays on the server (src/lib/workouts/involvement.ts) — the phone draws
+what it is sent rather than keeping a second table.
 
 ### Companions (collectible creatures)
 ```
-GET  /api/v1/companions         this person's roster
+GET  /api/v1/characters/collection   this person's gallery: every creature by era,
+                                     owned (name, art, stage, isActive, shiny) or a
+                                     mystery (rarity only). Self only.
+POST /api/v1/characters/hatch        { "mode":"new"|"deepen" } → { "hatched": … | null }
+POST /api/v1/characters/activate     { "species" } → { "activated": name }   (v0.576)
+GET  /api/v1/companion-sprite        sprite art
 ```
+Progression (v0.574–0.578), settled after three bugs from conflating them:
+**`stage` is earned growth (hatchling → juvenile → adult); `phase` is what the
+companion is doing now. Nothing about one may be inferred from the other** —
+shiny does not mean adult. An egg appears only once the active companion is
+fully grown; deepening is a phase worked through after that. Activating an
+older companion banks the current one's growth and resumes the returning one's
+(`companions-tenure.ts`, migration 121). There is no monthly hatch cap.
 
 ### Devices — **built (v0.189)**
 This person's own devices, so anyone can see what's enrolled and revoke a phone
@@ -846,7 +920,7 @@ on this shape.
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**132 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**134 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -857,10 +931,10 @@ silently invisible:
 - **calendar** (`event`, `event/update`, `event/delete`, `prefs`, `subscribed-reminders`), **event-names**, **event-bg**, **addresses**, **sport/confirm**, **sport/decline**, **notifications/meta**, **notifications/upcoming**
 - **school** (`add`, `add-to-today`, `approvals`, `rename`, `delete`), **classes**, **classes/form**
 - **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
-- **groceries** (`add`, `add-catalog`, `move`, `purchased`, `remove`, `trip/start`, `trip/complete`)
+- **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
-- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `expire`, `log`, `log-custom`, `complete`, `uncomplete`, `movement*`, `personal*`, `plan*` (incl. `plan/active`, `plan/options`, `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
-- **characters** (`collection`, `hatch`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `expire`, `log`, `log-custom`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options`, `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
+- **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server)
 
 ## Deep links (notification -> screen)

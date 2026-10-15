@@ -11,7 +11,7 @@ schedule.
 **[Roadmap](ROADMAP.md)** — everything planned, and what is already built.
 **[Architecture](ARCHITECTURE.md)** — how it works and why.
 
-> **Status:** in active use, web `0.526.0`. The core modules — chores, Bible
+> **Status:** in active use, web `0.581.0`. The core modules — chores, Bible
 > reading, workouts, game time, groceries, calendar, school with the curriculum
 > planner, and the summary — are built, and the companion Android app mirrors the
 > personal view. A few things are still to come; see the roadmap below.
@@ -26,8 +26,12 @@ schedule.
 - **Bible reading.** Generate a plan of any length; the app divides the text so
   nothing is read twice, with per-weekday chapter counts you control, and
   tracks how far the household has actually come.
-- **Workouts.** Per-person routines of movements assigned by weekday, with the
-  sets, reps, and weight you actually did logged against each one.
+- **Workouts.** Per-person weekly plans or rotations of movements, each movement
+  logged on its own with the weight and reps (or a hold time) you actually did.
+  Progress opens on a body map: tap a muscle group to see its lifts, with best
+  weight, best reps and your latest session beside the entry fields, per-group
+  charts, and a workout-days grid. A missed workout counts for the day it was
+  due and shows on the day you did it.
 - **Game time.** A per-person view of how much each kid actually played today,
   this week, and this month, with a per-game breakdown and per-system icons.
   Monitoring only — the numbers are pulled automatically for awareness, not
@@ -35,13 +39,19 @@ schedule.
   service watches Xbox (via Home Assistant) and Steam and pushes resolved daily
   totals to `/api/v1/game-time/ingest`; Kairos owns the durable history.
 - **Groceries.** A shared shopping list that learns the items you buy and their
-  icons — including a custom set of ~226 colourful icons for the items and stores
-  that emoji handle badly, searchable from the admin picker. Drag items to reorder them or move them between stores. Tap **Shop** on
+  icons — including a custom set of 244 colourful icons for the items and stores
+  that emoji handle badly, offered as suggestions and searchable from the admin
+  picker. A line can carry a quantity (×10). Drag items to reorder them or move them between stores. Tap **Shop** on
   a store and pick who's going: that store becomes their trip, with a line on
   their dashboard card that opens a big-tap checklist on its own page. Finishing
   keeps whatever wasn't bought for next time.
 - **Work and appointments.** Shifts, lessons, practices, and visits on a week
-  grid with an hourly gutter, color-coded by person or by category.
+  grid with an hourly gutter, color-coded by person or by category. Events and
+  medical appointments take a short note, and a parent can file an event under
+  anyone in the house from the web or the phone.
+- **Import from email.** Open an `.ics` invite on the phone (or use **Import
+  .ics** on the web) and New event opens filled in from it — name, times,
+  location and note — leaving only whose calendar, the type and reminders.
 - **Subscribed calendars.** Point it at any public ICS feed and those events
   land on the same grid.
 - **Themes and dark mode.** A household-wide color theme (eight options) and
@@ -51,6 +61,12 @@ schedule.
   themes, profile editing, and local calendar reminders.
 - **Overdue carries forward.** Anything left unfinished is flagged and shown
   again the next day without losing its original due date.
+- **School pace.** Work completed anywhere marks the curriculum plan done; work
+  pulled ahead shows the date it was moved from, and work you're behind on is
+  tinted red on the card.
+- **Family goals and companions.** A monthly family goal that carries forward
+  until a parent signs it off, and collectible companions each person raises
+  through growth stages, deepens, and can swap back in from their gallery.
 
 ## Roadmap
 
@@ -74,6 +90,7 @@ Built:
       schoolwork spread across a term's school days (wizard, paste, or CSV),
       review and reorder it, publish it to the kids' cards, then compile and
       rebalance a student's whole term day by day
+- [x] Calendar import — a single event from an `.ics` file, phone and web
 - [x] Seasons — a personal-progression RPG: character levels, per-category
       stats and class, a monthly season ladder, streaks, badges and mastery
       titles, all fuelled by fair, effort-weighted completion (nobody ranked)
@@ -86,10 +103,12 @@ Built:
 
 Planned:
 
+- [ ] Companion profile icons — any owned companion as your profile picture
 - [ ] Weather panel and forecast
 - [ ] Smooth drag-and-drop reordering
-- [ ] Curriculum planner Stage 3 — editing a class re-opens the affected term as
-      a draft instead of rewriting dates in place
+
+(The curriculum planner's "Stage 3" term-level draft was dropped: a class is
+reopened by unpublishing it to draft, editing and republishing — see ROADMAP.)
 
 ## Requirements
 
@@ -179,6 +198,12 @@ npm run dev
 
 The codebase is organized by domain under `src/`, so each feature area can be
 worked on without touching the others.
+
+Before shipping, run `scripts/preflight.sh` — a typecheck strict on the lines
+you changed, a scan for raw `\uXXXX` escapes in JSX text, and a check that every
+Prisma field read was selected. When the calendar-file import rule changes, run
+`scripts/ics-parity/check.sh` against a clone of the app repo too (it needs
+`kotlinc` and `tsx`).
 
 ## Tech
 

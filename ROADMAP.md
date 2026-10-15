@@ -8,24 +8,53 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (29 Sep 2026, web v0.526.0 / app v0.335.0, versionCode 387)
+## Current status (14 Oct 2026, web v0.581.0 / app v0.389.0, versionCode 446)
 
-**Most recent work (web v0.495–0.526, app v0.288–0.335):**
+**Most recent work (web v0.527–0.581, app v0.336–0.389, migrations 115–121):**
 
-- **Custom `kairos:` icon set** for groceries *and* stores — ~226 colourful PNGs
-  bundled in both repos, a searchable icon picker in admin, name-matching that
-  prefers a specific custom icon over a generic emoji, and the monochrome `mdi:`
-  set retired. See DECISIONS.md for the token contract and the creation pipeline.
-- **Calendar time model** settled end to end: events store real instants, the grid
-  DTO carries both per-day segments and the event's exact bounds, midnight is
-  00:00 of the next day, and all-day events are inclusive in the UI / exclusive in
-  storage with Starts + Ends fields on both clients.
-- **Workout plans**: a weekly plan and a rotation can now run concurrently, each
-  pausable; stopping a rotation deactivates rather than deletes it; weekly plans
-  take an optional future start date; editing a plan no longer manufactures a
-  false overdue backlog.
-- **Offline creates** finished their identity work — every create endpoint returns
-  the new id and honours a client-supplied idempotency key.
+- **Calendar import from email** (web 0.581 / app 0.389): an `.ics` invite opens
+  New event pre-filled — tap or Share the attachment to the phone app, or use
+  **Import .ics** on the web form. One rule (`src/lib/calendar/ics-import.ts`)
+  mirrored on the phone (`IcsImport.kt`, which reads the file on-device) and
+  held to parity by `scripts/ics-parity/`. A file with a whole schedule points
+  to subscribing instead.
+- **Calendar notes + per-person filing** (web 0.580 / app 0.387–0.388): a short
+  note on Events and Medical appointments only (`event-notes.ts`, mirrored in
+  `NoteField.kt`); a parent on the phone can file an event under anyone in the
+  house, the owner resolved once on the server in `create-event.ts`.
+- **Workouts, end to end**: reps logged with the weight; a clickable **body map**
+  that navigates muscle groups (selection and shading are separate fields, the
+  involvement table stays on the server); per-muscle-group progress blocks and
+  grouped bar charts ("Compare" as a bar per weight); a per-movement **history
+  block** (Best weight / Best reps / Latest, server-computed in
+  `movement-stats.ts`) right of the entry fields on both clients; `completedOn`
+  so an overdue workout counts for its **due** day but shows on the day it was
+  **done**; one-day swaps remembered on the set (`swappedFrom`); movements that
+  belong to no muscle group; held movements logged as minutes:seconds; web
+  logging delegating to the same `logPlannedWorkout` the phone uses; and
+  **per-movement logging** — each movement on a Log workout card has its own
+  Rest / Calculator / Log buttons.
+- **School**: completing schoolwork anywhere marks its curriculum plan unit done
+  (`syncPlanUnitDone` in `plan-unit-sync.ts`, migration 118 backfills); the
+  extra-work picker; original due dates ("ahead of Oct 20" / "moved from");
+  behind work tinted red on the card.
+- **Family goals** carry across months until a parent approves them, judged on
+  their own month, on both clients; approval is enforced on the server.
+- **Companions progression reworked**: growth stages, deepening as a phase,
+  shiny, growth banked across a shelf trip (`companions-tenure.ts`), bringing an
+  older companion back from the gallery, and one XP bar broken at the stage
+  boundaries. The 3-hatches-a-month cap is gone. Settled rule: **`stage` is
+  earned, `phase` is current activity — never infer one from the other.**
+- **Groceries**: per-line quantity (×N), 30 more icons and the full shipped icon
+  set offered as suggestions (244 items).
+- **Dashboard for a given day**: a page requested for tomorrow computes that
+  day's schedule, chores, reading-goal progress and Bible rewards.
+- **Profiles**: the display name is a parent's call; everyone else still edits
+  their own picture, colour and birthday.
+
+**Previous run (web v0.495–0.526, app v0.288–0.335):** the `kairos:` icon set,
+the calendar time model, concurrent/pausable workout plans, and offline-create
+identity — detailed under "Shipped — Sept 25–29 2026 run" below.
 
 
 The web is mature and the **Android app has reached parity** across every
@@ -1120,7 +1149,8 @@ own exercises, optionally schedules them, and records what they did.
 - [ ] Running and rowing (single-metric graphs)
 - [ ] Sport, stretching, isometric
 - [ ] HIIT / Crossfit — user-defined workouts with a result
-- [ ] Major muscle groups on weightlifting workouts
+- [x] Major muscle groups on weightlifting workouts — per-group progress blocks,
+      the body map, and "No group" for lifts like the deadlift (v0.545–0.556)
 - [ ] A pool of HIIT / Crossfit workouts (timed, intervals, stations) to draw
       from when building a plan
 - [ ] Multiple sets per exercise, and estimated one-rep max
@@ -1335,15 +1365,17 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       or deepen the current one (shiny); rarity scales with season tier; active
       companion evolves on its own tenure; reset starts everyone over as an egg
       (v0.118.0)
-- [ ] Collection gallery: a page showing all creatures owned + the silhouettes
-      still to find; minted keepsakes with their frozen colour
+- [x] Collection gallery: every creature by era, owned or a silhouette still to
+      find (app `GalleryScreen`, `/api/v1/characters/collection`); an owned one
+      can be made active again (v0.576 / app 0.383). Minted keepsakes keep the
+      stage they reached (`mintedStage`).
 - [ ] Lighter collect mechanic for a 50+ roster: streak/token/coin currency to
       earn or buy eggs; essence banked from would-be duplicates toward a chosen
       creature; egg-era selection
 - [ ] Calibrate incubation XP and rarity odds against the Season planner once
       all events are locked in (levels/odds driven by real workload)
-- [ ] New eras' art as it arrives: Dragon (7 wyrmlets), WW2 (1940s), Imaginary,
-      Vintage; plus remaining Modern/'80s creatures
+- [x] New eras' art: all seven eras (Modern, '80s/'90s, Arcade, Dragon, Vintage,
+      WW2, Imaginary) are in — 52 creatures
 - [ ] Season tier rewards: cosmetic unlocks only for the individual track —
       avatar flair and evolving companions, no money (storage)
 - [ ] Companions: original collectible creatures across style "eras" (Modern,
@@ -1554,6 +1586,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   now writes back to the originating card (target survives nav via `rememberSaveable`).
 - [x] **Companions** — babies grow on clean days, streak-driven egg rarity + pity,
   gallery shows real stage, egg cap 3/month with a "hatch next month" message.
+  *(The monthly cap was removed in v0.574 — growth paces hatching now.)*
 - [ ] **School catch-up note (OPEN)** — the "Do N a day…" pace note stopped showing for
   behind subjects. Pace math verified consistent (orange ⇒ note); break is delivery or
   data. The past-year-spring theory was wrong and reverted (year one). Needs live values.
@@ -1580,8 +1613,59 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   app ARCHITECTURE theme section was corrected, and the collector roadmap was
   re-baselined.
 
+## Shipped — Sept 30 – Oct 14 2026 run (web v0.527–0.581, app v0.336–0.389)
+
+- [x] **Groceries** — quantity per line (v0.529, migration 115), 30 more icons and
+  the full icon set offered when adding (v0.527–0.530).
+- [x] **Dashboard for a given day** — tomorrow's page carries tomorrow's numbers
+  (v0.531–0.532).
+- [x] **Companions** — deepen no longer costs a monthly hatch (v0.534); then the
+  progression rework: growth to adult before an egg, deepening as a phase, no
+  monthly cap, shiny ≠ grown, growth banked on the shelf and resumed from the
+  gallery, one bar broken at stages (v0.574–0.578, migrations 120–121).
+- [x] **Profiles** — display name is parent-only (v0.535).
+- [x] **Workouts** — skip a missed day from Overdue (v0.536); reps (v0.537);
+  same-muscle plans share a card and swaps work on the web (v0.538–0.540,
+  migration 116); lift detail views, involvement table and held movements
+  (v0.541–0.546); progress from history, "No group", body map (v0.547–0.552);
+  Compare as bars, shared gridlines (v0.553–0.556); completion by identity, not
+  label (v0.558); prefill and edit of today's log (v0.559–0.562); `completedOn`
+  due-day vs done-day (v0.563–0.564, migration 117); one logging function on
+  both clients (v0.566–0.567); the history block (v0.568–0.570); per-movement
+  logging (v0.579).
+- [x] **Family goals** — carry across months with parent approval (v0.565).
+- [x] **School** — plan-unit completion sync + backfill (v0.571–0.572, migration
+  118); extra-work picker fix, original due dates, red behind tint (v0.573,
+  migration 119).
+- [x] **Calendar** — notes on Events / Medical, per-person filing from the phone
+  (v0.580 / app 0.387–0.388); import a single event from an `.ics` file on both
+  clients (v0.581 / app 0.389).
+- [x] **Docs brought back in step (14 Oct)** — ROADMAP, README, ARCHITECTURE,
+  docs/API.md and DECISIONS on the web; README, DECISIONS, ARCHITECTURE and
+  RELEASING on the app; README, DECISIONS and ROADMAP on the collector.
+
+## Open — agreed, not built yet
+
+- [ ] **Companion profile icons** — pick any owned companion, at any stage you
+  own, as your profile image, chosen from the gallery. Needs a third avatar kind
+  alongside uploaded photos and built-in icons (`src/lib/avatars.ts`,
+  `src/components/avatar.tsx`, and the app); the collection API already exposes
+  `stage` and `isActive` per owned species.
+- [ ] **School catch-up note** — see "School catch-up note (OPEN)" above.
+- [ ] **Offline** — calendar *viewing* offline is still the top ask (see
+  Offline-first).
+- [ ] **Game time** — Minecraft Java can't be tracked without a decision (host the
+  server for RCON/logs, or accept it); PC play through the Xbox app on a shared
+  family PC doesn't surface reliably in Home Assistant and probably has no
+  sensor-based fix. Tracked in the collector repo.
+- [ ] Smaller, unconfirmed: farmer carries in `involvement.ts` are FULL_BODY with
+  no nav region; nav regions beyond hip hinges unexamined; grouped charts squash
+  a light accessory against a heavy lift; both clients compute "today" at
+  render, so neither rolls over at midnight; one household phone was still on
+  app v0.351.0.
+
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.526.0 (migrations through 114_feed_force_duration).
-- App versionName 0.335.0 / versionCode 387 / CLIENT_BUILD 387.
+- Web APP_VERSION 0.581.0 (migrations through 121_companion_tenure).
+- App versionName 0.389.0 / versionCode 446 / CLIENT_BUILD 446.
 - Collector: deployed and running; Xbox totals come from real game sessions.

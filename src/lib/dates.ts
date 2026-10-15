@@ -113,7 +113,7 @@ export function householdTz(): string {
  * Formatting the instant in that zone and reading it back as if it were UTC
  * gives the offset, DST included.
  */
-function tzOffsetMs(at: Date, tz: string): number {
+export function tzOffsetMs(at: Date, tz: string): number {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: tz,
     hour12: false,

@@ -15,7 +15,9 @@ import { SelectField } from "@/components/select-field";
 import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
 import { NOTES_MAX, takesNotes } from "@/lib/calendar/event-notes";
 import { addDays, dayOfWeek, daysBetween, startOfWeek } from "@/lib/dates";
-import { PlusIcon } from "@/components/icons";
+import { PlusIcon, UploadIcon } from "@/components/icons";
+import { readIcsUpload } from "@/lib/actions/ics-import";
+import { ICS_MAX_BYTES, type IcsDraft } from "@/lib/calendar/ics-import";
 import { TimeSelect } from "@/components/time-select";
 import { DateField } from "@/components/date-field";
 import { ReminderPicker } from "@/components/reminder-picker";
@@ -158,6 +160,10 @@ type Prefill = {
   rrule?: string | null;
   // People the event is shared with (besides the owner), to pre-check the picker.
   participantIds?: string[];
+  // Import .ics: the repeat the file carried over, and whether the form should
+  // say it came from a file (and that a repeat it had couldn't be copied).
+  repeat?: string;
+  imported?: { repeatDropped: boolean };
 };
 export type EditTarget = {
   eventId: string;
@@ -244,6 +250,8 @@ export function AddEventProvider({
           participantIdsInit={prefill.participantIds}
           remindersInit={prefill.reminders}
           reminderUserIdsInit={prefill.reminderUserIds}
+          repeatInit={prefill.repeat}
+          imported={prefill.imported}
           onClose={() => setOpen(false)}
         />
       )}
@@ -279,6 +287,80 @@ export function AddEventButton({ wide = false }: { wide?: boolean }) {
   );
 }
 
+// --- Import .ics ----------------------------------------------------------
+
+/** A file's single event as New event form values. The server already put the
+ *  times in the household zone; endDayOffset is exclusive for all-day events. */
+function prefillFromDraft(d: IcsDraft): Prefill {
+  const span = daysBetween(d.startDate, d.endDate);
+  return {
+    title: d.title,
+    date: d.startDate,
+    allDay: d.allDay,
+    start: d.startTime ?? undefined,
+    end: d.endTime ?? undefined,
+    endDayOffset: d.allDay ? span + 1 : span,
+    location: d.location ?? undefined,
+    notes: d.notes ?? undefined,
+    kind: "APPOINTMENT",
+    repeat: d.repeat,
+    imported: { repeatDropped: d.repeatDropped },
+  };
+}
+
+function IcsImportButton({ onMessage }: { onMessage: (m: string | null) => void }) {
+  const { openAt } = useAddEvent();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  const onFile = async (file: File | undefined) => {
+    if (!file) return;
+    onMessage(null);
+    if (file.size > ICS_MAX_BYTES) {
+      onMessage("That file is too big to be a single invite.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await readIcsUpload(await file.text());
+      if (r.kind === "event") openAt(prefillFromDraft(r.draft));
+      else if (r.kind === "many")
+        onMessage(
+          `This file holds ${r.count} events. A file brings in one event at a time \u2014 for a whole schedule, a parent can subscribe to the calendar\u2019s link under Admin \u2192 Calendar.`,
+        );
+      else if (r.kind === "cancelled")
+        onMessage("This file cancels an event, so there\u2019s nothing to add.");
+      else onMessage("No event found in this file.");
+    } catch (e) {
+      onMessage(e instanceof Error && e.message ? e.message : "Couldn\u2019t read that file.");
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  };
+
+  return (
+    <>
+      <input
+        ref={input}
+        type="file"
+        accept=".ics,text/calendar"
+        className="hidden"
+        onChange={(e) => onFile(e.target.files?.[0])}
+      />
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => input.current?.click()}
+        className="inline-flex h-8 items-center gap-1.5 rounded-full border border-hairline px-3 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-60"
+      >
+        <UploadIcon className="h-4 w-4" />
+        {busy ? "Reading\u2026" : "Import .ics"}
+      </button>
+    </>
+  );
+}
+
 // --- the overlay form -----------------------------------------------------
 
 function EventModal({
@@ -301,6 +383,8 @@ function EventModal({
   participantIdsInit,
   remindersInit,
   reminderUserIdsInit,
+  repeatInit,
+  imported,
   onClose,
 }: {
   people: { id: string; name: string }[];
@@ -328,9 +412,13 @@ function EventModal({
   participantIdsInit?: string[];
   remindersInit?: number[];
   reminderUserIdsInit?: string[];
+  repeatInit?: string;
+  imported?: { repeatDropped: boolean };
   onClose: () => void;
 }) {
   const router = useRouter();
+  // What an Import .ics attempt had to say when it didn't produce an event.
+  const [importMsg, setImportMsg] = useState<string | null>(null);
   const [allDay, setAllDay] = useState(allDayInit ?? false);
   const [bells, setBells] = useState<Set<string>>(() => new Set(reminderUserIdsInit ?? []));
   const [participants, setParticipants] = useState<Set<string>>(
@@ -378,7 +466,7 @@ function EventModal({
   // so a series edit can change the pattern (ignored when adding or copying).
   const editRec = editing?.recurring ? parseRule(rruleInit ?? null) : null;
   const [repeat, setRepeat] = useState<string>(
-    editRec ? (editRec.interval > 1 ? "CUSTOM" : editRec.freq) : "NONE",
+    editRec ? (editRec.interval > 1 ? "CUSTOM" : editRec.freq) : (repeatInit ?? "NONE"),
   );
   const [customFreq, setCustomFreq] = useState<string>(editRec?.freq ?? "WEEKLY");
   const [endMode, setEndMode] = useState<"never" | "until" | "count">(
@@ -635,15 +723,32 @@ function EventModal({
           <h2 className="font-display text-lg font-semibold">
             {editing ? "Edit event" : "Add event"}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            {!editing && <IcsImportButton onMessage={setImportMsg} />}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground"
+            >
+              ✕
+            </button>
+          </div>
         </div>
+
+        {importMsg && (
+          <p className="mb-3 rounded-lg border border-hairline bg-ground px-3 py-2 text-sm">
+            {importMsg}
+          </p>
+        )}
+        {imported && !importMsg && (
+          <p className="mb-3 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm">
+            Filled in from the file. Choose whose calendar it goes on
+            {imported.repeatDropped
+              ? " \u2014 and set Repeats yourself: the file repeats in a way that didn\u2019t carry over."
+              : "."}
+          </p>
+        )}
 
         <form action={formAction} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">

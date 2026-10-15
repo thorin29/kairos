@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.580.0";
+export const APP_VERSION = "0.581.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -139,6 +139,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.581.0",
+    summary: [
+      "Add event has an Import .ics button. Pick a calendar file \u2014 an invite saved from an email \u2014 and the form fills in the name, date and times, location and the description as the note. Choose whose calendar it goes on, the type and any reminders, then save.",
+      "Times come in on the household\u2019s clock, whatever zone the file was written in, including Outlook\u2019s.",
+      "A file holding a whole schedule doesn\u2019t import; it says how many events it has and points to subscribing to the calendar instead. A cancellation says so.",
+      "A repeat carries over when it is a plain daily, weekly, monthly or yearly one. Anything fancier is left off, and the form says so, rather than being guessed at.",
+    ],
+  },
   {
     version: "0.580.0",
     summary: [
