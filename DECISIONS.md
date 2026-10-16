@@ -29,9 +29,11 @@ card itself; the grey line remains for the others.
 **Web Shared chores counts open.** Each name is a button showing exactly the
 completions its number counts (since the scoring start, always-open included),
 newest first, dated by the household day it was done (`completedAt`, due date
-for older rows). The panel is clamped 16px inside the screen — rendered at
-320–1200px wide; a chip mid-row on a phone fits neither a left- nor a
-right-anchored panel, which is why it's clamped rather than anchored.
+for older rows). v0.584.1: it opens as a centered pop-up over a dimmed page
+(the Add event overlay pattern), capped at 70% of the screen height with the
+list scrolling inside. The first version dropped down from the chip and ran
+off the bottom of the window, unreadable — a long list needs the middle of the
+screen, not the space below a chip.
 
 ## 2026-10 — One family-goal vote a month; the home card stops asking (v0.583.0 / app 0.393.0)
 
