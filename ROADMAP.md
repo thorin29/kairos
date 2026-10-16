@@ -1672,6 +1672,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.584.1 (migrations through 123_pool_reminder_opt_out).
-- App versionName 0.394.0 / versionCode 451 / CLIENT_BUILD 451.
+- Web APP_VERSION 0.585.0 (migrations through 124_companion_minted_floor).
+- App versionName 0.395.0 / versionCode 452 / CLIENT_BUILD 452.
 - Collector: deployed and running; Xbox totals come from real game sessions.

@@ -10,7 +10,7 @@ import {
 } from "@/lib/dates";
 import { getScoringStart, getSeasonConfig } from "@/lib/settings";
 import { resolveSeasonWindow } from "@/lib/season";
-import { blendPalette, companionPhase, luckFromStreak, type CompanionPhase } from "@/lib/companions";
+import { bankedGrowthFloor, blendPalette, companionPhase, luckFromStreak, type CompanionPhase } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
 import { readingXpForBook, bibleXpForChapters } from "@/lib/scoring/reading";
 import { loadBonuses } from "@/lib/queries/bonus";
@@ -165,7 +165,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     seasonKey: string | null;
     eggsThisSeason: number;
   };
-  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number; acquiredAt: Date; deepeningStartedAt: Date | null; growthBanked: number; tenureStartedAt: Date | null };
+  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number; acquiredAt: Date; deepeningStartedAt: Date | null; growthBanked: number; tenureStartedAt: Date | null; mintedStage: number | null };
   const stateByUser = new Map(
     (compStates as StateRow[]).map((s) => [s.userId, s]),
   );
@@ -424,17 +424,19 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         const tenureISO = (active.tenureStartedAt ?? active.acquiredAt)
           .toISOString()
           .slice(0, 10);
+        // Never below the stage the gallery showed it at (bankedGrowthFloor).
+        const banked = Math.max(active.growthBanked, bankedGrowthFloor(active.mintedStage));
         const deepFromISO = active.deepeningStartedAt
           ? active.deepeningStartedAt.toISOString().slice(0, 10)
           : null;
         const ph = companionPhase({
-          growth: active.growthBanked + growthSince(tenureISO),
+          growth: banked + growthSince(tenureISO),
           deepenGrowth: deepFromISO ? growthSince(deepFromISO) : 0,
           deepening: deepFromISO !== null,
           shiny: active.shiny,
         });
 
-        const totalGrowth = active.growthBanked + growthSince(tenureISO);
+        const totalGrowth = banked + growthSince(tenureISO);
         return {
           active: true as const,
           species: active.species,

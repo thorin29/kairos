@@ -60,7 +60,7 @@ export async function activateCompanionCore(
 
   const target = await prisma.companion.findUnique({
     where: { userId_species: { userId, species } },
-    select: { id: true, isActive: true, species: true },
+    select: { id: true, isActive: true, species: true, mintedStage: true },
   });
   if (!target) return { error: "You don't own that one yet." };
   if (target.isActive) {
@@ -89,6 +89,9 @@ export async function activateCompanionCore(
       data: {
         isActive: true,
         tenureStartedAt: new Date(),
+        // The gallery shows an unminted shelf row as adult (stage ?? 2), so it
+        // comes back as one: the minted stage is what bankedGrowthFloor reads.
+        mintedStage: target.mintedStage ?? 2,
         // A returning companion is not mid-deepen. If it was deepened before it
         // is still shiny; if it was not, it starts that choice fresh.
         deepeningStartedAt: null,

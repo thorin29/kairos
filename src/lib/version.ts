@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.584.1";
+export const APP_VERSION = "0.585.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -136,11 +136,18 @@ export const MIGRATIONS = [
   "121_companion_tenure",
   "122_coop_one_vote_per_month",
   "123_pool_reminder_opt_out",
+  "124_companion_minted_floor",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.585.0",
+    summary: [
+      "A companion brought back from the gallery keeps the stage it reached \u2014 it no longer restarts as a hatchling.",
+    ],
+  },
   {
     version: "0.584.1",
     summary: ["A name's shared-chore list now opens in the middle of the screen."],

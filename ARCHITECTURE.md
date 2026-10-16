@@ -159,6 +159,7 @@ production:
 | What the home card says before a goal is chosen | `coopHomeNudge` in `src/lib/coop-nudge.ts` (web banner + `/api/v1/coop`) |
 | Who a shared chore is available for (none set = everyone) | `loadPoolEligibility` / `isAvailableTo` in `src/lib/chores/pool-eligibility.ts` |
 | Whose turn a shared chore is | `furthestBehind` in `loadOpenTasks` (`src/lib/queries/overview.ts`), honouring `PoolReminderOptOut` |
+| The least growth a returning companion keeps | `bankedGrowthFloor` in `src/lib/companions.ts` (read in progression) |
 | What kind of profile picture a value is | `isUploaded` / `isIcon` / `companionAvatarOf` in `src/lib/avatars.ts` |
 
 When a rule must also run on the phone — the notes rule (`NoteField.kt`) and the

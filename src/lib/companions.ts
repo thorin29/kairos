@@ -334,6 +334,21 @@ export function spanFills(pct: number, spans: number[] = STAGE_SPANS): number[] 
     return w > 0 ? take / w : 0;
   });
 }
+/**
+ * The least growth a companion can have banked, given the stage it was minted
+ * at when it went to the gallery. The gallery shows a shelved companion at that
+ * stage, so bringing it back must never return it below that stage.
+ *
+ * Needed because migration 121 (growthBanked, v0.576) gave every existing row
+ * 0 banked growth: right for the companion active at the time, wrong for ones
+ * already on the shelf — an adult shelved before 0.576 came back a hatchling.
+ * Read through this floor everywhere banked growth is used.
+ */
+export function bankedGrowthFloor(mintedStage: number | null | undefined): number {
+  if (mintedStage == null) return 0;
+  return CLEAN_DAY_STAGES[Math.max(0, Math.min(2, mintedStage))];
+}
+
 export function stageFromGrowth(cleanDays: number, perfectWeeks: number): number {
   const growth = cleanDays + perfectWeeks * 2;
   if (growth >= CLEAN_DAY_STAGES[2]) return 2;

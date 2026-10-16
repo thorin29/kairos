@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-10 — A companion brought back keeps its stage (v0.585.0 / app 0.395.0)
+
+Reported: a child's first pet, raised to adult, showed as a hatchling after it
+was made active again; the phone's character page meanwhile showed a different
+companion than the web and the gallery.
+
+**The reset.** Hatching can't repeat a species — `pickHatch` draws only from
+species not owned, and `Companion` is unique on (userId, species) — so the
+"start over" came from bringing a companion back. A returning companion's
+growth is `growthBanked + growth since tenureStartedAt`. Migration 121 (v0.576)
+added `growthBanked` as 0 on every row and called that "right for existing
+rows" — true of the one active then, not of companions already on the shelf.
+The gallery showed those at their minted stage (`mintedStage ?? 2`, often
+adult), but they banked nothing, so bringing one back restarted it at 0.
+
+Fix, read-time first: `bankedGrowthFloor(mintedStage)` — banked growth is
+never below the threshold of the stage the companion was minted at — applied
+where progression computes the active companion. Activation now stamps
+`mintedStage ?? 2` on the row it brings back (what the gallery displayed).
+Migration 124 stamps `mintedStage = 2` on rows that have none: shelved ones,
+and active ones brought back from such a shelf (tenure started > 1 day after
+hatching). Rows active since before 0.576 (no tenure start) and fresh hatches
+(tenure starts at hatch) are left alone. Tested on Postgres 16 with one row of
+each kind, run twice.
+
+**The phone showing the old one.** The character page's view model loads once
+and outlives a trip to the gallery, so after "Make this my companion" it kept
+showing the previous companion; it also keeps the cached copy silently if a
+refresh fails. App 0.395 bumps `AppContainer.companionRevision` after a swap
+and the character page reloads on it. If a phone still shows the wrong one
+after a full restart, the refresh is failing — look at its log.
+
 ## 2026-10 — Shared chores: one list per chore, a separate reminder list, and counts you can open (v0.584.0 / app 0.394.0)
 
 **"Available for" on every shared chore.** Each chore always had its own list,
