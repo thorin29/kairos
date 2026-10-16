@@ -155,6 +155,8 @@ production:
 | Whose calendar a new event lands on | `resolveOwner` in `src/lib/calendar/create-event.ts` (never trusted from the request) |
 | One event from an `.ics` file | `readIcsFile` in `src/lib/calendar/ics-import.ts` |
 | Which companions you own, at which stage | `loadOwnedCompanions` in `src/lib/companions-owned.ts` (gallery + profile picture) |
+| A family-goal vote (one per person per month, movable) | `toggleCoopVoteCore` in `src/lib/coop-core.ts` |
+| What the home card says before a goal is chosen | `coopHomeNudge` in `src/lib/coop-nudge.ts` (web banner + `/api/v1/coop`) |
 | What kind of profile picture a value is | `isUploaded` / `isIcon` / `companionAvatarOf` in `src/lib/avatars.ts` |
 
 When a rule must also run on the phone — the notes rule (`NoteField.kt`) and the

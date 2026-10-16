@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { loadCoop, type CoopProposalView } from "@/lib/queries/coop";
+import { coopHomeNudge } from "@/lib/coop-nudge";
+import { personalUserId } from "@/lib/personal-scope";
 import { isAdmin } from "@/lib/session";
 import { TrophyIcon } from "@/components/icons";
 import { GoalCheckOff } from "@/components/family-goal-checkoff";
@@ -14,37 +16,47 @@ import { GoalCheckOff } from "@/components/family-goal-checkoff";
  *      reason the carry exists.
  *   2. This month's selected goal.
  *   3. This month's reward granted, if it is already done.
- *   4. Nothing selected yet — a nudge to go and vote.
+ *   4. Nothing selected yet — coopHomeNudge decides: "vote" for a child who
+ *      hasn't (on the shared screen, until every child has), "pick" for a
+ *      parent or an unlocked admin, otherwise nothing.
  *
  * Rendered inside a Suspense boundary by the home page, because it needs the
  * progression query and that is the heaviest read in the app. The home page
  * must not wait on it to paint.
  */
 export async function FamilyGoalBanner() {
-  const [data, admin] = await Promise.all([loadCoop(), isAdmin()]);
+  const [data, admin, me] = await Promise.all([loadCoop(), isAdmin(), personalUserId()]);
 
   const goal: CoopProposalView | null =
     data.carried ?? data.selected ?? data.granted ?? null;
 
-  // No goal and no ideas at all: say nothing rather than occupying the top of
-  // the home page with an empty state nobody asked for.
-  if (!goal && data.proposals.length === 0) return null;
-
   if (!goal) {
+    // A parent (or an unlocked admin on the shared screen) is asked to pick;
+    // a child to vote, and only until they have.
+    const isChild = (id: string) => data.children.some((c) => c.id === id);
+    const viewer = me
+      ? { id: me, isParent: admin || !isChild(me) }
+      : admin
+        ? { id: "", isParent: true }
+        : null;
+    const nudge = coopHomeNudge(data, viewer);
+    if (!nudge) return null;
+    const n = data.proposals.length;
     return (
       <Shell>
         <div className="min-w-0">
           <p className="font-display text-base font-semibold">Family goal</p>
           <p className="mt-0.5 text-sm text-muted">
-            {data.proposals.length} idea{data.proposals.length === 1 ? "" : "s"} waiting
-            {" — "}vote for the one you want.
+            {n} idea{n === 1 ? "" : "s"} waiting
+            {" — "}
+            {nudge === "pick" ? "pick this month\u2019s goal." : "vote for the one you want."}
           </p>
         </div>
         <Link
           href="/coop"
           className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-sm font-medium hover:border-accent"
         >
-          Vote
+          {nudge === "pick" ? "Pick" : "Vote"}
         </Link>
       </Shell>
     );

@@ -27,23 +27,43 @@ export async function proposeCoopCore(input: {
   return { error: null };
 }
 
-/** Toggle one person's vote on a proposal. */
+/**
+ * One vote per person per month. Tapping the idea you already voted for takes
+ * the vote back; tapping a different idea MOVES your vote there — your other
+ * votes in that month (the proposal's seasonKey) are removed in the same
+ * transaction. Anyone may vote, parents included; nobody has to.
+ *
+ * The single implementation: the web's face row and the app's Vote button both
+ * reach it, so the rule can't differ between them.
+ */
 export async function toggleCoopVoteCore(input: {
   proposalId: string;
   userId: string;
 }): Promise<{ error: string | null }> {
+  const proposal = await prisma.coopProposal.findUnique({
+    where: { id: input.proposalId },
+    select: { id: true, seasonKey: true },
+  });
+  if (!proposal) return { error: "That idea isn't there any more." };
+
   const existing = await prisma.coopVote.findUnique({
     where: {
       proposalId_userId: { proposalId: input.proposalId, userId: input.userId },
     },
+    select: { id: true },
   });
   if (existing) {
     await prisma.coopVote.delete({ where: { id: existing.id } });
-  } else {
-    await prisma.coopVote.create({
-      data: { proposalId: input.proposalId, userId: input.userId },
-    });
+    return { error: null };
   }
+  await prisma.$transaction([
+    prisma.coopVote.deleteMany({
+      where: { userId: input.userId, proposal: { seasonKey: proposal.seasonKey } },
+    }),
+    prisma.coopVote.create({
+      data: { proposalId: input.proposalId, userId: input.userId },
+    }),
+  ]);
   return { error: null };
 }
 

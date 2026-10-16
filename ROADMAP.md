@@ -1633,7 +1633,10 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   due-day vs done-day (v0.563–0.564, migration 117); one logging function on
   both clients (v0.566–0.567); the history block (v0.568–0.570); per-movement
   logging (v0.579).
-- [x] **Family goals** — carry across months with parent approval (v0.565).
+- [x] **Family goals** — carry across months with parent approval (v0.565); one
+  vote per person per month, movable, and the home card stops asking once
+  you've voted — parents are asked to pick instead (v0.583 / app 0.393,
+  migration 122).
 - [x] **School** — plan-unit completion sync + backfill (v0.571–0.572, migration
   118); extra-work picker fix, original due dates, red behind tint (v0.573,
   migration 119).
@@ -1664,6 +1667,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.582.0 (migrations through 121_companion_tenure).
-- App versionName 0.392.0 / versionCode 449 / CLIENT_BUILD 449.
+- Web APP_VERSION 0.583.0 (migrations through 122_coop_one_vote_per_month).
+- App versionName 0.393.0 / versionCode 450 / CLIENT_BUILD 450.
 - Collector: deployed and running; Xbox totals come from real game sessions.

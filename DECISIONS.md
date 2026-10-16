@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-10 — One family-goal vote a month; the home card stops asking (v0.583.0 / app 0.393.0)
+
+The owner's rules: **one vote per person per month, and it can be changed**;
+parents and admins **may** vote but don't need to; once you've voted the home
+page stops asking.
+
+What the code did before: `CoopVote` was unique per (proposal, person), and the
+vote was a toggle, so one person could vote for every idea. On the web's
+shared-screen face row anyone could also tap anyone's face. The home banner and
+the app card said "vote for the one you want" to everyone until a goal was
+picked, whether or not they had voted.
+
+Now:
+
+- `toggleCoopVoteCore` — tapping the idea you voted for takes the vote back;
+  tapping another MOVES it (your other votes in that proposal's month are
+  deleted in the same transaction). The one implementation, behind both the web
+  face row and the app's button, so they can't differ. The face row stays (the
+  shared screen needs it, per the owner) but now moves a person's vote rather
+  than adding one. The app's button reads "Move my vote here" when your vote is
+  elsewhere.
+- Not a database constraint: a unique (user, month) would need the month copied
+  onto the vote row. The transaction is the rule; migration 122 removed votes
+  cast under the old one (most recent kept per person and month, ties to the
+  larger id, idempotent — tested on Postgres 16 with planted doubles).
+- `coopHomeNudge` (src/lib/coop-nudge.ts, dependency-free and unit-checked) is
+  the one rule for the home card while no goal is chosen: "vote" for a child
+  who hasn't (on the shared screen, until every child has), "pick" for a parent
+  or admin — they don't need to vote, and choosing is their job — otherwise
+  nothing. The web banner calls it directly; the device API sends it as
+  `homeNudge` so the app doesn't keep a second copy.
+
+Unchanged and confirmed: remove (and select / grant) need the admin PIN on the
+web and a parent-or-admin account on the device API.
+
 ## 2026-10 — A companion can be the profile picture; a third avatar kind (v0.582.0 / app 0.392.0)
 
 Agreed earlier and built now: any owned companion, at any stage you've reached,

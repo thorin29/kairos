@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { apiOk } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { loadCoop } from "@/lib/queries/coop";
+import { coopHomeNudge } from "@/lib/coop-nudge";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,5 +56,9 @@ export async function GET(req: NextRequest) {
           childrenMeeting: data.carried.childrenMeeting,
         }
       : null,
+    // What the home card should say while no goal is chosen, for THIS person
+    // (v0.583): "vote" until they've voted, "pick" for a parent/admin, else
+    // null. Same rule as the web banner (coopHomeNudge). Appended at the end.
+    homeNudge: coopHomeNudge(data, { id: me.id, isParent: isAdmin }),
   });
 }

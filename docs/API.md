@@ -556,10 +556,15 @@ POST /api/v1/characters/hatch         { "mode":"new"|"deepen" }            // ha
 GET  /api/v1/characters/collection                                        // your gallery: creatures grouped by era, owned vs mystery (self only)
 GET  /api/v1/coop                                                         // family goal: season, children progress, reward proposals + your votes
 POST /api/v1/coop/propose            { "title","detail?" }                // propose a family reward (proposer = you)
-POST /api/v1/coop/vote               { "proposalId" }                     // toggle your vote on a proposal
+POST /api/v1/coop/vote               { "proposalId" }                     // one vote a month: same idea = take it back, another = move it (v0.583)
 POST /api/v1/coop/select             { "proposalId" }                     // parents/admins: pick the season reward
 POST /api/v1/coop/grant              { "proposalId" }                     // parents/admins: hand out the reward
 POST /api/v1/coop/remove             { "proposalId" }                     // parents/admins: remove a proposal
+// GET /coop also carries "homeNudge": "vote" | "pick" | null (v0.583) — what the
+//   home card says while no goal is chosen, for THIS person: "vote" until they've
+//   voted this month, "pick" for a parent/admin, null otherwise (src/lib/coop-nudge.ts).
+// Anyone may vote, parents included; nobody has to. Select / grant / remove are
+//   parent-or-admin on the device API; on the web they need the admin PIN.
 ```
 
 ### Calendar — **built (personal calendar, editing, prefs; time model settled v0.521–0.526)**
