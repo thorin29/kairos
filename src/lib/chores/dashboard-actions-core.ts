@@ -1,4 +1,5 @@
 import "server-only";
+import { isAvailableTo, loadPoolEligibility } from "@/lib/chores/pool-eligibility";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
@@ -61,6 +62,12 @@ export async function completeAlwaysOpenChoreCore(
   }
   const person = await prisma.user.findUnique({ where: { id: userId } });
   if (!person) return { error: "Whose is this?" };
+  // "Available for" applies to always-open chores too (v0.584): the list hides
+  // it from everyone else, and this keeps a stale screen from logging it anyway.
+  const eligibility = await loadPoolEligibility([choreId]);
+  if (!isAvailableTo(eligibility, choreId, userId)) {
+    return { error: "That chore isn't on your list." };
+  }
 
   if (chore.cooldownMinutes > 0) {
     const last = await prisma.task.findFirst({

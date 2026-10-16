@@ -50,6 +50,43 @@ export type PoolChoreRow = {
   effortLocked: boolean;
   /** People this shared chore is available for; empty means everyone. */
   eligibleUserIds: string[];
+  /** People still in the pool but never flagged "your turn" for it. */
+  reminderOptOutIds: string[];
+};
+
+// Named row shapes: without a generated Prisma client these queries type as
+// `any` locally, so the fields read below are spelled out (and hand-checked
+// against schema.prisma) rather than inferred.
+type PoolChoreDbRow = {
+  id: string;
+  title: string;
+  icon: string | null;
+  intervalDays: number | null;
+  isPaused: boolean;
+  alwaysOpen: boolean;
+  cooldownMinutes: number;
+  effort: number;
+  effortLocked: boolean;
+  tasks: {
+    status: string;
+    isOpen: boolean;
+    completedAt: Date | null;
+    dueDate: Date;
+    user: { name: string; displayName: string | null };
+  }[];
+  poolEligibility: { userId: string }[];
+  poolReminderOptOuts: { userId: string }[];
+};
+
+type AlwaysOpenDbRow = {
+  id: string;
+  title: string;
+  effort: number;
+  cooldownMinutes: number;
+  tasks: {
+    completedAt: Date | null;
+    user: { id: string; name: string; displayName: string | null; color: string };
+  }[];
 };
 
 /** Shared chores, with where each one currently stands. */
@@ -64,10 +101,11 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
         include: { user: { select: { name: true, displayName: true } } },
       },
       poolEligibility: { select: { userId: true } },
+      poolReminderOptOuts: { select: { userId: true } },
     },
   });
 
-  return chores.map((c) => {
+  return (chores as PoolChoreDbRow[]).map((c) => {
     const latest = c.tasks[0];
     const interval = c.intervalDays ?? 7;
     // Always-open chores are tap-to-complete, not scheduled — they have no
@@ -104,6 +142,7 @@ export async function loadPoolChores(): Promise<PoolChoreRow[]> {
       effort: c.effort,
       effortLocked: c.effortLocked,
       eligibleUserIds: c.poolEligibility.map((e) => e.userId),
+      reminderOptOutIds: c.poolReminderOptOuts.map((o) => o.userId),
     };
   });
 }
@@ -191,13 +230,25 @@ export async function loadChoreSummary(
   });
 }
 
-export type SharedTallyRow = { name: string; color: string; count: number };
+/** One completion behind a tally count: the chore and the day it was done. */
+export type SharedTallyItem = { title: string; dateISO: string };
+
+export type SharedTallyRow = {
+  name: string;
+  color: string;
+  count: number;
+  /** Exactly the completions `count` counts, newest first (v0.584). */
+  items: SharedTallyItem[];
+};
 
 /** Who has completed shared (pool) chores, by count — for the chores page.
- *  Counts since the current scoring start so it matches the season. */
+ *  Counts since the current scoring start so it matches the season, and
+ *  carries the rows behind each count so the page can list them. The date is
+ *  the household day it was actually done (completedAt), falling back to the
+ *  due date for rows that predate completedAt. */
 export async function loadSharedChoreTally(): Promise<SharedTallyRow[]> {
   const { getScoringStart } = await import("@/lib/settings");
-  const { toDateColumn } = await import("@/lib/dates");
+  const { toDateColumn, fromDateColumn, localParts } = await import("@/lib/dates");
   const start = await getScoringStart();
   const rows = await prisma.task.findMany({
     where: {
@@ -205,17 +256,38 @@ export async function loadSharedChoreTally(): Promise<SharedTallyRow[]> {
       chore: { is: { isPool: true } },
       ...(start ? { dueDate: { gte: toDateColumn(start) } } : {}),
     },
-    select: { user: { select: { name: true, displayName: true, color: true } } },
+    select: {
+      title: true,
+      completedAt: true,
+      dueDate: true,
+      user: { select: { name: true, displayName: true, color: true } },
+    },
   });
-  const counts = new Map<string, { color: string; count: number }>();
-  for (const r of rows) {
+  type Row = {
+    title: string;
+    completedAt: Date | null;
+    dueDate: Date;
+    user: { name: string; displayName: string | null; color: string };
+  };
+  const counts = new Map<string, { color: string; items: SharedTallyItem[] }>();
+  for (const r of rows as Row[]) {
     const name = r.user.displayName ?? r.user.name;
-    const cur = counts.get(name) ?? { color: r.user.color, count: 0 };
-    cur.count += 1;
+    const cur = counts.get(name) ?? { color: r.user.color, items: [] };
+    cur.items.push({
+      title: r.title,
+      dateISO: r.completedAt ? localParts(r.completedAt).iso : fromDateColumn(r.dueDate),
+    });
     counts.set(name, cur);
   }
   return [...counts.entries()]
-    .map(([name, v]) => ({ name, color: v.color, count: v.count }))
+    .map(([name, v]) => ({
+      name,
+      color: v.color,
+      count: v.items.length,
+      items: v.items.sort((a, b) =>
+        a.dateISO === b.dateISO ? a.title.localeCompare(b.title) : a.dateISO < b.dateISO ? 1 : -1,
+      ),
+    }))
     .sort((a, b) => b.count - a.count);
 }
 
@@ -234,12 +306,17 @@ export type AlwaysOpenChore = {
 /**
  * Always-open chores for the dashboard: each shows today's per-person tap
  * counts and, if a cooldown is set, when it's next available.
+ *
+ * With `viewerId`, only the chores available to that person ("Available for"
+ * in admin; none configured = everyone). Without it, all of them.
  */
 export async function loadAlwaysOpenChores(
   dayISO: string,
+  viewerId?: string,
 ): Promise<AlwaysOpenChore[]> {
   const { toDateColumn } = await import("@/lib/dates");
-  const chores = await prisma.chore.findMany({
+  const { loadPoolEligibility, isAvailableTo } = await import("@/lib/chores/pool-eligibility");
+  const all: AlwaysOpenDbRow[] = await prisma.chore.findMany({
     where: { isActive: true, isPool: true, alwaysOpen: true, isPaused: false },
     orderBy: { title: "asc" },
     include: {
@@ -251,6 +328,12 @@ export async function loadAlwaysOpenChores(
       },
     },
   });
+  const eligibility = viewerId
+    ? await loadPoolEligibility(all.map((c) => c.id))
+    : null;
+  const chores = eligibility
+    ? all.filter((c) => isAvailableTo(eligibility, c.id, viewerId as string))
+    : all;
 
   const now = Date.now();
   return chores.map((c) => {

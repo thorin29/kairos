@@ -1637,6 +1637,11 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   vote per person per month, movable, and the home card stops asking once
   you've voted — parents are asked to pick instead (v0.583 / app 0.393,
   migration 122).
+- [x] **Shared chores** (v0.584 / app 0.394, migration 123) — "Available for"
+  covers always-open chores too (hidden and refused for people off the list);
+  a per-chore Turn reminder list keeps people in the pool without ever flagging
+  them; the app home card calls out "Your turn"; the web Shared chores names
+  open the list of completions behind each count.
 - [x] **School** — plan-unit completion sync + backfill (v0.571–0.572, migration
   118); extra-work picker fix, original due dates, red behind tint (v0.573,
   migration 119).
@@ -1667,6 +1672,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.583.0 (migrations through 122_coop_one_vote_per_month).
-- App versionName 0.393.0 / versionCode 450 / CLIENT_BUILD 450.
+- Web APP_VERSION 0.584.0 (migrations through 123_pool_reminder_opt_out).
+- App versionName 0.394.0 / versionCode 451 / CLIENT_BUILD 451.
 - Collector: deployed and running; Xbox totals come from real game sessions.

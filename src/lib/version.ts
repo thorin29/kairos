@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.583.0";
+export const APP_VERSION = "0.584.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -135,11 +135,20 @@ export const MIGRATIONS = [
   "120_companion_deepening",
   "121_companion_tenure",
   "122_coop_one_vote_per_month",
+  "123_pool_reminder_opt_out",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.584.0",
+    summary: [
+      "\u201cAvailable for\u201d now applies to always-open chores too.",
+      "Shared chores have a Turn reminder list in admin \u2014 people left off can still do the chore but are never told it\u2019s their turn.",
+      "Click a name in Shared chores to see what it counts.",
+    ],
+  },
   {
     version: "0.583.0",
     summary: [

@@ -312,7 +312,7 @@ export async function loadApiDashboard(
   if (dayISO === today) {
     const [openTasks, alwaysOpenChores] = await Promise.all([
       loadOpenTasks(today, userId),
-      loadAlwaysOpenChores(today),
+      loadAlwaysOpenChores(today, userId),
     ]);
     upForGrabs = openTasks
       .filter((t) => t.category === "CHORE")

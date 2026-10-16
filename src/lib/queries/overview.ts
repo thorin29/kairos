@@ -217,8 +217,13 @@ export async function loadOpenTasks(
   const lastIsoByChore = new Map<string, string>();
 
   if (poolChoreIds.length > 0) {
-    const [elig, done, activeUsers] = await Promise.all([
+    const [elig, optOuts, done, activeUsers] = await Promise.all([
       prisma.poolEligibility.findMany({
+        where: { choreId: { in: poolChoreIds } },
+        select: { choreId: true, userId: true },
+      }),
+      // People kept in the pool but never reminded (admin "Turn reminder").
+      prisma.poolReminderOptOut.findMany({
         where: { choreId: { in: poolChoreIds } },
         select: { choreId: true, userId: true },
       }),
@@ -236,6 +241,9 @@ export async function loadOpenTasks(
       set.add(e.userId);
       eligibleByChore.set(e.choreId, set);
     }
+    const optedOut = new Set(
+      (optOuts as { choreId: string; userId: string }[]).map((o) => `${o.choreId}:${o.userId}`),
+    );
     // choreId -> userId -> most recent completion ms
     const lastMs = new Map<string, Map<string, number>>();
     for (const d of done) {
@@ -271,13 +279,20 @@ export async function loadOpenTasks(
           const ms = per?.get(uid);
           return ms === undefined ? Infinity : now - ms;
         };
+        // Opted-out people can still do it but are never "your turn", and their
+        // own last-done doesn't set the bar — otherwise a parent who never
+        // mows would keep everyone else from ever being reminded.
+        if (optedOut.has(`${cid}:${userId}`)) continue;
+        const remindable = (eligibleIds as string[]).filter(
+          (uid: string) => !optedOut.has(`${cid}:${uid}`),
+        );
         const viewerBehind = behind(userId);
         let maxBehind = 0;
-        for (const uid of eligibleIds) {
+        for (const uid of remindable) {
           const b = behind(uid);
           if (b > maxBehind) maxBehind = b;
         }
-        if (viewerBehind >= maxBehind) furthestChoreIds.add(cid);
+        if (viewerBehind >= maxBehind) furthestChoreIds.add(cid as string);
       }
     }
   }

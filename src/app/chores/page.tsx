@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { SharedTally } from "./shared-tally";
+import type { PoolChoreRow } from "@/lib/queries/chores-summary";
 import {
   loadChoreSummary,
   loadPoolChores,
@@ -208,26 +210,9 @@ export default async function ChoresOverviewPage() {
       {poolChores.length > 0 && (
         <section>
           <SectionHeading>Shared chores</SectionHeading>
-          {sharedTally.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-2">
-              {sharedTally.map((t) => (
-                <span
-                  key={t.name}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-3 py-1 text-xs"
-                >
-                  <span
-                    aria-hidden
-                    className="h-2 w-2 rounded-full"
-                    style={{ background: t.color }}
-                  />
-                  {t.name}
-                  <span className="tabular font-semibold">{t.count}</span>
-                </span>
-              ))}
-            </div>
-          )}
+          {sharedTally.length > 0 && <SharedTally rows={sharedTally} />}
           <Card className="divide-y divide-hairline">
-            {poolChores.filter((c) => !c.alwaysOpen).map((c) => (
+            {poolChores.filter((c: PoolChoreRow) => !c.alwaysOpen).map((c: PoolChoreRow) => (
               <div key={c.id} className="flex flex-wrap items-center gap-3 p-4">
                 <span className="min-w-[10rem] flex-1 text-sm font-medium">
                   {c.title}

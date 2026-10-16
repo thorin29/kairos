@@ -8,6 +8,7 @@ import {
   reopenPoolChore,
   markPoolChoreDone,
   setPoolEligibility,
+  setPoolReminderOptOut,
   type ChoreActionState,
 } from "@/lib/actions/chores";
 import { Card } from "@/components/ui";
@@ -32,6 +33,7 @@ export type PoolChore = {
   effort: number;
   effortLocked: boolean;
   eligibleUserIds?: string[];
+  reminderOptOutIds?: string[];
 };
 
 export function PoolChores({
@@ -172,6 +174,24 @@ function PoolRow({
   });
   const [savingElig, startElig] = useTransition();
 
+  // Who gets the "your turn" reminder (scheduled chores only). Off = still in the
+  // pool and can do it any time, but never flagged. Stored as the opted-out set.
+  const [optedOut, setOptedOut] = useState<Set<string>>(
+    () => new Set(c.reminderOptOutIds ?? []),
+  );
+  function toggleReminder(id: string) {
+    const next = new Set(optedOut);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setOptedOut(next);
+    const ids = [...next];
+    startElig(async () => {
+      const r = await setPoolReminderOptOut(c.id, ids);
+      if (r.error) alert(r.error);
+    });
+  }
+  const eligiblePeople = people.filter((p) => eligible.has(p.id));
+
   function toggleEligible(id: string) {
     const next = new Set(eligible);
     if (next.has(id)) {
@@ -239,9 +259,9 @@ function PoolRow({
         <DeleteChoreButton id={c.id} title={c.title} />
       </div>
 
-      {/* Who this chore is up for grabs for. Off-list people never see it. */}
-      {!c.alwaysOpen && (
-        <div className="mt-3 border-t border-hairline pt-3">
+      {/* Who this chore is up for grabs for. Off-list people never see it —
+          always-open chores included. */}
+      <div className="mt-3 border-t border-hairline pt-3">
           <p className="mb-2 text-xs font-medium text-muted">Available for</p>
           <div className="flex flex-wrap gap-2">
             {people.map((p) => {
@@ -268,6 +288,37 @@ function PoolRow({
             {eligible.size >= people.length
               ? "Everyone can do this chore."
               : "Only the highlighted people are in the up-for-grabs list."}
+          </p>
+        </div>
+
+      {/* Who is reminded when it's their turn (did it longest ago). */}
+      {!c.alwaysOpen && (
+        <div className="mt-3 border-t border-hairline pt-3">
+          <p className="mb-2 text-xs font-medium text-muted">Turn reminder</p>
+          <div className="flex flex-wrap gap-2">
+            {eligiblePeople.map((p) => {
+              const on = !optedOut.has(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  disabled={disabled || savingElig}
+                  onClick={() => toggleReminder(p.id)}
+                  aria-pressed={on}
+                  className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors disabled:opacity-50 ${
+                    on
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-hairline text-muted hover:border-accent hover:text-accent"
+                  }`}
+                >
+                  {p.name}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-xs text-muted">
+            Highlighted people are told it&rsquo;s their turn when they did it
+            longest ago. Others can still do it.
           </p>
         </div>
       )}

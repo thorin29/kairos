@@ -509,6 +509,37 @@ export async function completeAlwaysOpenChore(
 
 /** Set which people a shared (up-for-grabs) chore is available for. An empty
  *  list clears the restriction, so it's available to everyone. Admin only. */
+/**
+ * Who is kept out of a shared chore's "your turn" reminder. They stay in the
+ * pool — it still shows up for grabs for them and they can do it any time —
+ * but they're never flagged, and their last-done doesn't set the bar for
+ * anyone else. Replaces the chore's whole list.
+ */
+export async function setPoolReminderOptOut(
+  choreId: string,
+  userIds: string[],
+): Promise<{ error: string | null }> {
+  if (!(await isAdmin())) {
+    return { error: "Only a parent can change this. Switch profiles first." };
+  }
+  const ids = [...new Set(userIds)];
+  await prisma.$transaction([
+    prisma.poolReminderOptOut.deleteMany({ where: { choreId } }),
+    ...(ids.length > 0
+      ? [
+          prisma.poolReminderOptOut.createMany({
+            data: ids.map((userId) => ({ choreId, userId })),
+            skipDuplicates: true,
+          }),
+        ]
+      : []),
+  ]);
+  revalidatePath("/admin/chores");
+  revalidatePath("/chores");
+  revalidatePath("/");
+  return { error: null };
+}
+
 export async function setPoolEligibility(
   choreId: string,
   userIds: string[],

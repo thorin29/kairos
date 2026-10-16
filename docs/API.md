@@ -266,7 +266,10 @@ derived server-side and mirrors the web personal view (src/app/person/[id]).
        "upForGrabs": [ {                       // chores anyone can take today (chores only; empty unless date is today)
          "id","title","isShared":bool,         // isShared = a shared/pool chore (else released from a person)
          "releasedByName":"Sam","isOverdue":bool,"dueDate":"YYYY-MM-DD" } ],
-       "alwaysOpen": [ {                        // always-open chores, tap-to-complete for yourself
+       // upForGrabs[].furthestBehind — "your turn": you did this shared chore longest
+       //   ago among the people on its Turn reminder list (admin; v0.584). Someone
+       //   left off it is never flagged, and their date doesn't set the bar.
+       "alwaysOpen": [ {                        // always-open chores AVAILABLE TO YOU (v0.584), tap-to-complete
          "id","title","readyAtMs":int|null,     // readyAtMs set = on cooldown until then
          "myCount":int } ],                     // times you've done it today
        "schedule": [ {                          // whole household's events today ("Today's schedule")

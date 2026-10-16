@@ -1,5 +1,38 @@
 # Decisions
 
+## 2026-10 — Shared chores: one list per chore, a separate reminder list, and counts you can open (v0.584.0 / app 0.394.0)
+
+**"Available for" on every shared chore.** Each chore always had its own list,
+but the admin card hid it on always-open chores — and nothing on the server
+read it for them, so showing the picker alone would have been a control that
+did nothing. Now `loadAlwaysOpenChores(day, viewerId)` drops chores the viewer
+isn't on (web person card, personal dashboard, device dashboard), and
+`completeAlwaysOpenChoreCore` refuses a completion from someone off the list.
+The "none set = everyone" rule is read through one helper,
+`src/lib/chores/pool-eligibility.ts`, rather than a fourth inline copy.
+
+**Turn reminder, separate from availability** (migration 123,
+`PoolReminderOptOut`). The owner wants parents able to do a chore any time but
+never told it's their turn. A person on the opt-out list stays in the pool —
+it's up for grabs for them, they can do it — but is never `furthestBehind`, and
+their own last-done is left out of "who's furthest behind", or a parent who
+never mows would hold everyone else's reminder back for good. Admin: a "Turn
+reminder" row under "Available for" on scheduled shared chores, built from the
+people on the chore's list. No rows = everyone eligible can be reminded, so
+existing chores behave as before. Always-open chores have no turn, so no row.
+
+**The app home card calls it out.** `furthestBehind` already reached the phone
+and showed as a red "!" on the Chores detail; the home card buried it in a grey
+line. Now a chore that's your turn gets the "!" and "Your turn: <chore>" in the
+card itself; the grey line remains for the others.
+
+**Web Shared chores counts open.** Each name is a button showing exactly the
+completions its number counts (since the scoring start, always-open included),
+newest first, dated by the household day it was done (`completedAt`, due date
+for older rows). The panel is clamped 16px inside the screen — rendered at
+320–1200px wide; a chip mid-row on a phone fits neither a left- nor a
+right-anchored panel, which is why it's clamped rather than anchored.
+
 ## 2026-10 — One family-goal vote a month; the home card stops asking (v0.583.0 / app 0.393.0)
 
 The owner's rules: **one vote per person per month, and it can be changed**;

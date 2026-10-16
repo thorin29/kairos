@@ -84,6 +84,7 @@ model User {
   recurringTasks  RecurringTask[]   @relation("RecurringTaskOwner")
   choreAssignments ChoreAssignment[]
   poolEligibility  PoolEligibility[]
+  poolReminderOptOuts PoolReminderOptOut[]
   calendars       ExternalCalendar[]
   groceryItems    ShoppingItem[]    @relation("GroceryAssignee")
   workoutExercises Exercise[]        @relation("WorkoutExercises")
@@ -661,6 +662,9 @@ model Chore {
   // Which people a shared (up-for-grabs) chore is available for. Empty means
   // everyone; a non-empty set is the curated list of eligible people.
   poolEligibility PoolEligibility[]
+  // People who can still do this shared chore but never get the "your turn"
+  // reminder (usually the parents). See PoolReminderOptOut.
+  poolReminderOptOuts PoolReminderOptOut[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -690,6 +694,20 @@ model ChoreAssignment {
 /// Membership list for a shared/up-for-grabs chore: the people it is available
 /// for. No rows for a chore means it is available to everyone (unconfigured).
 model PoolEligibility {
+  choreId String
+  chore   Chore  @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([choreId, userId])
+  @@index([userId])
+}
+
+/// A person who stays in a shared chore's pool (can do it any time, it shows up
+/// for grabs for them) but is never flagged "your turn" for it — and whose own
+/// last-done date doesn't count when working out who is furthest behind. Only
+/// meaningful for scheduled shared chores; always-open ones have no turn.
+model PoolReminderOptOut {
   choreId String
   chore   Chore  @relation(fields: [choreId], references: [id], onDelete: Cascade)
   userId  String
