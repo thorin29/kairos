@@ -174,7 +174,10 @@ export function WorkoutsGrid({
     return () => {
       cancelled = true;
     };
-  }, [openUserId, logDate, todayISO]);
+    // `step` too: leaving the log step and coming back remounts the plan, and
+    // without a fresh read it refilled from what was there before the log —
+    // the weights and reps just saved came back blank.
+  }, [openUserId, logDate, todayISO, step]);
   useEffect(() => {
     let cancelled = false;
     if (!openUserId) {
@@ -195,7 +198,7 @@ export function WorkoutsGrid({
     return () => {
       cancelled = true;
     };
-  }, [openUserId, todayISO, overdueTick]);
+  }, [openUserId, todayISO, overdueTick, step]);
   const hasPlan = open ? open.plan.some((d) => d.workouts.length > 0) : false;
   // Named workouts available to this person: the shared library plus their own.
   const browsable = open
@@ -1821,7 +1824,7 @@ function unitFor(metric: Metric, system: UnitSystem): string {
     case "METERS":
       return "m";
     case "REPS":
-      return "rep";
+      return "reps";
     case "DURATION":
       return "";
   }

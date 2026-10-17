@@ -760,11 +760,15 @@ GET  /api/v1/workouts?date=YYYY-MM-DD
        "overdue":  [ { "date", "workouts":[TodayPlanned] } ],  // only when date is today
        "plannedWorkoutId","name","exercises" }  // = workouts[0], for older clients
 TodayPlanned:    { "plannedWorkoutId","name","muscleGroup":str|null,
-                   "exercises":[ PlannedMovement ] }
+                   "exercises":[ PlannedMovement ],
+                   "sessionLogged":bool }       // the plan's own session exists (v0.586)
 PlannedMovement: { "poolExerciseId","name","metric","unit",
                    "value":num|null,            // what is logged for this day (prefill + "Edit")
                    "loggedAs":{ poolExerciseId,name }|null,   // swapped for the day
-                   "stats": MovementStats|null } // WEIGHT movements with history only
+                   "stats": MovementStats|null, // WEIGHT movements with history only
+                   "tracked":bool,              // false = listed, no number asked (v0.586)
+                   "reps":int|null,             // reps logged with a WEIGHT value (v0.586)
+                   "skipped":bool }             // skipped for this day (v0.586)
 MovementStats (src/lib/queries/movement-stats.ts — the history block, v0.568–0.570):
   { bestWeight, bestWeightReps, bestOn,          // heaviest ever (weight only)
     bestReps, bestRepsWeight, bestRepsOn,        // most reps ever, at the weight done
@@ -795,6 +799,27 @@ request: { "date":"YYYY-MM-DD",              // the day the workout was DUE
   omits it and behaves as before.
 - metric is WEIGHT / REPS / DISTANCE / METERS / DURATION; a held movement in a
   weights plan logs DURATION in seconds (entered as minutes:seconds, v0.546).
+- `detectConflict` reports a conflict only when a movement being sent already
+  has a set that day (v0.586); before, any session for the plan counted.
+- An empty `entries` deletes nothing (v0.586). It used to clear the plan's
+  whole session, so a Log tapped with a blank box wiped the other movements.
+
+**Skipping one movement (v0.586).**
+```
+POST /api/v1/workouts/skip
+request: { "date":"YYYY-MM-DD", "plannedWorkoutId",
+           "poolExerciseId":id|"",           // "" = the plan as one result (HIIT)
+           "skipped":bool }
+200: { "date", "skipped":bool }   404 when the plan isn't the caller's
+```
+**When the day's workout is complete (v0.586).** Every planned movement the
+plan asks a number for is logged or skipped (`planDone`), and something was
+logged → COMPLETE. Everything skipped, nothing logged → SKIPPED (excused).
+Otherwise PENDING — unless something unplanned was logged that day (a custom
+log, a sport, "I worked out"), which completes it as it always did. A rest day
+is never overridden; a log never reopens a day closed as SKIPPED, only a skip
+change does. One rule, `settleWorkoutTask` in src/lib/workouts/mark.ts, run
+after every planned log, HIIT log and skip. Logging a movement un-skips it.
 
 **Progress (body map, charts).**
 ```
@@ -945,7 +970,7 @@ on this shape.
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**135 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**136 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -958,7 +983,7 @@ silently invisible:
 - **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
 - **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
-- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `expire`, `log`, `log-custom`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options`, `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options`, `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server)
 

@@ -126,6 +126,13 @@ export type PlannedMovement = {
    *  Computed here rather than in each client so the web and the phone can't
    *  disagree about what someone's best lift is. */
   stats?: MovementStats | null;
+  /** False for a movement the plan lists but doesn't ask a number for. It never
+   *  holds up the day's completion. Absent = tracked. */
+  tracked?: boolean;
+  /** Reps logged with a WEIGHT value, so a reopened day refills both boxes. */
+  reps?: number | null;
+  /** Skipped for this day. Counts as done for this movement. */
+  skipped?: boolean;
 };
 
 
@@ -135,7 +142,41 @@ export type TodayPlanned = {
   /** Used to group same-muscle plans onto one card (Chest + Chest together). */
   muscleGroup: string | null;
   exercises: PlannedMovement[];
+  /** The plan's own session exists for the day: how a plan with nothing to
+   *  enter (every movement untracked) shows that it was marked complete. */
+  sessionLogged?: boolean;
 } | null;
+
+/** The skip slot for a plan logged as one result (a named HIIT workout), which
+ *  has no movement id of its own. */
+export function planSlot(plannedWorkoutId: string): string {
+  return `plan:${plannedWorkoutId}`;
+}
+
+/**
+ * Whether one planned workout is done for its day: every movement it asks a
+ * number for is logged or skipped. A plan that asks for none is done once it
+ * was marked complete, or when everything on it was skipped.
+ *
+ * The one rule for "is this workout finished". The day's task, the overdue
+ * list, and both clients' ticks all read it, so none of them can call a day
+ * complete that another still shows as open.
+ */
+export function planDone(w: NonNullable<TodayPlanned>): boolean {
+  const tracked = w.exercises.filter((e) => e.tracked !== false);
+  if (tracked.length === 0) {
+    return (
+      !!w.sessionLogged ||
+      (w.exercises.length > 0 && w.exercises.every((e) => e.skipped))
+    );
+  }
+  return tracked.every((e) => e.value != null || !!e.skipped);
+}
+
+/** Anything actually recorded against this plan for its day. */
+export function planHasLog(w: NonNullable<TodayPlanned>): boolean {
+  return !!w.sessionLogged || w.exercises.some((e) => e.value != null);
+}
 
 type SlotLog = LoggedSet & {
   poolExerciseId: string | null;
@@ -265,6 +306,89 @@ export async function loadTodayPlannedWorkout(
   };
 }
 
+/** The plans that count for a day. Only workouts that existed on this day count
+ *  for it, so a plan built later never makes a past day look "overdue" (it was
+ *  scheduled under a different, already-logged plan). Mirrors the generator's
+ *  trainsSince clamp. */
+function dayPlanWhere(userId: string, dayISO: string) {
+  return {
+    userId,
+    dayOfWeek: dayOfWeek(dayISO),
+    isRest: false,
+    createdAt: { lt: toDateColumn(addDays(dayISO, 1)) },
+  };
+}
+
+/**
+ * How far through its plan a day is, for settling the day's workout task.
+ *
+ * `done`: every plan is done (planDone). A plan with nothing at all to enter —
+ * a run or a swim logged as one number — is done once logged or skipped; those
+ * plans are left out of loadTodayPlannedWorkouts, so they are read here.
+ * `logged`: anything recorded against a plan. `planNames`: every plan's name
+ * (cut to 40), so a session under any other name is known to be unplanned.
+ * `planCount` 0 means nothing was planned.
+ */
+export async function loadDayPlanProgress(
+  userId: string,
+  dayISO: string,
+): Promise<{ done: boolean; logged: boolean; planNames: string[]; planCount: number }> {
+  const day = toDateColumn(dayISO);
+  const [movementPlans, allPlans, skipRows, sessionRows] = (await Promise.all([
+    loadTodayPlannedWorkouts(userId, dayISO),
+    prisma.plannedWorkout.findMany({
+      where: dayPlanWhere(userId, dayISO),
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        hiitWorkoutId: true,
+        _count: { select: { exercises: true } },
+      },
+    }),
+    prisma.workoutMovementSkip.findMany({
+      where: { userId, date: day },
+      select: { slot: true },
+    }),
+    prisma.workoutSession.findMany({
+      where: { userId, date: day, isRest: false },
+      select: { name: true, category: true },
+    }),
+  ])) as [
+    NonNullable<TodayPlanned>[],
+    {
+      id: string;
+      name: string;
+      category: string | null;
+      hiitWorkoutId: string | null;
+      _count: { exercises: number };
+    }[],
+    { slot: string }[],
+    { name: string | null; category: string | null }[],
+  ];
+  const skipped = new Set(skipRows.map((r) => r.slot));
+  const sessionKeys = new Set(
+    sessionRows
+      .filter((r) => r.name)
+      .map((r) => `${(r.name as string).slice(0, 40)}|${r.category ?? ""}`),
+  );
+  const soloPlans = allPlans.filter(
+    (p) => !p.hiitWorkoutId && p._count.exercises === 0,
+  );
+  const soloLogged = soloPlans.map((p) =>
+    sessionKeys.has(`${p.name.slice(0, 40)}|${p.category ?? ""}`),
+  );
+  const soloDone = soloPlans.map(
+    (p, i) => soloLogged[i] || skipped.has(planSlot(p.id)),
+  );
+  return {
+    done: movementPlans.every(planDone) && soloDone.every(Boolean),
+    logged: movementPlans.some(planHasLog) || soloLogged.some(Boolean),
+    planNames: allPlans.map((p) => p.name.slice(0, 40)),
+    planCount: movementPlans.length + soloPlans.length,
+  };
+}
+
 /** All of a person's planned workouts for the day (a day can have several, e.g.
  *  Core AND Arms). Same per-plan shape as loadTodayPlannedWorkout, but every
  *  non-empty plan is returned so the card/logger can show them all. */
@@ -272,23 +396,15 @@ export async function loadTodayPlannedWorkouts(
   userId: string,
   dayISO: string,
 ): Promise<NonNullable<TodayPlanned>[]> {
-  const dow = dayOfWeek(dayISO);
   const system = await loadWorkoutUnitSystem();
 
   const plans = await prisma.plannedWorkout.findMany({
-    // Only workouts that existed on this day count for it, so a plan built later
-    // never makes a past day look "overdue" (it was scheduled under a different,
-    // already-logged plan). Mirrors the generator's trainsSince clamp.
-    where: {
-      userId,
-      dayOfWeek: dow,
-      isRest: false,
-      createdAt: { lt: toDateColumn(addDays(dayISO, 1)) },
-    },
+    where: dayPlanWhere(userId, dayISO),
     orderBy: { sortOrder: "asc" },
     select: {
       id: true,
       name: true,
+      category: true,
       muscleGroup: true,
       hiitWorkoutId: true,
       hiitWorkout: { select: { type: true } },
@@ -297,11 +413,35 @@ export async function loadTodayPlannedWorkouts(
         select: {
           poolExerciseId: true,
           metric: true,
+          tracked: true,
           poolExercise: { select: { name: true } },
         },
       },
     },
   });
+
+  // The day's skips and its sessions, read once for every plan below.
+  const day = toDateColumn(dayISO);
+  const [skipRows, sessionRows] = (await Promise.all([
+    prisma.workoutMovementSkip.findMany({
+      where: { userId, date: day },
+      select: { slot: true },
+    }),
+    prisma.workoutSession.findMany({
+      where: { userId, date: day, isRest: false },
+      select: { name: true, category: true },
+    }),
+  ])) as [{ slot: string }[], { name: string | null; category: string | null }[]];
+  const skipped = new Set(skipRows.map((r) => r.slot));
+  // A HIIT plan's name is cut to 40 characters and its session's to 60, so
+  // compare on the shorter.
+  const sessionKeys = new Set(
+    sessionRows
+      .filter((r) => r.name)
+      .map((r) => `${(r.name as string).slice(0, 40)}|${r.category ?? ""}`),
+  );
+  const hasSession = (p: { name: string; category: string | null }) =>
+    sessionKeys.has(`${p.name.slice(0, 40)}|${p.category ?? ""}`);
 
   // Every weight movement in the day's plans, in one read. Per-plan or
   // per-movement queries would multiply by however many cards the day holds.
@@ -332,7 +472,19 @@ export async function loadTodayPlannedWorkouts(
         plannedWorkoutId: plan.id,
         name: plan.name,
         muscleGroup: (plan as { muscleGroup?: string | null }).muscleGroup ?? null,
-      exercises: [{ poolExerciseId: "", name: res.label, metric: res.metric, unit, value }],
+        exercises: [
+          {
+            poolExerciseId: "",
+            name: res.label,
+            metric: res.metric,
+            unit,
+            value,
+            tracked: true,
+            reps: null,
+            skipped: skipped.has(planSlot(plan.id)),
+          },
+        ],
+        sessionLogged: hasSession(plan as { name: string; category: string | null }),
       });
       continue;
     }
@@ -380,6 +532,11 @@ export async function loadTodayPlannedWorkouts(
         // Only weights carry a record worth printing; a plank's "best" is a
         // duration and belongs in a different shape than this card has.
         stats: metric === "WEIGHT" ? (statsById[pe.poolExerciseId] ?? null) : null,
+        tracked: (pe as { tracked?: boolean }).tracked !== false,
+        // Sent back so a reopened day refills the reps box as well as the
+        // weight. Without it the phone came back with the weight alone.
+        reps: metric === "WEIGHT" && logged ? logged.reps : null,
+        skipped: skipped.has(pe.poolExerciseId),
       };
     });
     out.push({
@@ -387,6 +544,7 @@ export async function loadTodayPlannedWorkouts(
       name: plan.name,
       muscleGroup: (plan as { muscleGroup?: string | null }).muscleGroup ?? null,
       exercises,
+      sessionLogged: hasSession(plan as { name: string; category: string | null }),
     });
   }
   return out;
@@ -863,7 +1021,7 @@ function unitForMetric(metric: string, system: string): string {
     case "METERS":
       return "m";
     case "REPS":
-      return "rep";
+      return "reps";
     default:
       return "";
   }
@@ -1256,9 +1414,12 @@ export async function loadOverdueWorkoutDays(
     seen.add(iso);
     const workouts = await loadTodayPlannedWorkouts(userId, iso);
     // A scheduled workout is still due if none of its exercises were logged,
-    // whatever else happened that day.
+    // whatever else happened that day — unless it was skipped through.
     const unlogged = workouts.filter(
-      (w) => w.exercises.length > 0 && w.exercises.every((e) => e.value == null),
+      (w) =>
+        w.exercises.length > 0 &&
+        w.exercises.every((e) => e.value == null) &&
+        !planDone(w),
     );
     if (unlogged.length > 0) out.push({ date: iso, workouts: unlogged });
   }

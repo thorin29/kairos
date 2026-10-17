@@ -5,7 +5,7 @@ import {
   completePlannedWorkout,
   listExercisePool,
   logHiitWorkout,
-  restDay,
+  skipMovement,
   type LoggedSet,
 } from "@/lib/actions/workouts";
 import { CheckIcon, DumbbellIcon, MoonIcon, SwapIcon } from "@/components/icons";
@@ -98,10 +98,14 @@ export function TodayPlan({
    */
   const isDone = (w: PlanWorkout) => {
     const ex = w.exercises ?? [];
-    if (ex.length === 0) return done.has(w.name.trim().toLowerCase());
-    return ex.every(
-      (e) => e.poolExerciseId && loggedByPool[e.poolExerciseId],
-    );
+    // Skipped counts as done, for a movement and for a whole one-result plan.
+    if (loggedByPool[`plan:${w.id}`]?.skipped) return true;
+    const tracked = ex.filter((e) => e.tracked);
+    if (tracked.length === 0) return done.has(w.name.trim().toLowerCase());
+    return tracked.every((e) => {
+      const l = e.poolExerciseId ? loggedByPool[e.poolExerciseId] : undefined;
+      return !!l && (l.weight !== "" || !!l.skipped);
+    });
   };
 
   return (
@@ -238,6 +242,19 @@ function PlanRow({
     }
     return init;
   });
+  /** Skipped for this day, by poolExerciseId ("" = the plan as a whole). Seeded
+   *  from the server and flipped here at once, so the tile answers the tap
+   *  before the save returns. */
+  const [skipped, setSkipped] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const e of workout.exercises) {
+      if (e.poolExerciseId && loggedByPool[e.poolExerciseId]?.skipped) {
+        init[e.poolExerciseId] = true;
+      }
+    }
+    if (loggedByPool[`plan:${workout.id}`]?.skipped) init[""] = true;
+    return init;
+  });
   const [pending, startTransition] = useTransition();
   /** Which movement's Log button was pressed, so only that one says "Logging…".
    *  `pending` is one flag for the whole row, and a card holding two movements
@@ -284,6 +301,23 @@ function PlanRow({
 
   const setVal = (key: string, v: string) =>
     setValues((prev) => ({ ...prev, [key]: v.replace(/[^\d.]/g, "") }));
+
+  /** Skip or un-skip ONE movement for this day ("" = the whole plan when it
+   *  is logged as a single result). Only that movement — skipping used to rest
+   *  the entire day, wiping out every other movement still to do. */
+  const toggleSkip = (poolExerciseId: string) => {
+    const next = !skipped[poolExerciseId];
+    setSkipped((s) => ({ ...s, [poolExerciseId]: next }));
+    startTransition(async () => {
+      await skipMovement({
+        userId,
+        dateISO,
+        plannedWorkoutId: workout.id,
+        poolExerciseId,
+        skipped: next,
+      });
+    });
+  };
 
   /**
    * Log this plan. `only` names a single movement's planned-exercise id, which
@@ -391,6 +425,20 @@ function PlanRow({
       }
     }
 
+    // One movement with its box left blank: nothing to send. (The server now
+    // ignores an empty log too, but there is no reason to make the round trip.)
+    if (only && entries.length === 0) return;
+
+    // Logging a movement un-skips it on the server; match that here.
+    setSkipped((s) => {
+      const next = { ...s };
+      for (const e of entries) {
+        if (e.poolExerciseId) delete next[e.poolExerciseId];
+        if (e.swappedFrom) delete next[e.swappedFrom];
+      }
+      if (!only) delete next[""];
+      return next;
+    });
     setSavingKey(only ?? CARD_KEY);
     startTransition(async () => {
       await completePlannedWorkout({
@@ -632,11 +680,8 @@ function PlanRow({
                     logLabel={movementLogLabel(e)}
                     saving={pending && savingKey === e.id}
                     disabled={pending}
-                    onRest={() =>
-                      startTransition(async () => {
-                        await restDay(userId, dateISO);
-                      })
-                    }
+                    skipped={!!e.poolExerciseId && !!skipped[e.poolExerciseId]}
+                    onRest={() => e.poolExerciseId && toggleSkip(e.poolExerciseId)}
                     onCalc={() => setCalcOpen(true)}
                     onLog={() => complete(e.id)}
                   />
@@ -665,11 +710,8 @@ function PlanRow({
               logLabel={logLabel}
               saving={pending && savingKey === CARD_KEY}
               disabled={pending}
-              onRest={() =>
-                startTransition(async () => {
-                  await restDay(userId, dateISO);
-                })
-              }
+              skipped={!!skipped[""]}
+              onRest={() => toggleSkip("")}
               onCalc={() => setCalcOpen(true)}
               onLog={() => complete()}
             />
@@ -686,6 +728,7 @@ function PlanActions({
   logLabel,
   saving,
   disabled,
+  skipped,
   onRest,
   onCalc,
   onLog,
@@ -695,6 +738,8 @@ function PlanActions({
    *  so the other movements on the card keep their labels. */
   saving: boolean;
   disabled: boolean;
+  /** Skipped for the day: the tile reads "Skipped" and a second tap undoes it. */
+  skipped: boolean;
   onRest: () => void;
   onCalc: () => void;
   onLog: () => void;
@@ -703,8 +748,9 @@ function PlanActions({
     <div className="mt-1 grid grid-cols-3 gap-2">
       <PlanActionTile
         icon={MoonIcon}
-        label="Rest / skip"
+        label={skipped ? "Skipped" : "Skip"}
         disabled={disabled}
+        active={skipped}
         onClick={onRest}
       />
       <PlanActionTile
@@ -730,22 +776,28 @@ function PlanActionTile({
   onClick,
   disabled,
   primary,
+  active,
 }: {
   icon: (p: { className?: string }) => React.ReactElement;
   label: string;
   onClick: () => void;
   disabled?: boolean;
   primary?: boolean;
+  /** A toggle that is on (a skipped movement). */
+  active?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={active}
       className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center text-xs font-semibold transition-colors disabled:opacity-40 ${
         primary
           ? "border-accent bg-accent text-on-accent"
-          : "border-hairline text-ink hover:border-accent hover:text-accent"
+          : active
+            ? "border-accent bg-accent/10 text-accent"
+            : "border-hairline text-ink hover:border-accent hover:text-accent"
       }`}
     >
       <Icon className="h-5 w-5" />

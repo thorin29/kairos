@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.585.0";
+export const APP_VERSION = "0.586.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -137,11 +137,21 @@ export const MIGRATIONS = [
   "122_coop_one_vote_per_month",
   "123_pool_reminder_opt_out",
   "124_companion_minted_floor",
+  "125_workout_movement_skip",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.586.0",
+    summary: [
+      "A workout day is complete only once every planned movement is logged or skipped.",
+      "Skip now skips just that movement, not the whole day.",
+      "Logged reps stay filled in when you come back to a workout.",
+      "Rep counts are labelled \u201creps\u201d everywhere.",
+    ],
+  },
   {
     version: "0.585.0",
     summary: [

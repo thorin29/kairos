@@ -1,5 +1,51 @@
 # Decisions
 
+## 2026-10 — A workout day is complete only when every movement is (v0.586.0 / app 0.396.0)
+
+Reported: on a day with several planned movements, logging one made the day
+read "Complete for today!"; reopening the log lost the reps just entered; the
+phone's reps box said "rep".
+
+**Completion.** `logPlannedWorkout` ended with `completeWorkoutTask`, so any
+one movement completed the day. It now ends with `settleWorkoutTask`, which
+reads the day's plans and applies one rule (`planDone`): every movement the
+plan asks a number for is logged or skipped. Untracked movements never hold a
+day up; a plan with nothing to enter is done once marked complete; a plan
+logged as one number (a run, a HIIT result) once logged or skipped.
+All done with something logged → COMPLETE; all skipped → SKIPPED (excused —
+asked for: a skip counts toward the movement, but skipping everything is not a
+workout); otherwise PENDING. Something logged outside the plan (custom log,
+sport, "I worked out") still completes the day, as before, and a rest day is
+never touched. A log never reopens a SKIPPED day (it may be a missed workout
+closed on purpose); a skip change can, since it may be undoing its own close.
+The HIIT writer settles too. The overdue list uses the same `planDone`.
+
+**Skip is per movement and saved.** New table `WorkoutMovementSkip`
+(userId, date, slot; migration 125) — slot is the planned pool-exercise id, or
+`plan:<id>` for a one-result plan. The web's per-movement "Rest / skip" used
+to rest the WHOLE day; the phone's skip was local only and vanished on reload.
+Both now toggle that one movement through `setMovementSkipped`
+(`POST /api/v1/workouts/skip`, `skipMovement` on the web), on overdue days too.
+The whole-day Rest button on each overview is unchanged. Logging a movement
+clears its skip. A swapped row skips under the planned movement's id.
+
+**Reps.** The phone never received logged reps (`PlannedMovement` carried the
+value only), so they could not refill; `reps` is now sent. On the web the plan
+refilled from sets fetched when the dialog opened, so leaving the log step and
+returning remounted it with pre-log data; both fetches now re-run on `step`.
+
+**Found on the way.** A log with no entries (a Log tapped with a blank box)
+reached `deleteMany({ sessionId })` and cleared every movement already logged
+on the plan. An empty submission now deletes nothing, and both clients stop
+before sending one. The custom-log unit for REPS said "rep" in two copies of
+the unit table; both say "reps", like `metricUnit`.
+
+**"Already logged — update?" per movement.** The phone's conflict check fired
+whenever the plan had a session that day, so the second movement of a
+three-movement day always asked to overwrite something not yet logged. It now
+fires only when a movement being sent (or the one-result slot) already has a
+set, and names that set.
+
 ## 2026-10 — A companion brought back keeps its stage (v0.585.0 / app 0.395.0)
 
 Reported: a child's first pet, raised to adult, showed as a hatchling after it

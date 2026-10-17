@@ -26,6 +26,8 @@ import {
 } from "@/lib/workouts/catalog";
 import {
   completeWorkoutTask,
+  settleWorkoutTask,
+  setMovementSkipped,
   skipWorkoutTask,
   findOrCreateSession,
   setWorkedOut,
@@ -550,6 +552,29 @@ export async function restDay(userId: string, dateISO: string): Promise<void> {
   refresh();
 }
 
+/** Skip or un-skip one planned movement for a day. A skip counts as done for
+ *  that movement; the day completes once every movement is logged or skipped.
+ *  `poolExerciseId` empty skips a plan logged as one result (HIIT). */
+export async function skipMovement(input: {
+  userId: string;
+  dateISO: string;
+  plannedWorkoutId: string;
+  poolExerciseId: string;
+  skipped: boolean;
+}): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(input.userId);
+  if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
+  await setMovementSkipped(
+    input.userId,
+    input.dateISO,
+    input.plannedWorkoutId,
+    input.poolExerciseId,
+    input.skipped,
+  );
+  refresh();
+}
+
 /**
  * The movement pool, for the swap picker. Fetched when the dialog opens rather
  * than threaded through every screen that renders a plan, since swapping is
@@ -1010,7 +1035,9 @@ async function writeHiitSession(input: {
   else set.reps = Math.round(input.value);
 
   await prisma.sessionSet.create({ data: set });
-  await completeWorkoutTask(input.userId, input.dateISO);
+  // Settled rather than completed: a planned HIIT workout on a day that also
+  // has lifts planned is one part of the day, not all of it.
+  await settleWorkoutTask(input.userId, input.dateISO, { fallbackComplete: true });
   refresh();
 }
 
@@ -1208,11 +1235,22 @@ export async function loadLoggedWeights(
       }
     }
   }
+  // Skipped movements ride in the same map, so the card can show them as
+  // skipped without a second fetch. A plan's own slot ("plan:<id>") is keyed
+  // as-is.
+  const skips = (await prisma.workoutMovementSkip.findMany({
+    where: { userId, date: toDateColumn(dateISO) },
+    select: { slot: true },
+  })) as { slot: string }[];
+  for (const { slot } of skips) {
+    out[slot] = { ...(out[slot] ?? { weight: "", reps: "" }), skipped: true };
+  }
   return out;
 }
 
-/** A set already logged for a date, for prefilling the plan's fields. */
-export type LoggedSet = { weight: string; reps: string };
+/** A set already logged for a date, for prefilling the plan's fields.
+ *  `skipped` marks a movement skipped for that day (it may have no set). */
+export type LoggedSet = { weight: string; reps: string; skipped?: boolean };
 
 /** Overdue workout dates for a person (today's overdue window), for the web's
  *  Overdue section. */

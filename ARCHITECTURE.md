@@ -161,6 +161,8 @@ production:
 | Whose turn a shared chore is | `furthestBehind` in `loadOpenTasks` (`src/lib/queries/overview.ts`), honouring `PoolReminderOptOut` |
 | The least growth a returning companion keeps | `bankedGrowthFloor` in `src/lib/companions.ts` (read in progression) |
 | What kind of profile picture a value is | `isUploaded` / `isIcon` / `companionAvatarOf` in `src/lib/avatars.ts` |
+| Whether a planned workout is done (logged or skipped) | `planDone` in `src/lib/queries/workout-log.ts` |
+| Whether the day's workout task is complete | `settleWorkoutTask` in `src/lib/workouts/mark.ts` |
 
 When a rule must also run on the phone — the notes rule (`NoteField.kt`) and the
 calendar-file import (`IcsImport.kt`, which reads the file on the device) — the

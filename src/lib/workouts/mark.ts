@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
 import { CATEGORY_LABEL, type WorkoutCategory } from "@/lib/workouts/catalog";
+import { loadDayPlanProgress, planSlot } from "@/lib/queries/workout-log";
 
 /** Reported back when a movement/plan is already logged that day, so the caller
  *  can ask "update or cancel" instead of silently duplicating or overwriting.
@@ -83,6 +84,116 @@ export async function skipWorkoutTask(
     });
   }
   revalidatePath(`/person/${userId}`);
+}
+
+/**
+ * Bring the day's workout task in line with the day's plan. Logging one
+ * movement used to complete the whole day, so a day of three movements read
+ * "Complete for today!" after the first.
+ *
+ *   - every planned movement logged or skipped, something logged -> COMPLETE
+ *   - every planned movement skipped, nothing logged             -> SKIPPED
+ *     (excused, like a rest day: skipping is not working out)
+ *   - anything still open -> PENDING, unless something unplanned was logged
+ *     that day (a run, a game, "I worked out"), which completes it as before.
+ *     A log leaves a SKIPPED day alone; only a skip change reopens one.
+ *
+ * A rest day is never overridden, and a day with nothing planned keeps the old
+ * rule (`fallbackComplete`): logging completes it.
+ */
+export async function settleWorkoutTask(
+  userId: string,
+  dateISO: string,
+  opts?: {
+    fallbackComplete?: boolean;
+    /** Called from a skip change, which is allowed to reopen a day it closed
+     *  as SKIPPED. A log never reopens a SKIPPED day: that could be a missed
+     *  workout someone closed on purpose. */
+    fromSkip?: boolean;
+  },
+): Promise<void> {
+  const date = toDateColumn(dateISO);
+  const rest = await prisma.workoutSession.findFirst({
+    where: { userId, date, isRest: true },
+    select: { id: true },
+  });
+  if (rest) return;
+
+  const progress = await loadDayPlanProgress(userId, dateISO);
+  if (progress.planCount === 0) {
+    if (opts?.fallbackComplete) await completeWorkoutTask(userId, dateISO);
+    return;
+  }
+
+  const allDone = progress.done;
+  const anyLogged = progress.logged;
+  // Something logged that isn't one of the plans: its own session, under a
+  // name no plan has. Plan names are cut to 40 characters, so compare on that.
+  const planNames = new Set(progress.planNames);
+  const others = (await prisma.workoutSession.findMany({
+    where: { userId, date, isRest: false },
+    select: { name: true },
+  })) as { name: string | null }[];
+  const unplanned = others.some(
+    (o) => o.name == null || !planNames.has(o.name.slice(0, 40)),
+  );
+
+  if ((allDone && anyLogged) || unplanned) {
+    await completeWorkoutTask(userId, dateISO);
+    return;
+  }
+
+  const task = (await prisma.task.findFirst({
+    where: { userId, category: "EXERCISE", dueDate: date },
+    select: { id: true, status: true },
+  })) as { id: string; status: string } | null;
+  if (!task) {
+    revalidatePath(`/person/${userId}`);
+    return;
+  }
+  const status = allDone ? "SKIPPED" : "PENDING";
+  const keep = task.status === "SKIPPED" && !allDone && !opts?.fromSkip;
+  if (task.status !== status && !keep) {
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { status, completedAt: null },
+    });
+  }
+  revalidatePath(`/person/${userId}`);
+}
+
+/**
+ * Skip or un-skip one planned movement for a day, then settle the day. A
+ * skipped movement counts as done for it. `poolExerciseId` empty means the
+ * plan itself (a HIIT workout logged as one result).
+ */
+export async function setMovementSkipped(
+  userId: string,
+  dateISO: string,
+  plannedWorkoutId: string,
+  poolExerciseId: string,
+  skipped: boolean,
+): Promise<boolean> {
+  const plan = (await prisma.plannedWorkout.findUnique({
+    where: { id: plannedWorkoutId },
+    select: { userId: true },
+  })) as { userId: string } | null;
+  if (!plan || plan.userId !== userId) return false;
+  const slot = poolExerciseId || planSlot(plannedWorkoutId);
+  const date = toDateColumn(dateISO);
+  if (skipped) {
+    await prisma.workoutMovementSkip.upsert({
+      where: { userId_date_slot: { userId, date, slot } },
+      update: {},
+      create: { userId, date, slot },
+    });
+  } else {
+    await prisma.workoutMovementSkip.deleteMany({
+      where: { userId, date, slot },
+    });
+  }
+  await settleWorkoutTask(userId, dateISO, { fromSkip: true });
+  return true;
 }
 
 export async function findOrCreateSession(
@@ -365,8 +476,9 @@ export async function logPlannedWorkout(
       id: true,
       sets: {
         orderBy: { setNumber: "asc" },
-        take: 1,
         select: {
+          poolExerciseId: true,
+          swappedFromId: true,
           weight: true,
           reps: true,
           distance: true,
@@ -377,9 +489,36 @@ export async function logPlannedWorkout(
       },
     },
   });
+  // The movements this submission covers. A swapped set occupies its planned
+  // movement's slot, so both ids count.
+  const touched = new Set<string>();
+  for (const e of entries) {
+    if (e.poolExerciseId) touched.add(e.poolExerciseId);
+    if (e.swappedFrom) touched.add(e.swappedFrom);
+  }
   if (own && opts?.detectConflict && !opts?.replace) {
-    const summary = own.sets[0] ? summarizeSet(own.sets[0]) : "logged";
-    return { conflict: { name: plan.name, summary } };
+    // Only a movement already logged is a conflict. Asking about the plan as
+    // a whole meant the second movement of a three-movement day always asked
+    // "already logged — update?" though nothing of it had been logged.
+    type OwnSet = {
+      poolExerciseId: string | null;
+      swappedFromId: string | null;
+      weight: number | null;
+      reps: number | null;
+      distance: number | null;
+      meters: number | null;
+      seconds: number | null;
+      unit: string | null;
+    };
+    const clash = (own.sets as OwnSet[]).find((x: OwnSet) =>
+      touched.size === 0
+        ? x.poolExerciseId == null
+        : (x.poolExerciseId != null && touched.has(x.poolExerciseId)) ||
+          (x.swappedFromId != null && touched.has(x.swappedFromId)),
+    );
+    if (clash) {
+      return { conflict: { name: plan.name, summary: summarizeSet(clash) } };
+    }
   }
   const sessionId =
     own?.id ??
@@ -415,11 +554,6 @@ export async function logPlannedWorkout(
   // of a plan (one muscle group of several) no longer wipes the rest of the
   // day's work on its way in. A swapped set occupies its planned movement's
   // slot, so both ids have to be matched or the old set survives as a double.
-  const touched = new Set<string>();
-  for (const e of entries) {
-    if (e.poolExerciseId) touched.add(e.poolExerciseId);
-    if (e.swappedFrom) touched.add(e.swappedFrom);
-  }
   if (touched.size > 0) {
     const ids = [...touched];
     await prisma.sessionSet.deleteMany({
@@ -431,9 +565,15 @@ export async function logPlannedWorkout(
         ],
       },
     });
-  } else {
-    await prisma.sessionSet.deleteMany({ where: { sessionId } });
+  } else if (entries.length > 0) {
+    // A one-result plan (HIIT, a run): its sets carry no movement id.
+    await prisma.sessionSet.deleteMany({
+      where: { sessionId, poolExerciseId: null },
+    });
   }
+  // An empty submission ("Mark complete" on a plan with nothing to enter, or a
+  // Log tapped with the box blank) deletes nothing. It used to clear the whole
+  // session, taking every other movement already logged on the plan with it.
 
   let setNumber = 0;
   for (const e of entries) {
@@ -484,7 +624,15 @@ export async function logPlannedWorkout(
     await prisma.sessionSet.create({ data: set });
   }
 
-  await completeWorkoutTask(userId, dateISO);
+  // Logging a movement un-skips it: it was done after all.
+  const slots = [...touched];
+  if (slots.length === 0) slots.push(planSlot(plannedWorkoutId));
+  await prisma.workoutMovementSkip.deleteMany({
+    where: { userId, date, slot: { in: slots } },
+  });
+
+  // Not completeWorkoutTask: one movement of several is not the whole day.
+  await settleWorkoutTask(userId, dateISO, { fallbackComplete: true });
   return null;
 }
 

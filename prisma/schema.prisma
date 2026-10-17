@@ -90,6 +90,7 @@ model User {
   workoutExercises Exercise[]        @relation("WorkoutExercises")
   workoutSchedules WorkoutSchedule[] @relation("WorkoutSchedules")
   workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
+  workoutSkips     WorkoutMovementSkip[]
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   books            Book[]
   chapterReads     UserChapterRead[]
@@ -1325,6 +1326,23 @@ model PlannedExercise {
 
   @@unique([plannedWorkoutId, poolExerciseId])
   @@index([poolExerciseId])
+}
+
+/// One planned movement skipped for one day (v0.586.0). A skip counts as done
+/// for that movement when deciding whether the day's workout is complete.
+/// `slot` is the planned pool-exercise id, or "plan:<plannedWorkoutId>" for a
+/// plan logged as a single result (a named HIIT workout). No foreign key on
+/// the slot: it is either of two things, and a deleted plan or movement just
+/// leaves a row nothing reads.
+model WorkoutMovementSkip {
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   DateTime @db.Date
+  slot   String
+
+  createdAt DateTime @default(now())
+
+  @@id([userId, date, slot])
 }
 
 model WorkoutSession {
