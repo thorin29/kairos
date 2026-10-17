@@ -1,7 +1,7 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { toDateColumn } from "@/lib/dates";
+import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { CATEGORY_LABEL, type WorkoutCategory } from "@/lib/workouts/catalog";
 import { loadDayPlanProgress, planSlot } from "@/lib/queries/workout-log";
 
@@ -112,21 +112,48 @@ export async function settleWorkoutTask(
     fromSkip?: boolean;
   },
 ): Promise<void> {
+  const target = await workoutTaskTarget(userId, dateISO, !!opts?.fallbackComplete);
+  if (target === "LEAVE") return;
+  if (target === "COMPLETE") {
+    await completeWorkoutTask(userId, dateISO);
+    return;
+  }
+  const task = (await prisma.task.findFirst({
+    where: { userId, category: "EXERCISE", dueDate: toDateColumn(dateISO) },
+    select: { id: true, status: true },
+  })) as { id: string; status: string } | null;
+  if (task) {
+    const keep = task.status === "SKIPPED" && target === "PENDING" && !opts?.fromSkip;
+    if (task.status !== target && !keep) {
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { status: target, completedAt: null },
+      });
+    }
+  }
+  revalidatePath(`/person/${userId}`);
+}
+
+/**
+ * What the day's workout task should be, by the rules above. "LEAVE" = don't
+ * touch it (a rest day, or nothing planned and no fallback). Read-only, so the
+ * one-time repair below can use it while a page is rendering.
+ */
+async function workoutTaskTarget(
+  userId: string,
+  dateISO: string,
+  fallbackComplete: boolean,
+): Promise<"COMPLETE" | "SKIPPED" | "PENDING" | "LEAVE"> {
   const date = toDateColumn(dateISO);
   const rest = await prisma.workoutSession.findFirst({
     where: { userId, date, isRest: true },
     select: { id: true },
   });
-  if (rest) return;
+  if (rest) return "LEAVE";
 
   const progress = await loadDayPlanProgress(userId, dateISO);
-  if (progress.planCount === 0) {
-    if (opts?.fallbackComplete) await completeWorkoutTask(userId, dateISO);
-    return;
-  }
+  if (progress.planCount === 0) return fallbackComplete ? "COMPLETE" : "LEAVE";
 
-  const allDone = progress.done;
-  const anyLogged = progress.logged;
   // Something logged that isn't one of the plans: its own session, under a
   // name no plan has. Plan names are cut to 40 characters, so compare on that.
   const planNames = new Set(progress.planNames);
@@ -138,28 +165,52 @@ export async function settleWorkoutTask(
     (o) => o.name == null || !planNames.has(o.name.slice(0, 40)),
   );
 
-  if ((allDone && anyLogged) || unplanned) {
-    await completeWorkoutTask(userId, dateISO);
-    return;
-  }
+  if ((progress.done && progress.logged) || unplanned) return "COMPLETE";
+  return progress.done ? "SKIPPED" : "PENDING";
+}
 
-  const task = (await prisma.task.findFirst({
-    where: { userId, category: "EXERCISE", dueDate: date },
-    select: { id: true, status: true },
-  })) as { id: string; status: string } | null;
-  if (!task) {
-    revalidatePath(`/person/${userId}`);
-    return;
+const RESETTLE_KEY = "workout.settledV1";
+
+/**
+ * One-time repair (v0.586.1). Before v0.586 logging ONE movement completed the
+ * whole day, and v0.586 only re-judges a day when something on it is logged or
+ * skipped — so a day half-logged under the old rule kept saying "Complete for
+ * today!". This re-judges each COMPLETE workout task in the overdue window
+ * once, and reopens the ones the plan says aren't done. It only ever lowers a
+ * COMPLETE; anything else is left as it is. Runs from the task generator (every
+ * dashboard load, web and phone) and records that it ran, so it is a single
+ * pass. No revalidatePath: it runs while a page renders, before the page reads.
+ */
+export async function resettleCompletedWorkoutsOnce(
+  fromISO: string,
+  toISO: string,
+): Promise<void> {
+  const done = await prisma.appSetting.findUnique({ where: { key: RESETTLE_KEY } });
+  if (done) return;
+  const tasks = (await prisma.task.findMany({
+    where: {
+      category: "EXERCISE",
+      status: "COMPLETE",
+      generatedFrom: { startsWith: "workout:" },
+      dueDate: { gte: toDateColumn(fromISO), lte: toDateColumn(toISO) },
+    },
+    select: { id: true, userId: true, dueDate: true },
+  })) as { id: string; userId: string; dueDate: Date }[];
+  for (const t of tasks) {
+    const iso = fromDateColumn(t.dueDate);
+    const target = await workoutTaskTarget(t.userId, iso, false);
+    if (target === "PENDING" || target === "SKIPPED") {
+      await prisma.task.update({
+        where: { id: t.id },
+        data: { status: target, completedAt: null },
+      });
+    }
   }
-  const status = allDone ? "SKIPPED" : "PENDING";
-  const keep = task.status === "SKIPPED" && !allDone && !opts?.fromSkip;
-  if (task.status !== status && !keep) {
-    await prisma.task.update({
-      where: { id: task.id },
-      data: { status, completedAt: null },
-    });
-  }
-  revalidatePath(`/person/${userId}`);
+  await prisma.appSetting.upsert({
+    where: { key: RESETTLE_KEY },
+    update: { value: new Date().toISOString() },
+    create: { key: RESETTLE_KEY, value: new Date().toISOString() },
+  });
 }
 
 /**

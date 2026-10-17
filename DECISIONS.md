@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-10 — Re-judge days completed under the old rule (v0.586.1)
+
+Reported after 0.586: a day logged half-way earlier that day (curls, not
+triceps) still read "Complete for today!" on the phone and 1/1 on the web
+card. The task was set COMPLETE by the pre-0.586 rule, and 0.586 only
+re-judges a day when something on it is logged or skipped — nothing did.
+
+`resettleCompletedWorkoutsOnce` runs at the end of `generateWorkoutTasks`
+(every dashboard load, web and phone): it re-judges each COMPLETE workout task
+in the overdue window with the same target rule `settleWorkoutTask` uses
+(`workoutTaskTarget`), lowers the ones that aren't done to PENDING (or SKIPPED
+when everything was skipped), and records `workout.settledV1` in AppSetting so
+it never runs again. It only ever lowers a COMPLETE, and skips revalidatePath
+because it runs during render. A day that stays complete after this had
+something logged outside the plan that day (a custom log, a sport, "I worked
+out"), which completes a day by design.
+
 ## 2026-10 — A workout day is complete only when every movement is (v0.586.0 / app 0.396.0)
 
 Reported: on a day with several planned movements, logging one made the day

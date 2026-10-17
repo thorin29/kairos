@@ -16,6 +16,7 @@ import {
   type RotationShape,
 } from "@/lib/workouts/rotation";
 import { WORKOUT_OVERDUE_MAX } from "@/lib/settings";
+import { resettleCompletedWorkoutsOnce } from "@/lib/workouts/mark";
 
 const HORIZON_DAYS = 14;
 
@@ -292,6 +293,9 @@ export async function generateWorkoutTasks(
     created = (await prisma.task.createMany({ data: missing, skipDuplicates: true })).count;
   }
 
+  // Once ever: re-judge days completed under the pre-0.586 rule, where logging
+  // one movement completed the whole day. Cheap no-op after the first run.
+  await resettleCompletedWorkoutsOnce(backfillStart, todayISO());
   return { created, removed };
 }
 
