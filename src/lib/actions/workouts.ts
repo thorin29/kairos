@@ -25,9 +25,9 @@ import {
   type WorkoutType,
 } from "@/lib/workouts/catalog";
 import {
-  completeWorkoutTask,
   settleWorkoutTask,
   setMovementSkipped,
+  logCustomEntry,
   skipWorkoutTask,
   findOrCreateSession,
   setWorkedOut,
@@ -821,24 +821,6 @@ export type CustomLogResult =
   | { ok: true }
   | { conflict: { name: string; summary: string } };
 
-/** Short readout of a set's primary value, e.g. "185 lb" or "45 min". */
-function summarizeSet(s: {
-  weight: number | null;
-  reps: number | null;
-  distance: number | null;
-  meters: number | null;
-  seconds: number | null;
-  unit: string | null;
-}): string {
-  const n = (v: number) => (v === Math.round(v) ? String(v) : String(v));
-  if (s.weight != null) return `${n(s.weight)}${s.unit ? ` ${s.unit}` : ""}`;
-  if (s.distance != null) return `${n(s.distance)} ${s.unit || "mi"}`;
-  if (s.meters != null) return `${n(s.meters)} m`;
-  if (s.seconds != null) return `${Math.round(s.seconds / 60)} min`;
-  if (s.reps != null) return `${s.reps} reps`;
-  return "logged";
-}
-
 export async function logCustomWorkout(input: {
   userId: string;
   dateISO: string;
@@ -848,6 +830,8 @@ export async function logCustomWorkout(input: {
   value: number;
   unit: string;
   load?: number | null;
+  /** Reps for a WEIGHT log; the weight is still the record. */
+  reps?: number | null;
   notes?: string;
   replace?: boolean; // overwrite the same movement already logged that day
 }): Promise<CustomLogResult> {
@@ -855,132 +839,24 @@ export async function logCustomWorkout(input: {
   await requireCanActFor(input.userId);
   if (!input.userId) return { ok: true };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return { ok: true };
-  if (!Number.isFinite(input.value) || input.value <= 0) return { ok: true };
 
-  // Resolve what was done: a named pool movement, or a metric-only activity
-  // that takes its identity from the category (running, rowing, rucking).
-  let name: string;
-  let category: WorkoutCategory;
-  let poolExerciseId: string | null = null;
-  if (input.poolExerciseId) {
-    const pool = await prisma.poolExercise.findUnique({
-      where: { id: input.poolExerciseId },
-      select: { name: true, category: true },
-    });
-    if (!pool) return { ok: true };
-    name = pool.name;
-    category = pool.category as WorkoutCategory;
-    poolExerciseId = input.poolExerciseId;
-  } else if (input.category) {
-    category = input.category;
-    name = CATEGORY_LABEL[input.category];
-  } else {
-    return { ok: true };
-  }
-
-  const unit = input.unit.trim().slice(0, 8);
-  const date = toDateColumn(input.dateISO);
-
-  // Same movement already logged that day? Report it back so the caller can ask
-  // "update or cancel" rather than silently stacking a duplicate. On replace we
-  // edit that session in place; a different movement just logs on its own.
-  const existing = await prisma.workoutSession.findFirst({
-    where: { userId: input.userId, date, isRest: false, name },
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      sets: {
-        orderBy: { setNumber: "asc" },
-        take: 1,
-        select: {
-          weight: true,
-          reps: true,
-          distance: true,
-          meters: true,
-          seconds: true,
-          unit: true,
-        },
-      },
-    },
+  // Delegates, like completePlannedWorkout. This was its own copy of the phone's
+  // logCustomEntry, which is how adding reps would have meant changing two.
+  // Same movement already logged that day comes back as a conflict so the form
+  // can ask "update or cancel"; on replace that session is edited in place.
+  const result = await logCustomEntry(input.userId, input.dateISO, {
+    poolExerciseId: input.poolExerciseId ?? null,
+    category: input.category ?? null,
+    metric: input.metric,
+    value: input.value,
+    unit: input.unit,
+    load: input.load ?? null,
+    reps: input.reps ?? null,
+    notes: input.notes,
+    replace: input.replace,
+    detectConflict: true,
   });
-  if (existing && !input.replace) {
-    const summary = existing.sets[0] ? summarizeSet(existing.sets[0]) : name;
-    return { conflict: { name, summary } };
-  }
-
-  // Each log is its own named session, so a day can hold several — a lift and a
-  // run, hockey and a ride. Re-logging the SAME movement edits its session.
-  let sessionId: string;
-  if (existing && input.replace) {
-    sessionId = existing.id;
-    await prisma.workoutSession.update({
-      where: { id: sessionId },
-      data: {
-        category,
-        finished: true,
-        isRest: false,
-        notes: input.notes?.slice(0, 300) || null,
-      },
-    });
-    await prisma.sessionSet.deleteMany({ where: { sessionId } });
-  } else {
-    const session = await prisma.workoutSession.create({
-      data: {
-        userId: input.userId,
-        date,
-        name,
-        category,
-        finished: true,
-        isRest: false,
-        notes: input.notes?.slice(0, 300) || null,
-      },
-    });
-    sessionId = session.id;
-  }
-
-  const set: {
-    sessionId: string;
-    poolExerciseId: string | null;
-    setNumber: number;
-    unit: string | null;
-    finished: boolean;
-    weight?: number;
-    reps?: number;
-    distance?: number;
-    meters?: number;
-    seconds?: number;
-  } = {
-    sessionId,
-    poolExerciseId,
-    setNumber: 1,
-    unit: unit || null,
-    finished: true,
-  };
-  switch (input.metric) {
-    case "WEIGHT":
-      set.weight = input.value;
-      break;
-    case "REPS":
-      set.reps = Math.round(input.value);
-      break;
-    case "DISTANCE":
-      set.distance = input.value;
-      break;
-    case "METERS":
-      set.meters = input.value;
-      break;
-    case "DURATION":
-      set.seconds = Math.round(input.value);
-      break;
-  }
-  // A carried load (e.g. a ruck) rides alongside the distance in the weight
-  // column, so it shows in the summary without needing its own metric.
-  if (input.load != null && input.load > 0 && set.weight == null) {
-    set.weight = input.load;
-  }
-
-  await prisma.sessionSet.create({ data: set });
-  await completeWorkoutTask(input.userId, input.dateISO);
+  if (result?.conflict) return { conflict: result.conflict };
   refresh();
   return { ok: true };
 }

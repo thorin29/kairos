@@ -1833,6 +1833,9 @@ function unitFor(metric: Metric, system: UnitSystem): string {
 const CAPTION = "mb-1 block text-xs font-semibold uppercase tracking-widest text-muted";
 const FIELD =
   "h-9 w-full rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent";
+/** FIELD without the full width, for boxes that share a row. */
+const FIELD_BOX =
+  "h-9 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent";
 
 /** YYYY-MM-DD → "Jul 21", parsed locally to avoid an off-by-one. */
 /** "Mon". Parsed as a local date, not `new Date(iso)`, which reads a bare
@@ -1891,6 +1894,7 @@ export function CustomWorkoutForm({
   const [sec, setSec] = useState("");
   const [hours, setHours] = useState(""); // sport
   const [load, setLoad] = useState(""); // ruck load
+  const [reps, setReps] = useState(""); // reps for a weight, optional
   const [notes, setNotes] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -1939,6 +1943,8 @@ export function CustomWorkoutForm({
         value,
         unit,
         load: cfg.load ? num(load) || null : null,
+        // Reps ride with a weight; the weight is still the record.
+        reps: metric === "WEIGHT" && !isSport ? Math.round(num(reps)) || null : null,
         notes: notes.trim() || undefined,
         replace,
       });
@@ -2075,6 +2081,30 @@ export function CustomWorkoutForm({
               className={`${FIELD} w-20 text-center`}
             />
             <span className="text-sm text-muted">sec</span>
+          </div>
+        ) : metric === "WEIGHT" ? (
+          // Weight and reps on one row, the same shape as the plan card: the
+          // weight is the record, reps are optional but without them "185 x 5"
+          // and "185 x 12" log identically.
+          <div className="flex items-center gap-2">
+            <input
+              value={amount}
+              onChange={(e) => setAmount(numeric(e.target.value))}
+              inputMode="decimal"
+              placeholder="0"
+              aria-label="Weight"
+              className={`${FIELD_BOX} min-w-0 flex-1 text-center`}
+            />
+            {unit && <span className="text-sm text-muted">{unit}</span>}
+            <span className="text-sm text-muted">&times;</span>
+            <input
+              value={reps}
+              onChange={(e) => setReps(e.target.value.replace(/\D/g, "").slice(0, 3))}
+              inputMode="numeric"
+              placeholder="reps"
+              aria-label="Reps"
+              className={`${FIELD_BOX} w-24 shrink-0 text-center`}
+            />
           </div>
         ) : (
           <div className="flex items-center gap-2">

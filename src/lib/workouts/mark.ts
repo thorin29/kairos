@@ -711,6 +711,9 @@ export type CustomLogInput = {
   value: number;
   unit: string;
   load?: number | null;
+  /** For a WEIGHT log: how many reps that set was. The weight stays the
+   *  record; reps ride alongside it, as on a planned log. */
+  reps?: number | null;
   notes?: string;
   replace?: boolean; // overwrite the same movement already logged that day
   detectConflict?: boolean; // report a same-movement conflict instead of writing
@@ -718,8 +721,8 @@ export type CustomLogInput = {
 
 /**
  * Log an ad-hoc "different workout" — a pool movement or a metric-only activity.
- * Each is its own named session (a day can hold several). Mirrors the web's
- * logCustomWorkout; completes the workout task.
+ * Each is its own named session (a day can hold several). The web's
+ * logCustomWorkout calls this too; completes the workout task.
  */
 export async function logCustomEntry(
   userId: string,
@@ -834,6 +837,9 @@ export async function logCustomEntry(
   switch (input.metric) {
     case "WEIGHT":
       set.weight = input.value;
+      if (input.reps != null && Number.isFinite(input.reps) && input.reps > 0) {
+        set.reps = Math.round(input.reps);
+      }
       break;
     case "REPS":
       set.reps = Math.round(input.value);

@@ -148,6 +148,7 @@ production:
 | Rule | Where it lives |
 |---|---|
 | Logging a planned workout (web and phone) | `logPlannedWorkout` in `src/lib/workouts/mark.ts` |
+| Logging an additional (unplanned) workout (web and phone) | `logCustomEntry` in `src/lib/workouts/mark.ts` |
 | A movement's Best weight / Best reps / Latest | `src/lib/queries/movement-stats.ts` |
 | Schoolwork completion marks the plan unit done | `syncPlanUnitDone` in `src/lib/school/plan-unit-sync.ts` |
 | Companion growth banked across a shelf trip | `src/lib/companions-tenure.ts` |

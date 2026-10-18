@@ -804,6 +804,19 @@ request: { "date":"YYYY-MM-DD",              // the day the workout was DUE
 - An empty `entries` deletes nothing (v0.586). It used to clear the plan's
   whole session, so a Log tapped with a blank box wiped the other movements.
 
+**An additional (unplanned) workout.**
+```
+POST /api/v1/workouts/log-custom
+request: { "date"?:"YYYY-MM-DD", "metric", "value":num, "unit"?,
+           "poolExerciseId"? | "hiitWorkoutId"? | "category"?,
+           "load"?:num,                      // a carried load (rucking)
+           "reps"?:int,                      // on a WEIGHT log (v0.587)
+           "notes"?, "replace"?:bool, "detectConflict"?:bool }
+200: { "date", "status":"worked" }  |  { "date", "status":"conflict", "conflict":{…} }
+```
+One implementation, `logCustomEntry` (src/lib/workouts/mark.ts); the web's
+`logCustomWorkout` delegates to it since v0.587.
+
 **Skipping one movement (v0.586).**
 ```
 POST /api/v1/workouts/skip

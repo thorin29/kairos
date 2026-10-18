@@ -52,6 +52,8 @@ export async function POST(req: NextRequest) {
     value,
     unit: typeof raw?.unit === "string" ? raw.unit : "",
     load: num(raw?.load),
+    // Reps on a WEIGHT log (v0.587). Optional: older apps omit it.
+    reps: num(raw?.reps),
     notes: typeof raw?.notes === "string" ? raw.notes : undefined,
     replace: raw?.replace === true,
     detectConflict: raw?.detectConflict === true,

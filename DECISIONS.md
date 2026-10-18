@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-10 — Reps on a one-off weights log (v0.587.0 / app 0.397.0)
+
+"Log an additional workout" (also the only way to log for someone with no
+plan) took a weight and nothing else, so a one-off lift lost its reps. Both
+clients now show weight × reps for a WEIGHT log; reps are optional and the
+weight stays the record, as on a planned log. `CustomLogInput.reps` /
+`POST /api/v1/workouts/log-custom` `reps` (older apps omit it).
+
+The web's `logCustomWorkout` was a second copy of `logCustomEntry` — the same
+drift `completePlannedWorkout` had until v0.566. It now delegates, keeping only
+the session gate and revalidation, so reps were added in one place.
+
 ## 2026-10 — Re-judge days completed under the old rule (v0.586.1)
 
 Reported after 0.586: a day logged half-way earlier that day (curls, not
