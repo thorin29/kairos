@@ -694,6 +694,8 @@ shape, filtered and colored by the person's calendar prefs
 active person's events, which then take the person's "others" color. Tasks are
 only ever the person's own open general tasks (category OTHER), so the widget
 can complete them with `POST /tasks/{id}/complete`.
+An all-day event covering several days is listed once, on its first day in
+view (v0.588.1); its `endDayISO` (exclusive) says how far it runs.
 src/lib/queries/widget.ts.
 
 ### Bible reading — **built (v0.204)**

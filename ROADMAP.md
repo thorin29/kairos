@@ -1672,6 +1672,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.588.0 (migrations through 125_workout_movement_skip).
-- App versionName 0.398.0 / versionCode 455 / CLIENT_BUILD 455.
+- Web APP_VERSION 0.588.1 (migrations through 125_workout_movement_skip).
+- App versionName 0.399.0 / versionCode 456 / CLIENT_BUILD 456.
 - Collector: deployed and running; Xbox totals come from real game sessions.

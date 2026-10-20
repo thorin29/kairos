@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.588.0";
+export const APP_VERSION = "0.588.1";
 
 export const MIGRATIONS = [
   "0_init",
@@ -143,6 +143,10 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.588.1",
+    summary: ["An all-day event spanning several days shows once on the Android widget, not on every day."],
+  },
   {
     version: "0.588.0",
     summary: ["Adds what the new Android home-screen widget needs (app 0.398.0)."],

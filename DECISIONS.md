@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-10 — Widget: a multi-day all-day event is listed once (v0.588.1 / app 0.399.0)
+
+A week-long all-day event (a visit) filled the widget with the same line on
+every day. `loadWidgetPayload` now keeps only its first day in view — keyed on
+event id + occurrence start, so a daily repeating all-day event still shows
+each day — and the app adds "through Sat" (or "through Oct 31" past the week).
+Only the widget does this; the Calendar still shows it on every day it covers.
+
 ## 2026-10 — Android home-screen widget feed (v0.588.0 / app 0.398.0)
 
 `GET /api/v1/widget?scope=family|mine` (`loadWidgetPayload`): the next 7 days

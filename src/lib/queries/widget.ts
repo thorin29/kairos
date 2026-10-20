@@ -69,7 +69,20 @@ export async function loadWidgetPayload(
   for (const t of tasks) {
     byDate.get(fromDateColumn(t.dueDate))?.tasks.push({ id: t.id, title: t.title });
   }
-  for (const e of events) byDate.get(e.dayISO)?.events.push(e);
+  // An all-day event spanning several days (a visit, a trip) is listed once,
+  // on its first day in view; the app labels it "through <last day>". The
+  // calendar repeats it on every day it covers, which on a 7-day list was the
+  // same line over and over. Keyed on the occurrence's start, so a daily
+  // repeating all-day event still shows each day.
+  const seenSpan = new Set<string>();
+  for (const e of events) {
+    if (e.allDay && e.endDayISO > addDays(e.startDayISO, 1)) {
+      const key = `${e.eventId}|${e.startDayISO}`;
+      if (seenSpan.has(key)) continue;
+      seenSpan.add(key);
+    }
+    byDate.get(e.dayISO)?.events.push(e);
+  }
 
   return {
     today,
