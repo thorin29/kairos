@@ -41,6 +41,7 @@ export function WorkoutLauncher({
   todayISO,
   summaryNames,
   overdueCount = 0,
+  completeForToday = false,
 }: {
   userId: string;
   dateISO: string;
@@ -64,6 +65,8 @@ export function WorkoutLauncher({
   /** Server-computed count of overdue workouts, so the closed summary button can
    *  show it without waiting for the overlay's own fetch. */
   overdueCount?: number;
+  /** The summary button reads "Complete for today!" in green, like the phone. */
+  completeForToday?: boolean;
 }) {
   // Two plans for the same muscle group are two rows upstream, but this strip
   // names the group, so they arrived as "Core \u00b7 Core \u00b7 Legs". Collapse
@@ -153,7 +156,7 @@ export function WorkoutLauncher({
                   {overdueCount} overdue
                 </span>
               )}
-              {(overdueCount > 0 ? names.slice(0, 2) : names.slice(0, 3)).map(
+              {!completeForToday && (overdueCount > 0 ? names.slice(0, 2) : names.slice(0, 3)).map(
                 (n, i) => (
                 <span key={`${n}-${i}`} className="flex items-center">
                   {(i > 0 || overdueCount > 0) && (
@@ -163,8 +166,13 @@ export function WorkoutLauncher({
                 </span>
                 ),
               )}
-              {names.length === 0 && overdueCount === 0 && (
-                <span className="text-muted">No workout today</span>
+              {completeForToday ? (
+                <span className="font-medium text-emerald-600">Complete for today!</span>
+              ) : (
+                names.length === 0 &&
+                overdueCount === 0 && (
+                  <span className="text-muted">No workout today</span>
+                )
               )}
             </span>
           </span>

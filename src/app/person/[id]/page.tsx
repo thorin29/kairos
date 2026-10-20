@@ -658,8 +658,16 @@ export default async function PersonPage({
                         unitSystem={unitSystem}
                         weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
                         todayISO={today}
-                        summaryNames={todayEx.map((r) => r.title)}
+                        summaryNames={todayEx.map((r: { title: string }) => r.title)}
                         overdueCount={overdueWorkoutDays.length}
+                        // Same rule as the phone's home row: today's workout
+                        // task is complete (every movement logged or skipped,
+                        // or something else logged) and nothing is overdue.
+                        completeForToday={
+                          todayEx.length > 0 &&
+                          todayEx.every((r: { status: string }) => r.status === "COMPLETE") &&
+                          overdueWorkoutDays.length === 0
+                        }
                       />
                     </Card>
                   </section>

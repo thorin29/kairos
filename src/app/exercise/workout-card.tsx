@@ -260,6 +260,11 @@ function PlanRow({
    *  `pending` is one flag for the whole row, and a card holding two movements
    *  put both buttons into the saving state when either was used. */
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  /** Movements (or CARD_KEY) saved on this card since it opened — the server's
+   *  prefill was read before, so it can't know yet. */
+  const [savedHere, setSavedHere] = useState<Set<string>>(() => new Set());
+  /** The one just saved, whose button says "logged" for a moment. */
+  const [flashKey, setFlashKey] = useState<string | null>(null);
 
   const category: WorkoutCategory = workout.category ?? "WEIGHTS";
   const hiit = workout.hiit;
@@ -283,7 +288,9 @@ function PlanRow({
   }
   // Already recorded: the field is prefilled with what was logged, so the
   // button saves a correction rather than a first entry.
-  if (done && metricOnly) logLabel = `Edit ${LOG_NOUN[soloMetric]}`;
+  const cardLogged = savedHere.has(CARD_KEY) || (done && metricOnly);
+  if (cardLogged && metricOnly) logLabel = `edit ${LOG_NOUN[soloMetric]}`;
+  if (flashKey === CARD_KEY) logLabel = "logged";
 
   /**
    * The button that belongs to ONE movement.
@@ -293,14 +300,26 @@ function PlanRow({
    * per movement, not per plan — logging the bench press on a two-movement
    * chest plan must not relabel the incline press as an edit.
    */
+  const isLogged = (e: PlanExercise): boolean =>
+    savedHere.has(e.id) ||
+    !!(e.poolExerciseId && loggedByPool[e.poolExerciseId] && !loggedByPool[e.poolExerciseId].skipped);
+  // Same words as the phone: "Log weight", then "logged" for a moment after a
+  // save, then "edit weight".
   const movementLogLabel = (e: PlanExercise): string => {
-    const verb =
-      e.poolExerciseId && loggedByPool[e.poolExerciseId] ? "Edit" : "Log";
-    return `${verb} ${LOG_NOUN[metricFor(e.metric)]}`;
+    const noun = LOG_NOUN[metricFor(e.metric)];
+    if (flashKey === e.id) return "logged";
+    return isLogged(e) ? `edit ${noun}` : `Log ${noun}`;
   };
 
   const setVal = (key: string, v: string) =>
     setValues((prev) => ({ ...prev, [key]: v.replace(/[^\d.]/g, "") }));
+
+  /** A save made here: the button flashes "logged", then settles on "edit". */
+  const markSaved = (key: string) => {
+    setSavedHere((prev) => new Set(prev).add(key));
+    setFlashKey(key);
+    window.setTimeout(() => setFlashKey((k) => (k === key ? null : k)), 2500);
+  };
 
   /** Skip or un-skip ONE movement for this day ("" = the whole plan when it
    *  is logged as a single result). Only that movement — skipping used to rest
@@ -345,6 +364,7 @@ function PlanRow({
         });
         setValues({});
         setSavingKey(null);
+        markSaved(CARD_KEY);
       });
       return;
     }
@@ -449,6 +469,9 @@ function PlanRow({
         completedOnISO,
       });
       setSavingKey(null);
+      if (only || entries.length > 0 || trackedExercises.length === 0) {
+        markSaved(only ?? CARD_KEY);
+      }
       // Deliberately NOT cleared. What is in these boxes is now what the server
       // holds, so wiping them makes a successful save look like a failed one —
       // the numbers vanished and only came back on a full refresh. The prefill
@@ -678,8 +701,8 @@ function PlanRow({
                       read exactly like two added one at a time. */}
                   <PlanActions
                     logLabel={movementLogLabel(e)}
+                    logged={isLogged(e)}
                     saving={pending && savingKey === e.id}
-                    disabled={pending}
                     skipped={!!e.poolExerciseId && !!skipped[e.poolExerciseId]}
                     onRest={() => e.poolExerciseId && toggleSkip(e.poolExerciseId)}
                     onCalc={() => setCalcOpen(true)}
@@ -708,8 +731,8 @@ function PlanRow({
           {(hiit || metricOnly || trackedExercises.length === 0) && (
             <PlanActions
               logLabel={logLabel}
+              logged={cardLogged}
               saving={pending && savingKey === CARD_KEY}
-              disabled={pending}
               skipped={!!skipped[""]}
               onRest={() => toggleSkip("")}
               onCalc={() => setCalcOpen(true)}
@@ -722,22 +745,26 @@ function PlanRow({
   );
 }
 
-/** Three labelled tiles, same shape and wording as the phone, so the two
- *  logging screens read as one feature. */
+/** Three labelled tiles, same shape, wording and behaviour as the phone, so the
+ *  two logging screens read as one feature: Skip and Calculator are outlined in
+ *  the theme color; Log is filled until the movement is logged, then eases
+ *  (0.7s, like the phone) to a soft grey tile with theme-color text. Only the
+ *  tile that is saving changes while it saves. */
 function PlanActions({
   logLabel,
+  logged,
   saving,
-  disabled,
   skipped,
   onRest,
   onCalc,
   onLog,
 }: {
   logLabel: string;
+  /** Recorded for the day: the Log tile settles to its quiet "edit" look. */
+  logged: boolean;
   /** This button's own save is running — not merely "something is saving",
    *  so the other movements on the card keep their labels. */
   saving: boolean;
-  disabled: boolean;
   /** Skipped for the day: the tile reads "Skipped" and a second tap undoes it. */
   skipped: boolean;
   onRest: () => void;
@@ -749,21 +776,18 @@ function PlanActions({
       <PlanActionTile
         icon={MoonIcon}
         label={skipped ? "Skipped" : "Skip"}
-        disabled={disabled}
-        active={skipped}
+        dim={skipped}
+        pressed={skipped}
         onClick={onRest}
       />
-      <PlanActionTile
-        icon={DumbbellIcon}
-        label="Calculator"
-        disabled={false}
-        onClick={onCalc}
-      />
+      <PlanActionTile icon={DumbbellIcon} label="Calculator" onClick={onCalc} />
       <PlanActionTile
         icon={CheckIcon}
-        label={saving ? "Logging…" : logLabel}
-        disabled={disabled}
-        primary
+        label={logLabel}
+        filled
+        quiet={logged}
+        loading={saving}
+        disabled={saving}
         onClick={onLog}
       />
     </div>
@@ -775,32 +799,50 @@ function PlanActionTile({
   label,
   onClick,
   disabled,
-  primary,
-  active,
+  filled,
+  quiet,
+  dim,
+  loading,
+  pressed,
 }: {
   icon: (p: { className?: string }) => React.ReactElement;
   label: string;
   onClick: () => void;
   disabled?: boolean;
-  primary?: boolean;
-  /** A toggle that is on (a skipped movement). */
-  active?: boolean;
+  /** The Log tile: a filled button. */
+  filled?: boolean;
+  /** Filled tile after its movement is logged: grey fill, theme-color text. */
+  quiet?: boolean;
+  /** Outlined tile that is "off" (a skipped movement): grey text. */
+  dim?: boolean;
+  /** Its save is running: a spinner in place of the icon. */
+  loading?: boolean;
+  pressed?: boolean;
 }) {
+  const look = filled
+    ? quiet
+      ? "border-transparent bg-ground text-accent"
+      : "border-accent bg-accent text-on-accent"
+    : dim
+      ? "border-hairline bg-surface text-muted"
+      : "border-hairline bg-surface text-accent hover:border-accent";
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-pressed={active}
-      className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center text-xs font-semibold transition-colors disabled:opacity-40 ${
-        primary
-          ? "border-accent bg-accent text-on-accent"
-          : active
-            ? "border-accent bg-accent/10 text-accent"
-            : "border-hairline text-ink hover:border-accent hover:text-accent"
-      }`}
+      aria-pressed={pressed}
+      aria-busy={loading || undefined}
+      className={`flex min-h-[5.25rem] flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-center text-xs font-semibold transition-colors duration-700 ${look}`}
     >
-      <Icon className="h-5 w-5" />
+      {loading ? (
+        <span
+          aria-hidden="true"
+          className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent"
+        />
+      ) : (
+        <Icon className="h-5 w-5" />
+      )}
       {label}
     </button>
   );

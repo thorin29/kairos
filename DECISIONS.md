@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-10 — Web workout buttons match the phone; "Complete for today!" (v0.593.0)
+
+**Log tiles.** The web's three action tiles now follow the phone's
+`WorkoutActionTile`: Skip and Calculator are outlined with theme-color text
+(Skip greys out when skipped); Log is filled until the movement is logged,
+then eases over 0.7s to a soft grey tile with theme-color text. After a save
+the label reads "logged" for 2.5s, then "edit <noun>"; a spinner replaces the
+icon while that tile saves. A save made on the card is remembered on the card
+(`savedHere`), because the server prefill was read before it. Only the saving
+tile is disabled, as on the phone.
+
+**Person page.** The workouts card's summary says "Complete for today!" on
+the same rule as the phone's home row: every workout task for today is
+complete and nothing is overdue.
+
 ## 2026-10 — Shopping trips last a day; Marine Corps Birthday (v0.592.0)
 
 **Trips.** A trip stayed open until someone tapped Done, so a forgotten one
