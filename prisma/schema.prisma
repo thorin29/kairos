@@ -412,6 +412,7 @@ enum EventKind {
   WORK
   APPOINTMENT
   BIRTHDAY
+  ANNIVERSARY // yearly all-day, like BIRTHDAY (v0.591)
   EXTERNAL // pulled from a subscribed ICS feed
   OTHER
   PAUSE // the all-day marker event a household pause (vacation/break) generates

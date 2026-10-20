@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isOccasionName } from "@/lib/calendar/occasions";
 
 /**
  * Remember an event name so future events can pick it from the list. Find-or-
@@ -10,6 +11,8 @@ import { prisma } from "@/lib/prisma";
 export async function rememberEventName(raw: string): Promise<void> {
   const name = raw.trim().slice(0, 120);
   if (name.length < 2) return;
+  // "Sam's Birthday" is one person's occasion, not a name to offer again.
+  if (isOccasionName(name)) return;
   const existing = await prisma.eventName.findFirst({
     where: { name: { equals: name, mode: "insensitive" } },
     select: { id: true },

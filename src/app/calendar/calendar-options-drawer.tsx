@@ -234,6 +234,7 @@ export function CalendarOptionsDrawer({
                         ["CLASS", "Class"],
                         ["WORK", "Work"],
                         ["BIRTHDAY", "Birthdays"],
+                        ["ANNIVERSARY", "Anniversaries"],
                       ].map(([k, label]) => (
                         <ColorField
                           key={k}

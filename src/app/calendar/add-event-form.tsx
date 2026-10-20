@@ -13,6 +13,7 @@ import { LocationCombobox } from "@/components/location-combobox";
 import { EventNameCombobox } from "@/components/event-name-combobox";
 import { SelectField } from "@/components/select-field";
 import { parseRule, WEEKDAY_TOKENS } from "@/lib/calendar/recur";
+import { isOccasion } from "@/lib/calendar/occasions";
 import { NOTES_MAX, takesNotes } from "@/lib/calendar/event-notes";
 import { addDays, dayOfWeek, daysBetween, startOfWeek } from "@/lib/dates";
 import { PlusIcon, UploadIcon } from "@/components/icons";
@@ -56,6 +57,7 @@ const KINDS = [
   { value: "CLASS", label: "Class" },
   { value: "WORK", label: "Work shift" },
   { value: "BIRTHDAY", label: "Birthday" },
+  { value: "ANNIVERSARY", label: "Anniversary" },
   { value: "OTHER", label: "Medical / Dental" },
 ];
 
@@ -564,12 +566,12 @@ function EventModal({
   };
 
   const chooseKind = (value: string) => {
-    if (value === "BIRTHDAY") {
+    if (isOccasion(value)) {
       setAllDay(true);
       setRepeat("YEARLY");
-    } else if (kind === "BIRTHDAY") {
-      // Leaving birthday: undo the all-day + yearly it forced on, so the event
-      // doesn't stay locked as an all-day annual event.
+    } else if (isOccasion(kind)) {
+      // Leaving a birthday or anniversary: undo the all-day + yearly it forced
+      // on, so the event doesn't stay locked as an all-day annual event.
       setAllDay(false);
       setRepeat("NONE");
     }

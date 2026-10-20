@@ -1,4 +1,5 @@
 import type { GridEvent } from "@/lib/queries/calendar";
+import { isOccasion } from "@/lib/calendar/occasions";
 
 /**
  * Delete is only offered where it will actually work: never for subscribed
@@ -9,6 +10,6 @@ import type { GridEvent } from "@/lib/queries/calendar";
  */
 export function canDeleteEvent(e: GridEvent, admin: boolean): boolean {
   if (!e.eventId || e.external) return false;
-  if (e.recurring || e.kind === "BIRTHDAY") return admin;
+  if (e.recurring || isOccasion(e.kind)) return admin;
   return true;
 }

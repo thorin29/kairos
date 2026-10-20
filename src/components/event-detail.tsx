@@ -21,6 +21,7 @@ const KIND_LABEL: Record<string, string> = {
   WORK: "Work",
   APPOINTMENT: "Appointment",
   BIRTHDAY: "Birthday",
+  ANNIVERSARY: "Anniversary",
   EXTERNAL: "Subscribed",
   OTHER: "Medical / Dental",
   PAUSE: "Vacation / Break",

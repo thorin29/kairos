@@ -4,6 +4,7 @@ import { rememberEventName } from "@/lib/event-names-core";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fitRepeatingSpan } from "@/lib/calendar/repeat-span";
+import { isOccasion } from "@/lib/calendar/occasions";
 import { householdTz, localParts, eventParts, eventTz, toDateColumn, zonedToUtc, addDays, daysBetween } from "@/lib/dates";
 import { buildRule, parseRule, alignWeeklyByday, occurrencesIn } from "@/lib/calendar/recur";
 import { cleanNotes } from "@/lib/calendar/event-notes";
@@ -32,7 +33,7 @@ export type EventInput = {
   occurrenceISO?: string;
   /** Create only: the family calendar (needs parent/admin) vs the actor's own. */
   isFamily?: boolean;
-  /** Create only: CLASS | WORK | APPOINTMENT | BIRTHDAY | OTHER. */
+  /** Create only: CLASS | WORK | APPOINTMENT | BIRTHDAY | ANNIVERSARY | OTHER. */
   kind?: string;
   /** Create only: a custom EventType id whose color wins. */
   eventTypeId?: string;
@@ -53,7 +54,7 @@ export type EventInput = {
   reminderUserIds?: string[];
 };
 
-const CREATE_KINDS = ["CLASS", "WORK", "APPOINTMENT", "BIRTHDAY", "OTHER"] as const;
+const CREATE_KINDS = ["CLASS", "WORK", "APPOINTMENT", "BIRTHDAY", "ANNIVERSARY", "OTHER"] as const;
 function toKind(v: string | undefined): EventKind {
   return v && (CREATE_KINDS as readonly string[]).includes(v)
     ? (v as EventKind)
@@ -290,8 +291,8 @@ export async function updatePersonalEvent(
     return { error: "Only a parent can move an event to the family calendar." };
   }
   const nextKind = input.kind !== undefined ? toKind(input.kind) : ev.kind;
-  if (nextKind === "BIRTHDAY" && !canManageFamily) {
-    return { error: "Only a parent can make an event a birthday." };
+  if (isOccasion(nextKind) && !canManageFamily) {
+    return { error: "Only a parent can make an event a birthday or an anniversary." };
   }
   // Whose it is afterwards. Resolved ONCE: the write paths below each used to
   // re-derive the owner, which is exactly where two copies drift apart.

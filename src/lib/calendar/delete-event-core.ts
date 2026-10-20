@@ -1,4 +1,5 @@
 import "server-only";
+import { isOccasion } from "@/lib/calendar/occasions";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { addDays, toDateColumn } from "@/lib/dates";
@@ -38,9 +39,9 @@ export async function deleteEventCore(
     return { error: "You can only remove your own events." };
   }
 
-  if (event.rrule || event.kind === "BIRTHDAY") {
+  if (event.rrule || isOccasion(event.kind)) {
     if (!opts.isAdmin) {
-      return { error: "Only a parent can delete a repeating event or a birthday." };
+      return { error: "Only a parent can delete a repeating event, a birthday or an anniversary." };
     }
   }
 

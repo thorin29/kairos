@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10 — Anniversary event type; occasion names not suggested (v0.591.0 / app 0.403.0)
+
+`EventKind.ANNIVERSARY` (migration 126, `ADD VALUE IF NOT EXISTS`, run twice
+on Postgres 16) behaves exactly like BIRTHDAY: choosing it forces all-day +
+yearly on both forms, it takes its own kind color under Custom colors and is
+colored uniformly (not greyed as someone else's), only a parent can make or
+delete one. `occasions.ts` holds the list (`isOccasion`) so the places that
+treat birthdays specially now take both.
+
+Event names: a title with "birthday", "b-day" or "anniversary" in it names one
+person or couple, so `rememberEventName` no longer stores it and the picker
+(web + `/api/v1/event-names`) leaves existing ones out. They stay in the admin
+event-name list and the database. Profile birthdays are unchanged.
+
 ## 2026-10 — All-day events read in UTC; one end date for a repeating event (v0.590.0 / app 0.402.0)
 
 Reported: a yearly birthday set to 11/3 showed across 11/2–11/3, and a

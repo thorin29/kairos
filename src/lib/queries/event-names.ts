@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isOccasionName } from "@/lib/calendar/occasions";
 
 export type EventNameRow = { id: string; name: string };
 
@@ -17,5 +18,11 @@ export async function loadEventNamePicker(): Promise<{ names: string[] }> {
     orderBy: [{ name: "asc" }],
     select: { name: true },
   });
-  return { names: rows.map((r) => r.name) };
+  // Birthday and anniversary titles name one person or couple; they stay in
+  // the admin list (and in the database) but aren't offered as suggestions.
+  return {
+    names: (rows as { name: string }[])
+      .map((r) => r.name)
+      .filter((n) => !isOccasionName(n)),
+  };
 }

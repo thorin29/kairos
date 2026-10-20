@@ -23,7 +23,7 @@ export type ColorPrefs = {
 };
 
 const GREY = "#9ca3af";
-const KIND_KEYS = new Set(["APPOINTMENT", "CLASS", "WORK", "BIRTHDAY"]);
+const KIND_KEYS = new Set(["APPOINTMENT", "CLASS", "WORK", "BIRTHDAY", "ANNIVERSARY"]);
 
 function paint(e: GridEvent, color: string): GridEvent {
   // A chosen color is solid: drop the participant blend so it renders flat.
@@ -43,8 +43,9 @@ export function recolorForPersonal(
   if (e.kind === "HOLIDAY") {
     return p.holidayColor ? paint(e, p.holidayColor) : e;
   }
-  if (e.kind === "BIRTHDAY") {
-    return p.kindColors.BIRTHDAY ? paint(e, p.kindColors.BIRTHDAY) : e;
+  if (e.kind === "BIRTHDAY" || e.kind === "ANNIVERSARY") {
+    const c = p.kindColors[e.kind];
+    return c ? paint(e, c) : e;
   }
 
   // Subscribed feeds: my per-feed color only if I'm actually on the event

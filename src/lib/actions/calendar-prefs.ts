@@ -22,7 +22,7 @@ import {
 } from "@/lib/calendar/prefs";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
-const KINDS = new Set(["APPOINTMENT", "CLASS", "WORK", "BIRTHDAY"]);
+const KINDS = new Set(["APPOINTMENT", "CLASS", "WORK", "BIRTHDAY", "ANNIVERSARY"]);
 /** A valid hex color, or null to clear back to the system default. */
 function color(v: unknown): string | null | undefined {
   if (v === null) return null;

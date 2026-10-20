@@ -138,6 +138,7 @@ const KINDS = [
   "WORK",
   "APPOINTMENT",
   "BIRTHDAY",
+  "ANNIVERSARY",
   "OTHER",
 ] as const;
 
