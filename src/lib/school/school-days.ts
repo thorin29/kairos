@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { schoolClosedHolidayEntries } from "@/lib/holidays";
-import { localParts } from "@/lib/dates";
+import { eventParts } from "@/lib/dates";
 
 function dISO(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -45,11 +45,12 @@ export async function noSchoolDaysFor(
       select: { eventId: true },
     }),
   ]);
-  const keepIds = new Set(keep.map((k) => k.eventId));
-  for (const e of pauses) {
+  const keepIds = new Set((keep as { eventId: string }[]).map((k) => k.eventId));
+  for (const e of pauses as { id: string; startsAt: Date; endsAt: Date }[]) {
     if (keepIds.has(e.id)) continue;
-    let d = localParts(e.startsAt).iso;
-    const end = localParts(new Date(e.endsAt.getTime() - 1)).iso;
+    // PAUSE events are all-day: read in UTC, like the calendar (eventParts).
+    let d = eventParts(e.startsAt, true).iso;
+    const end = eventParts(new Date(e.endsAt.getTime() - 1), true).iso;
     while (d <= end) {
       skip.add(d);
       d = addDay(d);

@@ -157,7 +157,9 @@ export function occurrencesIn(
   const rule = parseRule(rrule);
   if (!rule) return [];
 
-  const base = localParts(baseStart);
+  // The start's own wall clock in `tz` — for an all-day event that is UTC
+  // (see eventTz), so its day is not read as the evening before.
+  const base = localParts(baseStart, tz);
   const hour = Math.floor(base.minutes / 60);
   const minute = base.minutes % 60;
 

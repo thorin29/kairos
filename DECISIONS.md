@@ -1,5 +1,45 @@
 # Decisions
 
+## 2026-10 — All-day events read in UTC; one end date for a repeating event (v0.590.0 / app 0.402.0)
+
+Reported: a yearly birthday set to 11/3 showed across 11/2–11/3, and a
+repeating event shows two "Ends" (beside Starts, and under Repeats).
+
+**The extra day.** All-day events are stored at UTC midnight (`toDateColumn`)
+— personal events, feeds, pauses alike — but were READ with `localParts` in
+the household zone. West of UTC that puts the start at 6–7 PM the evening
+before, so every one-day all-day event covered two days (reproduced with
+HOUSEHOLD_TZ=America/Chicago: 2026-10-21 read as 10-20 → 10-21; with UTC it
+reads correctly, which is why it hid in tests). `eventTz(allDay)` /
+`eventParts` now read all-day instants in UTC; `occurrencesIn` takes its base
+wall clock in the zone it's given (it used the household zone regardless), and
+the calendar passes UTC for all-day series. Also switched: school days and the
+school year (PAUSE events), event search, and the series-edit anchors on both
+save paths. Storage is unchanged, so no migration. Not changed: reminder times
+on all-day events (still minutes before UTC midnight). Known edge: a
+single-occurrence edit made earlier on an all-day series recorded the day it
+was then shown on (one early), so that one occurrence may show twice until
+edited again.
+
+**Two ends.** For a repeating series, the end beside Starts is how long each
+occurrence lasts, not when the series stops; setting it to the stop date made
+a yearly event one occurrence years long, overlapping all the others.
+`fitRepeatingSpan` (all save paths, web and phone, create and series/future
+edits): all-day → one day each time; timed → at most 24 hours (overnight is
+fine), longer is refused with a pointer to Ends under Repeats. The forms
+follow: while Repeats is set, the web hides the end date (all-day) or keeps
+only the end time with "next day" when it runs past midnight; the app does the
+same for new events. A single-occurrence edit is a one-off and keeps its own
+end. Checked the neighbours: "repeat ends before it starts" was already
+refused on the web; count/until are one-or-the-other; the phone can't set a
+series end at all (Repeats only), so the clamp is its only guard. Events saved
+before this keep their long span until their series is next edited.
+
+**Birthday years.** A profile birthday's year isn't used anywhere — the
+calendar shows month/day each year. Kept (it's the real date, and an age could
+use it later). Feb 29 birthdays now fall on Feb 28 in other years; they
+showed on no day at all before.
+
 ## 2026-10 — Typed birthdays; month and year quick picks in DateField (v0.589.0 / app 0.400.0)
 
 Birth years were hard to get right: the profile's date picker could only page

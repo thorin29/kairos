@@ -8,7 +8,7 @@ import {
   schoolClosedHolidayEntries,
   getSchoolClosedHolidayKeys,
 } from "@/lib/holidays";
-import { localParts } from "@/lib/dates";
+import { eventParts } from "@/lib/dates";
 
 function addDayISO(iso: string): string {
   const x = new Date(`${iso}T00:00:00Z`);
@@ -182,17 +182,19 @@ export async function loadYearCalendar(): Promise<YearCalendar> {
     }),
   ]);
 
-  const plannedBreaks = breaks
+  type BreakRow = { name: string; startDate: Date; endDate: Date };
+  type PauseRow = { title: string | null; startsAt: Date; endsAt: Date };
+  const plannedBreaks = (breaks as BreakRow[])
     .map((b) => ({ name: b.name, start: dISO(b.startDate), end: dISO(b.endDate) }))
     .filter((b) => b.end >= start && b.start <= end);
 
   // All-day PAUSE events store an exclusive end; the last covered day is the
-  // household-local day of (end − 1ms). Match how the family calendar renders.
-  const vacations = pauses
+  // day of (end − 1ms), read in UTC like every all-day event (eventParts).
+  const vacations = (pauses as PauseRow[])
     .map((p) => ({
       name: p.title || "Vacation",
-      start: localParts(p.startsAt).iso,
-      end: localParts(new Date(p.endsAt.getTime() - 1)).iso,
+      start: eventParts(p.startsAt, true).iso,
+      end: eventParts(new Date(p.endsAt.getTime() - 1), true).iso,
     }))
     .filter((b) => b.end >= b.start && b.end >= start && b.start <= end);
 
@@ -373,9 +375,9 @@ export async function loadBreakReminders(
     where: { kind: "PAUSE" },
     select: { startsAt: true, endsAt: true },
   });
-  const pauseRanges = pauses.map((p) => ({
-    start: localParts(p.startsAt).iso,
-    end: localParts(new Date(p.endsAt.getTime() - 1)).iso,
+  const pauseRanges = (pauses as { startsAt: Date; endsAt: Date }[]).map((p) => ({
+    start: eventParts(p.startsAt, true).iso,
+    end: eventParts(new Date(p.endsAt.getTime() - 1), true).iso,
   }));
   const covered = (b: { start: string; end: string }) =>
     pauseRanges.some((pr) => pr.start <= b.start && pr.end >= b.end);
@@ -398,14 +400,14 @@ export async function loadVacationPrompts(today: string): Promise<VacationPrompt
     prisma.event.findMany({ where: { kind: "PAUSE" }, select: { id: true, title: true, startsAt: true, endsAt: true } }),
     prisma.schoolVacationDecision.findMany({ select: { eventId: true } }),
   ]);
-  const decidedIds = new Set(decided.map((d) => d.eventId));
+  const decidedIds = new Set((decided as { eventId: string }[]).map((d) => d.eventId));
 
-  return pauses
+  return (pauses as { id: string; title: string | null; startsAt: Date; endsAt: Date }[])
     .map((p) => ({
       eventId: p.id,
       title: p.title || "Vacation",
-      start: localParts(p.startsAt).iso,
-      end: localParts(new Date(p.endsAt.getTime() - 1)).iso,
+      start: eventParts(p.startsAt, true).iso,
+      end: eventParts(new Date(p.endsAt.getTime() - 1), true).iso,
     }))
     .filter(
       (p) =>

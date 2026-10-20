@@ -160,14 +160,15 @@ export function zonedToUtc(
   return new Date(guess - second);
 }
 
-/** Where an instant falls on the household's calendar grid. */
-export function localParts(at: Date): {
+/** Where an instant falls on the household's calendar grid (or, given `tz`,
+ *  on that zone's). */
+export function localParts(at: Date, tz: string = HOUSEHOLD_TZ): {
   iso: string;
   minutes: number;
   label: string;
 } {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: HOUSEHOLD_TZ,
+    timeZone: tz,
     hour12: false,
     year: "numeric",
     month: "2-digit",
@@ -186,11 +187,26 @@ export function localParts(at: Date): {
     iso: `${get("year")}-${get("month")}-${get("day")}`,
     minutes: hour * 60 + minute,
     label: new Intl.DateTimeFormat("en-US", {
-      timeZone: HOUSEHOLD_TZ,
+      timeZone: tz,
       hour: "numeric",
       minute: "2-digit",
     }).format(at),
   };
+}
+
+/**
+ * The timezone an event's instants are read in. All-day events are stored at
+ * UTC midnight (toDateColumn), so their days are read in UTC; timed events in
+ * the household zone. Reading an all-day event in a zone west of UTC put its
+ * start at 6 or 7 PM the evening before, so a one-day event covered two days.
+ */
+export function eventTz(allDay: boolean): string {
+  return allDay ? "UTC" : HOUSEHOLD_TZ;
+}
+
+/** Where an event instant falls on the calendar: localParts in eventTz. */
+export function eventParts(at: Date, allDay: boolean) {
+  return localParts(at, eventTz(allDay));
 }
 
 export function startOfMonth(iso: string): string {

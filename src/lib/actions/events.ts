@@ -1,5 +1,6 @@
 "use server";
 
+import { fitRepeatingSpan } from "@/lib/calendar/repeat-span";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { rememberEventName } from "@/lib/event-names-core";
@@ -9,6 +10,8 @@ import { prisma } from "@/lib/prisma";
 import {
   householdTz,
   localParts,
+  eventParts,
+  eventTz,
   toDateColumn,
   zonedToUtc,
   addDays,
@@ -261,6 +264,11 @@ export async function addEvent(
       count > 0 ? count : null,
       byday.length > 0 ? byday : null,
     );
+    // Each occurrence is one day (all-day) or at most 24 hours; the series
+    // end lives under Repeats.
+    const fit = fitRepeatingSpan(startsAt, endsAt, allDay);
+    if ("error" in fit) return { error: fit.error, saved: false };
+    endsAt = fit.endsAt;
   }
 
   const created = await prisma.event.create({
@@ -404,7 +412,7 @@ export async function updateEvent(
   // many days the user moved the start off the occurrence they opened. Single and
   // one-off edits use the form's date.
   let seriesPieces: { id: string; startsAt: Date; rrule: string | null }[] = [];
-  const openedISO = localParts(target.startsAt).iso;
+  const openedISO = eventParts(target.startsAt, target.allDay).iso;
   let seriesStartISO = openedISO;
   if (seriesEdit) {
     const gid = target.seriesId ?? target.id;
@@ -413,7 +421,7 @@ export async function updateEvent(
       select: { id: true, startsAt: true, rrule: true },
     });
     for (const p of seriesPieces) {
-      const pIso = localParts(p.startsAt).iso;
+      const pIso = eventParts(p.startsAt, target.allDay).iso;
       if (pIso < seriesStartISO) seriesStartISO = pIso;
     }
   }
@@ -518,6 +526,11 @@ export async function updateEvent(
     } else {
       newRrule = null;
     }
+    if (newRrule) {
+      const fit = fitRepeatingSpan(fields.startsAt, fields.endsAt, allDay);
+      if ("error" in fit) return { error: fit.error, saved: false };
+      fields.endsAt = fit.endsAt;
+    }
   }
 
   let targetEventId = id;
@@ -566,7 +579,7 @@ export async function updateEvent(
     });
     let pastCount = 0;
     for (const p of pieces) {
-      const pStart = localParts(p.startsAt).iso;
+      const pStart = eventParts(p.startsAt, target.allDay).iso;
       if (pStart >= occurrenceISO) {
         await prisma.event.deleteMany({ where: { recurrenceId: p.id } });
         await prisma.event.delete({ where: { id: p.id } });
@@ -583,7 +596,7 @@ export async function updateEvent(
           });
         }
         if (cappedRule) {
-          pastCount += occurrencesIn(p.startsAt, cappedRule, pStart, untilISO, tz).length;
+          pastCount += occurrencesIn(p.startsAt, cappedRule, pStart, untilISO, target.allDay ? eventTz(true) : tz).length;
         }
         await prisma.event.deleteMany({
           where: { recurrenceId: p.id, recurrenceDate: { gte: Dcol } },
@@ -729,8 +742,8 @@ export async function eventCopyData(id: string): Promise<EventCopyData | null> {
   });
   if (!e) return null;
 
-  const s = localParts(e.startsAt);
-  const en = localParts(e.endsAt);
+  const s = eventParts(e.startsAt, e.allDay);
+  const en = eventParts(e.endsAt, e.allDay);
 
   // A series split by "this and future" edits lives as several pieces; an older
   // piece's rule is capped to end before the split. When editing, show the

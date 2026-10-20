@@ -2,7 +2,7 @@
 
 import { requireInteractive } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
-import { localParts } from "@/lib/dates";
+import { eventParts } from "@/lib/dates";
 
 export type EventSearchResult = {
   id: string;
@@ -28,6 +28,16 @@ export async function searchEvents(
   const q = query.trim();
   if (q.length < 2) return { results: [] };
 
+  type SearchRow = {
+    id: string;
+    title: string;
+    startsAt: Date;
+    endsAt: Date;
+    allDay: boolean;
+    rrule: string | null;
+    isFamily: boolean;
+    user: { name: string } | null;
+  };
   const rows = await prisma.event.findMany({
     where: {
       title: { contains: q, mode: "insensitive" },
@@ -49,9 +59,9 @@ export async function searchEvents(
   });
 
   return {
-    results: rows.map((e) => {
-      const s = localParts(e.startsAt);
-      const en = localParts(e.endsAt);
+    results: (rows as SearchRow[]).map((e) => {
+      const s = eventParts(e.startsAt, e.allDay);
+      const en = eventParts(e.endsAt, e.allDay);
       return {
         id: e.id,
         title: e.title,

@@ -1,7 +1,7 @@
 import "server-only";
 import { normalizeAddress } from "@/lib/addresses";
 import { prisma } from "@/lib/prisma";
-import { fromDateColumn, localParts, toDateColumn, weekDays } from "@/lib/dates";
+import { eventParts, eventTz, fromDateColumn, localParts, toDateColumn, weekDays } from "@/lib/dates";
 import { getFamilyColor } from "@/lib/settings";
 import { householdTz } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
@@ -174,7 +174,11 @@ async function birthdayEvents(
     const years = new Set(days.map((d) => d.slice(0, 4)));
 
     for (const year of years) {
-      const iso = `${year}-${month}-${day}`;
+      // Born on Feb 29: Feb 28 in years without one, rather than no birthday.
+      const y = Number(year);
+      const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+      const iso =
+        month === "02" && day === "29" && !leap ? `${year}-02-28` : `${year}-${month}-${day}`;
       if (!inRange.has(iso)) continue;
 
       const who = p.displayName ?? p.name;
@@ -448,7 +452,7 @@ export async function loadRange(
             e.rrule,
             days[0],
             days[days.length - 1],
-            tz,
+            eventTz(e.allDay),
           )
         : [e.startsAt];
 
@@ -458,7 +462,7 @@ export async function loadRange(
 
     for (const occurrenceStart of starts) {
       // Occurrence replaced by a single-occurrence edit — the child renders it.
-      if (skip && skip.has(localParts(occurrenceStart).iso)) continue;
+      if (skip && skip.has(eventParts(occurrenceStart, e.allDay).iso)) continue;
       addOccurrence(e, occurrenceStart, durationMs);
     }
   }
@@ -468,8 +472,10 @@ export async function loadRange(
     startsAt: Date,
     durationMs: number,
   ) {
-    const start = localParts(startsAt);
-    const end = localParts(new Date(startsAt.getTime() + durationMs));
+    // All-day events are read in UTC (eventTz), timed ones in the household
+    // zone; reading all-day ones locally made each start the evening before.
+    const start = eventParts(startsAt, e.allDay);
+    const end = eventParts(new Date(startsAt.getTime() + durationMs), e.allDay);
 
     // A custom event type sets its own color (a "Hockey game" is that color
     // for everyone); otherwise it's the owner's color, or the family color
@@ -622,8 +628,9 @@ export async function loadRange(
       // its exclusive end (a one-day event stays on its single day). Each day
       // gets its own entry so a multi-day event (a vacation) shows and shades
       // across its whole span.
-      const lastISO = localParts(
+      const lastISO = eventParts(
         new Date(startsAt.getTime() + durationMs - 1),
+        true,
       ).iso;
       for (const d of days) {
         if (d < start.iso || d > lastISO) continue;

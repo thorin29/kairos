@@ -617,6 +617,27 @@ function EventModal({
       ?.sportWorkout ?? false;
   const effectiveRepeat = repeat === "CUSTOM" ? customFreq : repeat;
 
+  // A repeating event has two ends: when each occurrence finishes (beside
+  // Starts) and when the series stops (under Repeats). Setting the first to
+  // the day the series should stop made every occurrence years long. So while
+  // it repeats, the series end is the only end DATE: an all-day occurrence is
+  // its one day, a timed one ends the same day — or the next, when it runs
+  // past midnight. The server holds the same rule (fitRepeatingSpan). A
+  // single-occurrence edit is a one-off and keeps its own end.
+  const repeatingSeries =
+    repeat !== "NONE" &&
+    (!editing || (editing.recurring && (scope === "series" || scope === "future")));
+  useEffect(() => {
+    if (!repeatingSeries) return;
+    const next = allDay
+      ? startDate
+      : hhmmToMin(endTime) > hhmmToMin(startTime)
+        ? startDate
+        : addDays(startDate, 1);
+    if (next !== endDate) setEndDate(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repeatingSeries, allDay, startDate, startTime, endTime]);
+
   const [state, formAction, pending] = useActionState(
     editing ? updateEvent : addEvent,
     initial,
@@ -873,17 +894,22 @@ function EventModal({
                     className={`tabular ${field}`}
                   />
                 </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium">Ends</label>
-                  <DateField
-                    name="endDate"
-                    ariaLabel="End date"
-                    min={startDate}
-                    value={endDate}
-                    onChange={setEndDate}
-                    className={`tabular ${field}`}
-                  />
-                </div>
+                {repeatingSeries ? (
+                  // One day each time; the series end is under Repeats.
+                  <input type="hidden" name="endDate" value={endDate} />
+                ) : (
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium">Ends</label>
+                    <DateField
+                      name="endDate"
+                      ariaLabel="End date"
+                      min={startDate}
+                      value={endDate}
+                      onChange={setEndDate}
+                      className={`tabular ${field}`}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 sm:col-span-2">
@@ -909,16 +935,22 @@ function EventModal({
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium">Ends</label>
-                  <div className="flex gap-2">
-                    <DateField
-                      ariaLabel="End date"
-                      name="endDate"
-                      min={startDate}
-                      value={endDate}
-                      onChange={setEndDate}
-                      wrapperClassName="min-w-0 flex-[3]"
-                      className={`tabular ${field}`}
-                    />
+                  <div className="flex items-center gap-2">
+                    {repeatingSeries ? (
+                      // Time only: each occurrence ends the same day, or the
+                      // next when it runs past midnight.
+                      <input type="hidden" name="endDate" value={endDate} />
+                    ) : (
+                      <DateField
+                        ariaLabel="End date"
+                        name="endDate"
+                        min={startDate}
+                        value={endDate}
+                        onChange={setEndDate}
+                        wrapperClassName="min-w-0 flex-[3]"
+                        className={`tabular ${field}`}
+                      />
+                    )}
                     <TimeSelect
                       name="end"
                       ariaLabel="End time"
@@ -926,6 +958,9 @@ function EventModal({
                       onChange={setEndTime}
                       className="min-w-0 flex-[2]"
                     />
+                    {repeatingSeries && endDate > startDate && (
+                      <span className="shrink-0 text-xs text-muted">next day</span>
+                    )}
                   </div>
                 </div>
               </div>

@@ -3,7 +3,8 @@ import { revalidatePath } from "next/cache";
 import { rememberEventName } from "@/lib/event-names-core";
 import { EventKind } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { householdTz, localParts, toDateColumn, zonedToUtc, addDays, daysBetween } from "@/lib/dates";
+import { fitRepeatingSpan } from "@/lib/calendar/repeat-span";
+import { householdTz, localParts, eventParts, eventTz, toDateColumn, zonedToUtc, addDays, daysBetween } from "@/lib/dates";
 import { buildRule, parseRule, alignWeeklyByday, occurrencesIn } from "@/lib/calendar/recur";
 import { cleanNotes } from "@/lib/calendar/event-notes";
 
@@ -164,6 +165,12 @@ export async function createPersonalEvent(
 
   const rrule =
     input.repeat && isFreq(input.repeat) ? buildRule(input.repeat, 1, null) : null;
+  if (rrule) {
+    // Each occurrence is one day (all-day) or at most 24 hours.
+    const fit = fitRepeatingSpan(t.startsAt, t.endsAt, input.allDay);
+    if ("error" in fit) return { error: fit.error };
+    t.endsAt = fit.endsAt;
+  }
 
   // Idempotency: a retried offline create whose response was lost returns the
   // already-created event instead of duplicating it.
@@ -312,7 +319,7 @@ export async function updatePersonalEvent(
   // many days the user moved the start; single / non-recurring edits use the
   // form's date.
   let seriesPieces: { id: string; startsAt: Date; rrule: string | null }[] = [];
-  const openedISO = localParts(ev.startsAt).iso;
+  const openedISO = eventParts(ev.startsAt, ev.allDay).iso;
   let seriesStartISO = openedISO;
   if (seriesEdit) {
     const gid = ev.seriesId ?? ev.id;
@@ -321,7 +328,7 @@ export async function updatePersonalEvent(
       select: { id: true, startsAt: true, rrule: true },
     });
     for (const p of seriesPieces) {
-      const pIso = localParts(p.startsAt).iso;
+      const pIso = eventParts(p.startsAt, ev.allDay).iso;
       if (pIso < seriesStartISO) seriesStartISO = pIso;
     }
   }
@@ -372,6 +379,14 @@ export async function updatePersonalEvent(
       ? { reminderUserIds: normalizeUserIds(input.reminderUserIds) }
       : {}),
   };
+  // A series stays a series: each occurrence one day (all-day) or at most 24
+  // hours. A single-occurrence override is a one-off and may run longer.
+  if (recurring && !singleEdit) {
+    const fit = fitRepeatingSpan(fields.startsAt, fields.endsAt, input.allDay);
+    if ("error" in fit) return { error: fit.error };
+    fields.endsAt = fit.endsAt;
+  }
+
   // Owner/kind/type apply to a normal or series edit (not a single-occurrence
   // override, which stays tied to its parent's identity).
   const ownerFields = singleEdit
@@ -434,7 +449,7 @@ export async function updatePersonalEvent(
     });
     let pastCount = 0;
     for (const p of pieces) {
-      const pStart = localParts(p.startsAt).iso;
+      const pStart = eventParts(p.startsAt, ev.allDay).iso;
       if (pStart >= occ) {
         await prisma.event.deleteMany({ where: { recurrenceId: p.id } });
         await prisma.event.delete({ where: { id: p.id } });
@@ -450,7 +465,7 @@ export async function updatePersonalEvent(
           });
         }
         if (cappedRule) {
-          pastCount += occurrencesIn(p.startsAt, cappedRule, pStart, untilISO, tz).length;
+          pastCount += occurrencesIn(p.startsAt, cappedRule, pStart, untilISO, ev.allDay ? eventTz(true) : tz).length;
         }
         await prisma.event.deleteMany({
           where: { recurrenceId: p.id, recurrenceDate: { gte: Dcol } },
@@ -484,7 +499,7 @@ export async function updatePersonalEvent(
     // (latest) piece's rule so the real end date is kept, not a capped one.
     const gid = ev.seriesId ?? ev.id;
     const latest = seriesPieces.reduce(
-      (a, b) => (localParts(b.startsAt).iso > localParts(a.startsAt).iso ? b : a),
+      (a, b) => (eventParts(b.startsAt, ev.allDay).iso > eventParts(a.startsAt, ev.allDay).iso ? b : a),
       seriesPieces[0] ?? { id: ev.id, startsAt: ev.startsAt, rrule: ev.rrule },
     );
     const lr = parseRule(latest.rrule);
