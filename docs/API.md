@@ -680,6 +680,22 @@ returns what the database already holds, so a fresh feed shows up on the next lo
 rather than blocking this one. Colours arrive resolved — the client should not
 re-derive them.
 
+### Home-screen widget (Android) — **built (v0.588)**
+```
+GET /api/v1/widget?scope=family|mine          // anything but "mine" = family
+200: { "today":"YYYY-MM-DD", "scope":"family"|"mine",
+       "overdueTasks":int,                    // the person's open tasks from before today
+       "days":[ { "date", "tasks":[ { "id","title" } ],
+                  "events":[ CalEvent ] } ] } // only days with something on them
+```
+The next 7 days, today included. Events are the Calendar's own `CalEvent`
+shape, filtered and colored by the person's calendar prefs
+(`personalEventRules`, shared with `GET /calendar`); "family" includes every
+active person's events, which then take the person's "others" color. Tasks are
+only ever the person's own open general tasks (category OTHER), so the widget
+can complete them with `POST /tasks/{id}/complete`.
+src/lib/queries/widget.ts.
+
 ### Bible reading — **built (v0.204)**
 One aggregate read paints the whole Bible screen (mirrors src/app/bible/page.tsx
 on a personal device): the family reading deck + coverage, and this person's own
@@ -983,7 +999,7 @@ on this shape.
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**136 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**137 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -999,6 +1015,7 @@ silently invisible:
 - **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options`, `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server)
+- **widget** (the Android home-screen widget's feed)
 
 ## Deep links (notification -> screen)
 

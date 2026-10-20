@@ -204,6 +204,73 @@ function toWire(e: GridEvent): CalEvent {
   };
 }
 
+/**
+ * Which events a person's own calendar shows, and in which colors: family
+ * events only if they show family, a subscribed feed only if it's switched on,
+ * and every color through their saved choices (others greyed, kind colors…).
+ * Shared by the Calendar screen and the home-screen widget, so the two can't
+ * disagree about what an event looks like.
+ */
+export function personalEventRules(
+  userId: string,
+  prefs: Awaited<ReturnType<typeof loadCalendarPrefs>>,
+  shownSubs: Set<string>,
+): { keep: (e: GridEvent) => boolean; recolor: (e: GridEvent) => GridEvent } {
+  const colorPrefs = {
+    personalizeColors: prefs.personalizeColors,
+    othersMode: prefs.othersMode,
+    othersColor: prefs.othersColor,
+    holidayColor: prefs.holidayColor,
+    familyColor: prefs.familyColor,
+    kindColors: prefs.kindColors,
+    eventTypeColors: prefs.eventTypeColors,
+    subColors: prefs.subColors,
+  };
+  return {
+    keep: (e: GridEvent) =>
+      (!e.isFamily || prefs.showFamily) &&
+      (!e.external ||
+        (e.externalCalendarId ? shownSubs.has(e.externalCalendarId) : true)),
+    recolor: (e: GridEvent) => recolorForPersonal(e, colorPrefs, userId),
+  };
+}
+
+/**
+ * A person's events for a run of days, filtered and colored exactly as their
+ * Calendar shows them. `people` overrides whose events are included (the
+ * widget's "whole family"); null uses the people they show on their calendar.
+ * Sorted per day: all-day first, then by start.
+ */
+export async function loadPersonalEvents(
+  userId: string,
+  days: string[],
+  people: string[] | null,
+): Promise<CalEvent[]> {
+  const prefs = await loadCalendarPrefs(userId);
+  const subs = (await prisma.externalCalendar.findMany({
+    where: { isActive: true },
+    select: { id: true },
+  })) as { id: string }[];
+  const shownSubs = new Set(prefs.shownSubs ?? subs.map((s) => s.id));
+  const { keep, recolor } = personalEventRules(userId, prefs, shownSubs);
+  const range = await loadRange(
+    days,
+    people ?? prefs.shownPeople ?? [userId],
+    prefs.showSchoolWork,
+  );
+  refreshCalendarsInBackground();
+  return [...range.allDay, ...range.timed]
+    .filter(keep)
+    .map(recolor)
+    .map(toWire)
+    .sort(
+      (a, b) =>
+        a.dayISO.localeCompare(b.dayISO) ||
+        Number(b.allDay) - Number(a.allDay) ||
+        a.startMin - b.startMin,
+    );
+}
+
 export async function loadCalendarPagePayload(
   userId: string,
   todayISO: string,
@@ -255,8 +322,8 @@ export async function loadCalendarPagePayload(
   // Opt-out default: with no saved preference, every active feed is visible
   // (not just your own), so new household calendars show for everyone until
   // they choose to hide one. School work stays governed by showSchoolWork.
-  const shownSubs = prefs.shownSubs ?? subs.map((s) => s.id);
-  const subsSet = new Set(shownSubs);
+  const shownSubs = prefs.shownSubs ?? subs.map((s: { id: string }) => s.id);
+  const subsSet = new Set<string>(shownSubs as string[]);
 
   const days =
     view === "month"
@@ -278,21 +345,7 @@ export async function loadCalendarPagePayload(
 
   refreshCalendarsInBackground();
 
-  const colorPrefs = {
-    personalizeColors: prefs.personalizeColors,
-    othersMode: prefs.othersMode,
-    othersColor: prefs.othersColor,
-    holidayColor: prefs.holidayColor,
-    familyColor: prefs.familyColor,
-    kindColors: prefs.kindColors,
-    eventTypeColors: prefs.eventTypeColors,
-    subColors: prefs.subColors,
-  };
-  const keep = (e: GridEvent) =>
-    (!e.isFamily || prefs.showFamily) &&
-    (!e.external ||
-      (e.externalCalendarId ? subsSet.has(e.externalCalendarId) : true));
-  const recolor = (e: GridEvent) => recolorForPersonal(e, colorPrefs, userId);
+  const { keep, recolor } = personalEventRules(userId, prefs, subsSet);
 
   const rawRange = await loadRange(days, shownPeople, prefs.showSchoolWork);
   const timed = rawRange.timed.filter(keep).map(recolor);

@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10 — Android home-screen widget feed (v0.588.0 / app 0.398.0)
+
+`GET /api/v1/widget?scope=family|mine` (`loadWidgetPayload`): the next 7 days
+that have something on them — events plus the person's own open tasks
+(category OTHER) — and a count of their overdue tasks. Events go through the
+same filter and recolor as the person's Calendar: the inline `keep`/`recolor`
+in `loadCalendarPagePayload` became `personalEventRules`, and
+`loadPersonalEvents(userId, days, people)` uses it, so the widget can't color an
+event differently from the app. "family" passes every active person as the
+people to load; other people's events then take the person's "others" color.
+Tasks are only ever the person's own: the widget can tick them off. Tasks always
+have a due date, so the widget's top line counts overdue tasks rather than
+"no due date" ones (decided with the owner).
+
 ## 2026-10 — Reps on a one-off weights log (v0.587.0 / app 0.397.0)
 
 "Log an additional workout" (also the only way to log for someone with no
