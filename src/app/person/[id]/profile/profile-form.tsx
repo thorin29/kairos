@@ -91,14 +91,20 @@ export function ProfileForm({
         >
           Birthday
         </label>
+        {/* Typed or picked. Typing is the quick way to a birth year decades
+            back; the calendar's month and year open quick pickers too. */}
         <DateField
           name="birthday"
+          typeable
           defaultValue={person.birthdayISO ?? ""}
+          min="1900-01-01"
+          max={todayLocalISO()}
           ariaLabel="Birthday"
-          className="tabular mt-2 h-11 w-full rounded-full border border-hairline px-5 outline-none focus:border-accent"
+          className="tabular mt-2 h-11 w-full rounded-full border border-hairline px-5 focus-within:border-accent"
         />
         <p className="mt-2 text-xs text-muted">
-          Optional. Shown as an all-day event on the calendar each year.
+          Optional. Type it as mm/dd/yyyy or pick it. Shown as an all-day event on
+          the calendar each year.
         </p>
 
         <label className="mt-4 flex items-center gap-2.5 text-sm">
@@ -285,4 +291,11 @@ export function ProfileForm({
       )}
     </form>
   );
+}
+
+/** Today on this computer, as YYYY-MM-DD: a birthday can't be later. */
+function todayLocalISO(): string {
+  const n = new Date();
+  const p = (x: number) => String(x).padStart(2, "0");
+  return `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`;
 }

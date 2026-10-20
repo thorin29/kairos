@@ -680,6 +680,15 @@ returns what the database already holds, so a fresh feed shows up on the next lo
 rather than blocking this one. Colours arrive resolved — the client should not
 re-derive them.
 
+### Birthday — **built (v0.589)**
+```
+GET  /api/v1/me/birthday          200: { "birthday":"YYYY-MM-DD"|null }
+POST /api/v1/me/birthday          { "birthday":"YYYY-MM-DD"|null|"" }  // null/"" clears
+200: { "birthday" }   400 validation: not a real date, before 1900, or in the future
+```
+The same `User.birthday` the web profile edits (shown on the calendar yearly);
+one rule for both, `checkBirthday` in src/lib/birthday.ts.
+
 ### Home-screen widget (Android) — **built (v0.588)**
 ```
 GET /api/v1/widget?scope=family|mine          // anything but "mine" = family
@@ -1001,13 +1010,13 @@ on this shape.
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**137 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**138 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
 silently invisible:
 
-- **auth/** `login`, `join`, `join/check`, `forgot`, `recover`, `reauth`, `refresh`, `revoke` · **meta**, **me**, `me/avatar`, `me/avatar/companion`, `me/color`, **devices**, `devices/[id]/revoke`, `avatars/[file]`
+- **auth/** `login`, `join`, `join/check`, `forgot`, `recover`, `reauth`, `refresh`, `revoke` · **meta**, **me**, `me/avatar`, `me/avatar/companion`, `me/color`, `me/birthday`, **devices**, `devices/[id]/revoke`, `avatars/[file]`
 - **dashboard**, **tasks** (`add`, `[id]/complete`, `[id]/uncomplete`, `[id]/update`, `[id]/edit-data`, `[id]/delete`), **chores** (`always-open`, `claim`, `claim-complete`, `release`)
 - **calendar** (`event`, `event/update`, `event/delete`, `prefs`, `subscribed-reminders`), **event-names**, **event-bg**, **addresses**, **sport/confirm**, **sport/decline**, **notifications/meta**, **notifications/upcoming**
 - **school** (`add`, `add-to-today`, `approvals`, `rename`, `delete`), **classes**, **classes/form**

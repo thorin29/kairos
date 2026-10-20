@@ -6,7 +6,8 @@ import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { AVATAR_ICONS, ICON_PREFIX, isUploaded } from "@/lib/avatars";
-import { toDateColumn } from "@/lib/dates";
+import { toDateColumn, todayISO } from "@/lib/dates";
+import { checkBirthday } from "@/lib/birthday";
 import { requireAdminOrSelf } from "@/lib/gate";
 import { isAdmin } from "@/lib/session";
 
@@ -71,7 +72,7 @@ export async function updateProfile(
   const displayNameInput = String(formData.get("displayName") ?? "").trim().slice(0, 40);
   const color = String(formData.get("color") ?? "").trim();
   const icon = String(formData.get("icon") ?? "").trim();
-  const birthday = String(formData.get("birthday") ?? "").trim();
+  const birthdayRaw = String(formData.get("birthday") ?? "").trim();
   const shadeBirthday = formData.get("shadeBirthday") === "on";
   const removePhoto = formData.get("removePhoto") === "1";
   const photo = formData.get("photo");
@@ -83,9 +84,10 @@ export async function updateProfile(
     return { error: "Pick a color.", saved: false };
   }
 
-  if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
-    return { error: "That birthday isn't a valid date.", saved: false };
-  }
+  // Same rule as the phone: a real date, 1900 on, not in the future.
+  const checkedBirthday = checkBirthday(birthdayRaw, todayISO());
+  if (!checkedBirthday.ok) return { error: checkedBirthday.error, saved: false };
+  const birthday = checkedBirthday.value;
 
   let avatarPath = user.avatarPath;
   const oldFile = isUploaded(avatarPath) ? avatarPath : null;

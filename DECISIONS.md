@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-10 — Typed birthdays; month and year quick picks in DateField (v0.589.0 / app 0.400.0)
+
+Birth years were hard to get right: the profile's date picker could only page
+month by month. `DateField` gains `typeable` — the field becomes a text box
+shaped as mm/dd/yyyy while you type, saved once it is a whole real date in
+range, put back on leaving if it isn't — used for the birthday. Every
+DateField's header now has the month and the year as buttons: the year opens a
+year grid (min/max bounded, scrolled to the shown year), then the months, then
+the days. One rule for what a birthday may be, `checkBirthday` (real date, 1900
+on, not in the future), serves the web action and the phone's new
+`/api/v1/me/birthday`. Rendered and exercised in Chromium: typing 07041979
+submits 1979-07-04; 02/30/1990 is flagged and not saved.
+
 ## 2026-10 — Widget: a multi-day all-day event is listed once (v0.588.1 / app 0.399.0)
 
 A week-long all-day event (a visit) filled the widget with the same line on

@@ -39,6 +39,28 @@ function ord(y: number, m: number, d: number) {
 }
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const MONTHS_SHORT = Array.from({ length: 12 }, (_, i) =>
+  new Date(2000, i, 1).toLocaleString("default", { month: "short" }),
+);
+
+/** Digits typed into a date box, shaped as mm/dd/yyyy while you type. */
+function maskTyped(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+/** A complete mm/dd/yyyy that is a real date, as YYYY-MM-DD; otherwise null. */
+function readTyped(text: string): string | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
+  if (!m) return null;
+  const mo = Number(m[1]);
+  const d = Number(m[2]);
+  const y = Number(m[3]);
+  if (mo < 1 || mo > 12 || d < 1 || d > daysInMonth(y, mo)) return null;
+  return toISO(y, mo, d);
+}
 
 /**
  * A styled date picker that renders its own calendar popup instead of the
@@ -60,6 +82,7 @@ export function DateField({
   wrapperClassName = "",
   placeholder = "mm/dd/yyyy",
   disabled = false,
+  typeable = false,
 }: {
   name?: string;
   value?: string;
@@ -72,6 +95,9 @@ export function DateField({
   wrapperClassName?: string;
   placeholder?: string;
   disabled?: boolean;
+  /** Type the date as well as pick it — for dates far from today, like a
+   *  birthday, where paging month by month is slow. */
+  typeable?: boolean;
 }) {
   const controlled = value !== undefined;
   const [internal, setInternal] = useState(defaultValue ?? "");
@@ -83,6 +109,19 @@ export function DateField({
   const start = parseISO(val) ?? parseISO(todayISO())!;
   const [viewY, setViewY] = useState(start[0]);
   const [viewM, setViewM] = useState(start[1]); // 1-based
+  // Which grid the popup shows: days, or a quick pick of month or year (tap the
+  // month or the year in the header).
+  const [mode, setMode] = useState<"days" | "months" | "years">("days");
+  const yearListRef = useRef<HTMLDivElement>(null);
+
+  // What is typed, when typing is allowed. Follows the value whenever it
+  // changes from outside (a pick from the calendar, a reset).
+  const [text, setText] = useState(fmtUS(val));
+  const [typedBad, setTypedBad] = useState(false);
+  useEffect(() => {
+    setText(fmtUS(val));
+    setTypedBad(false);
+  }, [val]);
 
   // Re-center on the selected month each time the popup opens.
   useEffect(() => {
@@ -90,8 +129,16 @@ export function DateField({
     const p = parseISO(val) ?? parseISO(todayISO())!;
     setViewY(p[0]);
     setViewM(p[1]);
+    setMode("days");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Opening the year list puts the year being shown in the middle of it.
+  useEffect(() => {
+    if (mode !== "years") return;
+    const el = yearListRef.current?.querySelector<HTMLElement>("[data-current='1']");
+    el?.scrollIntoView({ block: "center" });
+  }, [mode]);
 
   useEffect(() => {
     if (!open) return;
@@ -136,6 +183,7 @@ export function DateField({
       return m + 1;
     });
 
+  const today0 = parseISO(todayISO())!;
   const minP = min ? parseISO(min) : null;
   const maxP = max ? parseISO(max) : null;
   const isBefore = (y: number, m: number, d: number) =>
@@ -144,6 +192,13 @@ export function DateField({
     maxP ? ord(y, m, d) > ord(maxP[0], maxP[1], maxP[2]) : false;
   const outOfRange = (y: number, m: number, d: number) =>
     isBefore(y, m, d) || isAfter(y, m, d);
+
+  const firstYear = minP ? minP[0] : 1900;
+  const lastYear = maxP ? maxP[0] : today0[0] + 20;
+  const years = Array.from(
+    { length: Math.max(0, lastYear - firstYear + 1) },
+    (_, i) => firstYear + i,
+  );
 
   const dim = daysInMonth(viewY, viewM);
   const lead = firstWeekday(viewY, viewM);
@@ -154,28 +209,100 @@ export function DateField({
 
   const selected = parseISO(val);
   const today = parseISO(todayISO())!;
-  const monthLabel = new Date(viewY, viewM - 1, 1).toLocaleString("default", {
+  const monthName = new Date(viewY, viewM - 1, 1).toLocaleString("default", {
     month: "long",
-    year: "numeric",
   });
+
+  /** A typed date: shaped as you type, saved once it's a whole real date in
+   *  range. Anything else is left for you to finish, and put back on leaving. */
+  const onType = (raw: string) => {
+    const next = maskTyped(raw);
+    setText(next);
+    if (next === "") {
+      setTypedBad(false);
+      commit("", false);
+      return;
+    }
+    const iso = readTyped(next);
+    if (iso) {
+      const p = parseISO(iso)!;
+      if (outOfRange(p[0], p[1], p[2])) {
+        setTypedBad(true);
+        return;
+      }
+      setTypedBad(false);
+      commit(iso, false);
+      setViewY(p[0]);
+      setViewM(p[1]);
+    } else {
+      setTypedBad(next.length === 10);
+    }
+  };
+  const onTypeBlur = () => {
+    if (text !== fmtUS(val)) {
+      setText(fmtUS(val));
+      setTypedBad(false);
+    }
+  };
+
+  const headBtn =
+    "rounded-full px-2 py-1 text-sm font-semibold transition-colors hover:bg-ground";
 
   return (
     <div ref={boxRef} className={`relative ${wrapperClassName}`}>
       {name && <input type="hidden" name={name} value={val} readOnly />}
-      <button
-        type="button"
-        onClick={() => !disabled && setOpen((o) => !o)}
-        disabled={disabled}
-        aria-label={ariaLabel}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        className={`flex items-center justify-between gap-2 text-left disabled:opacity-40 ${className}`}
-      >
-        <span className={val ? "" : "text-muted"}>
-          {val ? fmtUS(val) : placeholder}
-        </span>
-        <CalendarIcon className="h-4 w-4 shrink-0 text-muted" />
-      </button>
+      {typeable ? (
+        <div
+          className={`flex items-center justify-between gap-2 ${
+            typedBad ? "border-red-600!" : ""
+          } ${disabled ? "opacity-40" : ""} ${className}`}
+        >
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            value={text}
+            onChange={(e) => onType(e.target.value)}
+            onBlur={onTypeBlur}
+            disabled={disabled}
+            placeholder={placeholder}
+            aria-label={ariaLabel}
+            aria-invalid={typedBad}
+            className="tabular w-full min-w-0 bg-transparent outline-none placeholder:text-muted"
+          />
+          <button
+            type="button"
+            onClick={() => !disabled && setOpen((o) => !o)}
+            disabled={disabled}
+            aria-label="Pick from a calendar"
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            className="-mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-ground hover:text-ink"
+          >
+            <CalendarIcon className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => !disabled && setOpen((o) => !o)}
+          disabled={disabled}
+          aria-label={ariaLabel}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          className={`flex items-center justify-between gap-2 text-left disabled:opacity-40 ${className}`}
+        >
+          <span className={val ? "" : "text-muted"}>
+            {val ? fmtUS(val) : placeholder}
+          </span>
+          <CalendarIcon className="h-4 w-4 shrink-0 text-muted" />
+        </button>
+      )}
+      {typeable && typedBad && (
+        <p role="alert" className="mt-1 text-xs text-red-700">
+          Not a date that can be used — check the month, day and year.
+        </p>
+      )}
 
       {open && (
         <div className="absolute left-0 top-full z-30 mt-1 w-64 rounded-2xl border border-hairline bg-surface p-3 shadow-xl">
@@ -184,21 +311,88 @@ export function DateField({
               type="button"
               onClick={prevMonth}
               aria-label="Previous month"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-ground hover:text-ink"
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-ground hover:text-ink ${mode === "days" ? "" : "invisible"}`}
             >
               <ChevronLeftIcon className="h-4 w-4" />
             </button>
-            <span className="text-sm font-semibold">{monthLabel}</span>
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={() => setMode((m) => (m === "months" ? "days" : "months"))}
+                aria-label="Choose month"
+                aria-pressed={mode === "months"}
+                className={`${headBtn} ${mode === "months" ? "bg-ground text-accent" : ""}`}
+              >
+                {monthName}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode((m) => (m === "years" ? "days" : "years"))}
+                aria-label="Choose year"
+                aria-pressed={mode === "years"}
+                className={`${headBtn} tabular ${mode === "years" ? "bg-ground text-accent" : ""}`}
+              >
+                {viewY}
+              </button>
+            </div>
             <button
               type="button"
               onClick={nextMonth}
               aria-label="Next month"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-ground hover:text-ink"
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-ground hover:text-ink ${mode === "days" ? "" : "invisible"}`}
             >
               <ChevronRightIcon className="h-4 w-4" />
             </button>
           </div>
 
+          {mode === "months" && (
+            <div className="mt-2 grid grid-cols-3 gap-1">
+              {MONTHS_SHORT.map((label, i) => {
+                const on = i + 1 === viewM;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      setViewM(i + 1);
+                      setMode("days");
+                    }}
+                    className={`h-10 rounded-full text-sm transition-colors ${
+                      on ? "bg-accent font-semibold text-on-accent" : "hover:bg-ground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {mode === "years" && (
+            <div ref={yearListRef} className="mt-2 grid max-h-56 grid-cols-4 gap-1 overflow-y-auto pr-1">
+              {years.map((y) => {
+                const on = y === viewY;
+                return (
+                  <button
+                    key={y}
+                    type="button"
+                    data-current={on ? "1" : undefined}
+                    onClick={() => {
+                      setViewY(y);
+                      setMode("months");
+                    }}
+                    className={`tabular h-9 rounded-full text-sm transition-colors ${
+                      on ? "bg-accent font-semibold text-on-accent" : "hover:bg-ground"
+                    }`}
+                  >
+                    {y}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {mode === "days" && (<>
           <div className="mt-2 grid grid-cols-7 gap-0.5 text-center text-xs font-medium text-muted">
             {WEEKDAYS.map((d) => (
               <span key={d}>{d}</span>
@@ -242,6 +436,8 @@ export function DateField({
               ),
             )}
           </div>
+
+          </>)}
 
           <div className="mt-2 flex items-center justify-between border-t border-hairline pt-2 text-sm font-medium">
             <button

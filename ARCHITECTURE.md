@@ -150,6 +150,7 @@ production:
 | Logging a planned workout (web and phone) | `logPlannedWorkout` in `src/lib/workouts/mark.ts` |
 | Logging an additional (unplanned) workout (web and phone) | `logCustomEntry` in `src/lib/workouts/mark.ts` |
 | Which events a person's calendar shows, and their colors (Calendar + widget) | `personalEventRules` in `src/lib/queries/calendar-page.ts` |
+| What birthday can be saved (web form + phone) | `checkBirthday` in `src/lib/birthday.ts` |
 | A movement's Best weight / Best reps / Latest | `src/lib/queries/movement-stats.ts` |
 | Schoolwork completion marks the plan unit done | `syncPlanUnitDone` in `src/lib/school/plan-unit-sync.ts` |
 | Companion growth banked across a shelf trip | `src/lib/companions-tenure.ts` |
