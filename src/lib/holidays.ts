@@ -35,6 +35,9 @@ type HolidayDef = {
   label: string;
   group: HolidayGroup;
   defaultOn: boolean;
+  /** Shown on the calendar but school still runs, unless an admin marks it a
+   *  no-school day. Only matters while the no-school list was never saved. */
+  schoolDay?: boolean;
   /** UTC-midnight date of the holiday in the given year. */
   date: (year: number) => Date;
 };
@@ -104,6 +107,7 @@ export const HOLIDAYS: HolidayDef[] = [
   { key: "columbus", label: "Columbus Day", group: "Federal", defaultOn: true, date: (y) => nthWeekday(y, 10, 1, 2) },
   { key: "halloween", label: "Halloween", group: "Observance", defaultOn: true, date: fixed(10, 31) },
   { key: "election_day", label: "Election Day", group: "Observance", defaultOn: true, date: (y) => shiftDays(nthWeekday(y, 11, 1, 1), 1) },
+  { key: "marine_corps_birthday", label: "Marine Corps Birthday", group: "Observance", defaultOn: true, schoolDay: true, date: fixed(11, 10) },
   { key: "veterans", label: "Veterans Day", group: "Federal", defaultOn: true, date: fixed(11, 11) },
   { key: "dst_end", label: "Daylight Saving ends", group: "Seasonal", defaultOn: true, date: (y) => nthWeekday(y, 11, 0, 1) },
   { key: "thanksgiving", label: "Thanksgiving", group: "Federal", defaultOn: true, date: (y) => nthWeekday(y, 11, 4, 4) },
@@ -165,7 +169,10 @@ const SCHOOL_CLOSED_SETTING = "school_closed_holidays";
  *  enabled holiday, so behavior is unchanged until an admin picks a subset. */
 export async function getSchoolClosedHolidayKeys(): Promise<Set<string>> {
   const raw = await getSetting(SCHOOL_CLOSED_SETTING);
-  if (raw == null) return await getEnabledHolidayKeys();
+  if (raw == null) {
+    const schoolDays = new Set(HOLIDAYS.filter((h) => h.schoolDay).map((h) => h.key));
+    return new Set([...(await getEnabledHolidayKeys())].filter((k) => !schoolDays.has(k)));
+  }
   try {
     const arr: unknown = JSON.parse(raw);
     if (Array.isArray(arr)) return new Set(arr.filter((k): k is string => typeof k === "string"));

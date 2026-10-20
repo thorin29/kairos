@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { endStaleTrips } from "@/lib/groceries-core";
 import { guessIconInfo } from "@/lib/groceries/catalog";
 
 export type StoreView = {
@@ -90,6 +91,8 @@ function itemView(i: {
  * match the rest as you type. The roster feeds the "who's shopping?" picker.
  */
 export async function loadGroceries(): Promise<GroceriesData> {
+  // Yesterday's unfinished trip ends before anyone sees it (endStaleTrips).
+  await endStaleTrips();
   const [stores, saved, trips, catalog, roster] = await Promise.all([
     prisma.store.findMany({
       where: { isActive: true },
@@ -173,6 +176,8 @@ export type CartData = {
  * no run under way (the page then shows an empty state and a way back).
  */
 export async function loadCart(storeId: string): Promise<CartData> {
+  // Yesterday's unfinished trip ends before anyone sees it (endStaleTrips).
+  await endStaleTrips();
   const trip = await prisma.shoppingTrip.findUnique({
     where: { storeId },
     select: {
@@ -223,6 +228,8 @@ export type DashboardTrip = {
 /** Active trips summarised for the dashboard, so each person's card can carry a
  *  line into their cart. Grouped by shopper on the page. */
 export async function loadDashboardTrips(): Promise<DashboardTrip[]> {
+  // Yesterday's unfinished trip ends before anyone sees it (endStaleTrips).
+  await endStaleTrips();
   const trips = await prisma.shoppingTrip.findMany({
     select: {
       id: true,

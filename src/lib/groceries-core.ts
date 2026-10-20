@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { guessIcon, normalizeName } from "@/lib/groceries/catalog";
+import { householdTz, todayISO, zonedToUtc } from "@/lib/dates";
 
 /**
  * Session-free grocery operations shared by the web server actions (behind an
@@ -15,9 +16,27 @@ import { guessIcon, normalizeName } from "@/lib/groceries/catalog";
  * item lands on the same store's list unless told otherwise.
  */
 
+/**
+ * A shopping trip lasts the day it was started. One still open from an earlier
+ * day — the shopper never tapped Done — is finished the way Done finishes it:
+ * what was ticked drops off, the rest goes back on the list, and the shopper is
+ * no longer shown as shopping. Runs before every read and write of trips, so
+ * the first look at groceries on a new day finds the store back to "Shop".
+ */
+export async function endStaleTrips(): Promise<void> {
+  const [y, m, d] = todayISO().split("-").map(Number);
+  const startOfToday = zonedToUtc(y, m, d, 0, 0, 0, householdTz());
+  const stale = (await prisma.shoppingTrip.findMany({
+    where: { startedAt: { lt: startOfToday } },
+    select: { id: true },
+  })) as { id: string }[];
+  for (const t of stale) await completeTripCore(t.id);
+}
+
 /** The active trip for a store, if one is under way. A line added while a trip
  *  is live joins that trip rather than the saved list. */
 async function activeTripId(storeId: string): Promise<string | null> {
+  await endStaleTrips();
   const trip = await prisma.shoppingTrip.findUnique({
     where: { storeId },
     select: { id: true },
@@ -207,6 +226,7 @@ export async function startTripCore(
   storeId: string,
   shopperId: string,
 ): Promise<{ ok: boolean; reason?: string }> {
+  await endStaleTrips();
   const [store, shopper, existing] = await Promise.all([
     prisma.store.findUnique({ where: { id: storeId } }),
     prisma.user.findUnique({ where: { id: shopperId } }),

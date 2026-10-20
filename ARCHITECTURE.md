@@ -154,6 +154,7 @@ production:
 | Which timezone an event's instants are read in (all-day = UTC) | `eventTz` / `eventParts` in `src/lib/dates.ts` |
 | How long each occurrence of a repeating event may last | `fitRepeatingSpan` in `src/lib/calendar/repeat-span.ts` (every save path) |
 | Which kinds are yearly occasions, and which names aren't remembered | `isOccasion` / `isOccasionName` in `src/lib/calendar/occasions.ts` |
+| When a shopping trip ends on its own (the day after it started) | `endStaleTrips` in `src/lib/groceries-core.ts`, run before every trip read/write |
 | A movement's Best weight / Best reps / Latest | `src/lib/queries/movement-stats.ts` |
 | Schoolwork completion marks the plan unit done | `syncPlanUnitDone` in `src/lib/school/plan-unit-sync.ts` |
 | Companion growth banked across a shelf trip | `src/lib/companions-tenure.ts` |

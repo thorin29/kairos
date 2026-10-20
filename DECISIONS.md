@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-10 — Shopping trips last a day; Marine Corps Birthday (v0.592.0)
+
+**Trips.** A trip stayed open until someone tapped Done, so a forgotten one
+kept the shopper "shopping" for days on every screen. A trip now lasts the
+household day it started: `endStaleTrips` finishes any trip started before
+today's household midnight exactly as Done does (ticked lines drop off, the
+rest go back to the saved list, the trip row is removed). No cron: it runs
+before every trip read and write (`loadGroceries`, `loadCart`,
+`loadDashboardTrips`, adding a line, starting a trip), so the first look on a
+new day — web or phone — already sees the store back to "Shop". The phone
+reads trips from the server, so it needed no change.
+
+**Marine Corps Birthday**, Nov 10, Observance, on by default. Migration 127
+appends it once to a saved `holidays.enabled` list (idempotent; a value that
+isn't a JSON array is left alone — tested both). New `schoolDay` flag on a
+holiday: while the no-school list was never saved it defaults to every enabled
+holiday, and this one would otherwise have become a no-school day.
+
 ## 2026-10 — Anniversary event type; occasion names not suggested (v0.591.0 / app 0.403.0)
 
 `EventKind.ANNIVERSARY` (migration 126, `ADD VALUE IF NOT EXISTS`, run twice
