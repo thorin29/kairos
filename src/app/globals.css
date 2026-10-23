@@ -230,6 +230,18 @@ html.dark .text-teal-700, html.dark .text-teal-900 { color: #5eead4; }
 html.dark .text-sky-600 { color: #38bdf8; }
 html.dark .text-blue-600 { color: #60a5fa; }
 
+/* Grocery pictures sit on a soft light tile in dark mode. They were drawn
+   for light pages: many keep a pale edge or soft grey shadow from their
+   original white background, which disappears on white and shows on dark.
+   The tile (the light page's own ground colour) hides all of that at once,
+   for every icon present and future. Light mode is untouched; emoji icons
+   are fonts and need no tile. */
+html.dark .grocery-pic {
+  background-color: #e8edf3;
+  border-radius: 24%;
+  padding: 2px;
+}
+
 /* Consistent dropdown caret across every <select> in the app — replaces the
    browser's default arrow (which varies and sits at the very edge) with one
    chevron, inset from the right. Applies to all selects automatically; the

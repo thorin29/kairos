@@ -571,7 +571,7 @@ export function GroceryGlyph({
   const src = GLYPH_IMAGES[icon];
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt="" className={`${className} object-contain`} aria-hidden />;
+    return <img src={src} alt="" className={`${className} grocery-pic object-contain`} aria-hidden />;
   }
   if (icon.startsWith("kairos:")) {
     // Bundled colorful PNGs under public/grocery-icons/kairos/<slug>.png.
@@ -580,7 +580,7 @@ export function GroceryGlyph({
       <img
         src={`/grocery-icons/kairos/${icon.slice(7)}.png`}
         alt=""
-        className={`${className} object-contain`}
+        className={`${className} grocery-pic object-contain`}
         aria-hidden
       />
     );

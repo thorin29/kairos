@@ -130,7 +130,6 @@ export const GROCERY_SUGGESTIONS: GrocerySuggestion[] = [
   { name: "English muffins", icon: "kairos:english-muffins" },
   { name: "Espresso powder", icon: "kairos:espresso-powder" },
   { name: "Fajitas", icon: "kairos:fajitas" },
-  { name: "Feminine care", icon: "kairos:feminine-care" },
   { name: "Feta", icon: "kairos:feta" },
   { name: "Filet mignon", icon: "kairos:filet-mignon" },
   { name: "First aid supplies", icon: "kairos:first-aid" },

@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-10 — Grocery icons on a light tile in dark mode (v0.596.0 / app 0.407.0)
+
+An audit of all 310 grocery pictures on a dark page found ~100 with a pale
+edge or soft grey drop shadow left from their original white backgrounds —
+invisible on white, obvious on dark. Rather than repair each one (and every
+future batch), every grocery *picture* now sits on a soft light tile in dark
+mode: the light page's ground colour (#e8edf3), 24% rounded corners, 2px
+inset. Web: `.grocery-pic` on `GroceryGlyph`'s <img>, styled under
+`html.dark` in globals.css. App: `GroceryGlyph` draws the same tile when
+`KairosThemeState.dark`. Light mode and emoji icons are unchanged.
+
+The 12 store icons lost their leftover white card and thin grey frame
+(frame stripped from the outer 4px; the card flooded away on the four that
+still had one; stray line pieces removed). `feminine-care` is gone: PNG,
+matcher rule, picker entry, suggestion and app map entry. Still to
+regenerate: `air-freshener` (part of its white can was erased with the
+background) and the legacy `ic:sorbet` square.
+
 ## 2026-10 — Grocery icon batch: 49 baking, produce, meat and bakery icons (v0.595.0 / app 0.406.0)
 
 Sliced from one generated sheet by detected rows (icon band, caption band)

@@ -156,6 +156,7 @@ production:
 | Which kinds are yearly occasions, and which names aren't remembered | `isOccasion` / `isOccasionName` in `src/lib/calendar/occasions.ts` |
 | When a shopping trip ends on its own (the day after it started) | `endStaleTrips` in `src/lib/groceries-core.ts`, run before every trip read/write |
 | How pale status tints (`bg-*-50`, `text-*-700`…) look in dark mode | the `html.dark` remap block in `src/app/globals.css` |
+| How grocery pictures look in dark mode (a light tile) | `.grocery-pic` in `src/app/globals.css`; the app's `GroceryGlyph` draws the same tile |
 | Body map figure colours (web and app) | `--color-figure*` in `src/app/globals.css`; the app's `figureColors(dark)` holds the same values |
 | A movement's Best weight / Best reps / Latest | `src/lib/queries/movement-stats.ts` |
 | Schoolwork completion marks the plan unit done | `syncPlanUnitDone` in `src/lib/school/plan-unit-sync.ts` |
