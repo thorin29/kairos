@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-10 — Grocery icon batch: 49 baking, produce, meat and bakery icons (v0.595.0 / app 0.406.0)
+
+Sliced from one generated sheet by detected rows (icon band, caption band)
+rather than a fixed grid, each item matched to the caption under it. The
+background is a border-connected flood of near-white only, so white inside
+an object stays; every piece above the caption is kept (berries, beans,
+candies); specks under 60px are dropped. For dark mode: the outer edge is
+un-mixed from white, soft grey drop shadows near the outline are turned to
+alpha (except on white-bodied items — sugar bag, coconut jar, poultry, the
+clear salad tub), enclosed white holes are cleared where they are holes
+(bagels), and the sugar pile used a stricter flood so it isn't eaten. Every
+crop was checked on light and dark beside its source cell and OCR'd for
+caption leaks.
+
+Matcher changes beyond the new rules: `whole chicken` moved from the
+rotisserie icon to `whole-chicken`; `black beans` moved from `canned-beans`
+to `black-beans`; `cold cut turkey/chicken` and `deli turkey/chicken` go to
+`cold-cuts`, `cold cut ham` to `deli-ham`. Bare "apple" keeps its emoji;
+"ginger ale", "jelly beans", "english muffins", "pork chops" and "ground
+turkey" keep theirs. Slug notes: the sheet prints `cacao-powder`; the token is
+`kairos:cocoa-powder` (both "cocoa powder" and "cacao powder" match it). The
+sheet's `espreso-powder` typo is `kairos:espresso-powder`.
+
 ## 2026-10 — Body map light-mode grey (v0.594.1 / app 0.405.1)
 
 The near-black light-mode figure from 0.594.0 was too heavy. Light mode now
