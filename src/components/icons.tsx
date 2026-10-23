@@ -588,9 +588,13 @@ export function GroceryGlyph({
   // A prefixed token we can't render (unknown ic:/kairos:/other) shows a box
   // rather than the raw string like "kairos:foo".
   const unknownToken = /^[a-z]+:/.test(icon);
+  // The outer span is the picture icons' box. In light mode it is
+  // `display: contents` (no box at all, so the emoji lays out exactly as
+  // before); in dark mode it becomes the same light tile the pictures get,
+  // with the emoji sized to fit it (see .grocery-emoji-tile in globals.css).
   return (
-    <span className={emojiClassName} aria-hidden>
-      {unknownToken ? "📦" : icon}
+    <span className={`${className} grocery-emoji-tile`} aria-hidden>
+      <span className={emojiClassName}>{unknownToken ? "📦" : icon}</span>
     </span>
   );
 }

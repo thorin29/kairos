@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-10 — Emoji grocery icons get the dark-mode tile too (v0.596.1 / app 0.407.1)
+
+0.596.0 tiled only the pictures, so a dark list mixed tiled pictures with
+bare emoji (apples, bread, anything typed in). Emoji now get the same tile.
+Web: `GroceryGlyph` wraps the emoji in a box of the picture's size
+(`.grocery-emoji-tile`), `display: contents` in light mode so light layout is
+byte-for-byte what it was, an inline-flex tile in dark mode with the emoji
+sized by container units (66cqh). App: the emoji branch draws the same tile
+when dark, with the emoji's size derived from the tile through the density.
+
 ## 2026-10 — Grocery icons on a light tile in dark mode (v0.596.0 / app 0.407.0)
 
 An audit of all 310 grocery pictures on a dark page found ~100 with a pale

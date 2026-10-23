@@ -241,6 +241,25 @@ html.dark .grocery-pic {
   border-radius: 24%;
   padding: 2px;
 }
+/* Emoji icons (apples, bread, anything typed in) get the same tile, so a
+   list never mixes tiled and bare icons. Light mode: the wrapper is not a
+   box at all. Dark mode: it takes the picture's size, and the emoji scales
+   to the tile (container units), whatever text size the caller gave it. */
+.grocery-emoji-tile { display: contents; }
+html.dark .grocery-emoji-tile {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  background-color: #e8edf3;
+  border-radius: 24%;
+  overflow: hidden;
+  container-type: size;
+}
+html.dark .grocery-emoji-tile > span {
+  font-size: 66cqh;
+  line-height: 1;
+}
 
 /* Consistent dropdown caret across every <select> in the app — replaces the
    browser's default arrow (which varies and sits at the very edge) with one
