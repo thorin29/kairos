@@ -937,7 +937,7 @@ const MG_COLOR: Record<string, string> = {
 
 /** The same colour, faded, for a muscle a movement only assists with. */
 function faded(hex: string): string {
-  return `color-mix(in srgb, ${hex} 32%, var(--color-surface))`;
+  return `color-mix(in srgb, ${hex} 32%, var(--color-figure-fade))`;
 }
 
 const GRID_COLORS = [

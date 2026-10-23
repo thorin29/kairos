@@ -1672,6 +1672,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.593.0 (migrations through 127_marine_corps_birthday).
-- App versionName 0.403.0 / versionCode 461 / CLIENT_BUILD 461.
+- Web APP_VERSION 0.594.0 (migrations through 127_marine_corps_birthday).
+- App versionName 0.405.0 / versionCode 464 / CLIENT_BUILD 464.
 - Collector: deployed and running; Xbox totals come from real game sessions.

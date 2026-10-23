@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-10 — Dark-mode tints, body map figure, Shopping (v0.594.0 / app 0.405.0)
+
+**Status tints.** Banners and error boxes use Tailwind's stock pale tints
+(`bg-amber-50`, `bg-red-50`, `text-red-700`, …). In dark mode they stayed pale
+cards holding the page's light text. Rather than add `dark:` variants to
+~200 class lists, `globals.css` re-maps those classes once under `html.dark`:
+tints become dark washes of the same hue, borders soften, deep text shades
+lift to their light counterparts. Solid fills (white-text buttons) are left
+alone. A new pale tint or deep text shade needs a line there.
+
+**Body map.** The figure is swapped against the page — dark figure on light
+cards, light figure on dark cards — through `--color-figure`,
+`--color-figure-fade` (what assisting muscles mix toward) and
+`--color-figure-ring`, plain `:root` vars because no utility uses them. The
+app's `figureColors(dark)` holds the same three values.
+
+**Icons.** `paper-plates.png` had its white plate face cut out with the
+icon sheet's white card, so the page showed through it; the face is filled
+back in (inside the outline only). `ground-sausage.png` was fully
+transparent; it is now the ground-meat tray recoloured. Store icons still
+carry a white tile.
+
+**Name.** The Groceries section is labelled Shopping (sidebar, admin card,
+admin heading, app menu and title). Routes, models and APIs keep "groceries".
+
 ## 2026-10 — Web workout buttons match the phone; "Complete for today!" (v0.593.0)
 
 **Log tiles.** The web's three action tiles now follow the phone's

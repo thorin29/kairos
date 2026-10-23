@@ -85,7 +85,7 @@ const TILES: Tile[] = [
   },
   {
     href: "/admin/groceries",
-    label: "Groceries",
+    label: "Shopping",
     blurb: "Stores and the catalog the shopping list remembers",
     icon: <CartIcon className="h-7 w-7" />,
     ready: true,

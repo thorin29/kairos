@@ -47,7 +47,7 @@ type Props = {
   className?: string;
 };
 
-const INERT = "var(--color-hairline)";
+const INERT = "var(--color-figure)";
 
 function Figure({
   paths,
@@ -131,7 +131,7 @@ function Figure({
             key={`sel-${nav}`}
             d={outlines[nav]}
             fill="none"
-            stroke="var(--color-ink)"
+            stroke="var(--color-figure-ring)"
             strokeWidth={4}
             strokeLinejoin="round"
             pointerEvents="none"

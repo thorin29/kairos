@@ -162,6 +162,16 @@ html[data-theme="pink"]   { --color-accent: #b83280; --color-sidebar: #bc93ac; }
 html[data-theme="orange"] { --color-accent: #c2570c; --color-sidebar: #bfa088; }
 html[data-theme="red"]    { --color-accent: #b3261e; --color-sidebar: #bf9491; }
 
+:root {
+  /* Body map figure (plain vars, not @theme: no utility uses them). Swapped
+     against the page: a dark figure on light cards, a light figure on dark
+     cards, so the muscles read in both modes. `fade` is what an assisting
+     muscle's colour is mixed toward. */
+  --color-figure: #2a3547;
+  --color-figure-fade: #161e2e;
+  --color-figure-ring: #ffffff;
+}
+
 /* --- Dark mode: neutrals flip; accent brightens, on-accent goes dark --- */
 html.dark {
   --color-ground: #0b1220;
@@ -171,6 +181,9 @@ html.dark {
   --color-hairline: #2a3547;
   --color-shade: #202a3b;
   --color-shade-soft: #1a2333;
+  --color-figure: #dce3ea;
+  --color-figure-fade: #ffffff;
+  --color-figure-ring: #10202f;
   /* teal (default) dark accent */
   --color-accent: #2dd4bf;
   --color-on-accent: #04231f;
@@ -183,6 +196,39 @@ html.dark[data-theme="purple"] { --color-accent: #c08bf5; --color-on-accent: #1c
 html.dark[data-theme="pink"]   { --color-accent: #f77fbe; --color-on-accent: #360a24; --color-sidebar: #3d1f32; }
 html.dark[data-theme="orange"] { --color-accent: #fb9e4b; --color-on-accent: #331705; --color-sidebar: #40280f; }
 html.dark[data-theme="red"]    { --color-accent: #f48078; --color-on-accent: #330a07; --color-sidebar: #411e1b; }
+
+/* --- Dark mode: Tailwind's pale status tints ---
+   Banners and error boxes use the stock palette (bg-amber-50, bg-red-50,
+   text-red-700…), which is built for light pages: in dark mode they stayed
+   pale cards holding the page's light text, and their dark text sat on the
+   dark page. One rule set here re-maps them for every screen at once: tints
+   become dark washes of the same hue, borders soften, and the deep text
+   shades lift to their light counterparts. Solid fills (bg-red-600 buttons
+   with white text) are untouched. */
+html.dark .bg-red-50, html.dark .bg-rose-50 { background-color: rgb(248 113 113 / 0.12); }
+html.dark .bg-red-100 { background-color: rgb(248 113 113 / 0.18); }
+html.dark .bg-amber-50, html.dark .bg-yellow-50 { background-color: rgb(251 191 36 / 0.10); }
+html.dark .bg-amber-100 { background-color: rgb(251 191 36 / 0.16); }
+html.dark .bg-orange-50 { background-color: rgb(251 146 60 / 0.10); }
+html.dark .bg-emerald-50 { background-color: rgb(52 211 153 / 0.10); }
+html.dark .bg-green-50 { background-color: rgb(74 222 128 / 0.10); }
+html.dark .bg-teal-50 { background-color: rgb(45 212 191 / 0.10); }
+html.dark .bg-sky-50, html.dark .bg-blue-50 { background-color: rgb(96 165 250 / 0.10); }
+html.dark .border-red-200, html.dark .border-red-300, html.dark .border-red-400 { border-color: rgb(248 113 113 / 0.35); }
+html.dark .border-amber-300, html.dark .border-amber-400 { border-color: rgb(251 191 36 / 0.35); }
+html.dark .border-orange-200 { border-color: rgb(251 146 60 / 0.35); }
+html.dark .border-emerald-200, html.dark .border-emerald-300 { border-color: rgb(52 211 153 / 0.35); }
+html.dark .border-green-300 { border-color: rgb(74 222 128 / 0.35); }
+html.dark .border-teal-300 { border-color: rgb(45 212 191 / 0.35); }
+html.dark .text-red-600, html.dark .text-red-700, html.dark .text-red-800 { color: #f87171; }
+html.dark .text-amber-600, html.dark .text-amber-700 { color: #fbbf24; }
+html.dark .text-amber-800, html.dark .text-amber-900 { color: #fcd34d; }
+html.dark .text-orange-600, html.dark .text-orange-700 { color: #fb923c; }
+html.dark .text-emerald-600, html.dark .text-emerald-700, html.dark .text-emerald-800, html.dark .text-emerald-900 { color: #34d399; }
+html.dark .text-green-600, html.dark .text-green-700 { color: #4ade80; }
+html.dark .text-teal-700, html.dark .text-teal-900 { color: #5eead4; }
+html.dark .text-sky-600 { color: #38bdf8; }
+html.dark .text-blue-600 { color: #60a5fa; }
 
 /* Consistent dropdown caret across every <select> in the app — replaces the
    browser's default arrow (which varies and sits at the very edge) with one

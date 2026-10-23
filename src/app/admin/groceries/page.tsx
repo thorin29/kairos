@@ -14,7 +14,7 @@ export default async function AdminGroceriesPage() {
 
       <header className="mb-8 mt-5 border-b border-hairline pb-5">
         <h1 className="font-display text-3xl font-semibold tracking-tight">
-          Groceries
+          Shopping
         </h1>
         <p className="mt-2 max-w-xl text-muted">
           Stores to shop at, and the catalog the list remembers. The catalog
