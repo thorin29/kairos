@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-10 — Body map light-mode grey (v0.594.1 / app 0.405.1)
+
+The near-black light-mode figure from 0.594.0 was too heavy. Light mode now
+uses a mid grey (#b4c1cf) with white seams, pastel assisting muscles (fade
+toward white) and a dark selection ring; dark mode keeps the light figure.
+
 ## 2026-10 — Dark-mode tints, body map figure, Shopping (v0.594.0 / app 0.405.0)
 
 **Status tints.** Banners and error boxes use Tailwind's stock pale tints
@@ -10,8 +16,8 @@ tints become dark washes of the same hue, borders soften, deep text shades
 lift to their light counterparts. Solid fills (white-text buttons) are left
 alone. A new pale tint or deep text shade needs a line there.
 
-**Body map.** The figure is swapped against the page — dark figure on light
-cards, light figure on dark cards — through `--color-figure`,
+**Body map.** The figure is set per mode (light mode revised in 0.594.1)
+through `--color-figure`,
 `--color-figure-fade` (what assisting muscles mix toward) and
 `--color-figure-ring`, plain `:root` vars because no utility uses them. The
 app's `figureColors(dark)` holds the same three values.

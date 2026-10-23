@@ -163,13 +163,13 @@ html[data-theme="orange"] { --color-accent: #c2570c; --color-sidebar: #bfa088; }
 html[data-theme="red"]    { --color-accent: #b3261e; --color-sidebar: #bf9491; }
 
 :root {
-  /* Body map figure (plain vars, not @theme: no utility uses them). Swapped
-     against the page: a dark figure on light cards, a light figure on dark
-     cards, so the muscles read in both modes. `fade` is what an assisting
+  /* Body map figure (plain vars, not @theme: no utility uses them). A mid
+     grey on light cards (the old #dce3ea was too faint; a near-black one too
+     heavy), a light figure on dark cards. `fade` is what an assisting
      muscle's colour is mixed toward. */
-  --color-figure: #2a3547;
-  --color-figure-fade: #161e2e;
-  --color-figure-ring: #ffffff;
+  --color-figure: #b4c1cf;
+  --color-figure-fade: #ffffff;
+  --color-figure-ring: #10202f;
 }
 
 /* --- Dark mode: neutrals flip; accent brightens, on-accent goes dark --- */
