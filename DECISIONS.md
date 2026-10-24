@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-10 — Grocery icon batch 2: 16 icons, men's/women's deodorant (v0.598.0 / app 0.408.0)
+
+The rest of the October request, cut the same way as batch 1 (detected rows,
+caption matched by position, border-connected flood, every piece kept,
+captions OCR-checked, each crop compared to its source and viewed on white
+and on the dark-mode tile). White-bodied items (styrofoam cup, pore strip,
+deodorant, buttermilk, wipes, bowl, gift card, clear jar, cup rims) use a
+stricter flood so their white edges aren't eaten; their soft shadows are left,
+since in dark mode every picture sits on the light tile (0.596).
+
+Deodorant: the existing blue stick stays `kairos:deodorant` (so items already
+using it don't change) and is now women's — "women's deodorant", "secret",
+"degree" and plain "deodorant" map to it; the new black-and-white stick is
+`kairos:mens-deodorant` ("men's deodorant", "old spice"). The suggestion list
+says "Women's deodorant" / "Men's deodorant". Phrase care: "sandwich cookies",
+"oreos", "joe-joe's" never take plain "cookies"; party/solo/plastic and
+foam/styrofoam cups need their word, so "k-cups" and "paper cups" are
+untouched; "pens" can't match "penne"; "toilet/flushable wipes" leave "baby
+wipes"; "naan bread" beats bread; "chocolate syrup" beats syrup; "candy" now
+has a picture ("ginger candy" keeps its own).
+
 ## 2026-10 — Repeating events "duplicated" across days: three bugs, self-repairing (v0.597.0)
 
 Reported: a work event ending at midnight showed as duplicates spanning

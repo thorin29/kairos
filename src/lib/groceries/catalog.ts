@@ -18,6 +18,23 @@ const ICONS: [RegExp, string][] = [
   // (e.g. "sweet potato" before "potato", "peanut butter" before "butter").
   // --- Kairos specific icons first: more-specific phrases win over the
   //     generic emoji rules below via the head-noun/length tie-break. ---
+  // --- Oct 2026 batch 2: pantry, snacks, party, household. Phrases are
+  //     explicit so plain "cookies", k-cups, penne and baby wipes keep theirs. ---
+  [/\b(naan\s+bread|naan)\b/, "kairos:naan"],
+  [/\b(couscous|cous\s+cous)\b/, "kairos:couscous"],
+  [/\b(pumpkin\s+(spice\s+)?cereal)\b/, "kairos:pumpkin-cereal"],
+  [/\b(sandwich\s+cookies|oreos?|joe-?joe'?s)\b/, "kairos:sandwich-cookies"],
+  [/\b(buttermilk)\b/, "kairos:buttermilk"],
+  [/\b(chocolate\s+syrup|hershey'?s\s+syrup)\b/, "kairos:chocolate-syrup"],
+  [/\b(sprinkles|jimmies|nonpareils)\b/, "kairos:sprinkles"],
+  [/\b(candy|candies|hard\s+candy)\b/, "kairos:candy"],
+  [/\b(electrolyte\s+packets?|electrolytes?|liquid\s+i\.?\s?v\.?)\b/, "kairos:electrolyte-packets"],
+  [/\b((plastic|solo|party|red)\s+cups?)\b/, "kairos:plastic-cups"],
+  [/\b((styrofoam|foam)\s+cups?)\b/, "kairos:styrofoam-cups"],
+  [/\b(toilet\s+wipes|flushable\s+wipes)\b/, "kairos:toilet-wipes"],
+  [/\b(pore\s+strips|nose\s+strips|biore)\b/, "kairos:pore-strips"],
+  [/\b(pens?|ballpoint\s+pens?)\b/, "kairos:pens"],
+  [/\b(gift\s+cards?)\b/, "kairos:gift-card"],
   // --- Oct 2026 batch: baking, produce, herbs, meats, bakery. Phrases are
   //     explicit so a modifier never steals a head noun (ground turkey, pork
   //     chops, english muffins, jelly beans, ginger ale keep their own). ---
@@ -192,7 +209,10 @@ const ICONS: [RegExp, string][] = [
   [/\b(creamer)\b/, "kairos:creamer"],
   [/\b(cumin)\b/, "kairos:cumin"],
   [/\b(deli\s+ham|sliced\s+ham|cold\s+cut\s+ham)\b/, "kairos:deli-ham"],
-  [/\b(deodorant)\b/, "kairos:deodorant"],
+  // The blue stick is women's (and plain "deodorant", as before); men's has
+  // its own black-and-white stick.
+  [/\b(deodorant|women'?s\s+deodorant|womens\s+deodorant|secret\s+deodorant|degree)\b/, "kairos:deodorant"],
+  [/\b(men'?s\s+deodorant|mens\s+deodorant|old\s+spice|axe\s+deodorant)\b/, "kairos:mens-deodorant"],
   [/\b(diapers)\b/, "kairos:diapers"],
   [/\b(dinner\s+rolls)\b/, "kairos:dinner-rolls"],
   [/\b(dish\s+soap)\b/, "kairos:dish-soap"],
@@ -623,7 +643,7 @@ export const GROCERY_ICON_LIBRARY: IconLibraryEntry[] = [
   { icon: "kairos:creamer", keywords: "creamer" },
   { icon: "kairos:cumin", keywords: "cumin" },
   { icon: "kairos:deli-ham", keywords: "deli ham ham sliced" },
-  { icon: "kairos:deodorant", keywords: "deodorant" },
+  { icon: "kairos:deodorant", keywords: "deodorant women's womens secret degree" },
   { icon: "kairos:diapers", keywords: "diapers" },
   { icon: "kairos:dinner-rolls", keywords: "dinner rolls roll" },
   { icon: "kairos:dish-soap", keywords: "dish soap" },
@@ -863,6 +883,22 @@ export const GROCERY_ICON_LIBRARY: IconLibraryEntry[] = [
   { icon: "kairos:pumpkin-muffin", keywords: "pumpkin muffin muffins" },
   { icon: "kairos:croissant", keywords: "croissant croissants pastry" },
   { icon: "kairos:bagels", keywords: "bagels bagel" },
+  { icon: "kairos:naan", keywords: "naan flatbread bread" },
+  { icon: "kairos:couscous", keywords: "couscous grain" },
+  { icon: "kairos:pumpkin-cereal", keywords: "pumpkin cereal spice" },
+  { icon: "kairos:sandwich-cookies", keywords: "sandwich cookies oreo joe-joe's" },
+  { icon: "kairos:buttermilk", keywords: "buttermilk carton" },
+  { icon: "kairos:chocolate-syrup", keywords: "chocolate syrup hershey's" },
+  { icon: "kairos:sprinkles", keywords: "sprinkles jimmies baking" },
+  { icon: "kairos:candy", keywords: "candy candies sweets" },
+  { icon: "kairos:electrolyte-packets", keywords: "electrolyte packets liquid iv drink mix" },
+  { icon: "kairos:plastic-cups", keywords: "plastic cups solo party red" },
+  { icon: "kairos:styrofoam-cups", keywords: "styrofoam foam cups" },
+  { icon: "kairos:mens-deodorant", keywords: "men's deodorant mens old spice" },
+  { icon: "kairos:toilet-wipes", keywords: "toilet wipes flushable" },
+  { icon: "kairos:pore-strips", keywords: "pore strips nose biore" },
+  { icon: "kairos:pens", keywords: "pens pen ballpoint" },
+  { icon: "kairos:gift-card", keywords: "gift card" },
 ];
 
 /** Store/shop icons for the admin store picker (kairos: PNGs + a few emoji). */
