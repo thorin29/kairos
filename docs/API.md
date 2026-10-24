@@ -642,6 +642,10 @@ POST /api/v1/calendar/event/update
      { "eventId", ...same fields as create...,
        "occurrenceISO"?:"YYYY-MM-DD",                             // which occurrence was tapped
        "scope"?:"series"|"single"|"future" }                      // default "series"
+     // v0.597: occurrenceISO may be the day of ANY piece of the occurrence (the
+     //   after-midnight piece of an overnight one); the server resolves it to the
+     //   occurrence's start day (occurrenceOfRow). A series edit shifts the
+     //   series only by how far `date` moved off that occurrence.
      → { "status":"ok" }
 
 // notes (v0.580): kept only when takesNotes(kind, eventTypeId) — kind APPOINTMENT
@@ -659,6 +663,7 @@ POST /api/v1/calendar/event/update
 POST /api/v1/calendar/event/delete
      { "eventId", "scope"?:"all"|"future"|"one", "occurrenceISO"? }   // default "all"
      → { "status":"ok" }
+     // v0.597: occurrenceISO resolved to its occurrence's start day, as on update
      // non-admins may delete only their own or family events; recurring events and
      // birthdays stay admin/parent-only; feed (subscribed) events cannot be deleted here
 

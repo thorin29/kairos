@@ -28,11 +28,13 @@ export function MonthChip({
   const editEvent = async (scope: "single" | "series" | "future") => {
     const data = await eventCopyData(event.eventId);
     if (!data) return;
+    // The occurrence by the day it starts, not the piece shown (see week-grid).
+    const occ = event.startDayISO ?? event.dayISO;
     openEdit(
-      { ...data, date: event.recurring ? event.dayISO : data.date },
+      { ...data, date: event.recurring ? occ : data.date },
       {
         eventId: event.eventId,
-        occurrenceISO: event.dayISO,
+        occurrenceISO: occ,
         recurring: event.recurring,
         scope,
       },

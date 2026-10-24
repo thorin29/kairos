@@ -1,5 +1,48 @@
 # Decisions
 
+## 2026-10 — Repeating events "duplicated" across days: three bugs, self-repairing (v0.597.0)
+
+Reported: a work event ending at midnight showed as duplicates spanning
+several days. Reproduced with the real save and calendar code (an in-memory
+database stand-in) rather than guessed. Today's create paths are clean for a
+midnight end, on web and phone, across DST; three other faults remain:
+
+**1. Old multi-day series.** Before v0.590 a series' "Ends" beside Starts could
+be days after the start (an end of 12:00 AM read as before the start, so a
+later date got picked). Each weekly occurrence was then drawn across several
+days, every day labelled "4:00 PM – 12:00 AM" — a row of apparent duplicates.
+0.590 stopped new ones but left the rows. Now `occurrenceSpanMs` gives every
+stored repeating event its one-occurrence length when read (all-day: one day;
+timed: start → the end's clock time, same day or next morning; a sane ≤ 24 h
+span untouched), and `repairEventRows` rewrites such rows.
+
+**2. Overnight pieces.** An occurrence running past midnight is drawn on two
+days; the web editors and the phone's detail screen sent the TAPPED piece's
+day as the occurrence. Editing "this event" from the after-midnight piece
+saved an override for a date the series never had: the original stayed and an
+edited copy appeared a day later. Deleting from it tombstoned nothing.
+`occurrenceDayFor` / `occurrenceOfRow` resolve a day to the occurrence that
+covers it (its own start wins; else the day before's, if it reaches past
+midnight). Every path uses it: web and phone update, the delete core, the
+calendar's override skip, and the repair (which moves an override filed on
+the wrong day back to its occurrence, shifting an edited copy saved on that
+day back with it; skipped if the right day already has an override). The web
+editors now open an occurrence by `startDayISO`; old phone builds are covered
+by the server. Daily overnight series can't be told apart after the fact
+(every day is an occurrence) — the fix prevents new ones.
+
+**3. Series edit from a later date.** The whole-series shift was measured from
+the series' first start instead of the opened occurrence, so editing the
+series from week 3 without touching the date moved its start to week 3 and
+dropped weeks 1–2. Both paths now measure from the resolved opened
+occurrence; a real weekday move still shifts every week.
+
+Also: the sport-prompt and class-attendance "ended" checks use
+`occurrenceSpanMs` (a multi-day span kept them from ever ending), and the
+delete core reads the series' first day in the household zone (the UTC
+date was a day late for evening starts). No migration: the repair needs the
+household time zone, which lives in the environment.
+
 ## 2026-10 — Emoji grocery icons get the dark-mode tile too (v0.596.1 / app 0.407.1)
 
 0.596.0 tiled only the pictures, so a dark list mixed tiled pictures with

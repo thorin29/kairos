@@ -1,4 +1,5 @@
 import "server-only";
+import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
 import { loadSubjectColors, displaySubjectColor } from "@/lib/school/subject-colors";
 import { prisma } from "@/lib/prisma";
 import {
@@ -743,8 +744,10 @@ export async function pendingClassPrompts(
   const endedByClass = new Map<string, string[]>();
   for (const c of classes) {
     if (!c.event) continue;
-    const durationMs =
-      c.event.endsAt.getTime() - c.event.startsAt.getTime();
+    // One meeting's length (occurrenceSpanMs), whatever span an older save kept.
+    const durationMs = c.event.rrule
+      ? occurrenceSpanMs(c.event.startsAt, c.event.endsAt, false, tz)
+      : c.event.endsAt.getTime() - c.event.startsAt.getTime();
     const starts = c.event.rrule
       ? occurrencesIn(c.event.startsAt, c.event.rrule, fromISO, today, tz)
       : [c.event.startsAt];

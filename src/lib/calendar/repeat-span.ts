@@ -1,3 +1,5 @@
+import { localParts } from "@/lib/dates";
+
 /**
  * How long each occurrence of a REPEATING event may be — one rule for the web
  * form, the phone, and every save path.
@@ -28,4 +30,33 @@ export function fitRepeatingSpan(
     };
   }
   return { endsAt };
+}
+
+/**
+ * How long each occurrence of a STORED repeating event lasts, in ms — the read
+ * side of the rule above, for rows saved before it existed.
+ *
+ * Before v0.590 nothing stopped a series' "Ends" being set days after its
+ * start (a 4 PM shift ending "12:00 AM" got the next free date, or the day the
+ * job ended), so every occurrence was drawn across several days and overlapped
+ * the next: one event that read as a row of duplicates. Rather than trust that
+ * span, keep what was meant: all-day → one day; timed → start to the end's
+ * clock time, the same day or the next morning. A sane span (≤ 24 h) is kept
+ * exactly. Used everywhere an occurrence's end is derived, and by the repair
+ * that rewrites such rows (`repairEventRows`).
+ */
+export function occurrenceSpanMs(
+  startsAt: Date,
+  endsAt: Date,
+  allDay: boolean,
+  tz: string,
+): number {
+  const DAY = 86_400_000;
+  if (allDay) return DAY;
+  const span = endsAt.getTime() - startsAt.getTime();
+  if (span > 0 && span <= DAY) return span;
+  const s = localParts(startsAt, tz).minutes;
+  const e = localParts(endsAt, tz).minutes;
+  const mins = e > s ? e - s : e + 1440 - s;
+  return mins * 60_000;
 }

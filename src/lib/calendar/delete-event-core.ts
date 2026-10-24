@@ -2,8 +2,8 @@ import "server-only";
 import { isOccasion } from "@/lib/calendar/occasions";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { addDays, toDateColumn } from "@/lib/dates";
-import { buildRule, parseRule } from "@/lib/calendar/recur";
+import { addDays, eventParts, toDateColumn } from "@/lib/dates";
+import { buildRule, occurrenceOfRow, parseRule } from "@/lib/calendar/recur";
 
 /**
  * Guard-free core for deleting a calendar event, shared by the web `deleteEvent`
@@ -19,11 +19,17 @@ export type DeleteScope = "all" | "future" | "one";
 export async function deleteEventCore(
   id: string,
   scope: DeleteScope,
-  occurrenceISO: string | undefined,
+  sentOccurrenceISO: string | undefined,
   opts: { isAdmin: boolean; callerUserId: string | null },
 ): Promise<{ error: string | null }> {
   const event = await prisma.event.findUnique({ where: { id } });
   if (!event) return { error: null };
+  // The occurrence meant, resolved through the series: deleting from the
+  // after-midnight piece of an overnight occurrence names the day after it,
+  // and used to tombstone a date the series never had (nothing disappeared).
+  const occurrenceISO = sentOccurrenceISO
+    ? occurrenceOfRow(event, sentOccurrenceISO)
+    : sentOccurrenceISO;
 
   if (event.externalCalendarId) {
     return { error: "Unsubscribe from the feed to remove its events." };
@@ -47,7 +53,9 @@ export async function deleteEventCore(
 
   const validOccurrence =
     !!occurrenceISO && /^\d{4}-\d{2}-\d{2}$/.test(occurrenceISO);
-  const parentStartISO = event.startsAt.toISOString().slice(0, 10);
+  // The series' first day as the calendar shows it (household day for timed
+  // events; the UTC instant's date was a day late for late-evening starts).
+  const parentStartISO = eventParts(event.startsAt, event.allDay).iso;
 
   const done = () => {
     revalidatePath("/calendar");

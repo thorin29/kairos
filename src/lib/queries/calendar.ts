@@ -4,7 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { eventParts, eventTz, fromDateColumn, localParts, toDateColumn, weekDays } from "@/lib/dates";
 import { getFamilyColor } from "@/lib/settings";
 import { householdTz } from "@/lib/dates";
-import { occurrencesIn } from "@/lib/calendar/recur";
+import { occurrenceOfRow, occurrencesIn } from "@/lib/calendar/recur";
+import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
+import { repairEventRows } from "@/lib/calendar/repair-events";
 import { CATEGORY_COLORS } from "@/lib/colors";
 
 /** Medical / Dental (the OTHER kind) is red for everyone by default. */
@@ -325,6 +327,10 @@ export async function loadRange(
   userId?: string | string[],
   includeSchoolWork = false,
 ): Promise<WeekData> {
+  // Rows saved by older code (multi-day repeating spans, edits filed against
+  // the day after their occurrence) are put right once per process first.
+  await repairEventRows();
+
   const rangeStart = toDateColumn(days[0]);
   const rangeEnd = new Date(
     toDateColumn(days[days.length - 1]).getTime() + 2 * 86_400_000,
@@ -434,9 +440,18 @@ export async function loadRange(
     select: { recurrenceId: true, recurrenceDate: true },
   });
   const skipDates = new Map<string, Set<string>>();
+  // The override's date is the occurrence it replaces — resolved through the
+  // series (occurrenceDayFor), so one filed against the after-midnight piece
+  // still hides its occurrence instead of showing beside it.
+  type SeriesRow = { id: string; startsAt: Date; endsAt: Date; allDay: boolean; rrule: string | null };
+  const seriesById = new Map<string, SeriesRow>(
+    (events as SeriesRow[]).filter((e) => e.rrule).map((e) => [e.id, e] as const),
+  );
   for (const r of overrideRows) {
     if (!r.recurrenceId || !r.recurrenceDate) continue;
-    const iso = fromDateColumn(r.recurrenceDate);
+    const parent = seriesById.get(r.recurrenceId);
+    const rawISO = fromDateColumn(r.recurrenceDate);
+    const iso = parent ? occurrenceOfRow(parent, rawISO) : rawISO;
     const set = skipDates.get(r.recurrenceId) ?? new Set<string>();
     set.add(iso);
     skipDates.set(r.recurrenceId, set);
@@ -458,7 +473,12 @@ export async function loadRange(
 
     const skip = e.rrule ? skipDates.get(e.id) : undefined;
 
-    const durationMs = e.endsAt.getTime() - e.startsAt.getTime();
+    // A repeating event's occurrences are each one occurrence long, whatever
+    // span an older save stored (occurrenceSpanMs).
+    const durationMs =
+      e.rrule && !e.externalCalendarId
+        ? occurrenceSpanMs(e.startsAt, e.endsAt, e.allDay, eventTz(e.allDay))
+        : e.endsAt.getTime() - e.startsAt.getTime();
 
     for (const occurrenceStart of starts) {
       // Occurrence replaced by a single-occurrence edit — the child renders it.

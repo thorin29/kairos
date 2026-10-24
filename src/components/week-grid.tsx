@@ -223,13 +223,17 @@ export function WeekGrid({
   const editEvent = async (ev: GridEvent, scope: "single" | "series" | "future") => {
     const data = await eventCopyData(ev.eventId);
     if (!data) return;
-    // Recurring: edit the occurrence that was clicked. Non-recurring (incl. a
+    // Recurring: edit the occurrence that was clicked — by the day it STARTS,
+    // not the piece tapped (an overnight occurrence's after-midnight piece is
+    // the next day; opening that day edited a date the series never had and
+    // left the original beside an edited copy). Non-recurring (incl. a
     // multi-day all-day event shown on a middle day): keep its real start date.
+    const occ = ev.startDayISO ?? ev.dayISO;
     openEdit(
-      { ...data, date: ev.recurring ? ev.dayISO : data.date },
+      { ...data, date: ev.recurring ? occ : data.date },
       {
         eventId: ev.eventId,
-        occurrenceISO: ev.dayISO,
+        occurrenceISO: occ,
         recurring: ev.recurring,
         scope,
       },

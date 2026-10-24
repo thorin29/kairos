@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { fitRepeatingSpan } from "@/lib/calendar/repeat-span";
 import { isOccasion } from "@/lib/calendar/occasions";
 import { householdTz, localParts, eventParts, eventTz, toDateColumn, zonedToUtc, addDays, daysBetween } from "@/lib/dates";
-import { buildRule, parseRule, alignWeeklyByday, occurrencesIn } from "@/lib/calendar/recur";
+import { buildRule, parseRule, alignWeeklyByday, occurrencesIn, occurrenceOfRow } from "@/lib/calendar/recur";
 import { cleanNotes } from "@/lib/calendar/event-notes";
 
 /**
@@ -271,6 +271,12 @@ export async function updatePersonalEvent(
   if (ev.externalCalendarId) return { error: "Subscribed events can't be edited here." };
 
   const recurring = Boolean(ev.rrule);
+  // The occurrence the editor was opened on, resolved through the series: the
+  // after-midnight piece of an overnight occurrence names the day after it
+  // (every app version sends the tapped piece's day).
+  const openedOccurrenceISO = input.occurrenceISO
+    ? occurrenceOfRow(ev, input.occurrenceISO)
+    : undefined;
   const singleEdit = recurring && scope === "single";
   const seriesEdit = recurring && scope === "series";
   const futureEdit = recurring && scope === "future";
@@ -333,7 +339,14 @@ export async function updatePersonalEvent(
       if (pIso < seriesStartISO) seriesStartISO = pIso;
     }
   }
-  const seriesShiftDays = seriesEdit ? daysBetween(openedISO, input.date) : 0;
+  // Shift only by how far the user moved the start off the occurrence they
+  // opened. Measuring from the series' first start instead moved the whole
+  // series to the opened occurrence, dropping every earlier one.
+  const shiftFromISO =
+    openedOccurrenceISO && /^\d{4}-\d{2}-\d{2}$/.test(openedOccurrenceISO)
+      ? openedOccurrenceISO
+      : openedISO;
+  const seriesShiftDays = seriesEdit ? daysBetween(shiftFromISO, input.date) : 0;
   const dateForRow = seriesEdit
     ? addDays(seriesStartISO, seriesShiftDays)
     : input.date;
@@ -401,8 +414,8 @@ export async function updatePersonalEvent(
 
   if (singleEdit) {
     const occ =
-      input.occurrenceISO && /^\d{4}-\d{2}-\d{2}$/.test(input.occurrenceISO)
-        ? input.occurrenceISO
+      openedOccurrenceISO && /^\d{4}-\d{2}-\d{2}$/.test(openedOccurrenceISO)
+        ? openedOccurrenceISO
         : input.date;
     const overrideDate = toDateColumn(occ);
     const existing = await prisma.event.findFirst({
@@ -436,8 +449,8 @@ export async function updatePersonalEvent(
     // Occurrences before this date keep their settings; per-occurrence changes
     // and deletions from this date on are reset and regenerated.
     const occ =
-      input.occurrenceISO && /^\d{4}-\d{2}-\d{2}$/.test(input.occurrenceISO)
-        ? input.occurrenceISO
+      openedOccurrenceISO && /^\d{4}-\d{2}-\d{2}$/.test(openedOccurrenceISO)
+        ? openedOccurrenceISO
         : input.date;
     const untilISO = addDays(occ, -1);
     const sid = ev.seriesId ?? ev.id;

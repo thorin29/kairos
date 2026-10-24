@@ -17,7 +17,7 @@ import {
   addDays,
   daysBetween,
 } from "@/lib/dates";
-import { buildRule, parseRule, alignWeeklyByday, occurrencesIn } from "@/lib/calendar/recur";
+import { buildRule, parseRule, alignWeeklyByday, occurrencesIn, occurrenceOfRow } from "@/lib/calendar/recur";
 import { cleanNotes } from "@/lib/calendar/event-notes";
 import { deleteEventCore } from "@/lib/calendar/delete-event-core";
 import { isAdmin, requireAdmin } from "@/lib/session";
@@ -342,7 +342,7 @@ export async function updateEvent(
 
   const id = String(formData.get("eventId") ?? "");
   const scope = String(formData.get("scope") ?? "series");
-  const occurrenceISO = String(formData.get("occurrenceISO") ?? "");
+  const sentOccurrenceISO = String(formData.get("occurrenceISO") ?? "");
 
   const target = await prisma.event.findUnique({
     where: { id },
@@ -365,6 +365,9 @@ export async function updateEvent(
   }
 
   const recurring = Boolean(target.rrule);
+  // The occurrence the editor was opened on, resolved through the series: the
+  // after-midnight piece of an overnight occurrence names the day after it.
+  const occurrenceISO = occurrenceOfRow(target, sentOccurrenceISO);
   const singleEdit = recurring && scope === "single";
   const seriesEdit = recurring && scope === "series";
   const futureEdit = recurring && scope === "future";
@@ -426,7 +429,11 @@ export async function updateEvent(
       if (pIso < seriesStartISO) seriesStartISO = pIso;
     }
   }
-  const seriesShiftDays = seriesEdit ? daysBetween(openedISO, formDate) : 0;
+  // Shift only by how far the user moved the start off the occurrence they
+  // opened. Measuring from the series' first start instead moved the whole
+  // series to the opened occurrence, dropping every earlier one.
+  const shiftFromISO = /^\d{4}-\d{2}-\d{2}$/.test(occurrenceISO) ? occurrenceISO : openedISO;
+  const seriesShiftDays = seriesEdit ? daysBetween(shiftFromISO, formDate) : 0;
   const dateForRow = seriesEdit
     ? addDays(seriesStartISO, seriesShiftDays)
     : formDate;

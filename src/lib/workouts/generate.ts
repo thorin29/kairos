@@ -1,4 +1,5 @@
 import { Category } from "@/generated/prisma/client";
+import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
 import { prisma } from "@/lib/prisma";
 import {
   addDays,
@@ -355,7 +356,11 @@ export async function pendingSportPrompts(
   const fromISO = addDays(dateISO, -(SPORT_LOOKBACK_DAYS - 1));
   const occs: { e: (typeof events)[number]; iso: string }[] = [];
   for (const e of events) {
-    const durationMs = e.endsAt.getTime() - e.startsAt.getTime();
+    // One occurrence's length (occurrenceSpanMs): an older series saved with a
+    // multi-day span would otherwise never count as ended.
+    const durationMs = e.rrule
+      ? occurrenceSpanMs(e.startsAt, e.endsAt, false, tz)
+      : e.endsAt.getTime() - e.startsAt.getTime();
     if (e.rrule) {
       for (const start of occurrencesIn(e.startsAt, e.rrule, fromISO, dateISO, tz)) {
         if (start.getTime() + durationMs <= now) {

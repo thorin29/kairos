@@ -6,7 +6,9 @@ import {
   shiftYears,
   startOfWeek,
   zonedToUtc,
+  eventTz,
 } from "@/lib/dates";
+import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
 
 /**
  * Expands the simple recurrence rules this app writes: a frequency, an
@@ -216,4 +218,58 @@ export function occurrencesIn(
   }
 
   return out;
+}
+
+/**
+ * The occurrence a calendar DAY belongs to, as that occurrence's start date.
+ *
+ * An occurrence that runs past midnight is drawn on two days; the calendar
+ * hands an editor whichever piece was tapped. Opening the after-midnight
+ * piece used to send the NEXT day as "the occurrence", so a single-occurrence
+ * edit saved an override for a date the series never had — the original
+ * stayed and an edited copy appeared a day later (a duplicate), and "delete
+ * this event" deleted nothing. Every save and delete path resolves the date
+ * through here first; so does the read side for overrides saved before.
+ *
+ * `spanMs` is the occurrence length (`occurrenceSpanMs`, ≤ 24 h), so only the
+ * day itself and the day before can hold an occurrence covering `iso`. A day
+ * that starts an occurrence of its own wins; otherwise the day before is
+ * used if its occurrence reaches past midnight; otherwise `iso` as given.
+ */
+export function occurrenceDayFor(
+  baseStart: Date,
+  rrule: string,
+  spanMs: number,
+  iso: string,
+  tz: string,
+): string {
+  const own = occurrencesIn(baseStart, rrule, iso, iso, tz);
+  if (own.length > 0) return iso;
+  const prevISO = addDays(iso, -1);
+  const prev = occurrencesIn(baseStart, rrule, prevISO, prevISO, tz);
+  if (prev.length === 0) return iso;
+  const [y, mo, d] = iso.split("-").map(Number);
+  const dayStart = zonedToUtc(y, mo, d, 0, 0, 0, tz);
+  const reaches = prev.some((p) => p.getTime() + spanMs > dayStart.getTime());
+  return reaches ? prevISO : iso;
+}
+
+/**
+ * `occurrenceDayFor` for a stored series row: the one call every save, delete
+ * and read path makes with the day a client sent. A malformed day, or a row
+ * that doesn't repeat, comes back unchanged.
+ */
+export function occurrenceOfRow(
+  row: { startsAt: Date; endsAt: Date; allDay: boolean; rrule: string | null },
+  iso: string,
+): string {
+  if (!row.rrule || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const tz = eventTz(row.allDay);
+  return occurrenceDayFor(
+    row.startsAt,
+    row.rrule,
+    occurrenceSpanMs(row.startsAt, row.endsAt, row.allDay, tz),
+    iso,
+    tz,
+  );
 }
