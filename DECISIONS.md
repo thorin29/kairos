@@ -1,5 +1,41 @@
 # Decisions
 
+## 2026-10 — Gallery swaps were dropping growth; it is credited back (v0.602.0)
+
+Reported: switching characters in the gallery (and back, or any mix) and the
+growth bar stops moving; some people's characters had fallen well behind.
+
+Two leaks, both at the hand-over between the companion leaving and the one
+arriving:
+
+- **The tenure day was the UTC date.** `tenureStartedAt.toISOString()` made a
+  swap after ~7 PM Central start "tomorrow". The leaving companion banks days
+  before today, the arriving one counted from tomorrow, so the swap day went to
+  neither. Someone who swaps most evenings lost most days.
+- **A week counted only if it STARTED inside the tenure.** The leaving one banks
+  finished weeks, the arriving one skipped the week already under way, so any
+  mid-week swap lost that week's +2 for both.
+
+Fix — one attribution rule, `src/lib/companions-growth.ts`, with no gap and no
+overlap: a day belongs to the companion active at its end (tenure starts on the
+household day it was activated, `todayISO(date)`), and a perfect week to the
+companion active when the week ended (its last day on or after the tenure's
+first day). Replayed over 200 random swap histories: banked + live always equals
+everything earned.
+
+**The growth already lost.** Swap history isn't stored, so it can't be put back
+on the companion that missed it. Instead, at read time, `unclaimedGrowth` =
+everything earned since the person's first hatch − what the shelf has banked
+(floored as the gallery shows it) − the active companion's growth, never below
+zero, and that is added to the active companion. It is banked with it like the
+rest when it next goes to the gallery, after which it is zero again. Derived,
+not stored: no migration, and it keeps self-correcting if anything ever drops
+growth again. A household whose shelf was floored up by migration 124 can only
+come out at zero here, never negative.
+
+Checked by running the real `loadProgression` against a fake database for an
+evening swap plus a mid-week swap: 17 growth where the old code gave 11.
+
 ## 2026-10 — Hockey: each person's own section order and open sections (v0.601.0)
 
 Every section starts collapsed. Opening one, or reordering with **Arrange**,

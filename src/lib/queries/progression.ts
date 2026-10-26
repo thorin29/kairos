@@ -12,6 +12,7 @@ import { getScoringStart, getSeasonConfig } from "@/lib/settings";
 import { resolveSeasonWindow } from "@/lib/season";
 import { bankedGrowthFloor, blendPalette, companionPhase, luckFromStreak, type CompanionPhase } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
+import { growthSince as growthBetween, unclaimedGrowth } from "@/lib/companions-growth";
 import { readingXpForBook, bibleXpForChapters } from "@/lib/scoring/reading";
 import { loadBonuses } from "@/lib/queries/bonus";
 import { isStale, loadStaleContext, type StaleInput } from "@/lib/chores/stale";
@@ -144,7 +145,22 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     loadBonuses(seasonStart, today),
     loadBonuses(startISO ?? EPOCH, today),
     prisma.companionState.findMany(),
-    prisma.companion.findMany({ where: { isActive: true } }),
+    // Every companion, not just the active one: the shelf's banked growth and
+    // the first hatch date are what `unclaimedGrowth` checks against.
+    prisma.companion.findMany({
+      select: {
+        userId: true,
+        species: true,
+        shiny: true,
+        isActive: true,
+        activeSinceXp: true,
+        acquiredAt: true,
+        deepeningStartedAt: true,
+        growthBanked: true,
+        tenureStartedAt: true,
+        mintedStage: true,
+      },
+    }),
     // Leisure reading feeds Scholar slightly (derived from the logs at read time).
     prisma.book.findMany({
       select: {
@@ -165,13 +181,24 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     seasonKey: string | null;
     eggsThisSeason: number;
   };
-  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number; acquiredAt: Date; deepeningStartedAt: Date | null; growthBanked: number; tenureStartedAt: Date | null; mintedStage: number | null };
+  type ActiveRow = { userId: string; species: string; shiny: boolean; isActive: boolean; activeSinceXp: number; acquiredAt: Date; deepeningStartedAt: Date | null; growthBanked: number; tenureStartedAt: Date | null; mintedStage: number | null };
   const stateByUser = new Map(
     (compStates as StateRow[]).map((s) => [s.userId, s]),
   );
+  const allComps = activeComps as ActiveRow[];
   const activeByUser = new Map(
-    (activeComps as ActiveRow[]).map((c) => [c.userId, c]),
+    allComps.filter((c) => c.isActive).map((c) => [c.userId, c]),
   );
+  // Per person: what the shelf holds (never below the stage the gallery shows,
+  // as the live read does) and the household day their first egg hatched.
+  const shelfByUser = new Map<string, { banked: number; firstISO: string }>();
+  for (const c of allComps) {
+    const cur = shelfByUser.get(c.userId) ?? { banked: 0, firstISO: "9999-12-31" };
+    if (!c.isActive) cur.banked += Math.max(c.growthBanked, bankedGrowthFloor(c.mintedStage));
+    const hatched = todayISO(c.acquiredAt);
+    if (hatched < cur.firstISO) cur.firstISO = hatched;
+    shelfByUser.set(c.userId, cur);
+  }
 
   type Acc = {
     xp: number;
@@ -382,23 +409,9 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         // lifetime XP, which accrues from everything and so filled eggs while
         // the creature in front of you had not grown — that is where "a new egg
         // is ready" under a hatchling came from.
-        const growthSince = (fromISO: string) =>
-          [...a.days.entries()].filter(
-            ([iso, b]) =>
-              iso >= fromISO &&
-              iso < today &&
-              b.assigned > 0 &&
-              b.missed === 0 &&
-              b.complete === b.assigned,
-          ).length +
-          [...a.weeks.entries()].filter(
-            ([wkISO, b]) =>
-              wkISO >= fromISO &&
-              b.assigned > 0 &&
-              b.complete === b.assigned &&
-              addDays(wkISO, 6) < today,
-          ).length *
-            2;
+        // One attribution rule for days and weeks (companions-growth.ts), so
+        // nothing earned falls between two companions on a swap.
+        const growthSince = (fromISO: string) => growthBetween(a.days, a.weeks, fromISO, today);
 
         if (!active) {
           // No companion yet: the first egg is simply there to hatch, so a new
@@ -421,22 +434,36 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         // one. A companion brought back from the gallery keeps what it earned
         // and nothing more: measuring from `acquiredAt` would credit it every
         // clean day since it first hatched, including the ones it spent shelved.
-        const tenureISO = (active.tenureStartedAt ?? active.acquiredAt)
-          .toISOString()
-          .slice(0, 10);
+        // The household day it was made active — not the UTC date, which
+        // turned an evening swap into tomorrow.
+        const tenureISO = todayISO(active.tenureStartedAt ?? active.acquiredAt);
         // Never below the stage the gallery showed it at (bankedGrowthFloor).
         const banked = Math.max(active.growthBanked, bankedGrowthFloor(active.mintedStage));
         const deepFromISO = active.deepeningStartedAt
-          ? active.deepeningStartedAt.toISOString().slice(0, 10)
+          ? todayISO(active.deepeningStartedAt)
           : null;
+        // Plus anything earned since the first hatch that no companion holds:
+        // growth older swaps dropped between two companions (see
+        // companions-growth.ts). It lands on the one active now, and is banked
+        // with it like the rest when it next goes to the gallery.
+        const live = banked + growthSince(tenureISO);
+        const shelf = shelfByUser.get(person.id);
+        const totalGrowth =
+          live +
+          (shelf
+            ? unclaimedGrowth({
+                earnedSinceFirstHatch: growthSince(shelf.firstISO),
+                shelvedBanked: shelf.banked,
+                activeGrowth: live,
+              })
+            : 0);
         const ph = companionPhase({
-          growth: banked + growthSince(tenureISO),
+          growth: totalGrowth,
           deepenGrowth: deepFromISO ? growthSince(deepFromISO) : 0,
           deepening: deepFromISO !== null,
           shiny: active.shiny,
         });
 
-        const totalGrowth = banked + growthSince(tenureISO);
         return {
           active: true as const,
           species: active.species,

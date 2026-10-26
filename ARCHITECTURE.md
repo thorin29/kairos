@@ -163,7 +163,7 @@ production:
 | Body map figure colours (web and app) | `--color-figure*` in `src/app/globals.css`; the app's `figureColors(dark)` holds the same values |
 | A movement's Best weight / Best reps / Latest | `src/lib/queries/movement-stats.ts` |
 | Schoolwork completion marks the plan unit done | `syncPlanUnitDone` in `src/lib/school/plan-unit-sync.ts` |
-| Companion growth banked across a shelf trip | `src/lib/companions-tenure.ts` |
+| Companion growth banked across a shelf trip | `src/lib/companions-tenure.ts`; which companion a day or week belongs to, and growth no companion got back, in `src/lib/companions-growth.ts` |
 | Which events take a note, and its length | `takesNotes` / `cleanNotes` in `src/lib/calendar/event-notes.ts` |
 | Whose calendar a new event lands on | `resolveOwner` in `src/lib/calendar/create-event.ts` (never trusted from the request) |
 | One event from an `.ics` file | `readIcsFile` in `src/lib/calendar/ics-import.ts` |
