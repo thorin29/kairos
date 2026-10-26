@@ -21,6 +21,7 @@ import {
   TasksIcon,
   PaletteIcon,
   GearIcon,
+  HockeyIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -95,6 +96,13 @@ const TILES: Tile[] = [
     label: "Money",
     blurb: "Approve transactions, edit rows, and reconcile balances",
     icon: <DollarIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/admin/hockey",
+    label: "Hockey",
+    blurb: "Connect ice-time for the week's ice times",
+    icon: <HockeyIcon className="h-7 w-7" />,
     ready: true,
   },
   {

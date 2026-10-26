@@ -1,5 +1,33 @@
 # Decisions
 
+## 2026-10 — Hockey page reads a separate ice-time container (v0.600.0)
+
+Rink schedules come from **ice-time**, its own container and repo, which reads
+the rink's registration pages and serves `GET /api/sessions`. Kairos stores
+only ice-time's address and token (`hockey.feedUrl`, `hockey.feedToken` in
+`AppSetting`, set under Admin → Hockey) and asks for the week each time the
+page opens — no session data is stored, no rink is named anywhere in Kairos.
+Blank address = Hockey hidden from the sidebar (`hiddenNavHrefs`, now applied
+on every device, not just personal ones).
+
+- **One shaping rule:** `buildHockeyView` (`src/lib/hockey-view.ts`, pure)
+  turns the feed into days, columns and each session's Add button; the web
+  page and `/api/v1/hockey` both use it, so the phone only draws it. The feed
+  is untrusted: every field is checked, sign-up links must be https.
+- **Add to calendar** opens the normal New event form pre-filled: name
+  "Section: Rink", the session's start/end, the "Hockey practice" event type
+  (else any type with "hockey" in the name), and the location from a saved
+  address whose name matches the rink. Sessions with a goalie list are booked
+  as the goalie session ("Add goalie session"); the rest say "Add to calendar".
+  Owner: the signed-in person on their own device; the form asks on the shared
+  tablet. The phone fills in its own person and can add participants.
+- **Web shows all 7 days** ("Nothing scheduled" on empty days); the phone
+  hides empty days.
+- **Freshness** shown is the oldest enabled schedule's last good read on
+  ice-time, not the time of the request.
+- **Admin-entered address is fetched server-side.** Admin-only and needed by
+  design; no redirects to other hosts are relied on.
+
 ## 2026-10 — Black-and-white characters checked against their original sheets (v0.599.2)
 
 With the original sheets for Newsreel Nettie, Reel Rascal Ollie, Eugene,

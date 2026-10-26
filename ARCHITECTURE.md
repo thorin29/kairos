@@ -176,6 +176,7 @@ production:
 | What kind of profile picture a value is | `isUploaded` / `isIcon` / `companionAvatarOf` in `src/lib/avatars.ts` |
 | Whether a planned workout is done (logged or skipped) | `planDone` in `src/lib/queries/workout-log.ts` |
 | Whether the day's workout task is complete | `workoutTaskTarget` (applied by `settleWorkoutTask`) in `src/lib/workouts/mark.ts` |
+| What the Hockey page shows and what each Add fills in (web + phone) | `buildHockeyView` in `src/lib/hockey-view.ts`, served to the phone by `/api/v1/hockey` |
 
 When a rule must also run on the phone — the notes rule (`NoteField.kt`) and the
 calendar-file import (`IcsImport.kt`, which reads the file on the device) — the
@@ -203,6 +204,14 @@ fed by a subsystem that lives across three repositories:
 
 So credited minutes are computed once, in the collector, and flow one way:
 collector → web (store) → app/web (display).
+
+## Hockey reads a separate container
+
+Ice times come from **ice-time** (its own repo), which reads a rink's public
+registration pages and serves a JSON feed. Kairos keeps only its address and
+token (Admin → Hockey), fetches the week on each page open in
+`src/lib/hockey.ts`, and stores nothing. Everything rink-specific lives in
+ice-time's own data volume.
 
 ## Layout
 

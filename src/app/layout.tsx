@@ -83,7 +83,7 @@ export default async function RootLayout({
   // this server layout was the bug: the layout doesn't re-render on in-app
   // navigation, so a value computed from the request path froze at the last
   // hard load and the sidebar could stay gone until a manual refresh.
-  const hiddenNav = me ? await hiddenNavHrefs() : [];
+  const hiddenNav = await hiddenNavHrefs();
   const mode = me ? await deviceMode() : "personal";
   const personalHome = me && mode === "personal" ? `/person/${me.id}` : "/";
   const shared = Boolean(me) && mode === "shared";

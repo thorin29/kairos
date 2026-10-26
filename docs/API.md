@@ -1012,10 +1012,49 @@ on this shape.
 - **Response:** `{ "matched": [...names], "unmatched": [...] }`. An entry that
   resolves to no Kairos person comes back as `unmatched`.
 
+### Hockey — **built (v0.600)**
+
+`GET /api/v1/hockey` (device auth). Kairos asks the ice-time container for the
+week on every call; nothing is stored. Shaped by `buildHockeyView`, the same rule
+the web page uses.
+
+```jsonc
+// Not set up:            { "state": "off" }
+// ice-time unreachable:  { "state": "error", "error": "Couldn't reach ice-time…" }
+{
+  "state": "ok",
+  "eventTypeId": "…",             // the "Hockey practice" type, or null
+  "days": ["2026-10-26", …],      // 7 days, today first
+  "rinks": ["Sample Arena"],
+  "generatedAt": "…", "checkedAt": "…",   // checkedAt: oldest schedule's last read
+  "warnings": [],
+  "sections": [
+    {
+      "name": "Drop-in", "colA": "Skaters", "colB": "Goalies",   // colA "Signed up", colB null when unsplit
+      "link": "https://…", "rink": "Sample Arena",
+      "rows": [
+        {
+          "date": "2026-10-27", "start": "06:00", "end": "07:45", "endDayOffset": 0,
+          "minutes": 105, "rink": "Sample Arena",
+          "skaters": { "enrolled": 1, "max": 24, "remaining": 23 },
+          "goalies": { "enrolled": 0, "max": 3, "remaining": 3 },
+          "players": null,
+          "link": "https://…",
+          "add": { "title": "Drop-in: Sample Arena", "label": "Add goalie session",
+                   "location": "1 Example Way" }   // location null when no saved address matches
+        }
+      ]
+    }
+  ]
+}
+```
+
+Rows are local wall-clock times. A section with no rows this week is still listed.
+
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**138 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**139 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1031,6 +1070,7 @@ silently invisible:
 - **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options`, `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server)
+- **hockey** (the week from ice-time)
 - **widget** (the Android home-screen widget's feed)
 
 ## Deep links (notification -> screen)

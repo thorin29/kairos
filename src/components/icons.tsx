@@ -227,6 +227,16 @@ export function GamepadIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+export function HockeyIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M8 3l5.6 12.4" />
+      <path d="M13.6 15.4H19a1.8 1.8 0 0 1 0 3.6h-6.3a2 2 0 0 1-1.8-1.2l-.9-2" />
+      <ellipse cx="5.5" cy="18.5" rx="2.5" ry="1.4" />
+    </svg>
+  );
+}
+
 export function TokenIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>

@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { deviceMode } from "@/lib/device";
 import { currentUser } from "@/lib/user-session";
+import { hockeyEnabled } from "@/lib/hockey";
 
 /**
  * On a personal device with someone signed in, the id a page should narrow to;
@@ -42,15 +43,15 @@ export async function personalVisibleIds(): Promise<string[] | null> {
 }
 
 /**
- * Nav links to hide on a personal device because the signed-in person (and, for
- * a parent, their children) have no data there. Currently just Money: a child
- * with no transactions shouldn't see the Money tab at all. Returns [] on the
- * shared tablet.
+ * Nav links to hide. Hockey is hidden everywhere until ice-time is connected.
+ * On a personal device, Money is also hidden when the signed-in person (and,
+ * for a parent, their children) have no transactions.
  */
 export async function hiddenNavHrefs(): Promise<string[]> {
-  const visible = await personalVisibleIds();
-  if (!visible) return [];
   const hidden: string[] = [];
+  if (!(await hockeyEnabled())) hidden.push("/hockey");
+  const visible = await personalVisibleIds();
+  if (!visible) return hidden;
   const money = await prisma.moneyEntry.count({
     where: { userId: { in: visible } },
   });
