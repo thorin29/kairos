@@ -1051,10 +1051,15 @@ the web page uses.
 
 Rows are local wall-clock times. A section with no rows this week is still listed.
 
+**Layout (v0.601):** sections come in this person's order, each with
+`"open": true|false` (everything starts collapsed). Save it with
+`POST /api/v1/hockey/prefs` `{ "order": [names], "open": [names] }` — the whole
+layout each time; returns `{ "ok": true, "order": [...], "open": [...] }`.
+
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**139 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**140 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1070,7 +1075,7 @@ silently invisible:
 - **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options`, `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server)
-- **hockey** (the week from ice-time)
+- **hockey** (the week from ice-time), `hockey/prefs`
 - **widget** (the Android home-screen widget's feed)
 
 ## Deep links (notification -> screen)

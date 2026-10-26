@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10 — Hockey: each person's own section order and open sections (v0.601.0)
+
+Every section starts collapsed. Opening one, or reordering with **Arrange**,
+is saved for the signed-in person and follows them between the web and their
+phone. Stored as one JSON setting per person (`hockey.prefs.<userId>` in
+`AppSetting`: `{ order, open }` by section name) rather than a new table — it's
+a few names, read only by Hockey, and needed no migration. One rule,
+`arrangeSections` in `src/lib/hockey-view.ts`: placed sections first in the
+person's order, the rest after in the feed's order; names that no longer
+exist are ignored. The web page and `GET /api/v1/hockey` both apply it; the
+phone saves through `POST /api/v1/hockey/prefs` with the whole layout each
+time, so a write queued offline replays safely. With no one signed in the
+layout works but isn't saved. The explanatory footer was removed from the page.
+
 ## 2026-10 — Hockey page reads a separate ice-time container (v0.600.0)
 
 Rink schedules come from **ice-time**, its own container and repo, which reads

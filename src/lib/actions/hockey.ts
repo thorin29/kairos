@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/session";
-import { saveHockeyConfig, loadHockey } from "@/lib/hockey";
+import { saveHockeyConfig, loadHockey, saveHockeyPrefs } from "@/lib/hockey";
+import { currentUser } from "@/lib/user-session";
 
 /** Save where Hockey's ice times come from. Admin only. */
 export async function saveHockeyAction(input: {
@@ -32,4 +33,12 @@ export async function testHockeyAction(): Promise<{ ok: boolean; message: string
     ...r.view.warnings,
   ];
   return { ok: true, message: parts.join(" ") };
+}
+
+/** Save the signed-in person's own Hockey layout. Anyone signed in; it only
+ *  ever writes their own. */
+export async function saveHockeyPrefsAction(prefs: { order: string[]; open: string[] }): Promise<void> {
+  const me = await currentUser();
+  if (!me) return;
+  await saveHockeyPrefs(me.id, prefs);
 }

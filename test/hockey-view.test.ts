@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildHockeyView, placeForRink, countText, spotsLeft } from "@/lib/hockey-view";
+import {
+  buildHockeyView,
+  placeForRink,
+  countText,
+  spotsLeft,
+  arrangeSections,
+  cleanHockeyPrefs,
+} from "@/lib/hockey-view";
 
 // A made-up rink and feed in ice-time's format; nothing household-specific.
 const link = (n: number) => `https://yourclub.finnlyconnect.com/registration/activityitemv2/${n}`;
@@ -111,5 +118,29 @@ describe("helpers", () => {
   it("formats counts and open spots", () => {
     expect(countText({ enrolled: 2, max: 3, remaining: 1 })).toBe("2/3");
     expect(spotsLeft({ enrolled: 3, max: 3, remaining: null })).toBe(0);
+  });
+});
+
+describe("per-person layout", () => {
+  const secs = [{ name: "Stick & puck" }, { name: "Drop-in" }, { name: "Parent & child" }, { name: "Youth open hockey" }];
+
+  it("starts with everything collapsed, in the feed's order", () => {
+    const a = arrangeSections(secs, cleanHockeyPrefs(null));
+    expect(a.map((s) => s.name)).toEqual(secs.map((s) => s.name));
+    expect(a.every((s) => !s.open)).toBe(true);
+  });
+
+  it("puts a person's chosen order first and remembers what they opened", () => {
+    const a = arrangeSections(secs, { order: ["Youth open hockey", "Drop-in"], open: ["Drop-in"] });
+    expect(a.map((s) => s.name)).toEqual(["Youth open hockey", "Drop-in", "Stick & puck", "Parent & child"]);
+    expect(a.find((s) => s.name === "Drop-in")?.open).toBe(true);
+    expect(a.find((s) => s.name === "Youth open hockey")?.open).toBe(false);
+  });
+
+  it("ignores names that no longer exist and junk input", () => {
+    expect(arrangeSections(secs, { order: ["Gone"], open: ["Gone"] }).map((s) => s.name)).toEqual(
+      secs.map((s) => s.name),
+    );
+    expect(cleanHockeyPrefs({ order: ["A", "A", 3, ""], open: "x" })).toEqual({ order: ["A"], open: [] });
   });
 });

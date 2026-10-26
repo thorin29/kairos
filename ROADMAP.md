@@ -1675,12 +1675,14 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] **Hockey page** — stick & puck, drop-in, parent & child and youth open
   hockey for the next 7 days with sign-up counts, from the separate ice-time
   container (Admin → Hockey). Add to calendar pre-fills New event.
+- [x] **Hockey layout per person** (web 0.601 / app 0.410) — sections start
+  collapsed; open/closed and the order set with Arrange are saved per person.
 - [ ] ice-time: follow the rink's schedule index page to pick up each July's
   new links (tracked in the ice-time repo).
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.600.0 (migrations through 127_marine_corps_birthday).
-- App versionName 0.409.0 / versionCode 470 / CLIENT_BUILD 470.
+- Web APP_VERSION 0.601.0 (migrations through 127_marine_corps_birthday).
+- App versionName 0.410.0 / versionCode 471 / CLIENT_BUILD 471.
 - ice-time v0.1.0: deployed; feeds the Hockey page.
 - Collector: deployed and running; Xbox totals come from real game sessions.

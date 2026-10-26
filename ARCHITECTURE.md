@@ -177,6 +177,7 @@ production:
 | Whether a planned workout is done (logged or skipped) | `planDone` in `src/lib/queries/workout-log.ts` |
 | Whether the day's workout task is complete | `workoutTaskTarget` (applied by `settleWorkoutTask`) in `src/lib/workouts/mark.ts` |
 | What the Hockey page shows and what each Add fills in (web + phone) | `buildHockeyView` in `src/lib/hockey-view.ts`, served to the phone by `/api/v1/hockey` |
+| A person's Hockey section order and which are open | `arrangeSections` in `src/lib/hockey-view.ts`; saved by `saveHockeyPrefs` in `src/lib/hockey.ts` |
 
 When a rule must also run on the phone — the notes rule (`NoteField.kt`) and the
 calendar-file import (`IcsImport.kt`, which reads the file on the device) — the

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { saveHockeyPrefsAction } from "@/lib/actions/hockey";
 import { useAddEvent } from "@/app/calendar/add-event-form";
 import {
   countText,
@@ -10,7 +11,7 @@ import {
   type HockeySection,
   type HockeyView,
 } from "@/lib/hockey-view";
-import { PlusIcon } from "@/components/icons";
+import { PlusIcon, ChevronDownIcon } from "@/components/icons";
 
 const dayFmt = (iso: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -65,15 +66,54 @@ function GoaliePill({ c }: { c: NonNullable<HockeyRow["goalies"]> }) {
   );
 }
 
+type Arranged = HockeySection & { open: boolean };
+
 export function HockeyBoard({
   view,
+  sections: initialSections,
+  canSave,
   eventTypeId,
   ownerId,
 }: {
   view: HockeyView;
+  /** In this person's order, each open or collapsed (all collapsed at first). */
+  sections: Arranged[];
+  canSave: boolean;
   eventTypeId: string | null;
   ownerId: string | null;
 }) {
+  const [sections, setSections] = useState(initialSections);
+  const [arranging, setArranging] = useState(false);
+  // A refresh brings new sessions; keep this person's current layout on them.
+  useEffect(() => {
+    setSections((cur) => {
+      const open = new Set(cur.filter((s) => s.open).map((s) => s.name));
+      const rank = new Map(cur.map((s, i) => [s.name, i]));
+      return [...initialSections]
+        .sort((a, b) => (rank.get(a.name) ?? 99) - (rank.get(b.name) ?? 99))
+        .map((s) => ({ ...s, open: open.has(s.name) }));
+    });
+  }, [initialSections]);
+
+  const commit = (next: Arranged[]) => {
+    setSections(next);
+    if (canSave) {
+      void saveHockeyPrefsAction({
+        order: next.map((s) => s.name),
+        open: next.filter((s) => s.open).map((s) => s.name),
+      });
+    }
+  };
+  const toggle = (name: string) =>
+    commit(sections.map((s) => (s.name === name ? { ...s, open: !s.open } : s)));
+  const move = (i: number, by: number) => {
+    const j = i + by;
+    if (j < 0 || j >= sections.length) return;
+    const next = [...sections];
+    [next[i], next[j]] = [next[j], next[i]];
+    commit(next);
+  };
+
   const router = useRouter();
   const { openAt } = useAddEvent();
   const [refreshing, startRefresh] = useTransition();
@@ -112,6 +152,20 @@ export function HockeyBoard({
         </div>
         <div className="flex items-center gap-3 text-sm text-muted">
           {updated && <span>{updated}</span>}
+          {sections.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setArranging((v) => !v)}
+              aria-pressed={arranging}
+              className={`inline-flex h-10 items-center rounded-full border px-4 font-medium transition-colors ${
+                arranging
+                  ? "border-accent bg-accent text-on-accent"
+                  : "border-hairline bg-surface text-accent hover:border-accent"
+              }`}
+            >
+              {arranging ? "Done" : "Arrange"}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => startRefresh(() => router.refresh())}
@@ -131,22 +185,26 @@ export function HockeyBoard({
         </div>
       )}
 
-      {view.sections.length === 0 ? (
+      {sections.length === 0 ? (
         <p className="rounded-2xl border border-hairline bg-surface p-6 text-sm text-muted">
           No ice times this week. Schedules are chosen on the ice-time page.
         </p>
       ) : (
         <div className="space-y-6">
-          {view.sections.map((s) => (
-            <SectionCard key={s.name} s={s} days={view.days} onAdd={add} />
+          {sections.map((s, i) => (
+            <SectionCard
+              key={s.name}
+              s={s}
+              days={view.days}
+              onAdd={add}
+              onToggle={() => toggle(s.name)}
+              arranging={arranging}
+              onUp={i > 0 ? () => move(i, -1) : undefined}
+              onDown={i < sections.length - 1 ? () => move(i, 1) : undefined}
+            />
           ))}
         </div>
       )}
-
-      <p className="mt-6 text-xs text-muted">
-        Counts come from the rink&rsquo;s registration pages and can lag a few minutes.
-        Sign-ups happen there.
-      </p>
     </main>
   );
 }
@@ -155,29 +213,70 @@ function SectionCard({
   s,
   days,
   onAdd,
+  onToggle,
+  arranging,
+  onUp,
+  onDown,
 }: {
-  s: HockeySection;
+  s: Arranged;
   days: string[];
   onAdd: (r: HockeyRow) => void;
+  onToggle: () => void;
+  arranging: boolean;
+  onUp?: () => void;
+  onDown?: () => void;
 }) {
   const byDay = new Map<string, HockeyRow[]>();
   for (const r of s.rows) byDay.set(r.date, [...(byDay.get(r.date) ?? []), r]);
 
+  const n = s.rows.length;
+  const arrow =
+    "inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-ink transition-colors hover:border-accent hover:text-accent disabled:opacity-30 disabled:hover:border-hairline disabled:hover:text-ink";
+
   return (
     <section className="overflow-hidden rounded-2xl border border-hairline bg-surface">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline px-5 py-4">
-        <h2 className="font-display text-xl font-semibold">{s.name}</h2>
-        {s.link && (
-          <a
-            href={s.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-medium text-accent hover:underline"
-          >
-            {s.rink ? `Sign up at ${s.rink}` : "Sign up"} ↗
-          </a>
+      <div
+        className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 ${
+          s.open ? "border-b border-hairline" : ""
+        }`}
+      >
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={s.open}
+          className="-mx-2 flex min-h-11 items-center gap-2 rounded-xl px-2 text-left hover:bg-ink/5"
+        >
+          <ChevronDownIcon
+            className={`h-5 w-5 shrink-0 text-muted transition-transform ${s.open ? "" : "-rotate-90"}`}
+          />
+          <h2 className="font-display text-xl font-semibold">{s.name}</h2>
+          <span className="text-sm text-muted">
+            {n === 0 ? "none this week" : `${n} session${n === 1 ? "" : "s"}`}
+          </span>
+        </button>
+        {arranging ? (
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onUp} disabled={!onUp} aria-label={`Move ${s.name} up`} className={arrow}>
+              <ChevronDownIcon className="h-5 w-5 rotate-180" />
+            </button>
+            <button type="button" onClick={onDown} disabled={!onDown} aria-label={`Move ${s.name} down`} className={arrow}>
+              <ChevronDownIcon className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          s.link && (
+            <a
+              href={s.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-accent hover:underline"
+            >
+              {s.rink ? `Sign up at ${s.rink}` : "Sign up"} ↗
+            </a>
+          )
         )}
       </div>
+      {s.open && (
       <div className="overflow-x-auto">
         <table className="w-full min-w-[680px] table-fixed border-collapse text-sm">
           <thead>
@@ -230,6 +329,7 @@ function SectionCard({
           </tbody>
         </table>
       </div>
+      )}
     </section>
   );
 }

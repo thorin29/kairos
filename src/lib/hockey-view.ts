@@ -211,3 +211,42 @@ export function spotsLeft(c: HockeyCount): number {
   if (c.remaining != null) return c.remaining;
   return c.max != null ? Math.max(0, c.max - c.enrolled) : 1;
 }
+
+// --- Per-person layout ------------------------------------------------------
+
+/** How one person has arranged their Hockey page: the section order they set
+ *  and which sections they've opened. Every section starts collapsed. */
+export type HockeyPrefs = { order: string[]; open: string[] };
+
+export const NO_HOCKEY_PREFS: HockeyPrefs = { order: [], open: [] };
+
+/** Untrusted input (a saved setting or a request body) → clean prefs. */
+export function cleanHockeyPrefs(v: unknown): HockeyPrefs {
+  const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
+  const list = (x: unknown) =>
+    Array.isArray(x)
+      ? [...new Set(x.filter((s): s is string => typeof s === "string" && s.trim().length > 0).map((s) => s.trim().slice(0, 60)))].slice(0, 30)
+      : [];
+  return { order: list(o.order), open: list(o.open) };
+}
+
+/** Sections in the person's order (any they haven't placed keep the feed's
+ *  order, after the placed ones), each marked open or collapsed. */
+export function arrangeSections<T extends { name: string }>(
+  sections: T[],
+  prefs: HockeyPrefs,
+): (T & { open: boolean })[] {
+  const rank = new Map(prefs.order.map((n, i) => [n, i]));
+  const open = new Set(prefs.open);
+  return sections
+    .map((s, i) => ({ s, i }))
+    .sort((a, b) => {
+      const ra = rank.get(a.s.name);
+      const rb = rank.get(b.s.name);
+      if (ra != null && rb != null) return ra - rb;
+      if (ra != null) return -1;
+      if (rb != null) return 1;
+      return a.i - b.i;
+    })
+    .map(({ s }) => ({ ...s, open: open.has(s.name) }));
+}

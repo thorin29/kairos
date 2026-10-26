@@ -2,7 +2,13 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { getSetting, setSetting, clearSetting } from "@/lib/settings";
 import { todayISO } from "@/lib/dates";
-import { buildHockeyView, type HockeyView } from "@/lib/hockey-view";
+import {
+  buildHockeyView,
+  cleanHockeyPrefs,
+  NO_HOCKEY_PREFS,
+  type HockeyPrefs,
+  type HockeyView,
+} from "@/lib/hockey-view";
 
 /**
  * Where the Hockey page's ice times come from: an ice-time container (its own
@@ -100,4 +106,25 @@ export async function hockeyEventTypeId(): Promise<string | null> {
     types.find((t) => n(t.name).includes("hockey"))?.id ??
     null
   );
+}
+
+/** Each person's own Hockey layout (order + open sections), kept as one small
+ *  setting per person so it follows them between the web and their phone. */
+const prefsKey = (userId: string) => `hockey.prefs.${userId}`;
+
+export async function getHockeyPrefs(userId: string | null | undefined): Promise<HockeyPrefs> {
+  if (!userId) return NO_HOCKEY_PREFS;
+  const raw = await getSetting(prefsKey(userId));
+  if (!raw) return NO_HOCKEY_PREFS;
+  try {
+    return cleanHockeyPrefs(JSON.parse(raw));
+  } catch {
+    return NO_HOCKEY_PREFS;
+  }
+}
+
+export async function saveHockeyPrefs(userId: string, prefs: unknown): Promise<HockeyPrefs> {
+  const clean = cleanHockeyPrefs(prefs);
+  await setSetting(prefsKey(userId), JSON.stringify(clean));
+  return clean;
 }
