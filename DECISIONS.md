@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-10 — Black-and-white characters checked against their original sheets (v0.599.2)
+
+With the original sheets for Newsreel Nettie, Reel Rascal Ollie, Eugene,
+Inkbelle, Curtain-Call Curly and Knox, each stage was re-cut (border-connected
+flood; floor line removed except under the feet) and compared with the file
+in use. Identical — so NOT clipped, despite the outline check flagging them:
+Ollie, Eugene, Knox (all stages), Curly's hatchling, and Nettie and Inkbelle's
+juvenile/adult once cut the same way. The outline check over-reports: some
+hands are drawn with white touching the edge of the outline in the original.
+Actually clipped and replaced: Curly's juvenile (83 px short — the whole
+raised fist and part of the arm) and Inkbelle's hatchling (4 px of glove).
+Colourful characters: no reliable automatic test (their outlines mix
+shades); a visual pass found nothing certain, so they wait for their sheets
+rather than being patched by guesswork.
+
 ## 2026-10 — Old-Reel Rufus re-cut from the original sheet (v0.599.1)
 
 All three Rufus sprites had been cut a little narrow: the right edge went
