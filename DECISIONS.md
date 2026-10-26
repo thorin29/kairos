@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-10 — Character sprites: stray lines removed (v0.599.0)
+
+Scanned all 163 companion PNGs for pieces separate from the character and
+for a floor line under it, then looked at every hit. Fixed:
+- **Neighbour bleed** (a sliver or a chunk of the next sprite on the sheet,
+  touching the image edge): Curtain-Call Curly ×3 (the adult had part of a
+  neighbour's hand), Turbo Tusk adult/juvenile; a stray speck on Pluck's
+  hatchling.
+- **Floor lines** under Inkbelle, Newsreel Nettie and Old-Reel Rufus (every
+  stage) plus loose squares beside them. Only the bottom strip at least 95%
+  as wide as the bottom row is taken, and in it only pixels outside the feet's
+  lowest row — so flared feet and sloped shoes keep their shape and outline. (A
+  first, looser rule clipped Nettie's and Rufus's feet; caught by comparing
+  before/after.)
+- **Chillwing**'s perch had every other pixel row transparent (read as stray
+  lines); the 1–2-row gaps are filled from the row above, so it's a solid
+  branch with the feet on it. Kept, not removed: the feet are part of it.
+Left as drawn: Victory Vip's ground (intended) and Boombug's spread legs.
+Web only — the app loads the sprites from the server.
+
 ## 2026-10 — Grocery icon batch 2: 16 icons, men's/women's deodorant (v0.598.0 / app 0.408.0)
 
 The rest of the October request, cut the same way as batch 1 (detected rows,
