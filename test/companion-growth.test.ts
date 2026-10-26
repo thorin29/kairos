@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   growthSince,
-  unclaimedGrowth,
   type DayBucket,
   type WeekBucket,
 } from "@/lib/companions-growth";
@@ -78,7 +77,7 @@ describe("companion growth across gallery swaps", () => {
     }
   });
 
-  it("the old rules dropped growth; unclaimed growth hands back exactly that", () => {
+  it("the old rules dropped growth", () => {
     // Old: a week counted only if it STARTED in the tenure; an evening swap
     // started the tenure the next (UTC) day.
     let lostSomewhere = false;
@@ -98,8 +97,6 @@ describe("companion growth across gallery swaps", () => {
       );
       if (live + shelved < earned) lostSomewhere = true;
       expect(live + shelved).toBeLessThanOrEqual(earned);
-      const back = unclaimedGrowth({ earnedSinceFirstHatch: earned, shelvedBanked: shelved, activeGrowth: live });
-      expect(live + back + shelved).toBe(earned);
     }
     expect(lostSomewhere).toBe(true);
   });
@@ -115,9 +112,5 @@ describe("companion growth across gallery swaps", () => {
     expect(before).toBe(3);
     expect(after).toBe(4 + 2);
     expect(before + after).toBe(growthSince(days, weeks, START, "2026-08-10"));
-  });
-
-  it("never takes growth away when the shelf was floored up", () => {
-    expect(unclaimedGrowth({ earnedSinceFirstHatch: 10, shelvedBanked: 12, activeGrowth: 3 })).toBe(0);
   });
 });

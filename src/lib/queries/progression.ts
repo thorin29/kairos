@@ -12,7 +12,7 @@ import { getScoringStart, getSeasonConfig } from "@/lib/settings";
 import { resolveSeasonWindow } from "@/lib/season";
 import { bankedGrowthFloor, blendPalette, companionPhase, luckFromStreak, type CompanionPhase } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
-import { growthSince as growthBetween, unclaimedGrowth } from "@/lib/companions-growth";
+import { growthSince as growthBetween } from "@/lib/companions-growth";
 import { readingXpForBook, bibleXpForChapters } from "@/lib/scoring/reading";
 import { loadBonuses } from "@/lib/queries/bonus";
 import { isStale, loadStaleContext, type StaleInput } from "@/lib/chores/stale";
@@ -145,22 +145,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     loadBonuses(seasonStart, today),
     loadBonuses(startISO ?? EPOCH, today),
     prisma.companionState.findMany(),
-    // Every companion, not just the active one: the shelf's banked growth and
-    // the first hatch date are what `unclaimedGrowth` checks against.
-    prisma.companion.findMany({
-      select: {
-        userId: true,
-        species: true,
-        shiny: true,
-        isActive: true,
-        activeSinceXp: true,
-        acquiredAt: true,
-        deepeningStartedAt: true,
-        growthBanked: true,
-        tenureStartedAt: true,
-        mintedStage: true,
-      },
-    }),
+    prisma.companion.findMany({ where: { isActive: true } }),
     // Leisure reading feeds Scholar slightly (derived from the logs at read time).
     prisma.book.findMany({
       select: {
@@ -181,24 +166,13 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     seasonKey: string | null;
     eggsThisSeason: number;
   };
-  type ActiveRow = { userId: string; species: string; shiny: boolean; isActive: boolean; activeSinceXp: number; acquiredAt: Date; deepeningStartedAt: Date | null; growthBanked: number; tenureStartedAt: Date | null; mintedStage: number | null };
+  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number; acquiredAt: Date; deepeningStartedAt: Date | null; growthBanked: number; tenureStartedAt: Date | null; mintedStage: number | null };
   const stateByUser = new Map(
     (compStates as StateRow[]).map((s) => [s.userId, s]),
   );
-  const allComps = activeComps as ActiveRow[];
   const activeByUser = new Map(
-    allComps.filter((c) => c.isActive).map((c) => [c.userId, c]),
+    (activeComps as ActiveRow[]).map((c) => [c.userId, c]),
   );
-  // Per person: what the shelf holds (never below the stage the gallery shows,
-  // as the live read does) and the household day their first egg hatched.
-  const shelfByUser = new Map<string, { banked: number; firstISO: string }>();
-  for (const c of allComps) {
-    const cur = shelfByUser.get(c.userId) ?? { banked: 0, firstISO: "9999-12-31" };
-    if (!c.isActive) cur.banked += Math.max(c.growthBanked, bankedGrowthFloor(c.mintedStage));
-    const hatched = todayISO(c.acquiredAt);
-    if (hatched < cur.firstISO) cur.firstISO = hatched;
-    shelfByUser.set(c.userId, cur);
-  }
 
   type Acc = {
     xp: number;
@@ -442,21 +416,11 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         const deepFromISO = active.deepeningStartedAt
           ? todayISO(active.deepeningStartedAt)
           : null;
-        // Plus anything earned since the first hatch that no companion holds:
-        // growth older swaps dropped between two companions (see
-        // companions-growth.ts). It lands on the one active now, and is banked
-        // with it like the rest when it next goes to the gallery.
-        const live = banked + growthSince(tenureISO);
-        const shelf = shelfByUser.get(person.id);
-        const totalGrowth =
-          live +
-          (shelf
-            ? unclaimedGrowth({
-                earnedSinceFirstHatch: growthSince(shelf.firstISO),
-                shelvedBanked: shelf.banked,
-                activeGrowth: live,
-              })
-            : 0);
+        // No back-fill of growth older swaps dropped (tried in 0.602.0): rows
+        // shelved before 0.576 hold only their stage's floor, not what they
+        // earned, so "earned minus what the shelf holds" credited a fresh
+        // hatchling with months of old growth. See DECISIONS 0.602.1.
+        const totalGrowth = banked + growthSince(tenureISO);
         const ph = companionPhase({
           growth: totalGrowth,
           deepenGrowth: deepFromISO ? growthSince(deepFromISO) : 0,

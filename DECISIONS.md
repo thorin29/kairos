@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-10 — The 0.602.0 back-fill was wrong; removed (v0.602.1)
+
+Reported straight after 0.602.0: a companion hatched a few days earlier showed
+as a full adult. The back-fill computed "everything earned since the first hatch
+− what the shelf holds − the active companion" and gave the difference to the
+active one. That only works if the shelf holds what each companion really
+earned. Companions shelved before 0.576 hold `growthBanked = 0`, read as their
+stage's floor (12 for an adult) — but they earned far more than that while they
+sat as adults waiting for the next egg. That surplus isn't lost growth, yet the
+back-fill counted it as missing and handed months of it to a fresh hatchling.
+
+Removed. Kept: the attribution rule in `companions-growth.ts` (household day,
+week credited to whoever holds it when it ends), so swaps no longer lose
+anything from here on. Growth already lost to past swaps is not restored
+automatically: swaps aren't recorded, so there is nothing reliable to rebuild
+it from.
+
+A companion that was retired to the gallery (a swap or a hatch) while 0.602.0
+was deployed banked the inflated total; those rows need a hand fix.
+
 ## 2026-10 — Gallery swaps were dropping growth; it is credited back (v0.602.0)
 
 Reported: switching characters in the gallery (and back, or any mix) and the

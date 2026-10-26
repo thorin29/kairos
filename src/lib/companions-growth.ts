@@ -16,8 +16,9 @@
  *
  * Before v0.602 the tenure day was read in UTC (an evening swap started the
  * next day, losing that day to both companions) and a week counted only if it
- * STARTED inside the tenure (a mid-week swap lost the week to both). That
- * growth was earned and never credited; `unclaimedGrowth` hands it back.
+ * STARTED inside the tenure (a mid-week swap lost the week to both). What was
+ * lost then can't be put back automatically — swaps aren't recorded, and rows
+ * shelved before 0.576 hold only a stage floor — see DECISIONS 0.602.1.
  */
 
 export type DayBucket = { assigned: number; complete: number; missed: number };
@@ -60,18 +61,4 @@ export function growthSince(
     if (end >= fromISO && end < today && isPerfectWeek(b)) g += WEEK_GROWTH;
   }
   return g;
-}
-
-/**
- * Growth the person earned since their first companion hatched that no
- * companion holds: everything earned, less what the shelf has banked and what
- * the active one has. Never negative — older rows were floored up to the stage
- * the gallery showed (`bankedGrowthFloor`), which can only add.
- */
-export function unclaimedGrowth(input: {
-  earnedSinceFirstHatch: number;
-  shelvedBanked: number;
-  activeGrowth: number;
-}): number {
-  return Math.max(0, input.earnedSinceFirstHatch - input.shelvedBanked - input.activeGrowth);
 }
