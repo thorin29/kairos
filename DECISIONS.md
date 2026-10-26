@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10 — Old-Reel Rufus re-cut from the original sheet (v0.599.1)
+
+All three Rufus sprites had been cut a little narrow: the right edge went
+through a hand (half the hatchling's mitten, the juvenile's right hand, the
+edge of the adult's wave). A visual pass missed it — a straight cut through
+pixel art reads as drawing — so the tell is now an outline check: on the
+black-outlined characters, a light pixel ON the image edge means the outline
+was cut away. Re-cut from the original sheet (background by border-connected
+flood, floor line dropped, near-black/near-white snapped to flat colour).
+The same check flags other black-and-white characters with clipped hands
+(Newsreel Nettie, Reel Rascal Ollie, Eugene, Inkbelle, Curtain-Call Curly's
+juvenile; possibly Knox) — those need their original sheets; not patched by
+guessing at the missing pixels.
+
 ## 2026-10 — Character sprites: stray lines removed (v0.599.0)
 
 Scanned all 163 companion PNGs for pieces separate from the character and
