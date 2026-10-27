@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-10 — The phone's drawer hides sections by the web's rule (v0.604.0 / app 0.412.0)
+
+`hiddenNavFor(visibleIds)` in `src/lib/personal-scope.ts` is now the one rule
+for both the web sidebar and `GET /api/v1/nav` (`{ hidden: ["hockey","money"] }`):
+Hockey until ice-time is connected; Money when the person (and, for a parent,
+the children) have no entries. The phone is always personal, so it uses
+`visibleIdsFor(person)`. The app caches the list (DataStore) and re-asks on
+start, after a sync and on opening the drawer.
+
 ## 2026-10 — Scoring rework: partial days, one unit for growth and the month (v0.603.0 / app 0.411.0)
 
 The full map is docs/SCORING.md. What changed and why, from a snapshot where

@@ -386,10 +386,8 @@ Characters. Each drawer entry keeps its web brand colour.
       - Needs: FCM token registration per device, a per-user/-device notification
         prefs store, a scheduler that fires on the event's instant minus lead
         time (respecting the event's timezone), and quiet-hours later.
-- [ ] **Offline** for the personal daily surface (today's chores + completion
-      at minimum), replaying writes through the same POST endpoints so there is
-      no separate write-sync path. Wider offline (calendar two-way) is a later
-      step.
+- [x] **Offline** for the personal daily surface and the calendar (two-way),
+      replaying writes through the same POST endpoints — see the phone app.
 
 ## Dashboard
 
@@ -1658,8 +1656,10 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   tap an owned companion → Use as profile picture → pick a stage you've reached.
   Phone-only to choose; shown everywhere. See DECISIONS.
 - [ ] **School catch-up note** — see "School catch-up note (OPEN)" above.
-- [ ] **Offline** — calendar *viewing* offline is still the top ask (see
-  Offline-first).
+- [x] **Offline** — done on the phone (app 0.292–0.313 and since): every
+  screen paints from the Room page cache and works offline; offline writes,
+  calendar events included, queue and replay with temp-id correlation. Gap:
+  a calendar day never opened while online shows a "not synced yet" note.
 - [ ] **Game time** — Minecraft Java can't be tracked without a decision (host the
   server for RCON/logs, or accept it); PC play through the Xbox app on a shared
   family PC doesn't surface reliably in Home Assistant and probably has no
@@ -1692,7 +1692,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.603.0 (migrations through 127_marine_corps_birthday).
-- App versionName 0.411.0 / versionCode 472 / CLIENT_BUILD 472.
-- ice-time v0.1.0: deployed; feeds the Hockey page.
+- Web APP_VERSION 0.604.0 (migrations through 127_marine_corps_birthday).
+- App versionName 0.412.0 / versionCode 473 / CLIENT_BUILD 473.
+- ice-time 0.1.1 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

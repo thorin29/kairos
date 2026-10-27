@@ -31,13 +31,18 @@ export async function personalVisibleIds(): Promise<string[] | null> {
     where: { id: me.id },
     select: { kind: true },
   });
+  return visibleIdsFor({ id: me.id, kind: self?.kind ?? null });
+}
 
-  if (self?.kind === "PARENT") {
+/** The same role-aware set for a known person — the phone, which is always
+ *  personal: themselves, plus every child for a parent. */
+export async function visibleIdsFor(me: { id: string; kind: string | null }): Promise<string[]> {
+  if (me.kind === "PARENT") {
     const kids = await prisma.user.findMany({
       where: { isActive: true, kind: "CHILD" },
       select: { id: true },
     });
-    return [me.id, ...kids.map((k) => k.id)];
+    return [me.id, ...kids.map((k: { id: string }) => k.id)];
   }
   return [me.id];
 }
@@ -48,9 +53,17 @@ export async function personalVisibleIds(): Promise<string[] | null> {
  * for a parent, their children) have no transactions.
  */
 export async function hiddenNavHrefs(): Promise<string[]> {
+  return hiddenNavFor(await personalVisibleIds());
+}
+
+/**
+ * The one rule for which sections to hide, given whose data the viewer sees
+ * (null = the shared tablet, everyone). The web sidebar and the phone's drawer
+ * (`/api/v1/nav`) both use it.
+ */
+export async function hiddenNavFor(visible: string[] | null): Promise<string[]> {
   const hidden: string[] = [];
   if (!(await hockeyEnabled())) hidden.push("/hockey");
-  const visible = await personalVisibleIds();
   if (!visible) return hidden;
   const money = await prisma.moneyEntry.count({
     where: { userId: { in: visible } },
