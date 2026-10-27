@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { sendResetEmail, sendRecoveryEmail } from "@/lib/mail/send";
 import { appJoinLink } from "@/lib/url";
+import { rateLimit, rateLimitReset } from "@/lib/rate-limit";
 import {
   hashPassword,
   verifyPassword,
@@ -221,4 +222,58 @@ export async function disableLogin(userId: string): Promise<void> {
     }),
     prisma.invite.deleteMany({ where: { userId } }),
   ]);
+}
+
+export type ChangePasswordResult =
+  | { ok: true; credentialVersion: number }
+  | { ok: false; reason: "no_password" | "wrong_password" | "weak" | "same" | "rate_limited" };
+
+/**
+ * Change your own password: the one rule for the web profile page and the
+ * phone (`POST /api/v1/me/password`). Needs the current password, at least
+ * MIN_PASSWORD characters, and something different. Bumps credentialVersion,
+ * so every OTHER web session and phone has to sign in again with the new one;
+ * the caller keeps its own session by re-issuing it at the returned version.
+ * Rate-limited per person so the current-password check can't be guessed at.
+ */
+export async function changeOwnPassword(
+  userId: string,
+  current: string,
+  next: string,
+): Promise<ChangePasswordResult> {
+  const limit = rateLimit(`pw-change:${userId}`, 8, 15 * 60_000);
+  if (!limit.ok) return { ok: false, reason: "rate_limited" };
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true, isActive: true },
+  });
+  if (!user?.isActive || !user.passwordHash) return { ok: false, reason: "no_password" };
+  if (!verifyPassword(current, user.passwordHash)) return { ok: false, reason: "wrong_password" };
+  if (next.length < MIN_PASSWORD) return { ok: false, reason: "weak" };
+  if (next === current) return { ok: false, reason: "same" };
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: hashPassword(next), credentialVersion: { increment: 1 } },
+    select: { credentialVersion: true },
+  });
+  rateLimitReset(`pw-change:${userId}`);
+  return { ok: true, credentialVersion: updated.credentialVersion as number };
+}
+
+/** Plain words for a failed change, shared by the web form and the app. */
+export function changePasswordMessage(reason: Exclude<ChangePasswordResult, { ok: true }>["reason"]): string {
+  switch (reason) {
+    case "wrong_password":
+      return "That's not your current password.";
+    case "weak":
+      return `Use at least ${MIN_PASSWORD} characters.`;
+    case "same":
+      return "Pick a password different from the current one.";
+    case "rate_limited":
+      return "Too many tries. Wait a few minutes and try again.";
+    default:
+      return "This account doesn't sign in with a password.";
+  }
 }

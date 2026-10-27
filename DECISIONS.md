@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-10 — Change your own password (v0.605.0 / app 0.413.0)
+
+`changeOwnPassword` in `src/lib/accounts.ts` is the one rule for the web
+profile page (shown only on your own profile, when you sign in with a password)
+and the phone (`POST /api/v1/auth/password`). It needs the current password,
+at least `MIN_PASSWORD` (8) characters and a different one, and is rate-limited
+per person (8 tries / 15 min) so the current-password check can't be guessed
+at. It bumps `credentialVersion`: every other browser session and phone is
+asked for the new password; the one that made the change stays signed in (web
+re-issues its session cookie at the new version; the phone's device row is
+moved to it). The phone endpoint lives under `/auth/` deliberately — the app
+never queues `/auth/` requests for offline replay, so a password is never
+written to its offline queue. New-account join still accepts 6 characters; only
+a change asks for 8.
+
 ## 2026-10 — The phone's drawer hides sections by the web's rule (v0.604.0 / app 0.412.0)
 
 `hiddenNavFor(visibleIds)` in `src/lib/personal-scope.ts` is now the one rule

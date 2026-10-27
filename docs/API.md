@@ -1073,13 +1073,13 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**142 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**143 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
 silently invisible:
 
-- **auth/** `login`, `join`, `join/check`, `forgot`, `recover`, `reauth`, `refresh`, `revoke` · **meta**, **me**, `me/avatar`, `me/avatar/companion`, `me/color`, `me/birthday`, **devices**, `devices/[id]/revoke`, `avatars/[file]`
+- **auth/** `login`, `join`, `join/check`, `forgot`, `recover`, `reauth`, `refresh`, `revoke`, `password` (change your own: `{ current, next }` → `{ ok, error? }`; v0.605) · **meta**, **me**, `me/avatar`, `me/avatar/companion`, `me/color`, `me/birthday`, **devices**, `devices/[id]/revoke`, `avatars/[file]`
 - **dashboard**, **tasks** (`add`, `[id]/complete`, `[id]/uncomplete`, `[id]/update`, `[id]/edit-data`, `[id]/delete`), **chores** (`always-open`, `claim`, `claim-complete`, `release`)
 - **calendar** (`event`, `event/update`, `event/delete`, `prefs`, `subscribed-reminders`), **event-names**, **event-bg**, **addresses**, **sport/confirm**, **sport/decline**, **notifications/meta**, **notifications/upcoming**
 - **school** (`add`, `add-to-today`, `approvals`, `rename`, `delete`), **classes**, **classes/form**

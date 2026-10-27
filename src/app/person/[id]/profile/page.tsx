@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { isAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { ProfileForm } from "./profile-form";
+import { PasswordForm } from "./password-form";
+import { currentUser } from "@/lib/user-session";
 import { BackLink } from "@/components/back-link";
 import { fromDateColumn } from "@/lib/dates";
 
@@ -13,8 +15,10 @@ export default async function ProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const person = await prisma.user.findUnique({ where: { id } });
+  const [person, me] = await Promise.all([prisma.user.findUnique({ where: { id } }), currentUser()]);
   if (!person) notFound();
+  // Your own profile, and you sign in with a password.
+  const ownPassword = me?.id === person.id && person.passwordHash != null;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
@@ -44,6 +48,8 @@ export default async function ProfilePage({
             (person as { shadeBirthday?: boolean }).shadeBirthday ?? true,
         }}
       />
+
+      {ownPassword && <PasswordForm />}
     </main>
   );
 }

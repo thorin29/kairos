@@ -180,6 +180,7 @@ production:
 | Whether a planned workout is done (logged or skipped) | `planDone` in `src/lib/queries/workout-log.ts` |
 | Whether the day's workout task is complete | `workoutTaskTarget` (applied by `settleWorkoutTask`) in `src/lib/workouts/mark.ts` |
 | What the Hockey page shows and what each Add fills in (web + phone) | `buildHockeyView` in `src/lib/hockey-view.ts`, served to the phone by `/api/v1/hockey` |
+| Changing your own password (web profile + phone) | `changeOwnPassword` in `src/lib/accounts.ts`; phone via `/api/v1/auth/password` |
 | Which sections the menu hides (web sidebar + phone drawer) | `hiddenNavFor` in `src/lib/personal-scope.ts`, served to the phone by `/api/v1/nav` |
 | A person's Hockey section order and which are open | `arrangeSections` in `src/lib/hockey-view.ts`; saved by `saveHockeyPrefs` in `src/lib/hockey.ts` |
 

@@ -10,8 +10,10 @@ import {
   revokeInvites,
   setUserEmail,
   userEmail,
+  changeOwnPassword,
+  changePasswordMessage,
 } from "@/lib/accounts";
-import { startUserSession, endUserSession } from "@/lib/user-session";
+import { startUserSession, endUserSession, currentUser } from "@/lib/user-session";
 import { rateLimit, rateLimitReset } from "@/lib/rate-limit";
 import { appJoinLink } from "@/lib/url";
 import { sendInviteEmail, sendTestEmail } from "@/lib/mail/send";
@@ -196,4 +198,19 @@ export async function disableLoginAction(
   await disableLogin(userId);
   revalidatePath("/setup");
   return { error: null };
+}
+
+/** Change your own password from your profile. Only ever the signed-in
+ *  person's own; this browser stays signed in (its session is re-issued at the
+ *  new version), every other browser and phone signs in again. */
+export async function changeOwnPasswordAction(input: {
+  current: string;
+  next: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const me = await currentUser();
+  if (!me) return { ok: false, error: "Sign in first." };
+  const r = await changeOwnPassword(me.id, String(input.current ?? ""), String(input.next ?? ""));
+  if (!r.ok) return { ok: false, error: changePasswordMessage(r.reason) };
+  await startUserSession(me.id, r.credentialVersion);
+  return { ok: true };
 }

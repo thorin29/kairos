@@ -147,7 +147,7 @@ Next up, roughly in order:
       panel: these are personal preferences, not household administration.
       Icon is deliberately held back until the area exists, so there's no dead
       button in the sidebar.
-- [ ] Change your own password.
+- [x] Change your own password (web 0.605 profile page / app 0.413 Settings).
 - [x] Appearance / themes — light and **dark mode**, plus **eight color themes**
       (teal, olive, green, blue, purple, pink, orange, red). Shipped in the app
       (per-device) and on the web from **Admin → Appearance** (household-wide);
@@ -1692,7 +1692,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.604.0 (migrations through 127_marine_corps_birthday).
-- App versionName 0.412.0 / versionCode 473 / CLIENT_BUILD 473.
+- Web APP_VERSION 0.605.0 (migrations through 127_marine_corps_birthday).
+- App versionName 0.413.0 / versionCode 474 / CLIENT_BUILD 474.
 - ice-time 0.1.1 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.
