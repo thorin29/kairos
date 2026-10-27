@@ -897,6 +897,18 @@ fully grown; deepening is a phase worked through after that. Activating an
 older companion banks the current one's growth and resumes the returning one's
 (`companions-tenure.ts`, migration 121). There is no monthly hatch cap.
 
+**Growth and the month (v0.603, rules in docs/SCORING.md).** Each day is worth
+the share of its effort finished (0..1, today live). `GET /api/v1/characters`
+companion adds `pendingFrom` (squares from here on are today's — draw lighter)
+and `growthLabel` ("7.4 / 12" while growing or deepening, else null); `xpCells`
+are coloured by what earned the growth. The sheet adds
+`"month": { "credit": 17.4, "target": 15 }` — days of work this month against
+the family goal. `season` (tier) is still sent for older apps but no longer
+drawn. `GET /api/v1/coop` children add `credit` (1 decimal); `cleanDays` is now
+`floor(credit)` for older apps. `GET /api/v1/scoring/guide` →
+`{ "sections": [{ "title", "lines": [string] }] }`, the "How scoring works" text
+with live numbers (same as web `/scoring`).
+
 **Companion as profile picture (v0.582, phone only).** Each owned gallery entry
 carries `stageImages` — sprite URLs for the stages reached so far (index =
 stage; unreached stages are absent, so their art is never sent). Choosing one
@@ -1061,7 +1073,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**140 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**141 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1076,7 +1088,7 @@ silently invisible:
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
 - **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options`, `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
-- **game-time**, **game-time/ingest** (collector → server)
+- **game-time**, **game-time/ingest** (collector → server), **scoring/guide**
 - **hockey** (the week from ice-time), `hockey/prefs`
 - **widget** (the Android home-screen widget's feed)
 

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { currentSeasonWindow } from "@/lib/season";
 import { loadProgression } from "@/lib/queries/progression";
-import { pickHatch, COMPANIONS, luckFromStreak } from "@/lib/companions";
+import { pickHatch, COMPANIONS } from "@/lib/companions";
 import { retireActiveCompanionOp } from "@/lib/companions-tenure";
 
 /**
@@ -52,7 +52,8 @@ export async function hatchEggCore(
   }
 
   const lifetimeXp = me.lifetimeXp;
-  const luck = luckFromStreak(me.currentStreak);
+  // Recent completion, not the streak (see luckFromCompletion).
+  const luck = me.companion.luck;
   const seasonKey = (await currentSeasonWindow()).startISO;
 
   const [state, ownedRows, active] = await Promise.all([
@@ -88,7 +89,9 @@ export async function hatchEggCore(
       ops.push(
         retireActiveCompanionOp({
           companionId: active.id,
-          totalGrowth: me.companion.growth,
+          // Settled growth only: today's credit moves with the companion that
+        // takes over, so it is never counted twice (companions-growth.ts).
+        totalGrowth: me.companion.settledGrowth,
           stage: me.companion.stage,
           shiny: me.companion.shiny,
         }),

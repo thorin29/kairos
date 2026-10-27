@@ -1670,6 +1670,16 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   render, so neither rolls over at midnight; one household phone was still on
   app v0.351.0.
 
+## Scoring rework (web 0.603 / app 0.411)
+
+- [x] Partial days count (share of the day's list finished), today live and
+  drawn lighter; family goal and "This month" count the same days of work;
+  egg luck from the last 14 days' completion; Life from confirmed team sport;
+  bar colours from what earned the growth; scoring snapshot shows the real
+  rules; "How scoring works" on web and in app Settings. docs/SCORING.md.
+- [ ] Re-check with a fresh snapshot after two weeks (growth rate per kid,
+  family-goal target — 15 may now be easy).
+
 ## Hockey (web 0.600 / app 0.409)
 
 - [x] **Hockey page** — stick & puck, drop-in, parent & child and youth open
@@ -1682,7 +1692,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.602.2 (migrations through 127_marine_corps_birthday).
-- App versionName 0.410.0 / versionCode 471 / CLIENT_BUILD 471.
+- Web APP_VERSION 0.603.0 (migrations through 127_marine_corps_birthday).
+- App versionName 0.411.0 / versionCode 472 / CLIENT_BUILD 472.
 - ice-time v0.1.0: deployed; feeds the Hockey page.
 - Collector: deployed and running; Xbox totals come from real game sessions.

@@ -77,7 +77,9 @@ export async function activateCompanionCore(
     ops.push(
       retireActiveCompanionOp({
         companionId: active.id,
-        totalGrowth: me.companion.growth,
+        // Settled growth only: today's credit moves with the companion that
+        // takes over, so it is never counted twice (companions-growth.ts).
+        totalGrowth: me.companion.settledGrowth,
         stage: me.companion.stage,
         shiny: me.companion.shiny,
       }),

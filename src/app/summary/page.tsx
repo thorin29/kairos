@@ -3,7 +3,7 @@ import { loadCoop } from "@/lib/queries/coop";
 import { getScoringStart } from "@/lib/settings";
 import { todayISO } from "@/lib/dates";
 import { currentSeasonWindow } from "@/lib/season";
-import { SEASON_MAX_TIER } from "@/lib/scoring/progression";
+import { fmtGrowth } from "@/lib/companions-growth";
 import { Avatar } from "@/components/avatar";
 import { Card, SectionHeading } from "@/components/ui";
 import type { ReactNode } from "react";
@@ -44,8 +44,11 @@ export default async function SummaryPage() {
       
 
       <main className="mx-auto max-w-3xl px-6 py-6">
-        <div className="mb-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
           <SectionHeading>This month &middot; {season}</SectionHeading>
+          <Link href="/scoring" className="text-sm font-medium text-accent hover:underline">
+            How scoring works
+          </Link>
         </div>
 
         <Link
@@ -78,15 +81,13 @@ export default async function SummaryPage() {
                   <Companion
                     companion={p.companion}
                     colorHex={p.companionColor}
-                    pct={p.level.pct}
-                    shares={p.statShares}
                   />
                   {p.companion.eggReady && (
                     <HatchControls userId={p.id} phase={p.companion.phase} />
                   )}
                 </div>
               )}
-              <PersonCard p={p} full={personal} />
+              <PersonCard p={p} full={personal} monthTarget={coop.target} />
             </DayLogCard>
           ))}
         </div>
@@ -95,13 +96,22 @@ export default async function SummaryPage() {
   );
 }
 
-function PersonCard({ p, full = false }: { p: PersonProgress; full?: boolean }) {
+function PersonCard({
+  p,
+  full = false,
+  monthTarget,
+}: {
+  p: PersonProgress;
+  full?: boolean;
+  monthTarget: number;
+}) {
   const chips: { key: string; icon: ReactNode; label: string }[] = [];
-  if (p.season.complete) {
+  const monthDone = p.monthlyCredit >= monthTarget;
+  if (monthDone) {
     chips.push({
-      key: "season",
+      key: "month",
       icon: <TrophyIcon className="h-3.5 w-3.5 text-amber-500" />,
-      label: "Season complete",
+      label: "Month goal reached",
     });
   }
   if (p.perfectWeeks > 0) {
@@ -158,27 +168,15 @@ function PersonCard({ p, full = false }: { p: PersonProgress; full?: boolean }) 
         </p>
       </div>
 
-      {/* Season tier */}
+      {/* This month: days of work, the family goal's count */}
       <div className="mt-4 rounded-xl border border-hairline p-3">
         <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-sm font-medium">
-            This month &middot; Tier {p.season.tier}
-            <span className="text-muted"> / {SEASON_MAX_TIER}</span>
+          <span className="text-sm font-medium">This month</span>
+          <span className={`tabular text-xs font-medium ${monthDone ? "text-emerald-700" : "text-muted"}`}>
+            {fmtGrowth(p.monthlyCredit)} / {monthTarget} days
           </span>
-          {p.season.complete ? (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
-              <TrophyIcon className="h-3.5 w-3.5" />
-              {p.season.tier >= SEASON_MAX_TIER ? "Maxed" : "Complete"}
-            </span>
-          ) : (
-            <span className="text-xs font-medium text-muted">
-              {p.season.tier + 1 <= SEASON_MAX_TIER
-                ? `Next up: Tier ${p.season.tier + 1}`
-                : "Almost there"}
-            </span>
-          )}
         </div>
-        <Bar pct={p.season.pct} tone={p.season.complete ? "emerald" : "accent"} />
+        <Bar pct={(p.monthlyCredit / Math.max(1, monthTarget)) * 100} tone={monthDone ? "emerald" : "accent"} />
       </div>
 
       {/* Stats */}

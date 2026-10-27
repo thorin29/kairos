@@ -12,8 +12,9 @@ export type CoopChild = {
   avatarPath: string | null;
   avatarPosition: string | null;
   tier: number;
-  /** Clean days finished this month so far (accumulates, never drops). */
-  cleanDays: number;
+  /** Days of work this month so far: each day's credit (share of that day's
+   *  list finished, 0..1; today live), summed. Not rounded. */
+  credit: number;
   meets: boolean;
 };
 
@@ -49,7 +50,7 @@ export type CoopData = {
   seasonKey: string;
   seasonLabel: string;
   floor: number;
-  /** Clean days a child needs to finish the month (the family-goal target). */
+  /** Days of work a child needs this month (the family-goal target). */
   target: number;
   /** 0-100 shared family progress toward everyone finishing the month. */
   familyPct: number;
@@ -145,8 +146,8 @@ export async function loadCoop(
   const roster: UserRow[] = users as UserRow[];
 
   const tierById = new Map(prog.map((p) => [p.id, p.season.tier]));
-  const cleanById = new Map(prog.map((p) => [p.id, p.monthlyCleanDays]));
-  const bySeason = new Map(prog.map((p) => [p.id, p.cleanDaysBySeason]));
+  const creditById = new Map(prog.map((p) => [p.id, p.monthlyCredit]));
+  const bySeason = new Map(prog.map((p) => [p.id, p.creditBySeason]));
   const childIds = roster.filter((u) => u.kind === "CHILD").map((u) => u.id);
 
   /**
@@ -165,7 +166,7 @@ export async function loadCoop(
   const children: CoopChild[] = roster
     .filter((u) => u.kind === "CHILD")
     .map((u) => {
-      const cleanDays = cleanById.get(u.id) ?? 0;
+      const credit = creditById.get(u.id) ?? 0;
       return {
         id: u.id,
         name: u.displayName ?? u.name,
@@ -173,8 +174,8 @@ export async function loadCoop(
         avatarPath: u.avatarPath,
         avatarPosition: u.avatarPosition,
         tier: tierById.get(u.id) ?? 0,
-        cleanDays,
-        meets: cleanDays >= target,
+        credit,
+        meets: credit >= target,
       };
     });
 
@@ -182,7 +183,7 @@ export async function loadCoop(
   const gateMet = children.length > 0 && childrenMeeting === children.length;
   const familyPct = children.length
     ? Math.round(
-        (children.reduce((n, c) => n + Math.min(c.cleanDays, target), 0) /
+        (children.reduce((n, c) => n + Math.min(c.credit, target), 0) /
           (target * children.length)) *
           100,
       )
@@ -266,7 +267,7 @@ export async function coopGateFor(
     loadProgression(),
   ]);
   const bySeason = new Map(
-    (progression as PersonProgress[]).map((p) => [p.id, p.cleanDaysBySeason]),
+    (progression as PersonProgress[]).map((p) => [p.id, p.creditBySeason]),
   );
   const ids = (users as { id: string }[]).map((u) => u.id);
   const meeting = ids.filter(

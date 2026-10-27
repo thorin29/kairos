@@ -5,7 +5,7 @@ import { exportScoringSnapshot } from "@/lib/actions/scoring-export";
 import { setMonthGoalDays } from "@/lib/actions/coop";
 
 /**
- * Admin control for how many clean days finish the month. Lives here on the
+ * Admin control for how many days of work finish the month. Lives here on the
  * admin page, not on the kid-facing family-goal screen.
  */
 export function MonthGoalControl({ target }: { target: number }) {
@@ -17,10 +17,10 @@ export function MonthGoalControl({ target }: { target: number }) {
     <section className="rounded-2xl border border-hairline bg-surface p-5">
       <p className="text-sm font-medium">Days to finish the month</p>
       <p className="mt-1 text-sm text-muted">
-        A child finishes the month once they&rsquo;ve had this many clean days &mdash;
-        days where they completed everything assigned. It counts up and never
-        drops, and every child can reach it whatever their load, since everyone
-        has daily chores and Bible to finish.
+        A child finishes the month once they&rsquo;ve done this many days of work.
+        Each day counts for the share of that day&rsquo;s list they finished, so a
+        90% day adds 0.9. Fair whatever the load, and it only goes down if
+        something done today is unchecked.
       </p>
       <div className="mt-3 flex items-center gap-4">
         <input

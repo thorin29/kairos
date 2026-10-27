@@ -38,7 +38,7 @@ export default async function ScoringRewardsPage() {
         </p>
       </header>
 
-      {/* The monthly family reward — how many clean days finish the month. */}
+      {/* The monthly family reward — how many days of work finish the month. */}
       <section className="mb-6">
         <p className="mb-2 text-sm font-medium">Family reward</p>
         <p className="mb-3 text-sm text-muted">

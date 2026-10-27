@@ -21,6 +21,9 @@ export const XP_PER_EFFORT = 10;
  *  by the score, so doing well (not just finishing) lifts School. */
 export const TEST_SCORE_BONUS_XP = 20;
 
+/** Life XP for each confirmed team-sport event (a practice or game). */
+export const SPORT_LIFE_XP = 10;
+
 // ---- Character level curve --------------------------------------------------
 // Fast early levels for momentum, then a gentle classic RPG ramp.
 

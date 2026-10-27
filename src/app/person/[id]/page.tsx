@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadPersonProgress } from "@/lib/queries/progression";
+import { getMonthGoalDays } from "@/lib/settings";
+import { fmtGrowth } from "@/lib/companions-growth";
 import { loadGetAhead } from "@/lib/queries/get-ahead";
 import { loadSchoolGetAhead } from "@/lib/queries/school-get-ahead";
 import { loadSchoolProgress } from "@/lib/queries/school-card";
@@ -147,7 +149,7 @@ export default async function PersonPage({
   const activePause = await loadActivePause(today);
   const classOptions = await loadClassOptions();
   const subjectNames = await loadSubjectNames();
-  const progress = await loadPersonProgress(id);
+  const [progress, monthTarget] = await Promise.all([loadPersonProgress(id), getMonthGoalDays()]);
   const getAhead = await loadGetAhead(id, today);
   const choreBadges = await loadChoreBadges(id, today);
   // Up-for-grabs + always-open are household pool chores shown on every person's
@@ -468,7 +470,7 @@ export default async function PersonPage({
             <span className="font-medium">Level {progress.level.level}</span>
             <span className="text-muted">{progress.className}</span>
             <span className="tabular text-muted">
-              &middot; This month {progress.season.tier}/{progress.season.maxTier}
+              &middot; This month {fmtGrowth(progress.monthlyCredit)}/{monthTarget} days
             </span>
             {progress.currentStreak > 0 && (
               <span
@@ -507,8 +509,6 @@ export default async function PersonPage({
           <Companion
             companion={progress.companion}
             colorHex={progress.companionColor}
-            pct={progress.level.pct}
-            shares={progress.statShares}
           />
           {progress.companion.eggReady && (
             <HatchControls userId={person.id} phase={progress.companion.phase} />

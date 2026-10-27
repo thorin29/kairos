@@ -1,7 +1,9 @@
 "use client";
 
-import { COMPANIONS, stageAsset, STAGE_NAMES, STAGE_SPANS } from "@/lib/companions";
+import { COMPANIONS, stageAsset, STAGE_NAMES } from "@/lib/companions";
 import { XpBar } from "@/components/xp-bar";
+import { growthRow } from "@/lib/scoring/growth-cells";
+import type { StatKey } from "@/lib/companions-growth";
 
 const MYSTERY_EGG = "/companions/eggs/mystery.png";
 /** The one shiny colour, shared by the card, the name and the app. */
@@ -18,6 +20,11 @@ export type CompanionView = {
   eggReady: boolean;
   eggCapped: boolean;
   luck: number;
+  growth: number;
+  pendingGrowth: number;
+  phaseGoal: number | null;
+  phaseProgress: number;
+  growthMix: Record<StatKey, number>;
 };
 
 /**
@@ -29,15 +36,12 @@ export function Companion({
   companion,
   colorHex,
   size = "md",
-  pct,
-  shares,
 }: {
   companion: CompanionView;
   colorHex: string;
   size?: "sm" | "md";
-  pct?: number;
-  shares?: Record<string, number>;
 }) {
+  const row = growthRow(companion);
   const sp = companion.species ? COMPANIONS[companion.species] : null;
   const asset =
     companion.active && sp ? stageAsset(sp.id, companion.stage) : MYSTERY_EGG;
@@ -114,18 +118,15 @@ export function Companion({
                   rather than needing a second rail underneath saying so. The
                   colours still come from what earned it, which was always the
                   point of them. */}
-              {shares && (
-                <XpBar
-                  pct={companion.incubationPct}
-                  shares={shares}
-                  gapsAfter={growthCellGaps()}
-                />
+              <XpBar row={row} />
+              {companion.phase === "growing" && row.label && (
+                <p className="tabular text-[0.7rem] font-medium text-muted">{row.label}</p>
               )}
               {/* Deepening is the exception: a smaller, separate job, so it gets
                   its own short rail in place of nothing rather than reusing the
                   stage row, which is about growth it has already finished. */}
               {companion.phase === "deepening" && (
-                <PhaseBar companion={companion} luckColor={luckColor} />
+                <PhaseBar companion={companion} luckColor={luckColor} label={row.label} />
               )}
               {companion.eggReady && (
                 <p className="text-[0.65rem] font-medium text-emerald-700">
@@ -161,37 +162,25 @@ export function Companion({
 function PhaseBar({
   companion,
   luckColor,
+  label,
 }: {
   companion: CompanionView;
   luckColor: string;
+  label: string | null;
 }) {
   return (
-    <div className="flex w-20 flex-col items-center gap-0.5">
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="w-20">
       <div className="h-2 w-full overflow-hidden rounded-full bg-hairline">
         <div
           className="h-full rounded-full"
           style={{ width: `${companion.incubationPct}%`, background: luckColor }}
         />
       </div>
-      <p className="text-[0.65rem] font-medium text-muted">deepening</p>
+      </div>
+      <p className="tabular whitespace-nowrap text-[0.65rem] font-medium text-muted">
+        deepening{label ? ` · ${label}` : ""}
+      </p>
     </div>
   );
-}
-
-/**
- * Which cells of the 20 get a divider after them, from the stage spans.
- *
- * Derived rather than hardcoded: the thresholds live in CLEAN_DAY_STAGES, and a
- * divider drawn at a different place than the stage actually ends would be
- * worse than no divider at all.
- */
-function growthCellGaps(): number[] {
-  const CELLS = 20;
-  const out: number[] = [];
-  let acc = 0;
-  for (const span of STAGE_SPANS.slice(0, -1)) {
-    acc += span;
-    out.push(Math.round((acc / 100) * CELLS));
-  }
-  return out;
 }

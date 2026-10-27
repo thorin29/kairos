@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
       name: c.name,
       color: c.color,
       tier: c.tier,
-      cleanDays: c.cleanDays,
+      // Whole days for apps before 0.411 (an Int field); `credit` is exact.
+      cleanDays: Math.floor(c.credit),
+      credit: Math.round(c.credit * 10) / 10,
       meets: c.meets,
     })),
     proposals: data.proposals.map((p) => ({

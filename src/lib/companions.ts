@@ -358,8 +358,10 @@ export function stageFromGrowth(cleanDays: number, perfectWeeks: number): number
 
 type Rarity = CompanionSpecies["rarity"];
 
-/** How strongly a child's current streak tilts the odds toward rarer creatures:
- *  0 at no streak, 1 at a long (30-day) streak. Keeping a streak visibly pays off. */
+/** @deprecated since 0.603 — luck comes from recent completion
+ *  (`luckFromCompletion` in companions-growth.ts). A streak resets on one missed
+ *  chore, so a child with a long list almost never had any luck. Kept so the
+ *  name isn't reinvented. */
 export function luckFromStreak(streak: number): number {
   return Math.max(0, Math.min(1, streak / 30));
 }

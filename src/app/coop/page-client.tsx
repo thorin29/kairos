@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { fmtGrowth } from "@/lib/companions-growth";
 import { Avatar } from "@/components/avatar";
 import { TrophyIcon, CheckIcon, PlusIcon, TrashIcon } from "@/components/icons";
 import {
@@ -44,11 +45,11 @@ export function CoopBoard({ data, isAdmin }: { data: CoopData; isAdmin: boolean 
                   ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                   : "border-hairline text-muted"
               }`}
-              title={`${c.cleanDays} of ${data.target} clean days this month`}
+              title={`${fmtGrowth(c.credit)} of ${data.target} days this month`}
             >
               <Avatar name={c.name} color={c.color} avatarPath={c.avatarPath} avatarPosition={c.avatarPosition} size="xs" />
               {c.name}
-              {c.meets ? <CheckIcon className="h-3.5 w-3.5" /> : <span className="tabular">{c.cleanDays}/{data.target}</span>}
+              {c.meets ? <CheckIcon className="h-3.5 w-3.5" /> : <span className="tabular">{fmtGrowth(c.credit)}/{data.target}</span>}
             </span>
           ))}
           {data.childrenTotal === 0 && (

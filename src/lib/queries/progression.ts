@@ -10,9 +10,19 @@ import {
 } from "@/lib/dates";
 import { getScoringStart, getSeasonConfig } from "@/lib/settings";
 import { resolveSeasonWindow } from "@/lib/season";
-import { bankedGrowthFloor, blendPalette, companionPhase, luckFromStreak, type CompanionPhase } from "@/lib/companions";
+import { bankedGrowthFloor, blendPalette, companionPhase, type CompanionPhase } from "@/lib/companions";
 import { taskEffort, groupForCategory } from "@/lib/scoring/weights";
-import { growthSince as growthBetween } from "@/lib/companions-growth";
+import {
+  growthSince as growthBetween,
+  growthMix,
+  creditBetween,
+  dayCredit,
+  emptyDay,
+  recentCompletion,
+  luckFromCompletion,
+  type DayBucket,
+} from "@/lib/companions-growth";
+import { CLEAN_DAY_STAGES, DEEPEN_GROWTH } from "@/lib/companions";
 import { readingXpForBook, bibleXpForChapters } from "@/lib/scoring/reading";
 import { loadBonuses } from "@/lib/queries/bonus";
 import { isStale, loadStaleContext, type StaleInput } from "@/lib/chores/stale";
@@ -20,6 +30,7 @@ import { computeStreaks, earnedMilestones, type DayClass } from "@/lib/scoring/s
 import {
   XP_PER_EFFORT,
   TEST_SCORE_BONUS_XP,
+  SPORT_LIFE_XP,
   levelFromXp,
   seasonTier,
   masteryRank,
@@ -59,6 +70,18 @@ export type PersonProgress = {
   /** Clean days completed so far this month — resolved past days where the child
    *  finished everything assigned that day. Accumulates; never drops. */
   monthlyCleanDays: number;
+  /** This month's days of work: the sum of each day's credit (share of the
+   *  day's list finished, 0..1; today live). The family goal counts these. */
+  monthlyCredit: number;
+  /** The same, by season window (startISO), so a carried goal is judged on its
+   *  own month. */
+  creditBySeason: Record<string, number>;
+  /** Today's credit so far, 0..1 (what today adds to growth right now). */
+  todayCredit: number;
+  /** Average credit over the last 14 settled days with anything due (0..1). */
+  recentCompletion: number;
+  /** This month's effort due/done, by stat. */
+  monthByStat: Record<StatKey, { due: number; done: number }>;
   /** The same count, bucketed by the season window each day falls in. A family
    *  goal carried over from an earlier month has to be judged on ITS month, not
    *  on the current one: the question "did everyone finish September?" cannot be
@@ -89,8 +112,20 @@ export type PersonProgress = {
      *  back when it retires, so bringing it out of the gallery resumes rather
      *  than restarting. Zero when there is no companion. */
     growth: number;
-    /** 0..1 streak-driven odds; the higher it is, the rarer the next hatch can be.
-     *  Drives the egg meter's colour so a strong streak shows without any text. */
+    /** The same growth without today's live credit — what is banked if it goes
+     *  to the gallery now (today then belongs to whoever takes over). */
+    settledGrowth: number;
+    /** Today's part of `growth` (drawn lighter: it can still change today). */
+    pendingGrowth: number;
+    /** Growth needed to finish the current phase: 12 to adult while growing,
+     *  6 while deepening; null when nothing is being grown (adult, shiny). */
+    phaseGoal: number | null;
+    /** Progress through the current phase, in the same units as phaseGoal. */
+    phaseProgress: number;
+    /** What earned this companion's growth, by stat (sums to 1, or all 0). */
+    growthMix: Record<StatKey, number>;
+    /** 0..1 odds for the next hatch, from recent completion (last 14 days).
+     *  Drives the egg meter's colour. */
     luck: number;
   };
   /** Proportional XP by domain, for the pixel XP bar (sums to ~1, or all 0). */
@@ -117,7 +152,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
   const startISO = await getScoringStart();
   const dueFloor = startISO ? { gte: toDateColumn(startISO) } : {};
 
-  const [people, tasks, ctx, seasonBonus, lifetimeBonus, compStates, activeComps, books, chapterReads] = await Promise.all([
+  const [people, tasks, ctx, seasonBonus, lifetimeBonus, compStates, activeComps, books, chapterReads, sportSessions] = await Promise.all([
     prisma.user.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -157,6 +192,20 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     }),
     // Personal Bible reading feeds Wisdom slightly (one row per chapter read).
     prisma.userChapterRead.findMany({ select: { userId: true } }),
+    // Confirmed team sport (a practice or game from the calendar, "Yes, I did
+    // it") feeds Life: showing up for the team. The same confirmation also
+    // completes the day's workout task (Strength) — that is the workout; this
+    // is the team. One per event per day.
+    prisma.workoutSession.findMany({
+      where: {
+        category: "SPORT",
+        sourceEventId: { not: null },
+        finished: true,
+        isRest: false,
+        date: { lte: toDateColumn(today), ...dueFloor },
+      },
+      select: { userId: true },
+    }),
   ]);
 
   type StateRow = {
@@ -177,9 +226,11 @@ export async function loadProgression(): Promise<PersonProgress[]> {
   type Acc = {
     xp: number;
     statXp: Record<StatKey, number>;
-    days: Map<string, { assigned: number; complete: number; missed: number }>;
+    days: Map<string, DayBucket>;
     weeks: Map<string, { assigned: number; complete: number }>;
     month: { assigned: number; complete: number };
+    /** This month's effort due and done, by stat (for the scoring snapshot). */
+    monthByStat: Record<StatKey, { due: number; done: number }>;
     mastery: Map<string, { chore: string; count: number }>;
   };
   const acc = new Map<string, Acc>();
@@ -192,6 +243,13 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         days: new Map(),
         weeks: new Map(),
         month: { assigned: 0, complete: 0 },
+        monthByStat: {
+          CHORE: { due: 0, done: 0 },
+          EXERCISE: { due: 0, done: 0 },
+          BIBLE: { due: 0, done: 0 },
+          SCHOOL: { due: 0, done: 0 },
+          TASK: { due: 0, done: 0 },
+        },
         mastery: new Map(),
       };
       acc.set(id, a);
@@ -229,10 +287,14 @@ export async function loadProgression(): Promise<PersonProgress[]> {
       }
     }
 
-    const day = a.days.get(dayISO) ?? { assigned: 0, complete: 0, missed: 0 };
+    const day = a.days.get(dayISO) ?? emptyDay();
     day.assigned += 1;
-    if (complete) day.complete += 1;
-    else if (isStale(t as StaleInput, today, ctx)) day.missed += 1;
+    day.effort += effort;
+    if (complete) {
+      day.complete += 1;
+      day.effortDone += effort;
+      day.doneByStat[stat] += effort;
+    } else if (isStale(t as StaleInput, today, ctx)) day.missed += 1;
     a.days.set(dayISO, day);
 
     const wk = a.weeks.get(weekISO) ?? { assigned: 0, complete: 0 };
@@ -243,6 +305,8 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     if (dayISO >= seasonStart) {
       a.month.assigned += effort;
       if (complete) a.month.complete += effort;
+      a.monthByStat[stat].due += effort;
+      if (complete) a.monthByStat[stat].done += effort;
     }
   }
 
@@ -276,11 +340,26 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     a.statXp.BIBLE += xp;
   }
 
+  for (const r of sportSessions as { userId: string }[]) {
+    const a = acc.get(r.userId);
+    if (!a) continue;
+    a.xp += SPORT_LIFE_XP;
+    a.statXp.TASK += SPORT_LIFE_XP;
+  }
+
   // The family baseline per stat, so class and color reflect what each person
   // does *above* the shared norm — universal work cancels out.
-  const baseline = computeBaseline(people.map((p) => acc.get(p.id)!.statXp));
+  const baseline = computeBaseline(people.map((p: { id: string }) => acc.get(p.id)!.statXp));
 
-  return people.map((person) => {
+  type PersonRow = {
+    id: string;
+    name: string;
+    displayName: string | null;
+    color: string;
+    avatarPath: string | null;
+    avatarPosition: string | null;
+  };
+  return (people as PersonRow[]).map((person) => {
     const name = person.displayName ?? person.name;
     const a = acc.get(person.id)!;
 
@@ -339,6 +418,23 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     }
     const monthlyCleanDays = cleanDaysBySeason[seasonStart] ?? 0;
 
+    // Days of work per season window: each day's credit (0..1, today live),
+    // summed. The family goal counts these — a 90% day is 0.9 of a day, not 0.
+    const creditBySeason: Record<string, number> = {};
+    for (const [iso, b] of a.days) {
+      if (iso > today || b.effort <= 0) continue;
+      const key = resolveSeasonWindow(seasonCfg, iso).startISO;
+      creditBySeason[key] = (creditBySeason[key] ?? 0) + dayCredit(b);
+    }
+    const monthlyCredit = creditBet(seasonStart);
+    function creditBet(fromISO: string): number {
+      return creditBetween(a.days, fromISO, seasonWin.endISO, today);
+    }
+    const todayCredit = dayCredit(a.days.get(today));
+    // Egg luck from how steadily the list gets finished, not from the streak.
+    const recent = recentCompletion(a.days, today);
+    const luck = luckFromCompletion(recent);
+
     // Best completed week (self-competition personal best).
     let bestWeekPct: number | null = null;
     for (const [wkISO, b] of a.weeks) {
@@ -374,6 +470,11 @@ export async function loadProgression(): Promise<PersonProgress[]> {
       perfectWeeks,
       monthlyCleanDays,
       cleanDaysBySeason,
+      monthlyCredit,
+      creditBySeason,
+      todayCredit,
+      recentCompletion: recent,
+      monthByStat: a.monthByStat,
       bestWeekPct,
       masteries,
       companionColor: blendPalette(signatureOf(a.statXp, baseline)),
@@ -383,9 +484,10 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         // lifetime XP, which accrues from everything and so filled eggs while
         // the creature in front of you had not grown — that is where "a new egg
         // is ready" under a hatchling came from.
-        // One attribution rule for days and weeks (companions-growth.ts), so
-        // nothing earned falls between two companions on a swap.
-        const growthSince = (fromISO: string) => growthBetween(a.days, a.weeks, fromISO, today);
+        // One rule for what a day is worth and whose it is (companions-growth.ts):
+        // shown growth counts today live; banked growth stops at yesterday.
+        const growthSince = (fromISO: string) => growthBetween(a.days, a.weeks, fromISO, today, true);
+        const settledSince = (fromISO: string) => growthBetween(a.days, a.weeks, fromISO, today, false);
 
         if (!active) {
           // No companion yet: the first egg is simply there to hatch, so a new
@@ -400,7 +502,12 @@ export async function loadProgression(): Promise<PersonProgress[]> {
             eggReady: true,
             eggCapped: false,
             growth: 0,
-            luck: luckFromStreak(current),
+            settledGrowth: 0,
+            pendingGrowth: 0,
+            phaseGoal: null,
+            phaseProgress: 0,
+            growthMix: { CHORE: 0, EXERCISE: 0, BIBLE: 0, SCHOOL: 0, TASK: 0 },
+            luck,
           };
         }
 
@@ -421,12 +528,24 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         // earned, so "earned minus what the shelf holds" credited a fresh
         // hatchling with months of old growth. See DECISIONS 0.602.1.
         const totalGrowth = banked + growthSince(tenureISO);
+        const settledGrowth = banked + settledSince(tenureISO);
+        const deepenGrowth = deepFromISO ? growthSince(deepFromISO) : 0;
         const ph = companionPhase({
           growth: totalGrowth,
-          deepenGrowth: deepFromISO ? growthSince(deepFromISO) : 0,
+          deepenGrowth,
           deepening: deepFromISO !== null,
           shiny: active.shiny,
         });
+        // Only one thing grows at a time: toward adult, then (if chosen)
+        // toward the glow. Adult and shiny wait on a choice, so nothing fills.
+        const phaseGoal =
+          ph.phase === "growing" ? CLEAN_DAY_STAGES[2] : ph.phase === "deepening" ? DEEPEN_GROWTH : null;
+        const phaseProgress =
+          ph.phase === "growing"
+            ? Math.min(totalGrowth, CLEAN_DAY_STAGES[2])
+            : ph.phase === "deepening"
+              ? Math.min(deepenGrowth, DEEPEN_GROWTH)
+              : 0;
 
         return {
           active: true as const,
@@ -441,7 +560,12 @@ export async function loadProgression(): Promise<PersonProgress[]> {
           incubationPct: ph.pct,
           eggReady: ph.eggReady,
           eggCapped: false,
-          luck: luckFromStreak(current),
+          settledGrowth,
+          pendingGrowth: Math.max(0, totalGrowth - settledGrowth),
+          phaseGoal,
+          phaseProgress,
+          growthMix: growthMix(a.days, tenureISO, today, true),
+          luck,
         };
       })(),
       statShares: (() => {

@@ -68,7 +68,7 @@ export async function setCoopFloor(tier: number): Promise<{ error: string | null
   return { error: null };
 }
 
-/** Admin sets how many clean days a child needs to finish the month. */
+/** Admin sets how many days of work a child needs to finish the month. */
 export async function setMonthGoalDays(days: number): Promise<{ error: string | null }> {
   await requireAdmin();
   const n = Math.min(28, Math.max(1, Math.round(days)));

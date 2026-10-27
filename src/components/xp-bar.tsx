@@ -1,75 +1,25 @@
 "use client";
 
-import { STAT_ORDER, type StatKey } from "@/lib/scoring/progression";
-
-// Domain colors (match the companion palette hues).
-const HEX: Record<StatKey, string> = {
-  CHORE: "#22c55e",
-  EXERCISE: "#f97316",
-  BIBLE: "#eab308",
-  SCHOOL: "#6366f1",
-  TASK: "#14b8a6",
-};
-
-const CELLS = 20;
+import type { GrowthRow } from "@/lib/scoring/growth-cells";
 
 /**
- * A tight row of little squares showing progress into the current level. The
- * filled squares are colored by what you actually did — grouped by domain into
- * bands (all chore-green together, all workout-orange together, …) so it reads
- * as your mix at a glance, not confetti. Replaces the old "evolves in N" text.
+ * The character's row of squares: how far it has grown toward adult, coloured
+ * by what earned it, with today's squares lighter (today can still change).
+ * The squares themselves come from `growthRow` (src/lib/scoring/growth-cells.ts),
+ * the same rule the phone is sent.
  */
-export function XpBar({
-  pct,
-  shares,
-  gapsAfter,
-}: {
-  pct: number;
-  shares: Record<StatKey, number>;
-  /** Cell indices (1-based count of cells) to put a wider gap after, so one row
-   *  of squares can show where a stage ends without a second bar underneath. */
-  gapsAfter?: number[];
-}) {
-  const filled = Math.max(0, Math.min(CELLS, Math.round((pct / 100) * CELLS)));
-
-  // Allocate the filled cells across domains by share, in a fixed order so
-  // colors stay grouped. Largest-remainder keeps the total exact.
-  const raw = STAT_ORDER.map((k) => ({ k, want: (shares[k] ?? 0) * filled }));
-  const alloc: Record<StatKey, number> = {
-    CHORE: 0,
-    EXERCISE: 0,
-    BIBLE: 0,
-    SCHOOL: 0,
-    TASK: 0,
-  };
-  let used = 0;
-  for (const r of raw) {
-    alloc[r.k] = Math.floor(r.want);
-    used += alloc[r.k];
-  }
-  let remainder = filled - used;
-  for (const r of raw.slice().sort((a, b) => (b.want % 1) - (a.want % 1))) {
-    if (remainder <= 0) break;
-    alloc[r.k] += 1;
-    remainder -= 1;
-  }
-
-  const cells: (string | null)[] = [];
-  for (const k of STAT_ORDER) for (let i = 0; i < alloc[k]; i++) cells.push(HEX[k]);
-  // if nothing has a domain share yet but there's fill, show neutral fill
-  while (cells.length < filled) cells.push("#94a3b8");
-  while (cells.length < CELLS) cells.push(null);
-
-  const gaps = new Set(gapsAfter ?? []);
+export function XpBar({ row }: { row: GrowthRow }) {
+  const gaps = new Set(row.gaps);
+  const filled = row.cells.filter(Boolean).length;
   return (
-    <div className="flex gap-[2px]" aria-label={`${pct}%`}>
-      {cells.map((c, i) => (
+    <div className="flex gap-[2px]" role="img" aria-label={row.label ?? `${filled} of ${row.cells.length}`}>
+      {row.cells.map((c, i) => (
         <span
           key={i}
           className="h-2.5 w-2.5 rounded-[2px]"
           style={{
-            background: c ?? "var(--color-hairline)",
-            opacity: c ? 1 : 0.5,
+            background: c || "var(--color-hairline)",
+            opacity: !c ? 0.5 : i >= row.pendingFrom ? 0.45 : 1,
             // The divider is margin on the cell before it, not an extra
             // element: an element would need its own width in the flex row and
             // would shift the cells out of a clean grid.

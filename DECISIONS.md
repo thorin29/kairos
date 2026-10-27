@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-10 — Scoring rework: partial days, one unit for growth and the month (v0.603.0 / app 0.411.0)
+
+The full map is docs/SCORING.md. What changed and why, from a snapshot where
+the kids carried 4–7× the parents' load yet had 0–3 perfect weeks (parents 9–10)
+and characters that barely grew:
+
+- **Day credit** = effort finished ÷ effort due (0..1). Growth, "This month",
+  the family goal and egg luck all run on it. All-or-nothing perfect days made
+  every reward except level favour short lists. Never lower than the old rule for
+  any history (tested), so nothing shrank on update.
+- **Today counts live** and is drawn lighter; it can fall the same day if a task
+  is unchecked or added. Retiring a companion banks **settled** growth (to
+  yesterday) so today moves with the one taking over — no double count (tested
+  with several switches a day).
+- **One thing at a time.** No egg while growing or deepening — unchanged, now
+  documented and tested.
+- **Luck** from the last 14 days' average credit, not the streak (one missed
+  chore zeroed it).
+- **Family goal** counts days of work (target unchanged, default 15). Season
+  tiers are still computed for old apps but not shown; "This month: X / target
+  days" replaces them so the month means one thing.
+- **Life** gets 10 XP per confirmed team-sport event. Confirming already
+  completes the day's workout task (Strength); this is the team, not the workout.
+- **Bar colours** come from what earned the growth (`growthMix`), not the
+  all-time XP mix, which recoloured squares without filling any.
+- **Snapshot** reports the real rules and adds days of work, completion by
+  skill, today's credit, growth, phase, luck and the last 14 days.
+- **"How scoring works"** is one source (`scoring/guide.ts`) for web `/scoring`
+  and the app's Settings, with the live numbers filled in.
+
 ## 2026-10 — Hockey layout: the shared tablet has its own (v0.602.2)
 
 Reported: rearranging Hockey on the web tablet rearranged the phone too. A

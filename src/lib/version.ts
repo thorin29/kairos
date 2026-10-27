@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.602.2";
+export const APP_VERSION = "0.603.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,18 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.603.0",
+    summary: [
+      "Characters grow from every day, not just perfect ones: finish most of your list and it still grows most of a step.",
+      "Today's growth shows straight away, in a lighter colour.",
+      "The bar's colours show what you did to grow your character.",
+      "This month and the family goal count the same days of work.",
+      "Rarer eggs come from finishing your list over the last two weeks, not from a streak.",
+      "Team practices and games you confirm add to Life.",
+      "New: How scoring works, on the Characters page.",
+    ],
+  },
   {
     version: "0.602.2",
     summary: [
@@ -3609,7 +3621,7 @@ export const CHANGES: Change[] = [
     version: "0.55.0",
     summary: [
       "Once sign-in is required, the shared-screen actions (checking off tasks, logging workouts, adding groceries and events, and the like) now need a signed-in session too \\u2014 no change when sign-in is off",
-      "Names are now treated case-insensitively when adding people, matching how login already works, so \\\"Marco\\\" and \\\"marco\\\" can't both exist",
+      "Names are now treated case-insensitively when adding people, matching how login already works, so \\\"Alex\\\" and \\\"alex\\\" can't both exist",
     ],
   },
   {
