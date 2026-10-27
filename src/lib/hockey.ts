@@ -2,6 +2,8 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { getSetting, setSetting, clearSetting } from "@/lib/settings";
 import { todayISO } from "@/lib/dates";
+import { currentUser } from "@/lib/user-session";
+import { deviceMode } from "@/lib/device";
 import {
   buildHockeyView,
   cleanHockeyPrefs,
@@ -109,12 +111,22 @@ export async function hockeyEventTypeId(): Promise<string | null> {
 }
 
 /** Each person's own Hockey layout (order + open sections), kept as one small
- *  setting per person so it follows them between the web and their phone. */
-const prefsKey = (userId: string) => `hockey.prefs.${userId}`;
+ *  setting per person so it follows them between their phone and their own
+ *  computer. Shared devices (the wall tablet) keep one household layout of
+ *  their own — whoever signed the tablet in, it never touches their phone's. */
+const prefsKey = (owner: string) => `hockey.prefs.${owner}`;
 
-export async function getHockeyPrefs(userId: string | null | undefined): Promise<HockeyPrefs> {
-  if (!userId) return NO_HOCKEY_PREFS;
-  const raw = await getSetting(prefsKey(userId));
+/** Whose layout this web request reads and writes: the person on a personal
+ *  device, "shared" on a shared one, null when no one is signed in. */
+export async function webHockeyPrefsOwner(): Promise<string | null> {
+  const [me, mode] = await Promise.all([currentUser(), deviceMode()]);
+  if (!me) return null;
+  return mode === "personal" ? me.id : "shared";
+}
+
+export async function getHockeyPrefs(owner: string | null | undefined): Promise<HockeyPrefs> {
+  if (!owner) return NO_HOCKEY_PREFS;
+  const raw = await getSetting(prefsKey(owner));
   if (!raw) return NO_HOCKEY_PREFS;
   try {
     return cleanHockeyPrefs(JSON.parse(raw));
@@ -123,8 +135,8 @@ export async function getHockeyPrefs(userId: string | null | undefined): Promise
   }
 }
 
-export async function saveHockeyPrefs(userId: string, prefs: unknown): Promise<HockeyPrefs> {
+export async function saveHockeyPrefs(owner: string, prefs: unknown): Promise<HockeyPrefs> {
   const clean = cleanHockeyPrefs(prefs);
-  await setSetting(prefsKey(userId), JSON.stringify(clean));
+  await setSetting(prefsKey(owner), JSON.stringify(clean));
   return clean;
 }

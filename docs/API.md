@@ -1054,7 +1054,9 @@ Rows are local wall-clock times. A section with no rows this week is still liste
 **Layout (v0.601):** sections come in this person's order, each with
 `"open": true|false` (everything starts collapsed). Save it with
 `POST /api/v1/hockey/prefs` `{ "order": [names], "open": [names] }` — the whole
-layout each time; returns `{ "ok": true, "order": [...], "open": [...] }`.
+layout each time; returns `{ "ok": true, "order": [...], "open": [...] }`. The
+phone's layout is the person's own; the web on a shared device keeps a separate
+household layout (v0.602.2).
 
 ## Endpoint inventory (what exists vs what is written up here)
 

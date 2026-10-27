@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { loadHockey, hockeyEventTypeId, getHockeyPrefs } from "@/lib/hockey";
+import { loadHockey, hockeyEventTypeId, getHockeyPrefs, webHockeyPrefsOwner } from "@/lib/hockey";
 import { arrangeSections } from "@/lib/hockey-view";
 import { loadEventTypes } from "@/lib/queries/calendar";
 import { loadClassCtx } from "@/lib/queries/class-ctx";
@@ -48,7 +48,8 @@ export default async function HockeyPage() {
     currentUser(),
     deviceMode(),
   ]);
-  const prefs = await getHockeyPrefs(me?.id);
+  const prefsOwner = await webHockeyPrefsOwner();
+  const prefs = await getHockeyPrefs(prefsOwner);
 
   return (
     <AddEventProvider
@@ -63,7 +64,7 @@ export default async function HockeyPage() {
       <HockeyBoard
         view={load.view}
         sections={arrangeSections(load.view.sections, prefs)}
-        canSave={Boolean(me)}
+        canSave={prefsOwner != null}
         eventTypeId={typeId}
         // On someone's own device the event is theirs; on the shared tablet
         // the form asks whose it is.

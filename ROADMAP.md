@@ -1682,7 +1682,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.602.1 (migrations through 127_marine_corps_birthday).
+- Web APP_VERSION 0.602.2 (migrations through 127_marine_corps_birthday).
 - App versionName 0.410.0 / versionCode 471 / CLIENT_BUILD 471.
 - ice-time v0.1.0: deployed; feeds the Hockey page.
 - Collector: deployed and running; Xbox totals come from real game sessions.

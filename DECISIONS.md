@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-10 — Hockey layout: the shared tablet has its own (v0.602.2)
+
+Reported: rearranging Hockey on the web tablet rearranged the phone too. A
+shared device is still signed in as someone, and 0.601 keyed the layout by that
+person, so tablet and phone shared one. The web now keys it by
+`webHockeyPrefsOwner()`: the person on a personal device, `shared` on a shared
+one (`hockey.prefs.shared`; person ids are cuids, so no clash). The phone is
+always personal. Layouts saved on the tablet before this stay with the person
+who was signed in; the tablet starts again collapsed.
+
 ## 2026-10 — The 0.602.0 back-fill was wrong; removed (v0.602.1)
 
 Reported straight after 0.602.0: a companion hatched a few days earlier showed

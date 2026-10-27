@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/session";
-import { saveHockeyConfig, loadHockey, saveHockeyPrefs } from "@/lib/hockey";
-import { currentUser } from "@/lib/user-session";
+import { saveHockeyConfig, loadHockey, saveHockeyPrefs, webHockeyPrefsOwner } from "@/lib/hockey";
 
 /** Save where Hockey's ice times come from. Admin only. */
 export async function saveHockeyAction(input: {
@@ -35,10 +34,10 @@ export async function testHockeyAction(): Promise<{ ok: boolean; message: string
   return { ok: true, message: parts.join(" ") };
 }
 
-/** Save the signed-in person's own Hockey layout. Anyone signed in; it only
- *  ever writes their own. */
+/** Save this device's Hockey layout: the signed-in person's own on a personal
+ *  device, the household one on a shared device. Decided here, never sent. */
 export async function saveHockeyPrefsAction(prefs: { order: string[]; open: string[] }): Promise<void> {
-  const me = await currentUser();
-  if (!me) return;
-  await saveHockeyPrefs(me.id, prefs);
+  const owner = await webHockeyPrefsOwner();
+  if (!owner) return;
+  await saveHockeyPrefs(owner, prefs);
 }
