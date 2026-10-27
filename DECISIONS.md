@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-10 — Paper plates picture redrawn (v0.605.1 / app 0.413.1)
+
+`kairos:paper-plates` was one of the pictures sliced with the grid cell
+instead of the object, so the stack ran off the bottom (and both sides) of
+its canvas; the missing pixels were never in the file, so it was redrawn
+rather than repaired: a stack of five white plates with a blue leaf rim, drawn
+at 4x and scaled down to the old 160x134 so list rows don't shift. A
+hard-opaque-edge scan of all pictures flagged 35 others; looked at side by
+side, every one is a whole object whose flat side touches its box (cans,
+trays, bottle caps), not a cut. `air-freshener` and the legacy `ic:sorbet`
+square are still the ones to regenerate.
+
 ## 2026-10 — Change your own password (v0.605.0 / app 0.413.0)
 
 `changeOwnPassword` in `src/lib/accounts.ts` is the one rule for the web
