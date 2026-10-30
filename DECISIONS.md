@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10 — Every-set logging on the phone (v0.608.0 / app 0.414.0)
+
+`/api/v1/workouts/sets` (GET one movement's sets + last time's, POST every saved
+set) is a thin wrapper over the web's `loadMovementLog` / `logMovementSets`, so
+both clients save through one function. The POST is a replace, which makes an
+offline-queued copy safe to replay. `GET /api/v1/workouts` adds `title`,
+`strip` (the last 8 days, `loadWeekStrip`), each block's `category`, and per
+movement `setCount` / `summary` / `last`; the phone applies the same split rule
+as `daySections` to decide which plans open the set logger. All new fields are
+appended with defaults, so older phones decode as before.
+
+The web's day page regained a back-date picker ("Another day", up to 90 days
+back, the old range): 0.607.0's week strip only reached 8 days.
+
 ## 2026-10 — Build fix (v0.607.1)
 
 0.607.0 didn't compile: `logMovementSets` cast the plan's category to

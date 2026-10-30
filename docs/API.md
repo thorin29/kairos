@@ -790,8 +790,12 @@ GET  /api/v1/workouts?date=YYYY-MM-DD
 200: { "date", "loggable": bool,
        "workouts": [ TodayPlanned ],            // every planned workout that day (Core, Arms, …)
        "overdue":  [ { "date", "workouts":[TodayPlanned] } ],  // only when date is today
-       "plannedWorkoutId","name","exercises" }  // = workouts[0], for older clients
+       "plannedWorkoutId","name","exercises",   // = workouts[0], for older clients
+       "title":str,                             // "Chest · Legs" — blocks.ts dayTitle (v0.608)
+       "strip":{ "today","days":[ { "date","task":str|null,"rested","logged" } ],
+                 "overdue":[date] } }           // the last 8 days (v0.608)
 TodayPlanned:    { "plannedWorkoutId","name","muscleGroup":str|null,
+                   "category":str|null,         // WEIGHTS, HIIT… — decides the set logger (v0.608)
                    "exercises":[ PlannedMovement ],
                    "sessionLogged":bool }       // the plan's own session exists (v0.586)
 PlannedMovement: { "poolExerciseId","name","metric","unit",
@@ -800,7 +804,31 @@ PlannedMovement: { "poolExerciseId","name","metric","unit",
                    "stats": MovementStats|null, // WEIGHT movements with history only
                    "tracked":bool,              // false = listed, no number asked (v0.586)
                    "reps":int|null,             // reps logged with a WEIGHT value (v0.586)
-                   "skipped":bool }             // skipped for this day (v0.586)
+                   "skipped":bool,              // skipped for this day (v0.586)
+                   "setCount":int,              // sets logged for the day (v0.608)
+                   "summary":str,               // "5 sets · top 185 × 1" (v0.608)
+                   "last":str }                 // last time's sets, same words (v0.608)
+```
+`value`/`reps` are the day's top set (heaviest, then most reps), so an older
+client reads a multi-set day as its top set.
+
+**One movement's sets (every-set logging, v0.608).**
+```
+GET  /api/v1/workouts/sets?date=YYYY-MM-DD&slot=<planned poolExerciseId>[&doing=<swap id>]
+200: { "sets":[ Set ], "loggedAs":{ poolExerciseId,name }|null,
+       "last":{ "date","sets":[ Set ] }|null,   // hints; `doing` picks whose history
+       "skipped":bool }
+Set: { "weight":num|null, "reps":int|null, "seconds":int|null }
+
+POST /api/v1/workouts/sets
+request: { "date","plannedWorkoutId","slotId","loggedId",   // loggedId = a swap, else slotId
+           "metric":"WEIGHT"|"REPS"|"DURATION","unit",
+           "sets":[ Set ],                      // every saved set, in order; [] clears
+           "completedOn":"YYYY-MM-DD"|null }    // set when logged late
+200: { "date","status":"saved" }   404 not_found: the slot isn't in that plan
+```
+A replace, so the same call adds, edits and removes, and a queued offline copy
+is safe to replay. One implementation: `logMovementSets` (src/lib/workouts/mark.ts).
 MovementStats (src/lib/queries/movement-stats.ts — the history block, v0.568–0.570):
   { bestWeight, bestWeightReps, bestOn,          // heaviest ever (weight only)
     bestReps, bestRepsWeight, bestRepsOn,        // most reps ever, at the weight done
@@ -1073,7 +1101,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**143 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**144 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1086,7 +1114,7 @@ silently invisible:
 - **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
 - **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
-- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options`, `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options`, `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604)
 - **hockey** (the week from ice-time), `hockey/prefs`

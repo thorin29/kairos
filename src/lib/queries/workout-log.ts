@@ -142,6 +142,8 @@ export type TodayPlanned = {
   name: string;
   /** Used to group same-muscle plans onto one card (Chest + Chest together). */
   muscleGroup: string | null;
+  /** The plan's category, which decides its section on the day page. */
+  category?: string | null;
   exercises: PlannedMovement[];
   /** The plan's own session exists for the day: how a plan with nothing to
    *  enter (every movement untracked) shows that it was marked complete. */
@@ -473,6 +475,7 @@ export async function loadTodayPlannedWorkouts(
         plannedWorkoutId: plan.id,
         name: plan.name,
         muscleGroup: (plan as { muscleGroup?: string | null }).muscleGroup ?? null,
+        category: (plan as { category?: string | null }).category ?? null,
         exercises: [
           {
             poolExerciseId: "",
@@ -552,6 +555,7 @@ export async function loadTodayPlannedWorkouts(
       plannedWorkoutId: plan.id,
       name: plan.name,
       muscleGroup: (plan as { muscleGroup?: string | null }).muscleGroup ?? null,
+      category: (plan as { category?: string | null }).category ?? null,
       exercises,
       sessionLogged: hasSession(plan as { name: string; category: string | null }),
     });
@@ -1561,10 +1565,15 @@ export type DayLogState = {
 };
 
 /** The day page's state for a person and date, read in a handful of queries. */
-export async function loadDayLogState(userId: string, dateISO: string): Promise<DayLogState> {
+export async function loadDayLogState(
+  userId: string,
+  dateISO: string,
+  /** The day's plans when the caller already has them (the phone's day read). */
+  plannedIn?: NonNullable<TodayPlanned>[],
+): Promise<DayLogState> {
   const day = toDateColumn(dateISO);
   const [planned, sets, skips, sessions] = (await Promise.all([
-    loadTodayPlannedWorkouts(userId, dateISO),
+    plannedIn ?? loadTodayPlannedWorkouts(userId, dateISO),
     prisma.sessionSet.findMany({
       where: { session: { userId, date: day, isRest: false }, poolExerciseId: { not: null } },
       orderBy: [{ setNumber: "asc" }, { createdAt: "asc" }],

@@ -180,7 +180,7 @@ production:
 | Whether a planned workout is done (logged or skipped) | `planDone` in `src/lib/queries/workout-log.ts` |
 | Which set stands for a movement logged set by set (prefills, phone value, history, last time) | `topSet` in `src/lib/workouts/sets.ts` |
 | How a day's workouts are laid out (sections, title, progress, week strip) | `daySections` / `dayTitle` / `dayProgress` / `stripState` in `src/lib/workouts/blocks.ts` |
-| Saving one movement's sets for a day (add, edit, remove, swap, late) | `logMovementSets` in `src/lib/workouts/mark.ts` |
+| Saving one movement's sets for a day (add, edit, remove, swap, late) | `logMovementSets` in `src/lib/workouts/mark.ts`; phone via `/api/v1/workouts/sets` |
 | Whether the day's workout task is complete | `workoutTaskTarget` (applied by `settleWorkoutTask`) in `src/lib/workouts/mark.ts` |
 | What the Hockey page shows and what each Add fills in (web + phone) | `buildHockeyView` in `src/lib/hockey-view.ts`, served to the phone by `/api/v1/hockey` |
 | Changing your own password (web profile + phone) | `changeOwnPassword` in `src/lib/accounts.ts`; phone via `/api/v1/auth/password` |

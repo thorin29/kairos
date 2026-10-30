@@ -23,7 +23,7 @@ import {
 } from "@/lib/workouts/blocks";
 import { fmtNumber, fmtSeconds } from "@/lib/workouts/sets";
 import type { Metric, UnitSystem } from "@/lib/workouts/catalog";
-import { dayOfWeek } from "@/lib/dates";
+import { addDays, dayOfWeek } from "@/lib/dates";
 import {
   ArrowLeftIcon,
   CheckIcon,
@@ -186,6 +186,20 @@ export function DayLog({
           onPick={(d) => setDate(d)}
         />
       )}
+      <label className="flex items-center justify-end gap-2 text-xs text-muted">
+        Another day
+        <input
+          type="date"
+          value={date}
+          max={todayISO}
+          min={addDays(todayISO, -90)}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(v) && v <= todayISO) setDate(v);
+          }}
+          className="tabular h-9 rounded-full border border-hairline bg-surface px-3 text-xs text-ink outline-none focus:border-accent"
+        />
+      </label>
 
       {openDays.map((d) => (
         <div
