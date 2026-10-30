@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-10 — How a movement is logged lives on the movement (v0.609.0)
+
+A pool movement had no idea how it was logged; only the plan entry did, and
+new entries took the category default, so a plank on a weights day asked for
+weight. `PoolExercise.metric` (nullable, migration 128) is the movement's own
+"Logs as". New plan entries without a chosen metric take it (`poolMetrics`),
+and the web and phone pickers preselect it; a plan entry's own metric still
+wins. The migration times holds (the `isHoldName` words, also used when a
+movement is added to the pool) and moves their WEIGHT/unset plan entries to
+time, except where that person has logged a real weight for the movement (a
+weighted plank stays weighted). Logged history is not rewritten. Admin →
+Exercise sets "Logs as" per movement; plan entries that were on the old
+setting follow, ones set differently keep theirs. The starting library (plan
+release 5) tags every movement the same way.
+
 ## 2026-10 — Every-set logging on the phone (v0.608.0 / app 0.414.0)
 
 `/api/v1/workouts/sets` (GET one movement's sets + last time's, POST every saved

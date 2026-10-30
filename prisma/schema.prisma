@@ -1152,6 +1152,9 @@ model PoolExercise {
   category    WorkoutCategory
   name        String
   muscleGroup MuscleGroup?
+  /// How the movement is logged (v0.609.0); null = the category's default.
+  /// New plan entries take it; a plan entry's own metric still wins.
+  metric      WorkoutMetric?
   isActive    Boolean         @default(true)
   sortOrder   Int             @default(0)
   ownerId     String?

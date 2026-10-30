@@ -5,7 +5,11 @@ import { Card, SectionHeading } from "@/components/ui";
 import { PlusIcon, TrashIcon, PencilIcon } from "@/components/icons";
 import {
   CATEGORY_LABEL,
+  METRIC_LABEL_SHORT,
   MUSCLE_GROUPS,
+  metricChoicesFor,
+  poolMetricFor,
+  type Metric,
   MUSCLE_GROUP_LABEL,
   POOL_CATEGORIES,
   type MuscleGroup,
@@ -17,6 +21,7 @@ import {
   deletePoolExercise,
   renamePoolExercise,
   setPoolExerciseActive,
+  setPoolExerciseMetric,
   setWeightUnit,
 } from "@/lib/actions/workouts";
 import type { PoolEntry, WeightUnits } from "@/lib/queries/workouts";
@@ -253,6 +258,17 @@ function PoolRow({ entry }: { entry: PoolEntry }) {
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(entry.name);
+  const choices = metricChoicesFor(entry.category);
+  const [metric, setMetric] = useState<Metric>(poolMetricFor(entry.category, entry.metric));
+  const [moved, setMoved] = useState<number | null>(null);
+
+  const changeMetric = (m: Metric) => {
+    setMetric(m);
+    setMoved(null);
+    startTransition(async () => {
+      setMoved(await setPoolExerciseMetric(entry.id, m));
+    });
+  };
 
   const saveName = () => {
     const clean = name.trim();
@@ -293,6 +309,26 @@ function PoolRow({ entry }: { entry: PoolEntry }) {
       >
         <PencilIcon className="h-4 w-4" />
       </button>
+      {moved != null && moved > 0 && (
+        <span className="text-xs text-muted">
+          {moved} {moved === 1 ? "plan" : "plans"} updated
+        </span>
+      )}
+      {choices.length > 1 && (
+        <select
+          aria-label={`How ${entry.name} is logged`}
+          value={metric}
+          disabled={pending}
+          onChange={(e) => changeMetric(e.target.value as Metric)}
+          className="h-8 rounded-full border border-hairline bg-surface px-2 text-xs outline-none focus:border-accent disabled:opacity-40"
+        >
+          {choices.map((m) => (
+            <option key={m} value={m}>
+              {METRIC_LABEL_SHORT[m]}
+            </option>
+          ))}
+        </select>
+      )}
       <button
         type="button"
         disabled={pending}

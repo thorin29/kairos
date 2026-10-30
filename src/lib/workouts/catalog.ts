@@ -279,6 +279,18 @@ export function metricChoicesFor(category: WorkoutCategory): Metric[] {
   }
 }
 
+/** A hold (plank, wall sit, dead hang…): timed, whatever its category. The
+ *  same words as migration 128_pool_movement_metric. */
+export function isHoldName(name: string): boolean {
+  return /\b(planks?|wall sits?|dead hangs?|hollow (holds?|body)|l-sits?|holds?)\b/i.test(name);
+}
+
+/** How a pool movement is logged: its own setting if it's one the category
+ *  allows, else the category's default. */
+export function poolMetricFor(category: WorkoutCategory, metric: Metric | null | undefined): Metric {
+  return metric && metricChoicesFor(category).includes(metric) ? metric : defaultMetricFor(category);
+}
+
 export const METRIC_LABEL_SHORT: Record<Metric, string> = {
   WEIGHT: "Weight",
   DISTANCE: "Distance",

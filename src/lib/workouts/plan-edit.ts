@@ -3,6 +3,7 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import {
   MUSCLE_GROUP_LABEL,
   CATEGORY_LABEL,
+  metricChoicesFor,
   type WorkoutCategory,
   type MuscleGroup,
   type Metric,
@@ -93,6 +94,7 @@ export async function addPlannedFromPoolCore(
     return true;
   });
 
+  const fill = await poolMetrics(input.category, rows);
   const count = await prisma.plannedWorkout.count({ where: { userId, dayOfWeek: day } });
   await prisma.plannedWorkout.create({
     data: {
@@ -106,7 +108,7 @@ export async function addPlannedFromPoolCore(
         create: rows.map((e, i) => ({
           poolExerciseId: e.poolExerciseId,
           tracked: e.tracked,
-          metric: (e.metric ?? null) as Metric | null,
+          metric: (e.metric ?? fill.get(e.poolExerciseId) ?? null) as Metric | null,
           sortOrder: i,
         })),
       },
@@ -140,4 +142,28 @@ export async function addPlannedHiitCore(
   });
   await generateWorkoutTasks();
   return "ok";
+}
+
+/**
+ * The metric a new plan entry takes when none was chosen: the movement's own
+ * "Logs as" setting, if the plan's category allows it (v0.609.0). So a plank
+ * added to a weights day is timed without anyone changing it.
+ */
+export async function poolMetrics(
+  category: string,
+  rows: readonly { poolExerciseId: string; metric?: string | null }[],
+): Promise<Map<string, Metric>> {
+  const ids = rows.filter((r) => !r.metric).map((r) => r.poolExerciseId);
+  const out = new Map<string, Metric>();
+  if (ids.length === 0) return out;
+  const allowed = metricChoicesFor(category as WorkoutCategory);
+  const pool = await prisma.poolExercise.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, metric: true },
+  });
+  for (const p of pool) {
+    const m = p.metric as Metric | null;
+    if (m && allowed.includes(m)) out.set(p.id, m);
+  }
+  return out;
 }

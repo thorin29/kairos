@@ -1136,6 +1136,8 @@ export type PoolEntry = {
   muscleGroup: MuscleGroup | null;
   isActive: boolean;
   unit: string; // weights: the muscle group's lb/kg; otherwise ""
+  /** How it's logged; null = the category's default (v0.609.0). */
+  metric: Metric | null;
 };
 
 export async function loadExercisePool(): Promise<PoolEntry[]> {
@@ -1153,6 +1155,7 @@ export async function loadExercisePool(): Promise<PoolEntry[]> {
         name: true,
         muscleGroup: true,
         isActive: true,
+        metric: true,
       },
     }),
     loadWeightUnits(),

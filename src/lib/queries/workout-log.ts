@@ -1268,7 +1268,8 @@ export type PlanCategoryOption = {
 export type PlanOptions = {
   categories: PlanCategoryOption[];
   muscleGroups: { key: string; label: string }[];
-  exercises: { id: string; name: string; category: string; muscleGroup: string | null }[];
+  /** `metric`: the movement's own "Logs as", null = the category default (v0.609). */
+  exercises: { id: string; name: string; category: string; muscleGroup: string | null; metric: string | null }[];
   hiitWorkouts: { id: string; name: string; personal: boolean }[];
 };
 
@@ -1294,7 +1295,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
     prisma.poolExercise.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, category: true, muscleGroup: true },
+      select: { id: true, name: true, category: true, muscleGroup: true, metric: true },
     }),
     loadBrowsableWorkouts(userId),
   ]);
@@ -1310,6 +1311,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
       name: e.name,
       category: e.category as string,
       muscleGroup: (e.muscleGroup as string | null) ?? null,
+      metric: (e.metric as string | null) ?? null,
     })),
     hiitWorkouts: hiit.map((w) => ({ id: w.id, name: w.name, personal: w.personal })),
   };

@@ -295,7 +295,11 @@ function AddWorkoutModal({
     setPicked((prev) => {
       const next = { ...prev };
       if (next[id]) delete next[id];
-      else next[id] = { tracked: true, metric: defMetric };
+      else {
+        // The movement's own "Logs as" (a plank is timed), else the category's.
+        const own = pool.find((p) => p.id === id)?.metric;
+        next[id] = { tracked: true, metric: own && choices.includes(own) ? own : defMetric };
+      }
       return next;
     });
 

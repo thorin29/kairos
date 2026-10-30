@@ -32,6 +32,7 @@ type PoolRow = {
   category: string;
   name: string;
   muscleGroup: string | null;
+  metric: string | null;
   isActive: boolean;
   ownerId: string | null;
 };
@@ -140,7 +141,7 @@ export async function exportWorkouts(opts: { anonymise: boolean }): Promise<stri
       }),
       prisma.poolExercise.findMany({
         orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
-        select: { id: true, category: true, name: true, muscleGroup: true, isActive: true, ownerId: true },
+        select: { id: true, category: true, name: true, muscleGroup: true, metric: true, isActive: true, ownerId: true },
       }),
       prisma.exercise.findMany({
         orderBy: [{ userId: "asc" }, { sortOrder: "asc" }],
@@ -231,6 +232,7 @@ export async function exportWorkouts(opts: { anonymise: boolean }): Promise<stri
       name: p.name,
       category: p.category,
       muscleGroup: p.muscleGroup,
+      logsAs: p.metric,
       active: p.isActive,
       ownedBy: who(p.ownerId),
     })),

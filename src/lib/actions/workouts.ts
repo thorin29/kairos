@@ -19,12 +19,16 @@ import {
 import { topSet } from "@/lib/workouts/sets";
 import { loadExercisePool, type PoolEntry } from "@/lib/queries/workouts";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
+import { poolMetrics } from "@/lib/workouts/plan-edit";
 import {
   CATEGORY_LABEL,
   MUSCLE_GROUP_LABEL,
   WORKOUT_TYPE_LABEL,
   formatHiitMovement,
   hiitResult,
+  isHoldName,
+  metricChoicesFor,
+  poolMetricFor,
   weightUnitKey,
   type Implement,
   type Metric,
@@ -192,12 +196,44 @@ export async function addPoolExercise(input: {
   const count = await prisma.poolExercise.count({
     where: { category: input.category },
   });
+  // A hold is timed from the start, so a plank never asks for weight.
+  const metric: Metric | null =
+    isHoldName(name) && metricChoicesFor(input.category).includes("DURATION") ? "DURATION" : null;
   await prisma.poolExercise
     .create({
-      data: { category: input.category, name, muscleGroup, sortOrder: count },
+      data: { category: input.category, name, muscleGroup, sortOrder: count, metric },
     })
     .catch(() => {});
   refresh();
+}
+
+/**
+ * Set how a pool movement is logged (null = the category's default). Every
+ * plan entry for it that was on the old setting moves to the new one; an entry
+ * someone set differently keeps its own. Returns how many plan entries moved.
+ */
+export async function setPoolExerciseMetric(id: string, metric: Metric | null): Promise<number> {
+  await requireAdmin();
+  const p = await prisma.poolExercise.findUnique({
+    where: { id },
+    select: { category: true, metric: true },
+  });
+  if (!p) return 0;
+  const category = p.category as WorkoutCategory;
+  if (metric && !metricChoicesFor(category).includes(metric)) return 0;
+  const prev = poolMetricFor(category, p.metric as Metric | null);
+  const next = poolMetricFor(category, metric);
+  await prisma.poolExercise.update({ where: { id }, data: { metric } });
+  let moved = 0;
+  if (prev !== next) {
+    const r = await prisma.plannedExercise.updateMany({
+      where: { poolExerciseId: id, OR: [{ metric: null }, { metric: prev }] },
+      data: { metric: next },
+    });
+    moved = r.count;
+  }
+  refresh();
+  return moved;
 }
 
 export async function renamePoolExercise(
@@ -451,6 +487,7 @@ export async function addPlannedWorkoutFromPool(
     return true;
   });
 
+  const fill = await poolMetrics(input.category, rows);
   const count = await prisma.plannedWorkout.count({ where: { userId, dayOfWeek } });
   await prisma.plannedWorkout.create({
     data: {
@@ -464,7 +501,7 @@ export async function addPlannedWorkoutFromPool(
         create: rows.map((e, i) => ({
           poolExerciseId: e.poolExerciseId,
           tracked: e.tracked,
-          metric: e.metric ?? null,
+          metric: e.metric ?? fill.get(e.poolExerciseId) ?? null,
           sortOrder: i,
         })),
       },

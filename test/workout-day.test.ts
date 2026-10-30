@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { topSet, setsSummary, fmtSet } from "@/lib/workouts/sets";
 import { platesFor, PLATE_BY_ID } from "@/lib/workouts/plates";
+import { isHoldName, poolMetricFor } from "@/lib/workouts/catalog";
 import {
   daySections,
   dayTitle,
@@ -187,5 +188,17 @@ describe("stripState", () => {
     expect(stripState(d(today, "PENDING", true), today, open)).toBe("partial");
     expect(stripState(d("2026-10-26", null), today, open)).toBe("none");
     expect(stripState(d("2026-10-26", null, true), today, open)).toBe("done");
+  });
+});
+
+describe("pool movement metric (v0.609)", () => {
+  it("knows a hold by its name", () => {
+    expect(["Planks", "Side plank", "Wall sit", "Dead hang", "Hollow hold", "L-sit", "Farmer hold"].every(isHoldName)).toBe(true);
+    expect(["Bench press", "Threshold run", "Holder squat", "Pull-ups"].some(isHoldName)).toBe(false);
+  });
+  it("uses the movement's own setting only when the category allows it", () => {
+    expect(poolMetricFor("WEIGHTS", "DURATION")).toBe("DURATION");
+    expect(poolMetricFor("WEIGHTS", null)).toBe("WEIGHT");
+    expect(poolMetricFor("ROWING", "DURATION")).toBe("METERS");
   });
 });
