@@ -1167,7 +1167,7 @@ injuries don't read as going backwards. Phases, in order:
 - [ ] 2. Every-set logging: day page in sections → one movement's sets; last
       time's sets as greyed hints, never typed over; add, remove (confirm if
       saved) and shift sets; Skip / Calculator (use for set N) / Log; week
-      strip and late logging. **Web done (v0.607.0)**; phone next
+      strip and late logging. **Web done (v0.607.1)**; phone next
 - [ ] 3. More kinds of progress: rep and set records, session intent (light
       days drawn hollow), effort after a session, a "something hurt" area,
       weekly training chart, rewards for consistency and light weeks
@@ -1718,7 +1718,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.607.0 (migrations through 127_marine_corps_birthday).
+- Web APP_VERSION 0.607.1 (migrations through 127_marine_corps_birthday).
 - App versionName 0.413.1 / versionCode 475 / CLIENT_BUILD 475.
 - ice-time 0.1.1 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

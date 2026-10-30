@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-10 — Build fix (v0.607.1)
+
+0.607.0 didn't compile: `logMovementSets` cast the plan's category to
+`string | null` and passed it back into a Prisma `where`, which only takes the
+`WorkoutCategory` enum. It's now typed with Prisma's own enum.
+
+The sandbox's preflight couldn't see it because the Prisma client can't be
+generated there (the engine download is blocked), so every Prisma-typed value
+reads as `any`. The client *can* be generated: point Prisma at a dummy schema
+engine (`PRISMA_SCHEMA_ENGINE_BINARY` set to a script that exits 0, plus
+`PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1`). Generation doesn't run the
+engine. `scripts/preflight.sh` now does this itself: it generates the client
+when it's missing, type-checks the whole project with it (must be 0 errors),
+and deletes `src/generated/` again, since it isn't ignored by git. It falls
+back to the old changed-file report only if generation fails. Checked by putting
+the bug back: the new preflight flags both lines.
+
 ## 2026-10 — The day page and every-set logging, web (v0.607.0)
 
 Release 2 of the workouts rework (ROADMAP → Workouts rework). "Log workout"

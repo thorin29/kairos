@@ -5,6 +5,7 @@ import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { CATEGORY_LABEL, type WorkoutCategory } from "@/lib/workouts/catalog";
 import { loadDayPlanProgress, planSlot } from "@/lib/queries/workout-log";
 import { topSet } from "@/lib/workouts/sets";
+import type { WorkoutCategory as DbWorkoutCategory } from "@/generated/prisma/client";
 
 /** Reported back when a movement/plan is already logged that day, so the caller
  *  can ask "update or cancel" instead of silently duplicating or overwriting.
@@ -763,7 +764,7 @@ export async function logMovementSets(
     },
   })) as {
     name: string;
-    category: string | null;
+    category: DbWorkoutCategory | null;
     userId: string;
     exercises: { poolExerciseId: string }[];
   } | null;
