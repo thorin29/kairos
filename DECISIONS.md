@@ -1,449 +1,120 @@
 # Decisions
 
-## 2026-10 — How a movement is logged lives on the movement (v0.609.0)
-
-A pool movement had no idea how it was logged; only the plan entry did, and
-new entries took the category default, so a plank on a weights day asked for
-weight. `PoolExercise.metric` (nullable, migration 128) is the movement's own
-"Logs as". New plan entries without a chosen metric take it (`poolMetrics`),
-and the web and phone pickers preselect it; a plan entry's own metric still
-wins. The migration times holds (the `isHoldName` words, also used when a
-movement is added to the pool) and moves their WEIGHT/unset plan entries to
-time, except where that person has logged a real weight for the movement (a
-weighted plank stays weighted). Logged history is not rewritten. Admin →
-Exercise sets "Logs as" per movement; plan entries that were on the old
-setting follow, ones set differently keep theirs. The starting library (plan
-release 5) tags every movement the same way.
-
-## 2026-10 — Every-set logging on the phone (v0.608.0 / app 0.414.0)
-
-`/api/v1/workouts/sets` (GET one movement's sets + last time's, POST every saved
-set) is a thin wrapper over the web's `loadMovementLog` / `logMovementSets`, so
-both clients save through one function. The POST is a replace, which makes an
-offline-queued copy safe to replay. `GET /api/v1/workouts` adds `title`,
-`strip` (the last 8 days, `loadWeekStrip`), each block's `category`, and per
-movement `setCount` / `summary` / `last`; the phone applies the same split rule
-as `daySections` to decide which plans open the set logger. All new fields are
-appended with defaults, so older phones decode as before.
-
-The web's day page regained a back-date picker ("Another day", up to 90 days
-back, the old range): 0.607.0's week strip only reached 8 days.
-
-## 2026-10 — Build fix (v0.607.1)
-
-0.607.0 didn't compile: `logMovementSets` cast the plan's category to
-`string | null` and passed it back into a Prisma `where`, which only takes the
-`WorkoutCategory` enum. It's now typed with Prisma's own enum.
-
-The sandbox's preflight couldn't see it because the Prisma client can't be
-generated there (the engine download is blocked), so every Prisma-typed value
-reads as `any`. The client *can* be generated: point Prisma at a dummy schema
-engine (`PRISMA_SCHEMA_ENGINE_BINARY` set to a script that exits 0, plus
-`PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1`). Generation doesn't run the
-engine. `scripts/preflight.sh` now does this itself: it generates the client
-when it's missing, type-checks the whole project with it (must be 0 errors),
-and deletes `src/generated/` again, since it isn't ignored by git. It falls
-back to the old changed-file report only if generation fails. Checked by putting
-the bug back: the new preflight flags both lines.
-
-## 2026-10 — The day page and every-set logging, web (v0.607.0)
-
-Release 2 of the workouts rework (ROADMAP → Workouts rework). "Log workout"
-on the Exercise page is now the day page: a week strip, a card for each missed
-day still open, then the day's workouts laid out in sections. A movement opens
-its own page to log every set.
-
-**No schema change.**
-- **Sections:** derived from each planned workout's category by
-  `daySections` (blocks.ts): STRETCHING → Warm-up; ROWING/RUNNING/RUCKING →
-  Cardio; WEIGHTS/ISOMETRIC → its muscle group; HIIT → Conditioning; SPORT →
-  Sport. The `block` and `scheme` columns the plan sketched wait for the plan
-  builder release, where they're first edited.
-- **Same-group plans:** two plans for one muscle group on a day (two "Arms")
-  share a section. Display only.
-
-**Only strength movements change.**
-- **Split into movements:** a strength workout is split into one row per
-  movement only when every movement it tracks is logged in weight, reps or
-  time. Anything else (a tracked distance, nothing tracked) stays one card.
-- **Unchanged cards:** warm-up, cardio and HIIT keep the card they had
-  (`PlanRow`), so they log exactly as before until their own releases.
-
-**Sets.**
-- **Save:** `logMovementSets` (mark.ts) replaces a planned movement's sets
-  for the day with the list it's given, so add, edit, remove and repeat are one
-  idempotent call.
-- **The logger sends the movement's saved sets:**
-  - on every ✓
-  - on every removal of a saved set (asked first)
-  - on Log or Back (which also save anything typed but not ticked)
-- **Page refresh:** only the leaving save refreshes the page, so ticking
-  sets doesn't re-render the Exercise page between sets.
-- **Emptying a movement:** removing every set deletes the plan's session once
-  it's empty, so the day reads as not logged.
-- **Swaps:** stored as always (the done movement, `swappedFromId` = the
-  planned one).
-- **Late logging:** same as the old Overdue list. `date` = the day it counts
-  for, `completedOn` = today.
-
-**Hints.**
-- **Source:** last time's sets for the movement being done: its most recent
-  earlier day, in set order. Set N's hint is last time's set N.
-- **Display only:** hints are placeholders, never values, so nothing is
-  typed over.
-- **Adding a set** copies the set above.
-- **"Remaining sets ±5"** (±2.5 kg) moves only the placeholders of sets not
-  entered; what's typed or saved never moves.
-- **The calculator** opens loaded to the next unticked set's weight
-  (`platesFor`) and "Use for set N" fills that box (lb only, as the calculator
-  is).
-
-**One top set for older readers.** Before this a movement had one set a day,
-and several readers took "the" set by whichever came last. They now all use
-`topSet` (heaviest, more reps on a tie):
-- the phone's plan value (`loadTodayPlannedWorkouts`)
-- the web's prefill map (`loadLoggedWeights`)
-- "last time" in movement stats
-- the day list and history summaries, which now read "5 sets · top 185 × 1"
-  for one movement with several sets
-
-**The phone can't silently undo sets.** The app still logs one value per
-movement, and re-sends a plan's movements on Log. `logPlannedWorkout` now
-leaves a multi-set movement alone when the value sent equals its top set.
-A changed value is still an edit and replaces the sets, as before. The phone
-gets the set logger in its own release.
-
-**Week strip.** The last 8 days (`loadWeekStrip`): the day's workout task
-status, rest days, and whether anything was logged. `stripState` reads them as:
-
-| State | Rule |
-|---|---|
-| done | task complete, or something logged on a day with nothing planned |
-| partly done | task pending, something logged |
-| rest | a rest day taken |
-| not logged yet | inside the overdue window |
-| missed | outside it |
-| today | today's day |
-
-Missed days are grey, never red.
-
-Tested: the pure helpers (`test/workout-day.test.ts`), the save/read path
-against an in-memory database, and the page in a browser with sample data. Not
-run against the real database or built here (no Prisma client in the
-sandbox).
-
-## 2026-10 — Workout export (v0.606.0)
-
-The start of the workouts rework (ROADMAP → Workouts rework). Before
-changing how workouts are logged or suggesting programs, the plan is built
-from what people actually do, so Admin → Workouts gets a download of the
-whole area as JSON (`exportWorkouts` in `src/lib/actions/workout-export.ts`).
-It's a server action handing the client a string that becomes a Blob
-download, like the scoring snapshot, rather than a route, so there's no new
-API surface and it sits behind `requireAdmin` the same way.
-
-- **People:** role, child or parent, and **age in years**, never the
-  birthday.
-- **"Hide names"** replaces names with "Person 1, 2…" in the household's own
-  order and leaves out the free-text session and HIIT notes, since those can
-  name people too. Session names, task titles and movement names stay. They
-  come from plans and the pool, but a custom one could still hold a name.
-- **Ids become names** (movements, HIIT workouts) so the file reads on its
-  own. Pool ids are kept on the pool list for joining.
-- **Every set** is included, plus swaps, skipped movements and the workout
-  tasks' due/done status, which is the only record of how consistently
-  someone trained, since a skipped day has no session.
-
-Reads only.
-
-## 2026-10 — Paper plates picture redrawn (v0.605.1 / app 0.413.1)
-
-`kairos:paper-plates` was one of the pictures sliced with the grid cell
-instead of the object, so the stack ran off the bottom (and both sides) of
-its canvas; the missing pixels were never in the file, so it was redrawn
-rather than repaired: a stack of five white plates with a blue leaf rim, drawn
-at 4x and scaled down to the old 160x134 so list rows don't shift. A
-hard-opaque-edge scan of all pictures flagged 35 others; looked at side by
-side, every one is a whole object whose flat side touches its box (cans,
-trays, bottle caps), not a cut. `air-freshener` and the legacy `ic:sorbet`
-square are still the ones to regenerate.
-
-## 2026-10 — Change your own password (v0.605.0 / app 0.413.0)
-
-`changeOwnPassword` in `src/lib/accounts.ts` is the one rule for the web
-profile page (shown only on your own profile, when you sign in with a password)
-and the phone (`POST /api/v1/auth/password`). It needs the current password,
-at least `MIN_PASSWORD` (8) characters and a different one, and is rate-limited
-per person (8 tries / 15 min) so the current-password check can't be guessed
-at. It bumps `credentialVersion`: every other browser session and phone is
-asked for the new password; the one that made the change stays signed in (web
-re-issues its session cookie at the new version; the phone's device row is
-moved to it). The phone endpoint lives under `/auth/` deliberately — the app
-never queues `/auth/` requests for offline replay, so a password is never
-written to its offline queue. New-account join still accepts 6 characters; only
-a change asks for 8.
-
-## 2026-10 — The phone's drawer hides sections by the web's rule (v0.604.0 / app 0.412.0)
-
-`hiddenNavFor(visibleIds)` in `src/lib/personal-scope.ts` is now the one rule
-for both the web sidebar and `GET /api/v1/nav` (`{ hidden: ["hockey","money"] }`):
-Hockey until ice-time is connected; Money when the person (and, for a parent,
-the children) have no entries. The phone is always personal, so it uses
-`visibleIdsFor(person)`. The app caches the list (DataStore) and re-asks on
-start, after a sync and on opening the drawer.
-
-## 2026-10 — Scoring rework: partial days, one unit for growth and the month (v0.603.0 / app 0.411.0)
-
-The full map is docs/SCORING.md. What changed and why, from a snapshot where
-the kids carried 4–7× the parents' load yet had 0–3 perfect weeks (parents 9–10)
-and characters that barely grew:
-
-- **Day credit** = effort finished ÷ effort due (0..1). Growth, "This month",
-  the family goal and egg luck all run on it. All-or-nothing perfect days made
-  every reward except level favour short lists. Never lower than the old rule for
-  any history (tested), so nothing shrank on update.
-- **Today counts live** and is drawn lighter; it can fall the same day if a task
-  is unchecked or added. Retiring a companion banks **settled** growth (to
-  yesterday) so today moves with the one taking over — no double count (tested
-  with several switches a day).
-- **One thing at a time.** No egg while growing or deepening — unchanged, now
-  documented and tested.
-- **Luck** from the last 14 days' average credit, not the streak (one missed
-  chore zeroed it).
-- **Family goal** counts days of work (target unchanged, default 15). Season
-  tiers are still computed for old apps but not shown; "This month: X / target
-  days" replaces them so the month means one thing.
-- **Life** gets 10 XP per confirmed team-sport event. Confirming already
-  completes the day's workout task (Strength); this is the team, not the workout.
-- **Bar colours** come from what earned the growth (`growthMix`), not the
-  all-time XP mix, which recoloured squares without filling any.
-- **Snapshot** reports the real rules and adds days of work, completion by
-  skill, today's credit, growth, phase, luck and the last 14 days.
-- **"How scoring works"** is one source (`scoring/guide.ts`) for web `/scoring`
-  and the app's Settings, with the live numbers filled in.
-
-## 2026-10 — Hockey layout: the shared tablet has its own (v0.602.2)
-
-Reported: rearranging Hockey on the web tablet rearranged the phone too. A
-shared device is still signed in as someone, and 0.601 keyed the layout by that
-person, so tablet and phone shared one. The web now keys it by
-`webHockeyPrefsOwner()`: the person on a personal device, `shared` on a shared
-one (`hockey.prefs.shared`; person ids are cuids, so no clash). The phone is
-always personal. Layouts saved on the tablet before this stay with the person
-who was signed in; the tablet starts again collapsed.
-
-## 2026-10 — The 0.602.0 back-fill was wrong; removed (v0.602.1)
-
-Reported straight after 0.602.0: a companion hatched a few days earlier showed
-as a full adult. The back-fill computed "everything earned since the first hatch
-− what the shelf holds − the active companion" and gave the difference to the
-active one. That only works if the shelf holds what each companion really
-earned. Companions shelved before 0.576 hold `growthBanked = 0`, read as their
-stage's floor (12 for an adult) — but they earned far more than that while they
-sat as adults waiting for the next egg. That surplus isn't lost growth, yet the
-back-fill counted it as missing and handed months of it to a fresh hatchling.
-
-Removed. Kept: the attribution rule in `companions-growth.ts` (household day,
-week credited to whoever holds it when it ends), so swaps no longer lose
-anything from here on. Growth already lost to past swaps is not restored
-automatically: swaps aren't recorded, so there is nothing reliable to rebuild
-it from.
-
-A companion that was retired to the gallery (a swap or a hatch) while 0.602.0
-was deployed banked the inflated total; those rows need a hand fix.
-
-## 2026-10 — Gallery swaps were dropping growth; it is credited back (v0.602.0)
-
-Reported: switching characters in the gallery (and back, or any mix) and the
-growth bar stops moving; some people's characters had fallen well behind.
-
-Two leaks, both at the hand-over between the companion leaving and the one
-arriving:
-
-- **The tenure day was the UTC date.** `tenureStartedAt.toISOString()` made a
-  swap after ~7 PM Central start "tomorrow". The leaving companion banks days
-  before today, the arriving one counted from tomorrow, so the swap day went to
-  neither. Someone who swaps most evenings lost most days.
-- **A week counted only if it STARTED inside the tenure.** The leaving one banks
-  finished weeks, the arriving one skipped the week already under way, so any
-  mid-week swap lost that week's +2 for both.
-
-Fix — one attribution rule, `src/lib/companions-growth.ts`, with no gap and no
-overlap: a day belongs to the companion active at its end (tenure starts on the
-household day it was activated, `todayISO(date)`), and a perfect week to the
-companion active when the week ended (its last day on or after the tenure's
-first day). Replayed over 200 random swap histories: banked + live always equals
-everything earned.
-
-**The growth already lost.** Swap history isn't stored, so it can't be put back
-on the companion that missed it. Instead, at read time, `unclaimedGrowth` =
-everything earned since the person's first hatch − what the shelf has banked
-(floored as the gallery shows it) − the active companion's growth, never below
-zero, and that is added to the active companion. It is banked with it like the
-rest when it next goes to the gallery, after which it is zero again. Derived,
-not stored: no migration, and it keeps self-correcting if anything ever drops
-growth again. A household whose shelf was floored up by migration 124 can only
-come out at zero here, never negative.
-
-Checked by running the real `loadProgression` against a fake database for an
-evening swap plus a mid-week swap: 17 growth where the old code gave 11.
-
-## 2026-10 — Hockey: each person's own section order and open sections (v0.601.0)
-
-Every section starts collapsed. Opening one, or reordering with **Arrange**,
-is saved for the signed-in person and follows them between the web and their
-phone. Stored as one JSON setting per person (`hockey.prefs.<userId>` in
-`AppSetting`: `{ order, open }` by section name) rather than a new table — it's
-a few names, read only by Hockey, and needed no migration. One rule,
-`arrangeSections` in `src/lib/hockey-view.ts`: placed sections first in the
-person's order, the rest after in the feed's order; names that no longer
-exist are ignored. The web page and `GET /api/v1/hockey` both apply it; the
-phone saves through `POST /api/v1/hockey/prefs` with the whole layout each
-time, so a write queued offline replays safely. With no one signed in the
-layout works but isn't saved. The explanatory footer was removed from the page.
-
-## 2026-10 — Hockey page reads a separate ice-time container (v0.600.0)
-
-Rink schedules come from **ice-time**, its own container and repo, which reads
-the rink's registration pages and serves `GET /api/sessions`. Kairos stores
-only ice-time's address and token (`hockey.feedUrl`, `hockey.feedToken` in
-`AppSetting`, set under Admin → Hockey) and asks for the week each time the
-page opens — no session data is stored, no rink is named anywhere in Kairos.
-Blank address = Hockey hidden from the sidebar (`hiddenNavHrefs`, now applied
-on every device, not just personal ones).
-
-- **One shaping rule:** `buildHockeyView` (`src/lib/hockey-view.ts`, pure)
-  turns the feed into days, columns and each session's Add button; the web
-  page and `/api/v1/hockey` both use it, so the phone only draws it. The feed
-  is untrusted: every field is checked, sign-up links must be https.
-- **Add to calendar** opens the normal New event form pre-filled: name
-  "Section: Rink", the session's start/end, the "Hockey practice" event type
-  (else any type with "hockey" in the name), and the location from a saved
-  address whose name matches the rink. Sessions with a goalie list are booked
-  as the goalie session ("Add goalie session"); the rest say "Add to calendar".
-  Owner: the signed-in person on their own device; the form asks on the shared
-  tablet. The phone fills in its own person and can add participants.
-- **Web shows all 7 days** ("Nothing scheduled" on empty days); the phone
-  hides empty days.
-- **Freshness** shown is the oldest enabled schedule's last good read on
-  ice-time, not the time of the request.
-- **Admin-entered address is fetched server-side.** Admin-only and needed by
-  design; no redirects to other hosts are relied on.
-
-## 2026-10 — Black-and-white characters checked against their original sheets (v0.599.2)
-
-With the original sheets for Newsreel Nettie, Reel Rascal Ollie, Eugene,
-Inkbelle, Curtain-Call Curly and Knox, each stage was re-cut (border-connected
-flood; floor line removed except under the feet) and compared with the file
-in use. Identical — so NOT clipped, despite the outline check flagging them:
-Ollie, Eugene, Knox (all stages), Curly's hatchling, and Nettie and Inkbelle's
-juvenile/adult once cut the same way. The outline check over-reports: some
-hands are drawn with white touching the edge of the outline in the original.
-Actually clipped and replaced: Curly's juvenile (83 px short — the whole
-raised fist and part of the arm) and Inkbelle's hatchling (4 px of glove).
-Colourful characters: no reliable automatic test (their outlines mix
-shades); a visual pass found nothing certain, so they wait for their sheets
-rather than being patched by guesswork.
-
-## 2026-10 — Old-Reel Rufus re-cut from the original sheet (v0.599.1)
-
-All three Rufus sprites had been cut a little narrow: the right edge went
-through a hand (half the hatchling's mitten, the juvenile's right hand, the
-edge of the adult's wave). A visual pass missed it — a straight cut through
-pixel art reads as drawing — so the tell is now an outline check: on the
-black-outlined characters, a light pixel ON the image edge means the outline
-was cut away. Re-cut from the original sheet (background by border-connected
-flood, floor line dropped, near-black/near-white snapped to flat colour).
-The same check flags other black-and-white characters with clipped hands
-(Newsreel Nettie, Reel Rascal Ollie, Eugene, Inkbelle, Curtain-Call Curly's
-juvenile; possibly Knox) — those need their original sheets; not patched by
-guessing at the missing pixels.
-
-## 2026-10 — Character sprites: stray lines removed (v0.599.0)
-
-Scanned all 163 companion PNGs for pieces separate from the character and
-for a floor line under it, then looked at every hit. Fixed:
-- **Neighbour bleed** (a sliver or a chunk of the next sprite on the sheet,
-  touching the image edge): Curtain-Call Curly ×3 (the adult had part of a
-  neighbour's hand), Turbo Tusk adult/juvenile; a stray speck on Pluck's
-  hatchling.
-- **Floor lines** under Inkbelle, Newsreel Nettie and Old-Reel Rufus (every
-  stage) plus loose squares beside them. Only the bottom strip at least 95%
-  as wide as the bottom row is taken, and in it only pixels outside the feet's
-  lowest row — so flared feet and sloped shoes keep their shape and outline. (A
-  first, looser rule clipped Nettie's and Rufus's feet; caught by comparing
-  before/after.)
-- **Chillwing**'s perch had every other pixel row transparent (read as stray
-  lines); the 1–2-row gaps are filled from the row above, so it's a solid
-  branch with the feet on it. Kept, not removed: the feet are part of it.
-Left as drawn: Victory Vip's ground (intended) and Boombug's spread legs.
-Web only — the app loads the sprites from the server.
-
-## 2026-10 — Grocery icon batch 2: 16 icons, men's/women's deodorant (v0.598.0 / app 0.408.0)
-
-The rest of the October request, cut the same way as batch 1 (detected rows,
-caption matched by position, border-connected flood, every piece kept,
-captions OCR-checked, each crop compared to its source and viewed on white
-and on the dark-mode tile). White-bodied items (styrofoam cup, pore strip,
-deodorant, buttermilk, wipes, bowl, gift card, clear jar, cup rims) use a
-stricter flood so their white edges aren't eaten; their soft shadows are left,
-since in dark mode every picture sits on the light tile (0.596).
-
-Deodorant: the existing blue stick stays `kairos:deodorant` (so items already
-using it don't change) and is now women's — "women's deodorant", "secret",
-"degree" and plain "deodorant" map to it; the new black-and-white stick is
-`kairos:mens-deodorant` ("men's deodorant", "old spice"). The suggestion list
-says "Women's deodorant" / "Men's deodorant". Phrase care: "sandwich cookies",
-"oreos", "joe-joe's" never take plain "cookies"; party/solo/plastic and
-foam/styrofoam cups need their word, so "k-cups" and "paper cups" are
-untouched; "pens" can't match "penne"; "toilet/flushable wipes" leave "baby
-wipes"; "naan bread" beats bread; "chocolate syrup" beats syrup; "candy" now
-has a picture ("ginger candy" keeps its own).
-
-## 2026-10 — Repeating events "duplicated" across days: three bugs, self-repairing (v0.597.0)
-
-Reported: a work event ending at midnight showed as duplicates spanning
-several days. Reproduced with the real save and calendar code (an in-memory
-database stand-in) rather than guessed. Today's create paths are clean for a
-midnight end, on web and phone, across DST; three other faults remain:
-
-**1. Old multi-day series.** Before v0.590 a series' "Ends" beside Starts could
-be days after the start (an end of 12:00 AM read as before the start, so a
-later date got picked). Each weekly occurrence was then drawn across several
-days, every day labelled "4:00 PM – 12:00 AM" — a row of apparent duplicates.
-0.590 stopped new ones but left the rows. Now `occurrenceSpanMs` gives every
-stored repeating event its one-occurrence length when read (all-day: one day;
-timed: start → the end's clock time, same day or next morning; a sane ≤ 24 h
-span untouched), and `repairEventRows` rewrites such rows.
-
-**2. Overnight pieces.** An occurrence running past midnight is drawn on two
-days; the web editors and the phone's detail screen sent the TAPPED piece's
-day as the occurrence. Editing "this event" from the after-midnight piece
-saved an override for a date the series never had: the original stayed and an
-edited copy appeared a day later. Deleting from it tombstoned nothing.
-`occurrenceDayFor` / `occurrenceOfRow` resolve a day to the occurrence that
-covers it (its own start wins; else the day before's, if it reaches past
-midnight). Every path uses it: web and phone update, the delete core, the
-calendar's override skip, and the repair (which moves an override filed on
-the wrong day back to its occurrence, shifting an edited copy saved on that
-day back with it; skipped if the right day already has an override). The web
-editors now open an occurrence by `startDayISO`; old phone builds are covered
-by the server. Daily overnight series can't be told apart after the fact
-(every day is an occurrence) — the fix prevents new ones.
-
-**3. Series edit from a later date.** The whole-series shift was measured from
-the series' first start instead of the opened occurrence, so editing the
-series from week 3 without touching the date moved its start to week 3 and
-dropped weeks 1–2. Both paths now measure from the resolved opened
-occurrence; a real weekday move still shifts every week.
-
-Also: the sport-prompt and class-attendance "ended" checks use
-`occurrenceSpanMs` (a multi-day span kept them from ever ending), and the
-delete core reads the series' first day in the household zone (the UTC
-date was a day late for evening starts). No migration: the repair needs the
-household time zone, which lives in the environment.
-
-## 2026-10 — Emoji grocery icons get the dark-mode tile too (v0.596.1 / app 0.407.1)
+## 2026-10 — Web fonts in the app; set logger back to the card's style (v0.416.0)
+
+The app used Material's default type (Roboto, regular weight), which read thin
+next to the web and the mockups. `KairosTypography` now uses the web's fonts
+(the same files, converted with fontTools; the variable Bricolage is
+instantiated at 600 and 700 because Compose static fonts are simpler and
+minSdk 26 gains nothing from the variable file). Glyphs they lack fall back to
+the system font.
+
+0.415.0's set logger drifted from the Log workout card: a column-heading row,
+stretched boxes, and a bottom bar under the gesture bar. It now keeps the
+mockup's layout in the card's own idiom: the movement names itself with the
+Swap pill beside it (Undo when swapped) and "Last: Oct 23" on the right; each
+set is a small card reading "[165] lb × [3]" with the card's 72dp boxes; Add set
+and Same as last time are pills; −/+ are white circles; Skip / Calculator / Log
+sit above the navigation bar (`navigationBarsPadding`), Log filled. The day page
+is unchanged.
+
+## 2026-10 — Day page and set logger follow the mockup (v0.415.0 / web 0.609.0)
+
+0.414.0 bolted the new rows onto the old card layout. The log page now follows
+the mockup and the web day page, built from the app's own parts (OutlinedCard,
+WorkoutActionTile, the swap pill): a header card (the day, tap to pick another;
+the title; "N of M done"; the week strip), then sections in the web's order
+(`daySections` mirrored in `WorkoutLogScreen.kt`: warm-up, cardio, strength by
+muscle group, conditioning, sport). A set-by-set movement is its own card with
+today's sets or last time's and a Logged / Skipped chip; other plans keep their
+existing card. Overdue days use the same sections, tinted and labelled with the
+day. The set logger: a column header, a card per set (✓ fills when saved, "Last
+time …" or "Added today" under it), Add set and Same as last time as pills,
+Remaining sets with −/+, and Skip / Calculator / Log pinned to the bottom.
+
+Adding a movement to a plan preselects the movement's own "Logs as" (server
+0.609 `metric` on plan options), so a plank starts as time.
+
+## 2026-10 — Every-set logging on the phone (v0.414.0 / web 0.608.0)
+
+The log page uses the web's day-page rule (blocks.ts `daySections`): a strength
+plan (WEIGHTS, ISOMETRIC or no category) whose tracked movements are all
+WEIGHT, REPS or DURATION shows one row per movement that opens
+`MovementSetsScreen`; everything else keeps its card. The set logger mirrors the
+web: hints never become values until ✓; each save sends the movement's whole
+saved list to `POST workouts/sets` (a replace, so a queued offline copy is safe to
+replay); saves are sent one at a time with the newest rows; Back and Log keep
+typed-but-unticked sets; a late day sends `completedOn`. A queued save is
+re-applied on reload (the set screen's rows, the log page's set count). The week
+strip mirrors `stripState`. Needs web 0.608.0 (older servers have no
+`workouts/sets`).
+
+## 2026-10 — Paper plates picture redrawn (v0.413.1 / web 0.605.1)
+
+`grocery_paper_plates.png` replaced with the web's redrawn picture (same
+160x134 size); the old one was cut off at the bottom. See the web's DECISIONS.
+
+## 2026-10 — Change your password (v0.413.0 / web 0.605.0)
+
+Settings → Password posts `{ current, next }` to `/api/v1/auth/password`; the
+server checks everything and returns a message to show. Under `auth/` so the
+offline queue never stores it (ApiClient skips `/auth/`); offline, the change
+simply fails with "Couldn't reach the server". This phone stays signed in.
+
+## 2026-10 — Drawer hides sections the server says to (v0.412.0 / web 0.604.0)
+
+`GET /api/v1/nav` returns section keys to hide (the web sidebar's rule,
+`hiddenNavFor`). Stored in DataStore (`nav_hidden`) so the drawer is right
+offline and on a cold start; re-fetched on start, after a sync and whenever the
+drawer is opened from the menu button. Empty until the first answer, so nothing
+is hidden by guesswork; an older server (404) leaves everything shown.
+Supersedes "the section is always in the drawer" from 0.409.
+
+## 2026-10 — Scoring rework on the phone (v0.411.0 / web 0.603.0)
+
+The rules live on the server (web docs/SCORING.md); the phone draws what it is
+sent. Character card: squares from `pendingFrom` on are today's growth (alpha
+0.45), `growthLabel` ("7.4 / 12") under the row while growing and beside the
+deepening rail; "This month" shows `month.credit / month.target` days (falls back
+to the season tier when an older server omits `month`). Family goal rows show
+`credit` (one decimal, rounded down, `fmtDays`). Settings → How scoring works
+draws `GET /api/v1/scoring/guide` (the same text as the web's /scoring page) and
+caches it in the Room page cache so it opens offline.
+
+## 2026-10 — Hockey layout per person (v0.410.0 / web 0.601.0)
+
+Sections arrive from `/api/v1/hockey` already in the person's order with
+`open` set (the server's `arrangeSections`); the app draws them and changes
+them in place. A toggle or an Arrange move updates the screen at once, rewrites
+the Room page cache (so the layout holds offline and on the next cold open),
+and posts the whole layout to `/api/v1/hockey/prefs`. Offline, that post is
+queued by the normal write queue and replayed — safe because it is the whole
+layout, not a delta. Collapsed sections show their session count; the
+explanatory footer was removed.
+
+## 2026-10 — Hockey section (v0.409.0 / web 0.600.0)
+
+`GET /api/v1/hockey` returns the week already shaped by the server's
+`buildHockeyView` (event name, button label, saved location, the "Hockey
+practice" type id), so `ui/hockey/HockeyScreen.kt` only draws it — no rule is
+copied onto the phone. Empty days are left out (the web lists all seven). Add
+hands an `IcsDraft` plus the type id to the Calendar through
+`CalendarOpen.NewFromDraft`, the same pending-open path the widget uses, so the
+normal New event form opens filled in, owned by the person on this phone, with
+participants addable. `AddEventOverlay` takes `presetEventTypeId`, applied only
+on a new event and only if the type still exists. The section is always in the
+drawer; on a server without ice-time it says Hockey isn't set up (the web hides
+it — the app has no feature flag from the server yet). The last good week is
+cached and stays on screen if ice-time can't be reached.
+
+## 2026-10 — Grocery icon batch 2 (v0.408.0 / web 0.598.0)
+
+16 more `grocery_*` PNGs (same files as the web), mapped in `KAIROS_DRAWABLES`
+and added to `GROCERY_SUGGESTIONS`. `kairos:deodorant` (blue) is now listed as
+"Women's deodorant"; the new `kairos:mens-deodorant` is "Men's deodorant".
+Details in the web repo's DECISIONS for 0.598.0.
+
+## 2026-10 — Emoji grocery icons get the dark-mode tile too (v0.407.1 / web 0.596.1)
 
 0.596.0 tiled only the pictures, so a dark list mixed tiled pictures with
 bare emoji (apples, bread, anything typed in). Emoji now get the same tile.
@@ -453,7 +124,7 @@ byte-for-byte what it was, an inline-flex tile in dark mode with the emoji
 sized by container units (66cqh). App: the emoji branch draws the same tile
 when dark, with the emoji's size derived from the tile through the density.
 
-## 2026-10 — Grocery icons on a light tile in dark mode (v0.596.0 / app 0.407.0)
+## 2026-10 — Grocery icons on a light tile in dark mode (v0.407.0 / web 0.596.0)
 
 An audit of all 310 grocery pictures on a dark page found ~100 with a pale
 edge or soft grey drop shadow left from their original white backgrounds —
@@ -471,1061 +142,478 @@ matcher rule, picker entry, suggestion and app map entry. Still to
 regenerate: `air-freshener` (part of its white can was erased with the
 background) and the legacy `ic:sorbet` square.
 
-## 2026-10 — Grocery icon batch: 49 baking, produce, meat and bakery icons (v0.595.0 / app 0.406.0)
+## 2026-10 — Grocery icon batch (v0.406.0 / web 0.595.0)
 
-Sliced from one generated sheet by detected rows (icon band, caption band)
-rather than a fixed grid, each item matched to the caption under it. The
-background is a border-connected flood of near-white only, so white inside
-an object stays; every piece above the caption is kept (berries, beans,
-candies); specks under 60px are dropped. For dark mode: the outer edge is
-un-mixed from white, soft grey drop shadows near the outline are turned to
-alpha (except on white-bodied items — sugar bag, coconut jar, poultry, the
-clear salad tub), enclosed white holes are cleared where they are holes
-(bagels), and the sugar pile used a stricter flood so it isn't eaten. Every
-crop was checked on light and dark beside its source cell and OCR'd for
-caption leaks.
+49 new `grocery_*` PNGs, the same files as the web's
+`public/grocery-icons/kairos/`, mapped in `KAIROS_DRAWABLES` and added to
+`GROCERY_SUGGESTIONS` (kept identical to the web list). How they were cut
+and made dark-mode safe is in the web repo's DECISIONS for 0.595.0.
 
-Matcher changes beyond the new rules: `whole chicken` moved from the
-rotisserie icon to `whole-chicken`; `black beans` moved from `canned-beans`
-to `black-beans`; `cold cut turkey/chicken` and `deli turkey/chicken` go to
-`cold-cuts`, `cold cut ham` to `deli-ham`. Bare "apple" keeps its emoji;
-"ginger ale", "jelly beans", "english muffins", "pork chops" and "ground
-turkey" keep theirs. Slug notes: the sheet prints `cacao-powder`; the token is
-`kairos:cocoa-powder` (both "cocoa powder" and "cacao powder" match it). The
-sheet's `espreso-powder` typo is `kairos:espresso-powder`.
-
-## 2026-10 — Body map light-mode grey (v0.594.1 / app 0.405.1)
+## 2026-10 — Body map light-mode grey (v0.405.1 / web 0.594.1)
 
 The near-black light-mode figure from 0.594.0 was too heavy. Light mode now
 uses a mid grey (#b4c1cf) with white seams, pastel assisting muscles (fade
 toward white) and a dark selection ring; dark mode keeps the light figure.
 
-## 2026-10 — Dark-mode tints, body map figure, Shopping (v0.594.0 / app 0.405.0)
-
-**Status tints.** Banners and error boxes use Tailwind's stock pale tints
-(`bg-amber-50`, `bg-red-50`, `text-red-700`, …). In dark mode they stayed pale
-cards holding the page's light text. Rather than add `dark:` variants to
-~200 class lists, `globals.css` re-maps those classes once under `html.dark`:
-tints become dark washes of the same hue, borders soften, deep text shades
-lift to their light counterparts. Solid fills (white-text buttons) are left
-alone. A new pale tint or deep text shade needs a line there.
-
-**Body map.** The figure is set per mode (light mode revised in 0.594.1)
-through `--color-figure`,
-`--color-figure-fade` (what assisting muscles mix toward) and
-`--color-figure-ring`, plain `:root` vars because no utility uses them. The
-app's `figureColors(dark)` holds the same three values.
-
-**Icons.** `paper-plates.png` had its white plate face cut out with the
-icon sheet's white card, so the page showed through it; the face is filled
-back in (inside the outline only). `ground-sausage.png` was fully
-transparent; it is now the ground-meat tray recoloured. Store icons still
-carry a white tile.
-
-**Name.** The Groceries section is labelled Shopping (sidebar, admin card,
-admin heading, app menu and title). Routes, models and APIs keep "groceries".
-
-## 2026-10 — Web workout buttons match the phone; "Complete for today!" (v0.593.0)
-
-**Log tiles.** The web's three action tiles now follow the phone's
-`WorkoutActionTile`: Skip and Calculator are outlined with theme-color text
-(Skip greys out when skipped); Log is filled until the movement is logged,
-then eases over 0.7s to a soft grey tile with theme-color text. After a save
-the label reads "logged" for 2.5s, then "edit <noun>"; a spinner replaces the
-icon while that tile saves. A save made on the card is remembered on the card
-(`savedHere`), because the server prefill was read before it. Only the saving
-tile is disabled, as on the phone.
-
-**Person page.** The workouts card's summary says "Complete for today!" on
-the same rule as the phone's home row: every workout task for today is
-complete and nothing is overdue.
-
-## 2026-10 — Shopping trips last a day; Marine Corps Birthday (v0.592.0)
-
-**Trips.** A trip stayed open until someone tapped Done, so a forgotten one
-kept the shopper "shopping" for days on every screen. A trip now lasts the
-household day it started: `endStaleTrips` finishes any trip started before
-today's household midnight exactly as Done does (ticked lines drop off, the
-rest go back to the saved list, the trip row is removed). No cron: it runs
-before every trip read and write (`loadGroceries`, `loadCart`,
-`loadDashboardTrips`, adding a line, starting a trip), so the first look on a
-new day — web or phone — already sees the store back to "Shop". The phone
-reads trips from the server, so it needed no change.
-
-**Marine Corps Birthday**, Nov 10, Observance, on by default. Migration 127
-appends it once to a saved `holidays.enabled` list (idempotent; a value that
-isn't a JSON array is left alone — tested both). New `schoolDay` flag on a
-holiday: while the no-school list was never saved it defaults to every enabled
-holiday, and this one would otherwise have become a no-school day.
-
-## 2026-10 — Anniversary event type; occasion names not suggested (v0.591.0 / app 0.403.0)
-
-`EventKind.ANNIVERSARY` (migration 126, `ADD VALUE IF NOT EXISTS`, run twice
-on Postgres 16) behaves exactly like BIRTHDAY: choosing it forces all-day +
-yearly on both forms, it takes its own kind color under Custom colors and is
-colored uniformly (not greyed as someone else's), only a parent can make or
-delete one. `occasions.ts` holds the list (`isOccasion`) so the places that
-treat birthdays specially now take both.
-
-Event names: a title with "birthday", "b-day" or "anniversary" in it names one
-person or couple, so `rememberEventName` no longer stores it and the picker
-(web + `/api/v1/event-names`) leaves existing ones out. They stay in the admin
-event-name list and the database. Profile birthdays are unchanged.
-
-## 2026-10 — All-day events read in UTC; one end date for a repeating event (v0.590.0 / app 0.402.0)
-
-Reported: a yearly birthday set to 11/3 showed across 11/2–11/3, and a
-repeating event shows two "Ends" (beside Starts, and under Repeats).
-
-**The extra day.** All-day events are stored at UTC midnight (`toDateColumn`)
-— personal events, feeds, pauses alike — but were READ with `localParts` in
-the household zone. West of UTC that puts the start at 6–7 PM the evening
-before, so every one-day all-day event covered two days (reproduced with
-HOUSEHOLD_TZ=America/Chicago: 2026-10-21 read as 10-20 → 10-21; with UTC it
-reads correctly, which is why it hid in tests). `eventTz(allDay)` /
-`eventParts` now read all-day instants in UTC; `occurrencesIn` takes its base
-wall clock in the zone it's given (it used the household zone regardless), and
-the calendar passes UTC for all-day series. Also switched: school days and the
-school year (PAUSE events), event search, and the series-edit anchors on both
-save paths. Storage is unchanged, so no migration. Not changed: reminder times
-on all-day events (still minutes before UTC midnight). Known edge: a
-single-occurrence edit made earlier on an all-day series recorded the day it
-was then shown on (one early), so that one occurrence may show twice until
-edited again.
-
-**Two ends.** For a repeating series, the end beside Starts is how long each
-occurrence lasts, not when the series stops; setting it to the stop date made
-a yearly event one occurrence years long, overlapping all the others.
-`fitRepeatingSpan` (all save paths, web and phone, create and series/future
-edits): all-day → one day each time; timed → at most 24 hours (overnight is
-fine), longer is refused with a pointer to Ends under Repeats. The forms
-follow: while Repeats is set, the web hides the end date (all-day) or keeps
-only the end time with "next day" when it runs past midnight; the app does the
-same for new events. A single-occurrence edit is a one-off and keeps its own
-end. Checked the neighbours: "repeat ends before it starts" was already
-refused on the web; count/until are one-or-the-other; the phone can't set a
-series end at all (Repeats only), so the clamp is its only guard. Events saved
-before this keep their long span until their series is next edited.
-
-**Birthday years.** A profile birthday's year isn't used anywhere — the
-calendar shows month/day each year. Kept (it's the real date, and an age could
-use it later). Feb 29 birthdays now fall on Feb 28 in other years; they
-showed on no day at all before.
-
-## 2026-10 — Typed birthdays; month and year quick picks in DateField (v0.589.0 / app 0.400.0)
-
-Birth years were hard to get right: the profile's date picker could only page
-month by month. `DateField` gains `typeable` — the field becomes a text box
-shaped as mm/dd/yyyy while you type, saved once it is a whole real date in
-range, put back on leaving if it isn't — used for the birthday. Every
-DateField's header now has the month and the year as buttons: the year opens a
-year grid (min/max bounded, scrolled to the shown year), then the months, then
-the days. One rule for what a birthday may be, `checkBirthday` (real date, 1900
-on, not in the future), serves the web action and the phone's new
-`/api/v1/me/birthday`. Rendered and exercised in Chromium: typing 07041979
-submits 1979-07-04; 02/30/1990 is flagged and not saved.
-
-## 2026-10 — Widget: a multi-day all-day event is listed once (v0.588.1 / app 0.399.0)
-
-A week-long all-day event (a visit) filled the widget with the same line on
-every day. `loadWidgetPayload` now keeps only its first day in view — keyed on
-event id + occurrence start, so a daily repeating all-day event still shows
-each day — and the app adds "through Sat" (or "through Oct 31" past the week).
-Only the widget does this; the Calendar still shows it on every day it covers.
-
-## 2026-10 — Android home-screen widget feed (v0.588.0 / app 0.398.0)
-
-`GET /api/v1/widget?scope=family|mine` (`loadWidgetPayload`): the next 7 days
-that have something on them — events plus the person's own open tasks
-(category OTHER) — and a count of their overdue tasks. Events go through the
-same filter and recolor as the person's Calendar: the inline `keep`/`recolor`
-in `loadCalendarPagePayload` became `personalEventRules`, and
-`loadPersonalEvents(userId, days, people)` uses it, so the widget can't color an
-event differently from the app. "family" passes every active person as the
-people to load; other people's events then take the person's "others" color.
-Tasks are only ever the person's own: the widget can tick them off. Tasks always
-have a due date, so the widget's top line counts overdue tasks rather than
-"no due date" ones (decided with the owner).
-
-## 2026-10 — Reps on a one-off weights log (v0.587.0 / app 0.397.0)
-
-"Log an additional workout" (also the only way to log for someone with no
-plan) took a weight and nothing else, so a one-off lift lost its reps. Both
-clients now show weight × reps for a WEIGHT log; reps are optional and the
-weight stays the record, as on a planned log. `CustomLogInput.reps` /
-`POST /api/v1/workouts/log-custom` `reps` (older apps omit it).
-
-The web's `logCustomWorkout` was a second copy of `logCustomEntry` — the same
-drift `completePlannedWorkout` had until v0.566. It now delegates, keeping only
-the session gate and revalidation, so reps were added in one place.
-
-## 2026-10 — Re-judge days completed under the old rule (v0.586.1)
-
-Reported after 0.586: a day logged half-way earlier that day (curls, not
-triceps) still read "Complete for today!" on the phone and 1/1 on the web
-card. The task was set COMPLETE by the pre-0.586 rule, and 0.586 only
-re-judges a day when something on it is logged or skipped — nothing did.
-
-`resettleCompletedWorkoutsOnce` runs at the end of `generateWorkoutTasks`
-(every dashboard load, web and phone): it re-judges each COMPLETE workout task
-in the overdue window with the same target rule `settleWorkoutTask` uses
-(`workoutTaskTarget`), lowers the ones that aren't done to PENDING (or SKIPPED
-when everything was skipped), and records `workout.settledV1` in AppSetting so
-it never runs again. It only ever lowers a COMPLETE, and skips revalidatePath
-because it runs during render. A day that stays complete after this had
-something logged outside the plan that day (a custom log, a sport, "I worked
-out"), which completes a day by design.
-
-## 2026-10 — A workout day is complete only when every movement is (v0.586.0 / app 0.396.0)
-
-Reported: on a day with several planned movements, logging one made the day
-read "Complete for today!"; reopening the log lost the reps just entered; the
-phone's reps box said "rep".
-
-**Completion.** `logPlannedWorkout` ended with `completeWorkoutTask`, so any
-one movement completed the day. It now ends with `settleWorkoutTask`, which
-reads the day's plans and applies one rule (`planDone`): every movement the
-plan asks a number for is logged or skipped. Untracked movements never hold a
-day up; a plan with nothing to enter is done once marked complete; a plan
-logged as one number (a run, a HIIT result) once logged or skipped.
-All done with something logged → COMPLETE; all skipped → SKIPPED (excused —
-asked for: a skip counts toward the movement, but skipping everything is not a
-workout); otherwise PENDING. Something logged outside the plan (custom log,
-sport, "I worked out") still completes the day, as before, and a rest day is
-never touched. A log never reopens a SKIPPED day (it may be a missed workout
-closed on purpose); a skip change can, since it may be undoing its own close.
-The HIIT writer settles too. The overdue list uses the same `planDone`.
-
-**Skip is per movement and saved.** New table `WorkoutMovementSkip`
-(userId, date, slot; migration 125) — slot is the planned pool-exercise id, or
-`plan:<id>` for a one-result plan. The web's per-movement "Rest / skip" used
-to rest the WHOLE day; the phone's skip was local only and vanished on reload.
-Both now toggle that one movement through `setMovementSkipped`
-(`POST /api/v1/workouts/skip`, `skipMovement` on the web), on overdue days too.
-The whole-day Rest button on each overview is unchanged. Logging a movement
-clears its skip. A swapped row skips under the planned movement's id.
-
-**Reps.** The phone never received logged reps (`PlannedMovement` carried the
-value only), so they could not refill; `reps` is now sent. On the web the plan
-refilled from sets fetched when the dialog opened, so leaving the log step and
-returning remounted it with pre-log data; both fetches now re-run on `step`.
-
-**Found on the way.** A log with no entries (a Log tapped with a blank box)
-reached `deleteMany({ sessionId })` and cleared every movement already logged
-on the plan. An empty submission now deletes nothing, and both clients stop
-before sending one. The custom-log unit for REPS said "rep" in two copies of
-the unit table; both say "reps", like `metricUnit`.
-
-**"Already logged — update?" per movement.** The phone's conflict check fired
-whenever the plan had a session that day, so the second movement of a
-three-movement day always asked to overwrite something not yet logged. It now
-fires only when a movement being sent (or the one-result slot) already has a
-set, and names that set.
-
-## 2026-10 — A companion brought back keeps its stage (v0.585.0 / app 0.395.0)
-
-Reported: a child's first pet, raised to adult, showed as a hatchling after it
-was made active again; the phone's character page meanwhile showed a different
-companion than the web and the gallery.
-
-**The reset.** Hatching can't repeat a species — `pickHatch` draws only from
-species not owned, and `Companion` is unique on (userId, species) — so the
-"start over" came from bringing a companion back. A returning companion's
-growth is `growthBanked + growth since tenureStartedAt`. Migration 121 (v0.576)
-added `growthBanked` as 0 on every row and called that "right for existing
-rows" — true of the one active then, not of companions already on the shelf.
-The gallery showed those at their minted stage (`mintedStage ?? 2`, often
-adult), but they banked nothing, so bringing one back restarted it at 0.
-
-Fix, read-time first: `bankedGrowthFloor(mintedStage)` — banked growth is
-never below the threshold of the stage the companion was minted at — applied
-where progression computes the active companion. Activation now stamps
-`mintedStage ?? 2` on the row it brings back (what the gallery displayed).
-Migration 124 stamps `mintedStage = 2` on rows that have none: shelved ones,
-and active ones brought back from such a shelf (tenure started > 1 day after
-hatching). Rows active since before 0.576 (no tenure start) and fresh hatches
-(tenure starts at hatch) are left alone. Tested on Postgres 16 with one row of
-each kind, run twice.
-
-**The phone showing the old one.** The character page's view model loads once
-and outlives a trip to the gallery, so after "Make this my companion" it kept
-showing the previous companion; it also keeps the cached copy silently if a
-refresh fails. App 0.395 bumps `AppContainer.companionRevision` after a swap
-and the character page reloads on it. If a phone still shows the wrong one
-after a full restart, the refresh is failing — look at its log.
-
-## 2026-10 — Shared chores: one list per chore, a separate reminder list, and counts you can open (v0.584.0 / app 0.394.0)
-
-**"Available for" on every shared chore.** Each chore always had its own list,
-but the admin card hid it on always-open chores — and nothing on the server
-read it for them, so showing the picker alone would have been a control that
-did nothing. Now `loadAlwaysOpenChores(day, viewerId)` drops chores the viewer
-isn't on (web person card, personal dashboard, device dashboard), and
-`completeAlwaysOpenChoreCore` refuses a completion from someone off the list.
-The "none set = everyone" rule is read through one helper,
-`src/lib/chores/pool-eligibility.ts`, rather than a fourth inline copy.
-
-**Turn reminder, separate from availability** (migration 123,
-`PoolReminderOptOut`). The owner wants parents able to do a chore any time but
-never told it's their turn. A person on the opt-out list stays in the pool —
-it's up for grabs for them, they can do it — but is never `furthestBehind`, and
-their own last-done is left out of "who's furthest behind", or a parent who
-never mows would hold everyone else's reminder back for good. Admin: a "Turn
-reminder" row under "Available for" on scheduled shared chores, built from the
-people on the chore's list. No rows = everyone eligible can be reminded, so
-existing chores behave as before. Always-open chores have no turn, so no row.
-
-**The app home card calls it out.** `furthestBehind` already reached the phone
-and showed as a red "!" on the Chores detail; the home card buried it in a grey
-line. Now a chore that's your turn gets the "!" and "Your turn: <chore>" in the
-card itself; the grey line remains for the others.
-
-**Web Shared chores counts open.** Each name is a button showing exactly the
-completions its number counts (since the scoring start, always-open included),
-newest first, dated by the household day it was done (`completedAt`, due date
-for older rows). v0.584.1: it opens as a centered pop-up over a dimmed page
-(the Add event overlay pattern), capped at 70% of the screen height with the
-list scrolling inside. The first version dropped down from the chip and ran
-off the bottom of the window, unreadable — a long list needs the middle of the
-screen, not the space below a chip.
-
-## 2026-10 — One family-goal vote a month; the home card stops asking (v0.583.0 / app 0.393.0)
-
-The owner's rules: **one vote per person per month, and it can be changed**;
-parents and admins **may** vote but don't need to; once you've voted the home
-page stops asking.
-
-What the code did before: `CoopVote` was unique per (proposal, person), and the
-vote was a toggle, so one person could vote for every idea. On the web's
-shared-screen face row anyone could also tap anyone's face. The home banner and
-the app card said "vote for the one you want" to everyone until a goal was
-picked, whether or not they had voted.
-
-Now:
-
-- `toggleCoopVoteCore` — tapping the idea you voted for takes the vote back;
-  tapping another MOVES it (your other votes in that proposal's month are
-  deleted in the same transaction). The one implementation, behind both the web
-  face row and the app's button, so they can't differ. The face row stays (the
-  shared screen needs it, per the owner) but now moves a person's vote rather
-  than adding one. The app's button reads "Move my vote here" when your vote is
-  elsewhere.
-- Not a database constraint: a unique (user, month) would need the month copied
-  onto the vote row. The transaction is the rule; migration 122 removed votes
-  cast under the old one (most recent kept per person and month, ties to the
-  larger id, idempotent — tested on Postgres 16 with planted doubles).
-- `coopHomeNudge` (src/lib/coop-nudge.ts, dependency-free and unit-checked) is
-  the one rule for the home card while no goal is chosen: "vote" for a child
-  who hasn't (on the shared screen, until every child has), "pick" for a parent
-  or admin — they don't need to vote, and choosing is their job — otherwise
-  nothing. The web banner calls it directly; the device API sends it as
-  `homeNudge` so the app doesn't keep a second copy.
-
-Unchanged and confirmed: remove (and select / grant) need the admin PIN on the
-web and a parent-or-admin account on the device API.
-
-## 2026-10 — A companion can be the profile picture; a third avatar kind (v0.582.0 / app 0.392.0)
-
-Agreed earlier and built now: any owned companion, at any stage you've reached,
-as your profile picture. **Chosen only in the app** (the owner's call) — gallery
-→ tap an owned creature → Use as profile picture → pick one of three stages.
-The web shows it everywhere a picture appears but has no picker; picking a
-photo or an icon on the web replaces it, as either replaces the other.
-
-**Storage: a third kind in `User.avatarPath`**, `companion:<species>:<stage
-name>`, beside a bare upload filename and `icon:<key>`. No migration. The
-danger was every existing check: seven places decided "not an icon ⇒ an
-uploaded file", so a companion value would have been served as a broken photo
-and, on the next save, passed to `unlink()`. All now use one classifier in
-`src/lib/avatars.ts` — `isUploaded` (only a real file), `isIcon`,
-`companionAvatarOf` (null for an unknown species or stage, which then shows
-initials). New code must not test `!isIcon(x)` to mean "a file".
-
-**Which stages you may pick** comes from the same rule the gallery shows:
-`loadOwnedCompanions` (src/lib/companions-owned.ts), extracted from the
-collection route — the active companion at its live growth stage, a shelved one
-at its `mintedStage`. The route re-checks ownership and stage, so the phone's
-picker is a request, not an authority. A chosen stage is fixed; it doesn't grow
-with the companion.
-
-**Unreached stages aren't spoiled.** The gallery sends `stageImages` only for
-stages reached; the picker shows an egg and "Not yet" for the rest.
-
-**Rendering.** A sprite is transparent art, so it is fitted whole with some air
-(web `object-contain p-[12%]`, app 76% of the circle) instead of cropped and
-framed like a photo; `avatarPosition` is reset and ignored for it. The app
-draws it through one composable, `CompanionAvatarArt`, used by the rail, content
-avatars and the Profile preview. The person payload carries
-`avatarCompanion { species, stage, image }`; an older app ignores it and shows
-initials.
-
-## 2026-10 — One calendar file, read in two places, held to one answer (v0.581.0 / app 0.389.0)
-
-An `.ics` invite from an email now opens New event filled in: on the phone by
-tapping (or sharing) the attachment, on the web with **Import .ics** on the Add
-event form. It fills the form and nothing else — the save goes through the
-existing create path, so there is no new endpoint and no new data.
-
-**Where the file is read was the owner's call: on the phone.** It works with no
-connection and needs no server change. The web cannot do the same in the
-browser, because the times have to land on the household's clock and
-`HOUSEHOLD_TZ` is not exposed to the browser (`dates.ts` would quietly fall back
-to UTC there). So the web reads the file text in the browser and hands it to a
-server action (`readIcsUpload`, gated like saving an event) that returns the
-draft. Two readers, then — and that is exactly the situation that has bitten
-this project before.
-
-So the rule lives once in `src/lib/calendar/ics-import.ts`, with its rules
-written at the top; `IcsImport.kt` mirrors it line for line; and
-`scripts/ics-parity/check.sh` compiles the Kotlin with `kotlinc`, runs 43
-hand-written files plus a seeded random batch (thousands of files, CRLF / LF / CR,
-folding, BOMs, Windows and bogus TZIDs, DST edges, every RRULE shape the form
-can and can't hold) through both in four household zones, and diffs the
-drafts. On its first runs it found two real bugs that agreeing copies would
-have hidden from any example test: a note clipped at 500 characters could end on
-half an emoji (now `clip()` never splits a surrogate pair), and a start in the
-year 1000 shifted across zones to year 999, which **crashed** the Kotlin
-(`LocalDate.parse("999-12-31")`). Years outside 1900–2199 are now unreadable,
-and `readIcsFile` never throws on either side — a file it can't use is "no
-event".
-
-The shape of the answer:
-
-- **One event or nothing.** A file holding several events (counted by UID; a
-  `RECURRENCE-ID` override belongs to its series) is a schedule, and a schedule
-  belongs in a subscription — the form says how many it holds and points to
-  Admin → Calendar. Adding feeds stays a parent job on the web; phones can only
-  show or hide feeds that already exist. METHOD:CANCEL or an all-cancelled file
-  says so instead of adding anything.
-- **Times on the household clock.** A UTC time or a real TZID is converted; the
-  Windows zone names Outlook writes ("Central Standard Time") are mapped; an
-  unknown TZID or a floating time is read as already household time. The phone
-  form defaults new events to the household zone, so the draft lands as is.
-  Known edge, identical on both: a wall time that doesn't exist (02:30 on
-  spring-forward day) resolves an hour early, as `zonedToUtc` does everywhere.
-- **Repeats are carried or dropped, never approximated.** Plain daily / weekly /
-  monthly / yearly from the start date carries over. An interval, an end, a
-  second weekday, exceptions (EXDATE/RDATE) or changed occurrences drop the
-  repeat and the form says so — "every other Tuesday until June" quietly saved
-  as "every Tuesday forever" would be worse than asking.
-- **Only alarm-free, event-level properties count.** A VALARM's DESCRIPTION is
-  not the event's description; first value wins.
-- **The description becomes the note**, under the same 500-character rule as
-  typing one, and the type starts as Event so the note is kept.
-- **Whose calendar**: the file can't know. The web leaves Whose on "Choose" (the
-  save already refuses an unchosen owner); the phone defaults to the person
-  holding it, like any new event there.
-- **Not deduplicated.** Importing the same invite twice makes two events; the
-  file's UID is not stored. Fine for one-off invites; revisit if it bites.
-
-Android specifics: the activity declares VIEW and SEND filters for
-`text/calendar`, `text/x-vcalendar`, `application/ics`, `application/x-ical`.
-An app can't make itself the default — the first open shows the chooser, and
-"Always" is the user's to pick. The file is read off the main thread (a mail
-app may still be fetching it), capped at 1 MB, parked in
-`AppContainer.pendingIcs`, and picked up by the Calendar screen once the
-calendar has loaded (which also waits through sign-in). A recreated activity
-doesn't import the same file again, and an imported form counts as unsaved so
-closing it asks first.
-
-## 2026-10 — A note on two kinds of event; the owner decided once (v0.580.0 / app 0.387–0.388)
-
-**Notes.** Events (APPOINTMENT) and Medical / Dental (OTHER) take a short note —
-flight numbers, a confirmation code, what to bring. A custom event type stores
-as OTHER too but is deliberately excluded: a hockey game is its own category,
-and nobody asked for a note there. The rule is `takesNotes` / `cleanNotes` in
-`src/lib/calendar/event-notes.ts` (500 chars), read by the web form, both server
-actions and the device API, and ported to the phone's `NoteField.kt`. The two
-copies must agree exactly: a blank `eventTypeId` is "no type" on both, because
-a TS/Kotlin pair that disagreed on `""` would have shown a field whose contents
-the server then threw away. (The note cap is also checked by
-`scripts/ics-parity/check.sh`, which compares the two `NOTES_MAX` constants.)
-`cleanNotes` returns null for a kind that can't hold one, which also clears a
-note left behind when the type changes.
-
-On the web the box sits beside the All day switch so the add/edit windows keep
-their size; on the phone the note opens on its own screen like the address
-(0.388), and it displays only in the event detail, under the address — never on
-grid chips.
-
-**Owner.** A parent on the phone can now file an event under anyone in the
-house (My calendar / Family calendar / each person), matching the web's Whose.
-`ownerId` is resolved once in `create-event.ts` (`resolveOwner`) and re-checked:
-a non-parent can only ever file under themselves, whatever the request says.
-
-## 2026-10 — Every movement logs on its own (v0.579.0 / app 0.386.0)
-
-Two movements added to one plan used to render differently from two plans that
-share a muscle group: one Log button for the pair versus one each. How a
-movement got onto the card was deciding how it was logged. Now every movement
-on a weights card carries its own Rest / skip, Calculator and Log buttons under
-a rule of its own, and the card-level buttons remain only for shapes with no
-movement to hang them on (HIIT, a metric-only log, a plan with nothing to
-enter).
-
-It works because of v0.539's rule — the server clears only the movements a
-submission covers — so `complete(only)` sends one movement and the bench press
-saves while the incline press stays open. `useTransition`'s `pending` is one
-flag per row, so a `savingKey` records which button was pressed; only that one
-says "Logging…". The label is per movement too: Log weight / Log time, and Edit
-for a movement already recorded that day.
-
-## 2026-10 — History labels in one column, "Latest" on both (v0.570.0 / app 0.379.0)
-
-The three history lines lined labels and values up by their own lengths, so each
-pair drifted. Labels now start in one column and values end in another. "Most
-recent" became "Latest" — the phone had shortened it to "Recent" to fit, so the
-two clients named the same line differently. The phone made the same change in
-app 0.379.0.
-
-## 2026-10 — One row of squares, broken at the stages (v0.578.0)
-
-The card had drifted to two bars again: the cell row for the skill blend, and a
-separate segmented rail underneath for growth. Two bars is what started this
-whole thread, and adding the second one back was me solving "show the stages" by
-adding furniture rather than by making the existing bar mean something.
-
-The cell row now fills with GROWTH and breaks where each stage ends. The domain
-colours stay, because they were never the problem — they say what earned the
-progress, while the count says how much. One object, two honest readings.
-
-The break is extra margin on the cell before it, not an inserted element. An
-element needs its own width in the row and knocks the squares out of their grid.
-
-The break positions are derived from CLEAN_DAY_STAGES and sent to the phone
-rather than hardcoded in both. A divider drawn somewhere other than the real
-boundary would be worse than no divider.
-
-The "growing" caption is gone: a bar that is filling already says it. Only two
-captions remain, and both say something a bar cannot — "A new egg is ready!"
-and "deepening".
-
-Deepening keeps a separate short rail. It is the one thing on this card that is
-NOT the growth the row measures, so sharing the row would misstate it.
-
-## 2026-10 — Shiny is not finished (v0.577.0)
-
-Second time in three releases the same mistake: treating a PHASE as if it
-implied a stage. 0.575.0 fixed the sprite — a shiny hatchling was being drawn
-as an adult — but left `eggReady: true` in the same branch, so it was still
-being treated as a completed companion with an egg waiting.
-
-The shiny branch now requires adulthood. A companion deepened under the old
-rules keeps its glow and falls through to `growing`, which is exactly right: it
-has not been raised, so it is still being raised. The side effect is that its
-bar shows stage segments again, which is why they appeared to be missing — the
-segments were only ever drawn while growing, and it was never classed as
-growing.
-
-Worth stating plainly because it keeps recurring: `stage` is earned, `phase` is
-current activity, and NOTHING about a phase may be inferred from the other. Each
-time these have been collapsed, legacy data has been credited with work nobody
-did.
-
-Deepening gets a shorter bar. Reusing the full-width growth rail made a smaller,
-separate job look like the same journey starting over.
-
-The caption no longer says "deepened". It described how the egg was earned, and
-what to do next is the same either way.
-
-## 2026-10 — Growth has to survive the shelf (v0.576.0)
-
-Bringing a companion back out of the gallery breaks the assumption the growth
-model was built on: that a companion has exactly one tenure, so measuring from
-`acquiredAt` is the same as measuring its whole life.
-
-Both obvious fixes are wrong. Measuring from `acquiredAt` credits a returning
-companion with every clean day since it first hatched, including the months it
-spent shelved — a hatchling put away in spring comes back a full adult.
-Measuring from the day it returns throws away everything it earned.
-
-So growth is banked on retirement and the current tenure is measured from when
-it started; total growth is the sum. Simulated across a shelf trip: seven days
-earned, thirty-three shelved, and it returns as the juvenile it was rather than
-the adult the naive version would have handed over.
-
-One helper owns taking a companion out of the slot, and both paths that do it —
-hatching something new, and activating an old one — call it. That is the same
-rule as `syncPlanUnitDone` and `logPlannedWorkout`: the second implementation is
-the one that drifts.
-
-A returning companion has `deepeningStartedAt` cleared. It is not mid-deepen; if
-it was deepened before it is still shiny, and if it was not, it gets that choice
-fresh when it reaches adult again.
-
-The gallery dialog says what the swap costs before the tap rather than after it.
-Activating retires whoever is in the slot, and that is not obvious from a button
-labelled "make this my companion".
-
-## 2026-10 — A phase is not a stage (v0.575.0)
-
-`companionPhase` returned `stage: 2` for anything shiny or deepening, on the
-reasoning that only an adult can reach those phases. True going forward, and
-false for data already in the database: the old rules let a hatchling be
-deepened, so a shiny hatchling exists — and 0.574.0 redrew it with the adult
-sprite, crediting growth that was never done.
-
-The stage now always comes from growth, in every branch. A phase describes what
-a companion is DOING; the stage is what it has become, and only one of those is
-allowed to pick the picture.
-
-The XP bar is back. It was removed as part of "three progress ideas, one bar",
-but it was the one deliberate thing of the three — the problem was never that
-it existed, it was that nothing on the card showed growth. So: XP cells on top,
-growth below, each saying what it is.
-
-Growth is drawn as one segment per stage with a gap, rather than a tick on a
-continuous rail. The tick read as a seam in the bar; the gap reads as a
-division. 4px, because 2px read as a rendering artifact at this bar height.
-
-## 2026-10 — Three progress ideas, one bar (v0.574.0)
-
-The companion card showed one bar and the feature had three unrelated notions of
-progress behind it:
-
-  stage       clean days + perfect weeks×2 since that companion hatched
-  egg         LIFETIME XP since the last hatch, against a cost that rose
-  the bar     neither — it was the skill-blend XP bar, coloured by domain
-
-Nobody could say what filled what, which is the whole complaint. XP accrues from
-everything, so eggs filled while the creature in front of you had not grown at
-all: hence "a new egg is ready" under a hatchling, and a shiny hatchling, since
-deepening only ever checked for an egg and never for a stage.
-
-Now there is one currency. Growth raises the companion; reaching fully grown IS
-the egg. Deepening is a second growth phase on top, and the glow appearing is
-both "deepening finished" and "there is an egg again" — one event, not two
-things to correlate. `companionPhase()` returns the phase, the stage and the
-percentage through the CURRENT phase, so the bar measures one thing at a time
-and 100% always means something is waiting to be spent.
-
-The per-season hatch cap is gone. Growth already paces hatching, and the second
-limiter is what produced `eggCapped` — a state whose UI had to apologise for
-itself in three places.
-
-`shiny` is now derived from growth while a companion is active, and written to
-the column when it retires. A shelved companion has no growth left to measure,
-so the flag has to hold the answer there; deriving it while active avoids a
-write-on-read to flip it the moment the phase completes.
-
-Cost of the change: a hatchling can no longer be made shiny. Existing shiny
-companions keep their glow — the flag is still honoured — but that combination
-cannot be created again, which is the point.
-
-The dead constants (`EGGS_PER_SEASON_CAP`, `eggCostFor`) were left in place and
-marked, not deleted. This feature already collapsed under three overlapping
-progress ideas; quietly removing the names is how the next one gets reinvented.
-
-## 2026-10 — An index over a list that removes its own items (v0.573.0)
-
-The extra-work picker kept an index and advanced it after each add. The list it
-indexed is "strictly future, still pending", and adding a lesson to today moves
-its due date to today — so the server drops that item on the next read and
-everything below shifts up one. The index then stepped past the item that had
-just moved into the vacated slot, so every single add skipped an assignment.
-
-Two counters for one movement. The index is gone entirely: the soonest item is
-always `items[0]`, because the list maintains that by construction.
-
-Adding also returns to the subject list now, naming what went in. Staying on the
-subject offered a second add nobody asked for, and was how the skipping got
-noticed in the first place.
-
-Separately, `originalDueDate` on Task. Pulling work forward overwrote `dueDate`,
-the SchoolWork `startDate` and the plan unit's `scheduledDate` with today, so the
-planned date simply ceased to exist and nothing could say whether you were early.
-It is written once, the first time a task moves, and never again — the ORIGINAL,
-not the previous, or a second move would quietly redefine it as "wherever it was
-last". Null for every existing row and for anything that never moves, so there is
-nothing to backfill.
-
-Direction matters in the wording: "ahead of Oct 20" and "moved from Oct 8" are
-different situations, and a bare second date says neither. Built once in each of
-the two row builders, from the same two dates, so the phone and the web read the
-same.
-
-Behind work is tinted on the row rather than only grouped under a heading. The
-heading leaves the screen as soon as the list scrolls, which is exactly when
-being behind matters most. The tint clears when the row is completed — a
-finished assignment is not behind anything.
-
-## 2026-10 — The sandbox cannot see Prisma types, so a script has to (v0.572.0)
-
-0.571.0 failed to build on `task.id`, where the `select` had only asked for
-`userId`. It typechecked locally because this sandbox cannot generate the Prisma
-client — every query result is `any` here, so any property access on one is
-accepted. The Docker build generates the client and is therefore the first place
-the mistake exists at all.
-
-That is the second deploy lost to this blind spot (the first was a nullable
-muscle group used as an index). The gap is structural, not carelessness, so the
-answer is a check rather than more care: `scripts/check-prisma-select.py` reads
-each `findUnique`/`findFirst` with a flat `select`, collects its keys, and flags
-reads of anything else off that variable.
-
-It is deliberately conservative — it skips selects containing a spread, stops at
-any rebinding of the name including a loop variable, blanks comments so it
-cannot flag its own prose, and ignores `prisma.task.update` when a variable
-happens to be called `task`. Each of those was a false positive it produced
-first. A clean run is therefore weak evidence; a hit is nearly always real.
-Verified by reinstating the exact line that broke the build and watching it fail.
-
-It is not in `npm run build`. The builder image is node:22-alpine and may not
-have Python; a check that breaks the deploy it exists to protect is worse than
-no check. It runs in `scripts/preflight.sh`, alongside the typecheck report and
-the JSX-escape scan, before a zip goes out.
-
-## 2026-10 — A stored flag with one writer out of four (v0.571.0)
-
-`ClassPlanUnit.done` is stored, not derived from the task behind it. Four paths
-complete a task — `toggleTask` (ticking it on a card), `claimAndCompleteTask`,
-`api/day.ts` (the phone), and `setSchoolWorkComplete` (the admin school-work
-screen) — and only the last one wrote the flag. So every lesson the children
-actually finished stayed `done = false` and the plan review printed it as
-overdue, indefinitely, while the task sat there COMPLETE.
-
-The flag could have been dropped and the status derived from the task on read,
-which would make this class of bug impossible. It was not, because a unit can be
-marked done with no task behind it at all — work skipped at upload time, via
-`setPlanUnitDone` — so the flag carries information the tasks do not.
-
-Instead `syncPlanUnitDone` lives in `lib/school/plan-unit-sync.ts` and every
-completion path calls it, including the one that already worked: its inline copy
-was deleted in favour of the shared call. A no-op for any task that isn't
-schoolwork, so callers invoke it unconditionally rather than testing first.
-
-Migration 118 repairs the existing rows. Recoverable, unlike the lost reps in
-0.566, because the Task rows still hold the answer. It sets `done` and never
-clears it: a unit flagged complete with no task is the admin-marked case above,
-and clearing those would re-open work that was finished off the books. Verified
-against a scratch Postgres over all five shapes — already-true, card-completed,
-pending, skipped, and admin-marked-without-task — and it is idempotent.
-
-Separately: ten screens were printing `\u00b7` and `\u2014` as literal text. The
-detector added after the first two of these only looked at lines containing a
-`>`, and every one of these sat on a line starting with `{` or a bare word. It is
-now `scripts/check-jsx-escapes.py`, which strips comments, template literals and
-strings and inspects what is left.
-
-## 2026-10 — Best weight and best reps are different questions (v0.569.0)
-
-The first cut of this block showed "Best" as the record set, weight AND the reps
-done at it, and then only showed a reps line when those reps existed. That
-collapses two questions into one and answers neither well.
-
-They are now three fixed lines:
-
-  Best weight  the heaviest ever lifted, weight alone. Whatever reps happened to
-               go with it are noise against the number being asked for.
-  Best reps    the MOST reps ever done, with the weight they were done at. This
-               is usually a LIGHTER bar than the record, which is the whole
-               point of having the line — deriving it from the record set would
-               make it the record over again.
-  Most recent  the last session, even when below both records. A summary that
-               only ever shows personal bests cannot tell you where you are now.
-
-All three render always, with an em dash when empty. A line that disappears
-shifts the two below it, so the block changed shape as a movement accumulated
-history.
-
-Placement is to the right of the movement's own entry fields, in the same row.
-Under them was wrong: it pushed the action tiles down and read as a footnote to
-the card rather than as information about that one movement.
-
-`bestRepsOn` was added for the web's date column. The app omits dates and the
-repeated unit entirely — it has a third of a phone's width to work in, and the
-unit is already printed beside the weight box on the same row.
-
-## 2026-10 — One record, two plan queries (v0.568.0)
-
-The log card needed Best / Best reps / Last per movement. The two clients reach
-the log card through *different* queries — the web renders the weekly plan from
-`loadWorkoutsBoard`, the phone reads the day's plan from
-`loadTodayPlannedWorkouts` — so the obvious move was to compute the summary in
-each. That is how the web and the phone ended up disagreeing about reps, swaps
-and sessions over the last two days.
-
-So the computation went into `queries/movement-stats.ts` and both call it.
-`workout-log.ts` already imports `workouts.ts`, so putting it in either would
-have made them import each other; a third module costs nothing and ends the
-question. `doneOn` moved there too, since the summary has to report the day a
-workout was DONE, the same rule the charts use — and it was private to
-`workout-log.ts`, which is how a second copy starts.
-
-The API route needed no change at all: it passes `workouts` through wholesale,
-so the new field reached the phone the moment the query produced it.
-
-The summary attaches to the MOVEMENT, not the card. "Best bench" is meaningless
-on a card holding three lifts. On a single-movement card — most of them — that
-puts it exactly in the empty space above the action row, which is where it was
-asked for.
-
-The REPS tile was not broken. It means reps AT the record, and the record
-predates reps being stored, so it honestly said "none logged yet" while LAST,
-two tiles away, showed the same lift at ×2. Honest and still wrong to read, so
-it now falls back to the best rep count logged at any weight and says which
-weight that was.
-
-Dates: the web was formatting with `toLocaleDateString`, which prints "Oct 7"
-and, in another locale, could print 5/10 where the phone prints 10/5. Both now
-build the string from the ISO parts.
-
-## 2026-10 — Clearing the fields made a save look like a failure (v0.567.0)
-
-`completePlannedWorkout` finished with `setValues({})`. The numbers vanished the
-instant they were saved, and only came back on a full page refresh.
-
-The clear was wrong on its own terms: what is in those boxes after a successful
-save IS what the server holds, so emptying them reports the opposite of what
-happened. And nothing was going to refill them, because the prefill runs in a
-`useState` initialiser — that does not re-run when revalidation delivers new
-props, only on remount, which is exactly why navigating away and back "fixed" it.
-
-So the save no longer clears. No syncing effect was added to chase the
-revalidated props: an effect that writes into the same state the user is typing
-into can clobber an edit in progress, and it buys nothing here, since a remount
-already re-reads from the server.
-
-The overdue cards still get no `loggedByPool`, which is correct and worth not
-"fixing" later: that map holds TODAY's logged sets, and a card about a missed
-Monday would prefill Monday with today's numbers.
-
-## 2026-10 — One logging function, not two (v0.566.0)
-
-Reps typed on the web never reached the database. `completePlannedWorkout` built
-its set with `switch (e.metric) { case "WEIGHT": set.weight = e.value; }` and
-never read `e.reps` — a field its own input type declared. `mark.ts`, which the
-phone goes through, had handled it correctly the whole time.
-
-Hunting that turned up two more holes in the same function: it dropped
-`swappedFrom` as well (also declared, also ignored), and it called
-`workoutSession.create` unconditionally, so "Edit weight" appended a second
-session for the day rather than editing the first.
-
-Three bugs, one cause: two implementations of the same operation, one of which
-quietly fell behind. Yesterday's `completedOn` work hit this exact seam from the
-other direction — the web action had the feature and `mark.ts` did not. That
-made it the second time in two days, which is the point at which patching the
-symptom is the wrong move.
-
-So `completePlannedWorkout` no longer implements anything. It does the two things
-that are genuinely the web's business — `requireCanActFor` and `refresh()` —
-and delegates to `logPlannedWorkout`. The entry shapes already matched field for
-field, which is the tell that these were one function wearing two hats. About
-sixty lines of parallel logic are gone, and there is now no copy left to drift.
-
-Two behaviour changes fall out of it, both wanted. Re-logging edits the day's
-existing session instead of adding another, which is what the button has said
-since it was relabelled "Edit weight". And a web log now reuses a session the
-phone created, and vice versa, because both finally agree on what a session for a
-plan on a day is.
-
-Reps logged on the web before this are gone. They were discarded server-side
-rather than stored wrongly, so there is nothing to recover from — no backfill
-is possible, unlike the `completedOn` repair where `createdAt` still held the
-answer.
-
-## 2026-10 — A goal outlives its month (v0.565.0)
-
-September's family goal "ended" on October 1. Nothing expired it. `seasonKey` is a
-plain string (`"2026-09-01"`) and `loadCoop()` filters on whichever key is current,
-so on October 1 the query started asking for `"2026-10-01"` and found nothing. The
-proposals and votes were never deleted — they became unreachable, which looked
-identical to being gone.
-
-A `SELECTED` proposal from an earlier window now loads alongside the current
-window's, as `carried`, and stays live until a parent checks it off. `PROPOSED`
-rows do not carry (a losing idea is just a past idea) and `GRANTED` ones do not
-(they are finished). Only one carries, newest first, so an abandoned goal from
-months back cannot outrank a more recent one.
-
-The hard part was the gate, not the carry. "Everyone finished their month" was
-computed as a single number for the current window, and a carried goal needs the
-answer for ITS window — a question October's counter cannot answer. So
-`monthlyCleanDays` is now derived from a new `cleanDaysBySeason` map: the same
-one pass over day buckets, keyed by the window each day resolves into rather than
-filtered to the current one. It uses `resolveSeasonWindow`, the same resolver the
-live window uses, so it stays correct in "weeks" mode instead of assuming calendar
-months.
-
-This matters for fairness in a specific way. If the kids finished September and a
-parent simply forgot to hand out the reward, re-testing the gate against October
-would close a gate the family had already earned — moving the finish line after
-the race. The gate for a past window is a settled fact, so it is read as one.
-
-No migration. The carry is a different query against rows that were already there.
-
-`grantCoopCore` now enforces the gate itself. It only checked status before; the
-web UI hid the button when the gate wasn't met, which meant the rule held on the
-web and nowhere else — the `/api/v1` route and the app call the same function
-directly. A rule that lives in a disabled button is not enforced.
-
-The home banner streams inside a Suspense boundary. It needs `loadProgression()`,
-the heaviest read in the app, and the home page is the most-visited page; awaiting
-it there would have made every visit pay for the goal card. `bump()` also
-revalidates `/` now, or checking the goal off from the banner would leave the
-banner stale — the one thing the person who just pressed the button is looking at.
-
-## 2026-10 — Two log paths, not one (v0.564.0)
-
-`completedOn` was wired through `completePlannedWorkout` (the web server action)
-and that looked complete, because the app's charts and history read dates the
-server already resolves — so no app change appeared necessary.
-
-It was not complete. The app does not use that action. It posts to
-`/api/v1/workouts/log`, which calls `logPlannedWorkout` in `lib/workouts/mark.ts`
-— a separate implementation whose own doc comment says it "mirrors the web's
-completePlannedWorkout". A mirror is not the same object, and only one of the two
-had been changed.
-
-Both now take the day actually logged on. The route reads it as an optional body
-field so a phone on an older build omits it and is unaffected instead of failing
+## 2026-10 — Dark-mode fixes, body map figure, Shopping (v0.405.0 / web 0.594.0)
+
+Screens that hard-coded light colours now follow the theme: Add an item and
+the startup screen use `colorScheme.background` (they were `Color.White`);
+the money banners (Money page, home reminder) and the overdue workout card
+pick dark tinted colours when `KairosThemeState.dark`. The body map's
+figure is swapped against the page by `figureColors(dark)` — dark figure on
+light cards, light on dark — matching the web's `--color-figure*` vars.
+`grocery_paper_plates` gets its plate face back (it had been cut out with
+the sheet's white card) and `grocery_ground_sausage`, which was blank, is
+the ground-meat tray recoloured. The section is labelled Shopping; the route
+and code keep "groceries".
+
+## 2026-10 — Widget header icons: grey, lighter lines (v0.404.1)
+
+The + now uses the same muted color as refresh, and both header icons draw
+with 1.5 strokes (in a 24 viewport) instead of 2. Scaling the icons up to
+28/32dp had scaled the lines with them (about 2.7dp on the +), which read as
+bold; at 1.5 they land near the old icons' line weight while staying large.
+
+## 2026-10 — Widget header buttons without circles (v0.404.0)
+
+The + and refresh buttons drop their filled circles and are drawn as bare,
+larger icons (`HeaderButton`, replacing `RoundButton`): + at 32dp in the
+theme color, refresh at 28dp in the muted text color so it sits quietly in
+the card (28/24dp on tiny widgets). The tap area stays 40dp (34dp tiny), with
+a rounded corner kept only to shape the press ripple. The picker preview
+matches, and loses the today circle the widget itself dropped in 0.402.0.
+
+## 2026-10 — Anniversary type (v0.403.0 / web 0.591.0)
+
+Anniversary joins the type list and the reminder-defaults list (no reminder by
+default, like Birthday), forces all-day + yearly like Birthday
+(`isOccasionKind`, mirroring the web's `isOccasion`), and has its own color slot
+under Custom colors. The name picker already comes filtered from the server.
+
+## 2026-10 — No today circle on the widget; repeating events have one end (v0.402.0 / web 0.590.0)
+
+- The widget's day labels are all drawn alike — the date is already in its
+  header. The number box keeps a clear background (reused list rows).
+- New repeating events: the end date beside Starts is hidden (all-day) or
+  reduced to an end time, "Ends the next day" when it runs past midnight, and
+  kept in step with the start. The server applies the same rule on every save
+  (`fitRepeatingSpan`, web DECISIONS), which also covers editing a series here,
+  where the repeat can't be changed.
+- The "all-day events also showing the day before" fix is server-side
+  (web 0.590.0); nothing in the app computes those days itself.
+
+## 2026-10 — Widget Solid / Accent styles (v0.401.0; renamed from Quiet in 0.401.1)
+
+The second style ("Accent"; briefly "Quiet") is no longer "like Home": the names on each line made it
+unreadable at widget size. Accent keeps Solid's content (title, time, place)
+beside a color bar, and outlines tasks in the theme color instead of filling
+them. Tasks draw the same views in both styles (an accent box with an inner box
+inset 1.5dp, since Glance has no border) so reused list rows stay right. The
+month is always written in full, in a normal weight, with the day number bold;
+narrow widgets shrink the font rather than abbreviate. Appearance lost its
+explanatory lines and its labels were shortened (Solid / Accent, App / System /
+Light / Dark), at the owner's request.
+
+## 2026-10 — Birthday in Profile; a date picker with month and year quick picks (v0.400.0 / web 0.589.0)
+
+Profile gains a Birthday card (`GET`/`POST /api/v1/me/birthday`), saved the
+moment a date is picked or cleared. The server applies the same rule as the web
+form (`checkBirthday`: a real date, 1900 on, not in the future) and its message
+is shown as-is. The picker is `ui/common/QuickDatePicker.kt`: the app's own
+pop-up (AnimatedDialog), a Sunday-first month like the calendar, with the month
+and year in the header as buttons — the year opens a year grid, then the month
+grid, then the days. Material's DatePicker offers only a year list, and paging
+back decades month by month is what a birthday needs least. The other date
+pickers in the app are unchanged; this one is in `ui/common` so they can move
+to it.
+
+## 2026-10 — Widget fixes after first use (v0.399.0 / web 0.588.1)
+
+- **Stray circles** around Thursday and Saturday, with dark text: the launcher
+  reuses list rows, and the day label only set the circle's background on
+  today's row, so a reused row kept it. Every row now draws the same views and
+  sets the background either way (transparent when not today). The same rule
+  now holds for the "who" text on the color-bar style.
+- **Multi-day all-day events** are listed once, on their first day in view,
+  with "through <day>" (server drops the repeats; widget only).
+- **Narrow widgets**: `SizeMode.Exact`; under 280dp the header says "Oct 19" at
+  20sp, under 220dp 18sp with smaller buttons.
+- **Tasks** are 30dp lines with 13sp text, shorter than an event.
+- **Widget light/dark** is its own setting (Like app / System / Light / Dark),
+  so the app can stay light while the widget follows the phone.
+- **Picker preview**: a static sample week (`previewLayout`), made-up events.
+
+## 2026-10 — Home-screen widget; theme follows the phone (v0.398.0 / web 0.588.0)
+
+A calendar + tasks widget, designed on a mockup first. Decided with the owner:
+- **Glance**, not hand-built RemoteViews: one Compose-style file, and the
+  colours come from the app's own palette (`widgetPalette`).
+- **Events colored by the server**: `/api/v1/widget` runs the Calendar's own
+  filter and recolor (`personalEventRules`), so "others grey" under Custom
+  colors applies to the widget unchanged.
+- **Whole family by default**, a per-phone "Only mine" setting. Tasks are always
+  the phone owner's own, because the widget can tick them off.
+- **Event style is a per-phone setting**: solid boxes (default) or the home
+  page's color bar with who it's for.
+- **The task's icon is its checkbox**: an empty rounded square, ticked when
+  done. The rest of the task opens Tasks with that task tinted for a few seconds.
+- **No "no due date" line**: a task always has a due date (blank = today). The
+  top line counts overdue tasks instead and opens Tasks.
+- **+ opens a chooser**: Android widgets can't show a popup, so + starts a
+  see-through activity drawn as a dialog (New task / New event), which opens
+  the app on Assign a task or New event.
+- **7 days**, empty days left out.
+- **Theme mode System / Light / Dark** replaces the dark-mode switch; System is
+  the default for anyone who never touched the switch, and the widget follows
+  the app's setting.
+
+Built without an Android build here: the widget files were compiled with
+`kotlinc` against stubs of the Glance API (Kotlin-level errors only); the first
+real build is the check that the Glance calls match the library.
+
+## 2026-10 — Reps on a one-off weights log (v0.397.0 / web 0.587.0)
+
+The "log a different workout" wizard took a weight only. Its value step now
+shows a reps box beside the weight when the metric is WEIGHT (`showReps`), and
+`CustomLogRequest` gains `reps: Int? = null`, appended last. Optional; blank
+logs exactly as before. Reset with the rest of the form when the type changes.
+
+## 2026-10 — Skip is saved per movement; reps refill (v0.396.0 / web 0.586.0)
+
+Skip on a movement was local only: it greyed the row and left it out of the
+log, but nothing reached the server, so it vanished on reload and could not
+count toward the day. It now calls `POST /api/v1/workouts/skip` (optimistic,
+rolled back on failure). A swapped row skips under the planned movement's id;
+a one-result block (HIIT) sends `""`. Overdue blocks skip the same way — they
+used to rest the whole day from any one movement's tile. Skipping no longer
+blanks a typed value. The server decides whether the day is complete (every
+movement logged or skipped — web DECISIONS, v0.586); the tick beside a plan's
+name follows the same rule locally, ignoring untracked movements.
+
+Reps did not refill because the server never sent them; `PlannedMovementDto`
+gains `reps`, `skipped` and `tracked`, appended with defaults. A movement's Log
+with an empty box no longer sends anything (an empty log used to clear every
+movement already logged on the plan). The reps placeholder says "reps".
+
+## 2026-10 — Character page reloads after a gallery swap (v0.395.0 / web 0.585.0)
+
+`CharacterViewModel` loads once (cache first, then the server) and survives the
+trip to the gallery, so after "Make this my companion" it went on showing the
+companion it loaded before — the web and the gallery, which ask the server
+fresh, showed the new one. `CollectionViewModel` now takes an
+`onCompanionChanged` callback; the gallery bumps `AppContainer.companionRevision`
+after a successful swap, and `CharacterScreen` reloads when it changes (a
+shared signal rather than ON_RESUME, which is unreliable under the drawer nav).
+The reset-to-hatchling half of the report was server-side: web DECISIONS,
+"A companion brought back keeps its stage".
+
+## 2026-10 — "Your turn" on the home card (v0.394.0 / web 0.584.0)
+
+The home Chores card now pulls any up-for-grabs chore with `furthestBehind`
+out of the grey summary line into its own row: the same red "!" the Chores
+detail uses, "Your turn: <chore>", and "You did it longest ago". Who that is
+stays the server's call — including the admin's Turn reminder opt-outs (web
+DECISIONS, v0.584) — so the app adds no rule of its own. Always-open chores
+off your "Available for" list no longer reach the phone at all (server-side).
+
+## 2026-10 — Family-goal votes: one a month, and the card is the server's call (v0.393.0 / web 0.583.0)
+
+Rationale in the web DECISIONS ("One family-goal vote a month"). App side: the
+home card no longer decides for itself whether to nudge — it shows for a goal
+(carried, chosen or earned) or when the server's `homeNudge` is "vote" / "pick",
+so the rule lives once (web `coopHomeNudge`). An older server omits the field
+and the nudge simply doesn't show. On the Family goal screen the button reads
+"Move my vote here" when your vote is on another idea; the server does the move.
+
+## 2026-10 — Companion as profile picture, chosen in the gallery (v0.392.0 / web 0.582.0)
+
+Full rationale in the web repo's DECISIONS ("A companion can be the profile
+picture"). App side: the gallery's enlarge dialog gains "Use as profile
+picture" (only when the server sends `stageImages`), which opens a three-stage
+picker — reached stages show their art and are tappable, unreached show an egg
+and "Not yet" (their art is never sent), and the picture in use is ringed. The
+pick posts `/me/avatar/companion`, and `SessionRepository.setCompanionAvatar`
+adopts the returned person, so the rail and every avatar update at once.
+
+The result shows in its own `pictureNotice`. The view model's older `message`
+(set after "Make this my companion") has never been displayed by the gallery;
+surfacing it here would have changed that flow unasked, so it is left alone.
+
+All three avatar views (rail, `PersonAvatar`, Profile preview) draw a companion
+through one composable, `CompanionAvatarArt`: fit, not crop, no framing.
+
+## 2026-10 — Hand-offs go to the activity on screen (v0.391.0)
+
+An `.ics` opened from Gmail landed on Home with nothing imported. The log showed
+two MainActivity instances: the mail app's "Open with" starts a fresh one, while
+an older, stopped one lingered. Both compositions collect the app-wide one-shot
+flows in AppContainer (`pendingRoute`, `pendingIcs`), and a stopped activity's
+composition still runs — so the hidden one, not stuck behind the new one's 2 s
+splash, consumed both: it navigated itself to Calendar and opened the filled-in
+form where nobody could see it. The new one then finished its splash on Home.
+
+Fix: `rememberActivityOnScreen()` (ui/common) — the hosting ACTIVITY is at least
+STARTED — gates the `pendingRoute` effect in AppRoot and the `pendingIcs` effect
+in CalendarScreen. It deliberately reads the activity's lifecycle, not the
+NavBackStackEntry's, because drawer navigation can leave an entry below RESUMED
+while its screen shows. The same race could send a notification tap to the
+hidden instance, so that is fixed too. Any new hand-off through AppContainer
+must be consumed behind the same gate.
+
+Considered and not done: `launchMode="singleTask"` would avoid the second
+instance, but changes how Back and recents behave across the app for a problem
+the gate already solves.
+
+## 2026-10 — Launcher icon inset is a fraction, not dp (v0.390.0)
+
+The adaptive icon's foreground wrapped the logo in `<inset android:inset="20dp">`.
+A dp inset doesn't scale with the size the icon is drawn at: on the home screen
+(large) 20dp per side is a normal margin, but the system "Open with" sheet draws
+the icon small and the same 20dp per side left almost nothing for the logo — a
+speck in a white circle. Now `18.5%` (20/108 of the adaptive canvas): identical
+on the launcher, proportional everywhere else. Any future inset or padding in an
+icon layer should be a percentage for the same reason.
+
+## 2026-10 — Release notes are short, for the household (v0.390.0)
+
+`CHANGELOG.md`'s top section is the update prompt's text (release.yml), so it is
+written for end users: a few one-line bullets of what changed. No explanations,
+no "Needs web x.y" lines, no internals — the reasoning lives here instead.
+Rule in RELEASING.md step 2.
+
+## 2026-10 — Calendar files open in Kairos, read on the phone (v0.389.0 / web 0.581.0)
+
+Tapping an `.ics` attachment (or sharing it to Kairos) opens New event filled in
+from the file. Full rationale in the web repo's DECISIONS ("One calendar file,
+read in two places"); the app-side choices:
+
+- **Read on the device** — the owner's call: no connection needed, no server
+  work. The rule is `ui/calendar/IcsImport.kt`, a line-for-line mirror of the
+  web's `src/lib/calendar/ics-import.ts` (the web uses it for its Import .ics
+  button). The two are held to parity by the web repo's
+  `scripts/ics-parity/check.sh`, which compiles THIS file with `kotlinc` and
+  diffs both readers over thousands of files. Change one, change the other,
+  run it. Its first runs found a split emoji at the note cap and a crash on a
+  three-digit year; both fixed in both, and `readIcsFile` never throws.
+- **Intent filters, not a default.** VIEW and SEND for `text/calendar`,
+  `text/x-vcalendar`, `application/ics`, `application/x-ical` on MainActivity.
+  Android shows the chooser the first time; "Always" is the user's. SEND covers
+  mail apps whose own "open" doesn't offer Kairos, and also takes a shared
+  `EXTRA_TEXT` that is itself a VCALENDAR.
+- **Read off the main thread, once.** The content URI is read on IO (a mail app
+  may still be fetching the attachment), capped at 1 MB, into
+  `AppContainer.pendingIcs`, and `pendingRoute = "calendar"`. `handleIntent`
+  only imports when the activity is fresh (not a rotation or restore), so a saved
+  event can't be re-opened as a second import.
+- **The Calendar screen consumes it** once its data has loaded — the draft is put
+  on `data.timezone`, the household clock new events default to — which also
+  means it waits through sign-in, since `pendingRoute` is only acted on in the
+  authenticated app. One event → `AddEventOverlay(importDraft = …)`, keyed on the
+  draft so a second file restarts the form; several events, a cancellation, or
+  nothing usable → an `AnimatedDialog` saying so (several points to subscribing,
+  which is a parent job on the web).
+- **Owner defaults to the person on the phone**, as for any new event; the
+  Calendar picker can still change it. The type starts as Event so the
+  description, which becomes the note, is kept.
+- **An imported form is always "dirty"**, so closing it asks first instead of
+  silently dropping the file.
+- `CLIENT_BUILD` is back to `versionCode` (446). It had been left at 430; nothing
+  broke only because `/api/v1/meta` reports `minClient: 0`.
+
+## 2026-10 — Notes open on their own screen; the owner is a picker (v0.387.0–0.388.0 / web 0.580.0)
+
+A short note on Events and Medical appointments only. `takesNotes` /
+`NOTES_MAX` in `NoteField.kt` mirror the web's `event-notes.ts` exactly — a
+blank `eventTypeId` is "no type" on both, so the phone never offers a field the
+server would discard; a custom event type (stored as OTHER) is deliberately
+excluded. 0.387 put the note inline; 0.388 made the row behave like the address
+and title rows: tap it and the note opens on its own screen with Save, closing
+without saving leaves it unchanged, and the row shows one line. The note is
+displayed only in the event detail, under the address, never on grid chips.
+
+The Calendar row now lists My calendar, Family calendar and each person, the
+same choice as the web's Whose. Picking an owner drops them from Share with.
+The server resolves and re-checks the owner (`create-event.ts`), so the picker
+is a request, not an authority.
+
+## 2026-10 — Each movement has its own buttons (v0.386.0 / web 0.579.0)
+
+Every movement on a Log workout card gets its own Rest / skip, Calculator and
+Log buttons under its own rule, so two movements added to one plan look exactly
+like two plans sharing a muscle group. Logging one leaves the others alone (the
+server clears only what a submission covers) and only the pressed button shows
+the spinner. The calculator writes back to the movement whose button opened
+it, not the card's first movement. "Edit weight" is read from what is logged for
+the day, so it survives reopening the page, not just a save in the same session.
+
+## 2026-10 — Companions: stage is earned, phase is current (v0.381.0–0.385.0 / web 0.574–0.578)
+
+The web DECISIONS has the full thread; the rule the phone must keep: **`stage`
+is earned growth, `phase` is what the companion is doing now, and nothing about
+one may be inferred from the other.** Conflating them caused three bugs in a row
+(shiny read as adult, so a shiny hatchling got an adult sprite; stage segments
+hidden because shiny was read as finished; an egg held by a companion that
+never grew). The
+sprite follows growth actually done, never the glow.
+
+What the card is now: one row of squares that fills with growth and breaks at
+each stage boundary (break positions come from the server, not hardcoded), the
+skill-blend colours kept on it; deepening on its own short bar, offered only on
+a fully grown companion and worked through as a phase. No monthly hatch cap.
+0.383: tap a companion in the gallery to make it active again — it resumes the
+growth it had, the current one is shelved keeping its own, and the dialog says
+so before you tap. Don't remove the bar or its segments because they look
+redundant: the XP bar was deleted once by mistake and had to be restored.
+
+## 2026-10 — School rows show ahead / behind (v0.380.0 / web 0.573.0)
+
+Behind work is tinted on the row itself (it clears when done), not just a red
+date under a heading that scrolls away. Pulled-forward or pushed-back work says
+"ahead of Oct 20" / "moved from Oct 8" beside its due date, from the task's
+original due date (web migration 119). An older server simply doesn't send it.
+
+## 2026-10 — The history block beside the fields (v0.378.0–0.379.0 / web 0.569–0.570)
+
+Three fixed lines to the right of the entry fields, above Log weight: Best
+(heaviest ever, weight only), Best reps (most reps ever, with the weight), and
+Latest (the last session even when below both). A line with nothing behind it
+shows a dash so the block keeps its shape. No dates and no repeated unit on the
+phone — the unit is already beside the box. The labels start in one column and
+values end in another; "Recent" became "Latest" to match the web. The numbers
+come from the server (`stats`, see "The history summary is server-computed").
+
+## 2026-10 — The history summary is server-computed (v0.377.0)
+
+Best / Best reps / Last arrive as a field on the movement rather than being
+derived on the phone. The phone has the logged sets it needs for today, not the
+whole history, and computing a record locally would mean two answers to "what is
+my best bench" — which is exactly the class of bug that cost the last two days.
+
+`MovementStatsDto` is appended last and nullable, so an older server omits it and
+the block simply doesn't render. Nothing constructs `PlannedMovementDto`
+positionally, but it still went last.
+
+Rendered per movement, under its entry fields. On a one-movement card that is
+the space above the Log weight button, which is where it was wanted; on a card
+with three lifts each keeps its own, which a card-level block could not do.
+
+## 2026-10 — Aligning the fields by structure, not by numbers (v0.376.0)
+
+The entry boxes now sit in the same three weighted cells as the action tiles
+below them, rather than being positioned with widths and spacers that happened to
+look right. Both rows are `fillMaxWidth` children of the same Column with the
+same 8dp gaps, so cell N and tile N resolve to the same x-extent on any screen.
+Nothing has to be re-tuned for a different phone, which is the failure mode of
+the alternative.
+
+Each box is `weight(1f, fill = false).widthIn(max = NUM_FIELD_W)` — capped at
+three digits, but able to shrink below that on a narrow screen instead of
+overflowing its cell. A plain fixed width is what put sixteen columns off the
+right edge of the attendance grid in 0.372.
+
+One constant for every numeric box on the screen, so weight, reps and seconds
+cannot drift into three sizes again — which is what they were.
+
+`MovementRow` is the only implementation of that row and both call sites go
+through it, so this lands everywhere the fields appear without a second copy to
+keep in step.
+
+## 2026-10 — The goal card loads on its own, not with the dashboard (v0.375.0)
+
+The obvious place for the home-screen goal card was the dashboard payload, next
+to `money` — that is how every other home card gets its data, in the one read
+the screen already makes.
+
+It went in its own view-model instead. The goal needs the server's progression
+query, the heaviest read there is, and `/dashboard` is the single most-hit
+endpoint in the app: folding it in would make every home refresh on every phone
+pay for the goal card. A separate `CoopViewModel` means the dashboard paints
+first and the card appears when it arrives — the same reasoning as the web's
+Suspense boundary, reached by a different mechanism. It is also cache-backed
+through `PayloadCacheStore`, so on a return visit or offline it paints
+immediately from the last payload.
+
+The side benefit is that this needed no server change at all. `/api/v1/coop`
+already returns everything the card needs, including `isAdmin` and now
+`carried`, so this is an app-only release.
+
+`CoopDto.carried` is appended at the END of the data class and nullable. Against
+a server older than web 0.565.0 the field is absent, decodes as null, and the
+card falls back to the current month — no failure. Nothing constructs `CoopDto`
+positionally, so appending was safe here, but the field still went last out of
+habit after the `WorkoutLogRequest` near-miss.
+
+A carried goal's gate comes from the carried record (`carried.gateMet`,
+`carried.childrenMeeting`), never from `CoopDto.gateMet`. That top-level field is
+this month's, and using it for a September goal would re-test an already-settled
+month against an empty October counter — closing a gate the family had earned.
+
+## 2026-10 — The client has to say which day it logged on (v0.374.0)
+
+The server cannot infer it. A past `date` on a log means one of two things —
+catching up on an overdue workout, or deliberately back-dating from the date
+picker — and only the client knows which. Stamping "today" on every past date
+would move a back-dated Saturday lift to Sunday, which is the same failure that
+ruled out using `createdAt` server-side.
+
+So `WorkoutLogRequest` carries an optional `completedOn`, set only when today
+differs from the day being logged for. It is appended at the END of the data
+class and every construction of that request is now NAMED rather than
+positional: the request was being built positionally in SessionRepository, so an
+inserted field would have silently shifted `replace` and `detectConflict`.
+
+Captured at submit time, not at replay time. The write queue stores the
+serialized body verbatim from the OkHttp interceptor, so a log queued offline on
+Tuesday and synced on Thursday still reports Tuesday — which is when the workout
+was actually done.
+
+Older builds omit the field entirely and the server treats it as absent, so a
+phone that has not updated behaves exactly as it did before rather than failing
 validation.
 
-One asymmetry worth keeping: on the edit path `logPlannedWorkout` only ever SETS
-`completedOn`, never clears it. That path also runs when an existing session is
-re-logged, and a client sending no `completedOn` — an older app, or a same-day
-edit from the web — must not erase the day a catch-up was recorded on.
+## 2026-10 — Workout days was drawing off the edge of the phone (v0.373.0)
 
-## 2026-10 — A session has a due day and a done day (v0.563.0)
+0.371 fixed the date window and the current week still did not appear, because the window was never
+the whole problem. The grid drew a fixed sixteen columns: 16 x (18dp + 4dp gap) + a 12dp weekday
+rail is ~364dp, and a phone's content width after card padding is ~330-360dp. The newest columns,
+the week in progress among them, were laid out past the right edge of a Row that does not scroll.
+The data was right, the dates were right, and the pixels were off-screen.
 
-`WorkoutSession.date` is the day a workout *counts for*. Adherence is built on it:
-`loadOverdueWorkoutDays` walks back through the plan and asks `loadTodayPlannedWorkouts(iso)`
-whether that day's session exists, so moving `date` to the day someone caught up on would make a
-missed Monday retroactively not missed. That is the one thing the column must never do.
+`BoxWithConstraints` now measures the available width and draws as many weeks as fit
+(`(maxWidth - rail - gap) / (cell + gap)`, clamped 4..16), anchored so the current week is always
+the last column. 14 weeks on a 360dp phone, 16 on a 412dp one, and older weeks fall away on their
+own as time moves forward — which is the behaviour asked for rather than a fixed horizon.
 
-But a chart that draws Tuesday's weights on Monday's square is lying about when the work happened,
-and Recent workouts dating it 10/5 reads as a bug because it is one.
+The lesson for next time: when a layout fix does not take, check whether the thing is being drawn
+somewhere you cannot see before changing the logic again. Two releases went into the date maths
+while the real fault was that the row was wider than the screen.
 
-So: a second nullable column, `completedOn DATE`, written only when the two differ. `date` stays
-the due day and keeps owning adherence; every DISPLAY read resolves `completedOn ?? date`. One
-helper, `doneOn()` in `workout-log.ts`, so the fallback is written once rather than at each of the
-four series sites.
+## 2026-10 — Three, four, five muscle groups on a day (v0.372.0)
 
-`createdAt` was considered and rejected: it is when the row was inserted, which is right for a
-catch-up and wrong for deliberate backdating — logging Saturday's lift on Sunday morning from the
-date picker would move it to Sunday. The ISO date the UI was actually logging *for* is the only
-honest source, so `completePlannedWorkout` takes `completedOnISO` and stores it only when it
-differs from `dateISO`.
+Matching the web: three and four cut from the centre via a hard-stop `Brush.sweepGradient` — thirds
+as wedges, four as quadrants — because every piece meets in the middle and stays legible at 18dp.
+Five or more would be slivers from a centre point, so those keep the horizontal bands.
 
-The overdue cards were left alone on purpose. `TodayPlan` and `PlanRow` thread the new prop
-through and render nothing new from it — the request was for the data to be right, not for the
-cards to grow a second date.
+Compose's sweep starts at 3 o'clock where CSS conic starts at 12, so the pieces sit a quarter turn
+round from the web's. At this size that is not perceptible and it is not worth the rotation
+gymnastics to match exactly; what reads is "three wedges" or "four quarters", not which colour is
+where.
 
-No app release. The app's attendance grid (`byDate.getOrPut(p.date)`) and its history list read
-dates the server already resolved, so the field name is unchanged and only the value moves. Room
-caches the payload verbatim and refreshes on next sync, so there is no schema change there either.
+## 2026-10 — Grid window, stripes, and the Swap button (v0.371.0)
 
-## 2026-10 — Two plans on one page, one of them unwired (v0.562.0)
+The attendance window had the same off-by-a-week fault as the web: `today.minusDays(111)` snapped
+back to Sunday moved the start earlier without moving the end, so it finished at
+`today - dayOfWeek` and the week in progress was missing. Now `startOfWeek(today).minusWeeks(15)`.
 
-`workouts-grid.tsx` renders `TodayPlan` twice: once for today on the main Log workout step, and
-once for a chosen date on "plan for this day". Only the second was passed `loggedByPool`, so the
-one people actually use had no prefill at all — while the home page's single copy worked, which is
-exactly why it looked like a sync problem rather than a missing prop.
+Three or more muscle groups on a day become equal vertical bands via a hard-stop
+`Brush.horizontalGradient`; two keeps the diagonal. See the web DECISIONS entry for why.
 
-The main step gets its own `loggedToday`, loaded for `todayISO` and deliberately NOT shared with
-the date picker's state: that follows whatever day is being browsed, and handing it to a card about
-today would prefill the wrong day the moment someone looked at another one.
-
-It is also gated on its own loading flag. The prefill is read once in a `useState` initialiser when
-the rows mount, so a card that mounts before the fetch returns captures nothing and never recovers.
-Toggling between the loading line and the plan unmounts and remounts it, which is what makes the
-home page work and what this copy was missing.
-
-### `\u2026` in JSX text
-
-Two "Loading logged weights\u2026" strings rendered the escape literally. Inside a JSX text node
-`\u2026` is six characters, not an ellipsis — only a JS string literal interprets it. `version.ts`
-records a fix for this exact class before, so it has now regressed once; `&hellip;` is used instead.
-
-### The attendance window advances
-
-Confirmed by simulation across several dates on both clients: the window is derived from
-`today` at render, so it rolls forward a week at a time and the oldest week falls off the left.
-Checked 2026-10-07 through 2027-06-30 — the current week is in range on every date tested, and the
-start advances exactly 7 days per week elapsed.
-
-## 2026-10 — Logged rows keep their fields (v0.561.0 / app 0.373.0)
-
-The compact "✓ bent over row — Logged" row goes away. It was a reasonable-looking idea and the
-wrong one: the reason you reopen a day is to see WHAT you lifted, and collapsing the row to a tick
-hid exactly that. A logged movement keeps its ordinary row with weight and reps prefilled and the
-button reading "Edit weight", which is how the phone has always behaved.
-
-Worth recording as a pattern, since this is the second time: "it is done, so show less" removed
-information at the moment it became most useful. Done is a reason to show the numbers, not to
-replace them with a word.
-
-### Compare orders by date, not by weight
-
-Sorting each person's bars lightest-to-heaviest made every lifter look like a neat staircase
-whatever actually happened. Chronological order shows the progression — including a week that went
-backwards, which is the part a tidy sort was quietly hiding.
-
-## 2026-10 — Today was the one day excluded from its own prefill (v0.560.0 / app 0.372.0)
-
-Adding `reps` to `loadLoggedWeights` in 0.559 changed nothing, because the fetch never ran for
-today. Both call sites were guarded:
-
-```ts
-if (logDate !== todayISO) { loadLoggedWeights(...) } else { setLoggedByPool({}); }
-```
-
-The launcher's comment said it outright — "already-logged weights for a BACK-DATED day". Today was
-deliberately excluded, so the one day you are most likely to be correcting was the only day whose
-fields came up blank, under a button offering to log it afresh. Both now fetch for the date being
-shown, today included.
-
-Worth noting how this hid: 0.559's change was real and correct, and verifying it by reading the
-query would have shown reps coming back. The thing that was broken sat one layer up, in a
-condition that decided whether to ask at all. A fix to the right function is still no fix when
-nothing calls it.
-
-### Compare tops out at the heaviest lift
-
-The plot ceiling was the ROUNDED top (`grid.yMax`), leaving headroom above the heaviest lift and
-then drawing lines into it — a solid one first, and after that was suppressed, a dotted one. The
-ceiling is now the tallest bar itself, and both tick lists are filtered to it. The top gets a
-labelled line only when it is a load someone would recognise; an odd number leaves the bar standing
-above the last line, which is honest.
-
-### Three, four, five muscle groups
-
-Three and four cut from the centre — thirds as wedges, four as true quadrants (`from 0deg`, so the
-boundaries land on the axes). Every piece meets in the middle, which is what keeps them legible at
-18px. Five or more would be slivers from a centre point, so those become equal vertical bands.
-Verified by rendering all six cases at 18px before shipping.
-
-## 2026-10 — The attendance grid never reached this week (v0.559.0 / app 0.371.0)
-
-Both clients built the window as `today - 111 days`, then snapped that start back to Sunday, then
-drew 16 weeks. Snapping moved the START earlier without moving the END, so the range finished at
-`today - dayOfWeek`. On a Wednesday it stopped the previous Saturday and today could not appear at
-all; only on a Sunday was it correct. Verified against 2026-10-07: the old window ran to Oct 3, the
-new one to Oct 10.
-
-Both now anchor to the current week and count back — `startOfWeek(today) - 15 weeks` — so the last
-column is always the week in progress.
-
-### Three or more muscle groups in a day
-
-Two reads best as a diagonal split and that stays. Three cannot extend it, and wedges or quarters
-in an 18px square turn to mud, so 3+ becomes equal vertical bands with hard stops. One rule that
-degrades predictably, and the change of grammar is itself a signal that the day holds more than two.
-
-### Prefilling a logged day
-
-`loadLoggedWeights` selected `poolExerciseId` and `weight` only. Reopening a logged day therefore
-filled in what was lifted but not how many times, under a button still offering to "Log weight" —
-for something plainly already in the boxes. It returns `{ weight, reps }` now, both prefill, and the
-button reads "Edit" when every movement in the workout is already recorded. The phone has behaved
-this way for a while; this is the web catching up.
-
-### Compare's top gridline
-
-Adding the rounded ceiling unconditionally put a 190 label on top of a 185 one when the tallest bar
-was itself a common load. It is only added when something actually rises above the highest labelled
-line.
+`Swap` sat after a name pinned to `Modifier.width(150.dp)`, so the button was parked at the same x
+whatever the name was and floated over empty space beside anything short. The name is
+`Modifier.weight(1f, fill = false)` now: it takes only the width it needs so Swap follows it, and a
+long name still ellipsizes at the weighted bound rather than pushing the button off the row. The
+buttons no longer line up with each other, which is the point — they belong to the names.
 
 ## 2026-10 — Completion is identity, not a label (v0.557.0, shipped in v0.558.0)
 
@@ -1543,29 +631,6 @@ keeps the same weakness.
 
 The general shape: a label is a rendering of a thing, not the thing. Any time two rows can carry
 the same label, matching on it is a coin flip that happens to be right while the data is sparse.
-
-The same mistake, one line further on: the logged row rendered `workout.name` — the muscle-group
-label again — so a Back card holding two logged plans read "Back / Back / Back". It names the
-movements now, falling back to the plan name only for HIIT and metric-only workouts, which have no
-movements to name.
-
-### Recent workouts excluded today
-
-`where: { userId, date: { lt: today } }`. Not a sync problem and not a caching problem: the web's
-history query asked for everything BEFORE today, so a session logged this morning could not appear
-in it however many times the page reloaded. The phone reads `loadWorkoutProgress`, a different
-query without that bound, which is exactly why the two disagreed — the phone was right. Now `lte`.
-
-### The overlay kept its scroll between steps
-
-The person card is one `overflow-y-auto` container with the steps swapped inside it. Scrolling down
-the menu to reach "Recent workouts" and opening it left the new screen at the old offset, which
-reads as the list opening at its bottom. A ref on the pane and a `scrollTo({ top: 0 })` on every
-step change.
-
-Not fixed because it is already fixed: the phone showing "Log weight" on an already-logged movement
-is 0.351.0 behaviour. Current code reads `block.logged -> "edit weight"`. That device needs the
-update, not a patch.
 
 ## 2026-10 — Gridlines, the rep floor, and the reset icon (v0.556.0 / app 0.370.0)
 
