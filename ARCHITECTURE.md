@@ -1,238 +1,273 @@
-# Kairos Android app — architecture
+# Architecture
 
-Native Kotlin / Jetpack Compose client for the Kairos household dashboard. Talks
-only to the versioned REST API (`/api/v1`) in the web repo's `docs/API.md`. The
-web app is the source of truth for behaviour and look; the app **mirrors the web
-from source** rather than inventing its own UX.
+Why the code is shaped the way it is. Read alongside [ROADMAP.md](ROADMAP.md),
+which covers what exists and what doesn't.
 
-## Stack / build
+## Stack
 
-- AGP 8.13.2, Gradle 8.13, Kotlin 2.2.21, Compose BOM 2025.06.01.
-- compileSdk / targetSdk 36, minSdk 26, JDK 17. `applicationId com.kairos.app`.
-- Retrofit + OkHttp + `retrofit2-kotlinx-serialization-converter`, kotlinx.serialization.
-- DataStore (settings + token blob). Coil (`io.coil-kt:coil-compose:2.7.0`) for avatars.
-- Navigation-Compose type-safe routes. Manual DI (no Hilt).
-- Release APK is signed in CI (`.github/workflows/android.yml`) with secrets
-  `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEYSTORE_PASSWORD`, `KEY_PASSWORD`
-  (KEY_PASSWORD == KEYSTORE_PASSWORD; PKCS12 requires it). R8 minify OFF for now.
+Next.js 15 (App Router) · TypeScript · Prisma 7 · PostgreSQL · Tailwind 4
 
-## Versioning — bump all three every release
+Dependencies are pinned to exact versions and installed with `npm ci` against
+a committed lockfile, so a rebuild months from now produces the same image.
 
-- `app/build.gradle.kts`: `versionCode` (integer, +1) and `versionName` (semver).
-- `SessionRepository`: `const val CLIENT_BUILD` — keep equal to `versionCode`.
-- `CHANGELOG.md`: user-facing entry at the top.
+Deployment is a single container published to GHCR by GitHub Actions, running
+alongside an existing PostgreSQL instance. Migrations apply on start, so
+updating is pulling a newer image.
 
-## Networking (`data/remote`)
+## The load-bearing decisions
 
-- `ApiClient.create(baseUrl, tokenProvider)` builds the Retrofit `ApiService`.
-  `normalizeBase` turns the user's bare origin into `<origin>/api/v1/`.
-- `AuthInterceptor(tokenProvider)` attaches `Authorization: Bearer <token>` to
-  every request when a token is held (no per-method header). `tokenProvider` is
-  `{ tokenStore.current() }` — an in-memory read, never a blocking decrypt on the
-  network thread.
-- JSON is lenient: `ignoreUnknownKeys = true`, `explicitNulls = false`,
-  `coerceInputValues = true`. **Every DTO field should have a default** so a
-  status-only response (`{ "status": "ok" }`) still deserialises. (See DECISIONS
-  — a required `id` once silently broke a refresh.)
-- `Response<T>.bodyOrThrow()` maps the `{ error }` envelope to a typed
-  `ApiException(ApiError.*)`. `apiCall {}` turns transport failures into
-  `ApiError.Network`.
-- `ApiClient.resolveUrl(base, path)` resolves a relative URL (e.g. an avatar
-  `/api/v1/avatars/x.png`) against the configured origin.
+### One task table
 
-## Auth / session
+Chores, Bible readings, school work, and one-off tasks are all rows in `Task`,
+separated by a category and optional links to detail records. Completion
+percentages, overdue detection, streaks, and the scoreboard are then single
+queries rather than four parallel implementations.
 
-- `SessionState` sealed interface: `Loading → NeedsSetup → NeedsEnroll → Ready`.
-  It drives all top-level UI, which eliminates soft-navigation bypass as a class.
-- Device token stored encrypted (Android Keystore AES-256-GCM) via `TokenStore`;
-  `tokenStore.current()` is the in-memory copy used by the interceptor and Coil.
-- Layered login+code enrollment; passwordless kids use a code alone.
-  Credential-version gate: a password change server-side returns
-  `reauth_required` (401) → the app shows the reauth screen (device stays enrolled).
+### Dates are not timestamps
 
-## Dependency container (`di/AppContainer`)
+A chore is due on a *day*; a work shift starts at an *instant*. Due dates are
+`DATE` columns, events are `timestamptz`.
 
-Manual container built once in `KairosApp`. Holds `settingsStore`, `tokenStore`,
-`sessionRepository`, `navExpanded` (rail state), and `imageLoader` (a Coil
-`ImageLoader` whose OkHttp client reuses `AuthInterceptor { tokenStore.current() }`
-so avatar requests carry the device token). Reach it in composables with
-`rememberContainer()`.
+The Node process runs in UTC and the household's real timezone lives in
+`HOUSEHOLD_TZ`. This is not cosmetic: the `pg` driver parses `DATE` columns at
+the process's *local* midnight, so a process running in Chicago reads back a
+stored date as `05:00Z` and compares it as greater than the `00:00Z` value it
+wrote. Running in UTC makes reads and writes agree.
 
-## Navigation
+All date comparisons are on `YYYY-MM-DD` strings, never on `Date` objects, so
+an hours-level offset can't flip one. Everything funnels through
+`src/lib/dates.ts`.
 
-- Routes are `@Serializable` objects/classes in `ui/nav/Routes.kt`.
-- `AppRoot` hosts the `NavHost`; add a screen with `composable<Route.X> { ... }`
-  and navigate with `navController.navigate(Route.X)` / `popBackStack()`.
-- The nav shell is a custom overlay rail (`ui/nav/KairosRail.kt`), not a Material
-  drawer: teal panel `#86A0A3`, collapsed 76dp (icons) / expanded 224dp (labels),
-  expand state in `AppContainer.navExpanded`. Icons in `KairosIcons.kt` (SVG paths
-  ported from the web). Section metadata in `AppSections.kt`.
+### Derived state is computed, not stored
 
-## Screen pattern (used everywhere — follow it for new sections)
+Overdue, chore expiry, and birthday occurrences are read-time rules rather
+than columns written by a job. No nightly sweep to run, no backfill when a
+rule changes, and no rows drifting out of sync with reality.
 
-1. **DTOs** in `data/remote/dto/Dtos.kt` (`@Serializable`, all fields defaulted).
-2. **ApiService** method (Retrofit) + **SessionRepository** wrapper using
-   `runAuthed { requireService().call() }` (handles reauth/401).
-3. **ViewModel** with a `StateFlow<XUiState>`; an `init { load() }`, and an
-   `act { ... }` helper that runs a mutation then reloads (so the UI refreshes
-   without the user re-navigating). Guard reentrancy with a `busy` flag.
-4. **Screen** composable: `rememberContainer()` → build the VM via
-   `viewModelFactory`; render loading / error / content; pass navigation as
-   lambdas from `AppRoot`.
+Overdue in particular never rewrites a due date. A chore missed on Tuesday
+stays a Tuesday chore forever, which is what makes historical stats mean
+anything.
 
-## Images / avatars
+### Generators reconcile, they don't append
 
-- Uploaded avatars are served by the device-authed `GET /api/v1/avatars/[file]`
-  (the web's `/api/avatars/*` sits behind Authelia and the app can't reach it).
-- `/me` sends `avatarUrl` (relative, `/api/v1/...`), `avatarIcon` (emoji), and
-  `avatarPosition` (`"tx ty scale"`). Render with `SubcomposeAsyncImage`
-  (`imageLoader = container.imageLoader`, `ContentScale.Crop`) inside a circle,
-  falling back to emoji/initials on null/error. Apply `avatarPosition` with a
-  `graphicsLayer { scaleX/Y = scale; translationX = tx/100f*size.width; ... }` —
-  this mirrors the web's `translate(tx%, ty%) scale(s)` on an `object-cover` image.
-- A companion picture arrives as `avatarCompanion { species, stage, image }` and
-  is drawn ONLY through `CompanionAvatarArt` (ui/common/PersonAvatar.kt): fitted
-  whole at 76% of the circle, no framing. Any new avatar view must check it
-  before `avatarUrl`. It is chosen in the gallery (`StagePickerDialog`) via
-  `POST /me/avatar/companion`; the session adopts the returned person.
+`generateChores`, `generatePoolChores`, and `generateReadingTasks` each work
+out what *should* exist across a window, create what's missing, and delete
+unfinished rows that no longer match. An append-only generator leaves orphans
+behind whenever a schedule is edited and nothing ever corrects them.
 
-## Theme
+Two things are never touched: anything already complete or skipped, and
+anything dated before today.
 
-**Type matches the web** (`ui/theme/Type.kt`): IBM Plex Sans for text and
-Bricolage Grotesque for headings (display, headline, `titleLarge`), from the
-web's own font files converted to TTF in `res/font/` (Bricolage cut to 600 and
-700). Titles and labels are a step heavier than Material's defaults. Plain
-`Text` picks it up through `MaterialTheme`; don't set `fontFamily` per screen.
+Chore slots are matched on the assignment they came from, not on who holds
+them, so a chore released and claimed by a sibling still fills its slot.
 
-**Eight colour schemes plus a light/dark mode, per device** (`ui/theme/Theme.kt`).
-The mode is `SettingsStore.themeMode`: SYSTEM (default; follows the phone),
-LIGHT or DARK — the old on/off `dark_mode` key still decides it for anyone who
-set it. `widgetPalette(scheme, dark)` hands the home-screen widget the same
-colours.
-`ThemeScheme` is the enum — TEAL (default), OLIVE, GREEN, BLUE, PURPLE, PINK,
-ORANGE, RED — resolved from a stored key with `ThemeScheme.fromKey`, and
-`KairosTheme(scheme, darkTheme)` picks `lightScheme(p)` / `darkScheme(p)` and
-publishes `KairosThemeState.accent` / `.sidebar` / `.dark` for non-Material
-surfaces. `MainActivity` reads both from `SettingsStore` and passes them in.
-Settings → Appearance also holds the 24-hour clock option. (The "light only,
-dark mode deliberately off" rule this file used to carry was superseded when the
-Settings epic shipped; the web has the same eight themes household-wide from
-Admin → Appearance.)
+Generation runs on page load and is idempotent, which avoids needing a
+scheduler.
 
-## Grocery and store icons
+### Chore expiry is by succession
 
-Items and stores store a short **icon token**, rendered by `GroceryGlyph`
-(`ui/groceries/GroceryGlyph.kt`) — the single renderer for both:
+An unfinished chore expires the moment the same chore next comes due for
+anyone — the floor only needs vacuuming once. Never on a timer, so a monthly
+chore stays live for its whole month. Expired instances grey out and count for
+nobody, but remain against their original date.
 
-- a bare **emoji** → drawn as text;
-- **`ic:<name>`** → `GLYPH_DRAWABLES` (five legacy PNGs);
-- **`kairos:<slug>`** → `KAIROS_DRAWABLES` → `R.drawable.grocery_<slug>` in
-  `res/drawable-nodpi/`. **Hyphens in the slug become underscores** in the
-  resource name (`kairos:baby-wipes` → `grocery_baby_wipes`).
-- anything else that looks prefixed (`^[a-z]+:`) → **📦**, never the raw token.
+Shared chores are the exception: unassigned, claimed by whoever gets to them,
+and rescheduled a fixed number of days after each *completion*.
 
-Two rules that follow from this: the web server must ship **before** the app when
-a new token is introduced (a phone can only draw art it has bundled — otherwise
-the user sees 📦), and every entry added to `KAIROS_DRAWABLES` must have a real
-PNG bundled or the build fails on an unresolved resource. The web repo's
-`DECISIONS.md` holds the token contract and the icon-sheet slicing pipeline.
+### There is no per-person sign-in
 
-## Calendar time model (shared with the server — don't improvise here)
+The dashboard is a shared household screen. Everyone sees everything and
+completes their own work without identifying themselves.
 
-The server sends per-day **segments** for layout (`dayISO`, `startMin`, `endMin`,
-where `1440` means end-of-day and is *not* a clock value) plus the event's **true
-bounds** (`startDayISO`, `startMinExact`, `endDayISO`, `endMinExact`).
-`CalendarAddEvent.kt` initialises the editor from the exact bounds when they are
-present and falls back to the segment (rolling a `1440` end forward to 00:00 of
-the next day) when they aren't — so an overnight event opens whole regardless of
-which day was tapped.
+The only thing behind a lock is administration: a parent's PIN unlocks the
+admin area for a few hours. Sessions are a signed cookie with a secret
+generated on first use and stored in `AppSetting` — no session table, no
+environment variable.
 
-- **Midnight is 00:00 on the next day, never 23:59.** Clock state stays 0–1439.
-- `TimePickerDialog` clamps input to 0..23:59 as a **crash guard only**
-  (`rememberTimePickerState` throws on hour ≥ 24); it is not the time model.
-- **All-day is inclusive in the UI, exclusive on the wire**: the editor shows
-  Starts and Ends as the first and last covered day, and sends
-  `endDate = endDateIso + 1 day` for `allDay`. A timed event sends its real end
-  day. Reverse the conversion when loading.
-- Save is disabled and the offending field reddens while the end is at or before
-  the start; the All-day switch normalises the dates/times rather than leaving a
-  zero-length span.
+Guards live in server actions, not only in the UI, and the guard for `/admin`
+is in the route layout so a new sub-page is protected the moment it exists.
+The unlock page deliberately sits outside `/admin`, because a door can't be
+behind the lock it opens.
 
-## Calendar file import (`ui/calendar/IcsImport.kt`)
+### Plans are data, generators are code
 
-An `.ics` opened or shared into the app becomes a pre-filled New event:
-MainActivity's VIEW/SEND filters → the file read on IO (≤1 MB) into
-`AppContainer.pendingIcs` + `pendingRoute = "calendar"` → CalendarScreen waits
-for its data, parses on `data.timezone`, and opens `AddEventOverlay(importDraft)`
-or explains why not. Only a fresh activity imports (not a rotation/restore).
-Both `pendingRoute` and `pendingIcs` are consumed only where
-`rememberActivityOnScreen()` is true — several MainActivity instances can be
-alive, and a stopped one must not take the hand-off.
-`IcsImport.kt` is a line-for-line mirror of the web's
-`src/lib/calendar/ics-import.ts`; the web repo's `scripts/ics-parity/check.sh`
-compiles this file with `kotlinc` and diffs the two over thousands of files.
-Never change one without the other and a parity run.
+A household's reading plan lives in the database and never enters this
+repository. What ships is the machinery: canon reference, passage parser,
+importer, statistics, and the generator. A fresh clone gets an empty plan
+builder.
 
-## Scoring (`ui/character/`, `ui/settings/ScoringGuideScreen.kt`)
+The generator (`src/lib/bible/plan-builder.ts`) is a pure function with no
+server dependencies, which is what lets the same code preview a plan in the
+browser as the form is filled in and build the saved one on the server. The
+server never accepts the preview's output — only the inputs cross the wire and
+the schedule is rebuilt on arrival, so the two can't drift.
 
-The phone computes no scoring. `/api/v1/characters` sends the growth row
-(`xpCells`, `cellGaps`, `pendingFrom`, `growthLabel`) and `month`; the How
-scoring works screen draws `/api/v1/scoring/guide`. Rules: web docs/SCORING.md.
+### Position is laid out, not scrolled to
 
-## Hockey (`ui/hockey/`)
+The reading deck centres today by pushing every card sideways by its distance
+from the selection, so the correct arrangement is the first paint. The earlier
+version set `scrollLeft` after mount and put today hard against the left edge
+whenever the measurement ran before the fonts settled. Anything that has to
+measure the DOM to look right will occasionally look wrong.
 
-A read-only client of `GET /api/v1/hockey`; the server does all the shaping
-(web `buildHockeyView`). Add to calendar goes through
-`container.pendingCalendarOpen` (`CalendarOpen.NewFromDraft`) to the Calendar's
-New event, with the event type preset via `AddEventOverlay(presetEventTypeId)`.
-Layout (order, open sections) comes from the server per person; changes are
-applied locally, written to the Room page cache and posted to
-`/api/v1/hockey/prefs` (queued when offline).
+### The client/server boundary is enforced
 
-## Home-screen widget (`widget/`)
+`src/lib/prisma.ts` imports `server-only`. Anything a client component imports
+is bundled for the browser along with everything *it* imports, so a query
+module and a constants module can't share a file — that once dragged the
+Postgres driver into the browser build. Constants that both sides need live in
+dependency-free modules (`src/lib/days.ts`, `src/lib/bible/books.ts`).
 
-Glance (`androidx.glance:glance-appwidget`). `KairosWidget` draws
-`WidgetStore.state`: the last `GET /api/v1/widget` feed (cached in DataStore,
-so it draws offline) plus this phone's theme, colour, event style (SOLID/BAR)
-and scope (FAMILY/MINE) from Settings → Appearance. The server colours events
-exactly as the person's Calendar does (`personalEventRules` on the web) — never
-recolour them here. It refreshes every 30 minutes (`updatePeriodMillis`), when
-the app is left (`MainActivity.onStop`), after a sync, after an Appearance
-change, and on its own button; `KairosWidget.refresh` does nothing when no
-widget is placed. Taps open the app through `Notifications.EXTRA_OPEN`:
-"calendar" (+ `EXTRA_EVENT`, the event as JSON → `pendingCalendarOpen`),
-"tasks", "task:<id>" (→ `highlightTaskId`), "task-new", "calendar-new". A task's
-checkbox completes it with `completeTaskFromNotification`, falling back to
-`CompleteTaskWorker` offline. The + button is `WidgetAddActivity`, a
-see-through activity drawn as a dialog (a widget can't show one itself). Both
-header buttons are bare icons (`HeaderButton`): no fill, full-size tap area.
-Rules learned the hard way: the launcher REUSES list rows, so every row must
-draw the same views with every modifier set both ways (a background left off
-in one branch keeps the last row's — stray "today" circles); light/dark is the
-widget's own setting (`widgetTheme`, default "APP" = follow the app);
-`SizeMode.Exact` + `LocalSize` shrink the header on narrow widgets (the
-month is always written in full); the picker
-preview is a static `layout/widget_preview.xml` with made-up events
-(`previewLayout`, Android 12+) — never real household data.
+Enum imports used only as types are `import type`, which TypeScript erases.
 
-## Docs that must stay current
+### The mobile API is a second door, self-authenticated
 
-`CHANGELOG.md` every release (it becomes the in-app release notes), `DECISIONS.md`
-whenever a guardrail or a model is settled, and this file whenever the stack,
-theming, or a cross-cutting model changes. Doc upkeep is part of the release, not
-an afterthought — this file claiming "light only" months after dark mode shipped
-is what that rule exists to prevent.
+The native phone client talks to a versioned REST surface at `/api/v1`
+(docs/API.md), not to Server Actions. It is **additive** — the same domain logic
+behind a second door — and is the first place per-person identity enters the
+system. A phone enrolls to one `Person` and carries a bearer **device token**;
+the web wall tablet stays identity-free.
 
-## Where things live
+Two properties are load-bearing. First, only a SHA-256 of every secret is
+stored — enrollment codes and device tokens alike, exactly like an `Invite` — so
+a database leak yields nothing usable. Second, `/api/v1` does its own auth on
+every request in the route handlers (`src/lib/api/device-auth.ts`), so it is
+**exempt from the login-gate middleware** rather than redirected to `/login`.
+That per-request self-authentication is also what makes a scoped Authelia
+`/api/v1` bypass safe: the app never relies on Authelia to protect it. The one
+unauthenticated endpoint, `/auth/enroll`, is public by design and guarded
+instead by a one-time, short-lived, rate-limited code.
 
-- `ui/<section>/` — screens + view models per feature (e.g. `ui/workout/`).
-- `ui/workout/MovementSetsScreen.kt` — one planned movement's sets for a day.
-  `WorkoutLogScreen.kt` mirrors the web's blocks.ts: `daySections` / `blockKind`
-  (sections and order), `opensSetLogger` (the split rule), `dayProgress` and
-  `stripState`; keep them in step.
-- `ui/calendar/NoteField.kt`, `ui/calendar/IcsImport.kt` — the two rules mirrored
-  from the web (`event-notes.ts`, `ics-import.ts`); keep them in step.
-- `ui/common/` — `rememberContainer`, shared composables.
-- `data/remote/` — ApiClient, ApiService, AuthInterceptor, dto/Dtos.kt, ApiError.
-- `data/session/` — SessionRepository, SessionState.
-- `data/secure/` — TokenStore. `data/settings/` — SettingsStore.
+### A rule lives in one place; a phone copy is tested against it
+
+Every rule that decides what gets saved or shown has exactly one
+implementation on the server, and both the web pages and the device API call
+it. Each of these exists because a duplicated copy had already drifted in
+production:
+
+| Rule | Where it lives |
+|---|---|
+| Logging a planned workout (web and phone) | `logPlannedWorkout` in `src/lib/workouts/mark.ts` |
+| Logging an additional (unplanned) workout (web and phone) | `logCustomEntry` in `src/lib/workouts/mark.ts` |
+| Which events a person's calendar shows, and their colors (Calendar + widget) | `personalEventRules` in `src/lib/queries/calendar-page.ts` |
+| What birthday can be saved (web form + phone) | `checkBirthday` in `src/lib/birthday.ts` |
+| Which timezone an event's instants are read in (all-day = UTC) | `eventTz` / `eventParts` in `src/lib/dates.ts` |
+| How long each occurrence of a repeating event may last | `fitRepeatingSpan` in `src/lib/calendar/repeat-span.ts` (every save path) |
+| Which kinds are yearly occasions, and which names aren't remembered | `isOccasion` / `isOccasionName` in `src/lib/calendar/occasions.ts` |
+| When a shopping trip ends on its own (the day after it started) | `endStaleTrips` in `src/lib/groceries-core.ts`, run before every trip read/write |
+| How pale status tints (`bg-*-50`, `text-*-700`…) look in dark mode | the `html.dark` remap block in `src/app/globals.css` |
+| How long each occurrence of a stored repeating event lasts | `occurrenceSpanMs` in `src/lib/calendar/repeat-span.ts` (calendar, sport and class "ended" checks, repair) |
+| Which occurrence a tapped day belongs to (overnight pieces) | `occurrenceOfRow` / `occurrenceDayFor` in `src/lib/calendar/recur.ts` (web + phone edit, delete, calendar read, repair) |
+| Repairing calendar rows saved by older code | `repairEventRows` in `src/lib/calendar/repair-events.ts`, once per process before `loadRange` |
+| How grocery icons look in dark mode (a light tile, pictures and emoji) | `.grocery-pic` / `.grocery-emoji-tile` in `src/app/globals.css`; the app's `GroceryGlyph` draws the same tile |
+| Body map figure colours (web and app) | `--color-figure*` in `src/app/globals.css`; the app's `figureColors(dark)` holds the same values |
+| A movement's Best weight / Best reps / Latest | `src/lib/queries/movement-stats.ts` |
+| Schoolwork completion marks the plan unit done | `syncPlanUnitDone` in `src/lib/school/plan-unit-sync.ts` |
+| Companion growth banked across a shelf trip | `src/lib/companions-tenure.ts` (banks `settledGrowth`); which companion a day or week belongs to in `src/lib/companions-growth.ts` |
+| What a day is worth (growth, the month, the family goal, egg luck) | `dayCredit` and friends in `src/lib/companions-growth.ts` — map in docs/SCORING.md |
+| The character's row of squares (web + phone) | `growthRow` in `src/lib/scoring/growth-cells.ts` |
+| "How scoring works" text (web `/scoring` + phone Settings) | `scoringGuide` in `src/lib/scoring/guide.ts` |
+| Which events take a note, and its length | `takesNotes` / `cleanNotes` in `src/lib/calendar/event-notes.ts` |
+| Whose calendar a new event lands on | `resolveOwner` in `src/lib/calendar/create-event.ts` (never trusted from the request) |
+| One event from an `.ics` file | `readIcsFile` in `src/lib/calendar/ics-import.ts` |
+| Which companions you own, at which stage | `loadOwnedCompanions` in `src/lib/companions-owned.ts` (gallery + profile picture) |
+| A family-goal vote (one per person per month, movable) | `toggleCoopVoteCore` in `src/lib/coop-core.ts` |
+| What the home card says before a goal is chosen | `coopHomeNudge` in `src/lib/coop-nudge.ts` (web banner + `/api/v1/coop`) |
+| Who a shared chore is available for (none set = everyone) | `loadPoolEligibility` / `isAvailableTo` in `src/lib/chores/pool-eligibility.ts` |
+| Whose turn a shared chore is | `furthestBehind` in `loadOpenTasks` (`src/lib/queries/overview.ts`), honouring `PoolReminderOptOut` |
+| The least growth a returning companion keeps | `bankedGrowthFloor` in `src/lib/companions.ts` (read in progression) |
+| What kind of profile picture a value is | `isUploaded` / `isIcon` / `companionAvatarOf` in `src/lib/avatars.ts` |
+| Whether a planned workout is done (logged or skipped) | `planDone` in `src/lib/queries/workout-log.ts` |
+| Which set stands for a movement logged set by set (prefills, phone value, history, last time) | `topSet` in `src/lib/workouts/sets.ts` |
+| How a day's workouts are laid out (sections, title, progress, week strip) | `daySections` / `dayTitle` / `dayProgress` / `stripState` in `src/lib/workouts/blocks.ts` |
+| How a pool movement is logged, and which names are holds | `poolMetricFor` / `isHoldName` in `src/lib/workouts/catalog.ts`; new plan entries via `poolMetrics` (`src/lib/workouts/plan-edit.ts`); changes spread by `setPoolExerciseMetric` |
+| Saving one movement's sets for a day (add, edit, remove, swap, late) | `logMovementSets` in `src/lib/workouts/mark.ts`; phone via `/api/v1/workouts/sets` |
+| Whether the day's workout task is complete | `workoutTaskTarget` (applied by `settleWorkoutTask`) in `src/lib/workouts/mark.ts` |
+| What the Hockey page shows and what each Add fills in (web + phone) | `buildHockeyView` in `src/lib/hockey-view.ts`, served to the phone by `/api/v1/hockey` |
+| Changing your own password (web profile + phone) | `changeOwnPassword` in `src/lib/accounts.ts`; phone via `/api/v1/auth/password` |
+| Which sections the menu hides (web sidebar + phone drawer) | `hiddenNavFor` in `src/lib/personal-scope.ts`, served to the phone by `/api/v1/nav` |
+| A person's Hockey section order and which are open | `arrangeSections` in `src/lib/hockey-view.ts`; saved by `saveHockeyPrefs` in `src/lib/hockey.ts` |
+
+When a rule must also run on the phone — the notes rule (`NoteField.kt`) and the
+calendar-file import (`IcsImport.kt`, which reads the file on the device) — the
+Kotlin copy says so at the top, and the two are tested for parity across the
+whole input space, not a couple of examples: `scripts/ics-parity/check.sh` runs
+hand-written and seeded random files through both and diffs the drafts.
+
+## Game-time monitoring spans three repos
+
+Game time is **monitoring only** (the allowance/token model was retired) and is
+fed by a subsystem that lives across three repositories:
+
+- **Web (`kairos`, this repo)** — display + source of truth. Owns durable history
+  (`GameDay` / `GameDayTitle` / `PlayerCard`), the `/games` page, and the
+  `/api/v1/game-time` read API for the app. It holds **no** game-service
+  credentials and does no merge logic — it just upserts what it's given at
+  `POST /api/v1/game-time/ingest` (auth `X-Ingest-Token`; contract in docs/API.md).
+- **Collector (`kairos-game-collector`)** — the only thing that talks to Xbox (via
+  Home Assistant) and Steam. It resolves each kid's actual game-session time
+  (online presence is *not* counted), applies the Steam-primary merge, and pushes
+  resolved daily rollups to the ingest endpoint. Its own repo holds the detection
+  model and decisions.
+- **App (`kairos-app`)** — a read client of the web `/api/v1/game-time` surface;
+  it has no game-source knowledge.
+
+So credited minutes are computed once, in the collector, and flow one way:
+collector → web (store) → app/web (display).
+
+## Hockey reads a separate container
+
+Ice times come from **ice-time** (its own repo), which reads a rink's public
+registration pages and serves a JSON feed. Kairos keeps only its address and
+token (Admin → Hockey), fetches the week on each page open in
+`src/lib/hockey.ts`, and stores nothing. Everything rink-specific lives in
+ice-time's own data volume.
+
+## Layout
+
+```
+src/app/            routes; /admin/* is PIN-guarded by its layout
+src/components/     shared UI
+src/app/api/v1/     the device API the Android app talks to (docs/API.md)
+src/lib/
+  actions/          "use server" mutations
+  queries/          read paths for pages (incl. movement-stats.ts)
+  api/              device auth and error shapes for /api/v1
+  chores/ bible/ calendar/ school/ workouts/ groceries/ scoring/ tasks/
+                    domain logic
+  companions*.ts    roster, hatching, growth tenure
+  dates.ts          every date conversion
+prisma/migrations/  hand-written SQL, applied on container start
+scripts/            preflight.sh and its checks; ics-parity/
+```
+
+Each feature area has a read-only page anyone can see and an editor behind the
+PIN — `/chores` and `/admin/chores`, `/bible` and `/admin/bible`.
+
+## Conventions
+
+- Migrations are hand-written SQL and numbered; `/about` compares the ones
+  applied in the database against the ones this build expects, which catches a
+  partial deploy in seconds.
+- `src/lib/version.ts` carries the version and a short changelog.
+- Repository docs are the source of truth, not any tool's memory: ARCHITECTURE.md
+  (how it's built), ROADMAP.md (what's planned/done), DECISIONS.md (what was
+  decided and why), docs/API.md (the mobile contract). A change that makes,
+  reverses, or narrows a standing decision — a security posture, an auth
+  boundary, a scoring rule, the mobile contract — updates DECISIONS.md in the
+  same release, the same way version.ts and ROADMAP.md are always touched.
+- `scripts/preflight.sh` is the gate before shipping: `typecheck-report.mjs
+  --changed` (strict at the lines you edited, excusing only the noise the
+  missing Prisma client causes), `check-jsx-escapes.py` and
+  `check-prisma-select.py`. It is deliberately not part of `npm run build` —
+  the builder image may lack Python, and a check that breaks the deploy it
+  protects is worse than none.
+- Without a generated Prisma client every query result types as `any` locally,
+  so a field read that was never selected passes `tsc` and fails in Docker.
+  Hand-audit every new Prisma call against `schema.prisma`;
+  `check-prisma-select.py` catches the common shape of the mistake.
+- Migrations are idempotent (`IF NOT EXISTS`, guarded `CREATE TYPE`) and are
+  registered at the END of `MIGRATIONS` in `src/lib/version.ts` — the array is
+  order-sensitive. Derive at read time; never store computed values.
+- Numbers, times, and dates use the `.tabular` class so columns stay aligned
+  as values change.
