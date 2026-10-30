@@ -1151,9 +1151,34 @@ own exercises, optionally schedules them, and records what they did.
       the body map, and "No group" for lifts like the deadlift (v0.545–0.556)
 - [ ] A pool of HIIT / Crossfit workouts (timed, intervals, stations) to draw
       from when building a plan
-- [ ] Multiple sets per exercise, and estimated one-rep max
+- [ ] Multiple sets per exercise (estimated one-rep max dropped: charts show actual weights only)
 - [ ] Concept2 and other device imports
 - [ ] Read-only progress overview across the household in admin
+
+### Workouts rework (planned)
+
+Progress beyond the heaviest set, so lighter weeks, other workouts and
+injuries don't read as going backwards. Phases, in order:
+
+- [x] 0. Workout export: Admin → Workouts downloads plans, movements, HIIT
+      workouts, every logged set and the workout tasks as JSON (v0.606.0)
+- [ ] 1. Analyse the export; propose programs and a starting library; mock up
+      the new logging flow
+- [ ] 2. Every-set logging: home card → the day in blocks → one block's
+      logger; last time's sets shown as hints, never typed over; add, insert
+      and shift sets
+- [ ] 3. More kinds of progress: rep and set records, session intent (light
+      days drawn hollow), effort after a session, a "something hurt" area,
+      weekly training chart, rewards for consistency and light weeks
+- [ ] 4. Programs: templates that feed the plan (strength waves with a light
+      week, sets of 10 with earned increases, full body, conditioning,
+      maintain/hurt); target weight per set; test weeks
+- [ ] 5. Suggestions: light week due, next weight, big-jump warning, what to
+      try after a block, swaps around a hurt area — suggested, never automatic
+- [ ] 6. Household equipment, movement tags, a starting library shipped as
+      data, and a finisher builder
+- [ ] 7. Concept2 Logbook sync with a personal read-only token
+- [ ] 8. Export and import of workouts and programs for everyone
 
 ## Game time
 
@@ -1692,7 +1717,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.605.1 (migrations through 127_marine_corps_birthday).
+- Web APP_VERSION 0.606.0 (migrations through 127_marine_corps_birthday).
 - App versionName 0.413.1 / versionCode 475 / CLIENT_BUILD 475.
 - ice-time 0.1.1 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

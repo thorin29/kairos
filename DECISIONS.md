@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-10 — Workout export (v0.606.0)
+
+The start of the workouts rework (ROADMAP → Workouts rework). Before
+changing how workouts are logged or suggesting programs, the plan is built
+from what people actually do, so Admin → Workouts gets a download of the
+whole area as JSON (`exportWorkouts` in `src/lib/actions/workout-export.ts`).
+It's a server action handing the client a string that becomes a Blob
+download, like the scoring snapshot, rather than a route, so there's no new
+API surface and it sits behind `requireAdmin` the same way.
+
+- **People:** role, child or parent, and **age in years**, never the
+  birthday.
+- **"Hide names"** replaces names with "Person 1, 2…" in the household's own
+  order and leaves out the free-text session and HIIT notes, since those can
+  name people too. Session names, task titles and movement names stay. They
+  come from plans and the pool, but a custom one could still hold a name.
+- **Ids become names** (movements, HIIT workouts) so the file reads on its
+  own. Pool ids are kept on the pool list for joining.
+- **Every set** is included, plus swaps, skipped movements and the workout
+  tasks' due/done status, which is the only record of how consistently
+  someone trained, since a skipped day has no session.
+
+Reads only.
+
 ## 2026-10 — Paper plates picture redrawn (v0.605.1 / app 0.413.1)
 
 `kairos:paper-plates` was one of the pictures sliced with the grid cell

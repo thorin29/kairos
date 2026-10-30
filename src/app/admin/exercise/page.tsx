@@ -11,6 +11,7 @@ import { ExercisePool } from "./exercise-pool";
 import { HiitWorkouts } from "./hiit-workouts";
 import { PendingShares } from "./pending-shares";
 import { WorkoutExpiry } from "./workout-expiry";
+import { WorkoutExport } from "./workout-export";
 import { getWorkoutOverdueDays } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,7 @@ export default async function AdminWorkoutsPage() {
           workouts={hiitWorkouts}
         />
         <WorkoutAdmin people={people} />
+        <WorkoutExport />
       </div>
     </main>
   );
