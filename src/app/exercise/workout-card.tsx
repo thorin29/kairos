@@ -198,7 +198,7 @@ function groupByMuscle(
   return out;
 }
 
-function PlanRow({
+export function PlanRow({
   workout,
   userId,
   dateISO,
@@ -794,7 +794,7 @@ function PlanActions({
   );
 }
 
-function PlanActionTile({
+export function PlanActionTile({
   icon: Icon,
   label,
   onClick,
@@ -848,7 +848,7 @@ function PlanActionTile({
   );
 }
 
-type PoolPick = {
+export type PoolPick = {
   id: string;
   name: string;
   unit: string;
@@ -863,7 +863,7 @@ type PoolPick = {
  * and only same-category movements are offered (swapping a bench press for a
  * plank is not the point).
  */
-function SwapPicker({
+export function SwapPicker({
   exercise,
   onPick,
   onClose,

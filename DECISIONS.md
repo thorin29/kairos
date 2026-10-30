@@ -1,5 +1,91 @@
 # Decisions
 
+## 2026-10 — The day page and every-set logging, web (v0.607.0)
+
+Release 2 of the workouts rework (ROADMAP → Workouts rework). "Log workout"
+on the Exercise page is now the day page: a week strip, a card for each missed
+day still open, then the day's workouts laid out in sections. A movement opens
+its own page to log every set.
+
+**No schema change.**
+- **Sections:** derived from each planned workout's category by
+  `daySections` (blocks.ts): STRETCHING → Warm-up; ROWING/RUNNING/RUCKING →
+  Cardio; WEIGHTS/ISOMETRIC → its muscle group; HIIT → Conditioning; SPORT →
+  Sport. The `block` and `scheme` columns the plan sketched wait for the plan
+  builder release, where they're first edited.
+- **Same-group plans:** two plans for one muscle group on a day (two "Arms")
+  share a section. Display only.
+
+**Only strength movements change.**
+- **Split into movements:** a strength workout is split into one row per
+  movement only when every movement it tracks is logged in weight, reps or
+  time. Anything else (a tracked distance, nothing tracked) stays one card.
+- **Unchanged cards:** warm-up, cardio and HIIT keep the card they had
+  (`PlanRow`), so they log exactly as before until their own releases.
+
+**Sets.**
+- **Save:** `logMovementSets` (mark.ts) replaces a planned movement's sets
+  for the day with the list it's given, so add, edit, remove and repeat are one
+  idempotent call.
+- **The logger sends the movement's saved sets:**
+  - on every ✓
+  - on every removal of a saved set (asked first)
+  - on Log or Back (which also save anything typed but not ticked)
+- **Page refresh:** only the leaving save refreshes the page, so ticking
+  sets doesn't re-render the Exercise page between sets.
+- **Emptying a movement:** removing every set deletes the plan's session once
+  it's empty, so the day reads as not logged.
+- **Swaps:** stored as always (the done movement, `swappedFromId` = the
+  planned one).
+- **Late logging:** same as the old Overdue list. `date` = the day it counts
+  for, `completedOn` = today.
+
+**Hints.**
+- **Source:** last time's sets for the movement being done: its most recent
+  earlier day, in set order. Set N's hint is last time's set N.
+- **Display only:** hints are placeholders, never values, so nothing is
+  typed over.
+- **Adding a set** copies the set above.
+- **"Remaining sets ±5"** (±2.5 kg) moves only the placeholders of sets not
+  entered; what's typed or saved never moves.
+- **The calculator** opens loaded to the next unticked set's weight
+  (`platesFor`) and "Use for set N" fills that box (lb only, as the calculator
+  is).
+
+**One top set for older readers.** Before this a movement had one set a day,
+and several readers took "the" set by whichever came last. They now all use
+`topSet` (heaviest, more reps on a tie):
+- the phone's plan value (`loadTodayPlannedWorkouts`)
+- the web's prefill map (`loadLoggedWeights`)
+- "last time" in movement stats
+- the day list and history summaries, which now read "5 sets · top 185 × 1"
+  for one movement with several sets
+
+**The phone can't silently undo sets.** The app still logs one value per
+movement, and re-sends a plan's movements on Log. `logPlannedWorkout` now
+leaves a multi-set movement alone when the value sent equals its top set.
+A changed value is still an edit and replaces the sets, as before. The phone
+gets the set logger in its own release.
+
+**Week strip.** The last 8 days (`loadWeekStrip`): the day's workout task
+status, rest days, and whether anything was logged. `stripState` reads them as:
+
+| State | Rule |
+|---|---|
+| done | task complete, or something logged on a day with nothing planned |
+| partly done | task pending, something logged |
+| rest | a rest day taken |
+| not logged yet | inside the overdue window |
+| missed | outside it |
+| today | today's day |
+
+Missed days are grey, never red.
+
+Tested: the pure helpers (`test/workout-day.test.ts`), the save/read path
+against an in-memory database, and the page in a browser with sample data. Not
+run against the real database or built here (no Prisma client in the
+sandbox).
+
 ## 2026-10 — Workout export (v0.606.0)
 
 The start of the workouts rework (ROADMAP → Workouts rework). Before

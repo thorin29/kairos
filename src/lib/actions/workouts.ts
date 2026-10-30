@@ -1,13 +1,22 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { logPlannedWorkout } from "@/lib/workouts/mark";
+import { logPlannedWorkout, logMovementSets, type MovementSetIn } from "@/lib/workouts/mark";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { setSetting, WORKOUT_OVERDUE_DAYS, WORKOUT_OVERDUE_MAX } from "@/lib/settings";
 import { toDateColumn, todayISO } from "@/lib/dates";
-import { loadOverdueWorkoutDates } from "@/lib/queries/workout-log";
+import {
+  loadOverdueWorkoutDates,
+  loadDayLogState,
+  loadMovementLog,
+  loadWeekStrip,
+  type DayLogState,
+  type MovementLog,
+  type WeekStripDay,
+} from "@/lib/queries/workout-log";
+import { topSet } from "@/lib/workouts/sets";
 import { loadExercisePool, type PoolEntry } from "@/lib/queries/workouts";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import {
@@ -1101,14 +1110,21 @@ export async function loadLoggedWeights(
     },
   });
   const out: Record<string, LoggedSet> = {};
+  // A movement logged set by set has several sets: prefill its top one.
+  const byPool = new Map<string, { weight: number | null; reps: number | null }[]>();
   for (const session of sessions) {
     for (const set of session.sets) {
       if (set.poolExerciseId != null && set.weight != null) {
-        out[set.poolExerciseId] = {
-          weight: String(set.weight),
-          reps: set.reps != null ? String(set.reps) : "",
-        };
+        const list = byPool.get(set.poolExerciseId) ?? [];
+        list.push(set);
+        byPool.set(set.poolExerciseId, list);
       }
+    }
+  }
+  for (const [id, list] of byPool) {
+    const top = topSet(list);
+    if (top && top.weight != null) {
+      out[id] = { weight: String(top.weight), reps: top.reps != null ? String(top.reps) : "" };
     }
   }
   // Skipped movements ride in the same map, so the card can show them as
@@ -1134,4 +1150,84 @@ export async function overdueWorkoutDates(userId: string): Promise<string[]> {
   await requireInteractive();
   await requireCanActFor(userId);
   return loadOverdueWorkoutDates(userId, todayISO());
+}
+
+
+// --- the day page (every set) ------------------------------------------------
+
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The day page's state for a person and date, plus the prefill map the
+ *  whole-workout cards (warm-up, cardio, HIIT) still use. */
+export async function loadDayLog(
+  userId: string,
+  dateISO: string,
+): Promise<{ state: DayLogState; loggedByPool: Record<string, LoggedSet> }> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!ISO.test(dateISO)) throw new Error("Bad date");
+  const [state, loggedByPool] = await Promise.all([
+    loadDayLogState(userId, dateISO),
+    loadLoggedWeights(userId, dateISO),
+  ]);
+  return { state, loggedByPool };
+}
+
+/** One movement's sets for the day, and its last time, for the set logger. */
+export async function loadMovementSets(
+  userId: string,
+  dateISO: string,
+  slotId: string,
+  doing?: string | null,
+): Promise<MovementLog> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!ISO.test(dateISO) || !slotId) throw new Error("Bad request");
+  return loadMovementLog(userId, dateISO, slotId, doing ?? null);
+}
+
+/**
+ * Save a planned movement's sets for a day (every saved set, in order; empty
+ * clears it). Called on each tick, each removal, and on Log. Only `final`
+ * (Log, leaving the movement) refreshes the pages, so ticking sets doesn't
+ * re-render the whole Exercise page between sets.
+ */
+export async function saveMovementSets(input: {
+  userId: string;
+  dateISO: string;
+  plannedWorkoutId: string;
+  slotId: string;
+  loggedId: string;
+  metric: Metric;
+  unit: string;
+  sets: MovementSetIn[];
+  completedOnISO?: string | null;
+  final?: boolean;
+}): Promise<{ ok: boolean }> {
+  await requireInteractive();
+  await requireCanActFor(input.userId);
+  if (!ISO.test(input.dateISO) || !input.plannedWorkoutId || !input.slotId) return { ok: false };
+  if (!Array.isArray(input.sets) || input.sets.length > 50) return { ok: false };
+  const r = await logMovementSets(
+    input.userId,
+    input.dateISO,
+    input.plannedWorkoutId,
+    input.slotId,
+    { loggedId: input.loggedId, metric: input.metric, unit: input.unit, sets: input.sets },
+    { completedOnISO: input.completedOnISO ?? null },
+  );
+  if (input.final) refresh();
+  return { ok: r === "ok" };
+}
+
+/** The week strip: the last 8 days with each day's workout state, and which
+ *  past days are still open for logging. */
+export async function loadWorkoutWeek(
+  userId: string,
+): Promise<{ days: WeekStripDay[]; overdue: string[]; today: string }> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const today = todayISO();
+  const r = await loadWeekStrip(userId, today);
+  return { ...r, today };
 }

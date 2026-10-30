@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
 import { getSetting } from "@/lib/settings";
 import { loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
+import { setsSummary } from "@/lib/workouts/sets";
 import {
   CATEGORY_LABEL,
   LINE_COLORS,
@@ -255,6 +256,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
               seconds: true,
               unit: true,
               exercise: { select: { name: true } },
+              poolExercise: { select: { name: true } },
             },
           },
         },
@@ -316,6 +318,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
               seconds: true,
               unit: true,
               exercise: { select: { name: true } },
+              poolExercise: { select: { name: true } },
             },
           },
         },
@@ -762,6 +765,7 @@ type SetShape = {
   seconds: number | null;
   unit: string | null;
   exercise: { name: string } | null;
+  poolExercise?: { name: string } | null;
 };
 
 type SessShape = {
@@ -810,8 +814,14 @@ function workoutResult(s: SessShape): string {
   if (sets.length === 0) return "";
   if (sets.length > 1) {
     const names = [
-      ...new Set(sets.map((x) => x.exercise?.name).filter((n): n is string => !!n)),
+      ...new Set(
+        sets
+          .map((x) => x.exercise?.name ?? x.poolExercise?.name)
+          .filter((n): n is string => !!n),
+      ),
     ];
+    // One movement logged set by set: "5 sets · top 185 × 1".
+    if (names.length === 1 && sets.some((x) => x.weight != null)) return setsSummary(sets);
     if (names.length === 0) return `${sets.length} exercises`;
     const shown = names.slice(0, 3).join(", ");
     return names.length > 3 ? `${shown} +${names.length - 3}` : shown;

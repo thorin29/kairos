@@ -9,6 +9,7 @@ import {
   PLATE_BY_ID,
   STEEL,
   fmtWeight,
+  platesFor,
   type BarOption,
   type BarType,
   type Plate,
@@ -179,9 +180,25 @@ function PlateButton({
   );
 }
 
-export function WeightCalculator({ onClose }: { onClose: () => void }) {
+export function WeightCalculator({
+  onClose,
+  startTotal,
+  onUse,
+  useLabel,
+}: {
+  onClose: () => void;
+  /** Open already loaded to this weight (on the standard bar), e.g. the set
+   *  being entered. Omitted: an empty bar, as before. */
+  startTotal?: number;
+  /** Send the loaded total back (the set logger's "Use for set N"). */
+  onUse?: (total: number) => void;
+  useLabel?: string;
+}) {
   const [bar, setBar] = useState<BarOption>(BARS[0]);
-  const [loaded, setLoaded] = useState<string[]>([]); // plate ids, one entry = one pair
+  // Plate ids, one entry = one pair.
+  const [loaded, setLoaded] = useState<string[]>(() =>
+    startTotal && startTotal > BARS[0].weight ? platesFor(startTotal, BARS[0].weight) : [],
+  );
 
   const add = (id: string) => setLoaded((l) => [...l, id]);
   const removeOne = (id: string) =>
@@ -313,6 +330,16 @@ export function WeightCalculator({ onClose }: { onClose: () => void }) {
         <p className="mt-4 text-center text-xs text-muted">
           Each tap adds a pair — one plate per side.
         </p>
+
+        {onUse && (
+          <button
+            type="button"
+            onClick={() => onUse(total)}
+            className="mt-4 flex h-12 w-full items-center justify-center rounded-full bg-accent text-sm font-semibold text-on-accent transition-all hover:brightness-110"
+          >
+            {useLabel ?? "Use this weight"} · {fmtWeight(total)}
+          </button>
+        )}
       </div>
     </div>
   );

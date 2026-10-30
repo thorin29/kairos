@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { DateField } from "@/components/date-field";
 import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
 import {
@@ -22,15 +21,11 @@ import {
   createAndLogHiitWorkout,
   requestShareHiitWorkout,
   restDay,
-  markWorkedOut,
-  loadLoggedWeights,
-  overdueWorkoutDates,
-  type LoggedSet,
 } from "@/lib/actions/workouts";
-import { addDays, dayOfWeek, formatShort } from "@/lib/dates";
+import { formatShort } from "@/lib/dates";
 import { PlanBuilder } from "./plan-builder";
 import { RotationBuilder } from "./rotation-builder";
-import { TodayPlan } from "./workout-card";
+import { DayLog } from "./day-log";
 import { LineChart } from "@/components/line-chart";
 import { WeightCalculator } from "./weight-calculator";
 import type {
@@ -98,22 +93,6 @@ export function WorkoutsGrid({
   // When creating a plan from scratch, which kind the person chose (before one
   // exists). Once a plan or rotation exists, that decides what's shown instead.
   const [planMode, setPlanMode] = useState<"weekly" | "rotation" | null>(null);
-  // Which day the log step writes to. Defaults to today; can be set back to a
-  // recent past day to record a workout that wasn't logged at the time.
-  const [logDate, setLogDate] = useState(todayISO);
-  // TODAY's logged sets, kept apart from `loggedByPool`. That one follows the
-  // date picker on the "plan for this day" step, and the main Log workout step
-  // is always about today — handing it the picker's data would prefill the
-  // wrong day the moment someone looked at another one.
-  const [loggedToday, setLoggedToday] = useState<Record<string, LoggedSet>>({});
-  const [loadingToday, setLoadingToday] = useState(false);
-  // Weights already logged for the picked earlier day (pool-exercise id -> value),
-  // so the plan pre-fills them like the phone does.
-  const [loggedByPool, setLoggedByPool] = useState<Record<string, LoggedSet>>({});
-  const [loadingLogged, setLoadingLogged] = useState(false);
-  const [overdueDates, setOverdueDates] = useState<string[]>([]);
-  // Bumped after skipping a missed day so the Overdue list re-reads itself.
-  const [overdueTick, setOverdueTick] = useState(0);
   const [browseFilter, setBrowseFilter] = useState<"regular" | "hero">(
     "regular",
   );
@@ -133,72 +112,9 @@ export function WorkoutsGrid({
     setOpenId(id);
     setStep("menu");
     setPlanMode(null);
-    setLogDate(todayISO);
   };
 
   const open = people.find((p) => p.user.id === openId) ?? null;
-  const openUserId = open?.user.id ?? null;
-  useEffect(() => {
-    if (!openUserId) {
-      setOverdueDates([]);
-      return;
-    }
-    let cancelled = false;
-    overdueWorkoutDates(openUserId)
-      .then((d) => {
-        if (!cancelled) setOverdueDates(d);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [openUserId, overdueTick]);
-  useEffect(() => {
-    let cancelled = false;
-    if (openUserId) {
-      setLoadingLogged(true);
-      loadLoggedWeights(openUserId, logDate)
-        .then((m) => {
-          if (!cancelled) setLoggedByPool(m);
-        })
-        .catch(() => {
-          if (!cancelled) setLoggedByPool({});
-        })
-        .finally(() => {
-          if (!cancelled) setLoadingLogged(false);
-        });
-    } else {
-      setLoggedByPool({});
-      setLoadingLogged(false);
-    }
-    return () => {
-      cancelled = true;
-    };
-    // `step` too: leaving the log step and coming back remounts the plan, and
-    // without a fresh read it refilled from what was there before the log —
-    // the weights and reps just saved came back blank.
-  }, [openUserId, logDate, todayISO, step]);
-  useEffect(() => {
-    let cancelled = false;
-    if (!openUserId) {
-      setLoggedToday({});
-      return;
-    }
-    setLoadingToday(true);
-    loadLoggedWeights(openUserId, todayISO)
-      .then((m) => {
-        if (!cancelled) setLoggedToday(m);
-      })
-      .catch(() => {
-        if (!cancelled) setLoggedToday({});
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingToday(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [openUserId, todayISO, overdueTick, step]);
   const hasPlan = open ? open.plan.some((d) => d.workouts.length > 0) : false;
   // Named workouts available to this person: the shared library plus their own.
   const browsable = open
@@ -485,106 +401,12 @@ export function WorkoutsGrid({
               {step === "log" && (
                 <div className="mt-4 space-y-6">
                   <BackLink onClick={() => setStep("menu")} />
-                  <h3 className="font-display text-lg font-semibold">
-                    Log workout
-                  </h3>
-
-                  <div>
-                    <label
-                      htmlFor="log-date"
-                      className="mb-1.5 block text-sm font-medium"
-                    >
-                      Date
-                    </label>
-                    <DateField
-                      value={logDate}
-                      max={todayISO}
-                      min={addDays(todayISO, -90)}
-                      onChange={(v) => {
-                        const d = v || todayISO;
-                        setLogDate(d);
-                        if (d !== todayISO) setLoadingLogged(true);
-                      }}
-                      ariaLabel="Date"
-                      className="tabular h-11 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
-                    />
-                    {logDate !== todayISO && (
-                      <p className="mt-1 text-xs text-muted">
-                        Recording a workout for an earlier day.
-                      </p>
-                    )}
-                  </div>
-
-                  {logDate === todayISO ? (
-                    <>
-                      {overdueDates.length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="font-display text-sm font-semibold text-red-700">
-                            Overdue
-                          </h4>
-                          {overdueDates.map((od) => {
-                            const w = open.plan[dayOfWeek(od)]?.workouts ?? [];
-                            if (w.length === 0) return null;
-                            return (
-                              <div
-                                key={od}
-                                className="rounded-xl border border-red-200 bg-red-50 p-3"
-                              >
-                                <TodayPlan
-                                  userId={open.user.id}
-                                  dateISO={od}
-                                  workouts={w}
-                                  doneLabels={[]}
-                                  paused={null}
-                                  rested={false}
-                                  unitSystem={unitSystem}
-                                  heading={`Missed ${formatShort(od)}`}
-                                  // Counts for the day it was due; recorded as
-                                  // done today. The card itself is unchanged.
-                                  completedOnISO={todayISO}
-                                />
-                                {/* Log it, or be done with it. Without this the
-                                    only way to clear a missed day was to switch
-                                    the date picker to it — the Overdue list
-                                    showed the problem and not the way out. */}
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    startTransition(async () => {
-                                      await restDay(open.user.id, od);
-                                      setOverdueTick((n) => n + 1);
-                                    })
-                                  }
-                                  className="mt-2 inline-flex h-9 items-center rounded-full border border-red-200 px-4 text-sm font-medium text-red-700 hover:bg-red-100"
-                                >
-                                  Skip this day
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {/* Gated the same way the home page gates its copy: the
-                          prefill is read once when the rows mount, so mounting
-                          before the fetch returns captures nothing. */}
-                      {loadingToday ? (
-                        <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
-                          Loading logged weights&hellip;
-                        </p>
-                      ) : (
-                        <TodayPlan
-                          userId={open.user.id}
-                          dateISO={todayISO}
-                          workouts={open.plan[todayDow]?.workouts ?? []}
-                          doneLabels={open.todayWorkouts.map((w) => w.label)}
-                          paused={open.today.paused}
-                          rested={open.today.rested}
-                          unitSystem={unitSystem}
-                          loggedByPool={loggedToday}
-                        />
-                      )}
-
-                      <div className="border-t border-hairline pt-5">
+                  <DayLog
+                    person={open}
+                    todayISO={todayISO}
+                    unitSystem={unitSystem}
+                    extra={(d) => (
+                      <>
                         <h4 className="mb-3 font-display text-sm font-semibold">
                           Log an additional workout
                         </h4>
@@ -593,78 +415,12 @@ export function WorkoutsGrid({
                           unitSystem={unitSystem}
                           pool={pool}
                           hiitWorkouts={hiitWorkouts}
-                          dateISO={todayISO}
+                          dateISO={d}
                           onDone={() => setStep("menu")}
                         />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {loadingLogged ? (
-                        <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
-                          Loading logged weights…
-                        </p>
-                      ) : (
-                        <TodayPlan
-                          key={logDate}
-                          userId={open.user.id}
-                          dateISO={logDate}
-                          workouts={open.plan[dayOfWeek(logDate)]?.workouts ?? []}
-                          doneLabels={[]}
-                          paused={null}
-                          rested={false}
-                          unitSystem={unitSystem}
-                          heading="Plan for this day"
-                          loggedByPool={loggedByPool}
-                        />
-                      )}
-
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            startTransition(async () => {
-                              await markWorkedOut(open.user.id, logDate, true);
-                              setStep("menu");
-                            })
-                          }
-                          className="inline-flex h-10 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent"
-                        >
-                          Mark workout done
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            startTransition(async () => {
-                              await restDay(open.user.id, logDate);
-                              setStep("menu");
-                            })
-                          }
-                          className="inline-flex h-10 items-center rounded-full border border-hairline px-5 text-sm font-medium text-muted hover:text-ink"
-                        >
-                          Rest day
-                        </button>
-                      </div>
-
-                      <div className="border-t border-hairline pt-5">
-                        <h4 className="mb-1 font-display text-sm font-semibold">
-                          Log a specific workout
-                        </h4>
-                        <p className="mb-3 text-sm text-muted">
-                          Record what was actually done that day &mdash; pick the
-                          type, choose the movement, drop in the result.
-                        </p>
-                        <CustomWorkoutForm
-                          userId={open.user.id}
-                          unitSystem={unitSystem}
-                          pool={pool}
-                          hiitWorkouts={hiitWorkouts}
-                          dateISO={logDate}
-                          onDone={() => setStep("menu")}
-                        />
-                      </div>
-                    </>
-                  )}
+                      </>
+                    )}
+                  />
                 </div>
               )}
 

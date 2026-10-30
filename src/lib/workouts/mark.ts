@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { CATEGORY_LABEL, type WorkoutCategory } from "@/lib/workouts/catalog";
 import { loadDayPlanProgress, planSlot } from "@/lib/queries/workout-log";
+import { topSet } from "@/lib/workouts/sets";
 
 /** Reported back when a movement/plan is already logged that day, so the caller
  *  can ask "update or cancel" instead of silently duplicating or overwriting.
@@ -540,6 +541,42 @@ export async function logPlannedWorkout(
       },
     },
   });
+  // A movement logged set by set (the web's day page) keeps every set when an
+  // older single-value client sends back the same top set unchanged: the phone
+  // re-sends a plan's movements on Log, and replacing five sets with their top
+  // one would quietly lose four. A changed value is an edit and replaces as
+  // before.
+  if (own) {
+    const ownSets = own.sets as {
+      poolExerciseId: string | null;
+      swappedFromId: string | null;
+      weight: number | null;
+      reps: number | null;
+      distance: number | null;
+      meters: number | null;
+      seconds: number | null;
+    }[];
+    entries = entries.filter((e) => {
+      const slot = e.swappedFrom ?? e.poolExerciseId;
+      if (!slot) return true;
+      const existing = ownSets.filter((x) => (x.swappedFromId ?? x.poolExerciseId) === slot);
+      if (existing.length < 2) return true;
+      const top = topSet(existing);
+      if (!top) return true;
+      const same =
+        e.metric === "WEIGHT"
+          ? top.weight === e.value && (e.reps == null || e.reps === top.reps)
+          : e.metric === "REPS"
+            ? top.reps === e.value
+            : e.metric === "DURATION"
+              ? top.seconds === Math.round(e.value)
+              : e.metric === "METERS"
+                ? top.meters === e.value
+                : top.distance === e.value;
+      return !same;
+    });
+  }
+
   // The movements this submission covers. A swapped set occupies its planned
   // movement's slot, so both ids count.
   const touched = new Set<string>();
@@ -685,6 +722,140 @@ export async function logPlannedWorkout(
   // Not completeWorkoutTask: one movement of several is not the whole day.
   await settleWorkoutTask(userId, dateISO, { fallbackComplete: true });
   return null;
+}
+
+export type MovementSetIn = {
+  weight?: number | null;
+  reps?: number | null;
+  seconds?: number | null;
+};
+
+/**
+ * Save one planned movement's sets for a day, replacing whatever that
+ * movement had: the day page's logger sends every set it has saved each time
+ * a set is ticked, removed or the movement is finished, so the call is the
+ * same whether it adds, edits or removes, and safe to repeat.
+ *
+ * `slotId` is the PLANNED movement. `loggedId` is what was actually done
+ * (the same, or a swap for the day), stored the way swaps always have been:
+ * on the swapped movement with `swappedFromId` pointing at the planned one.
+ *
+ * An empty `sets` clears the movement, and the plan's session too once
+ * nothing is left in it, so a day emptied by mistake reads as not logged.
+ * `dateISO` is the day it counts for; `completedOnISO` (catching up on a
+ * missed day) is when it was really done, exactly as for logPlannedWorkout.
+ */
+export async function logMovementSets(
+  userId: string,
+  dateISO: string,
+  plannedWorkoutId: string,
+  slotId: string,
+  input: { loggedId: string; metric: string; unit: string; sets: MovementSetIn[] },
+  opts?: { completedOnISO?: string | null },
+): Promise<"ok" | "not_found"> {
+  const plan = (await prisma.plannedWorkout.findUnique({
+    where: { id: plannedWorkoutId },
+    select: {
+      name: true,
+      category: true,
+      userId: true,
+      exercises: { select: { poolExerciseId: true } },
+    },
+  })) as {
+    name: string;
+    category: string | null;
+    userId: string;
+    exercises: { poolExerciseId: string }[];
+  } | null;
+  if (!plan || plan.userId !== userId) return "not_found";
+  if (!plan.exercises.some((e) => e.poolExerciseId === slotId)) return "not_found";
+  const loggedId = input.loggedId || slotId;
+  if (loggedId !== slotId) {
+    const exists = await prisma.poolExercise.findUnique({ where: { id: loggedId }, select: { id: true } });
+    if (!exists) return "not_found";
+  }
+
+  type SetData = { weight?: number; reps?: number | null; seconds?: number };
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null);
+  const rows: SetData[] = [];
+  for (const s of input.sets) {
+    const weight = num(s.weight);
+    const reps = num(s.reps);
+    const seconds = num(s.seconds);
+    if (input.metric === "WEIGHT" && weight != null) {
+      rows.push({ weight, reps: reps != null ? Math.round(reps) : null });
+    } else if (input.metric === "REPS" && reps != null) {
+      rows.push({ reps: Math.round(reps) });
+    } else if (input.metric === "DURATION" && seconds != null) {
+      rows.push({ seconds: Math.round(seconds) });
+    }
+  }
+
+  const date = toDateColumn(dateISO);
+  const completedOn =
+    opts?.completedOnISO &&
+    /^\d{4}-\d{2}-\d{2}$/.test(opts.completedOnISO) &&
+    opts.completedOnISO !== dateISO
+      ? toDateColumn(opts.completedOnISO)
+      : null;
+
+  let session = (await prisma.workoutSession.findFirst({
+    where: { userId, date, isRest: false, name: plan.name, category: plan.category },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  })) as { id: string } | null;
+  if (!session && rows.length > 0) {
+    session = (await prisma.workoutSession.create({
+      data: {
+        userId,
+        date,
+        completedOn,
+        name: plan.name,
+        category: plan.category,
+        finished: true,
+        isRest: false,
+      },
+      select: { id: true },
+    })) as { id: string };
+  } else if (session && completedOn) {
+    // Only ever set, never cleared, as in logPlannedWorkout.
+    await prisma.workoutSession.update({ where: { id: session.id }, data: { completedOn } });
+  }
+
+  if (session) {
+    await prisma.sessionSet.deleteMany({
+      where: {
+        sessionId: session.id,
+        OR: [{ poolExerciseId: { in: [...new Set([slotId, loggedId])] } }, { swappedFromId: slotId }],
+      },
+    });
+    let setNumber = 0;
+    for (const r of rows) {
+      setNumber++;
+      await prisma.sessionSet.create({
+        data: {
+          sessionId: session.id,
+          poolExerciseId: loggedId,
+          swappedFromId: loggedId !== slotId ? slotId : null,
+          setNumber,
+          unit: input.unit || null,
+          finished: true,
+          ...r,
+        },
+      });
+    }
+    if (rows.length === 0) {
+      const left = await prisma.sessionSet.count({ where: { sessionId: session.id } });
+      if (left === 0) await prisma.workoutSession.delete({ where: { id: session.id } });
+    }
+  }
+
+  if (rows.length > 0) {
+    // Logging a movement un-skips it: it was done after all.
+    await prisma.workoutMovementSkip.deleteMany({ where: { userId, date, slot: slotId } });
+  }
+  await settleWorkoutTask(userId, dateISO, { fallbackComplete: true });
+  return "ok";
 }
 
 /** Delete one of the caller's own workout sessions (for the Recent page's

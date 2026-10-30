@@ -93,8 +93,14 @@ export async function loadMovementStats(
       cur.bestRepsWeight = r.weight;
       cur.bestRepsOn = on;
     }
-    // Ties on the same day go to the later row, which is the later edit.
-    if (on >= cur.lastOn) {
+    // The most recent day's TOP set: a movement logged set by set has several
+    // rows that day, and the heaviest (more reps on a tie) stands for it.
+    if (
+      on > cur.lastOn ||
+      (on === cur.lastOn &&
+        (r.weight > cur.lastWeight ||
+          (r.weight === cur.lastWeight && (r.reps ?? 0) > (cur.lastReps ?? 0))))
+    ) {
       cur.lastWeight = r.weight;
       cur.lastReps = r.reps;
       cur.lastOn = on;

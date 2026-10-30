@@ -70,6 +70,28 @@ export const BARS: BarOption[] = [
   { weight: 19, label: "EZ", type: "ez" },
 ];
 
+/**
+ * The plates that make `total` on a bar of `barWeight`, as plate ids, one id
+ * per pair, heaviest first: 45/35/25/10 bumpers, then 5 and 2.5 steel, then
+ * fractions. Whatever can't be made from these is left off, so the
+ * calculator shows the nearest load below. Empty when the total is the bar or
+ * less.
+ */
+export function platesFor(total: number, barWeight: number): string[] {
+  let perSide = (total - barWeight) / 2;
+  if (!(perSide > 0)) return [];
+  const order = ["b45", "b35", "b25", "b10", "s5", "s2_5", "f1", "f075", "f05", "f025"];
+  const out: string[] = [];
+  for (const id of order) {
+    const w = PLATE_BY_ID[id].weight;
+    while (perSide >= w - 1e-9) {
+      out.push(id);
+      perSide -= w;
+    }
+  }
+  return out;
+}
+
 export function fmtWeight(lb: number): string {
   return Number.isInteger(lb) ? String(lb) : String(Math.round(lb * 100) / 100);
 }

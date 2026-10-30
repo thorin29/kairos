@@ -9,6 +9,7 @@ import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
 import { doneOn, loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
 import { loadStaleContext } from "@/lib/chores/stale";
 import { groupsFor, navRegionFor } from "@/lib/workouts/involvement";
+import { setsSummary, topSet } from "@/lib/workouts/sets";
 
 /**
  * The exercises scheduled for a person on a day, with any weight/reps already
@@ -506,15 +507,23 @@ export async function loadTodayPlannedWorkouts(
     // A set logged for a one-day swap belongs to the PLANNED slot it replaced,
     // so key by that; otherwise the planned row comes back blank and the day
     // looks unlogged even though it isn't.
-    const loggedBySlot = new Map<string, SlotLog>(
-      sets
-        .filter((s) => s.poolExerciseId)
-        .map((s) => [
-          (s.swappedFromId ?? s.poolExerciseId) as string,
-          s as unknown as SlotLog,
-        ]),
-    );
-    const exercises: PlannedMovement[] = plan.exercises.map((pe) => {
+    // A movement logged set by set has several: the slot shows its top set,
+    // the same rule as everywhere else (topSet), not whichever came last.
+    const slotSets = new Map<string, SlotLog[]>();
+    for (const s of sets) {
+      if (!s.poolExerciseId) continue;
+      const slot = (s.swappedFromId ?? s.poolExerciseId) as string;
+      const list = slotSets.get(slot) ?? [];
+      list.push(s as unknown as SlotLog);
+      slotSets.set(slot, list);
+    }
+    const loggedBySlot = new Map<string, SlotLog>();
+    for (const [slot, list] of slotSets) {
+      const top = topSet(list);
+      if (top) loggedBySlot.set(slot, top);
+    }
+    type PlanEx = { poolExerciseId: string; metric: string | null; tracked?: boolean; poolExercise: { name: string } };
+    const exercises: PlannedMovement[] = (plan.exercises as PlanEx[]).map((pe: PlanEx) => {
       const metric = (pe.metric ?? "WEIGHT") as string;
       const unit = metricUnit(metric as Metric, system);
       const logged = loggedBySlot.get(pe.poolExerciseId);
@@ -934,6 +943,8 @@ function historyResult(
   const names = [
     ...new Set(sets.map((x) => x.poolExercise?.name).filter((n): n is string => !!n)),
   ];
+  // One movement, several sets: "5 sets · top 185 × 1", not its name.
+  if (names.length === 1 && sets.some((x) => x.weight != null)) return setsSummary(sets);
   if (names.length === 0) return `${sets.length} movements`;
   const shown = names.slice(0, 3).join(", ");
   return names.length > 3 ? `${shown} +${names.length - 3}` : shown;
@@ -1435,4 +1446,267 @@ export async function loadOverdueWorkoutDates(
 ): Promise<string[]> {
   const days = await loadOverdueWorkoutDays(userId, beforeISO);
   return days.map((d) => d.date);
+}
+
+// ---------------------------------------------------------------------------
+// The day page (web): one movement's sets, the day's state, the week strip.
+
+export type MovementSetRow = {
+  weight: number | null;
+  reps: number | null;
+  seconds: number | null;
+};
+
+export type MovementLog = {
+  /** The day's sets for this planned movement (or its swap), in order. */
+  sets: MovementSetRow[];
+  /** When the day's sets were logged with a swap: what was done instead. */
+  loggedAs: { poolExerciseId: string; name: string } | null;
+  /** The most recent earlier day with sets for the movement being done. */
+  last: { date: string; sets: MovementSetRow[] } | null;
+  skipped: boolean;
+};
+
+const setRow = (s: { weight: number | null; reps: number | null; seconds: number | null }): MovementSetRow => ({
+  weight: s.weight,
+  reps: s.reps,
+  seconds: s.seconds,
+});
+
+/**
+ * Everything the set logger needs for one planned movement on a day. `doing`
+ * is the movement whose history fills the hints: the planned one, or a swap
+ * chosen today; when omitted, a swap already logged for the day is used.
+ */
+export async function loadMovementLog(
+  userId: string,
+  dateISO: string,
+  slotId: string,
+  doing?: string | null,
+): Promise<MovementLog> {
+  const day = toDateColumn(dateISO);
+  const [daySets, skip] = (await Promise.all([
+    prisma.sessionSet.findMany({
+      where: {
+        session: { userId, date: day, isRest: false },
+        OR: [{ poolExerciseId: slotId, swappedFromId: null }, { swappedFromId: slotId }],
+      },
+      orderBy: [{ setNumber: "asc" }, { createdAt: "asc" }],
+      select: {
+        poolExerciseId: true,
+        weight: true,
+        reps: true,
+        seconds: true,
+        poolExercise: { select: { name: true } },
+      },
+    }),
+    prisma.workoutMovementSkip.findFirst({
+      where: { userId, date: day, slot: slotId },
+      select: { slot: true },
+    }),
+  ])) as [
+    {
+      poolExerciseId: string | null;
+      weight: number | null;
+      reps: number | null;
+      seconds: number | null;
+      poolExercise: { name: string } | null;
+    }[],
+    { slot: string } | null,
+  ];
+  const swapped = daySets.find((s) => s.poolExerciseId && s.poolExerciseId !== slotId);
+  const loggedAs = swapped
+    ? { poolExerciseId: swapped.poolExerciseId as string, name: swapped.poolExercise?.name ?? "" }
+    : null;
+  const movement = doing || loggedAs?.poolExerciseId || slotId;
+
+  const prior = (await prisma.sessionSet.findFirst({
+    where: { poolExerciseId: movement, session: { userId, isRest: false, date: { lt: day } } },
+    orderBy: { session: { date: "desc" } },
+    select: { session: { select: { date: true } } },
+  })) as { session: { date: Date } } | null;
+  let last: MovementLog["last"] = null;
+  if (prior) {
+    const rows = (await prisma.sessionSet.findMany({
+      where: { poolExerciseId: movement, session: { userId, isRest: false, date: prior.session.date } },
+      orderBy: [{ setNumber: "asc" }, { createdAt: "asc" }],
+      select: { weight: true, reps: true, seconds: true },
+    })) as { weight: number | null; reps: number | null; seconds: number | null }[];
+    last = { date: fromDateColumn(prior.session.date), sets: rows.map(setRow) };
+  }
+  return { sets: daySets.map(setRow), loggedAs, last, skipped: !!skip };
+}
+
+export type DayMovementState = {
+  /** The day's sets in a few words ("5 sets · top 185 × 1"); empty when none. */
+  summary: string;
+  setCount: number;
+  skipped: boolean;
+  /** Swapped for the day: the movement done instead. */
+  loggedAs: string | null;
+  /** The last earlier day's sets in a few words, for a movement not done yet. */
+  last: string;
+};
+
+export type DayLogState = {
+  /** Keyed by planned movement (pool exercise id). */
+  movements: Record<string, DayMovementState>;
+  /** Planned workouts done for the day (planDone), by planned workout id. */
+  doneWorkouts: string[];
+  /** Workout-level skips ("plan:<id>"). */
+  skippedPlans: string[];
+  /** Names of the day's sessions, for plans that log with no movement. */
+  sessionNames: string[];
+  rested: boolean;
+};
+
+/** The day page's state for a person and date, read in a handful of queries. */
+export async function loadDayLogState(userId: string, dateISO: string): Promise<DayLogState> {
+  const day = toDateColumn(dateISO);
+  const [planned, sets, skips, sessions] = (await Promise.all([
+    loadTodayPlannedWorkouts(userId, dateISO),
+    prisma.sessionSet.findMany({
+      where: { session: { userId, date: day, isRest: false }, poolExerciseId: { not: null } },
+      orderBy: [{ setNumber: "asc" }, { createdAt: "asc" }],
+      select: {
+        poolExerciseId: true,
+        swappedFromId: true,
+        weight: true,
+        reps: true,
+        seconds: true,
+        unit: true,
+        poolExercise: { select: { name: true } },
+      },
+    }),
+    prisma.workoutMovementSkip.findMany({ where: { userId, date: day }, select: { slot: true } }),
+    prisma.workoutSession.findMany({ where: { userId, date: day }, select: { name: true, isRest: true } }),
+  ])) as [
+    NonNullable<TodayPlanned>[],
+    {
+      poolExerciseId: string | null;
+      swappedFromId: string | null;
+      weight: number | null;
+      reps: number | null;
+      seconds: number | null;
+      unit: string | null;
+      poolExercise: { name: string } | null;
+    }[],
+    { slot: string }[],
+    { name: string | null; isRest: boolean }[],
+  ];
+  const skipped = new Set(skips.map((s) => s.slot));
+  const bySlot = new Map<string, typeof sets>();
+  for (const s of sets) {
+    const slot = (s.swappedFromId ?? s.poolExerciseId) as string;
+    const list = bySlot.get(slot) ?? [];
+    list.push(s);
+    bySlot.set(slot, list);
+  }
+
+  const slots = [...new Set(planned.flatMap((p) => p.exercises.map((e) => e.poolExerciseId)).filter(Boolean))];
+  // Last time for each planned movement: its sets on the most recent earlier
+  // day. One read over the person's history of these movements.
+  const history = (slots.length
+    ? await prisma.sessionSet.findMany({
+        where: {
+          poolExerciseId: { in: slots },
+          session: { userId, isRest: false, date: { lt: day } },
+        },
+        orderBy: [{ setNumber: "asc" }, { createdAt: "asc" }],
+        select: {
+          poolExerciseId: true,
+          weight: true,
+          reps: true,
+          seconds: true,
+          unit: true,
+          session: { select: { date: true } },
+        },
+      })
+    : []) as {
+    poolExerciseId: string | null;
+    weight: number | null;
+    reps: number | null;
+    seconds: number | null;
+    unit: string | null;
+    session: { date: Date };
+  }[];
+  const lastBy = new Map<string, { date: number; rows: typeof history }>();
+  for (const h of history) {
+    const id = h.poolExerciseId as string;
+    const t = h.session.date.getTime();
+    const cur = lastBy.get(id);
+    if (!cur || t > cur.date) lastBy.set(id, { date: t, rows: [h] });
+    else if (t === cur.date) cur.rows.push(h);
+  }
+
+  const movements: Record<string, DayMovementState> = {};
+  for (const slot of slots) {
+    const today = bySlot.get(slot) ?? [];
+    const swap = today.find((s) => s.poolExerciseId !== slot);
+    const prev = lastBy.get(slot);
+    movements[slot] = {
+      summary: setsSummary(today, today[0]?.unit ?? null),
+      setCount: today.length,
+      skipped: skipped.has(slot),
+      loggedAs: swap?.poolExercise?.name ?? null,
+      last: prev ? setsSummary(prev.rows, prev.rows[0]?.unit ?? null) : "",
+    };
+  }
+
+  return {
+    movements,
+    doneWorkouts: planned.filter((p) => planDone(p)).map((p) => p.plannedWorkoutId),
+    skippedPlans: [...skipped].filter((s) => s.startsWith("plan:")),
+    sessionNames: sessions.filter((s) => !s.isRest && s.name).map((s) => s.name as string),
+    rested: sessions.some((s) => s.isRest),
+  };
+}
+
+export type WeekStripDay = {
+  date: string;
+  task: "PENDING" | "COMPLETE" | "SKIPPED" | null;
+  rested: boolean;
+  logged: boolean;
+};
+
+/** The last `days` days up to today, for the day page's week strip. */
+export async function loadWeekStrip(
+  userId: string,
+  today: string,
+  days = 8,
+): Promise<{ days: WeekStripDay[]; overdue: string[] }> {
+  const from = addDays(today, -(days - 1));
+  const [tasks, sessions, overdue] = (await Promise.all([
+    prisma.task.findMany({
+      where: {
+        userId,
+        category: "EXERCISE",
+        dueDate: { gte: toDateColumn(from), lte: toDateColumn(today) },
+      },
+      select: { dueDate: true, status: true },
+    }),
+    prisma.workoutSession.findMany({
+      where: { userId, date: { gte: toDateColumn(from), lte: toDateColumn(today) } },
+      select: { date: true, isRest: true },
+    }),
+    loadOverdueWorkoutDates(userId, today),
+  ])) as [
+    { dueDate: Date; status: string }[],
+    { date: Date; isRest: boolean }[],
+    string[],
+  ];
+  const taskBy = new Map(tasks.map((t) => [fromDateColumn(t.dueDate), t.status]));
+  const out: WeekStripDay[] = [];
+  for (let i = 0; i < days; i++) {
+    const date = addDays(from, i);
+    const own = sessions.filter((s) => fromDateColumn(s.date) === date);
+    const status = taskBy.get(date);
+    out.push({
+      date,
+      task: status === "PENDING" || status === "COMPLETE" || status === "SKIPPED" ? status : null,
+      rested: own.some((s) => s.isRest),
+      logged: own.some((s) => !s.isRest),
+    });
+  }
+  return { days: out, overdue };
 }
