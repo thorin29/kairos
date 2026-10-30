@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-10 — More kinds of progress (v0.610.0 / app 0.418.0)
+
+Records are by exact rep count, from real sets only (`repRecords`). A set is a
+"new best" when nothing earlier was as heavy for as many reps or more
+(`isNewBest`); with no history at all nothing is, so a first session doesn't
+light up every set. The logger shows up to four record chips, the usual counts
+(1, 2, 3, 5, 8, 10) first, and a chip turns green with today's weight once
+beaten. Records come with the movement's sets (`workouts/sets` `records`,
+before the day) and each client applies the rules, so a typed set can show as
+a best before it reaches the server.
+
+Effort (Easy / Solid / Hard / Too hard) and "something hurt" are per planned
+movement per day (`WorkoutFeedback`, migration 129), asked once a set is saved.
+Hurt picks a joint or region from a list rather than the body map: the map is
+muscle groups, and it's the knee that hurts, not "legs". Release 5's suggestions
+read both.
+
+Charts can show one rep range at a time (1–3, 4–6, 7–12: `bandPoints`), so a
+set of 5 is compared with other sets of 4–6. Tapping a point names it with its
+reps on both clients.
+
+Weekly training: days, sets and minutes for 12 weeks, and weeks trained in a
+row (`weeksInARow`): a week counts when every workout due was done or excused
+and something was due or logged. The current week adds once it qualifies and
+never breaks the run. Light weeks, skips and rest days never break it.
+
+Session intent (light days drawn hollow) moved to release 4: programs plan the
+light weeks, so that's where it's set.
+
 ## 2026-10 — How a movement is logged lives on the movement (v0.609.0)
 
 A pool movement had no idea how it was logged; only the plan entry did, and

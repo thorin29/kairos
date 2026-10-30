@@ -315,3 +315,41 @@ export function metricUnit(metric: Metric, system: UnitSystem): string {
       return "min";
   }
 }
+
+/** How a movement felt, after logging it (v0.610). */
+export const EFFORTS = ["EASY", "SOLID", "HARD", "TOO_HARD"] as const;
+export type Effort = (typeof EFFORTS)[number];
+export const EFFORT_LABEL: Record<Effort, string> = {
+  EASY: "Easy",
+  SOLID: "Solid",
+  HARD: "Hard",
+  TOO_HARD: "Too hard",
+};
+
+/** Where something hurt. Joints and regions, not muscle groups: it's the
+ *  knee that hurts, not "legs". */
+export const HURT_AREAS = [
+  "NECK",
+  "SHOULDER",
+  "ELBOW",
+  "WRIST",
+  "UPPER_BACK",
+  "LOWER_BACK",
+  "HIP",
+  "KNEE",
+  "ANKLE",
+  "OTHER",
+] as const;
+export type HurtArea = (typeof HURT_AREAS)[number];
+export const HURT_LABEL: Record<HurtArea, string> = {
+  NECK: "Neck",
+  SHOULDER: "Shoulder",
+  ELBOW: "Elbow",
+  WRIST: "Wrist",
+  UPPER_BACK: "Upper back",
+  LOWER_BACK: "Lower back",
+  HIP: "Hip",
+  KNEE: "Knee",
+  ANKLE: "Ankle",
+  OTHER: "Somewhere else",
+};

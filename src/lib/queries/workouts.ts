@@ -1,4 +1,5 @@
 import "server-only";
+import { REP_BANDS, bandPoints } from "@/lib/workouts/records";
 import { prisma } from "@/lib/prisma";
 import { dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
 import { getSetting } from "@/lib/settings";
@@ -38,6 +39,9 @@ export type GraphSeries = {
   /** Best weight actually lifted at each rep count — real lifts, no estimates.
    *  Only rep counts that have been logged appear. */
   repMaxes?: { reps: number; value: number; date: string }[];
+  /** The line for one rep range at a time (records.ts REP_BANDS), so sets
+   *  are compared with sets like them. Only ranges with a point (v0.610). */
+  bands?: { key: string; label: string; points: { date: string; value: number; reps: number }[] }[];
 };
 
 export type ExerciseDef = {
@@ -424,6 +428,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     const perMovementDay = new Map<string, Map<string, { value: number; reps: number | null }>>();
     // movementId -> reps -> best weight at that rep count
     const repMaxes = new Map<string, Map<number, { value: number; date: string }>>();
+    const dated = new Map<string, { weight: number; reps: number; date: string }[]>();
     for (const set of wSets) {
       if (set.weight == null || !set.poolExercise) continue;
       const id = set.poolExerciseId;
@@ -449,6 +454,9 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
 
       // Best weight at each rep count, from real logged sets only.
       if (set.reps != null && set.reps > 0) {
+        const list = dated.get(id) ?? [];
+        list.push({ weight: set.weight, reps: set.reps, date: d });
+        dated.set(id, list);
         const rm = repMaxes.get(id) ?? new Map<number, { value: number; date: string }>();
         const cur = rm.get(set.reps);
         if (!cur || set.weight > cur.value) rm.set(set.reps, { value: set.weight, date: d });
@@ -473,6 +481,9 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         repMaxes: [...(repMaxes.get(id)?.entries() ?? [])]
           .map(([reps, r]) => ({ reps, value: r.value, date: r.date }))
           .sort((a, b) => a.reps - b.reps),
+        bands: REP_BANDS.map((b) => ({ key: b.key, label: b.label, points: bandPoints(dated.get(id) ?? [], b) })).filter(
+          (b) => b.points.length > 0,
+        ),
       }))
       .filter((s) => s.points.length > 0);
 

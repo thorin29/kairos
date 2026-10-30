@@ -27,6 +27,8 @@ import { PlanBuilder } from "./plan-builder";
 import { RotationBuilder } from "./rotation-builder";
 import { DayLog } from "./day-log";
 import { LineChart } from "@/components/line-chart";
+import { REP_BANDS } from "@/lib/workouts/records";
+import { WeeklyTraining } from "./weekly-training";
 import { WeightCalculator } from "./weight-calculator";
 import type {
   PersonWorkout,
@@ -285,6 +287,8 @@ export function WorkoutsGrid({
                       />
                     </div>
                   )}
+
+                  {!personal && <WeeklyTraining userId={open.user.id} />}
 
                   <div className="grid grid-cols-3 gap-3">
                     <ActionButton
@@ -982,6 +986,9 @@ function GroupCharts({
   groupKey: string;
 }) {
   const [open, setOpen] = useState(false);
+  // "All", or one rep range so a set of 5 is compared with other sets of 4–6.
+  const [band, setBand] = useState<string>("all");
+  const bands = REP_BANDS.filter((b) => series.some((s) => s.bands?.some((x) => x.key === b.key)));
   const withReps = series.filter((s) => (s.repMaxes?.length ?? 0) > 0);
   const tone = MG_COLOR[groupKey] ?? series[0]?.color ?? "var(--color-accent)";
   return (
@@ -995,9 +1002,27 @@ function GroupCharts({
       </button>
       {open && (
         <div className="mt-2">
+          {bands.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5" role="group" aria-label="Reps">
+              {[{ key: "all", label: "All" }, ...bands].map((b) => (
+                <button
+                  key={b.key}
+                  type="button"
+                  aria-pressed={band === b.key}
+                  onClick={() => setBand(b.key)}
+                  className={`inline-flex h-9 items-center rounded-full border px-3 text-xs font-semibold transition-colors ${
+                    band === b.key ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+                  }`}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          )}
           {/* One plot for the group, a line per movement. Separate charts per
               exercise drew the same axis twice to say less. */}
           <LineChart
+            key={band}
             weight
             dots
             series={series.map((s) => ({
@@ -1005,7 +1030,7 @@ function GroupCharts({
               name: s.name,
               color: s.color,
               unit: s.unit,
-              points: s.points,
+              points: band === "all" ? s.points : (s.bands?.find((x) => x.key === band)?.points ?? []),
             }))}
           />
           {withReps.map((s) => {

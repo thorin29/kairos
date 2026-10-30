@@ -3,13 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { slotForDate } from "@/lib/workouts/rotation";
 import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES, hiitResult } from "@/lib/workouts/catalog";
 import type { WorkoutType } from "@/generated/prisma/client";
-import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween } from "@/lib/dates";
+import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween, startOfWeek } from "@/lib/dates";
 import { metricUnit, type Metric, type MuscleGroup } from "@/lib/workouts/catalog";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
 import { doneOn, loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
 import { loadStaleContext } from "@/lib/chores/stale";
 import { groupsFor, navRegionFor } from "@/lib/workouts/involvement";
 import { setsSummary, topSet } from "@/lib/workouts/sets";
+import { repRecords, REP_BANDS, bandPoints, weeksInARow, type RepRecord } from "@/lib/workouts/records";
 
 /**
  * The exercises scheduled for a person on a day, with any weight/reps already
@@ -597,6 +598,9 @@ export type ProgressSeries = {
   best?: { date: string; value: number; reps: number | null } | null;
   /** Best weight actually lifted at each rep count. Real sets only. */
   repMaxes?: { reps: number; value: number; date: string }[];
+  /** The same line for one rep range at a time ("4–6 reps"), so sets are
+   *  compared with sets like them (v0.610). Only ranges with a point. */
+  bands?: { key: string; label: string; points: GraphPoint[] }[];
   /**
    * Body-map facts, resolved HERE so the two clients cannot drift. The
    * involvement table is a single TypeScript file; reimplementing it in Kotlin
@@ -835,6 +839,8 @@ export async function loadWorkoutProgress(
   }
 
   const perDay = new Map<string, Map<string, { value: number; reps: number | null }>>();
+  // movement -> every weighted set with reps, dated, for the rep-range lines
+  const dated = new Map<string, { weight: number; reps: number; date: string }[]>();
   // movement -> reps -> heaviest weight actually lifted at that rep count
   const repMaxes = new Map<string, Map<number, { value: number; date: string }>>();
   for (const s of wSets) {
@@ -848,6 +854,9 @@ export async function loadWorkoutProgress(
     }
     perDay.set(s.poolExerciseId, m);
     if (s.reps != null && s.reps > 0) {
+      const list = dated.get(s.poolExerciseId) ?? [];
+      list.push({ weight: s.weight, reps: s.reps, date: d });
+      dated.set(s.poolExerciseId, list);
       const rm = repMaxes.get(s.poolExerciseId) ?? new Map<number, { value: number; date: string }>();
       const cur = rm.get(s.reps);
       if (!cur || s.weight > cur.value) rm.set(s.reps, { value: s.weight, date: d });
@@ -875,6 +884,11 @@ export async function loadWorkoutProgress(
       repMaxes: [...(repMaxes.get(id)?.entries() ?? [])]
         .map(([reps, r]) => ({ reps, value: r.value, date: r.date }))
         .sort((a, b) => a.reps - b.reps),
+      bands: REP_BANDS.map((b) => ({
+        key: b.key,
+        label: b.label,
+        points: bandPoints(dated.get(id) ?? [], b),
+      })).filter((b) => b.points.length > 0),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -1471,6 +1485,11 @@ export type MovementLog = {
   /** The most recent earlier day with sets for the movement being done. */
   last: { date: string; sets: MovementSetRow[] } | null;
   skipped: boolean;
+  /** Best weight at each rep count before this day, for the movement being
+   *  done (records.ts repRecords); the logger shows a few and marks new bests. */
+  records: RepRecord[];
+  /** How it felt and anything that hurt, once answered (v0.610). */
+  feedback: { effort: string | null; hurt: string | null } | null;
 };
 
 const setRow = (s: { weight: number | null; reps: number | null; seconds: number | null }): MovementSetRow => ({
@@ -1540,7 +1559,35 @@ export async function loadMovementLog(
     })) as { weight: number | null; reps: number | null; seconds: number | null }[];
     last = { date: fromDateColumn(prior.session.date), sets: rows.map(setRow) };
   }
-  return { sets: daySets.map(setRow), loggedAs, last, skipped: !!skip };
+  const [earlier, fb] = (await Promise.all([
+    prisma.sessionSet.findMany({
+      where: {
+        poolExerciseId: movement,
+        weight: { gt: 0 },
+        reps: { gt: 0 },
+        session: { userId, isRest: false, date: { lt: day } },
+      },
+      select: { weight: true, reps: true, session: { select: { date: true } } },
+    }),
+    prisma.workoutFeedback.findUnique({
+      where: { userId_date_slot: { userId, date: day, slot: slotId } },
+      select: { effort: true, hurt: true },
+    }),
+  ])) as [
+    { weight: number | null; reps: number | null; session: { date: Date } }[],
+    { effort: string | null; hurt: string | null } | null,
+  ];
+  const records = repRecords(
+    earlier.map((s) => ({ weight: s.weight, reps: s.reps, date: fromDateColumn(s.session.date) })),
+  );
+  return {
+    sets: daySets.map(setRow),
+    loggedAs,
+    last,
+    skipped: !!skip,
+    records,
+    feedback: fb ? { effort: fb.effort, hurt: fb.hurt } : null,
+  };
 }
 
 export type DayMovementState = {
@@ -1720,4 +1767,110 @@ export async function loadWeekStrip(
     });
   }
   return { days: out, overdue };
+}
+
+export type TrainingWeek = {
+  /** Sunday the week starts on. */
+  start: string;
+  /** Days with something logged (not rest). */
+  days: number;
+  sets: number;
+  /** Minutes where recorded: a session's duration, or timed sets. */
+  minutes: number;
+  /** Every workout due was done or excused (weeksInARow's rule). */
+  trained: boolean;
+};
+
+/**
+ * The last `weeks` weeks of training, oldest first, and the weeks trained in a
+ * row (v0.610). Consistency, not weight: a light week or a week of skips for
+ * an injury still counts.
+ */
+export async function loadWeeklyTraining(
+  userId: string,
+  today: string,
+  weeks = 12,
+): Promise<{ weeks: TrainingWeek[]; inARow: number }> {
+  const thisWeek = startOfWeek(today);
+  const from = addDays(thisWeek, -7 * (weeks - 1));
+  // The run can be longer than the chart: look back a year for it.
+  const runFrom = addDays(thisWeek, -7 * 51);
+  const [tasks, sessions] = (await Promise.all([
+    prisma.task.findMany({
+      where: {
+        userId,
+        category: "EXERCISE",
+        dueDate: { gte: toDateColumn(runFrom), lte: toDateColumn(today) },
+      },
+      select: { dueDate: true, status: true },
+    }),
+    prisma.workoutSession.findMany({
+      where: { userId, isRest: false, date: { gte: toDateColumn(runFrom), lte: toDateColumn(today) } },
+      select: {
+        date: true,
+        durationMin: true,
+        sets: { select: { seconds: true } },
+      },
+    }),
+  ])) as [
+    { dueDate: Date; status: string }[],
+    { date: Date; durationMin: number | null; sets: { seconds: number | null }[] }[],
+  ];
+
+  type Acc = { days: Set<string>; sets: number; minutes: number; due: number; open: number };
+  const acc = new Map<string, Acc>();
+  const get = (start: string) => {
+    let a = acc.get(start);
+    if (!a) {
+      a = { days: new Set(), sets: 0, minutes: 0, due: 0, open: 0 };
+      acc.set(start, a);
+    }
+    return a;
+  };
+  for (const t of tasks) {
+    const d = fromDateColumn(t.dueDate);
+    const a = get(startOfWeek(d));
+    a.due++;
+    // Today's workout can still be done; only an earlier one left pending counts.
+    if (t.status === "PENDING" && d < today) a.open++;
+  }
+  for (const s of sessions) {
+    // Counted on the day it counts for, like the task it settles.
+    const d = fromDateColumn(s.date);
+    const a = get(startOfWeek(d));
+    a.days.add(d);
+    a.sets += s.sets.length;
+    const timed = s.sets.reduce((n, x) => n + (x.seconds ?? 0), 0) / 60;
+    a.minutes += s.durationMin ?? Math.round(timed);
+  }
+
+  const run: { start: string; due: number; open: number; logged: boolean; current: boolean }[] = [];
+  for (let start = thisWeek; start >= runFrom; start = addDays(start, -7)) {
+    const a = acc.get(start);
+    run.push({
+      start,
+      due: a?.due ?? 0,
+      open: a?.open ?? 0,
+      logged: (a?.days.size ?? 0) > 0,
+      current: start === thisWeek,
+    });
+  }
+  const inARow = weeksInARow(run);
+
+  const out: TrainingWeek[] = [];
+  for (let i = 0; i < weeks; i++) {
+    const start = addDays(from, 7 * i);
+    const a = acc.get(start);
+    const due = a?.due ?? 0;
+    const open = a?.open ?? 0;
+    const logged = (a?.days.size ?? 0) > 0;
+    out.push({
+      start,
+      days: a?.days.size ?? 0,
+      sets: a?.sets ?? 0,
+      minutes: Math.round(a?.minutes ?? 0),
+      trained: open === 0 && (due > 0 || logged),
+    });
+  }
+  return { weeks: out, inARow };
 }

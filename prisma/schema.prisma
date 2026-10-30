@@ -91,6 +91,7 @@ model User {
   workoutSchedules WorkoutSchedule[] @relation("WorkoutSchedules")
   workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
   workoutSkips     WorkoutMovementSkip[]
+  workoutFeedback  WorkoutFeedback[]
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   books            Book[]
   chapterReads     UserChapterRead[]
@@ -1345,6 +1346,21 @@ model WorkoutMovementSkip {
   slot   String
 
   createdAt DateTime @default(now())
+
+  @@id([userId, date, slot])
+}
+
+/// How a movement felt for one person on one day, and anything that hurt
+/// (v0.610.0). `slot` is the planned movement's pool id. effort: EASY / SOLID /
+/// HARD / TOO_HARD; hurt: a HURT_AREAS key (src/lib/workouts/catalog.ts).
+model WorkoutFeedback {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  slot      String
+  effort    String?
+  hurt      String?
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@id([userId, date, slot])
 }

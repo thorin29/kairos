@@ -11,6 +11,8 @@ import {
   loadOverdueWorkoutDates,
   loadDayLogState,
   loadMovementLog,
+  loadWeeklyTraining,
+  type TrainingWeek,
   loadWeekStrip,
   type DayLogState,
   type MovementLog,
@@ -20,6 +22,7 @@ import { topSet } from "@/lib/workouts/sets";
 import { loadExercisePool, type PoolEntry } from "@/lib/queries/workouts";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { poolMetrics } from "@/lib/workouts/plan-edit";
+import { setMovementFeedback, cleanEffort, cleanHurt } from "@/lib/workouts/feedback";
 import {
   CATEGORY_LABEL,
   MUSCLE_GROUP_LABEL,
@@ -1267,4 +1270,29 @@ export async function loadWorkoutWeek(
   const today = todayISO();
   const r = await loadWeekStrip(userId, today);
   return { ...r, today };
+}
+
+/** How a movement felt on a day, and anything that hurt (v0.610). The whole
+ *  answer each time; both null clears it. */
+export async function saveMovementFeedback(input: {
+  userId: string;
+  dateISO: string;
+  slot: string;
+  effort: string | null;
+  hurt: string | null;
+}): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(input.userId);
+  if (!ISO.test(input.dateISO) || !input.slot) return;
+  await setMovementFeedback(input.userId, input.dateISO, input.slot, {
+    effort: cleanEffort(input.effort),
+    hurt: cleanHurt(input.hurt),
+  });
+}
+
+/** The weekly training chart's data for a person (v0.610). */
+export async function loadWeeklyTrainingFor(userId: string): Promise<{ weeks: TrainingWeek[]; inARow: number }> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return loadWeeklyTraining(userId, todayISO());
 }

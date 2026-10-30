@@ -6,6 +6,7 @@ import {
   loadMovementSets,
   loadWorkoutWeek,
   restDay,
+  saveMovementFeedback,
   saveMovementSets,
   skipMovement,
   type LoggedSet,
@@ -22,7 +23,17 @@ import {
   type StripState,
 } from "@/lib/workouts/blocks";
 import { fmtNumber, fmtSeconds } from "@/lib/workouts/sets";
-import type { Metric, UnitSystem } from "@/lib/workouts/catalog";
+import {
+  EFFORTS,
+  EFFORT_LABEL,
+  HURT_AREAS,
+  HURT_LABEL,
+  type Effort,
+  type HurtArea,
+  type Metric,
+  type UnitSystem,
+} from "@/lib/workouts/catalog";
+import { isNewBest, recordChips } from "@/lib/workouts/records";
 import { addDays, dayOfWeek } from "@/lib/dates";
 import {
   ArrowLeftIcon,
@@ -509,6 +520,9 @@ function MovementLogger({
   const [skipped, setSkipped] = useState(false);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [leaving, setLeaving] = useState(false);
+  const [effort, setEffort] = useState<Effort | null>(null);
+  const [hurt, setHurt] = useState<HurtArea | null>(null);
+  const [hurtOpen, setHurtOpen] = useState(false);
   const nextKey = useRef(100);
   const latest = useRef<Row[]>([]);
   latest.current = rows;
@@ -521,6 +535,8 @@ function MovementLogger({
         setLog(l);
         setRows(rowsFrom(l));
         setSkipped(l.skipped);
+        setEffort((l.feedback?.effort as Effort | null) ?? null);
+        setHurt((l.feedback?.hurt as HurtArea | null) ?? null);
         if (l.loggedAs) setDoing({ id: l.loggedAs.poolExerciseId, name: l.loggedAs.name });
       })
       .catch(() => live && setFailed(true));
@@ -667,11 +683,28 @@ function MovementLogger({
             : { ...r, hintW: last[i]?.weight ?? null, hintR: last[i]?.reps ?? null, hintS: last[i]?.seconds ?? null },
         ),
       );
-      setLog((cur) => (cur ? { ...cur, last: l.last } : l));
+      setLog((cur) => (cur ? { ...cur, last: l.last, records: l.records } : l));
     } catch {
       /* keep the old hints */
     }
   };
+
+  // How it felt / what hurt: the whole answer each time.
+  const saveFeedback = (e: Effort | null, h: HurtArea | null) => {
+    setEffort(e);
+    setHurt(h);
+    void saveMovementFeedback({ userId, dateISO, slot: slotId, effort: e, hurt: h }).catch(() => {});
+  };
+
+  const records = log?.records ?? [];
+  // Today's heaviest at each exact rep count, from what's saved or typed.
+  const todayAt = new Map<number, number>();
+  for (const r of rows) {
+    if (!r.saved && !typed(r)) continue;
+    const v = valueOf(r);
+    if (v.weight != null && v.reps != null) todayAt.set(v.reps, Math.max(todayAt.get(v.reps) ?? 0, v.weight));
+  }
+  const chips = metric === "WEIGHT" ? recordChips(records) : [];
 
   const anyEntered = rows.some((r) => r.saved || typed(r));
   const canLog = rows.some((r) => r.saved || (typed(r) && complete(r)));
@@ -713,6 +746,30 @@ function MovementLogger({
           {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : status === "error" ? "Not saved. Try again." : log?.last ? `Last time ${log.last.date.slice(5).replace("-", "/")}` : ""}
         </span>
       </div>
+
+      {chips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" aria-label="Best weight by reps">
+          {chips.map((c) => {
+            const now = todayAt.get(c.reps);
+            const beat = now != null && now > c.weight;
+            return (
+              <span
+                key={c.reps}
+                className={`tabular inline-flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
+                  beat ? "border-emerald-200 bg-emerald-50" : "border-hairline bg-surface"
+                }`}
+              >
+                <span className="text-muted">
+                  {c.reps} {c.reps === 1 ? "rep" : "reps"}
+                </span>
+                <span className={`font-bold ${beat ? "text-emerald-700" : "text-ink"}`}>
+                  {fmtNumber(beat ? (now as number) : c.weight)}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {picking && (
         <SwapPicker exercise={exercise} onPick={(p) => void swapTo(p)} onClose={() => setPicking(false)} />
@@ -791,6 +848,11 @@ function MovementLogger({
                       <XIcon className="h-4 w-4" />
                     </button>
                   </div>
+                  {r.saved && metric === "WEIGHT" && isNewBest(valueOf(r), records) && (
+                    <p className="mt-1 pl-10 text-xs font-semibold text-emerald-700">
+                      New best for {valueOf(r).reps} {valueOf(r).reps === 1 ? "rep" : "reps"}
+                    </p>
+                  )}
                   {confirmKey === r.key && (
                     <div className="mt-2 flex flex-wrap items-center justify-end gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm">
                       <span className="mr-auto">
@@ -860,6 +922,57 @@ function MovementLogger({
               )}
             </div>
           </div>
+
+          {rows.some((r) => r.saved) && !skipped && (
+            <section className="space-y-2.5 rounded-2xl border border-hairline bg-surface px-4 py-3">
+              <p className="text-sm font-semibold">How did {(doing?.name ?? exercise.name).toLowerCase()} feel?</p>
+              <div className="flex flex-wrap gap-2">
+                {EFFORTS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    aria-pressed={effort === e}
+                    onClick={() => saveFeedback(effort === e ? null : e, hurt)}
+                    className={`inline-flex h-11 items-center rounded-full border px-4 text-sm font-semibold transition-colors ${
+                      effort === e ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+                    }`}
+                  >
+                    {EFFORT_LABEL[e]}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  aria-expanded={hurtOpen}
+                  onClick={() => setHurtOpen((v) => !v)}
+                  className={`inline-flex h-11 items-center rounded-full border px-4 text-sm font-semibold sm:ml-auto ${
+                    hurt ? "border-red-200 bg-red-50 text-red-700" : "border-hairline text-muted hover:border-accent"
+                  }`}
+                >
+                  {hurt ? `Hurt: ${HURT_LABEL[hurt].toLowerCase()}` : "Something hurt?"}
+                </button>
+              </div>
+              {hurtOpen && (
+                <div className="flex flex-wrap gap-2">
+                  {HURT_AREAS.map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      aria-pressed={hurt === a}
+                      onClick={() => {
+                        saveFeedback(effort, hurt === a ? null : a);
+                        setHurtOpen(false);
+                      }}
+                      className={`inline-flex h-10 items-center rounded-full border px-3.5 text-sm font-medium ${
+                        hurt === a ? "border-red-300 bg-red-50 text-red-700" : "border-hairline hover:border-accent"
+                      }`}
+                    >
+                      {HURT_LABEL[a]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           <div className="grid grid-cols-3 gap-2">
             <PlanActionTile

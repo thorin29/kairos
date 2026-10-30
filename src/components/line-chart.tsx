@@ -7,7 +7,8 @@ export type Series = {
   name: string;
   color: string;
   unit: string;
-  points: { date: string; value: number }[];
+  /** `reps`: the set the point stands for, shown with it ("185 × 3"). */
+  points: { date: string; value: number; reps?: number | null }[];
 };
 
 const W = 520;
@@ -58,6 +59,9 @@ export function LineChart({
   dots?: boolean;
 }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  // The tapped point, named under the chart (a hover title never shows on a
+  // phone).
+  const [picked, setPicked] = useState<{ id: string; i: number } | null>(null);
 
   const visible = series.filter((s) => !hidden.has(s.id));
 
@@ -205,26 +209,40 @@ export function LineChart({
               {!dots && (
                 <path d={d} fill="none" stroke={s.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
               )}
-              {s.points.map((p, i) => (
-                <circle
-                  key={i}
-                  cx={x(Date.parse(`${p.date}T00:00:00Z`))}
-                  cy={y(p.value)}
-                  r={dots ? 3 : 3}
-                  fill={s.color}
-                  stroke={dots ? "var(--surface)" : undefined}
-                  strokeWidth={dots ? 1 : undefined}
-                >
-                  <title>
-                    {s.name}: {p.value}
-                    {s.unit} · {fmtDate(Date.parse(`${p.date}T00:00:00Z`))}
-                  </title>
-                </circle>
-              ))}
+              {s.points.map((p, i) => {
+                const on = picked?.id === s.id && picked.i === i;
+                const cx = x(Date.parse(`${p.date}T00:00:00Z`));
+                const cy = y(p.value);
+                return (
+                  <g key={i} onClick={() => setPicked(on ? null : { id: s.id, i })} className="cursor-pointer">
+                    <circle cx={cx} cy={cy} r={10} fill="transparent" />
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={on ? 5 : 3}
+                      fill={s.color}
+                      stroke={dots || on ? "var(--surface)" : undefined}
+                      strokeWidth={dots || on ? 1.5 : undefined}
+                    >
+                      <title>{pointText(s, p)}</title>
+                    </circle>
+                  </g>
+                );
+              })}
             </g>
           );
         })}
       </svg>
+
+      {(() => {
+        const s = picked ? visible.find((v) => v.id === picked.id) : undefined;
+        const p = s && picked ? s.points[picked.i] : undefined;
+        return s && p ? (
+          <p className="tabular mt-1 text-center text-sm">
+            <span className="font-semibold">{pointText(s, p)}</span>
+          </p>
+        ) : null;
+      })()}
 
       <div className="mt-2 flex flex-wrap gap-1.5">
         {series.map((s) => {
@@ -247,4 +265,15 @@ export function LineChart({
       </div>
     </div>
   );
+}
+
+/** "Bench press · 185 lb × 3 · Oct 19". */
+function pointText(s: Series, p: Series["points"][number]): string {
+  const date = new Date(Date.parse(`${p.date}T00:00:00Z`)).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  const reps = p.reps != null && p.reps > 0 ? ` × ${p.reps}` : "";
+  return `${s.name} · ${p.value} ${s.unit}${reps} · ${date}`;
 }

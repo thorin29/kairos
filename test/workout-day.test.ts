@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { topSet, setsSummary, fmtSet } from "@/lib/workouts/sets";
 import { platesFor, PLATE_BY_ID } from "@/lib/workouts/plates";
 import { isHoldName, poolMetricFor } from "@/lib/workouts/catalog";
+import { repRecords, recordChips, isNewBest, bandPoints, REP_BANDS, weeksInARow } from "@/lib/workouts/records";
 import {
   daySections,
   dayTitle,
@@ -200,5 +201,67 @@ describe("pool movement metric (v0.609)", () => {
     expect(poolMetricFor("WEIGHTS", "DURATION")).toBe("DURATION");
     expect(poolMetricFor("WEIGHTS", null)).toBe("WEIGHT");
     expect(poolMetricFor("ROWING", "DURATION")).toBe("METERS");
+  });
+});
+
+describe("records by rep count (v0.610)", () => {
+  const hist = [
+    { weight: 185, reps: 1, date: "2026-10-05" },
+    { weight: 175, reps: 3, date: "2026-10-05" },
+    { weight: 165, reps: 5, date: "2026-10-12" },
+    { weight: 165, reps: 5, date: "2026-10-01" },
+    { weight: 135, reps: 10, date: "2026-09-20" },
+    { weight: null, reps: 5, date: "2026-09-01" },
+  ];
+  it("keeps the heaviest per exact rep count, first day it was done", () => {
+    expect(repRecords(hist)).toEqual([
+      { reps: 1, weight: 185, date: "2026-10-05" },
+      { reps: 3, weight: 175, date: "2026-10-05" },
+      { reps: 5, weight: 165, date: "2026-10-01" },
+      { reps: 10, weight: 135, date: "2026-09-20" },
+    ]);
+  });
+  it("chips favour the usual counts", () => {
+    const recs = repRecords([...hist, { weight: 150, reps: 7, date: "2026-10-02" }, { weight: 120, reps: 12, date: "2026-10-02" }]);
+    expect(recordChips(recs).map((r) => r.reps)).toEqual([1, 3, 5, 10]);
+  });
+  it("a new best is something never matched for as many reps or more", () => {
+    const recs = repRecords(hist);
+    expect(isNewBest({ weight: 170, reps: 5 }, recs)).toBe(true);
+    expect(isNewBest({ weight: 175, reps: 2 }, recs)).toBe(false); // 175 × 3 already
+    expect(isNewBest({ weight: 180, reps: 2 }, recs)).toBe(true);
+    expect(isNewBest({ weight: 100, reps: 12 }, recs)).toBe(true); // never 12 reps
+    expect(isNewBest({ weight: 200, reps: 1 }, [])).toBe(false); // first session ever
+  });
+  it("rep-range lines take the heaviest set in range per day", () => {
+    const band = REP_BANDS.find((b) => b.key === "4-6")!;
+    expect(
+      bandPoints(
+        [
+          { weight: 185, reps: 1, date: "2026-10-05" },
+          { weight: 165, reps: 5, date: "2026-10-05" },
+          { weight: 165, reps: 6, date: "2026-10-05" },
+          { weight: 155, reps: 4, date: "2026-10-01" },
+        ],
+        band,
+      ),
+    ).toEqual([
+      { date: "2026-10-01", value: 155, reps: 4 },
+      { date: "2026-10-05", value: 165, reps: 6 },
+    ]);
+  });
+});
+
+describe("weeks in a row (v0.610)", () => {
+  const w = (due: number, open: number, logged: boolean, current = false) => ({ start: "", due, open, logged, current });
+  it("counts done or excused weeks, newest first, until one wasn't", () => {
+    expect(weeksInARow([w(3, 1, true, true), w(5, 0, true), w(5, 0, false), w(5, 2, true), w(5, 0, true)])).toBe(2);
+  });
+  it("the current week adds once it qualifies and never breaks the run", () => {
+    expect(weeksInARow([w(2, 0, true, true), w(5, 0, true)])).toBe(2);
+    expect(weeksInARow([w(0, 0, false, true), w(5, 0, true)])).toBe(1);
+  });
+  it("a week with nothing due and nothing logged ends it", () => {
+    expect(weeksInARow([w(0, 0, false), w(5, 0, true)])).toBe(0);
   });
 });
