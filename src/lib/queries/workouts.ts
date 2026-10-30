@@ -33,7 +33,7 @@ export type GraphSeries = {
   color: string;
   /** value = the day's heaviest weight (the record). reps = how many that set
    *  was, when it was logged — never part of the record, only context. */
-  points: { date: string; value: number; reps?: number | null }[];
+  points: { date: string; value: number; reps?: number | null; intent?: string | null }[];
   /** The heaviest set ever logged for this movement. */
   best?: { value: number; reps: number | null; date: string } | null;
   /** Best weight actually lifted at each rep count — real lifts, no estimates.
@@ -233,7 +233,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           poolExerciseId: true,
           weight: true,
           reps: true,
-          session: { select: { date: true, completedOn: true } },
+          session: { select: { date: true, completedOn: true, intent: true } },
           poolExercise: { select: { name: true, muscleGroup: true } },
         },
       }),
@@ -385,7 +385,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       poolExerciseId: string;
       weight: number | null;
       reps: number | null;
-      session: { date: Date };
+      session: { date: Date; intent?: string | null };
       poolExercise: { name: string; muscleGroup: MuscleGroup | null } | null;
     }[];
     const sessions = (todaySessions ?? []) as unknown as SessShape[];
@@ -429,6 +429,8 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     // movementId -> reps -> best weight at that rep count
     const repMaxes = new Map<string, Map<number, { value: number; date: string }>>();
     const dated = new Map<string, { weight: number; reps: number; date: string }[]>();
+    // Days logged as a program's light or test day, drawn hollow (v0.611).
+    const intentOn = new Map<string, string>();
     for (const set of wSets) {
       if (set.weight == null || !set.poolExercise) continue;
       const id = set.poolExerciseId;
@@ -443,6 +445,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       const d = fromDateColumn(
         (set.session as { completedOn?: Date | null }).completedOn ?? set.session.date,
       );
+      if (set.session.intent) intentOn.set(d, set.session.intent);
       const m = perMovementDay.get(id) ?? new Map<string, { value: number; reps: number | null }>();
       const prev = m.get(d);
       // Heaviest wins the day; on equal weight the one with more reps wins,
@@ -473,7 +476,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         unit: meta.muscleGroup ? weightUnits[meta.muscleGroup] : "",
         color: LINE_COLORS[i % LINE_COLORS.length],
         points: [...perMovementDay.get(id)!.entries()]
-          .map(([date, p]) => ({ date, value: p.value, reps: p.reps }))
+          .map(([date, p]) => ({ date, value: p.value, reps: p.reps, intent: intentOn.get(date) ?? null }))
           .sort((a, b) => (a.date < b.date ? -1 : 1)),
         best: [...perMovementDay.get(id)!.entries()]
           .map(([date, p]) => ({ date, value: p.value, reps: p.reps }))

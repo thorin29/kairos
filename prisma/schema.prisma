@@ -92,6 +92,7 @@ model User {
   workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
   workoutSkips     WorkoutMovementSkip[]
   workoutFeedback  WorkoutFeedback[]
+  programs         PersonProgram[]
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   books            Book[]
   chapterReads     UserChapterRead[]
@@ -1326,6 +1327,11 @@ model PlannedExercise {
   poolExercise     PoolExercise   @relation(fields: [poolExerciseId], references: [id], onDelete: Cascade)
   tracked          Boolean        @default(true)
   metric           WorkoutMetric?
+  /// How the sets are laid out ("wave", "range:3x8-12", "same:3x5";
+  /// src/lib/workouts/programs.ts). Null = free, like last time (v0.611).
+  scheme           String?
+  /// The program slot that wrote this entry ("squat", "row"), if any.
+  programRole      String?
   sortOrder        Int            @default(0)
   createdAt        DateTime       @default(now())
 
@@ -1348,6 +1354,27 @@ model WorkoutMovementSkip {
   createdAt DateTime @default(now())
 
   @@id([userId, date, slot])
+}
+
+/// A person's workout program (v0.611): which template, when it and the
+/// current block started, training maxes ({poolExerciseId: weight}), and the
+/// plan it replaced so ending it can put that back. One ACTIVE per person.
+model PersonProgram {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  programKey     String
+  startedOn      DateTime  @db.Date
+  blockStartedOn DateTime  @db.Date
+  /// Weekdays the program's days land on, in day order ("1,2,4,5").
+  days           String
+  trainingMaxes  Json      @default("{}")
+  previousPlan   Json?
+  status         String    @default("ACTIVE")
+  endedOn        DateTime? @db.Date
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, status])
 }
 
 /// How a movement felt for one person on one day, and anything that hurt
@@ -1390,6 +1417,8 @@ model WorkoutSession {
   // values. Null means "same as date", which is true of every ordinary log and
   // every deliberately back-dated one; only logging a missed day sets it.
   completedOn DateTime? @db.Date
+  /// LIGHT or TEST when logged on a program's light or test week (v0.611).
+  intent      String?
   createdAt   DateTime @default(now())
 
   sets SessionSet[]

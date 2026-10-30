@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-10 — Programs (v0.611.0 / app 0.419.0)
+
+A program is a template in the repo (`programs.ts`): weeks, days, slots, set
+schemes. Starting one asks which weekdays, a pool movement for each slot (the
+best name match to start with, or left out) and a recent top weight for main
+lifts (training max = 90%, rounded to 5 lb / 2.5 kg). It then writes an
+ordinary weekly plan: one planned workout per muscle group per day (plus
+Rowing where the day has it), each movement carrying its scheme in
+`PlannedExercise.scheme` and its slot in `programRole`. The plan it replaced
+(and an active rotation, switched off rather than deleted) is kept in
+`PersonProgram.previousPlan`; ending offers "Go back to my old plan" or "Keep
+this plan". Changing program keeps the very first plan as the one to go back
+to.
+
+Targets (`targetsFor`) fill the logger's hints in place of last time: waves use
+the week's percentages of the training max (without one, last time's weights);
+rep ranges add a step once every set reached the top, else aim one rep higher;
+same-weight adds a step once every rep was done. Light weeks drop a set at 80%;
+test weeks work up to a heavy 3 at the best weight lifted for 3+. Nothing is an
+estimate: every number comes from what the person gave or lifted.
+
+Weeks run Sunday–Saturday from `blockStartedOn`. Targets keep cycling after a
+block; the Workouts page shows "Block done" until the person picks Raise my
+maxes (+10 lb lower body, +5 upper; half in kg) or Repeat — the app suggests,
+people decide. A day logged in a light or test week records
+`WorkoutSession.intent`, and charts draw it hollow.
+
+The invite shows on the Workouts page (web person card, phone Workouts) for
+someone with no plan, rotation or program and nothing logged in 30 days. Not
+now snoozes 30 days; Don't ask again is permanent (`workouts.invite.<userId>`).
+The home page placement waits for the suggestions release.
+
 ## 2026-10 — More kinds of progress (v0.610.0 / app 0.418.0)
 
 Records are by exact rep count, from real sets only (`repRecords`). A set is a

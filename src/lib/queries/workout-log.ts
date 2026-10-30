@@ -5,12 +5,22 @@ import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetr
 import type { WorkoutType } from "@/generated/prisma/client";
 import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween, startOfWeek } from "@/lib/dates";
 import { metricUnit, type Metric, type MuscleGroup } from "@/lib/workouts/catalog";
-import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
+import { loadWorkoutUnitSystem, loadWeightUnits } from "@/lib/queries/workouts";
 import { doneOn, loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
 import { loadStaleContext } from "@/lib/chores/stale";
 import { groupsFor, navRegionFor } from "@/lib/workouts/involvement";
 import { setsSummary, topSet } from "@/lib/workouts/sets";
 import { repRecords, REP_BANDS, bandPoints, weeksInARow, type RepRecord } from "@/lib/workouts/records";
+import {
+  parseScheme,
+  programWeek,
+  schemeLabel,
+  targetsFor,
+  weekIntent,
+  weekLabel,
+  type Program,
+} from "@/lib/workouts/programs";
+import { loadActiveProgram, plannedSlotFor, programInfoFor, type ProgramInfo } from "@/lib/workouts/program-run";
 
 /**
  * The exercises scheduled for a person on a day, with any weight/reps already
@@ -571,7 +581,13 @@ export async function loadTodayPlannedWorkouts(
  */
 /** value = the day's heaviest weight (the record); reps = that set's rep count
  *  when it was logged, carried as context, never as the record itself. */
-export type GraphPoint = { date: string; value: number; reps?: number | null };
+export type GraphPoint = {
+  date: string;
+  value: number;
+  reps?: number | null;
+  /** LIGHT or TEST: a program's light or test day, drawn hollow (v0.611). */
+  intent?: string | null;
+};
 /** Body-map facts for one movement, in the shape the clients consume. */
 function bodyMapFor(name: string, filed: string | null) {
   const g = groupsFor(name, filed as MuscleGroup | null);
@@ -746,7 +762,7 @@ export async function loadWorkoutProgress(
       reps: true,
       poolExerciseId: true,
       poolExercise: { select: { name: true, muscleGroup: true } },
-      session: { select: { date: true, completedOn: true } },
+      session: { select: { date: true, completedOn: true, intent: true } },
     },
   });
   // A movement seen only in history still needs a name and a group.
@@ -843,9 +859,13 @@ export async function loadWorkoutProgress(
   const dated = new Map<string, { weight: number; reps: number; date: string }[]>();
   // movement -> reps -> heaviest weight actually lifted at that rep count
   const repMaxes = new Map<string, Map<number, { value: number; date: string }>>();
+  // Days logged as a program's light or test day, drawn hollow (v0.611).
+  const intentOn = new Map<string, string>();
   for (const s of wSets) {
     if (s.weight == null || !s.poolExerciseId) continue;
     const d = doneOn(s.session);
+    const intent = (s.session as { intent?: string | null }).intent;
+    if (intent) intentOn.set(d, intent);
     const m = perDay.get(s.poolExerciseId) ?? new Map<string, { value: number; reps: number | null }>();
     const prev = m.get(d);
     // Heaviest wins the day; on a tie the set with more reps is the better one.
@@ -873,7 +893,7 @@ export async function loadWorkoutProgress(
       ...bodyMapFor(name, trackedGroups.get(id) ?? null),
       unit: weightUnit,
       points: [...(perDay.get(id)?.entries() ?? [])]
-        .map(([date, p]) => ({ date, value: p.value, reps: p.reps }))
+        .map(([date, p]) => ({ date, value: p.value, reps: p.reps, intent: intentOn.get(date) ?? null }))
         .sort((a, b) => (a.date < b.date ? -1 : 1)),
       // The heaviest set ever: the headline number, with the reps it was done
       // for as context. Never an estimate.
@@ -1490,6 +1510,16 @@ export type MovementLog = {
   records: RepRecord[];
   /** How it felt and anything that hurt, once answered (v0.610). */
   feedback: { effort: string | null; hurt: string | null } | null;
+  /** The sets to aim for, when the planned movement has a set scheme (a
+   *  program wrote it): these fill the greyed hints in place of last time
+   *  (v0.611). Weights can be null: last time's fills those. */
+  target: {
+    /** "Strength waves · Week 2 of 4", or just the scheme without a program. */
+    title: string;
+    /** "Work up to a top set", "3 × 8–12". */
+    scheme: string;
+    sets: { weight: number | null; reps: number; top?: boolean }[];
+  } | null;
 };
 
 const setRow = (s: { weight: number | null; reps: number | null; seconds: number | null }): MovementSetRow => ({
@@ -1580,6 +1610,7 @@ export async function loadMovementLog(
   const records = repRecords(
     earlier.map((s) => ({ weight: s.weight, reps: s.reps, date: fromDateColumn(s.session.date) })),
   );
+  const target = await movementTarget(userId, dateISO, slotId, movement, last?.sets ?? [], records);
   return {
     sets: daySets.map(setRow),
     loggedAs,
@@ -1587,8 +1618,62 @@ export async function loadMovementLog(
     skipped: !!skip,
     records,
     feedback: fb ? { effort: fb.effort, hurt: fb.hurt } : null,
+    target,
   };
 }
+
+/** A planned movement's targets for a day, from its set scheme and the
+ *  person's program (v0.611). Null when the movement has no scheme. */
+async function movementTarget(
+  userId: string,
+  dateISO: string,
+  slotId: string,
+  movement: string,
+  lastSets: MovementSetRow[],
+  records: RepRecord[],
+): Promise<MovementLog["target"]> {
+  const planned = await plannedSlotFor(userId, dateISO, slotId);
+  const scheme = parseScheme(planned?.scheme);
+  if (!planned || !scheme) return null;
+  const active = await loadActiveProgram(userId);
+  const fromProgram = active && planned.programRole ? active : null;
+  const program: Program = fromProgram?.program ?? { ...FREE_PROGRAM };
+  const week = fromProgram ? programWeek(program, fromProgram.blockStartedOn, dateISO) : 1;
+  const role = program.days.flatMap((d) => d.roles).find((r) => r.key === planned.programRole);
+  const units = await loadWeightUnits();
+  const unit = units[(planned.muscleGroup ?? "CHEST") as MuscleGroup] ?? "lb";
+  const bestForThree = records.filter((r) => r.reps >= 3).reduce((m, r) => Math.max(m, r.weight), 0) || null;
+  const sets = targetsFor({
+    program,
+    week,
+    scheme,
+    unit,
+    lower: role?.lower,
+    // A swap keeps the scheme but not the planned lift's training max.
+    trainingMax: movement === slotId ? (fromProgram?.trainingMaxes[slotId] ?? null) : null,
+    last: lastSets.map((s) => ({ weight: s.weight, reps: s.reps })),
+    bestForThree,
+  });
+  if (sets.length === 0) return null;
+  const intent = weekIntent(program, week);
+  return {
+    title: fromProgram ? `${program.name} · ${weekLabel(program, week)}` : "",
+    scheme: intent === "TEST" ? "Work up to a heavy 3" : schemeLabel(scheme),
+    sets,
+  };
+}
+
+/** Targets for a scheme outside any program: one week, no light or test weeks. */
+const FREE_PROGRAM: Program = {
+  key: "",
+  name: "",
+  blurb: "",
+  weeks: 1,
+  lightWeeks: [],
+  testWeeks: [],
+  defaultDays: [],
+  days: [],
+};
 
 export type DayMovementState = {
   /** The day's sets in a few words ("5 sets · top 185 × 1"); empty when none. */
@@ -1611,6 +1696,8 @@ export type DayLogState = {
   /** Names of the day's sessions, for plans that log with no movement. */
   sessionNames: string[];
   rested: boolean;
+  /** The person's program and its week on this day, if one is running (v0.611). */
+  program: ProgramInfo | null;
 };
 
 /** The day page's state for a person and date, read in a handful of queries. */
@@ -1717,6 +1804,7 @@ export async function loadDayLogState(
     skippedPlans: [...skipped].filter((s) => s.startsWith("plan:")),
     sessionNames: sessions.filter((s) => !s.isRest && s.name).map((s) => s.name as string),
     rested: sessions.some((s) => s.isRest),
+    program: await programInfoFor(userId, dateISO),
   };
 }
 

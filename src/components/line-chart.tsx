@@ -8,7 +8,7 @@ export type Series = {
   color: string;
   unit: string;
   /** `reps`: the set the point stands for, shown with it ("185 × 3"). */
-  points: { date: string; value: number; reps?: number | null }[];
+  points: { date: string; value: number; reps?: number | null; intent?: string | null }[];
 };
 
 const W = 520;
@@ -216,13 +216,14 @@ export function LineChart({
                 return (
                   <g key={i} onClick={() => setPicked(on ? null : { id: s.id, i })} className="cursor-pointer">
                     <circle cx={cx} cy={cy} r={10} fill="transparent" />
+                    {/* A light or test day is drawn hollow: it isn't meant to beat anything. */}
                     <circle
                       cx={cx}
                       cy={cy}
-                      r={on ? 5 : 3}
-                      fill={s.color}
-                      stroke={dots || on ? "var(--surface)" : undefined}
-                      strokeWidth={dots || on ? 1.5 : undefined}
+                      r={on ? 5 : p.intent ? 3.5 : 3}
+                      fill={p.intent ? "var(--color-surface)" : s.color}
+                      stroke={p.intent ? s.color : dots || on ? "var(--surface)" : undefined}
+                      strokeWidth={p.intent ? 1.75 : dots || on ? 1.5 : undefined}
                     >
                       <title>{pointText(s, p)}</title>
                     </circle>
@@ -275,5 +276,6 @@ function pointText(s: Series, p: Series["points"][number]): string {
     timeZone: "UTC",
   });
   const reps = p.reps != null && p.reps > 0 ? ` × ${p.reps}` : "";
-  return `${s.name} · ${p.value} ${s.unit}${reps} · ${date}`;
+  const kind = p.intent === "LIGHT" ? " · light day" : p.intent === "TEST" ? " · test day" : "";
+  return `${s.name} · ${p.value} ${s.unit}${reps} · ${date}${kind}`;
 }

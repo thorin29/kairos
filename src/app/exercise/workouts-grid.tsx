@@ -29,6 +29,7 @@ import { DayLog } from "./day-log";
 import { LineChart } from "@/components/line-chart";
 import { REP_BANDS } from "@/lib/workouts/records";
 import { WeeklyTraining } from "./weekly-training";
+import { ProgramCard } from "./program-card";
 import { WeightCalculator } from "./weight-calculator";
 import type {
   PersonWorkout,
@@ -289,6 +290,8 @@ export function WorkoutsGrid({
                   )}
 
                   {!personal && <WeeklyTraining userId={open.user.id} />}
+
+                  <ProgramCard userId={open.user.id} />
 
                   <div className="grid grid-cols-3 gap-3">
                     <ActionButton

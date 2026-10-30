@@ -246,6 +246,7 @@ export function DayLog({
         <p className="text-xs font-semibold uppercase tracking-widest text-muted">
           {date === todayISO ? "Today" : dayLabel(date)}
           {late && " · logging late"}
+          {state?.program && ` · ${state.program.name} · ${state.program.label}`}
         </p>
         <h3 className="mt-1 font-display text-xl font-semibold">
           {state?.rested ? "Rest day" : title || (workouts.length === 0 ? "Nothing planned" : "Workout")}
@@ -431,6 +432,8 @@ type Row = {
   saved: boolean;
   /** Added today, so it has no "last time" of its own. */
   added: boolean;
+  /** The program's top set (work up to a top set). */
+  top?: boolean;
 };
 
 const num = (v: string): number | null => {
@@ -440,6 +443,9 @@ const num = (v: string): number | null => {
 
 function rowsFrom(log: MovementLog): Row[] {
   const last = log.last?.sets ?? [];
+  // A program's targets fill the hints in place of last time; a target with no
+  // weight yet (no training max) falls back to last time's weight.
+  const target = log.target?.sets ?? [];
   let k = 0;
   if (log.sets.length > 0) {
     return log.sets.map((s, i) => ({
@@ -447,11 +453,26 @@ function rowsFrom(log: MovementLog): Row[] {
       w: s.weight != null ? fmtNumber(s.weight) : "",
       r: s.reps != null ? String(s.reps) : "",
       s: s.seconds != null ? String(s.seconds) : "",
-      hintW: last[i]?.weight ?? null,
-      hintR: last[i]?.reps ?? null,
+      hintW: target[i] ? (target[i].weight ?? last[i]?.weight ?? null) : (last[i]?.weight ?? null),
+      hintR: target[i] ? target[i].reps : (last[i]?.reps ?? null),
       hintS: last[i]?.seconds ?? null,
       saved: true,
-      added: i >= last.length,
+      added: i >= Math.max(last.length, target.length),
+      top: target[i]?.top,
+    }));
+  }
+  if (target.length > 0) {
+    return target.map((t, i) => ({
+      key: k++,
+      w: "",
+      r: "",
+      s: "",
+      hintW: t.weight ?? last[i]?.weight ?? null,
+      hintR: t.reps,
+      hintS: last[i]?.seconds ?? null,
+      saved: false,
+      added: false,
+      top: t.top,
     }));
   }
   if (last.length > 0) {
@@ -747,6 +768,14 @@ function MovementLogger({
         </span>
       </div>
 
+      {log?.target && (
+        <p className="text-sm">
+          <span className="font-semibold text-muted">Today</span>{" "}
+          <span className="font-semibold">{log.target.scheme}</span>
+          {log.target.title && <span className="text-muted"> · {log.target.title}</span>}
+        </p>
+      )}
+
       {chips.length > 0 && (
         <div className="flex flex-wrap gap-1.5" aria-label="Best weight by reps">
           {chips.map((c) => {
@@ -795,7 +824,10 @@ function MovementLogger({
               return (
                 <div key={r.key} className={`border-b border-hairline py-2 ${r.saved ? "bg-accent/[0.03]" : ""}`}>
                   <div className={`grid ${cols} items-center gap-2`}>
-                    <span className="tabular pl-1 text-sm font-semibold">{i + 1}</span>
+                    <span className="tabular pl-1 text-sm font-semibold">
+                      {i + 1}
+                      {r.top && <span className="block text-[10px] font-bold uppercase leading-none text-accent">Top</span>}
+                    </span>
                     <span className="tabular hidden text-sm text-muted sm:block">
                       {r.added ? "new" : lastText(lastSets[i], metric)}
                     </span>

@@ -24,6 +24,19 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { poolMetrics } from "@/lib/workouts/plan-edit";
 import { setMovementFeedback, cleanEffort, cleanHurt } from "@/lib/workouts/feedback";
 import {
+  answerInvite,
+  endProgram,
+  inviteFor,
+  loadProgramChoices,
+  nextBlock,
+  programInfoFor,
+  setTrainingMax,
+  startProgram,
+  type ProgramChoice,
+  type ProgramInfo,
+  type StartProgramInput,
+} from "@/lib/workouts/program-run";
+import {
   CATEGORY_LABEL,
   MUSCLE_GROUP_LABEL,
   WORKOUT_TYPE_LABEL,
@@ -1295,4 +1308,59 @@ export async function loadWeeklyTrainingFor(userId: string): Promise<{ weeks: Tr
   await requireInteractive();
   await requireCanActFor(userId);
   return loadWeeklyTraining(userId, todayISO());
+}
+
+// --- programs (v0.611) -----------------------------------------------------------
+
+/** Programs to choose from, the person's running program, and the invite. */
+export async function loadProgramsFor(userId: string): Promise<{
+  choices: ProgramChoice[];
+  active: ProgramInfo | null;
+  invite: boolean;
+}> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const [choices, active, invite] = await Promise.all([
+    loadProgramChoices(),
+    programInfoFor(userId, todayISO()),
+    inviteFor(userId),
+  ]);
+  return { choices, active, invite };
+}
+
+export async function startProgramFor(userId: string, input: StartProgramInput): Promise<{ ok: boolean }> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const r = await startProgram(userId, input);
+  refresh();
+  return { ok: r === "ok" };
+}
+
+export async function endProgramFor(userId: string, restore: boolean): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await endProgram(userId, restore);
+  refresh();
+}
+
+export async function nextProgramBlock(userId: string, raise: boolean): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await nextBlock(userId, raise);
+  refresh();
+}
+
+export async function setProgramMax(userId: string, poolExerciseId: string, weight: number): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!Number.isFinite(weight) || weight < 0 || weight >= 2000) return;
+  await setTrainingMax(userId, poolExerciseId, weight);
+  refresh();
+}
+
+export async function answerProgramInvite(userId: string, answer: "later" | "never"): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await answerInvite(userId, answer === "never" ? "never" : "later");
+  refresh();
 }

@@ -819,7 +819,9 @@ GET  /api/v1/workouts/sets?date=YYYY-MM-DD&slot=<planned poolExerciseId>[&doing=
        "last":{ "date","sets":[ Set ] }|null,   // hints; `doing` picks whose history
        "skipped":bool,
        "records":[ { "reps","weight","date" } ],  // best per rep count before this day (v0.610)
-       "feedback":{ "effort","hurt" }|null }      // how it felt (v0.610)
+       "feedback":{ "effort","hurt" }|null,       // how it felt (v0.610)
+       "target":{ "title","scheme",               // the planned scheme's targets (v0.611)
+                  "sets":[ { "weight":num|null,"reps","top":bool } ] }|null }
 Set: { "weight":num|null, "reps":int|null, "seconds":int|null }
 
 POST /api/v1/workouts/sets
@@ -845,6 +847,33 @@ GET  /api/v1/workouts/weekly
 200: { "weeks":[ { "start","days","sets","minutes","trained" } ],  // 12, oldest first
        "inARow":int }                          // records.ts weeksInARow
 ```
+**Programs (v0.611).**
+```
+GET  /api/v1/workouts/programs
+200: { "choices":[ ProgramChoice ], "active": ProgramInfo|null, "invite":bool }
+ProgramChoice: { "key","name","blurb","weeks","defaultDays":[weekday],
+                 "days":[ { "name","row":bool,
+                            "roles":[ { "key","label","muscleGroup","main","optional","scheme",
+                                        "defaultId"|null,"options":[ {id,name} ] } ] } ] }
+ProgramInfo:   { "key","name","week","weeks","label","intent":"LIGHT"|"TEST"|null,
+                 "blockDone":bool,"maxes":[ { "poolExerciseId","name","weight" } ] }
+
+POST /api/v1/workouts/programs/start  { "key","days":[weekday per program day],
+                                        "picks":{ "<day>:<slot>": poolExerciseId|null },
+                                        "tops":{ poolExerciseId: recent top weight } }
+POST /api/v1/workouts/programs/end    { "restore":bool }   // true: back to the old plan
+POST /api/v1/workouts/programs/block  { "raise":bool }     // end of a block
+POST /api/v1/workouts/programs/max    { "poolExerciseId","weight" }   // 0 clears
+POST /api/v1/workouts/invite          { "answer":"later"|"never" }
+200 (each): { "status":"ok" }
+```
+Starting writes the caller's weekly plan (`PlannedWorkout` rows with each
+movement's `scheme`) and keeps the old plan to restore. `GET /api/v1/workouts`
+also returns `program` (ProgramInfo for that day, or null). Progress points
+carry `intent` ("LIGHT"/"TEST"), drawn hollow. Rules:
+src/lib/workouts/programs.ts (`targetsFor`); running a program:
+src/lib/workouts/program-run.ts.
+
 New bests and the record chips are worked out on each client from `records`
 with the rules in src/lib/workouts/records.ts (`isNewBest`, `recordChips`).
 
@@ -918,7 +947,7 @@ after every planned log, HIIT log and skip. Logging a movement un-skips it.
 ```
 GET  /api/v1/workouts/progress   → WorkoutProgress (src/lib/queries/workout-log.ts)
   series[]: { poolExerciseId,name,muscleGroup,tracked,unit,
-              points:[{date,value,reps}], best, repMaxes,
+              points:[{date,value,reps,intent}], best, repMaxes,
               bands:[{key,label,points}],          // one rep range per line (v0.610)
               navRegion, shadePrimary, shadeSecondary[], view }   // body map, v0.549–0.551
   planDays[]: { day, groups[] }   defaultGroup   defaultId   history[] …
@@ -1122,7 +1151,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**146 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**152 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1135,7 +1164,7 @@ silently invisible:
 - **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
 - **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
-- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null; v0.609), `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null; v0.609), `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604)
 - **hockey** (the week from ice-time), `hockey/prefs`

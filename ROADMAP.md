@@ -1174,10 +1174,12 @@ injuries don't read as going backwards. Phases, in order:
       tap labels, weekly training with weeks in a row. Web v0.610.0, phone
       v0.418.0. Session intent (light days drawn hollow) moved to 4, where
       programs plan the light weeks.
-- [ ] 4. Programs: templates that feed the plan (strength waves with a light
-      week, sets of 10 with earned increases, full body, conditioning,
-      maintain/hurt); target weight per set; test weeks; session intent
-      (light / technique / test days drawn hollow on the charts)
+- [x] 4. Programs: templates that write the plan (strength waves with a light
+      week, sets of 10 with a test week, in-season full body, just get moving,
+      maintain); target weight and reps per set; end-of-block raise/repeat;
+      light and test days drawn hollow; the invite. Web v0.611.0, phone
+      v0.419.0. Conditioning and kettlebell programs wait for the library (6);
+      a "Change" for today's set type waits for the plan builder.
 - [ ] 5. Suggestions: light week due, next weight, big-jump warning, what to
       try after a block, swaps around a hurt area — suggested, never automatic
 - [ ] 6. Household equipment, movement tags, a starting library shipped as
@@ -1722,7 +1724,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.610.0 (migrations through 129_workout_feedback).
-- App versionName 0.418.0 / versionCode 480 / CLIENT_BUILD 480.
+- Web APP_VERSION 0.611.0 (migrations through 130_programs).
+- App versionName 0.419.0 / versionCode 481 / CLIENT_BUILD 481.
 - ice-time 0.1.1 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

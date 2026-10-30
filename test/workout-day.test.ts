@@ -3,6 +3,7 @@ import { topSet, setsSummary, fmtSet } from "@/lib/workouts/sets";
 import { platesFor, PLATE_BY_ID } from "@/lib/workouts/plates";
 import { isHoldName, poolMetricFor } from "@/lib/workouts/catalog";
 import { repRecords, recordChips, isNewBest, bandPoints, REP_BANDS, weeksInARow } from "@/lib/workouts/records";
+import { PROGRAMS, programByKey, parseScheme, schemeKey, programWeek, blocksDone, targetsFor, weekLabel, raisedMaxes, defaultMovement } from "@/lib/workouts/programs";
 import {
   daySections,
   dayTitle,
@@ -263,5 +264,64 @@ describe("weeks in a row (v0.610)", () => {
   });
   it("a week with nothing due and nothing logged ends it", () => {
     expect(weeksInARow([w(0, 0, false), w(5, 0, true)])).toBe(0);
+  });
+});
+
+describe("programs (v0.611)", () => {
+  const waves = programByKey("strength-waves")!;
+  const tens = programByKey("sets-of-ten")!;
+  const full = programByKey("full-body-3")!;
+  it("every program's days and defaults line up", () => {
+    for (const p of PROGRAMS) {
+      expect(p.defaultDays.length).toBe(p.days.length);
+      if (p.days.some((d) => d.roles.some((r) => r.scheme.kind === "WAVE"))) expect(p.wave?.length).toBe(p.weeks);
+    }
+  });
+  it("schemes round-trip", () => {
+    for (const k of ["wave", "range:3x8-12", "same:3x5"]) expect(schemeKey(parseScheme(k)!)).toBe(k);
+    expect(parseScheme("nonsense")).toBeNull();
+  });
+  it("weeks cycle from the block start", () => {
+    expect(programWeek(waves, "2026-10-25", "2026-10-30")).toBe(1);
+    expect(programWeek(waves, "2026-10-25", "2026-11-15")).toBe(4);
+    expect(programWeek(waves, "2026-10-25", "2026-11-22")).toBe(1);
+    expect(blocksDone(waves, "2026-10-25", "2026-11-21")).toBe(0);
+    expect(blocksDone(waves, "2026-10-25", "2026-11-22")).toBe(1);
+    expect(weekLabel(waves, 4)).toBe("Week 4 of 4 · light");
+  });
+  it("waves: the week's sets from the training max, or last time without one", () => {
+    expect(targetsFor({ program: waves, week: 3, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 170, last: [] })).toEqual([
+      { weight: 130, reps: 5, top: undefined },
+      { weight: 145, reps: 3, top: undefined },
+      { weight: 160, reps: 1, top: true },
+    ]);
+    const t = targetsFor({ program: waves, week: 1, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: null, last: [{ weight: 135, reps: 5 }] });
+    expect(t.map((x) => x.weight)).toEqual([135, null, null]);
+  });
+  it("rep range: up a step once every set reached the top, else one more rep", () => {
+    const scheme = parseScheme("range:3x8-12")!;
+    const up = targetsFor({ program: tens, week: 1, scheme, unit: "lb", lower: true, last: [12, 12, 12].map((r) => ({ weight: 100, reps: r })) });
+    expect(up).toEqual([1, 2, 3].map(() => ({ weight: 110, reps: 8 })));
+    const more = targetsFor({ program: tens, week: 1, scheme, unit: "lb", last: [{ weight: 50, reps: 10 }, { weight: 50, reps: 9 }, { weight: 50, reps: 8 }] });
+    expect(more[0]).toEqual({ weight: 50, reps: 9 });
+  });
+  it("same weight: up once every rep was done; light week drops a set at 80%", () => {
+    const scheme = parseScheme("same:3x5")!;
+    const done = [5, 5, 5].map((r) => ({ weight: 135, reps: r }));
+    expect(targetsFor({ program: full, week: 1, scheme, unit: "lb", last: done })[0]).toEqual({ weight: 140, reps: 5 });
+    const light = targetsFor({ program: full, week: 4, scheme, unit: "lb", last: done });
+    expect(light).toEqual([{ weight: 110, reps: 5 }, { weight: 110, reps: 5 }]);
+  });
+  it("test week works up to a heavy 3 at the best for 3+", () => {
+    const t = targetsFor({ program: tens, week: 6, scheme: parseScheme("range:3x8-12")!, unit: "lb", last: [], bestForThree: 150 });
+    expect(t.at(-1)).toEqual({ weight: 150, reps: 3, top: true });
+    expect(t[0].weight).toBe(75);
+  });
+  it("raising maxes steps lower lifts further", () => {
+    expect(raisedMaxes({ a: 170, b: 120 }, new Set(["a"]), "lb")).toEqual({ a: 180, b: 125 });
+  });
+  it("finds a default movement by name, ignoring case and plurals", () => {
+    const role = waves.days[0].roles[0];
+    expect(defaultMovement(role, [{ id: "x", name: "Back Squats" }])?.id).toBe("x");
   });
 });
