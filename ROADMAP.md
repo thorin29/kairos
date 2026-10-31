@@ -1180,8 +1180,11 @@ injuries don't read as going backwards. Phases, in order:
       light and test days drawn hollow; the invite. Web v0.611.0, phone
       v0.419.0. Conditioning and kettlebell programs wait for the library (6);
       a "Change" for today's set type waits for the plan builder.
-- [ ] 5. Suggestions: light week due, next weight, big-jump warning, what to
-      try after a block, swaps around a hurt area — suggested, never automatic
+- [x] 5. Suggestions, never automatic: day cards (back after a break, a recent
+      hurt, workouts that felt hard → a lighter day at 80/90%), movement cards
+      (swap around a hurt area, the next weight, a stalled lift), big-jump
+      note, the program invite on the home page. Web v0.612.0, phone v0.420.0.
+      Hockey-aware and balance rules need game detection and movement tags (6).
 - [ ] 6. Household equipment, movement tags, a starting library shipped as
       data, and a finisher builder
 - [ ] 7. Concept2 Logbook sync with a personal read-only token
@@ -1724,7 +1727,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.611.1 (migrations through 130_programs).
-- App versionName 0.419.0 / versionCode 481 / CLIENT_BUILD 481.
+- Web APP_VERSION 0.612.0 (migrations through 131_suggestion_answers).
+- App versionName 0.420.0 / versionCode 482 / CLIENT_BUILD 482.
 - ice-time 0.1.1 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

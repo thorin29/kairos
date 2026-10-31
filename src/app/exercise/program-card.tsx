@@ -21,7 +21,16 @@ const PILL = "inline-flex h-10 items-center rounded-full border px-4 text-sm fon
  * Starting one asks which days, which movement for each slot and, for main
  * lifts, a recent top weight; it then writes their weekly plan.
  */
-export function ProgramCard({ userId, onChanged }: { userId: string; onChanged?: () => void }) {
+export function ProgramCard({
+  userId,
+  onChanged,
+  inviteOnly = false,
+}: {
+  userId: string;
+  onChanged?: () => void;
+  /** The home page: show only the invite (and its setup), nothing otherwise. */
+  inviteOnly?: boolean;
+}) {
   const [data, setData] = useState<{ choices: ProgramChoice[]; active: ProgramInfo | null; invite: boolean } | null>(null);
   const [setup, setSetup] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
@@ -38,6 +47,7 @@ export function ProgramCard({ userId, onChanged }: { userId: string; onChanged?:
   }, [userId]);
 
   if (!data) return null;
+  if (inviteOnly && !data.invite && !setup) return null;
   const done = () => {
     void reload();
     onChanged?.();

@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-10 — Suggestions (v0.612.0 / app 0.420.0)
+
+Rules are pure and explainable (`suggest.ts`, thresholds in `RULES`), one card
+per surface, each saying why, never applied until the person picks. Day card,
+first match: back after 14+ days off (ease in at 90%), an area that hurt in the
+last 7 days (lighter at 80%), two of the last three efforts Hard or Too hard
+within 10 days (lighter at 80%). None inside a program's light or test week:
+the program already decided. Movement card, first match: a recent hurt area
+that works this muscle group (swap), the next weight (same top set the last two
+times and it felt Easy or Solid: +5 upper / +10 lower; never when a program
+target or a lighter day sets the weights), a lift with no new best in 6 weeks
+over 4+ sessions (try a variation, or see programs).
+
+Answers live in `WorkoutSuggestionAnswer` (migration 131) and hide that card
+for the day. "light" / "ease" also write the day's lightness; the server then
+returns each movement's target (or last time's sets) at that share, so both
+clients just show the hints, and the session records `intent` LIGHT (drawn
+hollow). A set more than 10% over the heaviest of the last two weeks gets a
+note on the set: flagged, never blocked. The program invite now also shows on
+the home page (web person page, phone home).
+
+Not yet: hockey-aware rules (game tomorrow, tournament weeks) and balance by
+movement type need game detection and the movement tags that come with the
+library (release 6).
+
 ## 2026-10 — Home page workouts open the day page (v0.611.1)
 
 The person page's workout prompt (`WorkoutLauncher`) still opened the old

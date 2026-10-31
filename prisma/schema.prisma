@@ -93,6 +93,7 @@ model User {
   workoutSkips     WorkoutMovementSkip[]
   workoutFeedback  WorkoutFeedback[]
   programs         PersonProgram[]
+  suggestionAnswers WorkoutSuggestionAnswer[]
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   books            Book[]
   chapterReads     UserChapterRead[]
@@ -1354,6 +1355,21 @@ model WorkoutMovementSkip {
   createdAt DateTime @default(now())
 
   @@id([userId, date, slot])
+}
+
+/// An answer to a workout suggestion for a day (v0.612): hides that card for
+/// the day. key "day" holds a lighter day ("light" / "ease"). slot is the
+/// planned movement for a movement card, '' for the day's.
+model WorkoutSuggestionAnswer {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  key       String
+  slot      String   @default("")
+  answer    String
+  createdAt DateTime @default(now())
+
+  @@id([userId, date, key, slot])
 }
 
 /// A person's workout program (v0.611): which template, when it and the

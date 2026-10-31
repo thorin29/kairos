@@ -23,6 +23,7 @@ import { loadExercisePool, type PoolEntry } from "@/lib/queries/workouts";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { poolMetrics } from "@/lib/workouts/plan-edit";
 import { setMovementFeedback, cleanEffort, cleanHurt } from "@/lib/workouts/feedback";
+import { answerSuggestion } from "@/lib/workouts/suggest-run";
 import {
   answerInvite,
   endProgram,
@@ -1363,4 +1364,19 @@ export async function answerProgramInvite(userId: string, answer: "later" | "nev
   await requireCanActFor(userId);
   await answerInvite(userId, answer === "never" ? "never" : "later");
   refresh();
+}
+
+/** Answer a suggestion card: hides it for the day; "light" / "ease" make the
+ *  day lighter (v0.612). */
+export async function answerWorkoutSuggestion(input: {
+  userId: string;
+  dateISO: string;
+  key: string;
+  slot?: string;
+  answer: string;
+}): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(input.userId);
+  if (!ISO.test(input.dateISO) || !input.key || !input.answer) return;
+  await answerSuggestion(input.userId, input.dateISO, input.key, input.slot ?? "", input.answer);
 }

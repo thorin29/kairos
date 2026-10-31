@@ -4,6 +4,7 @@ import { platesFor, PLATE_BY_ID } from "@/lib/workouts/plates";
 import { isHoldName, poolMetricFor } from "@/lib/workouts/catalog";
 import { repRecords, recordChips, isNewBest, bandPoints, REP_BANDS, weeksInARow } from "@/lib/workouts/records";
 import { PROGRAMS, programByKey, parseScheme, schemeKey, programWeek, blocksDone, targetsFor, weekLabel, raisedMaxes, defaultMovement } from "@/lib/workouts/programs";
+import { daySuggestion, movementSuggestion, bigJump, recentHurt, lightFactor } from "@/lib/workouts/suggest";
 import {
   daySections,
   dayTitle,
@@ -323,5 +324,65 @@ describe("programs (v0.611)", () => {
   it("finds a default movement by name, ignoring case and plurals", () => {
     const role = waves.days[0].roles[0];
     expect(defaultMovement(role, [{ id: "x", name: "Back Squats" }])?.id).toBe("x");
+  });
+});
+
+describe("suggestions (v0.612)", () => {
+  const none = new Set<string>();
+  const base = { today: "2026-10-30", lastTrained: "2026-10-29", feedback: [], light: false, programIntent: null, answered: none };
+  it("welcome back after two weeks off, before anything else", () => {
+    const s = daySuggestion({ ...base, lastTrained: "2026-10-10", feedback: [{ date: "2026-10-29", effort: null, hurt: "KNEE" }] });
+    expect(s?.key).toBe("back");
+    expect(s?.actions[0].answer).toBe("ease");
+  });
+  it("asks about a recent hurt, then hard days; quiet once answered or already light", () => {
+    const hurt = daySuggestion({ ...base, feedback: [{ date: "2026-10-27", effort: null, hurt: "SHOULDER" }] });
+    expect(hurt?.title).toBe("Your shoulder hurt on Tuesday. Go lighter today?");
+    expect(daySuggestion({ ...base, feedback: [{ date: "2026-10-27", effort: null, hurt: "SHOULDER" }], answered: new Set(["hurt"]) })).toBeNull();
+    const hard = [
+      { date: "2026-10-29", effort: "HARD", hurt: null },
+      { date: "2026-10-28", effort: "TOO_HARD", hurt: null },
+      { date: "2026-10-27", effort: "SOLID", hurt: null },
+    ];
+    expect(daySuggestion({ ...base, feedback: hard })?.key).toBe("hard");
+    expect(daySuggestion({ ...base, feedback: hard, light: true })).toBeNull();
+    expect(daySuggestion({ ...base, feedback: hard, programIntent: "LIGHT" })).toBeNull();
+    expect(recentHurt([{ date: "2026-10-01", effort: null, hurt: "KNEE" }], "2026-10-30")).toBeNull();
+  });
+  const mv = {
+    today: "2026-10-30",
+    name: "bench press",
+    muscleGroup: "CHEST" as const,
+    hasTarget: false,
+    lower: false,
+    unit: "lb",
+    feedback: [],
+    lastBestOn: "2026-10-20",
+    answered: none,
+  };
+  const s185 = [{ weight: 135, reps: 5 }, { weight: 185, reps: 3 }];
+  it("next weight after the same top set twice that felt fine", () => {
+    const s = movementSuggestion({ ...mv, history: [{ date: "2026-10-27", sets: s185, effort: "SOLID" }, { date: "2026-10-20", sets: s185, effort: null }] });
+    expect(s?.title).toBe("Try 190 for your top set?");
+    expect(s?.weight).toBe(190);
+    expect(movementSuggestion({ ...mv, hasTarget: true, history: [{ date: "2026-10-27", sets: s185, effort: "SOLID" }, { date: "2026-10-20", sets: s185, effort: null }] })).toBeNull();
+    expect(movementSuggestion({ ...mv, history: [{ date: "2026-10-27", sets: s185, effort: "HARD" }, { date: "2026-10-20", sets: s185, effort: null }] })).toBeNull();
+  });
+  it("a hurt area that works this movement offers a swap", () => {
+    const s = movementSuggestion({ ...mv, history: [], feedback: [{ date: "2026-10-29", effort: null, hurt: "ELBOW" }] });
+    expect(s?.key).toBe("hurt-swap");
+    expect(movementSuggestion({ ...mv, history: [], feedback: [{ date: "2026-10-29", effort: null, hurt: "KNEE" }] })).toBeNull();
+  });
+  it("a stalled lift: no new best in 6 weeks over 4+ sessions", () => {
+    const h = ["2026-10-27", "2026-10-20", "2026-10-13", "2026-10-06"].map((date) => ({ date, sets: [{ weight: 180, reps: 3 }], effort: null }));
+    expect(movementSuggestion({ ...mv, history: h, lastBestOn: "2026-09-01" })?.key).toBe("stall");
+    expect(movementSuggestion({ ...mv, history: h, lastBestOn: "2026-10-13" })).toBeNull();
+  });
+  it("big jumps and lighter days", () => {
+    expect(bigJump(205, 175)).toBe(17);
+    expect(bigJump(190, 185)).toBeNull();
+    expect(lightFactor("light")).toBe(0.8);
+    expect(lightFactor("ease")).toBe(0.9);
+    expect(lightFactor("dismiss")).toBeNull();
   });
 });

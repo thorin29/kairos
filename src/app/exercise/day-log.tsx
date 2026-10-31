@@ -7,6 +7,7 @@ import {
   loadWorkoutWeek,
   restDay,
   saveMovementFeedback,
+  answerWorkoutSuggestion,
   saveMovementSets,
   skipMovement,
   type LoggedSet,
@@ -34,6 +35,7 @@ import {
   type UnitSystem,
 } from "@/lib/workouts/catalog";
 import { isNewBest, recordChips } from "@/lib/workouts/records";
+import { bigJump, type Suggestion } from "@/lib/workouts/suggest";
 import { addDays, dayOfWeek } from "@/lib/dates";
 import {
   ArrowLeftIcon,
@@ -268,6 +270,23 @@ export function DayLog({
           </div>
         )}
       </div>
+
+      {state?.light && !state.rested && (
+        <p className="text-sm font-semibold text-accent">Lighter today · {Math.round(state.light * 100)}% of the usual weights</p>
+      )}
+
+      {state?.suggestion && !state.rested && (
+        <SuggestionCard
+          s={state.suggestion}
+          onAnswer={(answer) => {
+            const key = state.suggestion!.key;
+            setData((cur) => (cur ? { ...cur, state: { ...cur.state, suggestion: null } } : cur));
+            void answerWorkoutSuggestion({ userId, dateISO: date, key, answer })
+              .then(() => setTick((n) => n + 1))
+              .catch(() => {});
+          }}
+        />
+      )}
 
       {failed && (
         <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">Couldn&rsquo;t load this day. Try again.</p>
@@ -547,6 +566,7 @@ function MovementLogger({
   const [effort, setEffort] = useState<Effort | null>(null);
   const [hurt, setHurt] = useState<HurtArea | null>(null);
   const [hurtOpen, setHurtOpen] = useState(false);
+  const [sugg, setSugg] = useState<Suggestion | null>(null);
   const nextKey = useRef(100);
   const latest = useRef<Row[]>([]);
   latest.current = rows;
@@ -559,6 +579,7 @@ function MovementLogger({
         setLog(l);
         setRows(rowsFrom(l));
         setSkipped(l.skipped);
+        setSugg(l.suggestion ?? null);
         setEffort((l.feedback?.effort as Effort | null) ?? null);
         setHurt((l.feedback?.hurt as HurtArea | null) ?? null);
         if (l.loggedAs) setDoing({ id: l.loggedAs.poolExerciseId, name: l.loggedAs.name });
@@ -720,6 +741,24 @@ function MovementLogger({
     void saveMovementFeedback({ userId, dateISO, slot: slotId, effort: e, hurt: h }).catch(() => {});
   };
 
+  // A suggestion's answer: "use" puts its weight in the top set's hint, "swap"
+  // opens the picker, "programs" goes back to the day. Each hides it for today.
+  const answerSugg = (answer: string) => {
+    const s = sugg;
+    if (!s) return;
+    setSugg(null);
+    void answerWorkoutSuggestion({ userId, dateISO, key: s.key, slot: slotId, answer }).catch(() => {});
+    if (answer === "use" && s.weight != null) {
+      const open = rows.filter((r) => !r.saved && r.w === "" && r.hintW != null);
+      const max = Math.max(...open.map((r) => r.hintW as number));
+      setRows((rs) => rs.map((r) => (open.includes(r) && r.hintW === max ? { ...r, hintW: (s.weight as number) - shift } : r)));
+    } else if (answer === "swap") {
+      setPicking(true);
+    } else if (answer === "programs") {
+      void leave();
+    }
+  };
+
   const records = log?.records ?? [];
   // Today's heaviest at each exact rep count, from what's saved or typed.
   const todayAt = new Map<number, number>();
@@ -770,6 +809,8 @@ function MovementLogger({
           {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : status === "error" ? "Not saved. Try again." : log?.last ? `Last time ${log.last.date.slice(5).replace("-", "/")}` : ""}
         </span>
       </div>
+
+      {sugg && !skipped && <SuggestionCard s={sugg} onAnswer={answerSugg} />}
 
       {log?.target && (
         <p className="text-sm">
@@ -883,6 +924,15 @@ function MovementLogger({
                       <XIcon className="h-4 w-4" />
                     </button>
                   </div>
+                  {(() => {
+                    if (metric !== "WEIGHT" || (!r.saved && !typed(r))) return null;
+                    const pct = bigJump(valueOf(r).weight, log?.recentTop ?? null);
+                    return pct != null ? (
+                      <p className="mt-1 pl-10 text-xs font-semibold text-amber-700">
+                        {pct}% over your recent top. Make sure it&rsquo;s the weight you meant.
+                      </p>
+                    ) : null;
+                  })()}
                   {r.saved && metric === "WEIGHT" && isNewBest(valueOf(r), records) && (
                     <p className="mt-1 pl-10 text-xs font-semibold text-emerald-700">
                       New best for {valueOf(r).reps} {valueOf(r).reps === 1 ? "rep" : "reps"}
@@ -1051,5 +1101,34 @@ function MovementLogger({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * One suggestion: what and why, with its choices. Never applied on its own;
+ * answering hides it for the day.
+ */
+function SuggestionCard({ s, onAnswer }: { s: Suggestion; onAnswer: (answer: string) => void }) {
+  return (
+    <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent/5 px-4 py-3">
+      <span className="min-w-[14rem] flex-1">
+        <span className="block text-sm font-semibold">{s.title}</span>
+        <span className="block text-xs text-muted">{s.why}</span>
+      </span>
+      <span className="flex flex-wrap gap-2">
+        {s.actions.map((a, i) => (
+          <button
+            key={a.answer}
+            type="button"
+            onClick={() => onAnswer(a.answer)}
+            className={`inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold ${
+              i === 0 ? "border-accent bg-accent text-on-accent" : "border-hairline bg-surface hover:border-accent"
+            }`}
+          >
+            {a.label}
+          </button>
+        ))}
+      </span>
+    </section>
   );
 }

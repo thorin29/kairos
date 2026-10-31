@@ -14,6 +14,7 @@ import { repRecords, REP_BANDS, bandPoints, weeksInARow, type RepRecord } from "
 import {
   parseScheme,
   programWeek,
+  roundLoad,
   schemeLabel,
   targetsFor,
   weekIntent,
@@ -21,6 +22,8 @@ import {
   type Program,
 } from "@/lib/workouts/programs";
 import { loadActiveProgram, plannedSlotFor, programInfoFor, type ProgramInfo } from "@/lib/workouts/program-run";
+import { dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
+import type { Suggestion } from "@/lib/workouts/suggest";
 
 /**
  * The exercises scheduled for a person on a day, with any weight/reps already
@@ -1520,6 +1523,11 @@ export type MovementLog = {
     scheme: string;
     sets: { weight: number | null; reps: number; top?: boolean }[];
   } | null;
+  /** One suggestion card for this movement, or null (v0.612). */
+  suggestion: Suggestion | null;
+  /** Heaviest weight in the last two weeks before today: a set more than 10%
+   *  over it gets a note (suggest.ts bigJump). */
+  recentTop: number | null;
 };
 
 const setRow = (s: { weight: number | null; reps: number | null; seconds: number | null }): MovementSetRow => ({
@@ -1610,7 +1618,41 @@ export async function loadMovementLog(
   const records = repRecords(
     earlier.map((s) => ({ weight: s.weight, reps: s.reps, date: fromDateColumn(s.session.date) })),
   );
-  const target = await movementTarget(userId, dateISO, slotId, movement, last?.sets ?? [], records);
+  let target = await movementTarget(userId, dateISO, slotId, movement, last?.sets ?? [], records);
+  const [light, poolRow, units] = await Promise.all([
+    dayLightFactor(userId, dateISO),
+    prisma.poolExercise.findUnique({ where: { id: movement }, select: { muscleGroup: true } }) as Promise<{
+      muscleGroup: string | null;
+    } | null>,
+    loadWeightUnits(),
+  ]);
+  const unit = (poolRow?.muscleGroup && units[poolRow.muscleGroup as MuscleGroup]) || "lb";
+  // A lighter day (a suggestion answered): today's targets, or last time's
+  // sets, at 80% (90% easing back in), in place of the usual hints.
+  if (light) {
+    const base =
+      target?.sets ??
+      (last?.sets ?? [])
+        .filter((s) => s.weight != null)
+        .map((s) => ({ weight: s.weight, reps: s.reps ?? 0 }));
+    if (base.length > 0) {
+      target = {
+        title: target?.title ?? "",
+        scheme: `Lighter today · ${Math.round(light * 100)}%`,
+        sets: base.map((s) => ({ ...s, weight: s.weight != null ? roundLoad(s.weight * light, unit) : null })),
+      };
+    }
+  }
+  const { suggestion, recentTop } = await movementSuggestionFor({
+    userId,
+    dateISO,
+    slot: slotId,
+    movement,
+    hasTarget: !!target,
+    records,
+    lower: poolRow?.muscleGroup === "LEGS",
+    unit,
+  });
   return {
     sets: daySets.map(setRow),
     loggedAs,
@@ -1619,6 +1661,8 @@ export async function loadMovementLog(
     records,
     feedback: fb ? { effort: fb.effort, hurt: fb.hurt } : null,
     target,
+    suggestion,
+    recentTop,
   };
 }
 
@@ -1698,6 +1742,10 @@ export type DayLogState = {
   rested: boolean;
   /** The person's program and its week on this day, if one is running (v0.611). */
   program: ProgramInfo | null;
+  /** The day's suggestion card, at most one (v0.612). */
+  suggestion: Suggestion | null;
+  /** Today was made lighter: the share of the usual weights. */
+  light: number | null;
 };
 
 /** The day page's state for a person and date, read in a handful of queries. */
@@ -1805,6 +1853,8 @@ export async function loadDayLogState(
     sessionNames: sessions.filter((s) => !s.isRest && s.name).map((s) => s.name as string),
     rested: sessions.some((s) => s.isRest),
     program: await programInfoFor(userId, dateISO),
+    suggestion: await daySuggestionFor(userId, dateISO),
+    light: await dayLightFactor(userId, dateISO),
   };
 }
 

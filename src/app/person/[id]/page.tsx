@@ -19,6 +19,8 @@ import {
 import { loadOverdueWorkoutDates } from "@/lib/queries/workout-log";
 import { loadReadingProgress } from "@/lib/queries/reading";
 import { WorkoutLauncher } from "./workout-launcher";
+import { ProgramCard } from "@/app/exercise/program-card";
+import { inviteFor } from "@/lib/workouts/program-run";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { loadClassOptions, loadSubjectNames } from "@/lib/queries/school";
@@ -169,6 +171,8 @@ export default async function PersonPage({
     loadReadingProgress(id),
   ]);
   const boardPerson = board.people.find((p) => p.user.id === id) ?? null;
+  // "Start a workout program?" for someone with no plan and nothing logged lately.
+  const showInvite = await inviteFor(id);
   const unitSystem = board.unitSystem;
 
   // For a workout prompt on day D: the plan for D's weekday, plus what's already
@@ -698,6 +702,12 @@ export default async function PersonPage({
         );
       })()}
 
+
+      {showInvite && (
+        <div className="mt-6">
+          <ProgramCard userId={id} inviteOnly />
+        </div>
+      )}
 
       <div className="mt-8 flex flex-wrap gap-3">
         <AddTaskForm

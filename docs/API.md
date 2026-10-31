@@ -821,7 +821,9 @@ GET  /api/v1/workouts/sets?date=YYYY-MM-DD&slot=<planned poolExerciseId>[&doing=
        "records":[ { "reps","weight","date" } ],  // best per rep count before this day (v0.610)
        "feedback":{ "effort","hurt" }|null,       // how it felt (v0.610)
        "target":{ "title","scheme",               // the planned scheme's targets (v0.611)
-                  "sets":[ { "weight":num|null,"reps","top":bool } ] }|null }
+                  "sets":[ { "weight":num|null,"reps","top":bool } ] }|null,
+       "suggestion": Suggestion|null,            // one card for this movement (v0.612)
+       "recentTop":num|null }                    // heaviest in the last 14 days (big-jump note)
 Set: { "weight":num|null, "reps":int|null, "seconds":int|null }
 
 POST /api/v1/workouts/sets
@@ -873,6 +875,17 @@ also returns `program` (ProgramInfo for that day, or null). Progress points
 carry `intent` ("LIGHT"/"TEST"), drawn hollow. Rules:
 src/lib/workouts/programs.ts (`targetsFor`); running a program:
 src/lib/workouts/program-run.ts.
+
+**Suggestions (v0.612).**
+```
+Suggestion: { "key","title","why","actions":[ { "answer","label" } ],"weight":num? }
+POST /api/v1/workouts/suggestion  { "date","key","slot"?,"answer" }  → { "date","status":"saved" }
+```
+`GET /api/v1/workouts` returns the day's `suggestion` and `light` (0.8 / 0.9 when
+the day was made lighter, else null). Answering hides a card for the day;
+"light" and "ease" also make the day lighter, and the loggers' `target` then
+comes back at that share. A set more than 10% over `recentTop` is flagged on
+each client (`bigJump`). Rules and thresholds: src/lib/workouts/suggest.ts.
 
 New bests and the record chips are worked out on each client from `records`
 with the rules in src/lib/workouts/records.ts (`isNewBest`, `recordChips`).
@@ -1151,7 +1164,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**152 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**153 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1164,7 +1177,7 @@ silently invisible:
 - **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
 - **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
-- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null; v0.609), `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null; v0.609), `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604)
 - **hockey** (the week from ice-time), `hockey/prefs`

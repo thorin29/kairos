@@ -12,6 +12,7 @@ import { daySections, dayTitle, type DayWorkoutIn } from "@/lib/workouts/blocks"
 import type { Metric, MuscleGroup, WorkoutCategory } from "@/lib/workouts/catalog";
 import { todayISO } from "@/lib/dates";
 import { programInfoFor } from "@/lib/workouts/program-run";
+import { dayLightFactor, daySuggestionFor } from "@/lib/workouts/suggest-run";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,6 +68,9 @@ export async function GET(req: NextRequest) {
     strip: { today, days: strip.days, overdue: strip.overdue },
     // The program and its week on this day (v0.611); null without one.
     program: await programInfoFor(userId, date),
+    // The day's suggestion card and a lighter day, if chosen (v0.612).
+    suggestion: await daySuggestionFor(userId, date),
+    light: await dayLightFactor(userId, date),
   });
 }
 

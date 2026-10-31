@@ -5,7 +5,7 @@ import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { CATEGORY_LABEL, type WorkoutCategory } from "@/lib/workouts/catalog";
 import { loadDayPlanProgress, planSlot } from "@/lib/queries/workout-log";
 import { topSet } from "@/lib/workouts/sets";
-import { programIntentFor } from "@/lib/workouts/program-run";
+import { dayIntentFor } from "@/lib/workouts/suggest-run";
 import type { WorkoutCategory as DbWorkoutCategory } from "@/generated/prisma/client";
 
 /** Reported back when a movement/plan is already logged that day, so the caller
@@ -817,7 +817,7 @@ export async function logMovementSets(
         finished: true,
         isRest: false,
         // A program's light or test week: charts draw the day hollow.
-        intent: await programIntentFor(userId, dateISO),
+        intent: await dayIntentFor(userId, dateISO),
       },
       select: { id: true },
     })) as { id: string };

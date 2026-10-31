@@ -182,6 +182,7 @@ production:
 | How a day's workouts are laid out (sections, title, progress, week strip) | `daySections` / `dayTitle` / `dayProgress` / `stripState` in `src/lib/workouts/blocks.ts` |
 | Records by rep count, a new best, the logger's record chips, rep-range chart lines, weeks trained in a row | `repRecords` / `isNewBest` / `recordChips` / `bandPoints` / `weeksInARow` in `src/lib/workouts/records.ts` (the phone mirrors `isNewBest` and `recordChips` in `MovementSetsViewModel`) |
 | A program's weeks, set schemes and each set's target; what starting one writes | `targetsFor` / `programWeek` / `PROGRAMS` in `src/lib/workouts/programs.ts` (pure); `startProgram` / `endProgram` / `nextBlock` / `inviteFor` in `src/lib/workouts/program-run.ts` |
+| Which suggestion shows, and its thresholds; a big jump; a lighter day | `daySuggestion` / `movementSuggestion` / `bigJump` / `RULES` in `src/lib/workouts/suggest.ts` (pure); answers and the day's lightness in `src/lib/workouts/suggest-run.ts` |
 | How a movement felt and where it hurt | `setMovementFeedback` in `src/lib/workouts/feedback.ts`; effort and area keys in `catalog.ts` |
 | How a pool movement is logged, and which names are holds | `poolMetricFor` / `isHoldName` in `src/lib/workouts/catalog.ts`; new plan entries via `poolMetrics` (`src/lib/workouts/plan-edit.ts`); changes spread by `setPoolExerciseMetric` |
 | Saving one movement's sets for a day (add, edit, remove, swap, late) | `logMovementSets` in `src/lib/workouts/mark.ts`; phone via `/api/v1/workouts/sets` |
