@@ -11,7 +11,7 @@ import {
 } from "@/lib/actions/workouts";
 import { TodayPlan } from "@/app/exercise/workout-card";
 import { DayLog } from "@/app/exercise/day-log";
-import { CustomWorkoutForm } from "@/app/exercise/workouts-grid";
+import { CustomWorkoutForm, HiitBuilder } from "@/app/exercise/workouts-grid";
 import type {
   PlanWorkout,
   PoolEntry,
@@ -260,6 +260,15 @@ export function WorkoutLauncher({
                   todayISO={todayISO}
                   unitSystem={unitSystem}
                   initialDate={dateISO}
+                  writeOwn={(d, done) => (
+                    <HiitBuilder
+                      pool={pool}
+                      workouts={hiitWorkouts.filter((w) => w.ownerId === null || w.ownerId === userId)}
+                      userId={userId}
+                      dateISO={d}
+                      onDone={done}
+                    />
+                  )}
                   extra={(d) => (
                     <>
                       <h4 className="mb-3 font-display text-sm font-semibold">Log an additional workout</h4>

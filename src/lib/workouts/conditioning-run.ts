@@ -2,7 +2,8 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { addDays, dayOfWeek, toDateColumn, fromDateColumn } from "@/lib/dates";
 import { hiitResult, formatHiitMovement, type WorkoutType } from "@/lib/workouts/catalog";
-import { clockText } from "@/lib/workouts/timer";
+import { hasScaled, versionMoves } from "@/lib/workouts/wod-library";
+import { readScaled, resultText, versionFor, type MoveLine, type Version } from "@/lib/workouts/wod-run";
 
 /** The feedback slot for a planned conditioning workout on a day. */
 export const hiitSlot = (plannedWorkoutId: string) => `hiit:${plannedWorkoutId}`;
@@ -14,7 +15,12 @@ export type ConditioningPlan = {
   type: WorkoutType;
   /** AMRAP cap / EMOM length / seconds per timed station. */
   capSec: number | null;
-  movements: { name: string; reps: number | null; distance: number | null; weight: number | null; line: string }[];
+  movements: MoveLine[];
+  /** The Scaled version's movements, when it differs (v0.617). */
+  scaled: MoveLine[] | null;
+  about: string | null;
+  /** The version to start on: today's if logged, else the person's default. */
+  version: Version;
   /** "Rounds", "Time", "Minutes done", "Total reps", and how it's stored. */
   resultLabel: string;
   resultMetric: "REPS" | "DURATION";
@@ -26,15 +32,6 @@ export type ConditioningPlan = {
   effort: string | null;
   hurt: string | null;
 };
-
-function resultText(type: WorkoutType, reps: number | null, seconds: number | null): string | null {
-  const r = hiitResult(type);
-  if (r.metric === "DURATION") return seconds ? clockText(seconds) : null;
-  if (reps == null) return null;
-  if (type === "AMRAP") return `${reps} ${reps === 1 ? "round" : "rounds"}`;
-  if (type === "EMOM") return `${reps} min`;
-  return `${reps} reps`;
-}
 
 /**
  * The day's planned conditioning workouts (named HIIT workouts), with what
@@ -59,6 +56,8 @@ export async function conditioningFor(userId: string, dateISO: string): Promise<
           name: true,
           type: true,
           capSec: true,
+          about: true,
+          scaled: true,
           movements: {
             orderBy: { position: "asc" },
             select: { reps: true, distance: true, weight: true, poolExercise: { select: { name: true } } },
@@ -73,6 +72,8 @@ export async function conditioningFor(userId: string, dateISO: string): Promise<
       name: string;
       type: WorkoutType;
       capSec: number | null;
+      about: string | null;
+      scaled: unknown;
       movements: { reps: number | null; distance: number | null; weight: number | null; poolExercise: { name: string } | null }[];
     } | null;
   }[];
@@ -83,7 +84,7 @@ export async function conditioningFor(userId: string, dateISO: string): Promise<
   // phone under the plan's (40): both count.
   const names = [...new Set(list.flatMap((p) => [p.hiitWorkout!.name.slice(0, 60), p.hiitWorkout!.name.slice(0, 40)]))];
   const day = toDateColumn(dateISO);
-  const [sessions, feedback] = (await Promise.all([
+  const [sessions, feedback, version] = (await Promise.all([
     prisma.workoutSession.findMany({
       where: { category: "HIIT" as never, isRest: false, name: { in: names } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
@@ -92,6 +93,7 @@ export async function conditioningFor(userId: string, dateISO: string): Promise<
         userId: true,
         date: true,
         name: true,
+        version: true,
         user: { select: { name: true, displayName: true } },
         sets: { orderBy: { setNumber: "asc" }, take: 1, select: { reps: true, seconds: true } },
       },
@@ -100,15 +102,18 @@ export async function conditioningFor(userId: string, dateISO: string): Promise<
       where: { userId, date: day, slot: { in: list.map((p) => hiitSlot(p.id)) } },
       select: { slot: true, effort: true, hurt: true },
     }),
+    versionFor(userId, dateISO),
   ])) as [
     {
       userId: string;
       date: Date;
       name: string | null;
+      version: string | null;
       user: { name: string; displayName: string | null } | null;
       sets: { reps: number | null; seconds: number | null }[];
     }[],
     { slot: string; effort: string | null; hurt: string | null }[],
+    Version,
   ];
   const fb = new Map(feedback.map((f) => [f.slot, f]));
 
@@ -117,32 +122,35 @@ export async function conditioningFor(userId: string, dateISO: string): Promise<
     const r = hiitResult(w.type);
     const mine = sessions.filter((s) => (s.name ?? "").slice(0, 40) === w.name.slice(0, 40));
     const val = (s: (typeof mine)[number]) => (r.metric === "DURATION" ? s.sets[0]?.seconds ?? null : s.sets[0]?.reps ?? null);
-    const text = (s: (typeof mine)[number] | undefined) => (s ? resultText(w.type, s.sets[0]?.reps ?? null, s.sets[0]?.seconds ?? null) : null);
+    const text = (s: (typeof mine)[number] | undefined) =>
+      s ? resultText(w.type, s.sets[0]?.reps ?? null, s.sets[0]?.seconds ?? null, s.version) : null;
     const today = mine.find((s) => s.userId === userId && fromDateColumn(s.date) === dateISO);
     const last = mine.find((s) => s.userId === userId && fromDateColumn(s.date) < dateISO && val(s) != null);
     let best: (typeof mine)[number] | undefined;
     for (const s of mine) {
+      // The household best is an Rx one.
+      if (s.version === "SCALED") continue;
       const v = val(s);
       if (v == null || v <= 0) continue;
       const b = best ? val(best) : null;
       if (b == null || (r.metric === "DURATION" ? v < b : v > b)) best = s;
     }
     const f = fb.get(hiitSlot(p.id));
+    const moves = w.movements
+      .filter((m) => m.poolExercise)
+      .map((m) => ({ name: m.poolExercise!.name, reps: m.reps, distance: m.distance, weight: m.weight }));
+    const scaled = readScaled(w.scaled, moves.length);
+    const withLine = (list: typeof moves) => list.map((m) => ({ ...m, line: formatHiitMovement(m) }));
     return {
       plannedWorkoutId: p.id,
       hiitWorkoutId: w.id,
       name: w.name,
       type: w.type,
       capSec: w.capSec,
-      movements: w.movements
-        .filter((m) => m.poolExercise)
-        .map((m) => ({
-          name: m.poolExercise!.name,
-          reps: m.reps,
-          distance: m.distance,
-          weight: m.weight,
-          line: formatHiitMovement({ name: m.poolExercise!.name, reps: m.reps, distance: m.distance, weight: m.weight }),
-        })),
+      movements: withLine(moves),
+      scaled: hasScaled(moves, scaled) ? withLine(versionMoves(moves, scaled, "SCALED")) : null,
+      about: w.about,
+      version: today?.version === "SCALED" || today?.version === "RX" ? today.version : version,
       resultLabel: r.label,
       resultMetric: r.metric === "DURATION" ? "DURATION" : "REPS",
       today: text(today),

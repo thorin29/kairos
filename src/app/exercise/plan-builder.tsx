@@ -40,6 +40,9 @@ import {
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
 
+/** The plan-builder value for a Conditioning plan picked on the day (v0.617). */
+const PICK_ON_THE_DAY = "pick";
+
 // Order the builder offers categories in. Rowing, running and rucking are
 // one "Cardio" now (v0.615): whichever gets done that day fills it.
 const PLAN_CATEGORIES: WorkoutCategory[] = [
@@ -498,6 +501,10 @@ function AddWorkoutModal({
     startSave(async () => {
       if (rest) {
         await addPlannedRestDay(userId, day);
+      } else if (isHiit && hiitId === PICK_ON_THE_DAY) {
+        // Conditioning with no workout chosen ahead: picked, built or
+        // written on the day (v0.617).
+        await addPlannedWorkoutFromPool(userId, day, { category: "HIIT", name: "Conditioning", exercises: [] });
       } else if (isHiit) {
         await addPlannedHiitWorkout(userId, day, hiitId);
       } else {
@@ -610,43 +617,37 @@ function AddWorkoutModal({
               expected and no prompt is created.
             </p>
           ) : isHiit ? (
-            hiitWorkouts.length === 0 ? (
-              <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
-                No HIIT/CrossFit workouts yet. Build one in the Workouts admin,
-                or log one from &ldquo;Log an additional workout&rdquo; to add your own.
-              </p>
-            ) : (
-              <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-widest text-muted">
-                  Workout
-                </label>
-                <select
-                  value={hiitId}
-                  onChange={(e) => setHiitId(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
-                >
-                  <option value="">Pick a workout…</option>
-                  {mine.length > 0 && (
-                    <optgroup label="Yours">
-                      {mine.map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {shared.length > 0 && (
-                    <optgroup label="Shared">
-                      {shared.map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
-              </div>
-            )
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-widest text-muted">
+                Workout
+              </label>
+              <select
+                value={hiitId}
+                onChange={(e) => setHiitId(e.target.value)}
+                className="h-10 w-full rounded-xl border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+              >
+                <option value="">Pick a workout…</option>
+                <option value={PICK_ON_THE_DAY}>Pick on the day</option>
+                {mine.length > 0 && (
+                  <optgroup label="Yours">
+                    {mine.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {shared.length > 0 && (
+                  <optgroup label="Shared">
+                    {shared.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
           ) : simple ? null : metricOnly ? (
             <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
               Adds a {CATEGORY_LABEL[category].toLowerCase()} day. You&rsquo;ll

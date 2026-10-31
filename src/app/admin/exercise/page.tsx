@@ -14,12 +14,13 @@ import { WorkoutExpiry } from "./workout-expiry";
 import { WorkoutExport } from "./workout-export";
 import { getWorkoutOverdueDays } from "@/lib/settings";
 import { libraryStatus, loadEquipment } from "@/lib/workouts/library-run";
-import { MovementLibrary, HouseholdEquipment } from "./movement-library";
+import { MovementLibrary, HouseholdEquipment, WorkoutsLibrary } from "./movement-library";
+import { wodLibraryStatus } from "@/lib/workouts/wod-run";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminWorkoutsPage() {
-  const [{ people }, pool, weightUnits, hiitWorkouts, pendingShares, overdueDays, library, equipment] =
+  const [{ people }, pool, weightUnits, hiitWorkouts, pendingShares, overdueDays, library, equipment, wods] =
     await Promise.all([
       loadWorkoutAdmin(),
       loadExercisePool(),
@@ -29,6 +30,7 @@ export default async function AdminWorkoutsPage() {
       getWorkoutOverdueDays(),
       libraryStatus(),
       loadEquipment(),
+      wodLibraryStatus(),
     ]);
 
   return (
@@ -50,6 +52,7 @@ export default async function AdminWorkoutsPage() {
         <ExercisePool pool={pool} weightUnits={weightUnits} />
         <MovementLibrary status={library} />
         <HouseholdEquipment items={equipment} />
+        <WorkoutsLibrary status={wods} />
         {pendingShares.length > 0 && <PendingShares shares={pendingShares} />}
         <HiitWorkouts
           movements={pool.filter((p) => p.category === "HIIT")}

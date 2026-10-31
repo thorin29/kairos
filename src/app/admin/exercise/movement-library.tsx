@@ -6,7 +6,9 @@ import { PlusIcon, TrashIcon } from "@/components/icons";
 import { CATEGORY_LABEL, MUSCLE_GROUP_LABEL, type MuscleGroup, type WorkoutCategory } from "@/lib/workouts/catalog";
 import type { EquipmentItem } from "@/lib/workouts/library";
 import type { LibraryStatus } from "@/lib/workouts/library-run";
-import { applyMovementLibrary, saveHouseholdEquipment } from "@/lib/actions/workouts";
+import { applyMovementLibrary, applyWorkoutsLibrary, saveHouseholdEquipment } from "@/lib/actions/workouts";
+import type { WodLibraryStatus } from "@/lib/workouts/wod-run";
+import { WORKOUT_TYPE_LABEL } from "@/lib/workouts/catalog";
 
 const FIELD =
   "h-9 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent";
@@ -114,6 +116,119 @@ export function MovementLibrary({ status }: { status: LibraryStatus }) {
           </div>
         )}
       </Card>
+    </section>
+  );
+}
+
+const WOD_KIND_LABEL: Record<string, string> = { DAILY: "Everyday", BENCHMARK: "Benchmarks", HERO: "Hero workouts" };
+
+/** Workouts library: add the starting conditioning workouts (all or picked). */
+export function WorkoutsLibrary({ status }: { status: WodLibraryStatus }) {
+  const [pending, startTransition] = useTransition();
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [done, setDone] = useState<number | null>(null);
+
+  const apply = (keys: string[] | null) =>
+    startTransition(async () => {
+      setDone((await applyWorkoutsLibrary(keys)).added);
+      setPicking(false);
+      setPicked(new Set());
+    });
+  const groups = ["DAILY", "BENCHMARK", "HERO"]
+    .map((k) => ({ k, items: status.add.filter((w) => w.kind === k) }))
+    .filter((g) => g.items.length > 0);
+
+  return (
+    <section>
+      <SectionHeading>Workouts library</SectionHeading>
+      <Card className="p-5">
+        <p className="text-sm">
+          {status.add.length === 0 ? (
+            <span className="text-muted">All {status.total} library workouts are in.</span>
+          ) : (
+            <span className="font-semibold">{status.add.length} new</span>
+          )}
+          {done != null && (
+            <span className="ml-2 text-muted" aria-live="polite">
+              Added {done}.
+            </span>
+          )}
+        </p>
+        {status.add.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" disabled={pending} onClick={() => apply(null)} className={BUTTON}>
+              <PlusIcon className="h-4 w-4" />
+              Add all
+            </button>
+            <button type="button" disabled={pending} onClick={() => setPicking(true)} className={QUIET}>
+              Pick
+            </button>
+          </div>
+        )}
+      </Card>
+      {picking && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+          onClick={() => setPicking(false)}
+        >
+          <div
+            role="dialog"
+            aria-label="Pick workouts"
+            className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
+              <h3 className="text-base font-semibold">Pick workouts</h3>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setPicking(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-4 overflow-y-auto px-4 py-4">
+              {groups.map((g) => (
+                <div key={g.k}>
+                  <p className="pb-1 text-xs font-bold uppercase tracking-wide text-accent">{WOD_KIND_LABEL[g.k]}</p>
+                  <div className="space-y-1">
+                    {g.items.map((w) => {
+                      const on = picked.has(w.key);
+                      return (
+                        <label key={w.key} className="flex items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-ground/50">
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() =>
+                              setPicked((prev) => {
+                                const next = new Set(prev);
+                                if (on) next.delete(w.key);
+                                else next.add(w.key);
+                                return next;
+                              })
+                            }
+                          />
+                          <span className="flex-1 text-sm font-medium">{w.name}</span>
+                          <span className="text-xs text-muted">
+                            {WORKOUT_TYPE_LABEL[w.type]} · {w.minutes} min
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-hairline px-4 py-3">
+              <button type="button" disabled={pending || picked.size === 0} onClick={() => apply([...picked])} className={BUTTON}>
+                Add {picked.size}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

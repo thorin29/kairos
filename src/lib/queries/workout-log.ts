@@ -355,7 +355,7 @@ function dayPlanWhere(userId: string, dayISO: string) {
 export async function loadDayPlanProgress(
   userId: string,
   dayISO: string,
-): Promise<{ done: boolean; logged: boolean; planNames: string[]; planCount: number }> {
+): Promise<{ done: boolean; logged: boolean; planNames: string[]; planCount: number; pickConditioning: boolean }> {
   const day = toDateColumn(dayISO);
   const [movementPlans, allPlans, skipRows, sessionRows] = (await Promise.all([
     loadTodayPlannedWorkouts(userId, dayISO),
@@ -402,8 +402,16 @@ export async function loadDayPlanProgress(
   // A Cardio plan (or an older Rowing / Running / Rucking one) is done by any
   // cardio that day: a Concept2 row, a run, jump rope.
   const anyCardio = sessionRows.some((r) => r.category != null && CARDIO_CATEGORIES.includes(r.category));
+  // A Conditioning plan with no workout chosen ahead (v0.617) is done by any
+  // conditioning that day.
+  const anyHiit = sessionRows.some((r) => r.category === "HIIT");
+  const isPick = (p: { category: string | null }) => p.category === "HIIT";
   const soloLogged = soloPlans.map((p) =>
-    p.category != null && CARDIO_CATEGORIES.includes(p.category) ? anyCardio : sessionKeys.has(`${p.name.slice(0, 40)}|${p.category ?? ""}`),
+    p.category != null && CARDIO_CATEGORIES.includes(p.category)
+      ? anyCardio
+      : isPick(p)
+        ? anyHiit
+        : sessionKeys.has(`${p.name.slice(0, 40)}|${p.category ?? ""}`),
   );
   const soloDone = soloPlans.map(
     (p, i) => soloLogged[i] || skipped.has(planSlot(p.id)),
@@ -413,6 +421,7 @@ export async function loadDayPlanProgress(
     logged: movementPlans.some(planHasLog) || soloLogged.some(Boolean),
     planNames: allPlans.map((p) => p.name.slice(0, 40)),
     planCount: movementPlans.length + soloPlans.length,
+    pickConditioning: soloPlans.some(isPick),
   };
 }
 
@@ -1835,6 +1844,9 @@ export type DayLogState = {
   sessionNames: string[];
   /** Any cardio logged that day: what makes a Cardio plan done (v0.615). */
   cardioLogged: boolean;
+  /** Any conditioning logged that day: what makes a "pick on the day"
+   *  Conditioning plan done (v0.617). */
+  hiitLogged: boolean;
   rested: boolean;
   /** The person's program and its week on this day, if one is running (v0.611). */
   program: ProgramInfo | null;
@@ -1948,6 +1960,7 @@ export async function loadDayLogState(
     skippedPlans: [...skipped].filter((s) => s.startsWith("plan:")),
     sessionNames: sessions.filter((s) => !s.isRest && s.name).map((s) => s.name as string),
     cardioLogged: sessions.some((s) => !s.isRest && s.category != null && CARDIO_CATEGORIES.includes(s.category)),
+    hiitLogged: sessions.some((s) => !s.isRest && s.category === "HIIT"),
     rested: sessions.some((s) => s.isRest),
     program: await programInfoFor(userId, dateISO),
     suggestion: await daySuggestionFor(userId, dateISO),

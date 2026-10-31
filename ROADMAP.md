@@ -1201,10 +1201,10 @@ injuries don't read as going backwards. Phases, in order:
 - [x] 9a. Conditioning, part 1: the timer for every format (get ready, tones,
       vibration, screen awake), EMOM, the planned workout's card with last
       result, household best and how it felt. Web v0.616.0, phone v0.424.0.
-- [ ] 9b. Conditioning, part 2: Pick one (filters, the named-workouts library
+- [x] 9b. Conditioning, part 2: Pick one (filters, the named-workouts library
       with how-tos and Rx/Scaled versions, younger users on Scaled), Build one
       (finisher builder from household equipment), Write your own on the day,
-      the monthly benchmark offered after a month.
+      the monthly benchmark offered after a month. Web v0.617.0, phone v0.425.0.
 - [ ] 8. Export and import of workouts and programs for everyone
 
 ## Game time
@@ -1744,7 +1744,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.616.1 (migrations through 135_emom).
-- App versionName 0.424.1 / versionCode 488 / CLIENT_BUILD 488.
+- Web APP_VERSION 0.617.0 (migrations through 136_wod_library).
+- App versionName 0.425.0 / versionCode 489 / CLIENT_BUILD 489.
 - ice-time 0.1.1 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

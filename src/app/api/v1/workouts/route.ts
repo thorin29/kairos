@@ -14,6 +14,7 @@ import { dayOfWeek, todayISO } from "@/lib/dates";
 import { orderForDay } from "@/lib/workouts/day-order";
 import { cardioDay, simplePlansFor } from "@/lib/workouts/cardio-run";
 import { conditioningFor } from "@/lib/workouts/conditioning-run";
+import { benchmarkFor, pickPlansFor } from "@/lib/workouts/wod-run";
 import { programInfoFor } from "@/lib/workouts/program-run";
 import { dayLightFactor, daySuggestionFor } from "@/lib/workouts/suggest-run";
 
@@ -84,6 +85,12 @@ export async function GET(req: NextRequest) {
     // v0.616: the day's planned conditioning workouts, with what the timer
     // needs and the results to beat.
     conditioning: await conditioningFor(userId, date),
+    // v0.617: Conditioning plans picked on the day (done by any conditioning
+    // that day, with what was logged) and the monthly benchmark (OFFER or
+    // SUGGEST, or null). Each conditioning plan also carries `about`,
+    // `scaled` and the person's starting `version`.
+    picks: await pickPlansFor(userId, date),
+    benchmark: await benchmarkFor(userId, date),
   });
 }
 

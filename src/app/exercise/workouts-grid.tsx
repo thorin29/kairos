@@ -413,6 +413,15 @@ export function WorkoutsGrid({
                     person={open}
                     todayISO={todayISO}
                     unitSystem={unitSystem}
+                    writeOwn={(d, done) => (
+                      <HiitBuilder
+                        pool={pool}
+                        workouts={hiitWorkouts.filter((w) => w.ownerId === null || w.ownerId === open.user.id)}
+                        userId={open.user.id}
+                        dateISO={d}
+                        onDone={done}
+                      />
+                    )}
                     extra={(d) => (
                       <>
                         <h4 className="mb-3 font-display text-sm font-semibold">
@@ -1973,7 +1982,7 @@ export function CustomWorkoutForm({
   );
 }
 
-function HiitBuilder({
+export function HiitBuilder({
   pool,
   workouts,
   userId,

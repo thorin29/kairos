@@ -30,6 +30,22 @@ import { cardioDay, logCardio, removeCardio, setWarmupDone, type CardioEntry, ty
 import { loadDayOrders, orderForDay, saveDayOrder, type DayOrders } from "@/lib/workouts/day-order";
 import { conditioningFor, type ConditioningPlan } from "@/lib/workouts/conditioning-run";
 import {
+  answerBenchmark,
+  applyWodLibrary,
+  benchmarkFor,
+  cleanVersion,
+  conditioningChoices,
+  logBuiltConditioning,
+  logNamedConditioning,
+  pickPlansFor,
+  saveBuiltWorkout,
+  writeConditioning,
+  type BenchmarkState,
+  type PickPlan,
+  type WodChoice,
+} from "@/lib/workouts/wod-run";
+import { cleanBuilt } from "@/lib/workouts/finisher";
+import {
   concept2Day,
   connectConcept2,
   disconnectConcept2,
@@ -55,8 +71,6 @@ import {
   CATEGORY_LABEL,
   MUSCLE_GROUP_LABEL,
   WORKOUT_TYPE_LABEL,
-  formatHiitMovement,
-  hiitResult,
   isHoldName,
   metricChoicesFor,
   poolMetricFor,
@@ -69,7 +83,6 @@ import {
   type WorkoutType,
 } from "@/lib/workouts/catalog";
 import {
-  settleWorkoutTask,
   setMovementSkipped,
   logCustomEntry,
   skipWorkoutTask,
@@ -952,64 +965,21 @@ async function writeHiitSession(input: {
   /** One result per workout per day: today's earlier one is replaced (v0.616). */
   replace?: boolean;
 }): Promise<void> {
-  const { metric } = hiitResult(input.type);
-  const notes =
-    [input.movementNames.join(", "), input.notes?.trim() || ""]
-      .filter(Boolean)
-      .join(" \u2014 ")
-      .slice(0, 300) || null;
-
-  const date = toDateColumn(input.dateISO);
-  if (input.replace) {
-    await prisma.workoutSession.deleteMany({
-      where: {
-        userId: input.userId,
-        date,
-        isRest: false,
-        category: "HIIT",
-        name: { in: [input.name.slice(0, 60), input.name.slice(0, 40)] },
-      },
-    });
-  }
-  const session = await prisma.workoutSession.create({
-    data: {
-      userId: input.userId,
-      date,
-      name: input.name.slice(0, 60),
-      category: "HIIT",
-      workoutType: input.type,
-      finished: true,
-      isRest: false,
-      notes,
-    },
+  await writeConditioning({
+    userId: input.userId,
+    dateISO: input.dateISO,
+    name: input.name,
+    type: input.type,
+    movementLines: input.movementNames,
+    value: input.value,
+    notes: input.notes,
+    replace: input.replace,
   });
-
-  const set: {
-    sessionId: string;
-    poolExerciseId: string | null;
-    setNumber: number;
-    unit: string | null;
-    finished: boolean;
-    reps?: number;
-    seconds?: number;
-  } = {
-    sessionId: session.id,
-    poolExerciseId: null,
-    setNumber: 1,
-    unit: null,
-    finished: true,
-  };
-  if (metric === "DURATION") set.seconds = Math.round(input.value);
-  else set.reps = Math.round(input.value);
-
-  await prisma.sessionSet.create({ data: set });
-  // Settled rather than completed: a planned HIIT workout on a day that also
-  // has lifts planned is one part of the day, not all of it.
-  await settleWorkoutTask(input.userId, input.dateISO, { fallbackComplete: true });
   refresh();
 }
 
-/** Log a result against an existing named HIIT/CrossFit workout. */
+/** Log a result against an existing named HIIT/CrossFit workout, in a
+ *  version (Rx / Scaled) when the workout has one. */
 export async function logHiitWorkout(input: {
   userId: string;
   dateISO: string;
@@ -1017,60 +987,23 @@ export async function logHiitWorkout(input: {
   value: number;
   notes?: string;
   replace?: boolean;
+  version?: "RX" | "SCALED" | null;
+  completedOnISO?: string | null;
 }): Promise<void> {
   await requireInteractive();
   await requireCanActFor(input.userId);
   if (!input.userId || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateISO)) return;
-  if (!Number.isFinite(input.value) || input.value <= 0) return;
-
-  const w = (await prisma.hiitWorkout.findUnique({
-    where: { id: input.hiitWorkoutId },
-    select: {
-      name: true,
-      type: true,
-      movements: {
-        orderBy: { position: "asc" },
-        select: {
-          reps: true,
-          distance: true,
-          weight: true,
-          poolExercise: { select: { name: true } },
-        },
-      },
-    },
-  })) as unknown as {
-    name: string;
-    type: WorkoutType;
-    movements: {
-      reps: number | null;
-      distance: number | null;
-      weight: number | null;
-      poolExercise: { name: string } | null;
-    }[];
-  } | null;
-  if (!w) return;
-
-  const movementNames = w.movements
-    .filter((m) => m.poolExercise)
-    .map((m) =>
-      formatHiitMovement({
-        name: m.poolExercise!.name,
-        reps: m.reps,
-        distance: m.distance,
-        weight: m.weight,
-      }),
-    );
-
-  await writeHiitSession({
+  const ok = await logNamedConditioning({
     userId: input.userId,
     dateISO: input.dateISO,
-    name: w.name,
-    type: w.type,
-    movementNames,
+    hiitWorkoutId: input.hiitWorkoutId,
     value: input.value,
     notes: input.notes,
     replace: input.replace,
+    version: cleanVersion(input.version),
+    completedOnISO: input.completedOnISO,
   });
+  if (ok) refresh();
 }
 
 /**
@@ -1253,18 +1186,91 @@ export async function loadDayLog(
   order: SectionKind[];
   cardio: CardioEntry[];
   conditioning: ConditioningPlan[];
+  picks: PickPlan[];
+  benchmark: BenchmarkState;
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
   if (!ISO.test(dateISO)) throw new Error("Bad date");
-  const [state, loggedByPool, order, cardio, conditioning] = await Promise.all([
+  const [state, loggedByPool, order, cardio, conditioning, picks, benchmark] = await Promise.all([
     loadDayLogState(userId, dateISO),
     loadLoggedWeights(userId, dateISO),
     orderForDay(userId, dayOfWeek(dateISO)),
     cardioDay(userId, dateISO),
     conditioningFor(userId, dateISO),
+    pickPlansFor(userId, dateISO),
+    benchmarkFor(userId, dateISO),
   ]);
-  return { state, loggedByPool, order, cardio, conditioning };
+  return { state, loggedByPool, order, cardio, conditioning, picks, benchmark };
+}
+
+// --- conditioning: Pick one, Build one, the monthly benchmark (v0.617) ------
+
+/** Everything that can be picked for the day, the person's starting version
+ *  and the household's equipment (for Build one). */
+export async function loadConditioningChoices(
+  userId: string,
+  dateISO: string,
+): Promise<{ choices: WodChoice[]; version: "RX" | "SCALED"; equipment: EquipmentItem[] }> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!ISO.test(dateISO)) throw new Error("Bad date");
+  return conditioningChoices(userId, dateISO);
+}
+
+/** Log a workout built on the spot. */
+export async function logBuiltWorkout(input: {
+  userId: string;
+  dateISO: string;
+  built: unknown;
+  value: number;
+  version: "RX" | "SCALED" | null;
+  completedOnISO?: string | null;
+}): Promise<boolean> {
+  await requireInteractive();
+  await requireCanActFor(input.userId);
+  if (!ISO.test(input.dateISO)) return false;
+  const built = cleanBuilt(input.built);
+  if (!built) return false;
+  const ok = await logBuiltConditioning({
+    userId: input.userId,
+    dateISO: input.dateISO,
+    built,
+    value: input.value,
+    version: cleanVersion(input.version),
+    replace: true,
+    completedOnISO: input.completedOnISO,
+  });
+  if (ok) refresh();
+  return ok;
+}
+
+/** Keep a built workout as one of the person's own. */
+export async function saveBuiltConditioning(userId: string, raw: unknown): Promise<string | null> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const built = cleanBuilt(raw);
+  if (!built) return null;
+  const id = await saveBuiltWorkout(userId, built);
+  refresh();
+  return id;
+}
+
+/** The monthly benchmark: yes / later / never, or set this month's aside. */
+export async function answerMonthlyBenchmark(userId: string, dateISO: string, answer: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!ISO.test(dateISO)) return;
+  await answerBenchmark(userId, dateISO, answer);
+  refresh();
+}
+
+/** Add the starting conditioning workouts (all, or the picked keys). */
+export async function applyWorkoutsLibrary(keys: string[] | null): Promise<{ added: number }> {
+  await requireAdmin();
+  const r = await applyWodLibrary(keys ? keys.slice(0, 200).map(String) : null);
+  refresh();
+  return r;
 }
 
 /**

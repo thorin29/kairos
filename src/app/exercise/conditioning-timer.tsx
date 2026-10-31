@@ -45,6 +45,9 @@ function writePref(key: string, value: string) {
  * and the result filled in at the end. Sound, vibration and the get-ready
  * length are kept on this device. The screen is kept awake while it runs.
  */
+/** What the timer needs: a planned workout, a picked one or a built one. */
+export type TimerWorkout = Pick<ConditioningPlan, "name" | "type" | "capSec" | "movements" | "resultLabel" | "today">;
+
 export function ConditioningTimer({
   userId,
   workout,
@@ -53,7 +56,7 @@ export function ConditioningTimer({
   onClose,
 }: {
   userId: string;
-  workout: ConditioningPlan;
+  workout: TimerWorkout;
   lastText: string | null;
   onLog: (value: number, notes: string) => Promise<void>;
   onClose: () => void;
@@ -280,7 +283,7 @@ export function ConditioningTimer({
     <div
       role="dialog"
       aria-label={`${workout.name} timer`}
-      className="fixed inset-0 z-50 flex flex-col overflow-y-auto"
+      className="fixed inset-0 z-[60] flex flex-col overflow-y-auto"
       style={{ background: C.bg, color: "#fff" }}
     >
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">

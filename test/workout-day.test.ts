@@ -11,6 +11,8 @@ import { cleanPlanScheme, schemeChoiceKey, HAND_WAVE } from "@/lib/workouts/prog
 import { timerPlanFor, timerAt, cuesAt, clockText, resultFromTimer } from "@/lib/workouts/timer";
 import { mapResult, rowSummary, rowNotes, syncFrom, syncDue, cleanToken, fmtClock } from "@/lib/workouts/concept2";
 import { LIBRARY, DEFAULT_EQUIPMENT, nameKey, planLibraryMerge, watchUrl } from "@/lib/workouts/library";
+import { WOD_LIBRARY, planWodMerge, versionMoves, hasScaled, defaultVersion, benchmarkForMonth, wodEquipment } from "@/lib/workouts/wod-library";
+import { buildFinisher, cleanBuilt, nearestSize, FINISHER_FORMATS, FINISHER_FOCUSES } from "@/lib/workouts/finisher";
 import {
   daySections,
   dayTitle,
@@ -631,5 +633,106 @@ describe("conditioning timer", () => {
     expect(clockText(720)).toBe("12:00");
     expect(clockText(7)).toBe("0:07");
     expect(clockText(3725)).toBe("1:02:05");
+  });
+});
+
+describe("workouts library", () => {
+  it("uses library movements (or a run), unique keys, a how-to and Scaled for each", () => {
+    const names = new Set(LIBRARY.map((l) => nameKey(l.name)));
+    expect(new Set(WOD_LIBRARY.map((w) => w.key)).size).toBe(WOD_LIBRARY.length);
+    for (const w of WOD_LIBRARY) {
+      expect(w.about.length).toBeGreaterThan(10);
+      expect(w.scaled.length).toBe(w.moves.length);
+      for (const m of w.moves) expect(m.name === "Run" || names.has(nameKey(m.name))).toBe(true);
+    }
+    expect(WOD_LIBRARY.filter((w) => w.kind === "BENCHMARK").length).toBeGreaterThanOrEqual(5);
+  });
+  it("Scaled changes only what it says", () => {
+    const cindy = WOD_LIBRARY.find((w) => w.key === "cindy")!;
+    expect(versionMoves(cindy.moves, cindy.scaled, "SCALED").map((m) => m.reps)).toEqual([3, 6, 15]);
+    expect(versionMoves(cindy.moves, cindy.scaled, "RX").map((m) => m.reps)).toEqual([5, 10, 15]);
+    expect(hasScaled(cindy.moves, cindy.scaled)).toBe(true);
+    const tabata = WOD_LIBRARY.find((w) => w.key === "tabata-squat-push")!;
+    expect(hasScaled(tabata.moves, tabata.scaled)).toBe(false);
+    const helen = WOD_LIBRARY.find((w) => w.key === "helen")!;
+    expect(versionMoves(helen.moves, helen.scaled, "SCALED")[0]).toMatchObject({ name: "Run", distance: 0.5 });
+  });
+  it("needs the right equipment", () => {
+    expect(wodEquipment(WOD_LIBRARY.find((w) => w.key === "bodyweight-fifteen")!)).toEqual([]);
+    expect(wodEquipment(WOD_LIBRARY.find((w) => w.key === "swing-and-push")!)).toEqual(["kettlebells"]);
+  });
+  it("adds only what isn't there, by key or by a shared workout's name", () => {
+    const all = planWodMerge([]);
+    expect(all.length).toBe(WOD_LIBRARY.length);
+    const some = planWodMerge([
+      { name: "x", libraryKey: "cindy", ownerId: null },
+      { name: "Karen", libraryKey: null, ownerId: null },
+      { name: "Annie", libraryKey: null, ownerId: "u1" },
+    ]);
+    expect(some.map((w) => w.key)).not.toContain("cindy");
+    expect(some.map((w) => w.key)).not.toContain("karen");
+    expect(some.map((w) => w.key)).toContain("annie");
+  });
+  it("starts younger people on Scaled", () => {
+    expect(defaultVersion(null, "2026-11-02")).toBe("RX");
+    expect(defaultVersion("2012-05-01", "2026-11-02")).toBe("SCALED");
+    expect(defaultVersion("2010-11-02", "2026-11-02")).toBe("RX");
+    expect(defaultVersion("2010-11-03", "2026-11-02")).toBe("SCALED");
+  });
+  it("turns the benchmarks month by month", () => {
+    const list = [1, 2, 3];
+    const a = benchmarkForMonth("2026-11-02", list);
+    expect(benchmarkForMonth("2026-12-01", list)).toBe((a + 1) % 3);
+    expect(benchmarkForMonth("2027-01-01", list)).toBe((a + 2) % 3);
+    expect(benchmarkForMonth("2026-11-02", [])).toBe(-1);
+  });
+});
+
+describe("build one", () => {
+  it("is the same for the same seed, different for the next", () => {
+    const a = buildFinisher({ minutes: 12, format: "AMRAP", focus: "ANY", equipment: DEFAULT_EQUIPMENT, seed: 5 });
+    const b = buildFinisher({ minutes: 12, format: "AMRAP", focus: "ANY", equipment: DEFAULT_EQUIPMENT, seed: 5 });
+    expect(a).toEqual(b);
+    const names = new Set([5, 6, 7, 8].map((s) => JSON.stringify(buildFinisher({ minutes: 12, format: "AMRAP", focus: "ANY", equipment: DEFAULT_EQUIPMENT, seed: s })!.moves)));
+    expect(names.size).toBeGreaterThan(1);
+  });
+  it("builds every format and focus from the household's kit", () => {
+    for (const format of FINISHER_FORMATS)
+      for (const focus of FINISHER_FOCUSES)
+        for (const minutes of [8, 12, 15, 20]) {
+          const w = buildFinisher({ minutes, format, focus, equipment: DEFAULT_EQUIPMENT, seed: 1 })!;
+          expect(w).not.toBeNull();
+          expect(w.moves.length).toBeGreaterThanOrEqual(2);
+          if (format === "AMRAP" || format === "EMOM") expect(w.capSec).toBe(minutes * 60);
+          if (format === "TABATA") expect(w.moves.every((m) => m.reps == null)).toBe(true);
+          if (format === "CHIPPER") expect(w.moves.length).toBe(5);
+          if (focus === "BODYWEIGHT") expect(w.moves.every((m) => m.weight == null)).toBe(true);
+          // Weights are sizes on hand.
+          for (const m of w.moves) if (m.weight != null) expect(DEFAULT_EQUIPMENT.some((e) => e.sizes.includes(m.weight!))).toBe(true);
+        }
+  });
+  it("keeps to bodyweight with no equipment", () => {
+    const w = buildFinisher({ minutes: 12, format: "AMRAP", focus: "KETTLEBELL", equipment: [], seed: 2 })!;
+    expect(w.moves.every((m) => m.weight == null)).toBe(true);
+  });
+  it("Scaled is lighter and trims the hard reps", () => {
+    const w = buildFinisher({ minutes: 12, format: "AMRAP", focus: "KETTLEBELL", equipment: DEFAULT_EQUIPMENT, seed: 3 })!;
+    const s = versionMoves(w.moves, w.scaled, "SCALED");
+    w.moves.forEach((m, i) => {
+      if (m.weight != null) expect(s[i].weight!).toBeLessThanOrEqual(m.weight);
+      if (m.reps != null) expect(s[i].reps!).toBeLessThanOrEqual(m.reps);
+    });
+  });
+  it("picks the nearest size", () => {
+    expect(nearestSize([15, 18, 26, 35], 20)).toBe(18);
+    expect(nearestSize([10, 30], 20)).toBe(10);
+    expect(nearestSize([], 20)).toBe(20);
+    expect(nearestSize([10], null)).toBe(null);
+  });
+  it("checks a built workout from a client", () => {
+    const w = buildFinisher({ minutes: 8, format: "EMOM", focus: "ANY", equipment: DEFAULT_EQUIPMENT, seed: 9 })!;
+    expect(cleanBuilt(JSON.parse(JSON.stringify(w)))).toEqual(w);
+    expect(cleanBuilt({ name: "x", type: "AMRAP", moves: [] })).toBeNull();
+    expect(cleanBuilt({ name: "Okay", type: "DROP TABLE", moves: [{ name: "Burpee" }] })).toBeNull();
   });
 });

@@ -1207,6 +1207,14 @@ model HiitWorkout {
   notes        String?
   heroWod      Boolean      @default(false)
   sortOrder    Int          @default(0)
+  /// The workouts library (v0.617.0): the entry it came from, a how-to, its
+  /// kind (DAILY / BENCHMARK / HERO), about how long it takes, and the Scaled
+  /// version as [{ reps, weight, distance }] per movement (null = same as Rx).
+  libraryKey   String?
+  about        String?
+  kind         String?
+  minutes      Int?
+  scaled       Json?
   createdAt    DateTime     @default(now())
 
   movements HiitWorkoutMovement[]
@@ -1214,6 +1222,7 @@ model HiitWorkout {
 
   @@index([ownerId])
   @@index([approved])
+  @@index([libraryKey])
 }
 
 model HiitWorkoutMovement {
@@ -1471,6 +1480,8 @@ model WorkoutSession {
   completedOn DateTime? @db.Date
   /// LIGHT or TEST when logged on a program's light or test week (v0.611).
   intent      String?
+  /// RX or SCALED for a conditioning result (v0.617.0); null = not recorded.
+  version     String?
   createdAt   DateTime @default(now())
 
   sets SessionSet[]

@@ -1,5 +1,55 @@
 # Decisions
 
+## 2026-10 — Conditioning, part 2: Pick one, Build one, Rx/Scaled, the monthly benchmark (v0.617.0 / app 0.425.0)
+
+**The workouts library** (`src/lib/workouts/wod-library.ts`, pure): 19 daily
+workouts across AMRAP, EMOM, Tabata, for time and timed stations, 6
+benchmarks (Cindy, Helen, Annie, a home Fran, a kettlebell Grace, Karen) and
+2 heroes (Murph, Kalsu), all from the movement library's names and the
+household's kit (plus "Run"). Each has a how-to, about how long it takes, and
+a Scaled version stored per movement (`HiitWorkout.scaled`, JSON; a field
+left out is the same as Rx). Admin adds them like the movement library: all,
+or picked in a window; matched by `libraryKey`, or by name among shared
+workouts, so nobody's workout is overwritten; a missing movement is added to
+the pool under HIIT. Heroes are flagged `heroWod` and are listed last, never
+suggested.
+
+**Pick on the day**: a HIIT plan with no workout and no movements (the plan
+builder's "Pick on the day", named Conditioning). Any conditioning logged
+that day completes it (`loadDayPlanProgress`, `hiitLogged` on the day
+state), and while one is planned a conditioning session doesn't count as
+"unplanned" (so it can't finish a lifting day on its own). Its card offers
+Pick one (approved and your own workouts; filters for length, format and
+"Equipment we have"; not done lately first), Build one, and Write your own
+(the existing workout builder: the web's form in a window, the phone's
+personal workout screen).
+
+**Build one** (`src/lib/workouts/finisher.ts`, pure, seeded): 8/12/15/20
+minutes; AMRAP, EMOM, Tabata, rounds for time or a chipper; focus Any,
+Kettlebell, Clubs, Slam/med ball or Bodyweight. It picks 2–5 movements, one
+per piece of kit, with weights from the sizes on hand (nearest to a target);
+Scaled is lighter and trims the hard reps by a third. Nothing is stored
+until it's logged (a session under its name) or saved ("Save to our
+workouts": the person's own, unapproved, kind BUILT, shareable as before).
+The phone asks the server to build (`workouts/conditioning/build`) so there
+is one generator.
+
+**Rx / Scaled**: a toggle wherever a workout has a Scaled version; the
+result records it (`WorkoutSession.version`) and shows "· Scaled". The
+household best counts Rx results only. People under 16 (from their birthday)
+start on Scaled and can switch.
+
+**The monthly benchmark**: offered once a person's first conditioning result
+is 30+ days old (Yes / Later = 30 days / No thanks), kept in settings
+`workouts.benchmark.<userId>`. When on, days 1–7 of each month show that
+month's benchmark (the benchmarks in turn) until it's logged or "Not this
+month" (`workouts.benchmark.skip.<userId>`).
+
+Logging moved into `writeConditioning` (wod-run.ts) so the web, the phone's
+new `workouts/conditioning/log` and planned workouts share one path; the
+phone's planned workouts now log there too (by hiitWorkoutId, with the
+version). Migration 136 adds the columns; all optional.
+
 ## 2026-10 — Ask before replacing a result; Add cardio in a window (v0.616.1 / app 0.424.1)
 
 A conditioning result logged from the timer replaces that day's earlier one,

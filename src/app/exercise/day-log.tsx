@@ -18,6 +18,8 @@ import {
 import type { Concept2Day } from "@/lib/workouts/concept2-run";
 import { CardioCard } from "./cardio-card";
 import { ConditioningCard } from "./conditioning-card";
+import { BenchmarkCard, PickConditioningCard } from "./conditioning-picker";
+import type { BenchmarkState, PickPlan } from "@/lib/workouts/wod-run";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
 import type { CardioEntry } from "@/lib/workouts/cardio-run";
 import type { DayLogState, MovementLog, MovementSetRow, WeekStripDay } from "@/lib/queries/workout-log";
@@ -91,6 +93,7 @@ export function DayLog({
   unitSystem,
   extra,
   initialDate,
+  writeOwn,
 }: {
   person: PersonWorkout;
   todayISO: string;
@@ -99,6 +102,8 @@ export function DayLog({
   extra?: (dateISO: string) => React.ReactNode;
   /** The day it opens on (a home-page prompt carried over from an earlier day). */
   initialDate?: string;
+  /** "Write your own" conditioning for the day (the workout builder). */
+  writeOwn?: (dateISO: string, onDone: () => void) => React.ReactNode;
 }) {
   const userId = person.user.id;
   const [date, setDate] = useState(initialDate && initialDate <= todayISO ? initialDate : todayISO);
@@ -108,6 +113,8 @@ export function DayLog({
     order: SectionKind[];
     cardio: CardioEntry[];
     conditioning: ConditioningPlan[];
+    picks: PickPlan[];
+    benchmark: BenchmarkState;
   } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -202,6 +209,8 @@ export function DayLog({
       // Cardio (and an older Rowing / Running / Rucking plan) is done by any
       // cardio that day.
       if (w?.category && CARDIO_CATEGORIES.includes(w.category)) return state.cardioLogged;
+      // Conditioning picked on the day: done by any conditioning (v0.617).
+      if (w?.category === "HIIT" && !w.hiit && w.exercises.length === 0) return state.hiitLogged;
       // A plan with nothing to enter (a run, a stretch) is done once its
       // session exists, matched by name as the old card did.
       return !!w && state.sessionNames.some((n) => n.trim().toLowerCase() === w.name.trim().toLowerCase());
@@ -343,6 +352,17 @@ export function DayLog({
         />
       )}
 
+      {data?.benchmark && !state?.rested && (
+        <BenchmarkCard
+          key={`bench:${date}`}
+          userId={userId}
+          dateISO={date}
+          completedOnISO={completedOnISO}
+          benchmark={data.benchmark}
+          onChanged={() => setTick((n) => n + 1)}
+        />
+      )}
+
       {failed && (
         <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">Couldn&rsquo;t load this day. Try again.</p>
       )}
@@ -404,6 +424,21 @@ export function DayLog({
                             workout={cond}
                             skipped={state?.skippedPlans.includes(`plan:${w.id}`) ?? false}
                             onChanged={() => setTick((n) => n + 1)}
+                          />
+                        );
+                      }
+                      const pick = data.picks.find((p) => p.plannedWorkoutId === w.id);
+                      if (pick) {
+                        return (
+                          <PickConditioningCard
+                            key={`${date}:${w.id}`}
+                            userId={userId}
+                            dateISO={date}
+                            completedOnISO={completedOnISO}
+                            plan={pick}
+                            skipped={state?.skippedPlans.includes(`plan:${w.id}`) ?? false}
+                            onChanged={() => setTick((n) => n + 1)}
+                            writeOwn={writeOwn}
                           />
                         );
                       }

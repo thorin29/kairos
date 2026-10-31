@@ -7,6 +7,7 @@ import { WORKOUT_TYPE_LABEL, type Effort, type HurtArea } from "@/lib/workouts/c
 import { clockText, timerPlanFor } from "@/lib/workouts/timer";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
 import { ConditioningTimer } from "./conditioning-timer";
+import { VersionToggle } from "./conditioning-picker";
 
 /**
  * A planned conditioning workout on the day page (the mockup's "Planned"):
@@ -33,11 +34,21 @@ export function ConditioningCard({
   const [effort, setEffort] = useState<Effort | null>((workout.effort as Effort | null) ?? null);
   const [hurt, setHurt] = useState<HurtArea | null>((workout.hurt as HurtArea | null) ?? null);
   const [pending, start] = useTransition();
-  const plan = timerPlanFor(workout.type, workout.capSec, workout.movements.map((m) => m.name));
+  const [version, setVersion] = useState<"RX" | "SCALED">(workout.scaled ? workout.version : "RX");
+  const movements = version === "SCALED" && workout.scaled ? workout.scaled : workout.movements;
+  const plan = timerPlanFor(workout.type, workout.capSec, movements.map((m) => m.name));
   const isTime = workout.resultMetric === "DURATION";
 
   const log = async (v: number, notes: string) => {
-    await logHiitWorkout({ userId, dateISO, hiitWorkoutId: workout.hiitWorkoutId, value: v, notes: notes || undefined, replace: true });
+    await logHiitWorkout({
+      userId,
+      dateISO,
+      hiitWorkoutId: workout.hiitWorkoutId,
+      value: v,
+      notes: notes || undefined,
+      replace: true,
+      version: workout.scaled ? version : null,
+    });
     setTiming(false);
     setManual(false);
     setValue("");
@@ -76,9 +87,11 @@ export function ConditioningCard({
           {plan.totalSec ? ` · ${clockText(plan.totalSec)}` : ""}
         </p>
       </div>
-      {workout.movements.length > 0 && (
+      {workout.about && <p className="text-sm text-muted">{workout.about}</p>}
+      {workout.scaled && <VersionToggle value={version} onChange={setVersion} />}
+      {movements.length > 0 && (
         <ul className="space-y-0.5 text-sm">
-          {workout.movements.map((m, i) => (
+          {movements.map((m, i) => (
             <li key={i}>{m.line}</li>
           ))}
         </ul>
@@ -180,7 +193,7 @@ export function ConditioningCard({
       {timing && (
         <ConditioningTimer
           userId={userId}
-          workout={workout}
+          workout={{ ...workout, movements }}
           lastText={workout.last}
           onLog={log}
           onClose={() => setTiming(false)}
