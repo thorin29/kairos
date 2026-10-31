@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { PlusIcon, TrashIcon } from "@/components/icons";
+import { PlusIcon, SyncIcon, TrashIcon } from "@/components/icons";
 import { EffortPicker } from "@/components/effort-picker";
 import { logCardioEntry, removeCardioEntry, saveMovementFeedback } from "@/lib/actions/workouts";
 import { CARDIO_ACTIVITIES, cardioActivity, cardioSlot, parseClock } from "@/lib/workouts/cardio";
@@ -101,13 +101,67 @@ export function CardioCard({
     void saveMovementFeedback({ userId, dateISO, slot: cardioSlot(e.sessionId), effort, hurt }).catch(() => undefined);
   };
 
+  const sync = c2?.connected ? (
+    <button
+      type="button"
+      onClick={onCheckC2}
+      disabled={c2Checking}
+      aria-label="Check Concept2 now"
+      className="inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-sm font-semibold text-accent hover:bg-ground disabled:opacity-40"
+    >
+      <SyncIcon className={`h-4 w-4 ${c2Checking ? "animate-spin" : ""}`} />
+      Concept2
+    </button>
+  ) : null;
+
   return (
-    <div className="space-y-2">
-      {entries.map((e) => (
-        <div key={e.sessionId} className="space-y-3 rounded-xl border border-hairline bg-surface px-4 py-3">
+    <div className="rounded-xl border border-hairline bg-surface">
+      <div className="flex min-h-[3.5rem] flex-wrap items-center gap-2 px-4 py-2.5">
+        <span className="min-w-0 flex-1 text-sm font-semibold">{entries.length === 0 ? name : entries.length === 1 ? entries[0].name : name}</span>
+        {sync}
+        {entries.length > 0 ? (
+          <button
+            type="button"
+            aria-label="Add cardio"
+            onClick={() => setAdding(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-accent hover:bg-ground"
+          >
+            <PlusIcon className="h-5 w-5" />
+          </button>
+        ) : (
+          <>
+            {skip && (
+              <button
+                type="button"
+                aria-pressed={skip.skipped}
+                onClick={() => skip.onToggle(!skip.skipped)}
+                className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
+                  skip.skipped ? "border-hairline bg-ground text-muted" : "border-hairline text-muted hover:border-accent"
+                }`}
+              >
+                {skip.skipped ? "Skipped" : "Skip"}
+              </button>
+            )}
+            {!skip?.skipped && (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-accent bg-accent px-3.5 text-sm font-semibold text-on-accent"
+              >
+                <PlusIcon className="h-4 w-4" />
+                Add cardio
+              </button>
+            )}
+          </>
+        )}
+      </div>
+      {c2?.error && <p className="px-4 pb-2 text-xs text-red-700">{c2.error}</p>}
+
+      {entries.map((e, i) => (
+        <div key={e.sessionId} className={`space-y-3 px-4 pb-3 ${i > 0 || entries.length > 1 ? "border-t border-hairline pt-3" : ""}`}>
           <div className="flex items-center gap-3">
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold">{e.name}</span>
+              {entries.length > 1 && <span className="block text-sm font-semibold">{e.name}</span>}
               <span className="tabular block text-xs text-muted">
                 {e.concept2 ? `From Concept2 · ${e.summary}` : e.summary}
               </span>
@@ -124,20 +178,22 @@ export function CardioCard({
                 </button>
               </span>
             )}
-            <button
-              type="button"
-              aria-label={`Remove ${e.name}`}
-              onClick={() => {
-                if (!confirm(`Remove ${e.name} (${e.summary})?`)) return;
-                start(async () => onEntries(await removeCardioEntry(userId, dateISO, e.sessionId)));
-              }}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-red-50 hover:text-red-700"
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
+            {/* A Concept2 row comes from the rower: nothing to delete here. */}
+            {!e.concept2 && (
+              <button
+                type="button"
+                aria-label={`Remove ${e.name}`}
+                onClick={() => {
+                  if (!confirm(`Remove ${e.name} (${e.summary})?`)) return;
+                  start(async () => onEntries(await removeCardioEntry(userId, dateISO, e.sessionId)));
+                }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-red-50 hover:text-red-700"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <EffortPicker
-            compact
             question="How did it feel?"
             effort={(e.effort as Effort | null) ?? null}
             hurt={(e.hurt as HurtArea | null) ?? null}
@@ -145,59 +201,6 @@ export function CardioCard({
           />
         </div>
       ))}
-
-      {entries.length === 0 ? (
-        // Nothing logged yet: one card, like the Warm-up's.
-        <div className="flex min-h-[3.5rem] flex-wrap items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3">
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold">{name}</span>
-            {c2?.connected && (
-              <span className="block text-xs text-muted">
-                {c2.error ? <span className="text-red-700">{c2.error} </span> : null}
-                <button
-                  type="button"
-                  onClick={onCheckC2}
-                  disabled={c2Checking}
-                  className="text-left font-semibold text-accent hover:underline disabled:opacity-40"
-                >
-                  {c2Checking ? "Checking Concept2…" : "Check Concept2 now"}
-                </button>
-              </span>
-            )}
-          </span>
-          {skip && (
-            <button
-              type="button"
-              aria-pressed={skip.skipped}
-              onClick={() => skip.onToggle(!skip.skipped)}
-              className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
-                skip.skipped ? "border-hairline bg-ground text-muted" : "border-hairline text-muted hover:border-accent"
-              }`}
-            >
-              {skip.skipped ? "Skipped" : "Skip"}
-            </button>
-          )}
-          {!skip?.skipped && (
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-accent bg-accent px-3.5 text-sm font-semibold text-on-accent"
-            >
-              <PlusIcon className="h-4 w-4" />
-              Add cardio
-            </button>
-          )}
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-hairline px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
-        >
-          <PlusIcon className="h-4 w-4" />
-          Add cardio
-        </button>
-      )}
 
       {adding && (
         <div
@@ -280,19 +283,6 @@ export function CardioCard({
         </div>
       )}
 
-      {c2?.connected && entries.length > 0 && (
-        <div className="flex items-center justify-end gap-3 text-xs text-muted">
-          {c2.error && <span className="text-red-700">{c2.error}</span>}
-          <button
-            type="button"
-            onClick={onCheckC2}
-            disabled={c2Checking}
-            className="font-semibold text-accent hover:underline disabled:opacity-40"
-          >
-            {c2Checking ? "Checking Concept2…" : "Check Concept2 now"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

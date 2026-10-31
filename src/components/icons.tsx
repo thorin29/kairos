@@ -287,6 +287,28 @@ export function RefreshIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+/** Two arrows chasing round: refresh / sync. */
+export function SyncIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M20 12a8 8 0 0 0-14.3-4.9L4 9" />
+      <path d="M4 4v5h5" />
+      <path d="M4 12a8 8 0 0 0 14.3 4.9L20 15" />
+      <path d="M20 20v-5h-5" />
+    </svg>
+  );
+}
+
+/** A bandage: something hurt. */
+export function BandageIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M7.5 20.5l-4-4a2.83 2.83 0 0 1 0-4l9-9a2.83 2.83 0 0 1 4 0l4 4a2.83 2.83 0 0 1 0 4l-9 9a2.83 2.83 0 0 1-4 0Z" />
+      <path d="M10.5 10.5h.01M13.5 13.5h.01M13.5 10.5h.01M10.5 13.5h.01" />
+    </svg>
+  );
+}
+
 export function LinkIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>

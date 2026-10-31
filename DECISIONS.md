@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-10 — "How did it feel?" slider; one Cardio card (v0.618.1 / app 0.426.1)
+
+Every "How did it feel?" (a movement's sets, cardio, conditioning, sport) is
+one control, `EffortPicker` (web) / `EffortChooser` (phone): a four-step
+slider with the thumb in the theme colour (grey until answered, starting at
+Solid) and a check beside it that saves the answer; the check fills once
+saved, and moving the slider again asks for it again. "Something hurt?" is a
+small bandage icon by the question that opens the areas in a dialog (web
+window / phone AlertDialog), with "Nothing hurt" to clear it; the chosen area
+shows in red by the icon.
+
+Cardio is a single card: its title (the entry's name when there's one, else
+the plan's), then ⟳ Concept2 (check now) and + (add more) on the card, or
+Skip and Add cardio when nothing is logged. The Add cardio button under the
+card and the "Check Concept2 now" link below it are gone. A Concept2 row has
+no delete (it comes from the rower; Undo still restores a hand entry it
+replaced); a hand entry keeps its trash icon.
+
 ## 2026-10 — Export and import for everyone; household plans (v0.618.0 / app 0.426.0)
 
 **The workouts file** (`src/lib/workouts/plan-file.ts`, pure): kind

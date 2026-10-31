@@ -18,6 +18,7 @@ import {
 import type { Concept2Day } from "@/lib/workouts/concept2-run";
 import { CardioCard } from "./cardio-card";
 import { ConditioningCard } from "./conditioning-card";
+import { EffortPicker } from "@/components/effort-picker";
 import { BenchmarkCard, PickConditioningCard } from "./conditioning-picker";
 import type { BenchmarkState, PickPlan } from "@/lib/workouts/wod-run";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
@@ -38,10 +39,6 @@ import {
 } from "@/lib/workouts/blocks";
 import { fmtNumber, fmtSeconds } from "@/lib/workouts/sets";
 import {
-  EFFORTS,
-  EFFORT_LABEL,
-  HURT_AREAS,
-  HURT_LABEL,
   type Effort,
   type HurtArea,
   type Metric,
@@ -773,7 +770,6 @@ function MovementLogger({
   const [leaving, setLeaving] = useState(false);
   const [effort, setEffort] = useState<Effort | null>(null);
   const [hurt, setHurt] = useState<HurtArea | null>(null);
-  const [hurtOpen, setHurtOpen] = useState(false);
   const [sugg, setSugg] = useState<Suggestion | null>(null);
   const nextKey = useRef(100);
   const latest = useRef<Row[]>([]);
@@ -1222,53 +1218,13 @@ function MovementLogger({
           </div>
 
           {rows.some((r) => r.saved) && !skipped && (
-            <section className="space-y-2.5 rounded-2xl border border-hairline bg-surface px-4 py-3">
-              <p className="text-sm font-semibold">How did {(doing?.name ?? exercise.name).toLowerCase()} feel?</p>
-              <div className="flex flex-wrap gap-2">
-                {EFFORTS.map((e) => (
-                  <button
-                    key={e}
-                    type="button"
-                    aria-pressed={effort === e}
-                    onClick={() => saveFeedback(effort === e ? null : e, hurt)}
-                    className={`inline-flex h-11 items-center rounded-full border px-4 text-sm font-semibold transition-colors ${
-                      effort === e ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
-                    }`}
-                  >
-                    {EFFORT_LABEL[e]}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  aria-expanded={hurtOpen}
-                  onClick={() => setHurtOpen((v) => !v)}
-                  className={`inline-flex h-11 items-center rounded-full border px-4 text-sm font-semibold sm:ml-auto ${
-                    hurt ? "border-red-200 bg-red-50 text-red-700" : "border-hairline text-muted hover:border-accent"
-                  }`}
-                >
-                  {hurt ? `Hurt: ${HURT_LABEL[hurt].toLowerCase()}` : "Something hurt?"}
-                </button>
-              </div>
-              {hurtOpen && (
-                <div className="flex flex-wrap gap-2">
-                  {HURT_AREAS.map((a) => (
-                    <button
-                      key={a}
-                      type="button"
-                      aria-pressed={hurt === a}
-                      onClick={() => {
-                        saveFeedback(effort, hurt === a ? null : a);
-                        setHurtOpen(false);
-                      }}
-                      className={`inline-flex h-10 items-center rounded-full border px-3.5 text-sm font-medium ${
-                        hurt === a ? "border-red-300 bg-red-50 text-red-700" : "border-hairline hover:border-accent"
-                      }`}
-                    >
-                      {HURT_LABEL[a]}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <section className="rounded-2xl border border-hairline bg-surface px-4 py-3">
+              <EffortPicker
+                question={`How did ${(doing?.name ?? exercise.name).toLowerCase()} feel?`}
+                effort={effort}
+                hurt={hurt}
+                onChange={(e, h) => saveFeedback(e, h)}
+              />
             </section>
           )}
 
