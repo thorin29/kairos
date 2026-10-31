@@ -134,7 +134,15 @@ export function ConditioningCard({
           {!skipped && (
             <button
               type="button"
-              onClick={() => setTiming(true)}
+              onClick={() => {
+                // Logging from the timer replaces today's result: ask first.
+                if (
+                  workout.today &&
+                  !confirm(`You already logged ${workout.today} today. A new result from the timer will replace it. Start the timer?`)
+                )
+                  return;
+                setTiming(true);
+              }}
               className="inline-flex h-10 flex-1 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-on-accent"
             >
               {workout.today ? "Start again" : "Start"}

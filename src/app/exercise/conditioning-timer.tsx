@@ -439,6 +439,11 @@ export function ConditioningTimer({
                 {saving ? "Saving…" : "Log"}
               </button>
             </div>
+            {workout.today && (
+              <p className="text-sm" style={{ color: C.ready }}>
+                Logging replaces today&rsquo;s {workout.today}.
+              </p>
+            )}
             {error && <p className="text-sm" style={{ color: C.rest }}>{error}</p>}
           </div>
         )}

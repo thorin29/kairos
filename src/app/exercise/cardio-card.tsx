@@ -146,65 +146,7 @@ export function CardioCard({
         </div>
       ))}
 
-      {adding ? (
-        <div className="space-y-3 rounded-xl border border-hairline bg-surface px-4 py-3">
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="What you did">
-            {CARDIO_ACTIVITIES.map((x) => (
-              <button
-                key={x.key}
-                type="button"
-                aria-pressed={activity === x.key}
-                onClick={() => setActivity(x.key)}
-                className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
-                  activity === x.key ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
-                }`}
-              >
-                {x.label}
-              </button>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {a.meters && (
-              <label>
-                <span className={CAPTION}>Meters</span>
-                <input inputMode="numeric" value={meters} onChange={(e) => setMeters(e.target.value.replace(/[^\d]/g, ""))} placeholder="2000" className={FIELD} />
-              </label>
-            )}
-            {a.distance && (
-              <label>
-                <span className={CAPTION}>Distance ({distUnit})</span>
-                <input inputMode="decimal" value={distance} onChange={(e) => setDistance(e.target.value.replace(/[^\d.]/g, ""))} placeholder="3.1" className={FIELD} />
-              </label>
-            )}
-            <label>
-              <span className={CAPTION}>Time</span>
-              <input inputMode="numeric" value={time} onChange={(e) => setTime(e.target.value.replace(/[^\d:]/g, ""))} placeholder="mm:ss" className={FIELD} />
-            </label>
-            {a.load && (
-              <label>
-                <span className={CAPTION}>Load ({unitSystem === "metric" ? "kg" : "lb"})</span>
-                <input inputMode="decimal" value={load} onChange={(e) => setLoad(e.target.value.replace(/[^\d.]/g, ""))} placeholder="30" className={FIELD} />
-              </label>
-            )}
-          </div>
-          {error && <p className="text-sm text-red-700">{error}</p>}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={save}
-              className="inline-flex h-10 items-center rounded-full bg-accent px-4 text-sm font-semibold text-on-accent disabled:opacity-40"
-            >
-              Save
-            </button>
-            {(entries.length > 0 || c2?.connected) && (
-              <button type="button" onClick={() => setAdding(false)} className="h-10 px-3 text-sm text-muted hover:text-ink">
-                Cancel
-              </button>
-            )}
-          </div>
-        </div>
-      ) : entries.length === 0 ? (
+      {entries.length === 0 ? (
         // Nothing logged yet: one card, like the Warm-up's.
         <div className="flex min-h-[3.5rem] flex-wrap items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3">
           <span className="min-w-0 flex-1">
@@ -257,7 +199,88 @@ export function CardioCard({
         </button>
       )}
 
-      {c2?.connected && (entries.length > 0 || adding) && (
+      {adding && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+          onClick={() => setAdding(false)}
+        >
+          <div
+            role="dialog"
+            aria-label="Add cardio"
+            className="flex max-h-[85vh] w-full max-w-md flex-col overflow-y-auto rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
+              <h3 className="text-base font-semibold">Add cardio</h3>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setAdding(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-4 px-4 py-4">
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="What you did">
+                {CARDIO_ACTIVITIES.map((x) => (
+                  <button
+                    key={x.key}
+                    type="button"
+                    aria-pressed={activity === x.key}
+                    onClick={() => setActivity(x.key)}
+                    className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
+                      activity === x.key ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+                    }`}
+                  >
+                    {x.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {a.meters && (
+                  <label>
+                    <span className={CAPTION}>Meters</span>
+                    <input inputMode="numeric" value={meters} onChange={(e) => setMeters(e.target.value.replace(/[^\d]/g, ""))} placeholder="2000" className={FIELD} />
+                  </label>
+                )}
+                {a.distance && (
+                  <label>
+                    <span className={CAPTION}>Distance ({distUnit})</span>
+                    <input inputMode="decimal" value={distance} onChange={(e) => setDistance(e.target.value.replace(/[^\d.]/g, ""))} placeholder="3.1" className={FIELD} />
+                  </label>
+                )}
+                <label>
+                  <span className={CAPTION}>Time</span>
+                  <input inputMode="numeric" value={time} onChange={(e) => setTime(e.target.value.replace(/[^\d:]/g, ""))} placeholder="mm:ss" className={FIELD} />
+                </label>
+                {a.load && (
+                  <label>
+                    <span className={CAPTION}>Load ({unitSystem === "metric" ? "kg" : "lb"})</span>
+                    <input inputMode="decimal" value={load} onChange={(e) => setLoad(e.target.value.replace(/[^\d.]/g, ""))} placeholder="30" className={FIELD} />
+                  </label>
+                )}
+              </div>
+              {error && <p className="text-sm text-red-700">{error}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={save}
+                  className="inline-flex h-10 items-center rounded-full bg-accent px-4 text-sm font-semibold text-on-accent disabled:opacity-40"
+                >
+                  Save
+                </button>
+                <button type="button" onClick={() => setAdding(false)} className="h-10 px-3 text-sm text-muted hover:text-ink">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {c2?.connected && entries.length > 0 && (
         <div className="flex items-center justify-end gap-3 text-xs text-muted">
           {c2.error && <span className="text-red-700">{c2.error}</span>}
           <button

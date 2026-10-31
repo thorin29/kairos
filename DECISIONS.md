@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-10 — Ask before replacing a result; Add cardio in a window (v0.616.1 / app 0.424.1)
+
+A conditioning result logged from the timer replaces that day's earlier one,
+so "Start again" asks first, and the timer's Log step says what it replaces.
+Typing a result (Edit result) shows the old one and isn't asked about. Add
+cardio opens a dialog (web) / a sheet (phone) instead of growing the card.
+On the phone, the plan screen's pickers (category, muscle group, log as, sets,
+copy from) open the full-screen radio list the calendar uses for Type and
+Calendar (`OptionPickerOverlay`), not a small drop-down menu.
+
 ## 2026-10 — Conditioning timer, part 1 (v0.616.0 / app 0.424.0)
 
 The conditioning release is split. This part: the timer, EMOM, and the
