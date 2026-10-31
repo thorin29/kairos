@@ -13,6 +13,7 @@ import type { Metric, MuscleGroup, WorkoutCategory } from "@/lib/workouts/catalo
 import { dayOfWeek, todayISO } from "@/lib/dates";
 import { orderForDay } from "@/lib/workouts/day-order";
 import { cardioDay, simplePlansFor } from "@/lib/workouts/cardio-run";
+import { conditioningFor } from "@/lib/workouts/conditioning-run";
 import { programInfoFor } from "@/lib/workouts/program-run";
 import { dayLightFactor, daySuggestionFor } from "@/lib/workouts/suggest-run";
 
@@ -80,6 +81,9 @@ export async function GET(req: NextRequest) {
     order,
     simple: await simplePlansFor(userId, date),
     cardio: await cardioDay(userId, date),
+    // v0.616: the day's planned conditioning workouts, with what the timer
+    // needs and the results to beat.
+    conditioning: await conditioningFor(userId, date),
   });
 }
 

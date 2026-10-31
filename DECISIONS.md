@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-10 — Conditioning timer, part 1 (v0.616.0 / app 0.424.0)
+
+The conditioning release is split. This part: the timer, EMOM, and the
+planned workout's card. Pick one (filters, the named-workouts library with
+how-tos and Rx/Scaled versions, younger users on Scaled), Build one (the
+finisher builder from household equipment), Write your own on the day, and the
+monthly benchmark offered after a month come next.
+
+**One set of timer rules** (`src/lib/workouts/timer.ts`, mirrored in the
+phone's Timer.kt): AMRAP counts the cap down (12 min default) with "+1 round";
+EMOM is a segment per minute (capSec is the length, 10 min default), cycling
+the movements; Tabata is 20 s on / 10 s off × 8 for each movement; timed
+stations a segment per station; everything else a stopwatch stopped with Done.
+Cues per second reached: ticks on the last 3 seconds of the clock or an
+interval, a tone at each interval change, a halfway cue on a countdown of 2+
+minutes, a long tone at the end. Get ready is 0 / 5 / 10 / 15 s (10 default)
+with ticks on 3-2-1. Time is measured from the clock (performance.now /
+elapsedRealtime), never counted by the interval, so a slow tab or a busy phone
+doesn't drift. Web: Web Audio unlocked by the Start tap, Wake Lock while it
+runs, vibration where the browser has it. Phone: ToneGenerator on the alarm
+stream (audible over music), vibration, the screen kept on. Sound and the
+get-ready length are kept per device (localStorage / SharedPreferences).
+
+**The card** (`conditioningFor`): the workout, its movements, today's result,
+your last before today and the household best (lower time wins, more rounds or
+reps win), Start, Log a result, Skip, and "How did it feel?" once logged (slot
+`hiit:<plannedWorkoutId>`, so it feeds the lighter-day suggestion). One result
+per workout per day: the web's logHiitWorkout now replaces today's earlier one
+(`replace`), and the phone logs through the plan with replace. Results are
+matched by the workout's name (first 40 characters), since the web logged under
+the workout's name and the phone under the plan's.
+
 ## 2026-10 — Warm-up and Cardio never make a day late (v0.615.1 / app 0.423.1)
 
 Warm-up and Cardio plans (and an older Rowing / Running / Rucking one) are

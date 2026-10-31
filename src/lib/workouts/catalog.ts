@@ -133,7 +133,8 @@ export type WorkoutType =
   | "STATIONS"
   | "TIMED_STATIONS"
   | "PYRAMID"
-  | "TABATA";
+  | "TABATA"
+  | "EMOM";
 
 // Types offered in the builder, in a sensible order. MAX_SETS is kept in the
 // enum for older logged data but isn't offered for new workouts (FOR_REPS
@@ -142,6 +143,7 @@ export const WORKOUT_TYPES: WorkoutType[] = [
   "FOR_TIME",
   "FOR_REPS",
   "AMRAP",
+  "EMOM",
   "TABATA",
   "STATIONS",
   "TIMED_STATIONS",
@@ -157,6 +159,7 @@ export const WORKOUT_TYPE_LABEL: Record<WorkoutType, string> = {
   TIMED_STATIONS: "Timed stations",
   PYRAMID: "Pyramid",
   TABATA: "Tabata",
+  EMOM: "EMOM",
 };
 
 // A one-line hint describing how each type works, shown in the builder.
@@ -169,6 +172,7 @@ export const WORKOUT_TYPE_HINT: Record<WorkoutType, string> = {
   TIMED_STATIONS: "A fixed time at each station.",
   PYRAMID: "Reps climb then fall (or count up/down).",
   TABATA: "20s work / 10s rest \u00d7 8 rounds (4 min).",
+  EMOM: "Every minute on the minute: the movements at the start of each minute.",
 };
 
 // The metric each type records for its single result, and the field label.
@@ -180,6 +184,8 @@ export function hiitResult(type: WorkoutType): { metric: Metric; label: string }
       return { metric: "DURATION", label: "Time" };
     case "AMRAP":
       return { metric: "REPS", label: "Rounds" };
+    case "EMOM":
+      return { metric: "REPS", label: "Minutes done" };
     case "MAX_SETS":
     case "FOR_REPS":
     case "TIMED_STATIONS":
@@ -199,6 +205,8 @@ export function hiitConfig(type: WorkoutType): {
       return { cap: true, capLabel: "Time cap (min)", pyramid: false };
     case "TIMED_STATIONS":
       return { cap: true, capLabel: "Seconds per station", pyramid: false };
+    case "EMOM":
+      return { cap: true, capLabel: "Minutes", pyramid: false };
     case "PYRAMID":
       return { cap: false, capLabel: "", pyramid: true };
     default:

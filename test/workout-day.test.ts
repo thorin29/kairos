@@ -8,6 +8,7 @@ import { daySuggestion, movementSuggestion, bigJump, recentHurt, lightFactor } f
 import { cleanOrder, withCardio, isSimpleCategory, blockKind } from "@/lib/workouts/blocks";
 import { parseClock, cardioActivity } from "@/lib/workouts/cardio";
 import { cleanPlanScheme, schemeChoiceKey, HAND_WAVE } from "@/lib/workouts/programs";
+import { timerPlanFor, timerAt, cuesAt, clockText, resultFromTimer } from "@/lib/workouts/timer";
 import { mapResult, rowSummary, rowNotes, syncFrom, syncDue, cleanToken, fmtClock } from "@/lib/workouts/concept2";
 import { LIBRARY, DEFAULT_EQUIPMENT, nameKey, planLibraryMerge, watchUrl } from "@/lib/workouts/library";
 import {
@@ -573,5 +574,62 @@ describe("set structure in a hand-built plan", () => {
       [170, 3, false],
       [190, 1, true],
     ]);
+  });
+});
+
+describe("conditioning timer", () => {
+  it("counts an AMRAP down, ticking the last three seconds, with a halfway cue", () => {
+    const p = timerPlanFor("AMRAP", 600, ["a", "b"]);
+    expect([p.kind, p.totalSec, p.result, p.rounds, p.title]).toEqual(["COUNTDOWN", 600, "ROUNDS", true, "AMRAP · 10 min"]);
+    expect(timerAt(p, 0).clock).toBe(600);
+    expect(timerAt(p, 61).clock).toBe(539);
+    expect(cuesAt(p, 300)).toEqual(["HALF"]);
+    expect(cuesAt(p, 597)).toEqual(["TICK"]);
+    expect(cuesAt(p, 599)).toEqual(["TICK"]);
+    expect(cuesAt(p, 600)).toEqual(["END"]);
+    expect(timerAt(p, 600).done).toBe(true);
+    expect(timerPlanFor("AMRAP", null, []).totalSec).toBe(720);
+  });
+
+  it("runs an EMOM a minute at a time, cycling the movements", () => {
+    const p = timerPlanFor("EMOM", 300, ["Swing", "Burpee"]);
+    expect(p.segments.map((s) => s.label)).toEqual([
+      "Minute 1 of 5 · Swing",
+      "Minute 2 of 5 · Burpee",
+      "Minute 3 of 5 · Swing",
+      "Minute 4 of 5 · Burpee",
+      "Minute 5 of 5 · Swing",
+    ]);
+    expect(timerAt(p, 65)).toMatchObject({ clock: 55, index: 1 });
+    expect(cuesAt(p, 60)).toEqual(["CHANGE"]);
+    expect(cuesAt(p, 58)).toEqual(["TICK"]);
+    expect(cuesAt(p, 300)).toEqual(["END"]);
+    expect(resultFromTimer(p, 300, 0)).toBe(5);
+    expect(timerPlanFor("EMOM", null, []).totalSec).toBe(600);
+  });
+
+  it("runs Tabata 20 on / 10 off × 8 for each movement", () => {
+    const p = timerPlanFor("TABATA", null, ["Squat", "Push-up"]);
+    expect(p.totalSec).toBe(480);
+    expect(p.segments.length).toBe(32);
+    expect(timerAt(p, 20)).toMatchObject({ label: "Rest", work: false, clock: 10 });
+    expect(timerAt(p, 245)).toMatchObject({ label: "Push-up · round 1 of 8", work: true });
+    expect(cuesAt(p, 20)).toEqual(["CHANGE"]);
+  });
+
+  it("times for-time workouts on a stopwatch, and stations by station", () => {
+    const f = timerPlanFor("FOR_TIME", null, ["a"]);
+    expect([f.kind, f.totalSec, f.result]).toEqual(["STOPWATCH", null, "TIME"]);
+    expect(timerAt(f, 845).clock).toBe(845);
+    expect(cuesAt(f, 30)).toEqual([]);
+    expect(resultFromTimer(f, 845, 0)).toBe(845);
+    const t = timerPlanFor("TIMED_STATIONS", 45, ["a", "b", "c"]);
+    expect([t.totalSec, t.segments[2].label]).toEqual([135, "Station 3 of 3 · c"]);
+  });
+
+  it("formats the clock", () => {
+    expect(clockText(720)).toBe("12:00");
+    expect(clockText(7)).toBe("0:07");
+    expect(clockText(3725)).toBe("1:02:05");
   });
 });

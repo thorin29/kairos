@@ -1129,6 +1129,8 @@ enum WorkoutType {
   TIMED_STATIONS
   PYRAMID
   TABATA
+  /// Every minute on the minute (v0.616); capSec is the length.
+  EMOM
 }
 
 enum WorkoutMetric {

@@ -118,7 +118,7 @@ export function HiitWorkouts({
     setHero(w.heroWod);
     setInstructions(w.instructions ?? "");
     setCap(
-      w.type === "AMRAP"
+      w.type === "AMRAP" || w.type === "EMOM"
         ? w.capSec != null
           ? String(Math.round(w.capSec / 60))
           : ""
@@ -147,9 +147,9 @@ export function HiitWorkouts({
 
   const save = () => {
     setError(null);
-    // AMRAP cap is entered in minutes; timed stations in seconds.
+    // AMRAP cap and EMOM length are entered in minutes; timed stations in seconds.
     const capSec =
-      type === "AMRAP"
+      type === "AMRAP" || type === "EMOM"
         ? num(cap)
           ? (num(cap) as number) * 60
           : null

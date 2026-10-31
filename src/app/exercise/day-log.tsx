@@ -17,6 +17,8 @@ import {
 } from "@/lib/actions/workouts";
 import type { Concept2Day } from "@/lib/workouts/concept2-run";
 import { CardioCard } from "./cardio-card";
+import { ConditioningCard } from "./conditioning-card";
+import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
 import type { CardioEntry } from "@/lib/workouts/cardio-run";
 import type { DayLogState, MovementLog, MovementSetRow, WeekStripDay } from "@/lib/queries/workout-log";
 import type { PersonWorkout, PlanExercise, PlanWorkout } from "@/lib/queries/workouts";
@@ -105,6 +107,7 @@ export function DayLog({
     loggedByPool: Record<string, LoggedSet>;
     order: SectionKind[];
     cardio: CardioEntry[];
+    conditioning: ConditioningPlan[];
   } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -391,6 +394,19 @@ export function DayLog({
                       if (!w) return null;
                       // Cardio plans are the card above.
                       if (w.category && CARDIO_CATEGORIES.includes(w.category)) return null;
+                      const cond = w.hiit ? data.conditioning.find((c) => c.plannedWorkoutId === w.id) : undefined;
+                      if (cond) {
+                        return (
+                          <ConditioningCard
+                            key={`${date}:${w.id}`}
+                            userId={userId}
+                            dateISO={date}
+                            workout={cond}
+                            skipped={state?.skippedPlans.includes(`plan:${w.id}`) ?? false}
+                            onChanged={() => setTick((n) => n + 1)}
+                          />
+                        );
+                      }
                       if (w.category === "WARMUP") {
                         const done = cardDone(w.id);
                         return (

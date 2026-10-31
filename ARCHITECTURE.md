@@ -187,6 +187,7 @@ production:
 | Which plans never make a day late (Warm-up, Cardio) | `OPTIONAL_CATEGORIES` / `isOptionalCategory` in blocks.ts, used by the task generator, `loadDayPlanProgress` and `workoutTaskTarget` |
 | What makes a Cardio or Warm-up plan done; logging cardio | `CARDIO_CATEGORIES` in blocks.ts, `loadDayPlanProgress` (solo plans); `logCardio` / `cardioDay` / `setWarmupDone` / `simplePlansFor` in `src/lib/workouts/cardio-run.ts`; activities and `parseClock` in `src/lib/workouts/cardio.ts` |
 | A hand-built plan's set structure | `SCHEME_CHOICES` / `cleanPlanScheme` / `HAND_WAVE` in `src/lib/workouts/programs.ts`; targets in `movementTarget` (workout-log.ts) |
+| How each conditioning format runs, its clock and sounds; the result it fills | `timerPlanFor` / `timerAt` / `cuesAt` / `resultFromTimer` in `src/lib/workouts/timer.ts` (pure; the phone's Timer.kt mirrors it); the card's results in `src/lib/workouts/conditioning-run.ts` |
 | Concept2 results to rows, when to sync, how far back | `mapResult` / `syncFrom` / `syncDue` / `rowSummary` in `src/lib/workouts/concept2.ts` (pure); token, ledger, replace and Undo in `src/lib/workouts/concept2-run.ts` |
 | A movement's "Watch how" link | `watchUrl` in `src/lib/workouts/watch.ts` (the phone's `watchUrl` in `MovementInfo.kt` matches it) |
 | Which suggestion shows, and its thresholds; a big jump; a lighter day | `daySuggestion` / `movementSuggestion` / `bigJump` / `RULES` in `src/lib/workouts/suggest.ts` (pure); answers and the day's lightness in `src/lib/workouts/suggest-run.ts` |

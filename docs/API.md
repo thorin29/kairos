@@ -913,6 +913,23 @@ Skipping a Warm-up or Cardio plan is the existing `workouts/skip` with an empty
 poolExerciseId. Effort for a cardio entry or a sport event goes through
 `workouts/feedback` with slot `cardio:<sessionId>` or `sport:<eventId>`.
 
+**Conditioning (v0.616).** `GET /api/v1/workouts` adds
+`"conditioning":[ ConditioningPlan ]`, the day's planned named workouts:
+```
+ConditioningPlan: { "plannedWorkoutId","hiitWorkoutId","name",
+  "type": AMRAP|EMOM|TABATA|FOR_TIME|TIMED_STATIONS|STATIONS|PYRAMID|FOR_REPS|MAX_SETS,
+  "capSec":int|null,                          // AMRAP cap, EMOM length, seconds per timed station
+  "movements":[ { "name","reps","distance","weight","line" } ],
+  "resultLabel","resultMetric":"REPS"|"DURATION",
+  "today":str|null, "last":str|null, "best":{ "name","result" }|null,   // "8 rounds", "13:20"
+  "effort","hurt" }
+```
+The timer runs on the client (rules: src/lib/workouts/timer.ts). The result
+logs through `workouts/log` for the plan (poolExerciseId "", replace true);
+how it felt through `workouts/feedback` with slot `hiit:<plannedWorkoutId>`.
+`EMOM` is a new workout type (personal workouts and Admin take its length as
+capSec).
+
 **Concept2 Logbook (v0.614).** The person's own token; it never comes back.
 ```
 GET    /api/v1/concept2                → Concept2Status

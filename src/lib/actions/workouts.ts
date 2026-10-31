@@ -28,6 +28,7 @@ import { answerSuggestion } from "@/lib/workouts/suggest-run";
 import { applyLibrary, saveEquipment, setPoolAbout } from "@/lib/workouts/library-run";
 import { cardioDay, logCardio, removeCardio, setWarmupDone, type CardioEntry, type CardioIn } from "@/lib/workouts/cardio-run";
 import { loadDayOrders, orderForDay, saveDayOrder, type DayOrders } from "@/lib/workouts/day-order";
+import { conditioningFor, type ConditioningPlan } from "@/lib/workouts/conditioning-run";
 import {
   concept2Day,
   connectConcept2,
@@ -948,6 +949,8 @@ async function writeHiitSession(input: {
   movementNames: string[];
   value: number;
   notes?: string;
+  /** One result per workout per day: today's earlier one is replaced (v0.616). */
+  replace?: boolean;
 }): Promise<void> {
   const { metric } = hiitResult(input.type);
   const notes =
@@ -957,6 +960,17 @@ async function writeHiitSession(input: {
       .slice(0, 300) || null;
 
   const date = toDateColumn(input.dateISO);
+  if (input.replace) {
+    await prisma.workoutSession.deleteMany({
+      where: {
+        userId: input.userId,
+        date,
+        isRest: false,
+        category: "HIIT",
+        name: { in: [input.name.slice(0, 60), input.name.slice(0, 40)] },
+      },
+    });
+  }
   const session = await prisma.workoutSession.create({
     data: {
       userId: input.userId,
@@ -1002,6 +1016,7 @@ export async function logHiitWorkout(input: {
   hiitWorkoutId: string;
   value: number;
   notes?: string;
+  replace?: boolean;
 }): Promise<void> {
   await requireInteractive();
   await requireCanActFor(input.userId);
@@ -1054,6 +1069,7 @@ export async function logHiitWorkout(input: {
     movementNames,
     value: input.value,
     notes: input.notes,
+    replace: input.replace,
   });
 }
 
@@ -1236,17 +1252,19 @@ export async function loadDayLog(
   loggedByPool: Record<string, LoggedSet>;
   order: SectionKind[];
   cardio: CardioEntry[];
+  conditioning: ConditioningPlan[];
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
   if (!ISO.test(dateISO)) throw new Error("Bad date");
-  const [state, loggedByPool, order, cardio] = await Promise.all([
+  const [state, loggedByPool, order, cardio, conditioning] = await Promise.all([
     loadDayLogState(userId, dateISO),
     loadLoggedWeights(userId, dateISO),
     orderForDay(userId, dayOfWeek(dateISO)),
     cardioDay(userId, dateISO),
+    conditioningFor(userId, dateISO),
   ]);
-  return { state, loggedByPool, order, cardio };
+  return { state, loggedByPool, order, cardio, conditioning };
 }
 
 /**
