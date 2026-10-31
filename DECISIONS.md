@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-10 — Movement library, equipment and how-to (v0.613.0 / app 0.421.0)
+
+The starting library is data in code (`LIBRARY` in `src/lib/workouts/library.ts`,
+reviewed in the library doc): about 140 movements, each with how it logs, a
+type (squat, hinge, push, pull, carry, core, conditioning, mobility), the
+equipment it needs, an optional bodyweight ladder and step, and a one- or
+two-line how-to. Strength and core go under Weights by muscle group;
+conditioning moves under HIIT; mobility under Stretching. Run, row and ruck
+stay their own categories and aren't in the library.
+
+Nothing is added on its own. Admin → Exercise shows "N new · M to tag" with Add
+all or Pick. Merging matches shared movements by name in any category (case,
+plurals and hyphens ignored), tags them in place and fills a missing how-to;
+it never renames, never overwrites a how-to someone wrote, never touches
+personal movements, and remembers the library key so a rename doesn't bring a
+duplicate back. Running it again does nothing.
+
+Household equipment and the weights or sizes on hand live in the setting
+`workouts.equipment` (starts from `DEFAULT_EQUIPMENT`; edit, add or remove in
+Admin). Nothing reads it yet: the conditioning builder will, so it moved to
+the conditioning release with the timers, EMOM and the workouts library.
+
+Questions about what a movement is are answered where it's picked: ⓘ beside
+the name in the set logger, Swap lists, and the plan builder opens the how-to
+and a "Watch how" video search (no links stored, nothing to go stale). Admins
+can write or edit any movement's how-to.
+
 ## 2026-10 — Suggestions (v0.612.0 / app 0.420.0)
 
 Rules are pure and explainable (`suggest.ts`, thresholds in `RULES`), one card

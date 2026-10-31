@@ -24,6 +24,8 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { poolMetrics } from "@/lib/workouts/plan-edit";
 import { setMovementFeedback, cleanEffort, cleanHurt } from "@/lib/workouts/feedback";
 import { answerSuggestion } from "@/lib/workouts/suggest-run";
+import { applyLibrary, saveEquipment, setPoolAbout } from "@/lib/workouts/library-run";
+import type { EquipmentItem } from "@/lib/workouts/library";
 import {
   answerInvite,
   endProgram,
@@ -251,6 +253,31 @@ export async function setPoolExerciseMetric(id: string, metric: Metric | null): 
   }
   refresh();
   return moved;
+}
+
+/** Add the movement library to the pool (all, or the picked keys) and tag
+ *  matching movements (v0.613.0). */
+export async function applyMovementLibrary(keys: string[] | null): Promise<{ added: number; tagged: number }> {
+  await requireAdmin();
+  const r = await applyLibrary(keys ? keys.slice(0, 500).map(String) : null);
+  refresh();
+  return r;
+}
+
+/** The household's equipment and the weights or sizes on hand. */
+export async function saveHouseholdEquipment(list: EquipmentItem[]): Promise<EquipmentItem[]> {
+  await requireAdmin();
+  const r = await saveEquipment(list);
+  refresh();
+  return r;
+}
+
+/** A movement's how-to, shown behind ⓘ. Empty clears it. */
+export async function setPoolExerciseAbout(id: string, about: string): Promise<void> {
+  await requireAdmin();
+  if (!id) return;
+  await setPoolAbout(id, String(about ?? ""));
+  refresh();
 }
 
 export async function renamePoolExercise(

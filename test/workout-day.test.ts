@@ -5,6 +5,7 @@ import { isHoldName, poolMetricFor } from "@/lib/workouts/catalog";
 import { repRecords, recordChips, isNewBest, bandPoints, REP_BANDS, weeksInARow } from "@/lib/workouts/records";
 import { PROGRAMS, programByKey, parseScheme, schemeKey, programWeek, blocksDone, targetsFor, weekLabel, raisedMaxes, defaultMovement } from "@/lib/workouts/programs";
 import { daySuggestion, movementSuggestion, bigJump, recentHurt, lightFactor } from "@/lib/workouts/suggest";
+import { LIBRARY, DEFAULT_EQUIPMENT, nameKey, planLibraryMerge, watchUrl } from "@/lib/workouts/library";
 import {
   daySections,
   dayTitle,
@@ -384,5 +385,49 @@ describe("suggestions (v0.612)", () => {
     expect(lightFactor("light")).toBe(0.8);
     expect(lightFactor("ease")).toBe(0.9);
     expect(lightFactor("dismiss")).toBeNull();
+  });
+});
+
+describe("movement library", () => {
+  it("has unique keys, a how-to on every movement and known equipment", () => {
+    expect(new Set(LIBRARY.map((m) => m.key)).size).toBe(LIBRARY.length);
+    const known = new Set(DEFAULT_EQUIPMENT.map((e) => e.key));
+    for (const m of LIBRARY) {
+      expect(m.about.length).toBeGreaterThan(10);
+      for (const e of m.equipment) expect(known.has(e)).toBe(true);
+    }
+  });
+
+  it("logs holds by time", () => {
+    for (const m of LIBRARY) if (isHoldName(m.name)) expect(m.metric).toBe("DURATION");
+  });
+
+  it("matches names ignoring case, plurals and hyphens", () => {
+    expect(nameKey("Push-ups")).toBe(nameKey("push up"));
+    expect(nameKey("Kettlebell Swings")).toBe(nameKey("Kettlebell swing"));
+    expect(nameKey("Arm circles")).toBe(nameKey("arm circle"));
+    expect(nameKey("Press")).toBe("press");
+  });
+
+  it("tags shared movements with the same name in any category, and adds the rest", () => {
+    const lib = LIBRARY.filter((m) => ["plank", "push-up", "burpee"].includes(m.key));
+    const pool = [
+      { id: "a", name: "Planks", category: "ISOMETRIC", libraryKey: null, ownerId: null },
+      { id: "b", name: "Push ups", category: "WEIGHTS", libraryKey: null, ownerId: null },
+      { id: "c", name: "Burpee", category: "HIIT", libraryKey: null, ownerId: "someone" },
+    ];
+    const plan = planLibraryMerge(pool, lib);
+    expect(plan.tag.map((t) => `${t.id}:${t.entry.key}`).sort()).toEqual(["a:plank", "b:push-up"]);
+    expect(plan.add.map((m) => m.key)).toEqual(["burpee"]);
+  });
+
+  it("does nothing new the second time, even after a rename", () => {
+    const lib = LIBRARY.filter((m) => m.key === "goblet-squat");
+    const pool = [{ id: "a", name: "KB goblet squat", category: "WEIGHTS", libraryKey: "goblet-squat", ownerId: null }];
+    expect(planLibraryMerge(pool, lib)).toEqual({ add: [], tag: [] });
+  });
+
+  it("links to a video search", () => {
+    expect(watchUrl("Turkish get-up")).toContain("Turkish%20get-up");
   });
 });

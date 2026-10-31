@@ -47,6 +47,7 @@ import {
   SwapIcon,
   XIcon,
 } from "@/components/icons";
+import { MovementInfo } from "@/components/movement-info";
 import { PlanRow, PlanActionTile, SwapPicker, type PoolPick } from "./workout-card";
 import { WeightCalculator } from "./weight-calculator";
 
@@ -797,6 +798,11 @@ function MovementLogger({
           {doing ? doing.name : exercise.name}
           {doing && <span className="ml-2 text-sm font-normal text-muted">instead of {exercise.name}</span>}
         </h3>
+        <MovementInfo
+          name={doing ? doing.name : exercise.name}
+          about={log && log.name === (doing ? doing.name : exercise.name) ? log.about : null}
+          className="-ml-2"
+        />
         <button
           type="button"
           onClick={() => (doing ? swapTo(null) : setPicking(true))}

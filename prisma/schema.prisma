@@ -1158,6 +1158,15 @@ model PoolExercise {
   /// How the movement is logged (v0.609.0); null = the category's default.
   /// New plan entries take it; a plan entry's own metric still wins.
   metric      WorkoutMetric?
+  /// The movement library (v0.613.0): equipment keys (comma list, empty =
+  /// bodyweight), type (SQUAT/HINGE/PUSH…), bodyweight ladder and step, the
+  /// library entry it came from, and a short how-to.
+  equipment   String?
+  pattern     String?
+  ladderKey   String?
+  ladderStep  Int?
+  libraryKey  String?
+  about       String?
   isActive    Boolean         @default(true)
   sortOrder   Int             @default(0)
   ownerId     String?
@@ -1170,6 +1179,7 @@ model PoolExercise {
 
   @@unique([category, name, ownerId])
   @@index([category, muscleGroup, isActive])
+  @@index([libraryKey])
 }
 
 // A named HIIT/CrossFit workout (e.g. "Cindy") of a given type, built from

@@ -1152,6 +1152,12 @@ export type PoolEntry = {
   unit: string; // weights: the muscle group's lb/kg; otherwise ""
   /** How it's logged; null = the category's default (v0.609.0). */
   metric: Metric | null;
+  /** The how-to shown behind ⓘ (v0.613.0). */
+  about: string | null;
+  /** Library tags (v0.613.0): equipment keys, type, and the library entry. */
+  equipment: string | null;
+  pattern: string | null;
+  libraryKey: string | null;
 };
 
 export async function loadExercisePool(): Promise<PoolEntry[]> {
@@ -1170,6 +1176,10 @@ export async function loadExercisePool(): Promise<PoolEntry[]> {
         muscleGroup: true,
         isActive: true,
         metric: true,
+        about: true,
+        equipment: true,
+        pattern: true,
+        libraryKey: true,
       },
     }),
     loadWeightUnits(),

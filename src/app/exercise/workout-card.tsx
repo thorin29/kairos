@@ -9,6 +9,7 @@ import {
   type LoggedSet,
 } from "@/lib/actions/workouts";
 import { CheckIcon, DumbbellIcon, MoonIcon, SwapIcon } from "@/components/icons";
+import { InfoToggle, MovementAbout } from "@/components/movement-info";
 import {
   METRIC_LABEL_SHORT,
   MUSCLE_GROUP_LABEL,
@@ -875,6 +876,7 @@ export function SwapPicker({
   const [pool, setPool] = useState<PoolEntry[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [q, setQ] = useState("");
+  const [peek, setPeek] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -961,21 +963,30 @@ export function SwapPicker({
                 {g.label}
               </p>
               {g.items.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() =>
-                    onPick({
-                      id: p.id,
-                      name: p.name,
-                      unit: p.unit,
-                      muscleGroup: p.muscleGroup,
-                    })
-                  }
-                  className="block w-full truncate rounded-lg px-2 py-1.5 text-left text-sm hover:bg-ground/50"
-                >
-                  {p.name}
-                </button>
+                <Fragment key={p.id}>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onPick({
+                          id: p.id,
+                          name: p.name,
+                          unit: p.unit,
+                          muscleGroup: p.muscleGroup,
+                        })
+                      }
+                      className="block min-w-0 flex-1 truncate rounded-lg px-2 py-1.5 text-left text-sm hover:bg-ground/50"
+                    >
+                      {p.name}
+                    </button>
+                    <InfoToggle
+                      name={p.name}
+                      open={peek === p.id}
+                      onToggle={() => setPeek((x) => (x === p.id ? null : p.id))}
+                    />
+                  </div>
+                  {peek === p.id && <MovementAbout name={p.name} about={p.about} />}
+                </Fragment>
               ))}
             </div>
           ))

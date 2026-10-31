@@ -823,7 +823,8 @@ GET  /api/v1/workouts/sets?date=YYYY-MM-DD&slot=<planned poolExerciseId>[&doing=
        "target":{ "title","scheme",               // the planned scheme's targets (v0.611)
                   "sets":[ { "weight":num|null,"reps","top":bool } ] }|null,
        "suggestion": Suggestion|null,            // one card for this movement (v0.612)
-       "recentTop":num|null }                    // heaviest in the last 14 days (big-jump note)
+       "recentTop":num|null,                     // heaviest in the last 14 days (big-jump note)
+       "name":str, "about":str|null }            // the movement being done and its how-to (v0.613)
 Set: { "weight":num|null, "reps":int|null, "seconds":int|null }
 
 POST /api/v1/workouts/sets
@@ -1177,7 +1178,7 @@ silently invisible:
 - **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
 - **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
-- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool`, `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null; v0.609), `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool` (each exercise carries `about`, its how-to or null; v0.613), `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null, v0.609, and `about`, v0.613), `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604)
 - **hockey** (the week from ice-time), `hockey/prefs`

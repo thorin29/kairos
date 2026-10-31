@@ -13,6 +13,7 @@ import {
   setWeeklyActive,
 } from "@/lib/actions/workouts";
 import { PlusIcon, TrashIcon } from "@/components/icons";
+import { InfoToggle, MovementAbout } from "@/components/movement-info";
 import type {
   PlanDay,
   PlanWorkout,
@@ -270,6 +271,7 @@ function AddWorkoutModal({
   const [hiitId, setHiitId] = useState("");
   const [rest, setRest] = useState(false);
   const [saving, startSave] = useTransition();
+  const [peek, setPeek] = useState<string | null>(null);
 
   const metricOnly = METRIC_ONLY_CATEGORIES.includes(category);
   const isWeights = category === "WEIGHTS";
@@ -502,15 +504,27 @@ function AddWorkoutModal({
                           : "border-hairline bg-ground/30"
                       }`}
                     >
-                      <label className="flex cursor-pointer items-center gap-2.5">
-                        <input
-                          type="checkbox"
-                          checked={on}
-                          onChange={() => toggle(o.id)}
-                          className="h-4 w-4 accent-accent"
+                      <div className="flex items-center">
+                        <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => toggle(o.id)}
+                            className="h-4 w-4 accent-accent"
+                          />
+                          <span className="text-sm font-medium">{o.name}</span>
+                        </label>
+                        <InfoToggle
+                          name={o.name}
+                          open={peek === o.id}
+                          onToggle={() => setPeek((x) => (x === o.id ? null : o.id))}
                         />
-                        <span className="text-sm font-medium">{o.name}</span>
-                      </label>
+                      </div>
+                      {peek === o.id && (
+                        <div className="mt-1.5 -mx-2">
+                          <MovementAbout name={o.name} about={o.about} />
+                        </div>
+                      )}
 
                       {on && (
                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-7">

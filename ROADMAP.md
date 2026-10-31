@@ -1185,8 +1185,11 @@ injuries don't read as going backwards. Phases, in order:
       (swap around a hurt area, the next weight, a stalled lift), big-jump
       note, the program invite on the home page. Web v0.612.0, phone v0.420.0.
       Hockey-aware and balance rules need game detection and movement tags (6).
-- [ ] 6. Household equipment, movement tags, a starting library shipped as
-      data, and a finisher builder
+- [x] 6. Household equipment with weights, movement tags (type, equipment,
+      ladders), a starting library shipped as data with a how-to for each
+      movement, and ⓘ wherever movements are picked. Web v0.613.0, phone
+      v0.421.0. The finisher builder moved to the conditioning release (it
+      needs EMOM and timers), along with the named workouts library.
 - [ ] 7. Concept2 Logbook sync with a personal read-only token
 - [ ] 8. Export and import of workouts and programs for everyone
 
@@ -1727,7 +1730,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.612.0 (migrations through 131_suggestion_answers).
-- App versionName 0.420.0 / versionCode 482 / CLIENT_BUILD 482.
+- Web APP_VERSION 0.613.0 (migrations through 132_movement_library).
+- App versionName 0.421.0 / versionCode 483 / CLIENT_BUILD 483.
 - ice-time 0.1.1 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

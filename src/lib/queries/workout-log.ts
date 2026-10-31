@@ -1009,7 +1009,8 @@ export type LogCategory = {
   metrics: MetricOption[];
   load: boolean;
 };
-export type PoolExerciseLite = { id: string; name: string; category: string; muscleGroup: string | null };
+/** `about`: the movement's how-to (v0.613), null when it has none. */
+export type PoolExerciseLite = { id: string; name: string; category: string; muscleGroup: string | null; about: string | null };
 export type HiitLogOption = {
   id: string;
   name: string;
@@ -1104,7 +1105,7 @@ export async function loadWorkoutPool(userId?: string): Promise<WorkoutPool> {
       OR: [{ ownerId: null }, ...(userId ? [{ ownerId: userId }] : [])],
     },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, category: true, muscleGroup: true },
+    select: { id: true, name: true, category: true, muscleGroup: true, about: true },
   });
 
   // Named HIIT/CrossFit workouts you can log: the shared library (admin, normal +
@@ -1138,6 +1139,7 @@ export async function loadWorkoutPool(userId?: string): Promise<WorkoutPool> {
       name: e.name,
       category: e.category as string,
       muscleGroup: (e as { muscleGroup?: string | null }).muscleGroup ?? null,
+      about: (e as { about?: string | null }).about ?? null,
     })),
     hiitWorkouts,
     muscleGroups,
@@ -1306,7 +1308,14 @@ export type PlanOptions = {
   categories: PlanCategoryOption[];
   muscleGroups: { key: string; label: string }[];
   /** `metric`: the movement's own "Logs as", null = the category default (v0.609). */
-  exercises: { id: string; name: string; category: string; muscleGroup: string | null; metric: string | null }[];
+  exercises: {
+    id: string;
+    name: string;
+    category: string;
+    muscleGroup: string | null;
+    metric: string | null;
+    about: string | null;
+  }[];
   hiitWorkouts: { id: string; name: string; personal: boolean }[];
 };
 
@@ -1332,7 +1341,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
     prisma.poolExercise.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, category: true, muscleGroup: true, metric: true },
+      select: { id: true, name: true, category: true, muscleGroup: true, metric: true, about: true },
     }),
     loadBrowsableWorkouts(userId),
   ]);
@@ -1349,6 +1358,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
       category: e.category as string,
       muscleGroup: (e.muscleGroup as string | null) ?? null,
       metric: (e.metric as string | null) ?? null,
+      about: (e.about as string | null) ?? null,
     })),
     hiitWorkouts: hiit.map((w) => ({ id: w.id, name: w.name, personal: w.personal })),
   };
@@ -1528,6 +1538,9 @@ export type MovementLog = {
   /** Heaviest weight in the last two weeks before today: a set more than 10%
    *  over it gets a note (suggest.ts bigJump). */
   recentTop: number | null;
+  /** The movement being done, and its how-to for ⓘ (v0.613). */
+  name: string;
+  about: string | null;
 };
 
 const setRow = (s: { weight: number | null; reps: number | null; seconds: number | null }): MovementSetRow => ({
@@ -1621,8 +1634,13 @@ export async function loadMovementLog(
   let target = await movementTarget(userId, dateISO, slotId, movement, last?.sets ?? [], records);
   const [light, poolRow, units] = await Promise.all([
     dayLightFactor(userId, dateISO),
-    prisma.poolExercise.findUnique({ where: { id: movement }, select: { muscleGroup: true } }) as Promise<{
+    prisma.poolExercise.findUnique({
+      where: { id: movement },
+      select: { muscleGroup: true, name: true, about: true },
+    }) as Promise<{
       muscleGroup: string | null;
+      name: string;
+      about: string | null;
     } | null>,
     loadWeightUnits(),
   ]);
@@ -1663,6 +1681,8 @@ export async function loadMovementLog(
     target,
     suggestion,
     recentTop,
+    name: poolRow?.name ?? "",
+    about: poolRow?.about ?? null,
   };
 }
 

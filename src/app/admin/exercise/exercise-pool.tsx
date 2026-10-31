@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Card, SectionHeading } from "@/components/ui";
-import { PlusIcon, TrashIcon, PencilIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon, PencilIcon, InfoIcon } from "@/components/icons";
 import {
   CATEGORY_LABEL,
   METRIC_LABEL_SHORT,
@@ -22,6 +22,7 @@ import {
   renamePoolExercise,
   setPoolExerciseActive,
   setPoolExerciseMetric,
+  setPoolExerciseAbout,
   setWeightUnit,
 } from "@/lib/actions/workouts";
 import type { PoolEntry, WeightUnits } from "@/lib/queries/workouts";
@@ -261,6 +262,8 @@ function PoolRow({ entry }: { entry: PoolEntry }) {
   const choices = metricChoicesFor(entry.category);
   const [metric, setMetric] = useState<Metric>(poolMetricFor(entry.category, entry.metric));
   const [moved, setMoved] = useState<number | null>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [about, setAbout] = useState(entry.about ?? "");
 
   const changeMetric = (m: Metric) => {
     setMetric(m);
@@ -280,7 +283,13 @@ function PoolRow({ entry }: { entry: PoolEntry }) {
     }
   };
 
+  const saveAbout = () => {
+    if (about.trim() === (entry.about ?? "")) return;
+    startTransition(() => setPoolExerciseAbout(entry.id, about));
+  };
+
   return (
+    <div>
     <div className="flex items-center gap-3 p-3.5">
       {editing ? (
         <input
@@ -308,6 +317,17 @@ function PoolRow({ entry }: { entry: PoolEntry }) {
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-ground hover:text-ink disabled:opacity-40"
       >
         <PencilIcon className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        aria-label={`How to do ${entry.name}`}
+        aria-expanded={aboutOpen}
+        onClick={() => setAboutOpen((o) => !o)}
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-ground hover:text-ink ${
+          aboutOpen ? "text-accent" : entry.about ? "text-muted" : "text-muted/40"
+        }`}
+      >
+        <InfoIcon className="h-4 w-4" />
       </button>
       {moved != null && moved > 0 && (
         <span className="text-xs text-muted">
@@ -356,6 +376,21 @@ function PoolRow({ entry }: { entry: PoolEntry }) {
       >
         <TrashIcon className="h-4 w-4" />
       </button>
+    </div>
+    {aboutOpen && (
+      <div className="px-3.5 pb-3.5">
+        <textarea
+          value={about}
+          onChange={(e) => setAbout(e.target.value)}
+          onBlur={saveAbout}
+          rows={3}
+          maxLength={600}
+          aria-label={`How to do ${entry.name}`}
+          placeholder="How to do it"
+          className="w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
+        />
+      </div>
+    )}
     </div>
   );
 }

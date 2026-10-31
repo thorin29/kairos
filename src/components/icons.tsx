@@ -55,6 +55,17 @@ export function SwapIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+/** "How to": a circled i, beside a movement or workout name. */
+export function InfoIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" />
+      <path d="M12 8h.01" />
+    </svg>
+  );
+}
+
 export function PlusIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>
