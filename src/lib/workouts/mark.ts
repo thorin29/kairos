@@ -5,6 +5,7 @@ import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { CATEGORY_LABEL, type WorkoutCategory } from "@/lib/workouts/catalog";
 import { loadDayPlanProgress, planSlot } from "@/lib/queries/workout-log";
 import { topSet } from "@/lib/workouts/sets";
+import { isOptionalCategory } from "@/lib/workouts/blocks";
 import { dayIntentFor } from "@/lib/workouts/suggest-run";
 import type { WorkoutCategory as DbWorkoutCategory } from "@/generated/prisma/client";
 
@@ -160,12 +161,14 @@ async function workoutTaskTarget(
   // Something logged that isn't one of the plans: its own session, under a
   // name no plan has. Plan names are cut to 40 characters, so compare on that.
   const planNames = new Set(progress.planNames);
+  // Cardio and a warm-up are extras on a planned day (v0.615.1): a row before
+  // the lifts doesn't finish the day.
   const others = (await prisma.workoutSession.findMany({
     where: { userId, date, isRest: false },
-    select: { name: true },
-  })) as { name: string | null }[];
+    select: { name: true, category: true },
+  })) as { name: string | null; category: string | null }[];
   const unplanned = others.some(
-    (o) => o.name == null || !planNames.has(o.name.slice(0, 40)),
+    (o) => !isOptionalCategory(o.category) && (o.name == null || !planNames.has(o.name.slice(0, 40))),
   );
 
   if ((progress.done && progress.logged) || unplanned) return "COMPLETE";

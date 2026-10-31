@@ -1,4 +1,5 @@
 import { Category } from "@/generated/prisma/client";
+import { OPTIONAL_CATEGORIES } from "@/lib/workouts/blocks";
 import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
 import { prisma } from "@/lib/prisma";
 import {
@@ -61,8 +62,13 @@ export async function generateWorkoutTasks(
         endDate: true,
       },
     }),
+    // Warm-up and Cardio never make a day due (v0.615.1): a day with only
+    // those gets no prompt, so nothing goes late or missed.
     prisma.plannedWorkout.findMany({
-      where: { isRest: false },
+      where: {
+        isRest: false,
+        OR: [{ category: null }, { category: { notIn: OPTIONAL_CATEGORIES as never } }],
+      },
       select: { userId: true, dayOfWeek: true, createdAt: true },
     }),
     // Household pauses (vacations) suppress workouts for everyone on the days

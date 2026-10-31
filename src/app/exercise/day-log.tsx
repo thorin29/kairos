@@ -370,6 +370,7 @@ export function DayLog({
                       c2Checking={c2Checking}
                       onCheckC2={() => checkC2(true)}
                       onUndoC2={undoC2}
+                      name={workouts.find((w) => w.category === "CARDIO")?.name ?? "Cardio"}
                       skip={(() => {
                         const plan = workouts.find((w) => w.category === "CARDIO");
                         if (!plan) return undefined;

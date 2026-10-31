@@ -207,7 +207,8 @@ export async function setWarmupDone(
       where: { userId, date: toDateColumn(dateISO), isRest: false, name: plan.name, category: plan.category as never },
     });
   }
-  await settleWorkoutTask(userId, dateISO, { fallbackComplete: done, fromSkip: !done });
+  // A warm-up alone never finishes a day.
+  await settleWorkoutTask(userId, dateISO, { fromSkip: !done });
   return true;
 }
 

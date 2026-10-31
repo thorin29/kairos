@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-10 — Warm-up and Cardio never make a day late (v0.615.1 / app 0.423.1)
+
+Warm-up and Cardio plans (and an older Rowing / Running / Rucking one) are
+optional (`OPTIONAL_CATEGORIES` in blocks.ts): the task generator gives a day
+with only those no prompt, `loadDayPlanProgress` leaves them out of whether the
+day is done, and a cardio or warm-up session no longer counts as "something
+else logged" that finishes a lifting day. They still show on the day page and
+in its progress, and picking an earlier date still logs them there. A
+warm-up alone never completes a day. With nothing logged yet, Cardio is one
+card (name, Check Concept2 now, Skip, Add cardio), like the Warm-up.
+
 ## 2026-10 — Cardio, Warm-up, day order and set structure (v0.615.0 / app 0.423.0)
 
 **Cardio is one plan category.** Rowing, Running and Rucking leave the plan

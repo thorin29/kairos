@@ -30,7 +30,10 @@ export function CardioCard({
   onCheckC2,
   onUndoC2,
   skip,
+  name = "Cardio",
 }: {
+  /** The card's title: the Cardio plan's name. */
+  name?: string;
   /** A Cardio plan on the day: it can be skipped while nothing is logged. */
   skip?: { skipped: boolean; onToggle: (skipped: boolean) => void };
   userId: string;
@@ -201,32 +204,60 @@ export function CardioCard({
             )}
           </div>
         </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-hairline px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
-          >
-            <PlusIcon className="h-4 w-4" />
-            Add cardio
-          </button>
-          {skip && entries.length === 0 && (
+      ) : entries.length === 0 ? (
+        // Nothing logged yet: one card, like the Warm-up's.
+        <div className="flex min-h-[3.5rem] flex-wrap items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3">
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">{name}</span>
+            {c2?.connected && (
+              <span className="block text-xs text-muted">
+                {c2.error ? <span className="text-red-700">{c2.error} </span> : null}
+                <button
+                  type="button"
+                  onClick={onCheckC2}
+                  disabled={c2Checking}
+                  className="text-left font-semibold text-accent hover:underline disabled:opacity-40"
+                >
+                  {c2Checking ? "Checking Concept2…" : "Check Concept2 now"}
+                </button>
+              </span>
+            )}
+          </span>
+          {skip && (
             <button
               type="button"
               aria-pressed={skip.skipped}
               onClick={() => skip.onToggle(!skip.skipped)}
-              className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium ${
+              className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
                 skip.skipped ? "border-hairline bg-ground text-muted" : "border-hairline text-muted hover:border-accent"
               }`}
             >
               {skip.skipped ? "Skipped" : "Skip"}
             </button>
           )}
+          {!skip?.skipped && (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-accent bg-accent px-3.5 text-sm font-semibold text-on-accent"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Add cardio
+            </button>
+          )}
         </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-hairline px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
+        >
+          <PlusIcon className="h-4 w-4" />
+          Add cardio
+        </button>
       )}
 
-      {c2?.connected && (
+      {c2?.connected && (entries.length > 0 || adding) && (
         <div className="flex items-center justify-end gap-3 text-xs text-muted">
           {c2.error && <span className="text-red-700">{c2.error}</span>}
           <button

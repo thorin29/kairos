@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { slotForDate } from "@/lib/workouts/rotation";
 import { fmtClock, rowSummary } from "@/lib/workouts/concept2";
-import { CARDIO_CATEGORIES, blockKind, isSimpleCategory } from "@/lib/workouts/blocks";
+import { CARDIO_CATEGORIES, blockKind, isOptionalCategory, isSimpleCategory } from "@/lib/workouts/blocks";
 import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES, hiitResult } from "@/lib/workouts/catalog";
 import type { WorkoutType } from "@/generated/prisma/client";
 import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween, startOfWeek } from "@/lib/dates";
@@ -395,8 +395,9 @@ export async function loadDayPlanProgress(
       .filter((r) => r.name)
       .map((r) => `${(r.name as string).slice(0, 40)}|${r.category ?? ""}`),
   );
+  // Warm-up and Cardio plans are optional: they never hold the day open.
   const soloPlans = allPlans.filter(
-    (p) => !p.hiitWorkoutId && p._count.exercises === 0,
+    (p) => !p.hiitWorkoutId && p._count.exercises === 0 && !isOptionalCategory(p.category),
   );
   // A Cardio plan (or an older Rowing / Running / Rucking one) is done by any
   // cardio that day: a Concept2 row, a run, jump rope.
