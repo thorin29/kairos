@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-10 — Recent workouts show cardio numbers (v0.614.1)
+
+The history line (`historyResult`) only knew weight and reps, so a row, a run
+or a hold read "Logged". It now shows metres, time and pace for a row
+(`rowSummary`, the same words as the day page), distance and time for a run,
+the load for a ruck, and the time for a hold. Both clients print the server's
+line, so the phone needed nothing.
+
 ## 2026-10 — Concept2 Logbook (v0.614.0 / app 0.422.0)
 
 Each person connects their own Logbook with the long-lived token Concept2

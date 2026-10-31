@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { slotForDate } from "@/lib/workouts/rotation";
+import { fmtClock, rowSummary } from "@/lib/workouts/concept2";
 import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES, hiitResult } from "@/lib/workouts/catalog";
 import type { WorkoutType } from "@/generated/prisma/client";
 import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween, startOfWeek } from "@/lib/dates";
@@ -705,6 +706,9 @@ export async function loadWorkoutProgress(
             weight: true,
             reps: true,
             unit: true,
+            distance: true,
+            meters: true,
+            seconds: true,
             poolExercise: { select: { name: true } },
           },
         },
@@ -964,21 +968,40 @@ export async function loadWorkoutProgress(
   return { series, defaultId, history, planDays, defaultGroup };
 }
 
-function historyResult(
+export function historyResult(
   sets: {
     weight: number | null;
     reps: number | null;
     unit: string | null;
+    distance?: number | null;
+    meters?: number | null;
+    seconds?: number | null;
     poolExercise: { name: string } | null;
   }[],
 ): string {
   if (sets.length === 0) return "";
   if (sets.length === 1) {
     const x = sets[0];
+    // A row, a run, a ruck or a hold: what was done, not just "Logged".
+    // (A ruck's weight is the load it carried, after the distance.)
+    if (x.meters != null || x.distance != null || (x.seconds != null && x.weight == null)) {
+      return [
+        x.meters != null
+          ? rowSummary({ meters: Math.round(x.meters), seconds: x.seconds ?? 0, pace: x.meters > 0 && x.seconds ? Math.round((x.seconds / (x.meters / 500)) * 10) / 10 : null })
+          : x.distance != null
+            ? [`${trimNum(x.distance)} ${x.unit || "mi"}`, x.seconds ? fmtClock(x.seconds) : ""].filter(Boolean).join(" · ")
+            : fmtClock(x.seconds as number),
+        x.weight != null ? `${trimNum(x.weight)} lb` : "",
+        x.reps != null && x.meters == null && x.distance == null ? `${x.reps} reps` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    }
     if (x.weight != null && x.reps != null) {
       return `${trimNum(x.weight)}${x.unit ?? ""} × ${x.reps}`;
     }
     if (x.weight != null) return `${trimNum(x.weight)}${x.unit ?? ""}`;
+    if (x.reps != null) return `${x.reps} reps`;
     return x.poolExercise?.name ?? "Logged";
   }
   const names = [
