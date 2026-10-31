@@ -1,8 +1,9 @@
 /**
- * How a day's planned workouts are laid out on the day page: sections in a
- * fixed order (Warm-up, Cardio, each muscle group, Conditioning, Sport, then
- * anything else), the page title, how far through the day is, and the week
- * strip. Pure, shared by the web and (later) the phone's day endpoint.
+ * How a day's planned workouts are laid out on the day page: sections in the
+ * person's order (by default Warm-up, Cardio, each muscle group, Conditioning,
+ * Stretching, Sport; anything else last), the page title, how far through the
+ * day is, and the week strip. Pure, shared by the web and the phone's day
+ * endpoint (the phone mirrors blockKind in WorkoutLogScreen.kt).
  */
 import {
   MUSCLE_GROUP_LABEL,
@@ -12,9 +13,43 @@ import {
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
 
-export type BlockKind = "WARMUP" | "CARDIO" | "STRENGTH" | "CONDITIONING" | "SPORT" | "OTHER";
+export type BlockKind = "WARMUP" | "CARDIO" | "STRENGTH" | "CONDITIONING" | "STRETCH" | "SPORT" | "OTHER";
 
-const ORDER: BlockKind[] = ["WARMUP", "CARDIO", "STRENGTH", "CONDITIONING", "SPORT", "OTHER"];
+/** The sections a person can put in order (OTHER always comes last). */
+export const SECTION_KINDS = ["WARMUP", "CARDIO", "STRENGTH", "CONDITIONING", "STRETCH", "SPORT"] as const;
+export type SectionKind = (typeof SECTION_KINDS)[number];
+/** The order before anyone sets one: the mockup's. */
+export const DEFAULT_ORDER: readonly SectionKind[] = SECTION_KINDS;
+
+/** A saved or sent order made safe: known kinds once each, any missing ones
+ *  added where the default has them. */
+export function cleanOrder(raw: unknown): SectionKind[] {
+  const known = new Set<string>(SECTION_KINDS);
+  const out: SectionKind[] = [];
+  if (Array.isArray(raw)) {
+    for (const k of raw) if (typeof k === "string" && known.has(k) && !out.includes(k as SectionKind)) out.push(k as SectionKind);
+  }
+  for (const k of DEFAULT_ORDER) {
+    if (out.includes(k)) continue;
+    const at = DEFAULT_ORDER.indexOf(k);
+    // Right after the last kind the default puts before it (else first).
+    let after = -1;
+    out.forEach((x, i) => {
+      if (DEFAULT_ORDER.indexOf(x) < at) after = i;
+    });
+    out.splice(after + 1, 0, k);
+  }
+  return out;
+}
+
+/** Warm-up and Cardio plans hold no movements: done with a tap, or by any
+ *  cardio logged that day. */
+export function isSimpleCategory(category: string | null | undefined): boolean {
+  return category === "WARMUP" || category === "CARDIO";
+}
+
+/** Categories whose sessions count as cardio (a Cardio plan is done by any). */
+export const CARDIO_CATEGORIES: readonly string[] = ["CARDIO", "ROWING", "RUNNING", "RUCKING"];
 
 /** Metrics a movement is logged in set by set. Distance and metres stay one result. */
 const SET_METRICS: ReadonlySet<string> = new Set(["WEIGHT", "REPS", "DURATION"]);
@@ -51,12 +86,15 @@ export type DaySection = { key: string; kind: BlockKind; title: string; items: D
 export function blockKind(category: WorkoutCategory | null, hasHiit: boolean): BlockKind {
   if (hasHiit || category === "HIIT") return "CONDITIONING";
   switch (category) {
+    case "CARDIO":
     case "ROWING":
     case "RUNNING":
     case "RUCKING":
       return "CARDIO";
-    case "STRETCHING":
+    case "WARMUP":
       return "WARMUP";
+    case "STRETCHING":
+      return "STRETCH";
     case "SPORT":
       return "SPORT";
     case "WEIGHTS":
@@ -73,8 +111,19 @@ const KIND_TITLE: Record<BlockKind, string> = {
   CARDIO: "Cardio",
   STRENGTH: "",
   CONDITIONING: "Conditioning",
+  STRETCH: "Stretching",
   SPORT: "Sport",
   OTHER: "Other",
+};
+
+/** A section's name in the order editor. */
+export const KIND_LABEL: Record<SectionKind, string> = {
+  WARMUP: "Warm-up",
+  CARDIO: "Cardio",
+  STRENGTH: "Strength (each muscle group)",
+  CONDITIONING: "Conditioning",
+  STRETCH: "Stretching",
+  SPORT: "Sport",
 };
 
 function resolvedMetric(m: DayMovementIn, category: WorkoutCategory | null): Metric {
@@ -88,7 +137,10 @@ function resolvedMetric(m: DayMovementIn, category: WorkoutCategory | null): Met
  * card, logged as it always was. Two workouts for the same muscle group (two
  * "Arms" plans on a Monday) share one section: display only, nothing merged.
  */
-export function daySections(workouts: readonly DayWorkoutIn[]): DaySection[] {
+export function daySections(
+  workouts: readonly DayWorkoutIn[],
+  order: readonly SectionKind[] = DEFAULT_ORDER,
+): DaySection[] {
   const byKey = new Map<string, DaySection>();
   const seen: DaySection[] = [];
   const add = (key: string, kind: BlockKind, title: string, items: DayItem[]) => {
@@ -135,7 +187,25 @@ export function daySections(workouts: readonly DayWorkoutIn[]): DaySection[] {
     );
   }
 
-  return ORDER.flatMap((k) => seen.filter((s) => s.kind === k));
+  const kinds: BlockKind[] = [...cleanOrder(order), "OTHER"];
+  return kinds.flatMap((k) => seen.filter((s) => s.kind === k));
+}
+
+/**
+ * A Cardio section on a day that has cardio logged but none planned (a row
+ * that just got done), placed where the person's order puts Cardio.
+ */
+export function withCardio(
+  sections: DaySection[],
+  hasCardio: boolean,
+  order: readonly SectionKind[] = DEFAULT_ORDER,
+): DaySection[] {
+  if (!hasCardio || sections.some((s) => s.kind === "CARDIO")) return sections;
+  const kinds: BlockKind[] = [...cleanOrder(order), "OTHER"];
+  const at = kinds.indexOf("CARDIO");
+  const i = sections.findIndex((s) => kinds.indexOf(s.kind) > at);
+  const cardio: DaySection = { key: "k:CARDIO", kind: "CARDIO", title: KIND_TITLE.CARDIO, items: [] };
+  return i < 0 ? [...sections, cardio] : [...sections.slice(0, i), cardio, ...sections.slice(i)];
 }
 
 /**

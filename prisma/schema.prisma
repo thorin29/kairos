@@ -1104,6 +1104,10 @@ enum WorkoutCategory {
   HIIT
   ISOMETRIC
   RUCKING
+  /// A plan's "any cardio" (v0.615): done by any row, run or ruck that day.
+  CARDIO
+  /// A plan's warm-up (v0.615): no movements, done with a tap.
+  WARMUP
 }
 
 enum WorkoutImplement {

@@ -9,10 +9,15 @@ import {
   addPlannedWorkoutFromPool,
   copyDayPlan,
   removePlannedWorkout,
+  saveSectionOrder,
+  setPlannedScheme,
   setWeeklyStart,
   setWeeklyActive,
 } from "@/lib/actions/workouts";
 import { PlusIcon, TrashIcon } from "@/components/icons";
+import { blockKind, cleanOrder, isSimpleCategory, KIND_LABEL, type SectionKind } from "@/lib/workouts/blocks";
+import { SCHEME_CHOICES, schemeChoiceKey } from "@/lib/workouts/programs";
+import type { DayOrders } from "@/lib/workouts/day-order";
 import { InfoToggle, MovementAbout } from "@/components/movement-info";
 import type {
   PlanDay,
@@ -35,18 +40,83 @@ import {
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
 
-// Order the builder offers categories in — pool-backed first, then the
-// metric-only ones (a run/row/ruck day is just the day).
+// Order the builder offers categories in. Rowing, running and rucking are
+// one "Cardio" now (v0.615): whichever gets done that day fills it.
 const PLAN_CATEGORIES: WorkoutCategory[] = [
   "WEIGHTS",
   "HIIT",
-  "ISOMETRIC",
+  "CARDIO",
+  "WARMUP",
   "STRETCHING",
+  "ISOMETRIC",
   "SPORT",
-  "RUNNING",
-  "ROWING",
-  "RUCKING",
 ];
+
+const SELECT_SM =
+  "h-7 rounded-full border border-hairline bg-surface px-2 text-xs outline-none focus:border-accent";
+
+/** A day's sections as an ordered list with up/down: every day's order, or
+ *  one weekday's own. */
+function OrderEditor({
+  order,
+  onSave,
+  onReset,
+  resetLabel,
+}: {
+  order: SectionKind[];
+  onSave: (o: SectionKind[]) => void;
+  onReset?: () => void;
+  resetLabel?: string;
+}) {
+  const move = (i: number, d: -1 | 1) => {
+    const j = i + d;
+    if (j < 0 || j >= order.length) return;
+    const next = [...order];
+    [next[i], next[j]] = [next[j], next[i]];
+    onSave(next);
+  };
+  return (
+    <div className="space-y-1">
+      <ol className="space-y-1">
+        {order.map((k, i) => (
+          <li key={k} className="flex items-center gap-2 rounded-lg bg-surface px-3 py-1.5 shadow-sm">
+            <span className="tabular w-5 text-xs text-muted">{i + 1}</span>
+            <span className="flex-1 text-sm">{KIND_LABEL[k]}</span>
+            <button
+              type="button"
+              aria-label={`Move ${KIND_LABEL[k]} up`}
+              disabled={i === 0}
+              onClick={() => move(i, -1)}
+              className="h-7 w-7 rounded-full text-muted hover:bg-ground hover:text-ink disabled:opacity-30"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              aria-label={`Move ${KIND_LABEL[k]} down`}
+              disabled={i === order.length - 1}
+              onClick={() => move(i, 1)}
+              className="h-7 w-7 rounded-full text-muted hover:bg-ground hover:text-ink disabled:opacity-30"
+            >
+              ↓
+            </button>
+          </li>
+        ))}
+      </ol>
+      {onReset && (
+        <button type="button" onClick={onReset} className="text-xs font-medium text-accent hover:underline">
+          {resetLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** The section a planned workout sits in, for ordering the day's list. */
+function kindOf(w: PlanWorkout): SectionKind {
+  const k = blockKind(w.category, !!w.hiit);
+  return k === "OTHER" ? "STRENGTH" : k;
+}
 
 export function PlanBuilder({
   userId,
@@ -56,6 +126,7 @@ export function PlanBuilder({
   hiitWorkouts,
   weeklyStart,
   weeklyActive,
+  sectionOrder,
 }: {
   userId: string;
   plan: PlanDay[];
@@ -64,8 +135,22 @@ export function PlanBuilder({
   hiitWorkouts: BoardHiitWorkout[];
   weeklyStart: string;
   weeklyActive: boolean;
+  sectionOrder: DayOrders;
 }) {
   const [, startWeeklyStart] = useTransition();
+  const [orders, setOrders] = useState<DayOrders>(sectionOrder);
+  const [orderOpen, setOrderOpen] = useState(false);
+  const saveOrder = (day: number | null, order: SectionKind[] | null) => {
+    // Shown at once; the server's cleaned copy replaces it.
+    setOrders((cur) => {
+      if (day == null) return { ...cur, everyDay: order ?? cleanOrder(null) };
+      const days = { ...cur.days };
+      if (order) days[day] = order;
+      else delete days[day];
+      return { ...cur, days };
+    });
+    void saveSectionOrder(userId, day, order).then(setOrders).catch(() => undefined);
+  };
   return (
     <div className="space-y-2">
       <p className="text-sm text-muted">
@@ -105,9 +190,30 @@ export function PlanBuilder({
           Paused &mdash; no weekly prompts. A rotation, if any, still runs.
         </p>
       )}
+      <div className="rounded-xl border border-hairline bg-ground/30 p-3">
+        <button
+          type="button"
+          aria-expanded={orderOpen}
+          onClick={() => setOrderOpen((o) => !o)}
+          className="flex w-full items-center justify-between gap-2 text-left"
+        >
+          <span className="text-sm font-semibold">Order of the day</span>
+          <span className="truncate text-xs text-muted">
+            {orders.everyDay.map((k) => KIND_LABEL[k].replace(" (each muscle group)", "")).join(" → ")}
+          </span>
+        </button>
+        {orderOpen && (
+          <div className="mt-2">
+            <OrderEditor order={orders.everyDay} onSave={(o) => saveOrder(null, o)} />
+          </div>
+        )}
+      </div>
       {plan.map((d) => (
         <DayRow
           key={d.day}
+          order={orders.days[d.day] ?? null}
+          everyDay={orders.everyDay}
+          onOrder={(o) => saveOrder(d.day, o)}
           userId={userId}
           day={d.day}
           workouts={d.workouts}
@@ -129,7 +235,14 @@ function DayRow({
   pool,
   hiitWorkouts,
   isToday,
+  order,
+  everyDay,
+  onOrder,
 }: {
+  /** This day's own order, or null for every day's. */
+  order: SectionKind[] | null;
+  everyDay: SectionKind[];
+  onOrder: (o: SectionKind[] | null) => void;
   userId: string;
   day: number;
   workouts: PlanWorkout[];
@@ -139,7 +252,13 @@ function DayRow({
   isToday: boolean;
 }) {
   const [adding, setAdding] = useState(false);
+  const [ordering, setOrdering] = useState(false);
   const [, startTransition] = useTransition();
+  const dayOrder = order ?? everyDay;
+  // Listed the way the day page shows them: by section, in this day's order.
+  const listed = [...workouts].sort(
+    (a, b) => (a.isRest ? -1 : dayOrder.indexOf(kindOf(a))) - (b.isRest ? -1 : dayOrder.indexOf(kindOf(b))),
+  );
 
   const copyFrom = (from: number) => {
     if (from === day) return;
@@ -163,6 +282,16 @@ function DayRow({
             <span className="ml-2 text-xs font-normal text-accent">today</span>
           )}
         </span>
+        {workouts.some((w) => !w.isRest) && (
+          <button
+            type="button"
+            aria-expanded={ordering}
+            onClick={() => setOrdering((o) => !o)}
+            className="ml-auto text-xs font-medium text-muted hover:text-accent"
+          >
+            {order ? "Own order" : "Order"}
+          </button>
+        )}
         {otherDaysWithWork.length > 0 && (
           <select
             value=""
@@ -181,14 +310,31 @@ function DayRow({
         )}
       </div>
 
+      {ordering && (
+        <div className="mb-2">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted">{DAY_NAMES[day]} only</p>
+          <OrderEditor
+            order={dayOrder}
+            onSave={(o) => onOrder(o)}
+            onReset={order ? () => onOrder(null) : undefined}
+            resetLabel="Use the order of every day"
+          />
+        </div>
+      )}
+
       <div className="space-y-1.5">
-        {workouts.map((w) => (
+        {listed.map((w) => (
           <div
             key={w.id}
             className="flex items-start gap-2 rounded-lg bg-surface px-3 py-2 shadow-sm"
           >
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium">{w.name}</div>
+              <div className="text-sm font-medium">
+                {w.name}
+                {!w.isRest && kindOf(w) !== "STRENGTH" && KIND_LABEL[kindOf(w)] !== w.name && (
+                  <span className="ml-2 text-xs font-normal text-muted">{KIND_LABEL[kindOf(w)]}</span>
+                )}
+              </div>
               {w.hiit ? (
                 <div className="mt-0.5 text-xs text-muted">
                   {WORKOUT_TYPE_LABEL[w.hiit.type]}
@@ -197,13 +343,41 @@ function DayRow({
                       .map((m) => formatHiitMovement(m))
                       .join(", ")}`}
                 </div>
-              ) : w.isRest ? null : w.exercises.length > 0 ? (
+              ) : w.isRest ? null : w.exercises.length > 0 && (w.category === "WEIGHTS" || w.category == null) ? (
+                <ul className="mt-1 space-y-1">
+                  {w.exercises.map((e) => (
+                    <li key={e.id} className="flex items-center gap-2 text-xs text-muted">
+                      <span className="min-w-0 flex-1 truncate">{e.tracked ? e.name : `${e.name} (no log)`}</span>
+                      {e.tracked && (
+                        <select
+                          aria-label={`Sets for ${e.name}`}
+                          value={schemeChoiceKey(e.scheme)}
+                          onChange={(ev) =>
+                            startTransition(() =>
+                              setPlannedScheme(userId, w.id, e.poolExerciseId, ev.target.value),
+                            )
+                          }
+                          className={SELECT_SM}
+                        >
+                          {SCHEME_CHOICES.map((c) => (
+                            <option key={c.key} value={c.key}>
+                              {c.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : w.exercises.length > 0 ? (
                 <div className="mt-0.5 text-xs text-muted">
                   {w.exercises
                     .map((e) => (e.tracked ? e.name : `${e.name} (no log)`))
                     .join(" · ")}
                 </div>
-              ) : (
+              ) : w.category === "CARDIO" ? (
+                <div className="mt-0.5 text-xs text-muted">Row, run, ruck or other</div>
+              ) : w.category === "WARMUP" ? null : (
                 <div className="mt-0.5 text-xs text-muted">
                   {w.category
                     ? `Log ${METRIC_LABEL_SHORT[
@@ -250,7 +424,7 @@ function DayRow({
   );
 }
 
-type Picked = { tracked: boolean; metric: Metric };
+type Picked = { tracked: boolean; metric: Metric; scheme: string };
 
 function AddWorkoutModal({
   userId,
@@ -273,7 +447,8 @@ function AddWorkoutModal({
   const [saving, startSave] = useTransition();
   const [peek, setPeek] = useState<string | null>(null);
 
-  const metricOnly = METRIC_ONLY_CATEGORIES.includes(category);
+  const simple = isSimpleCategory(category);
+  const metricOnly = METRIC_ONLY_CATEGORIES.includes(category) || simple;
   const isWeights = category === "WEIGHTS";
   const isHiit = category === "HIIT";
   const choices = metricChoicesFor(category);
@@ -300,7 +475,7 @@ function AddWorkoutModal({
       else {
         // The movement's own "Logs as" (a plank is timed), else the category's.
         const own = pool.find((p) => p.id === id)?.metric;
-        next[id] = { tracked: true, metric: own && choices.includes(own) ? own : defMetric };
+        next[id] = { tracked: true, metric: own && choices.includes(own) ? own : defMetric, scheme: "" };
       }
       return next;
     });
@@ -335,6 +510,7 @@ function AddWorkoutModal({
                 poolExerciseId,
                 tracked: p.tracked,
                 metric: p.metric,
+                scheme: isWeights && p.tracked && p.metric === "WEIGHT" ? p.scheme : "",
               })),
         });
       }
@@ -471,7 +647,7 @@ function AddWorkoutModal({
                 </select>
               </div>
             )
-          ) : metricOnly ? (
+          ) : simple ? null : metricOnly ? (
             <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
               Adds a {CATEGORY_LABEL[category].toLowerCase()} day. You&rsquo;ll
               log {METRIC_LABEL_SHORT[defMetric].toLowerCase()} when you
@@ -558,6 +734,22 @@ function AddWorkoutModal({
                             <span className="text-xs text-muted">
                               {METRIC_LABEL_SHORT[choices[0]]}
                             </span>
+                          )}
+                          {isWeights && p.tracked && p.metric === "WEIGHT" && (
+                            <select
+                              aria-label={`Sets for ${o.name}`}
+                              value={p.scheme}
+                              onChange={(e) =>
+                                setPicked((prev) => ({ ...prev, [o.id]: { ...prev[o.id], scheme: e.target.value } }))
+                              }
+                              className={SELECT_SM}
+                            >
+                              {SCHEME_CHOICES.map((c) => (
+                                <option key={c.key} value={c.key}>
+                                  {c.label}
+                                </option>
+                              ))}
+                            </select>
                           )}
                         </div>
                       )}

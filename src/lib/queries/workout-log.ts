@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { slotForDate } from "@/lib/workouts/rotation";
 import { fmtClock, rowSummary } from "@/lib/workouts/concept2";
+import { CARDIO_CATEGORIES, blockKind, isSimpleCategory } from "@/lib/workouts/blocks";
 import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES, hiitResult } from "@/lib/workouts/catalog";
 import type { WorkoutType } from "@/generated/prisma/client";
 import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween, startOfWeek } from "@/lib/dates";
@@ -16,6 +17,10 @@ import {
   parseScheme,
   programWeek,
   roundLoad,
+  HAND_WAVE,
+  trainingMaxFrom,
+  schemeChoiceKey,
+  SCHEME_CHOICES,
   schemeLabel,
   targetsFor,
   weekIntent,
@@ -393,8 +398,11 @@ export async function loadDayPlanProgress(
   const soloPlans = allPlans.filter(
     (p) => !p.hiitWorkoutId && p._count.exercises === 0,
   );
+  // A Cardio plan (or an older Rowing / Running / Rucking one) is done by any
+  // cardio that day: a Concept2 row, a run, jump rope.
+  const anyCardio = sessionRows.some((r) => r.category != null && CARDIO_CATEGORIES.includes(r.category));
   const soloLogged = soloPlans.map((p) =>
-    sessionKeys.has(`${p.name.slice(0, 40)}|${p.category ?? ""}`),
+    p.category != null && CARDIO_CATEGORIES.includes(p.category) ? anyCardio : sessionKeys.has(`${p.name.slice(0, 40)}|${p.category ?? ""}`),
   );
   const soloDone = soloPlans.map(
     (p, i) => soloLogged[i] || skipped.has(planSlot(p.id)),
@@ -1241,6 +1249,11 @@ export type PlanWorkoutLite = {
   name: string;
   isRest: boolean;
   detail: string;
+  /** Its section on the day page (WARMUP, CARDIO, STRENGTH…) and category (v0.615). */
+  kind: string;
+  category: string | null;
+  /** Movements, each with its set structure (weights only carry one). */
+  exercises: { poolExerciseId: string; name: string; tracked: boolean; scheme: string; weights: boolean }[];
 };
 export type PlanDayLite = { day: number; workouts: PlanWorkoutLite[] };
 
@@ -1270,7 +1283,7 @@ export async function loadPlan(userId: string): Promise<PlanDayLite[]> {
       },
       exercises: {
         orderBy: { sortOrder: "asc" },
-        select: { tracked: true, poolExercise: { select: { name: true } } },
+        select: { tracked: true, poolExerciseId: true, scheme: true, metric: true, poolExercise: { select: { name: true } } },
       },
     },
   });
@@ -1278,11 +1291,23 @@ export async function loadPlan(userId: string): Promise<PlanDayLite[]> {
   const byDay = new Map<number, PlanWorkoutLite[]>();
   for (let d = 0; d < 7; d++) byDay.set(d, []);
   for (const w of rows) {
+    const weights = w.category === "WEIGHTS" || w.category == null;
     byDay.get(w.dayOfWeek)?.push({
       id: w.id,
       name: w.name,
       isRest: w.isRest,
       detail: planDetail(w),
+      kind: w.isRest ? "REST" : blockKind((w.category ?? null) as Parameters<typeof blockKind>[0], !!w.hiitWorkout),
+      category: (w.category as string | null) ?? null,
+      exercises: (
+        w.exercises as { tracked: boolean; poolExerciseId: string; scheme: string | null; metric: string | null; poolExercise: { name: string } | null }[]
+      ).map((e) => ({
+        poolExerciseId: e.poolExerciseId,
+        name: e.poolExercise?.name ?? "—",
+        tracked: e.tracked,
+        scheme: schemeChoiceKey(e.scheme),
+        weights: weights && e.tracked && (e.metric ?? "WEIGHT") === "WEIGHT",
+      })),
     });
   }
   return [...byDay.entries()].map(([day, workouts]) => ({ day, workouts }));
@@ -1306,6 +1331,8 @@ function planDetail(w: {
     return `${label} · ${moves}`;
   }
   if (w.isRest) return "";
+  if (w.category === "CARDIO") return "Row, run, ruck or other";
+  if (w.category === "WARMUP") return "";
   if (w.exercises.length > 0) {
     return w.exercises
       .map((e) => (e.tracked ? e.poolExercise?.name ?? "—" : `${e.poolExercise?.name ?? "—"} (no log)`))
@@ -1326,6 +1353,8 @@ export type PlanCategoryOption = {
   kind: string; // "weights" | "hiit" | "metricOnly" | "pool"
   metrics: PlanMetric[];
   defaultMetric: string;
+  /** Warm-up or Cardio: nothing to pick, done on the day (v0.615). */
+  simple: boolean;
 };
 export type PlanOptions = {
   categories: PlanCategoryOption[];
@@ -1340,15 +1369,20 @@ export type PlanOptions = {
     about: string | null;
   }[];
   hiitWorkouts: { id: string; name: string; personal: boolean }[];
+  /** Set structures a weights movement can take ("" = any sets; v0.615). */
+  schemes: { key: string; label: string }[];
 };
 
-const PLAN_CAT_ORDER = ["WEIGHTS", "HIIT", "ISOMETRIC", "STRETCHING", "SPORT", "RUNNING", "ROWING", "RUCKING"];
+// Rowing, running and rucking are one Cardio in the plan picker (v0.615).
+const PLAN_CAT_ORDER = ["WEIGHTS", "HIIT", "CARDIO", "WARMUP", "STRETCHING", "ISOMETRIC", "SPORT"];
 
 export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
   const categories: PlanCategoryOption[] = PLAN_CAT_ORDER.map((c) => {
     const kind = c === "WEIGHTS" ? "weights"
       : c === "HIIT" ? "hiit"
-      : (METRIC_ONLY_CATEGORIES as string[]).includes(c) ? "metricOnly"
+      // Warm-up and Cardio add a plan with nothing in it, like the old
+      // metric-only ones did, so an older phone adds them the same way.
+      : (METRIC_ONLY_CATEGORIES as string[]).includes(c) || isSimpleCategory(c) ? "metricOnly"
       : "pool";
     const choices = metricChoicesFor(c as never) as string[];
     return {
@@ -1357,6 +1391,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
       kind,
       metrics: choices.map((m) => ({ key: m, label: (METRIC_LABEL_SHORT as Record<string, string>)[m] ?? m })),
       defaultMetric: defaultMetricFor(c as never) as string,
+      simple: isSimpleCategory(c),
     };
   });
 
@@ -1384,6 +1419,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
       about: (e.about as string | null) ?? null,
     })),
     hiitWorkouts: hiit.map((w) => ({ id: w.id, name: w.name, personal: w.personal })),
+    schemes: SCHEME_CHOICES.map((c) => ({ key: c.key, label: c.label })),
   };
 }
 
@@ -1724,8 +1760,15 @@ async function movementTarget(
   if (!planned || !scheme) return null;
   const active = await loadActiveProgram(userId);
   const fromProgram = active && planned.programRole ? active : null;
-  const program: Program = fromProgram?.program ?? { ...FREE_PROGRAM };
-  const week = fromProgram ? programWeek(program, fromProgram.blockStartedOn, dateISO) : 1;
+  // A wave chosen in a plan built by hand runs its own 4 weeks from the day
+  // it was chosen, with a training max from the person's best for 3+ reps.
+  const handWave = !fromProgram && scheme.kind === "WAVE" && scheme.start ? scheme.start : null;
+  const program: Program = fromProgram?.program ?? (handWave ? HAND_WAVE : { ...FREE_PROGRAM });
+  const week = fromProgram
+    ? programWeek(program, fromProgram.blockStartedOn, dateISO)
+    : handWave
+      ? programWeek(program, handWave, dateISO)
+      : 1;
   const role = program.days.flatMap((d) => d.roles).find((r) => r.key === planned.programRole);
   const units = await loadWeightUnits();
   const unit = units[(planned.muscleGroup ?? "CHEST") as MuscleGroup] ?? "lb";
@@ -1737,14 +1780,21 @@ async function movementTarget(
     unit,
     lower: role?.lower,
     // A swap keeps the scheme but not the planned lift's training max.
-    trainingMax: movement === slotId ? (fromProgram?.trainingMaxes[slotId] ?? null) : null,
+    trainingMax:
+      movement !== slotId
+        ? null
+        : fromProgram
+          ? (fromProgram.trainingMaxes[slotId] ?? null)
+          : handWave && bestForThree
+            ? trainingMaxFrom(bestForThree, unit)
+            : null,
     last: lastSets.map((s) => ({ weight: s.weight, reps: s.reps })),
     bestForThree,
   });
   if (sets.length === 0) return null;
   const intent = weekIntent(program, week);
   return {
-    title: fromProgram ? `${program.name} · ${weekLabel(program, week)}` : "",
+    title: fromProgram || handWave ? `${program.name} · ${weekLabel(program, week)}` : "",
     scheme: intent === "TEST" ? "Work up to a heavy 3" : schemeLabel(scheme),
     sets,
   };
@@ -1782,6 +1832,8 @@ export type DayLogState = {
   skippedPlans: string[];
   /** Names of the day's sessions, for plans that log with no movement. */
   sessionNames: string[];
+  /** Any cardio logged that day: what makes a Cardio plan done (v0.615). */
+  cardioLogged: boolean;
   rested: boolean;
   /** The person's program and its week on this day, if one is running (v0.611). */
   program: ProgramInfo | null;
@@ -1815,7 +1867,7 @@ export async function loadDayLogState(
       },
     }),
     prisma.workoutMovementSkip.findMany({ where: { userId, date: day }, select: { slot: true } }),
-    prisma.workoutSession.findMany({ where: { userId, date: day }, select: { name: true, isRest: true } }),
+    prisma.workoutSession.findMany({ where: { userId, date: day }, select: { name: true, isRest: true, category: true } }),
   ])) as [
     NonNullable<TodayPlanned>[],
     {
@@ -1828,7 +1880,7 @@ export async function loadDayLogState(
       poolExercise: { name: string } | null;
     }[],
     { slot: string }[],
-    { name: string | null; isRest: boolean }[],
+    { name: string | null; isRest: boolean; category: string | null }[],
   ];
   const skipped = new Set(skips.map((s) => s.slot));
   const bySlot = new Map<string, typeof sets>();
@@ -1894,6 +1946,7 @@ export async function loadDayLogState(
     doneWorkouts: planned.filter((p) => planDone(p)).map((p) => p.plannedWorkoutId),
     skippedPlans: [...skipped].filter((s) => s.startsWith("plan:")),
     sessionNames: sessions.filter((s) => !s.isRest && s.name).map((s) => s.name as string),
+    cardioLogged: sessions.some((s) => !s.isRest && s.category != null && CARDIO_CATEGORIES.includes(s.category)),
     rested: sessions.some((s) => s.isRest),
     program: await programInfoFor(userId, dateISO),
     suggestion: await daySuggestionFor(userId, dateISO),

@@ -387,6 +387,7 @@ export function WorkoutsGrid({
                             pool={pool}
                             weeklyStart={open.weeklyStart}
                             weeklyActive={open.weeklyActive}
+                            sectionOrder={open.sectionOrder}
                             hiitWorkouts={hiitWorkouts.filter(
                               (w) =>
                                 w.ownerId === null ||
@@ -1585,6 +1586,8 @@ const CATEGORY_CFG: Record<WorkoutCategory, CatCfg> = {
   SPORT: { choices: ["DURATION", "REPS"] },
   STRETCHING: { choices: ["DURATION", "REPS"] },
   ISOMETRIC: { choices: ["DURATION", "REPS"] },
+  CARDIO: { locked: "DURATION" },
+  WARMUP: { locked: "DURATION" },
 };
 
 const METRIC_LABEL: Record<Metric, string> = {

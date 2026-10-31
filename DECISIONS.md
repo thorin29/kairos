@@ -1,5 +1,43 @@
 # Decisions
 
+## 2026-10 — Cardio, Warm-up, day order and set structure (v0.615.0 / app 0.423.0)
+
+**Cardio is one plan category.** Rowing, Running and Rucking leave the plan
+picker (they stay in the one-off logger, and existing plans keep working). A
+Cardio plan has nothing in it: it's done by any cardio session that day (row,
+run, ruck, or "other cardio" logged as CARDIO: jump rope, bike, other), a
+Concept2 row included; an older Rowing / Running / Rucking plan is now done the
+same way. The day page shows one Cardio card listing the day's cardio, each
+with "How did it feel?", plus Add cardio (activity, then meters / distance /
+time / load as it applies) and "Check Concept2 now". Cardio done on a day with
+none planned still gets a Cardio section, where the person's order puts it.
+The Concept2 "Extra" section is gone.
+
+**Warm-up is a plan category with no content**: Mark done (its session, named
+after the plan) or Skip. **Stretching is its own section** now (it used to be
+the Warm-up section).
+
+**Day order.** Sections are Warm-up, Cardio, Strength (each muscle group, in
+plan order), Conditioning, Stretching, Sport; "Other" always last. One order
+for every day (`workouts.order.<userId>`) and optionally a weekday's own
+(`workouts.order.<userId>.<0-6>`); `cleanOrder` keeps known kinds once and puts
+any missing one right after the last kind the default puts before it. The plan
+page lists each day's workouts in that order, with "Order of the day" at the
+top and "Order" per day.
+
+**Set structure in a hand-built plan.** Each weights movement can take Any
+sets, 3 × 5, 5 × 5, 3 × 8–12, 3 × 10–15 or a 5/3/1 wave (`SCHEME_CHOICES`),
+when adding it or later on the plan page. A wave chosen by hand is stored as
+`wave:<start>` and runs Strength waves' four weeks from that day (week 4
+light, `HAND_WAVE`), with a training max of 90% of the best weight lifted for 3
+or more reps; with no such set yet, last time's weights fill the hints.
+Programs still store plain `wave` and use their own maxes.
+
+**How it felt, beyond lifts.** Cardio entries (`cardio:<sessionId>`) and sport
+events after "Did you do it? Yes" (`sport:<eventId>`) store effort and hurt in
+`WorkoutFeedback` like a movement does, so a hard game or row now counts
+toward the lighter-day suggestion.
+
 ## 2026-10 — Recent workouts show cardio numbers (v0.614.1)
 
 The history line (`historyResult`) only knew weight and reps, so a row, a run

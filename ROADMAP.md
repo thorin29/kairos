@@ -1194,6 +1194,10 @@ injuries don't read as going backwards. Phases, in order:
       profile (web) or Settings → Concept2 (phone); rows land in the day's
       Cardio, replace a hand entry with Undo, never doubled. Web v0.614.0,
       phone v0.422.0. SkiErg and bike results wait for categories of their own.
+- [x] 7b. Cardio and Warm-up as plan categories, the day's section order
+      (every day or per day), set structure per movement in a hand-built plan
+      (incl. a 5/3/1 wave), and "how did it feel" for cardio and sport. Web
+      v0.615.0, phone v0.423.0.
 - [ ] 8. Export and import of workouts and programs for everyone
 
 ## Game time
@@ -1733,7 +1737,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.614.1 (migrations through 133_concept2).
-- App versionName 0.422.0 / versionCode 484 / CLIENT_BUILD 484.
+- Web APP_VERSION 0.615.0 (migrations through 134_cardio_warmup).
+- App versionName 0.423.0 / versionCode 485 / CLIENT_BUILD 485.
 - ice-time 0.1.1 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

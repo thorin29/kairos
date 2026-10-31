@@ -5,6 +5,7 @@ import { dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
 import { getSetting } from "@/lib/settings";
 import { loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
 import { setsSummary } from "@/lib/workouts/sets";
+import { loadDayOrders, type DayOrders } from "@/lib/workouts/day-order";
 import {
   CATEGORY_LABEL,
   LINE_COLORS,
@@ -88,6 +89,8 @@ export type PlanExercise = {
   muscleGroup: MuscleGroup | null;
   tracked: boolean;
   metric: Metric | null;
+  /** Its set structure ("same:3x5", "wave:2026-11-02"), or null for any sets (v0.615). */
+  scheme?: string | null;
   unit: string;
   /** Record / best reps / last, for the summary under the entry fields. Shared
    *  with the phone's plan query so both report the same record. */
@@ -139,6 +142,8 @@ export type PersonWorkout = {
   weeklyStart: string;
   /** Whether the weekly plan is active (false = paused, can run alongside a rotation). */
   weeklyActive: boolean;
+  /** The day page's section order: every day, and weekdays with their own (v0.615). */
+  sectionOrder: DayOrders;
   todayPlanned: { id: string; name: string }[];
   reminders: Reminder[];
 };
@@ -292,6 +297,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
               poolExerciseId: true,
               tracked: true,
               metric: true,
+              scheme: true,
               poolExercise: { select: { name: true, muscleGroup: true } },
             },
           },
@@ -618,6 +624,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         poolExerciseId: string;
         tracked: boolean;
         metric: Metric | null;
+        scheme: string | null;
         poolExercise: { name: string; muscleGroup: MuscleGroup | null } | null;
       }[];
     }[];
@@ -660,6 +667,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
               muscleGroup: mg,
               tracked: e.tracked,
               metric: e.metric,
+              scheme: e.scheme ?? null,
               unit: mg ? weightUnits[mg] : "",
               stats: planStats[e.poolExerciseId] ?? null,
             };
@@ -707,6 +715,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       rotation,
       weeklyStart: (await getSetting(`weeklyStart:${person.id}`)) ?? "",
       weeklyActive: (await getSetting(`weeklyActive:${person.id}`)) !== "0",
+      sectionOrder: await loadDayOrders(person.id),
       todayPlanned: pausedName ? [] : todayPlanned,
       reminders,
     });

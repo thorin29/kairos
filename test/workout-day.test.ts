@@ -5,6 +5,9 @@ import { isHoldName, poolMetricFor } from "@/lib/workouts/catalog";
 import { repRecords, recordChips, isNewBest, bandPoints, REP_BANDS, weeksInARow } from "@/lib/workouts/records";
 import { PROGRAMS, programByKey, parseScheme, schemeKey, programWeek, blocksDone, targetsFor, weekLabel, raisedMaxes, defaultMovement } from "@/lib/workouts/programs";
 import { daySuggestion, movementSuggestion, bigJump, recentHurt, lightFactor } from "@/lib/workouts/suggest";
+import { cleanOrder, withCardio, isSimpleCategory, blockKind } from "@/lib/workouts/blocks";
+import { parseClock, cardioActivity } from "@/lib/workouts/cardio";
+import { cleanPlanScheme, schemeChoiceKey, HAND_WAVE } from "@/lib/workouts/programs";
 import { mapResult, rowSummary, rowNotes, syncFrom, syncDue, cleanToken, fmtClock } from "@/lib/workouts/concept2";
 import { LIBRARY, DEFAULT_EQUIPMENT, nameKey, planLibraryMerge, watchUrl } from "@/lib/workouts/library";
 import {
@@ -103,9 +106,10 @@ describe("daySections", () => {
       w({ id: "stretch", category: "STRETCHING", movements: [mv("9090", null, false)] }),
       w({ id: "legs", muscleGroup: "LEGS", movements: [mv("squat")] }),
     ]);
-    expect(s.map((x) => x.title)).toEqual(["Warm-up", "Cardio", "Chest", "Legs", "Conditioning"]);
-    expect(s[0].items).toEqual([{ type: "card", workoutId: "stretch" }]);
-    expect(s[2].items[0]).toMatchObject({ type: "movement", poolExerciseId: "bench", metric: "WEIGHT" });
+    // Stretching is its own section since v0.615 (Warm-up is a plan of its own).
+    expect(s.map((x) => x.title)).toEqual(["Cardio", "Chest", "Legs", "Conditioning", "Stretching"]);
+    expect(s[4].items).toEqual([{ type: "card", workoutId: "stretch" }]);
+    expect(s[1].items[0]).toMatchObject({ type: "movement", poolExerciseId: "bench", metric: "WEIGHT" });
   });
 
   it("puts two plans for the same muscle group in one section", () => {
@@ -470,5 +474,104 @@ describe("concept2", () => {
     expect(cleanToken("  Bearer abcdefghijklmnop0123 ")).toBe("abcdefghijklmnop0123");
     expect(cleanToken("short")).toBeNull();
     expect(cleanToken("has spaces in the middle of it")).toBeNull();
+  });
+});
+
+describe("section order", () => {
+  it("keeps known kinds once and fills in the rest where the default has them", () => {
+    expect(cleanOrder(["CARDIO", "WARMUP", "BOGUS", "CARDIO"])).toEqual([
+      "CARDIO",
+      "WARMUP",
+      "STRENGTH",
+      "CONDITIONING",
+      "STRETCH",
+      "SPORT",
+    ]);
+    expect(cleanOrder(["SPORT", "STRENGTH"])).toEqual(["WARMUP", "CARDIO", "SPORT", "STRENGTH", "CONDITIONING", "STRETCH"]);
+    expect(cleanOrder(["STRENGTH", "CARDIO"])).toEqual(["WARMUP", "STRENGTH", "CARDIO", "CONDITIONING", "STRETCH", "SPORT"]);
+    expect(cleanOrder(null)[0]).toBe("WARMUP");
+  });
+
+  it("lays the day out in the person's order", () => {
+    const w = (id: string, category: string | null, mg: string | null = null): DayWorkoutIn => ({
+      id,
+      name: id,
+      category: category as never,
+      muscleGroup: mg as never,
+      isRest: false,
+      hasHiit: false,
+      movements: [],
+    });
+    const day = [w("lift", "WEIGHTS", "CHEST"), w("cardio", "CARDIO"), w("warm", "WARMUP"), w("stretch", "STRETCHING")];
+    expect(daySections(day).map((s) => s.kind)).toEqual(["WARMUP", "CARDIO", "STRENGTH", "STRETCH"]);
+    expect(daySections(day, ["WARMUP", "STRENGTH", "CARDIO", "CONDITIONING", "STRETCH", "SPORT"]).map((s) => s.kind)).toEqual([
+      "WARMUP",
+      "STRENGTH",
+      "CARDIO",
+      "STRETCH",
+    ]);
+  });
+
+  it("puts a Cardio section where the order says when cardio was done but not planned", () => {
+    const lift: DayWorkoutIn = { id: "a", name: "Chest", category: "WEIGHTS", muscleGroup: "CHEST", isRest: false, hasHiit: false, movements: [] };
+    const warm: DayWorkoutIn = { ...lift, id: "w", name: "Warm-up", category: "WARMUP" as never, muscleGroup: null };
+    const s = daySections([lift, warm]);
+    expect(withCardio(s, true).map((x) => x.kind)).toEqual(["WARMUP", "CARDIO", "STRENGTH"]);
+    expect(withCardio(s, true, ["WARMUP", "STRENGTH", "CARDIO"] as never).map((x) => x.kind)).toEqual(["WARMUP", "STRENGTH", "CARDIO"]);
+    expect(withCardio(s, false)).toBe(s);
+  });
+
+  it("files the new categories", () => {
+    expect(blockKind("CARDIO" as never, false)).toBe("CARDIO");
+    expect(blockKind("ROWING", false)).toBe("CARDIO");
+    expect(blockKind("WARMUP" as never, false)).toBe("WARMUP");
+    expect(blockKind("STRETCHING", false)).toBe("STRETCH");
+    expect(isSimpleCategory("CARDIO")).toBe(true);
+    expect(isSimpleCategory("ROWING")).toBe(false);
+  });
+});
+
+describe("cardio", () => {
+  it("reads times", () => {
+    expect(parseClock("7:45")).toBe(465);
+    expect(parseClock("1:02:05")).toBe(3725);
+    expect(parseClock("20")).toBe(1200);
+    expect(parseClock("7:75")).toBeNull();
+    expect(parseClock("abc")).toBeNull();
+    expect(parseClock("")).toBeNull();
+  });
+  it("knows what each activity asks for", () => {
+    expect(cardioActivity("ruck")).toMatchObject({ category: "RUCKING", distance: true, load: true });
+    expect(cardioActivity("jump_rope")).toMatchObject({ category: "CARDIO", name: "Jump rope" });
+    expect(cardioActivity("swim")).toBeNull();
+  });
+});
+
+describe("set structure in a hand-built plan", () => {
+  it("stores known structures and starts a wave today", () => {
+    expect(cleanPlanScheme("same:3x5", "2026-11-02")).toBe("same:3x5");
+    expect(cleanPlanScheme("range:3x8-12", "2026-11-02")).toBe("range:3x8-12");
+    expect(cleanPlanScheme("wave", "2026-11-02")).toBe("wave:2026-11-02");
+    expect(cleanPlanScheme("wave", "2026-11-09", "wave:2026-11-02")).toBe("wave:2026-11-02");
+    expect(cleanPlanScheme("", "2026-11-02")).toBeNull();
+    expect(cleanPlanScheme("same:99x5", "2026-11-02")).toBeNull();
+    expect(cleanPlanScheme("junk", "2026-11-02")).toBeNull();
+  });
+  it("shows a stored wave as the wave choice", () => {
+    expect(schemeChoiceKey("wave:2026-11-02")).toBe("wave");
+    expect(schemeChoiceKey("same:5x5")).toBe("same:5x5");
+    expect(schemeChoiceKey(null)).toBe("");
+    expect(parseScheme("wave:2026-11-02")).toEqual({ kind: "WAVE", start: "2026-11-02" });
+  });
+  it("runs the 5/3/1 wave from the day it was chosen", () => {
+    expect(programWeek(HAND_WAVE, "2026-11-02", "2026-11-02")).toBe(1);
+    expect(programWeek(HAND_WAVE, "2026-11-02", "2026-11-16")).toBe(3);
+    expect(programWeek(HAND_WAVE, "2026-11-02", "2026-11-30")).toBe(1);
+    const sets = targetsFor({ program: HAND_WAVE, week: 3, scheme: { kind: "WAVE", start: "2026-11-02" }, unit: "lb", trainingMax: 200, last: [] });
+    expect(sets.map((s) => [s.weight, s.reps, !!s.top])).toEqual([
+      [150, 5, false],
+      [170, 3, false],
+      [190, 1, true],
+    ]);
   });
 });

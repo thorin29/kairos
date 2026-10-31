@@ -888,6 +888,31 @@ the day was made lighter, else null). Answering hides a card for the day;
 comes back at that share. A set more than 10% over `recentTop` is flagged on
 each client (`bigJump`). Rules and thresholds: src/lib/workouts/suggest.ts.
 
+**Cardio, Warm-up, day order, set structure (v0.615).**
+```
+GET  /api/v1/workouts adds:
+  "order":[ "WARMUP"|"CARDIO"|"STRENGTH"|"CONDITIONING"|"STRETCH"|"SPORT" ],  // this weekday's
+  "simple":[ { "plannedWorkoutId","name","category":"WARMUP"|"CARDIO","done","skipped" } ],
+  "cardio":[ CardioEntry ]
+CardioEntry: { "sessionId","name","summary",
+               "concept2":{ "resultId","replaced":str|null }|null, "effort","hurt" }
+POST /api/v1/workouts/cardio         { "date","activity":row|run|ruck|jump_rope|bike|other,
+                                       "meters"?,"distance"?,"seconds"?,"load"?,"completedOn"? } → { "date","cardio" }
+POST /api/v1/workouts/cardio/remove  { "date","sessionId" } → { "date","cardio" }   // a Concept2 row stays out
+POST /api/v1/workouts/warmup         { "date","plannedWorkoutId","done","completedOn"? } → { "date","status" }
+GET  /api/v1/workouts/order          → { "everyDay":[kind…], "days":{ "1":[kind…] } }
+POST /api/v1/workouts/order          { "day":0-6|null, "order":[kind…]|null } → the same   // null order resets
+POST /api/v1/workouts/plan/scheme    { "plannedWorkoutId","poolExerciseId","scheme":""|"same:3x5"|"range:3x8-12"|"wave" }
+```
+`plan/options` categories are Weights, HIIT, Cardio, Warm-up, Stretching,
+Isometric, Sport (Cardio and Warm-up come as kind `metricOnly` with
+`simple: true`) and it adds `schemes` ([{key,label}]). `plan/add-pool`
+exercises take `scheme`, and the body `name`. `plan` workouts add `kind`,
+`category` and `exercises` ([{ poolExerciseId, name, tracked, scheme, weights }]).
+Skipping a Warm-up or Cardio plan is the existing `workouts/skip` with an empty
+poolExerciseId. Effort for a cardio entry or a sport event goes through
+`workouts/feedback` with slot `cardio:<sessionId>` or `sport:<eventId>`.
+
 **Concept2 Logbook (v0.614).** The person's own token; it never comes back.
 ```
 GET    /api/v1/concept2                → Concept2Status
@@ -1180,7 +1205,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**157 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**162 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1193,7 +1218,7 @@ silently invisible:
 - **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
 - **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
-- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool` (each exercise carries `about`, its how-to or null; v0.613), `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `plan*` (incl. `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null, v0.609, and `about`, v0.613), `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool` (each exercise carries `about`, its how-to or null; v0.613), `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `cardio`, `cardio/remove`, `warmup`, `order` (v0.615), `plan*` (incl. `plan/scheme` (v0.615), `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null, v0.609, and `about`, v0.613), `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604)
 - **hockey** (the week from ice-time), `hockey/prefs`

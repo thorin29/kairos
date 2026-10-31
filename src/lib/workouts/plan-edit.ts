@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
+import { cleanPlanScheme } from "@/lib/workouts/programs";
+import { todayISO } from "@/lib/dates";
 import {
   MUSCLE_GROUP_LABEL,
   CATEGORY_LABEL,
@@ -70,22 +72,36 @@ export async function copyDayPlanCore(
 }
 
 
-/** Add a structured workout from the pool to a day. */
+/**
+ * Add a workout to a day: movements from the pool (each with an optional set
+ * structure), or a Warm-up or Cardio with nothing in it (v0.615). The web's
+ * plan builder and the phone's both call this.
+ */
 export async function addPlannedFromPoolCore(
   userId: string,
   day: number,
   input: {
     category: string;
     muscleGroup?: string | null;
-    exercises: { poolExerciseId: string; tracked: boolean; metric?: string | null }[];
+    name?: string;
+    exercises: {
+      poolExerciseId: string;
+      tracked: boolean;
+      metric?: string | null;
+      /** "same:3x5", "range:3x8-12", "wave"; "" or absent = any sets. */
+      scheme?: string | null;
+    }[];
   },
 ): Promise<void> {
   if (day < 0 || day > 6) return;
+  if (!(input.category in CATEGORY_LABEL)) return;
   const label = (
-    input.muscleGroup
+    input.name?.trim() ||
+    (input.muscleGroup
       ? (MUSCLE_GROUP_LABEL as Record<string, string>)[input.muscleGroup]
-      : (CATEGORY_LABEL as Record<string, string>)[input.category]
+      : (CATEGORY_LABEL as Record<string, string>)[input.category])
   ).slice(0, 40);
+  const today = todayISO();
 
   const seen = new Set<string>();
   const rows = input.exercises.filter((e) => {
@@ -109,6 +125,7 @@ export async function addPlannedFromPoolCore(
           poolExerciseId: e.poolExerciseId,
           tracked: e.tracked,
           metric: (e.metric ?? fill.get(e.poolExerciseId) ?? null) as Metric | null,
+          scheme: input.category === "WEIGHTS" ? cleanPlanScheme(e.scheme, today) : null,
           sortOrder: i,
         })),
       },
@@ -166,4 +183,28 @@ export async function poolMetrics(
     if (m && allowed.includes(m)) out.set(p.id, m);
   }
   return out;
+}
+
+/**
+ * Change one planned movement's set structure (v0.615). "" clears it (any
+ * sets); "wave" keeps a wave already running, else starts one today. Only the
+ * owner's plans.
+ */
+export async function setPlannedSchemeCore(
+  userId: string,
+  plannedWorkoutId: string,
+  poolExerciseId: string,
+  scheme: string,
+): Promise<"ok" | "not_found"> {
+  const row = (await prisma.plannedExercise.findFirst({
+    where: { plannedWorkoutId, poolExerciseId, plannedWorkout: { userId } },
+    select: { id: true, scheme: true, plannedWorkout: { select: { category: true } } },
+  })) as { id: string; scheme: string | null; plannedWorkout: { category: string | null } } | null;
+  if (!row) return "not_found";
+  const next =
+    row.plannedWorkout.category === "WEIGHTS" || row.plannedWorkout.category == null
+      ? cleanPlanScheme(scheme, todayISO(), row.scheme)
+      : null;
+  await prisma.plannedExercise.update({ where: { id: row.id }, data: { scheme: next } });
+  return "ok";
 }

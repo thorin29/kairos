@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
     day?: number;
     category?: string;
     muscleGroup?: string | null;
-    exercises?: { poolExerciseId: string; tracked?: boolean; metric?: string | null }[];
+    name?: string;
+    exercises?: { poolExerciseId: string; tracked?: boolean; metric?: string | null; scheme?: string | null }[];
   } | null;
   const day = typeof b?.day === "number" ? b.day : NaN;
   if (!Number.isInteger(day) || day < 0 || day > 6) return apiError("validation", "day must be 0..6.");
@@ -22,10 +23,12 @@ export async function POST(req: NextRequest) {
   await addPlannedFromPoolCore(authed.device.person.id, day, {
     category: b.category,
     muscleGroup: b.muscleGroup ?? null,
+    name: typeof b.name === "string" ? b.name : undefined,
     exercises: (b.exercises ?? []).map((e) => ({
       poolExerciseId: e.poolExerciseId,
       tracked: e.tracked !== false,
       metric: e.metric ?? null,
+      scheme: typeof e.scheme === "string" ? e.scheme : null,
     })),
   });
   return apiOk({ status: "ok" });

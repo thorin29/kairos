@@ -21,7 +21,11 @@ export type WorkoutCategory =
   | "STRETCHING"
   | "HIIT"
   | "ISOMETRIC"
-  | "RUCKING";
+  | "RUCKING"
+  /** A plan's "any cardio" (v0.615). */
+  | "CARDIO"
+  /** A plan's warm-up (v0.615). */
+  | "WARMUP";
 
 export type Implement =
   | "BARBELL"
@@ -41,6 +45,8 @@ export const CATEGORY_LABEL: Record<WorkoutCategory, string> = {
   HIIT: "HIIT/CrossFit",
   ISOMETRIC: "Isometric",
   RUCKING: "Rucking",
+  CARDIO: "Cardio",
+  WARMUP: "Warm-up",
 };
 
 export const IMPLEMENT_LABEL: Record<Implement, string> = {

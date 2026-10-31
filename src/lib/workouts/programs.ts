@@ -17,16 +17,18 @@ export type WaveSet = { reps: number; pct: number; top?: boolean };
 /**
  * How a movement's sets are laid out (stored in PlannedExercise.scheme):
  *   wave            work up to a top set; reps and % of training max by program week
+ *   wave:2026-11-02 the same in a plan built by hand (v0.615): the 4-week wave
+ *                   counted from that day, week 4 light
  *   range:3x8-12    one weight; reps up to the top of the range, then the weight goes up
  *   same:3x5        one weight for every set; all reps done → the weight goes up
  */
 export type Scheme =
-  | { kind: "WAVE" }
+  | { kind: "WAVE"; start?: string }
   | { kind: "RANGE"; sets: number; min: number; max: number }
   | { kind: "SAME"; sets: number; reps: number };
 
 export function schemeKey(s: Scheme): string {
-  if (s.kind === "WAVE") return "wave";
+  if (s.kind === "WAVE") return s.start ? `wave:${s.start}` : "wave";
   if (s.kind === "RANGE") return `range:${s.sets}x${s.min}-${s.max}`;
   return `same:${s.sets}x${s.reps}`;
 }
@@ -34,16 +36,53 @@ export function schemeKey(s: Scheme): string {
 export function parseScheme(raw: string | null | undefined): Scheme | null {
   if (!raw) return null;
   if (raw === "wave") return { kind: "WAVE" };
-  let m = /^range:(\d+)x(\d+)-(\d+)$/.exec(raw);
+  let m: RegExpExecArray | null = /^wave:(\d{4}-\d{2}-\d{2})$/.exec(raw);
+  if (m) return { kind: "WAVE", start: m[1] };
+  m = /^range:(\d+)x(\d+)-(\d+)$/.exec(raw);
   if (m) return { kind: "RANGE", sets: +m[1], min: +m[2], max: +m[3] };
   m = /^same:(\d+)x(\d+)$/.exec(raw);
   if (m) return { kind: "SAME", sets: +m[1], reps: +m[2] };
   return null;
 }
 
+/** The set structures a hand-built plan can pick (key as stored, "" = any
+ *  sets; "wave" starts a 4-week 5/3/1 wave on the day it's chosen). */
+export const SCHEME_CHOICES: readonly { key: string; label: string }[] = [
+  { key: "", label: "Any sets" },
+  { key: "same:3x5", label: "3 × 5" },
+  { key: "same:5x5", label: "5 × 5" },
+  { key: "range:3x8-12", label: "3 × 8–12" },
+  { key: "range:3x10-15", label: "3 × 10–15" },
+  { key: "wave", label: "5/3/1 wave" },
+];
+
+/** The choice a stored scheme shows as ("wave:2026-11-02" → "wave"). */
+export function schemeChoiceKey(raw: string | null | undefined): string {
+  const s = parseScheme(raw);
+  if (!s) return "";
+  return s.kind === "WAVE" ? "wave" : schemeKey(s);
+}
+
+/** A scheme sent from a plan editor, ready to store: a known structure or
+ *  null; "wave" keeps the wave already running, else starts one today. */
+export function cleanPlanScheme(raw: unknown, todayISO: string, current?: string | null): string | null {
+  if (typeof raw !== "string" || raw === "") return null;
+  const s = parseScheme(raw);
+  if (!s) return null;
+  if (s.kind === "WAVE") {
+    const cur = parseScheme(current);
+    if (cur?.kind === "WAVE" && cur.start) return schemeKey(cur);
+    return `wave:${s.start ?? todayISO}`;
+  }
+  if (s.sets < 1 || s.sets > 10) return null;
+  if (s.kind === "RANGE" && !(s.min >= 1 && s.max >= s.min && s.max <= 50)) return null;
+  if (s.kind === "SAME" && !(s.reps >= 1 && s.reps <= 50)) return null;
+  return schemeKey(s);
+}
+
 /** "Work up to a top set", "3 × 8–12", "3 × 5". */
 export function schemeLabel(s: Scheme): string {
-  if (s.kind === "WAVE") return "Work up to a top set";
+  if (s.kind === "WAVE") return s.start ? "5/3/1 · work up to a top set" : "Work up to a top set";
   if (s.kind === "RANGE") return `${s.sets} × ${s.min}–${s.max}`;
   return `${s.sets} × ${s.reps}`;
 }
@@ -295,6 +334,21 @@ export const PROGRAMS: readonly Program[] = [
     ],
   },
 ];
+
+/** The 5/3/1 wave on its own, for a movement given a wave in a plan built by
+ *  hand: Strength waves' four weeks (week 4 light), counted from the day the
+ *  wave was chosen. */
+export const HAND_WAVE: Program = {
+  key: "",
+  name: "5/3/1",
+  blurb: "",
+  weeks: 4,
+  lightWeeks: [4],
+  testWeeks: [],
+  defaultDays: [],
+  days: [],
+  wave: PROGRAMS.find((p) => p.key === "strength-waves")?.wave,
+};
 
 export function programByKey(key: string | null | undefined): Program | null {
   return PROGRAMS.find((p) => p.key === key) ?? null;

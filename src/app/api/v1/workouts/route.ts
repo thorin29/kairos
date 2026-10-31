@@ -10,7 +10,9 @@ import {
 } from "@/lib/queries/workout-log";
 import { daySections, dayTitle, type DayWorkoutIn } from "@/lib/workouts/blocks";
 import type { Metric, MuscleGroup, WorkoutCategory } from "@/lib/workouts/catalog";
-import { todayISO } from "@/lib/dates";
+import { dayOfWeek, todayISO } from "@/lib/dates";
+import { orderForDay } from "@/lib/workouts/day-order";
+import { cardioDay, simplePlansFor } from "@/lib/workouts/cardio-run";
 import { programInfoFor } from "@/lib/workouts/program-run";
 import { dayLightFactor, daySuggestionFor } from "@/lib/workouts/suggest-run";
 
@@ -32,6 +34,7 @@ export async function GET(req: NextRequest) {
   const userId = authed.device.person.id;
   const today = todayISO();
   const workouts = await loadTodayPlannedWorkouts(userId, date);
+  const order = await orderForDay(userId, dayOfWeek(date));
   const overdue = date === today ? await loadOverdueWorkoutDays(userId, date) : [];
 
   // Every-set logging (v0.608): each movement carries its day's sets in a few
@@ -64,13 +67,19 @@ export async function GET(req: NextRequest) {
     plannedWorkoutId: first?.plannedWorkoutId ?? null,
     name: first?.name ?? null,
     exercises: first?.exercises ?? [],
-    title: dayTitle(daySections(dayWorkouts.map(asDayWorkout))),
+    title: dayTitle(daySections(dayWorkouts.map(asDayWorkout), order)),
     strip: { today, days: strip.days, overdue: strip.overdue },
     // The program and its week on this day (v0.611); null without one.
     program: await programInfoFor(userId, date),
     // The day's suggestion card and a lighter day, if chosen (v0.612).
     suggestion: await daySuggestionFor(userId, date),
     light: await dayLightFactor(userId, date),
+    // v0.615: the person's section order for this weekday; the day's Warm-up
+    // and Cardio plans (no movements, so not in `workouts`); and the day's
+    // cardio, Concept2 rows included, each with how it felt.
+    order,
+    simple: await simplePlansFor(userId, date),
+    cardio: await cardioDay(userId, date),
   });
 }
 

@@ -12,13 +12,18 @@ import {
   skipMovement,
   checkConcept2,
   undoConcept2Row,
+  setWarmup,
   type LoggedSet,
 } from "@/lib/actions/workouts";
 import type { Concept2Day } from "@/lib/workouts/concept2-run";
-import { Concept2Rows } from "./concept2-rows";
+import { CardioCard } from "./cardio-card";
+import type { CardioEntry } from "@/lib/workouts/cardio-run";
 import type { DayLogState, MovementLog, MovementSetRow, WeekStripDay } from "@/lib/queries/workout-log";
 import type { PersonWorkout, PlanExercise, PlanWorkout } from "@/lib/queries/workouts";
 import {
+  CARDIO_CATEGORIES,
+  withCardio,
+  type SectionKind,
   daySections,
   dayTitle,
   dayProgress,
@@ -95,7 +100,12 @@ export function DayLog({
 }) {
   const userId = person.user.id;
   const [date, setDate] = useState(initialDate && initialDate <= todayISO ? initialDate : todayISO);
-  const [data, setData] = useState<{ state: DayLogState; loggedByPool: Record<string, LoggedSet> } | null>(null);
+  const [data, setData] = useState<{
+    state: DayLogState;
+    loggedByPool: Record<string, LoggedSet>;
+    order: SectionKind[];
+    cardio: CardioEntry[];
+  } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
   const [failed, setFailed] = useState(false);
   const [tick, setTick] = useState(0);
@@ -112,6 +122,7 @@ export function DayLog({
       checkConcept2(userId, date, force)
         .then((r) => {
           setC2(r.day);
+          setData((cur) => (cur ? { ...cur, cardio: r.cardio } : cur));
           if (r.added > 0) setTick((n) => n + 1);
         })
         .catch(() => undefined)
@@ -152,9 +163,11 @@ export function DayLog({
     [person.plan, date],
   );
   const byId = useMemo(() => new Map(workouts.map((w) => [w.id, w])), [workouts]);
+  const order = data?.order;
+  const cardioCount = data?.cardio.length ?? 0;
   const sections = useMemo(
     () =>
-      daySections(
+      withCardio(daySections(
         workouts.map(
           (w): DayWorkoutIn => ({
             id: w.id,
@@ -171,12 +184,11 @@ export function DayLog({
             })),
           }),
         ),
-      ),
-    [workouts],
+        order,
+      ), cardioCount > 0, order),
+    [workouts, order, cardioCount],
   );
 
-  const c2Shown = !!c2?.connected;
-  const hasCardio = sections.some((s) => s.kind === "CARDIO");
 
   const state = data?.state ?? null;
   const cardDone = useCallback(
@@ -184,6 +196,9 @@ export function DayLog({
       if (!state) return false;
       const w = byId.get(workoutId);
       if (state.doneWorkouts.includes(workoutId) || state.skippedPlans.includes(`plan:${workoutId}`)) return true;
+      // Cardio (and an older Rowing / Running / Rucking plan) is done by any
+      // cardio that day.
+      if (w?.category && CARDIO_CATEGORIES.includes(w.category)) return state.cardioLogged;
       // A plan with nothing to enter (a run, a stretch) is done once its
       // session exists, matched by name as the old card did.
       return !!w && state.sessionNames.some((n) => n.trim().toLowerCase() === w.name.trim().toLowerCase());
@@ -339,10 +354,65 @@ export function DayLog({
               <section key={s.key}>
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{s.title}</h4>
                 <div className="space-y-2">
+                  {s.kind === "CARDIO" && (
+                    <CardioCard
+                      key={`cardio:${date}`}
+                      userId={userId}
+                      dateISO={date}
+                      completedOnISO={completedOnISO}
+                      unitSystem={unitSystem}
+                      entries={data.cardio}
+                      onEntries={(cardio) => {
+                        setData((cur) => (cur ? { ...cur, cardio } : cur));
+                        setTick((n) => n + 1);
+                      }}
+                      c2={c2}
+                      c2Checking={c2Checking}
+                      onCheckC2={() => checkC2(true)}
+                      onUndoC2={undoC2}
+                      skip={(() => {
+                        const plan = workouts.find((w) => w.category === "CARDIO");
+                        if (!plan) return undefined;
+                        return {
+                          skipped: state?.skippedPlans.includes(`plan:${plan.id}`) ?? false,
+                          onToggle: (v: boolean) =>
+                            startTransition(async () => {
+                              await skipMovement({ userId, dateISO: date, plannedWorkoutId: plan.id, poolExerciseId: "", skipped: v });
+                              setTick((n) => n + 1);
+                            }),
+                        };
+                      })()}
+                    />
+                  )}
                   {s.items.map((it) => {
                     if (it.type === "card") {
                       const w = byId.get(it.workoutId);
                       if (!w) return null;
+                      // Cardio plans are the card above.
+                      if (w.category && CARDIO_CATEGORIES.includes(w.category)) return null;
+                      if (w.category === "WARMUP") {
+                        const done = cardDone(w.id);
+                        return (
+                          <WarmupRow
+                            key={`${date}:${w.id}`}
+                            name={w.name}
+                            done={done}
+                            skipped={state?.skippedPlans.includes(`plan:${w.id}`) ?? false}
+                            onDone={(v) =>
+                              startTransition(async () => {
+                                await setWarmup({ userId, dateISO: date, plannedWorkoutId: w.id, done: v, completedOnISO });
+                                setTick((n) => n + 1);
+                              })
+                            }
+                            onSkip={(v) =>
+                              startTransition(async () => {
+                                await skipMovement({ userId, dateISO: date, plannedWorkoutId: w.id, poolExerciseId: "", skipped: v });
+                                setTick((n) => n + 1);
+                              })
+                            }
+                          />
+                        );
+                      }
                       return (
                         <PlanRow
                           key={`${date}:${w.id}`}
@@ -405,23 +475,63 @@ export function DayLog({
                       </button>
                     );
                   })}
-                  {s.kind === "CARDIO" && c2Shown && c2 && (
-                    <Concept2Rows day={c2} checking={c2Checking} onCheck={() => checkC2(true)} onUndo={undoC2} />
-                  )}
                 </div>
               </section>
             ))}
-            {!hasCardio && c2Shown && c2 && c2.rows.length > 0 && (
-              <section>
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">Extra</h4>
-                <Concept2Rows day={c2} checking={c2Checking} onCheck={() => checkC2(true)} onUndo={undoC2} />
-              </section>
-            )}
           </div>
         )
       )}
 
       {extra && <div className="border-t border-hairline pt-5">{extra(date)}</div>}
+    </div>
+  );
+}
+
+/** A Warm-up in the plan: done with a tap (tap again to undo), or skipped. */
+function WarmupRow({
+  name,
+  done,
+  skipped,
+  onDone,
+  onSkip,
+}: {
+  name: string;
+  done: boolean;
+  skipped: boolean;
+  onDone: (done: boolean) => void;
+  onSkip: (skipped: boolean) => void;
+}) {
+  const finished = done && !skipped;
+  return (
+    <div className="flex min-h-[3.5rem] items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3">
+      <span className="min-w-0 flex-1 text-sm font-semibold">{name}</span>
+      {!finished && (
+        <button
+          type="button"
+          aria-pressed={skipped}
+          onClick={() => onSkip(!skipped)}
+          className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
+            skipped ? "border-hairline bg-ground text-muted" : "border-hairline text-muted hover:border-accent"
+          }`}
+        >
+          {skipped ? "Skipped" : "Skip"}
+        </button>
+      )}
+      {!skipped && (
+        <button
+          type="button"
+          aria-pressed={finished}
+          onClick={() => onDone(!finished)}
+          className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold ${
+            finished
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-accent bg-accent text-on-accent"
+          }`}
+        >
+          <CheckIcon className="h-4 w-4" />
+          {finished ? "Done" : "Mark done"}
+        </button>
+      )}
     </div>
   );
 }

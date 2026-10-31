@@ -6,7 +6,8 @@ import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { setSetting, WORKOUT_OVERDUE_DAYS, WORKOUT_OVERDUE_MAX } from "@/lib/settings";
-import { toDateColumn, todayISO } from "@/lib/dates";
+import { dayOfWeek, toDateColumn, todayISO } from "@/lib/dates";
+import type { SectionKind } from "@/lib/workouts/blocks";
 import {
   loadOverdueWorkoutDates,
   loadDayLogState,
@@ -21,10 +22,12 @@ import {
 import { topSet } from "@/lib/workouts/sets";
 import { loadExercisePool, type PoolEntry } from "@/lib/queries/workouts";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
-import { poolMetrics } from "@/lib/workouts/plan-edit";
+import { poolMetrics, addPlannedFromPoolCore, setPlannedSchemeCore } from "@/lib/workouts/plan-edit";
 import { setMovementFeedback, cleanEffort, cleanHurt } from "@/lib/workouts/feedback";
 import { answerSuggestion } from "@/lib/workouts/suggest-run";
 import { applyLibrary, saveEquipment, setPoolAbout } from "@/lib/workouts/library-run";
+import { cardioDay, logCardio, removeCardio, setWarmupDone, type CardioEntry, type CardioIn } from "@/lib/workouts/cardio-run";
+import { loadDayOrders, orderForDay, saveDayOrder, type DayOrders } from "@/lib/workouts/day-order";
 import {
   concept2Day,
   connectConcept2,
@@ -516,50 +519,27 @@ export async function addPlannedWorkoutFromPool(
       poolExerciseId: string;
       tracked: boolean;
       metric?: Metric | null;
+      scheme?: string | null;
     }[];
   },
 ): Promise<void> {
   await requireInteractive();
   await requireCanActFor(userId);
   if (!userId || dayOfWeek < 0 || dayOfWeek > 6) return;
+  await addPlannedFromPoolCore(userId, dayOfWeek, input);
+  refresh();
+}
 
-  const label = (
-    input.name?.trim() ||
-    (input.muscleGroup
-      ? MUSCLE_GROUP_LABEL[input.muscleGroup]
-      : CATEGORY_LABEL[input.category])
-  ).slice(0, 40);
-
-  // De-dupe within this workout; the [plannedWorkoutId, poolExerciseId] unique
-  // is the backstop.
-  const seen = new Set<string>();
-  const rows = input.exercises.filter((e) => {
-    if (!e.poolExerciseId || seen.has(e.poolExerciseId)) return false;
-    seen.add(e.poolExerciseId);
-    return true;
-  });
-
-  const fill = await poolMetrics(input.category, rows);
-  const count = await prisma.plannedWorkout.count({ where: { userId, dayOfWeek } });
-  await prisma.plannedWorkout.create({
-    data: {
-      userId,
-      dayOfWeek,
-      name: label,
-      sortOrder: count,
-      category: input.category,
-      muscleGroup: input.muscleGroup ?? null,
-      exercises: {
-        create: rows.map((e, i) => ({
-          poolExerciseId: e.poolExerciseId,
-          tracked: e.tracked,
-          metric: e.metric ?? fill.get(e.poolExerciseId) ?? null,
-          sortOrder: i,
-        })),
-      },
-    },
-  });
-  await generateWorkoutTasks();
+/** A planned movement's set structure: "" any sets, "same:3x5", "wave"… */
+export async function setPlannedScheme(
+  userId: string,
+  plannedWorkoutId: string,
+  poolExerciseId: string,
+  scheme: string,
+): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await setPlannedSchemeCore(userId, plannedWorkoutId, poolExerciseId, String(scheme ?? ""));
   refresh();
 }
 
@@ -1251,15 +1231,22 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 export async function loadDayLog(
   userId: string,
   dateISO: string,
-): Promise<{ state: DayLogState; loggedByPool: Record<string, LoggedSet> }> {
+): Promise<{
+  state: DayLogState;
+  loggedByPool: Record<string, LoggedSet>;
+  order: SectionKind[];
+  cardio: CardioEntry[];
+}> {
   await requireInteractive();
   await requireCanActFor(userId);
   if (!ISO.test(dateISO)) throw new Error("Bad date");
-  const [state, loggedByPool] = await Promise.all([
+  const [state, loggedByPool, order, cardio] = await Promise.all([
     loadDayLogState(userId, dateISO),
     loadLoggedWeights(userId, dateISO),
+    orderForDay(userId, dayOfWeek(dateISO)),
+    cardioDay(userId, dateISO),
   ]);
-  return { state, loggedByPool };
+  return { state, loggedByPool, order, cardio };
 }
 
 /**
@@ -1270,13 +1257,60 @@ export async function checkConcept2(
   userId: string,
   dateISO: string,
   force = false,
-): Promise<{ added: number; day: Concept2Day }> {
+): Promise<{ added: number; day: Concept2Day; cardio: CardioEntry[] }> {
   await requireInteractive();
   await requireCanActFor(userId);
   if (!ISO.test(dateISO)) throw new Error("Bad date");
   const { added } = await syncConcept2(userId, force);
   if (added > 0) refresh();
-  return { added, day: await concept2Day(userId, dateISO) };
+  const [day, cardio] = await Promise.all([concept2Day(userId, dateISO), cardioDay(userId, dateISO)]);
+  return { added, day, cardio };
+}
+
+/** Log a row, run, ruck or other cardio for a day (v0.615). */
+export async function logCardioEntry(
+  userId: string,
+  dateISO: string,
+  input: CardioIn,
+): Promise<{ ok: boolean; cardio: CardioEntry[] }> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!ISO.test(dateISO)) throw new Error("Bad date");
+  const id = await logCardio(userId, dateISO, input);
+  if (id) refresh();
+  return { ok: !!id, cardio: await cardioDay(userId, dateISO) };
+}
+
+/** Remove a cardio entry (a Concept2 row then stays out). */
+export async function removeCardioEntry(userId: string, dateISO: string, sessionId: string): Promise<CardioEntry[]> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!ISO.test(dateISO)) throw new Error("Bad date");
+  if (await removeCardio(userId, String(sessionId))) refresh();
+  return cardioDay(userId, dateISO);
+}
+
+/** A Warm-up plan done, or not, for a day. */
+export async function setWarmup(input: {
+  userId: string;
+  dateISO: string;
+  plannedWorkoutId: string;
+  done: boolean;
+  completedOnISO?: string;
+}): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(input.userId);
+  if (!ISO.test(input.dateISO)) return;
+  if (await setWarmupDone(input.userId, input.dateISO, input.plannedWorkoutId, input.done, input.completedOnISO)) refresh();
+}
+
+/** The section order: every day (`day` null) or one weekday; null order resets. */
+export async function saveSectionOrder(userId: string, day: number | null, order: string[] | null): Promise<DayOrders> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await saveDayOrder(userId, day, order);
+  refresh();
+  return loadDayOrders(userId);
 }
 
 /** Put back rowing entered by hand that a Concept2 row replaced. */
