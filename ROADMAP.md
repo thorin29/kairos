@@ -1205,7 +1205,10 @@ injuries don't read as going backwards. Phases, in order:
       with how-tos and Rx/Scaled versions, younger users on Scaled), Build one
       (finisher builder from household equipment), Write your own on the day,
       the monthly benchmark offered after a month. Web v0.617.0, phone v0.425.0.
-- [ ] 8. Export and import of workouts and programs for everyone
+- [x] 8. Export and import for everyone: a workouts file (plan, own workouts,
+      optionally everything logged) to keep or move, imported as Replace or
+      Add; share a plan with the household through a parent's approval.
+      Web v0.618.0, phone v0.426.0.
 
 ## Game time
 
@@ -1744,7 +1747,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.617.0 (migrations through 136_wod_library).
-- App versionName 0.425.0 / versionCode 489 / CLIENT_BUILD 489.
+- Web APP_VERSION 0.618.0 (migrations through 137_shared_plans).
+- App versionName 0.426.0 / versionCode 490 / CLIENT_BUILD 490.
 - ice-time 0.1.1 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

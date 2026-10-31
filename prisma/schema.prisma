@@ -95,6 +95,7 @@ model User {
   programs         PersonProgram[]
   suggestionAnswers WorkoutSuggestionAnswer[]
   concept2Results Concept2Result[]
+  sharedPlans     SharedPlan[]
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   books            Book[]
   chapterReads     UserChapterRead[]
@@ -1415,6 +1416,23 @@ model Concept2Result {
 
   @@id([userId, resultId])
   @@index([userId, date])
+}
+
+/// A weekly plan shared with the household (v0.618): sent for a parent's
+/// approval (PENDING → APPROVED), then anyone can start from it. `file` is the
+/// workouts-file shape (src/lib/workouts/plan-file.ts): names, never ids.
+model SharedPlan {
+  id         String    @id @default(cuid())
+  name       String
+  ownerId    String?
+  owner      User?     @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  status     String    @default("PENDING")
+  file       Json
+  summary    String?
+  createdAt  DateTime  @default(now())
+  approvedAt DateTime?
+
+  @@index([status])
 }
 
 /// A person's workout program (v0.611): which template, when it and the

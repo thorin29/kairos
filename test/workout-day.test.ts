@@ -12,6 +12,7 @@ import { timerPlanFor, timerAt, cuesAt, clockText, resultFromTimer } from "@/lib
 import { mapResult, rowSummary, rowNotes, syncFrom, syncDue, cleanToken, fmtClock } from "@/lib/workouts/concept2";
 import { LIBRARY, DEFAULT_EQUIPMENT, nameKey, planLibraryMerge, watchUrl } from "@/lib/workouts/library";
 import { WOD_LIBRARY, planWodMerge, versionMoves, hasScaled, defaultVersion, benchmarkForMonth, wodEquipment } from "@/lib/workouts/wod-library";
+import { readWorkoutsFile, planImport, planSummary, fileNameFor, FILE_KIND } from "@/lib/workouts/plan-file";
 import { buildFinisher, cleanBuilt, nearestSize, FINISHER_FORMATS, FINISHER_FOCUSES } from "@/lib/workouts/finisher";
 import {
   daySections,
@@ -734,5 +735,67 @@ describe("build one", () => {
     expect(cleanBuilt(JSON.parse(JSON.stringify(w)))).toEqual(w);
     expect(cleanBuilt({ name: "x", type: "AMRAP", moves: [] })).toBeNull();
     expect(cleanBuilt({ name: "Okay", type: "DROP TABLE", moves: [{ name: "Burpee" }] })).toBeNull();
+  });
+});
+
+describe("workouts file", () => {
+  const good = {
+    kind: FILE_KIND,
+    format: 1,
+    exportedAt: "2026-11-02T12:00:00Z",
+    name: "Three-day",
+    plan: [
+      { day: 1, name: "Chest", category: "WEIGHTS", muscleGroup: "CHEST", rest: false, workout: null,
+        movements: [{ name: "Bench press", category: "WEIGHTS", muscleGroup: "CHEST", metric: "WEIGHT", tracked: true, scheme: "wave:2026-10-01" },
+                    { name: "Svend press", category: "WEIGHTS", muscleGroup: "CHEST", metric: "BOGUS", tracked: true, scheme: "drop table" }] },
+      { day: 3, name: "Conditioning", category: "HIIT", muscleGroup: null, rest: false, workout: "Garage grinder", movements: [] },
+      { day: 0, name: "", category: null, muscleGroup: null, rest: true, workout: null, movements: [] },
+      { day: 9, name: "Nope", category: "WEIGHTS", rest: false, movements: [] },
+    ],
+    order: { everyDay: ["WARMUP", "STRENGTH", "NOPE"], days: { "1": ["CARDIO"], "8": ["CARDIO"] } },
+    workouts: [
+      { name: "Garage grinder", type: "AMRAP", capSec: 600, movements: [{ name: "Kettlebell swing", category: "WEIGHTS", reps: 15, weight: 35 }, { name: "Bear crawl", reps: 10 }] },
+      { name: "Bad", type: "WHATEVER", movements: [{ name: "x" }] },
+    ],
+    history: [{ date: "2026-10-01", sets: [] }],
+  };
+  it("reads a file and leaves out what it doesn't know", () => {
+    const r = readWorkoutsFile(JSON.stringify(good));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.file.plan.map((e) => [e.day, e.name])).toEqual([[1, "Chest"], [3, "Conditioning"], [0, "Rest day"]]);
+    expect(r.file.plan[0].movements.map((m) => [m.metric, m.scheme])).toEqual([["WEIGHT", "wave"], [null, null]]);
+    expect(r.file.workouts.map((w) => w.name)).toEqual(["Garage grinder"]);
+    expect(r.file.workouts[0].movements[1].category).toBe("HIIT");
+    expect(r.file.order).toEqual({ everyDay: ["WARMUP", "STRENGTH"], days: { "1": ["CARDIO"] } });
+    expect("history" in r.file).toBe(false);
+  });
+  it("refuses what isn't a workouts file", () => {
+    expect(readWorkoutsFile("not json").ok).toBe(false);
+    expect(readWorkoutsFile({ kind: "other" }).ok).toBe(false);
+    expect(readWorkoutsFile({ ...good, format: 99 }).ok).toBe(false);
+    expect(readWorkoutsFile({ kind: FILE_KIND, format: 1, plan: [], workouts: [] }).ok).toBe(false);
+  });
+  it("works out what an import adds", () => {
+    const r = readWorkoutsFile(good);
+    if (!r.ok) throw new Error("bad");
+    const pool = [
+      { id: "1", name: "Bench Press", category: "WEIGHTS", ownerId: null },
+      { id: "2", name: "Kettlebell swings", category: "WEIGHTS", ownerId: null },
+      { id: "3", name: "Svend press", category: "WEIGHTS", ownerId: "someone-else" },
+    ];
+    const p = planImport(r.file, pool, [{ id: "w", name: "garage grinder", ownerId: "someone-else", approved: false }], "me");
+    expect(p.newMovements.map((m) => m.name)).toEqual(["Svend press", "Bear crawl"]);
+    expect(p.newWorkouts).toEqual(["Garage grinder"]);
+    expect([p.entries, p.days]).toEqual([3, 2]);
+    const q = planImport(r.file, pool, [{ id: "w", name: "Garage grinder", ownerId: null, approved: true }], "me");
+    expect(q.newWorkouts).toEqual([]);
+  });
+  it("sums a plan up and names the file", () => {
+    const r = readWorkoutsFile(good);
+    if (!r.ok) throw new Error("bad");
+    expect(planSummary(r.file.plan)).toBe("Mon Chest · Wed Conditioning");
+    expect(fileNameFor("2026-11-02")).toBe("kairos-workouts-2026-11-02.json");
+    expect(fileNameFor("2026-11-02", "Three-Day Plan!")).toBe("kairos-workouts-three-day-plan-2026-11-02.json");
   });
 });

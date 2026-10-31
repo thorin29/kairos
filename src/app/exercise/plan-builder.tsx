@@ -15,6 +15,7 @@ import {
   setWeeklyActive,
 } from "@/lib/actions/workouts";
 import { PlusIcon, TrashIcon } from "@/components/icons";
+import { PlanFilePanel } from "./plan-file-panel";
 import { blockKind, cleanOrder, isSimpleCategory, KIND_LABEL, type SectionKind } from "@/lib/workouts/blocks";
 import { SCHEME_CHOICES, schemeChoiceKey } from "@/lib/workouts/programs";
 import type { DayOrders } from "@/lib/workouts/day-order";
@@ -188,6 +189,7 @@ export function PlanBuilder({
           {weeklyActive ? "Pause weekly plan" : "Resume weekly plan"}
         </button>
       </div>
+      <PlanFilePanel userId={userId} />
       {!weeklyActive && (
         <p className="rounded-lg bg-surface px-3 py-2 text-sm text-muted">
           Paused &mdash; no weekly prompts. A rotation, if any, still runs.

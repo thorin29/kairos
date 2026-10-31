@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-10 — Export and import for everyone; household plans (v0.618.0 / app 0.426.0)
+
+**The workouts file** (`src/lib/workouts/plan-file.ts`, pure): kind
+`kairos-workouts`, format 1. It holds the weekly plan (each entry's weekday,
+name, category, muscle group, rest, its named workout by name, and its
+movements by name and category with how they're logged, tracked and the set
+structure — a wave as just "wave"), the day page's section order, the
+person's own named workouts plus any shared ones the plan uses (so the file
+stands alone), and, if asked, everything logged. No ids anywhere, so a file
+works in another household. Reading a file keeps what it recognises and drops
+the rest; a file newer than the server is refused.
+
+**Import**: Replace swaps the whole weekly plan (ending a running program,
+which wrote the old one; its "go back" plan isn't kept) and takes the order;
+Add puts each entry on its day unless one with that name is already there,
+and a workout added to a rest day makes it a training day. Movements match by
+name within their category, shared ones first; missing ones are added to the
+person's own pool. Named workouts match by name among approved and own ones;
+missing ones are added as the person's own (unapproved, shareable as
+before). A wave restarts on the day it's imported. Program roles aren't
+carried. History is never imported (no duplicates, no rewriting the past).
+Rotations aren't in the file.
+
+**Household plans** (`SharedPlan`, migration 137): Share this plan stores the
+plan as a workouts file under a name, PENDING until a parent approves it in
+Admin → Workouts (or dismisses it). Approved plans list for everyone under
+Household plans with who shared it and the plan in a line; starting from one
+is the same Replace / Add as an import. The sharer can withdraw a plan still
+waiting; Admin can take an approved one down, and plans people started from
+stay theirs. Sharing a single named workout keeps the existing request flow.
+
+**Where**: the plan builder on the web (four buttons, each opening a window;
+Export downloads, Import reads a chosen file) and the plan screen on the
+phone (four buttons, sheets; Export and Import use the system file picker).
+
 ## 2026-10 — Conditioning, part 2: Pick one, Build one, Rx/Scaled, the monthly benchmark (v0.617.0 / app 0.425.0)
 
 **The workouts library** (`src/lib/workouts/wod-library.ts`, pure): 19 daily

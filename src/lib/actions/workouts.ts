@@ -46,6 +46,21 @@ import {
 } from "@/lib/workouts/wod-run";
 import { cleanBuilt } from "@/lib/workouts/finisher";
 import {
+  applyImport,
+  approveSharedPlan,
+  exportWorkouts,
+  previewImport,
+  previewSharedPlan,
+  removeSharedPlan,
+  sharePlan,
+  sharedPlansFor,
+  useSharedPlan,
+  type ImportMode,
+  type ImportPreview,
+  type SharedPlanRow,
+} from "@/lib/workouts/plan-share-run";
+import type { WorkoutsFile } from "@/lib/workouts/plan-file";
+import {
   concept2Day,
   connectConcept2,
   disconnectConcept2,
@@ -1519,4 +1534,88 @@ export async function answerWorkoutSuggestion(input: {
   await requireCanActFor(input.userId);
   if (!ISO.test(input.dateISO) || !input.key || !input.answer) return;
   await answerSuggestion(input.userId, input.dateISO, input.key, input.slot ?? "", input.answer);
+}
+
+// --- workouts file and household plans (v0.618) -----------------------------
+
+const mode = (m: unknown): ImportMode => (m === "add" ? "add" : "replace");
+
+/** A person's workouts file (their plan and own workouts; history if asked). */
+export async function exportMyWorkouts(userId: string, history: boolean): Promise<WorkoutsFile> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return exportWorkouts(userId, { history });
+}
+
+/** What a workouts file holds and what bringing it in would add. */
+export async function previewWorkoutsImport(
+  userId: string,
+  text: string,
+): Promise<{ ok: true; preview: ImportPreview } | { ok: false; error: string }> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (typeof text !== "string" || text.length > 5_000_000) return { ok: false, error: "That file is too big." };
+  return previewImport(userId, text);
+}
+
+/** Bring a workouts file in: replace the plan, or add to it. */
+export async function importWorkouts(userId: string, text: string, how: "replace" | "add") {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (typeof text !== "string" || text.length > 5_000_000) return { ok: false as const, error: "That file is too big." };
+  const r = await applyImport(userId, text, mode(how));
+  if (r.ok) refresh();
+  return r;
+}
+
+/** Send this plan to the parents to share with everyone. */
+export async function shareMyPlan(userId: string, name: string) {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const r = await sharePlan(userId, String(name ?? ""));
+  if (r.ok) refresh();
+  return r;
+}
+
+/** The household's plans (approved, and this person's waiting ones). */
+export async function loadHouseholdPlans(userId: string): Promise<SharedPlanRow[]> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return sharedPlansFor(userId);
+}
+
+export async function previewHouseholdPlan(userId: string, id: string) {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return previewSharedPlan(userId, String(id));
+}
+
+/** Start from a household plan: replace the plan, or add to it. */
+export async function useHouseholdPlan(userId: string, id: string, how: "replace" | "add") {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const r = await useSharedPlan(userId, String(id), mode(how));
+  if (r.ok) refresh();
+  return r;
+}
+
+/** Take back a plan still waiting for approval. */
+export async function withdrawSharedPlan(userId: string, id: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await removeSharedPlan(String(id), userId);
+  refresh();
+}
+
+/** Admin: approve a shared plan, or dismiss / take one down. */
+export async function approveHouseholdPlan(id: string): Promise<void> {
+  await requireAdmin();
+  await approveSharedPlan(String(id));
+  refresh();
+}
+
+export async function removeHouseholdPlan(id: string): Promise<void> {
+  await requireAdmin();
+  await removeSharedPlan(String(id));
+  refresh();
 }
