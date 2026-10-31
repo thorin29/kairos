@@ -10,8 +10,12 @@ import {
   answerWorkoutSuggestion,
   saveMovementSets,
   skipMovement,
+  checkConcept2,
+  undoConcept2Row,
   type LoggedSet,
 } from "@/lib/actions/workouts";
+import type { Concept2Day } from "@/lib/workouts/concept2-run";
+import { Concept2Rows } from "./concept2-rows";
 import type { DayLogState, MovementLog, MovementSetRow, WeekStripDay } from "@/lib/queries/workout-log";
 import type { PersonWorkout, PlanExercise, PlanWorkout } from "@/lib/queries/workouts";
 import {
@@ -97,6 +101,35 @@ export function DayLog({
   const [tick, setTick] = useState(0);
   const [open, setOpen] = useState<OpenMovement | null>(null);
   const [, startTransition] = useTransition();
+  const [c2, setC2] = useState<Concept2Day | null>(null);
+  const [c2Checking, setC2Checking] = useState(false);
+
+  // Concept2: checked when the day opens, every 15 minutes while it's open,
+  // and on "Check now". New rows reload the day (the Cardio block counts done).
+  const checkC2 = useCallback(
+    (force: boolean) => {
+      if (force) setC2Checking(true);
+      checkConcept2(userId, date, force)
+        .then((r) => {
+          setC2(r.day);
+          if (r.added > 0) setTick((n) => n + 1);
+        })
+        .catch(() => undefined)
+        .finally(() => force && setC2Checking(false));
+    },
+    [userId, date],
+  );
+  useEffect(() => {
+    checkC2(false);
+    const t = setInterval(() => checkC2(false), 15 * 60_000);
+    return () => clearInterval(t);
+  }, [checkC2]);
+  const undoC2 = (resultId: string) =>
+    startTransition(async () => {
+      await undoConcept2Row(userId, resultId).catch(() => undefined);
+      checkC2(false);
+      setTick((n) => n + 1);
+    });
 
   // Reload when the date changes, after a movement closes, and whenever the
   // page's own data refreshes (a card logged or skipped through its action).
@@ -141,6 +174,9 @@ export function DayLog({
       ),
     [workouts],
   );
+
+  const c2Shown = !!c2?.connected;
+  const hasCardio = sections.some((s) => s.kind === "CARDIO");
 
   const state = data?.state ?? null;
   const cardDone = useCallback(
@@ -369,9 +405,18 @@ export function DayLog({
                       </button>
                     );
                   })}
+                  {s.kind === "CARDIO" && c2Shown && c2 && (
+                    <Concept2Rows day={c2} checking={c2Checking} onCheck={() => checkC2(true)} onUndo={undoC2} />
+                  )}
                 </div>
               </section>
             ))}
+            {!hasCardio && c2Shown && c2 && c2.rows.length > 0 && (
+              <section>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">Extra</h4>
+                <Concept2Rows day={c2} checking={c2Checking} onCheck={() => checkC2(true)} onUndo={undoC2} />
+              </section>
+            )}
           </div>
         )
       )}

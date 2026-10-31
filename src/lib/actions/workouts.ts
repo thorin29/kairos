@@ -25,6 +25,14 @@ import { poolMetrics } from "@/lib/workouts/plan-edit";
 import { setMovementFeedback, cleanEffort, cleanHurt } from "@/lib/workouts/feedback";
 import { answerSuggestion } from "@/lib/workouts/suggest-run";
 import { applyLibrary, saveEquipment, setPoolAbout } from "@/lib/workouts/library-run";
+import {
+  concept2Day,
+  connectConcept2,
+  disconnectConcept2,
+  syncConcept2,
+  undoConcept2,
+  type Concept2Day,
+} from "@/lib/workouts/concept2-run";
 import type { EquipmentItem } from "@/lib/workouts/library";
 import {
   answerInvite,
@@ -1252,6 +1260,53 @@ export async function loadDayLog(
     loadLoggedWeights(userId, dateISO),
   ]);
   return { state, loggedByPool };
+}
+
+/**
+ * Concept2 for the day page: syncs when due (or `force`, "Check now") and
+ * returns the day's Concept2 rows. Refreshes the pages only when rows came in.
+ */
+export async function checkConcept2(
+  userId: string,
+  dateISO: string,
+  force = false,
+): Promise<{ added: number; day: Concept2Day }> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!ISO.test(dateISO)) throw new Error("Bad date");
+  const { added } = await syncConcept2(userId, force);
+  if (added > 0) refresh();
+  return { added, day: await concept2Day(userId, dateISO) };
+}
+
+/** Put back rowing entered by hand that a Concept2 row replaced. */
+export async function undoConcept2Row(userId: string, resultId: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (await undoConcept2(userId, String(resultId).slice(0, 40))) refresh();
+}
+
+/** Connect a person's Concept2 Logbook with their token. */
+export async function connectConcept2Account(
+  userId: string,
+  token: string,
+): Promise<{ ok: true } | { error: string }> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const r = await connectConcept2(userId, String(token ?? "").slice(0, 2100));
+  if ("ok" in r) {
+    await syncConcept2(userId, true);
+    refresh();
+    revalidatePath(`/person/${userId}/profile`);
+  }
+  return r;
+}
+
+export async function disconnectConcept2Account(userId: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await disconnectConcept2(userId);
+  revalidatePath(`/person/${userId}/profile`);
 }
 
 /** One movement's sets for the day, and its last time, for the set logger. */

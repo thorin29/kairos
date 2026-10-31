@@ -1152,7 +1152,7 @@ own exercises, optionally schedules them, and records what they did.
 - [ ] A pool of HIIT / Crossfit workouts (timed, intervals, stations) to draw
       from when building a plan
 - [ ] Multiple sets per exercise (estimated one-rep max dropped: charts show actual weights only)
-- [ ] Concept2 and other device imports
+- [x] Concept2 (rower) import, web v0.614.0. Other devices later.
 - [ ] Read-only progress overview across the household in admin
 
 ### Workouts rework (planned)
@@ -1190,7 +1190,10 @@ injuries don't read as going backwards. Phases, in order:
       movement, and ⓘ wherever movements are picked. Web v0.613.0, phone
       v0.421.0. The finisher builder moved to the conditioning release (it
       needs EMOM and timers), along with the named workouts library.
-- [ ] 7. Concept2 Logbook sync with a personal read-only token
+- [x] 7. Concept2 Logbook sync with each person's own token: connect on the
+      profile (web) or Settings → Concept2 (phone); rows land in the day's
+      Cardio, replace a hand entry with Undo, never doubled. Web v0.614.0,
+      phone v0.422.0. SkiErg and bike results wait for categories of their own.
 - [ ] 8. Export and import of workouts and programs for everyone
 
 ## Game time
@@ -1730,7 +1733,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.613.0 (migrations through 132_movement_library).
-- App versionName 0.421.0 / versionCode 483 / CLIENT_BUILD 483.
+- Web APP_VERSION 0.614.0 (migrations through 133_concept2).
+- App versionName 0.422.0 / versionCode 484 / CLIENT_BUILD 484.
 - ice-time 0.1.1 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

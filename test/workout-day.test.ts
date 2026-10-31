@@ -5,6 +5,7 @@ import { isHoldName, poolMetricFor } from "@/lib/workouts/catalog";
 import { repRecords, recordChips, isNewBest, bandPoints, REP_BANDS, weeksInARow } from "@/lib/workouts/records";
 import { PROGRAMS, programByKey, parseScheme, schemeKey, programWeek, blocksDone, targetsFor, weekLabel, raisedMaxes, defaultMovement } from "@/lib/workouts/programs";
 import { daySuggestion, movementSuggestion, bigJump, recentHurt, lightFactor } from "@/lib/workouts/suggest";
+import { mapResult, rowSummary, rowNotes, syncFrom, syncDue, cleanToken, fmtClock } from "@/lib/workouts/concept2";
 import { LIBRARY, DEFAULT_EQUIPMENT, nameKey, planLibraryMerge, watchUrl } from "@/lib/workouts/library";
 import {
   daySections,
@@ -429,5 +430,45 @@ describe("movement library", () => {
 
   it("links to a video search", () => {
     expect(watchUrl("Turkish get-up")).toContain("Turkish%20get-up");
+  });
+});
+
+describe("concept2", () => {
+  it("maps a rower result", () => {
+    const r = mapResult({ id: 12345, type: "rower", date: "2026-10-31 07:12:00", distance: 2000, time: 4653, stroke_rate: 24 });
+    expect(r).toEqual({ resultId: "12345", dateISO: "2026-10-31", meters: 2000, seconds: 465, pace: 116.3, strokeRate: 24 });
+    expect(rowSummary(r!)).toBe("2,000 m · 7:45 · 1:56.3 /500m");
+    expect(rowNotes(r!)).toBe("Concept2 · 1:56.3 /500m · 24 spm");
+  });
+
+  it("skips other machines and empty results", () => {
+    expect(mapResult({ id: 1, type: "skierg", date: "2026-10-31 07:00:00", distance: 1000, time: 2400 })).toBeNull();
+    expect(mapResult({ id: 1, type: "rower", date: "2026-10-31", distance: 0, time: 0 })).toBeNull();
+    expect(mapResult({ type: "rower", date: "2026-10-31", distance: 500, time: 900 })).toBeNull();
+  });
+
+  it("formats clocks", () => {
+    expect(fmtClock(3725)).toBe("1:02:05");
+    expect(fmtClock(116.3, true)).toBe("1:56.3");
+  });
+
+  it("asks from a day before the last sync, or two weeks back the first time", () => {
+    expect(syncFrom(null, "2026-10-31")).toBe("2026-10-17");
+    expect(syncFrom("2026-10-30T12:00:00.000Z", "2026-10-31")).toBe("2026-10-29");
+    expect(syncFrom("2026-01-01T00:00:00.000Z", "2026-10-31")).toBe("2026-08-02");
+  });
+
+  it("checks at most every five minutes unless asked", () => {
+    const now = new Date("2026-10-31T12:00:00Z");
+    expect(syncDue(null, now)).toBe(true);
+    expect(syncDue("2026-10-31T11:58:00Z", now)).toBe(false);
+    expect(syncDue("2026-10-31T11:58:00Z", now, true)).toBe(true);
+    expect(syncDue("2026-10-31T11:50:00Z", now)).toBe(true);
+  });
+
+  it("cleans a pasted token", () => {
+    expect(cleanToken("  Bearer abcdefghijklmnop0123 ")).toBe("abcdefghijklmnop0123");
+    expect(cleanToken("short")).toBeNull();
+    expect(cleanToken("has spaces in the middle of it")).toBeNull();
   });
 });

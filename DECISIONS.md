@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-10 — Concept2 Logbook (v0.614.0 / app 0.422.0)
+
+Each person connects their own Logbook with the long-lived token Concept2
+offers under Edit Profile → Applications (no OAuth app to register). The token
+is checked against `/api/users/me`, kept in the setting `concept2.token.<id>`
+and never sent to a client; results are only read.
+
+Sync is pull, never in the background on the server: the day page asks when it
+opens (the server goes to Concept2 at most every 5 minutes), every 15 minutes
+while it stays open, and on "Check Concept2 now". It asks for rower results
+updated since a day before the last good check (14 days back the first time,
+never more than 90). SkiErg and bike results are skipped: no category for them
+yet.
+
+`Concept2Result` (migration 133) is the ledger: one row per result, so nothing
+is imported twice, including after Undo. A result becomes a Rowing session on
+its day, named after that day's planned rowing so the Cardio block counts done
+(otherwise "Rowing", shown under Extra), with the pace and stroke rate in the
+notes. When the day already had rowing entered by hand and no Concept2 row yet,
+the first Concept2 row replaces it and keeps a copy; Undo restores the hand
+entry, removes the Concept2 row and keeps that result out. Later rows the same
+day are added alongside. Deleting a Concept2 row from history removes it from
+the day too.
+
 ## 2026-10 — Movement library, equipment and how-to (v0.613.0 / app 0.421.0)
 
 The starting library is data in code (`LIBRARY` in `src/lib/workouts/library.ts`,

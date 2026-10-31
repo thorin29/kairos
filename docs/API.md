@@ -888,6 +888,21 @@ the day was made lighter, else null). Answering hides a card for the day;
 comes back at that share. A set more than 10% over `recentTop` is flagged on
 each client (`bigJump`). Rules and thresholds: src/lib/workouts/suggest.ts.
 
+**Concept2 Logbook (v0.614).** The person's own token; it never comes back.
+```
+GET    /api/v1/concept2                → Concept2Status
+DELETE /api/v1/concept2                → { "status":"ok" }            // forget the token; rows stay
+POST   /api/v1/concept2/connect  { "token" }        → Concept2Status  // 400 validation with Concept2's answer
+POST   /api/v1/concept2/sync     { "date","force"? } → Concept2Status + { "added", "rows":[ Concept2Row ] }
+POST   /api/v1/concept2/undo     { "resultId" }      → { "status":"ok" } // safe to replay
+Concept2Status: { "connected":bool, "checkedAt":ISO|null, "error":str|null }
+Concept2Row:    { "resultId", "summary",            // "2,000 m · 7:45 · 1:56.3 /500m"
+                  "replaced":str|null }             // the hand entry it replaced; Undo puts it back
+```
+Without `force`, sync only goes to Concept2 when the last check is 5+ minutes
+old. Rows are Rowing sessions named after the day's planned rowing (so the
+Cardio block counts done), else "Rowing". Rules: src/lib/workouts/concept2.ts.
+
 New bests and the record chips are worked out on each client from `records`
 with the rules in src/lib/workouts/records.ts (`isNewBest`, `recordChips`).
 
@@ -1165,7 +1180,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**153 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**157 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1182,6 +1197,7 @@ silently invisible:
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604)
 - **hockey** (the week from ice-time), `hockey/prefs`
+- **concept2** (status / disconnect), `concept2/connect`, `concept2/sync`, `concept2/undo` (v0.614)
 - **widget** (the Android home-screen widget's feed)
 
 ## Deep links (notification -> screen)

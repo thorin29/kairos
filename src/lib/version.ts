@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.613.0";
+export const APP_VERSION = "0.614.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.614.0",
+    summary: [
+      "Connect Concept2 on your profile and your rows show up in the day's Cardio on their own.",
+      "A Concept2 row replaces rowing you entered by hand that day, with Undo.",
+    ],
+  },
   {
     version: "0.613.0",
     summary: [

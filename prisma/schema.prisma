@@ -94,6 +94,7 @@ model User {
   workoutFeedback  WorkoutFeedback[]
   programs         PersonProgram[]
   suggestionAnswers WorkoutSuggestionAnswer[]
+  concept2Results Concept2Result[]
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   books            Book[]
   chapterReads     UserChapterRead[]
@@ -1380,6 +1381,25 @@ model WorkoutSuggestionAnswer {
   createdAt DateTime @default(now())
 
   @@id([userId, date, key, slot])
+}
+
+/// A Concept2 Logbook result that was taken (v0.614): never imported twice.
+/// `sessionId` is the workout it became (null once undone); `replaced` keeps a
+/// hand-entered row it replaced, for Undo; `dismissed` keeps an undone one out.
+model Concept2Result {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resultId  String
+  date      DateTime @db.Date
+  meters    Int      @default(0)
+  seconds   Int      @default(0)
+  sessionId String?
+  replaced  Json?
+  dismissed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@id([userId, resultId])
+  @@index([userId, date])
 }
 
 /// A person's workout program (v0.611): which template, when it and the
