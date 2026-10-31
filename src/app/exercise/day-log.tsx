@@ -76,15 +76,18 @@ export function DayLog({
   todayISO,
   unitSystem,
   extra,
+  initialDate,
 }: {
   person: PersonWorkout;
   todayISO: string;
   unitSystem: UnitSystem;
   /** Rendered under the day (the "log an additional workout" form). */
   extra?: (dateISO: string) => React.ReactNode;
+  /** The day it opens on (a home-page prompt carried over from an earlier day). */
+  initialDate?: string;
 }) {
   const userId = person.user.id;
-  const [date, setDate] = useState(todayISO);
+  const [date, setDate] = useState(initialDate && initialDate <= todayISO ? initialDate : todayISO);
   const [data, setData] = useState<{ state: DayLogState; loggedByPool: Record<string, LoggedSet> } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
   const [failed, setFailed] = useState(false);

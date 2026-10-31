@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-10 — Home page workouts open the day page (v0.611.1)
+
+The person page's workout prompt (`WorkoutLauncher`) still opened the old
+"Scheduled" log step, so every-set logging was only reachable from Exercise.
+It now renders the same `DayLog` (with `initialDate` = the prompt's own day, so
+a carried-over workout opens on its day) and the "Log an additional workout"
+form under it. The old step stays only as a fallback when no workout card data
+is passed.
+
 ## 2026-10 — Programs (v0.611.0 / app 0.419.0)
 
 A program is a template in the repo (`programs.ts`): weeks, days, slots, set

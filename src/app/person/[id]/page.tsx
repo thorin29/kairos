@@ -365,6 +365,7 @@ export default async function PersonPage({
           unitSystem={unitSystem}
           weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
           todayISO={today}
+          person={boardPerson}
         />
       );
     }
@@ -658,6 +659,7 @@ export default async function PersonPage({
                         unitSystem={unitSystem}
                         weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
                         todayISO={today}
+                        person={boardPerson}
                         summaryNames={todayEx.map((r: { title: string }) => r.title)}
                         overdueCount={overdueWorkoutDays.length}
                         // Same rule as the phone's home row: today's workout

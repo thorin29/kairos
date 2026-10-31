@@ -10,11 +10,13 @@ import {
   type LoggedSet,
 } from "@/lib/actions/workouts";
 import { TodayPlan } from "@/app/exercise/workout-card";
+import { DayLog } from "@/app/exercise/day-log";
 import { CustomWorkoutForm } from "@/app/exercise/workouts-grid";
 import type {
   PlanWorkout,
   PoolEntry,
   BoardHiitWorkout,
+  PersonWorkout,
 } from "@/lib/queries/workouts";
 import type { UnitSystem } from "@/lib/workouts/catalog";
 
@@ -42,6 +44,7 @@ export function WorkoutLauncher({
   summaryNames,
   overdueCount = 0,
   completeForToday = false,
+  person = null,
 }: {
   userId: string;
   dateISO: string;
@@ -67,6 +70,9 @@ export function WorkoutLauncher({
   overdueCount?: number;
   /** The summary button reads "Complete for today!" in green, like the phone. */
   completeForToday?: boolean;
+  /** The person's workout card data: when given, the overlay is the day page
+   *  (sections, every-set logging), the same as Exercise → Log workout. */
+  person?: PersonWorkout | null;
 }) {
   // Two plans for the same muscle group are two rows upstream, but this strip
   // names the group, so they arrived as "Core \u00b7 Core \u00b7 Legs". Collapse
@@ -236,6 +242,40 @@ export function WorkoutLauncher({
             onClick={(e) => e.stopPropagation()}
             className="animate-card-zoom my-4 w-full max-w-2xl"
           >
+            {person ? (
+              <div className="rounded-2xl border border-hairline bg-surface p-6 shadow-xl">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h3 className="font-display text-lg font-semibold">Log workout</h3>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    aria-label="Close"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-black/5 hover:text-ink"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <DayLog
+                  person={person}
+                  todayISO={todayISO}
+                  unitSystem={unitSystem}
+                  initialDate={dateISO}
+                  extra={(d) => (
+                    <>
+                      <h4 className="mb-3 font-display text-sm font-semibold">Log an additional workout</h4>
+                      <CustomWorkoutForm
+                        userId={userId}
+                        unitSystem={unitSystem}
+                        pool={pool}
+                        hiitWorkouts={hiitWorkouts}
+                        dateISO={d}
+                        onDone={() => setOpen(false)}
+                      />
+                    </>
+                  )}
+                />
+              </div>
+            ) : (
             <div className="rounded-2xl border border-hairline bg-surface p-6 shadow-xl">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -338,6 +378,7 @@ export function WorkoutLauncher({
                 </div>
               </div>
             </div>
+            )}
           </div>
         </div>
       )}
