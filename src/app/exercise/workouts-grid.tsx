@@ -706,6 +706,7 @@ const MG_COLOR: Record<string, string> = {
   FOREARMS: "#7a6ad8",
   UPPER_BACK: "#139c86",
   FULL_BODY: "#e87ba4",
+  DEADLIFT: "#9c6b3c",
 };
 
 /** The same colour, faded, for a muscle a movement only assists with. */
@@ -721,7 +722,7 @@ const GRID_COLORS = [
 const MG_LABEL: Record<string, string> = {
   CHEST: "Chest", BACK: "Back", LEGS: "Legs", SHOULDERS: "Shoulders",
   ARMS: "Arms", CORE: "Core", GLUTES: "Glutes", CALVES: "Calves",
-  FOREARMS: "Forearms", UPPER_BACK: "Upper back", FULL_BODY: "Full body",
+  FOREARMS: "Forearms", UPPER_BACK: "Upper back", FULL_BODY: "Full body", DEADLIFT: "Deadlift",
 };
 
 /** Series grouped by the muscle group they are planned under, alphabetically. */
@@ -1203,11 +1204,16 @@ function LiftDetailPanel({
   }
   const trained = byDate;
 
-  // Only weekdays the plan uses get a row. A row for a day you never train is
-  // noise, and the grid is about whether the plan was kept.
-  const rows = planDays && planDays.length > 0
-    ? [...planDays].map((d) => d.day).sort((a, b) => a - b)
-    : [0, 1, 2, 3, 4, 5, 6];
+  // A row for each weekday the plan uses AND each weekday something was
+  // logged on in the last 16 weeks (v0.619), so switching to a plan with
+  // fewer days keeps the old days on the grid until they scroll off. A row
+  // for a day never trained and not planned is noise.
+  const gridSince = new Date(Date.now() - 16 * 7 * 86400000).toISOString().slice(0, 10);
+  const loggedDays = [...byDate.keys()]
+    .filter((d) => d >= gridSince)
+    .map((d) => new Date(`${d}T12:00:00Z`).getUTCDay());
+  const rowSet = new Set<number>([...(planDays ?? []).map((d) => d.day), ...loggedDays]);
+  const rows = rowSet.size > 0 ? [...rowSet].sort((a, b) => a - b) : [0, 1, 2, 3, 4, 5, 6];
 
   type Cell = { date: string; groups: string[] };
   const weeks: Cell[][] = [];

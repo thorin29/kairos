@@ -287,6 +287,14 @@ function ProgramSetup({
     return out;
   });
   const [tops, setTops] = useState<Record<string, string>>({});
+  // The heaviest weight logged on each movement fills its top weight; the
+  // person can change it (v0.619).
+  const bestOf = useMemo(() => {
+    const m = new Map<string, number>();
+    program.days.forEach((d) => d.roles.forEach((r) => r.options.forEach((o) => o.best && m.set(o.id, o.best))));
+    return m;
+  }, [program]);
+  const topText = (id: string) => tops[id] ?? (bestOf.get(id) != null ? String(bestOf.get(id)) : "");
 
   const mains = useMemo(() => {
     const seen = new Map<string, string>();
@@ -368,15 +376,14 @@ function ProgramSetup({
 
       {mains.length > 0 && (
         <div>
-          <p className="text-sm font-semibold">Recent top weight</p>
-          <p className="text-xs text-muted">Leave blank and the first weeks use last time&rsquo;s weights.</p>
+          <p className="text-sm font-semibold">Top weight</p>
           <div className="mt-1 divide-y divide-hairline">
             {mains.map(([id, name]) => (
               <label key={id} className="flex items-center gap-3 py-1.5 text-sm">
                 <span className="min-w-0 flex-1 truncate">{name}</span>
                 <input
                   inputMode="decimal"
-                  value={tops[id] ?? ""}
+                  value={topText(id)}
                   onChange={(e) => setTops((t) => ({ ...t, [id]: e.target.value }))}
                   className="tabular h-9 w-20 rounded-lg border border-hairline bg-surface px-2 text-right text-sm outline-none focus:border-accent"
                 />
@@ -395,8 +402,8 @@ function ProgramSetup({
           disabled={!ready || busy}
           onClick={() => {
             const t: Record<string, number> = {};
-            for (const [id, v] of Object.entries(tops)) {
-              const n = Number(v);
+            for (const [id] of mains) {
+              const n = Number(topText(id));
               if (Number.isFinite(n) && n > 0) t[id] = n;
             }
             onStart({ days, picks, tops: t });

@@ -1,5 +1,45 @@
 # Decisions
 
+## 2026-11 — Deadlift group; program fixes; 5/3/1 logger; + Conditioning (v0.619.0 / app 0.427.0)
+
+**Deadlift is a muscle group** (`DEADLIFT`, colour #9c6b3c). Migration 138
+adds the enum value; 139 uses it (a new value can't be used in the
+transaction that adds it). 139 moves every pool movement in Weights whose name
+contains "deadlift" (Romanian and trap bar too) into it, turns a plan entry
+that held only deadlifts into a Deadlift entry (renamed when it was called
+Core, Legs, Back or Full body), and splits a mixed entry: the deadlifts go to a
+new "Deadlift" entry on the same day. Both are safe to run twice. On the body
+map the posterior-hip region is labelled Deadlift and shades from the Deadlift
+fill.
+
+**Program setup:** a slot offers every active movement in its group, or whose
+name matches the slot, in any category (pull-ups are filed under HIIT). Top
+weights are pre-filled with the highest weight ever logged; the training max
+stays 90% of it. Starting a program keeps a timed movement's metric (planks log
+by time, no scheme); 139 fixes plans already written.
+
+**Strict sets:** a set with a `pct` is a 5/3/1 set. The set number shows the
+percentage instead of "Top", the × becomes a plates button that opens the
+calculator loaded for that weight (switching the bar reloads the plates), and
+the "Remaining sets −5 / +5" row is hidden. Elsewhere it stays.
+
+**Timed movements:** the Calculator tile becomes Timer, which opens the
+conditioning timer (for time); its result fills the next set's seconds.
+
+**+ Conditioning on any day:** a button under the sections opens Pick one /
+Build one / Write your own in a window; what's logged lists as an extra. A
+conditioning session no longer counts as an unplanned workout, so a finisher
+doesn't complete a lifting day.
+
+**Lighter day:** asks only when the same muscle group was answered Too hard
+twice in a row (one answer per group per day), or three training days in a row
+each had a Too hard; Hard alone never asks; never in the 14 days after a
+program starts or the plan changes.
+
+**Workout days chart:** rows are the plan's days plus every weekday with a
+logged day in the last 16 weeks. **Home card:** on a program a day reads
+"<program> · <main lift>".
+
 ## 2026-10 — "How did it feel?" slider; one Cardio card (v0.618.1 / app 0.426.1)
 
 Every "How did it feel?" (a movement's sets, cardio, conditioning, sport) is

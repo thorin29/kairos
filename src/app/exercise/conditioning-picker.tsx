@@ -535,6 +535,74 @@ function BuildOne({
 type Opened = "pick" | "build" | "own" | null;
 
 /**
+ * A one-off conditioning session on any day, planned or not (v0.619): Pick
+ * one, Build one or Write your own, logged as an extra.
+ */
+export function AddConditioning({
+  userId,
+  dateISO,
+  completedOnISO,
+  onChanged,
+  writeOwn,
+}: {
+  userId: string;
+  dateISO: string;
+  completedOnISO?: string;
+  onChanged: () => void;
+  writeOwn?: (dateISO: string, onDone: () => void) => React.ReactNode;
+}) {
+  const [menu, setMenu] = useState(false);
+  const [opened, setOpened] = useState<Opened>(null);
+  const finish = () => {
+    setOpened(null);
+    onChanged();
+  };
+  const choose = (o: Opened) => {
+    setMenu(false);
+    setOpened(o);
+  };
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setMenu(true)}
+        className="inline-flex h-10 items-center gap-1.5 rounded-full border border-dashed border-hairline px-4 text-sm font-semibold text-muted hover:border-accent hover:text-accent"
+      >
+        + Conditioning
+      </button>
+      {menu && (
+        <Modal title="Conditioning" onClose={() => setMenu(false)}>
+          <div className="grid gap-2">
+            <button type="button" onClick={() => choose("pick")} className={PRIMARY}>
+              Pick one
+            </button>
+            <button type="button" onClick={() => choose("build")} className={QUIET + " justify-center"}>
+              Build one
+            </button>
+            {writeOwn && (
+              <button type="button" onClick={() => choose("own")} className={QUIET + " justify-center"}>
+                Write your own
+              </button>
+            )}
+          </div>
+        </Modal>
+      )}
+      {opened === "pick" && (
+        <PickOne userId={userId} dateISO={dateISO} completedOnISO={completedOnISO} onDone={finish} onClose={() => setOpened(null)} />
+      )}
+      {opened === "build" && (
+        <BuildOne userId={userId} dateISO={dateISO} completedOnISO={completedOnISO} onDone={finish} onClose={() => setOpened(null)} />
+      )}
+      {opened === "own" && writeOwn && (
+        <Modal title="Write your own" onClose={() => setOpened(null)}>
+          {writeOwn(dateISO, finish)}
+        </Modal>
+      )}
+    </>
+  );
+}
+
+/**
  * A Conditioning plan with no workout chosen ahead: Pick one, Build one or
  * Write your own on the day. Any conditioning logged that day completes it.
  */

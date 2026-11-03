@@ -67,14 +67,39 @@ async function recentFeedback(userId: string, dateISO: string): Promise<Feedback
       userId,
       date: { gte: toDateColumn(addDays(dateISO, -RULES.hardDays - 4)), lte: toDateColumn(dateISO) },
     },
-    select: { date: true, effort: true, hurt: true },
-  })) as { date: Date; effort: string | null; hurt: string | null }[];
-  return rows.map((r) => ({ date: fromDateColumn(r.date), effort: r.effort, hurt: r.hurt }));
+    select: { date: true, effort: true, hurt: true, slot: true },
+  })) as { date: Date; effort: string | null; hurt: string | null; slot: string }[];
+  // What each answer was about: a movement's muscle group, or cardio /
+  // conditioning / sport (v0.619).
+  const ids = [...new Set(rows.map((r) => r.slot).filter((x) => !x.includes(":")))];
+  const groups = new Map(
+    (ids.length
+      ? ((await prisma.poolExercise.findMany({ where: { id: { in: ids } }, select: { id: true, muscleGroup: true } })) as {
+          id: string;
+          muscleGroup: string | null;
+        }[])
+      : []
+    ).map((p) => [p.id, p.muscleGroup]),
+  );
+  const kind = (slot: string) =>
+    slot.startsWith("cardio:") ? "CARDIO" : slot.startsWith("hiit:") ? "HIIT" : slot.startsWith("sport:") ? "SPORT" : groups.get(slot) ?? null;
+  return rows.map((r) => ({ date: fromDateColumn(r.date), effort: r.effort, hurt: r.hurt, group: kind(r.slot) }));
+}
+
+/** The latest day a person started a program or got new plan entries. */
+async function planChangedOn(userId: string): Promise<string | null> {
+  const [program, plan] = (await Promise.all([
+    prisma.personProgram.findFirst({ where: { userId }, orderBy: { startedOn: "desc" }, select: { startedOn: true } }),
+    prisma.plannedWorkout.findFirst({ where: { userId }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
+  ])) as [{ startedOn: Date } | null, { createdAt: Date } | null];
+  const a = program ? fromDateColumn(program.startedOn) : null;
+  const b = plan ? plan.createdAt.toISOString().slice(0, 10) : null;
+  return a && b ? (a > b ? a : b) : a ?? b;
 }
 
 /** The day page's card for a person and day (at most one). */
 export async function daySuggestionFor(userId: string, dateISO: string): Promise<Suggestion | null> {
-  const [answers, feedback, last, intent] = await Promise.all([
+  const [answers, feedback, last, intent, changed] = await Promise.all([
     answersOn(userId, dateISO),
     recentFeedback(userId, dateISO),
     prisma.workoutSession.findFirst({
@@ -83,9 +108,11 @@ export async function daySuggestionFor(userId: string, dateISO: string): Promise
       select: { date: true },
     }) as Promise<{ date: Date } | null>,
     programIntentFor(userId, dateISO),
+    planChangedOn(userId),
   ]);
   const answered = new Set([...answers.keys()].filter((k) => k.startsWith("|")).map((k) => k.slice(1)));
   return daySuggestion({
+    planChangedOn: changed,
     today: dateISO,
     lastTrained: last ? fromDateColumn(last.date) : null,
     feedback,

@@ -45,7 +45,7 @@ export const NAV_LABEL: Record<NavRegion, string> = {
   ARMS: "Arms",
   LEGS: "Legs",
   BACK: "Back",
-  POSTERIOR_HIP: "Lower back & glutes",
+  POSTERIOR_HIP: "Deadlift",
 };
 
 export type Involvement = {
@@ -135,8 +135,8 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
     // Romanian / stiff-leg is a hamstring movement with the back holding position.
     match: /\b(romanian|rdl|stiff[- ]?leg)/,
     involvement: {
-      suggestedPrimary: "LEGS",
-      secondary: ["BACK", "CORE"],
+      suggestedPrimary: "DEADLIFT",
+      secondary: ["LEGS", "BACK", "CORE"],
       view: "back",
       navRegion: "POSTERIOR_HIP",
     },
@@ -148,8 +148,8 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
     // Posterior view only: that is what separates it from a squat on the body.
     match: /\bdeadlift/,
     involvement: {
-      suggestedPrimary: "LEGS",
-      secondary: ["BACK", "CORE", "ARMS"],
+      suggestedPrimary: "DEADLIFT",
+      secondary: ["LEGS", "BACK", "CORE", "ARMS"],
       view: "back",
       navRegion: "POSTERIOR_HIP",
     },
@@ -279,6 +279,8 @@ export function navRegionFor(
   if (inv?.navRegion) return inv.navRegion;
   const g = filed ?? inv?.suggestedPrimary ?? null;
   if (g === null) return null;
-  // FULL_BODY has no single place on the body to press.
+  // FULL_BODY has no single place on the body to press; Deadlift is reached
+  // from the lower back and glutes.
+  if (g === "DEADLIFT") return "POSTERIOR_HIP";
   return g === "FULL_BODY" ? null : (g as NavRegion);
 }

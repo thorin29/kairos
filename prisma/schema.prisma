@@ -1152,6 +1152,8 @@ enum MuscleGroup {
   ARMS
   CORE
   FULL_BODY
+  /// Deadlifts and their variants (v0.619.0).
+  DEADLIFT
 }
 
 // The household exercise pool: a shared, admin-managed library of movements,

@@ -91,7 +91,11 @@ function Figure({
         if (firstOfTarget) seen.add(nav!);
 
         // Shading is by GROUP; selection is by NAV.
-        const fill = inert ? INERT : (fills[p.group!] ?? INERT);
+        // Deadlift has no muscles of its own in the artwork: it shades the
+        // lower back and glutes it's reached from (v0.619).
+        const fill = inert
+          ? INERT
+          : ((nav === "POSTERIOR_HIP" ? fills.DEADLIFT : undefined) ?? fills[p.group!] ?? INERT);
 
         return (
           <path

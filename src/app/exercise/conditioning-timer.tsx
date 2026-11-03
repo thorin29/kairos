@@ -54,12 +54,15 @@ export function ConditioningTimer({
   lastText,
   onLog,
   onClose,
+  logLabel = "Log",
 }: {
   userId: string;
   workout: TimerWorkout;
   lastText: string | null;
   onLog: (value: number, notes: string) => Promise<void>;
   onClose: () => void;
+  /** The done step's button: "Log", or "Use time" for a timed set (v0.619). */
+  logLabel?: string;
 }) {
   const plan = useMemo(
     () => timerPlanFor(workout.type, workout.capSec, workout.movements.map((m) => m.name)),
@@ -439,7 +442,7 @@ export function ConditioningTimer({
                 className="ml-auto min-h-[48px] rounded-full px-6 text-base font-bold disabled:opacity-50"
                 style={{ background: C.accent, color: C.bg }}
               >
-                {saving ? "Saving…" : "Log"}
+                {saving ? "Saving…" : logLabel}
               </button>
             </div>
             {workout.today && (

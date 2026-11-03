@@ -15,11 +15,15 @@ export const RULES = {
   breakDays: 14,
   /** How long a hurt area keeps being asked about. */
   hurtDays: 7,
-  /** Hard or Too hard this many times in the last few answers… */
+  /** "Too hard" on the same muscle group this many times in a row… */
   hardCount: 2,
-  /** …out of this many, within this many days. */
-  hardOf: 3,
+  /** …or a "Too hard" on this many training days in a row… */
+  hardDaysInRow: 3,
+  /** …within this many days. Hard alone never asks (v0.619). */
   hardDays: 10,
+  /** Days after a new program or plan when effort isn't read: the workout is
+   *  changing, so it's expected to feel different. */
+  settleDays: 14,
   /** No new best for this many weeks, with at least this many sessions. */
   stallWeeks: 6,
   stallSessions: 4,
@@ -51,8 +55,8 @@ export const HURT_GROUPS: Record<HurtArea, MuscleGroup[]> = {
   ELBOW: ["ARMS", "CHEST"],
   WRIST: ["ARMS", "CHEST", "SHOULDERS"],
   UPPER_BACK: ["BACK", "SHOULDERS"],
-  LOWER_BACK: ["LEGS", "BACK", "CORE"],
-  HIP: ["LEGS"],
+  LOWER_BACK: ["DEADLIFT", "LEGS", "BACK", "CORE"],
+  HIP: ["LEGS", "DEADLIFT"],
   KNEE: ["LEGS"],
   ANKLE: ["LEGS"],
   OTHER: [],
@@ -69,7 +73,13 @@ export function whenLabel(dateISO: string, today: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-export type FeedbackIn = { date: string; effort: string | null; hurt: string | null };
+export type FeedbackIn = {
+  date: string;
+  effort: string | null;
+  hurt: string | null;
+  /** What the answer was about: a muscle group, CARDIO, HIIT or SPORT. */
+  group?: string | null;
+};
 
 /** The latest area that hurt within RULES.hurtDays, if any. */
 export function recentHurt(feedback: readonly FeedbackIn[], today: string): { area: HurtArea; date: string } | null {
@@ -98,6 +108,8 @@ export function daySuggestion(input: {
   /** A program's light or test week: the program already decided. */
   programIntent: "LIGHT" | "TEST" | null;
   answered: ReadonlySet<string>;
+  /** When the person last started a program or got a new plan. */
+  planChangedOn?: string | null;
 }): Suggestion | null {
   const { today, answered } = input;
   if (input.light || input.programIntent) return null;
@@ -128,16 +140,13 @@ export function daySuggestion(input: {
     };
   }
 
-  const recent = input.feedback
-    .filter((f) => f.effort && days(f.date, today) >= 0 && days(f.date, today) <= RULES.hardDays)
-    .sort((a, b) => (a.date < b.date ? 1 : -1))
-    .slice(0, RULES.hardOf);
-  const hard = recent.filter((f) => f.effort === "HARD" || f.effort === "TOO_HARD").length;
-  if (hard >= RULES.hardCount && !answered.has("hard")) {
+  const settling = !!input.planChangedOn && days(input.planChangedOn, today) < RULES.settleDays;
+  const hard = settling ? null : tooHard(input.feedback, today);
+  if (hard && !answered.has("hard")) {
     return {
       key: "hard",
-      title: "Your last workouts felt hard. Take a lighter day?",
-      why: `${hard} of your last ${recent.length} felt Hard or Too hard.`,
+      title: "Take a lighter day?",
+      why: hard,
       actions: [
         { answer: "light", label: "Lighter today" },
         { answer: "dismiss", label: "Not today" },
@@ -146,6 +155,57 @@ export function daySuggestion(input: {
   }
   return null;
 }
+
+/**
+ * Whether recent workouts were too hard (v0.619), and why: the same muscle
+ * group answered "Too hard" its last RULES.hardCount times, or each of the last
+ * RULES.hardDaysInRow training days had a "Too hard". "Hard" alone is fine.
+ */
+export function tooHard(feedback: readonly FeedbackIn[], today: string): string | null {
+  const recent = feedback
+    .filter((f) => f.effort && days(f.date, today) >= 0 && days(f.date, today) <= RULES.hardDays)
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  const byGroup = new Map<string, FeedbackIn[]>();
+  for (const f of recent) {
+    if (!f.group) continue;
+    byGroup.set(f.group, [...(byGroup.get(f.group) ?? []), f]);
+  }
+  for (const [g, list] of byGroup) {
+    // One answer per day: a day with two arm movements is one arms workout.
+    const perDay: FeedbackIn[] = [];
+    for (const f of list) {
+      const same = perDay.find((x) => x.date === f.date);
+      if (!same) perDay.push({ ...f });
+      else if (f.effort === "TOO_HARD") same.effort = "TOO_HARD";
+    }
+    const last = perDay.slice(0, RULES.hardCount);
+    if (last.length === RULES.hardCount && last.every((f) => f.effort === "TOO_HARD")) {
+      return `${GROUP_WORD[g] ?? "It"} felt too hard the last ${RULES.hardCount} times.`;
+    }
+  }
+  const dates = [...new Set(recent.map((f) => f.date))].slice(0, RULES.hardDaysInRow);
+  if (
+    dates.length === RULES.hardDaysInRow &&
+    dates.every((d) => recent.some((f) => f.date === d && f.effort === "TOO_HARD"))
+  ) {
+    return `Something felt too hard on each of your last ${RULES.hardDaysInRow} workouts.`;
+  }
+  return null;
+}
+
+const GROUP_WORD: Record<string, string> = {
+  CHEST: "Chest",
+  BACK: "Back",
+  SHOULDERS: "Shoulders",
+  LEGS: "Legs",
+  ARMS: "Arms",
+  CORE: "Core",
+  FULL_BODY: "Full body",
+  DEADLIFT: "Deadlift",
+  CARDIO: "Cardio",
+  HIIT: "Conditioning",
+  SPORT: "Sport",
+};
 
 export type SessionIn = {
   date: string;

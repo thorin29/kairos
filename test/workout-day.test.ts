@@ -350,11 +350,33 @@ describe("suggestions (v0.612)", () => {
     expect(hurt?.title).toBe("Your shoulder hurt on Tuesday. Go lighter today?");
     expect(daySuggestion({ ...base, feedback: [{ date: "2026-10-27", effort: null, hurt: "SHOULDER" }], answered: new Set(["hurt"]) })).toBeNull();
     const hard = [
-      { date: "2026-10-29", effort: "HARD", hurt: null },
-      { date: "2026-10-28", effort: "TOO_HARD", hurt: null },
-      { date: "2026-10-27", effort: "SOLID", hurt: null },
+      { date: "2026-10-29", effort: "TOO_HARD", hurt: null, group: "ARMS" },
+      { date: "2026-10-27", effort: "TOO_HARD", hurt: null, group: "ARMS" },
+      { date: "2026-10-28", effort: "SOLID", hurt: null, group: "CHEST" },
     ];
     expect(daySuggestion({ ...base, feedback: hard })?.key).toBe("hard");
+    expect(daySuggestion({ ...base, feedback: hard })?.why).toBe("Arms felt too hard the last 2 times.");
+    // Hard (not too hard), or two groups on one day, never ask (v0.619).
+    const sameDay = [
+      { date: "2026-10-29", effort: "HARD", hurt: null, group: "ARMS" },
+      { date: "2026-10-29", effort: "HARD", hurt: null, group: "ARMS" },
+      { date: "2026-10-28", effort: "HARD", hurt: null, group: "CHEST" },
+    ];
+    expect(daySuggestion({ ...base, feedback: sameDay })).toBeNull();
+    const oneDayTwoMoves = [
+      { date: "2026-10-29", effort: "TOO_HARD", hurt: null, group: "ARMS" },
+      { date: "2026-10-29", effort: "TOO_HARD", hurt: null, group: "ARMS" },
+    ];
+    expect(daySuggestion({ ...base, feedback: oneDayTwoMoves })).toBeNull();
+    const threeDays = [
+      { date: "2026-10-29", effort: "TOO_HARD", hurt: null, group: "ARMS" },
+      { date: "2026-10-28", effort: "TOO_HARD", hurt: null, group: "LEGS" },
+      { date: "2026-10-27", effort: "TOO_HARD", hurt: null, group: "CHEST" },
+    ];
+    expect(daySuggestion({ ...base, feedback: threeDays })?.key).toBe("hard");
+    // Not while a new program or plan settles in.
+    expect(daySuggestion({ ...base, feedback: hard, planChangedOn: "2026-10-25" })).toBeNull();
+    expect(daySuggestion({ ...base, feedback: hard, planChangedOn: "2026-10-01" })?.key).toBe("hard");
     expect(daySuggestion({ ...base, feedback: hard, light: true })).toBeNull();
     expect(daySuggestion({ ...base, feedback: hard, programIntent: "LIGHT" })).toBeNull();
     expect(recentHurt([{ date: "2026-10-01", effort: null, hurt: "KNEE" }], "2026-10-30")).toBeNull();

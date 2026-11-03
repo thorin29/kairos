@@ -857,7 +857,8 @@ GET  /api/v1/workouts/programs
 ProgramChoice: { "key","name","blurb","weeks","defaultDays":[weekday],
                  "days":[ { "name","row":bool,
                             "roles":[ { "key","label","muscleGroup","main","optional","scheme",
-                                        "defaultId"|null,"options":[ {id,name} ] } ] } ] }
+                                        "defaultId"|null,"options":[ {id,name,best} ] } ] } ] }
+                 // best: highest weight logged for that movement, or null (v0.619)
 ProgramInfo:   { "key","name","week","weeks","label","intent":"LIGHT"|"TEST"|null,
                  "blockDone":bool,"maxes":[ { "poolExerciseId","name","weight" } ] }
 
@@ -876,6 +877,14 @@ also returns `program` (ProgramInfo for that day, or null). Progress points
 carry `intent` ("LIGHT"/"TEST"), drawn hollow. Rules:
 src/lib/workouts/programs.ts (`targetsFor`); running a program:
 src/lib/workouts/program-run.ts.
+
+v0.619: a slot's options are every active movement in its muscle group or whose
+name matches the slot (pull-ups, deadlifts), any category. A timed movement
+(logs as DURATION) keeps its metric when a program writes it. On a 5/3/1 set,
+the movement's target sets carry `pct` (fraction of the training max). `GET
+/api/v1/workouts` also returns `conditioningDone: [ { name, result|null } ]`,
+the conditioning logged that day. A conditioning session no longer counts as
+an unplanned workout that completes the day.
 
 **Suggestions (v0.612).**
 ```

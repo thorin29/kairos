@@ -1600,7 +1600,8 @@ export type MovementLog = {
     title: string;
     /** "Work up to a top set", "3 × 8–12". */
     scheme: string;
-    sets: { weight: number | null; reps: number; top?: boolean }[];
+    /** `pct`: a 5/3/1 set's share of the training max (v0.619). */
+    sets: { weight: number | null; reps: number; top?: boolean; pct?: number }[];
   } | null;
   /** One suggestion card for this movement, or null (v0.612). */
   suggestion: Suggestion | null;

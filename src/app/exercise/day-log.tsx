@@ -18,8 +18,9 @@ import {
 import type { Concept2Day } from "@/lib/workouts/concept2-run";
 import { CardioCard } from "./cardio-card";
 import { ConditioningCard } from "./conditioning-card";
+import { ConditioningTimer } from "./conditioning-timer";
 import { EffortPicker } from "@/components/effort-picker";
-import { BenchmarkCard, PickConditioningCard } from "./conditioning-picker";
+import { AddConditioning, BenchmarkCard, PickConditioningCard } from "./conditioning-picker";
 import type { BenchmarkState, PickPlan } from "@/lib/workouts/wod-run";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
 import type { CardioEntry } from "@/lib/workouts/cardio-run";
@@ -52,6 +53,7 @@ import {
   CheckIcon,
   ChevronRightIcon,
   DumbbellIcon,
+  TimerIcon,
   MoonIcon,
   PlusIcon,
   SwapIcon,
@@ -112,6 +114,7 @@ export function DayLog({
     conditioning: ConditioningPlan[];
     picks: PickPlan[];
     benchmark: BenchmarkState;
+    conditioningDone: { name: string; result: string | null }[];
   } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -527,6 +530,30 @@ export function DayLog({
                 </div>
               </section>
             ))}
+            {(() => {
+              // Conditioning done today that no card above shows: a one-off.
+              if (data.picks.length > 0) return null;
+              const planned = new Set(data.conditioning.map((c) => c.name.slice(0, 40)));
+              const extra = data.conditioningDone.filter((c) => !planned.has(c.name.slice(0, 40)));
+              return extra.length > 0 ? (
+                <ul className="space-y-1 rounded-xl border border-hairline bg-surface px-4 py-3 text-sm">
+                  {extra.map((c, i) => (
+                    <li key={i}>
+                      <span className="font-medium">{c.name}</span>
+                      {c.result && <span className="tabular text-muted"> · {c.result}</span>}
+                    </li>
+                  ))}
+                </ul>
+              ) : null;
+            })()}
+            <AddConditioning
+              key={`addc:${date}`}
+              userId={userId}
+              dateISO={date}
+              completedOnISO={completedOnISO}
+              onChanged={() => setTick((n) => n + 1)}
+              writeOwn={writeOwn}
+            />
           </div>
         )
       )}
@@ -661,6 +688,8 @@ type Row = {
   added: boolean;
   /** The program's top set (work up to a top set). */
   top?: boolean;
+  /** A 5/3/1 set's share of the training max (v0.619). */
+  pct?: number;
 };
 
 const num = (v: string): number | null => {
@@ -686,6 +715,7 @@ function rowsFrom(log: MovementLog): Row[] {
       saved: true,
       added: i >= Math.max(last.length, target.length),
       top: target[i]?.top,
+      pct: target[i]?.pct,
     }));
   }
   if (target.length > 0) {
@@ -700,6 +730,7 @@ function rowsFrom(log: MovementLog): Row[] {
       saved: false,
       added: false,
       top: t.top,
+      pct: t.pct,
     }));
   }
   if (last.length > 0) {
@@ -765,6 +796,8 @@ function MovementLogger({
   const [picking, setPicking] = useState(false);
   const [confirmKey, setConfirmKey] = useState<number | null>(null);
   const [calcKey, setCalcKey] = useState<number | null>(null);
+  // A timed movement's timer, for this set (v0.619): its time fills the set.
+  const [timerKey, setTimerKey] = useState<number | null>(null);
   const [skipped, setSkipped] = useState(false);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [leaving, setLeaving] = useState(false);
@@ -979,6 +1012,9 @@ function MovementLogger({
   const nextUnsaved = rows.find((r) => !r.saved) ?? rows[rows.length - 1];
   const lastSets = log?.last?.sets ?? [];
   const hasHints = rows.some((r) => r.hintW != null || r.hintR != null || r.hintS != null);
+  // A program that fixes each set's weight (5/3/1): no removing sets and no
+  // moving the remaining weights (v0.619).
+  const strict = rows.some((r) => r.pct != null);
   const cols =
     metric === "WEIGHT"
       ? "grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem_2.75rem] sm:grid-cols-[2rem_5.5rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem_2.75rem]"
@@ -1079,7 +1115,9 @@ function MovementLogger({
                   <div className={`grid ${cols} items-center gap-2`}>
                     <span className="tabular pl-1 text-sm font-semibold">
                       {i + 1}
-                      {r.top && <span className="block text-[10px] font-bold uppercase leading-none text-accent">Top</span>}
+                      {r.pct != null && (
+                        <span className="block text-[11px] font-semibold leading-none text-accent">{Math.round(r.pct * 100)}%</span>
+                      )}
                     </span>
                     <span className="tabular hidden text-sm text-muted sm:block">
                       {r.added ? "new" : lastText(lastSets[i], metric)}
@@ -1124,14 +1162,27 @@ function MovementLogger({
                     >
                       <CheckIcon className="h-4 w-4" />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => (r.saved ? setConfirmKey(r.key) : remove(r))}
-                      aria-label={`Remove set ${i + 1}`}
-                      className="mx-auto flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
-                    >
-                      <XIcon className="h-4 w-4" />
-                    </button>
+                    {strict ? (
+                      // A set the program fixed isn't removed: a set left blank
+                      // simply isn't logged. Its plates instead (v0.619).
+                      <button
+                        type="button"
+                        onClick={() => setCalcKey(r.key)}
+                        aria-label={`Plates for set ${i + 1}`}
+                        className="mx-auto flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
+                      >
+                        <DumbbellIcon className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => (r.saved ? setConfirmKey(r.key) : remove(r))}
+                        aria-label={`Remove set ${i + 1}`}
+                        className="mx-auto flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
+                      >
+                        <XIcon className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                   {(() => {
                     if (metric !== "WEIGHT" || (!r.saved && !typed(r))) return null;
@@ -1190,7 +1241,7 @@ function MovementLogger({
                   Same as last time
                 </button>
               )}
-              {metric === "WEIGHT" && hasHints && (
+              {metric === "WEIGHT" && hasHints && !strict && (
                 <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted">
                   Remaining sets
                   <button
@@ -1237,10 +1288,10 @@ function MovementLogger({
               onClick={() => void toggleSkip()}
             />
             <PlanActionTile
-              icon={DumbbellIcon}
-              label="Calculator"
-              onClick={() => setCalcKey(nextUnsaved?.key ?? null)}
-              disabled={metric !== "WEIGHT"}
+              icon={metric === "DURATION" ? TimerIcon : DumbbellIcon}
+              label={metric === "DURATION" ? "Timer" : "Calculator"}
+              onClick={() => (metric === "DURATION" ? setTimerKey(nextUnsaved?.key ?? rows.at(-1)?.key ?? null) : setCalcKey(nextUnsaved?.key ?? null))}
+              disabled={metric !== "WEIGHT" && metric !== "DURATION"}
             />
             <PlanActionTile
               icon={CheckIcon}
@@ -1252,6 +1303,27 @@ function MovementLogger({
             />
           </div>
         </>
+      )}
+
+      {timerKey != null && (
+        <ConditioningTimer
+          userId={userId}
+          workout={{
+            name: doing?.name ?? exercise.name,
+            type: "FOR_TIME",
+            capSec: null,
+            movements: [],
+            resultLabel: "Time",
+            today: null,
+          }}
+          lastText={null}
+          logLabel={`Use for set ${rows.findIndex((r) => r.key === timerKey) + 1}`}
+          onLog={async (seconds) => {
+            update(timerKey, { s: String(Math.round(seconds)), saved: false });
+            setTimerKey(null);
+          }}
+          onClose={() => setTimerKey(null)}
+        />
       )}
 
       {calcKey != null && (

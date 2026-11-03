@@ -141,19 +141,34 @@ export type ProgramChoice = {
       scheme: string;
       /** The pool movement it starts with (null: nothing fits; pick one or leave it out). */
       defaultId: string | null;
-      /** Movements that fit, by muscle group. */
-      options: { id: string; name: string }[];
+      /** Movements that fit (by group, or named by the slot), with the
+       *  person's heaviest logged weight on each. */
+      options: { id: string; name: string; best: number | null }[];
     }[];
   }[];
 };
 
-/** Every program, with each slot's default and choices from the pool. */
-export async function loadProgramChoices(): Promise<ProgramChoice[]> {
+/** Every program, with each slot's default and choices from the pool, and —
+ *  for a person — the heaviest weight they've ever logged on each choice (the
+ *  starting training max is 90% of it, v0.619). */
+export async function loadProgramChoices(userId?: string | null): Promise<ProgramChoice[]> {
   const pool = (await prisma.poolExercise.findMany({
-    where: { isActive: true, ownerId: null, category: "WEIGHTS" },
+    where: { isActive: true, ownerId: null },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, muscleGroup: true },
-  })) as { id: string; name: string; muscleGroup: string | null }[];
+    select: { id: true, name: true, muscleGroup: true, category: true },
+  })) as { id: string; name: string; muscleGroup: string | null; category: string }[];
+  const bests = new Map<string, number>();
+  if (userId) {
+    const rows = (await prisma.sessionSet.findMany({
+      where: { poolExerciseId: { not: null }, weight: { not: null }, session: { userId, isRest: false } },
+      select: { poolExerciseId: true, weight: true },
+    })) as { poolExerciseId: string | null; weight: number | null }[];
+    for (const r of rows) {
+      if (!r.poolExerciseId || !r.weight) continue;
+      if (r.weight > (bests.get(r.poolExerciseId) ?? 0)) bests.set(r.poolExerciseId, r.weight);
+    }
+  }
+  const norm = (s: string) => s.trim().toLowerCase().replace(/s$/, "");
   return PROGRAMS.map((p) => ({
     key: p.key,
     name: p.name,
@@ -164,7 +179,13 @@ export async function loadProgramChoices(): Promise<ProgramChoice[]> {
       name: d.name,
       row: !!d.row,
       roles: d.roles.map((r) => {
-        const fits = pool.filter((m) => m.muscleGroup === r.muscleGroup);
+        // Movements filed under the slot's group, and any movement the slot
+        // names wherever it's filed (pull-ups kept under HIIT, a deadlift
+        // under Core).
+        const names = new Set(r.match.map(norm));
+        const fits = pool.filter(
+          (m) => (m.category === "WEIGHTS" && m.muscleGroup === r.muscleGroup) || names.has(norm(m.name)),
+        );
         const def = defaultFor(r, pool);
         return {
           key: r.key,
@@ -174,7 +195,7 @@ export async function loadProgramChoices(): Promise<ProgramChoice[]> {
           optional: !!r.optional,
           scheme: schemeKey(r.scheme),
           defaultId: def?.id ?? null,
-          options: fits.map((m) => ({ id: m.id, name: m.name })),
+          options: fits.map((m) => ({ id: m.id, name: m.name, best: bests.get(m.id) ?? null })),
         };
       }),
     })),
@@ -288,9 +309,14 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
   }
   const pickIds = [...new Set(Object.values(input.picks).filter((v): v is string => !!v))];
   const pool = pickIds.length
-    ? ((await prisma.poolExercise.findMany({ where: { id: { in: pickIds } }, select: { id: true } })) as { id: string }[])
+    ? ((await prisma.poolExercise.findMany({ where: { id: { in: pickIds } }, select: { id: true, metric: true } })) as {
+        id: string;
+        metric: string | null;
+      }[])
     : [];
   const known = new Set(pool.map((p) => p.id));
+  // A timed movement (a plank) keeps logging by time, with no set structure.
+  const timed = new Set(pool.filter((p) => p.metric === "DURATION").map((p) => p.id));
 
   const prev = await snapshotPlan(userId);
   const prevActive = (await prisma.personProgram.findFirst({
@@ -346,9 +372,9 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
             create: exercises.map((e, k) => ({
               poolExerciseId: e.poolExerciseId,
               tracked: true,
-              metric: "WEIGHT",
+              metric: timed.has(e.poolExerciseId) ? "DURATION" : "WEIGHT",
               sortOrder: k,
-              scheme: e.scheme,
+              scheme: timed.has(e.poolExerciseId) ? null : e.scheme,
               programRole: e.programRole,
             })),
           },

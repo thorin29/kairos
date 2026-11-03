@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   if ("response" in authed) return authed.response;
   const userId = authed.device.person.id;
   const [choices, active, invite] = await Promise.all([
-    loadProgramChoices(),
+    loadProgramChoices(userId),
     programInfoFor(userId, todayISO()),
     inviteFor(userId),
   ]);

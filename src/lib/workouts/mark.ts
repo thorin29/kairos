@@ -167,12 +167,12 @@ async function workoutTaskTarget(
     where: { userId, date, isRest: false },
     select: { name: true, category: true },
   })) as { name: string | null; category: string | null }[];
-  // A "pick on the day" Conditioning plan (v0.617) owns whatever
-  // conditioning is logged.
   const unplanned = others.some(
     (o) =>
       !isOptionalCategory(o.category) &&
-      !(progress.pickConditioning && o.category === "HIIT") &&
+      // Conditioning added to a planned day is an extra too (v0.619): a
+      // finisher doesn't finish the day's lifts.
+      o.category !== "HIIT" &&
       (o.name == null || !planNames.has(o.name.slice(0, 40))),
   );
 

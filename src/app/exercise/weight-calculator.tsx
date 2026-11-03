@@ -273,7 +273,12 @@ export function WeightCalculator({
               <button
                 key={b.label}
                 type="button"
-                onClick={() => setBar(b)}
+                onClick={() => {
+                  setBar(b);
+                  // A set's weight stays the target: switching the bar reloads
+                  // the plates for it (v0.619).
+                  if (startTotal && startTotal > b.weight) setLoaded(platesFor(startTotal, b.weight));
+                }}
                 className={[
                   "rounded-full border px-3 py-1 text-sm font-medium",
                   bar.label === b.label

@@ -287,6 +287,16 @@ export function RefreshIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+/** A stopwatch: the timer. */
+export function TimerIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2 2M9 2h6" />
+    </svg>
+  );
+}
+
 /** Two arrows chasing round: refresh / sync. */
 export function SyncIcon({ className = "h-5 w-5" }: IconProps) {
   return (

@@ -34,6 +34,7 @@ import {
   applyWodLibrary,
   benchmarkFor,
   cleanVersion,
+  conditioningOnDay,
   conditioningChoices,
   logBuiltConditioning,
   logNamedConditioning,
@@ -1203,11 +1204,13 @@ export async function loadDayLog(
   conditioning: ConditioningPlan[];
   picks: PickPlan[];
   benchmark: BenchmarkState;
+  /** Every conditioning result logged that day (v0.619). */
+  conditioningDone: { name: string; result: string | null }[];
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
   if (!ISO.test(dateISO)) throw new Error("Bad date");
-  const [state, loggedByPool, order, cardio, conditioning, picks, benchmark] = await Promise.all([
+  const [state, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone] = await Promise.all([
     loadDayLogState(userId, dateISO),
     loadLoggedWeights(userId, dateISO),
     orderForDay(userId, dayOfWeek(dateISO)),
@@ -1215,8 +1218,9 @@ export async function loadDayLog(
     conditioningFor(userId, dateISO),
     pickPlansFor(userId, dateISO),
     benchmarkFor(userId, dateISO),
+    conditioningOnDay(userId, dateISO),
   ]);
-  return { state, loggedByPool, order, cardio, conditioning, picks, benchmark };
+  return { state, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone };
 }
 
 // --- conditioning: Pick one, Build one, the monthly benchmark (v0.617) ------
@@ -1477,7 +1481,7 @@ export async function loadProgramsFor(userId: string): Promise<{
   await requireInteractive();
   await requireCanActFor(userId);
   const [choices, active, invite] = await Promise.all([
-    loadProgramChoices(),
+    loadProgramChoices(userId),
     programInfoFor(userId, todayISO()),
     inviteFor(userId),
   ]);

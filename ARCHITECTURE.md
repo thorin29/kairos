@@ -194,6 +194,10 @@ production:
 | Concept2 results to rows, when to sync, how far back | `mapResult` / `syncFrom` / `syncDue` / `rowSummary` in `src/lib/workouts/concept2.ts` (pure); token, ledger, replace and Undo in `src/lib/workouts/concept2-run.ts` |
 | A movement's "Watch how" link | `watchUrl` in `src/lib/workouts/watch.ts` (the phone's `watchUrl` in `MovementInfo.kt` matches it) |
 | Which suggestion shows, and its thresholds; a big jump; a lighter day | `daySuggestion` / `movementSuggestion` / `bigJump` / `RULES` in `src/lib/workouts/suggest.ts` (pure); answers and the day's lightness in `src/lib/workouts/suggest-run.ts` |
+| Muscle groups (Deadlift included) and their labels | `MUSCLE_GROUPS` / `MG_LABEL` in `src/lib/workouts/catalog.ts`; body-map regions in `navRegionFor` (`involvement.ts`); existing deadlifts moved by migration `139_deadlift_move` |
+| A program slot's movement choices and top-weight prefill | `loadProgramChoices` in `src/lib/workouts/program-run.ts` |
+| The 5/3/1 logger (% per set, plates button, no ±5) and the Timer tile | `DayLog` / movement logger in `src/app/exercise/day-log.tsx`; `pct` on target sets from `targetsFor` |
+| + Conditioning on any day | `AddConditioning` in `src/app/exercise/conditioning-picker.tsx`; `conditioningDone` from `conditioningOnDay` |
 | How a movement felt and where it hurt | `setMovementFeedback` in `src/lib/workouts/feedback.ts`; effort and area keys in `catalog.ts` |
 | How a pool movement is logged, and which names are holds | `poolMetricFor` / `isHoldName` in `src/lib/workouts/catalog.ts`; new plan entries via `poolMetrics` (`src/lib/workouts/plan-edit.ts`); changes spread by `setPoolExerciseMetric` |
 | Saving one movement's sets for a day (add, edit, remove, swap, late) | `logMovementSets` in `src/lib/workouts/mark.ts`; phone via `/api/v1/workouts/sets` |

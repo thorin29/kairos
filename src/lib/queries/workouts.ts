@@ -6,6 +6,7 @@ import { getSetting } from "@/lib/settings";
 import { loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
 import { setsSummary } from "@/lib/workouts/sets";
 import { loadDayOrders, type DayOrders } from "@/lib/workouts/day-order";
+import { programByKey } from "@/lib/workouts/programs";
 import {
   CATEGORY_LABEL,
   LINE_COLORS,
@@ -165,11 +166,47 @@ export type WorkoutsBoard = {
 export async function loadWorkoutPlanNames(
   userId: string,
 ): Promise<Map<number, string>> {
-  const planned = await prisma.plannedWorkout.findMany({
-    where: { userId, isRest: false },
-    orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
-    select: { dayOfWeek: true, name: true },
-  });
+  const [planned, program] = (await Promise.all([
+    prisma.plannedWorkout.findMany({
+      where: { userId, isRest: false },
+      orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
+      select: {
+        dayOfWeek: true,
+        name: true,
+        exercises: {
+          where: { programRole: { not: null } },
+          orderBy: { sortOrder: "asc" },
+          select: { programRole: true, poolExercise: { select: { name: true } } },
+        },
+      },
+    }),
+    prisma.personProgram.findFirst({ where: { userId, status: "ACTIVE" }, select: { programKey: true } }),
+  ])) as [
+    {
+      dayOfWeek: number;
+      name: string;
+      exercises: { programRole: string | null; poolExercise: { name: string } | null }[];
+    }[],
+    { programKey: string } | null,
+  ];
+
+  // On a program the day reads as the program and its main lift ("Strength
+  // waves · Back squats"), not every block of the day (v0.619).
+  const prog = programByKey(program?.programKey);
+  const mainRoles = new Set(prog ? prog.days.flatMap((d) => d.roles.filter((r) => r.main).map((r) => r.key)) : []);
+  const mains = new Map<number, string[]>();
+  if (prog) {
+    for (const p of planned) {
+      for (const e of p.exercises) {
+        if (!e.programRole || !mainRoles.has(e.programRole) || !e.poolExercise) continue;
+        const n = e.poolExercise.name.trim();
+        const label = n.charAt(0).toUpperCase() + n.slice(1);
+        const list = mains.get(p.dayOfWeek) ?? [];
+        if (!list.includes(label)) list.push(label);
+        mains.set(p.dayOfWeek, list);
+      }
+    }
+  }
 
   // Join every named planned workout for the day (in order) so a Legs + Chest
   // day reads "Legs · Chest" rather than just the first block.
@@ -186,7 +223,10 @@ export async function loadWorkoutPlanNames(
     byDay.set(p.dayOfWeek, list);
   }
   const out = new Map<number, string>();
-  for (const [day, names] of byDay) out.set(day, names.join(" \u00b7 "));
+  for (const [day, names] of byDay) {
+    const m = mains.get(day);
+    out.set(day, prog && m?.length ? [prog.name, ...m].join(" \u00b7 ") : names.join(" \u00b7 "));
+  }
   return out;
 }
 

@@ -102,7 +102,9 @@ export type MuscleGroup =
   | "LEGS"
   | "ARMS"
   | "CORE"
-  | "FULL_BODY";
+  | "FULL_BODY"
+  /** Deadlifts and their variants (v0.619): more than core work. */
+  | "DEADLIFT";
 
 export const MUSCLE_GROUPS: MuscleGroup[] = [
   "CHEST",
@@ -110,6 +112,7 @@ export const MUSCLE_GROUPS: MuscleGroup[] = [
   "SHOULDERS",
   "LEGS",
   "ARMS",
+  "DEADLIFT",
   "CORE",
   "FULL_BODY",
 ];
@@ -122,6 +125,7 @@ export const MUSCLE_GROUP_LABEL: Record<MuscleGroup, string> = {
   ARMS: "Arms",
   CORE: "Core",
   FULL_BODY: "Full body",
+  DEADLIFT: "Deadlift",
 };
 
 // HIIT / CrossFit workout types and how each one's single result reads.

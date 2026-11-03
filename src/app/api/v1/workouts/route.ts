@@ -14,7 +14,7 @@ import { dayOfWeek, todayISO } from "@/lib/dates";
 import { orderForDay } from "@/lib/workouts/day-order";
 import { cardioDay, simplePlansFor } from "@/lib/workouts/cardio-run";
 import { conditioningFor } from "@/lib/workouts/conditioning-run";
-import { benchmarkFor, pickPlansFor } from "@/lib/workouts/wod-run";
+import { benchmarkFor, conditioningOnDay, pickPlansFor } from "@/lib/workouts/wod-run";
 import { programInfoFor } from "@/lib/workouts/program-run";
 import { dayLightFactor, daySuggestionFor } from "@/lib/workouts/suggest-run";
 
@@ -90,6 +90,8 @@ export async function GET(req: NextRequest) {
     // SUGGEST, or null). Each conditioning plan also carries `about`,
     // `scaled` and the person's starting `version`.
     picks: await pickPlansFor(userId, date),
+    // v0.619: every conditioning result that day, for one-offs added to it.
+    conditioningDone: await conditioningOnDay(userId, date),
     benchmark: await benchmarkFor(userId, date),
   });
 }

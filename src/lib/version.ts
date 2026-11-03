@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.618.1";
+export const APP_VERSION = "0.619.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,19 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.619.0",
+    summary: [
+      "Deadlifts have their own group, Deadlift, on the plan, the charts and the body map.",
+      "On a 5/3/1 day each set shows its percentage, and the plates button shows what to load.",
+      "Timed movements like planks log by time in programs, with a timer on the movement.",
+      "Add a conditioning workout to any day.",
+      "Program setup fills in your top weights, and finds pull-ups and deadlifts.",
+      "The lighter-day suggestion only comes up after a muscle group felt too hard twice in a row.",
+      "The Workout days chart shows every day you've logged.",
+      "The home card shows the program and the day's main lift.",
+    ],
+  },
   {
     version: "0.618.1",
     summary: [

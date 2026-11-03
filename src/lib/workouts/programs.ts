@@ -178,7 +178,7 @@ export const PROGRAMS: readonly Program[] = [
       {
         name: "Deadlift day",
         roles: [
-          { key: "deadlift", label: "Deadlift", muscleGroup: "LEGS", match: DEAD, scheme: { kind: "WAVE" }, lower: true, main: true },
+          { key: "deadlift", label: "Deadlift", muscleGroup: "DEADLIFT", match: DEAD, scheme: { kind: "WAVE" }, lower: true, main: true },
           { key: "pull", label: "Pull", muscleGroup: "BACK", match: PULL, scheme: r(3, 6, 10), optional: true },
           { key: "core", label: "Core", muscleGroup: "CORE", match: CORE, scheme: r(3, 8, 12), optional: true },
         ],
@@ -216,7 +216,7 @@ export const PROGRAMS: readonly Program[] = [
       {
         name: "Day B",
         roles: [
-          { key: "deadlift", label: "Hinge", muscleGroup: "LEGS", match: DEAD, scheme: r(3, 8, 12), lower: true },
+          { key: "deadlift", label: "Hinge", muscleGroup: "DEADLIFT", match: DEAD, scheme: r(3, 8, 12), lower: true },
           { key: "press", label: "Press", muscleGroup: "SHOULDERS", match: PRESS, scheme: r(3, 8, 12) },
           { key: "pull", label: "Pull", muscleGroup: "BACK", match: PULL, scheme: r(3, 6, 10), optional: true },
         ],
@@ -255,7 +255,7 @@ export const PROGRAMS: readonly Program[] = [
       {
         name: "Day B",
         roles: [
-          { key: "deadlift", label: "Hinge", muscleGroup: "LEGS", match: DEAD, scheme: same(3, 5), lower: true },
+          { key: "deadlift", label: "Hinge", muscleGroup: "DEADLIFT", match: DEAD, scheme: same(3, 5), lower: true },
           { key: "press", label: "Press", muscleGroup: "SHOULDERS", match: PRESS, scheme: same(3, 5) },
           { key: "core", label: "Core", muscleGroup: "CORE", match: CORE, scheme: r(3, 8, 12), optional: true },
         ],
@@ -326,7 +326,7 @@ export const PROGRAMS: readonly Program[] = [
       {
         name: "Day B",
         roles: [
-          { key: "deadlift", label: "Hinge", muscleGroup: "LEGS", match: DEAD, scheme: r(2, 8, 12), lower: true },
+          { key: "deadlift", label: "Hinge", muscleGroup: "DEADLIFT", match: DEAD, scheme: r(2, 8, 12), lower: true },
           { key: "press", label: "Press", muscleGroup: "SHOULDERS", match: PRESS, scheme: r(2, 8, 12) },
           { key: "core", label: "Core", muscleGroup: "CORE", match: CORE, scheme: r(2, 8, 12), optional: true },
         ],
@@ -398,7 +398,9 @@ export function weekLabel(program: Program, week: number): string {
 
 // --- targets --------------------------------------------------------------------
 
-export type TargetSet = { weight: number | null; reps: number; top?: boolean };
+/** A set to aim for; `pct` is its share of the training max on a 5/3/1 set,
+ *  shown under the set number (v0.619). */
+export type TargetSet = { weight: number | null; reps: number; top?: boolean; pct?: number };
 export type LastSet = { weight: number | null; reps: number | null };
 
 /** Round to the nearest loadable weight: 5 lb, or 2.5 kg. */
@@ -456,6 +458,7 @@ export function targetsFor(input: {
       weight: trainingMax ? roundLoad(trainingMax * s.pct, unit) : (last[i]?.weight ?? null),
       reps: s.reps,
       top: s.top,
+      pct: s.pct,
     }));
   }
 
