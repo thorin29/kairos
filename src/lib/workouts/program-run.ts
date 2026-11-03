@@ -6,6 +6,7 @@ import { MUSCLE_GROUP_LABEL, type MuscleGroup } from "@/lib/workouts/catalog";
 import { loadWeightUnits } from "@/lib/queries/workouts";
 import { getSetting, setSetting } from "@/lib/settings";
 import { savePlan } from "@/lib/workouts/plan-share-run";
+import { routineFor } from "@/lib/workouts/warmup-run";
 import {
   PROGRAMS,
   cleanPlanScheme,
@@ -244,7 +245,13 @@ function defaultFor(role: ProgramRole, pool: readonly { id: string; name: string
 /** What the person's plan has now, for the setup's Extras step (v0.620):
  *  whether there's a warm-up, and the weekdays with cardio or conditioning
  *  (kept as they are when the program starts). */
-export type CurrentExtras = { warmup: boolean; cardioDays: number[]; conditioningDays: number[] };
+export type CurrentExtras = {
+  warmup: boolean;
+  /** The plan's warm-up routine, if it has one (v0.622). */
+  warmupRoutine: string | null;
+  cardioDays: number[];
+  conditioningDays: number[];
+};
 
 const CARDIO_CATS = new Set(["CARDIO", "ROWING", "RUNNING", "RUCKING"]);
 const isConditioning = (w: { category: string | null; hiitWorkoutId: string | null }) => w.category === "HIIT" || !!w.hiitWorkoutId;
@@ -252,11 +259,12 @@ const isConditioning = (w: { category: string | null; hiitWorkoutId: string | nu
 export async function currentExtras(userId: string): Promise<CurrentExtras> {
   const rows = (await prisma.plannedWorkout.findMany({
     where: { userId, isRest: false },
-    select: { dayOfWeek: true, category: true, hiitWorkoutId: true },
-  })) as { dayOfWeek: number; category: string | null; hiitWorkoutId: string | null }[];
+    select: { dayOfWeek: true, category: true, hiitWorkoutId: true, warmup: true },
+  })) as { dayOfWeek: number; category: string | null; hiitWorkoutId: string | null; warmup: string | null }[];
   const days = (f: (w: (typeof rows)[number]) => boolean) => [...new Set(rows.filter(f).map((w) => w.dayOfWeek))].sort();
   return {
     warmup: rows.some((w) => w.category === "WARMUP"),
+    warmupRoutine: rows.find((w) => w.category === "WARMUP" && w.warmup)?.warmup ?? null,
     cardioDays: days((w) => !!w.category && CARDIO_CATS.has(w.category)),
     conditioningDays: days(isConditioning),
   };
@@ -274,6 +282,7 @@ type PlanSnapshot = {
     isRest: boolean;
     hiitWorkoutId: string | null;
     sortOrder: number;
+    warmup?: string | null;
     exercises: {
       poolExerciseId: string;
       tracked: boolean;
@@ -298,6 +307,7 @@ async function snapshotPlan(userId: string): Promise<PlanSnapshot> {
         isRest: true,
         hiitWorkoutId: true,
         sortOrder: true,
+        warmup: true,
         exercises: {
           orderBy: { sortOrder: "asc" },
           select: { poolExerciseId: true, tracked: true, metric: true, sortOrder: true, scheme: true, programRole: true },
@@ -321,6 +331,7 @@ async function writePlan(userId: string, snap: PlanSnapshot["workouts"]): Promis
         isRest: w.isRest,
         hiitWorkoutId: w.hiitWorkoutId,
         sortOrder: w.sortOrder,
+        warmup: w.warmup ?? null,
         exercises: {
           create: w.exercises.map((e) => ({
             poolExerciseId: e.poolExerciseId,
@@ -354,6 +365,9 @@ export type StartProgramInput = {
    *  or conditioning on keeps what it had; a new day gets "any cardio" or
    *  conditioning picked on the day. */
   warmup?: boolean;
+  /** The warm-up's routine (v0.622): "lib:<key>", a routine id, or "" for a
+   *  plain check. Unset keeps the old plan's warm-up as it was. */
+  warmupRoutine?: string | null;
   cardioDays?: number[];
   conditioningDays?: number[];
 };
@@ -421,9 +435,22 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
   // Warm-up first on each program day: the old plan's own, else an empty one.
   if (input.warmup) {
     const own = prev.workouts.find((w) => w.category === "WARMUP");
+    const routine =
+      input.warmupRoutine === undefined
+        ? undefined
+        : input.warmupRoutine && (await routineFor(userId, input.warmupRoutine))
+          ? input.warmupRoutine
+          : null;
     for (const dow of programDays) {
-      if (own) await writePlan(userId, [{ ...own, dayOfWeek: dow, sortOrder: nextOrder(dow) }]);
-      else await prisma.plannedWorkout.create({ data: { userId, dayOfWeek: dow, name: "Warm-up", category: "WARMUP", sortOrder: nextOrder(dow) } });
+      if (own) {
+        await writePlan(userId, [
+          { ...own, dayOfWeek: dow, sortOrder: nextOrder(dow), ...(routine !== undefined ? { warmup: routine } : {}) },
+        ]);
+      } else {
+        await prisma.plannedWorkout.create({
+          data: { userId, dayOfWeek: dow, name: "Warm-up", category: "WARMUP", sortOrder: nextOrder(dow), warmup: routine ?? null },
+        });
+      }
     }
   }
 

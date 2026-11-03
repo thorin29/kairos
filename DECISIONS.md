@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-11 — Warm-up routines; timer light or dark (v0.622.0 / app 0.430.0)
+
+**Warm-up routines.** A Warm-up plan entry is still done with one check, but
+can now show a routine: `PlannedWorkout.warmup` holds "lib:<key>" (a
+ready-made routine in `src/lib/workouts/warmup-library.ts`) or the id of the
+person's own `WarmupRoutine` (migration 140; steps as JSON); null is a plain
+check. A step is REPS (an amount as text — "10–15", "5 × 3" — nothing logged)
+or TIME (seconds; on the day a plain count-up timer: Start, Stop, Reset), and
+either can be "each side". Nothing in a routine is logged: the routine is a
+guide, the check is the record. The 5/3/1 warm-up sets stay with the lift
+(v0.621), so dropping the warm-up never drops them.
+- Ready-made: Jumps and throws (5/3/1: jump rope, then 10–15 fast jumps and
+  throws, per Wendler), Hips and shoulders, Quick 5 minutes, Lower body.
+- The day: tapping the Warm-up card opens the routine in a window (steps with
+  a tick each and timers on timed ones), with Switch (changes that day's plan
+  entry) and Mark done; the card's own check completes it without opening.
+- The plan editor: a Warm-up entry shows its routine; tapping it opens the
+  chooser (Just a check, ready-made, your own, + New warm-up). Editing a
+  ready-made one saves your own copy. Deleting your routine turns entries that
+  used it back into a plain check.
+- Starting a program: the Extras step's Warm-up is None / Just a check / a
+  routine, starting from the plan's own. The workouts file and My plans keep
+  the routine id (dropped on import if it isn't there).
+
+**Timer look.** Dark stays the default (a high-contrast screen readable across
+a room). Light uses the app's surfaces and accent with amber for get-ready and
+red for rest; "Match the app" follows the app's light or dark mode. Kept per
+device: web Profile → Workout timer (localStorage), phone Settings →
+Appearance → Workout timer.
+
 ## 2026-11 — 5/3/1 warm-up sets; setup labels and maxes; rowing in metres (v0.621.0 / app 0.429.0)
 
 **Warm-up sets** belong to the lift, not the Warm-up card, so leaving the

@@ -1262,6 +1262,8 @@ export type PlanWorkoutLite = {
   /** Its section on the day page (WARMUP, CARDIO, STRENGTH…) and category (v0.615). */
   kind: string;
   category: string | null;
+  /** A Warm-up's routine (v0.622): "lib:<key>" or a routine id; null: a plain check. */
+  warmup: string | null;
   /** Movements, each with its set structure (weights only carry one). */
   exercises: { poolExerciseId: string; name: string; tracked: boolean; scheme: string; weights: boolean }[];
 };
@@ -1277,6 +1279,7 @@ export async function loadPlan(userId: string): Promise<PlanDayLite[]> {
       dayOfWeek: true,
       category: true,
       isRest: true,
+      warmup: true,
       hiitWorkout: {
         select: {
           type: true,
@@ -1309,6 +1312,7 @@ export async function loadPlan(userId: string): Promise<PlanDayLite[]> {
       detail: planDetail(w),
       kind: w.isRest ? "REST" : blockKind((w.category ?? null) as Parameters<typeof blockKind>[0], !!w.hiitWorkout),
       category: (w.category as string | null) ?? null,
+      warmup: (w as { warmup?: string | null }).warmup ?? null,
       exercises: (
         w.exercises as { tracked: boolean; poolExerciseId: string; scheme: string | null; metric: string | null; poolExercise: { name: string } | null }[]
       ).map((e) => ({

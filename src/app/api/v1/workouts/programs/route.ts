@@ -3,6 +3,7 @@ import { apiOk } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { currentExtras, inviteFor, loadProgramChoices, programInfoFor } from "@/lib/workouts/program-run";
 import { todayISO } from "@/lib/dates";
+import { routinesFor } from "@/lib/workouts/warmup-run";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,11 +15,12 @@ export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
   const userId = authed.device.person.id;
-  const [choices, active, invite, current] = await Promise.all([
+  const [choices, active, invite, current, warmups] = await Promise.all([
     loadProgramChoices(userId),
     programInfoFor(userId, todayISO()),
     inviteFor(userId),
     currentExtras(userId),
+    routinesFor(userId),
   ]);
-  return apiOk({ choices, active, invite, current });
+  return apiOk({ choices, active, invite, current, warmups });
 }

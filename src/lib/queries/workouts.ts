@@ -104,6 +104,8 @@ export type PlanWorkout = {
   category: WorkoutCategory | null;
   muscleGroup: MuscleGroup | null;
   isRest: boolean;
+  /** A Warm-up's routine (v0.622): "lib:<key>" or a routine id; null: a plain check. */
+  warmup?: string | null;
   hiit: {
     id: string;
     type: WorkoutType;
@@ -320,6 +322,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           category: true,
           muscleGroup: true,
           isRest: true,
+          warmup: true,
           hiitWorkoutId: true,
           hiitWorkout: {
             select: {
@@ -649,6 +652,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       category: WorkoutCategory | null;
       muscleGroup: MuscleGroup | null;
       isRest: boolean;
+      warmup: string | null;
       hiitWorkoutId: string | null;
       hiitWorkout: {
         type: WorkoutType;
@@ -685,6 +689,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           category: w.category,
           muscleGroup: w.muscleGroup,
           isRest: w.isRest,
+          warmup: w.warmup,
           hiit:
             w.hiitWorkoutId && w.hiitWorkout
               ? {

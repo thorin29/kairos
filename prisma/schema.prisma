@@ -96,6 +96,7 @@ model User {
   suggestionAnswers WorkoutSuggestionAnswer[]
   concept2Results Concept2Result[]
   sharedPlans     SharedPlan[]
+  warmupRoutines  WarmupRoutine[]
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   books            Book[]
   chapterReads     UserChapterRead[]
@@ -1304,10 +1305,27 @@ model PlannedWorkout {
   hiitWorkout   HiitWorkout?   @relation(fields: [hiitWorkoutId], references: [id], onDelete: SetNull)
   sortOrder   Int              @default(0)
   createdAt   DateTime         @default(now())
+  /// A Warm-up entry's routine (v0.622): "lib:<key>" or a WarmupRoutine id;
+  /// null is a plain check.
+  warmup      String?
 
   exercises PlannedExercise[]
 
   @@index([userId, dayOfWeek])
+}
+
+/// A person's own warm-up routine (v0.622): steps of reps or timed holds, as
+/// JSON ([{ name, kind: "REPS"|"TIME", amount?, seconds?, sides? }]).
+model WarmupRoutine {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  steps     Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([ownerId])
 }
 
 // A workout rotation: an ordered cycle of days that repeats independent of the

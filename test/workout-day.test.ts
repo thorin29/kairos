@@ -851,3 +851,26 @@ describe("workouts file", () => {
     expect(fileNameFor("2026-11-02", "Three-Day Plan!")).toBe("kairos-workouts-three-day-plan-2026-11-02.json");
   });
 });
+
+describe("warm-up routines (v0.622)", () => {
+  it("library ids are unique and every step reads", async () => {
+    const { WARMUP_LIBRARY, LIBRARY_ROUTINES, stepAmount } = await import("@/lib/workouts/warmup-library");
+    expect(new Set(WARMUP_LIBRARY.map((r) => r.key)).size).toBe(WARMUP_LIBRARY.length);
+    for (const r of LIBRARY_ROUTINES) for (const s of r.steps) expect(stepAmount(s).length).toBeGreaterThan(0);
+  });
+  it("cleans steps from a client and says their amount", async () => {
+    const { cleanSteps, stepAmount } = await import("@/lib/workouts/warmup-library");
+    const s = cleanSteps([
+      { name: " Lunge stretch ", kind: "TIME", seconds: 2, sides: true },
+      { name: "Squats", kind: "REPS", amount: "10–15" },
+      { name: "", kind: "REPS" },
+      "junk",
+    ]);
+    expect(s).toEqual([
+      { name: "Lunge stretch", kind: "TIME", seconds: 5, sides: true },
+      { name: "Squats", kind: "REPS", amount: "10–15" },
+    ]);
+    expect(s.map(stepAmount)).toEqual(["5 s each side", "10–15"]);
+    expect(stepAmount({ name: "Row", kind: "TIME", seconds: 180 })).toBe("3:00");
+  });
+});

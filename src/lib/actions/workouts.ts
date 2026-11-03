@@ -26,6 +26,14 @@ import { poolMetrics, addPlannedFromPoolCore, setPlannedSchemeCore } from "@/lib
 import { setMovementFeedback, cleanEffort, cleanHurt } from "@/lib/workouts/feedback";
 import { answerSuggestion } from "@/lib/workouts/suggest-run";
 import { applyLibrary, saveEquipment, setPoolAbout } from "@/lib/workouts/library-run";
+import {
+  deleteRoutine,
+  routinesFor,
+  saveRoutine,
+  setPlanWarmup,
+  warmupsForDay,
+} from "@/lib/workouts/warmup-run";
+import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { cardioDay, logCardio, removeCardio, setWarmupDone, type CardioEntry, type CardioIn } from "@/lib/workouts/cardio-run";
 import { loadDayOrders, orderForDay, saveDayOrder, type DayOrders } from "@/lib/workouts/day-order";
 import { conditioningFor, type ConditioningPlan } from "@/lib/workouts/conditioning-run";
@@ -1213,11 +1221,13 @@ export async function loadDayLog(
   benchmark: BenchmarkState;
   /** Every conditioning result logged that day (v0.619). */
   conditioningDone: { name: string; result: string | null }[];
+  /** The day's Warm-up entries and their routines (v0.622). */
+  warmups: { plannedWorkoutId: string; routine: WarmupRoutine | null }[];
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
   if (!ISO.test(dateISO)) throw new Error("Bad date");
-  const [state, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone] = await Promise.all([
+  const [state, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone, warmups] = await Promise.all([
     loadDayLogState(userId, dateISO),
     loadLoggedWeights(userId, dateISO),
     orderForDay(userId, dayOfWeek(dateISO)),
@@ -1226,8 +1236,9 @@ export async function loadDayLog(
     pickPlansFor(userId, dateISO),
     benchmarkFor(userId, dateISO),
     conditioningOnDay(userId, dateISO),
+    warmupsForDay(userId, dateISO),
   ]);
-  return { state, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone };
+  return { state, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone, warmups };
 }
 
 // --- conditioning: Pick one, Build one, the monthly benchmark (v0.617) ------
@@ -1485,16 +1496,18 @@ export async function loadProgramsFor(userId: string): Promise<{
   active: ProgramInfo | null;
   invite: boolean;
   current: CurrentExtras;
+  warmups: WarmupRoutine[];
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
-  const [choices, active, invite, current] = await Promise.all([
+  const [choices, active, invite, current, warmups] = await Promise.all([
     loadProgramChoices(userId),
     programInfoFor(userId, todayISO()),
     inviteFor(userId),
     currentExtras(userId),
+    routinesFor(userId),
   ]);
-  return { choices, active, invite, current };
+  return { choices, active, invite, current, warmups };
 }
 
 export async function startProgramFor(userId: string, input: StartProgramInput): Promise<{ ok: boolean }> {
@@ -1660,4 +1673,37 @@ export async function deleteMyPlan(userId: string, id: string): Promise<void> {
   await requireInteractive();
   await requireCanActFor(userId);
   await deleteSavedPlan(userId, String(id));
+}
+
+// --- warm-up routines (v0.622) ----------------------------------------------
+
+export async function loadWarmupRoutines(userId: string): Promise<WarmupRoutine[]> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return routinesFor(userId);
+}
+
+/** Save one's own routine (new without an id). */
+export async function saveWarmupRoutine(userId: string, input: { id?: string | null; name: string; steps: unknown }) {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const r = await saveRoutine(userId, input);
+  if (r.ok) refresh();
+  return r;
+}
+
+export async function deleteWarmupRoutine(userId: string, id: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await deleteRoutine(userId, String(id));
+  refresh();
+}
+
+/** A Warm-up plan entry's routine (null: a plain check). */
+export async function setPlanWarmupRoutine(userId: string, plannedWorkoutId: string, warmup: string | null): Promise<boolean> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const ok = await setPlanWarmup(userId, String(plannedWorkoutId), warmup ? String(warmup) : null);
+  if (ok) refresh();
+  return ok;
 }

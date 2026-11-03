@@ -5,6 +5,7 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { loadDayOrders, saveDayOrder } from "@/lib/workouts/day-order";
 import { cleanPlanScheme } from "@/lib/workouts/programs";
 import { nameKey } from "@/lib/workouts/library";
+import { routineFor } from "@/lib/workouts/warmup-run";
 import {
   FILE_FORMAT,
   FILE_KIND,
@@ -24,6 +25,7 @@ type PlanRow = {
   category: string | null;
   muscleGroup: string | null;
   isRest: boolean;
+  warmup: string | null;
   hiitWorkout: { name: string } | null;
   exercises: {
     tracked: boolean;
@@ -82,6 +84,7 @@ export async function exportWorkouts(userId: string, opts: { history?: boolean; 
         category: true,
         muscleGroup: true,
         isRest: true,
+        warmup: true,
         hiitWorkout: { select: { name: true } },
         exercises: {
           orderBy: { sortOrder: "asc" },
@@ -133,6 +136,7 @@ export async function exportWorkouts(userId: string, opts: { history?: boolean; 
       muscleGroup: r.muscleGroup,
       rest: r.isRest,
       workout: r.hiitWorkout?.name ?? null,
+      ...(r.warmup ? { warmup: r.warmup } : {}),
       movements: r.exercises
         .filter((e) => e.poolExercise)
         .map((e) => ({
@@ -414,6 +418,7 @@ export async function applyImport(
         isRest: e.rest,
         hiitWorkoutId,
         sortOrder,
+        warmup: e.category === "WARMUP" && e.warmup && (await routineFor(userId, e.warmup)) ? e.warmup : null,
         exercises: { create: exercises.map((x) => ({ ...x, metric: x.metric as never })) },
       },
     });

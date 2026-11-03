@@ -12,6 +12,7 @@ import {
 import { SCHEME_CHOICES, parseScheme, roundLoad, schemeLabel } from "@/lib/workouts/programs";
 import type { CurrentExtras, ProgramChoice, ProgramInfo, StartProgramInput } from "@/lib/workouts/program-run";
 import { Modal } from "./plan-file-panel";
+import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { PlanLibrary } from "./my-plans";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -26,6 +27,7 @@ type Data = {
   active: ProgramInfo | null;
   invite: boolean;
   current: CurrentExtras;
+  warmups: WarmupRoutine[];
 };
 
 /**
@@ -95,6 +97,7 @@ export function ProgramCard({
         <ProgramSetup
           program={program}
           current={data.current}
+          warmups={data.warmups}
           busy={pending}
           onBack={choosing ? () => setSetup(null) : undefined}
           onClose={() => {
@@ -463,6 +466,7 @@ const mainTag = (key: string) => (key.startsWith("wendler") ? "5/3/1" : key === 
 function ProgramSetup({
   program,
   current,
+  warmups,
   busy,
   onBack,
   onClose,
@@ -470,6 +474,7 @@ function ProgramSetup({
 }: {
   program: ProgramChoice;
   current: CurrentExtras;
+  warmups: WarmupRoutine[];
   busy: boolean;
   onBack?: () => void;
   onClose: () => void;
@@ -485,7 +490,8 @@ function ProgramSetup({
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [schemes, setSchemes] = useState<Record<string, string>>({});
   const [added, setAdded] = useState<Added[]>([]);
-  const [warmup, setWarmup] = useState(true);
+  // "none", "" (just a check) or a routine; starts from the plan's own (v0.622).
+  const [warmup, setWarmup] = useState<string>(current.warmup ? (current.warmupRoutine ?? "") : "");
   const [cardio, setCardio] = useState<number[] | null>(null);
   const [conditioning, setConditioning] = useState<number[]>(current.conditioningDays);
   const [maxText, setMaxText] = useState<Record<string, string>>({});
@@ -548,7 +554,8 @@ function ProgramSetup({
           poolExerciseId: a.poolExerciseId,
           scheme: a.scheme || null,
         })),
-      warmup,
+      warmup: warmup !== "none",
+      ...(warmup !== "none" ? { warmupRoutine: warmup } : {}),
       cardioDays,
       conditioningDays: conditioning,
     });
@@ -698,21 +705,23 @@ function ProgramSetup({
 
         {step === 2 && (
           <div className="space-y-5">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold">Warm-up</p>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={warmup}
+            <label className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold">Warm-up</span>
+              <select
                 aria-label="Warm-up"
-                onClick={() => setWarmup(!warmup)}
-                className={`relative h-7 w-12 rounded-full transition-colors ${warmup ? "bg-accent" : "bg-hairline"}`}
+                value={warmup}
+                onChange={(e) => setWarmup(e.target.value)}
+                className={`${SELECT} max-w-[60%]`}
               >
-                <span
-                  className={`absolute top-1 h-5 w-5 rounded-full bg-surface shadow transition-all ${warmup ? "left-6" : "left-1"}`}
-                />
-              </button>
-            </div>
+                <option value="none">None</option>
+                <option value="">Just a check</option>
+                {warmups.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="space-y-1.5">
               <p className="text-sm font-semibold">Cardio</p>
               <DayChips label="Cardio" value={cardioDays} onToggle={(d) => setCardio(toggle(cardioDays, d))} />

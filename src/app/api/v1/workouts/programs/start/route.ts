@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
     schemes,
     added,
     warmup: b?.warmup === true,
+    warmupRoutine: typeof b?.warmupRoutine === "string" ? b.warmupRoutine : undefined,
     cardioDays: weekdays(b?.cardioDays),
     conditioningDays: weekdays(b?.conditioningDays),
   });

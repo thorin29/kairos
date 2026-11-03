@@ -14,7 +14,24 @@ import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
 
 type Phase = "idle" | "lead" | "run" | "paused" | "done";
 
-const C = {
+type Palette = {
+  bg: string;
+  panel: string;
+  line: string;
+  soft: string;
+  accent: string;
+  ready: string;
+  rest: string;
+  /** The big digits and plain text. */
+  ink: string;
+  /** A highlighted row (the current movement). */
+  strong: string;
+  /** Text on an accent fill. */
+  onAccent: string;
+};
+
+/** Dark: the gym screen, high contrast at a distance. */
+const DARK: Palette = {
   bg: "#10202f",
   panel: "#1b3044",
   line: "#3b5468",
@@ -22,7 +39,38 @@ const C = {
   accent: "#9fd3d8",
   ready: "#f6c66b",
   rest: "#f0a3a3",
+  ink: "#ffffff",
+  strong: "#16384a",
+  onAccent: "#10202f",
 };
+
+/** Light: the app's own surfaces and accent, with amber for get-ready and red
+ *  for rest (v0.622). */
+const LIGHT: Palette = {
+  bg: "var(--color-surface)",
+  panel: "var(--color-ground)",
+  line: "var(--color-hairline)",
+  soft: "var(--color-muted)",
+  accent: "var(--color-accent)",
+  ready: "#b45309",
+  rest: "#b91c1c",
+  ink: "var(--color-ink)",
+  strong: "color-mix(in srgb, var(--color-accent) 14%, transparent)",
+  onAccent: "var(--color-on-accent)",
+};
+
+/** The timer screen's look, kept on this device: dark (default), light, or
+ *  matching the app's light or dark mode. */
+export const TIMER_THEME_KEY = "kairos.timer.theme";
+function usePalette(): Palette {
+  const [p, setP] = useState<Palette>(DARK);
+  useEffect(() => {
+    const pref = readPref(TIMER_THEME_KEY, "dark");
+    const appDark = document.documentElement.classList.contains("dark");
+    setP(pref === "light" || (pref === "app" && !appDark) ? LIGHT : DARK);
+  }, []);
+  return p;
+}
 
 function readPref(key: string, fallback: string): string {
   try {
@@ -64,6 +112,7 @@ export function ConditioningTimer({
   /** The done step's button: "Log", or "Use time" for a timed set (v0.619). */
   logLabel?: string;
 }) {
+  const C = usePalette();
   const plan = useMemo(
     () => timerPlanFor(workout.type, workout.capSec, workout.movements.map((m) => m.name)),
     [workout],
@@ -287,7 +336,7 @@ export function ConditioningTimer({
       role="dialog"
       aria-label={`${workout.name} timer`}
       className="fixed inset-0 z-[60] flex flex-col overflow-y-auto"
-      style={{ background: C.bg, color: "#fff" }}
+      style={{ background: C.bg, color: C.ink }}
     >
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
         <header className="flex items-center justify-between px-3 pt-2">
@@ -322,7 +371,7 @@ export function ConditioningTimer({
           </span>
           <span
             className="tabular font-bold leading-none"
-            style={{ fontSize: 84, letterSpacing: "-0.02em", color: leading ? C.ready : restNow ? C.rest : "#fff" }}
+            style={{ fontSize: 84, letterSpacing: "-0.02em", color: leading ? C.ready : restNow ? C.rest : C.ink }}
           >
             {clock}
           </span>
@@ -350,7 +399,7 @@ export function ConditioningTimer({
                 style={{
                   borderColor: lead === v ? C.accent : C.line,
                   background: lead === v ? C.accent : "transparent",
-                  color: lead === v ? C.bg : C.soft,
+                  color: lead === v ? C.onAccent : C.soft,
                 }}
               >
                 {v}s
@@ -384,7 +433,7 @@ export function ConditioningTimer({
                 aria-label={`Add a round, now ${rounds}`}
                 onClick={() => setRounds((r) => r + 1)}
                 className="flex h-40 w-40 flex-col items-center justify-center rounded-full border-[3px]"
-                style={{ borderColor: C.accent, background: "#16384a", color: "#fff" }}
+                style={{ borderColor: C.accent, background: C.strong, color: C.ink }}
               >
                 <span className="tabular text-6xl font-bold leading-none">{rounds}</span>
                 <span className="text-sm font-semibold" style={{ color: C.accent }}>
@@ -419,7 +468,7 @@ export function ConditioningTimer({
                   onChange={(e) => setResult(e.target.value.replace(/[^\d:]/g, ""))}
                   placeholder={plan.result === "TIME" ? "mm:ss" : "0"}
                   className="tabular h-11 w-24 rounded-xl border px-3 text-base outline-none"
-                  style={{ borderColor: C.line, background: C.panel, color: "#fff" }}
+                  style={{ borderColor: C.line, background: C.panel, color: C.ink }}
                 />
               </label>
               {plan.result === "ROUNDS" && (
@@ -431,7 +480,7 @@ export function ConditioningTimer({
                     onChange={(e) => setExtra(e.target.value.replace(/\D/g, ""))}
                     placeholder="0"
                     className="tabular h-11 w-20 rounded-xl border px-3 text-base outline-none"
-                    style={{ borderColor: C.line, background: C.panel, color: "#fff" }}
+                    style={{ borderColor: C.line, background: C.panel, color: C.ink }}
                   />
                 </label>
               )}
@@ -440,7 +489,7 @@ export function ConditioningTimer({
                 disabled={saving}
                 onClick={() => void save()}
                 className="ml-auto min-h-[48px] rounded-full px-6 text-base font-bold disabled:opacity-50"
-                style={{ background: C.accent, color: C.bg }}
+                style={{ background: C.accent, color: C.onAccent }}
               >
                 {saving ? "Saving…" : logLabel}
               </button>
@@ -459,7 +508,7 @@ export function ConditioningTimer({
             type="button"
             onClick={reset}
             className="min-h-[52px] flex-1 rounded-full border text-base font-semibold"
-            style={{ borderColor: C.line, color: "#fff" }}
+            style={{ borderColor: C.line, color: C.ink }}
           >
             Reset
           </button>
@@ -468,7 +517,7 @@ export function ConditioningTimer({
               type="button"
               onClick={() => (phase === "run" || phase === "lead" ? pause() : start())}
               className="min-h-[52px] flex-[2] rounded-full text-base font-bold"
-              style={{ background: "#fff", color: C.bg }}
+              style={{ background: C.ink, color: C.bg }}
             >
               {phase === "idle" ? "Start" : phase === "paused" ? "Resume" : "Pause"}
             </button>
@@ -483,7 +532,7 @@ export function ConditioningTimer({
                 finish(now);
               }}
               className="min-h-[52px] flex-1 rounded-full text-base font-bold"
-              style={{ background: C.accent, color: C.bg }}
+              style={{ background: C.accent, color: C.onAccent }}
             >
               Done
             </button>
@@ -497,7 +546,7 @@ export function ConditioningTimer({
                 finish(now);
               }}
               className="min-h-[52px] flex-1 rounded-full border text-base font-semibold"
-              style={{ borderColor: C.line, color: "#fff" }}
+              style={{ borderColor: C.line, color: C.ink }}
             >
               End
             </button>

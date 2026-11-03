@@ -1,4 +1,6 @@
 import "server-only";
+import { routinesById } from "@/lib/workouts/warmup-run";
+import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
@@ -219,6 +221,8 @@ export type SimplePlan = {
   category: "WARMUP" | "CARDIO";
   done: boolean;
   skipped: boolean;
+  /** A Warm-up's routine (v0.622); null: a plain check. */
+  routine?: WarmupRoutine | null;
 };
 
 /**
@@ -239,7 +243,7 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
         createdAt: { lt: new Date(Date.parse(`${dateISO}T00:00:00Z`) + 86_400_000) },
       },
       orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, category: true, _count: { select: { exercises: true } } },
+      select: { id: true, name: true, category: true, warmup: true, _count: { select: { exercises: true } } },
     }),
     prisma.workoutSession.findMany({
       where: { userId, date, isRest: false },
@@ -247,10 +251,11 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
     }),
     prisma.workoutMovementSkip.findMany({ where: { userId, date }, select: { slot: true } }),
   ])) as [
-    { id: string; name: string; category: string | null; _count: { exercises: number } }[],
+    { id: string; name: string; category: string | null; warmup: string | null; _count: { exercises: number } }[],
     { name: string | null; category: string | null }[],
     { slot: string }[],
   ];
+  const routines = await routinesById(userId, plans.map((p) => p.warmup));
   const anyCardio = sessions.some((row) => row.category != null && CARDIO_CATEGORIES.includes(row.category));
   const skipped = new Set(skips.map((k) => k.slot));
   return plans
@@ -265,6 +270,7 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
           ? sessions.some((row) => row.category === "WARMUP" && (row.name ?? "").slice(0, 40) === p.name.slice(0, 40))
           : anyCardio,
         skipped: skipped.has(`plan:${p.id}`),
+        ...(warmup ? { routine: (p.warmup && routines.get(p.warmup)) || null } : {}),
       };
     });
 }

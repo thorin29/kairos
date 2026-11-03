@@ -20,6 +20,8 @@ import { CardioCard } from "./cardio-card";
 import { ConditioningCard } from "./conditioning-card";
 import { ConditioningTimer } from "./conditioning-timer";
 import { EffortPicker } from "@/components/effort-picker";
+import { WarmupWindow } from "./warmup-window";
+import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { AddConditioning, BenchmarkCard, PickConditioningCard } from "./conditioning-picker";
 import type { BenchmarkState, PickPlan } from "@/lib/workouts/wod-run";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
@@ -115,6 +117,7 @@ export function DayLog({
     picks: PickPlan[];
     benchmark: BenchmarkState;
     conditioningDone: { name: string; result: string | null }[];
+    warmups?: { plannedWorkoutId: string; routine: WarmupRoutine | null }[];
   } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -447,7 +450,11 @@ export function DayLog({
                         return (
                           <WarmupRow
                             key={`${date}:${w.id}`}
+                            userId={userId}
+                            plannedWorkoutId={w.id}
                             name={w.name}
+                            routine={data.warmups?.find((x) => x.plannedWorkoutId === w.id)?.routine ?? null}
+                            onChanged={() => setTick((n) => n + 1)}
                             done={done}
                             skipped={state?.skippedPlans.includes(`plan:${w.id}`) ?? false}
                             onDone={(v) =>
@@ -565,22 +572,49 @@ export function DayLog({
 
 /** A Warm-up in the plan: done with a tap (tap again to undo), or skipped. */
 function WarmupRow({
+  userId,
+  plannedWorkoutId,
   name,
+  routine,
+  onChanged,
   done,
   skipped,
   onDone,
   onSkip,
 }: {
+  userId: string;
+  plannedWorkoutId: string;
   name: string;
+  /** Its routine (v0.622): tapping the card opens it; null is a plain check. */
+  routine: WarmupRoutine | null;
+  onChanged: () => void;
   done: boolean;
   skipped: boolean;
   onDone: (done: boolean) => void;
   onSkip: (skipped: boolean) => void;
 }) {
   const finished = done && !skipped;
+  const [open, setOpen] = useState(false);
   return (
     <div className="flex min-h-[3.5rem] items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3">
-      <span className="min-w-0 flex-1 text-sm font-semibold">{name}</span>
+      <button type="button" onClick={() => setOpen(true)} className="min-w-0 flex-1 text-left">
+        <span className="block truncate text-sm font-semibold">{name}</span>
+        {routine && <span className="block truncate text-xs text-muted">{routine.name}</span>}
+      </button>
+      {open && (
+        <WarmupWindow
+          userId={userId}
+          plannedWorkoutId={plannedWorkoutId}
+          routine={routine}
+          done={finished}
+          onDone={() => {
+            onDone(true);
+            setOpen(false);
+          }}
+          onClose={() => setOpen(false)}
+          onChanged={onChanged}
+        />
+      )}
       {!finished && (
         <button
           type="button"

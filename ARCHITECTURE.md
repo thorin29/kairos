@@ -195,6 +195,8 @@ production:
 | A movement's "Watch how" link | `watchUrl` in `src/lib/workouts/watch.ts` (the phone's `watchUrl` in `MovementInfo.kt` matches it) |
 | Which suggestion shows, and its thresholds; a big jump; a lighter day | `daySuggestion` / `movementSuggestion` / `bigJump` / `RULES` in `src/lib/workouts/suggest.ts` (pure); answers and the day's lightness in `src/lib/workouts/suggest-run.ts` |
 | Muscle groups (Deadlift included) and their labels | `MUSCLE_GROUPS` / `MG_LABEL` in `src/lib/workouts/catalog.ts`; body-map regions in `navRegionFor` (`involvement.ts`); existing deadlifts moved by migration `139_deadlift_move` |
+| Warm-up routines (library, own, a plan entry's choice) | `WARMUP_LIBRARY` / `cleanSteps` / `stepAmount` in `src/lib/workouts/warmup-library.ts` (pure); `routinesFor` / `saveRoutine` / `setPlanWarmup` / `warmupsForDay` in `warmup-run.ts`; UI `WarmupWindow` / `RoutinePicker` / `WarmupPlanLine` in `src/app/exercise/warmup-window.tsx` |
+| The workout timer's light or dark look | `usePalette` / `TIMER_THEME_KEY` in `src/app/exercise/conditioning-timer.tsx`; set in `src/app/person/[id]/profile/timer-theme-form.tsx` |
 | Saved plans (My plans) | `savePlan` / `savedPlansFor` / `renameSavedPlan` / `deleteSavedPlan` in `src/lib/workouts/plan-share-run.ts` (SharedPlan, status PRIVATE); UI `PlanLibrary` in `src/app/exercise/my-plans.tsx` |
 | Program setup steps, extras, end of cycle | `ProgramSetup` / `CycleEnd` / `Chooser` in `src/app/exercise/program-card.tsx`; `startProgram` / `currentExtras` / `nextBlock` (raises) in `program-run.ts` |
 | A program slot's movement choices and top-weight prefill | `loadProgramChoices` in `src/lib/workouts/program-run.ts` |

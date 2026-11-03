@@ -34,6 +34,8 @@ export type FilePlanEntry = {
   rest: boolean;
   /** A named workout, by name (one of `workouts`, or one the household has). */
   workout: string | null;
+  /** A Warm-up's routine id ("lib:<key>" or the owner's own; v0.622). */
+  warmup?: string | null;
   movements: FileMovement[];
 };
 
@@ -174,6 +176,7 @@ export function readWorkoutsFile(raw: unknown): { ok: true; file: WorkoutsFile }
       muscleGroup: rest ? null : oneOf(x.muscleGroup, GROUPS),
       rest,
       workout: rest ? null : str(x.workout, 60),
+      ...(str(x.warmup, 60) ? { warmup: str(x.warmup, 60) } : {}),
       movements: rest ? [] : arr(x.movements, 30).map(movement).filter((m): m is FileMovement => !!m),
     });
   }

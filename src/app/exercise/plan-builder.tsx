@@ -1,5 +1,6 @@
 "use client";
 
+import { WarmupPlanLine } from "./warmup-window";
 import { useMemo, useState, useTransition } from "react";
 import { DAY_NAMES } from "@/lib/days";
 import { DateField } from "@/components/date-field";
@@ -382,7 +383,9 @@ function DayRow({
                 </div>
               ) : w.category === "CARDIO" ? (
                 <div className="mt-0.5 text-xs text-muted">Row, run, ruck or other</div>
-              ) : w.category === "WARMUP" ? null : (
+              ) : w.category === "WARMUP" ? (
+                <WarmupPlanLine userId={userId} plannedWorkoutId={w.id} warmup={w.warmup ?? null} />
+              ) : (
                 <div className="mt-0.5 text-xs text-muted">
                   {w.category
                     ? `Log ${METRIC_LABEL_SHORT[
