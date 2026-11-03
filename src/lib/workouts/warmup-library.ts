@@ -126,3 +126,61 @@ export function stepAmount(s: WarmupStep): string {
   }
   return (s.amount ?? "") + (s.amount ? side : side.trim());
 }
+
+/**
+ * The warm-up countdown (v0.625). A timed step's timer runs it and the timed
+ * steps straight after it, one interval each, two for an each-side step
+ * ("Side plank · left", then "· right"). Pure: the phone mirrors it in
+ * WarmupScreens.kt.
+ */
+export type WarmupInterval = { step: number; name: string; seconds: number };
+
+export function warmupIntervals(steps: readonly WarmupStep[], from: number): WarmupInterval[] {
+  const out: WarmupInterval[] = [];
+  for (let i = from; i < steps.length; i++) {
+    const s = steps[i];
+    if (s.kind !== "TIME" || !s.seconds) break;
+    if (s.sides) {
+      out.push({ step: i, name: `${s.name} · left`, seconds: s.seconds });
+      out.push({ step: i, name: `${s.name} · right`, seconds: s.seconds });
+    } else {
+      out.push({ step: i, name: s.name, seconds: s.seconds });
+    }
+  }
+  return out;
+}
+
+/** Choices for the pause between intervals, in seconds. */
+export const WARMUP_GAPS = [0, 5, 10, 15, 20, 30] as const;
+
+/** One stretch of the countdown: a get-ready or pause, or an interval's work. */
+export type WarmupSegment = { kind: "READY" | "WORK"; interval: number; seconds: number };
+
+/** The whole countdown: get-ready before the first, the gap before each next. */
+export function warmupSchedule(intervals: readonly WarmupInterval[], lead: number, gap: number): WarmupSegment[] {
+  const out: WarmupSegment[] = [];
+  intervals.forEach((iv, i) => {
+    const wait = i === 0 ? lead : gap;
+    if (wait > 0) out.push({ kind: "READY", interval: i, seconds: wait });
+    out.push({ kind: "WORK", interval: i, seconds: iv.seconds });
+  });
+  return out;
+}
+
+/** Where the countdown is after `elapsed` whole seconds; done past the end. */
+export function warmupAt(
+  schedule: readonly WarmupSegment[],
+  elapsed: number,
+): { segment: number; left: number; done: boolean } {
+  let t = elapsed;
+  for (let i = 0; i < schedule.length; i++) {
+    if (t < schedule[i].seconds) return { segment: i, left: schedule[i].seconds - t, done: false };
+    t -= schedule[i].seconds;
+  }
+  return { segment: schedule.length - 1, left: 0, done: true };
+}
+
+/** Total length of the countdown in seconds. */
+export function warmupTotal(schedule: readonly WarmupSegment[]): number {
+  return schedule.reduce((n, s) => n + s.seconds, 0);
+}

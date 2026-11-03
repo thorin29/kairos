@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   deleteWarmupRoutine,
   loadWarmupRoutines,
@@ -10,105 +10,70 @@ import {
 import { CheckIcon, PencilIcon, TimerIcon, TrashIcon } from "@/components/icons";
 import { stepAmount, type WarmupRoutine, type WarmupStep } from "@/lib/workouts/warmup-library";
 import { Modal } from "./plan-file-panel";
+import { WarmupTimer } from "./warmup-timer";
 
 const PRIMARY =
   "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-on-accent disabled:opacity-40";
 const QUIET =
   "inline-flex h-10 items-center justify-center rounded-full border border-hairline px-4 text-sm font-semibold hover:border-accent disabled:opacity-40";
-const FIELD =
-  "h-10 min-w-0 rounded-lg border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent";
-
-/** "1:05" from seconds. */
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-
-/** A plain count-up timer for a timed step: Start, Stop, and back to 0. */
-function StepTimer({ target }: { target: number }) {
-  const [running, setRunning] = useState(false);
-  const [secs, setSecs] = useState(0);
-  const started = useRef(0);
-  const banked = useRef(0);
-  useEffect(() => {
-    if (!running) return;
-    started.current = Date.now();
-    const t = setInterval(() => setSecs(banked.current + Math.floor((Date.now() - started.current) / 1000)), 250);
-    return () => clearInterval(t);
-  }, [running]);
-  const reached = secs >= target && target > 0;
-  return (
-    <div className="flex items-center gap-2">
-      {(running || secs > 0) && (
-        <span className={`tabular text-lg font-semibold ${reached ? "text-accent" : ""}`} aria-live="off">
-          {clock(secs)}
-        </span>
-      )}
-      {running ? (
-        <button
-          type="button"
-          onClick={() => {
-            banked.current = secs;
-            setRunning(false);
-          }}
-          className={QUIET}
-        >
-          Stop
-        </button>
-      ) : secs > 0 ? (
-        <button
-          type="button"
-          onClick={() => {
-            banked.current = 0;
-            setSecs(0);
-          }}
-          className={QUIET}
-        >
-          Reset
-        </button>
-      ) : (
-        <button type="button" onClick={() => setRunning(true)} className={`${QUIET} gap-1.5 text-accent`}>
-          <TimerIcon className="h-4 w-4" />
-          Start
-        </button>
-      )}
-    </div>
-  );
-}
+const FIELD = "h-10 min-w-0 rounded-lg border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent";
 
 /** A routine's steps: name and amount, a timer on timed ones, and a tick each. */
 export function WarmupSteps({ steps }: { steps: WarmupStep[] }) {
   const [ticked, setTicked] = useState<Set<number>>(new Set());
+  const [timing, setTiming] = useState<number | null>(null);
   return (
-    <ol className="divide-y divide-hairline">
-      {steps.map((s, i) => {
-        const on = ticked.has(i);
-        return (
-          <li key={i} className="flex items-center gap-3 py-2.5">
-            <button
-              type="button"
-              aria-pressed={on}
-              aria-label={`${s.name} done`}
-              onClick={() =>
-                setTicked((t) => {
-                  const n = new Set(t);
-                  if (n.has(i)) n.delete(i);
-                  else n.add(i);
-                  return n;
-                })
-              }
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
-                on ? "border-accent bg-accent text-on-accent" : "border-hairline text-transparent hover:border-accent"
-              }`}
-            >
-              <CheckIcon className="h-4 w-4" />
-            </button>
-            <span className={`min-w-0 flex-1 ${on ? "text-muted line-through" : ""}`}>
-              <span className="block text-sm font-semibold">{s.name}</span>
-              <span className="tabular block text-xs text-muted">{stepAmount(s)}</span>
-            </span>
-            {s.kind === "TIME" && <StepTimer target={s.seconds ?? 0} />}
-          </li>
-        );
-      })}
-    </ol>
+    <>
+      {timing != null && (
+        <WarmupTimer
+          steps={steps}
+          from={timing}
+          onFinished={(done) => setTicked((t) => new Set([...t, ...done]))}
+          onClose={() => setTiming(null)}
+        />
+      )}
+      <ol className="divide-y divide-hairline">
+        {steps.map((s, i) => {
+          const on = ticked.has(i);
+          return (
+            <li key={i} className="flex items-center gap-3 py-2.5">
+              <button
+                type="button"
+                aria-pressed={on}
+                aria-label={`${s.name} done`}
+                onClick={() =>
+                  setTicked((t) => {
+                    const n = new Set(t);
+                    if (n.has(i)) n.delete(i);
+                    else n.add(i);
+                    return n;
+                  })
+                }
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
+                  on ? "border-accent bg-accent text-on-accent" : "border-hairline text-transparent hover:border-accent"
+                }`}
+              >
+                <CheckIcon className="h-4 w-4" />
+              </button>
+              <span className={`min-w-0 flex-1 ${on ? "text-muted line-through" : ""}`}>
+                <span className="block text-sm font-semibold">{s.name}</span>
+                <span className="tabular block text-xs text-muted">{stepAmount(s)}</span>
+              </span>
+              {s.kind === "TIME" && (
+                <button
+                  type="button"
+                  onClick={() => setTiming(i)}
+                  className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border-2 border-accent px-3.5 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
+                >
+                  <TimerIcon className="h-4 w-4" />
+                  Timer
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </>
   );
 }
 
@@ -269,11 +234,15 @@ function RoutineEditor({
 }) {
   const [name, setName] = useState(routine?.name ?? "");
   const [steps, setSteps] = useState<DraftStep[]>(() =>
-    (routine?.steps.length ? routine.steps : [{ name: "", kind: "REPS" as const, amount: "10" }]).map((s, k) => ({ ...s, k })),
+    (routine?.steps.length ? routine.steps : [{ name: "", kind: "REPS" as const, amount: "10" }]).map((s, k) => ({
+      ...s,
+      k,
+    })),
   );
   const [error, setError] = useState("");
   const [busy, start] = useTransition();
-  const set = (k: number, patch: Partial<WarmupStep>) => setSteps((x) => x.map((s) => (s.k === k ? { ...s, ...patch } : s)));
+  const set = (k: number, patch: Partial<WarmupStep>) =>
+    setSteps((x) => x.map((s) => (s.k === k ? { ...s, ...patch } : s)));
   const move = (k: number, by: number) =>
     setSteps((x) => {
       const i = x.findIndex((s) => s.k === k);
@@ -359,10 +328,20 @@ function RoutineEditor({
                 Each side
               </label>
               <span className="ml-auto flex">
-                <button type="button" aria-label="Move up" onClick={() => move(s.k, -1)} className="h-8 w-8 rounded-full text-muted hover:bg-ground">
+                <button
+                  type="button"
+                  aria-label="Move up"
+                  onClick={() => move(s.k, -1)}
+                  className="h-8 w-8 rounded-full text-muted hover:bg-ground"
+                >
                   ↑
                 </button>
-                <button type="button" aria-label="Move down" onClick={() => move(s.k, 1)} className="h-8 w-8 rounded-full text-muted hover:bg-ground">
+                <button
+                  type="button"
+                  aria-label="Move down"
+                  onClick={() => move(s.k, 1)}
+                  className="h-8 w-8 rounded-full text-muted hover:bg-ground"
+                >
                   ↓
                 </button>
               </span>
@@ -372,7 +351,9 @@ function RoutineEditor({
       </ol>
       <button
         type="button"
-        onClick={() => setSteps((x) => [...x, { k: Math.max(0, ...x.map((y) => y.k)) + 1, name: "", kind: "REPS", amount: "10" }])}
+        onClick={() =>
+          setSteps((x) => [...x, { k: Math.max(0, ...x.map((y) => y.k)) + 1, name: "", kind: "REPS", amount: "10" }])
+        }
         className="text-sm font-semibold text-accent"
       >
         + Add a step
@@ -419,7 +400,15 @@ function RoutineEditor({
 }
 
 /** A Warm-up entry in the plan editor: its routine, tapped to choose another. */
-export function WarmupPlanLine({ userId, plannedWorkoutId, warmup }: { userId: string; plannedWorkoutId: string; warmup: string | null }) {
+export function WarmupPlanLine({
+  userId,
+  plannedWorkoutId,
+  warmup,
+}: {
+  userId: string;
+  plannedWorkoutId: string;
+  warmup: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState<string | null>(null);
   useEffect(() => {
@@ -507,8 +496,14 @@ export function WarmupLibrary({ userId }: { userId: string }) {
         <p className="text-sm text-muted">Loading…</p>
       ) : (
         <>
-          {section("Yours", routines.filter((r) => r.mine))}
-          {section("Ready-made", routines.filter((r) => !r.mine))}
+          {section(
+            "Yours",
+            routines.filter((r) => r.mine),
+          )}
+          {section(
+            "Ready-made",
+            routines.filter((r) => !r.mine),
+          )}
         </>
       )}
       {open && (

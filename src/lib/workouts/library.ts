@@ -23,6 +23,23 @@ export const PATTERN_LABEL: Record<Pattern, string> = {
   MOBILITY: "Mobility",
 };
 
+/**
+ * A movement's type from its name alone, for one with no tag and no library
+ * match ("Sandbag lunge" → SQUAT) (v0.625). The first rule that fits wins, so
+ * a leg curl is a hinge and a leg press a squat. Null when nothing fits.
+ */
+const GUESSES: [RegExp, Pattern][] = [
+  [/dead\s*lift|\brdl\b|good\s*morning|hip\s*thrust|bridge|swing|back\s*extension|hyperextension|(leg|hamstring)\s*curl|pull[\s-]*through/i, "HINGE"],
+  [/lunge|squat|step[\s-]*up|leg\s*press|split\s*squat/i, "SQUAT"],
+  [/plank|sit[\s-]*up|crunch|leg\s*raise|\bab\b|\babs\b|ab\s*wheel|roll[\s-]*out|hollow/i, "CORE"],
+  [/\brows?\b|pull|chin|pulldown/i, "PULL"],
+  [/press|push[\s-]*up|\bdips?\b|bench/i, "PUSH"],
+];
+export function guessPattern(name: string): Pattern | null {
+  for (const [re, p] of GUESSES) if (re.test(name)) return p;
+  return null;
+}
+
 /** Household equipment, with the weights or sizes on hand (Admin edits these). */
 export type EquipmentItem = { key: string; label: string; have: boolean; sizes: number[]; unit: "lb" | "kg" | "in" | "" };
 

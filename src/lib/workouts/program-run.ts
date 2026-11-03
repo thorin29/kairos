@@ -6,7 +6,7 @@ import { MUSCLE_GROUP_LABEL, type MuscleGroup } from "@/lib/workouts/catalog";
 import { loadWeightUnits } from "@/lib/queries/workouts";
 import { getSetting, setSetting } from "@/lib/settings";
 import { savePlan } from "@/lib/workouts/plan-share-run";
-import { LIBRARY, nameKey } from "@/lib/workouts/library";
+import { LIBRARY, guessPattern, nameKey } from "@/lib/workouts/library";
 import { applyLibrary, loadEquipment } from "@/lib/workouts/library-run";
 import { routineFor } from "@/lib/workouts/warmup-run";
 import {
@@ -96,7 +96,8 @@ export type ProgramInfo = {
 
 export async function programInfoFor(userId: string, dateISO: string): Promise<ProgramInfo | null> {
   const p = await loadActiveProgram(userId);
-  if (!p) return null;
+  // A day before the program started isn't part of it (v0.625).
+  if (!p || dateISO < p.startedOn) return null;
   const week = programWeek(p.program, p.blockStartedOn, dateISO);
   const ids = Object.keys(p.trainingMaxes);
   const names = ids.length
@@ -195,7 +196,10 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
   }[];
   // A movement's pattern: its own tag, else the library movement of that name.
   const libByName = new Map(LIBRARY.map((e) => [nameKey(e.name), e]));
-  const patternOf = (m: { name: string; pattern: string | null }) => m.pattern ?? libByName.get(nameKey(m.name))?.pattern ?? null;
+  // A movement's pattern: its own tag, else the library movement of that
+  // name, else a guess from the name ("Sandbag lunge" is a squat) (v0.625).
+  const patternOf = (m: { name: string; pattern: string | null }) =>
+    m.pattern ?? libByName.get(nameKey(m.name))?.pattern ?? guessPattern(m.name);
   const groupOfMove = (m: { name: string; muscleGroup: string | null }) =>
     m.muscleGroup ?? libByName.get(nameKey(m.name))?.muscleGroup ?? null;
   const have = new Set((await loadEquipment()).filter((e) => e.have).map((e) => e.key));
@@ -231,9 +235,14 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
           const mains = new Set(p.days.flatMap((x) => x.roles.filter((y) => y.main).flatMap((y) => y.match)).map((n) => nameKey(n)));
           const fitsKind = (pattern: string | null, group: string | null) =>
             !!pattern && r.patterns!.includes(pattern as never) && (!r.groups || (!!group && r.groups.includes(group as never)));
-          fits = pool.filter(
-            (m) => !mains.has(nameKey(m.name)) && (names.has(norm(m.name)) || fitsKind(patternOf(m), groupOfMove(m))),
-          );
+          // A weights movement with no type at all still fits by its muscle group.
+          const inGroups = (group: string | null) => !!group && (r.groups ?? [r.muscleGroup]).includes(group as never);
+          fits = pool.filter((m) => {
+            if (mains.has(nameKey(m.name))) return false;
+            if (names.has(norm(m.name))) return true;
+            const pattern = patternOf(m);
+            return pattern ? fitsKind(pattern, groupOfMove(m)) : m.category === "WEIGHTS" && inGroups(groupOfMove(m));
+          });
           adds = LIBRARY.filter(
             (e) =>
               e.category === "WEIGHTS" &&

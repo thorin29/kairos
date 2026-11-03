@@ -33,7 +33,8 @@ import {
   withCardio,
   type SectionKind,
   daySections,
-  dayTitle,
+  dayHeadline,
+  withSection,
   dayProgress,
   stripState,
   type DayItem,
@@ -41,12 +42,7 @@ import {
   type StripState,
 } from "@/lib/workouts/blocks";
 import { fmtNumber, fmtSeconds } from "@/lib/workouts/sets";
-import {
-  type Effort,
-  type HurtArea,
-  type Metric,
-  type UnitSystem,
-} from "@/lib/workouts/catalog";
+import { type Effort, type HurtArea, type Metric, type UnitSystem } from "@/lib/workouts/catalog";
 import { isNewBest, recordChips } from "@/lib/workouts/records";
 import { bigJump, type Suggestion } from "@/lib/workouts/suggest";
 import { addDays, dayOfWeek } from "@/lib/dates";
@@ -186,9 +182,9 @@ export function DayLog({
   const cardioCount = data?.cardio.length ?? 0;
   const sections = useMemo(
     () =>
-      withCardio(daySections(
-        workouts.map(
-          (w): DayWorkoutIn => ({
+      withCardio(
+        daySections(
+          workouts.map((w): DayWorkoutIn => ({
             id: w.id,
             name: w.name,
             category: w.category,
@@ -201,13 +197,14 @@ export function DayLog({
               tracked: e.tracked,
               metric: e.metric,
             })),
-          }),
+          })),
+          order,
         ),
+        cardioCount > 0,
         order,
-      ), cardioCount > 0, order),
+      ),
     [workouts, order, cardioCount],
   );
-
 
   const state = data?.state ?? null;
   const cardDone = useCallback(
@@ -238,6 +235,9 @@ export function DayLog({
     },
     [state, cardDone],
   );
+  // A Conditioning section is always there, so + Conditioning sits where the
+  // person's order puts conditioning, even on a day with none planned (v0.625).
+  const withConditioning = useMemo(() => withSection(sections, "CONDITIONING", order), [sections, order]);
   const progress = dayProgress(sections, isDone);
   const late = date < todayISO;
   const completedOnISO = late ? todayISO : undefined;
@@ -262,7 +262,8 @@ export function DayLog({
     );
   }
 
-  const title = dayTitle(sections);
+  // The program on a program day, else the kinds of work (v0.625).
+  const title = state?.program?.name ?? dayHeadline(sections);
 
   return (
     <div className="space-y-5">
@@ -324,7 +325,7 @@ export function DayLog({
         <p className="text-xs font-semibold uppercase tracking-widest text-muted">
           {date === todayISO ? "Today" : dayLabel(date)}
           {late && !state?.loggedAny && " · logging late"}
-          {state?.program && ` · ${state.program.name} · ${state.program.label}`}
+          {state?.program && ` · ${state.program.label}`}
         </p>
         <h3 className="mt-1 font-display text-xl font-semibold">
           {state?.rested
@@ -332,7 +333,7 @@ export function DayLog({
             : title ||
               (workouts.length === 0
                 ? state?.loggedOther?.length
-                  ? state.loggedOther.map((g) => g.name).join(" · ")
+                  ? [...new Set(state.loggedOther.map((g) => g.label))].join(" · ")
                   : "Nothing planned"
                 : "Workout")}
         </h3>
@@ -359,7 +360,7 @@ export function DayLog({
                 setTick((n) => n + 1);
               })
             }
-            className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline px-3.5 text-sm font-semibold text-muted hover:border-accent hover:text-accent"
+            className="mt-3 inline-flex h-10 items-center gap-1.5 rounded-full border-2 border-accent bg-surface px-4 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
           >
             <MoonIcon className="h-4 w-4" />
             Rest / skip day
@@ -368,7 +369,9 @@ export function DayLog({
       </div>
 
       {state?.light && !state.rested && (
-        <p className="text-sm font-semibold text-accent">Lighter today · {Math.round(state.light * 100)}% of the usual weights</p>
+        <p className="text-sm font-semibold text-accent">
+          Lighter today · {Math.round(state.light * 100)}% of the usual weights
+        </p>
       )}
 
       {state?.suggestion && !state.rested && (
@@ -405,7 +408,7 @@ export function DayLog({
         data &&
         !state?.rested && (
           <div className="space-y-5">
-            {sections.map((s) => (
+            {withConditioning.map((s) => (
               <section key={s.key}>
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{s.title}</h4>
                 <div className="space-y-2">
@@ -433,7 +436,13 @@ export function DayLog({
                           skipped: state?.skippedPlans.includes(`plan:${plan.id}`) ?? false,
                           onToggle: (v: boolean) =>
                             startTransition(async () => {
-                              await skipMovement({ userId, dateISO: date, plannedWorkoutId: plan.id, poolExerciseId: "", skipped: v });
+                              await skipMovement({
+                                userId,
+                                dateISO: date,
+                                plannedWorkoutId: plan.id,
+                                poolExerciseId: "",
+                                skipped: v,
+                              });
                               setTick((n) => n + 1);
                             }),
                         };
@@ -488,13 +497,25 @@ export function DayLog({
                             skipped={state?.skippedPlans.includes(`plan:${w.id}`) ?? false}
                             onDone={(v) =>
                               startTransition(async () => {
-                                await setWarmup({ userId, dateISO: date, plannedWorkoutId: w.id, done: v, completedOnISO });
+                                await setWarmup({
+                                  userId,
+                                  dateISO: date,
+                                  plannedWorkoutId: w.id,
+                                  done: v,
+                                  completedOnISO,
+                                });
                                 setTick((n) => n + 1);
                               })
                             }
                             onSkip={(v) =>
                               startTransition(async () => {
-                                await skipMovement({ userId, dateISO: date, plannedWorkoutId: w.id, poolExerciseId: "", skipped: v });
+                                await skipMovement({
+                                  userId,
+                                  dateISO: date,
+                                  plannedWorkoutId: w.id,
+                                  poolExerciseId: "",
+                                  skipped: v,
+                                });
                                 setTick((n) => n + 1);
                               })
                             }
@@ -563,33 +584,39 @@ export function DayLog({
                       </button>
                     );
                   })}
+                  {/* The day's Conditioning section, where the person's order puts
+                      it (v0.625): one-offs logged, then + Conditioning. */}
+                  {s.kind === "CONDITIONING" && (
+                    <>
+                      {(() => {
+                        // Conditioning done today that no card above shows: a one-off.
+                        if (data.picks.length > 0) return null;
+                        const planned = new Set(data.conditioning.map((c) => c.name.slice(0, 40)));
+                        const extra = data.conditioningDone.filter((c) => !planned.has(c.name.slice(0, 40)));
+                        return extra.length > 0 ? (
+                          <ul className="space-y-1 rounded-xl border border-hairline bg-surface px-4 py-3 text-sm">
+                            {extra.map((c, i) => (
+                              <li key={i}>
+                                <span className="font-medium">{c.name}</span>
+                                {c.result && <span className="tabular text-muted"> · {c.result}</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null;
+                      })()}
+                      <AddConditioning
+                        key={`addc:${date}`}
+                        userId={userId}
+                        dateISO={date}
+                        completedOnISO={completedOnISO}
+                        onChanged={() => setTick((n) => n + 1)}
+                        writeOwn={writeOwn}
+                      />
+                    </>
+                  )}
                 </div>
               </section>
             ))}
-            {(() => {
-              // Conditioning done today that no card above shows: a one-off.
-              if (data.picks.length > 0) return null;
-              const planned = new Set(data.conditioning.map((c) => c.name.slice(0, 40)));
-              const extra = data.conditioningDone.filter((c) => !planned.has(c.name.slice(0, 40)));
-              return extra.length > 0 ? (
-                <ul className="space-y-1 rounded-xl border border-hairline bg-surface px-4 py-3 text-sm">
-                  {extra.map((c, i) => (
-                    <li key={i}>
-                      <span className="font-medium">{c.name}</span>
-                      {c.result && <span className="tabular text-muted"> · {c.result}</span>}
-                    </li>
-                  ))}
-                </ul>
-              ) : null;
-            })()}
-            <AddConditioning
-              key={`addc:${date}`}
-              userId={userId}
-              dateISO={date}
-              completedOnISO={completedOnISO}
-              onChanged={() => setTick((n) => n + 1)}
-              writeOwn={writeOwn}
-            />
           </div>
         )
       )}
@@ -684,9 +711,7 @@ function WarmupRow({
           aria-pressed={finished}
           onClick={() => onDone(!finished)}
           className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold ${
-            finished
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-accent bg-accent text-on-accent"
+            finished ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-accent bg-accent text-on-accent"
           }`}
         >
           <CheckIcon className="h-4 w-4" />
@@ -699,7 +724,10 @@ function WarmupRow({
 
 const STRIP_LOOK: Record<StripState, { dot: string; label: string }> = {
   done: { dot: "bg-accent border-accent", label: "done" },
-  partial: { dot: "border-accent bg-[linear-gradient(90deg,var(--color-accent)_50%,transparent_50%)]", label: "partly done" },
+  partial: {
+    dot: "border-accent bg-[linear-gradient(90deg,var(--color-accent)_50%,transparent_50%)]",
+    label: "partly done",
+  },
   rest: { dot: "border-transparent bg-transparent", label: "rest" },
   open: { dot: "border-amber-500 bg-transparent", label: "not logged yet" },
   expired: { dot: "border-hairline bg-hairline", label: "missed" },
@@ -1085,7 +1113,9 @@ function MovementLogger({
     if (answer === "use" && s.weight != null) {
       const open = rows.filter((r) => !r.saved && r.w === "" && r.hintW != null);
       const max = Math.max(...open.map((r) => r.hintW as number));
-      setRows((rs) => rs.map((r) => (open.includes(r) && r.hintW === max ? { ...r, hintW: (s.weight as number) - shift } : r)));
+      setRows((rs) =>
+        rs.map((r) => (open.includes(r) && r.hintW === max ? { ...r, hintW: (s.weight as number) - shift } : r)),
+      );
     } else if (answer === "swap") {
       setPicking(true);
     } else if (answer === "programs") {
@@ -1153,7 +1183,15 @@ function MovementLogger({
           {doing ? "Undo swap" : "Swap"}
         </button>
         <span className="ml-auto text-xs text-muted" aria-live="polite">
-          {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : status === "error" ? "Not saved. Try again." : log?.last ? `Last time ${log.last.date.slice(5).replace("-", "/")}` : ""}
+          {status === "saving"
+            ? "Saving…"
+            : status === "saved"
+              ? "Saved"
+              : status === "error"
+                ? "Not saved. Try again."
+                : log?.last
+                  ? `Last time ${log.last.date.slice(5).replace("-", "/")}`
+                  : ""}
         </span>
       </div>
 
@@ -1191,9 +1229,7 @@ function MovementLogger({
         </div>
       )}
 
-      {picking && (
-        <SwapPicker exercise={exercise} onPick={(p) => void swapTo(p)} onClose={() => setPicking(false)} />
-      )}
+      {picking && <SwapPicker exercise={exercise} onPick={(p) => void swapTo(p)} onClose={() => setPicking(false)} />}
 
       {failed ? (
         <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">Couldn&rsquo;t load this movement. Try again.</p>
@@ -1202,7 +1238,9 @@ function MovementLogger({
       ) : (
         <>
           <div className="rounded-2xl border border-hairline bg-surface px-3 pb-3 sm:px-4">
-            <div className={`grid ${cols} items-center gap-2 border-b border-hairline py-2 text-xs font-semibold text-muted`}>
+            <div
+              className={`grid ${cols} items-center gap-2 border-b border-hairline py-2 text-xs font-semibold text-muted`}
+            >
               <span>Set</span>
               <span className="hidden sm:block">Last time</span>
               {metric === "WEIGHT" && <span>Weight ({unit})</span>}
@@ -1219,120 +1257,128 @@ function MovementLogger({
               const n = i + 1 - rows.slice(0, i).filter((x) => groupOf(x) !== grp).length;
               return (
                 <div key={r.key}>
-                {startsGroup && (
-                  <p className={`pb-1 text-xs font-semibold uppercase tracking-widest text-muted ${i > 0 ? "pt-4" : "pt-1"}`}>
-                    {grp === "warm" ? "Warm-up" : grp === "supp" ? suppLabel : "Main sets"}
-                  </p>
-                )}
-                <div className={`border-b border-hairline py-2 ${r.saved ? "bg-accent/[0.03]" : ""}`}>
-                  <div className={`grid ${cols} items-center gap-2`}>
-                    <span className="tabular pl-1 text-sm font-semibold">
-                      {grouped ? n : i + 1}
-                      {r.pct != null && (
-                        <span className="block text-[11px] font-semibold leading-none text-accent">{Math.round(r.pct * 100)}%</span>
-                      )}
-                    </span>
-                    <span className="tabular hidden text-sm text-muted sm:block">
-                      {r.added ? "new" : lastText(lastSets[i], metric)}
-                    </span>
-                    {metric === "WEIGHT" && (
-                      <input
-                        aria-label={`Weight, set ${i + 1}`}
-                        inputMode="decimal"
-                        value={r.w}
-                        placeholder={hw != null ? fmtNumber(hw) : ""}
-                        onChange={(e) => update(r.key, { w: e.target.value, saved: r.saved && e.target.value === r.w })}
-                        className={`tabular h-11 w-full rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.w ? "border-accent/60" : "border-hairline"}`}
-                      />
-                    )}
-                    {metric === "DURATION" ? (
-                      <input
-                        aria-label={`Seconds, set ${i + 1}`}
-                        inputMode="numeric"
-                        value={r.s}
-                        placeholder={r.hintS != null ? String(r.hintS) : ""}
-                        onChange={(e) => update(r.key, { s: e.target.value, saved: false })}
-                        className={`tabular h-11 w-full rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.s ? "border-accent/60" : "border-hairline"}`}
-                      />
-                    ) : (
-                      <input
-                        aria-label={`Reps, set ${i + 1}`}
-                        inputMode="numeric"
-                        value={r.r}
-                        placeholder={r.hintR != null ? `${r.hintR}${r.plus ? "+" : ""}` : ""}
-                        onChange={(e) => update(r.key, { r: e.target.value, saved: false })}
-                        className={`tabular h-11 w-full rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.r ? "border-accent/60" : "border-hairline"}`}
-                      />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => tick(r)}
-                      aria-label={r.saved ? `Undo set ${i + 1}` : `Done: set ${i + 1}`}
-                      aria-pressed={r.saved}
-                      className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full border transition-colors ${
-                        r.saved ? "border-accent bg-accent text-on-accent" : "border-accent/40 text-accent hover:border-accent"
-                      }`}
+                  {startsGroup && (
+                    <p
+                      className={`pb-1 text-xs font-semibold uppercase tracking-widest text-muted ${i > 0 ? "pt-4" : "pt-1"}`}
                     >
-                      <CheckIcon className="h-4 w-4" />
-                    </button>
-                    {strict ? (
-                      // A set the program fixed isn't removed: a set left blank
-                      // simply isn't logged. Its plates instead (v0.619).
-                      <button
-                        type="button"
-                        onClick={() => setCalcKey(r.key)}
-                        aria-label={`Plates for set ${i + 1}`}
-                        className="mx-auto flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
-                      >
-                        <DumbbellIcon className="h-4 w-4" />
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => (r.saved ? setConfirmKey(r.key) : remove(r))}
-                        aria-label={`Remove set ${i + 1}`}
-                        className="mx-auto flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
-                      >
-                        <XIcon className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  {(() => {
-                    if (metric !== "WEIGHT" || (!r.saved && !typed(r))) return null;
-                    const pct = bigJump(valueOf(r).weight, log?.recentTop ?? null);
-                    return pct != null ? (
-                      <p className="mt-1 pl-10 text-xs font-semibold text-amber-700">
-                        {pct}% over your recent top. Make sure it&rsquo;s the weight you meant.
-                      </p>
-                    ) : null;
-                  })()}
-                  {r.saved && metric === "WEIGHT" && isNewBest(valueOf(r), records) && (
-                    <p className="mt-1 pl-10 text-xs font-semibold text-emerald-700">
-                      New best for {valueOf(r).reps} {valueOf(r).reps === 1 ? "rep" : "reps"}
+                      {grp === "warm" ? "Warm-up" : grp === "supp" ? suppLabel : "Main sets"}
                     </p>
                   )}
-                  {confirmKey === r.key && (
-                    <div className="mt-2 flex flex-wrap items-center justify-end gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm">
-                      <span className="mr-auto">
-                        Remove set {i + 1} ({lastText(valueOf(r) as MovementSetRow, metric)})?
+                  <div className={`border-b border-hairline py-2 ${r.saved ? "bg-accent/[0.03]" : ""}`}>
+                    <div className={`grid ${cols} items-center gap-2`}>
+                      <span className="tabular pl-1 text-sm font-semibold">
+                        {grouped ? n : i + 1}
+                        {r.pct != null && (
+                          <span className="block text-[11px] font-semibold leading-none text-accent">
+                            {Math.round(r.pct * 100)}%
+                          </span>
+                        )}
                       </span>
+                      <span className="tabular hidden text-sm text-muted sm:block">
+                        {r.added ? "new" : lastText(lastSets[i], metric)}
+                      </span>
+                      {metric === "WEIGHT" && (
+                        <input
+                          aria-label={`Weight, set ${i + 1}`}
+                          inputMode="decimal"
+                          value={r.w}
+                          placeholder={hw != null ? fmtNumber(hw) : ""}
+                          onChange={(e) =>
+                            update(r.key, { w: e.target.value, saved: r.saved && e.target.value === r.w })
+                          }
+                          className={`tabular h-11 w-full rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.w ? "border-accent/60" : "border-hairline"}`}
+                        />
+                      )}
+                      {metric === "DURATION" ? (
+                        <input
+                          aria-label={`Seconds, set ${i + 1}`}
+                          inputMode="numeric"
+                          value={r.s}
+                          placeholder={r.hintS != null ? String(r.hintS) : ""}
+                          onChange={(e) => update(r.key, { s: e.target.value, saved: false })}
+                          className={`tabular h-11 w-full rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.s ? "border-accent/60" : "border-hairline"}`}
+                        />
+                      ) : (
+                        <input
+                          aria-label={`Reps, set ${i + 1}`}
+                          inputMode="numeric"
+                          value={r.r}
+                          placeholder={r.hintR != null ? `${r.hintR}${r.plus ? "+" : ""}` : ""}
+                          onChange={(e) => update(r.key, { r: e.target.value, saved: false })}
+                          className={`tabular h-11 w-full rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.r ? "border-accent/60" : "border-hairline"}`}
+                        />
+                      )}
                       <button
                         type="button"
-                        onClick={() => remove(r)}
-                        className="inline-flex h-9 items-center rounded-full bg-red-700 px-4 text-xs font-semibold text-white"
+                        onClick={() => tick(r)}
+                        aria-label={r.saved ? `Undo set ${i + 1}` : `Done: set ${i + 1}`}
+                        aria-pressed={r.saved}
+                        className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full border transition-colors ${
+                          r.saved
+                            ? "border-accent bg-accent text-on-accent"
+                            : "border-accent/40 text-accent hover:border-accent"
+                        }`}
                       >
-                        Remove
+                        <CheckIcon className="h-4 w-4" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmKey(null)}
-                        className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-4 text-xs font-semibold"
-                      >
-                        Keep
-                      </button>
+                      {strict ? (
+                        // A set the program fixed isn't removed: a set left blank
+                        // simply isn't logged. Its plates instead (v0.619).
+                        <button
+                          type="button"
+                          onClick={() => setCalcKey(r.key)}
+                          aria-label={`Plates for set ${i + 1}`}
+                          className="mx-auto flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
+                        >
+                          <DumbbellIcon className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => (r.saved ? setConfirmKey(r.key) : remove(r))}
+                          aria-label={`Remove set ${i + 1}`}
+                          className="mx-auto flex h-11 w-11 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
+                        >
+                          <XIcon className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
-                  )}
-                </div>
+                    {(() => {
+                      if (metric !== "WEIGHT" || (!r.saved && !typed(r))) return null;
+                      const pct = bigJump(valueOf(r).weight, log?.recentTop ?? null);
+                      return pct != null ? (
+                        <p className="mt-1 pl-10 text-xs font-semibold text-amber-700">
+                          {pct}% over your recent top. Make sure it&rsquo;s the weight you meant.
+                        </p>
+                      ) : null;
+                    })()}
+                    {r.saved && metric === "WEIGHT" && isNewBest(valueOf(r), records) && (
+                      <p className="mt-1 pl-10 text-xs font-semibold text-emerald-700">
+                        New best for {valueOf(r).reps} {valueOf(r).reps === 1 ? "rep" : "reps"}
+                      </p>
+                    )}
+                    {confirmKey === r.key && (
+                      <div className="mt-2 flex flex-wrap items-center justify-end gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm">
+                        <span className="mr-auto">
+                          Remove set {i + 1} ({lastText(valueOf(r) as MovementSetRow, metric)})?
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => remove(r)}
+                          className="inline-flex h-9 items-center rounded-full bg-red-700 px-4 text-xs font-semibold text-white"
+                        >
+                          Remove
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmKey(null)}
+                          className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-4 text-xs font-semibold"
+                        >
+                          Keep
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -1404,7 +1450,11 @@ function MovementLogger({
             <PlanActionTile
               icon={metric === "DURATION" ? TimerIcon : DumbbellIcon}
               label={metric === "DURATION" ? "Timer" : "Calculator"}
-              onClick={() => (metric === "DURATION" ? setTimerKey(nextUnsaved?.key ?? rows.at(-1)?.key ?? null) : setCalcKey(nextUnsaved?.key ?? null))}
+              onClick={() =>
+                metric === "DURATION"
+                  ? setTimerKey(nextUnsaved?.key ?? rows.at(-1)?.key ?? null)
+                  : setCalcKey(nextUnsaved?.key ?? null)
+              }
               disabled={metric !== "WEIGHT" && metric !== "DURATION"}
             />
             <PlanActionTile

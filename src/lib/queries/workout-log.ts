@@ -1877,7 +1877,9 @@ export type DayLogState = {
   loggedAny: boolean;
 };
 
-export type LoggedOther = { name: string; lines: { name: string; summary: string }[] };
+/** `label` is the short name for the page title: a game's event type
+ *  ("Hockey game") rather than its event title (v0.625). */
+export type LoggedOther = { name: string; label: string; lines: { name: string; summary: string }[] };
 
 /** The day's sessions outside its plans, by session name, each movement's
  *  sets in a few words. */
@@ -1892,6 +1894,7 @@ async function loggedOtherFor(
     select: {
       name: true,
       category: true,
+      sourceEventId: true,
       sets: {
         orderBy: [{ setNumber: "asc" }, { createdAt: "asc" }],
         select: {
@@ -1909,6 +1912,7 @@ async function loggedOtherFor(
   })) as {
     name: string | null;
     category: string | null;
+    sourceEventId: string | null;
     sets: {
       poolExerciseId: string | null;
       swappedFromId: string | null;
@@ -1922,6 +1926,16 @@ async function loggedOtherFor(
   }[];
   const slots = new Set(planned.flatMap((p) => p.exercises.map((e) => e.poolExerciseId)).filter(Boolean) as string[]);
   const planNames = new Set(planned.map((p) => p.name.slice(0, 40).toLowerCase()));
+  // A game logged from the calendar goes by its event type in the title.
+  const eventIds = [...new Set(rows.map((r) => r.sourceEventId).filter((x): x is string => !!x))];
+  const types = eventIds.length
+    ? ((await prisma.event.findMany({
+        where: { id: { in: eventIds } },
+        select: { id: true, eventType: { select: { name: true } } },
+      })) as { id: string; eventType: { name: string } | null }[])
+    : [];
+  const typeOf = new Map(types.filter((t) => t.eventType).map((t) => [t.id, t.eventType!.name]));
+  const labelOf = new Map<string, string>();
   const byName = new Map<string, Map<string, typeof rows[number]["sets"]>>();
   for (const r of rows) {
     if (r.category && (CARDIO_CATEGORIES.includes(r.category) || r.category === "HIIT")) continue;
@@ -1929,6 +1943,8 @@ async function loggedOtherFor(
     const sets = r.sets.filter((x) => !slots.has((x.swappedFromId ?? x.poolExerciseId) ?? ""));
     if (r.sets.length > 0 && sets.length === 0) continue;
     if (r.sets.length === 0 && planNames.has(name.slice(0, 40).toLowerCase())) continue;
+    const typeName = r.sourceEventId ? typeOf.get(r.sourceEventId) : undefined;
+    if (!labelOf.has(name)) labelOf.set(name, typeName ?? name);
     const group = byName.get(name) ?? new Map();
     for (const x of sets) {
       const label = x.poolExercise?.name ?? x.exercise?.name ?? name;
@@ -1938,9 +1954,10 @@ async function loggedOtherFor(
   }
   const other: LoggedOther[] = [...byName.entries()].map(([name, group]) => ({
     name,
+    label: labelOf.get(name) ?? name,
     lines:
       group.size === 0
-        ? [{ name, summary: "Done" }]
+        ? [{ name: labelOf.get(name) ?? name, summary: "Done" }]
         : [...group.entries()].map(([m, sets]) => ({ name: m, summary: setsSummary(sets, sets[0]?.unit ?? null) || "Done" })),
   }));
   return { other, any: rows.length > 0 };

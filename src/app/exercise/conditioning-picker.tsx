@@ -566,7 +566,7 @@ export function AddConditioning({
       <button
         type="button"
         onClick={() => setMenu(true)}
-        className="inline-flex h-10 items-center gap-1.5 rounded-full border border-dashed border-hairline px-4 text-sm font-semibold text-muted hover:border-accent hover:text-accent"
+        className="inline-flex h-10 items-center gap-1.5 rounded-full border-2 border-accent bg-surface px-4 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
       >
         + Conditioning
       </button>

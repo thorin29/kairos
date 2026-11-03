@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.624.0";
+export const APP_VERSION = "0.625.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,17 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.625.0",
+    summary: [
+      "Rest / skip day and + Conditioning are proper buttons.",
+      "+ Conditioning sits where Conditioning is in your section order.",
+      "The day's title is your program's name (with the week under it), or the kind of workout.",
+      "Past days name a game by its type, like \u201cHockey game \u00b7 Back\u201d.",
+      "Timed warm-up steps have a Timer: a full-screen countdown with the exercise name, what's next, both sides, and a pause you choose between.",
+      "Program setup finds more of your own movements, like a sandbag lunge.",
+    ],
+  },
   {
     version: "0.624.0",
     summary: [

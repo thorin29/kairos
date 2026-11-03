@@ -14,7 +14,7 @@ import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
 
 type Phase = "idle" | "lead" | "run" | "paused" | "done";
 
-type Palette = {
+export type Palette = {
   bg: string;
   panel: string;
   line: string;
@@ -62,7 +62,7 @@ const LIGHT: Palette = {
 /** The timer screen's look, kept on this device: dark (default), light, or
  *  matching the app's light or dark mode. */
 export const TIMER_THEME_KEY = "kairos.timer.theme";
-function usePalette(): Palette {
+export function usePalette(): Palette {
   const [p, setP] = useState<Palette>(DARK);
   useEffect(() => {
     const pref = readPref(TIMER_THEME_KEY, "dark");
@@ -72,14 +72,14 @@ function usePalette(): Palette {
   return p;
 }
 
-function readPref(key: string, fallback: string): string {
+export function readPref(key: string, fallback: string): string {
   try {
     return window.localStorage.getItem(key) ?? fallback;
   } catch {
     return fallback;
   }
 }
-function writePref(key: string, value: string) {
+export function writePref(key: string, value: string) {
   try {
     window.localStorage.setItem(key, value);
   } catch {

@@ -8,7 +8,7 @@ import {
   loadWeekStrip,
   type TodayPlanned,
 } from "@/lib/queries/workout-log";
-import { daySections, dayTitle, type DayWorkoutIn } from "@/lib/workouts/blocks";
+import { dayHeadline, daySections, type DayWorkoutIn } from "@/lib/workouts/blocks";
 import type { Metric, MuscleGroup, WorkoutCategory } from "@/lib/workouts/catalog";
 import { dayOfWeek, todayISO } from "@/lib/dates";
 import { orderForDay } from "@/lib/workouts/day-order";
@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
     loadWeekStrip(userId, today),
   ]);
   const first = dayWorkouts[0] ?? null;
+  const program = await programInfoFor(userId, date);
   return apiOk({
     date,
     loggable: dayWorkouts.length > 0,
@@ -71,10 +72,11 @@ export async function GET(req: NextRequest) {
     plannedWorkoutId: first?.plannedWorkoutId ?? null,
     name: first?.name ?? null,
     exercises: first?.exercises ?? [],
-    title: dayTitle(daySections(dayWorkouts.map(asDayWorkout), order)),
+    // The program's name on a program day, else the kinds of work (v0.625).
+    title: program?.name ?? dayHeadline(daySections(dayWorkouts.map(asDayWorkout), order)),
     strip: { today, days: strip.days, overdue: strip.overdue },
     // The program and its week on this day (v0.611); null without one.
-    program: await programInfoFor(userId, date),
+    program,
     // The day's suggestion card and a lighter day, if chosen (v0.612).
     suggestion: await daySuggestionFor(userId, date),
     light: await dayLightFactor(userId, date),

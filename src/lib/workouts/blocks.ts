@@ -210,12 +210,56 @@ export function withCardio(
   hasCardio: boolean,
   order: readonly SectionKind[] = DEFAULT_ORDER,
 ): DaySection[] {
-  if (!hasCardio || sections.some((s) => s.kind === "CARDIO")) return sections;
+  return hasCardio ? withSection(sections, "CARDIO", order) : sections;
+}
+
+/**
+ * An empty section of a kind, where the person's order puts it, unless the day
+ * already has one: Cardio for cardio logged but not planned, Conditioning so
+ * "+ Conditioning" always sits in its place (v0.625).
+ */
+export function withSection(
+  sections: DaySection[],
+  kind: Exclude<BlockKind, "STRENGTH" | "OTHER">,
+  order: readonly SectionKind[] = DEFAULT_ORDER,
+): DaySection[] {
+  if (sections.some((s) => s.kind === kind)) return sections;
   const kinds: BlockKind[] = [...cleanOrder(order), "OTHER"];
-  const at = kinds.indexOf("CARDIO");
+  const at = kinds.indexOf(kind);
   const i = sections.findIndex((s) => kinds.indexOf(s.kind) > at);
-  const cardio: DaySection = { key: "k:CARDIO", kind: "CARDIO", title: KIND_TITLE.CARDIO, items: [] };
-  return i < 0 ? [...sections, cardio] : [...sections.slice(0, i), cardio, ...sections.slice(i)];
+  const add: DaySection = { key: `k:${kind}`, kind, title: KIND_TITLE[kind], items: [] };
+  return i < 0 ? [...sections, add] : [...sections.slice(0, i), add, ...sections.slice(i)];
+}
+
+/** A block kind's name in the page headline. */
+const HEADLINE: Record<BlockKind, string> = {
+  WARMUP: "Warm-up",
+  CARDIO: "Cardio",
+  STRENGTH: "Weights",
+  CONDITIONING: "Conditioning",
+  STRETCH: "Stretching",
+  SPORT: "Sport",
+  OTHER: "Workout",
+};
+
+/**
+ * The day page's headline off a program (v0.625): the kinds of work, not the
+ * muscle groups ("Weights", "Weights & cardio", "Cardio · Weights ·
+ * Conditioning"), in the day's order. A Warm-up alone names itself; beside
+ * other work it's left out. Empty sections (a stub) don't count.
+ */
+export function dayHeadline(sections: readonly DaySection[]): string {
+  const real = sections.filter((s) => s.items.length > 0);
+  const work = real.filter((s) => s.kind !== "WARMUP");
+  const names = [...new Set((work.length > 0 ? work : real).map((s) => HEADLINE[s.kind]))];
+  return joinNames(names);
+}
+
+function joinNames(names: string[]): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} & ${names[1].toLowerCase()}`;
+  return names.join(" · ");
 }
 
 /**

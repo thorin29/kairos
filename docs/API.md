@@ -951,6 +951,15 @@ accepts "lib:<key>" in `picks` and `added` (they join the pool first).
 `plan/share` answers `{ status: "shared" }` for a parent, else `"pending"`.
 `GET /api/v1/workouts` adds `rested`.
 
+v0.625: `GET /api/v1/workouts` `title` is the program's name on a day in a
+running program, else the kinds of work ("Weights", "Cardio & weights"), not
+the muscle groups; `program` is null on days before the program started.
+`loggedOther[]` adds `label` (a game logged from the calendar by its event
+type, e.g. "Hockey game"; otherwise the name), and a game's line is that label
+with "Done". A companion slot's options include pool movements typed from
+their names when untagged ("lunge" → Squat), and untyped weights movements
+of the slot's muscle group.
+
 **Suggestions (v0.612).**
 ```
 Suggestion: { "key","title","why","actions":[ { "answer","label" } ],"weight":num? }

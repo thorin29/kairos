@@ -1,5 +1,53 @@
 # Decisions
 
+## 2026-11 — Visible buttons; Conditioning in its place; day titles; warm-up countdown (v0.625.0 / app 0.433.0)
+
+**Buttons that read as buttons:** secondary actions on the day page (Rest /
+skip day, + Conditioning, and on the phone Log an additional workout) have a
+2 px accent outline and accent text on the surface colour. The grey hairline
+outline read as disabled.
+
+**+ Conditioning in its place:** the day always has a Conditioning section
+(`withSection`, the same rule as the cardio stub), placed where the person's
+section order puts Conditioning; the one-off conditioning list and
++ Conditioning render inside it rather than after every section.
+
+**Day titles:** on a program day the title is the program's name and the
+line above it is just the week ("Week 1 of 4"), matching the home card.
+Otherwise the title is the kinds of work (`dayHeadline`: Weights, Cardio,
+Conditioning…; a Warm-up only when it's all there is), not the muscle groups.
+A past day titled from what was logged uses `LoggedOther.label`: a session
+auto-logged from a calendar event goes by the event's type ("Hockey game"),
+not its title; the Logged card keeps the title with "Hockey game · Done"
+under it. `programInfoFor` returns null before the program's `startedOn`, so
+earlier days no longer show the program's week.
+
+**Warm-up countdown:** a timed step's Timer opens a full-screen countdown in
+the timer's colours (`usePalette`, now exported). It runs that step and the
+timed steps straight after it (an each-side step as two intervals, "· left"
+and "· right"), a get-ready before the first and a pause chosen before it
+starts between the rest (`WARMUP_GAPS`, kept on the device), "Next: …", 3-2-1
+beeps, a tone and a buzz at each change, Pause and Skip. The steps it ran are
+ticked. The schedule is pure (`warmupSchedule` / `warmupAt`) and measured
+from the clock, so a slow tab doesn't drift. It replaces the count-up timer.
+
+**Companion choices by name:** a pool movement with no pattern tag and no
+library match was invisible to companion slots (a household's "Sandbag
+lunge"). `guessPattern` types it from its name (lunge/squat/step-up → Squat;
+deadlift/RDL/good morning/hip thrust/bridge/swing/back extension/leg curl →
+Hinge; plank/sit-up/crunch/leg raise/ab/rollout/hollow → Core; row/pull/chin
+→ Pull; press/push-up/dip/bench → Push). A weights movement that still has
+no type fits by muscle group (the slot's `groups`, else its own group).
+
+**"· new" (unchanged):** marks a library movement that isn't in the
+household's pool. Starting a program with one adds it to the pool, after
+which it shows without the mark.
+
+**Concept2 (unchanged, noted):** the check runs only when a day page opens
+or reloads (or Check now), never in the background, and the server throttles
+it to once every 5 minutes.
+
+
 ## 2026-11 — Companion exercises by kind; Warm-ups home; plan tools tidied (v0.624.0 / app 0.432.0)
 
 **Companion exercises:** a companion slot names a kind of movement (`patterns`,
