@@ -74,10 +74,14 @@ export async function GET(req: NextRequest) {
     name: first?.name ?? null,
     exercises: first?.exercises ?? [],
     // On a program day the program and its main lift, as on the home card
-    // (v0.626); else the kinds of work (v0.625).
-    title: program
-      ? await programDayTitle(userId, date, program.name)
-      : dayHeadline(daySections(dayWorkouts.map(asDayWorkout), order)),
+    // (v0.626), or on a past day what was logged in it ("5/3/1 · Legs",
+    // v0.627); else the kinds of work (v0.625); else what was logged.
+    title:
+      (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.programTitle ??
+      ((program
+        ? await programDayTitle(userId, date, program.name)
+        : dayHeadline(daySections(dayWorkouts.map(asDayWorkout), order))) ||
+        ((dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.loggedTitle ?? "")),
     strip: { today, days: strip.days, overdue: strip.overdue },
     // The program and its week on this day (v0.611); null without one.
     program,

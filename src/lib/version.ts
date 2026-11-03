@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.626.0";
+export const APP_VERSION = "0.627.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,18 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.627.0",
+    summary: [
+      "Recent workouts shows one entry per day, named by what you trained and the program it was part of, like \u201c5/3/1 \u00b7 Legs\u201d. A warm-up isn't listed as the workout.",
+      "Past days keep the program they were part of, even after changing programs.",
+      "Setting up the program you're already on keeps your week and anything else in your plan.",
+      "Companion lifts keep their weight until you change it.",
+      "A day with nothing planned no longer says \u201clogging late\u201d.",
+      "Warm-up timer pauses: 0, 1, 2, 3, 5 or 10 seconds.",
+      "Buttons on the workout pages share one style.",
+    ],
+  },
   {
     version: "0.626.0",
     summary: [

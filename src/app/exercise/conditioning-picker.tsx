@@ -1,5 +1,6 @@
 "use client";
 
+import { PRIMARY_BTN, SECONDARY_BTN } from "./buttons";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { EffortPicker } from "@/components/effort-picker";
 import {
@@ -34,10 +35,8 @@ const CHIP = (on: boolean) =>
   `inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
     on ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
   }`;
-const PRIMARY =
-  "inline-flex h-10 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-on-accent disabled:opacity-40";
-const QUIET =
-  "inline-flex h-10 items-center rounded-full border border-hairline px-4 text-sm font-semibold text-accent hover:border-accent disabled:opacity-40";
+const PRIMARY = PRIMARY_BTN;
+const QUIET = SECONDARY_BTN;
 
 /** Rx or Scaled. */
 export function VersionToggle({ value, onChange }: { value: Version; onChange: (v: Version) => void }) {
@@ -566,7 +565,7 @@ export function AddConditioning({
       <button
         type="button"
         onClick={() => setMenu(true)}
-        className="inline-flex h-10 items-center gap-1.5 rounded-full border-2 border-accent bg-surface px-4 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
+        className={SECONDARY_BTN}
       >
         + Conditioning
       </button>

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { slotForDate } from "@/lib/workouts/rotation";
 import { fmtClock, rowSummary } from "@/lib/workouts/concept2";
 import { CARDIO_CATEGORIES, blockKind, isOptionalCategory, isSimpleCategory } from "@/lib/workouts/blocks";
+import { dayLabel, groupHistory, type HistorySession } from "@/lib/workouts/history";
+import { loadProgramSpans, sportLabels } from "@/lib/workouts/history-run";
 import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES, hiitResult } from "@/lib/workouts/catalog";
 import type { WorkoutType } from "@/generated/prisma/client";
 import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween, startOfWeek } from "@/lib/dates";
@@ -655,6 +657,8 @@ export type ProgressSeries = {
 };
 export type WorkoutHistoryEntry = {
   id: string;
+  /** Every session that day: an entry is the day (v0.627). */
+  ids: string[];
   date: string;
   label: string;
   result: string;
@@ -718,6 +722,8 @@ export async function loadWorkoutProgress(
         completedOn: true,
         name: true,
         isRest: true,
+        category: true,
+        sourceEventId: true,
         sets: {
           orderBy: { setNumber: "asc" },
           select: {
@@ -969,19 +975,22 @@ export async function loadWorkoutProgress(
   // off .map() leaves the comparator's parameters untyped whenever the query
   // row type is unavailable, and the annotation on `history` lands too late to
   // help. This way the array being sorted is the typed one.
-  const rows: WorkoutHistoryEntry[] = recent.map((s: (typeof recent)[number]) => ({
-    id: s.id,
-    // The day it was done, not the day it counts for.
-    date: doneOn(s as unknown as { date: Date; completedOn?: Date | null }),
-    label: s.isRest ? "Rest day" : s.name?.trim() || "Workout",
-    result: s.isRest ? "" : historyResult(s.sets),
-    isRest: s.isRest,
-  }));
-  // Newest-first by the date now being SHOWN. Leaving the due-date order in
-  // place would print Monday's catch-up under its real 10/6 label but below a
-  // 10/6 entry, and a list whose dates do not descend reads as broken.
-  rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  const history: WorkoutHistoryEntry[] = rows.slice(0, 20);
+  const games = await sportLabels(recent.map((s: (typeof recent)[number]) => (s as { sourceEventId?: string | null }).sourceEventId ?? null));
+  const sessions: HistorySession[] = recent.map((s: (typeof recent)[number]) => {
+    const x = s as unknown as { category?: string | null; sourceEventId?: string | null };
+    return {
+      id: s.id,
+      // The day it was done, not the day it counts for.
+      date: doneOn(s as unknown as { date: Date; completedOn?: Date | null }),
+      label: (x.sourceEventId && games.get(x.sourceEventId)) || s.name?.trim() || "Workout",
+      result: s.isRest ? "" : historyResult(s.sets),
+      isRest: s.isRest,
+      category: x.category ?? null,
+    };
+  });
+  // One entry per day, newest first by the date shown, named by what was
+  // trained and the program it was part of (v0.627).
+  const history: WorkoutHistoryEntry[] = groupHistory(sessions, await loadProgramSpans(userId), 20);
 
   return { series, defaultId, history, planDays, defaultGroup };
 }
@@ -1826,6 +1835,8 @@ async function movementTarget(
             : null,
     last: lastSets.map((s) => ({ weight: s.weight, reps: s.reps })),
     bestForThree,
+    // Only a program's own main lift moves up by itself (v0.627).
+    progress: !!fromProgram && !!role?.main && movement === slotId,
   });
   if (sets.length === 0) return null;
   const intent = weekIntent(program, week);
@@ -1884,8 +1895,13 @@ export type DayLogState = {
   /** The person's program and its week on this day, if one is running (v0.611). */
   program: ProgramInfo | null;
   /** On a program day, the page title the home card uses: the program and the
-   *  day's main lift ("5/3/1 · Bench press") (v0.626). Null off a program. */
+   *  day's main lift ("5/3/1 · Bench press") (v0.626); a past day whose plan has
+   *  changed since, the program and what was logged ("5/3/1 · Legs") (v0.627).
+   *  Null off a program. */
   programTitle: string | null;
+  /** What was logged, as a title: the main work and conditioning, else cardio,
+   *  else a warm-up ("Hockey game · Back") (v0.627). Empty when nothing was. */
+  loggedTitle: string;
   /** The day's suggestion card, at most one (v0.612). */
   suggestion: Suggestion | null;
   /** Today was made lighter: the share of the usual weights. */
@@ -1911,7 +1927,7 @@ async function loggedOtherFor(
   userId: string,
   dateISO: string,
   planned: NonNullable<TodayPlanned>[],
-): Promise<{ other: LoggedOther[]; any: boolean }> {
+): Promise<{ other: LoggedOther[]; any: boolean; title: string; lifted: boolean }> {
   const rows = (await prisma.workoutSession.findMany({
     where: { userId, date: toDateColumn(dateISO), isRest: false },
     orderBy: { createdAt: "asc" },
@@ -1950,30 +1966,27 @@ async function loggedOtherFor(
   }[];
   const slots = new Set(planned.flatMap((p) => p.exercises.map((e) => e.poolExerciseId)).filter(Boolean) as string[]);
   const planNames = new Set(planned.map((p) => p.name.slice(0, 40).toLowerCase()));
-  // A game logged from the calendar goes by its kind in the title.
-  const eventIds = [...new Set(rows.map((r) => r.sourceEventId).filter((x): x is string => !!x))];
-  const types = eventIds.length
-    ? ((await prisma.event.findMany({
-        where: { id: { in: eventIds } },
-        select: { id: true, eventType: { select: { name: true } }, externalCalendar: { select: { name: true } } },
-      })) as { id: string; eventType: { name: string } | null; externalCalendar: { name: string } | null }[])
-    : [];
-  // Its event type ("Hockey game"), else the subscribed calendar it came from
-  // (v0.626: a league feed's games have no type), else "Sport".
-  const typeOf = new Map(
-    types.map((t) => [t.id, t.eventType?.name?.trim() || t.externalCalendar?.name?.trim() || "Sport"]),
-  );
+  const typeOf = await sportLabels(rows.map((r) => r.sourceEventId));
+  const short = (r: (typeof rows)[number]) => {
+    const name = r.name?.trim() || (r.category ? (CATEGORY_LABEL as Record<string, string>)[r.category] ?? "Workout" : "Workout");
+    return (r.sourceEventId ? typeOf.get(r.sourceEventId) : undefined) ?? (r.category === "SPORT" ? "Sport" : name);
+  };
+  // What the day was, by what was logged (v0.627): the main work and
+  // conditioning, else cardio, else a warm-up; `lifted` when weights were.
+  const headline = dayLabel(rows.map((r) => ({ label: short(r), category: r.category })));
+  const lifted = rows.some((r) => (r.category === "WEIGHTS" || r.category == null) && headline.used.includes("MAIN"));
+  const onlyWarmup = rows.every((r) => r.category === "WARMUP");
   const labelOf = new Map<string, string>();
   const byName = new Map<string, Map<string, typeof rows[number]["sets"]>>();
   for (const r of rows) {
     if (r.category && (CARDIO_CATEGORIES.includes(r.category) || r.category === "HIIT")) continue;
+    // A warm-up isn't part of what's listed as done, unless it's all there was.
+    if (r.category === "WARMUP" && !onlyWarmup) continue;
     const name = r.name?.trim() || (r.category ? (CATEGORY_LABEL as Record<string, string>)[r.category] ?? "Workout" : "Workout");
     const sets = r.sets.filter((x) => !slots.has((x.swappedFromId ?? x.poolExerciseId) ?? ""));
     if (r.sets.length > 0 && sets.length === 0) continue;
     if (r.sets.length === 0 && planNames.has(name.slice(0, 40).toLowerCase())) continue;
-    const typeName =
-      (r.sourceEventId ? typeOf.get(r.sourceEventId) : undefined) ?? (r.category === "SPORT" ? "Sport" : undefined);
-    if (!labelOf.has(name)) labelOf.set(name, typeName ?? name);
+    if (!labelOf.has(name)) labelOf.set(name, short(r));
     const group = byName.get(name) ?? new Map();
     for (const x of sets) {
       const label = x.poolExercise?.name ?? x.exercise?.name ?? name;
@@ -1989,8 +2002,9 @@ async function loggedOtherFor(
         ? [{ name: labelOf.get(name) ?? name, summary: "Done" }]
         : [...group.entries()].map(([m, sets]) => ({ name: m, summary: setsSummary(sets, sets[0]?.unit ?? null) || "Done" })),
   }));
-  return { other, any: rows.length > 0 };
+  return { other, any: rows.length > 0, title: headline.label, lifted };
 }
+
 
 /** A program day's title, as on the home card: the program and the day's main
  *  lift ("5/3/1 · Bench press"), or just the program on a day without one. */
@@ -2085,6 +2099,7 @@ export async function loadDayLogState(
 
   const logged = await loggedOtherFor(userId, dateISO, planned);
   const program = await programInfoFor(userId, dateISO);
+  const planIds = [...new Set([...planned.map((p) => p.plannedWorkoutId), ...(await simplePlanIds(userId, dateISO))])];
 
   const movements: Record<string, DayMovementState> = {};
   for (const slot of slots) {
@@ -2109,10 +2124,15 @@ export async function loadDayLogState(
     hiitLogged: sessions.some((s) => !s.isRest && s.category === "HIIT"),
     rested: sessions.some((s) => s.isRest),
     program,
-    programTitle: program ? await programDayTitle(userId, dateISO, program.name) : null,
+    programTitle: !program
+      ? null
+      : planIds.length === 0 && logged.lifted && logged.title
+        ? `${program.name} \u00b7 ${logged.title}`
+        : await programDayTitle(userId, dateISO, program.name),
+    loggedTitle: logged.title,
     suggestion: await daySuggestionFor(userId, dateISO),
     light: await dayLightFactor(userId, dateISO),
-    planIds: [...new Set([...planned.map((p) => p.plannedWorkoutId), ...(await simplePlanIds(userId, dateISO))])],
+    planIds,
     loggedOther: logged.other,
     loggedAny: logged.any,
   };

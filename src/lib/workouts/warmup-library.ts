@@ -151,7 +151,7 @@ export function warmupIntervals(steps: readonly WarmupStep[], from: number): War
 }
 
 /** Choices for the pause between intervals, in seconds. */
-export const WARMUP_GAPS = [0, 5, 10, 15, 20, 30] as const;
+export const WARMUP_GAPS = [0, 1, 2, 3, 5, 10] as const;
 
 /** One stretch of the countdown: a get-ready or pause, or an interval's work. */
 export type WarmupSegment = { kind: "READY" | "WORK"; interval: number; seconds: number };

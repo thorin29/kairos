@@ -59,7 +59,10 @@ export async function loadActiveProgram(userId: string): Promise<ActiveProgram |
       previousPlan: true,
     },
   })) as ProgramRow | null;
-  if (!row) return null;
+  return row ? toActive(row) : null;
+}
+
+function toActive(row: ProgramRow): ActiveProgram | null {
   const program = programByKey(row.programKey);
   if (!program) return null;
   const tm: Record<string, number> = {};
@@ -76,6 +79,30 @@ export async function loadActiveProgram(userId: string): Promise<ActiveProgram |
     days: row.days.split(",").map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6),
     trainingMaxes: tm,
   };
+}
+
+/** The program running on a day: the active one from its start, else an
+ *  earlier one that was running then (changed or ended since) (v0.627). */
+async function loadProgramOn(userId: string, dateISO: string): Promise<ActiveProgram | null> {
+  const rows = (await prisma.personProgram.findMany({
+    where: { userId, startedOn: { lte: toDateColumn(dateISO) } },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      programKey: true,
+      startedOn: true,
+      blockStartedOn: true,
+      days: true,
+      trainingMaxes: true,
+      previousPlan: true,
+      status: true,
+      endedOn: true,
+    },
+  })) as (ProgramRow & { status: string; endedOn: Date | null })[];
+  const row = rows.find((r) =>
+    r.status === "ACTIVE" ? true : r.endedOn != null && dateISO < fromDateColumn(r.endedOn),
+  );
+  return row ? toActive(row) : null;
 }
 
 /** What the day page and the Workouts page say about a person's program. */
@@ -95,8 +122,9 @@ export type ProgramInfo = {
 };
 
 export async function programInfoFor(userId: string, dateISO: string): Promise<ProgramInfo | null> {
-  const p = await loadActiveProgram(userId);
-  // A day before the program started isn't part of it (v0.625).
+  // The program running that day: a day before it started isn't part of it
+  // (v0.625), but one an earlier program covered is (v0.627).
+  const p = await loadProgramOn(userId, dateISO);
   if (!p || dateISO < p.startedOn) return null;
   const week = programWeek(p.program, p.blockStartedOn, dateISO);
   const ids = Object.keys(p.trainingMaxes);
@@ -554,7 +582,10 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
   const timed = new Set(pool.filter((p) => p.metric === "DURATION").map((p) => p.id));
 
   const prev = await snapshotPlan(userId);
-  const running = input.next ? await loadActiveProgram(userId) : null;
+  // The running program again (the next cycle with changes, or set up again
+  // from Change program): it carries on — same start, same weeks — rather
+  // than starting over at week 1 (v0.627).
+  const running = await loadActiveProgram(userId);
   const next = !!running && running.program.key === program.key;
   // The plan being replaced goes to My plans (unless it's empty or already there).
   await savePlan(userId, `${shortDate(todayISO())} · before ${next ? "changes" : program.name}`, { auto: true }).catch(
@@ -579,6 +610,7 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
 
   const units = await loadWeightUnits();
   const maxes: Record<string, number> = {};
+  const mainIds = new Set<string>();
   const order = new Map<number, number>();
   const nextOrder = (dow: number) => {
     const n = order.get(dow) ?? 0;
@@ -651,6 +683,7 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
       const top = input.tops[id];
       const tm = input.maxes?.[id];
       const unit = units[r.muscleGroup] ?? "lb";
+      if (r.main) mainIds.add(id);
       if (r.main && typeof tm === "number" && tm > 0) maxes[id] = tm;
       else if (r.main && typeof top === "number" && top > 0 && maxes[id] == null) maxes[id] = trainingMaxFrom(top, unit);
     }
@@ -715,11 +748,20 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
       return true;
     });
     await writePlan(userId, kept.map((w) => ({ ...w, sortOrder: nextOrder(w.dayOfWeek) })));
-    const done = blocksDone(running.program, running.blockStartedOn, today);
+    // The next cycle moves on a block; set up again mid-cycle keeps the week.
+    const done = input.next ? blocksDone(running.program, running.blockStartedOn, today) : 0;
     const blockStart = done >= 1 ? addDays(running.blockStartedOn, 7 * running.program.weeks * done) : running.blockStartedOn;
     await prisma.personProgram.update({
       where: { id: running.id },
-      data: { days: input.days.join(","), trainingMaxes: maxes, blockStartedOn: toDateColumn(blockStart) },
+      data: {
+        days: input.days.join(","),
+        // A main lift left blank keeps the training max it had.
+        trainingMaxes: {
+          ...Object.fromEntries(Object.entries(running.trainingMaxes).filter(([id]) => mainIds.has(id))),
+          ...maxes,
+        },
+        blockStartedOn: toDateColumn(blockStart),
+      },
     });
     await generateWorkoutTasks();
     return "ok";

@@ -1,5 +1,6 @@
 "use client";
 
+import { PRIMARY_BTN, SECONDARY_BTN } from "./buttons";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   answerProgramInvite,
@@ -24,9 +25,8 @@ import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { PlanLibrary } from "./my-plans";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const PILL = "inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold transition-colors";
-const PRIMARY = `${PILL} border-accent bg-accent text-on-accent disabled:opacity-40`;
-const QUIET = `${PILL} border-hairline hover:border-accent disabled:opacity-40`;
+const PRIMARY = PRIMARY_BTN;
+const QUIET = SECONDARY_BTN;
 const SELECT =
   "h-10 min-w-0 rounded-lg border border-hairline bg-surface px-2 text-sm outline-none focus:border-accent";
 

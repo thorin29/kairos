@@ -1,5 +1,6 @@
 "use client";
 
+import { PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG } from "./buttons";
 import { useRef, useState, useTransition } from "react";
 import {
   exportMyWorkouts,
@@ -16,10 +17,8 @@ import { PlanLibrary } from "./my-plans";
 import { BookmarkIcon, DownloadIcon, ShareIcon, UploadIcon } from "@/components/icons";
 import type { ImportPreview, SharedPlanRow } from "@/lib/workouts/plan-share-run";
 
-const PRIMARY =
-  "inline-flex h-10 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-on-accent disabled:opacity-40";
-const QUIET =
-  "inline-flex h-10 items-center rounded-full border border-hairline px-4 text-sm font-semibold text-accent hover:border-accent disabled:opacity-40";
+const PRIMARY = PRIMARY_BTN;
+const QUIET = SECONDARY_BTN;
 
 export function Modal({ title, onClose, onBack, children }: { title: string; onClose: () => void; onBack?: () => void; children: React.ReactNode }) {
   return (
@@ -191,7 +190,7 @@ export function PlanFilePanel({ userId }: { userId: string }) {
       <button
         type="button"
         onClick={() => show("menu")}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border-2 border-accent bg-surface px-5 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
+        className={`${SECONDARY_LG} w-full`}
       >
         <ShareIcon className="h-4 w-4" />
         Save, share or export

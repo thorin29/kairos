@@ -970,6 +970,17 @@ the running program carries into its next block with these changes (same
 start date; maxes as sent), and plan entries the setup doesn't cover stay.
 `GET /api/v1/workouts/plan` movements add `about`.
 
+v0.627: `GET /api/v1/workouts/progress` `history` is one entry per day:
+`{ id, ids, date, label, result, isRest }` — `ids` every session that day (to
+delete the day), `label` what was trained with the program it was part of
+("5/3/1 · Legs"; a warm-up only when it's all there was, cardio only when
+nothing else was). `GET /api/v1/workouts` `program` is the program running on
+that day (an earlier one after a change), and `title` on a past day whose plan
+has changed is the program and what was logged; with nothing planned, what
+was logged. `programs/start` with the running program's key carries it on
+(same start and week, plan entries outside the setup kept, a blank training
+max kept) instead of starting over.
+
 **Suggestions (v0.612).**
 ```
 Suggestion: { "key","title","why","actions":[ { "answer","label" } ],"weight":num? }

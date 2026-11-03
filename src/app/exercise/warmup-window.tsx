@@ -1,5 +1,6 @@
 "use client";
 
+import { DANGER_BTN, PRIMARY_BTN, SECONDARY_BTN } from "./buttons";
 import { useEffect, useState, useTransition } from "react";
 import {
   deleteWarmupRoutine,
@@ -12,10 +13,8 @@ import { stepAmount, type WarmupRoutine, type WarmupStep } from "@/lib/workouts/
 import { Modal } from "./plan-file-panel";
 import { WarmupTimer } from "./warmup-timer";
 
-const PRIMARY =
-  "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-on-accent disabled:opacity-40";
-const QUIET =
-  "inline-flex h-10 items-center justify-center rounded-full border border-hairline px-4 text-sm font-semibold hover:border-accent disabled:opacity-40";
+const PRIMARY = PRIMARY_BTN;
+const QUIET = SECONDARY_BTN;
 const FIELD = "h-10 min-w-0 rounded-lg border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent";
 
 /** A routine's steps: name and amount, a timer on timed ones, and a tick each. */
@@ -63,7 +62,7 @@ export function WarmupSteps({ steps }: { steps: WarmupStep[] }) {
                 <button
                   type="button"
                   onClick={() => setTiming(i)}
-                  className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border-2 border-accent px-3.5 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
+                  className={`${SECONDARY_BTN} shrink-0`}
                 >
                   <TimerIcon className="h-4 w-4" />
                   Timer
@@ -371,7 +370,7 @@ function RoutineEditor({
                 onSaved(null);
               });
             }}
-            className={`${QUIET} text-red-700`}
+            className={DANGER_BTN}
           >
             Delete
           </button>

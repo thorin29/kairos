@@ -1,5 +1,6 @@
 "use client";
 
+import { SECONDARY_BTN, SECONDARY_LG } from "./buttons";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
@@ -314,7 +315,7 @@ export function WorkoutsGrid({
                   <button
                     type="button"
                     onClick={() => setStep("browse")}
-                    className="flex w-full items-center justify-center gap-2 rounded-full border border-hairline px-4 py-2.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+                    className={`${SECONDARY_LG} w-full`}
                   >
                     <BookIcon className="h-4 w-4" />
                     Browse workouts
@@ -324,7 +325,7 @@ export function WorkoutsGrid({
                     <button
                       type="button"
                       onClick={() => setCalcOpen(true)}
-                      className="flex w-full items-center justify-center gap-2 rounded-full border border-hairline px-4 py-2.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+                      className={`${SECONDARY_LG} w-full`}
                     >
                       <DumbbellIcon className="h-4 w-4" />
                       Weight calculator
@@ -567,9 +568,10 @@ export function WorkoutsGrid({
                                   type="button"
                                   onClick={() => {
                                     setConfirmDeleteId(null);
-                                    startTransition(() =>
-                                      deleteWorkoutSession(h.id),
-                                    );
+                                    // The entry is the whole day: delete each of its sessions.
+                                    startTransition(async () => {
+                                      for (const id of h.ids?.length ? h.ids : [h.id]) await deleteWorkoutSession(id);
+                                    });
                                   }}
                                   className="rounded-full bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
                                 >
@@ -1958,7 +1960,7 @@ export function CustomWorkoutForm({
             <button
               type="button"
               onClick={() => setConflict(null)}
-              className="rounded-full border border-hairline px-4 py-2 text-sm font-medium text-muted hover:text-ink"
+              className={SECONDARY_BTN}
             >
               Cancel
             </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import { SECONDARY_SM } from "./buttons";
 import { useState, useTransition } from "react";
 import { DateField } from "@/components/date-field";
 import { DAY_NAMES } from "@/lib/days";
@@ -94,7 +95,7 @@ export function RotationBuilder({
           type="button"
           disabled={pending}
           onClick={() => run(() => stopRotation(userId))}
-          className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-xs font-medium text-muted hover:text-ink disabled:opacity-50"
+          className={`${SECONDARY_SM} shrink-0`}
         >
           Stop rotation
         </button>
@@ -323,7 +324,7 @@ function AddSlot({
         onClick={() =>
           onAdd(() => addRotationSlot(userId, { name: "Rest", isRest: true }))
         }
-        className="inline-flex h-9 items-center rounded-full border border-hairline px-3 text-sm font-medium text-muted hover:text-ink disabled:opacity-50"
+        className={SECONDARY_SM}
       >
         + Rest day
       </button>

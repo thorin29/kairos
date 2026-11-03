@@ -1,5 +1,6 @@
 "use client";
 
+import { SECONDARY_BTN, SECONDARY_LG, SECONDARY_SM } from "./buttons";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   loadDayLog,
@@ -324,7 +325,7 @@ export function DayLog({
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-muted">
           {date === todayISO ? "Today" : dayLabel(date)}
-          {late && !state?.loggedAny && " · logging late"}
+          {late && workouts.length > 0 && !state?.loggedAny && " · logging late"}
           {state?.program && ` · ${state.program.label}`}
         </p>
         <h3 className="mt-1 font-display text-xl font-semibold">
@@ -332,9 +333,7 @@ export function DayLog({
             ? "Rest day"
             : title ||
               (workouts.length === 0
-                ? state?.loggedOther?.length
-                  ? [...new Set(state.loggedOther.map((g) => g.label))].join(" · ")
-                  : "Nothing planned"
+                ? state?.loggedTitle || "Nothing planned"
                 : "Workout")}
         </h3>
         {progress.total > 0 && !state?.rested && (
@@ -360,7 +359,7 @@ export function DayLog({
                 setTick((n) => n + 1);
               })
             }
-            className="mt-3 inline-flex h-10 items-center gap-1.5 rounded-full border-2 border-accent bg-surface px-4 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
+            className={`${SECONDARY_BTN} mt-3`}
           >
             <MoonIcon className="h-4 w-4" />
             Rest / skip day
@@ -1177,7 +1176,7 @@ function MovementLogger({
         <button
           type="button"
           onClick={() => (doing ? swapTo(null) : setPicking(true))}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline px-3 text-xs font-semibold text-accent hover:border-accent"
+          className={SECONDARY_SM}
         >
           <SwapIcon className="h-3.5 w-3.5" />
           {doing ? "Undo swap" : "Swap"}
@@ -1387,7 +1386,7 @@ function MovementLogger({
               <button
                 type="button"
                 onClick={addSet}
-                className="inline-flex h-11 items-center gap-1.5 rounded-full border border-hairline px-4 text-sm font-semibold hover:border-accent"
+                className={SECONDARY_LG}
               >
                 <PlusIcon className="h-4 w-4" />
                 Add set

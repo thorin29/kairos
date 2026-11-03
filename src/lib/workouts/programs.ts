@@ -21,8 +21,10 @@ export type WaveSet = { reps: number; pct: number; top?: boolean; plus?: boolean
  *   wave            work up to a top set; reps and % of training max by program week
  *   wave:2026-11-02 the same in a plan built by hand (v0.615): the 4-week wave
  *                   counted from that day, week 4 light
- *   range:3x8-12    one weight; reps up to the top of the range, then the weight goes up
- *   same:3x5        one weight for every set; all reps done → the weight goes up
+ *   range:3x8-12    one weight; reps up to the top of the range (a program's own
+ *                   main lift then goes up a step; anything else holds)
+ *   same:3x5        one weight for every set (a program's main lift goes up once
+ *                   all reps are done; anything else holds)
  */
 export type Scheme =
   | { kind: "WAVE"; start?: string }
@@ -629,9 +631,12 @@ export function stepFor(lower: boolean | undefined, unit: string): number {
  *   WAVE   the week's sets at a share of the training max. No max given yet:
  *          reps only, and the weights come from last time ("the first week
  *          finds your numbers").
- *   RANGE  last time's weight; up a step once every set reached the top of the
- *          range, reps back to the bottom. Otherwise aim for one more rep.
- *   SAME   last time's weight; up a step once every set got every rep.
+ *   RANGE  the weight done for these reps last time; aim for one more rep than
+ *          the lowest set, up to the top.
+ *   SAME   the weight done for these reps last time.
+ *   The weight holds until the person changes it, except a program's own main
+ *   lift (`progress`), which steps up once every set got every rep.
+ *   Either, after heavier lower-rep work: what that allows for these reps.
  *
  * A light week: one set fewer (at least 2) at 80%. A test week: work up to a
  * heavy 3, with the top set at the best weight lifted for 3+ reps, to beat.
@@ -646,6 +651,10 @@ export function targetsFor(input: {
   last: readonly LastSet[];
   /** Heaviest weight lifted for 3 or more reps, for a test week. */
   bestForThree?: number | null;
+  /** A program's own main lift on a rep scheme (Sets of ten, Full body): the
+   *  weight steps up once every set got every rep, as the program says. Off,
+   *  the weight holds until the person changes it (companion lifts, own plans). */
+  progress?: boolean;
 }): TargetSet[] {
   const { program, week, scheme, unit, lower, trainingMax, last } = input;
   const intent = weekIntent(program, week);
@@ -688,39 +697,38 @@ export function targetsFor(input: {
     }));
   }
 
-  // The weight comes from what last time says about these reps (v0.625): the
-  // heaviest weight already done for them, or, when last time was heavier
-  // and lower-rep (a 165 × 3), what that strength allows for these reps with
-  // a couple left in the tank. Never last time's top weight for 3 × as many reps.
+  // The weight comes from what last time says about these reps (v0.627): the
+  // weight already done for them holds until the person changes it (no step
+  // up by itself). When last time was heavier and lower-rep (a 165 × 3, a new
+  // best), what that strength allows for these reps with about three to spare,
+  // if that's more. Never last time's top weight for 3 × as many reps.
   const aimReps = scheme.kind === "RANGE" ? scheme.min : scheme.reps;
   const proven = last
     .filter((s) => s.weight != null && s.weight > 0 && (s.reps ?? 0) >= aimReps)
     .map((s) => s.weight as number);
-  const provenWeight = proven.length ? Math.max(...proven) : null;
+  let weight: number | null = proven.length ? Math.max(...proven) : null;
   const estimate = weightForReps(last, aimReps, unit);
-  const step = stepFor(lower, unit);
-  let sets: number;
+  if (estimate != null && (weight == null || estimate > weight)) weight = estimate;
+  let sets = scheme.sets;
   let reps: number;
-  let weight = provenWeight;
-
+  const lastReps = last.map((s) => s.reps ?? 0).slice(0, scheme.sets);
+  const step = stepFor(lower, unit);
   if (scheme.kind === "RANGE") {
-    sets = scheme.sets;
-    const lastReps = last.map((s) => s.reps ?? 0);
-    const allTop = last.length >= scheme.sets && lastReps.slice(0, scheme.sets).every((x) => x >= scheme.max);
-    if (weight != null && allTop) {
+    // A rep range: aim for one more rep than last time's lowest set, up to the
+    // top; a program's main lift then steps up and starts the range again.
+    const allTop = lastReps.length >= scheme.sets && lastReps.every((x) => x >= scheme.max);
+    if (input.progress && weight != null && allTop) {
       weight += step;
       reps = scheme.min;
     } else {
-      const lowest = last.length ? Math.min(...lastReps.slice(0, scheme.sets)) : scheme.min - 1;
+      const lowest = lastReps.length ? Math.min(...lastReps) : scheme.min - 1;
       reps = Math.min(scheme.max, Math.max(scheme.min, lowest + 1));
     }
   } else {
-    sets = scheme.sets;
     reps = scheme.reps;
-    const allDone = last.length >= scheme.sets && last.slice(0, scheme.sets).every((s) => (s.reps ?? 0) >= scheme.reps);
-    if (weight != null && allDone) weight += step;
+    const allDone = lastReps.length >= scheme.sets && lastReps.every((x) => x >= scheme.reps);
+    if (input.progress && weight != null && allDone) weight += step;
   }
-  if (estimate != null && (weight == null || estimate > weight)) weight = estimate;
 
   if (intent === "LIGHT") {
     sets = Math.max(2, sets - 1);
@@ -730,7 +738,7 @@ export function targetsFor(input: {
 }
 
 /**
- * A weight for `reps` reps with about two left in the tank, from the best set
+ * A weight for `reps` reps with about three left in the tank, from the best set
  * in `sets` (estimated max by Epley: weight × (1 + reps / 30)), rounded down
  * to a loadable weight. 165 × 3 → about 125 for 10. Null with nothing to go by.
  */
@@ -742,7 +750,7 @@ export function weightForReps(sets: readonly LastSet[], reps: number, unit: stri
   }
   if (max <= 0) return null;
   const inc = unit === "kg" ? 2.5 : 5;
-  const w = Math.floor(max / (1 + (reps + 2) / 30) / inc) * inc;
+  const w = Math.floor(max / (1 + (reps + 3) / 30) / inc) * inc;
   return w > 0 ? w : null;
 }
 

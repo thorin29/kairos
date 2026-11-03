@@ -202,6 +202,8 @@ production:
 | Day page headline and sections | `dayHeadline` (kinds of work) / `withSection` (an empty Conditioning or Cardio section in the person's order) in `src/lib/workouts/blocks.ts`; the program's name on a program day |
 | A companion lift's suggested weight (for its reps, from the last session's best set) | `weightForReps` / `targetsFor` in `src/lib/workouts/programs.ts` |
 | The next cycle with changes (setup opened on the running plan) | `currentSetup` / `startProgram({ next: true })` in `src/lib/workouts/program-run.ts`; UI `CycleEnd` → `ProgramSetup` (`initial`, `nextMaxes`) in `src/app/exercise/program-card.tsx` |
+| Recent workouts by day; a past day's program | `groupHistory` / `dayLabel` / `programOn` in `src/lib/workouts/history.ts` (pure); `loadProgramSpans` / `sportLabels` in `history-run.ts`; `loadProgramOn` in `program-run.ts` |
+| Workout-page button styles | `PRIMARY_BTN` / `SECONDARY_BTN` (`_SM`, `_LG`) / `DANGER_BTN` in `src/app/exercise/buttons.ts`; phone `ui/common/AccentOutlinedButton` |
 | A movement's kind from its name | `guessPattern` in `src/lib/workouts/library.ts`, used by `loadProgramChoices` for untagged pool movements |
 | Warm-ups (look through, edit, create) | `WarmupLibrary` in `src/app/exercise/warmup-window.tsx`, the Workouts page's Warm-ups step |
 | Saved plans (My plans) | `savePlan` / `savedPlansFor` / `renameSavedPlan` / `deleteSavedPlan` in `src/lib/workouts/plan-share-run.ts` (SharedPlan, status PRIVATE); UI `PlanLibrary` in `src/app/exercise/my-plans.tsx` |

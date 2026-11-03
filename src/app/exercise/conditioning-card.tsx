@@ -1,5 +1,6 @@
 "use client";
 
+import { SECONDARY_BTN } from "./buttons";
 import { useState, useTransition } from "react";
 import { EffortPicker } from "@/components/effort-picker";
 import { logHiitWorkout, saveMovementFeedback, skipMovement } from "@/lib/actions/workouts";
@@ -165,7 +166,7 @@ export function ConditioningCard({
             <button
               type="button"
               onClick={() => setManual(true)}
-              className="inline-flex h-10 items-center rounded-full border border-hairline px-4 text-sm font-semibold text-accent hover:border-accent"
+              className={SECONDARY_BTN}
             >
               {workout.today ? "Edit result" : "Log a result"}
             </button>

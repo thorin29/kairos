@@ -7,6 +7,8 @@ import { loadMovementStats, type MovementStats } from "@/lib/queries/movement-st
 import { setsSummary } from "@/lib/workouts/sets";
 import { loadDayOrders, type DayOrders } from "@/lib/workouts/day-order";
 import { programByKey } from "@/lib/workouts/programs";
+import { groupHistory } from "@/lib/workouts/history";
+import { loadProgramSpans, sportLabels } from "@/lib/workouts/history-run";
 import {
   CATEGORY_LABEL,
   LINE_COLORS,
@@ -77,6 +79,8 @@ export type TodayWorkout = {
 
 export type HistoryEntry = {
   id: string;
+  /** Every session that day: the entry is the day (v0.627). */
+  ids: string[];
   dateISO: string;
   label: string;
   result: string;
@@ -352,7 +356,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         // reads a different query, showed the same day correctly.
         where: { userId: person.id, date: { lte: today } },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-        take: 30,
+        take: 60,
         select: {
           id: true,
           name: true,
@@ -361,6 +365,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           isRest: true,
           date: true,
           completedOn: true,
+          sourceEventId: true,
           sets: {
             select: {
               exerciseId: true,
@@ -606,16 +611,22 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       .filter((s) => !s.isRest && (s.sets.length > 0 || (s.name?.trim().length ?? 0) > 0))
       .map((s) => ({ id: s.id, label: workoutLabel(s), result: workoutResult(s) }));
 
-    const recent = (recentSessions ?? []) as unknown as (SessShape & { date: Date })[];
-    const history: HistoryEntry[] = recent.map((s) => ({
-      id: s.id,
-      dateISO: fromDateColumn(
-        (s as { completedOn?: Date | null }).completedOn ?? s.date,
-      ),
-      label: s.isRest ? "Rest day" : workoutLabel(s),
-      result: s.isRest ? "" : workoutResult(s),
-      isRest: s.isRest,
-    }));
+    const recent = (recentSessions ?? []) as unknown as (SessShape & { date: Date; sourceEventId?: string | null })[];
+    // One entry per day, named by what was trained and the program it was
+    // part of (v0.627); a game by its kind.
+    const games = await sportLabels(recent.map((s) => s.sourceEventId ?? null));
+    const history: HistoryEntry[] = groupHistory(
+      recent.map((s) => ({
+        id: s.id,
+        date: fromDateColumn((s as { completedOn?: Date | null }).completedOn ?? s.date),
+        label: (s.sourceEventId && games.get(s.sourceEventId)) || workoutLabel(s),
+        result: s.isRest ? "" : workoutResult(s),
+        isRest: s.isRest,
+        category: (s.category as string | null) ?? null,
+      })),
+      await loadProgramSpans(person.id),
+      30,
+    ).map((d) => ({ id: d.id, ids: d.ids, dateISO: d.date, label: d.label, result: d.result, isRest: d.isRest }));
 
     // Reminders
     const reminders: Reminder[] = [];

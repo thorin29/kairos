@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { warmupAt, warmupIntervals, warmupSchedule, warmupTotal, type WarmupStep } from "@/lib/workouts/warmup-library";
 import { guessPattern } from "@/lib/workouts/library";
+import { groupHistory, programOn } from "@/lib/workouts/history";
 import { dayHeadline, withSection, type DaySection } from "@/lib/workouts/blocks";
 import { PROGRAMS, parseScheme, targetsFor, weightForReps } from "@/lib/workouts/programs";
 
@@ -30,6 +31,7 @@ describe("warm-up countdown", () => {
     expect(warmupAt(s, 5)).toEqual({ segment: 1, left: 30, done: false });
     expect(warmupAt(s, 95).done).toBe(true);
     expect(warmupSchedule(warmupIntervals(steps, 1), 0, 0)).toHaveLength(3);
+    expect(warmupSchedule(warmupIntervals(steps, 1), 0, 2).map((x) => x.seconds)).toEqual([30, 2, 20, 2, 20]);
   });
 });
 
@@ -81,10 +83,48 @@ describe("companion weights", () => {
     const t = targetsFor({ program, week: 1, scheme: parseScheme("same:5x10")!, unit: "lb", last: heavy });
     expect(t.map((x) => x.weight)).toEqual([125, 125, 125, 125, 125]);
   });
-  it("keeps a weight already done for the reps, and steps up once all were done", () => {
+  it("keeps the weight already done for the reps; it doesn't step up by itself", () => {
     const done = [10, 10, 10, 10, 10].map((reps) => ({ weight: 130, reps }));
-    expect(targetsFor({ program, week: 1, scheme: parseScheme("same:5x10")!, unit: "lb", last: done })[0].weight).toBe(135);
+    expect(targetsFor({ program, week: 1, scheme: parseScheme("same:5x10")!, unit: "lb", last: done })[0].weight).toBe(130);
     const missed = [10, 10, 10, 9, 8].map((reps) => ({ weight: 130, reps }));
     expect(targetsFor({ program, week: 1, scheme: parseScheme("same:5x10")!, unit: "lb", last: missed })[0].weight).toBe(130);
+  });
+});
+
+describe("recent workouts by day", () => {
+  const S = (id: string, date: string, label: string, category: string | null, result = "") => ({
+    id, date, label, category, result, isRest: false,
+  });
+  const spans = [
+    { name: "5/3/1", startedOn: "2026-11-02", endedOn: "2026-11-03" },
+    { name: "5/3/1 BBB", startedOn: "2026-11-03", endedOn: null },
+  ];
+  it("names the day by its main work and the program it was in, never the warm-up", () => {
+    const days = groupHistory(
+      [
+        S("w", "2026-11-02", "Warm-up", "WARMUP"),
+        S("l", "2026-11-02", "Legs", "WEIGHTS", "5 sets · top 225 × 5"),
+        S("r", "2026-11-01", "Rowing", "ROWING", "2,000 m"),
+        S("x", "2026-10-31", "Warm-up", "WARMUP"),
+        S("h", "2026-11-03", "Hockey game", "SPORT"),
+        S("b", "2026-11-03", "Back", "WEIGHTS"),
+        S("c", "2026-11-03", "Cindy", "HIIT", "12 rounds"),
+        S("r2", "2026-11-03", "Rowing", "ROWING"),
+      ],
+      spans,
+    );
+    expect(days.map((d) => [d.date, d.label])).toEqual([
+      ["2026-11-03", "5/3/1 BBB · Hockey game · Back · Cindy"],
+      ["2026-11-02", "5/3/1 · Legs"],
+      ["2026-11-01", "Rowing"],
+      ["2026-10-31", "Warm-up"],
+    ]);
+    expect(days[1].ids).toEqual(["w", "l"]);
+    expect(days[1].result).toBe("5 sets · top 225 × 5");
+  });
+  it("finds the program running on a day", () => {
+    expect(programOn(spans, "2026-11-01")).toBeNull();
+    expect(programOn(spans, "2026-11-02")).toBe("5/3/1");
+    expect(programOn(spans, "2026-11-04")).toBe("5/3/1 BBB");
   });
 });

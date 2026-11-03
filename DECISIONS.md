@@ -1,5 +1,45 @@
 # Decisions
 
+## 2026-11 — Recent workouts by day; programs across changes; weights that hold (v0.627.0 / app 0.435.0)
+
+**One button style:** the workout pages had four slightly different "quiet"
+buttons (a hairline outline, read as disabled). They now share
+`src/app/exercise/buttons.ts`: `PRIMARY_BTN` (filled accent) and
+`SECONDARY_BTN` (2 px accent outline, accent text, on the surface colour) in
+three sizes, plus `DANGER_BTN`. Sizes are separate constants because a height
+class added at the call site fights the one inside. The phone's plain
+OutlinedButtons in the workout screens became `AccentOutlinedButton`, and its
+pills (Add set, Swap) match; timer screens (their own palette), Delete and
+Stop rotation keep theirs.
+
+**Companion weights hold:** a fixed or rep-range scheme no longer steps up by
+itself. The weight is the one already done for the target reps; it changes
+when the person changes it, or when a heavier, lower-rep set elsewhere in the
+last session allows more (estimate ÷ (1 + (reps + 3) / 30), about three reps in
+reserve, so a guess starts on the light side). A program's own main lift on a
+rep scheme (Sets of ten, Full body) still steps up as its program says
+(`progress`). Sets are straight sets at one weight, as Wendler's assistance
+and BBB work are; ramp-up sets are for the main lifts only.
+
+**"Logging late"** only on a past day that had something planned.
+
+**Recent workouts by day:** one entry per day (`groupHistory`): the main work
+and conditioning ("Legs", "Hockey game · Back · Cindy"), else cardio, else the
+warm-up; prefixed with the program the day was part of when weights were done
+("5/3/1 · Legs"), from every program the person has run (`loadProgramSpans`:
+startedOn up to endedOn). Deleting an entry deletes the day's sessions
+(`ids`). The day page's Logged list and title leave a warm-up out the same way
+(`loggedTitle`).
+
+**Programs across a change:** `programInfoFor` uses the program running on the
+day (`loadProgramOn`: the active one from its start, else an ended one that
+covered it), so the day before a change still shows its program and week, and
+its title is the program and what was logged when the plan has changed since.
+Setting up the running program again (Change program → the same one) now
+carries it on like "Next cycle, with changes" without moving the block: same
+start and week, entries outside the setup kept, a blank training max kept.
+
+
 ## 2026-11 — Program-day titles; companion weights; ⓘ everywhere; next cycle with changes (v0.626.0 / app 0.434.0)
 
 **Titles:** a program day's title is the home card's label, the program and the
