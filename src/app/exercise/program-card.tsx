@@ -9,37 +9,54 @@ import {
   setProgramMax,
   startProgramFor,
 } from "@/lib/actions/workouts";
-import type { ProgramChoice, ProgramInfo } from "@/lib/workouts/program-run";
+import { SCHEME_CHOICES, parseScheme, roundLoad, schemeLabel } from "@/lib/workouts/programs";
+import type { CurrentExtras, ProgramChoice, ProgramInfo, StartProgramInput } from "@/lib/workouts/program-run";
+import { Modal } from "./plan-file-panel";
+import { PlanLibrary } from "./my-plans";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const PILL = "inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold transition-colors";
+const PRIMARY = `${PILL} border-accent bg-accent text-on-accent disabled:opacity-40`;
+const QUIET = `${PILL} border-hairline hover:border-accent disabled:opacity-40`;
+const SELECT =
+  "h-10 min-w-0 rounded-lg border border-hairline bg-surface px-2 text-sm outline-none focus:border-accent";
+
+type Data = { choices: ProgramChoice[]; active: ProgramInfo | null; invite: boolean; current: CurrentExtras };
 
 /**
  * A person's program on the Exercise page: the program and its week, training
- * maxes, the end-of-block choice and End; or, without one, the invite (for
- * someone with no plan and nothing logged lately) or a quiet "Start a program".
- * Starting one asks which days, which movement for each slot and, for main
- * lifts, a recent top weight; it then writes their weekly plan.
+ * maxes, the end-of-cycle window and End; or, without one, the invite (for
+ * someone with no plan and nothing logged lately) or "Start a program".
+ * Choosing (v0.620) opens a window with Kairos programs, My plans and the
+ * household's plans; a program is then set up step by step — days, lifts,
+ * extras, training maxes — and starting it opens the plan editor.
  */
 export function ProgramCard({
   userId,
   onChanged,
+  onEditPlan,
   inviteOnly = false,
 }: {
   userId: string;
   onChanged?: () => void;
+  /** Opens the plan editor once a program has started. */
+  onEditPlan?: () => void;
   /** The home page: show only the invite (and its setup), nothing otherwise. */
   inviteOnly?: boolean;
 }) {
-  const [data, setData] = useState<{ choices: ProgramChoice[]; active: ProgramInfo | null; invite: boolean } | null>(null);
+  const [data, setData] = useState<Data | null>(null);
   const [setup, setSetup] = useState<string | null>(null);
-  const [picking, setPicking] = useState(false);
+  const [choosing, setChoosing] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [cycleOpen, setCycleOpen] = useState(false);
   const [pending, start] = useTransition();
 
   const reload = () =>
     loadProgramsFor(userId)
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        if (d.active?.blockDone) setCycleOpen(true);
+      })
       .catch(() => {});
   useEffect(() => {
     void reload();
@@ -53,28 +70,48 @@ export function ProgramCard({
     onChanged?.();
   };
 
-  if (setup) {
-    const program = data.choices.find((c) => c.key === setup);
-    if (program) {
-      return (
+  const program = setup ? data.choices.find((c) => c.key === setup) : undefined;
+  const windows = (
+    <>
+      {choosing && !program && (
+        <Modal title={data.active ? "Change program" : "Start a program"} onClose={() => setChoosing(false)}>
+          <Chooser
+            userId={userId}
+            choices={data.choices}
+            onPick={setSetup}
+            onUsed={() => {
+              setChoosing(false);
+              done();
+            }}
+          />
+        </Modal>
+      )}
+      {program && (
         <ProgramSetup
           program={program}
+          current={data.current}
           busy={pending}
-          onCancel={() => setSetup(null)}
+          onBack={choosing ? () => setSetup(null) : undefined}
+          onClose={() => {
+            setSetup(null);
+            setChoosing(false);
+          }}
           onStart={(input) =>
             start(async () => {
               const r = await startProgramFor(userId, { key: program.key, ...input });
               if (r.ok) {
                 setSetup(null);
-                setPicking(false);
+                setChoosing(false);
+                setCycleOpen(false);
                 done();
+                onEditPlan?.();
               }
             })
           }
         />
-      );
-    }
-  }
+      )}
+    </>
+  );
 
   const a = data.active;
   if (a) {
@@ -85,30 +122,9 @@ export function ProgramCard({
           <span className="text-sm text-muted">{a.label}</span>
         </div>
         {a.blockDone && (
-          <div className="space-y-2 rounded-xl bg-accent/5 p-3">
-            <p className="text-sm font-semibold">Block done. What's next?</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => start(async () => { await nextProgramBlock(userId, true); done(); })}
-                className={`${PILL} border-accent bg-accent text-on-accent`}
-              >
-                Raise my maxes
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => start(async () => { await nextProgramBlock(userId, false); done(); })}
-                className={`${PILL} border-hairline hover:border-accent`}
-              >
-                Repeat
-              </button>
-              <button type="button" onClick={() => setPicking(true)} className={`${PILL} border-hairline hover:border-accent`}>
-                Try another program
-              </button>
-            </div>
-          </div>
+          <button type="button" onClick={() => setCycleOpen(true)} className={`${PRIMARY} w-full justify-center`}>
+            Cycle done · what&rsquo;s next?
+          </button>
         )}
         {a.maxes.length > 0 && (
           <div>
@@ -125,42 +141,55 @@ export function ProgramCard({
             </div>
           </div>
         )}
-        {picking && <ProgramList choices={data.choices} onPick={setSetup} onClose={() => setPicking(false)} />}
-        {ending ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-ground/60 p-3 text-sm">
-            <span className="mr-auto">End {a.name}?</span>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => start(async () => { await endProgramFor(userId, true); setEnding(false); done(); })}
-              className={`${PILL} border-hairline bg-surface hover:border-accent`}
-            >
-              Go back to my old plan
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => start(async () => { await endProgramFor(userId, false); setEnding(false); done(); })}
-              className={`${PILL} border-hairline bg-surface hover:border-accent`}
-            >
-              Keep this plan
-            </button>
-            <button type="button" onClick={() => setEnding(false)} className="h-10 px-3 text-sm font-semibold text-muted">
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-3 text-sm font-semibold">
-            {!picking && (
-              <button type="button" onClick={() => setPicking(true)} className="text-accent">
-                Change program
+        <div className="flex flex-wrap gap-3 text-sm font-semibold">
+          <button type="button" onClick={() => setChoosing(true)} className="text-accent">
+            Change program
+          </button>
+          <button type="button" onClick={() => setEnding(true)} className="text-muted hover:text-ink">
+            End program
+          </button>
+        </div>
+        {ending && (
+          <Modal title={`End ${a.name}?`} onClose={() => setEnding(false)}>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => start(async () => { await endProgramFor(userId, true); setEnding(false); done(); })}
+                className={`${PRIMARY} justify-center`}
+              >
+                Go back to my old plan
               </button>
-            )}
-            <button type="button" onClick={() => setEnding(true)} className="text-muted hover:text-ink">
-              End program
-            </button>
-          </div>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => start(async () => { await endProgramFor(userId, false); setEnding(false); done(); })}
+                className={`${QUIET} justify-center`}
+              >
+                Keep this plan
+              </button>
+            </div>
+          </Modal>
         )}
+        {cycleOpen && a.blockDone && (
+          <CycleEnd
+            active={a}
+            busy={pending}
+            onClose={() => setCycleOpen(false)}
+            onNext={(raises) =>
+              start(async () => {
+                await nextProgramBlock(userId, false, raises);
+                setCycleOpen(false);
+                done();
+              })
+            }
+            onSwitch={() => {
+              setCycleOpen(false);
+              setChoosing(true);
+            }}
+          />
+        )}
+        {windows}
       </section>
     );
   }
@@ -171,6 +200,9 @@ export function ProgramCard({
         <h4 className="font-display text-base font-semibold">Start a workout program?</h4>
         <ProgramList choices={data.choices.filter((c) => STARTERS.includes(c.key))} onPick={setSetup} />
         <div className="flex flex-wrap gap-3 text-sm font-semibold">
+          <button type="button" onClick={() => setChoosing(true)} className="text-accent">
+            More
+          </button>
           <button
             type="button"
             onClick={() => start(async () => { await answerProgramInvite(userId, "later"); done(); })}
@@ -186,33 +218,68 @@ export function ProgramCard({
             Don&rsquo;t ask again
           </button>
         </div>
+        {windows}
       </section>
     );
   }
 
-  return picking ? (
-    <section className="rounded-2xl border border-hairline bg-surface p-4">
-      <ProgramList choices={data.choices} onPick={setSetup} onClose={() => setPicking(false)} />
-    </section>
-  ) : (
-    <button type="button" onClick={() => setPicking(true)} className="text-sm font-semibold text-accent">
-      Start a program
-    </button>
+  return (
+    <>
+      <button type="button" onClick={() => setChoosing(true)} className="text-sm font-semibold text-accent">
+        Start a program
+      </button>
+      {windows}
+    </>
   );
 }
 
 /** The invite's three: easy starts. */
 const STARTERS = ["get-moving", "sets-of-ten", "full-body-3"];
 
-function ProgramList({
+/** Kairos programs, My plans, or the household's plans. */
+function Chooser({
+  userId,
   choices,
   onPick,
-  onClose,
+  onUsed,
 }: {
+  userId: string;
   choices: ProgramChoice[];
   onPick: (key: string) => void;
-  onClose?: () => void;
+  onUsed: () => void;
 }) {
+  const [tab, setTab] = useState<"programs" | "mine" | "household">("programs");
+  const tabs = [
+    ["programs", "Programs"],
+    ["mine", "My plans"],
+    ["household", "Household"],
+  ] as const;
+  return (
+    <div className="space-y-4">
+      <div role="tablist" className="grid grid-cols-3 gap-1 rounded-full bg-ground p-1">
+        {tabs.map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={tab === k}
+            onClick={() => setTab(k)}
+            className={`h-9 rounded-full text-sm font-semibold ${tab === k ? "bg-surface text-ink shadow-sm" : "text-muted"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === "programs" ? (
+        <ProgramList choices={choices} onPick={onPick} />
+      ) : (
+        <PlanLibrary userId={userId} kind={tab} onUsed={onUsed} />
+      )}
+    </div>
+  );
+}
+
+function ProgramList({ choices, onPick }: { choices: ProgramChoice[]; onPick: (key: string) => void }) {
   return (
     <div className="space-y-2">
       {choices.map((c) => (
@@ -224,18 +291,13 @@ function ProgramList({
         >
           <span className="flex items-baseline justify-between gap-2">
             <span className="font-semibold">{c.name}</span>
-            <span className="text-xs text-muted">
-              {c.days.length} days a week · {c.weeks}-week blocks
+            <span className="shrink-0 text-xs text-muted">
+              {c.days.length} days · {c.weeks} weeks
             </span>
           </span>
           <span className="mt-0.5 block text-sm text-muted">{c.blurb}</span>
         </button>
       ))}
-      {onClose && (
-        <button type="button" onClick={onClose} className="text-sm font-semibold text-muted hover:text-ink">
-          Cancel
-        </button>
-      )}
     </div>
   );
 }
@@ -264,37 +326,138 @@ function MaxRow({ name, weight, onSave }: { name: string; weight: number; onSave
   );
 }
 
+/** End of a cycle: each lift's raise (+5 upper, +10 lower to start, 0 holds
+ *  it), Next cycle, Repeat, or Switch program. */
+function CycleEnd({
+  active,
+  busy,
+  onClose,
+  onNext,
+  onSwitch,
+}: {
+  active: ProgramInfo;
+  busy: boolean;
+  onClose: () => void;
+  onNext: (raises: Record<string, number>) => void;
+  onSwitch: () => void;
+}) {
+  const [by, setBy] = useState<Record<string, string>>(() =>
+    Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, String(m.step)])),
+  );
+  const amount = (id: string) => {
+    const n = Number(by[id]);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  return (
+    <Modal title="Cycle done" onClose={onClose}>
+      <div className="space-y-4">
+        {active.maxes.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted">Training maxes</p>
+            <div className="mt-1 divide-y divide-hairline">
+              {active.maxes.map((m) => (
+                <div key={m.poolExerciseId} className="flex items-center gap-3 py-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">{m.name}</span>
+                    <span className="tabular block text-xs text-muted">
+                      {m.weight} → {m.weight + amount(m.poolExerciseId)}
+                    </span>
+                  </span>
+                  <span className="text-sm text-muted">+</span>
+                  <input
+                    aria-label={`Raise ${m.name} by`}
+                    inputMode="decimal"
+                    value={by[m.poolExerciseId] ?? ""}
+                    onChange={(e) => setBy((b) => ({ ...b, [m.poolExerciseId]: e.target.value }))}
+                    className="tabular h-10 w-16 rounded-lg border border-hairline bg-surface px-2 text-right text-sm outline-none focus:border-accent"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onNext(Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, amount(m.poolExerciseId)])))}
+            className={`${PRIMARY} justify-center`}
+          >
+            Next cycle
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onNext(Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, 0])))}
+            className={`${QUIET} justify-center`}
+          >
+            Repeat
+          </button>
+          <button type="button" onClick={onSwitch} className={`${QUIET} justify-center`}>
+            Switch program
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+type Added = { n: number; day: number; poolExerciseId: string; scheme: string };
+type SetupInput = Omit<StartProgramInput, "key">;
+
+const STEPS = ["Days", "Lifts", "Extras", "Training maxes"] as const;
+const COMPANION_SCHEMES = SCHEME_CHOICES.filter((c) => c.key !== "wave");
+
+/** What a main lift's tag says: 5/3/1, or Waves for wave loading. */
+const mainTag = (key: string) => (key.startsWith("wendler") ? "5/3/1" : key === "wave-loading" ? "Waves" : "Main");
+
 /**
- * Setting a program up: one weekday per program day, a movement for each slot
- * (the pool's best match to start with, or left out), and for main lifts a
- * recent top weight — blank means the first weeks use last time's weights.
+ * Setting a program up, a step at a time: a weekday for each program day (two
+ * may share one), the lifts (main lifts, then companion lifts with their own
+ * sets, which can be swapped, removed or added to), extras (warm-up, cardio
+ * and conditioning days, starting from the plan you have), and training maxes
+ * (90% of the heaviest you've logged, editable; blank finds them the first week).
  */
 function ProgramSetup({
   program,
+  current,
   busy,
-  onCancel,
+  onBack,
+  onClose,
   onStart,
 }: {
   program: ProgramChoice;
+  current: CurrentExtras;
   busy: boolean;
-  onCancel: () => void;
-  onStart: (input: { days: number[]; picks: Record<string, string | null>; tops: Record<string, number> }) => void;
+  onBack?: () => void;
+  onClose: () => void;
+  onStart: (input: SetupInput) => void;
 }) {
+  const [step, setStep] = useState(0);
   const [days, setDays] = useState<number[]>(program.defaultDays);
   const [picks, setPicks] = useState<Record<string, string | null>>(() => {
     const out: Record<string, string | null> = {};
     program.days.forEach((d, i) => d.roles.forEach((r) => (out[`${i}:${r.key}`] = r.defaultId)));
     return out;
   });
-  const [tops, setTops] = useState<Record<string, string>>({});
-  // The heaviest weight logged on each movement fills its top weight; the
-  // person can change it (v0.619).
-  const bestOf = useMemo(() => {
-    const m = new Map<string, number>();
-    program.days.forEach((d) => d.roles.forEach((r) => r.options.forEach((o) => o.best && m.set(o.id, o.best))));
-    return m;
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
+  const [schemes, setSchemes] = useState<Record<string, string>>({});
+  const [added, setAdded] = useState<Added[]>([]);
+  const [warmup, setWarmup] = useState(true);
+  const [cardio, setCardio] = useState<number[] | null>(null);
+  const [conditioning, setConditioning] = useState<number[]>(current.conditioningDays);
+  const [maxText, setMaxText] = useState<Record<string, string>>({});
+
+  // Every movement any slot offers, for "Add a lift".
+  const allOptions = useMemo(() => {
+    const m = new Map<string, { id: string; name: string; best: number | null }>();
+    program.days.forEach((d) => d.roles.forEach((r) => r.options.forEach((o) => m.set(o.id, o))));
+    return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [program]);
-  const topText = (id: string) => tops[id] ?? (bestOf.get(id) != null ? String(bestOf.get(id)) : "");
+  const bestOf = (id: string) => allOptions.find((o) => o.id === id)?.best ?? null;
+
+  const rowDays = [...new Set(program.days.flatMap((d, i) => (d.row ? [days[i]] : [])))];
+  const cardioDays = cardio ?? [...new Set([...current.cardioDays, ...rowDays])].sort();
 
   const mains = useMemo(() => {
     const seen = new Map<string, string>();
@@ -309,113 +472,285 @@ function ProgramSetup({
     );
     return [...seen.entries()];
   }, [program, picks]);
+  const maxFor = (id: string) => {
+    if (maxText[id] != null) return maxText[id];
+    const best = bestOf(id);
+    return best ? String(roundLoad(best * 0.9, "lb")) : "";
+  };
 
-  const toggleDay = (d: number) =>
-    setDays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d].sort((a, b) => a - b)));
-  const ready = days.length === program.days.length;
+  const toggle = (list: number[], d: number) => (list.includes(d) ? list.filter((x) => x !== d) : [...list, d].sort());
+
+  const startNow = () => {
+    const maxes: Record<string, number> = {};
+    for (const [id] of mains) {
+      const n = Number(maxFor(id));
+      if (Number.isFinite(n) && n > 0) maxes[id] = n;
+    }
+    const finalPicks = Object.fromEntries(Object.entries(picks).map(([k, v]) => [k, removed.has(k) ? null : v]));
+    onStart({
+      days,
+      picks: finalPicks,
+      tops: {},
+      maxes,
+      schemes,
+      added: added.filter((a) => a.poolExerciseId).map((a) => ({ day: a.day, poolExerciseId: a.poolExerciseId, scheme: a.scheme || null })),
+      warmup,
+      cardioDays,
+      conditioningDays: conditioning,
+    });
+  };
+
+  const DayChips = ({ value, onToggle, label }: { value: number[]; onToggle: (d: number) => void; label: string }) => (
+    <div role="group" aria-label={label} className="flex flex-wrap gap-1.5">
+      {WEEKDAYS.map((w, d) => (
+        <button
+          key={w}
+          type="button"
+          aria-pressed={value.includes(d)}
+          onClick={() => onToggle(d)}
+          className={`h-10 w-12 rounded-full border text-sm font-semibold ${
+            value.includes(d) ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+          }`}
+        >
+          {w}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
-    <section className="space-y-4 rounded-2xl border border-hairline bg-surface p-4">
-      <div>
-        <h4 className="font-display text-base font-semibold">{program.name}</h4>
-        <p className="mt-0.5 text-sm text-muted">{program.blurb}</p>
-      </div>
-
-      <div>
-        <p className="text-sm font-semibold">
-          Pick {program.days.length} days
-        </p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {WEEKDAYS.map((w, d) => (
-            <button
-              key={w}
-              type="button"
-              aria-pressed={days.includes(d)}
-              onClick={() => toggleDay(d)}
-              className={`h-10 w-12 rounded-full border text-sm font-semibold ${
-                days.includes(d) ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
-              }`}
-            >
-              {w}
-            </button>
+    <Modal title={program.name} onClose={onClose} onBack={step > 0 ? () => setStep(step - 1) : onBack}>
+      <div className="space-y-4">
+        <ol className="flex gap-1" aria-label="Steps">
+          {STEPS.map((s, i) => (
+            <li
+              key={s}
+              aria-current={i === step ? "step" : undefined}
+              className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-accent" : "bg-hairline"}`}
+            />
           ))}
-        </div>
-      </div>
+        </ol>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted">{STEPS[step]}</p>
 
-      {program.days.map((d, i) => (
-        <div key={d.name}>
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-            {d.name}
-            {ready && ` · ${WEEKDAYS[days[i]]}`}
-            {d.row && " · with rowing"}
-          </p>
-          <div className="mt-1 space-y-1.5">
-            {d.roles.map((r) => {
-              const k = `${i}:${r.key}`;
+        {step === 0 && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted">{program.blurb}</p>
+            {program.days.map((d, i) => (
+              <div key={`${d.name}-${i}`} className="space-y-1.5">
+                <p className="text-sm font-semibold">{d.name}</p>
+                <DayChips
+                  label={d.name}
+                  value={[days[i]]}
+                  onToggle={(w) => setDays((cur) => cur.map((x, k) => (k === i ? w : x)))}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="space-y-5">
+            {program.days.map((d, i) => {
+              const roles = d.roles.filter((r) => !removed.has(`${i}:${r.key}`));
+              const mainsHere = roles.filter((r) => r.main);
+              const companions = roles.filter((r) => !r.main);
+              const extras = added.filter((a) => a.day === i);
               return (
-                <label key={k} className="flex items-center gap-3 text-sm">
-                  <span className="w-24 shrink-0 text-muted">{r.label}</span>
-                  <select
-                    value={picks[k] ?? ""}
-                    onChange={(e) => setPicks((p) => ({ ...p, [k]: e.target.value || null }))}
-                    className="h-9 min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-2 text-sm outline-none focus:border-accent"
+                <div key={`${d.name}-${i}`} className="space-y-2">
+                  <p className="text-sm font-semibold">
+                    {d.name} · {WEEKDAYS[days[i]]}
+                  </p>
+                  {mainsHere.map((r) => {
+                    const k = `${i}:${r.key}`;
+                    return (
+                      <div key={k} className="flex items-center gap-2">
+                        <span className="w-14 shrink-0 rounded-full bg-accent/10 px-2 py-1 text-center text-xs font-semibold text-accent">
+                          {mainTag(program.key)}
+                        </span>
+                        <select
+                          aria-label={r.label}
+                          value={picks[k] ?? ""}
+                          onChange={(e) => setPicks((p) => ({ ...p, [k]: e.target.value || null }))}
+                          className={`${SELECT} flex-1`}
+                        >
+                          <option value="">{r.label}: choose</option>
+                          {r.options.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
+                  {(companions.length > 0 || extras.length > 0) && (
+                    <p className="pt-1 text-xs font-semibold text-muted">Companion lifts</p>
+                  )}
+                  {companions.map((r) => {
+                    const k = `${i}:${r.key}`;
+                    const scheme = schemes[k] ?? r.scheme;
+                    return (
+                      <CompanionRow
+                        key={k}
+                        label={r.label}
+                        options={r.options}
+                        value={picks[k] ?? ""}
+                        scheme={scheme}
+                        onPick={(id) => setPicks((p) => ({ ...p, [k]: id || null }))}
+                        onScheme={(s) => setSchemes((x) => ({ ...x, [k]: s }))}
+                        onRemove={() => setRemoved((x) => new Set(x).add(k))}
+                      />
+                    );
+                  })}
+                  {extras.map((a) => (
+                    <CompanionRow
+                      key={`add-${a.n}`}
+                      label="Lift"
+                      options={allOptions}
+                      value={a.poolExerciseId}
+                      scheme={a.scheme}
+                      onPick={(id) => setAdded((x) => x.map((y) => (y.n === a.n ? { ...y, poolExerciseId: id } : y)))}
+                      onScheme={(s) => setAdded((x) => x.map((y) => (y.n === a.n ? { ...y, scheme: s } : y)))}
+                      onRemove={() => setAdded((x) => x.filter((y) => y.n !== a.n))}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAdded((x) => [...x, { n: Date.now() + x.length, day: i, poolExerciseId: "", scheme: "range:3x8-12" }])
+                    }
+                    className="text-sm font-semibold text-accent"
                   >
-                    <option value="">Leave out</option>
-                    {r.options.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    + Add a lift
+                  </button>
+                </div>
               );
             })}
           </div>
-        </div>
-      ))}
+        )}
 
-      {mains.length > 0 && (
-        <div>
-          <p className="text-sm font-semibold">Top weight</p>
-          <div className="mt-1 divide-y divide-hairline">
-            {mains.map(([id, name]) => (
-              <label key={id} className="flex items-center gap-3 py-1.5 text-sm">
-                <span className="min-w-0 flex-1 truncate">{name}</span>
-                <input
-                  inputMode="decimal"
-                  value={topText(id)}
-                  onChange={(e) => setTops((t) => ({ ...t, [id]: e.target.value }))}
-                  className="tabular h-9 w-20 rounded-lg border border-hairline bg-surface px-2 text-right text-sm outline-none focus:border-accent"
+        {step === 2 && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold">Warm-up</p>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={warmup}
+                aria-label="Warm-up"
+                onClick={() => setWarmup(!warmup)}
+                className={`relative h-7 w-12 rounded-full transition-colors ${warmup ? "bg-accent" : "bg-hairline"}`}
+              >
+                <span
+                  className={`absolute top-1 h-5 w-5 rounded-full bg-surface shadow transition-all ${warmup ? "left-6" : "left-1"}`}
                 />
-              </label>
-            ))}
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-semibold">Cardio</p>
+              <DayChips label="Cardio" value={cardioDays} onToggle={(d) => setCardio(toggle(cardioDays, d))} />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-semibold">Conditioning</p>
+              <DayChips label="Conditioning" value={conditioning} onToggle={(d) => setConditioning(toggle(conditioning, d))} />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <p className="rounded-xl bg-ground/60 p-3 text-sm">
-        This replaces your weekly plan. Ending the program can put it back.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={!ready || busy}
-          onClick={() => {
-            const t: Record<string, number> = {};
-            for (const [id] of mains) {
-              const n = Number(topText(id));
-              if (Number.isFinite(n) && n > 0) t[id] = n;
-            }
-            onStart({ days, picks, tops: t });
-          }}
-          className={`${PILL} border-accent bg-accent text-on-accent disabled:opacity-40`}
-        >
-          {busy ? "Starting…" : "Start program"}
-        </button>
-        <button type="button" onClick={onCancel} className={`${PILL} border-hairline hover:border-accent`}>
-          Cancel
-        </button>
+        {step === 3 && (
+          <div className="space-y-3">
+            {mains.length === 0 ? (
+              <p className="text-sm text-muted">No main lifts.</p>
+            ) : (
+              <div className="divide-y divide-hairline">
+                {mains.map(([id, name]) => (
+                  <label key={id} className="flex items-center gap-3 py-2 text-sm">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold">{name}</span>
+                      {bestOf(id) != null && <span className="tabular block text-xs text-muted">Best {bestOf(id)}</span>}
+                    </span>
+                    <input
+                      aria-label={`${name} training max`}
+                      inputMode="decimal"
+                      value={maxFor(id)}
+                      onChange={(e) => setMaxText((t) => ({ ...t, [id]: e.target.value }))}
+                      className="tabular h-10 w-20 rounded-lg border border-hairline bg-surface px-2 text-right text-sm outline-none focus:border-accent"
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="sticky -bottom-4 -mx-4 flex gap-2 border-t border-hairline bg-surface px-4 py-3">
+          {step < STEPS.length - 1 ? (
+            <button type="button" onClick={() => setStep(step + 1)} className={`${PRIMARY} flex-1 justify-center`}>
+              Next
+            </button>
+          ) : (
+            <button type="button" disabled={busy} onClick={startNow} className={`${PRIMARY} flex-1 justify-center`}>
+              {busy ? "Starting…" : "Start program"}
+            </button>
+          )}
+        </div>
       </div>
-    </section>
+    </Modal>
   );
+}
+
+/** A companion lift: its movement, its sets, and remove. */
+function CompanionRow({
+  label,
+  options,
+  value,
+  scheme,
+  onPick,
+  onScheme,
+  onRemove,
+}: {
+  label: string;
+  options: { id: string; name: string }[];
+  value: string;
+  scheme: string;
+  onPick: (id: string) => void;
+  onScheme: (s: string) => void;
+  onRemove: () => void;
+}) {
+  const schemeOptions = COMPANION_SCHEMES.some((c) => c.key === scheme)
+    ? COMPANION_SCHEMES
+    : [{ key: scheme, label: schemeText(scheme) }, ...COMPANION_SCHEMES];
+  return (
+    <div className="flex items-center gap-2">
+      <select aria-label={label} value={value} onChange={(e) => onPick(e.target.value)} className={`${SELECT} flex-1`}>
+        <option value="">{label}: choose</option>
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.name}
+          </option>
+        ))}
+      </select>
+      <select aria-label={`${label} sets`} value={scheme} onChange={(e) => onScheme(e.target.value)} className={`${SELECT} w-[7.5rem] shrink-0`}>
+        {schemeOptions.map((c) => (
+          <option key={c.key} value={c.key}>
+            {c.label}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        aria-label={`Remove ${label}`}
+        onClick={onRemove}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+/** "same:5x15" → "5 × 15". */
+function schemeText(key: string): string {
+  const s = parseScheme(key);
+  return s ? schemeLabel(s) : key;
 }

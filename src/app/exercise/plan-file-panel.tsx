@@ -12,6 +12,7 @@ import {
   withdrawSharedPlan,
 } from "@/lib/actions/workouts";
 import { fileNameFor } from "@/lib/workouts/plan-file";
+import { PlanLibrary } from "./my-plans";
 import type { ImportPreview, SharedPlanRow } from "@/lib/workouts/plan-share-run";
 
 const PRIMARY =
@@ -21,7 +22,7 @@ const QUIET =
 const CHIP =
   "inline-flex h-9 items-center rounded-full border border-hairline px-3.5 text-sm font-semibold text-accent hover:border-accent";
 
-function Modal({ title, onClose, onBack, children }: { title: string; onClose: () => void; onBack?: () => void; children: React.ReactNode }) {
+export function Modal({ title, onClose, onBack, children }: { title: string; onClose: () => void; onBack?: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
       <div
@@ -58,7 +59,7 @@ function Modal({ title, onClose, onBack, children }: { title: string; onClose: (
 }
 
 /** What bringing a plan in would do, and Replace / Add. */
-function ImportChoice({
+export function ImportChoice({
   preview,
   busy,
   error,
@@ -102,7 +103,7 @@ function ImportChoice({
   );
 }
 
-type Open = "export" | "import" | "share" | "plans" | null;
+type Open = "export" | "import" | "share" | "plans" | "mine" | null;
 
 /**
  * Export, Import, Share this plan and Household plans (v0.618), each in its
@@ -185,6 +186,9 @@ export function PlanFilePanel({ userId }: { userId: string }) {
 
   return (
     <div className="flex flex-wrap gap-2">
+      <button type="button" onClick={() => show("mine")} className={CHIP}>
+        My plans
+      </button>
       <button type="button" onClick={() => show("plans")} className={CHIP}>
         Household plans
       </button>
@@ -287,6 +291,12 @@ export function PlanFilePanel({ userId }: { userId: string }) {
               </button>
             </>
           )}
+        </Modal>
+      )}
+
+      {open === "mine" && (
+        <Modal title="My plans" onClose={close}>
+          <PlanLibrary userId={userId} kind="mine" onUsed={close} />
         </Modal>
       )}
 

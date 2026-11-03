@@ -1,5 +1,67 @@
 # Decisions
 
+## 2026-11 — Wendler programs; step-by-step setup; My plans; end of cycle (v0.620.0 / app 0.428.0)
+
+**Programs** (`src/lib/workouts/programs.ts`), matched to Wendler's own
+templates as closely as the app's shapes allow:
+- **5/3/1** (`wendler-531`): 4 days (Press, Deadlift, Bench, Squat), the
+  5/3/1 weeks at 65/75/85, 70/80/90, 75/85/95% of the training max, the last
+  set of weeks 1–3 a "+" set, week 4 the deload (40/50/60%). Assistance is the
+  Triumvirate from the original book: dips 5 × 15 and chin-ups 5 × 10; good
+  mornings 5 × 12 and hanging leg raises 5 × 15; dumbbell bench 5 × 15 and
+  dumbbell rows 5 × 10; leg press 5 × 15 and leg curls 5 × 10. Each slot falls
+  back through similar names (no leg press → a split squat or lunge).
+- **Boring But Big** (`wendler-bbb`): the same weeks plus 5 × 10 at 50% of the
+  training max after the main sets (not in the deload), then one assistance
+  lift (chin-ups, hanging leg raises, dumbbell rows, leg curls).
+- **5/3/1 for Beginners** (`wendler-beginners`): 3 days — squat + bench,
+  deadlift + press, bench + squat — each with + sets and First Set Last 5 × 5
+  at the first set's %; 3-week cycles, no deload; push, pull and single-leg or
+  core at 5 × 10–20 (50–100 reps).
+- **Wave loading** (`wave-loading`): two waves of 3, 2, 1 in one session, the
+  second 2.5% heavier, each week 2.5% heavier again (75 → 80% base), week 4
+  light; the old Strength waves companions (no rowing).
+- Supplemental sets are part of the main lift's targets (`Program.supplemental`
+  FSL / BBB), so they log on the same movement with their % shown. `WaveSet.plus`
+  marks a + set; the logger's reps hint reads "5+". Strength waves is gone;
+  `strength-waves` reads as `wendler-531` (`RENAMED`), so a running one keeps
+  its plan and gains + sets. A hand-built wave stays without + sets.
+- Rowing stays only where it belongs: In-season full body (conditioning for a
+  sport) and Just get moving (an easy row). 5/3/1 templates plan none; cardio is
+  the person's own, kept by the Extras step.
+
+**Setup, one flow in windows** (web `program-card.tsx`, phone
+`ProgramsScreen.kt`): Choose (Programs / My plans / Household) → Days (a
+weekday per program day; two program days may share one) → Lifts (main lifts
+tagged 5/3/1 or Waves; companion lifts with their own sets, swap, remove, + Add
+a lift) → Extras (warm-up on by default, cardio days starting from the plan's
+own plus the program's rowing days, conditioning days starting from the plan's)
+→ Training maxes (90% of the heaviest logged, rounded to 5, editable; blank
+finds them the first week) → Start, which opens the plan editor. On the
+server, a day the old plan had cardio or conditioning on keeps that entry
+(Kalsu stays Kalsu); a new day gets "Cardio" or "Conditioning" (pick on the
+day); the warm-up copies the old plan's (with its movements) or adds an empty
+one. A program's rowing on a cardio day is "Rowing · <program>" — the Cardio
+card's title says it's the program's, and the person's own row isn't doubled.
+Older clients (no extras) get the program's rowing as before.
+
+**My plans** are SharedPlan rows with status PRIVATE (no new table): only the
+owner lists or opens them (through `plan/shared/use`, which already allowed an
+owner), and household lists and Admin filter to PENDING/APPROVED. Starting a
+program saves the plan it replaces as "<date> · before <program>", skipped
+when the plan is empty or the same as the last saved. The old snapshot on the
+program (Go back to my old plan) stays as it was.
+
+**End of cycle:** a window that opens on its own when a cycle is done (and
+from "Cycle done · what's next?" on the card): each lift's raise to the
+training max, starting at its `step` (10 lb lower body, 5 upper, half in kg),
+0 holds it; Next cycle, Repeat (all 0), or Switch program (the chooser,
+including My plans). `programs/block` takes `raises`.
+
+**Logger headers (#18):** only a main lift's target title names the program
+and week; a companion lift shows its sets, with the week only when light or a
+test.
+
 ## 2026-11 — Deadlift group; program fixes; 5/3/1 logger; + Conditioning (v0.619.0 / app 0.427.0)
 
 **Deadlift is a muscle group** (`DEADLIFT`, colour #9c6b3c). Migration 138

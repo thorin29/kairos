@@ -291,7 +291,7 @@ export function WorkoutsGrid({
 
                   {!personal && <WeeklyTraining userId={open.user.id} />}
 
-                  <ProgramCard userId={open.user.id} />
+                  <ProgramCard userId={open.user.id} onEditPlan={() => setStep("plan")} />
 
                   <div className="grid grid-cols-3 gap-3">
                     <ActionButton

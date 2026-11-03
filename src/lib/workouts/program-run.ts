@@ -5,8 +5,11 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { MUSCLE_GROUP_LABEL, type MuscleGroup } from "@/lib/workouts/catalog";
 import { loadWeightUnits } from "@/lib/queries/workouts";
 import { getSetting, setSetting } from "@/lib/settings";
+import { savePlan } from "@/lib/workouts/plan-share-run";
 import {
   PROGRAMS,
+  cleanPlanScheme,
+  stepFor,
   blocksDone,
   programByKey,
   programWeek,
@@ -83,8 +86,9 @@ export type ProgramInfo = {
   intent: "LIGHT" | "TEST" | null;
   /** A block finished and nobody chose what's next yet. */
   blockDone: boolean;
-  /** Main lifts and their training maxes, for the program card. */
-  maxes: { poolExerciseId: string; name: string; weight: number }[];
+  /** Main lifts and their training maxes, for the program card; `step` is
+   *  the end-of-cycle raise it starts at (10 lb lower body, 5 upper). */
+  maxes: { poolExerciseId: string; name: string; weight: number; step: number }[];
 };
 
 export async function programInfoFor(userId: string, dateISO: string): Promise<ProgramInfo | null> {
@@ -98,6 +102,7 @@ export async function programInfoFor(userId: string, dateISO: string): Promise<P
         name: string;
       }[])
     : [];
+  const steps = ids.length ? await raiseSteps(userId, p.program) : {};
   return {
     key: p.program.key,
     name: p.program.name,
@@ -110,8 +115,27 @@ export async function programInfoFor(userId: string, dateISO: string): Promise<P
       poolExerciseId: id,
       name: names.find((n) => n.id === id)?.name ?? "",
       weight: p.trainingMaxes[id],
+      step: steps[id] ?? 5,
     })),
   };
+}
+
+/** Each planned program lift's raise step: 10 lb lower body, 5 upper; half in kg. */
+async function raiseSteps(userId: string, program: Program): Promise<Record<string, number>> {
+  const units = await loadWeightUnits();
+  const rows = (await prisma.plannedExercise.findMany({
+    where: { plannedWorkout: { userId }, programRole: { not: null } },
+    select: { poolExerciseId: true, programRole: true, plannedWorkout: { select: { muscleGroup: true } } },
+  })) as { poolExerciseId: string; programRole: string | null; plannedWorkout: { muscleGroup: string | null } }[];
+  const out: Record<string, number> = {};
+  for (const r of rows) {
+    const role = program.days.flatMap((d) => d.roles).find((x) => x.key === r.programRole);
+    const mg = r.plannedWorkout.muscleGroup as MuscleGroup | null;
+    const unit = (mg && units[mg]) || "lb";
+    const step = stepFor(role?.lower, unit);
+    out[r.poolExerciseId] = Math.max(out[r.poolExerciseId] ?? 0, step);
+  }
+  return out;
 }
 
 /** LIGHT / TEST for a day in an active program's light or test week; null otherwise. */
@@ -211,6 +235,27 @@ function defaultFor(role: ProgramRole, pool: readonly { id: string; name: string
   return null;
 }
 
+/** What the person's plan has now, for the setup's Extras step (v0.620):
+ *  whether there's a warm-up, and the weekdays with cardio or conditioning
+ *  (kept as they are when the program starts). */
+export type CurrentExtras = { warmup: boolean; cardioDays: number[]; conditioningDays: number[] };
+
+const CARDIO_CATS = new Set(["CARDIO", "ROWING", "RUNNING", "RUCKING"]);
+const isConditioning = (w: { category: string | null; hiitWorkoutId: string | null }) => w.category === "HIIT" || !!w.hiitWorkoutId;
+
+export async function currentExtras(userId: string): Promise<CurrentExtras> {
+  const rows = (await prisma.plannedWorkout.findMany({
+    where: { userId, isRest: false },
+    select: { dayOfWeek: true, category: true, hiitWorkoutId: true },
+  })) as { dayOfWeek: number; category: string | null; hiitWorkoutId: string | null }[];
+  const days = (f: (w: (typeof rows)[number]) => boolean) => [...new Set(rows.filter(f).map((w) => w.dayOfWeek))].sort();
+  return {
+    warmup: rows.some((w) => w.category === "WARMUP"),
+    cardioDays: days((w) => !!w.category && CARDIO_CATS.has(w.category)),
+    conditioningDays: days(isConditioning),
+  };
+}
+
 // --- start, end, next block -------------------------------------------------------
 
 type PlanSnapshot = {
@@ -293,6 +338,18 @@ export type StartProgramInput = {
   picks: Record<string, string | null>;
   /** A recent top weight per main-lift movement; its training max is 90%. */
   tops: Record<string, number>;
+  /** Training maxes as set on the setup (v0.620); win over `tops`. */
+  maxes?: Record<string, number>;
+  /** A companion lift's sets in place of the program's, "<day>:<slot>" → scheme. */
+  schemes?: Record<string, string>;
+  /** Companion lifts added on a program day (by index). */
+  added?: { day: number; poolExerciseId: string; scheme: string | null }[];
+  /** Extras (v0.620). Unset: none, as before. A day the old plan had cardio
+   *  or conditioning on keeps what it had; a new day gets "any cardio" or
+   *  conditioning picked on the day. */
+  warmup?: boolean;
+  cardioDays?: number[];
+  conditioningDays?: number[];
 };
 
 /**
@@ -304,21 +361,30 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
   const program = programByKey(input.key);
   if (!program) return "bad_request";
   if (input.days.length !== program.days.length) return "bad_request";
-  if (new Set(input.days).size !== input.days.length || input.days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) {
-    return "bad_request";
-  }
-  const pickIds = [...new Set(Object.values(input.picks).filter((v): v is string => !!v))];
+  // Two program days may share a weekday (v0.620).
+  const okDay = (d: number) => Number.isInteger(d) && d >= 0 && d <= 6;
+  if (!input.days.every(okDay)) return "bad_request";
+  const added = (input.added ?? []).filter(
+    (a) => Number.isInteger(a.day) && a.day >= 0 && a.day < program.days.length && typeof a.poolExerciseId === "string" && a.poolExerciseId,
+  );
+  const pickIds = [
+    ...new Set([...Object.values(input.picks).filter((v): v is string => !!v), ...added.map((a) => a.poolExerciseId)]),
+  ];
   const pool = pickIds.length
-    ? ((await prisma.poolExercise.findMany({ where: { id: { in: pickIds } }, select: { id: true, metric: true } })) as {
-        id: string;
-        metric: string | null;
-      }[])
+    ? ((await prisma.poolExercise.findMany({
+        where: { id: { in: pickIds } },
+        select: { id: true, metric: true, muscleGroup: true, category: true },
+      })) as { id: string; metric: string | null; muscleGroup: string | null; category: string }[])
     : [];
   const known = new Set(pool.map((p) => p.id));
+  // An added lift files under its own group (a movement outside Weights under Full body).
+  const groupOf = new Map(pool.map((p) => [p.id, p.category === "WEIGHTS" && p.muscleGroup ? p.muscleGroup : "FULL_BODY"]));
   // A timed movement (a plank) keeps logging by time, with no set structure.
   const timed = new Set(pool.filter((p) => p.metric === "DURATION").map((p) => p.id));
 
   const prev = await snapshotPlan(userId);
+  // The plan being replaced goes to My plans (unless it's empty or already there).
+  await savePlan(userId, `${shortDate(todayISO())} · before ${program.name}`, { auto: true }).catch(() => null);
   const prevActive = (await prisma.personProgram.findFirst({
     where: { userId, status: "ACTIVE" },
     select: { id: true, previousPlan: true },
@@ -338,36 +404,87 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
 
   const units = await loadWeightUnits();
   const maxes: Record<string, number> = {};
+  const order = new Map<number, number>();
+  const nextOrder = (dow: number) => {
+    const n = order.get(dow) ?? 0;
+    order.set(dow, n + 1);
+    return n;
+  };
+  const programDays = [...new Set(input.days)].sort();
+
+  // Warm-up first on each program day: the old plan's own, else an empty one.
+  if (input.warmup) {
+    const own = prev.workouts.find((w) => w.category === "WARMUP");
+    for (const dow of programDays) {
+      if (own) await writePlan(userId, [{ ...own, dayOfWeek: dow, sortOrder: nextOrder(dow) }]);
+      else await prisma.plannedWorkout.create({ data: { userId, dayOfWeek: dow, name: "Warm-up", category: "WARMUP", sortOrder: nextOrder(dow) } });
+    }
+  }
+
+  // Cardio: a day the old plan had cardio on keeps it; a program's rowing day
+  // gets "Rowing · <program>", so the Cardio card says it's the program's.
+  const rowDays = new Set(program.days.flatMap((d, i) => (d.row ? [input.days[i]] : [])));
+  const cardioDays = [...new Set([...(input.cardioDays ?? []).filter(okDay)])].sort();
+  for (const dow of cardioDays) {
+    if (rowDays.has(dow)) {
+      await prisma.plannedWorkout.create({
+        data: { userId, dayOfWeek: dow, name: `Rowing · ${program.name}`, category: "ROWING", sortOrder: nextOrder(dow) },
+      });
+      continue;
+    }
+    const had = prev.workouts.filter((w) => w.dayOfWeek === dow && !w.isRest && w.category && CARDIO_CATS.has(w.category));
+    if (had.length) await writePlan(userId, had.map((w) => ({ ...w, sortOrder: nextOrder(dow) })));
+    else await prisma.plannedWorkout.create({ data: { userId, dayOfWeek: dow, name: "Cardio", category: "CARDIO", sortOrder: nextOrder(dow) } });
+  }
+  // Older clients send no extras: the program's rowing as before.
+  if (input.cardioDays == null) {
+    for (const dow of rowDays) {
+      await prisma.plannedWorkout.create({
+        data: { userId, dayOfWeek: dow, name: `Rowing · ${program.name}`, category: "ROWING", sortOrder: nextOrder(dow) },
+      });
+    }
+  }
+
   for (let i = 0; i < program.days.length; i++) {
     const day = program.days[i];
     const dow = input.days[i];
-    let order = 0;
-    if (day.row) {
-      await prisma.plannedWorkout.create({
-        data: { userId, dayOfWeek: dow, name: "Rowing", category: "ROWING", sortOrder: order++ },
+    type Pick = { poolExerciseId: string; scheme: string | null; programRole: string | null; group: MuscleGroup };
+    const picks: Pick[] = [];
+    for (const r of day.roles) {
+      const id = input.picks[`${i}:${r.key}`];
+      if (!id || !known.has(id) || picks.some((e) => e.poolExerciseId === id)) continue;
+      const own = !r.main ? input.schemes?.[`${i}:${r.key}`] : undefined;
+      const scheme = own !== undefined ? cleanPlanScheme(own, today) : schemeKey(r.scheme);
+      picks.push({ poolExerciseId: id, scheme: r.main ? schemeKey(r.scheme) : scheme?.startsWith("wave") ? null : scheme, programRole: r.key, group: r.muscleGroup });
+      const top = input.tops[id];
+      const tm = input.maxes?.[id];
+      const unit = units[r.muscleGroup] ?? "lb";
+      if (r.main && typeof tm === "number" && tm > 0) maxes[id] = tm;
+      else if (r.main && typeof top === "number" && top > 0 && maxes[id] == null) maxes[id] = trainingMaxFrom(top, unit);
+    }
+    for (const a of added.filter((x) => x.day === i)) {
+      if (!known.has(a.poolExerciseId) || picks.some((e) => e.poolExerciseId === a.poolExerciseId)) continue;
+      const scheme = cleanPlanScheme(a.scheme ?? "", today);
+      picks.push({
+        poolExerciseId: a.poolExerciseId,
+        scheme: scheme?.startsWith("wave") ? null : scheme,
+        programRole: null,
+        group: (groupOf.get(a.poolExerciseId) ?? "FULL_BODY") as MuscleGroup,
       });
     }
     // One planned workout per muscle group, in the order the day lists them.
     const groups: MuscleGroup[] = [];
-    for (const r of day.roles) if (!groups.includes(r.muscleGroup)) groups.push(r.muscleGroup);
+    for (const p of picks) if (!groups.includes(p.group)) groups.push(p.group);
     for (const g of groups) {
-      const exercises: { poolExerciseId: string; scheme: string; programRole: string }[] = [];
-      for (const r of day.roles.filter((x) => x.muscleGroup === g)) {
-        const id = input.picks[`${i}:${r.key}`];
-        if (!id || !known.has(id) || exercises.some((e) => e.poolExerciseId === id)) continue;
-        exercises.push({ poolExerciseId: id, scheme: schemeKey(r.scheme), programRole: r.key });
-        const top = input.tops[id];
-        if (r.main && typeof top === "number" && top > 0) maxes[id] = trainingMaxFrom(top, units[r.muscleGroup] ?? "lb");
-      }
-      if (exercises.length === 0) continue;
+      const exercises = picks.filter((p) => p.group === g);
       await prisma.plannedWorkout.create({
         data: {
           userId,
           dayOfWeek: dow,
-          name: MUSCLE_GROUP_LABEL[g],
+          name: MUSCLE_GROUP_LABEL[g] ?? "Weights",
           category: "WEIGHTS",
           muscleGroup: g,
-          sortOrder: order++,
+          sortOrder: nextOrder(dow),
           exercises: {
             create: exercises.map((e, k) => ({
               poolExerciseId: e.poolExerciseId,
@@ -381,6 +498,13 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
         },
       });
     }
+  }
+
+  // Conditioning last: a day that had some keeps it; a new day picks on the day.
+  for (const dow of [...new Set((input.conditioningDays ?? []).filter(okDay))].sort()) {
+    const had = prev.workouts.filter((w) => w.dayOfWeek === dow && !w.isRest && isConditioning(w));
+    if (had.length) await writePlan(userId, had.map((w) => ({ ...w, sortOrder: nextOrder(dow) })));
+    else await prisma.plannedWorkout.create({ data: { userId, dayOfWeek: dow, name: "Conditioning", category: "HIIT", sortOrder: nextOrder(dow) } });
   }
 
   // The block starts on the Sunday of this week, so weeks turn over with the
@@ -428,8 +552,8 @@ export async function endProgram(userId: string, restore: boolean): Promise<void
 }
 
 /** End of a block: start the next one, raising the training maxes a step or
- *  repeating them. */
-export async function nextBlock(userId: string, raise: boolean): Promise<void> {
+ *  repeating them. `raises` (v0.620) sets each lift's raise (0 holds it). */
+export async function nextBlock(userId: string, raise: boolean, raises?: Record<string, number>): Promise<void> {
   const p = await loadActiveProgram(userId);
   if (!p) return;
   const today = todayISO();
@@ -437,7 +561,14 @@ export async function nextBlock(userId: string, raise: boolean): Promise<void> {
   if (done < 1) return;
   const start = addDays(p.blockStartedOn, 7 * p.program.weeks * done);
   let maxes = p.trainingMaxes;
-  if (raise) {
+  if (raises) {
+    maxes = Object.fromEntries(
+      Object.entries(maxes).map(([id, w]) => {
+        const by = raises[id];
+        return [id, typeof by === "number" && Number.isFinite(by) && by > 0 && by <= 100 ? w + by : w];
+      }),
+    );
+  } else if (raise) {
     const lower = new Set<string>();
     const kg = new Set<string>();
     const units = await loadWeightUnits();
@@ -484,6 +615,12 @@ export async function plannedSlotFor(
   })) as { scheme: string | null; programRole: string | null; plannedWorkout: { muscleGroup: string | null } }[];
   const r = rows.find((x) => x.scheme) ?? rows[0];
   return r ? { scheme: r.scheme, programRole: r.programRole, muscleGroup: r.plannedWorkout.muscleGroup } : null;
+}
+
+/** "Nov 3" for a saved plan's name. */
+function shortDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 // --- the invite -------------------------------------------------------------------

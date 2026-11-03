@@ -886,6 +886,39 @@ the movement's target sets carry `pct` (fraction of the training max). `GET
 the conditioning logged that day. A conditioning session no longer counts as
 an unplanned workout that completes the day.
 
+**Programs and My plans (v0.620).**
+```
+GET  /api/v1/workouts/programs → adds "current": { "warmup":bool, "cardioDays":[weekday], "conditioningDays":[weekday] }
+     ProgramInfo.maxes[] adds "step" (the end-of-cycle raise to start from: 10 lower body, 5 upper; half in kg)
+POST /api/v1/workouts/programs/start  adds, all optional:
+     "maxes":{ poolExerciseId: training max },          // wins over "tops"
+     "schemes":{ "<day>:<slot>": scheme },              // a companion lift's own sets
+     "added":[ { "day", "poolExerciseId", "scheme"|null } ],
+     "warmup":bool, "cardioDays":[weekday], "conditioningDays":[weekday]
+     // "days" may repeat a weekday (two program days on one day)
+POST /api/v1/workouts/programs/block  { "raises":{ poolExerciseId: amount } }   // 0 holds that lift
+GET  /api/v1/workouts/plan/saved          → { "plans":[ { "id","name","summary","savedOn" } ] }
+POST /api/v1/workouts/plan/saved          { "name" } → { "status":"ok","id" }   // 400 when the plan is empty
+POST /api/v1/workouts/plan/saved/rename   { "id","name" }
+POST /api/v1/workouts/plan/saved/delete   { "id" }
+```
+Programs: `wendler-531` (5/3/1, 4 days, deload week 4, + sets, Triumvirate
+assistance), `wendler-bbb` (adds 5 × 10 at 50% after the main sets, none in
+the deload), `wendler-beginners` (3 days, two lifts a day, FSL 5 × 5, 3-week
+cycles, no deload), `wave-loading` (3-2-1 twice, rising weekly, week 4 light),
+then `sets-of-ten`, `full-body-3`, `get-moving`, `maintain`. The old key
+`strength-waves` reads as `wendler-531`. A target set adds `plus: true` on a
+"+" set (as many good reps as you can). A saved plan is a SharedPlan with
+status PRIVATE: only its owner lists or uses it (open it with
+`plan/shared/use`), and it never shows under household plans or in Admin.
+Starting a program saves the plan it replaces there first (skipped when empty
+or the same as the last saved). Without the extras an older client gets the
+program's rowing as before; with them, a day the old plan had cardio or
+conditioning on keeps it, a program's rowing day reads "Rowing · <program>",
+and a new day gets "Cardio" or "Conditioning" (picked on the day). Only a main
+lift's target title names the program and week; a companion lift's names the
+week only when it's light or a test.
+
 **Suggestions (v0.612).**
 ```
 Suggestion: { "key","title","why","actions":[ { "answer","label" } ],"weight":num? }
@@ -1277,7 +1310,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**173 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**176 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1290,7 +1323,7 @@ silently invisible:
 - **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
 - **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
-- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool` (each exercise carries `about`, its how-to or null; v0.613), `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `cardio`, `cardio/remove`, `warmup`, `order` (v0.615), `conditioning/choices`, `conditioning/build`, `conditioning/log`, `conditioning/save`, `benchmark` (v0.617), `plan*` (incl. `plan/scheme` (v0.615), `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null, v0.609, and `about`, v0.613), `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`, `plan/export`, `plan/import`, `plan/share`, `plan/shared`, `plan/shared/use`, `plan/shared/withdraw` (v0.618)), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool` (each exercise carries `about`, its how-to or null; v0.613), `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `cardio`, `cardio/remove`, `warmup`, `order` (v0.615), `conditioning/choices`, `conditioning/build`, `conditioning/log`, `conditioning/save`, `benchmark` (v0.617), `plan*` (incl. `plan/scheme` (v0.615), `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null, v0.609, and `about`, v0.613), `plan/copy`, `plan/start`, `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`, `plan/export`, `plan/import`, `plan/share`, `plan/shared`, `plan/shared/use`, `plan/shared/withdraw` (v0.618), `plan/saved`, `plan/saved/rename`, `plan/saved/delete` (v0.620)), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604)
 - **hockey** (the week from ice-time), `hockey/prefs`

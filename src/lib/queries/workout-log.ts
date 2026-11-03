@@ -1601,7 +1601,7 @@ export type MovementLog = {
     /** "Work up to a top set", "3 × 8–12". */
     scheme: string;
     /** `pct`: a 5/3/1 set's share of the training max (v0.619). */
-    sets: { weight: number | null; reps: number; top?: boolean; pct?: number }[];
+    sets: { weight: number | null; reps: number; top?: boolean; pct?: number; plus?: boolean }[];
   } | null;
   /** One suggestion card for this movement, or null (v0.612). */
   suggestion: Suggestion | null;
@@ -1805,7 +1805,14 @@ async function movementTarget(
   if (sets.length === 0) return null;
   const intent = weekIntent(program, week);
   return {
-    title: fromProgram || handWave ? `${program.name} · ${weekLabel(program, week)}` : "",
+    // Only a main lift says the program and week; a companion lift shows its
+    // sets, and the week only when it's light or a test (v0.620).
+    title:
+      handWave || (fromProgram && scheme.kind === "WAVE")
+        ? `${program.name} · ${weekLabel(program, week)}`
+        : fromProgram && intent
+          ? weekLabel(program, week)
+          : "",
     scheme: intent === "TEST" ? "Work up to a heavy 3" : schemeLabel(scheme),
     sets,
   };

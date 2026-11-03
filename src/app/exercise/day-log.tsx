@@ -690,6 +690,8 @@ type Row = {
   top?: boolean;
   /** A 5/3/1 set's share of the training max (v0.619). */
   pct?: number;
+  /** A 5/3/1 "+" set: as many good reps as you can (v0.620). */
+  plus?: boolean;
 };
 
 const num = (v: string): number | null => {
@@ -716,6 +718,7 @@ function rowsFrom(log: MovementLog): Row[] {
       added: i >= Math.max(last.length, target.length),
       top: target[i]?.top,
       pct: target[i]?.pct,
+      plus: target[i]?.plus,
     }));
   }
   if (target.length > 0) {
@@ -731,6 +734,7 @@ function rowsFrom(log: MovementLog): Row[] {
       added: false,
       top: t.top,
       pct: t.pct,
+      plus: t.plus,
     }));
   }
   if (last.length > 0) {
@@ -1146,7 +1150,7 @@ function MovementLogger({
                         aria-label={`Reps, set ${i + 1}`}
                         inputMode="numeric"
                         value={r.r}
-                        placeholder={r.hintR != null ? String(r.hintR) : ""}
+                        placeholder={r.hintR != null ? `${r.hintR}${r.plus ? "+" : ""}` : ""}
                         onChange={(e) => update(r.key, { r: e.target.value, saved: false })}
                         className={`tabular h-11 w-full rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.r ? "border-accent/60" : "border-hairline"}`}
                       />

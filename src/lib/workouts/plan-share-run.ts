@@ -480,7 +480,7 @@ export async function sharePlan(userId: string, name: string): Promise<{ ok: tru
 /** The household's plans for a person: approved ones, and their own waiting. */
 export async function sharedPlansFor(userId: string): Promise<SharedPlanRow[]> {
   const rows = (await prisma.sharedPlan.findMany({
-    where: { OR: [{ status: "APPROVED" }, { ownerId: userId }] },
+    where: { OR: [{ status: "APPROVED" }, { ownerId: userId, status: "PENDING" }] },
     orderBy: [{ status: "asc" }, { name: "asc" }],
     select: SHARED_SELECT,
   })) as SharedRow[];
@@ -490,6 +490,7 @@ export async function sharedPlansFor(userId: string): Promise<SharedPlanRow[]> {
 /** Every shared plan, for Admin: waiting ones first. */
 export async function sharedPlansForAdmin(): Promise<SharedPlanRow[]> {
   const rows = (await prisma.sharedPlan.findMany({
+    where: { status: { in: ["PENDING", "APPROVED"] } },
     orderBy: [{ status: "desc" }, { createdAt: "asc" }],
     select: SHARED_SELECT,
   })) as SharedRow[];
@@ -527,4 +528,63 @@ export async function useSharedPlan(userId: string, id: string, mode: ImportMode
   const file = await sharedFile(userId, id);
   if (!file) return { ok: false as const, error: "That plan isn't shared any more." };
   return applyImport(userId, file, mode);
+}
+
+// --- my plans (saved for later, private; v0.620) -----------------------------
+//
+// Kept in the household-plans table with status PRIVATE: only the owner sees
+// or uses them, and they never reach Admin or the household list.
+
+export type SavedPlanRow = { id: string; name: string; summary: string; savedOn: string };
+
+const PRIVATE = "PRIVATE";
+
+/** The person's saved plans, newest first. */
+export async function savedPlansFor(userId: string): Promise<SavedPlanRow[]> {
+  const rows = (await prisma.sharedPlan.findMany({
+    where: { ownerId: userId, status: PRIVATE },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, name: true, summary: true, createdAt: true },
+  })) as { id: string; name: string; summary: string | null; createdAt: Date }[];
+  return rows.map((r) => ({ id: r.id, name: r.name, summary: r.summary ?? "", savedOn: r.createdAt.toISOString().slice(0, 10) }));
+}
+
+/** Save the current plan under a name. `auto` skips an empty plan and one
+ *  the same as the last saved (starting a program saves the plan it replaces). */
+export async function savePlan(
+  userId: string,
+  name: string,
+  opts: { auto?: boolean } = {},
+): Promise<{ ok: true; id: string | null } | { ok: false; error: string }> {
+  const clean = name.trim().slice(0, 60);
+  if (clean.length < 2) return { ok: false, error: "Name the plan." };
+  const file = await exportWorkouts(userId, { name: clean });
+  if (!file.plan.some((e) => !e.rest)) {
+    return opts.auto ? { ok: true, id: null } : { ok: false, error: "There's nothing in your plan to save." };
+  }
+  if (opts.auto) {
+    const last = (await prisma.sharedPlan.findFirst({
+      where: { ownerId: userId, status: PRIVATE },
+      orderBy: { createdAt: "desc" },
+      select: { file: true },
+    })) as { file: unknown } | null;
+    const lastPlan = (last?.file as { plan?: unknown } | undefined)?.plan;
+    if (lastPlan && JSON.stringify(lastPlan) === JSON.stringify(file.plan)) return { ok: true, id: null };
+  }
+  const row = (await prisma.sharedPlan.create({
+    data: { name: clean, ownerId: userId, status: PRIVATE, file: file as never, summary: planSummary(file.plan) },
+    select: { id: true },
+  })) as { id: string };
+  return { ok: true, id: row.id };
+}
+
+export async function renameSavedPlan(userId: string, id: string, name: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const clean = name.trim().slice(0, 60);
+  if (clean.length < 2) return { ok: false, error: "Name the plan." };
+  await prisma.sharedPlan.updateMany({ where: { id, ownerId: userId, status: PRIVATE }, data: { name: clean } });
+  return { ok: true };
+}
+
+export async function deleteSavedPlan(userId: string, id: string): Promise<void> {
+  await prisma.sharedPlan.deleteMany({ where: { id, ownerId: userId, status: PRIVATE } });
 }

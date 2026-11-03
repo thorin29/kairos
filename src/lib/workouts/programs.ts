@@ -11,8 +11,9 @@
  */
 import type { MuscleGroup } from "@/lib/workouts/catalog";
 
-/** One set of a "work up to a top set" week: reps at a share of the training max. */
-export type WaveSet = { reps: number; pct: number; top?: boolean };
+/** One set of a "work up to a top set" week: reps at a share of the training
+ *  max; `plus` is a 5/3/1 "+" set, as many good reps as you can (v0.620). */
+export type WaveSet = { reps: number; pct: number; top?: boolean; plus?: boolean };
 
 /**
  * How a movement's sets are laid out (stored in PlannedExercise.scheme):
@@ -124,73 +125,241 @@ export type Program = {
   days: ProgramDay[];
   /** Waves only: per program week, the sets of a "work up to a top set". */
   wave?: WaveSet[][];
+  /** 5/3/1 supplemental work after the main sets of the same lift (v0.620):
+   *  FSL 5 × 5 at the first set's %, BBB 5 × 10 at 50%. Not in a light week. */
+  supplemental?: "FSL" | "BBB";
 };
 
 const SQUAT = ["back squat", "squat", "front squat", "goblet squat"];
 const BENCH = ["bench press", "bench", "dumbbell bench press", "incline bench press"];
-const DEAD = ["deadlift", "romanian deadlift", "trap bar deadlift"];
+const DEAD = ["deadlift", "trap bar deadlift", "romanian deadlift"];
 const PRESS = ["overhead press", "shoulder press", "military press", "press", "dumbbell shoulder press"];
 const ROW = ["bent over row", "barbell row", "dumbbell row", "row", "seated row"];
-const PULL = ["pull-up", "pull up", "chin-up", "lat pulldown"];
-const LUNGE = ["lunge", "dumbbell lunge", "walking lunge", "split squat"];
+const PULL = ["pull-up", "pull up", "chin-up", "chin up", "lat pulldown"];
+const CHIN = ["chin-up", "chin up", "pull-up", "pull up", "lat pulldown"];
+const LUNGE = ["lunge", "dumbbell lunge", "walking lunge", "split squat", "bulgarian split squat", "step-up"];
 const CURL = ["ez bar curl", "curl", "dumbbell curl", "barbell curl"];
 const TRI = ["ez bar skull crusher", "skull crusher", "tricep extension", "dip"];
 const CORE = ["plank", "sit-up", "sit up", "hanging knee raise"];
+const DIP = ["dip", "bench dip", "push-up", "push up"];
+const PUSH = ["push-up", "push up", "dip", "dumbbell bench press"];
+const GOOD_MORNING = ["good morning", "back extension", "romanian deadlift"];
+const LEG_RAISE = ["hanging leg raise", "hanging knee raise", "ab wheel", "ab rollout", "sit-up", "plank"];
+const DB_BENCH = ["dumbbell bench press", "incline dumbbell press", "dumbbell incline bench press", "push-up"];
+const DB_ROW = ["dumbbell row", "one arm dumbbell row", "bent over row", "barbell row"];
+const LEG_PRESS = ["leg press", "bulgarian split squat", "split squat", "lunge", "dumbbell lunge"];
+const LEG_CURL = ["leg curl", "hamstring curl", "glute ham raise", "nordic curl", "romanian deadlift"];
+const SINGLE_LEG_CORE = [...LUNGE, ...LEG_RAISE];
 
 const r = (sets: number, min: number, max: number): Scheme => ({ kind: "RANGE", sets, min, max });
 const same = (sets: number, reps: number): Scheme => ({ kind: "SAME", sets, reps });
+const WAVE: Scheme = { kind: "WAVE" };
+
+/** Wendler's 5/3/1 weeks, as a share of the training max; the last set of
+ *  weeks 1–3 is a "+" set. Week 4 is the deload. */
+export const WAVE_531: WaveSet[][] = [
+  [{ reps: 5, pct: 0.65 }, { reps: 5, pct: 0.75 }, { reps: 5, pct: 0.85, top: true, plus: true }],
+  [{ reps: 3, pct: 0.7 }, { reps: 3, pct: 0.8 }, { reps: 3, pct: 0.9, top: true, plus: true }],
+  [{ reps: 5, pct: 0.75 }, { reps: 3, pct: 0.85 }, { reps: 1, pct: 0.95, top: true, plus: true }],
+  [{ reps: 5, pct: 0.4 }, { reps: 5, pct: 0.5 }, { reps: 5, pct: 0.6 }],
+];
+
+/** Wave loading: two waves of 3, 2, 1 in one session, the second a little
+ *  heavier; each week a little heavier again; week 4 light. */
+const waveWeek = (base: number): WaveSet[] => [
+  { reps: 3, pct: base },
+  { reps: 2, pct: base + 0.05 },
+  { reps: 1, pct: base + 0.1 },
+  { reps: 3, pct: base + 0.025 },
+  { reps: 2, pct: base + 0.075 },
+  { reps: 1, pct: base + 0.125, top: true },
+];
+const WAVE_LOADING: WaveSet[][] = [
+  waveWeek(0.75),
+  waveWeek(0.775),
+  waveWeek(0.8),
+  [{ reps: 5, pct: 0.4 }, { reps: 5, pct: 0.5 }, { reps: 5, pct: 0.6 }],
+];
+
+const main = (key: string, label: string, muscleGroup: MuscleGroup, match: string[], lower = false): ProgramRole => ({
+  key,
+  label,
+  muscleGroup,
+  match,
+  scheme: WAVE,
+  main: true,
+  ...(lower ? { lower: true } : {}),
+});
+const extra = (key: string, label: string, muscleGroup: MuscleGroup, match: string[], scheme: Scheme, lower = false): ProgramRole => ({
+  key,
+  label,
+  muscleGroup,
+  match,
+  scheme,
+  optional: true,
+  ...(lower ? { lower: true } : {}),
+});
 
 export const PROGRAMS: readonly Program[] = [
   {
-    key: "strength-waves",
-    name: "Strength waves",
+    key: "wendler-531",
+    name: "5/3/1",
     blurb:
-      "Four main lifts, one a day, working up to a top set that changes each week, with week 4 light. " +
-      "Rows, curls and core as sets of 8–12. For a lift that has stalled.",
+      "Jim Wendler's original 5/3/1: four days, one main lift a day, with a + set to finish weeks 1–3 and a deload in week 4. " +
+      "Two assistance lifts a day, 5 sets each (the Triumvirate).",
     weeks: 4,
     lightWeeks: [4],
     testWeeks: [],
     defaultDays: [1, 2, 4, 5],
-    wave: [
-      [{ reps: 5, pct: 0.65 }, { reps: 5, pct: 0.75 }, { reps: 5, pct: 0.85, top: true }],
-      [{ reps: 3, pct: 0.7 }, { reps: 3, pct: 0.8 }, { reps: 3, pct: 0.9, top: true }],
-      [{ reps: 5, pct: 0.75 }, { reps: 3, pct: 0.85 }, { reps: 1, pct: 0.95, top: true }],
-      [{ reps: 5, pct: 0.4 }, { reps: 5, pct: 0.5 }, { reps: 5, pct: 0.6 }],
-    ],
+    wave: WAVE_531,
     days: [
       {
-        name: "Squat day",
+        name: "Press day",
         roles: [
-          { key: "squat", label: "Squat", muscleGroup: "LEGS", match: SQUAT, scheme: { kind: "WAVE" }, lower: true, main: true },
-          { key: "lunge", label: "Single leg", muscleGroup: "LEGS", match: LUNGE, scheme: r(3, 8, 12), lower: true, optional: true },
-          { key: "core", label: "Core", muscleGroup: "CORE", match: CORE, scheme: r(3, 8, 12), optional: true },
+          main("press", "Press", "SHOULDERS", PRESS),
+          extra("dip", "Dips", "CHEST", DIP, same(5, 15)),
+          extra("chin", "Chin-ups", "BACK", CHIN, same(5, 10)),
+        ],
+      },
+      {
+        name: "Deadlift day",
+        roles: [
+          main("deadlift", "Deadlift", "DEADLIFT", DEAD, true),
+          extra("goodmorning", "Good mornings", "LEGS", GOOD_MORNING, same(5, 12), true),
+          extra("legraise", "Hanging leg raises", "CORE", LEG_RAISE, same(5, 15)),
         ],
       },
       {
         name: "Bench day",
         roles: [
-          { key: "bench", label: "Bench", muscleGroup: "CHEST", match: BENCH, scheme: { kind: "WAVE" }, main: true },
-          { key: "row", label: "Row", muscleGroup: "BACK", match: ROW, scheme: r(3, 8, 12), optional: true },
-          { key: "tri", label: "Triceps", muscleGroup: "ARMS", match: TRI, scheme: r(3, 8, 12), optional: true },
+          main("bench", "Bench", "CHEST", BENCH),
+          extra("dbbench", "Dumbbell bench", "CHEST", DB_BENCH, same(5, 15)),
+          extra("dbrow", "Dumbbell rows", "BACK", DB_ROW, same(5, 10)),
         ],
-        row: true,
+      },
+      {
+        name: "Squat day",
+        roles: [
+          main("squat", "Squat", "LEGS", SQUAT, true),
+          extra("legpress", "Leg press", "LEGS", LEG_PRESS, same(5, 15), true),
+          extra("legcurl", "Leg curls", "LEGS", LEG_CURL, same(5, 10), true),
+        ],
+      },
+    ],
+  },
+  {
+    key: "wendler-bbb",
+    name: "Boring But Big",
+    blurb:
+      "5/3/1 with 5 sets of 10 of the same lift at 50% after the main sets, then one assistance lift. " +
+      "Four days, a + set to finish weeks 1–3, deload in week 4.",
+    weeks: 4,
+    lightWeeks: [4],
+    testWeeks: [],
+    defaultDays: [1, 2, 4, 5],
+    wave: WAVE_531,
+    supplemental: "BBB",
+    days: [
+      { name: "Press day", roles: [main("press", "Press", "SHOULDERS", PRESS), extra("chin", "Chin-ups", "BACK", CHIN, same(5, 10))] },
+      {
+        name: "Deadlift day",
+        roles: [main("deadlift", "Deadlift", "DEADLIFT", DEAD, true), extra("legraise", "Hanging leg raises", "CORE", LEG_RAISE, same(5, 15))],
+      },
+      { name: "Bench day", roles: [main("bench", "Bench", "CHEST", BENCH), extra("dbrow", "Dumbbell rows", "BACK", DB_ROW, same(5, 10))] },
+      {
+        name: "Squat day",
+        roles: [main("squat", "Squat", "LEGS", SQUAT, true), extra("legcurl", "Leg curls", "LEGS", LEG_CURL, same(5, 10), true)],
+      },
+    ],
+  },
+  {
+    key: "wendler-beginners",
+    name: "5/3/1 for Beginners",
+    blurb:
+      "Three days, two main lifts a day, each with a + set and then 5 × 5 at the first set's weight (First Set Last). " +
+      "3-week cycles with no deload. 50–100 reps each of push, pull and single-leg or core.",
+    weeks: 3,
+    lightWeeks: [],
+    testWeeks: [],
+    defaultDays: [1, 3, 5],
+    wave: WAVE_531.slice(0, 3),
+    supplemental: "FSL",
+    days: [
+      {
+        name: "Day 1",
+        roles: [
+          main("squat", "Squat", "LEGS", SQUAT, true),
+          main("bench", "Bench", "CHEST", BENCH),
+          extra("push", "Push", "CHEST", PUSH, r(5, 10, 20)),
+          extra("pull", "Pull", "BACK", PULL, r(5, 10, 20)),
+          extra("legcore", "Single leg or core", "CORE", SINGLE_LEG_CORE, r(5, 10, 20)),
+        ],
+      },
+      {
+        name: "Day 2",
+        roles: [
+          main("deadlift", "Deadlift", "DEADLIFT", DEAD, true),
+          main("press", "Press", "SHOULDERS", PRESS),
+          extra("push", "Push", "CHEST", PUSH, r(5, 10, 20)),
+          extra("pull", "Pull", "BACK", ROW, r(5, 10, 20)),
+          extra("legcore", "Single leg or core", "LEGS", SINGLE_LEG_CORE, r(5, 10, 20), true),
+        ],
+      },
+      {
+        name: "Day 3",
+        roles: [
+          main("bench", "Bench", "CHEST", BENCH),
+          main("squat", "Squat", "LEGS", SQUAT, true),
+          extra("push", "Push", "CHEST", PUSH, r(5, 10, 20)),
+          extra("pull", "Pull", "BACK", PULL, r(5, 10, 20)),
+          extra("legcore", "Single leg or core", "CORE", SINGLE_LEG_CORE, r(5, 10, 20)),
+        ],
+      },
+    ],
+  },
+  {
+    key: "wave-loading",
+    name: "Wave loading",
+    blurb:
+      "Four main lifts, one a day, as two waves of 3, 2 and 1 reps, the second wave a little heavier. " +
+      "Each week heavier again, week 4 light. Rows, curls and core as sets of 8–12.",
+    weeks: 4,
+    lightWeeks: [4],
+    testWeeks: [],
+    defaultDays: [1, 2, 4, 5],
+    wave: WAVE_LOADING,
+    days: [
+      {
+        name: "Squat day",
+        roles: [
+          main("squat", "Squat", "LEGS", SQUAT, true),
+          extra("lunge", "Single leg", "LEGS", LUNGE, r(3, 8, 12), true),
+          extra("core", "Core", "CORE", CORE, r(3, 8, 12)),
+        ],
+      },
+      {
+        name: "Bench day",
+        roles: [
+          main("bench", "Bench", "CHEST", BENCH),
+          extra("row", "Row", "BACK", ROW, r(3, 8, 12)),
+          extra("tri", "Triceps", "ARMS", TRI, r(3, 8, 12)),
+        ],
       },
       {
         name: "Deadlift day",
         roles: [
-          { key: "deadlift", label: "Deadlift", muscleGroup: "DEADLIFT", match: DEAD, scheme: { kind: "WAVE" }, lower: true, main: true },
-          { key: "pull", label: "Pull", muscleGroup: "BACK", match: PULL, scheme: r(3, 6, 10), optional: true },
-          { key: "core", label: "Core", muscleGroup: "CORE", match: CORE, scheme: r(3, 8, 12), optional: true },
+          main("deadlift", "Deadlift", "DEADLIFT", DEAD, true),
+          extra("pull", "Pull", "BACK", PULL, r(3, 6, 10)),
+          extra("core", "Core", "CORE", CORE, r(3, 8, 12)),
         ],
       },
       {
         name: "Press day",
         roles: [
-          { key: "press", label: "Press", muscleGroup: "SHOULDERS", match: PRESS, scheme: { kind: "WAVE" }, main: true },
-          { key: "row", label: "Row", muscleGroup: "BACK", match: ROW, scheme: r(3, 8, 12), optional: true },
-          { key: "curl", label: "Curl", muscleGroup: "ARMS", match: CURL, scheme: r(3, 8, 12), optional: true },
+          main("press", "Press", "SHOULDERS", PRESS),
+          extra("row", "Row", "BACK", ROW, r(3, 8, 12)),
+          extra("curl", "Curl", "ARMS", CURL, r(3, 8, 12)),
         ],
-        row: true,
       },
     ],
   },
@@ -274,7 +443,7 @@ export const PROGRAMS: readonly Program[] = [
   {
     key: "get-moving",
     name: "Just get moving",
-    blurb: "Three short days, two sets of 10–15 on a few movements. Easy to start and easy to keep.",
+    blurb: "Three short days, two sets of 10–15 on a few movements, and an easy row on day B. Easy to start and easy to keep.",
     weeks: 4,
     lightWeeks: [],
     testWeeks: [],
@@ -335,8 +504,11 @@ export const PROGRAMS: readonly Program[] = [
   },
 ];
 
+/** Programs renamed since they were started (a running one keeps working). */
+const RENAMED: Record<string, string> = { "strength-waves": "wendler-531" };
+
 /** The 5/3/1 wave on its own, for a movement given a wave in a plan built by
- *  hand: Strength waves' four weeks (week 4 light), counted from the day the
+ *  hand: the four weeks (week 4 light, no + sets), counted from the day the
  *  wave was chosen. */
 export const HAND_WAVE: Program = {
   key: "",
@@ -347,11 +519,12 @@ export const HAND_WAVE: Program = {
   testWeeks: [],
   defaultDays: [],
   days: [],
-  wave: PROGRAMS.find((p) => p.key === "strength-waves")?.wave,
+  wave: WAVE_531.map((w) => w.map(({ plus: _plus, ...s }) => s)),
 };
 
 export function programByKey(key: string | null | undefined): Program | null {
-  return PROGRAMS.find((p) => p.key === key) ?? null;
+  const k = key ? (RENAMED[key] ?? key) : key;
+  return PROGRAMS.find((p) => p.key === k) ?? null;
 }
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/s$/, "");
@@ -400,7 +573,7 @@ export function weekLabel(program: Program, week: number): string {
 
 /** A set to aim for; `pct` is its share of the training max on a 5/3/1 set,
  *  shown under the set number (v0.619). */
-export type TargetSet = { weight: number | null; reps: number; top?: boolean; pct?: number };
+export type TargetSet = { weight: number | null; reps: number; top?: boolean; pct?: number; plus?: boolean };
 export type LastSet = { weight: number | null; reps: number | null };
 
 /** Round to the nearest loadable weight: 5 lb, or 2.5 kg. */
@@ -453,12 +626,19 @@ export function targetsFor(input: {
   }
 
   if (scheme.kind === "WAVE") {
-    const sets = program.wave?.[week - 1] ?? program.wave?.[0] ?? [];
-    return sets.map((s, i) => ({
+    const main = program.wave?.[week - 1] ?? program.wave?.[0] ?? [];
+    const extra: WaveSet[] =
+      intent === "LIGHT" || !program.supplemental || main.length === 0
+        ? []
+        : program.supplemental === "FSL"
+          ? Array.from({ length: 5 }, () => ({ reps: 5, pct: main[0].pct }))
+          : Array.from({ length: 5 }, () => ({ reps: 10, pct: 0.5 }));
+    return [...main, ...extra].map((s, i) => ({
       weight: trainingMax ? roundLoad(trainingMax * s.pct, unit) : (last[i]?.weight ?? null),
       reps: s.reps,
       top: s.top,
       pct: s.pct,
+      ...(s.plus ? { plus: true } : {}),
     }));
   }
 
@@ -499,7 +679,8 @@ export function trainingMaxFrom(top: number, unit: string): number {
   return roundLoad(top * 0.9, unit);
 }
 
-/** The end-of-block raise: one step per lift (10 lb lower, 5 lb upper). */
+/** The end-of-block raise: one step per lift (10 lb lower, 5 lb upper).
+ *  The default for each lift on the end-of-cycle pop-up. */
 export function raisedMaxes(
   maxes: Record<string, number>,
   lowerIds: ReadonlySet<string>,

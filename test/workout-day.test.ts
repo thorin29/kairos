@@ -279,7 +279,7 @@ describe("weeks in a row (v0.610)", () => {
 });
 
 describe("programs (v0.611)", () => {
-  const waves = programByKey("strength-waves")!;
+  const waves = programByKey("wendler-531")!;
   const tens = programByKey("sets-of-ten")!;
   const full = programByKey("full-body-3")!;
   it("every program's days and defaults line up", () => {
@@ -304,10 +304,35 @@ describe("programs (v0.611)", () => {
     expect(targetsFor({ program: waves, week: 3, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 170, last: [] })).toEqual([
       { weight: 130, reps: 5, top: undefined, pct: 0.75 },
       { weight: 145, reps: 3, top: undefined, pct: 0.85 },
-      { weight: 160, reps: 1, top: true, pct: 0.95 },
+      { weight: 160, reps: 1, top: true, pct: 0.95, plus: true },
     ]);
     const t = targetsFor({ program: waves, week: 1, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: null, last: [{ weight: 135, reps: 5 }] });
     expect(t.map((x) => x.weight)).toEqual([135, null, null]);
+  });
+  it("5/3/1 templates (v0.620): + sets, BBB 5 × 10 at 50%, FSL 5 × 5, wave loading, renamed key", () => {
+    const bbb = programByKey("wendler-bbb")!;
+    const t1 = targetsFor({ program: bbb, week: 1, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 200, last: [] });
+    expect(t1.map((x) => [x.weight, x.reps, !!x.plus])).toEqual([
+      [130, 5, false], [150, 5, false], [170, 5, true],
+      ...Array.from({ length: 5 }, () => [100, 10, false]),
+    ]);
+    const deload = targetsFor({ program: bbb, week: 4, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 200, last: [] });
+    expect(deload.map((x) => x.weight)).toEqual([80, 100, 120]);
+    const beg = programByKey("wendler-beginners")!;
+    expect(beg.weeks).toBe(3);
+    expect(beg.lightWeeks).toEqual([]);
+    const t2 = targetsFor({ program: beg, week: 2, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 200, last: [] });
+    expect(t2.length).toBe(8);
+    expect(t2.slice(3).every((x) => x.weight === 140 && x.reps === 5 && x.pct === 0.7)).toBe(true);
+    const wl = programByKey("wave-loading")!;
+    const t3 = targetsFor({ program: wl, week: 1, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 200, last: [] });
+    expect(t3.map((x) => x.reps)).toEqual([3, 2, 1, 3, 2, 1]);
+    expect(t3.some((x) => x.plus)).toBe(false);
+    expect(programByKey("strength-waves")?.key).toBe("wendler-531");
+    // Beginners runs both lifts twice a week; every main role has a training-max lift.
+    expect(beg.days.flatMap((d) => d.roles.filter((r) => r.main).map((r) => r.key))).toEqual(["squat", "bench", "deadlift", "press", "bench", "squat"]);
+    const hand = targetsFor({ program: HAND_WAVE, week: 1, scheme: { kind: "WAVE", start: "2026-11-02" }, unit: "lb", trainingMax: 200, last: [] });
+    expect(hand.some((x) => x.plus)).toBe(false);
   });
   it("rep range: up a step once every set reached the top, else one more rep", () => {
     const scheme = parseScheme("range:3x8-12")!;
@@ -332,7 +357,7 @@ describe("programs (v0.611)", () => {
     expect(raisedMaxes({ a: 170, b: 120 }, new Set(["a"]), "lb")).toEqual({ a: 180, b: 125 });
   });
   it("finds a default movement by name, ignoring case and plurals", () => {
-    const role = waves.days[0].roles[0];
+    const role = waves.days[3].roles[0];
     expect(defaultMovement(role, [{ id: "x", name: "Back Squats" }])?.id).toBe("x");
   });
 });

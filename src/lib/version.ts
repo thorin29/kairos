@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.619.0";
+export const APP_VERSION = "0.620.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,18 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.620.0",
+    summary: [
+      "New programs: 5/3/1, Boring But Big, 5/3/1 for Beginners and Wave loading. Strength waves is now 5/3/1.",
+      "5/3/1 top sets are + sets: do as many good reps as you can.",
+      "Starting a program goes step by step: days (two on one day is fine), lifts, warm-up, cardio and conditioning, then training maxes.",
+      "Companion lifts can be swapped, removed or added, each with its own sets.",
+      "My plans: save your plan and open it again later. Starting a program saves the plan it replaces.",
+      "At the end of a cycle, choose how much each lift goes up, repeat, or switch program.",
+      "Rowing a program plans shows as Rowing with the program's name.",
+    ],
+  },
   {
     version: "0.619.0",
     summary: [

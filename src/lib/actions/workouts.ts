@@ -56,9 +56,14 @@ import {
   sharePlan,
   sharedPlansFor,
   useSharedPlan,
+  savedPlansFor,
+  savePlan,
+  renameSavedPlan,
+  deleteSavedPlan,
   type ImportMode,
   type ImportPreview,
   type SharedPlanRow,
+  type SavedPlanRow,
 } from "@/lib/workouts/plan-share-run";
 import type { WorkoutsFile } from "@/lib/workouts/plan-file";
 import {
@@ -72,6 +77,7 @@ import {
 import type { EquipmentItem } from "@/lib/workouts/library";
 import {
   answerInvite,
+  currentExtras,
   endProgram,
   inviteFor,
   loadProgramChoices,
@@ -79,6 +85,7 @@ import {
   programInfoFor,
   setTrainingMax,
   startProgram,
+  type CurrentExtras,
   type ProgramChoice,
   type ProgramInfo,
   type StartProgramInput,
@@ -1477,15 +1484,17 @@ export async function loadProgramsFor(userId: string): Promise<{
   choices: ProgramChoice[];
   active: ProgramInfo | null;
   invite: boolean;
+  current: CurrentExtras;
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
-  const [choices, active, invite] = await Promise.all([
+  const [choices, active, invite, current] = await Promise.all([
     loadProgramChoices(userId),
     programInfoFor(userId, todayISO()),
     inviteFor(userId),
+    currentExtras(userId),
   ]);
-  return { choices, active, invite };
+  return { choices, active, invite, current };
 }
 
 export async function startProgramFor(userId: string, input: StartProgramInput): Promise<{ ok: boolean }> {
@@ -1503,10 +1512,10 @@ export async function endProgramFor(userId: string, restore: boolean): Promise<v
   refresh();
 }
 
-export async function nextProgramBlock(userId: string, raise: boolean): Promise<void> {
+export async function nextProgramBlock(userId: string, raise: boolean, raises?: Record<string, number>): Promise<void> {
   await requireInteractive();
   await requireCanActFor(userId);
-  await nextBlock(userId, raise);
+  await nextBlock(userId, raise, raises && typeof raises === "object" ? raises : undefined);
   refresh();
 }
 
@@ -1622,4 +1631,33 @@ export async function removeHouseholdPlan(id: string): Promise<void> {
   await requireAdmin();
   await removeSharedPlan(String(id));
   refresh();
+}
+
+// --- my plans (v0.620) -------------------------------------------------------
+
+export async function loadMyPlans(userId: string): Promise<SavedPlanRow[]> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return savedPlansFor(userId);
+}
+
+/** Save the current plan to My plans. */
+export async function saveMyPlan(userId: string, name: string) {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const r = await savePlan(userId, String(name ?? ""));
+  if (r.ok) refresh();
+  return r;
+}
+
+export async function renameMyPlan(userId: string, id: string, name: string) {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return renameSavedPlan(userId, String(id), String(name ?? ""));
+}
+
+export async function deleteMyPlan(userId: string, id: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await deleteSavedPlan(userId, String(id));
 }
