@@ -302,17 +302,21 @@ describe("programs (v0.611)", () => {
   });
   it("waves: the week's sets from the training max, or last time without one", () => {
     expect(targetsFor({ program: waves, week: 3, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 170, last: [] })).toEqual([
+      { weight: 70, reps: 5, top: undefined, pct: 0.4, warmup: true },
+      { weight: 85, reps: 5, top: undefined, pct: 0.5, warmup: true },
+      { weight: 100, reps: 3, top: undefined, pct: 0.6, warmup: true },
       { weight: 130, reps: 5, top: undefined, pct: 0.75 },
       { weight: 145, reps: 3, top: undefined, pct: 0.85 },
       { weight: 160, reps: 1, top: true, pct: 0.95, plus: true },
     ]);
     const t = targetsFor({ program: waves, week: 1, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: null, last: [{ weight: 135, reps: 5 }] });
-    expect(t.map((x) => x.weight)).toEqual([135, null, null]);
+    expect(t.map((x) => x.weight)).toEqual([135, null, null, null, null, null]);
   });
   it("5/3/1 templates (v0.620): + sets, BBB 5 × 10 at 50%, FSL 5 × 5, wave loading, renamed key", () => {
     const bbb = programByKey("wendler-bbb")!;
     const t1 = targetsFor({ program: bbb, week: 1, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 200, last: [] });
     expect(t1.map((x) => [x.weight, x.reps, !!x.plus])).toEqual([
+      [80, 5, false], [100, 5, false], [120, 3, false],
       [130, 5, false], [150, 5, false], [170, 5, true],
       ...Array.from({ length: 5 }, () => [100, 10, false]),
     ]);
@@ -322,11 +326,12 @@ describe("programs (v0.611)", () => {
     expect(beg.weeks).toBe(3);
     expect(beg.lightWeeks).toEqual([]);
     const t2 = targetsFor({ program: beg, week: 2, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 200, last: [] });
-    expect(t2.length).toBe(8);
-    expect(t2.slice(3).every((x) => x.weight === 140 && x.reps === 5 && x.pct === 0.7)).toBe(true);
+    expect(t2.length).toBe(11);
+    expect(t2.slice(0, 3).every((x) => x.warmup)).toBe(true);
+    expect(t2.slice(6).every((x) => x.weight === 140 && x.reps === 5 && x.pct === 0.7)).toBe(true);
     const wl = programByKey("wave-loading")!;
     const t3 = targetsFor({ program: wl, week: 1, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 200, last: [] });
-    expect(t3.map((x) => x.reps)).toEqual([3, 2, 1, 3, 2, 1]);
+    expect(t3.map((x) => x.reps)).toEqual([5, 5, 3, 3, 2, 1, 3, 2, 1]);
     expect(t3.some((x) => x.plus)).toBe(false);
     expect(programByKey("strength-waves")?.key).toBe("wendler-531");
     // Beginners runs both lifts twice a week; every main role has a training-max lift.

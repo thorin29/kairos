@@ -692,6 +692,8 @@ type Row = {
   pct?: number;
   /** A 5/3/1 "+" set: as many good reps as you can (v0.620). */
   plus?: boolean;
+  /** A warm-up set before the main sets (v0.621): "W", not numbered. */
+  warmup?: boolean;
 };
 
 const num = (v: string): number | null => {
@@ -719,6 +721,7 @@ function rowsFrom(log: MovementLog): Row[] {
       top: target[i]?.top,
       pct: target[i]?.pct,
       plus: target[i]?.plus,
+      warmup: target[i]?.warmup,
     }));
   }
   if (target.length > 0) {
@@ -735,6 +738,7 @@ function rowsFrom(log: MovementLog): Row[] {
       top: t.top,
       pct: t.pct,
       plus: t.plus,
+      warmup: t.warmup,
     }));
   }
   if (last.length > 0) {
@@ -1117,8 +1121,8 @@ function MovementLogger({
               return (
                 <div key={r.key} className={`border-b border-hairline py-2 ${r.saved ? "bg-accent/[0.03]" : ""}`}>
                   <div className={`grid ${cols} items-center gap-2`}>
-                    <span className="tabular pl-1 text-sm font-semibold">
-                      {i + 1}
+                    <span className={`tabular pl-1 text-sm font-semibold ${r.warmup ? "text-muted" : ""}`}>
+                      {r.warmup ? "W" : i + 1 - rows.slice(0, i).filter((x) => x.warmup).length}
                       {r.pct != null && (
                         <span className="block text-[11px] font-semibold leading-none text-accent">{Math.round(r.pct * 100)}%</span>
                       )}

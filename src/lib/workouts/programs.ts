@@ -125,6 +125,9 @@ export type Program = {
   days: ProgramDay[];
   /** Waves only: per program week, the sets of a "work up to a top set". */
   wave?: WaveSet[][];
+  /** 5/3/1 warm-up sets before the main sets (v0.621): 40/50/60% × 5/5/3 of
+   *  the training max. Not in a light week. */
+  warmupSets?: boolean;
   /** 5/3/1 supplemental work after the main sets of the same lift (v0.620):
    *  FSL 5 × 5 at the first set's %, BBB 5 × 10 at 50%. Not in a light week. */
   supplemental?: "FSL" | "BBB";
@@ -203,6 +206,7 @@ const extra = (key: string, label: string, muscleGroup: MuscleGroup, match: stri
 export const PROGRAMS: readonly Program[] = [
   {
     key: "wendler-531",
+    warmupSets: true,
     name: "5/3/1",
     blurb:
       "Jim Wendler's original 5/3/1: four days, one main lift a day, with a + set to finish weeks 1–3 and a deload in week 4. " +
@@ -217,38 +221,39 @@ export const PROGRAMS: readonly Program[] = [
         name: "Press day",
         roles: [
           main("press", "Press", "SHOULDERS", PRESS),
-          extra("dip", "Dips", "CHEST", DIP, same(5, 15)),
-          extra("chin", "Chin-ups", "BACK", CHIN, same(5, 10)),
+          extra("dip", "Push", "CHEST", DIP, same(5, 15)),
+          extra("chin", "Pull", "BACK", CHIN, same(5, 10)),
         ],
       },
       {
         name: "Deadlift day",
         roles: [
           main("deadlift", "Deadlift", "DEADLIFT", DEAD, true),
-          extra("goodmorning", "Good mornings", "LEGS", GOOD_MORNING, same(5, 12), true),
-          extra("legraise", "Hanging leg raises", "CORE", LEG_RAISE, same(5, 15)),
+          extra("goodmorning", "Hinge", "DEADLIFT", GOOD_MORNING, same(5, 12), true),
+          extra("legraise", "Core", "CORE", LEG_RAISE, same(5, 15)),
         ],
       },
       {
         name: "Bench day",
         roles: [
           main("bench", "Bench", "CHEST", BENCH),
-          extra("dbbench", "Dumbbell bench", "CHEST", DB_BENCH, same(5, 15)),
-          extra("dbrow", "Dumbbell rows", "BACK", DB_ROW, same(5, 10)),
+          extra("dbbench", "Push", "CHEST", DB_BENCH, same(5, 15)),
+          extra("dbrow", "Pull", "BACK", DB_ROW, same(5, 10)),
         ],
       },
       {
         name: "Squat day",
         roles: [
           main("squat", "Squat", "LEGS", SQUAT, true),
-          extra("legpress", "Leg press", "LEGS", LEG_PRESS, same(5, 15), true),
-          extra("legcurl", "Leg curls", "LEGS", LEG_CURL, same(5, 10), true),
+          extra("legpress", "Legs", "LEGS", LEG_PRESS, same(5, 15), true),
+          extra("legcurl", "Hamstrings", "LEGS", LEG_CURL, same(5, 10), true),
         ],
       },
     ],
   },
   {
     key: "wendler-bbb",
+    warmupSets: true,
     name: "Boring But Big",
     blurb:
       "5/3/1 with 5 sets of 10 of the same lift at 50% after the main sets, then one assistance lift. " +
@@ -260,20 +265,21 @@ export const PROGRAMS: readonly Program[] = [
     wave: WAVE_531,
     supplemental: "BBB",
     days: [
-      { name: "Press day", roles: [main("press", "Press", "SHOULDERS", PRESS), extra("chin", "Chin-ups", "BACK", CHIN, same(5, 10))] },
+      { name: "Press day", roles: [main("press", "Press", "SHOULDERS", PRESS), extra("chin", "Pull", "BACK", CHIN, same(5, 10))] },
       {
         name: "Deadlift day",
-        roles: [main("deadlift", "Deadlift", "DEADLIFT", DEAD, true), extra("legraise", "Hanging leg raises", "CORE", LEG_RAISE, same(5, 15))],
+        roles: [main("deadlift", "Deadlift", "DEADLIFT", DEAD, true), extra("legraise", "Core", "CORE", LEG_RAISE, same(5, 15))],
       },
-      { name: "Bench day", roles: [main("bench", "Bench", "CHEST", BENCH), extra("dbrow", "Dumbbell rows", "BACK", DB_ROW, same(5, 10))] },
+      { name: "Bench day", roles: [main("bench", "Bench", "CHEST", BENCH), extra("dbrow", "Pull", "BACK", DB_ROW, same(5, 10))] },
       {
         name: "Squat day",
-        roles: [main("squat", "Squat", "LEGS", SQUAT, true), extra("legcurl", "Leg curls", "LEGS", LEG_CURL, same(5, 10), true)],
+        roles: [main("squat", "Squat", "LEGS", SQUAT, true), extra("legcurl", "Hamstrings", "LEGS", LEG_CURL, same(5, 10), true)],
       },
     ],
   },
   {
     key: "wendler-beginners",
+    warmupSets: true,
     name: "5/3/1 for Beginners",
     blurb:
       "Three days, two main lifts a day, each with a + set and then 5 × 5 at the first set's weight (First Set Last). " +
@@ -319,6 +325,7 @@ export const PROGRAMS: readonly Program[] = [
   },
   {
     key: "wave-loading",
+    warmupSets: true,
     name: "Wave loading",
     blurb:
       "Four main lifts, one a day, as two waves of 3, 2 and 1 reps, the second wave a little heavier. " +
@@ -573,7 +580,15 @@ export function weekLabel(program: Program, week: number): string {
 
 /** A set to aim for; `pct` is its share of the training max on a 5/3/1 set,
  *  shown under the set number (v0.619). */
-export type TargetSet = { weight: number | null; reps: number; top?: boolean; pct?: number; plus?: boolean };
+export type TargetSet = {
+  weight: number | null;
+  reps: number;
+  top?: boolean;
+  pct?: number;
+  plus?: boolean;
+  /** A warm-up set before the main sets (v0.621). */
+  warmup?: boolean;
+};
 export type LastSet = { weight: number | null; reps: number | null };
 
 /** Round to the nearest loadable weight: 5 lb, or 2.5 kg. */
@@ -627,18 +642,27 @@ export function targetsFor(input: {
 
   if (scheme.kind === "WAVE") {
     const main = program.wave?.[week - 1] ?? program.wave?.[0] ?? [];
+    const warm: (WaveSet & { warmup?: boolean })[] =
+      intent === "LIGHT" || !program.warmupSets || main.length === 0
+        ? []
+        : [
+            { reps: 5, pct: 0.4, warmup: true },
+            { reps: 5, pct: 0.5, warmup: true },
+            { reps: 3, pct: 0.6, warmup: true },
+          ];
     const extra: WaveSet[] =
       intent === "LIGHT" || !program.supplemental || main.length === 0
         ? []
         : program.supplemental === "FSL"
           ? Array.from({ length: 5 }, () => ({ reps: 5, pct: main[0].pct }))
           : Array.from({ length: 5 }, () => ({ reps: 10, pct: 0.5 }));
-    return [...main, ...extra].map((s, i) => ({
+    return [...warm, ...main, ...extra].map((s: WaveSet & { warmup?: boolean }, i) => ({
       weight: trainingMax ? roundLoad(trainingMax * s.pct, unit) : (last[i]?.weight ?? null),
       reps: s.reps,
       top: s.top,
       pct: s.pct,
       ...(s.plus ? { plus: true } : {}),
+      ...(s.warmup ? { warmup: true } : {}),
     }));
   }
 

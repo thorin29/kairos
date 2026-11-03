@@ -167,7 +167,7 @@ export type ProgramChoice = {
       defaultId: string | null;
       /** Movements that fit (by group, or named by the slot), with the
        *  person's heaviest logged weight on each. */
-      options: { id: string; name: string; best: number | null }[];
+      options: { id: string; name: string; best: number | null; timed?: boolean }[];
     }[];
   }[];
 };
@@ -179,8 +179,8 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
   const pool = (await prisma.poolExercise.findMany({
     where: { isActive: true, ownerId: null },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, muscleGroup: true, category: true },
-  })) as { id: string; name: string; muscleGroup: string | null; category: string }[];
+    select: { id: true, name: true, muscleGroup: true, category: true, metric: true },
+  })) as { id: string; name: string; muscleGroup: string | null; category: string; metric: string | null }[];
   const bests = new Map<string, number>();
   if (userId) {
     const rows = (await prisma.sessionSet.findMany({
@@ -219,7 +219,13 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
           optional: !!r.optional,
           scheme: schemeKey(r.scheme),
           defaultId: def?.id ?? null,
-          options: fits.map((m) => ({ id: m.id, name: m.name, best: bests.get(m.id) ?? null })),
+          // A timed movement (a plank) logs by time: the setup shows Time, not sets.
+          options: fits.map((m) => ({
+            id: m.id,
+            name: m.name,
+            best: bests.get(m.id) ?? null,
+            ...(m.metric === "DURATION" ? { timed: true } : {}),
+          })),
         };
       }),
     })),

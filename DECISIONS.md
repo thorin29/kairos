@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11 — 5/3/1 warm-up sets; setup labels and maxes; rowing in metres (v0.621.0 / app 0.429.0)
+
+**Warm-up sets** belong to the lift, not the Warm-up card, so leaving the
+warm-up out never drops them: `Program.warmupSets` (5/3/1, BBB, Beginners,
+Wave loading) puts 40/50/60% × 5/5/3 of the training max before the main sets,
+flagged `warmup` on the target set; none in a light week. The logger labels
+them "W" and numbers the working sets from 1. They log like any set (light, so
+they never set a record).
+
+**Setup:** companion slots are named by type — Push, Pull, Hinge, Core, Legs,
+Hamstrings — not by a specific exercise the household may not have (Good
+mornings listed every Legs movement). The hinge slot files under Deadlift so
+Romanian deadlifts are offered. A slot's options carry `timed`; a timed choice
+shows Time instead of a set scheme (the server already writes it by time). The
+last step is Maxes: the field is your best (pre-filled from what's logged,
+editable), with the training max (90%, rounded to 5) under it; the client sends
+the training max.
+
+**Rowing in metres:** the weekly readout under the chart summed rowing into
+miles. Rowing now reads in metres (what Concept2 reports); other distance uses
+the household's unit (Admin → Units, mi or km), a run logged in metres
+converted to it. Runs can still be logged in metres.
+
+**Workouts page order:** today's groups first, in the plan's order (a program
+writes the main lift's group first), then the rest A–Z, on web and phone. The
+phone's progress blocks now name each movement.
+
 ## 2026-11 — Wendler programs; step-by-step setup; My plans; end of cycle (v0.620.0 / app 0.428.0)
 
 **Programs** (`src/lib/workouts/programs.ts`), matched to Wendler's own

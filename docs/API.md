@@ -919,6 +919,12 @@ and a new day gets "Cardio" or "Conditioning" (picked on the day). Only a main
 lift's target title names the program and week; a companion lift's names the
 week only when it's light or a test.
 
+v0.621: a program slot's option adds `timed: true` for a movement logged by
+time; a target set adds `warmup: true` on a 5/3/1 warm-up set (40/50/60% ×
+5/5/3, before the main sets, none in a light week). Companion slot labels are
+types (Push, Pull, Hinge, Core, Legs, Hamstrings). The week's activity readout
+gives rowing in metres and other distance in the household unit.
+
 **Suggestions (v0.612).**
 ```
 Suggestion: { "key","title","why","actions":[ { "answer","label" } ],"weight":num? }

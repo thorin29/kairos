@@ -21,7 +21,12 @@ const QUIET = `${PILL} border-hairline hover:border-accent disabled:opacity-40`;
 const SELECT =
   "h-10 min-w-0 rounded-lg border border-hairline bg-surface px-2 text-sm outline-none focus:border-accent";
 
-type Data = { choices: ProgramChoice[]; active: ProgramInfo | null; invite: boolean; current: CurrentExtras };
+type Data = {
+  choices: ProgramChoice[];
+  active: ProgramInfo | null;
+  invite: boolean;
+  current: CurrentExtras;
+};
 
 /**
  * A person's program on the Exercise page: the program and its week, training
@@ -98,7 +103,10 @@ export function ProgramCard({
           }}
           onStart={(input) =>
             start(async () => {
-              const r = await startProgramFor(userId, { key: program.key, ...input });
+              const r = await startProgramFor(userId, {
+                key: program.key,
+                ...input,
+              });
               if (r.ok) {
                 setSetup(null);
                 setChoosing(false);
@@ -135,7 +143,12 @@ export function ProgramCard({
                   key={m.poolExerciseId}
                   name={m.name}
                   weight={m.weight}
-                  onSave={(w) => start(async () => { await setProgramMax(userId, m.poolExerciseId, w); done(); })}
+                  onSave={(w) =>
+                    start(async () => {
+                      await setProgramMax(userId, m.poolExerciseId, w);
+                      done();
+                    })
+                  }
                 />
               ))}
             </div>
@@ -155,7 +168,13 @@ export function ProgramCard({
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => start(async () => { await endProgramFor(userId, true); setEnding(false); done(); })}
+                onClick={() =>
+                  start(async () => {
+                    await endProgramFor(userId, true);
+                    setEnding(false);
+                    done();
+                  })
+                }
                 className={`${PRIMARY} justify-center`}
               >
                 Go back to my old plan
@@ -163,7 +182,13 @@ export function ProgramCard({
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => start(async () => { await endProgramFor(userId, false); setEnding(false); done(); })}
+                onClick={() =>
+                  start(async () => {
+                    await endProgramFor(userId, false);
+                    setEnding(false);
+                    done();
+                  })
+                }
                 className={`${QUIET} justify-center`}
               >
                 Keep this plan
@@ -205,14 +230,24 @@ export function ProgramCard({
           </button>
           <button
             type="button"
-            onClick={() => start(async () => { await answerProgramInvite(userId, "later"); done(); })}
+            onClick={() =>
+              start(async () => {
+                await answerProgramInvite(userId, "later");
+                done();
+              })
+            }
             className="text-accent"
           >
             Not now
           </button>
           <button
             type="button"
-            onClick={() => start(async () => { await answerProgramInvite(userId, "never"); done(); })}
+            onClick={() =>
+              start(async () => {
+                await answerProgramInvite(userId, "never");
+                done();
+              })
+            }
             className="text-muted hover:text-ink"
           >
             Don&rsquo;t ask again
@@ -368,7 +403,12 @@ function CycleEnd({
                     aria-label={`Raise ${m.name} by`}
                     inputMode="decimal"
                     value={by[m.poolExerciseId] ?? ""}
-                    onChange={(e) => setBy((b) => ({ ...b, [m.poolExerciseId]: e.target.value }))}
+                    onChange={(e) =>
+                      setBy((b) => ({
+                        ...b,
+                        [m.poolExerciseId]: e.target.value,
+                      }))
+                    }
                     className="tabular h-10 w-16 rounded-lg border border-hairline bg-surface px-2 text-right text-sm outline-none focus:border-accent"
                   />
                 </div>
@@ -380,7 +420,9 @@ function CycleEnd({
           <button
             type="button"
             disabled={busy}
-            onClick={() => onNext(Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, amount(m.poolExerciseId)])))}
+            onClick={() =>
+              onNext(Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, amount(m.poolExerciseId)])))
+            }
             className={`${PRIMARY} justify-center`}
           >
             Next cycle
@@ -405,7 +447,7 @@ function CycleEnd({
 type Added = { n: number; day: number; poolExerciseId: string; scheme: string };
 type SetupInput = Omit<StartProgramInput, "key">;
 
-const STEPS = ["Days", "Lifts", "Extras", "Training maxes"] as const;
+const STEPS = ["Days", "Lifts", "Extras", "Maxes"] as const;
 const COMPANION_SCHEMES = SCHEME_CHOICES.filter((c) => c.key !== "wave");
 
 /** What a main lift's tag says: 5/3/1, or Waves for wave loading. */
@@ -450,7 +492,7 @@ function ProgramSetup({
 
   // Every movement any slot offers, for "Add a lift".
   const allOptions = useMemo(() => {
-    const m = new Map<string, { id: string; name: string; best: number | null }>();
+    const m = new Map<string, { id: string; name: string; best: number | null; timed?: boolean }>();
     program.days.forEach((d) => d.roles.forEach((r) => r.options.forEach((o) => m.set(o.id, o))));
     return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [program]);
@@ -472,10 +514,16 @@ function ProgramSetup({
     );
     return [...seen.entries()];
   }, [program, picks]);
+  // The max asked for is your best (pre-filled from what you've logged); the
+  // training max is 90% of it, shown under the field (v0.621).
   const maxFor = (id: string) => {
     if (maxText[id] != null) return maxText[id];
     const best = bestOf(id);
-    return best ? String(roundLoad(best * 0.9, "lb")) : "";
+    return best ? String(best) : "";
+  };
+  const tmOf = (id: string) => {
+    const n = Number(maxFor(id));
+    return Number.isFinite(n) && n > 0 ? roundLoad(n * 0.9, "lb") : null;
   };
 
   const toggle = (list: number[], d: number) => (list.includes(d) ? list.filter((x) => x !== d) : [...list, d].sort());
@@ -483,8 +531,8 @@ function ProgramSetup({
   const startNow = () => {
     const maxes: Record<string, number> = {};
     for (const [id] of mains) {
-      const n = Number(maxFor(id));
-      if (Number.isFinite(n) && n > 0) maxes[id] = n;
+      const tm = tmOf(id);
+      if (tm) maxes[id] = tm;
     }
     const finalPicks = Object.fromEntries(Object.entries(picks).map(([k, v]) => [k, removed.has(k) ? null : v]));
     onStart({
@@ -493,7 +541,13 @@ function ProgramSetup({
       tops: {},
       maxes,
       schemes,
-      added: added.filter((a) => a.poolExerciseId).map((a) => ({ day: a.day, poolExerciseId: a.poolExerciseId, scheme: a.scheme || null })),
+      added: added
+        .filter((a) => a.poolExerciseId)
+        .map((a) => ({
+          day: a.day,
+          poolExerciseId: a.poolExerciseId,
+          scheme: a.scheme || null,
+        })),
       warmup,
       cardioDays,
       conditioningDays: conditioning,
@@ -570,7 +624,12 @@ function ProgramSetup({
                         <select
                           aria-label={r.label}
                           value={picks[k] ?? ""}
-                          onChange={(e) => setPicks((p) => ({ ...p, [k]: e.target.value || null }))}
+                          onChange={(e) =>
+                            setPicks((p) => ({
+                              ...p,
+                              [k]: e.target.value || null,
+                            }))
+                          }
                           className={`${SELECT} flex-1`}
                         >
                           <option value="">{r.label}: choose</option>
@@ -605,7 +664,7 @@ function ProgramSetup({
                   {extras.map((a) => (
                     <CompanionRow
                       key={`add-${a.n}`}
-                      label="Lift"
+                      label="Added lift"
                       options={allOptions}
                       value={a.poolExerciseId}
                       scheme={a.scheme}
@@ -617,7 +676,15 @@ function ProgramSetup({
                   <button
                     type="button"
                     onClick={() =>
-                      setAdded((x) => [...x, { n: Date.now() + x.length, day: i, poolExerciseId: "", scheme: "range:3x8-12" }])
+                      setAdded((x) => [
+                        ...x,
+                        {
+                          n: Date.now() + x.length,
+                          day: i,
+                          poolExerciseId: "",
+                          scheme: "range:3x8-12",
+                        },
+                      ])
                     }
                     className="text-sm font-semibold text-accent"
                   >
@@ -652,7 +719,11 @@ function ProgramSetup({
             </div>
             <div className="space-y-1.5">
               <p className="text-sm font-semibold">Conditioning</p>
-              <DayChips label="Conditioning" value={conditioning} onToggle={(d) => setConditioning(toggle(conditioning, d))} />
+              <DayChips
+                label="Conditioning"
+                value={conditioning}
+                onToggle={(d) => setConditioning(toggle(conditioning, d))}
+              />
             </div>
           </div>
         )}
@@ -667,15 +738,20 @@ function ProgramSetup({
                   <label key={id} className="flex items-center gap-3 py-2 text-sm">
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-semibold">{name}</span>
-                      {bestOf(id) != null && <span className="tabular block text-xs text-muted">Best {bestOf(id)}</span>}
+                      {bestOf(id) != null && (
+                        <span className="tabular block text-xs text-muted">Best {bestOf(id)}</span>
+                      )}
                     </span>
-                    <input
-                      aria-label={`${name} training max`}
-                      inputMode="decimal"
-                      value={maxFor(id)}
-                      onChange={(e) => setMaxText((t) => ({ ...t, [id]: e.target.value }))}
-                      className="tabular h-10 w-20 rounded-lg border border-hairline bg-surface px-2 text-right text-sm outline-none focus:border-accent"
-                    />
+                    <span className="flex flex-col items-end">
+                      <input
+                        aria-label={`${name} max`}
+                        inputMode="decimal"
+                        value={maxFor(id)}
+                        onChange={(e) => setMaxText((t) => ({ ...t, [id]: e.target.value }))}
+                        className="tabular h-10 w-20 rounded-lg border border-hairline bg-surface px-2 text-right text-sm outline-none focus:border-accent"
+                      />
+                      {tmOf(id) != null && <span className="tabular mt-0.5 text-xs text-muted">TM {tmOf(id)}</span>}
+                    </span>
                   </label>
                 ))}
               </div>
@@ -710,7 +786,7 @@ function CompanionRow({
   onRemove,
 }: {
   label: string;
-  options: { id: string; name: string }[];
+  options: { id: string; name: string; timed?: boolean }[];
   value: string;
   scheme: string;
   onPick: (id: string) => void;
@@ -720,31 +796,51 @@ function CompanionRow({
   const schemeOptions = COMPANION_SCHEMES.some((c) => c.key === scheme)
     ? COMPANION_SCHEMES
     : [{ key: scheme, label: schemeText(scheme) }, ...COMPANION_SCHEMES];
+  const timed = options.find((o) => o.id === value)?.timed;
   return (
-    <div className="flex items-center gap-2">
-      <select aria-label={label} value={value} onChange={(e) => onPick(e.target.value)} className={`${SELECT} flex-1`}>
-        <option value="">{label}: choose</option>
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.name}
-          </option>
-        ))}
-      </select>
-      <select aria-label={`${label} sets`} value={scheme} onChange={(e) => onScheme(e.target.value)} className={`${SELECT} w-[7.5rem] shrink-0`}>
-        {schemeOptions.map((c) => (
-          <option key={c.key} value={c.key}>
-            {c.label}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        aria-label={`Remove ${label}`}
-        onClick={onRemove}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
-      >
-        ✕
-      </button>
+    <div className="space-y-1">
+      <p className="text-xs font-semibold text-muted">{label}</p>
+      <div className="flex items-center gap-2">
+        <select
+          aria-label={label}
+          value={value}
+          onChange={(e) => onPick(e.target.value)}
+          className={`${SELECT} flex-1`}
+        >
+          <option value="">Choose</option>
+          {options.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.name}
+            </option>
+          ))}
+        </select>
+        {timed ? (
+          <span className="flex h-10 w-[7.5rem] shrink-0 items-center rounded-lg border border-hairline px-3 text-sm text-muted">
+            Time
+          </span>
+        ) : (
+          <select
+            aria-label={`${label} sets`}
+            value={scheme}
+            onChange={(e) => onScheme(e.target.value)}
+            className={`${SELECT} w-[7.5rem] shrink-0`}
+          >
+            {schemeOptions.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        )}
+        <button
+          type="button"
+          aria-label={`Remove ${label}`}
+          onClick={onRemove}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
+        >
+          ✕
+        </button>
+      </div>
     </div>
   );
 }

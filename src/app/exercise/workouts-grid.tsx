@@ -850,7 +850,13 @@ function LiftBlocks({
     return [front, back];
   }, [shown]);
 
-  const groups = byMuscleGroup(shown.map((m) => m.s));
+  // Today's groups first, in the plan's order (a program's main lift leads),
+  // then the rest A–Z (v0.621).
+  const rank = (k: string) => {
+    const i = todayGroups.indexOf(k);
+    return i < 0 ? todayGroups.length : i;
+  };
+  const groups = byMuscleGroup(shown.map((m) => m.s)).sort((a, b) => rank(a.key) - rank(b.key));
   const orphanGroups = byMuscleGroup(orphans.map((m) => m.s));
 
   if (meta.length === 0) return null;
