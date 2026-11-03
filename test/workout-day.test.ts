@@ -302,9 +302,9 @@ describe("programs (v0.611)", () => {
   });
   it("waves: the week's sets from the training max, or last time without one", () => {
     expect(targetsFor({ program: waves, week: 3, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 170, last: [] })).toEqual([
-      { weight: 130, reps: 5, top: undefined },
-      { weight: 145, reps: 3, top: undefined },
-      { weight: 160, reps: 1, top: true },
+      { weight: 130, reps: 5, top: undefined, pct: 0.75 },
+      { weight: 145, reps: 3, top: undefined, pct: 0.85 },
+      { weight: 160, reps: 1, top: true, pct: 0.95 },
     ]);
     const t = targetsFor({ program: waves, week: 1, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: null, last: [{ weight: 135, reps: 5 }] });
     expect(t.map((x) => x.weight)).toEqual([135, null, null]);
