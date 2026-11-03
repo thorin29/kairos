@@ -12,7 +12,8 @@ export const dynamic = "force-dynamic";
  * weight} }. Writes the caller's weekly plan and keeps the old one to go back to.
  * v0.620 adds (all optional): maxes {poolExerciseId: training max}, schemes
  * {"<day>:<slot>": scheme}, added [{day, poolExerciseId, scheme}], warmup
- * bool, cardioDays [weekday], conditioningDays [weekday].
+ * bool, cardioDays [weekday], conditioningDays [weekday]. v0.626: next true
+ * carries the running program into its next cycle with these changes.
  */
 export async function POST(req: NextRequest) {
   const authed = await requireDevice(req);
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
     warmupRoutine: typeof b?.warmupRoutine === "string" ? b.warmupRoutine : undefined,
     cardioDays: weekdays(b?.cardioDays),
     conditioningDays: weekdays(b?.conditioningDays),
+    next: b?.next === true,
   });
   if (r !== "ok") return apiError("validation", "Pick a program and one weekday for each of its days.");
   return apiOk({ status: "ok" });

@@ -26,6 +26,7 @@ import { PlanBuilder } from "./plan-builder";
 import { RotationBuilder } from "./rotation-builder";
 import { WarmupLibrary } from "./warmup-window";
 import { DayLog } from "./day-log";
+import { MovementInfo } from "@/components/movement-info";
 import { LineChart } from "@/components/line-chart";
 import { REP_BANDS } from "@/lib/workouts/records";
 import { WeeklyTraining } from "./weekly-training";
@@ -1792,10 +1793,11 @@ export function CustomWorkoutForm({
                 yet — add them in the Workouts admin.
               </p>
             ) : (
+              <div className="flex items-center gap-1">
               <select
                 value={poolId}
                 onChange={(e) => setPoolId(e.target.value)}
-                className={FIELD}
+                className={`${FIELD} min-w-0 flex-1`}
               >
                 {category === "WEIGHTS"
                   ? [...MUSCLE_GROUPS, null].map((mg) => {
@@ -1820,6 +1822,11 @@ export function CustomWorkoutForm({
                       </option>
                     ))}
               </select>
+              {(() => {
+                const o = options.find((x) => x.id === poolId);
+                return o ? <MovementInfo name={o.name} about={o.about} /> : null;
+              })()}
+              </div>
             )}
           </div>
         )}

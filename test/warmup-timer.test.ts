@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { warmupAt, warmupIntervals, warmupSchedule, warmupTotal, type WarmupStep } from "@/lib/workouts/warmup-library";
 import { guessPattern } from "@/lib/workouts/library";
 import { dayHeadline, withSection, type DaySection } from "@/lib/workouts/blocks";
+import { PROGRAMS, parseScheme, targetsFor, weightForReps } from "@/lib/workouts/programs";
 
 const steps: WarmupStep[] = [
   { name: "Jumping jacks", kind: "REPS", amount: "20" },
@@ -63,5 +64,27 @@ describe("day headline", () => {
     expect(s.map((x) => x.kind)).toEqual(["CARDIO", "STRENGTH", "CONDITIONING", "STRETCH"]);
     const first = withSection([sec("STRENGTH", "Back")], "CONDITIONING", ["CONDITIONING", "WARMUP", "CARDIO", "STRENGTH", "STRETCH", "SPORT"]);
     expect(first[0].kind).toBe("CONDITIONING");
+  });
+});
+
+describe("companion weights", () => {
+  const program = PROGRAMS[0];
+  const heavy = [
+    { weight: 95, reps: 5 },
+    { weight: 115, reps: 5 },
+    { weight: 135, reps: 5 },
+    { weight: 155, reps: 3 },
+    { weight: 165, reps: 3 },
+  ];
+  it("a 5 × 10 after heavy triples is a weight for 10, not the top triple", () => {
+    expect(weightForReps(heavy, 10, "lb")).toBe(125);
+    const t = targetsFor({ program, week: 1, scheme: parseScheme("same:5x10")!, unit: "lb", last: heavy });
+    expect(t.map((x) => x.weight)).toEqual([125, 125, 125, 125, 125]);
+  });
+  it("keeps a weight already done for the reps, and steps up once all were done", () => {
+    const done = [10, 10, 10, 10, 10].map((reps) => ({ weight: 130, reps }));
+    expect(targetsFor({ program, week: 1, scheme: parseScheme("same:5x10")!, unit: "lb", last: done })[0].weight).toBe(135);
+    const missed = [10, 10, 10, 9, 8].map((reps) => ({ weight: 130, reps }));
+    expect(targetsFor({ program, week: 1, scheme: parseScheme("same:5x10")!, unit: "lb", last: missed })[0].weight).toBe(130);
   });
 });

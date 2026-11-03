@@ -5,6 +5,7 @@ import {
   loadTodayPlannedWorkouts,
   loadOverdueWorkoutDays,
   loadDayLogState,
+  programDayTitle,
   loadWeekStrip,
   type TodayPlanned,
 } from "@/lib/queries/workout-log";
@@ -72,8 +73,11 @@ export async function GET(req: NextRequest) {
     plannedWorkoutId: first?.plannedWorkoutId ?? null,
     name: first?.name ?? null,
     exercises: first?.exercises ?? [],
-    // The program's name on a program day, else the kinds of work (v0.625).
-    title: program?.name ?? dayHeadline(daySections(dayWorkouts.map(asDayWorkout), order)),
+    // On a program day the program and its main lift, as on the home card
+    // (v0.626); else the kinds of work (v0.625).
+    title: program
+      ? await programDayTitle(userId, date, program.name)
+      : dayHeadline(daySections(dayWorkouts.map(asDayWorkout), order)),
     strip: { today, days: strip.days, overdue: strip.overdue },
     // The program and its week on this day (v0.611); null without one.
     program,

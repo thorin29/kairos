@@ -7,7 +7,7 @@ import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetr
 import type { WorkoutType } from "@/generated/prisma/client";
 import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween, startOfWeek } from "@/lib/dates";
 import { metricUnit, type Metric, type MuscleGroup } from "@/lib/workouts/catalog";
-import { loadWorkoutUnitSystem, loadWeightUnits } from "@/lib/queries/workouts";
+import { loadWorkoutPlanNames, loadWorkoutUnitSystem, loadWeightUnits } from "@/lib/queries/workouts";
 import { doneOn, loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
 import { loadStaleContext } from "@/lib/chores/stale";
 import { groupsFor, navRegionFor } from "@/lib/workouts/involvement";
@@ -1265,7 +1265,15 @@ export type PlanWorkoutLite = {
   /** A Warm-up's routine (v0.622): "lib:<key>" or a routine id; null: a plain check. */
   warmup: string | null;
   /** Movements, each with its set structure (weights only carry one). */
-  exercises: { poolExerciseId: string; name: string; tracked: boolean; scheme: string; weights: boolean }[];
+  exercises: {
+    poolExerciseId: string;
+    name: string;
+    tracked: boolean;
+    scheme: string;
+    weights: boolean;
+    /** Its how-to, for the ⓘ (v0.626). */
+    about: string | null;
+  }[];
 };
 export type PlanDayLite = { day: number; workouts: PlanWorkoutLite[] };
 
@@ -1296,7 +1304,13 @@ export async function loadPlan(userId: string): Promise<PlanDayLite[]> {
       },
       exercises: {
         orderBy: { sortOrder: "asc" },
-        select: { tracked: true, poolExerciseId: true, scheme: true, metric: true, poolExercise: { select: { name: true } } },
+        select: {
+          tracked: true,
+          poolExerciseId: true,
+          scheme: true,
+          metric: true,
+          poolExercise: { select: { name: true, about: true } },
+        },
       },
     },
   });
@@ -1314,13 +1328,20 @@ export async function loadPlan(userId: string): Promise<PlanDayLite[]> {
       category: (w.category as string | null) ?? null,
       warmup: (w as { warmup?: string | null }).warmup ?? null,
       exercises: (
-        w.exercises as { tracked: boolean; poolExerciseId: string; scheme: string | null; metric: string | null; poolExercise: { name: string } | null }[]
+        w.exercises as {
+          tracked: boolean;
+          poolExerciseId: string;
+          scheme: string | null;
+          metric: string | null;
+          poolExercise: { name: string; about: string | null } | null;
+        }[]
       ).map((e) => ({
         poolExerciseId: e.poolExerciseId,
         name: e.poolExercise?.name ?? "—",
         tracked: e.tracked,
         scheme: schemeChoiceKey(e.scheme),
         weights: weights && e.tracked && (e.metric ?? "WEIGHT") === "WEIGHT",
+        about: e.poolExercise?.about ?? null,
       })),
     });
   }
@@ -1862,6 +1883,9 @@ export type DayLogState = {
   rested: boolean;
   /** The person's program and its week on this day, if one is running (v0.611). */
   program: ProgramInfo | null;
+  /** On a program day, the page title the home card uses: the program and the
+   *  day's main lift ("5/3/1 · Bench press") (v0.626). Null off a program. */
+  programTitle: string | null;
   /** The day's suggestion card, at most one (v0.612). */
   suggestion: Suggestion | null;
   /** Today was made lighter: the share of the usual weights. */
@@ -1926,15 +1950,19 @@ async function loggedOtherFor(
   }[];
   const slots = new Set(planned.flatMap((p) => p.exercises.map((e) => e.poolExerciseId)).filter(Boolean) as string[]);
   const planNames = new Set(planned.map((p) => p.name.slice(0, 40).toLowerCase()));
-  // A game logged from the calendar goes by its event type in the title.
+  // A game logged from the calendar goes by its kind in the title.
   const eventIds = [...new Set(rows.map((r) => r.sourceEventId).filter((x): x is string => !!x))];
   const types = eventIds.length
     ? ((await prisma.event.findMany({
         where: { id: { in: eventIds } },
-        select: { id: true, eventType: { select: { name: true } } },
-      })) as { id: string; eventType: { name: string } | null }[])
+        select: { id: true, eventType: { select: { name: true } }, externalCalendar: { select: { name: true } } },
+      })) as { id: string; eventType: { name: string } | null; externalCalendar: { name: string } | null }[])
     : [];
-  const typeOf = new Map(types.filter((t) => t.eventType).map((t) => [t.id, t.eventType!.name]));
+  // Its event type ("Hockey game"), else the subscribed calendar it came from
+  // (v0.626: a league feed's games have no type), else "Sport".
+  const typeOf = new Map(
+    types.map((t) => [t.id, t.eventType?.name?.trim() || t.externalCalendar?.name?.trim() || "Sport"]),
+  );
   const labelOf = new Map<string, string>();
   const byName = new Map<string, Map<string, typeof rows[number]["sets"]>>();
   for (const r of rows) {
@@ -1943,7 +1971,8 @@ async function loggedOtherFor(
     const sets = r.sets.filter((x) => !slots.has((x.swappedFromId ?? x.poolExerciseId) ?? ""));
     if (r.sets.length > 0 && sets.length === 0) continue;
     if (r.sets.length === 0 && planNames.has(name.slice(0, 40).toLowerCase())) continue;
-    const typeName = r.sourceEventId ? typeOf.get(r.sourceEventId) : undefined;
+    const typeName =
+      (r.sourceEventId ? typeOf.get(r.sourceEventId) : undefined) ?? (r.category === "SPORT" ? "Sport" : undefined);
     if (!labelOf.has(name)) labelOf.set(name, typeName ?? name);
     const group = byName.get(name) ?? new Map();
     for (const x of sets) {
@@ -1961,6 +1990,13 @@ async function loggedOtherFor(
         : [...group.entries()].map(([m, sets]) => ({ name: m, summary: setsSummary(sets, sets[0]?.unit ?? null) || "Done" })),
   }));
   return { other, any: rows.length > 0 };
+}
+
+/** A program day's title, as on the home card: the program and the day's main
+ *  lift ("5/3/1 · Bench press"), or just the program on a day without one. */
+export async function programDayTitle(userId: string, dateISO: string, programName: string): Promise<string> {
+  const t = (await loadWorkoutPlanNames(userId)).get(dayOfWeek(dateISO));
+  return t && t.startsWith(programName) ? t : programName;
 }
 
 /** The day page's state for a person and date, read in a handful of queries. */
@@ -2048,6 +2084,7 @@ export async function loadDayLogState(
   }
 
   const logged = await loggedOtherFor(userId, dateISO, planned);
+  const program = await programInfoFor(userId, dateISO);
 
   const movements: Record<string, DayMovementState> = {};
   for (const slot of slots) {
@@ -2071,7 +2108,8 @@ export async function loadDayLogState(
     cardioLogged: sessions.some((s) => !s.isRest && s.category != null && CARDIO_CATEGORIES.includes(s.category)),
     hiitLogged: sessions.some((s) => !s.isRest && s.category === "HIIT"),
     rested: sessions.some((s) => s.isRest),
-    program: await programInfoFor(userId, dateISO),
+    program,
+    programTitle: program ? await programDayTitle(userId, dateISO, program.name) : null,
     suggestion: await daySuggestionFor(userId, dateISO),
     light: await dayLightFactor(userId, dateISO),
     planIds: [...new Set([...planned.map((p) => p.plannedWorkoutId), ...(await simplePlanIds(userId, dateISO))])],

@@ -20,7 +20,7 @@ import { PlanFilePanel } from "./plan-file-panel";
 import { blockKind, cleanOrder, isSimpleCategory, KIND_LABEL, type SectionKind } from "@/lib/workouts/blocks";
 import { SCHEME_CHOICES, schemeChoiceKey } from "@/lib/workouts/programs";
 import type { DayOrders } from "@/lib/workouts/day-order";
-import { InfoToggle, MovementAbout } from "@/components/movement-info";
+import { InfoToggle, MovementAbout, MovementInfo } from "@/components/movement-info";
 import type {
   PlanDay,
   PlanWorkout,
@@ -356,6 +356,7 @@ function DayRow({
                   {w.exercises.map((e) => (
                     <li key={e.id} className="flex items-center gap-2 text-xs text-muted">
                       <span className="min-w-0 flex-1 truncate">{e.tracked ? e.name : `${e.name} (no log)`}</span>
+                      <MovementInfo name={e.name} about={pool.find((p) => p.id === e.poolExerciseId)?.about} />
                       {e.tracked && (
                         <select
                           aria-label={`Sets for ${e.name}`}

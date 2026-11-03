@@ -960,6 +960,16 @@ with "Done". A companion slot's options include pool movements typed from
 their names when untagged ("lunge" → Squat), and untyped weights movements
 of the slot's muscle group.
 
+v0.626: `GET /api/v1/workouts` `title` on a program day is the program and the
+day's main lift ("5/3/1 · Bench press"), as on the home card. A game from a
+subscribed calendar (no event type) is labelled by the calendar's name, else
+"Sport". `GET /api/v1/workouts/programs` adds `setup` (the running program as
+its setup shows it: `{ key, days, picks, removed, schemes, added, maxes }`, or
+null) and each slot option adds `about`. `programs/start` takes `next: true`:
+the running program carries into its next block with these changes (same
+start date; maxes as sent), and plan entries the setup doesn't cover stay.
+`GET /api/v1/workouts/plan` movements add `about`.
+
 **Suggestions (v0.612).**
 ```
 Suggestion: { "key","title","why","actions":[ { "answer","label" } ],"weight":num? }

@@ -86,6 +86,7 @@ import type { EquipmentItem } from "@/lib/workouts/library";
 import {
   answerInvite,
   currentExtras,
+  currentSetup,
   endProgram,
   inviteFor,
   loadProgramChoices,
@@ -94,6 +95,7 @@ import {
   setTrainingMax,
   startProgram,
   type CurrentExtras,
+  type CurrentSetup,
   type ProgramChoice,
   type ProgramInfo,
   type StartProgramInput,
@@ -1497,17 +1499,19 @@ export async function loadProgramsFor(userId: string): Promise<{
   invite: boolean;
   current: CurrentExtras;
   warmups: WarmupRoutine[];
+  setup: CurrentSetup | null;
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
-  const [choices, active, invite, current, warmups] = await Promise.all([
+  const [choices, active, invite, current, warmups, setup] = await Promise.all([
     loadProgramChoices(userId),
     programInfoFor(userId, todayISO()),
     inviteFor(userId),
     currentExtras(userId),
     routinesFor(userId),
+    currentSetup(userId),
   ]);
-  return { choices, active, invite, current, warmups };
+  return { choices, active, invite, current, warmups, setup };
 }
 
 export async function startProgramFor(userId: string, input: StartProgramInput): Promise<{ ok: boolean }> {

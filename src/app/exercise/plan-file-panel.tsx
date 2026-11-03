@@ -191,7 +191,7 @@ export function PlanFilePanel({ userId }: { userId: string }) {
       <button
         type="button"
         onClick={() => show("menu")}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-accent px-5 text-sm font-semibold text-accent hover:bg-accent/10"
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border-2 border-accent bg-surface px-5 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
       >
         <ShareIcon className="h-4 w-4" />
         Save, share or export

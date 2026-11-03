@@ -262,8 +262,8 @@ export function DayLog({
     );
   }
 
-  // The program on a program day, else the kinds of work (v0.625).
-  const title = state?.program?.name ?? dayHeadline(sections);
+  // The program and its main lift on a program day, else the kinds of work.
+  const title = state?.programTitle ?? state?.program?.name ?? dayHeadline(sections);
 
   return (
     <div className="space-y-5">

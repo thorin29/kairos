@@ -173,7 +173,7 @@ export type ProgramChoice = {
        *  person's heaviest logged weight on each. A companion slot also offers
        *  library movements the household has the equipment for but not yet in
        *  its pool, as "lib:<key>" with `add` (added when the program starts). */
-      options: { id: string; name: string; best: number | null; timed?: boolean; add?: boolean }[];
+      options: { id: string; name: string; best: number | null; timed?: boolean; add?: boolean; about?: string | null }[];
     }[];
   }[];
 };
@@ -185,7 +185,7 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
   const pool = (await prisma.poolExercise.findMany({
     where: { isActive: true, ownerId: null },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, muscleGroup: true, category: true, metric: true, pattern: true },
+    select: { id: true, name: true, muscleGroup: true, category: true, metric: true, pattern: true, about: true },
   })) as {
     id: string;
     name: string;
@@ -193,6 +193,7 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
     category: string;
     metric: string | null;
     pattern: string | null;
+    about: string | null;
   }[];
   // A movement's pattern: its own tag, else the library movement of that name.
   const libByName = new Map(LIBRARY.map((e) => [nameKey(e.name), e]));
@@ -228,7 +229,7 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
       roles: d.roles.map((r) => {
         const names = new Set(r.match.map(norm));
         let fits: typeof pool;
-        let adds: { id: string; name: string; best: null; timed?: boolean; add: true }[] = [];
+        let adds: { id: string; name: string; best: null; timed?: boolean; add: true; about: string }[] = [];
         if (r.patterns && !r.main) {
           // A companion slot (v0.624): movements of its kind, never one of the
           // program's main lifts, plus what the library could add.
@@ -250,7 +251,14 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
               !mains.has(nameKey(e.name)) &&
               fitsKind(e.pattern, e.muscleGroup) &&
               e.equipment.every((k) => have.has(k)),
-          ).map((e) => ({ id: `lib:${e.key}`, name: e.name, best: null, ...(e.metric === "DURATION" ? { timed: true } : {}), add: true as const }));
+          ).map((e) => ({
+            id: `lib:${e.key}`,
+            name: e.name,
+            best: null,
+            ...(e.metric === "DURATION" ? { timed: true } : {}),
+            add: true as const,
+            about: e.about,
+          }));
         } else {
           // Movements filed under the slot's group, and any movement the slot
           // names wherever it's filed (pull-ups kept under HIIT).
@@ -275,6 +283,8 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
               name: m.name,
               best: bests.get(m.id) ?? null,
               ...(m.metric === "DURATION" ? { timed: true } : {}),
+              // The how-to for the ⓘ (v0.626): its own, else the library's.
+              about: m.about ?? libByName.get(nameKey(m.name))?.about ?? null,
             })),
             ...adds,
           ],
@@ -319,6 +329,70 @@ export async function currentExtras(userId: string): Promise<CurrentExtras> {
     cardioDays: days((w) => !!w.category && CARDIO_CATS.has(w.category)),
     conditioningDays: days(isConditioning),
   };
+}
+
+/** The running program as its setup would show it (v0.626): its days, the
+ *  movement in each slot (slots left out are `removed`), companion sets, and
+ *  the other lifts on its days as added ones. For "Make changes" at the end of
+ *  a cycle, so the setup opens on the plan as it is now. */
+export type CurrentSetup = {
+  key: string;
+  days: number[];
+  picks: Record<string, string | null>;
+  removed: string[];
+  schemes: Record<string, string>;
+  added: { day: number; poolExerciseId: string; scheme: string | null }[];
+  maxes: Record<string, number>;
+};
+
+export async function currentSetup(userId: string): Promise<CurrentSetup | null> {
+  const p = await loadActiveProgram(userId);
+  if (!p || p.days.length !== p.program.days.length) return null;
+  const rows = (await prisma.plannedWorkout.findMany({
+    where: { userId, isRest: false },
+    orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
+    select: {
+      dayOfWeek: true,
+      category: true,
+      exercises: { orderBy: { sortOrder: "asc" }, select: { poolExerciseId: true, scheme: true, programRole: true } },
+    },
+  })) as {
+    dayOfWeek: number;
+    category: string | null;
+    exercises: { poolExerciseId: string; scheme: string | null; programRole: string | null }[];
+  }[];
+  const picks: Record<string, string | null> = {};
+  const schemes: Record<string, string> = {};
+  const added: CurrentSetup["added"] = [];
+  const indexFor = (dow: number, role?: string) =>
+    p.days.findIndex((d, i) => d === dow && (!role || p.program.days[i].roles.some((r) => r.key === role)));
+  for (const w of rows) {
+    for (const e of w.exercises) {
+      if (e.programRole) {
+        const i = indexFor(w.dayOfWeek, e.programRole);
+        if (i < 0) continue;
+        const k = `${i}:${e.programRole}`;
+        if (picks[k]) continue;
+        picks[k] = e.poolExerciseId;
+        const role = p.program.days[i].roles.find((r) => r.key === e.programRole);
+        if (role && !role.main && e.scheme && e.scheme !== schemeKey(role.scheme)) schemes[k] = e.scheme;
+      } else if (w.category === "WEIGHTS" || w.category == null) {
+        const i = indexFor(w.dayOfWeek);
+        if (i >= 0) added.push({ day: i, poolExerciseId: e.poolExerciseId, scheme: e.scheme });
+      }
+    }
+  }
+  const removed: string[] = [];
+  p.program.days.forEach((d, i) =>
+    d.roles.forEach((r) => {
+      const k = `${i}:${r.key}`;
+      if (!picks[k]) {
+        picks[k] = null;
+        removed.push(k);
+      }
+    }),
+  );
+  return { key: p.program.key, days: p.days, picks, removed, schemes, added, maxes: p.trainingMaxes };
 }
 
 // --- start, end, next block -------------------------------------------------------
@@ -421,6 +495,10 @@ export type StartProgramInput = {
   warmupRoutine?: string | null;
   cardioDays?: number[];
   conditioningDays?: number[];
+  /** The next cycle of the running program, with changes (v0.626): the program
+   *  carries on (same start, the next block, these maxes) and plan entries the
+   *  setup doesn't cover — a workout on another day, stretching, a sport — stay. */
+  next?: boolean;
 };
 
 /**
@@ -476,14 +554,18 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
   const timed = new Set(pool.filter((p) => p.metric === "DURATION").map((p) => p.id));
 
   const prev = await snapshotPlan(userId);
+  const running = input.next ? await loadActiveProgram(userId) : null;
+  const next = !!running && running.program.key === program.key;
   // The plan being replaced goes to My plans (unless it's empty or already there).
-  await savePlan(userId, `${shortDate(todayISO())} · before ${program.name}`, { auto: true }).catch(() => null);
+  await savePlan(userId, `${shortDate(todayISO())} · before ${next ? "changes" : program.name}`, { auto: true }).catch(
+    () => null,
+  );
   const prevActive = (await prisma.personProgram.findFirst({
     where: { userId, status: "ACTIVE" },
     select: { id: true, previousPlan: true },
   })) as { id: string; previousPlan: unknown } | null;
   const today = todayISO();
-  if (prevActive) {
+  if (prevActive && !next) {
     await prisma.personProgram.update({
       where: { id: prevActive.id },
       data: { status: "ENDED", endedOn: toDateColumn(today) },
@@ -615,6 +697,32 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
     const had = prev.workouts.filter((w) => w.dayOfWeek === dow && !w.isRest && isConditioning(w));
     if (had.length) await writePlan(userId, had.map((w) => ({ ...w, sortOrder: nextOrder(dow) })));
     else await prisma.plannedWorkout.create({ data: { userId, dayOfWeek: dow, name: "Conditioning", category: "HIIT", sortOrder: nextOrder(dow) } });
+  }
+
+  // The next cycle with changes: what the setup doesn't cover comes back as it
+  // was (a workout on another day, a stretch, a sport, a rest day), then the
+  // program carries on into its next block with the maxes as set.
+  if (next && running) {
+    const programDays = new Set(input.days);
+    const kept = prev.workouts.filter((w) => {
+      // The setup set these: a warm-up on each program day, cardio and conditioning days.
+      if (w.category === "WARMUP" && programDays.has(w.dayOfWeek)) return false;
+      if ((w.category && CARDIO_CATS.has(w.category)) || isConditioning(w)) return false;
+      if (w.exercises.some((e) => e.programRole)) return false;
+      // Weights on a program day came back through the setup as added lifts.
+      if (programDays.has(w.dayOfWeek) && (w.category === "WEIGHTS" || w.category == null) && !w.isRest) return false;
+      if (w.isRest && programDays.has(w.dayOfWeek)) return false;
+      return true;
+    });
+    await writePlan(userId, kept.map((w) => ({ ...w, sortOrder: nextOrder(w.dayOfWeek) })));
+    const done = blocksDone(running.program, running.blockStartedOn, today);
+    const blockStart = done >= 1 ? addDays(running.blockStartedOn, 7 * running.program.weeks * done) : running.blockStartedOn;
+    await prisma.personProgram.update({
+      where: { id: running.id },
+      data: { days: input.days.join(","), trainingMaxes: maxes, blockStartedOn: toDateColumn(blockStart) },
+    });
+    await generateWorkoutTasks();
+    return "ok";
   }
 
   // The block starts on the Sunday of this week, so weeks turn over with the

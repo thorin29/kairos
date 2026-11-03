@@ -10,9 +10,16 @@ import {
   startProgramFor,
 } from "@/lib/actions/workouts";
 import { SCHEME_CHOICES, parseScheme, roundLoad, schemeLabel } from "@/lib/workouts/programs";
-import type { CurrentExtras, ProgramChoice, ProgramInfo, StartProgramInput } from "@/lib/workouts/program-run";
+import type {
+  CurrentExtras,
+  CurrentSetup,
+  ProgramChoice,
+  ProgramInfo,
+  StartProgramInput,
+} from "@/lib/workouts/program-run";
 import { Modal } from "./plan-file-panel";
 import { InfoIcon } from "@/components/icons";
+import { MovementInfo } from "@/components/movement-info";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { PlanLibrary } from "./my-plans";
 
@@ -29,6 +36,7 @@ type Data = {
   invite: boolean;
   current: CurrentExtras;
   warmups: WarmupRoutine[];
+  setup?: CurrentSetup | null;
 };
 
 /**
@@ -62,6 +70,9 @@ export function ProgramCard({
   const [choosing, setChoosing] = useState(false);
   const [ending, setEnding] = useState(false);
   const [cycleOpen, setCycleOpen] = useState(false);
+  // "Make changes" at the end of a cycle: the next cycle's training maxes, and
+  // the setup opened on the plan as it is (v0.626).
+  const [changing, setChanging] = useState<Record<string, number> | null>(null);
   const [pending, start] = useTransition();
 
   const reload = () =>
@@ -218,6 +229,13 @@ export function ProgramCard({
           <CycleEnd
             active={a}
             busy={pending}
+            canChange={!!data.setup && data.choices.some((c) => c.key === data.setup?.key)}
+            onChanges={(raises) => {
+              setCycleOpen(false);
+              setChanging(
+                Object.fromEntries(a.maxes.map((m) => [m.poolExerciseId, m.weight + (raises[m.poolExerciseId] ?? 0)])),
+              );
+            }}
             onClose={() => setCycleOpen(false)}
             onNext={(raises) =>
               start(async () => {
@@ -232,6 +250,31 @@ export function ProgramCard({
             }}
           />
         )}
+        {changing &&
+          data.setup &&
+          (() => {
+            const p = data.choices.find((c) => c.key === data.setup!.key);
+            return p ? (
+              <ProgramSetup
+                program={p}
+                current={data.current}
+                warmups={data.warmups}
+                busy={pending}
+                initial={data.setup}
+                nextMaxes={changing}
+                onClose={() => setChanging(null)}
+                onStart={(input) =>
+                  start(async () => {
+                    const r = await startProgramFor(userId, { key: p.key, ...input, next: true });
+                    if (r.ok) {
+                      setChanging(null);
+                      done();
+                    }
+                  })
+                }
+              />
+            ) : null;
+          })()}
         {windows}
       </section>
     );
@@ -402,12 +445,17 @@ function MaxRow({ name, weight, onSave }: { name: string; weight: number; onSave
 function CycleEnd({
   active,
   busy,
+  canChange,
+  onChanges,
   onClose,
   onNext,
   onSwitch,
 }: {
   active: ProgramInfo;
   busy: boolean;
+  /** "Make changes" opens the setup on the plan as it is (v0.626). */
+  canChange: boolean;
+  onChanges: (raises: Record<string, number>) => void;
   onClose: () => void;
   onNext: (raises: Record<string, number>) => void;
   onSwitch: () => void;
@@ -463,6 +511,18 @@ function CycleEnd({
           >
             Next cycle
           </button>
+          {canChange && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                onChanges(Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, amount(m.poolExerciseId)])))
+              }
+              className={`${QUIET} justify-center`}
+            >
+              Next cycle, with changes
+            </button>
+          )}
           <button
             type="button"
             disabled={busy}
@@ -501,6 +561,8 @@ function ProgramSetup({
   current,
   warmups,
   busy,
+  initial,
+  nextMaxes,
   onBack,
   onClose,
   onStart,
@@ -509,20 +571,32 @@ function ProgramSetup({
   current: CurrentExtras;
   warmups: WarmupRoutine[];
   busy: boolean;
+  /** Open on the running program's plan (the next cycle, with changes). */
+  initial?: CurrentSetup;
+  /** The next cycle's training maxes: the Maxes step edits these directly. */
+  nextMaxes?: Record<string, number>;
   onBack?: () => void;
   onClose: () => void;
   onStart: (input: SetupInput) => void;
 }) {
   const [step, setStep] = useState(0);
-  const [days, setDays] = useState<number[]>(program.defaultDays);
+  const [days, setDays] = useState<number[]>(initial?.days ?? program.defaultDays);
   const [picks, setPicks] = useState<Record<string, string | null>>(() => {
+    if (initial) return { ...initial.picks };
     const out: Record<string, string | null> = {};
     program.days.forEach((d, i) => d.roles.forEach((r) => (out[`${i}:${r.key}`] = r.defaultId)));
     return out;
   });
-  const [removed, setRemoved] = useState<Set<string>>(new Set());
-  const [schemes, setSchemes] = useState<Record<string, string>>({});
-  const [added, setAdded] = useState<Added[]>([]);
+  const [removed, setRemoved] = useState<Set<string>>(() => new Set(initial?.removed ?? []));
+  const [schemes, setSchemes] = useState<Record<string, string>>(() => ({ ...(initial?.schemes ?? {}) }));
+  const [added, setAdded] = useState<Added[]>(() =>
+    (initial?.added ?? []).map((a, n) => ({
+      n: n + 1,
+      day: a.day,
+      poolExerciseId: a.poolExerciseId,
+      scheme: a.scheme ?? "",
+    })),
+  );
   // "none", "" (just a check) or a routine; starts from the plan's own (v0.622).
   const [warmup, setWarmup] = useState<string>(current.warmup ? (current.warmupRoutine ?? "") : "");
   const [cardio, setCardio] = useState<number[] | null>(null);
@@ -532,7 +606,10 @@ function ProgramSetup({
 
   // Every movement any slot offers, for "Add exercise".
   const allOptions = useMemo(() => {
-    const m = new Map<string, { id: string; name: string; best: number | null; timed?: boolean }>();
+    const m = new Map<
+      string,
+      { id: string; name: string; best: number | null; timed?: boolean; about?: string | null }
+    >();
     program.days.forEach((d) => d.roles.forEach((r) => r.options.forEach((o) => m.set(o.id, o))));
     return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [program]);
@@ -556,14 +633,17 @@ function ProgramSetup({
   }, [program, picks]);
   // The max asked for is your best (pre-filled from what you've logged); the
   // training max is 90% of it, shown under the field (v0.621).
+  // The next cycle: the field is the training max itself, already raised.
   const maxFor = (id: string) => {
     if (maxText[id] != null) return maxText[id];
+    if (nextMaxes) return nextMaxes[id] ? String(nextMaxes[id]) : "";
     const best = bestOf(id);
     return best ? String(best) : "";
   };
   const tmOf = (id: string) => {
     const n = Number(maxFor(id));
-    return Number.isFinite(n) && n > 0 ? roundLoad(n * 0.9, "lb") : null;
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return nextMaxes ? n : roundLoad(n * 0.9, "lb");
   };
 
   const toggle = (list: number[], d: number) => (list.includes(d) ? list.filter((x) => x !== d) : [...list, d].sort());
@@ -650,94 +730,95 @@ function ProgramSetup({
               .map((d, i) => [d, i] as const)
               .sort((a, b) => days[a[1]] - days[b[1]] || a[1] - b[1])
               .map(([d, i]) => {
-              const roles = d.roles.filter((r) => !removed.has(`${i}:${r.key}`));
-              const mainsHere = roles.filter((r) => r.main);
-              const companions = roles.filter((r) => !r.main);
-              const extras = added.filter((a) => a.day === i);
-              return (
-                <div key={`${d.name}-${i}`} className="space-y-2">
-                  <p className="text-sm font-semibold">
-                    {d.name} · {WEEKDAYS[days[i]]}
-                  </p>
-                  {mainsHere.map((r) => {
-                    const k = `${i}:${r.key}`;
-                    return (
-                      <div key={k} className="flex items-center gap-2">
-                        <span className="w-14 shrink-0 rounded-full bg-accent/10 px-2 py-1 text-center text-xs font-semibold text-accent">
-                          {mainTag(program.key)}
-                        </span>
-                        <select
-                          aria-label={r.label}
+                const roles = d.roles.filter((r) => !removed.has(`${i}:${r.key}`));
+                const mainsHere = roles.filter((r) => r.main);
+                const companions = roles.filter((r) => !r.main);
+                const extras = added.filter((a) => a.day === i);
+                return (
+                  <div key={`${d.name}-${i}`} className="space-y-2">
+                    <p className="text-sm font-semibold">
+                      {d.name} · {WEEKDAYS[days[i]]}
+                    </p>
+                    {mainsHere.map((r) => {
+                      const k = `${i}:${r.key}`;
+                      return (
+                        <div key={k} className="flex items-center gap-2">
+                          <span className="w-14 shrink-0 rounded-full bg-accent/10 px-2 py-1 text-center text-xs font-semibold text-accent">
+                            {mainTag(program.key)}
+                          </span>
+                          <select
+                            aria-label={r.label}
+                            value={picks[k] ?? ""}
+                            onChange={(e) =>
+                              setPicks((p) => ({
+                                ...p,
+                                [k]: e.target.value || null,
+                              }))
+                            }
+                            className={`${SELECT} flex-1`}
+                          >
+                            <option value="">{r.label}: choose</option>
+                            {r.options.map((o) => (
+                              <option key={o.id} value={o.id}>
+                                {o.name}
+                              </option>
+                            ))}
+                          </select>
+                          <PickedInfo options={r.options} value={picks[k] ?? ""} />
+                        </div>
+                      );
+                    })}
+                    {(companions.length > 0 || extras.length > 0) && (
+                      <p className="pt-1 text-xs font-semibold text-muted">Companion exercises</p>
+                    )}
+                    {companions.map((r) => {
+                      const k = `${i}:${r.key}`;
+                      const scheme = schemes[k] ?? r.scheme;
+                      return (
+                        <CompanionRow
+                          key={k}
+                          label={r.label}
+                          options={r.options}
                           value={picks[k] ?? ""}
-                          onChange={(e) =>
-                            setPicks((p) => ({
-                              ...p,
-                              [k]: e.target.value || null,
-                            }))
-                          }
-                          className={`${SELECT} flex-1`}
-                        >
-                          <option value="">{r.label}: choose</option>
-                          {r.options.map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  })}
-                  {(companions.length > 0 || extras.length > 0) && (
-                    <p className="pt-1 text-xs font-semibold text-muted">Companion exercises</p>
-                  )}
-                  {companions.map((r) => {
-                    const k = `${i}:${r.key}`;
-                    const scheme = schemes[k] ?? r.scheme;
-                    return (
+                          scheme={scheme}
+                          onPick={(id) => setPicks((p) => ({ ...p, [k]: id || null }))}
+                          onScheme={(s) => setSchemes((x) => ({ ...x, [k]: s }))}
+                          onRemove={() => setRemoved((x) => new Set(x).add(k))}
+                        />
+                      );
+                    })}
+                    {extras.map((a) => (
                       <CompanionRow
-                        key={k}
-                        label={r.label}
-                        options={r.options}
-                        value={picks[k] ?? ""}
-                        scheme={scheme}
-                        onPick={(id) => setPicks((p) => ({ ...p, [k]: id || null }))}
-                        onScheme={(s) => setSchemes((x) => ({ ...x, [k]: s }))}
-                        onRemove={() => setRemoved((x) => new Set(x).add(k))}
+                        key={`add-${a.n}`}
+                        label="Added exercise"
+                        options={allOptions}
+                        value={a.poolExerciseId}
+                        scheme={a.scheme}
+                        onPick={(id) => setAdded((x) => x.map((y) => (y.n === a.n ? { ...y, poolExerciseId: id } : y)))}
+                        onScheme={(s) => setAdded((x) => x.map((y) => (y.n === a.n ? { ...y, scheme: s } : y)))}
+                        onRemove={() => setAdded((x) => x.filter((y) => y.n !== a.n))}
                       />
-                    );
-                  })}
-                  {extras.map((a) => (
-                    <CompanionRow
-                      key={`add-${a.n}`}
-                      label="Added exercise"
-                      options={allOptions}
-                      value={a.poolExerciseId}
-                      scheme={a.scheme}
-                      onPick={(id) => setAdded((x) => x.map((y) => (y.n === a.n ? { ...y, poolExerciseId: id } : y)))}
-                      onScheme={(s) => setAdded((x) => x.map((y) => (y.n === a.n ? { ...y, scheme: s } : y)))}
-                      onRemove={() => setAdded((x) => x.filter((y) => y.n !== a.n))}
-                    />
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAdded((x) => [
-                        ...x,
-                        {
-                          n: Date.now() + x.length,
-                          day: i,
-                          poolExerciseId: "",
-                          scheme: "range:3x8-12",
-                        },
-                      ])
-                    }
-                    className="text-sm font-semibold text-accent"
-                  >
-                    + Add exercise
-                  </button>
-                </div>
-              );
-            })}
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAdded((x) => [
+                          ...x,
+                          {
+                            n: Date.now() + x.length,
+                            day: i,
+                            poolExerciseId: "",
+                            scheme: "range:3x8-12",
+                          },
+                        ])
+                      }
+                      className="text-sm font-semibold text-accent"
+                    >
+                      + Add exercise
+                    </button>
+                  </div>
+                );
+              })}
           </div>
         )}
 
@@ -791,24 +872,28 @@ function ProgramSetup({
                     </span>
                     <span className="flex flex-col items-end">
                       <input
-                        aria-label={`${name} max`}
+                        aria-label={nextMaxes ? `${name} training max` : `${name} max`}
                         inputMode="decimal"
                         value={maxFor(id)}
                         onChange={(e) => setMaxText((t) => ({ ...t, [id]: e.target.value }))}
                         className="tabular h-10 w-20 rounded-lg border border-hairline bg-surface px-2 text-right text-sm outline-none focus:border-accent"
                       />
-                      {tmOf(id) != null && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setTmHelp(true);
-                          }}
-                          className="tabular mt-0.5 inline-flex items-center gap-1 text-xs text-muted hover:text-ink"
-                        >
-                          Training max {tmOf(id)}
-                          <InfoIcon className="h-3.5 w-3.5" />
-                        </button>
+                      {nextMaxes ? (
+                        <span className="mt-0.5 text-xs text-muted">Training max</span>
+                      ) : (
+                        tmOf(id) != null && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setTmHelp(true);
+                            }}
+                            className="tabular mt-0.5 inline-flex items-center gap-1 text-xs text-muted hover:text-ink"
+                          >
+                            Training max {tmOf(id)}
+                            <InfoIcon className="h-3.5 w-3.5" />
+                          </button>
+                        )
                       )}
                     </span>
                   </label>
@@ -825,7 +910,7 @@ function ProgramSetup({
             </button>
           ) : (
             <button type="button" disabled={busy} onClick={startNow} className={`${PRIMARY} flex-1 justify-center`}>
-              {busy ? "Starting…" : "Start program"}
+              {busy ? "Starting…" : nextMaxes ? "Start next cycle" : "Start program"}
             </button>
           )}
         </div>
@@ -834,12 +919,26 @@ function ProgramSetup({
         <Modal title="Training max" onClose={() => setTmHelp(false)}>
           <p className="text-sm">
             The program works from 90% of your max, its training max. Every set is a share of it (65%, 75%, 85%…), which
-            keeps the weights ones you can lift well and leaves room to keep going up. Enter your best; the app does the rest.
+            keeps the weights ones you can lift well and leaves room to keep going up. Enter your best; the app does the
+            rest.
           </p>
         </Modal>
       )}
     </Modal>
   );
+}
+
+/** ⓘ for the movement chosen in a select: its how-to and "Watch how" (v0.626).
+ *  Keeps its place when nothing is chosen, so rows line up. */
+function PickedInfo({
+  options,
+  value,
+}: {
+  options: { id: string; name: string; about?: string | null }[];
+  value: string;
+}) {
+  const o = options.find((x) => x.id === value);
+  return o ? <MovementInfo name={o.name} about={o.about} /> : <span className="w-7 shrink-0" aria-hidden />;
 }
 
 /** A companion lift: its movement, its sets, and remove. */
@@ -853,7 +952,7 @@ function CompanionRow({
   onRemove,
 }: {
   label: string;
-  options: { id: string; name: string; timed?: boolean; add?: boolean }[];
+  options: { id: string; name: string; timed?: boolean; add?: boolean; about?: string | null }[];
   value: string;
   scheme: string;
   onPick: (id: string) => void;
@@ -881,6 +980,7 @@ function CompanionRow({
             </option>
           ))}
         </select>
+        <PickedInfo options={options} value={value} />
         {timed ? (
           <span className="flex h-10 w-[7.5rem] shrink-0 items-center rounded-lg border border-hairline px-3 text-sm text-muted">
             Time

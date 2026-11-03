@@ -200,6 +200,8 @@ production:
 | A companion slot's choices (pattern, never a main lift, library additions) | `loadProgramChoices` in `src/lib/workouts/program-run.ts`; role `patterns` / `groups` in `programs.ts`; additions joined by `applyLibrary` in `startProgram` |
 | Warm-up countdown (a timed step and the timed steps after it, both sides, a pause between) | `warmupIntervals` / `warmupSchedule` / `warmupAt` in `src/lib/workouts/warmup-library.ts` (pure); UI `WarmupTimer` in `src/app/exercise/warmup-timer.tsx` (timer colours from `usePalette` in `conditioning-timer.tsx`) |
 | Day page headline and sections | `dayHeadline` (kinds of work) / `withSection` (an empty Conditioning or Cardio section in the person's order) in `src/lib/workouts/blocks.ts`; the program's name on a program day |
+| A companion lift's suggested weight (for its reps, from the last session's best set) | `weightForReps` / `targetsFor` in `src/lib/workouts/programs.ts` |
+| The next cycle with changes (setup opened on the running plan) | `currentSetup` / `startProgram({ next: true })` in `src/lib/workouts/program-run.ts`; UI `CycleEnd` → `ProgramSetup` (`initial`, `nextMaxes`) in `src/app/exercise/program-card.tsx` |
 | A movement's kind from its name | `guessPattern` in `src/lib/workouts/library.ts`, used by `loadProgramChoices` for untagged pool movements |
 | Warm-ups (look through, edit, create) | `WarmupLibrary` in `src/app/exercise/warmup-window.tsx`, the Workouts page's Warm-ups step |
 | Saved plans (My plans) | `savePlan` / `savedPlansFor` / `renameSavedPlan` / `deleteSavedPlan` in `src/lib/workouts/plan-share-run.ts` (SharedPlan, status PRIVATE); UI `PlanLibrary` in `src/app/exercise/my-plans.tsx` |

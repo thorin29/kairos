@@ -1,5 +1,43 @@
 # Decisions
 
+## 2026-11 — Program-day titles; companion weights; ⓘ everywhere; next cycle with changes (v0.626.0 / app 0.434.0)
+
+**Titles:** a program day's title is the home card's label, the program and the
+day's main lift ("5/3/1 · Bench press", `programDayTitle` over
+`loadWorkoutPlanNames`). A game auto-logged from a subscribed calendar has no
+event type, so `LoggedOther.label` falls back to the calendar's name, then
+"Sport".
+
+**Companion weights:** a fixed or rep-range scheme took last session's heaviest
+weight whatever its reps, so a 5 × 10 row after a pyramid to 165 × 3 asked for
+165 × 10 five times. The weight is now the heaviest already done for at least
+the target reps (stepped up once every set got every rep, as before), or, when
+that's lower, what the best recent set allows for the target reps with about
+two in reserve (`weightForReps`: Epley estimate ÷ (1 + (reps + 2) / 30),
+rounded down to a loadable weight; 165 × 3 → 125 for 10s). Wendler gives no
+percentage for assistance work (rows, chins, dips): enough reps, done well, short
+of failure; BBB's supplemental sets stay at 50% of the training max. This
+applies wherever targets are computed (programs and hand-built plans).
+
+**ⓘ:** program setup (main and companion picks, from each option's `about`,
+the pool's own or the library's), the plan editor's movement rows (web and
+phone) and the Log an additional workout exercise picker.
+
+**Next cycle, with changes:** the end-of-cycle window adds it beside Next
+cycle / Repeat / Switch. It opens the program setup on the plan as it is
+(`currentSetup`: days, each slot's movement, removed slots, companion sets,
+other lifts on program days as added ones; the Maxes step edits the raised
+training maxes directly). Starting it (`next: true`) keeps the program row
+(start date, history) and moves to the next block, rebuilds the program days,
+and puts back every plan entry the setup doesn't cover: workouts on other days,
+stretching, sport, rest days, a warm-up on a non-program day. Next cycle and
+Repeat never touched the plan, so edits made during a cycle (a warm-up routine,
+added workouts) carry on as they are; only Change program rebuilds from scratch
+(after saving the old plan to My plans).
+
+**Save, share or export** is accent-outlined (2 px) on web and phone.
+
+
 ## 2026-11 — Visible buttons; Conditioning in its place; day titles; warm-up countdown (v0.625.0 / app 0.433.0)
 
 **Buttons that read as buttons:** secondary actions on the day page (Rest /

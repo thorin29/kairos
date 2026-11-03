@@ -688,12 +688,20 @@ export function targetsFor(input: {
     }));
   }
 
-  const lastWeights = last.map((s) => s.weight).filter((w): w is number => w != null && w > 0);
-  const lastWeight = lastWeights.length ? Math.max(...lastWeights) : null;
+  // The weight comes from what last time says about these reps (v0.625): the
+  // heaviest weight already done for them, or, when last time was heavier
+  // and lower-rep (a 165 × 3), what that strength allows for these reps with
+  // a couple left in the tank. Never last time's top weight for 3 × as many reps.
+  const aimReps = scheme.kind === "RANGE" ? scheme.min : scheme.reps;
+  const proven = last
+    .filter((s) => s.weight != null && s.weight > 0 && (s.reps ?? 0) >= aimReps)
+    .map((s) => s.weight as number);
+  const provenWeight = proven.length ? Math.max(...proven) : null;
+  const estimate = weightForReps(last, aimReps, unit);
   const step = stepFor(lower, unit);
   let sets: number;
   let reps: number;
-  let weight = lastWeight;
+  let weight = provenWeight;
 
   if (scheme.kind === "RANGE") {
     sets = scheme.sets;
@@ -712,12 +720,30 @@ export function targetsFor(input: {
     const allDone = last.length >= scheme.sets && last.slice(0, scheme.sets).every((s) => (s.reps ?? 0) >= scheme.reps);
     if (weight != null && allDone) weight += step;
   }
+  if (estimate != null && (weight == null || estimate > weight)) weight = estimate;
 
   if (intent === "LIGHT") {
     sets = Math.max(2, sets - 1);
     weight = weight != null ? roundLoad(weight * 0.8, unit) : null;
   }
   return Array.from({ length: sets }, () => ({ weight, reps }));
+}
+
+/**
+ * A weight for `reps` reps with about two left in the tank, from the best set
+ * in `sets` (estimated max by Epley: weight × (1 + reps / 30)), rounded down
+ * to a loadable weight. 165 × 3 → about 125 for 10. Null with nothing to go by.
+ */
+export function weightForReps(sets: readonly LastSet[], reps: number, unit: string): number | null {
+  let max = 0;
+  for (const s of sets) {
+    if (!s.weight || s.weight <= 0 || !s.reps || s.reps <= 0) continue;
+    max = Math.max(max, s.weight * (1 + Math.min(s.reps, 12) / 30));
+  }
+  if (max <= 0) return null;
+  const inc = unit === "kg" ? 2.5 : 5;
+  const w = Math.floor(max / (1 + (reps + 2) / 30) / inc) * inc;
+  return w > 0 ? w : null;
 }
 
 /** Training max from a recent top weight: 90%, rounded to a loadable weight. */
