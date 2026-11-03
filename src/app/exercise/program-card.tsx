@@ -12,6 +12,7 @@ import {
 import { SCHEME_CHOICES, parseScheme, roundLoad, schemeLabel } from "@/lib/workouts/programs";
 import type { CurrentExtras, ProgramChoice, ProgramInfo, StartProgramInput } from "@/lib/workouts/program-run";
 import { Modal } from "./plan-file-panel";
+import { InfoIcon } from "@/components/icons";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { PlanLibrary } from "./my-plans";
 
@@ -42,12 +43,17 @@ export function ProgramCard({
   userId,
   onChanged,
   onEditPlan,
+  onOpenRotation,
+  hasRotation = false,
   inviteOnly = false,
 }: {
   userId: string;
   onChanged?: () => void;
   /** Opens the plan editor once a program has started. */
   onEditPlan?: () => void;
+  /** Opens the rotation builder: a rotation is chosen with the programs (v0.624). */
+  onOpenRotation?: () => void;
+  hasRotation?: boolean;
   /** The home page: show only the invite (and its setup), nothing otherwise. */
   inviteOnly?: boolean;
 }) {
@@ -85,6 +91,15 @@ export function ProgramCard({
           <Chooser
             userId={userId}
             choices={data.choices}
+            onRotation={
+              onOpenRotation
+                ? () => {
+                    setChoosing(false);
+                    onOpenRotation();
+                  }
+                : undefined
+            }
+            hasRotation={hasRotation}
             onPick={setSetup}
             onUsed={() => {
               setChoosing(false);
@@ -278,11 +293,15 @@ const STARTERS = ["get-moving", "sets-of-ten", "full-body-3"];
 function Chooser({
   userId,
   choices,
+  onRotation,
+  hasRotation,
   onPick,
   onUsed,
 }: {
   userId: string;
   choices: ProgramChoice[];
+  onRotation?: () => void;
+  hasRotation?: boolean;
   onPick: (key: string) => void;
   onUsed: () => void;
 }) {
@@ -309,7 +328,21 @@ function Chooser({
         ))}
       </div>
       {tab === "programs" ? (
-        <ProgramList choices={choices} onPick={onPick} />
+        <>
+          <ProgramList choices={choices} onPick={onPick} />
+          {onRotation && (
+            <button
+              type="button"
+              onClick={onRotation}
+              className="block w-full rounded-xl border border-dashed border-hairline bg-surface p-3 text-left transition-colors hover:border-accent"
+            >
+              <span className="font-semibold">{hasRotation ? "Your rotation" : "Rotation"}</span>
+              <span className="mt-0.5 block text-sm text-muted">
+                A cycle of workouts that repeats every few days, whatever the weekday.
+              </span>
+            </button>
+          )}
+        </>
       ) : (
         <PlanLibrary userId={userId} kind={tab} onUsed={onUsed} />
       )}
@@ -495,8 +528,9 @@ function ProgramSetup({
   const [cardio, setCardio] = useState<number[] | null>(null);
   const [conditioning, setConditioning] = useState<number[]>(current.conditioningDays);
   const [maxText, setMaxText] = useState<Record<string, string>>({});
+  const [tmHelp, setTmHelp] = useState(false);
 
-  // Every movement any slot offers, for "Add a lift".
+  // Every movement any slot offers, for "Add exercise".
   const allOptions = useMemo(() => {
     const m = new Map<string, { id: string; name: string; best: number | null; timed?: boolean }>();
     program.days.forEach((d) => d.roles.forEach((r) => r.options.forEach((o) => m.set(o.id, o))));
@@ -611,7 +645,11 @@ function ProgramSetup({
 
         {step === 1 && (
           <div className="space-y-5">
-            {program.days.map((d, i) => {
+            {/* In weekday order, whatever order the program lists its days (v0.624). */}
+            {program.days
+              .map((d, i) => [d, i] as const)
+              .sort((a, b) => days[a[1]] - days[b[1]] || a[1] - b[1])
+              .map(([d, i]) => {
               const roles = d.roles.filter((r) => !removed.has(`${i}:${r.key}`));
               const mainsHere = roles.filter((r) => r.main);
               const companions = roles.filter((r) => !r.main);
@@ -650,7 +688,7 @@ function ProgramSetup({
                     );
                   })}
                   {(companions.length > 0 || extras.length > 0) && (
-                    <p className="pt-1 text-xs font-semibold text-muted">Companion lifts</p>
+                    <p className="pt-1 text-xs font-semibold text-muted">Companion exercises</p>
                   )}
                   {companions.map((r) => {
                     const k = `${i}:${r.key}`;
@@ -671,7 +709,7 @@ function ProgramSetup({
                   {extras.map((a) => (
                     <CompanionRow
                       key={`add-${a.n}`}
-                      label="Added lift"
+                      label="Added exercise"
                       options={allOptions}
                       value={a.poolExerciseId}
                       scheme={a.scheme}
@@ -695,7 +733,7 @@ function ProgramSetup({
                     }
                     className="text-sm font-semibold text-accent"
                   >
-                    + Add a lift
+                    + Add exercise
                   </button>
                 </div>
               );
@@ -759,7 +797,19 @@ function ProgramSetup({
                         onChange={(e) => setMaxText((t) => ({ ...t, [id]: e.target.value }))}
                         className="tabular h-10 w-20 rounded-lg border border-hairline bg-surface px-2 text-right text-sm outline-none focus:border-accent"
                       />
-                      {tmOf(id) != null && <span className="tabular mt-0.5 text-xs text-muted">TM {tmOf(id)}</span>}
+                      {tmOf(id) != null && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setTmHelp(true);
+                          }}
+                          className="tabular mt-0.5 inline-flex items-center gap-1 text-xs text-muted hover:text-ink"
+                        >
+                          Training max {tmOf(id)}
+                          <InfoIcon className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </span>
                   </label>
                 ))}
@@ -780,6 +830,14 @@ function ProgramSetup({
           )}
         </div>
       </div>
+      {tmHelp && (
+        <Modal title="Training max" onClose={() => setTmHelp(false)}>
+          <p className="text-sm">
+            The program works from 90% of your max, its training max. Every set is a share of it (65%, 75%, 85%…), which
+            keeps the weights ones you can lift well and leaves room to keep going up. Enter your best; the app does the rest.
+          </p>
+        </Modal>
+      )}
     </Modal>
   );
 }
@@ -795,7 +853,7 @@ function CompanionRow({
   onRemove,
 }: {
   label: string;
-  options: { id: string; name: string; timed?: boolean }[];
+  options: { id: string; name: string; timed?: boolean; add?: boolean }[];
   value: string;
   scheme: string;
   onPick: (id: string) => void;
@@ -819,7 +877,7 @@ function CompanionRow({
           <option value="">Choose</option>
           {options.map((o) => (
             <option key={o.id} value={o.id}>
-              {o.name}
+              {o.add ? `${o.name} · new` : o.name}
             </option>
           ))}
         </select>

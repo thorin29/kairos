@@ -686,3 +686,32 @@ export function WaterIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+export function DownloadIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M7 10l5 5 5-5" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+export function ShareIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+    </svg>
+  );
+}
+
+export function BookmarkIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z" />
+    </svg>
+  );
+}

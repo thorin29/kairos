@@ -99,6 +99,8 @@ export async function GET(req: NextRequest) {
     // one-off), so a past day shows what was done; and whether anything was.
     loggedOther: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.loggedOther ?? [],
     loggedAny: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.loggedAny ?? false,
+    // v0.624: the day was marked a rest day.
+    rested: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.rested ?? false,
   });
 }
 

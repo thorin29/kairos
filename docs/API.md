@@ -945,6 +945,12 @@ summary } ] } ]` (logged that day outside its plans, cardio and conditioning
 left out) and `loggedAny` (anything logged). A target set adds `supplemental:
 true` on BBB / FSL sets.
 
+v0.624: a program slot's options may include library movements not yet in the
+pool, `{ id: "lib:<key>", name, best: null, add: true }`; `programs/start`
+accepts "lib:<key>" in `picks` and `added` (they join the pool first).
+`plan/share` answers `{ status: "shared" }` for a parent, else `"pending"`.
+`GET /api/v1/workouts` adds `rested`.
+
 **Suggestions (v0.612).**
 ```
 Suggestion: { "key","title","why","actions":[ { "answer","label" } ],"weight":num? }

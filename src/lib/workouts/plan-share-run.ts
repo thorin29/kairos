@@ -470,16 +470,29 @@ const toShared = (r: SharedRow, userId: string | null): SharedPlanRow => ({
   mine: !!userId && r.ownerId === userId,
 });
 
-/** Send the person's current plan to the parents to share with everyone. */
-export async function sharePlan(userId: string, name: string): Promise<{ ok: true } | { ok: false; error: string }> {
+/** Share the person's current plan with everyone: a parent's (an admin's)
+ *  is shared at once (v0.624); anyone else's waits for a parent's approval. */
+export async function sharePlan(
+  userId: string,
+  name: string,
+): Promise<{ ok: true; status: "APPROVED" | "PENDING" } | { ok: false; error: string }> {
   const clean = name.trim().slice(0, 60);
   if (clean.length < 2) return { ok: false, error: "Name the plan." };
   const file = await exportWorkouts(userId, { name: clean });
   if (!file.plan.some((e) => !e.rest)) return { ok: false, error: "There's nothing in your plan to share." };
+  const me = (await prisma.user.findUnique({ where: { id: userId }, select: { role: true } })) as { role: string } | null;
+  const status = me?.role === "ADMIN" ? ("APPROVED" as const) : ("PENDING" as const);
   await prisma.sharedPlan.create({
-    data: { name: clean, ownerId: userId, status: "PENDING", file: file as never, summary: planSummary(file.plan) },
+    data: {
+      name: clean,
+      ownerId: userId,
+      status,
+      file: file as never,
+      summary: planSummary(file.plan),
+      ...(status === "APPROVED" ? { approvedAt: new Date() } : {}),
+    },
   });
-  return { ok: true };
+  return { ok: true, status };
 }
 
 /** The household's plans for a person: approved ones, and their own waiting. */

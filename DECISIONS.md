@@ -1,5 +1,38 @@
 # Decisions
 
+## 2026-11 — Companion exercises by kind; Warm-ups home; plan tools tidied (v0.624.0 / app 0.432.0)
+
+**Companion exercises:** a companion slot names a kind of movement (`patterns`,
+optionally `groups`, on the role — Push, Pull, Hinge, Core, Legs, Hamstrings,
+Single leg or core) and offers movements of that pattern (the pool row's own
+`pattern` tag, else the library movement of that name), never one of the
+program's main lifts (by the main roles' names; Romanian deadlift is no
+longer a main-lift fallback). It also offers library movements the household
+has the equipment for but not in its pool yet ("lib:<key>", shown "· new");
+starting the program adds them (`applyLibrary`) and uses their ids. A slot
+with nothing named falls back to the first fit, so it isn't blank. A pick is
+planned under its own muscle group (a good morning under Legs), the slot's
+when it has none (pull-ups → Back). The Lifts step lists days in weekday
+order; "Companion exercises", "+ Add exercise". The Maxes step's training max
+reads "Training max 120" with an ⓘ that explains it.
+
+**Warm-ups' home:** the Workouts page's third button is Warm-ups (Create /
+edit): yours and the ready-made ones, each opening to its steps, Edit (a copy
+for a ready-made one) and New. Rest / skip moved to the day page ("Rest /
+skip day", shown until something is logged). "HIIT / CrossFit" is the label
+with "Create / edit" under it, the same as Warm-ups.
+
+**Plan tools:** the plan editor's four grey chips became one button at the foot
+of the plan, "Save, share or export", opening Save to My plans, Share with the
+household, Export a file, Import a file. Opening a saved or household plan is
+with the programs (Start / Change program), so it's not repeated here. A
+parent's (role ADMIN) shared plan is approved at once; anyone else's still
+goes to a parent (`plan/share` answers "shared" or "pending").
+
+**Rotation:** a rotation is another way to plan, so it's chosen with the
+programs (a Rotation card under Programs in the chooser) instead of a tab /
+button in the weekly plan editor.
+
 ## 2026-11 — Grouped sets; past days show what was logged (v0.623.0 / app 0.431.0)
 
 **Grouped sets:** a lift with warm-up or supplemental sets shows them under

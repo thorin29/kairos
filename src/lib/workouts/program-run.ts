@@ -6,6 +6,8 @@ import { MUSCLE_GROUP_LABEL, type MuscleGroup } from "@/lib/workouts/catalog";
 import { loadWeightUnits } from "@/lib/queries/workouts";
 import { getSetting, setSetting } from "@/lib/settings";
 import { savePlan } from "@/lib/workouts/plan-share-run";
+import { LIBRARY, nameKey } from "@/lib/workouts/library";
+import { applyLibrary, loadEquipment } from "@/lib/workouts/library-run";
 import { routineFor } from "@/lib/workouts/warmup-run";
 import {
   PROGRAMS,
@@ -167,8 +169,10 @@ export type ProgramChoice = {
       /** The pool movement it starts with (null: nothing fits; pick one or leave it out). */
       defaultId: string | null;
       /** Movements that fit (by group, or named by the slot), with the
-       *  person's heaviest logged weight on each. */
-      options: { id: string; name: string; best: number | null; timed?: boolean }[];
+       *  person's heaviest logged weight on each. A companion slot also offers
+       *  library movements the household has the equipment for but not yet in
+       *  its pool, as "lib:<key>" with `add` (added when the program starts). */
+      options: { id: string; name: string; best: number | null; timed?: boolean; add?: boolean }[];
     }[];
   }[];
 };
@@ -180,8 +184,22 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
   const pool = (await prisma.poolExercise.findMany({
     where: { isActive: true, ownerId: null },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, muscleGroup: true, category: true, metric: true },
-  })) as { id: string; name: string; muscleGroup: string | null; category: string; metric: string | null }[];
+    select: { id: true, name: true, muscleGroup: true, category: true, metric: true, pattern: true },
+  })) as {
+    id: string;
+    name: string;
+    muscleGroup: string | null;
+    category: string;
+    metric: string | null;
+    pattern: string | null;
+  }[];
+  // A movement's pattern: its own tag, else the library movement of that name.
+  const libByName = new Map(LIBRARY.map((e) => [nameKey(e.name), e]));
+  const patternOf = (m: { name: string; pattern: string | null }) => m.pattern ?? libByName.get(nameKey(m.name))?.pattern ?? null;
+  const groupOfMove = (m: { name: string; muscleGroup: string | null }) =>
+    m.muscleGroup ?? libByName.get(nameKey(m.name))?.muscleGroup ?? null;
+  const have = new Set((await loadEquipment()).filter((e) => e.have).map((e) => e.key));
+  const inPool = new Set(pool.map((m) => nameKey(m.name)));
   const bests = new Map<string, number>();
   if (userId) {
     const rows = (await prisma.sessionSet.findMany({
@@ -204,14 +222,35 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
       name: d.name,
       row: !!d.row,
       roles: d.roles.map((r) => {
-        // Movements filed under the slot's group, and any movement the slot
-        // names wherever it's filed (pull-ups kept under HIIT, a deadlift
-        // under Core).
         const names = new Set(r.match.map(norm));
-        const fits = pool.filter(
-          (m) => (m.category === "WEIGHTS" && m.muscleGroup === r.muscleGroup) || names.has(norm(m.name)),
-        );
-        const def = defaultFor(r, pool);
+        let fits: typeof pool;
+        let adds: { id: string; name: string; best: null; timed?: boolean; add: true }[] = [];
+        if (r.patterns && !r.main) {
+          // A companion slot (v0.624): movements of its kind, never one of the
+          // program's main lifts, plus what the library could add.
+          const mains = new Set(p.days.flatMap((x) => x.roles.filter((y) => y.main).flatMap((y) => y.match)).map((n) => nameKey(n)));
+          const fitsKind = (pattern: string | null, group: string | null) =>
+            !!pattern && r.patterns!.includes(pattern as never) && (!r.groups || (!!group && r.groups.includes(group as never)));
+          fits = pool.filter(
+            (m) => !mains.has(nameKey(m.name)) && (names.has(norm(m.name)) || fitsKind(patternOf(m), groupOfMove(m))),
+          );
+          adds = LIBRARY.filter(
+            (e) =>
+              e.category === "WEIGHTS" &&
+              !inPool.has(nameKey(e.name)) &&
+              !mains.has(nameKey(e.name)) &&
+              fitsKind(e.pattern, e.muscleGroup) &&
+              e.equipment.every((k) => have.has(k)),
+          ).map((e) => ({ id: `lib:${e.key}`, name: e.name, best: null, ...(e.metric === "DURATION" ? { timed: true } : {}), add: true as const }));
+        } else {
+          // Movements filed under the slot's group, and any movement the slot
+          // names wherever it's filed (pull-ups kept under HIIT).
+          fits = pool.filter(
+            (m) => (m.category === "WEIGHTS" && m.muscleGroup === r.muscleGroup) || names.has(norm(m.name)),
+          );
+        }
+        const def = defaultFor(r, fits) ?? (r.patterns && !r.main ? (fits[0] ?? null) : null);
+        const libDef = !def && !r.main ? (r.match.map((n) => adds.find((a) => norm(a.name) === norm(n))).find(Boolean) ?? null) : null;
         return {
           key: r.key,
           label: r.label,
@@ -219,14 +258,17 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
           main: !!r.main,
           optional: !!r.optional,
           scheme: schemeKey(r.scheme),
-          defaultId: def?.id ?? null,
+          defaultId: def?.id ?? libDef?.id ?? null,
           // A timed movement (a plank) logs by time: the setup shows Time, not sets.
-          options: fits.map((m) => ({
-            id: m.id,
-            name: m.name,
-            best: bests.get(m.id) ?? null,
-            ...(m.metric === "DURATION" ? { timed: true } : {}),
-          })),
+          options: [
+            ...fits.map((m) => ({
+              id: m.id,
+              name: m.name,
+              best: bests.get(m.id) ?? null,
+              ...(m.metric === "DURATION" ? { timed: true } : {}),
+            })),
+            ...adds,
+          ],
         };
       }),
     })),
@@ -387,8 +429,30 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
   const added = (input.added ?? []).filter(
     (a) => Number.isInteger(a.day) && a.day >= 0 && a.day < program.days.length && typeof a.poolExerciseId === "string" && a.poolExerciseId,
   );
+  // Library movements chosen in the setup ("lib:<key>") join the household's
+  // pool first, then stand in for their ids (v0.624).
+  const libKeys = [
+    ...new Set(
+      [...Object.values(input.picks), ...added.map((a) => a.poolExerciseId)]
+        .filter((v): v is string => !!v && v.startsWith("lib:"))
+        .map((v) => v.slice(4)),
+    ),
+  ];
+  if (libKeys.length) {
+    await applyLibrary(libKeys);
+    const rows = (await prisma.poolExercise.findMany({
+      where: { libraryKey: { in: libKeys }, ownerId: null },
+      select: { id: true, libraryKey: true },
+    })) as { id: string; libraryKey: string | null }[];
+    const byKey = new Map(rows.map((r) => [`lib:${r.libraryKey}`, r.id]));
+    for (const k of Object.keys(input.picks)) {
+      const v = input.picks[k];
+      if (v && v.startsWith("lib:")) input.picks[k] = byKey.get(v) ?? null;
+    }
+    for (const a of added) if (a.poolExerciseId.startsWith("lib:")) a.poolExerciseId = byKey.get(a.poolExerciseId) ?? "";
+  }
   const pickIds = [
-    ...new Set([...Object.values(input.picks).filter((v): v is string => !!v), ...added.map((a) => a.poolExerciseId)]),
+    ...new Set([...Object.values(input.picks).filter((v): v is string => !!v), ...added.map((a) => a.poolExerciseId).filter(Boolean)]),
   ];
   const pool = pickIds.length
     ? ((await prisma.poolExercise.findMany({
@@ -488,7 +552,11 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
       if (!id || !known.has(id) || picks.some((e) => e.poolExerciseId === id)) continue;
       const own = !r.main ? input.schemes?.[`${i}:${r.key}`] : undefined;
       const scheme = own !== undefined ? cleanPlanScheme(own, today) : schemeKey(r.scheme);
-      picks.push({ poolExerciseId: id, scheme: r.main ? schemeKey(r.scheme) : scheme?.startsWith("wave") ? null : scheme, programRole: r.key, group: r.muscleGroup });
+      // Filed under the movement's own group when it has one (a good morning
+      // under Legs), else the slot's (pull-ups kept under HIIT go to Back).
+      const ownGroup = groupOf.get(id);
+      const group = (ownGroup && ownGroup !== "FULL_BODY" ? ownGroup : r.muscleGroup) as MuscleGroup;
+      picks.push({ poolExerciseId: id, scheme: r.main ? schemeKey(r.scheme) : scheme?.startsWith("wave") ? null : scheme, programRole: r.key, group });
       const top = input.tops[id];
       const tm = input.maxes?.[id];
       const unit = units[r.muscleGroup] ?? "lb";

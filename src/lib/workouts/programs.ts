@@ -10,6 +10,7 @@
  * max they gave, or what they lifted last time); nothing is estimated.
  */
 import type { MuscleGroup } from "@/lib/workouts/catalog";
+import type { Pattern } from "@/lib/workouts/library";
 
 /** One set of a "work up to a top set" week: reps at a share of the training
  *  max; `plus` is a 5/3/1 "+" set, as many good reps as you can (v0.620). */
@@ -103,6 +104,11 @@ export type ProgramRole = {
   main?: boolean;
   /** Optional: left out when nothing in the pool fits. */
   optional?: boolean;
+  /** A companion slot's kind of movement (v0.624): its choices are movements
+   *  of these patterns (and, with `groups`, these muscle groups), never the
+   *  program's main lifts, plus library movements the household could add. */
+  patterns?: Pattern[];
+  groups?: MuscleGroup[];
 };
 
 export type ProgramDay = {
@@ -135,7 +141,7 @@ export type Program = {
 
 const SQUAT = ["back squat", "squat", "front squat", "goblet squat"];
 const BENCH = ["bench press", "bench", "dumbbell bench press", "incline bench press"];
-const DEAD = ["deadlift", "trap bar deadlift", "romanian deadlift"];
+const DEAD = ["deadlift", "trap bar deadlift", "sumo deadlift"];
 const PRESS = ["overhead press", "shoulder press", "military press", "press", "dumbbell shoulder press"];
 const ROW = ["bent over row", "barbell row", "dumbbell row", "row", "seated row"];
 const PULL = ["pull-up", "pull up", "chin-up", "chin up", "lat pulldown"];
@@ -193,7 +199,16 @@ const main = (key: string, label: string, muscleGroup: MuscleGroup, match: strin
   main: true,
   ...(lower ? { lower: true } : {}),
 });
-const extra = (key: string, label: string, muscleGroup: MuscleGroup, match: string[], scheme: Scheme, lower = false): ProgramRole => ({
+const extra = (
+  key: string,
+  label: string,
+  muscleGroup: MuscleGroup,
+  match: string[],
+  scheme: Scheme,
+  lower = false,
+  patterns?: Pattern[],
+  groups?: MuscleGroup[],
+): ProgramRole => ({
   key,
   label,
   muscleGroup,
@@ -201,7 +216,11 @@ const extra = (key: string, label: string, muscleGroup: MuscleGroup, match: stri
   scheme,
   optional: true,
   ...(lower ? { lower: true } : {}),
+  ...(patterns ? { patterns } : {}),
+  ...(groups ? { groups } : {}),
 });
+const HINGE_GROUPS: MuscleGroup[] = ["LEGS", "DEADLIFT", "BACK"];
+const HAM_GROUPS: MuscleGroup[] = ["LEGS", "DEADLIFT"];
 
 export const PROGRAMS: readonly Program[] = [
   {
@@ -221,32 +240,32 @@ export const PROGRAMS: readonly Program[] = [
         name: "Press day",
         roles: [
           main("press", "Press", "SHOULDERS", PRESS),
-          extra("dip", "Push", "CHEST", DIP, same(5, 15)),
-          extra("chin", "Pull", "BACK", CHIN, same(5, 10)),
+          extra("dip", "Push", "CHEST", DIP, same(5, 15), false, ["PUSH"]),
+          extra("chin", "Pull", "BACK", CHIN, same(5, 10), false, ["PULL"]),
         ],
       },
       {
         name: "Deadlift day",
         roles: [
           main("deadlift", "Deadlift", "DEADLIFT", DEAD, true),
-          extra("goodmorning", "Hinge", "DEADLIFT", GOOD_MORNING, same(5, 12), true),
-          extra("legraise", "Core", "CORE", LEG_RAISE, same(5, 15)),
+          extra("goodmorning", "Hinge", "DEADLIFT", GOOD_MORNING, same(5, 12), true, ["HINGE"], HINGE_GROUPS),
+          extra("legraise", "Core", "CORE", LEG_RAISE, same(5, 15), false, ["CORE"]),
         ],
       },
       {
         name: "Bench day",
         roles: [
           main("bench", "Bench", "CHEST", BENCH),
-          extra("dbbench", "Push", "CHEST", DB_BENCH, same(5, 15)),
-          extra("dbrow", "Pull", "BACK", DB_ROW, same(5, 10)),
+          extra("dbbench", "Push", "CHEST", DB_BENCH, same(5, 15), false, ["PUSH"]),
+          extra("dbrow", "Pull", "BACK", DB_ROW, same(5, 10), false, ["PULL"]),
         ],
       },
       {
         name: "Squat day",
         roles: [
           main("squat", "Squat", "LEGS", SQUAT, true),
-          extra("legpress", "Legs", "LEGS", LEG_PRESS, same(5, 15), true),
-          extra("legcurl", "Hamstrings", "LEGS", LEG_CURL, same(5, 10), true),
+          extra("legpress", "Legs", "LEGS", LEG_PRESS, same(5, 15), true, ["SQUAT"]),
+          extra("legcurl", "Hamstrings", "LEGS", LEG_CURL, same(5, 10), true, ["HINGE"], HAM_GROUPS),
         ],
       },
     ],
@@ -265,15 +284,15 @@ export const PROGRAMS: readonly Program[] = [
     wave: WAVE_531,
     supplemental: "BBB",
     days: [
-      { name: "Press day", roles: [main("press", "Press", "SHOULDERS", PRESS), extra("chin", "Pull", "BACK", CHIN, same(5, 10))] },
+      { name: "Press day", roles: [main("press", "Press", "SHOULDERS", PRESS), extra("chin", "Pull", "BACK", CHIN, same(5, 10), false, ["PULL"])] },
       {
         name: "Deadlift day",
-        roles: [main("deadlift", "Deadlift", "DEADLIFT", DEAD, true), extra("legraise", "Core", "CORE", LEG_RAISE, same(5, 15))],
+        roles: [main("deadlift", "Deadlift", "DEADLIFT", DEAD, true), extra("legraise", "Core", "CORE", LEG_RAISE, same(5, 15), false, ["CORE"])],
       },
-      { name: "Bench day", roles: [main("bench", "Bench", "CHEST", BENCH), extra("dbrow", "Pull", "BACK", DB_ROW, same(5, 10))] },
+      { name: "Bench day", roles: [main("bench", "Bench", "CHEST", BENCH), extra("dbrow", "Pull", "BACK", DB_ROW, same(5, 10), false, ["PULL"])] },
       {
         name: "Squat day",
-        roles: [main("squat", "Squat", "LEGS", SQUAT, true), extra("legcurl", "Hamstrings", "LEGS", LEG_CURL, same(5, 10), true)],
+        roles: [main("squat", "Squat", "LEGS", SQUAT, true), extra("legcurl", "Hamstrings", "LEGS", LEG_CURL, same(5, 10), true, ["HINGE"], HAM_GROUPS)],
       },
     ],
   },
@@ -296,9 +315,9 @@ export const PROGRAMS: readonly Program[] = [
         roles: [
           main("squat", "Squat", "LEGS", SQUAT, true),
           main("bench", "Bench", "CHEST", BENCH),
-          extra("push", "Push", "CHEST", PUSH, r(5, 10, 20)),
-          extra("pull", "Pull", "BACK", PULL, r(5, 10, 20)),
-          extra("legcore", "Single leg or core", "CORE", SINGLE_LEG_CORE, r(5, 10, 20)),
+          extra("push", "Push", "CHEST", PUSH, r(5, 10, 20), false, ["PUSH"]),
+          extra("pull", "Pull", "BACK", PULL, r(5, 10, 20), false, ["PULL"]),
+          extra("legcore", "Single leg or core", "CORE", SINGLE_LEG_CORE, r(5, 10, 20), false, ["SQUAT", "CORE"]),
         ],
       },
       {
@@ -306,9 +325,9 @@ export const PROGRAMS: readonly Program[] = [
         roles: [
           main("deadlift", "Deadlift", "DEADLIFT", DEAD, true),
           main("press", "Press", "SHOULDERS", PRESS),
-          extra("push", "Push", "CHEST", PUSH, r(5, 10, 20)),
-          extra("pull", "Pull", "BACK", ROW, r(5, 10, 20)),
-          extra("legcore", "Single leg or core", "LEGS", SINGLE_LEG_CORE, r(5, 10, 20), true),
+          extra("push", "Push", "CHEST", PUSH, r(5, 10, 20), false, ["PUSH"]),
+          extra("pull", "Pull", "BACK", ROW, r(5, 10, 20), false, ["PULL"]),
+          extra("legcore", "Single leg or core", "LEGS", SINGLE_LEG_CORE, r(5, 10, 20), true, ["SQUAT", "CORE"]),
         ],
       },
       {
@@ -316,9 +335,9 @@ export const PROGRAMS: readonly Program[] = [
         roles: [
           main("bench", "Bench", "CHEST", BENCH),
           main("squat", "Squat", "LEGS", SQUAT, true),
-          extra("push", "Push", "CHEST", PUSH, r(5, 10, 20)),
-          extra("pull", "Pull", "BACK", PULL, r(5, 10, 20)),
-          extra("legcore", "Single leg or core", "CORE", SINGLE_LEG_CORE, r(5, 10, 20)),
+          extra("push", "Push", "CHEST", PUSH, r(5, 10, 20), false, ["PUSH"]),
+          extra("pull", "Pull", "BACK", PULL, r(5, 10, 20), false, ["PULL"]),
+          extra("legcore", "Single leg or core", "CORE", SINGLE_LEG_CORE, r(5, 10, 20), false, ["SQUAT", "CORE"]),
         ],
       },
     ],
@@ -340,15 +359,15 @@ export const PROGRAMS: readonly Program[] = [
         name: "Squat day",
         roles: [
           main("squat", "Squat", "LEGS", SQUAT, true),
-          extra("lunge", "Single leg", "LEGS", LUNGE, r(3, 8, 12), true),
-          extra("core", "Core", "CORE", CORE, r(3, 8, 12)),
+          extra("lunge", "Single leg", "LEGS", LUNGE, r(3, 8, 12), true, ["SQUAT"]),
+          extra("core", "Core", "CORE", CORE, r(3, 8, 12), false, ["CORE"]),
         ],
       },
       {
         name: "Bench day",
         roles: [
           main("bench", "Bench", "CHEST", BENCH),
-          extra("row", "Row", "BACK", ROW, r(3, 8, 12)),
+          extra("row", "Row", "BACK", ROW, r(3, 8, 12), false, ["PULL"]),
           extra("tri", "Triceps", "ARMS", TRI, r(3, 8, 12)),
         ],
       },
@@ -356,15 +375,15 @@ export const PROGRAMS: readonly Program[] = [
         name: "Deadlift day",
         roles: [
           main("deadlift", "Deadlift", "DEADLIFT", DEAD, true),
-          extra("pull", "Pull", "BACK", PULL, r(3, 6, 10)),
-          extra("core", "Core", "CORE", CORE, r(3, 8, 12)),
+          extra("pull", "Pull", "BACK", PULL, r(3, 6, 10), false, ["PULL"]),
+          extra("core", "Core", "CORE", CORE, r(3, 8, 12), false, ["CORE"]),
         ],
       },
       {
         name: "Press day",
         roles: [
           main("press", "Press", "SHOULDERS", PRESS),
-          extra("row", "Row", "BACK", ROW, r(3, 8, 12)),
+          extra("row", "Row", "BACK", ROW, r(3, 8, 12), false, ["PULL"]),
           extra("curl", "Curl", "ARMS", CURL, r(3, 8, 12)),
         ],
       },

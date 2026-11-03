@@ -190,7 +190,6 @@ export function PlanBuilder({
           {weeklyActive ? "Pause weekly plan" : "Resume weekly plan"}
         </button>
       </div>
-      <PlanFilePanel userId={userId} />
       {!weeklyActive && (
         <p className="rounded-lg bg-surface px-3 py-2 text-sm text-muted">
           Paused &mdash; no weekly prompts. A rotation, if any, still runs.
@@ -229,6 +228,9 @@ export function PlanBuilder({
           isToday={d.day === todayDow}
         />
       ))}
+      <div className="pt-2">
+        <PlanFilePanel userId={userId} />
+      </div>
     </div>
   );
 }

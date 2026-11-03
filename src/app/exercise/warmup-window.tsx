@@ -451,3 +451,76 @@ export function WarmupPlanLine({ userId, plannedWorkoutId, warmup }: { userId: s
     </>
   );
 }
+
+/**
+ * Every warm-up, to look through and edit (the Workouts page's Warm-ups,
+ * v0.624): the ready-made ones and your own, each opening to its steps, with
+ * Edit (a ready-made one saves your own copy) and New.
+ */
+export function WarmupLibrary({ userId }: { userId: string }) {
+  const [routines, setRoutines] = useState<WarmupRoutine[] | null>(null);
+  const [open, setOpen] = useState<WarmupRoutine | null>(null);
+  const [editing, setEditing] = useState<WarmupRoutine | "new" | null>(null);
+  const load = () => {
+    loadWarmupRoutines(userId)
+      .then(setRoutines)
+      .catch(() => setRoutines([]));
+  };
+  useEffect(load, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (editing) {
+    return (
+      <RoutineEditor
+        userId={userId}
+        routine={editing === "new" ? null : editing}
+        onSaved={() => {
+          setEditing(null);
+          setOpen(null);
+          load();
+        }}
+        onBack={() => setEditing(null)}
+      />
+    );
+  }
+  const section = (title: string, list: WarmupRoutine[]) =>
+    list.length > 0 && (
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted">{title}</p>
+        {list.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            onClick={() => setOpen(r)}
+            className="block w-full rounded-xl border border-hairline bg-surface px-4 py-3 text-left hover:border-accent"
+          >
+            <span className="block text-sm font-semibold">{r.name}</span>
+            <span className="block truncate text-xs text-muted">{r.steps.map((s) => s.name).join(" · ")}</span>
+          </button>
+        ))}
+      </div>
+    );
+  return (
+    <div className="space-y-5">
+      <button type="button" onClick={() => setEditing("new")} className={`${PRIMARY} w-full`}>
+        + New warm-up
+      </button>
+      {!routines ? (
+        <p className="text-sm text-muted">Loading…</p>
+      ) : (
+        <>
+          {section("Yours", routines.filter((r) => r.mine))}
+          {section("Ready-made", routines.filter((r) => !r.mine))}
+        </>
+      )}
+      {open && (
+        <Modal title={open.name} onClose={() => setOpen(null)}>
+          <div className="space-y-4">
+            <WarmupSteps steps={open.steps} />
+            <button type="button" onClick={() => setEditing(open)} className={`${QUIET} w-full`}>
+              {open.mine ? "Edit" : "Edit a copy"}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}

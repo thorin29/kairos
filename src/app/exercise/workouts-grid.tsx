@@ -8,7 +8,7 @@ import {
   CalendarPlusIcon,
   DumbbellIcon,
   BookIcon,
-  MoonIcon,
+  FlameIcon,
   PlusIcon,
   TrashIcon,
   RefreshIcon,
@@ -20,11 +20,11 @@ import {
   logHiitWorkout,
   createAndLogHiitWorkout,
   requestShareHiitWorkout,
-  restDay,
 } from "@/lib/actions/workouts";
 import { formatShort } from "@/lib/dates";
 import { PlanBuilder } from "./plan-builder";
 import { RotationBuilder } from "./rotation-builder";
+import { WarmupLibrary } from "./warmup-window";
 import { DayLog } from "./day-log";
 import { LineChart } from "@/components/line-chart";
 import { REP_BANDS } from "@/lib/workouts/records";
@@ -58,7 +58,7 @@ import {
   type NavRegion,
 } from "@/lib/workouts/involvement";
 
-type Step = "menu" | "plan" | "log" | "history" | "browse";
+type Step = "menu" | "plan" | "log" | "history" | "browse" | "rotation" | "warmups";
 
 export function WorkoutsGrid({
   people,
@@ -93,9 +93,6 @@ export function WorkoutsGrid({
     paneRef.current?.scrollTo({ top: 0 });
   }, [step]);
   const [calcOpen, setCalcOpen] = useState(false);
-  // When creating a plan from scratch, which kind the person chose (before one
-  // exists). Once a plan or rotation exists, that decides what's shown instead.
-  const [planMode, setPlanMode] = useState<"weekly" | "rotation" | null>(null);
   const [browseFilter, setBrowseFilter] = useState<"regular" | "hero">(
     "regular",
   );
@@ -114,7 +111,6 @@ export function WorkoutsGrid({
     setOrigin(`${x} top`);
     setOpenId(id);
     setStep("menu");
-    setPlanMode(null);
   };
 
   const open = people.find((p) => p.user.id === openId) ?? null;
@@ -127,11 +123,6 @@ export function WorkoutsGrid({
     : [];
 
   const close = () => setOpenId(null);
-  const rest = () => {
-    if (open) startTransition(() => restDay(open.user.id, todayISO));
-    close();
-  };
-
   return (
     <>
       {!personal && (
@@ -161,7 +152,7 @@ export function WorkoutsGrid({
                 <div className="mt-4 grid grid-cols-3 gap-3" aria-hidden>
                   <ActionChip icon={CalendarPlusIcon} />
                   <ActionChip icon={DumbbellIcon} />
-                  <ActionChip icon={MoonIcon} />
+                  <ActionChip icon={FlameIcon} />
                 </div>
               </button>
             );
@@ -291,7 +282,12 @@ export function WorkoutsGrid({
 
                   {!personal && <WeeklyTraining userId={open.user.id} />}
 
-                  <ProgramCard userId={open.user.id} onEditPlan={() => setStep("plan")} />
+                  <ProgramCard
+                    userId={open.user.id}
+                    onEditPlan={() => setStep("plan")}
+                    onOpenRotation={() => setStep("rotation")}
+                    hasRotation={!!open.rotation}
+                  />
 
                   <div className="grid grid-cols-3 gap-3">
                     <ActionButton
@@ -307,9 +303,10 @@ export function WorkoutsGrid({
                       primary={hasPlan}
                     />
                     <ActionButton
-                      icon={MoonIcon}
-                      label="Rest / skip"
-                      onClick={rest}
+                      icon={FlameIcon}
+                      label="Warm-ups"
+                      sub="Create / edit"
+                      onClick={() => setStep("warmups")}
                     />
                   </div>
 
@@ -351,58 +348,36 @@ export function WorkoutsGrid({
                   <h3 className="mb-3 font-display text-lg font-semibold">
                     Workout plan
                   </h3>
-                  {(() => {
-                    const hasRotation = !!open.rotation;
-                    const hasWeekly = open.plan.some((d) =>
-                      d.workouts.some((w) => !w.isRest),
-                    );
-                    // Weekly and rotation can both be active at once; this picks
-                    // which one to view/edit.
-                    const view: "weekly" | "rotation" =
-                      planMode ?? (hasRotation && !hasWeekly ? "rotation" : "weekly");
-                    const tab = (mode: "weekly" | "rotation", label: string) => (
-                      <button
-                        type="button"
-                        onClick={() => setPlanMode(mode)}
-                        className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-                          view === mode
-                            ? "border-accent text-accent"
-                            : "border-hairline text-muted hover:border-accent"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    );
-                    return (
-                      <>
-                        <div className="mb-4 flex gap-2">
-                          {tab("weekly", "Weekly plan")}
-                          {tab("rotation", hasRotation ? "Rotation" : "Add a rotation")}
-                        </div>
-                        {view === "weekly" ? (
-                          <PlanBuilder
-                            userId={open.user.id}
-                            plan={open.plan}
-                            todayDow={todayDow}
-                            pool={pool}
-                            weeklyStart={open.weeklyStart}
-                            weeklyActive={open.weeklyActive}
-                            sectionOrder={open.sectionOrder}
-                            hiitWorkouts={hiitWorkouts.filter(
-                              (w) =>
-                                w.ownerId === null ||
-                                w.ownerId === open.user.id,
-                            )}
-                          />
-                        ) : (
-                          <RotationBuilder
-                            userId={open.user.id}
-                            rotation={open.rotation}
-                          />
-                        )}
-                      </>
-                    );
-                  })()}
+                  <PlanBuilder
+                    userId={open.user.id}
+                    plan={open.plan}
+                    todayDow={todayDow}
+                    pool={pool}
+                    weeklyStart={open.weeklyStart}
+                    weeklyActive={open.weeklyActive}
+                    sectionOrder={open.sectionOrder}
+                    hiitWorkouts={hiitWorkouts.filter(
+                      (w) => w.ownerId === null || w.ownerId === open.user.id,
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* A rotation is another way to plan, chosen with the
+                  programs (v0.624), not a tab of the weekly plan. */}
+              {step === "warmups" && (
+                <div className="mt-4">
+                  <BackLink onClick={() => setStep("menu")} />
+                  <h3 className="mb-3 font-display text-lg font-semibold">Warm-ups</h3>
+                  <WarmupLibrary userId={open.user.id} />
+                </div>
+              )}
+
+              {step === "rotation" && (
+                <div className="mt-4">
+                  <BackLink onClick={() => setStep("menu")} />
+                  <h3 className="mb-3 font-display text-lg font-semibold">Rotation</h3>
+                  <RotationBuilder userId={open.user.id} rotation={open.rotation} />
                 </div>
               )}
 
@@ -1558,11 +1533,14 @@ function ActionChip({ icon: Icon }: { icon: IconType }) {
 function ActionButton({
   icon: Icon,
   label,
+  sub,
   onClick,
   primary,
 }: {
   icon: IconType;
   label: string;
+  /** A smaller line under the label ("Create / edit"). */
+  sub?: string;
   onClick: () => void;
   primary?: boolean;
 }) {
@@ -1578,6 +1556,7 @@ function ActionButton({
     >
       <Icon className="h-6 w-6" />
       {label}
+      {sub && <span className="-mt-1 text-[11px] font-medium text-muted">{sub}</span>}
     </button>
   );
 }

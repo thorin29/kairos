@@ -13,14 +13,13 @@ import {
 } from "@/lib/actions/workouts";
 import { fileNameFor } from "@/lib/workouts/plan-file";
 import { PlanLibrary } from "./my-plans";
+import { BookmarkIcon, DownloadIcon, ShareIcon, UploadIcon } from "@/components/icons";
 import type { ImportPreview, SharedPlanRow } from "@/lib/workouts/plan-share-run";
 
 const PRIMARY =
   "inline-flex h-10 items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-on-accent disabled:opacity-40";
 const QUIET =
   "inline-flex h-10 items-center rounded-full border border-hairline px-4 text-sm font-semibold text-accent hover:border-accent disabled:opacity-40";
-const CHIP =
-  "inline-flex h-9 items-center rounded-full border border-hairline px-3.5 text-sm font-semibold text-accent hover:border-accent";
 
 export function Modal({ title, onClose, onBack, children }: { title: string; onClose: () => void; onBack?: () => void; children: React.ReactNode }) {
   return (
@@ -103,7 +102,7 @@ export function ImportChoice({
   );
 }
 
-type Open = "export" | "import" | "share" | "plans" | "mine" | null;
+type Open = "menu" | "export" | "import" | "share" | "plans" | "mine" | null;
 
 /**
  * Export, Import, Share this plan and Household plans (v0.618), each in its
@@ -185,22 +184,43 @@ export function PlanFilePanel({ userId }: { userId: string }) {
   };
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <button type="button" onClick={() => show("mine")} className={CHIP}>
-        My plans
+    <div>
+      {/* One button at the foot of the plan (v0.624): save, share, export and
+          import in a window. Opening a saved or household plan is with the
+          programs (Start / Change program). */}
+      <button
+        type="button"
+        onClick={() => show("menu")}
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-accent px-5 text-sm font-semibold text-accent hover:bg-accent/10"
+      >
+        <ShareIcon className="h-4 w-4" />
+        Save, share or export
       </button>
-      <button type="button" onClick={() => show("plans")} className={CHIP}>
-        Household plans
-      </button>
-      <button type="button" onClick={() => show("share")} className={CHIP}>
-        Share this plan
-      </button>
-      <button type="button" onClick={() => show("export")} className={CHIP}>
-        Export
-      </button>
-      <button type="button" onClick={() => show("import")} className={CHIP}>
-        Import
-      </button>
+
+      {open === "menu" && (
+        <Modal title="This plan" onClose={close}>
+          <div className="space-y-2">
+            {(
+              [
+                ["mine", BookmarkIcon, "Save to My plans"],
+                ["share", ShareIcon, "Share with the household"],
+                ["export", DownloadIcon, "Export a file"],
+                ["import", UploadIcon, "Import a file"],
+              ] as const
+            ).map(([k, Icon, label]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => show(k)}
+                className="flex w-full items-center gap-3 rounded-xl border border-hairline px-4 py-3 text-left text-sm font-semibold hover:border-accent"
+              >
+                <Icon className="h-5 w-5 text-accent" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
 
       {open === "export" && (
         <Modal title="Export" onClose={close}>
@@ -280,14 +300,14 @@ export function PlanFilePanel({ userId }: { userId: string }) {
                     const r = await shareMyPlan(userId, name);
                     if (!r.ok) setError(r.error);
                     else {
-                      setDone("Sent for approval.");
+                      setDone(r.status === "APPROVED" ? "Shared with the household." : "Sent to a parent to approve.");
                       setName("");
                     }
                   })
                 }
                 className={PRIMARY}
               >
-                Send for approval
+                Share
               </button>
             </>
           )}

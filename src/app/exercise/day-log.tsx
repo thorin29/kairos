@@ -349,6 +349,22 @@ export function DayLog({
             </span>
           </div>
         )}
+        {/* Resting or skipping the whole day lives here, with the day (v0.624). */}
+        {data && !state?.rested && !state?.loggedAny && (
+          <button
+            type="button"
+            onClick={() =>
+              startTransition(async () => {
+                await restDay(userId, date);
+                setTick((n) => n + 1);
+              })
+            }
+            className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline px-3.5 text-sm font-semibold text-muted hover:border-accent hover:text-accent"
+          >
+            <MoonIcon className="h-4 w-4" />
+            Rest / skip day
+          </button>
+        )}
       </div>
 
       {state?.light && !state.rested && (
