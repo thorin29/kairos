@@ -42,8 +42,10 @@ export async function GET(req: NextRequest) {
   // Every-set logging (v0.608): each movement carries its day's sets in a few
   // words and its last time, and the day its title and week strip. All
   // additive, so an older app reads exactly what it did before.
+  let dayState: Awaited<ReturnType<typeof loadDayLogState>> | null = null;
   const withSets = async (dayISO: string, list: NonNullable<TodayPlanned>[]) => {
     const st = await loadDayLogState(userId, dayISO, list);
+    if (dayISO === date) dayState = st;
     return list.map((w) => ({
       ...w,
       exercises: w.exercises.map((e) => {
@@ -93,6 +95,10 @@ export async function GET(req: NextRequest) {
     // v0.619: every conditioning result that day, for one-offs added to it.
     conditioningDone: await conditioningOnDay(userId, date),
     benchmark: await benchmarkFor(userId, date),
+    // v0.623: what was logged that day outside its plans (an older plan, a
+    // one-off), so a past day shows what was done; and whether anything was.
+    loggedOther: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.loggedOther ?? [],
+    loggedAny: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.loggedAny ?? false,
   });
 }
 

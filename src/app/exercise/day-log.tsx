@@ -171,9 +171,15 @@ export function DayLog({
     };
   }, [userId, date, tick, person]);
 
+  // A past day shows the plan entries that existed then (v0.623): one made
+  // later (a program started since) wasn't that day's plan.
+  const planIds = data?.state.planIds;
   const workouts: PlanWorkout[] = useMemo(
-    () => (person.plan[dayOfWeek(date)]?.workouts ?? []).filter((w) => !w.isRest),
-    [person.plan, date],
+    () =>
+      (person.plan[dayOfWeek(date)]?.workouts ?? []).filter(
+        (w) => !w.isRest && (date >= todayISO || !planIds || planIds.includes(w.id)),
+      ),
+    [person.plan, date, todayISO, planIds],
   );
   const byId = useMemo(() => new Map(workouts.map((w) => [w.id, w])), [workouts]);
   const order = data?.order;
@@ -317,11 +323,18 @@ export function DayLog({
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-muted">
           {date === todayISO ? "Today" : dayLabel(date)}
-          {late && " · logging late"}
+          {late && !state?.loggedAny && " · logging late"}
           {state?.program && ` · ${state.program.name} · ${state.program.label}`}
         </p>
         <h3 className="mt-1 font-display text-xl font-semibold">
-          {state?.rested ? "Rest day" : title || (workouts.length === 0 ? "Nothing planned" : "Workout")}
+          {state?.rested
+            ? "Rest day"
+            : title ||
+              (workouts.length === 0
+                ? state?.loggedOther?.length
+                  ? state.loggedOther.map((g) => g.name).join(" · ")
+                  : "Nothing planned"
+                : "Workout")}
         </h3>
         {progress.total > 0 && !state?.rested && (
           <div className="mt-2 flex items-center gap-3">
@@ -565,6 +578,28 @@ export function DayLog({
         )
       )}
 
+      {(state?.loggedOther?.length ?? 0) > 0 && (
+        <section className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted">Logged</p>
+          {state!.loggedOther.map((g) => (
+            <div key={g.name} className="rounded-xl border border-hairline bg-surface px-4 py-3">
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <CheckIcon className="h-4 w-4 text-accent" />
+                {g.name}
+              </p>
+              <ul className="mt-1 space-y-0.5 pl-6 text-sm">
+                {g.lines.map((l, i) => (
+                  <li key={i}>
+                    {l.name !== g.name && <span>{l.name} · </span>}
+                    <span className="tabular text-muted">{l.summary}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+
       {extra && <div className="border-t border-hairline pt-5">{extra(date)}</div>}
     </div>
   );
@@ -726,8 +761,10 @@ type Row = {
   pct?: number;
   /** A 5/3/1 "+" set: as many good reps as you can (v0.620). */
   plus?: boolean;
-  /** A warm-up set before the main sets (v0.621): "W", not numbered. */
+  /** A warm-up set before the main sets (v0.621). */
   warmup?: boolean;
+  /** A supplemental set after the main sets (BBB, FSL; v0.623). */
+  supplemental?: boolean;
 };
 
 const num = (v: string): number | null => {
@@ -756,6 +793,7 @@ function rowsFrom(log: MovementLog): Row[] {
       pct: target[i]?.pct,
       plus: target[i]?.plus,
       warmup: target[i]?.warmup,
+      supplemental: target[i]?.supplemental,
     }));
   }
   if (target.length > 0) {
@@ -773,6 +811,7 @@ function rowsFrom(log: MovementLog): Row[] {
       pct: t.pct,
       plus: t.plus,
       warmup: t.warmup,
+      supplemental: t.supplemental,
     }));
   }
   if (last.length > 0) {
@@ -1057,6 +1096,11 @@ function MovementLogger({
   // A program that fixes each set's weight (5/3/1): no removing sets and no
   // moving the remaining weights (v0.619).
   const strict = rows.some((r) => r.pct != null);
+  const groupOf = (r: Row) => (r.warmup ? "warm" : r.supplemental ? "supp" : "main");
+  const grouped = rows.some((r) => r.warmup || r.supplemental);
+  // "5 × 10" (Boring But Big) or "5 × 5" (First Set Last).
+  const suppRows = rows.filter((r) => r.supplemental);
+  const suppLabel = suppRows.length ? `${suppRows.length} × ${suppRows[0].hintR ?? ""}` : "";
   const cols =
     metric === "WEIGHT"
       ? "grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem_2.75rem] sm:grid-cols-[2rem_5.5rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem_2.75rem]"
@@ -1152,11 +1196,22 @@ function MovementLogger({
             </div>
             {rows.map((r, i) => {
               const hw = hintW(r);
+              // Warm-up, main and supplemental sets each under their own
+              // heading, numbered from 1 (v0.623).
+              const grp = groupOf(r);
+              const startsGroup = grouped && (i === 0 || groupOf(rows[i - 1]) !== grp);
+              const n = i + 1 - rows.slice(0, i).filter((x) => groupOf(x) !== grp).length;
               return (
-                <div key={r.key} className={`border-b border-hairline py-2 ${r.saved ? "bg-accent/[0.03]" : ""}`}>
+                <div key={r.key}>
+                {startsGroup && (
+                  <p className={`pb-1 text-xs font-semibold uppercase tracking-widest text-muted ${i > 0 ? "pt-4" : "pt-1"}`}>
+                    {grp === "warm" ? "Warm-up" : grp === "supp" ? suppLabel : "Main sets"}
+                  </p>
+                )}
+                <div className={`border-b border-hairline py-2 ${r.saved ? "bg-accent/[0.03]" : ""}`}>
                   <div className={`grid ${cols} items-center gap-2`}>
-                    <span className={`tabular pl-1 text-sm font-semibold ${r.warmup ? "text-muted" : ""}`}>
-                      {r.warmup ? "W" : i + 1 - rows.slice(0, i).filter((x) => x.warmup).length}
+                    <span className="tabular pl-1 text-sm font-semibold">
+                      {grouped ? n : i + 1}
                       {r.pct != null && (
                         <span className="block text-[11px] font-semibold leading-none text-accent">{Math.round(r.pct * 100)}%</span>
                       )}
@@ -1261,6 +1316,7 @@ function MovementLogger({
                       </button>
                     </div>
                   )}
+                </div>
                 </div>
               );
             })}

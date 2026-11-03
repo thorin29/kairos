@@ -940,6 +940,11 @@ null); `GET /api/v1/workouts/plan` workouts add `warmup` (the id or null);
 `current.warmupRoutine`; `programs/start` takes `warmupRoutine` ("" a plain
 check, unset keeps the old plan's).
 
+v0.623: `GET /api/v1/workouts` adds `loggedOther: [ { name, lines: [ { name,
+summary } ] } ]` (logged that day outside its plans, cardio and conditioning
+left out) and `loggedAny` (anything logged). A target set adds `supplemental:
+true` on BBB / FSL sets.
+
 **Suggestions (v0.612).**
 ```
 Suggestion: { "key","title","why","actions":[ { "answer","label" } ],"weight":num? }

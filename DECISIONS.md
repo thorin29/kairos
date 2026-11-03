@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — Grouped sets; past days show what was logged (v0.623.0 / app 0.431.0)
+
+**Grouped sets:** a lift with warm-up or supplemental sets shows them under
+their own headings — Warm-up, Main sets, then "5 × 10" or "5 × 5" — each
+numbered from 1. Target sets carry `supplemental` (BBB, FSL) as they carry
+`warmup`.
+
+**Past days:** the day page laid a past day out from today's plan, so after a
+program (or an import) rewrote the plan, last week's Chest day showed today's
+Deadlift card, unlogged, and nothing of what was actually done. Now:
+- `planIds`: the plan entries in effect that day (made before the day ended,
+  the same rule tasks and the phone already used); the web shows only those
+  for a past day.
+- `loggedOther`: everything logged that day outside those entries, by
+  session name, each movement's sets in a few words, under "Logged". Cardio
+  and conditioning are left out (their own cards show them).
+- `loggedAny`: "logging late" only shows on a past day with nothing logged;
+  the title names what was logged when nothing was planned.
+`GET /api/v1/workouts` adds `loggedOther` and `loggedAny`.
+
 ## 2026-11 — Warm-up routines; timer light or dark (v0.622.0 / app 0.430.0)
 
 **Warm-up routines.** A Warm-up plan entry is still done with one check, but

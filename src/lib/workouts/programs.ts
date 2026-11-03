@@ -588,6 +588,8 @@ export type TargetSet = {
   plus?: boolean;
   /** A warm-up set before the main sets (v0.621). */
   warmup?: boolean;
+  /** A supplemental set after them, BBB or FSL (v0.623). */
+  supplemental?: boolean;
 };
 export type LastSet = { weight: number | null; reps: number | null };
 
@@ -650,19 +652,20 @@ export function targetsFor(input: {
             { reps: 5, pct: 0.5, warmup: true },
             { reps: 3, pct: 0.6, warmup: true },
           ];
-    const extra: WaveSet[] =
+    const extra: (WaveSet & { supplemental?: boolean })[] =
       intent === "LIGHT" || !program.supplemental || main.length === 0
         ? []
         : program.supplemental === "FSL"
-          ? Array.from({ length: 5 }, () => ({ reps: 5, pct: main[0].pct }))
-          : Array.from({ length: 5 }, () => ({ reps: 10, pct: 0.5 }));
-    return [...warm, ...main, ...extra].map((s: WaveSet & { warmup?: boolean }, i) => ({
+          ? Array.from({ length: 5 }, () => ({ reps: 5, pct: main[0].pct, supplemental: true }))
+          : Array.from({ length: 5 }, () => ({ reps: 10, pct: 0.5, supplemental: true }));
+    return [...warm, ...main, ...extra].map((s: WaveSet & { warmup?: boolean; supplemental?: boolean }, i) => ({
       weight: trainingMax ? roundLoad(trainingMax * s.pct, unit) : (last[i]?.weight ?? null),
       reps: s.reps,
       top: s.top,
       pct: s.pct,
       ...(s.plus ? { plus: true } : {}),
       ...(s.warmup ? { warmup: true } : {}),
+      ...(s.supplemental ? { supplemental: true } : {}),
     }));
   }
 

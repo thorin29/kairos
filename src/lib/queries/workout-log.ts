@@ -1605,7 +1605,7 @@ export type MovementLog = {
     /** "Work up to a top set", "3 × 8–12". */
     scheme: string;
     /** `pct`: a 5/3/1 set's share of the training max (v0.619). */
-    sets: { weight: number | null; reps: number; top?: boolean; pct?: number; plus?: boolean; warmup?: boolean }[];
+    sets: { weight: number | null; reps: number; top?: boolean; pct?: number; plus?: boolean; warmup?: boolean; supplemental?: boolean }[];
   } | null;
   /** One suggestion card for this movement, or null (v0.612). */
   suggestion: Suggestion | null;
@@ -1866,7 +1866,85 @@ export type DayLogState = {
   suggestion: Suggestion | null;
   /** Today was made lighter: the share of the usual weights. */
   light: number | null;
+  /** The plan entries in effect that day (an entry made later wasn't part of
+   *  a past day), by id (v0.623). */
+  planIds: string[];
+  /** What was logged that day outside those plans — an older plan, a one-off
+   *  — so a past day always shows what was done (v0.623). Cardio and
+   *  conditioning are left out: their own cards show them. */
+  loggedOther: LoggedOther[];
+  /** Anything at all logged that day (not a rest). */
+  loggedAny: boolean;
 };
+
+export type LoggedOther = { name: string; lines: { name: string; summary: string }[] };
+
+/** The day's sessions outside its plans, by session name, each movement's
+ *  sets in a few words. */
+async function loggedOtherFor(
+  userId: string,
+  dateISO: string,
+  planned: NonNullable<TodayPlanned>[],
+): Promise<{ other: LoggedOther[]; any: boolean }> {
+  const rows = (await prisma.workoutSession.findMany({
+    where: { userId, date: toDateColumn(dateISO), isRest: false },
+    orderBy: { createdAt: "asc" },
+    select: {
+      name: true,
+      category: true,
+      sets: {
+        orderBy: [{ setNumber: "asc" }, { createdAt: "asc" }],
+        select: {
+          poolExerciseId: true,
+          swappedFromId: true,
+          weight: true,
+          reps: true,
+          seconds: true,
+          unit: true,
+          poolExercise: { select: { name: true } },
+          exercise: { select: { name: true } },
+        },
+      },
+    },
+  })) as {
+    name: string | null;
+    category: string | null;
+    sets: {
+      poolExerciseId: string | null;
+      swappedFromId: string | null;
+      weight: number | null;
+      reps: number | null;
+      seconds: number | null;
+      unit: string | null;
+      poolExercise: { name: string } | null;
+      exercise: { name: string } | null;
+    }[];
+  }[];
+  const slots = new Set(planned.flatMap((p) => p.exercises.map((e) => e.poolExerciseId)).filter(Boolean) as string[]);
+  const planNames = new Set(planned.map((p) => p.name.slice(0, 40).toLowerCase()));
+  const byName = new Map<string, Map<string, typeof rows[number]["sets"]>>();
+  for (const r of rows) {
+    if (r.category && (CARDIO_CATEGORIES.includes(r.category) || r.category === "HIIT")) continue;
+    const name = r.name?.trim() || (r.category ? (CATEGORY_LABEL as Record<string, string>)[r.category] ?? "Workout" : "Workout");
+    const sets = r.sets.filter((x) => !slots.has((x.swappedFromId ?? x.poolExerciseId) ?? ""));
+    if (r.sets.length > 0 && sets.length === 0) continue;
+    if (r.sets.length === 0 && planNames.has(name.slice(0, 40).toLowerCase())) continue;
+    const group = byName.get(name) ?? new Map();
+    for (const x of sets) {
+      const label = x.poolExercise?.name ?? x.exercise?.name ?? name;
+      group.set(label, [...(group.get(label) ?? []), x]);
+    }
+    byName.set(name, group);
+  }
+  const other: LoggedOther[] = [...byName.entries()].map(([name, group]) => ({
+    name,
+    lines:
+      group.size === 0
+        ? [{ name, summary: "Done" }]
+        : [...group.entries()].map(([m, sets]) => ({ name: m, summary: setsSummary(sets, sets[0]?.unit ?? null) || "Done" })),
+  }));
+  return { other, any: rows.length > 0 };
+}
 
 /** The day page's state for a person and date, read in a handful of queries. */
 export async function loadDayLogState(
@@ -1952,6 +2030,8 @@ export async function loadDayLogState(
     else if (t === cur.date) cur.rows.push(h);
   }
 
+  const logged = await loggedOtherFor(userId, dateISO, planned);
+
   const movements: Record<string, DayMovementState> = {};
   for (const slot of slots) {
     const today = bySlot.get(slot) ?? [];
@@ -1977,7 +2057,19 @@ export async function loadDayLogState(
     program: await programInfoFor(userId, dateISO),
     suggestion: await daySuggestionFor(userId, dateISO),
     light: await dayLightFactor(userId, dateISO),
+    planIds: [...new Set([...planned.map((p) => p.plannedWorkoutId), ...(await simplePlanIds(userId, dateISO))])],
+    loggedOther: logged.other,
+    loggedAny: logged.any,
   };
+}
+
+/** Plan entries in effect that day with nothing to log by movement (Warm-up,
+ *  Cardio, a one-number plan), which loadTodayPlannedWorkouts leaves out. */
+async function simplePlanIds(userId: string, dateISO: string): Promise<string[]> {
+  const rows = (await prisma.plannedWorkout.findMany({ where: dayPlanWhere(userId, dateISO), select: { id: true } })) as {
+    id: string;
+  }[];
+  return rows.map((r) => r.id);
 }
 
 export type WeekStripDay = {
