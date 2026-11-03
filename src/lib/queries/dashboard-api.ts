@@ -2,7 +2,8 @@ import { pendingSportPrompts } from "@/lib/workouts/generate";
 import "server-only";
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { loadPersonDay } from "@/lib/queries/overview";
-import { loadWorkoutPlanNames } from "@/lib/queries/workouts";
+import { loadWorkoutDayExtras, loadWorkoutPlanNames } from "@/lib/queries/workouts";
+import { sportLabels } from "@/lib/workouts/history-run";
 import { loadOverdueWorkoutDates } from "@/lib/queries/workout-log";
 import { loadReadingProgress, type ReadingProgress } from "@/lib/queries/reading";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
@@ -176,10 +177,24 @@ export async function loadApiDashboard(
     ? await Promise.all([loadSchoolProgress(userId), loadSchoolGetAhead(userId, today)])
     : [null, [] as Awaited<ReturnType<typeof loadSchoolGetAhead>>];
 
-  const [tasks, workoutNames] = await Promise.all([
+  const [tasks, workoutNames, workoutExtras, daySchedule] = await Promise.all([
     loadPersonDay(userId, dayISO),
     loadWorkoutPlanNames(userId),
+    loadWorkoutDayExtras(userId),
+    loadDaySchedule(dayISO),
   ]);
+  // The line under the home card's workout (v0.628): what else the day holds
+  // besides the program's lifts (conditioning, cardio, a workout of one's own),
+  // then a game on the calendar today by its kind and time ("Hockey game 7:30 PM").
+  const games = [...daySchedule.allDay, ...daySchedule.timed].filter(
+    (e) => e.attendees.some((a) => a.state !== "") && (e.ownerId === userId || e.memberIds.includes(userId)),
+  );
+  const gameKinds = await sportLabels(games.map((e) => e.eventId));
+  const gameLines = games
+    .sort((a, b) => a.startMin - b.startMin)
+    .map((e) => [gameKinds.get(e.eventId) ?? e.title, e.allDay ? "" : e.timeLabel.split(/\s[–-]\s/)[0]].filter(Boolean).join(" "));
+  const workoutLine = (dueISO: string) =>
+    [...(workoutExtras.get(dayOfWeek(dueISO)) ?? []), ...(dueISO === dayISO ? gameLines : [])].join(" \u00b7 ") || null;
 
   const rows: ApiTask[] = tasks.map((t) => {
     const dueISO = fromDateColumn(t.dueDate);
@@ -200,8 +215,9 @@ export async function loadApiDashboard(
           ? `ahead of ${formatShort(originalISO)}`
           : `moved from ${formatShort(originalISO)}`
         : null;
-    const subtitle =
-      t.category === Category.SCHOOL && sw
+    const subtitle = isWorkout
+      ? workoutLine(dueISO)
+      : t.category === Category.SCHOOL && sw
         ? [
             sw.class?.name ?? sw.subject,
             SCHOOL_TYPE_LABEL[sw.type],
@@ -288,7 +304,6 @@ export async function loadApiDashboard(
   // That matters because the app prefetches tomorrow while the server is up, and
   // a prefetched page with no schedule on it is the one gap a user would notice
   // on a morning when Kairos is down.
-  const daySchedule = await loadDaySchedule(dayISO);
   const schedule: ApiDashboard["schedule"] = [...daySchedule.allDay, ...daySchedule.timed]
     .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.startMin - b.startMin)
     .map((e) => ({

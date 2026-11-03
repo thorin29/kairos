@@ -342,7 +342,7 @@ export function WarmupTimer({
                 <button
                   type="button"
                   onClick={skip}
-                  className="min-h-[52px] flex-1 rounded-full border-2 text-base font-semibold"
+                  className="min-h-[52px] flex-1 rounded-full border text-base font-semibold"
                   style={{ borderColor: C.accent, color: C.accent }}
                 >
                   Skip

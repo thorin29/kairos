@@ -236,6 +236,53 @@ export async function loadWorkoutPlanNames(
   return out;
 }
 
+/**
+ * What else is on each weekday besides a program's lifts, for the line under
+ * the home card's title (v0.628): conditioning (the workout's name, else
+ * "Conditioning"), cardio, a sport, and workouts of one's own that aren't part
+ * of the program. Never the warm-up. Off a program the title already names
+ * every workout, so only days in a program have extras.
+ */
+export async function loadWorkoutDayExtras(userId: string): Promise<Map<number, string[]>> {
+  const [planned, program] = (await Promise.all([
+    prisma.plannedWorkout.findMany({
+      where: { userId, isRest: false },
+      orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
+      select: {
+        dayOfWeek: true,
+        name: true,
+        category: true,
+        hiitWorkout: { select: { name: true } },
+        exercises: { where: { programRole: { not: null } }, select: { programRole: true } },
+      },
+    }),
+    prisma.personProgram.findFirst({ where: { userId, status: "ACTIVE" }, select: { programKey: true } }),
+  ])) as [
+    {
+      dayOfWeek: number;
+      name: string;
+      category: string | null;
+      hiitWorkout: { name: string } | null;
+      exercises: { programRole: string | null }[];
+    }[],
+    { programKey: string } | null,
+  ];
+  const out = new Map<number, string[]>();
+  const prog = programByKey(program?.programKey);
+  if (!prog) return out;
+  for (const p of planned) {
+    if (p.category === "WARMUP" || p.exercises.length > 0) continue;
+    // "Rowing · 5/3/1" (the program's rowing day) reads as "Rowing" here.
+    const own = p.name.trim().replace(` \u00b7 ${prog.name}`, "");
+    const label = p.category === "HIIT" || p.hiitWorkout ? (p.hiitWorkout?.name ?? (own || "Conditioning")) : own;
+    if (!label) continue;
+    const list = out.get(p.dayOfWeek) ?? [];
+    if (!list.includes(label)) list.push(label);
+    out.set(p.dayOfWeek, list);
+  }
+  return out;
+}
+
 export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard> {
   const dow = dayOfWeek(todayISO);
   const today = toDateColumn(todayISO);

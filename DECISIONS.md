@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Thinner outlines; the home workout card's second line (v0.628.0 / app 0.436.0)
+
+**Outlines:** the secondary button outline is 1 px (it was 2 px from 0.627,
+which read as heavy). The accent colour is what makes it read as a button.
+
+**Home workout card:** the dashboard's workout task now has a `subtitle`
+(`loadWorkoutDayExtras` + the day's sport events): on a program day, the
+plan's other entries that aren't the program's lifts or the warm-up
+(conditioning by its workout's name, cardio, a workout of one's own), then any
+game on the calendar for the person that day (`sportLabels`: its event type or
+subscribed calendar, with its start time). Off a program the title already
+names every workout, so only games are added. The phone shows it under the
+title as Chores shows its second line, and the card is at least as tall as a
+two-line card.
+
+
 ## 2026-11 — Recent workouts by day; programs across changes; weights that hold (v0.627.0 / app 0.435.0)
 
 **One button style:** the workout pages had four slightly different "quiet"

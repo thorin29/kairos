@@ -981,6 +981,11 @@ was logged. `programs/start` with the running program's key carries it on
 (same start and week, plan entries outside the setup kept, a blank training
 max kept) instead of starting over.
 
+v0.628: the dashboard's workout task carries `subtitle`: what else the day
+holds besides a program's lifts (conditioning by name, cardio, a workout of
+one's own), then a game on the calendar that day by its kind and start time
+("Hockey game 7:30 PM"); null when there's nothing.
+
 **Suggestions (v0.612).**
 ```
 Suggestion: { "key","title","why","actions":[ { "answer","label" } ],"weight":num? }
