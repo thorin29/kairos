@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-11 — Core days (v0.637.0 / app 0.444.0)
+
+A Core day is a Weights · Core plan entry with a rotation (`PlannedWorkout.core`,
+JSON; migration 142). Add it from Add workout → Weights → Core → Core
+rotation (Pick movements still works as before); change it from the entry's
+Rotation button.
+- Core workouts: eight in code (`CORE_LIBRARY`, `core-library.ts`) and a
+  person's own (`CoreWorkout` table, made from the rotation list). Each
+  movement says how it's logged — reps, a timed hold, or weight × reps
+  (carries count lengths) — matching the movement library. The library ones
+  cover the core's jobs: resist arching (fallouts, hollow holds), resist
+  twisting (Pallof press, one-sided carries), resist side-bending (side
+  plank, suitcase carry), bend forward under load (leg raises, crunches) and
+  rotate with power (med-ball throws, slams) — Escamilla 2010 (rollouts
+  beat crunches), McGill's Big 3, Behm 2010 (heavy lifts already train the
+  core), Szymanski 2007 (med-ball rotational power).
+- The entry's movements are rewritten to the workout now due by
+  `syncCoreDays` (core-run.ts), run before the plan or a day is read: the
+  rotation moves on once the current workout was logged on an earlier day
+  that counts for that weekday (a missed week repeats it; logging never
+  swaps today's plan). Pure step in `stepCoreDay`, tested.
+- The monthly test goes first on the month's first core day — a max plank,
+  `hold:1x70-225` (1:10 PFT pass to 3:45 full marks) — then the week's
+  workout as usual, so the test day is the hardest core day, not the
+  easiest. Plank is kept out of the library workouts so the test never
+  collides with it (a plan entry holds a movement once).
+- New set scheme `hold:SxMIN-MAX` for timed holds: targets five seconds
+  past last time's shortest hold, within the range; target sets carry
+  `seconds`, and the loggers use them as the hint.
+- Library adds crunch, reverse crunch, bicycle crunch, V-up and flutter kick.
+
+
 ## 2026-11 — Core days, timed holds, two-row legend (v0.636.0 / app 0.443.0)
 
 - Workout days marks a day for a group trained without weights (a core day of

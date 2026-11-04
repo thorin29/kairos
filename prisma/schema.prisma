@@ -97,6 +97,7 @@ model User {
   concept2Results Concept2Result[]
   sharedPlans     SharedPlan[]
   warmupRoutines  WarmupRoutine[]
+  coreWorkouts    CoreWorkout[]
   plannedWorkouts  PlannedWorkout[]  @relation("PlannedWorkouts")
   books            Book[]
   chapterReads     UserChapterRead[]
@@ -1308,10 +1309,27 @@ model PlannedWorkout {
   /// A Warm-up entry's routine (v0.622): "lib:<key>" or a WarmupRoutine id;
   /// null is a plain check.
   warmup      String?
+  /// A Core day's rotation (v0.637): { rotation: ids, test, at, since,
+  /// testedMonth } (src/lib/workouts/core-library.ts). Null otherwise.
+  core        Json?
 
   exercises PlannedExercise[]
 
   @@index([userId, dayOfWeek])
+}
+
+/// A person's own core workout (v0.637): movements with their sets, as JSON
+/// ([{ name, poolExerciseId?, kind: "REPS"|"TIME"|"WEIGHT", sets, min, max }]).
+model CoreWorkout {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  moves     Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([ownerId])
 }
 
 /// A person's own warm-up routine (v0.622): steps of reps or timed holds, as

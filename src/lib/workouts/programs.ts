@@ -29,11 +29,14 @@ export type WaveSet = { reps: number; pct: number; top?: boolean; plus?: boolean
 export type Scheme =
   | { kind: "WAVE"; start?: string }
   | { kind: "RANGE"; sets: number; min: number; max: number }
-  | { kind: "SAME"; sets: number; reps: number };
+  | { kind: "SAME"; sets: number; reps: number }
+  /** Timed holds (v0.637): sets of `min`–`max` seconds — a plank, a hollow hold. */
+  | { kind: "HOLD"; sets: number; min: number; max: number };
 
 export function schemeKey(s: Scheme): string {
   if (s.kind === "WAVE") return s.start ? `wave:${s.start}` : "wave";
   if (s.kind === "RANGE") return `range:${s.sets}x${s.min}-${s.max}`;
+  if (s.kind === "HOLD") return `hold:${s.sets}x${s.min}-${s.max}`;
   return `same:${s.sets}x${s.reps}`;
 }
 
@@ -44,6 +47,8 @@ export function parseScheme(raw: string | null | undefined): Scheme | null {
   if (m) return { kind: "WAVE", start: m[1] };
   m = /^range:(\d+)x(\d+)-(\d+)$/.exec(raw);
   if (m) return { kind: "RANGE", sets: +m[1], min: +m[2], max: +m[3] };
+  m = /^hold:(\d+)x(\d+)-(\d+)$/.exec(raw);
+  if (m) return { kind: "HOLD", sets: +m[1], min: +m[2], max: +m[3] };
   m = /^same:(\d+)x(\d+)$/.exec(raw);
   if (m) return { kind: "SAME", sets: +m[1], reps: +m[2] };
   return null;
@@ -81,6 +86,7 @@ export function cleanPlanScheme(raw: unknown, todayISO: string, current?: string
   if (s.sets < 1 || s.sets > 10) return null;
   if (s.kind === "RANGE" && !(s.min >= 1 && s.max >= s.min && s.max <= 50)) return null;
   if (s.kind === "SAME" && !(s.reps >= 1 && s.reps <= 50)) return null;
+  if (s.kind === "HOLD" && !(s.min >= 5 && s.max >= s.min && s.max <= 600)) return null;
   return schemeKey(s);
 }
 
@@ -88,8 +94,12 @@ export function cleanPlanScheme(raw: unknown, todayISO: string, current?: string
 export function schemeLabel(s: Scheme): string {
   if (s.kind === "WAVE") return s.start ? "5/3/1 · work up to a top set" : "Work up to a top set";
   if (s.kind === "RANGE") return `${s.sets} × ${s.min}–${s.max}`;
+  if (s.kind === "HOLD") return s.min === s.max ? `${s.sets} × ${clock(s.min)}` : `${s.sets} × ${clock(s.min)}–${clock(s.max)}`;
   return `${s.sets} × ${s.reps}`;
 }
+
+/** Seconds as m:ss ("0:45", "1:10"). */
+export const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
 
 /** A slot in a program day, filled with one pool movement when it starts. */
 export type ProgramRole = {
@@ -611,8 +621,10 @@ export type TargetSet = {
   warmup?: boolean;
   /** A supplemental set after them, BBB or FSL (v0.623). */
   supplemental?: boolean;
+  /** A timed hold's target, seconds (v0.637); reps is 0 then. */
+  seconds?: number;
 };
-export type LastSet = { weight: number | null; reps: number | null };
+export type LastSet = { weight: number | null; reps: number | null; seconds?: number | null };
 
 /** Round to the nearest loadable weight: 5 lb, or 2.5 kg. */
 export function roundLoad(w: number, unit: string): number {
@@ -668,6 +680,15 @@ export function targetsFor(input: {
       { weight: at(0.85), reps: 3 },
       { weight: best, reps: 3, top: true },
     ];
+  }
+
+  if (scheme.kind === "HOLD") {
+    // Timed holds: five seconds past last time's shortest hold, within the
+    // range; no light or test weeks (v0.637).
+    const held = last.map((s) => s.seconds ?? 0).filter((x) => x > 0).slice(0, scheme.sets);
+    const shortest = held.length ? Math.min(...held) : scheme.min - 5;
+    const seconds = Math.min(scheme.max, Math.max(scheme.min, shortest + 5));
+    return Array.from({ length: scheme.sets }, () => ({ weight: null, reps: 0, seconds }));
   }
 
   if (scheme.kind === "WAVE") {

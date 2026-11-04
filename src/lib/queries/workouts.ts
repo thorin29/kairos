@@ -11,6 +11,7 @@ import { groupHistory } from "@/lib/workouts/history";
 import { loadProgramSpans, sportLabels } from "@/lib/workouts/history-run";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
+import { coreDayView, syncCoreDays } from "@/lib/workouts/core-run";
 import {
   CATEGORY_LABEL,
   LINE_COLORS,
@@ -112,6 +113,8 @@ export type PlanWorkout = {
   isRest: boolean;
   /** A Warm-up's routine (v0.622): "lib:<key>" or a routine id; null: a plain check. */
   warmup?: string | null;
+  /** A Core day's rotation (v0.637); null for anything else. */
+  core?: { rotation: string[]; test: boolean; at: number } | null;
   hiit: {
     id: string;
     type: WorkoutType;
@@ -288,6 +291,8 @@ export async function loadWorkoutDayExtras(userId: string): Promise<Map<number, 
 }
 
 export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard> {
+  // Core days move on to the workout now due before anything reads the plan (v0.637).
+  await syncCoreDays(undefined, todayISO);
   const dow = dayOfWeek(todayISO);
   const today = toDateColumn(todayISO);
 
@@ -378,6 +383,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           muscleGroup: true,
           isRest: true,
           warmup: true,
+          core: true,
           hiitWorkoutId: true,
           hiitWorkout: {
             select: {
@@ -706,6 +712,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       muscleGroup: MuscleGroup | null;
       isRest: boolean;
       warmup: string | null;
+      core: unknown;
       hiitWorkoutId: string | null;
       hiitWorkout: {
         type: WorkoutType;
@@ -743,6 +750,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           muscleGroup: w.muscleGroup,
           isRest: w.isRest,
           warmup: w.warmup,
+          core: coreDayView(w.core),
           hiit:
             w.hiitWorkoutId && w.hiitWorkout
               ? {

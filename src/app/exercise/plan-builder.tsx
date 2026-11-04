@@ -1,6 +1,7 @@
 "use client";
 
 import { WarmupPlanLine } from "./warmup-window";
+import { CorePlanLine, CoreRotationPicker } from "./core-days";
 import { useMemo, useState, useTransition } from "react";
 import { DAY_NAMES } from "@/lib/days";
 import { DateField } from "@/components/date-field";
@@ -11,6 +12,7 @@ import {
   copyDayPlan,
   removePlannedWorkout,
   saveSectionOrder,
+  setCoreDayAction,
   setPlannedScheme,
   setWeeklyStart,
   setWeeklyActive,
@@ -351,7 +353,9 @@ function DayRow({
                       .map((m) => formatHiitMovement(m))
                       .join(", ")}`}
                 </div>
-              ) : w.isRest ? null : w.exercises.length > 0 && (w.category === "WEIGHTS" || w.category == null) ? (
+              ) : w.isRest ? null : w.core ? (
+                <CorePlanLine userId={userId} pool={pool} workout={w} />
+              ) : w.exercises.length > 0 && (w.category === "WEIGHTS" || w.category == null) ? (
                 <ul className="mt-1 space-y-1">
                   {w.exercises.map((e) => (
                     <li key={e.id} className="flex items-center gap-2 text-xs text-muted">
@@ -457,6 +461,11 @@ function AddWorkoutModal({
   const [rest, setRest] = useState(false);
   const [saving, startSave] = useTransition();
   const [peek, setPeek] = useState<string | null>(null);
+  // Core (v0.637): a rotation of core workouts, or movements picked by hand.
+  const [coreMode, setCoreMode] = useState<"rotation" | "pick">("rotation");
+  const [coreRotation, setCoreRotation] = useState<string[]>([]);
+  const [coreTest, setCoreTest] = useState(true);
+  const [coreError, setCoreError] = useState("");
 
   const simple = isSimpleCategory(category);
   const metricOnly = METRIC_ONLY_CATEGORIES.includes(category) || simple;
@@ -498,9 +507,12 @@ function AddWorkoutModal({
     setPicked((prev) => ({ ...prev, [id]: { ...prev[id], metric } }));
 
   const chosen = Object.entries(picked);
+  const coreRot = category === "WEIGHTS" && muscle === "CORE" && coreMode === "rotation";
   const canSave = rest
     ? true
-    : isHiit
+    : coreRot
+      ? coreRotation.length > 0
+      : isHiit
       ? !!hiitId
       : metricOnly || chosen.length > 0;
 
@@ -509,6 +521,12 @@ function AddWorkoutModal({
     startSave(async () => {
       if (rest) {
         await addPlannedRestDay(userId, day);
+      } else if (coreRot) {
+        const r = await setCoreDayAction(userId, { day, rotation: coreRotation, test: coreTest });
+        if (!r.ok) {
+          setCoreError(r.error);
+          return;
+        }
       } else if (isHiit && hiitId === PICK_ON_THE_DAY) {
         // Conditioning with no workout chosen ahead: picked, built or
         // written on the day (v0.617).
@@ -619,7 +637,41 @@ function AddWorkoutModal({
             </div>
           )}
 
-          {rest ? (
+          {!rest && isWeights && muscle === "CORE" && (
+            <div className="flex overflow-hidden rounded-xl border border-accent text-sm font-semibold" role="radiogroup">
+              {(
+                [
+                  ["rotation", "Core rotation"],
+                  ["pick", "Pick movements"],
+                ] as const
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  role="radio"
+                  aria-checked={coreMode === k}
+                  onClick={() => setCoreMode(k)}
+                  className={`h-9 flex-1 ${coreMode === k ? "bg-accent text-on-accent" : "text-accent"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {coreRot ? (
+            <div>
+              <CoreRotationPicker
+                userId={userId}
+                pool={pool}
+                rotation={coreRotation}
+                onRotation={setCoreRotation}
+                test={coreTest}
+                onTest={setCoreTest}
+              />
+              {coreError && <p className="mt-2 text-sm text-red-700">{coreError}</p>}
+            </div>
+          ) : rest ? (
             <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
               Marks {DAY_NAMES[day]} as a planned rest day — no workout is
               expected and no prompt is created.
@@ -784,7 +836,7 @@ function AddWorkoutModal({
             onClick={save}
             className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-on-accent disabled:opacity-40"
           >
-            {saving ? "Adding…" : "Add workout"}
+            {saving ? "Adding…" : coreRot ? "Add core day" : "Add workout"}
           </button>
         </div>
       </div>

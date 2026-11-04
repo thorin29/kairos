@@ -34,6 +34,8 @@ import {
   warmupsForDay,
 } from "@/lib/workouts/warmup-run";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
+import { coreWorkoutsFor, deleteCoreWorkout, saveCoreWorkout, setCoreDay } from "@/lib/workouts/core-run";
+import type { CoreWorkout } from "@/lib/workouts/core-library";
 import { cardioDay, logCardio, removeCardio, setWarmupDone, type CardioEntry, type CardioIn } from "@/lib/workouts/cardio-run";
 import { loadDayOrders, orderForDay, saveDayOrder, type DayOrders } from "@/lib/workouts/day-order";
 import { conditioningFor, type ConditioningPlan } from "@/lib/workouts/conditioning-run";
@@ -1701,6 +1703,42 @@ export async function deleteWarmupRoutine(userId: string, id: string): Promise<v
   await requireCanActFor(userId);
   await deleteRoutine(userId, String(id));
   refresh();
+}
+
+// --- core days (v0.637) -------------------------------------------------------
+
+export async function loadCoreWorkouts(userId: string): Promise<CoreWorkout[]> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return coreWorkoutsFor(userId);
+}
+
+/** Save one's own core workout (new without an id). */
+export async function saveCoreWorkoutAction(userId: string, input: { id?: string | null; name: string; moves: unknown }) {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const r = await saveCoreWorkout(userId, input);
+  if (r.ok) refresh();
+  return r;
+}
+
+export async function deleteCoreWorkoutAction(userId: string, id: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await deleteCoreWorkout(userId, String(id));
+  refresh();
+}
+
+/** Make a Core day on `day`, or change the rotation of `plannedWorkoutId`. */
+export async function setCoreDayAction(
+  userId: string,
+  input: { plannedWorkoutId?: string | null; day?: number | null; rotation: string[]; test: boolean },
+) {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const r = await setCoreDay(userId, input);
+  if (r.ok) refresh();
+  return r;
 }
 
 /** A Warm-up plan entry's routine (null: a plain check). */

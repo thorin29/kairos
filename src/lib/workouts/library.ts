@@ -237,6 +237,11 @@ const STRENGTH: Short[] = [
   ["Russian twist", "CORE", "CORE", "", "R", "Sit leaning back with feet up, turn side to side touching the floor beside the hips. Each touch is a rep."],
   ["Dead bug", "CORE", "CORE", "", "R", "On your back, arms and knees up. Lower the opposite arm and leg toward the floor, back flat, switch."],
   ["Bird dog", "CORE", "CORE", "", "R", "On hands and knees, reach the opposite arm and leg out long, hold a second, switch."],
+  ["Crunch", "CORE", "CORE", "", "R", "On your back, knees bent, hands by the ears. Curl the shoulders off the floor, pause, lower."],
+  ["Reverse crunch", "CORE", "CORE", "", "R", "On your back, knees bent and up. Curl the hips off the floor, bringing the knees toward the chest, lower slowly."],
+  ["Bicycle crunch", "CORE", "CORE", "", "R", "On your back, hands by the ears. Bring one elbow toward the opposite knee as the other leg straightens, switch. Each side is a rep."],
+  ["V-up", "CORE", "CORE", "", "R", "Lie flat, arms overhead. Lift the arms and straight legs together to touch the toes, lower with control."],
+  ["Flutter kick", "CORE", "CORE", "", "R", "On your back, hands under the hips, legs straight and just off the floor. Kick them up and down in small, quick moves. Each four-count is a rep."],
   ["McGill curl-up", "CORE", "CORE", "", "R", "On your back, one knee bent, hands under the low back. Lift the head and shoulders just off the floor as one piece, hold 10 seconds, lower. Each hold is a rep."],
 ];
 

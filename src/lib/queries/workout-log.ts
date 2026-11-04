@@ -34,6 +34,8 @@ import { dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/w
 import type { Suggestion } from "@/lib/workouts/suggest";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
+import { coreDayView, coreWorkoutsFor, syncCoreDays } from "@/lib/workouts/core-run";
+import { coreMoveLabel, type CoreWorkout } from "@/lib/workouts/core-library";
 
 /**
  * The exercises scheduled for a person on a day, with any weight/reps already
@@ -436,6 +438,7 @@ export async function loadTodayPlannedWorkouts(
   userId: string,
   dayISO: string,
 ): Promise<NonNullable<TodayPlanned>[]> {
+  await syncCoreDays(userId);
   const system = await loadWorkoutUnitSystem();
 
   const plans = await prisma.plannedWorkout.findMany({
@@ -1278,6 +1281,9 @@ export type PlanWorkoutLite = {
   category: string | null;
   /** A Warm-up's routine (v0.622): "lib:<key>" or a routine id; null: a plain check. */
   warmup: string | null;
+  /** A Core day's rotation (v0.637): workout ids in order, the monthly plank
+   *  test, and which one is planned now. Null for anything else. */
+  core: { rotation: string[]; test: boolean; at: number } | null;
   /** Movements, each with its set structure (weights only carry one). */
   exercises: {
     poolExerciseId: string;
@@ -1292,6 +1298,7 @@ export type PlanWorkoutLite = {
 export type PlanDayLite = { day: number; workouts: PlanWorkoutLite[] };
 
 export async function loadPlan(userId: string): Promise<PlanDayLite[]> {
+  await syncCoreDays(userId);
   const rows = await prisma.plannedWorkout.findMany({
     where: { userId },
     orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
@@ -1302,6 +1309,7 @@ export async function loadPlan(userId: string): Promise<PlanDayLite[]> {
       category: true,
       isRest: true,
       warmup: true,
+      core: true,
       hiitWorkout: {
         select: {
           type: true,
@@ -1341,6 +1349,7 @@ export async function loadPlan(userId: string): Promise<PlanDayLite[]> {
       kind: w.isRest ? "REST" : blockKind((w.category ?? null) as Parameters<typeof blockKind>[0], !!w.hiitWorkout),
       category: (w.category as string | null) ?? null,
       warmup: (w as { warmup?: string | null }).warmup ?? null,
+      core: coreDayView((w as { core?: unknown }).core ?? null),
       exercises: (
         w.exercises as {
           tracked: boolean;
@@ -1420,7 +1429,18 @@ export type PlanOptions = {
   hiitWorkouts: { id: string; name: string; personal: boolean }[];
   /** Set structures a weights movement can take ("" = any sets; v0.615). */
   schemes: { key: string; label: string }[];
+  /** Core workouts for a Core day's rotation (v0.637): the library's and the person's own. */
+  coreWorkouts: CoreWorkoutView[];
 };
+
+/** A core workout as the plan editors show it, each movement with its sets in words. */
+export type CoreWorkoutView = Omit<CoreWorkout, "moves"> & {
+  moves: (CoreWorkout["moves"][number] & { label: string })[];
+};
+export const coreWorkoutView = (w: CoreWorkout): CoreWorkoutView => ({
+  ...w,
+  moves: w.moves.map((m) => ({ ...m, poolExerciseId: m.poolExerciseId ?? null, label: coreMoveLabel(m) })),
+});
 
 // Rowing, running and rucking are one Cardio in the plan picker (v0.615).
 const PLAN_CAT_ORDER = ["WEIGHTS", "HIIT", "CARDIO", "WARMUP", "STRETCHING", "ISOMETRIC", "SPORT"];
@@ -1444,13 +1464,14 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
     };
   });
 
-  const [exRows, hiit] = await Promise.all([
+  const [exRows, hiit, core] = await Promise.all([
     prisma.poolExercise.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true, category: true, muscleGroup: true, metric: true, about: true },
     }),
     loadBrowsableWorkouts(userId),
+    coreWorkoutsFor(userId),
   ]);
 
   return {
@@ -1469,6 +1490,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
     })),
     hiitWorkouts: hiit.map((w) => ({ id: w.id, name: w.name, personal: w.personal })),
     schemes: SCHEME_CHOICES.map((c) => ({ key: c.key, label: c.label })),
+    coreWorkouts: core.map(coreWorkoutView),
   };
 }
 
@@ -1640,7 +1662,7 @@ export type MovementLog = {
     /** "Work up to a top set", "3 × 8–12". */
     scheme: string;
     /** `pct`: a 5/3/1 set's share of the training max (v0.619). */
-    sets: { weight: number | null; reps: number; top?: boolean; pct?: number; plus?: boolean; warmup?: boolean; supplemental?: boolean }[];
+    sets: { weight: number | null; reps: number; seconds?: number; top?: boolean; pct?: number; plus?: boolean; warmup?: boolean; supplemental?: boolean }[];
   } | null;
   /** One suggestion card for this movement, or null (v0.612). */
   suggestion: Suggestion | null;
@@ -1838,7 +1860,7 @@ async function movementTarget(
           : handWave && bestForThree
             ? trainingMaxFrom(bestForThree, unit)
             : null,
-    last: lastSets.map((s) => ({ weight: s.weight, reps: s.reps })),
+    last: lastSets.map((s) => ({ weight: s.weight, reps: s.reps, seconds: s.seconds })),
     bestForThree,
     // Only a program's own main lift moves up by itself (v0.627).
     progress: !!fromProgram && !!role?.main && movement === slotId,

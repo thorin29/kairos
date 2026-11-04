@@ -925,6 +925,25 @@ time; a target set adds `warmup: true` on a 5/3/1 warm-up set (40/50/60% ×
 types (Push, Pull, Hinge, Core, Legs, Hamstrings). The week's activity readout
 gives rowing in metres and other distance in the household unit.
 
+**Core days (v0.637).**
+```
+GET  /api/v1/workouts/core-workouts         → { "workouts":[CoreWorkout] }
+     CoreWorkout: { "id","name","minutes","gear","mine":bool,"moves":[Move] }
+     Move: { "name","poolExerciseId"|null,"kind":"REPS"|"TIME"|"WEIGHT","sets","min","max","label" }
+     // TIME: min/max are seconds. Library ones first ("lib:<key>"), then the caller's own A–Z
+POST /api/v1/workouts/core-workouts         { "id"?,"name","moves":[{ "poolExerciseId","kind","sets","min","max" }] } → { "status":"ok","id" }
+POST /api/v1/workouts/core-workouts/delete  { "id" }                  // core days drop it from their rotation
+POST /api/v1/workouts/plan/core             { "day","rotation":[id],"test":bool } | { "plannedWorkoutId","rotation","test" } → { "status":"ok","id" }
+```
+A Core day is a Weights · Core plan entry with a rotation. The server keeps
+its movements on the workout now due (`syncCoreDays`, run when the plan or a
+day is loaded): the next workout once the current one was logged on an
+earlier day (a missed week repeats it), and on the first core day of a month
+the Marine Corps PFT plank (`hold:1x70-225`) first. `GET /api/v1/workouts/plan`
+workouts add `core` ({ rotation, test, at } or null); `plan/options` adds
+`coreWorkouts`. Set schemes add `hold:SxMIN-MAX` (timed holds, seconds), and
+a movement's `target.sets[]` carry `seconds` for those (reps 0).
+
 **Warm-up routines (v0.622).**
 ```
 GET  /api/v1/workouts/warmups         → { "routines":[ { "id","name","steps":[Step],"mine":bool } ] }
@@ -1395,7 +1414,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**179 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**182 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
