@@ -110,6 +110,16 @@ export async function hockeyEventTypeId(): Promise<string | null> {
   );
 }
 
+/** The event type for a skating session (public skate): one named for
+ *  skating, else none — never the hockey type (v0.641). */
+export async function skatingEventTypeId(): Promise<string | null> {
+  const types = (await prisma.eventType.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true },
+  })) as { id: string; name: string }[];
+  return types.find((t) => /skat/i.test(t.name) && !/hockey/i.test(t.name))?.id ?? null;
+}
+
 /** Each person's own Hockey layout (order + open sections), kept as one small
  *  setting per person so it follows them between their phone and their own
  *  computer. Shared devices (the wall tablet) keep one household layout of

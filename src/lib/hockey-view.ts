@@ -31,6 +31,11 @@ export type HockeyRow = {
 
 export type HockeySection = {
   name: string;
+  /** "skating" for public skate and other skating sessions, which aren't
+   *  hockey and aren't filed as hockey events (v0.641); else "hockey". */
+  kind: "hockey" | "skating";
+  /** The event type its "Add" uses; the page fills it in (`withEventTypes`). */
+  eventTypeId?: string | null;
   /** Column headings: "Skaters"/"Goalies", or "Signed up" alone. */
   colA: string;
   colB: string | null;
@@ -101,6 +106,23 @@ export function placeForRink(rink: string | null, places: SavedPlace[]): string 
   return partial?.address ?? null;
 }
 
+/** Skating, not hockey: ice-time says so (`kind`), or the name does
+ *  ("Public skate", "Learn to skate") when it's an older ice-time. */
+export function sectionKind(name: string, kind: unknown): "hockey" | "skating" {
+  if (kind === "skating") return "skating";
+  if (kind === "hockey") return "hockey";
+  return /\bskat/i.test(name) && !/hockey/i.test(name) ? "skating" : "hockey";
+}
+
+/** Each section's event type for "Add": a hockey type for hockey, a skating
+ *  type (or none) for skating. */
+export function withEventTypes<T extends { kind: "hockey" | "skating" }>(
+  sections: T[],
+  types: { hockey: string | null; skating: string | null },
+): (T & { eventTypeId: string | null })[] {
+  return sections.map((s) => ({ ...s, eventTypeId: s.kind === "skating" ? types.skating : types.hockey }));
+}
+
 /** "Drop-in: Rink", or just the section when the rink isn't named. */
 export function eventTitle(section: string, rink: string | null): string {
   return rink ? `${section}: ${rink}` : section;
@@ -123,6 +145,7 @@ export function buildHockeyView(
     const name = str((rs as Record<string, unknown>).name, 60);
     const rawRows = (rs as Record<string, unknown>).sessions;
     if (!name || !Array.isArray(rawRows)) continue;
+    const kind = sectionKind(name, (rs as Record<string, unknown>).kind);
     const rows: HockeyRow[] = [];
     for (const r of rawRows.slice(0, 500)) {
       if (!r || typeof r !== "object") continue;
@@ -164,7 +187,7 @@ export function buildHockeyView(
     }
     if (!rows.length) {
       // Keep the section so the web page can show its empty week.
-      sections.push({ name, colA: "Signed up", colB: null, rows, link: null, rink: null });
+      sections.push({ name, kind, colA: "Signed up", colB: null, rows, link: null, rink: null });
       continue;
     }
     rows.sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
@@ -172,6 +195,7 @@ export function buildHockeyView(
     const sectionRinks = [...new Set(rows.map((x) => x.rink).filter(Boolean))] as string[];
     sections.push({
       name,
+      kind,
       colA: split ? "Skaters" : "Signed up",
       colB: rows.some((x) => x.goalies) ? "Goalies" : null,
       rows,

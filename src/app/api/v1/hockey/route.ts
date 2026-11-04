@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { apiOk } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { loadHockey, hockeyEventTypeId, getHockeyPrefs } from "@/lib/hockey";
-import { arrangeSections } from "@/lib/hockey-view";
+import { loadHockey, hockeyEventTypeId, getHockeyPrefs, skatingEventTypeId } from "@/lib/hockey";
+import { arrangeSections, withEventTypes } from "@/lib/hockey-view";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,14 +22,16 @@ export async function GET(req: NextRequest) {
   const load = await loadHockey();
   if (load.state === "off") return apiOk({ state: "off" });
   if (load.state === "error") return apiOk({ state: "error", error: load.error });
-  const [typeId, prefs] = await Promise.all([
+  const [typeId, skateId, prefs] = await Promise.all([
     hockeyEventTypeId(),
+    skatingEventTypeId(),
     getHockeyPrefs(authed.device.person.id),
   ]);
   return apiOk({
     state: "ok",
     eventTypeId: typeId,
     ...load.view,
-    sections: arrangeSections(load.view.sections, prefs),
+    // Each section's own event type (v0.641): public skate isn't hockey.
+    sections: withEventTypes(arrangeSections(load.view.sections, prefs), { hockey: typeId, skating: skateId }),
   });
 }

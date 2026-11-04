@@ -123,17 +123,20 @@ export function HockeyBoard({
     return () => clearInterval(t);
   }, []);
 
-  const add = (r: HockeyRow) =>
+  // Each section's own event type (v0.641): public skate isn't a hockey event.
+  const add = (r: HockeyRow, sectionType: string | null | undefined) => {
+    const t = sectionType !== undefined ? sectionType : eventTypeId;
     openAt({
       title: r.add.title,
       date: r.date,
       start: r.start,
       end: r.end,
       endDayOffset: r.endDayOffset,
-      kind: eventTypeId ? `type:${eventTypeId}` : undefined,
+      kind: t ? `type:${t}` : undefined,
       location: r.add.location ?? undefined,
       userId: ownerId ?? undefined,
     });
+  };
 
   const first = view.days[0];
   const last = view.days[view.days.length - 1];
@@ -196,7 +199,7 @@ export function HockeyBoard({
               key={s.name}
               s={s}
               days={view.days}
-              onAdd={add}
+              onAdd={(r) => add(r, s.eventTypeId)}
               onToggle={() => toggle(s.name)}
               arranging={arranging}
               onUp={i > 0 ? () => move(i, -1) : undefined}

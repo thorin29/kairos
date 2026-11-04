@@ -6,6 +6,8 @@ import {
   spotsLeft,
   arrangeSections,
   cleanHockeyPrefs,
+  sectionKind,
+  withEventTypes,
 } from "@/lib/hockey-view";
 
 // A made-up rink and feed in ice-time's format; nothing household-specific.
@@ -142,5 +144,36 @@ describe("per-person layout", () => {
       secs.map((s) => s.name),
     );
     expect(cleanHockeyPrefs({ order: ["A", "A", 3, ""], open: "x" })).toEqual({ order: ["A"], open: [] });
+  });
+});
+
+describe("public skate (v0.641)", () => {
+  it("is skating, not hockey, by ice-time's kind or by its name", () => {
+    expect(sectionKind("Public skate", undefined)).toBe("skating");
+    expect(sectionKind("Learn to skate", undefined)).toBe("skating");
+    expect(sectionKind("Stick & puck", undefined)).toBe("hockey");
+    expect(sectionKind("Youth open hockey", undefined)).toBe("hockey");
+    expect(sectionKind("Freestyle", "skating")).toBe("skating");
+  });
+
+  it("gets the skating event type, never the hockey one", () => {
+    const v = buildHockeyView(
+      {
+        sections: [
+          {
+            name: "Public skate",
+            kind: "skating",
+            sessions: [
+              { start: "2026-10-27T13:00:00", end: "2026-10-27T15:00:00", rink: "Sample Arena", players: { enrolled: 4, max: null } },
+            ],
+          },
+        ],
+      },
+      { today: "2026-10-26", places: [] },
+    );
+    const [s] = withEventTypes(v.sections, { hockey: "h", skating: null });
+    expect(s.kind).toBe("skating");
+    expect(s.eventTypeId).toBeNull();
+    expect(s.rows[0].add.title).toBe("Public skate: Sample Arena");
   });
 });

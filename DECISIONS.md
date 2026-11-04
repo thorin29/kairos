@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — Public skate on the Hockey page (v0.641.0 / app 0.448.0)
+
+ice-time 0.1.3 adds a Public skate section and marks every section's `kind`
+("hockey" or "skating"). `sectionKind` reads it (or, from an older ice-time,
+guesses from the name: about skating and not hockey). `withEventTypes` gives
+each section its event type for "Add": the hockey type for hockey, a type
+named for skating (or none) for skating — never Hockey practice for a public
+skate. The page and `/api/v1/hockey` attach it per section; the phone uses a
+section's own type when the server sends `kind`. A public skate counts
+"Everyone" in ice-time: that's the counts having no skater/goalie split, not
+who may come.
+
+
 ## 2026-11 — Core day screen, like 5/3/1; carries log distance (v0.640.0 / app 0.447.0)
 
 - The Core day screen drops the per-movement cards and controls: each

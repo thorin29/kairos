@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { loadHockey, hockeyEventTypeId, getHockeyPrefs, webHockeyPrefsOwner } from "@/lib/hockey";
-import { arrangeSections } from "@/lib/hockey-view";
+import { loadHockey, hockeyEventTypeId, getHockeyPrefs, skatingEventTypeId, webHockeyPrefsOwner } from "@/lib/hockey";
+import { arrangeSections, withEventTypes } from "@/lib/hockey-view";
 import { loadEventTypes } from "@/lib/queries/calendar";
 import { loadClassCtx } from "@/lib/queries/class-ctx";
 import { currentUser } from "@/lib/user-session";
@@ -63,7 +63,10 @@ export default async function HockeyPage() {
     >
       <HockeyBoard
         view={load.view}
-        sections={arrangeSections(load.view.sections, prefs)}
+        sections={withEventTypes(arrangeSections(load.view.sections, prefs), {
+          hockey: typeId,
+          skating: await skatingEventTypeId(),
+        })}
         canSave={prefsOwner != null}
         eventTypeId={typeId}
         // On someone's own device the event is theirs; on the shared tablet
