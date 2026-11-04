@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-11 — Companion weights a step lighter (v0.633.0)
+
+From real use: 105 for 5 × 10 (after a 165 × 3) was a little heavy and 100
+was right. `weightForReps` now takes 5% off per set (at most 30%) instead of
+4% (at most 25%): from 165 × 3, 100 for 5 × 10, 115 for 3 × 10, 115 for 5 × 5.
+Web only; the phone shows the server's targets.
+
+
 ## 2026-11 — Companion weights by sets; neon timer numbers (v0.632.0 / app 0.440.0)
 
 **Companion weights:** the estimate from a heavier, lower-rep set picked a
