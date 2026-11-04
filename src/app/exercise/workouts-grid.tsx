@@ -54,6 +54,17 @@ import {
   type WorkoutType,
 } from "@/lib/workouts/catalog";
 import BodyMap from "@/components/body-map";
+import type { HeatMap } from "@/lib/workouts/heat";
+import {
+  HeatDetail,
+  HeatKey,
+  HeatRangeChips,
+  heatAvailable,
+  heatFills,
+  heatGroupOf,
+  rangeOf,
+  useHeatPrefs,
+} from "./heat-view";
 import {
   groupsFor,
   navRegionFor,
@@ -270,6 +281,7 @@ export function WorkoutsGrid({
                     <div>
                       <LiftBlocks
                         series={open.trackedSeries}
+                        heat={open.heat}
                         todayGroups={
                           open.planDays.find((d) => d.day === todayDow)
                             ?.groups ?? []
@@ -740,11 +752,19 @@ function byMuscleGroup(series: LiftSeries[]): { key: string; label: string; item
 function LiftBlocks({
   series,
   todayGroups = [],
+  heat,
 }: {
   series: LiftSeries[];
   /** Muscle groups today's plan asks for. The map opens on these. */
   todayGroups?: string[];
+  /** The heat view's data (v0.635). No toggle without it. */
+  heat?: HeatMap;
 }) {
+  const heatPrefs = useHeatPrefs();
+  const heatOn = !!heat && heatPrefs.on;
+  const heatRange = rangeOf(heat, heatPrefs.range);
+  const heatShade = useMemo(() => heatFills(heatRange), [heatRange]);
+  const [heatPicked, setHeatPicked] = useState<NavRegion | null>(null);
   const withBest = useMemo(() => series.filter((s) => s.best), [series]);
 
   // Which region selects each movement, and which groups it lights up. These
@@ -843,6 +863,42 @@ function LiftBlocks({
     <div className="space-y-4">
       {available.length > 0 && (
         <div className="relative">
+          {heat && (
+            <button
+              type="button"
+              onClick={() => heatPrefs.setOn(!heatOn)}
+              className={`absolute left-0 top-0 z-10 flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+                heatOn ? "border-accent bg-accent text-white" : "border-accent text-accent hover:bg-accent/10"
+              }`}
+              aria-label="Heat map"
+              aria-pressed={heatOn}
+              title="Heat map"
+            >
+              <FlameIcon className="h-4 w-4" />
+            </button>
+          )}
+          {heatOn ? (
+            <div className="space-y-3">
+              <BodyMap
+                selected={[]}
+                onSelect={setHeatPicked}
+                available={heatAvailable(heatRange)}
+                fillsFront={heatShade}
+                fillsBack={heatShade}
+              />
+              <HeatKey />
+              <HeatRangeChips value={heatPrefs.range} onChange={heatPrefs.setRange} />
+              {heatPicked && (
+                <HeatDetail
+                  nav={heatPicked}
+                  data={heatRange?.groups.find((g) => g.group === heatGroupOf(heatPicked))}
+                  unit={heat?.unit ?? ""}
+                  onClose={() => setHeatPicked(null)}
+                />
+              )}
+            </div>
+          ) : (
+          <>
           {picked && (
             <button
               type="button"
@@ -861,6 +917,8 @@ function LiftBlocks({
             fillsFront={fillsFront}
             fillsBack={fillsBack}
           />
+          </>
+          )}
         </div>
       )}
       {[...groups, ...orphanGroups].map((g) => (
@@ -1439,6 +1497,7 @@ function PersonalTop({
           </p>
           <LiftBlocks
             series={open.trackedSeries}
+            heat={open.heat}
             todayGroups={
               open.planDays.find((d) => d.day === todayDow)?.groups ?? []
             }

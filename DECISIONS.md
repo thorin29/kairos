@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-11 — Body-map heat view (v0.635.0 / app 0.442.0)
+
+A flame toggle on the body map swaps the primary/secondary view for hard sets
+a week per muscle, over 1 week, 4 weeks, 12 weeks (default), 6 months or all
+time; the toggle and range are kept per device. The server counts
+(`src/lib/workouts/heat.ts`, pure, tested; `heat-run.ts` loads), so both
+clients show the same numbers; it rides on the web board (`PersonWorkout.heat`)
+and `/api/v1/workouts/progress` (`heat`).
+
+What counts, from the research on hypertrophy and strength:
+- A set's credit is by proximity to failure, estimated from the person's own
+  best (Epley from sets of 12 or fewer, as of that day): within 5 reps of the
+  limit counts 1, 6–9 short ½, further off 0. Sets under half the day's top
+  weight for the movement (warm-ups) count 0. Bodyweight sets are judged
+  against the most reps logged.
+- How it felt overrides the estimate: Hard / Too hard → 1, Easy → at most ½.
+- The main muscle gets the credit; muscles it only assists get ½.
+- Heavy sets (6 reps or fewer at 80%+ of the estimated max) are counted on
+  their own, main muscle only — load matters for strength.
+- Shading: one hue, under 4 / 4–9 / 10+ a week; tapping a muscle opens a
+  pop-up with sets a week, heavy sets a week and the best weight at the most
+  common rep count for up to three movements, then → now.
+Warm-up and cardio sessions are left out. Deadlift shades the lower back and
+glutes, as the normal map does.
+
+
 ## 2026-11 — Progress is history, not the plan (v0.634.0 / app 0.441.0)
 
 The server already sent every movement with logged weights (v0.6xx), but

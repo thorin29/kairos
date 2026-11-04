@@ -32,6 +32,8 @@ import {
 import { loadActiveProgram, plannedSlotFor, programInfoFor, type ProgramInfo } from "@/lib/workouts/program-run";
 import { dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
 import type { Suggestion } from "@/lib/workouts/suggest";
+import type { HeatMap } from "@/lib/workouts/heat";
+import { loadHeat } from "@/lib/workouts/heat-run";
 
 /**
  * The exercises scheduled for a person on a day, with any weight/reps already
@@ -676,6 +678,8 @@ export type WorkoutProgress = {
    *  day that has one. Null when there's nothing to graph. */
   defaultId: string | null;
   history: WorkoutHistoryEntry[];
+  /** The body map's heat view: counted sets a week per muscle, per range (v0.635). */
+  heat?: HeatMap;
 };
 
 export async function loadWorkoutProgress(
@@ -992,7 +996,8 @@ export async function loadWorkoutProgress(
   // trained and the program it was part of (v0.627).
   const history: WorkoutHistoryEntry[] = groupHistory(sessions, await loadProgramSpans(userId), 20);
 
-  return { series, defaultId, history, planDays, defaultGroup };
+  const heat = await loadHeat(userId, todayISO, weightUnit);
+  return { series, defaultId, history, planDays, defaultGroup, heat };
 }
 
 export function historyResult(

@@ -970,6 +970,14 @@ the running program carries into its next block with these changes (same
 start date; maxes as sent), and plan entries the setup doesn't cover stay.
 `GET /api/v1/workouts/plan` movements add `about`.
 
+v0.635: `GET /api/v1/workouts/progress` adds `heat` — the body map's heat
+view: `{ unit, ranges: [{ key, label, groups: [{ group, perWeek, heavyPerWeek,
+level, bests: [{ name, kind, reps, from, to }] }] }] }`. `key` is 1w, 4w, 12w,
+6m or all; `perWeek` hard sets a week (assisting muscles ½), `heavyPerWeek`
+heavy sets a week, `level` 0–3 (none, under 4, 4–9, 10+); `bests` the best
+weight at the most common rep count (`kind` "weight") or most reps ("reps"),
+at the start of the range and now. Older servers omit it.
+
 v0.627: `GET /api/v1/workouts/progress` `history` is one entry per day:
 `{ id, ids, date, label, result, isRest }` — `ids` every session that day (to
 delete the day), `label` what was trained with the program it was part of

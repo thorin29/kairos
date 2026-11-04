@@ -9,6 +9,8 @@ import { loadDayOrders, type DayOrders } from "@/lib/workouts/day-order";
 import { programByKey } from "@/lib/workouts/programs";
 import { groupHistory } from "@/lib/workouts/history";
 import { loadProgramSpans, sportLabels } from "@/lib/workouts/history-run";
+import type { HeatMap } from "@/lib/workouts/heat";
+import { loadHeat } from "@/lib/workouts/heat-run";
 import {
   CATEGORY_LABEL,
   LINE_COLORS,
@@ -132,6 +134,8 @@ export type PersonWorkout = {
   weightSeries: GraphSeries[];
   /** Every tracked movement, not just today's. What the body map navigates. */
   trackedSeries: GraphSeries[];
+  /** The body map's heat view (v0.635). */
+  heat: HeatMap;
   /** Weekdays (0 = Sunday) the plan uses, with the muscle groups on each, so
    *  the attendance grid only draws rows that mean something. */
   planDays: { day: number; groups: string[] }[];
@@ -796,6 +800,11 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       exercises: defs,
       weightSeries,
       trackedSeries,
+      heat: await loadHeat(
+        person.id,
+        todayISO,
+        metricUnit("WEIGHT" as Metric, unitRaw === "metric" ? "metric" : "imperial"),
+      ),
       planDays,
       today: {
         scheduled: pausedName ? [] : scheduled,
