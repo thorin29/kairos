@@ -21,6 +21,7 @@ describe("warm-up countdown", () => {
       { step: 2, name: "Side plank · right", seconds: 20 },
     ]);
     expect(warmupIntervals(steps, 4)).toHaveLength(1);
+    expect(warmupIntervals(steps, 2, "right").map((x) => x.name)).toEqual(["Side plank · right", "Side plank · left"]);
     expect(warmupIntervals(steps, 0)).toHaveLength(0);
   });
   it("puts get-ready first and the chosen pause between", () => {

@@ -135,14 +135,22 @@ export function stepAmount(s: WarmupStep): string {
  */
 export type WarmupInterval = { step: number; name: string; seconds: number };
 
-export function warmupIntervals(steps: readonly WarmupStep[], from: number): WarmupInterval[] {
+/** Which side an each-side step starts on (v0.629: chosen on the timer). */
+export type FirstSide = "left" | "right";
+
+export function warmupIntervals(
+  steps: readonly WarmupStep[],
+  from: number,
+  first: FirstSide = "left",
+): WarmupInterval[] {
+  const [a, b] = first === "right" ? ["right", "left"] : ["left", "right"];
   const out: WarmupInterval[] = [];
   for (let i = from; i < steps.length; i++) {
     const s = steps[i];
     if (s.kind !== "TIME" || !s.seconds) break;
     if (s.sides) {
-      out.push({ step: i, name: `${s.name} · left`, seconds: s.seconds });
-      out.push({ step: i, name: `${s.name} · right`, seconds: s.seconds });
+      out.push({ step: i, name: `${s.name} · ${a}`, seconds: s.seconds });
+      out.push({ step: i, name: `${s.name} · ${b}`, seconds: s.seconds });
     } else {
       out.push({ step: i, name: s.name, seconds: s.seconds });
     }

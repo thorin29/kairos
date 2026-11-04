@@ -107,13 +107,16 @@ export async function applyLibrary(keys?: readonly string[] | null): Promise<{ a
 
   let tagged = 0;
   for (const t of plan.tag) {
-    const row = (await prisma.poolExercise.findUnique({ where: { id: t.id }, select: { about: true } })) as {
-      about: string | null;
-    } | null;
+    const row = (await prisma.poolExercise.findUnique({
+      where: { id: t.id },
+      select: { about: true, metric: true, category: true },
+    })) as { about: string | null; metric: string | null; category: string } | null;
     if (!row) continue;
+    // A bodyweight movement with no "Logs as" of its own logs reps (v0.629).
+    const reps = !row.metric && row.category === t.entry.category && t.entry.metric === "REPS";
     await prisma.poolExercise.update({
       where: { id: t.id },
-      data: { ...tags(t.entry), ...(row.about ? {} : { about: t.entry.about }) },
+      data: { ...tags(t.entry), ...(row.about ? {} : { about: t.entry.about }), ...(reps ? { metric: "REPS" as never } : {}) },
     });
     tagged++;
   }

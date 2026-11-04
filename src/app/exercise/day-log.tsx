@@ -705,16 +705,18 @@ function WarmupRow({
         </button>
       )}
       {!skipped && (
+        // A hollow check in the accent colour that fills in once done (v0.629);
+        // the card itself opens the routine.
         <button
           type="button"
           aria-pressed={finished}
+          aria-label={finished ? `${name} done` : `Mark ${name} done`}
           onClick={() => onDone(!finished)}
-          className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold ${
-            finished ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-accent bg-accent text-on-accent"
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[1.5px] border-accent transition-colors ${
+            finished ? "bg-accent text-on-accent" : "bg-surface text-accent hover:bg-accent/10"
           }`}
         >
-          <CheckIcon className="h-4 w-4" />
-          {finished ? "Done" : "Mark done"}
+          <CheckIcon className="h-5 w-5" />
         </button>
       )}
     </div>

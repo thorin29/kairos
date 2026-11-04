@@ -986,6 +986,11 @@ holds besides a program's lifts (conditioning by name, cardio, a workout of
 one's own), then a game on the calendar that day by its kind and start time
 ("Hockey game 7:30 PM"); null when there's nothing.
 
+v0.629: bodyweight movements (a library bodyweight movement with no "Logs as"
+of its own, or a movement from outside Weights in a weights plan) come with
+`metric: "REPS"` (migration 141 fixes existing plans), so the set logger asks
+for reps only.
+
 **Suggestions (v0.612).**
 ```
 Suggestion: { "key","title","why","actions":[ { "answer","label" } ],"weight":num? }

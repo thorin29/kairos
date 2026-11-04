@@ -580,6 +580,11 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
   const groupOf = new Map(pool.map((p) => [p.id, p.category === "WEIGHTS" && p.muscleGroup ? p.muscleGroup : "FULL_BODY"]));
   // A timed movement (a plank) keeps logging by time, with no set structure.
   const timed = new Set(pool.filter((p) => p.metric === "DURATION").map((p) => p.id));
+  // A bodyweight movement (push-ups, pull-ups kept under HIIT) logs reps, not a
+  // weight (v0.629); a weighted version is its own movement.
+  const repsOnly = new Set(
+    pool.filter((p) => p.metric === "REPS" || (p.category !== "WEIGHTS" && p.metric !== "DURATION")).map((p) => p.id),
+  );
 
   const prev = await snapshotPlan(userId);
   // The running program again (the next cycle with changes, or set up again
@@ -714,7 +719,7 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
             create: exercises.map((e, k) => ({
               poolExerciseId: e.poolExerciseId,
               tracked: true,
-              metric: timed.has(e.poolExerciseId) ? "DURATION" : "WEIGHT",
+              metric: timed.has(e.poolExerciseId) ? "DURATION" : repsOnly.has(e.poolExerciseId) ? "REPS" : "WEIGHT",
               sortOrder: k,
               scheme: timed.has(e.poolExerciseId) ? null : e.scheme,
               programRole: e.programRole,

@@ -9,6 +9,7 @@ import {
   warmupIntervals,
   warmupSchedule,
   warmupTotal,
+  type FirstSide,
   type WarmupStep,
 } from "@/lib/workouts/warmup-library";
 import { readPref, usePalette, writePref } from "./conditioning-timer";
@@ -18,6 +19,7 @@ type Phase = "idle" | "run" | "paused" | "done";
 const LEAD_KEY = "kairos.warmup.lead";
 const GAP_KEY = "kairos.warmup.gap";
 const SOUND_KEY = "kairos.warmup.sound";
+const SIDE_KEY = "kairos.warmup.side";
 
 /**
  * The warm-up countdown (v0.625): full screen in the timer's colours, the
@@ -39,7 +41,10 @@ export function WarmupTimer({
   onClose: () => void;
 }) {
   const C = usePalette();
-  const intervals = useMemo(() => warmupIntervals(steps, from), [steps, from]);
+  const [side, setSide] = useState<FirstSide>("left");
+  const intervals = useMemo(() => warmupIntervals(steps, from, side), [steps, from, side]);
+  // Each-side steps in this run: the timer asks which side to start on.
+  const hasSides = intervals.some((iv, i) => intervals[i + 1]?.step === iv.step);
   const [lead, setLead] = useState(5);
   const [gap, setGap] = useState(10);
   const [sound, setSound] = useState(true);
@@ -62,6 +67,7 @@ export function WarmupTimer({
     const g = Number(readPref(GAP_KEY, "10"));
     setGap((WARMUP_GAPS as readonly number[]).includes(g) ? g : 10);
     setSound(readPref(SOUND_KEY, "on") !== "off");
+    setSide(readPref(SIDE_KEY, "left") === "right" ? "right" : "left");
   }, []);
 
   const beep = useCallback((freq: number, ms: number) => {
@@ -293,6 +299,28 @@ export function WarmupTimer({
                 </button>
               ))}
             </div>
+            {hasSides && (
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <span className="w-24 text-right text-sm" style={{ color: C.soft }}>
+                  Start on
+                </span>
+                {(["left", "right"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-pressed={side === v}
+                    onClick={() => {
+                      setSide(v);
+                      writePref(SIDE_KEY, v);
+                    }}
+                    className="min-h-[36px] min-w-[64px] rounded-full border px-3 text-sm font-semibold"
+                    style={chip(side === v)}
+                  >
+                    {v === "left" ? "Left" : "Right"}
+                  </button>
+                ))}
+              </div>
+            )}
             {intervals.length > 1 && (
               <div className="flex flex-wrap items-center justify-center gap-1.5">
                 <span className="w-24 text-right text-sm" style={{ color: C.soft }}>

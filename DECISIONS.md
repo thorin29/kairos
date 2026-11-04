@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-11 — Bodyweight movements log reps; warm-up check; first side (v0.629.0 / app 0.437.0)
+
+**Reps only for bodyweight:** a program's lifts were planned with metric
+WEIGHT whatever the movement, so push-ups (and pull-ups kept under HIIT)
+asked for a weight. Starting a program now plans a movement whose pool
+"Logs as" is REPS, or one from outside Weights, as REPS. The library's
+bodyweight movements set REPS on a matching pool movement with no "Logs as"
+when tagged. Migration 141 does both for existing data (by library key) and
+fixes plan entries. A weighted version (weighted pull-ups) is its own
+movement.
+
+**Warm-up card:** the Mark done button is a hollow accent check that fills in
+when done; the card opens the routine (Mark done stays in the window).
+
+**First side:** the warm-up timer asks Left or Right (kept on the device)
+when its run has an each-side step; `warmupIntervals(…, first)`.
+
+
 ## 2026-11 — Thinner outlines; the home workout card's second line (v0.628.0 / app 0.436.0)
 
 **Outlines:** the secondary button outline is 1 px (it was 2 px from 0.627,
