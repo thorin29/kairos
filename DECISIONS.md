@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-11 — Progress is history, not the plan (v0.634.0 / app 0.441.0)
+
+The server already sent every movement with logged weights (v0.6xx), but
+both clients narrowed what they drew to the movements the current plan
+tracks whenever there was a plan: the web's `trackedSeries`, the phone's
+`universe` in WorkoutChart. Changing programs (Arms no longer programmed)
+made Arms vanish from the body map (not selectable), the records and the
+Workout days grid. Both now draw every movement with logged weights; the plan
+still decides what the map opens on (today's groups) and the "today" slice.
+
+
 ## 2026-11 — Companion weights a step lighter (v0.633.0)
 
 From real use: 105 for 5 × 10 (after a 165 × 3) was a little heavy and 100

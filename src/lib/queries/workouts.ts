@@ -592,31 +592,22 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       .filter((s) => s.points.length > 0);
 
     const todayPoolIds = new Set<string>();
-    // Graphable universe = movements a plan marks TRACKED, matching the phone,
-    // which has always graphed tracked movements only. Without this the web also
-    // charted anything ever logged (an extra/custom workout), so the same person
-    // saw different lifts on the two clients.
-    const trackedPoolIds = new Set<string>();
+    // Today's planned movements, for the places that mean "today".
     for (const w of plannedRows as unknown as {
       dayOfWeek: number;
       exercises: { poolExerciseId: string; tracked: boolean }[];
     }[]) {
-      for (const e of w.exercises) {
-        if (e.tracked) trackedPoolIds.add(e.poolExerciseId);
-      }
       if (w.dayOfWeek === dow) {
         for (const e of w.exercises) todayPoolIds.add(e.poolExerciseId);
       }
     }
 
-    // Everything the person tracks, whatever day it belongs to. The body map
-    // navigates by muscle, not by date, so narrowing this to today would make
-    // every other region unreachable — not merely unselected, but absent from
-    // the payload and therefore dead on the page.
-    const trackedSeries: GraphSeries[] =
-      trackedPoolIds.size > 0
-        ? allSeries.filter((s) => trackedPoolIds.has(s.exerciseId))
-        : allSeries;
+    // Everything the person has ever logged a weight for, whatever the plan or
+    // program is now (v0.634): the body map, records and Workout days grid are
+    // history. Narrowing to the plan's tracked movements made a muscle no longer
+    // programmed (Arms) vanish from all three, its records unreachable. The
+    // body map navigates by muscle, not by date, so it isn't narrowed to today.
+    const trackedSeries: GraphSeries[] = allSeries;
 
     // Today's slice, kept for the places that really do mean "today".
     let weightSeries = trackedSeries;
