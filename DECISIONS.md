@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — Timer numbers: font and colour (v0.630.0 / app 0.438.0)
+
+The workout timers (conditioning and warm-up) take a number font (Standard,
+Condensed, Monospace, Serif) and colour (Plain, Theme colour, Amber, Green,
+Red, Blue), kept on the device like the timer's look (`TIMER_FONT_KEY`,
+`TIMER_COLOR_KEY`, `useDigits` in conditioning-timer.tsx), set in the
+profile's Workout timer card. Get-ready and rest keep their own colours so
+they still stand out. The phone has the same under Settings → Appearance.
+
+Checked: 5/3/1's warm-up sets are 40% × 5, 50% × 5, 60% × 3 of the training
+max (Wendler; not in the deload week), as built.
+
+
 ## 2026-11 — Bodyweight movements log reps; warm-up check; first side (v0.629.0 / app 0.437.0)
 
 **Reps only for bodyweight:** a program's lifts were planned with metric

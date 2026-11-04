@@ -72,6 +72,42 @@ export function usePalette(): Palette {
   return p;
 }
 
+/** The timer's numbers on this device (v0.630): a font and a colour, set in
+ *  the profile's Workout timer card (the phone's Appearance has the same). */
+export const TIMER_FONT_KEY = "kairos.timer.font";
+export const TIMER_COLOR_KEY = "kairos.timer.color";
+export const TIMER_FONTS = [
+  ["standard", "Standard"],
+  ["condensed", "Condensed"],
+  ["mono", "Monospace"],
+  ["serif", "Serif"],
+] as const;
+export const TIMER_COLORS = [
+  ["plain", "Plain"],
+  ["accent", "Theme colour"],
+  ["amber", "Amber"],
+  ["green", "Green"],
+  ["red", "Red"],
+  ["blue", "Blue"],
+] as const;
+const FONT_FAMILY: Record<string, string | undefined> = {
+  condensed: '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", sans-serif-condensed, sans-serif',
+  mono: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+  serif: 'Georgia, "Times New Roman", serif',
+};
+const DIGIT_COLOR: Record<string, string> = { amber: "#f59e0b", green: "#22c55e", red: "#ef4444", blue: "#3b82f6" };
+
+/** The digits' font family and colour (undefined: the timer's own). */
+export function useDigits(C: Palette): { fontFamily?: string; color?: string } {
+  const [d, setD] = useState<{ fontFamily?: string; color?: string }>({});
+  useEffect(() => {
+    const font = readPref(TIMER_FONT_KEY, "standard");
+    const color = readPref(TIMER_COLOR_KEY, "plain");
+    setD({ fontFamily: FONT_FAMILY[font], color: color === "accent" ? C.accent : DIGIT_COLOR[color] });
+  }, [C]);
+  return d;
+}
+
 export function readPref(key: string, fallback: string): string {
   try {
     return window.localStorage.getItem(key) ?? fallback;
@@ -113,6 +149,7 @@ export function ConditioningTimer({
   logLabel?: string;
 }) {
   const C = usePalette();
+  const D = useDigits(C);
   const plan = useMemo(
     () => timerPlanFor(workout.type, workout.capSec, workout.movements.map((m) => m.name)),
     [workout],
@@ -371,7 +408,12 @@ export function ConditioningTimer({
           </span>
           <span
             className="tabular font-bold leading-none"
-            style={{ fontSize: 84, letterSpacing: "-0.02em", color: leading ? C.ready : restNow ? C.rest : C.ink }}
+            style={{
+              fontSize: 84,
+              letterSpacing: "-0.02em",
+              fontFamily: D.fontFamily,
+              color: leading ? C.ready : restNow ? C.rest : (D.color ?? C.ink),
+            }}
           >
             {clock}
           </span>

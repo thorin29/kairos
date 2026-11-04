@@ -12,7 +12,7 @@ import {
   type FirstSide,
   type WarmupStep,
 } from "@/lib/workouts/warmup-library";
-import { readPref, usePalette, writePref } from "./conditioning-timer";
+import { readPref, useDigits, usePalette, writePref } from "./conditioning-timer";
 
 type Phase = "idle" | "run" | "paused" | "done";
 
@@ -41,6 +41,7 @@ export function WarmupTimer({
   onClose: () => void;
 }) {
   const C = usePalette();
+  const D = useDigits(C);
   const [side, setSide] = useState<FirstSide>("left");
   const intervals = useMemo(() => warmupIntervals(steps, from, side), [steps, from, side]);
   // Each-side steps in this run: the timer asks which side to start on.
@@ -263,7 +264,7 @@ export function WarmupTimer({
           <span className="text-2xl font-bold">{phase === "done" ? "Warm-up done" : current.name}</span>
           <span
             className="tabular font-bold leading-none"
-            style={{ fontSize: 96, letterSpacing: "-0.02em", color: ready ? C.ready : C.ink }}
+            style={{ fontSize: 96, letterSpacing: "-0.02em", fontFamily: D.fontFamily, color: ready ? C.ready : (D.color ?? C.ink) }}
           >
             {clockText(shown)}
           </span>
