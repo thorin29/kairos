@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-11 — Core day screen, like 5/3/1; carries log distance (v0.640.0 / app 0.447.0)
+
+- The Core day screen drops the per-movement cards and controls: each
+  movement is a heading (name, today's target, ⓘ) over its set cards, like
+  5/3/1's Warm-up / Main sets. Skip (the whole workout), Timer and Log sit
+  once at the bottom; the timer's time goes into the next open timed set
+  down the page (filled, ticked by you). One "how did it feel" at the end,
+  saved against every movement (the heat map reads effort per movement). No
+  "Same as last time" there: the greyed hints already are last time (or the
+  target), and ticking a blank set logs its hint. Web: `SectionHandle`
+  (save, skip, takeSeconds, feel) registered by each embedded
+  `MovementLogger`.
+- Carries (`isCarry`: "carry"/"farmer" in the name) log weight × distance:
+  the reps field is yards (metres with kg), `MovementLog.repsUnit`, the
+  target reads "3 × 40 yd", and best-at-reps chips are off. Library carries
+  say "Log the weight and the distance"; core workouts plan 3 × 40 yd.
+
+
 ## 2026-11 — Core day on one screen; Weights → Strength (v0.639.0 / app 0.446.0)
 
 - A Core day shows as one card on the day page (name, "6 movements · 2

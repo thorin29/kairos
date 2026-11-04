@@ -150,7 +150,7 @@ const STRENGTH: Short[] = [
   ["Dumbbell Romanian deadlift", "DEADLIFT", "HINGE", "dumbbells", "W", "Romanian deadlift holding dumbbells in front of the thighs."],
   ["Dumbbell thruster", "FULL_BODY", "SQUAT", "dumbbells", "W", "Dumbbells at the shoulders, squat, and press them overhead as you stand."],
   ["Dumbbell snatch", "FULL_BODY", "HINGE", "dumbbells", "W", "One dumbbell between the feet. Hinge, then drive up fast and punch it overhead in one move."],
-  ["Farmer carry", "FULL_BODY", "CARRY", "dumbbells", "W", "Heavy dumbbell in each hand, walk tall with short steps. Log the weight; reps are lengths."],
+  ["Farmer carry", "FULL_BODY", "CARRY", "dumbbells", "W", "Heavy dumbbell in each hand, walk tall with short steps. Log the weight and the distance."],
   // Kettlebells
   ["Kettlebell swing", "FULL_BODY", "HINGE", "kettlebells", "W", "Hike the bell back between the legs, then snap the hips forward to float it to chest height. Arms just guide it."],
   ["Goblet squat", "LEGS", "SQUAT", "kettlebells", "W", "Hold a bell at the chest by the horns, squat between the knees, stand up."],
@@ -165,9 +165,9 @@ const STRENGTH: Short[] = [
   ["Turkish get-up", "FULL_BODY", "CORE", "kettlebells", "W", "Lie down holding the bell straight up. Stand up step by step keeping it overhead and your eyes on it, then reverse. Reps are each side."],
   ["Kettlebell windmill", "CORE", "CORE", "kettlebells", "W", "Bell overhead, feet angled. Push the hip out and slide the other hand down the leg, keeping the bell arm vertical."],
   ["Kettlebell halo", "SHOULDERS", "MOBILITY", "kettlebells", "W", "Hold a light bell upside down by the horns and circle it around the head. Change direction each set."],
-  ["Front rack carry", "FULL_BODY", "CARRY", "kettlebells", "W", "Bells racked at the shoulders, walk tall. Reps are lengths."],
-  ["Suitcase carry", "CORE", "CARRY", "kettlebells", "W", "One heavy bell in one hand, walk without leaning. Switch hands each length."],
-  ["Overhead carry", "CORE", "CARRY", "kettlebells", "W", "One bell locked out overhead, walk tall without leaning. Switch hands each length."],
+  ["Front rack carry", "FULL_BODY", "CARRY", "kettlebells", "W", "Bells racked at the shoulders, walk tall. Log the weight and the distance."],
+  ["Suitcase carry", "CORE", "CARRY", "kettlebells", "W", "One heavy bell in one hand, walk without leaning. Switch hands halfway. Log the weight and the distance."],
+  ["Overhead carry", "CORE", "CARRY", "kettlebells", "W", "One bell locked out overhead, walk tall without leaning. Switch hands halfway. Log the weight and the distance."],
   // Steel clubs
   ["Club mill", "SHOULDERS", "MOBILITY", "clubs", "W", "Club behind the head, swing it around and down the front, then back over the other shoulder. Alternate sides."],
   ["Shield cast", "SHOULDERS", "MOBILITY", "clubs", "W", "Club upright at the chest, drop it behind one shoulder and bring it back round the other side to the chest."],
@@ -176,7 +176,7 @@ const STRENGTH: Short[] = [
   ["Club torch press", "SHOULDERS", "PUSH", "clubs", "W", "Club held upright like a torch at the shoulder, press it overhead keeping it vertical."],
   ["Club order squat", "LEGS", "SQUAT", "clubs", "W", "Hold the club upright at the chest with both hands and squat."],
   // Sandbags
-  ["Sandbag carry", "FULL_BODY", "CARRY", "sandbags", "W", "Hug the bag to the chest or carry it on a shoulder and walk. Reps are lengths."],
+  ["Sandbag carry", "FULL_BODY", "CARRY", "sandbags", "W", "Hug the bag to the chest or carry it on a shoulder and walk. Log the weight and the distance."],
   ["Sandbag clean", "FULL_BODY", "HINGE", "sandbags", "W", "Bag on the floor, hinge to grab it, pull it into the lap, then stand and drive it up to the chest."],
   ["Sandbag squat", "LEGS", "SQUAT", "sandbags", "W", "Hug the bag at the chest and squat."],
   ["Sandbag over shoulder", "FULL_BODY", "HINGE", "sandbags", "W", "Lift the bag from the floor and throw it over one shoulder. Alternate sides."],

@@ -1676,6 +1676,8 @@ export type MovementLog = {
   /** The movement being done, and its how-to for ⓘ (v0.613). */
   name: string;
   about: string | null;
+  /** What the reps field counts, when not reps: "yd" / "m" for a carry (v0.640). */
+  repsUnit?: string | null;
 };
 
 const setRow = (s: { weight: number | null; reps: number | null; seconds: number | null }): MovementSetRow => ({
@@ -1771,15 +1773,20 @@ export async function loadMovementLog(
     dayLightFactor(userId, dateISO),
     prisma.poolExercise.findUnique({
       where: { id: movement },
-      select: { muscleGroup: true, name: true, about: true },
+      select: { muscleGroup: true, name: true, about: true, pattern: true },
     }) as Promise<{
       muscleGroup: string | null;
       name: string;
       about: string | null;
+      pattern: string | null;
     } | null>,
     loadWeightUnits(),
   ]);
   const unit = (poolRow?.muscleGroup && units[poolRow.muscleGroup as MuscleGroup]) || "lb";
+  // A carry logs the weight and the distance walked (v0.640): the reps field
+  // is yards (metres in metric).
+  const repsUnit = isCarry(poolRow) ? (unit === "kg" ? "m" : "yd") : null;
+  if (repsUnit && target && !/[a-z]$/i.test(target.scheme)) target = { ...target, scheme: `${target.scheme} ${repsUnit}` };
   // A lighter day (a suggestion answered): today's targets, or last time's
   // sets, at 80% (90% easing back in), in place of the usual hints.
   if (light) {
@@ -1818,8 +1825,13 @@ export async function loadMovementLog(
     recentTop,
     name: poolRow?.name ?? "",
     about: poolRow?.about ?? null,
+    repsUnit,
   };
 }
+
+/** A loaded carry (suitcase, farmer, overhead…): logged as weight and distance. */
+export const isCarry = (p: { pattern?: string | null; name?: string } | null | undefined) =>
+  !!p && /\bcarry\b|farmer/i.test(p.name ?? "");
 
 /** A planned movement's targets for a day, from its set scheme and the
  *  person's program (v0.611). Null when the movement has no scheme. */

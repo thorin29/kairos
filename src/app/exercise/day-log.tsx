@@ -72,6 +72,15 @@ function dayLabel(iso: string): string {
   return `${WEEKDAY_LONG[dayOfWeek(iso)]}, ${MONTH[m - 1]} ${d}`;
 }
 
+/** What a Core day's screen can ask of one movement's section (v0.640). */
+type SectionHandle = {
+  save: () => Promise<void>;
+  skip: (want: boolean) => Promise<void>;
+  /** The timer's time into this section's next open timed set; false if it has none. */
+  takeSeconds: (seconds: number) => boolean;
+  feel: (effort: Effort | null, hurt: HurtArea | null) => void;
+};
+
 type OpenMovement = {
   workoutId: string;
   exercise: PlanExercise;
@@ -998,18 +1007,25 @@ function CoreLogger({
   completedOnISO?: string;
   onBack: () => void;
 }) {
-  const saves = useRef(new Map<string, () => Promise<void>>());
-  const register = useCallback((slot: string, save: () => Promise<void>) => {
-    saves.current.set(slot, save);
+  const sections = useRef(new Map<string, SectionHandle>());
+  const register = useCallback((slot: string, h: SectionHandle) => {
+    sections.current.set(slot, h);
   }, []);
+  const ordered = () =>
+    moves.map((m) => sections.current.get(m.ex.poolExerciseId)).filter((h): h is SectionHandle => !!h);
   const [leaving, setLeaving] = useState(false);
+  const [skipped, setSkipped] = useState(false);
+  const [timing, setTiming] = useState(false);
+  const [effort, setEffort] = useState<Effort | null>(null);
+  const [hurt, setHurt] = useState<HurtArea | null>(null);
+  const timed = moves.some((m) => m.metric === "DURATION");
   const finish = async () => {
     setLeaving(true);
-    await Promise.all([...saves.current.values()].map((f) => f().catch(() => {})));
+    await Promise.all(ordered().map((h) => h.save().catch(() => {})));
     onBack();
   };
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <button
         type="button"
         onClick={() => void finish()}
@@ -1021,28 +1037,68 @@ function CoreLogger({
       </button>
       <h2 className="font-display text-2xl font-semibold">{title}</h2>
       {moves.map(({ ex, metric }) => (
-        <section key={ex.poolExerciseId} className="rounded-2xl border border-hairline bg-surface/60 p-4">
-          <MovementLogger
-            userId={userId}
-            dateISO={dateISO}
-            late={late}
-            workoutId={workoutId}
-            exercise={ex}
-            metric={metric}
-            completedOnISO={completedOnISO}
-            onBack={() => {}}
-            embedded={register}
+        <MovementLogger
+          key={ex.poolExerciseId}
+          userId={userId}
+          dateISO={dateISO}
+          late={late}
+          workoutId={workoutId}
+          exercise={ex}
+          metric={metric}
+          completedOnISO={completedOnISO}
+          onBack={() => {}}
+          embedded={register}
+        />
+      ))}
+      {!skipped && (
+        <section className="rounded-2xl border border-hairline bg-surface px-4 py-3">
+          <EffortPicker
+            question={`How did ${title.replace(/^Core · /, "").toLowerCase()} feel?`}
+            effort={effort}
+            hurt={hurt}
+            onChange={(e, h) => {
+              setEffort(e);
+              setHurt(h);
+              for (const s of ordered()) s.feel(e, h);
+            }}
           />
         </section>
-      ))}
-      <PlanActionTile
-        icon={CheckIcon}
-        label={leaving ? "Saving" : "Log"}
-        filled
-        loading={leaving}
-        disabled={leaving}
-        onClick={() => void finish()}
-      />
+      )}
+      <div className="grid grid-cols-3 gap-2">
+        <PlanActionTile
+          icon={MoonIcon}
+          label={skipped ? "Skipped" : "Skip"}
+          dim={skipped}
+          pressed={skipped}
+          onClick={() => {
+            const want = !skipped;
+            setSkipped(want);
+            for (const s of ordered()) void s.skip(want);
+          }}
+        />
+        <PlanActionTile icon={TimerIcon} label="Timer" onClick={() => setTiming(true)} disabled={!timed || skipped} />
+        <PlanActionTile
+          icon={CheckIcon}
+          label={leaving ? "Saving" : "Log"}
+          filled
+          loading={leaving}
+          disabled={leaving}
+          onClick={() => void finish()}
+        />
+      </div>
+      {timing && (
+        <ConditioningTimer
+          userId={userId}
+          workout={{ name: title, type: "FOR_TIME", capSec: null, movements: [], resultLabel: "Time", today: null }}
+          lastText={null}
+          logLabel="Use for the next hold"
+          onLog={async (seconds) => {
+            for (const s of ordered()) if (s.takeSeconds(seconds)) break;
+            setTiming(false);
+          }}
+          onClose={() => setTiming(false)}
+        />
+      )}
     </div>
   );
 }
@@ -1066,9 +1122,10 @@ function MovementLogger({
   metric: Metric;
   completedOnISO?: string;
   onBack: () => void;
-  /** One section of a Core day's screen (v0.639): no back or Log of its own;
-   *  the screen's Log calls the save it registers here. */
-  embedded?: (slot: string, save: () => Promise<void>) => void;
+  /** One section of a Core day's screen (v0.639, v0.640): no back, Skip,
+   *  Timer, Log or "how did it feel" of its own — the screen's do it through
+   *  what's registered here. */
+  embedded?: (slot: string, handle: SectionHandle) => void;
 }) {
   const slotId = exercise.poolExerciseId;
   const unit = metric === "WEIGHT" ? exercise.unit || "lb" : metric === "REPS" ? "reps" : "sec";
@@ -1232,10 +1289,31 @@ function MovementLogger({
       setLeaving(false);
     } else onBack();
   };
-  const leaveRef = useRef(leave);
-  leaveRef.current = leave;
+  // What a Core day's screen can ask of this section (v0.640): save on Log,
+  // skip with the rest, take the timer's time in its next open timed set,
+  // and the workout's "how did it feel".
+  const handleRef = useRef<SectionHandle | null>(null);
+  handleRef.current = {
+    save: leave,
+    skip: async (want: boolean) => {
+      if (want !== skipped) await toggleSkip();
+    },
+    takeSeconds: (seconds: number) => {
+      if (metric !== "DURATION" || skipped) return false;
+      const r = rows.find((x) => !x.saved && x.s === "");
+      if (!r) return false;
+      update(r.key, { s: String(Math.round(seconds)), saved: false });
+      return true;
+    },
+    feel: (e: Effort | null, h: HurtArea | null) => saveFeedback(e, h),
+  };
   useEffect(() => {
-    embedded?.(slotId, () => leaveRef.current());
+    embedded?.(slotId, {
+      save: () => handleRef.current!.save(),
+      skip: (w) => handleRef.current!.skip(w),
+      takeSeconds: (sec) => handleRef.current!.takeSeconds(sec),
+      feel: (e, h) => handleRef.current!.feel(e, h),
+    });
   }, [embedded, slotId]);
 
   const toggleSkip = async () => {
@@ -1302,7 +1380,9 @@ function MovementLogger({
     const v = valueOf(r);
     if (v.weight != null && v.reps != null) todayAt.set(v.reps, Math.max(todayAt.get(v.reps) ?? 0, v.weight));
   }
-  const chips = metric === "WEIGHT" ? recordChips(records) : [];
+  // A carry's reps are a distance (v0.640): no best-at-reps chips.
+  const repsUnit = log?.repsUnit ?? null;
+  const chips = metric === "WEIGHT" && !repsUnit ? recordChips(records) : [];
 
   const anyEntered = rows.some((r) => r.saved || typed(r));
   const canLog = rows.some((r) => r.saved || (typed(r) && complete(r)));
@@ -1338,7 +1418,13 @@ function MovementLogger({
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <h3 className={embedded ? "text-base font-semibold" : "font-display text-xl font-semibold"}>
+        <h3
+          className={
+            embedded
+              ? "text-xs font-semibold uppercase tracking-widest text-muted"
+              : "font-display text-xl font-semibold"
+          }
+        >
           {doing ? doing.name : exercise.name}
           {doing && <span className="ml-2 text-sm font-normal text-muted">instead of {exercise.name}</span>}
         </h3>
@@ -1417,7 +1503,7 @@ function MovementLogger({
               <span>Set</span>
               <span className="hidden sm:block">Last time</span>
               {metric === "WEIGHT" && <span>Weight ({unit})</span>}
-              <span>{metric === "DURATION" ? "Seconds" : "Reps"}</span>
+              <span>{metric === "DURATION" ? "Seconds" : repsUnit ? `Distance (${repsUnit})` : "Reps"}</span>
               <span className="text-center">Done</span>
               <span />
             </div>
@@ -1565,7 +1651,7 @@ function MovementLogger({
                 <PlusIcon className="h-4 w-4" />
                 Add set
               </button>
-              {!anyEntered && hasHints && (
+              {!anyEntered && hasHints && !embedded && (
                 <button
                   type="button"
                   onClick={sameAsLast}
@@ -1601,7 +1687,7 @@ function MovementLogger({
             </div>
           </div>
 
-          {rows.some((r) => r.saved) && !skipped && (
+          {rows.some((r) => r.saved) && !skipped && !embedded && (
             <section className="rounded-2xl border border-hairline bg-surface px-4 py-3">
               <EffortPicker
                 question={`How did ${(doing?.name ?? exercise.name).toLowerCase()} feel?`}
@@ -1612,24 +1698,7 @@ function MovementLogger({
             </section>
           )}
 
-          {embedded ? (
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => void toggleSkip()} aria-pressed={skipped} className={SECONDARY_SM}>
-                <MoonIcon className="h-3.5 w-3.5" />
-                {skipped ? "Skipped" : "Skip"}
-              </button>
-              {metric === "DURATION" && !skipped && (
-                <button
-                  type="button"
-                  onClick={() => setTimerKey(nextUnsaved?.key ?? rows.at(-1)?.key ?? null)}
-                  className={SECONDARY_SM}
-                >
-                  <TimerIcon className="h-3.5 w-3.5" />
-                  Timer
-                </button>
-              )}
-            </div>
-          ) : (
+          {embedded ? null : (
           <div className="grid grid-cols-3 gap-2">
             <PlanActionTile
               icon={MoonIcon}

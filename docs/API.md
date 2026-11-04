@@ -925,6 +925,9 @@ time; a target set adds `warmup: true` on a 5/3/1 warm-up set (40/50/60% ×
 types (Push, Pull, Hinge, Core, Legs, Hamstrings). The week's activity readout
 gives rowing in metres and other distance in the household unit.
 
+v0.640: the movement set log adds `repsUnit` ("yd" / "m" for a carry, else
+null): the reps field is the distance walked, and the target reads "3 × 40 yd".
+
 v0.639: `GET /api/v1/workouts` `workouts[]` add `core` (true for a Core day,
 whose movements the clients log on one screen). The WEIGHTS category's label
 is "Strength".

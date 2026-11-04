@@ -46,6 +46,7 @@ describe("core library", () => {
     expect(coreScheme({ name: "V-up", kind: "REPS", sets: 3, min: 8, max: 12 })).toBe("range:3x8-12");
     expect(coreScheme({ name: "Hollow hold", kind: "TIME", sets: 3, min: 30, max: 45 })).toBe("hold:3x30-45");
     expect(coreMoveLabel(PLANK_TEST)).toBe("1 × 1:10–3:45");
+    expect(coreMoveLabel({ name: "Suitcase carry", kind: "WEIGHT", sets: 3, min: 40, max: 40 })).toBe("3 × 40 yd");
     expect(schemeLabel(parseScheme("hold:3x30-45")!)).toBe("3 × 0:30–0:45");
   });
 

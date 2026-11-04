@@ -8,7 +8,7 @@
  * press, one-sided carries), resisting side-bending (side plank, suitcase
  * carry), bending forward under load (leg raises, crunches) and rotating
  * with power (med-ball throws, slams). Every movement says how it's logged:
- * reps, a timed hold, or a weight with reps. Carries count lengths as reps.
+ * reps, a timed hold, or a weight with reps. A carry's "reps" are yards walked.
  *
  * The Marine Corps PFT plank (1:10 to pass, 3:45 for full marks) is the
  * monthly test: done first, fresh, on the first core day of the month, and
@@ -61,7 +61,7 @@ export const CORE_LIBRARY: readonly CoreWorkout[] = [
   lib("strength", "Core strength", 25, "TRX, kettlebell, pull-up bar, back extension chair", [
     ["TRX fallout", "REPS", 3, 8, 12],
     ["Hanging leg raise", "REPS", 3, 8, 12],
-    ["Suitcase carry", "WEIGHT", 3, 2, 4],
+    ["Suitcase carry", "WEIGHT", 3, 40, 40],
     ["Side plank", "TIME", 3, 30, 60],
     ["Weighted back extension", "WEIGHT", 3, 8, 12],
   ]),
@@ -89,8 +89,8 @@ export const CORE_LIBRARY: readonly CoreWorkout[] = [
   lib("kettlebell", "Kettlebell core", 20, "Kettlebells", [
     ["Turkish get-up", "WEIGHT", 3, 2, 3],
     ["Kettlebell windmill", "WEIGHT", 3, 5, 8],
-    ["Overhead carry", "WEIGHT", 3, 2, 4],
-    ["Suitcase carry", "WEIGHT", 3, 2, 4],
+    ["Overhead carry", "WEIGHT", 3, 40, 40],
+    ["Suitcase carry", "WEIGHT", 3, 40, 40],
   ]),
   lib("situps", "Sit-up and crunch circuit", 12, "No equipment", [
     ["Sit-up", "REPS", 3, 20, 25],
@@ -143,10 +143,11 @@ export function coreMetric(m: CoreMove): "REPS" | "DURATION" | "WEIGHT" {
 
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 
-/** "3 × 8–12", "3 × 0:30–0:45", "1 × 1:10–3:45". */
+/** "3 × 8–12", "3 × 0:30–0:45", "1 × 1:10–3:45", "3 × 40 yd" (a carry). */
 export function coreMoveLabel(m: CoreMove): string {
   const f = m.kind === "TIME" ? clock : String;
-  return m.min === m.max ? `${m.sets} × ${f(m.min)}` : `${m.sets} × ${f(m.min)}–${f(m.max)}`;
+  const base = m.min === m.max ? `${m.sets} × ${f(m.min)}` : `${m.sets} × ${f(m.min)}–${f(m.max)}`;
+  return m.kind === "WEIGHT" && /\bcarry\b|farmer/i.test(m.name) ? `${base} yd` : base;
 }
 
 /** Clean moves sent from an editor: known kinds, sane numbers, at most 12. */
