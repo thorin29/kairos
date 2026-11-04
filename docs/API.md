@@ -925,6 +925,12 @@ time; a target set adds `warmup: true` on a 5/3/1 warm-up set (40/50/60% ×
 types (Push, Pull, Hinge, Core, Legs, Hamstrings). The week's activity readout
 gives rowing in metres and other distance in the household unit.
 
+v0.638: `POST /api/v1/workouts/plan/add-pool` takes `warmup` ("lib:<key>" or
+one's own routine id) for a Warm-up, set as it's created. The home card's
+workout `title` is the day's main workout (program lifts, else strength incl.
+a Core day, else conditioning, else cardio) and `subtitle` the rest, once
+each, never the warm-up.
+
 **Core days (v0.637).**
 ```
 GET  /api/v1/workouts/core-workouts         → { "workouts":[CoreWorkout] }

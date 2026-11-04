@@ -91,9 +91,19 @@ export async function addPlannedFromPoolCore(
       /** "same:3x5", "range:3x8-12", "wave"; "" or absent = any sets. */
       scheme?: string | null;
     }[];
+    /** A Warm-up's routine, chosen as it's added (v0.638): "lib:<key>" or one's own id. */
+    warmup?: string | null;
   },
 ): Promise<void> {
   if (day < 0 || day > 6) return;
+  let warmup: string | null = null;
+  if (input.category === "WARMUP" && input.warmup) {
+    if (input.warmup.startsWith("lib:")) warmup = input.warmup.slice(0, 80);
+    else {
+      const own = await prisma.warmupRoutine.findFirst({ where: { id: input.warmup, ownerId: userId }, select: { id: true } });
+      warmup = own?.id ?? null;
+    }
+  }
   if (!(input.category in CATEGORY_LABEL)) return;
   const label = (
     input.name?.trim() ||
@@ -120,6 +130,7 @@ export async function addPlannedFromPoolCore(
       sortOrder: count,
       category: input.category as WorkoutCategory,
       muscleGroup: (input.muscleGroup ?? null) as MuscleGroup | null,
+      ...(warmup ? { warmup } : {}),
       exercises: {
         create: rows.map((e, i) => ({
           poolExerciseId: e.poolExerciseId,

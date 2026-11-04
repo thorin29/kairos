@@ -12,6 +12,7 @@ import { loadProgramSpans, sportLabels } from "@/lib/workouts/history-run";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
 import { coreDayView, syncCoreDays } from "@/lib/workouts/core-run";
+import { cardLines, type CardEntry } from "@/lib/workouts/day-title";
 import {
   CATEGORY_LABEL,
   LINE_COLORS,
@@ -167,18 +168,8 @@ export type WorkoutsBoard = {
   unitSystem: UnitSystem;
 };
 
-/**
- * The top named workout on each weekday for one person, so a workout prompt on
- * the dashboard can read "Leg day" instead of a bare "Workout". Keyed by
- * weekday (0 = Sunday) and taken from the plan at read time, so it names the
- * carried-over prompts already sitting there and follows any plan edit without
- * a rewrite. "Top" is the first non-rest workout of the day by sort order.
- * Days with only a legacy per-exercise schedule (no named plan) are absent, and
- * the caller keeps the plain "Workout" label for those.
- */
-export async function loadWorkoutPlanNames(
-  userId: string,
-): Promise<Map<number, string>> {
+/** Each weekday's home-card lines (v0.638): the main workout, and the rest. */
+async function loadWorkoutCardLines(userId: string): Promise<Map<number, { title: string | null; extras: string[] }>> {
   const [planned, program] = (await Promise.all([
     prisma.plannedWorkout.findMany({
       where: { userId, isRest: false },
@@ -186,6 +177,8 @@ export async function loadWorkoutPlanNames(
       select: {
         dayOfWeek: true,
         name: true,
+        category: true,
+        hiitWorkout: { select: { name: true } },
         exercises: {
           where: { programRole: { not: null } },
           orderBy: { sortOrder: "asc" },
@@ -198,6 +191,8 @@ export async function loadWorkoutPlanNames(
     {
       dayOfWeek: number;
       name: string;
+      category: string | null;
+      hiitWorkout: { name: string } | null;
       exercises: { programRole: string | null; poolExercise: { name: string } | null }[];
     }[],
     { programKey: string } | null,
@@ -207,86 +202,40 @@ export async function loadWorkoutPlanNames(
   // waves · Back squats"), not every block of the day (v0.619).
   const prog = programByKey(program?.programKey);
   const mainRoles = new Set(prog ? prog.days.flatMap((d) => d.roles.filter((r) => r.main).map((r) => r.key)) : []);
-  const mains = new Map<number, string[]>();
-  if (prog) {
-    for (const p of planned) {
-      for (const e of p.exercises) {
-        if (!e.programRole || !mainRoles.has(e.programRole) || !e.poolExercise) continue;
-        const n = e.poolExercise.name.trim();
-        const label = n.charAt(0).toUpperCase() + n.slice(1);
-        const list = mains.get(p.dayOfWeek) ?? [];
-        if (!list.includes(label)) list.push(label);
-        mains.set(p.dayOfWeek, list);
-      }
-    }
-  }
-
-  // Join every named planned workout for the day (in order) so a Legs + Chest
-  // day reads "Legs · Chest" rather than just the first block.
-  // Each name once per day: two chest plans on a Monday are two rows here but
-  // one muscle group to the reader, and "Chest \u00b7 Chest \u00b7 Legs" said nothing
-  // the single "Chest" did not.
-  const byDay = new Map<number, string[]>();
+  const byDay = new Map<number, CardEntry[]>();
   for (const p of planned) {
-    const name = p.name.trim();
-    if (!name) continue;
+    const mains = prog
+      ? p.exercises
+          .filter((e) => e.programRole && mainRoles.has(e.programRole) && e.poolExercise)
+          .map((e) => {
+            const n = e.poolExercise!.name.trim();
+            return n.charAt(0).toUpperCase() + n.slice(1);
+          })
+      : [];
     const list = byDay.get(p.dayOfWeek) ?? [];
-    if (list.some((n) => n.toLowerCase() === name.toLowerCase())) continue;
-    list.push(name);
+    list.push({ name: p.name, category: p.category, hiitName: p.hiitWorkout?.name ?? null, mains });
     byDay.set(p.dayOfWeek, list);
   }
+  const out = new Map<number, { title: string | null; extras: string[] }>();
+  for (const [day, entries] of byDay) out.set(day, cardLines(entries, prog?.name ?? null));
+  return out;
+}
+
+/** Each weekday's workout title for the home card and the day page (see `cardLines`). */
+export async function loadWorkoutPlanNames(userId: string): Promise<Map<number, string>> {
   const out = new Map<number, string>();
-  for (const [day, names] of byDay) {
-    const m = mains.get(day);
-    out.set(day, prog && m?.length ? [prog.name, ...m].join(" \u00b7 ") : names.join(" \u00b7 "));
-  }
+  for (const [day, l] of await loadWorkoutCardLines(userId)) if (l.title) out.set(day, l.title);
   return out;
 }
 
 /**
- * What else is on each weekday besides a program's lifts, for the line under
- * the home card's title (v0.628): conditioning (the workout's name, else
- * "Conditioning"), cardio, a sport, and workouts of one's own that aren't part
- * of the program. Never the warm-up. Off a program the title already names
- * every workout, so only days in a program have extras.
+ * What else is on each weekday besides the main workout, for the line under
+ * the home card's title (v0.628, v0.638): conditioning, cardio, a sport, a
+ * second workout. Never the warm-up, never what the title already says.
  */
 export async function loadWorkoutDayExtras(userId: string): Promise<Map<number, string[]>> {
-  const [planned, program] = (await Promise.all([
-    prisma.plannedWorkout.findMany({
-      where: { userId, isRest: false },
-      orderBy: [{ dayOfWeek: "asc" }, { sortOrder: "asc" }],
-      select: {
-        dayOfWeek: true,
-        name: true,
-        category: true,
-        hiitWorkout: { select: { name: true } },
-        exercises: { where: { programRole: { not: null } }, select: { programRole: true } },
-      },
-    }),
-    prisma.personProgram.findFirst({ where: { userId, status: "ACTIVE" }, select: { programKey: true } }),
-  ])) as [
-    {
-      dayOfWeek: number;
-      name: string;
-      category: string | null;
-      hiitWorkout: { name: string } | null;
-      exercises: { programRole: string | null }[];
-    }[],
-    { programKey: string } | null,
-  ];
   const out = new Map<number, string[]>();
-  const prog = programByKey(program?.programKey);
-  if (!prog) return out;
-  for (const p of planned) {
-    if (p.category === "WARMUP" || p.exercises.length > 0) continue;
-    // "Rowing · 5/3/1" (the program's rowing day) reads as "Rowing" here.
-    const own = p.name.trim().replace(` \u00b7 ${prog.name}`, "");
-    const label = p.category === "HIIT" || p.hiitWorkout ? (p.hiitWorkout?.name ?? (own || "Conditioning")) : own;
-    if (!label) continue;
-    const list = out.get(p.dayOfWeek) ?? [];
-    if (!list.includes(label)) list.push(label);
-    out.set(p.dayOfWeek, list);
-  }
+  for (const [day, l] of await loadWorkoutCardLines(userId)) if (l.extras.length) out.set(day, l.extras);
   return out;
 }
 

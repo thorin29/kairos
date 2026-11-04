@@ -1,6 +1,6 @@
 "use client";
 
-import { WarmupPlanLine } from "./warmup-window";
+import { WarmupChooser, WarmupPlanLine } from "./warmup-window";
 import { CorePlanLine, CoreRotationPicker } from "./core-days";
 import { useMemo, useState, useTransition } from "react";
 import { DAY_NAMES } from "@/lib/days";
@@ -466,6 +466,8 @@ function AddWorkoutModal({
   const [coreRotation, setCoreRotation] = useState<string[]>([]);
   const [coreTest, setCoreTest] = useState(true);
   const [coreError, setCoreError] = useState("");
+  // Warm-up (v0.638): its routine chosen as it's added; null is a plain check.
+  const [warmupId, setWarmupId] = useState<string | null>(null);
 
   const simple = isSimpleCategory(category);
   const metricOnly = METRIC_ONLY_CATEGORIES.includes(category) || simple;
@@ -537,6 +539,7 @@ function AddWorkoutModal({
         await addPlannedWorkoutFromPool(userId, day, {
           category,
           muscleGroup: isWeights ? muscle : null,
+          ...(category === "WARMUP" ? { warmup: warmupId } : {}),
           exercises: metricOnly
             ? []
             : chosen.map(([poolExerciseId, p]) => ({
@@ -708,6 +711,8 @@ function AddWorkoutModal({
                 )}
               </select>
             </div>
+          ) : category === "WARMUP" ? (
+            <WarmupChooser userId={userId} value={warmupId} onChange={setWarmupId} />
           ) : simple ? null : metricOnly ? (
             <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
               Adds a {CATEGORY_LABEL[category].toLowerCase()} day. You&rsquo;ll

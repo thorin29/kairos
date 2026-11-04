@@ -55,8 +55,10 @@ import {
 } from "@/lib/workouts/catalog";
 import BodyMap from "@/components/body-map";
 import type { HeatMap } from "@/lib/workouts/heat";
+import { focusGroups } from "@/lib/workouts/focus";
 import {
   HeatDetail,
+  HeatGroupSummary,
   HeatKey,
   HeatRangeChips,
   heatAvailable,
@@ -282,10 +284,7 @@ export function WorkoutsGrid({
                       <LiftBlocks
                         series={open.trackedSeries}
                         heat={open.heat}
-                        todayGroups={
-                          open.planDays.find((d) => d.day === todayDow)
-                            ?.groups ?? []
-                        }
+                        todayGroups={focusGroups(open.planDays, todayDow)}
                       />
                       <LiftDetailPanel
                         all={open.trackedSeries}
@@ -781,11 +780,24 @@ function LiftBlocks({
     [withBest],
   );
 
+  // Muscles with no weight charts — a core of planks and crunches — still get
+  // a place on the map when they're planned or have been trained, and show
+  // their hard sets and bests instead of charts (v0.638).
+  const summaryGroups = useMemo(() => {
+    const charted = new Set<string>(meta.map((m) => m.primary).filter((x): x is NonNullable<typeof x> => !!x));
+    const trained = new Set(
+      (rangeOf(heat, "12w")?.groups ?? []).filter((g) => g.perWeek > 0 || g.bests.length > 0).map((g) => g.group),
+    );
+    return ON_BODY.filter((g) => !charted.has(g) && (trained.has(g) || todayGroups.includes(g)));
+  }, [meta, heat, todayGroups]);
+  const navOfGroup = (g: string) => (g === "DEADLIFT" ? "POSTERIOR_HIP" : g) as NavRegion;
+
   // Only regions you actually train are live. A Chest you have never pressed
   // is drawn, but inert — a target that selects nothing is a dead end.
   const available = useMemo(
-    () => [...new Set(meta.map((m) => m.nav).filter(Boolean))] as NavRegion[],
-    [meta],
+    () =>
+      [...new Set([...meta.map((m) => m.nav), ...summaryGroups.map(navOfGroup)].filter(Boolean))] as NavRegion[],
+    [meta, summaryGroups],
   );
 
   // What the map opens on: everything today asks for. A day that trains Core
@@ -796,8 +808,9 @@ function LiftBlocks({
       .filter((m) => m.primary && want.has(m.primary))
       .map((m) => m.nav)
       .filter(Boolean) as NavRegion[];
+    for (const g of summaryGroups) if (want.has(g)) navs.push(navOfGroup(g));
     return [...new Set(navs)];
-  }, [meta, todayGroups]);
+  }, [meta, todayGroups, summaryGroups]);
 
   // Nothing planned today — fall back to whatever was trained most recently,
   // which is what someone on a rotation or no plan at all still has.
@@ -846,8 +859,14 @@ function LiftBlocks({
         if (m.primary && MG_COLOR[m.primary]) t[m.primary] = MG_COLOR[m.primary];
       }
     }
+    for (const g of summaryGroups) {
+      if (activeSet.has(navOfGroup(g)) && MG_COLOR[g]) {
+        front[g] = MG_COLOR[g];
+        back[g] = MG_COLOR[g];
+      }
+    }
     return [front, back];
-  }, [shown]);
+  }, [shown, summaryGroups, activeSet]);
 
   // Today's groups first, in the plan's order (a program's main lift leads),
   // then the rest A–Z (v0.621).
@@ -857,8 +876,10 @@ function LiftBlocks({
   };
   const groups = byMuscleGroup(shown.map((m) => m.s)).sort((a, b) => rank(a.key) - rank(b.key));
   const orphanGroups = byMuscleGroup(orphans.map((m) => m.s));
+  const summaries = summaryGroups.filter((g) => activeSet.has(navOfGroup(g))).sort((a, b) => rank(a) - rank(b));
+  const summaryOf = (g: string) => rangeOf(heat, "12w")?.groups.find((x) => x.group === g);
 
-  if (meta.length === 0) return null;
+  if (meta.length === 0 && summaryGroups.length === 0) return null;
 
   return (
     <div className="space-y-4">
@@ -922,6 +943,14 @@ function LiftBlocks({
           )}
         </div>
       )}
+      {summaries.map((g) => (
+        <div key={`sum-${g}`}>
+          <p className="text-sm font-semibold" style={{ color: MG_COLOR[g] ?? "var(--color-accent)" }}>
+            {MG_LABEL[g] ?? g}
+          </p>
+          <HeatGroupSummary data={summaryOf(g)} unit={heat?.unit ?? ""} />
+        </div>
+      ))}
       {[...groups, ...orphanGroups].map((g) => (
         <div key={g.key}>
           <p
@@ -937,6 +966,9 @@ function LiftBlocks({
     </div>
   );
 }
+
+/** Groups with a place on the body (Deadlift is the lower back and glutes). */
+const ON_BODY = ["CHEST", "BACK", "SHOULDERS", "ARMS", "LEGS", "CORE", "DEADLIFT"];
 
 function LiftHeadline({ series }: { series: LiftSeries[] }) {
   const lifts = series.filter((s) => s.best);
@@ -1513,9 +1545,7 @@ function PersonalTop({
           <LiftBlocks
             series={open.trackedSeries}
             heat={open.heat}
-            todayGroups={
-              open.planDays.find((d) => d.day === todayDow)?.groups ?? []
-            }
+            todayGroups={focusGroups(open.planDays, todayDow)}
           />
           <LiftDetailPanel
             all={open.trackedSeries}

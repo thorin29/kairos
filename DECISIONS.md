@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-11 — Progress focus, warm-up chooser, home card lines (v0.638.0 / app 0.445.0)
+
+- The body map and charts open on today's muscle groups, else the next
+  planned day's (`focusGroups`, focus.ts) — never the last one trained,
+  which showed yesterday on a day whose group had no weight charts. A group
+  with no weight charts (Core of holds and reps) still gets its region when
+  planned or trained, and a summary block from the heat data: hard sets a
+  week over 12 weeks and its bests then → now (`HeatGroupSummary`).
+- Add workout → Warm-up shows the routines (`WarmupChooser`) in the Core
+  rotation's layout — a row each, ⓘ steps, pencil on your own, New warm-up —
+  and the entry is created with its routine (`add-pool` takes `warmup`). The
+  plan line's Warm-up window uses the same chooser.
+- Home card lines (`cardLines`, day-title.ts): the title is the program's
+  main lifts, else the strength work (a Core day counts), else
+  conditioning, else cardio; the line under it is everything else once,
+  never the warm-up and never what the title says. Off a program too. The
+  day page's title uses the same.
+- Core stays a Weights muscle group for now (offered: rename Weights to
+  Strength).
+
+
 ## 2026-11 — Core days (v0.637.0 / app 0.444.0)
 
 A Core day is a Weights · Core plan entry with a rotation (`PlannedWorkout.core`,

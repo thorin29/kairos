@@ -1,6 +1,6 @@
 "use client";
 
-import { DANGER_BTN, PRIMARY_BTN, SECONDARY_BTN } from "./buttons";
+import { DANGER_BTN, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG } from "./buttons";
 import { useEffect, useState, useTransition } from "react";
 import {
   deleteWarmupRoutine,
@@ -8,7 +8,7 @@ import {
   saveWarmupRoutine,
   setPlanWarmupRoutine,
 } from "@/lib/actions/workouts";
-import { CheckIcon, PencilIcon, TimerIcon, TrashIcon } from "@/components/icons";
+import { CheckIcon, InfoIcon, PencilIcon, PlusIcon, TimerIcon, TrashIcon } from "@/components/icons";
 import { stepAmount, type WarmupRoutine, type WarmupStep } from "@/lib/workouts/warmup-library";
 import { Modal } from "./plan-file-panel";
 import { WarmupTimer } from "./warmup-timer";
@@ -213,6 +213,107 @@ export function RoutinePicker({
       <button type="button" onClick={() => setEditing("new")} className="text-sm font-semibold text-accent">
         + New warm-up
       </button>
+    </div>
+  );
+}
+
+/**
+ * Choosing a day's warm-up (v0.638), laid out like a Core day's rotation:
+ * one row per routine, ⓘ for its steps, a pencil on your own, and New
+ * warm-up. Tapping a row chooses it.
+ */
+export function WarmupChooser({
+  userId,
+  value,
+  onChange,
+}: {
+  userId: string;
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  const [routines, setRoutines] = useState<WarmupRoutine[] | null>(null);
+  const [peek, setPeek] = useState<WarmupRoutine | null>(null);
+  const [editing, setEditing] = useState<WarmupRoutine | "new" | null>(null);
+  const load = () => {
+    loadWarmupRoutines(userId)
+      .then(setRoutines)
+      .catch(() => setRoutines([]));
+  };
+  useEffect(load, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const row = (id: string | null, name: string, sub: string, r?: WarmupRoutine) => {
+    const on = value === id;
+    return (
+      <li key={id ?? "plain"} className="flex items-center gap-3 py-2">
+        <button
+          type="button"
+          onClick={() => onChange(id)}
+          aria-pressed={on}
+          aria-label={`Choose ${name}`}
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+            on ? "border-accent bg-accent text-on-accent" : "border-accent"
+          }`}
+        >
+          {on && <CheckIcon className="h-3.5 w-3.5" />}
+        </button>
+        <button type="button" onClick={() => onChange(id)} className="min-w-0 flex-1 text-left">
+          <span className="block truncate text-sm font-semibold">{name}</span>
+          {sub && <span className="block truncate text-xs text-muted">{sub}</span>}
+        </button>
+        {r?.mine && (
+          <button
+            type="button"
+            onClick={() => setEditing(r)}
+            aria-label={`Edit ${name}`}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:text-accent"
+          >
+            <PencilIcon className="h-4 w-4" />
+          </button>
+        )}
+        {r && (
+          <button
+            type="button"
+            onClick={() => setPeek(r)}
+            aria-label={`About ${name}`}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:text-accent"
+          >
+            <InfoIcon className="h-4 w-4" />
+          </button>
+        )}
+      </li>
+    );
+  };
+
+  return (
+    <div>
+      <ul className="divide-y divide-hairline">
+        {row(null, "Just a check", "")}
+        {routines?.map((r) => row(r.id, r.name, `${r.steps.length} ${r.steps.length === 1 ? "step" : "steps"}${r.mine ? " · Yours" : ""}`, r))}
+      </ul>
+      {!routines && <p className="text-sm text-muted">Loading…</p>}
+      <button type="button" onClick={() => setEditing("new")} className={`${SECONDARY_LG} mt-2 w-full`}>
+        <PlusIcon className="h-4 w-4" />
+        New warm-up
+      </button>
+      {peek && (
+        <Modal title={peek.name} onClose={() => setPeek(null)}>
+          <WarmupSteps steps={peek.steps} />
+        </Modal>
+      )}
+      {editing && (
+        <Modal title={editing === "new" ? "New warm-up" : "Edit warm-up"} onClose={() => setEditing(null)}>
+          <RoutineEditor
+            userId={userId}
+            routine={editing === "new" ? null : editing}
+            onSaved={(id) => {
+              setEditing(null);
+              load();
+              if (id) onChange(id);
+            }}
+            onBack={() => setEditing(null)}
+          />
+        </Modal>
+      )}
     </div>
   );
 }
@@ -426,10 +527,10 @@ export function WarmupPlanLine({
       </button>
       {open && (
         <Modal title="Warm-up" onClose={() => setOpen(false)}>
-          <RoutinePicker
+          <WarmupChooser
             userId={userId}
-            current={warmup}
-            onPick={async (id) => {
+            value={warmup}
+            onChange={async (id) => {
               await setPlanWarmupRoutine(userId, plannedWorkoutId, id);
               setOpen(false);
             }}

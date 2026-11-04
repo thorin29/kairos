@@ -570,6 +570,7 @@ export async function addPlannedWorkoutFromPool(
       metric?: Metric | null;
       scheme?: string | null;
     }[];
+    warmup?: string | null;
   },
 ): Promise<void> {
   await requireInteractive();

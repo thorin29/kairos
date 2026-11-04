@@ -168,35 +168,56 @@ export function HeatDetail({
               <p className="text-xs text-muted">heavy sets a week</p>
             </div>
           </div>
-          {data.bests.length > 0 && (
-            <ul className="space-y-1.5">
-              {data.bests.map((b) => (
-                <li key={b.name} className="flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 truncate">
-                    {b.name}
-                    <span className="text-muted">
-                      {" · "}
-                      {b.kind === "weight" ? `${b.reps} reps` : b.kind === "time" ? "longest hold" : "most reps"}
-                    </span>
-                  </span>
-                  <span className="tabular shrink-0 font-medium">
-                    {b.kind === "time"
-                      ? b.from === b.to
-                        ? clock(b.to)
-                        : `${clock(b.from)} → ${clock(b.to)}`
-                      : b.from === b.to
-                        ? b.to
-                        : `${b.from} → ${b.to}`}
-                    {b.kind === "weight" && unit ? ` ${unit}` : ""}
-                    {b.pft != null ? <span className="text-muted"> · {b.pft} pts</span> : null}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <HeatBests bests={data.bests} unit={unit} />
         </div>
       )}
     </Modal>
+  );
+}
+
+export function HeatBests({ bests, unit }: { bests: HeatGroup["bests"]; unit: string }) {
+  if (bests.length === 0) return null;
+  return (
+    <ul className="space-y-1.5">
+      {bests.map((b) => (
+        <li key={b.name} className="flex items-baseline justify-between gap-3">
+          <span className="min-w-0 truncate">
+            {b.name}
+            <span className="text-muted">
+              {" · "}
+              {b.kind === "weight" ? `${b.reps} reps` : b.kind === "time" ? "longest hold" : "most reps"}
+            </span>
+          </span>
+          <span className="tabular shrink-0 font-medium">
+            {b.kind === "time"
+              ? b.from === b.to
+                ? clock(b.to)
+                : `${clock(b.from)} → ${clock(b.to)}`
+              : b.from === b.to
+                ? b.to
+                : `${b.from} → ${b.to}`}
+            {b.kind === "weight" && unit ? ` ${unit}` : ""}
+            {b.pft != null ? <span className="text-muted"> · {b.pft} pts</span> : null}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** A muscle with no weight charts (a core of holds and reps): its hard sets
+ *  a week over the last 12 weeks and its bests, then → now (v0.638). */
+export function HeatGroupSummary({ data, unit }: { data: HeatGroup | undefined; unit: string }) {
+  if (!data || (data.perWeek === 0 && data.bests.length === 0)) {
+    return <p className="mt-2 text-sm text-muted">Nothing logged yet.</p>;
+  }
+  return (
+    <div className="mt-2 space-y-2 rounded-xl border border-hairline bg-ground/40 px-3 py-2.5 text-sm">
+      <p className="text-muted">
+        <span className="tabular font-semibold text-ink">{fmt(data.perWeek)}</span> hard sets a week · last 12 weeks
+      </p>
+      <HeatBests bests={data.bests} unit={unit} />
+    </div>
   );
 }
 

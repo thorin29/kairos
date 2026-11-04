@@ -6,7 +6,7 @@ import { addPlannedFromPoolCore } from "@/lib/workouts/plan-edit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Add a structured pool workout to a day. */
+/** Add a structured pool workout to a day. A Warm-up can carry its routine (`warmup`, v0.638). */
 export async function POST(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     muscleGroup?: string | null;
     name?: string;
     exercises?: { poolExerciseId: string; tracked?: boolean; metric?: string | null; scheme?: string | null }[];
+    warmup?: string | null;
   } | null;
   const day = typeof b?.day === "number" ? b.day : NaN;
   if (!Number.isInteger(day) || day < 0 || day > 6) return apiError("validation", "day must be 0..6.");
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
       metric: e.metric ?? null,
       scheme: typeof e.scheme === "string" ? e.scheme : null,
     })),
+    warmup: typeof b.warmup === "string" ? b.warmup : null,
   });
   return apiOk({ status: "ok" });
 }
