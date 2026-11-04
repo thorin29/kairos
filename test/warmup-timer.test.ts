@@ -79,10 +79,12 @@ describe("companion weights", () => {
     { weight: 155, reps: 3 },
     { weight: 165, reps: 3 },
   ];
-  it("a 5 × 10 after heavy triples is a weight for 10, not the top triple", () => {
-    expect(weightForReps(heavy, 10, "lb")).toBe(125);
+  it("a 5 × 10 after heavy triples is a weight for five sets of 10, not the top triple", () => {
+    expect(weightForReps(heavy, 10, "lb", 5)).toBe(105);
+    expect(weightForReps(heavy, 10, "lb", 3)).toBe(115);
+    expect(weightForReps(heavy, 5, "lb", 5)).toBe(120);
     const t = targetsFor({ program, week: 1, scheme: parseScheme("same:5x10")!, unit: "lb", last: heavy });
-    expect(t.map((x) => x.weight)).toEqual([125, 125, 125, 125, 125]);
+    expect(t.map((x) => x.weight)).toEqual([105, 105, 105, 105, 105]);
   });
   it("keeps the weight already done for the reps; it doesn't step up by itself", () => {
     const done = [10, 10, 10, 10, 10].map((reps) => ({ weight: 130, reps }));

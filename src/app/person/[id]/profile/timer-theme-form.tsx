@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui";
 import {
+  DIGIT_COLOR,
+  FONT_FAMILY,
   TIMER_COLOR_KEY,
   TIMER_COLORS,
   TIMER_FONT_KEY,
@@ -70,6 +72,52 @@ function Choices({
   );
 }
 
+/** A choice's colour on the dark preview: plain is white, the theme colour the accent. */
+const digit = (k: string) => (k === "accent" ? "var(--color-accent)" : (DIGIT_COLOR[k] ?? "#ffffff"));
+
+/** Each choice drawn as it looks (v0.632): "1:30" on a dark tile, the name under it. */
+function Looks({
+  label,
+  choices,
+  value,
+  onPick,
+  look,
+}: {
+  label: string;
+  choices: readonly (readonly [string, string])[];
+  value: string;
+  onPick: (v: string) => void;
+  look: (k: string) => { fontFamily?: string; color: string };
+}) {
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted">{label}</p>
+      <div role="radiogroup" aria-label={label} className="mt-2 flex flex-wrap gap-2">
+        {choices.map(([k, text]) => (
+          <button
+            key={k}
+            type="button"
+            role="radio"
+            aria-checked={value === k}
+            onClick={() => onPick(k)}
+            className={`w-24 overflow-hidden rounded-xl border text-center ${
+              value === k ? "border-2 border-accent" : "border-hairline hover:border-accent"
+            }`}
+          >
+            <span
+              className="tabular flex h-12 items-center justify-center text-2xl font-bold"
+              style={{ ...look(k), background: "#0b0f14" }}
+            >
+              1:30
+            </span>
+            <span className="block px-1 py-1.5 text-xs font-semibold">{text}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** The workout timer on this device: its look (v0.622) and its numbers' font
  *  and colour (v0.630). */
 export function TimerThemeForm() {
@@ -80,8 +128,20 @@ export function TimerThemeForm() {
     <Card className="mt-6 p-5">
       <h2 className="font-display text-lg font-semibold">Workout timer</h2>
       <Choices label="Look" choices={THEMES} value={theme} onPick={setTheme} />
-      <Choices label="Numbers" choices={TIMER_FONTS} value={font} onPick={setFont} />
-      <Choices label="Number colour" choices={TIMER_COLORS} value={color} onPick={setColor} />
+      <Looks
+        label="Numbers"
+        choices={TIMER_FONTS}
+        value={font}
+        onPick={setFont}
+        look={(k) => ({ fontFamily: FONT_FAMILY[k], color: digit(color) })}
+      />
+      <Looks
+        label="Number colour"
+        choices={TIMER_COLORS}
+        value={color}
+        onPick={setColor}
+        look={(k) => ({ fontFamily: FONT_FAMILY[font], color: digit(k) })}
+      />
     </Card>
   );
 }

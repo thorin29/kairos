@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Companion weights by sets; neon timer numbers (v0.632.0 / app 0.440.0)
+
+**Companion weights:** the estimate from a heavier, lower-rep set picked a
+weight for one set of the target reps with about three to spare (165 × 3 →
+125 for 10), whatever the number of sets, so 5 × 10 asked for too much.
+`weightForReps(last, reps, unit, setCount)` now takes the most that set's
+strength allows once for these reps (Epley max ÷ (1 + reps / 30)) and takes
+4% off per set, to at most 25%, rounded down: from 165 × 3, 105 for 5 × 10
+(about 60% of the max), 115 for 3 × 10, 120 for 5 × 5. A weight already done
+for the reps still holds until changed.
+
+**Timer numbers:** the profile's choices show "1:30" in each font and colour
+on a dark tile; the colours are neon (green, blue, pink, yellow, orange, red,
+plus Plain and Theme colour).
+
+
 ## 2026-11 — Leaving a lift early keeps the rest (v0.631.0 / app 0.439.0)
 
 A lift with sets logged today opened with only those sets: the program's

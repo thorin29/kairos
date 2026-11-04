@@ -85,17 +85,27 @@ export const TIMER_FONTS = [
 export const TIMER_COLORS = [
   ["plain", "Plain"],
   ["accent", "Theme colour"],
-  ["amber", "Amber"],
-  ["green", "Green"],
-  ["red", "Red"],
-  ["blue", "Blue"],
+  ["green", "Neon green"],
+  ["blue", "Neon blue"],
+  ["pink", "Neon pink"],
+  ["amber", "Neon yellow"],
+  ["orange", "Neon orange"],
+  ["red", "Neon red"],
 ] as const;
-const FONT_FAMILY: Record<string, string | undefined> = {
+export const FONT_FAMILY: Record<string, string | undefined> = {
   condensed: '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", sans-serif-condensed, sans-serif',
   mono: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
   serif: 'Georgia, "Times New Roman", serif',
 };
-const DIGIT_COLOR: Record<string, string> = { amber: "#f59e0b", green: "#22c55e", red: "#ef4444", blue: "#3b82f6" };
+/** Neon, to read at a distance on the dark timer (v0.632). */
+export const DIGIT_COLOR: Record<string, string> = {
+  green: "#39ff14",
+  blue: "#00e5ff",
+  pink: "#ff2bd6",
+  amber: "#ffea00",
+  orange: "#ff7a00",
+  red: "#ff3131",
+};
 
 /** The digits' font family and colour (undefined: the timer's own). */
 export function useDigits(C: Palette): { fontFamily?: string; color?: string } {

@@ -700,14 +700,14 @@ export function targetsFor(input: {
   // The weight comes from what last time says about these reps (v0.627): the
   // weight already done for them holds until the person changes it (no step
   // up by itself). When last time was heavier and lower-rep (a 165 × 3, a new
-  // best), what that strength allows for these reps with about three to spare,
-  // if that's more. Never last time's top weight for 3 × as many reps.
+  // best), what that strength allows for this many sets of these reps
+  // (weightForReps), if that's more. Never last time's top weight for 3 × as many reps.
   const aimReps = scheme.kind === "RANGE" ? scheme.min : scheme.reps;
   const proven = last
     .filter((s) => s.weight != null && s.weight > 0 && (s.reps ?? 0) >= aimReps)
     .map((s) => s.weight as number);
   let weight: number | null = proven.length ? Math.max(...proven) : null;
-  const estimate = weightForReps(last, aimReps, unit);
+  const estimate = weightForReps(last, aimReps, unit, scheme.sets);
   if (estimate != null && (weight == null || estimate > weight)) weight = estimate;
   let sets = scheme.sets;
   let reps: number;
@@ -738,11 +738,15 @@ export function targetsFor(input: {
 }
 
 /**
- * A weight for `reps` reps with about three left in the tank, from the best set
- * in `sets` (estimated max by Epley: weight × (1 + reps / 30)), rounded down
- * to a loadable weight. 165 × 3 → about 125 for 10. Null with nothing to go by.
+ * A weight for `setCount` sets of `reps`, from the best set in `sets`
+ * (v0.632). Its estimated max (Epley: weight × (1 + reps / 30)) gives the most
+ * you could do once for these reps (max ÷ (1 + reps / 30)); every set after
+ * the first costs a little more, so that's taken down 4% a set (to at most
+ * 25% off), then rounded down to a loadable weight. From 165 × 3: 105 for
+ * 5 × 10 (about 60% of the max), 115 for 3 × 10, 120 for 5 × 5. Null with
+ * nothing to go by.
  */
-export function weightForReps(sets: readonly LastSet[], reps: number, unit: string): number | null {
+export function weightForReps(sets: readonly LastSet[], reps: number, unit: string, setCount = 1): number | null {
   let max = 0;
   for (const s of sets) {
     if (!s.weight || s.weight <= 0 || !s.reps || s.reps <= 0) continue;
@@ -750,7 +754,8 @@ export function weightForReps(sets: readonly LastSet[], reps: number, unit: stri
   }
   if (max <= 0) return null;
   const inc = unit === "kg" ? 2.5 : 5;
-  const w = Math.floor(max / (1 + (reps + 3) / 30) / inc) * inc;
+  const volume = Math.max(0.75, 1 - 0.04 * Math.max(1, setCount));
+  const w = Math.floor((max / (1 + reps / 30)) * volume / inc) * inc;
   return w > 0 ? w : null;
 }
 
