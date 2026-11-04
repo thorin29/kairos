@@ -711,7 +711,7 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
         data: {
           userId,
           dayOfWeek: dow,
-          name: MUSCLE_GROUP_LABEL[g] ?? "Weights",
+          name: MUSCLE_GROUP_LABEL[g] ?? "Strength",
           category: "WEIGHTS",
           muscleGroup: g,
           sortOrder: nextOrder(dow),

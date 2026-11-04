@@ -874,7 +874,7 @@ function fmtDuration(sec: number): string {
 function workoutLabel(s: SessShape): string {
   if (s.name && s.name.trim()) return s.name.trim();
   if (s.category) return CATEGORY_LABEL[s.category as WorkoutCategory] ?? "Workout";
-  if (s.sets.some((x) => x.weight != null)) return "Weights";
+  if (s.sets.some((x) => x.weight != null)) return "Strength";
   if (s.sets.length > 0) return "Workout";
   return "Worked out";
 }

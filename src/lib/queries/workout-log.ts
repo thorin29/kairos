@@ -170,6 +170,8 @@ export type TodayPlanned = {
   muscleGroup: string | null;
   /** The plan's category, which decides its section on the day page. */
   category?: string | null;
+  /** A Core day (v0.639): its movements log together on one screen. */
+  core?: boolean;
   exercises: PlannedMovement[];
   /** The plan's own session exists for the day: how a plan with nothing to
    *  enter (every movement untracked) shows that it was marked complete. */
@@ -449,6 +451,7 @@ export async function loadTodayPlannedWorkouts(
       name: true,
       category: true,
       muscleGroup: true,
+      core: true,
       hiitWorkoutId: true,
       hiitWorkout: { select: { type: true } },
       exercises: {
@@ -596,6 +599,7 @@ export async function loadTodayPlannedWorkouts(
       name: plan.name,
       muscleGroup: (plan as { muscleGroup?: string | null }).muscleGroup ?? null,
       category: (plan as { category?: string | null }).category ?? null,
+      core: (plan as { core?: unknown }).core != null,
       exercises,
       sessionLogged: hasSession(plan as { name: string; category: string | null }),
     });
@@ -1086,7 +1090,7 @@ export type WorkoutPool = {
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
-  WEIGHTS: "Weights",
+  WEIGHTS: "Strength",
   HIIT: "HIIT/CrossFit",
   RUNNING: "Running",
   ROWING: "Rowing",

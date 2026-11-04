@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — Core day on one screen; Weights → Strength (v0.639.0 / app 0.446.0)
+
+- A Core day shows as one card on the day page (name, "6 movements · 2
+  logged"). It opens `CoreLogger` (day-log.tsx): each movement's
+  `MovementLogger` in its own section (`embedded`: no back, no Log of its
+  own; Skip and Timer as small buttons), and one Log that saves every
+  section's typed sets and goes back. Sets still save as they're ticked, and
+  each movement keeps its own record, effort and skip. The day payload marks
+  Core days (`TodayPlanned.core`) for the phone.
+- The WEIGHTS category reads "Strength" everywhere it's shown (catalog,
+  options, day sections); the stored value is unchanged.
+
+
 ## 2026-11 — Progress focus, warm-up chooser, home card lines (v0.638.0 / app 0.445.0)
 
 - The body map and charts open on today's muscle groups, else the next

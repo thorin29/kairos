@@ -37,7 +37,7 @@ export type Implement =
 export type Metric = "WEIGHT" | "DISTANCE" | "METERS" | "DURATION" | "REPS";
 
 export const CATEGORY_LABEL: Record<WorkoutCategory, string> = {
-  WEIGHTS: "Weights",
+  WEIGHTS: "Strength",
   RUNNING: "Running",
   ROWING: "Rowing",
   SPORT: "Sport",

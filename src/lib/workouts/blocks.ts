@@ -235,7 +235,7 @@ export function withSection(
 const HEADLINE: Record<BlockKind, string> = {
   WARMUP: "Warm-up",
   CARDIO: "Cardio",
-  STRENGTH: "Weights",
+  STRENGTH: "Strength",
   CONDITIONING: "Conditioning",
   STRETCH: "Stretching",
   SPORT: "Sport",

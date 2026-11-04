@@ -57,8 +57,8 @@ describe("day headline", () => {
     items: Array.from({ length: n }, () => ({ type: "card" as const, workoutId: title })),
   });
   it("names the kinds of work, not the muscle groups", () => {
-    expect(dayHeadline([sec("STRENGTH", "Chest"), sec("STRENGTH", "Legs")])).toBe("Weights");
-    expect(dayHeadline([sec("WARMUP", "Warm-up"), sec("CARDIO", "Cardio"), sec("STRENGTH", "Back")])).toBe("Cardio & weights");
+    expect(dayHeadline([sec("STRENGTH", "Chest"), sec("STRENGTH", "Legs")])).toBe("Strength");
+    expect(dayHeadline([sec("WARMUP", "Warm-up"), sec("CARDIO", "Cardio"), sec("STRENGTH", "Back")])).toBe("Cardio & strength");
     expect(dayHeadline([sec("WARMUP", "Warm-up")])).toBe("Warm-up");
     expect(dayHeadline([sec("CONDITIONING", "Conditioning", 0)])).toBe("");
   });

@@ -61,7 +61,7 @@ export function ExercisePool({
       <SectionHeading>Exercise pool</SectionHeading>
       <p className="mb-3 text-sm text-muted">
         The shared library everyone picks from — so the same movement is one
-        thing across the household. Weights are grouped by muscle group, and
+        thing across the household. Strength movements are grouped by muscle group, and
         each group logs in its own unit (lb or kg).
       </p>
 

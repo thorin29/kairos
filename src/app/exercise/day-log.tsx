@@ -121,6 +121,8 @@ export function DayLog({
   const [failed, setFailed] = useState(false);
   const [tick, setTick] = useState(0);
   const [open, setOpen] = useState<OpenMovement | null>(null);
+  // A Core day opens as one screen, every movement in its own section (v0.639).
+  const [openCore, setOpenCore] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [c2, setC2] = useState<Concept2Day | null>(null);
   const [c2Checking, setC2Checking] = useState(false);
@@ -262,6 +264,33 @@ export function DayLog({
         }}
       />
     );
+  }
+
+  if (openCore) {
+    const w = byId.get(openCore);
+    const moves = (sections.flatMap((s) => s.items).filter(
+      (it) => it.type === "movement" && it.workoutId === openCore,
+    ) as { type: "movement"; workoutId: string; poolExerciseId: string; name: string; metric: Metric }[]);
+    if (w) {
+      return (
+        <CoreLogger
+          key={`${date}:${openCore}`}
+          userId={userId}
+          dateISO={date}
+          late={late}
+          title={w.name}
+          workoutId={w.id}
+          moves={moves
+            .map((m) => ({ ex: w.exercises.find((e) => e.poolExerciseId === m.poolExerciseId), metric: m.metric }))
+            .filter((m): m is { ex: PlanExercise; metric: Metric } => !!m.ex)}
+          completedOnISO={completedOnISO}
+          onBack={() => {
+            setOpenCore(null);
+            setTick((n) => n + 1);
+          }}
+        />
+      );
+    }
   }
 
   // The program and its main lift on a program day, else the kinds of work.
@@ -547,6 +576,37 @@ export function DayLog({
                       );
                     }
                     const w = byId.get(it.workoutId);
+                    // A Core day is one card for the whole workout (v0.639).
+                    if (w?.core) {
+                      const mine = s.items.filter((x) => x.type === "movement" && x.workoutId === w.id) as {
+                        poolExerciseId: string;
+                      }[];
+                      if (mine[0]?.poolExerciseId !== it.poolExerciseId) return null;
+                      const done = mine.filter((x) => (data.state.movements[x.poolExerciseId]?.setCount ?? 0) > 0).length;
+                      const all = mine.length > 0 && done === mine.length;
+                      return (
+                        <button
+                          key={`${it.workoutId}:core`}
+                          type="button"
+                          onClick={() => setOpenCore(w.id)}
+                          className="flex min-h-[3.5rem] w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-accent"
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold">{w.name}</span>
+                            <span className="tabular block truncate text-xs text-muted">
+                              {mine.length} {mine.length === 1 ? "movement" : "movements"}
+                              {done > 0 ? ` · ${done} logged` : ""}
+                            </span>
+                          </span>
+                          {all && (
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                              Logged
+                            </span>
+                          )}
+                          <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
+                        </button>
+                      );
+                    }
                     const ex = w?.exercises.find((e) => e.poolExerciseId === it.poolExerciseId);
                     if (!ex) return null;
                     const m = data.state.movements[it.poolExerciseId];
@@ -914,6 +974,79 @@ function lastText(s: MovementSetRow | undefined, metric: Metric): string {
  * was typed. Log finishes: it saves anything typed but not ticked, then goes
  * back to the day.
  */
+/**
+ * A Core day on one screen (v0.639): each movement in its own section, the
+ * way 5/3/1's warm-up and main sets are, and one Log for the whole workout.
+ * Every set saves as it's ticked; Log also saves anything typed.
+ */
+function CoreLogger({
+  userId,
+  dateISO,
+  late,
+  title,
+  workoutId,
+  moves,
+  completedOnISO,
+  onBack,
+}: {
+  userId: string;
+  dateISO: string;
+  late: boolean;
+  title: string;
+  workoutId: string;
+  moves: { ex: PlanExercise; metric: Metric }[];
+  completedOnISO?: string;
+  onBack: () => void;
+}) {
+  const saves = useRef(new Map<string, () => Promise<void>>());
+  const register = useCallback((slot: string, save: () => Promise<void>) => {
+    saves.current.set(slot, save);
+  }, []);
+  const [leaving, setLeaving] = useState(false);
+  const finish = async () => {
+    setLeaving(true);
+    await Promise.all([...saves.current.values()].map((f) => f().catch(() => {})));
+    onBack();
+  };
+  return (
+    <div className="space-y-5">
+      <button
+        type="button"
+        onClick={() => void finish()}
+        disabled={leaving}
+        className="inline-flex min-h-[2.75rem] items-center gap-1.5 text-sm font-semibold text-accent"
+      >
+        <ArrowLeftIcon className="h-4 w-4" />
+        {late ? dayLabel(dateISO) : "Today"}
+      </button>
+      <h2 className="font-display text-2xl font-semibold">{title}</h2>
+      {moves.map(({ ex, metric }) => (
+        <section key={ex.poolExerciseId} className="rounded-2xl border border-hairline bg-surface/60 p-4">
+          <MovementLogger
+            userId={userId}
+            dateISO={dateISO}
+            late={late}
+            workoutId={workoutId}
+            exercise={ex}
+            metric={metric}
+            completedOnISO={completedOnISO}
+            onBack={() => {}}
+            embedded={register}
+          />
+        </section>
+      ))}
+      <PlanActionTile
+        icon={CheckIcon}
+        label={leaving ? "Saving" : "Log"}
+        filled
+        loading={leaving}
+        disabled={leaving}
+        onClick={() => void finish()}
+      />
+    </div>
+  );
+}
+
 function MovementLogger({
   userId,
   dateISO,
@@ -923,6 +1056,7 @@ function MovementLogger({
   metric,
   completedOnISO,
   onBack,
+  embedded,
 }: {
   userId: string;
   dateISO: string;
@@ -932,6 +1066,9 @@ function MovementLogger({
   metric: Metric;
   completedOnISO?: string;
   onBack: () => void;
+  /** One section of a Core day's screen (v0.639): no back or Log of its own;
+   *  the screen's Log calls the save it registers here. */
+  embedded?: (slot: string, save: () => Promise<void>) => void;
 }) {
   const slotId = exercise.poolExerciseId;
   const unit = metric === "WEIGHT" ? exercise.unit || "lb" : metric === "REPS" ? "reps" : "sec";
@@ -1090,8 +1227,16 @@ function MovementLogger({
     const next = cur.map((r) => (!r.saved && typed(r) && complete(r) ? { ...r, saved: true } : r));
     const changed = next.some((r, i) => r.saved !== cur[i].saved);
     if (changed || cur.some((r) => r.saved)) await persist(next, true);
-    onBack();
+    if (embedded) {
+      setRows(next);
+      setLeaving(false);
+    } else onBack();
   };
+  const leaveRef = useRef(leave);
+  leaveRef.current = leave;
+  useEffect(() => {
+    embedded?.(slotId, () => leaveRef.current());
+  }, [embedded, slotId]);
 
   const toggleSkip = async () => {
     const want = !skipped;
@@ -1180,18 +1325,20 @@ function MovementLogger({
 
   return (
     <div className="space-y-4">
-      <button
-        type="button"
-        onClick={leave}
-        disabled={leaving}
-        className="inline-flex min-h-[2.75rem] items-center gap-1.5 text-sm font-semibold text-accent"
-      >
-        <ArrowLeftIcon className="h-4 w-4" />
-        {late ? dayLabel(dateISO) : "Today"}
-      </button>
+      {!embedded && (
+        <button
+          type="button"
+          onClick={leave}
+          disabled={leaving}
+          className="inline-flex min-h-[2.75rem] items-center gap-1.5 text-sm font-semibold text-accent"
+        >
+          <ArrowLeftIcon className="h-4 w-4" />
+          {late ? dayLabel(dateISO) : "Today"}
+        </button>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <h3 className="font-display text-xl font-semibold">
+        <h3 className={embedded ? "text-base font-semibold" : "font-display text-xl font-semibold"}>
           {doing ? doing.name : exercise.name}
           {doing && <span className="ml-2 text-sm font-normal text-muted">instead of {exercise.name}</span>}
         </h3>
@@ -1465,6 +1612,24 @@ function MovementLogger({
             </section>
           )}
 
+          {embedded ? (
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => void toggleSkip()} aria-pressed={skipped} className={SECONDARY_SM}>
+                <MoonIcon className="h-3.5 w-3.5" />
+                {skipped ? "Skipped" : "Skip"}
+              </button>
+              {metric === "DURATION" && !skipped && (
+                <button
+                  type="button"
+                  onClick={() => setTimerKey(nextUnsaved?.key ?? rows.at(-1)?.key ?? null)}
+                  className={SECONDARY_SM}
+                >
+                  <TimerIcon className="h-3.5 w-3.5" />
+                  Timer
+                </button>
+              )}
+            </div>
+          ) : (
           <div className="grid grid-cols-3 gap-2">
             <PlanActionTile
               icon={MoonIcon}
@@ -1496,6 +1661,7 @@ function MovementLogger({
               }}
             />
           </div>
+          )}
           {confirmLeave && (
             <Modal title="Finish early?" onClose={() => setConfirmLeave(false)}>
               <p className="text-sm">
