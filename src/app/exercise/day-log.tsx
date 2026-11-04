@@ -1,6 +1,7 @@
 "use client";
 
-import { SECONDARY_BTN, SECONDARY_LG, SECONDARY_SM } from "./buttons";
+import { PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG, SECONDARY_SM } from "./buttons";
+import { Modal } from "./plan-file-panel";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   loadDayLog,
@@ -824,7 +825,7 @@ function rowsFrom(log: MovementLog): Row[] {
   const target = log.target?.sets ?? [];
   let k = 0;
   if (log.sets.length > 0) {
-    return log.sets.map((s, i) => ({
+    const done: Row[] = log.sets.map((s, i) => ({
       key: k++,
       w: s.weight != null ? fmtNumber(s.weight) : "",
       r: s.reps != null ? String(s.reps) : "",
@@ -840,6 +841,28 @@ function rowsFrom(log: MovementLog): Row[] {
       warmup: target[i]?.warmup,
       supplemental: target[i]?.supplemental,
     }));
+    // The sets still to do stay after the ones logged (v0.631): leaving early
+    // (or an accidental Log) never takes the rest of the workout with it.
+    const rest = target.slice(done.length).map((t, j) => {
+      const i = done.length + j;
+      return {
+        key: k++,
+        w: "",
+        r: "",
+        s: "",
+        hintW: t.weight ?? last[i]?.weight ?? null,
+        hintR: t.reps,
+        hintS: last[i]?.seconds ?? null,
+        saved: false,
+        added: false,
+        top: t.top,
+        pct: t.pct,
+        plus: t.plus,
+        warmup: t.warmup,
+        supplemental: t.supplemental,
+      };
+    });
+    return [...done, ...rest];
   }
   if (target.length > 0) {
     return target.map((t, i) => ({
@@ -927,6 +950,8 @@ function MovementLogger({
   const [skipped, setSkipped] = useState(false);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [leaving, setLeaving] = useState(false);
+  // Log with sets still to do asks first (v0.631): finishing early keeps them.
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [effort, setEffort] = useState<Effort | null>(null);
   const [hurt, setHurt] = useState<HurtArea | null>(null);
   const [sugg, setSugg] = useState<Suggestion | null>(null);
@@ -1464,9 +1489,38 @@ function MovementLogger({
               filled
               loading={leaving}
               disabled={leaving || !canLog}
-              onClick={() => void leave()}
+              onClick={() => {
+                const left = rows.filter((r) => !r.saved && !(typed(r) && complete(r))).length;
+                if (left > 0) setConfirmLeave(true);
+                else void leave();
+              }}
             />
           </div>
+          {confirmLeave && (
+            <Modal title="Finish early?" onClose={() => setConfirmLeave(false)}>
+              <p className="text-sm">
+                {(() => {
+                  const left = rows.filter((r) => !r.saved && !(typed(r) && complete(r))).length;
+                  return `${left} ${left === 1 ? "set isn't" : "sets aren't"} logged yet. They'll still be here when you come back.`;
+                })()}
+              </p>
+              <div className="mt-4 flex flex-col gap-2">
+                <button type="button" onClick={() => setConfirmLeave(false)} className={PRIMARY_BTN}>
+                  Keep going
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmLeave(false);
+                    void leave();
+                  }}
+                  className={SECONDARY_BTN}
+                >
+                  Finish for now
+                </button>
+              </div>
+            </Modal>
+          )}
         </>
       )}
 

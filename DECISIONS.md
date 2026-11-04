@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-11 — Leaving a lift early keeps the rest (v0.631.0 / app 0.439.0)
+
+A lift with sets logged today opened with only those sets: the program's
+remaining target sets were gone, so an accidental Log after the first warm-up
+set left nothing to finish. The set logger (`rowsFrom`) now lists today's
+logged sets, then the targets still to do (blank, with their hints). Log with
+sets not yet done asks first ("Finish early?": Keep going / Finish for now);
+finishing saves what's logged and the rest stays for later. Only saved sets
+are ever sent, as before.
+
+
 ## 2026-11 — Timer numbers: font and colour (v0.630.0 / app 0.438.0)
 
 The workout timers (conditioning and warm-up) take a number font (Standard,
