@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-11 — Core days, timed holds, two-row legend (v0.636.0 / app 0.443.0)
+
+- Workout days marks a day for a group trained without weights (a core day of
+  planks and leg raises) from `heat.days` (`unweightedDays` in heat.ts): the
+  main group of every bodyweight or timed set, except sets in a conditioning
+  (HIIT) workout and warm-up/cardio sessions. Core is a group like Arms: it
+  shows only when core was the main work, never from squats or the warm-up.
+- Timed holds count on the heat map against the longest hold: two-thirds or
+  more counts 1, 40% ½. A plank counts in full at 1:10, the Marine Corps PFT
+  minimum (one table for every age and sex; 1:10 = 40 points, 3:45 = 100,
+  even steps between — the in-between table wasn't confirmed). The plank's
+  best shows its PFT points (`pftPlankPoints`).
+- The Workout days legend is four to a row in lined-up columns, so a seventh
+  group starts a tidy second row (the user's pick over a side legend or a Key
+  pop-up).
+- Library: McGill curl-up, TRX Pallof press, back extension hold, overhead
+  carry, toward premade core blocks (proposed, not built).
+
+
 ## 2026-11 — Body-map heat view (v0.635.0 / app 0.442.0)
 
 A flame toggle on the body map swaps the primary/secondary view for hard sets

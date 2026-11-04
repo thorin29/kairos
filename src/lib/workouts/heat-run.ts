@@ -12,7 +12,7 @@ const ON_BODY = new Set(["CHEST", "BACK", "ARMS", "LEGS", "SHOULDERS", "CORE", "
 
 /**
  * The body map's heat view for one person (v0.635): every finished set with
- * reps, from strength work (warm-up and cardio sessions are left out), with
+ * reps or a timed hold (v0.636), from strength work (warm-up and cardio sessions are left out), with
  * how each movement felt that day. Shared by the web board and the phone.
  */
 export async function loadHeat(userId: string, todayISO: string, unit: string): Promise<HeatMap> {
@@ -20,13 +20,14 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
     prisma.sessionSet.findMany({
       where: {
         finished: true,
-        reps: { gt: 0 },
+        OR: [{ reps: { gt: 0 } }, { seconds: { gt: 0 } }],
         poolExerciseId: { not: null },
         session: { userId, isRest: false },
       },
       select: {
         weight: true,
         reps: true,
+        seconds: true,
         poolExerciseId: true,
         swappedFromId: true,
         poolExercise: { select: { name: true, muscleGroup: true } },
@@ -41,6 +42,7 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
     {
       weight: number | null;
       reps: number | null;
+      seconds: number | null;
       poolExerciseId: string | null;
       swappedFromId: string | null;
       poolExercise: { name: string; muscleGroup: string | null } | null;
@@ -74,6 +76,8 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
       secondary,
       weight: r.weight,
       reps: r.reps,
+      seconds: r.seconds,
+      marksDay: r.session.category !== "HIIT",
       effort:
         effortOn.get(`${fromDateColumn(r.session.date)}|${slot}`) ??
         effortOn.get(`${doneOn(r.session)}|${slot}`) ??

@@ -290,6 +290,7 @@ export function WorkoutsGrid({
                       <LiftDetailPanel
                         all={open.trackedSeries}
                         planDays={open.planDays}
+                        extraDays={open.heat.days}
                       />
                     </div>
                   )}
@@ -1175,8 +1176,11 @@ function LiftDetailPanel({
   all,
   planDays,
   chart,
+  extraDays = [],
 }: {
   all: LiftSeries[];
+  /** Days a group was trained without weights (a core day of planks), v0.636. */
+  extraDays?: { date: string; groups: string[] }[];
   /** Weekdays the plan uses, so the grid only draws rows that mean something. */
   planDays?: { day: number; groups: string[] }[];
   /** The session plot, shown last. The numbers lead; the chart is the long
@@ -1226,6 +1230,12 @@ function LiftDetailPanel({
     if (!gLabels.has(g)) gLabels.set(g, s.muscleGroup != null ? (MG_LABEL[g] ?? g) : s.name);
     if (!groupsSeen.includes(g)) groupsSeen.push(g);
   }
+  for (const d of extraDays) {
+    for (const g of d.groups) {
+      if (!gLabels.has(g)) gLabels.set(g, MG_LABEL[g] ?? g);
+      if (!groupsSeen.includes(g)) groupsSeen.push(g);
+    }
+  }
   const labelOf = (g: string) => gLabels.get(g) ?? MG_LABEL[g] ?? g;
   groupsSeen.sort((a, b) => labelOf(a).localeCompare(labelOf(b)));
   // Muscle groups keep their fixed colour so the legend, the body map and the
@@ -1243,6 +1253,11 @@ function LiftDetailPanel({
       if (!list.includes(g)) list.push(g);
       byDate.set(p.date, list);
     }
+  }
+  for (const d of extraDays) {
+    const list = byDate.get(d.date) ?? [];
+    for (const g of d.groups) if (!list.includes(g)) list.push(g);
+    byDate.set(d.date, list);
   }
   const trained = byDate;
 
@@ -1413,7 +1428,7 @@ function LiftDetailPanel({
                 </div>
               </div>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
+            <div className="mt-2 grid grid-cols-[repeat(4,auto)] justify-start gap-x-3.5 gap-y-1 text-[11px] text-muted">
               {groupsSeen.map((g) => (
                 <span key={g} className="flex items-center gap-1.5">
                   <span
@@ -1505,6 +1520,7 @@ function PersonalTop({
           <LiftDetailPanel
             all={open.trackedSeries}
             planDays={open.planDays}
+            extraDays={open.heat.days}
           />
         </div>
       )}

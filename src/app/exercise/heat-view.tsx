@@ -125,6 +125,10 @@ export function HeatKey() {
               Warm-ups and easy sets don&apos;t count. Marking a lift Hard counts it in full; Easy counts it half.
             </p>
             <p>Muscles a lift only helps with get half a set.</p>
+            <p>
+              Holds count in full at two-thirds of your longest or more, half at 40%. A plank counts in full at 1:10,
+              the Marine Corps PFT minimum, and shows its PFT points (3:45 is 100).
+            </p>
             <p>Heavy sets are 6 reps or fewer near your best weight. They&apos;re what builds strength most.</p>
             <p>Around 10 or more hard sets a week is a strong week for a muscle.</p>
           </div>
@@ -134,6 +138,7 @@ export function HeatKey() {
   );
 }
 
+const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
 const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 export function HeatDetail({
@@ -169,11 +174,21 @@ export function HeatDetail({
                 <li key={b.name} className="flex items-baseline justify-between gap-3">
                   <span className="min-w-0 truncate">
                     {b.name}
-                    <span className="text-muted"> · {b.kind === "weight" ? `${b.reps} reps` : "most reps"}</span>
+                    <span className="text-muted">
+                      {" · "}
+                      {b.kind === "weight" ? `${b.reps} reps` : b.kind === "time" ? "longest hold" : "most reps"}
+                    </span>
                   </span>
                   <span className="tabular shrink-0 font-medium">
-                    {b.from === b.to ? b.to : `${b.from} → ${b.to}`}
+                    {b.kind === "time"
+                      ? b.from === b.to
+                        ? clock(b.to)
+                        : `${clock(b.from)} → ${clock(b.to)}`
+                      : b.from === b.to
+                        ? b.to
+                        : `${b.from} → ${b.to}`}
                     {b.kind === "weight" && unit ? ` ${unit}` : ""}
+                    {b.pft != null ? <span className="text-muted"> · {b.pft} pts</span> : null}
                   </span>
                 </li>
               ))}

@@ -970,6 +970,11 @@ the running program carries into its next block with these changes (same
 start date; maxes as sent), and plan entries the setup doesn't cover stay.
 `GET /api/v1/workouts/plan` movements add `about`.
 
+v0.636: `heat` adds `days: [{ date, groups }]` — groups trained without
+weights that day (bodyweight or timed sets, not in a conditioning workout), for
+Workout days. `bests` entries can be `kind` "time" (longest hold, seconds) with
+`pft` (a plank's Marine Corps PFT points, 40–100, null under 1:10).
+
 v0.635: `GET /api/v1/workouts/progress` adds `heat` — the body map's heat
 view: `{ unit, ranges: [{ key, label, groups: [{ group, perWeek, heavyPerWeek,
 level, bests: [{ name, kind, reps, from, to }] }] }] }`. `key` is 1w, 4w, 12w,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHeat, creditFor, levelFor, scoreSets, type HeatSet } from "@/lib/workouts/heat";
+import { buildHeat, creditFor, levelFor, pftPlankPoints, scoreSets, unweightedDays, type HeatSet } from "@/lib/workouts/heat";
 
 const set = (date: string, weight: number | null, reps: number, extra: Partial<HeatSet> = {}): HeatSet => ({
   date,
@@ -80,5 +80,53 @@ describe("heat map ranges", () => {
 
   it("levels", () => {
     expect([0, 2, 4, 9.9, 10].map(levelFor)).toEqual([0, 1, 2, 2, 3]);
+  });
+});
+
+describe("timed holds and core days", () => {
+  const hold = (date: string, seconds: number, name = "Plank", extra: Partial<HeatSet> = {}): HeatSet => ({
+    date,
+    movement: name,
+    name,
+    primary: "CORE",
+    secondary: [],
+    weight: null,
+    reps: null,
+    seconds,
+    ...extra,
+  });
+
+  it("scores a plank on the PFT table", () => {
+    expect(pftPlankPoints(69)).toBeNull();
+    expect(pftPlankPoints(70)).toBe(40);
+    expect(pftPlankPoints(225)).toBe(100);
+    expect(pftPlankPoints(300)).toBe(100);
+    expect(pftPlankPoints(150)).toBe(71);
+  });
+
+  it("counts a passing plank in full and other holds against the longest", () => {
+    const s = scoreSets([
+      hold("2026-10-01", 180),
+      hold("2026-10-02", 75),
+      hold("2026-10-03", 90, "Side plank"),
+      hold("2026-10-04", 50, "Side plank"),
+      hold("2026-10-05", 30, "Side plank"),
+    ]);
+    expect(s.map((x) => x.credit)).toEqual([1, 1, 1, 0.5, 0]);
+  });
+
+  it("reports the longest hold with PFT points", () => {
+    const heat = buildHeat([hold("2026-09-01", 100), hold("2026-11-01", 150)], "2026-11-04");
+    const core = heat.ranges.find((r) => r.key === "4w")!.groups.find((g) => g.group === "CORE")!;
+    expect(core.bests[0]).toMatchObject({ kind: "time", from: 100, to: 150, pft: 71 });
+  });
+
+  it("marks core days, but not from a conditioning workout or a lift", () => {
+    const days = unweightedDays([
+      hold("2026-11-01", 60),
+      hold("2026-11-02", 60, "Plank", { marksDay: false }),
+      set("2026-11-03", 185, 5),
+    ]);
+    expect(days).toEqual([{ date: "2026-11-01", groups: ["CORE"] }]);
   });
 });

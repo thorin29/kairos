@@ -167,6 +167,7 @@ const STRENGTH: Short[] = [
   ["Kettlebell halo", "SHOULDERS", "MOBILITY", "kettlebells", "W", "Hold a light bell upside down by the horns and circle it around the head. Change direction each set."],
   ["Front rack carry", "FULL_BODY", "CARRY", "kettlebells", "W", "Bells racked at the shoulders, walk tall. Reps are lengths."],
   ["Suitcase carry", "CORE", "CARRY", "kettlebells", "W", "One heavy bell in one hand, walk without leaning. Switch hands each length."],
+  ["Overhead carry", "CORE", "CARRY", "kettlebells", "W", "One bell locked out overhead, walk tall without leaning. Switch hands each length."],
   // Steel clubs
   ["Club mill", "SHOULDERS", "MOBILITY", "clubs", "W", "Club behind the head, swing it around and down the front, then back over the other shoulder. Alternate sides."],
   ["Shield cast", "SHOULDERS", "MOBILITY", "clubs", "W", "Club upright at the chest, drop it behind one shoulder and bring it back round the other side to the chest."],
@@ -190,6 +191,7 @@ const STRENGTH: Short[] = [
   ["TRX hamstring curl", "LEGS", "HINGE", "trx", "R", "Lie on your back with heels in the foot cradles, lift the hips and curl the heels to the glutes."],
   ["TRX fallout", "CORE", "CORE", "trx", "R", "Lean on the handles in a plank, let the arms go forward overhead, pull back without bending at the hips."],
   ["TRX pike", "CORE", "CORE", "trx", "R", "Feet in the cradles in a push-up position, lift the hips up into a pike, lower back."],
+  ["TRX Pallof press", "CORE", "CORE", "trx", "R", "Stand side-on to the anchor, both handles at the chest, leaning slightly into the strap. Press straight out, hold 2 seconds without turning, bring back. Reps are each side."],
   // Medicine ball and slam ball strength
   ["Chest pass", "CHEST", "PUSH", "med_balls", "R", "Ball at the chest, push it hard to a partner or a wall and catch it back."],
   ["Rotational throw", "CORE", "CORE", "med_balls", "R", "Side-on to a wall, turn away, then throw the ball into the wall with a fast turn of the hips. Both sides."],
@@ -210,6 +212,7 @@ const STRENGTH: Short[] = [
   ["Weighted back extension", "BACK", "HINGE", "back_ext,dumbbells", "W", "Back extension holding a weight at the chest."],
   ["Hip extension", "LEGS", "HINGE", "back_ext", "R", "Pad lower so the hips can bend, keep the back flat and lift with the glutes and hamstrings."],
   ["Side bend", "CORE", "CORE", "back_ext", "R", "Lie on your side on the chair, lower the shoulder toward the floor and lift back up. Both sides."],
+  ["Back extension hold", "CORE", "CORE", "back_ext", "T", "Hips on the pad, body in a straight line, arms crossed on the chest. Hold. Log the time."],
   // Bodyweight
   ["Incline push-up", "CHEST", "PUSH", "boxes", "R", "Hands on a box or bench, body straight, lower the chest to the edge and push up.", ["push-up", 1]],
   ["Push-up", "CHEST", "PUSH", "", "R", "Hands under the shoulders, body straight from head to heels, chest to the floor and push back up.", ["push-up", 2]],
@@ -234,6 +237,7 @@ const STRENGTH: Short[] = [
   ["Russian twist", "CORE", "CORE", "", "R", "Sit leaning back with feet up, turn side to side touching the floor beside the hips. Each touch is a rep."],
   ["Dead bug", "CORE", "CORE", "", "R", "On your back, arms and knees up. Lower the opposite arm and leg toward the floor, back flat, switch."],
   ["Bird dog", "CORE", "CORE", "", "R", "On hands and knees, reach the opposite arm and leg out long, hold a second, switch."],
+  ["McGill curl-up", "CORE", "CORE", "", "R", "On your back, one knee bent, hands under the low back. Lift the head and shoulders just off the floor as one piece, hold 10 seconds, lower. Each hold is a rep."],
 ];
 
 const CONDITIONING: Short[] = [

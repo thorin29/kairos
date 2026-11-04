@@ -202,7 +202,7 @@ production:
 | Day page headline and sections | `dayHeadline` (kinds of work) / `withSection` (an empty Conditioning or Cardio section in the person's order) in `src/lib/workouts/blocks.ts`; the program's name on a program day |
 | A companion lift's suggested weight (for its reps, from the last session's best set) | `weightForReps` / `targetsFor` in `src/lib/workouts/programs.ts` |
 | The next cycle with changes (setup opened on the running plan) | `currentSetup` / `startProgram({ next: true })` in `src/lib/workouts/program-run.ts`; UI `CycleEnd` → `ProgramSetup` (`initial`, `nextMaxes`) in `src/app/exercise/program-card.tsx` |
-| Body-map heat view (hard sets a week, heavy sets, bests by range) | `buildHeat` / `scoreSets` in `src/lib/workouts/heat.ts` (pure); `loadHeat` in `heat-run.ts`; UI in `src/app/exercise/heat-view.tsx` |
+| Body-map heat view (hard sets a week, heavy sets, bests by range) | `buildHeat` / `scoreSets` / `unweightedDays` / `pftPlankPoints` in `src/lib/workouts/heat.ts` (pure); `loadHeat` in `heat-run.ts`; UI in `src/app/exercise/heat-view.tsx` |
 | Recent workouts by day; a past day's program | `groupHistory` / `dayLabel` / `programOn` in `src/lib/workouts/history.ts` (pure); `loadProgramSpans` / `sportLabels` in `history-run.ts`; `loadProgramOn` in `program-run.ts` |
 | Home workout card's second line | `loadWorkoutDayExtras` in `src/lib/queries/workouts.ts` + the day's sport events, as the workout task's `subtitle` in `src/lib/queries/dashboard-api.ts` |
 | Workout-page button styles | `PRIMARY_BTN` / `SECONDARY_BTN` (`_SM`, `_LG`) / `DANGER_BTN` in `src/app/exercise/buttons.ts`; phone `ui/common/AccentOutlinedButton` |

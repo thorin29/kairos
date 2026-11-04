@@ -32,6 +32,10 @@ export type HeatSet = {
   secondary: readonly string[];
   weight: number | null;
   reps: number | null;
+  /** A timed hold (a plank), in seconds, when there are no reps. */
+  seconds?: number | null;
+  /** False for sets in a conditioning workout: they count as work, but don't make it a core (or any) day. */
+  marksDay?: boolean;
   /** How the movement felt that day (EASY / SOLID / HARD / TOO_HARD). */
   effort?: string | null;
 };
@@ -50,11 +54,13 @@ export const DEFAULT_HEAT_RANGE: HeatRangeKey = "12w";
 
 export type HeatBest = {
   name: string;
-  /** "weight": best weight at `reps`. "reps": best reps (no weight). */
-  kind: "weight" | "reps";
+  /** "weight": best weight at `reps`. "reps": best reps (no weight). "time": longest hold, seconds. */
+  kind: "weight" | "reps" | "time";
   reps: number | null;
   from: number;
   to: number;
+  /** A plank's best on the Marine Corps PFT scale (40–100), when it passes. */
+  pft?: number | null;
 };
 export type HeatGroup = {
   group: string;
@@ -66,7 +72,9 @@ export type HeatGroup = {
   bests: HeatBest[];
 };
 export type HeatRange = { key: HeatRangeKey; label: string; groups: HeatGroup[] };
-export type HeatMap = { unit: string; ranges: HeatRange[] };
+/** A day's groups trained without weights (bodyweight or timed), for Workout days. */
+export type HeatDay = { date: string; groups: string[] };
+export type HeatMap = { unit: string; ranges: HeatRange[]; days?: HeatDay[] };
 
 const MAX_REPS_FOR_ESTIMATE = 12;
 const epley = (w: number, reps: number) => w * (1 + Math.min(reps, MAX_REPS_FOR_ESTIMATE) / 30);
@@ -75,6 +83,34 @@ const epley = (w: number, reps: number) => w * (1 + Math.min(reps, MAX_REPS_FOR_
 export function creditFor(rir: number): number {
   if (rir <= 5) return 1;
   if (rir <= 9) return 0.5;
+  return 0;
+}
+
+/**
+ * The Marine Corps PFT plank: one table for every age and sex, 1:10 for the
+ * 40-point minimum and 3:45 for 100. Points between are taken as even steps.
+ * Under 1:10 doesn't pass (null).
+ */
+export const PFT_PLANK_MIN_SEC = 70;
+export const PFT_PLANK_MAX_SEC = 225;
+export function pftPlankPoints(seconds: number): number | null {
+  if (seconds < PFT_PLANK_MIN_SEC) return null;
+  if (seconds >= PFT_PLANK_MAX_SEC) return 100;
+  return Math.round(40 + ((seconds - PFT_PLANK_MIN_SEC) * 60) / (PFT_PLANK_MAX_SEC - PFT_PLANK_MIN_SEC));
+}
+export const isPlank = (name: string) => /^plank$/i.test(name.trim());
+
+/**
+ * Credit for a hold of `sec` against the longest so far: two-thirds of it or
+ * more is about as close to the limit as 5 reps short on a set of 15, so it
+ * counts in full; 40% or more counts half. A plank that passes the PFT
+ * (1:10) counts in full whatever the best.
+ */
+export function holdCredit(sec: number, best: number, plank: boolean): number {
+  if (plank && sec >= PFT_PLANK_MIN_SEC) return 1;
+  const r = best > 0 ? sec / best : 1;
+  if (r >= 0.65) return 1;
+  if (r >= 0.4) return 0.5;
   return 0;
 }
 
@@ -103,6 +139,7 @@ export function scoreSets(sets: readonly HeatSet[]): SetScore[] {
   const order = sets.map((s, i) => ({ s, i })).sort((a, b) => byDate(a.s, b.s));
   const best = new Map<string, number>(); // movement -> best e1RM
   const bestReps = new Map<string, number>(); // movement -> most reps without weight
+  const bestHold = new Map<string, number>(); // movement -> longest hold
   const out: SetScore[] = sets.map(() => ({ credit: 0, heavy: false }));
 
   let k = 0;
@@ -114,9 +151,17 @@ export function scoreSets(sets: readonly HeatSet[]): SetScore[] {
 
     const top = new Map<string, number>();
     const topReps = new Map<string, number>();
+    const topHold = new Map<string, number>();
     for (const { s } of day) {
       const reps = s.reps ?? 0;
-      if (reps <= 0) continue;
+      if (reps <= 0) {
+        const sec = s.seconds ?? 0;
+        if (sec > 0) {
+          bestHold.set(s.movement, Math.max(bestHold.get(s.movement) ?? 0, sec));
+          topHold.set(s.movement, Math.max(topHold.get(s.movement) ?? 0, sec));
+        }
+        continue;
+      }
       if (s.weight != null && s.weight > 0) {
         best.set(s.movement, Math.max(best.get(s.movement) ?? 0, epley(s.weight, reps)));
         top.set(s.movement, Math.max(top.get(s.movement) ?? 0, s.weight));
@@ -128,7 +173,13 @@ export function scoreSets(sets: readonly HeatSet[]): SetScore[] {
 
     for (const { s, i } of day) {
       const reps = s.reps ?? 0;
-      if (reps <= 0) continue;
+      if (reps <= 0) {
+        const sec = s.seconds ?? 0;
+        if (sec <= 0 || sec < 0.5 * (topHold.get(s.movement) ?? 0)) continue;
+        const credit = holdCredit(sec, bestHold.get(s.movement) ?? sec, isPlank(s.name));
+        out[i] = { credit: applyEffort(credit, s.effort), heavy: false };
+        continue;
+      }
       if (s.weight != null && s.weight > 0) {
         if (s.weight < 0.5 * (top.get(s.movement) ?? 0)) continue;
         const max = best.get(s.movement) ?? epley(s.weight, reps);
@@ -159,7 +210,9 @@ const daysBetween = (a: string, b: string) =>
 
 /** Best weight at the rep count done most in the range, then and now. */
 function bestsFor(sets: readonly HeatSet[], group: string, from: string, today: string): HeatBest[] {
-  const mine = sets.filter((s) => s.primary === group && (s.reps ?? 0) > 0 && s.date <= today);
+  const mine = sets.filter(
+    (s) => s.primary === group && ((s.reps ?? 0) > 0 || (s.seconds ?? 0) > 0) && s.date <= today,
+  );
   const inRange = mine.filter((s) => s.date >= from);
   const byMove = new Map<string, HeatSet[]>();
   for (const s of inRange) byMove.set(s.movement, [...(byMove.get(s.movement) ?? []), s]);
@@ -168,8 +221,26 @@ function bestsFor(sets: readonly HeatSet[], group: string, from: string, today: 
   const out: HeatBest[] = [];
   for (const [movement, list] of picks) {
     const all = mine.filter((s) => s.movement === movement);
-    const weighted = list.filter((s) => s.weight != null && s.weight > 0);
-    if (weighted.length > 0) {
+    const weighted = list.filter((s) => s.weight != null && s.weight > 0 && (s.reps ?? 0) > 0);
+    const timed = list.filter((s) => (s.reps ?? 0) <= 0 && (s.seconds ?? 0) > 0);
+    if (weighted.length === 0 && timed.length > 0) {
+      const holds = all.filter((s) => (s.reps ?? 0) <= 0 && (s.seconds ?? 0) > 0);
+      const before = holds.filter((s) => s.date < from);
+      const firstDay = timed.slice().sort(byDate)[0].date;
+      const start = (before.length ? before : holds.filter((s) => s.date === firstDay)).reduce(
+        (m, s) => Math.max(m, s.seconds ?? 0),
+        0,
+      );
+      const now = holds.reduce((m, s) => Math.max(m, s.seconds ?? 0), 0);
+      out.push({
+        name: list[0].name,
+        kind: "time",
+        reps: null,
+        from: start,
+        to: now,
+        pft: isPlank(list[0].name) ? pftPlankPoints(now) : null,
+      });
+    } else if (weighted.length > 0) {
       const counts = new Map<number, number>();
       for (const s of weighted) counts.set(s.reps!, (counts.get(s.reps!) ?? 0) + 1);
       const reps = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
@@ -183,13 +254,13 @@ function bestsFor(sets: readonly HeatSet[], group: string, from: string, today: 
       const now = at.reduce((m, s) => Math.max(m, s.weight!), 0);
       out.push({ name: list[0].name, kind: "weight", reps, from: start, to: now });
     } else {
-      const before = all.filter((s) => s.date < from && (s.weight ?? 0) <= 0);
-      const firstDay = list.slice().sort(byDate)[0].date;
+      const before = all.filter((s) => s.date < from && (s.weight ?? 0) <= 0 && (s.reps ?? 0) > 0);
+      const firstDay = list.filter((s) => (s.reps ?? 0) > 0).sort(byDate)[0]?.date ?? list[0].date;
       const start = (before.length ? before : list.filter((s) => s.date === firstDay)).reduce(
         (m, s) => Math.max(m, s.reps ?? 0),
         0,
       );
-      const now = all.filter((s) => (s.weight ?? 0) <= 0).reduce((m, s) => Math.max(m, s.reps ?? 0), 0);
+      const now = all.filter((s) => (s.weight ?? 0) <= 0 && (s.reps ?? 0) > 0).reduce((m, s) => Math.max(m, s.reps ?? 0), 0);
       out.push({ name: list[0].name, kind: "reps", reps: null, from: start, to: now });
     }
   }
@@ -239,5 +310,23 @@ export function buildHeat(sets: readonly HeatSet[], today: string, unit = "lb"):
       }),
     };
   });
-  return { unit, ranges };
+  return { unit, ranges, days: unweightedDays(sets) };
+}
+
+/**
+ * Days a muscle group was the main work without weights — a core day of
+ * planks and leg raises — so Workout days can mark them like a lifting day.
+ */
+export function unweightedDays(sets: readonly HeatSet[]): HeatDay[] {
+  const byDay = new Map<string, Set<string>>();
+  for (const s of sets) {
+    if (!s.primary || s.marksDay === false || (s.weight != null && s.weight > 0)) continue;
+    if ((s.reps ?? 0) <= 0 && (s.seconds ?? 0) <= 0) continue;
+    const g = byDay.get(s.date) ?? new Set<string>();
+    g.add(s.primary);
+    byDay.set(s.date, g);
+  }
+  return [...byDay.entries()]
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([date, g]) => ({ date, groups: [...g].sort() }));
 }
