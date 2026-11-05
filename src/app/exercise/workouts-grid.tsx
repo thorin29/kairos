@@ -961,6 +961,7 @@ function LiftBlocks({
           >
             {g.label}
           </p>
+          {g.key === "CORE" && <PlankBench tests={heat?.plank ?? []} />}
           <LiftHeadline series={g.items} />
           <GroupCharts series={g.items} groupKey={g.key} />
         </div>

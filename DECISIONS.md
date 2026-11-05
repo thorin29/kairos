@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Plank test shows with Core's charts (v0.643.1 / app 0.452.1)
+
+0.643.0 only drew the plank card when Core had no weighted charts. With a
+suitcase carry or weighted back extension logged, Core is a charted group, so
+the card never appeared. It now leads Core's section either way, and with no
+plank logged it says so instead of vanishing.
+
 ## 2026-11 — Plank test as core's benchmark (v0.643.0 / app 0.452.0)
 
 - Below the body map, Core opens with the plank test instead of only the

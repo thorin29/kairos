@@ -248,7 +248,13 @@ function Tile({ k, v, unit, sub, up }: { k: string; v: string; unit?: string; su
  * pass (1:10) and full marks (3:45).
  */
 export function PlankBench({ tests }: { tests: PlankTest[] }) {
-  if (tests.length === 0) return null;
+  if (tests.length === 0)
+    return (
+      <div className="mt-2 rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
+        <p className="text-sm font-semibold">Plank test</p>
+        <p className="text-sm text-muted">No plank logged yet.</p>
+      </div>
+    );
   const best = tests.reduce((a, b) => (b.seconds > a.seconds ? b : a));
   const last = tests[tests.length - 1];
   const prev = tests.length > 1 ? tests[tests.length - 2] : null;
