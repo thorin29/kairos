@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Workout plan: "Saved" after each change, Done at the bottom (v0.645.0 / app 0.454.0)
+
+The plan editor saves every change the moment it's made, but nothing said so,
+which left leaving the page feeling unsafe. Rather than a draft with Save and
+a discard warning (every edit is its own server write, and undoing them could
+strand a slot already logged today), each change now confirms with a short
+"Saved", and a Done button at the bottom leaves. Web: PlanBuilder watches the
+plan, start date and pause state coming back changed (and the section order's
+save) and shows a toast. No exit warning: there is never anything unsaved.
+
 ## 2026-11 — Core rotation moves on at the next core day; plank test card (v0.644.0 / app 0.453.0)
 
 - `stepCoreDay` used to move the rotation the day after a log. The plan entry

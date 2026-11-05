@@ -364,6 +364,7 @@ export function WorkoutsGrid({
                     Workout plan
                   </h3>
                   <PlanBuilder
+                    onDone={() => setStep("menu")}
                     userId={open.user.id}
                     plan={open.plan}
                     todayDow={todayDow}

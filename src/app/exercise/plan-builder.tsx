@@ -2,7 +2,7 @@
 
 import { WarmupChooser, WarmupPlanLine } from "./warmup-window";
 import { CorePlanLine, CoreRotationPicker } from "./core-days";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { DAY_NAMES } from "@/lib/days";
 import { DateField } from "@/components/date-field";
 import {
@@ -19,6 +19,7 @@ import {
 } from "@/lib/actions/workouts";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import { PlanFilePanel } from "./plan-file-panel";
+import { PRIMARY_BTN } from "./buttons";
 import { blockKind, cleanOrder, isSimpleCategory, KIND_LABEL, type SectionKind } from "@/lib/workouts/blocks";
 import { SCHEME_CHOICES, schemeChoiceKey } from "@/lib/workouts/programs";
 import type { DayOrders } from "@/lib/workouts/day-order";
@@ -134,7 +135,9 @@ export function PlanBuilder({
   weeklyStart,
   weeklyActive,
   sectionOrder,
+  onDone,
 }: {
+  onDone?: () => void;
   userId: string;
   plan: PlanDay[];
   todayDow: number;
@@ -145,6 +148,22 @@ export function PlanBuilder({
   sectionOrder: DayOrders;
 }) {
   const [, startWeeklyStart] = useTransition();
+  // Every change saves as it's made (v0.645): "Saved" shows each time the
+  // plan comes back changed, and Done at the bottom leaves.
+  const [savedAt, setSavedAt] = useState(0);
+  const sig = JSON.stringify([plan, weeklyStart, weeklyActive]);
+  const firstSig = useRef(sig);
+  useEffect(() => {
+    if (sig !== firstSig.current) {
+      firstSig.current = sig;
+      setSavedAt(Date.now());
+    }
+  }, [sig]);
+  useEffect(() => {
+    if (!savedAt) return;
+    const t = window.setTimeout(() => setSavedAt(0), 1800);
+    return () => window.clearTimeout(t);
+  }, [savedAt]);
   const [orders, setOrders] = useState<DayOrders>(sectionOrder);
   const [orderOpen, setOrderOpen] = useState(false);
   const saveOrder = (day: number | null, order: SectionKind[] | null) => {
@@ -156,7 +175,12 @@ export function PlanBuilder({
       else delete days[day];
       return { ...cur, days };
     });
-    void saveSectionOrder(userId, day, order).then(setOrders).catch(() => undefined);
+    void saveSectionOrder(userId, day, order)
+      .then((o) => {
+        setOrders(o);
+        setSavedAt(Date.now());
+      })
+      .catch(() => undefined);
   };
   return (
     <div className="space-y-2">
@@ -233,6 +257,19 @@ export function PlanBuilder({
       <div className="pt-2">
         <PlanFilePanel userId={userId} />
       </div>
+      {onDone && (
+        <button type="button" onClick={onDone} className={`${PRIMARY_BTN} mt-2 w-full`}>
+          Done
+        </button>
+      )}
+      {savedAt > 0 && (
+        <div
+          role="status"
+          className="pointer-events-none fixed inset-x-0 bottom-6 z-[80] flex justify-center"
+        >
+          <span className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-surface shadow-lg">Saved</span>
+        </div>
+      )}
     </div>
   );
 }
