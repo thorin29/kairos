@@ -16,9 +16,8 @@ import {
   type CoreMove,
   type CoreWorkout,
 } from "@/lib/workouts/core-library";
-import { parseScheme, schemeLabel } from "@/lib/workouts/programs";
 import type { PlanWorkout, PoolEntry } from "@/lib/queries/workouts";
-import { DANGER_BTN, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG, SECONDARY_SM } from "./buttons";
+import { DANGER_BTN, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG } from "./buttons";
 import { Modal } from "./plan-file-panel";
 
 /**
@@ -345,34 +344,19 @@ export function CorePlanLine({ userId, pool, workout }: { userId: string; pool: 
   const [error, setError] = useState("");
   const [busy, start] = useTransition();
   return (
-    <div className="mt-1">
-      <ul className="space-y-0.5">
-        {workout.exercises.map((e) => {
-          const s = parseScheme(e.scheme);
-          return (
-            <li key={e.id} className="flex items-center gap-2 text-xs text-muted">
-              <span className="min-w-0 flex-1 truncate">{e.name}</span>
-              {s && <span className="tabular shrink-0">{schemeLabel(s)}</span>}
-            </li>
-          );
-        })}
-      </ul>
-      <div className="mt-1.5 flex items-center gap-2">
-        <span className="text-xs text-muted">
-          {core.rotation.length} in the rotation{core.test ? " · plank test monthly" : ""}
-        </span>
-        <button
-          type="button"
-          onClick={() => {
-            setRotation(core.rotation);
-            setTest(core.test);
-            setOpen(true);
-          }}
-          className={`${SECONDARY_SM} ml-auto`}
-        >
-          Rotation
-        </button>
-      </div>
+    <>
+      {/* Like a warm-up (v0.644): the workout planned now, as a link to the rotation. */}
+      <button
+        type="button"
+        onClick={() => {
+          setRotation(core.rotation);
+          setTest(core.test);
+          setOpen(true);
+        }}
+        className="mt-0.5 block text-left text-xs font-semibold text-accent"
+      >
+        {workout.name.replace(/^Core · /, "") || "Core"} ›
+      </button>
       {open && (
         <Modal title="Core rotation" onClose={() => setOpen(false)}>
           <CoreRotationPicker
@@ -402,6 +386,6 @@ export function CorePlanLine({ userId, pool, workout }: { userId: string; pool: 
           </div>
         </Modal>
       )}
-    </div>
+    </>
   );
 }

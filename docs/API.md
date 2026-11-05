@@ -1010,6 +1010,10 @@ the running program carries into its next block with these changes (same
 start date; maxes as sent), and plan entries the setup doesn't cover stay.
 `GET /api/v1/workouts/plan` movements add `about`.
 
+v0.644: `GET /api/v1/workouts` workouts add `coreTest` — on a core day with
+the month's plank test, the plank's pool id (it's also the first exercise);
+clients show it as its own card. Plan `core` adds `withTest`.
+
 v0.643: `heat` adds `plank: [{ date, seconds, pft }]` — each day's longest
 plank (named Plank, Planks, Forearm plank or Plank test), oldest first, with
 its PFT points (null under 1:10). The core's benchmark chart.

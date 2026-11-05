@@ -35,7 +35,7 @@ import type { Suggestion } from "@/lib/workouts/suggest";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
 import { coreDayView, coreWorkoutsFor, syncCoreDays } from "@/lib/workouts/core-run";
-import { coreMoveLabel, switchesSides, type CoreWorkout } from "@/lib/workouts/core-library";
+import { cleanCoreDay, coreMoveLabel, switchesSides, type CoreWorkout } from "@/lib/workouts/core-library";
 
 /**
  * The exercises scheduled for a person on a day, with any weight/reps already
@@ -172,6 +172,9 @@ export type TodayPlanned = {
   category?: string | null;
   /** A Core day (v0.639): its movements log together on one screen. */
   core?: boolean;
+  /** On a core day with the monthly plank test, the plank's pool id (v0.644):
+   *  it gets its own card, apart from the workout. */
+  coreTest?: string | null;
   exercises: PlannedMovement[];
   /** The plan's own session exists for the day: how a plan with nothing to
    *  enter (every movement untracked) shows that it was marked complete. */
@@ -436,6 +439,13 @@ export async function loadDayPlanProgress(
 /** All of a person's planned workouts for the day (a day can have several, e.g.
  *  Core AND Arms). Same per-plan shape as loadTodayPlannedWorkout, but every
  *  non-empty plan is returned so the card/logger can show them all. */
+/** The plank test's pool id when a core entry plans it (it's always first). */
+function coreTestOf(core: unknown, exercises: { poolExerciseId: string }[]): string | null {
+  if (core == null) return null;
+  const d = cleanCoreDay(core, todayISO());
+  return d?.withTest ? (exercises[0]?.poolExerciseId ?? null) : null;
+}
+
 export async function loadTodayPlannedWorkouts(
   userId: string,
   dayISO: string,
@@ -600,6 +610,7 @@ export async function loadTodayPlannedWorkouts(
       muscleGroup: (plan as { muscleGroup?: string | null }).muscleGroup ?? null,
       category: (plan as { category?: string | null }).category ?? null,
       core: (plan as { core?: unknown }).core != null,
+      coreTest: coreTestOf((plan as { core?: unknown }).core, exercises),
       exercises,
       sessionLogged: hasSession(plan as { name: string; category: string | null }),
     });
@@ -1287,7 +1298,7 @@ export type PlanWorkoutLite = {
   warmup: string | null;
   /** A Core day's rotation (v0.637): workout ids in order, the monthly plank
    *  test, and which one is planned now. Null for anything else. */
-  core: { rotation: string[]; test: boolean; at: number } | null;
+  core: { rotation: string[]; test: boolean; at: number; withTest?: boolean } | null;
   /** Movements, each with its set structure (weights only carry one). */
   exercises: {
     poolExerciseId: string;

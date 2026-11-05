@@ -75,10 +75,13 @@ describe("core library", () => {
 });
 
 describe("core day rotation", () => {
-  it("moves on only after the workout was logged on an earlier day", () => {
+  it("moves on when the logged day's weekday comes round again", () => {
     expect(stepCoreDay(base, ["2026-11-07"], "2026-11-07").at).toBe(0);
-    const next = stepCoreDay(base, ["2026-11-07"], "2026-11-08");
-    expect(next).toMatchObject({ at: 1, since: "2026-11-08" });
+    // The day after, the logged day still shows what was done.
+    expect(stepCoreDay(base, ["2026-11-07"], "2026-11-08").at).toBe(0);
+    expect(stepCoreDay(base, ["2026-11-07"], "2026-11-13").at).toBe(0);
+    const next = stepCoreDay(base, ["2026-11-07"], "2026-11-14");
+    expect(next).toMatchObject({ at: 1, since: "2026-11-14" });
   });
 
   it("repeats a missed week instead of skipping it", () => {
@@ -86,7 +89,7 @@ describe("core day rotation", () => {
   });
 
   it("wraps around", () => {
-    expect(stepCoreDay({ ...base, at: 2 }, ["2026-11-07"], "2026-11-10").at).toBe(0);
+    expect(stepCoreDay({ ...base, at: 2 }, ["2026-11-07"], "2026-11-14").at).toBe(0);
   });
 
   it("puts the plank test in on the month's first core day and keeps the workout", () => {
@@ -97,6 +100,7 @@ describe("core day rotation", () => {
     expect(moves.length).toBe(CORE_LIBRARY[0].moves.length + 1);
     // Done that day: the test is off for the rest of the month.
     const after = stepCoreDay({ ...dec, since: "2026-12-05" }, ["2026-12-05"], "2026-12-12");
+    expect(after.since).toBe("2026-12-12");
     expect(after).toMatchObject({ testedMonth: "2026-12", withTest: false, at: 1 });
   });
 

@@ -283,10 +283,15 @@ export function DayLog({
   }
 
   if (openCore) {
-    const w = byId.get(openCore);
+    // "<id>" opens the core workout, "<id>|test" the month's plank test (v0.644).
+    const [coreId, part] = openCore.split("|");
+    const w = byId.get(coreId);
+    const testId = w ? coreTestId(w) : null;
     const moves = (sections.flatMap((s) => s.items).filter(
-      (it) => it.type === "movement" && it.workoutId === openCore,
-    ) as { type: "movement"; workoutId: string; poolExerciseId: string; name: string; metric: Metric }[]);
+      (it) => it.type === "movement" && it.workoutId === coreId,
+    ) as { type: "movement"; workoutId: string; poolExerciseId: string; name: string; metric: Metric }[]).filter(
+      (m) => (part === "test" ? m.poolExerciseId === testId : m.poolExerciseId !== testId),
+    );
     if (w) {
       return (
         <CoreLogger
@@ -294,7 +299,7 @@ export function DayLog({
           userId={userId}
           dateISO={date}
           late={late}
-          title={w.name}
+          title={part === "test" ? "Plank test" : w.name}
           workoutId={w.id}
           moves={moves
             .map((m) => ({ ex: w.exercises.find((e) => e.poolExerciseId === m.poolExerciseId), metric: m.metric }))
@@ -594,9 +599,38 @@ export function DayLog({
                     const w = byId.get(it.workoutId);
                     // A Core day is one card for the whole workout (v0.639).
                     if (w?.core) {
-                      const mine = s.items.filter((x) => x.type === "movement" && x.workoutId === w.id) as {
-                        poolExerciseId: string;
-                      }[];
+                      const testId = coreTestId(w);
+                      // The month's plank test is its own card (v0.644).
+                      if (testId && it.poolExerciseId === testId) {
+                        const m = data.state.movements[testId];
+                        const logged = !!m && m.setCount > 0;
+                        return (
+                          <button
+                            key={`${it.workoutId}:test`}
+                            type="button"
+                            onClick={() => setOpenCore(`${w.id}|test`)}
+                            className="flex min-h-[3.5rem] w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-accent"
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold">Plank test</span>
+                              <span className="tabular block truncate text-xs text-muted">
+                                {logged ? m.summary : m?.last ? `Last time ${m.last}` : "Not logged yet"}
+                              </span>
+                            </span>
+                            {logged && (
+                              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                                Logged
+                              </span>
+                            )}
+                            <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
+                          </button>
+                        );
+                      }
+                      const mine = (
+                        s.items.filter((x) => x.type === "movement" && x.workoutId === w.id) as {
+                          poolExerciseId: string;
+                        }[]
+                      ).filter((x) => x.poolExerciseId !== testId);
                       if (mine[0]?.poolExerciseId !== it.poolExerciseId) return null;
                       const done = mine.filter((x) => (data.state.movements[x.poolExerciseId]?.setCount ?? 0) > 0).length;
                       const all = mine.length > 0 && done === mine.length;
@@ -1864,4 +1898,9 @@ function SuggestionCard({ s, onAnswer }: { s: Suggestion; onAnswer: (answer: str
       </span>
     </section>
   );
+}
+
+/** The plank test's pool id on a core day that has it this month (it's planned first). */
+function coreTestId(w: PlanWorkout): string | null {
+  return w.core?.withTest ? (w.exercises[0]?.poolExerciseId ?? null) : null;
 }

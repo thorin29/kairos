@@ -340,8 +340,8 @@ function DayRow({
           >
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium">
-                {w.name}
-                {!w.isRest && kindOf(w) !== "STRENGTH" && KIND_LABEL[kindOf(w)] !== w.name && (
+                {w.core ? "Core" : w.name}
+                {!w.core && !w.isRest && kindOf(w) !== "STRENGTH" && KIND_LABEL[kindOf(w)] !== w.name && (
                   <span className="ml-2 text-xs font-normal text-muted">{KIND_LABEL[kindOf(w)]}</span>
                 )}
               </div>

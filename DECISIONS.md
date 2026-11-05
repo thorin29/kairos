@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — Core rotation moves on at the next core day; plank test card (v0.644.0 / app 0.453.0)
+
+- `stepCoreDay` used to move the rotation the day after a log. The plan entry
+  then held the next workout's movements, so the day just logged matched none
+  of them: it read as not logged ("logging late", an overdue nag) though it
+  was done. Now a log moves the rotation on when its weekday comes round again
+  (log + 7 days), and `since` becomes that day. Until then the logged day
+  keeps the workout that was done.
+- Entries stored before this (no `v: 2`) get a one-time repair in
+  `syncCoreDays`: if the rotation moved on the old way and that weekday hasn't
+  come round again, it steps back to the workout that was logged (and puts the
+  plank test back if that early move marked it done).
+- The monthly plank test stays the entry's first planned movement (so logging,
+  adherence and the heat map need nothing new) but the day page shows it as
+  its own "Plank test" card, opening just the plank; the core card leaves it
+  out. Served as `coreTest` on the day's workouts.
+- Plan editors show a Core day like a warm-up: "Core", then the workout's
+  name as an accent link that opens the rotation. The movement list and
+  "N in the rotation" line are gone from the row (the rotation shows them).
+
 ## 2026-11 — Plank test shows with Core's charts (v0.643.1 / app 0.452.1)
 
 0.643.0 only drew the plank card when Core had no weighted charts. With a

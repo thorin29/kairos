@@ -15,6 +15,7 @@ import {
   coreScheme,
   libraryCoreWorkout,
   libraryKeyFor,
+  plusDays,
   stepCoreDay,
   switchesSides,
   type CoreDay,
@@ -107,6 +108,7 @@ export async function deleteCoreWorkout(userId: string, id: string): Promise<voi
       rotation: rotation.length ? rotation : [CORE_LIBRARY[0].id],
       at: 0,
       since: today,
+      v: 2,
     };
     await prisma.plannedWorkout.update({ where: { id: e.id }, data: { core: next as never } });
   }
@@ -147,6 +149,7 @@ export async function setCoreDay(
       since: old && current && rotation.includes(current) ? old.since : today,
       testedMonth: old?.testedMonth ?? null,
       withTest: false,
+      v: 2,
     };
     await prisma.plannedWorkout.update({
       where: { id: row.id },
@@ -159,7 +162,7 @@ export async function setCoreDay(
   const day = typeof input.day === "number" ? input.day : -1;
   if (!(Number.isInteger(day) && day >= 0 && day <= 6)) return { ok: false, error: "Pick a day." };
   const count = await prisma.plannedWorkout.count({ where: { userId, dayOfWeek: day } });
-  const first: CoreDay = { rotation, test, at: 0, since: today, testedMonth: null, withTest: false };
+  const first: CoreDay = { rotation, test, at: 0, since: today, testedMonth: null, withTest: false, v: 2 };
   const made = (await prisma.plannedWorkout.create({
     data: {
       userId,
@@ -252,26 +255,59 @@ async function resolveMoves(userId: string, list: CoreMove[]): Promise<(CoreMove
  * month's first core day, and rewrite the entry's movements when they differ.
  * Writes only when something changed.
  */
+/** Finished, non-warm-up sessions on `dates` with a set of one of `ids`. */
+async function loggedDays(userId: string, ids: string[], from: string, to: string): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const sessions = (await prisma.workoutSession.findMany({
+    where: {
+      userId,
+      isRest: false,
+      date: { gte: toDateColumn(from), lt: toDateColumn(to) },
+      sets: { some: { finished: true, poolExerciseId: { in: ids } } },
+    },
+    select: { date: true, category: true },
+  })) as { date: Date; category: string | null }[];
+  return sessions.filter((s) => s.category !== "WARMUP" && s.category !== "HIIT").map((s) => fromDateColumn(s.date));
+}
+
+/**
+ * Before v0.644 a log moved the rotation on the very next day, so the day it
+ * was logged then showed the next workout and read as not done. Once per
+ * entry: if it moved on that way and the weekday hasn't come round again,
+ * step back to the workout that was done.
+ */
+async function repairEarlyStep(e: Entry & { userId: string }, today: string): Promise<CoreDay> {
+  const day: CoreDay = { ...e.day, v: 2 };
+  if (dayOfWeek(e.day.since) === e.dayOfWeek) return day;
+  let lastDay: string | null = null;
+  for (let k = 1; k <= 7 && !lastDay; k++) {
+    const d = plusDays(e.day.since, -k);
+    if (dayOfWeek(d) === e.dayOfWeek) lastDay = d;
+  }
+  if (!lastDay || plusDays(lastDay, 7) <= today) return day;
+  const prevAt = (day.at - 1 + day.rotation.length) % day.rotation.length;
+  const prev = await coreWorkoutFor(e.userId, day.rotation[prevAt]);
+  if (!prev) return day;
+  const ids = (await resolveMoves(e.userId, coreDayMoves(prev, true))).map((m) => m.poolExerciseId);
+  const hit = await loggedDays(e.userId, ids, lastDay, plusDays(lastDay, 1));
+  if (hit.length === 0) return day;
+  return {
+    ...day,
+    at: prevAt,
+    since: lastDay,
+    // The test was marked done by that early move: it was done that day.
+    testedMonth: day.testedMonth === lastDay.slice(0, 7) ? null : day.testedMonth,
+  };
+}
+
 export async function syncCoreDays(userId?: string, today: string = todayISO()): Promise<void> {
   const entries = await coreEntries(userId);
-  for (const e of entries) {
+  for (const stored of entries) {
+    const e = stored.day.v === 2 ? stored : { ...stored, day: await repairEarlyStep(stored, today) };
     const ids = e.planned.map((p) => p.poolExerciseId);
-    let loggedOn: string[] = [];
-    if (ids.length) {
-      const sessions = (await prisma.workoutSession.findMany({
-        where: {
-          userId: e.userId,
-          isRest: false,
-          date: { gte: toDateColumn(e.day.since), lt: toDateColumn(today) },
-          sets: { some: { finished: true, poolExerciseId: { in: ids } } },
-        },
-        select: { date: true, category: true },
-      })) as { date: Date; category: string | null }[];
-      loggedOn = sessions
-        .filter((s) => s.category !== "WARMUP" && s.category !== "HIIT")
-        .map((s) => fromDateColumn(s.date))
-        .filter((d) => dayOfWeek(d) === e.dayOfWeek);
-    }
+    const loggedOn = (await loggedDays(e.userId, ids, e.day.since, today)).filter(
+      (d) => dayOfWeek(d) === e.dayOfWeek,
+    );
     let day = stepCoreDay(e.day, loggedOn, today);
     // Skip workouts that are gone (a deleted one of your own).
     let workout: CoreWorkout | null = null;
@@ -293,7 +329,7 @@ export async function syncCoreDays(userId?: string, today: string = todayISO()):
           w.metric === e.planned[i].metric,
       );
     const name = coreDayName(workout);
-    const dayChanged = JSON.stringify(day) !== JSON.stringify(e.day);
+    const dayChanged = JSON.stringify(day) !== JSON.stringify(stored.day);
     if (same && !dayChanged && name === e.name) continue;
     await prisma.$transaction(async (tx) => {
       if (!same) {
@@ -315,8 +351,10 @@ export async function syncCoreDays(userId?: string, today: string = todayISO()):
   }
 }
 
-/** A core entry's rotation for the plan editors: { rotation, test, at } or null. */
-export function coreDayView(raw: unknown): { rotation: string[]; test: boolean; at: number } | null {
+/** A core entry's rotation for the plan editors and day page: { rotation, test, at, withTest } or null. */
+export function coreDayView(
+  raw: unknown,
+): { rotation: string[]; test: boolean; at: number; withTest: boolean } | null {
   const d = cleanCoreDay(raw, todayISO());
-  return d ? { rotation: d.rotation, test: d.test, at: d.at } : null;
+  return d ? { rotation: d.rotation, test: d.test, at: d.at, withTest: d.withTest } : null;
 }

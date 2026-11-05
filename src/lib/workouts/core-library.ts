@@ -204,6 +204,8 @@ export type CoreDay = {
   testedMonth: string | null;
   /** Whether the current plan includes the test. */
   withTest: boolean;
+  /** 2 once stored by v0.644+ (moves on a week after the log, not the day after). */
+  v?: number;
 };
 
 export function cleanCoreDay(raw: unknown, todayISO: string): CoreDay | null {
@@ -222,13 +224,22 @@ export function cleanCoreDay(raw: unknown, todayISO: string): CoreDay | null {
     since: iso(o.since) ?? todayISO,
     testedMonth: typeof o.testedMonth === "string" && /^\d{4}-\d{2}$/.test(o.testedMonth) ? o.testedMonth : null,
     withTest: o.withTest === true,
+    ...(o.v === 2 ? { v: 2 } : {}),
   };
 }
 
+/** The ISO day `n` days after `iso`. */
+export function plusDays(iso: string, n: number): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
 /**
- * Move a core day on (v0.637). The workout in place moves to the next once
- * it was logged on an earlier day than today, so a missed week repeats it
- * rather than skipping it, and today's log never swaps the plan under you.
+ * Move a core day on (v0.637). The workout in place moves to the next on
+ * the next core day after it was logged (v0.644 — a week later; it used to be
+ * the day after, which left the logged day showing a workout not done), so a
+ * missed week repeats it rather than skipping it.
  * The plank test goes in on the first core day of a month it wasn't done.
  *
  * `loggedOn`: days (before today or not) its movements were logged on, since
@@ -236,13 +247,15 @@ export function cleanCoreDay(raw: unknown, todayISO: string): CoreDay | null {
  */
 export function stepCoreDay(day: CoreDay, loggedOn: readonly string[], todayISO: string): CoreDay {
   let next = { ...day };
-  const done = loggedOn.filter((d) => d >= day.since && d < todayISO).sort();
+  // A log moves the rotation on when its weekday comes round again (v0.644):
+  // until then the day it was logged keeps showing the workout that was done.
+  const done = loggedOn.filter((d) => d >= day.since && plusDays(d, 7) <= todayISO).sort();
   if (done.length > 0) {
     const when = done[0];
     next = {
       ...next,
       at: (day.at + 1) % day.rotation.length,
-      since: todayISO,
+      since: plusDays(when, 7),
       testedMonth: day.withTest ? when.slice(0, 7) : day.testedMonth,
     };
   }
