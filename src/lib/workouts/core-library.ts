@@ -61,8 +61,8 @@ export const CORE_LIBRARY: readonly CoreWorkout[] = [
   lib("strength", "Core strength", 25, "TRX, kettlebell, pull-up bar, back extension chair", [
     ["TRX fallout", "REPS", 3, 8, 12],
     ["Hanging leg raise", "REPS", 3, 8, 12],
-    ["Suitcase carry", "WEIGHT", 3, 40, 40],
-    ["Side plank", "TIME", 3, 30, 60],
+    ["Suitcase carry", "WEIGHT", 4, 40, 40],
+    ["Side plank", "TIME", 4, 30, 60],
     ["Weighted back extension", "WEIGHT", 3, 8, 12],
   ]),
   lib("rotation", "Rotation and power", 20, "Med ball, slam ball, TRX, kettlebell", [
@@ -89,8 +89,8 @@ export const CORE_LIBRARY: readonly CoreWorkout[] = [
   lib("kettlebell", "Kettlebell core", 20, "Kettlebells", [
     ["Turkish get-up", "WEIGHT", 3, 2, 3],
     ["Kettlebell windmill", "WEIGHT", 3, 5, 8],
-    ["Overhead carry", "WEIGHT", 3, 40, 40],
-    ["Suitcase carry", "WEIGHT", 3, 40, 40],
+    ["Overhead carry", "WEIGHT", 4, 40, 40],
+    ["Suitcase carry", "WEIGHT", 4, 40, 40],
   ]),
   lib("situps", "Sit-up and crunch circuit", 12, "No equipment", [
     ["Sit-up", "REPS", 3, 20, 25],
@@ -107,7 +107,7 @@ export const CORE_LIBRARY: readonly CoreWorkout[] = [
   ]),
   lib("mcgill", "McGill Big 3", 10, "No equipment", [
     ["McGill curl-up", "REPS", 3, 5, 6],
-    ["Side plank", "TIME", 3, 10, 30],
+    ["Side plank", "TIME", 4, 10, 30],
     ["Bird dog", "REPS", 3, 5, 6],
   ]),
 ];
@@ -143,6 +143,14 @@ export function coreMetric(m: CoreMove): "REPS" | "DURATION" | "WEIGHT" {
 
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 
+/**
+ * A movement done one side at a time, a set per side (v0.642): a side plank,
+ * a one-handed carry. Its sets come in pairs, so both sides get the same
+ * work, and its timer switches sides.
+ */
+export const switchesSides = (name: string) =>
+  /side plank|suitcase|overhead carry|waiter|single[- ]arm|one[- ]arm|copenhagen/i.test(name);
+
 /** "3 × 8–12", "3 × 0:30–0:45", "1 × 1:10–3:45", "3 × 40 yd" (a carry). */
 export function coreMoveLabel(m: CoreMove): string {
   const f = m.kind === "TIME" ? clock : String;
@@ -172,7 +180,8 @@ export function cleanCoreMoves(raw: unknown): CoreMove[] {
     out.push({
       name,
       kind,
-      sets,
+      // A set per side: always pairs.
+      sets: switchesSides(name) && sets % 2 === 1 ? Math.min(10, sets + 1) : sets,
       min,
       max: Math.max(min, max),
       poolExerciseId: typeof o.poolExerciseId === "string" && o.poolExerciseId ? o.poolExerciseId : null,

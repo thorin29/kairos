@@ -925,6 +925,10 @@ time; a target set adds `warmup: true` on a 5/3/1 warm-up set (40/50/60% ×
 types (Push, Pull, Hinge, Core, Legs, Hamstrings). The week's activity readout
 gives rowing in metres and other distance in the household unit.
 
+v0.642: the movement set log adds `sides` (true for a movement done a side at
+a time — a set per side). Core workouts' side-at-a-time movements always have
+an even number of sets.
+
 v0.641: `GET /api/v1/hockey` sections add `kind` ("hockey" or "skating") and
 `eventTypeId` (the type "Add" uses for that section: a public skate never
 gets the hockey type). `eventTypeId` at the top stays for older apps.

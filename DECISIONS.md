@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-11 — Times in m:ss, sets in pairs, the side-switch timer (v0.642.0 / app 0.449.0)
+
+- Timed sets show and take minutes and seconds. Typing works like a
+  microwave — digits fill from the right (1, 2, 6 → 1:26) — so a number pad
+  is enough; stored as seconds (`clock-entry.ts`). Set boxes are sized to
+  their contents (m:ss, two-digit reps, a weight) instead of filling the row.
+- Movements done a side at a time (`switchesSides`: side plank, suitcase /
+  overhead / single-arm carries, Copenhagen) are a set per side, so their sets
+  come in pairs: the core library plans 4, and an odd count in your own core
+  workout rounds up. Library text says "one side per set, switching each set".
+  `MovementLog.sides` tells the clients.
+- On the Core day screen, Timer works on the next movement with open timed
+  sets, and only that one. A side-at-a-time movement opens `SidesTimer`:
+  Start on Left/Right, a 1/2/3 s pause, a stopwatch with Switch — each Switch
+  keeps that side's time, pauses, and times the next — until every open set
+  has a time, which fill its sets in order (ticked by you). Done stops early
+  with what's been timed.
+
+
 ## 2026-11 — Public skate on the Hockey page (v0.641.0 / app 0.448.0)
 
 ice-time 0.1.3 adds a Public skate section and marks every section's `kind`

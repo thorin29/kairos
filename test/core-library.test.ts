@@ -114,3 +114,26 @@ describe("core day rotation", () => {
     });
   });
 });
+
+describe("sides and clock entry (v0.642)", () => {
+  it("pairs the sets of a movement done a side at a time", async () => {
+    const { switchesSides } = await import("@/lib/workouts/core-library");
+    expect(switchesSides("Side plank")).toBe(true);
+    expect(switchesSides("Suitcase carry")).toBe(true);
+    expect(switchesSides("Plank")).toBe(false);
+    expect(switchesSides("Farmer carry")).toBe(false);
+    for (const w of CORE_LIBRARY) for (const m of w.moves) if (switchesSides(m.name)) expect(m.sets % 2, `${w.name}: ${m.name}`).toBe(0);
+    expect(cleanCoreMoves([{ name: "Side plank", kind: "TIME", sets: 3, min: 30, max: 45 }])[0].sets).toBe(4);
+  });
+
+  it("reads a typed time like a microwave and shows it as m:ss", async () => {
+    const { clockText, secondsFromTyped } = await import("@/lib/workouts/clock-entry");
+    expect(secondsFromTyped("126")).toBe("86");
+    expect(secondsFromTyped("2:06")).toBe("126");
+    expect(secondsFromTyped("2:065")).toBe("1265");
+    expect(secondsFromTyped("2:0")).toBe("20");
+    expect(secondsFromTyped("")).toBe("");
+    expect(clockText(126)).toBe("2:06");
+    expect(clockText("")).toBe("");
+  });
+});

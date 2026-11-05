@@ -1,5 +1,7 @@
 "use client";
 
+import { clockText as clockFromSeconds, secondsFromTyped } from "@/lib/workouts/clock-entry";
+import { SidesTimer } from "./sides-timer";
 import { PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG, SECONDARY_SM } from "./buttons";
 import { Modal } from "./plan-file-panel";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -76,8 +78,13 @@ function dayLabel(iso: string): string {
 type SectionHandle = {
   save: () => Promise<void>;
   skip: (want: boolean) => Promise<void>;
-  /** The timer's time into this section's next open timed set; false if it has none. */
-  takeSeconds: (seconds: number) => boolean;
+  /** Timed sets still open (blank, not ticked); 0 for an untimed or skipped movement. */
+  openTimed: () => number;
+  /** Done a side at a time: its timer switches sides (v0.642). */
+  sides: () => boolean;
+  name: () => string;
+  /** Timer times into its open timed sets, in order. */
+  fillSeconds: (seconds: number[]) => void;
   feel: (effort: Effort | null, hurt: HurtArea | null) => void;
 };
 
@@ -988,6 +995,8 @@ function lastText(s: MovementSetRow | undefined, metric: Metric): string {
  * way 5/3/1's warm-up and main sets are, and one Log for the whole workout.
  * Every set saves as it's ticked; Log also saves anything typed.
  */
+const clockEntry = (s: string | number) => clockFromSeconds(typeof s === "number" ? s : s);
+
 function CoreLogger({
   userId,
   dateISO,
@@ -1015,7 +1024,9 @@ function CoreLogger({
     moves.map((m) => sections.current.get(m.ex.poolExerciseId)).filter((h): h is SectionHandle => !!h);
   const [leaving, setLeaving] = useState(false);
   const [skipped, setSkipped] = useState(false);
-  const [timing, setTiming] = useState(false);
+  // The timer works on the next movement with open timed sets, and only that
+  // one: a side-at-a-time movement gets Switch (v0.642).
+  const [timing, setTiming] = useState<{ h: SectionHandle; sides: boolean; sets: number; name: string } | null>(null);
   const [effort, setEffort] = useState<Effort | null>(null);
   const [hurt, setHurt] = useState<HurtArea | null>(null);
   const timed = moves.some((m) => m.metric === "DURATION");
@@ -1076,7 +1087,15 @@ function CoreLogger({
             for (const s of ordered()) void s.skip(want);
           }}
         />
-        <PlanActionTile icon={TimerIcon} label="Timer" onClick={() => setTiming(true)} disabled={!timed || skipped} />
+        <PlanActionTile
+          icon={TimerIcon}
+          label="Timer"
+          onClick={() => {
+            const h = ordered().find((x) => x.openTimed() > 0);
+            if (h) setTiming({ h, sides: h.sides(), sets: h.openTimed(), name: h.name() });
+          }}
+          disabled={!timed || skipped}
+        />
         <PlanActionTile
           icon={CheckIcon}
           label={leaving ? "Saving" : "Log"}
@@ -1086,17 +1105,28 @@ function CoreLogger({
           onClick={() => void finish()}
         />
       </div>
-      {timing && (
+      {timing?.sides && (
+        <SidesTimer
+          name={timing.name}
+          sets={timing.sets}
+          onDone={(list) => {
+            timing.h.fillSeconds(list);
+            setTiming(null);
+          }}
+          onClose={() => setTiming(null)}
+        />
+      )}
+      {timing && !timing.sides && (
         <ConditioningTimer
           userId={userId}
-          workout={{ name: title, type: "FOR_TIME", capSec: null, movements: [], resultLabel: "Time", today: null }}
+          workout={{ name: timing.name, type: "FOR_TIME", capSec: null, movements: [], resultLabel: "Time", today: null }}
           lastText={null}
           logLabel="Use for the next hold"
           onLog={async (seconds) => {
-            for (const s of ordered()) if (s.takeSeconds(seconds)) break;
-            setTiming(false);
+            timing.h.fillSeconds([seconds]);
+            setTiming(null);
           }}
-          onClose={() => setTiming(false)}
+          onClose={() => setTiming(null)}
         />
       )}
     </div>
@@ -1298,12 +1328,17 @@ function MovementLogger({
     skip: async (want: boolean) => {
       if (want !== skipped) await toggleSkip();
     },
-    takeSeconds: (seconds: number) => {
-      if (metric !== "DURATION" || skipped) return false;
-      const r = rows.find((x) => !x.saved && x.s === "");
-      if (!r) return false;
-      update(r.key, { s: String(Math.round(seconds)), saved: false });
-      return true;
+    openTimed: () => (metric !== "DURATION" || skipped ? 0 : rows.filter((x) => !x.saved && x.s === "").length),
+    sides: () => !!log?.sides,
+    name: () => (doing ? doing.name : exercise.name),
+    fillSeconds: (list: number[]) => {
+      const open = rows.filter((x) => !x.saved && x.s === "");
+      setRows((cur) =>
+        cur.map((x) => {
+          const i = open.findIndex((o) => o.key === x.key);
+          return i >= 0 && i < list.length ? { ...x, s: String(Math.round(list[i])), saved: false } : x;
+        }),
+      );
     },
     feel: (e: Effort | null, h: HurtArea | null) => saveFeedback(e, h),
   };
@@ -1311,7 +1346,10 @@ function MovementLogger({
     embedded?.(slotId, {
       save: () => handleRef.current!.save(),
       skip: (w) => handleRef.current!.skip(w),
-      takeSeconds: (sec) => handleRef.current!.takeSeconds(sec),
+      openTimed: () => handleRef.current!.openTimed(),
+      sides: () => handleRef.current!.sides(),
+      name: () => handleRef.current!.name(),
+      fillSeconds: (list) => handleRef.current!.fillSeconds(list),
       feel: (e, h) => handleRef.current!.feel(e, h),
     });
   }, [embedded, slotId]);
@@ -1503,7 +1541,7 @@ function MovementLogger({
               <span>Set</span>
               <span className="hidden sm:block">Last time</span>
               {metric === "WEIGHT" && <span>Weight ({unit})</span>}
-              <span>{metric === "DURATION" ? "Seconds" : repsUnit ? `Distance (${repsUnit})` : "Reps"}</span>
+              <span>{metric === "DURATION" ? "Time" : repsUnit ? `Distance (${repsUnit})` : "Reps"}</span>
               <span className="text-center">Done</span>
               <span />
             </div>
@@ -1545,17 +1583,17 @@ function MovementLogger({
                           onChange={(e) =>
                             update(r.key, { w: e.target.value, saved: r.saved && e.target.value === r.w })
                           }
-                          className={`tabular h-11 w-full rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.w ? "border-accent/60" : "border-hairline"}`}
+                          className={`tabular h-11 w-full max-w-[6rem] rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.w ? "border-accent/60" : "border-hairline"}`}
                         />
                       )}
                       {metric === "DURATION" ? (
                         <input
-                          aria-label={`Seconds, set ${i + 1}`}
+                          aria-label={`Time, set ${i + 1}`}
                           inputMode="numeric"
-                          value={r.s}
-                          placeholder={r.hintS != null ? String(r.hintS) : ""}
-                          onChange={(e) => update(r.key, { s: e.target.value, saved: false })}
-                          className={`tabular h-11 w-full rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.s ? "border-accent/60" : "border-hairline"}`}
+                          value={clockEntry(r.s)}
+                          placeholder={r.hintS != null ? clockEntry(r.hintS) : "0:00"}
+                          onChange={(e) => update(r.key, { s: secondsFromTyped(e.target.value), saved: false })}
+                          className={`tabular h-11 w-full max-w-[5.5rem] rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.s ? "border-accent/60" : "border-hairline"}`}
                         />
                       ) : (
                         <input
@@ -1564,7 +1602,7 @@ function MovementLogger({
                           value={r.r}
                           placeholder={r.hintR != null ? `${r.hintR}${r.plus ? "+" : ""}` : ""}
                           onChange={(e) => update(r.key, { r: e.target.value, saved: false })}
-                          className={`tabular h-11 w-full rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.r ? "border-accent/60" : "border-hairline"}`}
+                          className={`tabular h-11 w-full max-w-[4.5rem] rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.r ? "border-accent/60" : "border-hairline"}`}
                         />
                       )}
                       <button

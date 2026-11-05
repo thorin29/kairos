@@ -16,6 +16,7 @@ import {
   libraryCoreWorkout,
   libraryKeyFor,
   stepCoreDay,
+  switchesSides,
   type CoreDay,
   type CoreMove,
   type CoreWorkout,
@@ -70,7 +71,11 @@ export async function saveCoreWorkout(
   const names = new Map(pool.map((p) => [p.id, p.name]));
   const kept = moves
     .filter((m) => names.has(m.poolExerciseId as string))
-    .map((m) => ({ ...m, name: names.get(m.poolExerciseId as string) as string }));
+    .map((m) => {
+      const name = names.get(m.poolExerciseId as string) as string;
+      // A set per side comes in pairs (v0.642).
+      return { ...m, name, sets: switchesSides(name) && m.sets % 2 === 1 ? Math.min(10, m.sets + 1) : m.sets };
+    });
   if (kept.length === 0) return { ok: false, error: "Add a movement." };
   if (input.id && !input.id.startsWith(CORE_LIB_PREFIX)) {
     const n = (await prisma.coreWorkout.updateMany({

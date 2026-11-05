@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.641.0";
+export const APP_VERSION = "0.642.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.642.0",
+    summary: [
+      "Times show and type as minutes and seconds (2:06), and the set boxes are narrower.",
+      "One-side-at-a-time movements (side plank, suitcase carry) come in even sets, a side each.",
+      "On a core day, the timer for a side plank has Switch: it keeps each side's time, pauses 1–3 seconds, and fills every set.",
+    ],
+  },
   {
     version: "0.641.0",
     summary: ["Public skate shows on the Hockey page, and adding one to the calendar doesn't file it as hockey."],

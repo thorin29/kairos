@@ -35,7 +35,7 @@ import type { Suggestion } from "@/lib/workouts/suggest";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
 import { coreDayView, coreWorkoutsFor, syncCoreDays } from "@/lib/workouts/core-run";
-import { coreMoveLabel, type CoreWorkout } from "@/lib/workouts/core-library";
+import { coreMoveLabel, switchesSides, type CoreWorkout } from "@/lib/workouts/core-library";
 
 /**
  * The exercises scheduled for a person on a day, with any weight/reps already
@@ -1678,6 +1678,8 @@ export type MovementLog = {
   about: string | null;
   /** What the reps field counts, when not reps: "yd" / "m" for a carry (v0.640). */
   repsUnit?: string | null;
+  /** Done a side at a time, a set per side (v0.642): its timer switches sides. */
+  sides?: boolean;
 };
 
 const setRow = (s: { weight: number | null; reps: number | null; seconds: number | null }): MovementSetRow => ({
@@ -1826,6 +1828,7 @@ export async function loadMovementLog(
     name: poolRow?.name ?? "",
     about: poolRow?.about ?? null,
     repsUnit,
+    sides: switchesSides(poolRow?.name ?? ""),
   };
 }
 
