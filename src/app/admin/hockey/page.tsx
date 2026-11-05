@@ -14,11 +14,11 @@ export default async function HockeyAdminPage() {
 
       <header className="mb-8 mt-5 flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-5">
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Hockey</h1>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Ice time</h1>
           <p className="mt-1 max-w-xl text-sm text-muted">
             Ice times come from an ice-time container, which reads the rink&rsquo;s
-            schedules. Kairos asks it for the week whenever Hockey opens. Leave the
-            address blank to hide Hockey.
+            schedules. Kairos asks it for the week whenever Ice time opens. Leave the
+            address blank to hide Ice time.
           </p>
         </div>
         <LockButton />

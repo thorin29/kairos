@@ -18,13 +18,13 @@ export default async function HockeyPage() {
   if (load.state !== "ok") {
     return (
       <main className="mx-auto max-w-[72rem] px-6 py-8">
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Hockey</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">Ice time</h1>
         <div className="mt-6 rounded-2xl border border-hairline bg-surface p-6 text-sm">
           {load.state === "off" ? (
             <p>
-              Hockey isn&rsquo;t set up yet. An admin can connect ice-time under{" "}
+              Ice time isn&rsquo;t set up yet. An admin can connect ice-time under{" "}
               <Link href="/admin/hockey" className="font-medium text-accent hover:underline">
-                Admin → Hockey
+                Admin → Ice time
               </Link>
               .
             </p>

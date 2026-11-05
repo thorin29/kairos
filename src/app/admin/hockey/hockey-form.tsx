@@ -29,7 +29,7 @@ export function HockeyForm({ initial }: { initial: HockeyConfig }) {
       setToken("");
       setClearToken(false);
       if (!url.trim()) {
-        setMsg({ ok: true, text: "Saved. Hockey is hidden." });
+        setMsg({ ok: true, text: "Saved. Ice time is hidden." });
         return;
       }
       const t = await testHockeyAction();

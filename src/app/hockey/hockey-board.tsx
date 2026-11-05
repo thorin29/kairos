@@ -146,7 +146,7 @@ export function HockeyBoard({
     <main className="mx-auto max-w-[72rem] px-6 py-8">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Hockey</h1>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Ice time</h1>
           <p className="mt-1 text-sm text-muted">
             {[view.rinks.join(", "), "next 7 days", `${dayFmt(first)} – ${dayFmt(last)}`]
               .filter(Boolean)

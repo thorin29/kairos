@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Hockey renamed Ice time (v0.647.0 / app 0.457.0)
+
+The page lists public skate as well as hockey, so the menu, page titles and
+admin card read "Ice time" and the icon is an ice skate. Only what people see
+changed: the route (/hockey), API paths, settings keys and code names
+(`HockeyIcon`, `KairosIcons.Hockey`, hockey-view.ts) stay as they were.
+
 ## 2026-11 — A planned rest day is a rest day (v0.646.0 / app 0.456.0)
 
 A weekday the plan marks Rest (and plans nothing else) used to look like an

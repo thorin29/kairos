@@ -100,7 +100,7 @@ const TILES: Tile[] = [
   },
   {
     href: "/admin/hockey",
-    label: "Hockey",
+    label: "Ice time",
     blurb: "Connect ice-time for the week's ice times",
     icon: <HockeyIcon className="h-7 w-7" />,
     ready: true,
