@@ -1949,6 +1949,8 @@ export type DayLogState = {
    *  Conditioning plan done (v0.617). */
   hiitLogged: boolean;
   rested: boolean;
+  /** The plan makes this weekday a rest day (v0.646). */
+  restPlanned: boolean;
   /** The person's program and its week on this day, if one is running (v0.611). */
   program: ProgramInfo | null;
   /** On a program day, the page title the home card uses: the program and the
@@ -1984,6 +1986,9 @@ async function loggedOtherFor(
   userId: string,
   dateISO: string,
   planned: NonNullable<TodayPlanned>[],
+  /** A planned rest day (v0.646): there are no Cardio or Conditioning
+   *  sections to show a row or a conditioning workout, so list them too. */
+  everything = false,
 ): Promise<{ other: LoggedOther[]; any: boolean; title: string; lifted: boolean }> {
   const rows = (await prisma.workoutSession.findMany({
     where: { userId, date: toDateColumn(dateISO), isRest: false },
@@ -2036,7 +2041,7 @@ async function loggedOtherFor(
   const labelOf = new Map<string, string>();
   const byName = new Map<string, Map<string, typeof rows[number]["sets"]>>();
   for (const r of rows) {
-    if (r.category && (CARDIO_CATEGORIES.includes(r.category) || r.category === "HIIT")) continue;
+    if (!everything && r.category && (CARDIO_CATEGORIES.includes(r.category) || r.category === "HIIT")) continue;
     // A warm-up isn't part of what's listed as done, unless it's all there was.
     if (r.category === "WARMUP" && !onlyWarmup) continue;
     const name = r.name?.trim() || (r.category ? (CATEGORY_LABEL as Record<string, string>)[r.category] ?? "Workout" : "Workout");
@@ -2154,9 +2159,13 @@ export async function loadDayLogState(
     else if (t === cur.date) cur.rows.push(h);
   }
 
-  const logged = await loggedOtherFor(userId, dateISO, planned);
-  const program = await programInfoFor(userId, dateISO);
   const planIds = [...new Set([...planned.map((p) => p.plannedWorkoutId), ...(await simplePlanIds(userId, dateISO))])];
+  // The plan marks this weekday a rest day and nothing else is planned (v0.646).
+  const restPlanned =
+    planIds.length === 0 &&
+    (await prisma.plannedWorkout.count({ where: { ...dayPlanWhere(userId, dateISO), isRest: true } })) > 0;
+  const logged = await loggedOtherFor(userId, dateISO, planned, restPlanned);
+  const program = await programInfoFor(userId, dateISO);
 
   const movements: Record<string, DayMovementState> = {};
   for (const slot of slots) {
@@ -2180,6 +2189,7 @@ export async function loadDayLogState(
     cardioLogged: sessions.some((s) => !s.isRest && s.category != null && CARDIO_CATEGORIES.includes(s.category)),
     hiitLogged: sessions.some((s) => !s.isRest && s.category === "HIIT"),
     rested: sessions.some((s) => s.isRest),
+    restPlanned,
     program,
     programTitle: !program
       ? null

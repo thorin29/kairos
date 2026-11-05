@@ -227,6 +227,9 @@ export function DayLog({
   );
 
   const state = data?.state ?? null;
+  // Marked a rest day, or a rest day in the plan (v0.646): no Rest / skip, no
+  // sections, just what was logged.
+  const isRestDay = !!state?.rested || !!state?.restPlanned;
   const cardDone = useCallback(
     (workoutId: string) => {
       if (!state) return false;
@@ -380,14 +383,14 @@ export function DayLog({
           {state?.program && ` · ${state.program.label}`}
         </p>
         <h3 className="mt-1 font-display text-xl font-semibold">
-          {state?.rested
+          {isRestDay
             ? "Rest day"
             : title ||
               (workouts.length === 0
                 ? state?.loggedTitle || "Nothing planned"
                 : "Workout")}
         </h3>
-        {progress.total > 0 && !state?.rested && (
+        {progress.total > 0 && !isRestDay && (
           <div className="mt-2 flex items-center gap-3">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-hairline" aria-hidden>
               <div
@@ -401,7 +404,7 @@ export function DayLog({
           </div>
         )}
         {/* Resting or skipping the whole day lives here, with the day (v0.624). */}
-        {data && !state?.rested && !state?.loggedAny && (
+        {data && !isRestDay && !state?.loggedAny && (
           <button
             type="button"
             onClick={() =>
@@ -418,13 +421,13 @@ export function DayLog({
         )}
       </div>
 
-      {state?.light && !state.rested && (
+      {state?.light && !isRestDay && (
         <p className="text-sm font-semibold text-accent">
           Lighter today · {Math.round(state.light * 100)}% of the usual weights
         </p>
       )}
 
-      {state?.suggestion && !state.rested && (
+      {state?.suggestion && !isRestDay && (
         <SuggestionCard
           s={state.suggestion}
           onAnswer={(answer) => {
@@ -437,7 +440,7 @@ export function DayLog({
         />
       )}
 
-      {data?.benchmark && !state?.rested && (
+      {data?.benchmark && !isRestDay && (
         <BenchmarkCard
           key={`bench:${date}`}
           userId={userId}
@@ -456,7 +459,7 @@ export function DayLog({
         <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">Loading&hellip;</p>
       ) : (
         data &&
-        !state?.rested && (
+        !isRestDay && (
           <div className="space-y-5">
             {withConditioning.map((s) => (
               <section key={s.key}>

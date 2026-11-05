@@ -76,8 +76,9 @@ export async function GET(req: NextRequest) {
     // On a program day the program and its main lift, as on the home card
     // (v0.626), or on a past day what was logged in it ("5/3/1 · Legs",
     // v0.627); else the kinds of work (v0.625); else what was logged.
-    title:
-      (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.programTitle ??
+    title: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.restPlanned
+      ? "Rest day"
+      : (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.programTitle ??
       ((program
         ? await programDayTitle(userId, date, program.name)
         : dayHeadline(daySections(dayWorkouts.map(asDayWorkout), order))) ||
@@ -111,6 +112,9 @@ export async function GET(req: NextRequest) {
     loggedAny: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.loggedAny ?? false,
     // v0.624: the day was marked a rest day.
     rested: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.rested ?? false,
+    // v0.646: the plan makes this weekday a rest day; `loggedOther` then lists
+    // rows and conditioning too.
+    restPlanned: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.restPlanned ?? false,
   });
 }
 

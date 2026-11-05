@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-11 — A planned rest day is a rest day (v0.646.0 / app 0.456.0)
+
+A weekday the plan marks Rest (and plans nothing else) used to look like an
+empty day: Rest / skip, + Conditioning, suggestions. Now `restPlanned` makes
+it read "Rest day" with none of that, the same as a day marked rested. Log an
+additional workout stays, and anything logged (a game, a row, conditioning)
+lists under Logged — on such a day `loggedOtherFor` includes cardio and HIIT
+sessions, which normally show in their own sections. It stays a rest day.
+
 ## 2026-11 — Workout plan: "Saved" after each change, Done at the bottom (v0.645.0 / app 0.454.0)
 
 The plan editor saves every change the moment it's made, but nothing said so,
