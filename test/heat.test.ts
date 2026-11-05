@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHeat, creditFor, levelFor, pftPlankPoints, scoreSets, unweightedDays, type HeatSet } from "@/lib/workouts/heat";
+import { buildHeat, creditFor, levelFor, pftPlankPoints, plankTests, scoreSets, unweightedDays, type HeatSet } from "@/lib/workouts/heat";
 
 const set = (date: string, weight: number | null, reps: number, extra: Partial<HeatSet> = {}): HeatSet => ({
   date,
@@ -94,6 +94,21 @@ describe("timed holds and core days", () => {
     reps: null,
     seconds,
     ...extra,
+  });
+
+  it("keeps each day's longest plank as the core benchmark", () => {
+    const tests = plankTests([
+      hold("2026-10-05", 90, "planks"),
+      hold("2026-10-05", 75, "planks"),
+      hold("2026-09-01", 60, "Plank test"),
+      hold("2026-10-05", 40, "Side plank"),
+      hold("2026-11-02", 150, "Forearm plank"),
+    ]);
+    expect(tests).toEqual([
+      { date: "2026-09-01", seconds: 60, pft: null },
+      { date: "2026-10-05", seconds: 90, pft: pftPlankPoints(90) },
+      { date: "2026-11-02", seconds: 150, pft: pftPlankPoints(150) },
+    ]);
   });
 
   it("scores a plank on the PFT table", () => {

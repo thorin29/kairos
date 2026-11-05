@@ -74,7 +74,7 @@ export type HeatGroup = {
 export type HeatRange = { key: HeatRangeKey; label: string; groups: HeatGroup[] };
 /** A day's groups trained without weights (bodyweight or timed), for Workout days. */
 export type HeatDay = { date: string; groups: string[] };
-export type HeatMap = { unit: string; ranges: HeatRange[]; days?: HeatDay[] };
+export type HeatMap = { unit: string; ranges: HeatRange[]; days?: HeatDay[]; plank?: PlankTest[] };
 
 const MAX_REPS_FOR_ESTIMATE = 12;
 const epley = (w: number, reps: number) => w * (1 + Math.min(reps, MAX_REPS_FOR_ESTIMATE) / 30);
@@ -98,7 +98,22 @@ export function pftPlankPoints(seconds: number): number | null {
   if (seconds >= PFT_PLANK_MAX_SEC) return 100;
   return Math.round(40 + ((seconds - PFT_PLANK_MIN_SEC) * 60) / (PFT_PLANK_MAX_SEC - PFT_PLANK_MIN_SEC));
 }
-export const isPlank = (name: string) => /^plank$/i.test(name.trim());
+export const isPlank = (name: string) => /^(forearm )?planks?( test)?$/i.test(name.trim());
+
+/** A plank test (v0.643): the day's longest plank hold, with its PFT points. */
+export type PlankTest = { date: string; seconds: number; pft: number | null };
+
+/** Every day's longest plank, oldest first: the core's benchmark. */
+export function plankTests(sets: readonly HeatSet[]): PlankTest[] {
+  const best = new Map<string, number>();
+  for (const s of sets) {
+    if (!isPlank(s.name) || (s.reps ?? 0) > 0 || !(s.seconds && s.seconds > 0)) continue;
+    best.set(s.date, Math.max(best.get(s.date) ?? 0, s.seconds));
+  }
+  return [...best.entries()]
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([date, seconds]) => ({ date, seconds, pft: pftPlankPoints(seconds) }));
+}
 
 /**
  * Credit for a hold of `sec` against the longest so far: two-thirds of it or
@@ -310,7 +325,7 @@ export function buildHeat(sets: readonly HeatSet[], today: string, unit = "lb"):
       }),
     };
   });
-  return { unit, ranges, days: unweightedDays(sets) };
+  return { unit, ranges, days: unweightedDays(sets), plank: plankTests(sets) };
 }
 
 /**

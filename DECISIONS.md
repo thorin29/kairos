@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-11 — Plank test as core's benchmark (v0.643.0 / app 0.452.0)
+
+- Below the body map, Core opens with the plank test instead of only the
+  hard-sets summary: best and last (with Marine Corps PFT points and dates),
+  the change since the test before, time still to 3:45 (100 points), days
+  since the best, and the number of tests — then a chart of every test with
+  dashed lines at 1:10 (pass) and 3:45 (full marks). The hard-sets summary
+  stays underneath.
+- A "test" is a day's longest plank, whether from the monthly plank test or a
+  plank in a workout: any single long hold is the same benchmark, and it means
+  a log from before the monthly test existed still counts. Side planks don't.
+- `isPlank` now also matches "Planks" and "Plank test", so pool items named
+  either way count. Served as `heat.plank`, worked out in `plankTests`.
+
 ## 2026-11 — Times in m:ss, sets in pairs, the side-switch timer (v0.642.0 / app 0.449.0)
 
 - Timed sets show and take minutes and seconds. Typing works like a

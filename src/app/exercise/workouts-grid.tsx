@@ -60,6 +60,7 @@ import {
   HeatDetail,
   HeatGroupSummary,
   HeatKey,
+  PlankBench,
   HeatRangeChips,
   heatAvailable,
   heatFills,
@@ -948,6 +949,7 @@ function LiftBlocks({
           <p className="text-sm font-semibold" style={{ color: MG_COLOR[g] ?? "var(--color-accent)" }}>
             {MG_LABEL[g] ?? g}
           </p>
+          {g === "CORE" && <PlankBench tests={heat?.plank ?? []} />}
           <HeatGroupSummary data={summaryOf(g)} unit={heat?.unit ?? ""} />
         </div>
       ))}

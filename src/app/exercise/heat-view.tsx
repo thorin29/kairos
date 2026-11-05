@@ -10,6 +10,9 @@ import {
   type HeatMap,
   type HeatRange,
   type HeatRangeKey,
+  type PlankTest,
+  PFT_PLANK_MAX_SEC,
+  PFT_PLANK_MIN_SEC,
 } from "@/lib/workouts/heat";
 import { readPref, writePref } from "./conditioning-timer";
 import { Modal } from "./plan-file-panel";
@@ -217,6 +220,105 @@ export function HeatGroupSummary({ data, unit }: { data: HeatGroup | undefined; 
         <span className="tabular font-semibold text-ink">{fmt(data.perWeek)}</span> hard sets a week · last 12 weeks
       </p>
       <HeatBests bests={data.bests} unit={unit} />
+    </div>
+  );
+}
+
+const shortDate = (iso: string) =>
+  new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const daysSince = (iso: string) => Math.max(0, Math.round((Date.now() - Date.parse(`${iso}T12:00:00`)) / 86_400_000));
+
+function Tile({ k, v, unit, sub, up }: { k: string; v: string; unit?: string; sub: string; up?: boolean }) {
+  return (
+    <div className="rounded-lg border border-hairline bg-surface px-2.5 py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">{k}</p>
+      <p className={`tabular font-display text-xl font-semibold leading-tight ${up ? "text-emerald-600" : ""}`}>
+        {v}
+        {unit && <span className="ml-0.5 text-xs font-normal text-muted">{unit}</span>}
+      </p>
+      <p className="truncate text-xs text-muted">{sub}</p>
+    </div>
+  );
+}
+
+/**
+ * Core's benchmark (v0.643): the plank test — the Marine Corps PFT plank,
+ * a day's longest plank hold. Best and latest with their PFT points, the
+ * change since the test before, and every test on a chart against the PFT's
+ * pass (1:10) and full marks (3:45).
+ */
+export function PlankBench({ tests }: { tests: PlankTest[] }) {
+  if (tests.length === 0) return null;
+  const best = tests.reduce((a, b) => (b.seconds > a.seconds ? b : a));
+  const last = tests[tests.length - 1];
+  const prev = tests.length > 1 ? tests[tests.length - 2] : null;
+  const change = prev ? last.seconds - prev.seconds : null;
+  const toMax = Math.max(0, PFT_PLANK_MAX_SEC - best.seconds);
+  const pts = (t: PlankTest) => (t.pft != null ? `${t.pft} pts` : "under 1:10");
+
+  // The chart: time against date, with the pass and full-marks lines.
+  const W = 300;
+  const H = 120;
+  const pad = { l: 34, r: 8, t: 8, b: 18 };
+  const t0 = Date.parse(tests[0].date);
+  const t1 = Date.parse(last.date);
+  const top = Math.max(PFT_PLANK_MAX_SEC, ...tests.map((t) => t.seconds)) * 1.05;
+  const x = (d: string) =>
+    tests.length === 1 || t1 === t0 ? (pad.l + W - pad.r) / 2 : pad.l + ((Date.parse(d) - t0) / (t1 - t0)) * (W - pad.l - pad.r);
+  const y = (sec: number) => pad.t + (1 - sec / top) * (H - pad.t - pad.b);
+  const line = tests.map((t, i) => `${i ? "L" : "M"}${x(t.date).toFixed(1)},${y(t.seconds).toFixed(1)}`).join(" ");
+
+  return (
+    <div className="mt-2 rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
+      <p className="mb-2 text-sm font-semibold">Plank test</p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <Tile k="best" v={clock(best.seconds)} sub={`${pts(best)} · ${shortDate(best.date)}`} />
+        <Tile k="last" v={clock(last.seconds)} sub={`${pts(last)} · ${shortDate(last.date)}`} />
+        <Tile
+          k="change"
+          v={change == null ? "\u2014" : `${change >= 0 ? "+" : "\u2212"}${clock(Math.abs(change))}`}
+          sub={change == null ? "first test" : "since the test before"}
+          up={change != null && change > 0}
+        />
+        <Tile k="to 100 pts" v={toMax === 0 ? "Done" : clock(toMax)} sub={toMax === 0 ? "3:45 reached" : "more than your best"} />
+        <Tile k="since best" v={`${daysSince(best.date)}`} unit="days" sub="last record" />
+        <Tile k="tests" v={`${tests.length}`} sub={`since ${shortDate(tests[0].date)}`} />
+      </div>
+      {tests.length > 1 && (
+        <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full" role="img" aria-label="Plank tests over time">
+          {[
+            [PFT_PLANK_MIN_SEC, "1:10"],
+            [PFT_PLANK_MAX_SEC, "3:45"],
+          ].map(([sec, label]) => (
+            <g key={label}>
+              <line
+                x1={pad.l}
+                x2={W - pad.r}
+                y1={y(sec as number)}
+                y2={y(sec as number)}
+                stroke="currentColor"
+                strokeOpacity={0.25}
+                strokeDasharray="3 3"
+              />
+              <text x={pad.l - 4} y={y(sec as number) + 3} textAnchor="end" fontSize="9" fill="currentColor" opacity={0.6}>
+                {label}
+              </text>
+            </g>
+          ))}
+          <path d={line} fill="none" stroke="var(--color-accent)" strokeWidth={2} strokeLinejoin="round" />
+          {tests.map((t) => (
+            <circle key={t.date} cx={x(t.date)} cy={y(t.seconds)} r={3} fill="var(--color-accent)">
+              <title>{`${shortDate(t.date)}: ${clock(t.seconds)} · ${pts(t)}`}</title>
+            </circle>
+          ))}
+          <text x={pad.l} y={H - 4} fontSize="9" fill="currentColor" opacity={0.6}>
+            {shortDate(tests[0].date)}
+          </text>
+          <text x={W - pad.r} y={H - 4} textAnchor="end" fontSize="9" fill="currentColor" opacity={0.6}>
+            {shortDate(last.date)}
+          </text>
+        </svg>
+      )}
     </div>
   );
 }

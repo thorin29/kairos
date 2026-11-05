@@ -1010,6 +1010,10 @@ the running program carries into its next block with these changes (same
 start date; maxes as sent), and plan entries the setup doesn't cover stay.
 `GET /api/v1/workouts/plan` movements add `about`.
 
+v0.643: `heat` adds `plank: [{ date, seconds, pft }]` — each day's longest
+plank (named Plank, Planks, Forearm plank or Plank test), oldest first, with
+its PFT points (null under 1:10). The core's benchmark chart.
+
 v0.636: `heat` adds `days: [{ date, groups }]` — groups trained without
 weights that day (bodyweight or timed sets, not in a conditioning workout), for
 Workout days. `bests` entries can be `kind` "time" (longest hold, seconds) with
