@@ -1,6 +1,6 @@
-import { Category } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { localParts, toDateColumn } from "@/lib/dates";
+import { settleWorkoutTask } from "@/lib/workouts/mark";
 
 /** Gate-free "Yes, I did it" core, shared by the server action and the app API. */
 export async function confirmSportCore(
@@ -43,30 +43,9 @@ export async function confirmSportCore(
 
   await prisma.sportSkip.deleteMany({ where: { eventId, userId, date } });
 
-  const task = await prisma.task.findFirst({
-    where: { userId, category: Category.EXERCISE, dueDate: date },
-    select: { id: true, status: true },
-  });
-  if (task) {
-    if (task.status !== "COMPLETE") {
-      await prisma.task.update({
-        where: { id: task.id },
-        data: { status: "COMPLETE", completedAt: new Date() },
-      });
-    }
-  } else {
-    await prisma.task.create({
-      data: {
-        userId,
-        category: Category.EXERCISE,
-        title: "Workout",
-        dueDate: date,
-        status: "COMPLETE",
-        completedAt: new Date(),
-        generatedFrom: `workout:${userId}`,
-      },
-    });
-  }
+  // A game is an extra (v0.649): on a planned day the plan decides whether
+  // the day is done; on a day with nothing planned, the game completes it.
+  await settleWorkoutTask(userId, occurrenceISO, { fallbackComplete: true });
 }
 
 /** Gate-free "No" core: remembered for this person + occurrence. */

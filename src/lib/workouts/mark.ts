@@ -5,7 +5,6 @@ import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { CATEGORY_LABEL, type WorkoutCategory } from "@/lib/workouts/catalog";
 import { loadDayPlanProgress, planSlot } from "@/lib/queries/workout-log";
 import { topSet } from "@/lib/workouts/sets";
-import { isOptionalCategory } from "@/lib/workouts/blocks";
 import { dayIntentFor } from "@/lib/workouts/suggest-run";
 import type { WorkoutCategory as DbWorkoutCategory } from "@/generated/prisma/client";
 
@@ -98,8 +97,9 @@ export async function skipWorkoutTask(
  *   - every planned movement logged or skipped, something logged -> COMPLETE
  *   - every planned movement skipped, nothing logged             -> SKIPPED
  *     (excused, like a rest day: skipping is not working out)
- *   - anything still open -> PENDING, unless something unplanned was logged
- *     that day (a run, a game, "I worked out"), which completes it as before.
+ *   - anything still open -> PENDING. Only a plain "I worked out" overrides
+ *     that; a game, a run or any other extra logged that day doesn't
+ *     (v0.649 — they used to complete the day with the plan still open).
  *     A log leaves a SKIPPED day alone; only a skip change reopens one.
  *
  * A rest day is never overridden, and a day with nothing planned keeps the old
@@ -158,29 +158,22 @@ async function workoutTaskTarget(
   const progress = await loadDayPlanProgress(userId, dateISO);
   if (progress.planCount === 0) return fallbackComplete ? "COMPLETE" : "LEAVE";
 
-  // Something logged that isn't one of the plans: its own session, under a
-  // name no plan has. Plan names are cut to 40 characters, so compare on that.
-  const planNames = new Set(progress.planNames);
-  // Cardio and a warm-up are extras on a planned day (v0.615.1): a row before
-  // the lifts doesn't finish the day.
-  const others = (await prisma.workoutSession.findMany({
-    where: { userId, date, isRest: false },
-    select: { name: true, category: true },
-  })) as { name: string | null; category: string | null }[];
-  const unplanned = others.some(
-    (o) =>
-      !isOptionalCategory(o.category) &&
-      // Conditioning added to a planned day is an extra too (v0.619): a
-      // finisher doesn't finish the day's lifts.
-      o.category !== "HIIT" &&
-      (o.name == null || !planNames.has(o.name.slice(0, 40))),
-  );
+  // On a planned day the plan decides (v0.649). Extras — a game confirmed from
+  // the calendar, a run, a custom entry, conditioning, a warm-up — don't
+  // finish it. The one override is a plain "I worked out": a bare session with
+  // no name, category or event, which only that button makes.
+  const bare = await prisma.workoutSession.findFirst({
+    where: { userId, date, isRest: false, name: null, category: null, sourceEventId: null },
+    select: { id: true },
+  });
 
-  if ((progress.done && progress.logged) || unplanned) return "COMPLETE";
+  if ((progress.done && progress.logged) || bare) return "COMPLETE";
   return progress.done ? "SKIPPED" : "PENDING";
 }
 
-const RESETTLE_KEY = "workout.settledV1";
+// V2 (v0.649): re-judge once more under the plan-decides rule, so a day an
+// extra (a game) marked complete with the plan still open reopens.
+const RESETTLE_KEY = "workout.settledV2";
 
 /**
  * One-time repair (v0.586.1). Before v0.586 logging ONE movement completed the
@@ -468,7 +461,9 @@ export async function logWorkoutSession(
     });
   }
 
-  await completeWorkoutTask(userId, dateISO);
+  // Settled by the plan (v0.649): an extra logged on a planned day doesn't
+  // finish it; on a day with nothing planned it does, as before.
+  await settleWorkoutTask(userId, dateISO, { fallbackComplete: true });
 }
 
 export type PlannedLogEntry = {
@@ -1042,6 +1037,6 @@ export async function logCustomEntry(
   }
   await prisma.sessionSet.create({ data: set });
 
-  await completeWorkoutTask(userId, dateISO);
+  await settleWorkoutTask(userId, dateISO, { fallbackComplete: true });
   return null;
 }

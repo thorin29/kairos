@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-11 — On a planned day, the plan decides "complete" (v0.649.0)
+
+Three paths completed the day's workout task outright: confirming a game
+from the calendar (`confirmSportCore`), `logWorkoutSession` and
+`logCustomEntry`; and `workoutTaskTarget` counted any unplanned session as
+finishing the day. So one game read "Complete for today!" with the planned
+lifts still open. Now all of them go through `settleWorkoutTask` with
+`fallbackComplete`: on a day with a plan, only the plan's movements (logged or
+skipped) complete it; on a day with nothing planned, a game or extra still
+completes it as before. The one override kept is the plain "I worked out"
+button — a bare session with no name, category or event. `workout.settledV2`
+re-runs the one-time repair over the overdue window, reopening days an extra
+had closed (it only ever lowers COMPLETE).
+
 ## 2026-11 — Dumbbell weight is one bell's (v0.648.0)
 
 The question "two dumbbells — what do I enter?" had no written answer. The
