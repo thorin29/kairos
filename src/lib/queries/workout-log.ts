@@ -35,6 +35,7 @@ import type { Suggestion } from "@/lib/workouts/suggest";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
 import { coreDayView, coreWorkoutsFor, syncCoreDays } from "@/lib/workouts/core-run";
+import { aboutWithBellNote } from "@/lib/workouts/bells";
 import { cleanCoreDay, coreMoveLabel, switchesSides, type CoreWorkout } from "@/lib/workouts/core-library";
 
 /**
@@ -1786,12 +1787,13 @@ export async function loadMovementLog(
     dayLightFactor(userId, dateISO),
     prisma.poolExercise.findUnique({
       where: { id: movement },
-      select: { muscleGroup: true, name: true, about: true, pattern: true },
+      select: { muscleGroup: true, name: true, about: true, pattern: true, equipment: true },
     }) as Promise<{
       muscleGroup: string | null;
       name: string;
       about: string | null;
       pattern: string | null;
+      equipment: string | null;
     } | null>,
     loadWeightUnits(),
   ]);
@@ -1837,7 +1839,8 @@ export async function loadMovementLog(
     suggestion,
     recentTop,
     name: poolRow?.name ?? "",
-    about: poolRow?.about ?? null,
+    // Dumbbells and kettlebells: the ⓘ says the weight is one bell's (v0.648).
+    about: aboutWithBellNote(poolRow?.about ?? null, poolRow?.name ?? "", poolRow?.equipment),
     repsUnit,
     sides: switchesSides(poolRow?.name ?? ""),
   };

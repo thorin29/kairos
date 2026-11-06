@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-11 — Dumbbell weight is one bell's (v0.648.0)
+
+The question "two dumbbells — what do I enter?" had no written answer. The
+code already behaved one way throughout: equipment sizes are single bells,
+the finisher picks a single bell's size, records and e1RM compare a movement
+only with itself, and nothing converts between barbell and dumbbell weights.
+So the rule is one bell, the number on it — for a pair (fly, press, farmer
+carry) or one held in both hands (goblet squat) — and nothing is doubled or
+halved. `aboutWithBellNote` (bells.ts) adds that line to the movement's ⓘ
+whenever it uses dumbbells or kettlebells (by equipment, or "dumbbell",
+"kettlebell", "DB", "KB" in the name), so both apps show it with no change.
+
 ## 2026-11 — Hockey renamed Ice time (v0.647.0 / app 0.457.0)
 
 The page lists public skate as well as hockey, so the menu, page titles and
