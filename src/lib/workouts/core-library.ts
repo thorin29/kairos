@@ -42,6 +42,8 @@ export type CoreWorkout = {
   gear: string;
   moves: CoreMove[];
   mine: boolean;
+  /** "arms" for an Arms workout (v0.651); absent means Core. */
+  kind?: "arms";
 };
 
 export const CORE_LIB_PREFIX = "lib:";
@@ -112,8 +114,66 @@ export const CORE_LIBRARY: readonly CoreWorkout[] = [
   ]),
 ];
 
+/**
+ * Arms days (v0.651): the same rotation as Core, its own workouts. Biceps and
+ * triceps with the home gym — barbell, EZ bar, dumbbells (and the bench's
+ * preacher pad), kettlebells, TRX, pull-up bar, a dip bar and belt.
+ */
+export const ARMS_LIBRARY: readonly CoreWorkout[] = ([
+  lib("arms-ez", "EZ bar classic", 30, "EZ bar, dumbbell, bench", [
+    ["EZ bar curl", "WEIGHT", 4, 8, 10],
+    ["EZ bar skull crusher", "WEIGHT", 4, 8, 10],
+    ["EZ bar preacher curl", "WEIGHT", 3, 10, 12],
+    ["Overhead triceps extension", "WEIGHT", 3, 10, 12],
+  ]),
+  lib("arms-db", "Dumbbell pump", 25, "Dumbbells", [
+    ["Dumbbell curl", "WEIGHT", 3, 10, 12],
+    ["Overhead triceps extension", "WEIGHT", 3, 10, 12],
+    ["Hammer curl", "WEIGHT", 3, 10, 12],
+    ["Triceps kickback", "WEIGHT", 3, 12, 15],
+  ]),
+  lib("arms-heavy", "Heavy barbell", 30, "Barbell, bench, pull-up bar, dip bar", [
+    ["Barbell curl", "WEIGHT", 5, 5, 5],
+    ["Close-grip bench press", "WEIGHT", 5, 5, 5],
+    ["Chin-up", "REPS", 3, 5, 10],
+    ["Weighted dip", "WEIGHT", 3, 5, 8],
+  ]),
+  lib("arms-bodyweight", "TRX and bodyweight", 20, "TRX, pull-up bar, dip bar", [
+    ["TRX biceps curl", "REPS", 3, 12, 15],
+    ["TRX triceps extension", "REPS", 3, 12, 15],
+    ["Chin-up", "REPS", 3, 6, 12],
+    ["Dip", "REPS", 3, 8, 15],
+  ]),
+  lib("arms-kb", "Kettlebell arms", 20, "Kettlebells", [
+    ["Kettlebell curl", "WEIGHT", 3, 10, 12],
+    ["Kettlebell overhead extension", "WEIGHT", 3, 10, 12],
+    ["Hammer curl", "WEIGHT", 3, 10, 12],
+    ["Diamond push-up", "REPS", 3, 10, 15],
+  ]),
+  lib("arms-preacher", "Preacher and dips", 25, "Dumbbells, bench, dip bar", [
+    ["Dumbbell preacher curl", "WEIGHT", 3, 8, 12],
+    ["Weighted dip", "WEIGHT", 4, 6, 10],
+    ["Concentration curl", "WEIGHT", 3, 10, 12],
+    ["EZ bar skull crusher", "WEIGHT", 3, 10, 12],
+  ]),
+  lib("arms-21s", "21s and burnouts", 20, "EZ bar, dumbbells, bench", [
+    ["EZ bar curl", "WEIGHT", 3, 21, 21],
+    ["EZ bar skull crusher", "WEIGHT", 3, 10, 12],
+    ["Bench dip", "REPS", 2, 15, 25],
+    ["Hammer curl", "WEIGHT", 2, 12, 20],
+  ]),
+] as CoreWorkout[]).map((w) => ({ ...w, kind: "arms" as const }));
+
+/** What a rotation day trains (v0.651): Core (the default) or Arms. */
+export type RotationKind = "core" | "arms";
+export const rotationKindOf = (v: unknown): RotationKind => (v === "arms" ? "arms" : "core");
+export const rotationLibrary = (kind: RotationKind): readonly CoreWorkout[] =>
+  kind === "arms" ? ARMS_LIBRARY : CORE_LIBRARY;
+/** "Core" / "Arms": the day's name and the plan entry's muscle group. */
+export const rotationLabel = (kind: RotationKind) => (kind === "arms" ? "Arms" : "Core");
+
 export function libraryCoreWorkout(id: string | null | undefined): CoreWorkout | null {
-  return CORE_LIBRARY.find((w) => w.id === id) ?? null;
+  return CORE_LIBRARY.find((w) => w.id === id) ?? ARMS_LIBRARY.find((w) => w.id === id) ?? null;
 }
 
 /** The monthly test: one max plank, scored on the PFT. */
@@ -206,6 +266,8 @@ export type CoreDay = {
   withTest: boolean;
   /** 2 once stored by v0.644+ (moves on a week after the log, not the day after). */
   v?: number;
+  /** "arms" for an Arms day (v0.651); absent means Core. */
+  kind?: "arms";
 };
 
 export function cleanCoreDay(raw: unknown, todayISO: string): CoreDay | null {
@@ -225,6 +287,7 @@ export function cleanCoreDay(raw: unknown, todayISO: string): CoreDay | null {
     testedMonth: typeof o.testedMonth === "string" && /^\d{4}-\d{2}$/.test(o.testedMonth) ? o.testedMonth : null,
     withTest: o.withTest === true,
     ...(o.v === 2 ? { v: 2 } : {}),
+    ...(o.kind === "arms" ? { kind: "arms" as const } : {}),
   };
 }
 
@@ -277,5 +340,6 @@ export function coreDayMoves(workout: CoreWorkout | null, withTest: boolean): Co
   return out;
 }
 
-/** The plan entry's name: "Core · Hanging core". */
-export const coreDayName = (workout: CoreWorkout | null) => (workout ? `Core · ${workout.name}`.slice(0, 40) : "Core");
+/** The plan entry's name: "Core · Hanging core", "Arms · EZ bar classic". */
+export const coreDayName = (workout: CoreWorkout | null, kind: RotationKind = "core") =>
+  workout ? `${rotationLabel(kind)} · ${workout.name}`.slice(0, 40) : rotationLabel(kind);

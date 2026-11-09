@@ -5,7 +5,6 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { applyLibrary } from "@/lib/workouts/library-run";
 import { nameKey } from "@/lib/workouts/library";
 import {
-  CORE_LIBRARY,
   CORE_LIB_PREFIX,
   cleanCoreDay,
   cleanCoreMoves,
@@ -14,6 +13,10 @@ import {
   coreMetric,
   coreScheme,
   libraryCoreWorkout,
+  rotationKindOf,
+  rotationLabel,
+  rotationLibrary,
+  type RotationKind,
   libraryKeyFor,
   plusDays,
   stepCoreDay,
@@ -29,29 +32,37 @@ import {
  * workout now due (`syncCoreDays`, run when the plan or a day is loaded).
  */
 
-type Row = { id: string; name: string; moves: unknown };
+type Row = { id: string; name: string; moves: unknown; kind: string };
 
 function toWorkout(r: Row): CoreWorkout {
   const moves = cleanCoreMoves(r.moves);
   const sets = moves.reduce((n, m) => n + m.sets, 0);
-  return { id: r.id, name: r.name, minutes: Math.max(5, Math.round(sets * 1.2)), gear: "", moves, mine: true };
+  return {
+    id: r.id,
+    name: r.name,
+    minutes: Math.max(5, Math.round(sets * 1.2)),
+    gear: "",
+    moves,
+    mine: true,
+    ...(rotationKindOf(r.kind) === "arms" ? { kind: "arms" as const } : {}),
+  };
 }
 
-/** The library's core workouts, then the person's own (A–Z). */
-export async function coreWorkoutsFor(userId: string): Promise<CoreWorkout[]> {
+/** The library's workouts of a kind (Core by default, or Arms, v0.651), then the person's own (A–Z). */
+export async function coreWorkoutsFor(userId: string, kind: RotationKind = "core"): Promise<CoreWorkout[]> {
   const own = (await prisma.coreWorkout.findMany({
-    where: { ownerId: userId },
+    where: { ownerId: userId, kind },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, moves: true },
+    select: { id: true, name: true, moves: true, kind: true },
   })) as Row[];
-  return [...CORE_LIBRARY, ...own.map(toWorkout)];
+  return [...rotationLibrary(kind), ...own.map(toWorkout)];
 }
 
 async function coreWorkoutFor(userId: string, id: string): Promise<CoreWorkout | null> {
   if (id.startsWith(CORE_LIB_PREFIX)) return libraryCoreWorkout(id);
   const r = (await prisma.coreWorkout.findFirst({
     where: { id, ownerId: userId },
-    select: { id: true, name: true, moves: true },
+    select: { id: true, name: true, moves: true, kind: true },
   })) as Row | null;
   return r ? toWorkout(r) : null;
 }
@@ -59,8 +70,9 @@ async function coreWorkoutFor(userId: string, id: string): Promise<CoreWorkout |
 /** Save the person's own core workout (new without an id). Movements must be in the pool. */
 export async function saveCoreWorkout(
   userId: string,
-  input: { id?: string | null; name: unknown; moves: unknown },
+  input: { id?: string | null; name: unknown; moves: unknown; kind?: unknown },
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const kind = rotationKindOf(input.kind);
   const name = typeof input.name === "string" ? input.name.trim().slice(0, 40) : "";
   if (name.length < 2) return { ok: false, error: "Name the workout." };
   const moves = cleanCoreMoves(input.moves).filter((m) => !!m.poolExerciseId);
@@ -89,7 +101,7 @@ export async function saveCoreWorkout(
     }
   }
   const made = (await prisma.coreWorkout.create({
-    data: { ownerId: userId, name, moves: kept as never },
+    data: { ownerId: userId, name, moves: kept as never, kind },
     select: { id: true },
   })) as { id: string };
   return { ok: true, id: made.id };
@@ -105,7 +117,7 @@ export async function deleteCoreWorkout(userId: string, id: string): Promise<voi
     const rotation = e.day.rotation.filter((x) => x !== id);
     const next: CoreDay = {
       ...e.day,
-      rotation: rotation.length ? rotation : [CORE_LIBRARY[0].id],
+      rotation: rotation.length ? rotation : [rotationLibrary(rotationKindOf(e.day.kind))[0].id],
       at: 0,
       since: today,
       v: 2,
@@ -122,15 +134,19 @@ export async function deleteCoreWorkout(userId: string, id: string): Promise<voi
  */
 export async function setCoreDay(
   userId: string,
-  input: { plannedWorkoutId?: string | null; day?: number | null; rotation: unknown; test: unknown },
+  input: { plannedWorkoutId?: string | null; day?: number | null; rotation: unknown; test: unknown; kind?: unknown },
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const ids = Array.isArray(input.rotation)
     ? [...new Set(input.rotation.filter((x): x is string => typeof x === "string" && !!x))].slice(0, 12)
     : [];
-  const known = await coreWorkoutsFor(userId);
+  const kind = rotationKindOf(input.kind);
+  const known = await coreWorkoutsFor(userId, kind);
   const rotation = ids.filter((id) => known.some((w) => w.id === id));
-  if (rotation.length === 0) return { ok: false, error: "Pick at least one core workout." };
-  const test = input.test !== false;
+  if (rotation.length === 0) return { ok: false, error: `Pick at least one ${kind === "arms" ? "arms" : "core"} workout.` };
+  // The plank test is Core's; an Arms day has none.
+  const test = kind === "core" && input.test !== false;
+  const tag = kind === "arms" ? { kind: "arms" as const } : {};
+  const group = kind === "arms" ? "ARMS" : "CORE";
   const today = todayISO();
 
   if (input.plannedWorkoutId) {
@@ -150,10 +166,11 @@ export async function setCoreDay(
       testedMonth: old?.testedMonth ?? null,
       withTest: false,
       v: 2,
+      ...tag,
     };
     await prisma.plannedWorkout.update({
       where: { id: row.id },
-      data: { core: next as never, category: "WEIGHTS" as never, muscleGroup: "CORE" as never },
+      data: { core: next as never, category: "WEIGHTS" as never, muscleGroup: group as never },
     });
     await syncCoreDays(userId);
     return { ok: true, id: row.id };
@@ -162,15 +179,15 @@ export async function setCoreDay(
   const day = typeof input.day === "number" ? input.day : -1;
   if (!(Number.isInteger(day) && day >= 0 && day <= 6)) return { ok: false, error: "Pick a day." };
   const count = await prisma.plannedWorkout.count({ where: { userId, dayOfWeek: day } });
-  const first: CoreDay = { rotation, test, at: 0, since: today, testedMonth: null, withTest: false, v: 2 };
+  const first: CoreDay = { rotation, test, at: 0, since: today, testedMonth: null, withTest: false, v: 2, ...tag };
   const made = (await prisma.plannedWorkout.create({
     data: {
       userId,
       dayOfWeek: day,
-      name: "Core",
+      name: rotationLabel(kind),
       sortOrder: count,
       category: "WEIGHTS" as never,
-      muscleGroup: "CORE" as never,
+      muscleGroup: group as never,
       core: first as never,
     },
     select: { id: true },
@@ -184,7 +201,12 @@ type Entry = { id: string; dayOfWeek: number; name: string; day: CoreDay; planne
 
 async function coreEntries(userId?: string): Promise<(Entry & { userId: string })[]> {
   const rows = (await prisma.plannedWorkout.findMany({
-    where: { ...(userId ? { userId } : {}), category: "WEIGHTS" as never, muscleGroup: "CORE" as never },
+    // Core and Arms days (v0.651) — both rotations.
+    where: {
+      ...(userId ? { userId } : {}),
+      category: "WEIGHTS" as never,
+      muscleGroup: { in: ["CORE", "ARMS"] as never },
+    },
     orderBy: { sortOrder: "asc" },
     select: {
       id: true,
@@ -328,7 +350,7 @@ export async function syncCoreDays(userId?: string, today: string = todayISO()):
           w.scheme === e.planned[i].scheme &&
           w.metric === e.planned[i].metric,
       );
-    const name = coreDayName(workout);
+    const name = coreDayName(workout, rotationKindOf(day.kind));
     const dayChanged = JSON.stringify(day) !== JSON.stringify(stored.day);
     if (same && !dayChanged && name === e.name) continue;
     await prisma.$transaction(async (tx) => {
@@ -354,7 +376,9 @@ export async function syncCoreDays(userId?: string, today: string = todayISO()):
 /** A core entry's rotation for the plan editors and day page: { rotation, test, at, withTest } or null. */
 export function coreDayView(
   raw: unknown,
-): { rotation: string[]; test: boolean; at: number; withTest: boolean } | null {
+): { rotation: string[]; test: boolean; at: number; withTest: boolean; kind: RotationKind } | null {
   const d = cleanCoreDay(raw, todayISO());
-  return d ? { rotation: d.rotation, test: d.test, at: d.at, withTest: d.withTest } : null;
+  return d
+    ? { rotation: d.rotation, test: d.test, at: d.at, withTest: d.withTest, kind: rotationKindOf(d.kind) }
+    : null;
 }

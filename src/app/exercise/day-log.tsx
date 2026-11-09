@@ -41,6 +41,8 @@ import {
   withSection,
   dayProgress,
   stripState,
+  STRIP_PAGES_AHEAD,
+  STRIP_PAGES_BACK,
   type DayItem,
   type DayWorkoutIn,
   type StripState,
@@ -134,6 +136,10 @@ export function DayLog({
     warmups?: { plannedWorkoutId: string; routine: WarmupRoutine | null }[];
   } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
+  // Which 8 days the strip shows (v0.651): 0 = up to today, + ahead, - back.
+  const [weekPage, setWeekPage] = useState(0);
+  // A day still to come only previews its plan (v0.651).
+  const future = date > todayISO;
   const [failed, setFailed] = useState(false);
   const [tick, setTick] = useState(0);
   const [open, setOpen] = useState<OpenMovement | null>(null);
@@ -179,13 +185,19 @@ export function DayLog({
     loadDayLog(userId, date)
       .then((d) => live && setData(d))
       .catch(() => live && setFailed(true));
-    loadWorkoutWeek(userId)
+    return () => {
+      live = false;
+    };
+  }, [userId, date, tick, person]);
+  useEffect(() => {
+    let live = true;
+    loadWorkoutWeek(userId, weekPage)
       .then((w) => live && setWeek(w))
       .catch(() => undefined);
     return () => {
       live = false;
     };
-  }, [userId, date, tick, person]);
+  }, [userId, weekPage, tick, person]);
 
   // A past day shows the plan entries that existed then (v0.623): one made
   // later (a program started since) wasn't that day's plan.
@@ -329,6 +341,12 @@ export function DayLog({
           today={week.today}
           selected={date}
           onPick={(d) => setDate(d)}
+          page={weekPage}
+          onPage={setWeekPage}
+          onToday={() => {
+            setWeekPage(0);
+            setDate(todayISO);
+          }}
         />
       )}
       <label className="flex items-center justify-end gap-2 text-xs text-muted">
@@ -379,6 +397,7 @@ export function DayLog({
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-muted">
           {date === todayISO ? "Today" : dayLabel(date)}
+          {future && " · planned"}
           {late && workouts.length > 0 && !state?.loggedAny && " · logging late"}
           {state?.program && ` · ${state.program.label}`}
         </p>
@@ -390,7 +409,7 @@ export function DayLog({
                 ? state?.loggedTitle || "Nothing planned"
                 : "Workout")}
         </h3>
-        {progress.total > 0 && !isRestDay && (
+        {progress.total > 0 && !isRestDay && !future && (
           <div className="mt-2 flex items-center gap-3">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-hairline" aria-hidden>
               <div
@@ -404,7 +423,7 @@ export function DayLog({
           </div>
         )}
         {/* Resting or skipping the whole day lives here, with the day (v0.624). */}
-        {data && !isRestDay && !state?.loggedAny && (
+        {data && !isRestDay && !future && !state?.loggedAny && (
           <button
             type="button"
             onClick={() =>
@@ -421,13 +440,13 @@ export function DayLog({
         )}
       </div>
 
-      {state?.light && !isRestDay && (
+      {state?.light && !isRestDay && !future && (
         <p className="text-sm font-semibold text-accent">
           Lighter today · {Math.round(state.light * 100)}% of the usual weights
         </p>
       )}
 
-      {state?.suggestion && !isRestDay && (
+      {state?.suggestion && !isRestDay && !future && (
         <SuggestionCard
           s={state.suggestion}
           onAnswer={(answer) => {
@@ -440,7 +459,7 @@ export function DayLog({
         />
       )}
 
-      {data?.benchmark && !isRestDay && (
+      {data?.benchmark && !isRestDay && !future && (
         <BenchmarkCard
           key={`bench:${date}`}
           userId={userId}
@@ -462,7 +481,10 @@ export function DayLog({
         // A rest day in the plan shows only what was logged; a skipped day
         // keeps its plan in view, faded, so nothing on it looks open (v0.650).
         !state?.restPlanned && (
-          <div className={`space-y-5 ${state?.rested ? "opacity-40" : ""}`}>
+          <div
+            className={`space-y-5 ${state?.rested ? "opacity-40" : ""} ${future ? "pointer-events-none opacity-55" : ""}`}
+            aria-disabled={future || undefined}
+          >
             {withConditioning.map((s) => (
               <section key={s.key}>
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{s.title}</h4>
@@ -847,6 +869,7 @@ const STRIP_LOOK: Record<StripState, { dot: string; label: string }> = {
   },
   // A rest day: a grey dot under its date (v0.650; was a dash).
   rest: { dot: "border-transparent bg-muted/45", label: "rest" },
+  planned: { dot: "border-dashed border-muted bg-transparent", label: "planned" },
   open: { dot: "border-amber-500 bg-transparent", label: "not logged yet" },
   expired: { dot: "border-hairline bg-hairline", label: "missed" },
   today: { dot: "border-accent bg-transparent", label: "today" },
@@ -859,40 +882,92 @@ function WeekStrip({
   today,
   selected,
   onPick,
+  page,
+  onPage,
+  onToday,
 }: {
   days: WeekStripDay[];
   overdue: string[];
   today: string;
   selected: string;
   onPick: (d: string) => void;
+  /** Which 8 days (v0.651): 0 = up to today. */
+  page: number;
+  onPage: (p: number) => void;
+  onToday: () => void;
 }) {
   const open = new Set(overdue);
+  // A swipe across the strip pages it, like the arrows (touch only).
+  const touchX = useRef<number | null>(null);
+  const go = (p: number) => onPage(Math.max(-STRIP_PAGES_BACK, Math.min(STRIP_PAGES_AHEAD, p)));
+  const arrow = "flex h-9 w-7 shrink-0 items-center justify-center rounded-full text-lg font-semibold text-accent disabled:text-hairline";
   return (
-    <div className="grid grid-cols-8 gap-1" role="group" aria-label="This week">
-      {days.map((d) => {
-        const st = stripState(d, today, open);
-        const look = STRIP_LOOK[st];
-        const on = d.date === selected;
-        const [, , dd] = d.date.split("-").map(Number);
-        return (
-          <button
-            key={d.date}
-            type="button"
-            onClick={() => onPick(d.date)}
-            aria-pressed={on}
-            aria-label={`${WEEKDAY_LONG[dayOfWeek(d.date)]} ${dd}, ${look.label}`}
-            className={`flex min-h-[3.75rem] flex-col items-center justify-center gap-1 rounded-xl border text-xs transition-colors ${
-              on ? "border-accent bg-accent/5" : "border-transparent hover:bg-ground"
-            }`}
-          >
-            <span className="text-[0.65rem] font-semibold uppercase text-muted">
-              {d.date === today ? "Today" : WEEKDAY[dayOfWeek(d.date)]}
-            </span>
-            <span className={`tabular font-semibold ${st === "rest" ? "text-muted" : ""}`}>{dd}</span>
-            <span className={`h-2.5 w-2.5 rounded-full border-2 ${look.dot}`} aria-hidden />
+    <div>
+      {(page !== 0 || selected !== today) && (
+        <div className="mb-1 flex justify-end">
+          <button type="button" onClick={onToday} className="text-xs font-semibold text-accent">
+            Today
           </button>
-        );
-      })}
+        </div>
+      )}
+      <div
+        className="flex items-center gap-1"
+        onTouchStart={(e) => {
+          touchX.current = e.touches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(e) => {
+          const x0 = touchX.current;
+          touchX.current = null;
+          const x1 = e.changedTouches[0]?.clientX;
+          if (x0 == null || x1 == null || Math.abs(x1 - x0) < 40) return;
+          go(page + (x1 < x0 ? 1 : -1));
+        }}
+      >
+        <button
+          type="button"
+          aria-label="Earlier days"
+          onClick={() => go(page - 1)}
+          disabled={page <= -STRIP_PAGES_BACK}
+          className={arrow}
+        >
+          ‹
+        </button>
+        <div className="grid flex-1 grid-cols-8 gap-1" role="group" aria-label="Days">
+          {days.map((d) => {
+            const st = stripState(d, today, open);
+            const look = STRIP_LOOK[st];
+            const on = d.date === selected;
+            const [, , dd] = d.date.split("-").map(Number);
+            return (
+              <button
+                key={d.date}
+                type="button"
+                onClick={() => onPick(d.date)}
+                aria-pressed={on}
+                aria-label={`${WEEKDAY_LONG[dayOfWeek(d.date)]} ${dd}, ${look.label}`}
+                className={`flex min-h-[3.75rem] flex-col items-center justify-center gap-1 rounded-xl border text-xs transition-colors ${
+                  on ? "border-accent bg-accent/5" : "border-transparent hover:bg-ground"
+                }`}
+              >
+                <span className="text-[0.65rem] font-semibold uppercase text-muted">
+                  {d.date === today ? "Today" : WEEKDAY[dayOfWeek(d.date)]}
+                </span>
+                <span className={`tabular font-semibold ${st === "rest" ? "text-muted" : ""}`}>{dd}</span>
+                <span className={`h-2.5 w-2.5 rounded-full border-2 ${look.dot}`} aria-hidden />
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          aria-label="Later days"
+          onClick={() => go(page + 1)}
+          disabled={page >= STRIP_PAGES_AHEAD}
+          className={arrow}
+        >
+          ›
+        </button>
+      </div>
     </div>
   );
 }

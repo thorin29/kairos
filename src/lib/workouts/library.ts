@@ -144,6 +144,12 @@ const STRENGTH: Short[] = [
   ["Hammer curl", "ARMS", "PULL", "dumbbells", "W", "Curl with palms facing each other the whole way."],
   ["Overhead triceps extension", "ARMS", "PUSH", "dumbbells", "W", "Hold one dumbbell overhead with both hands, lower it behind the head by bending the elbows, straighten."],
   ["Triceps kickback", "ARMS", "PUSH", "dumbbells", "W", "Hinge forward, upper arm by the side, straighten the elbow to kick the dumbbell back."],
+  // Arms rotation (v0.651)
+  ["Dumbbell preacher curl", "ARMS", "PULL", "dumbbells", "W", "Upper arm on the bench's preacher pad, curl the dumbbell up, lower all the way. One arm at a time or both."],
+  ["Concentration curl", "ARMS", "PULL", "dumbbells", "W", "Seated, elbow braced on the inside of the thigh, curl the dumbbell up slowly, lower all the way."],
+  ["Weighted dip", "ARMS", "PUSH", "dumbbells", "W", "Dip with a plate or dumbbell on a dip belt. Lower until the shoulders are below the elbows, press up. Log the added weight."],
+  ["Kettlebell curl", "ARMS", "PULL", "kettlebells", "W", "Hold the kettlebell by the horns or the handle, elbows at the sides, curl up, lower slowly."],
+  ["Kettlebell overhead extension", "ARMS", "PUSH", "kettlebells", "W", "Hold one kettlebell by the horns overhead, lower it behind the head by bending the elbows, straighten."],
   ["Dumbbell lunge", "LEGS", "SQUAT", "dumbbells", "W", "Dumbbells at the sides. Step forward, lower the back knee, push back up."],
   ["Bulgarian split squat", "LEGS", "SQUAT", "dumbbells", "W", "Back foot on a bench, dumbbells at the sides. Lower straight down on the front leg, stand up."],
   ["Dumbbell step-up", "LEGS", "SQUAT", "dumbbells,boxes", "W", "Step up onto a box with one foot, stand tall, step down. Alternate or do one side at a time."],

@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-11 — Week strip pages; Arms days (v0.651.0 / app 0.461.0)
+
+- **Looking ahead.** The day page's strip pages 8 days at a time (‹ › or a
+  swipe inside the strip only — on the phone a HorizontalPager like the Bible
+  page's cards, so the rest of the page and the side menu behave as
+  everywhere else). Back 8 pages, ahead 4. A "Today" button appears off
+  today; no hint text. Days ahead come from `loadWeekStrip(…, end)` with a
+  new `planned` flag; `stripState` reads a future day as rest / planned /
+  none (planned = dashed ring). Opening a future day shows its plan faded and
+  untappable, marked planned, with no Rest / skip, suggestion or benchmark.
+  New route `GET /api/v1/workouts/strip`.
+- **Arms days** reuse Core's rotation rather than a second system: CoreDay
+  JSON gains `kind: "arms"`, own workouts gain a `kind` column (migration
+  143_rotation_kind), `ARMS_LIBRARY` holds 7 workouts (ids `lib:arms-*`) for
+  the home gym including the dip bar/belt and the bench's preacher pad, and
+  five arms movements joined the library (Dumbbell preacher curl,
+  Concentration curl, Weighted dip, Kettlebell curl, Kettlebell overhead
+  extension). An Arms entry is muscle group ARMS with `core` set, so the day
+  page's one-card/one-screen logger, the rotation sync (moves on at the next
+  arms day) and the plan line all work unchanged. No plank test on Arms.
+- "Rest day!" → "Rest day".
+
 ## 2026-11 — Rest days look like rest days (v0.650.0 / app 0.460.0)
 
 - The home Workouts card reads "Rest day!" on a rest day: the plan's Rest

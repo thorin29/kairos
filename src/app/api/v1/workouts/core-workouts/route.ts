@@ -12,7 +12,9 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
-  return apiOk({ workouts: (await coreWorkoutsFor(authed.device.person.id)).map(coreWorkoutView) });
+  // ?kind=arms for Arms days (v0.651); Core otherwise.
+  const kind = req.nextUrl.searchParams.get("kind") === "arms" ? "arms" : "core";
+  return apiOk({ workouts: (await coreWorkoutsFor(authed.device.person.id, kind)).map(coreWorkoutView) });
 }
 
 /** Save one's own core workout. Body: { id?, name, moves: [{ poolExerciseId, kind, sets, min, max }] }
@@ -30,6 +32,7 @@ export async function POST(req: NextRequest) {
     id: typeof b.id === "string" ? b.id : null,
     name: b.name,
     moves,
+    kind: b.kind,
   });
   return r.ok ? apiOk({ status: "ok", id: r.id }) : apiError("validation", r.error);
 }

@@ -1299,7 +1299,7 @@ export type PlanWorkoutLite = {
   warmup: string | null;
   /** A Core day's rotation (v0.637): workout ids in order, the monthly plank
    *  test, and which one is planned now. Null for anything else. */
-  core: { rotation: string[]; test: boolean; at: number; withTest?: boolean } | null;
+  core: { rotation: string[]; test: boolean; at: number; withTest?: boolean; kind?: "core" | "arms" } | null;
   /** Movements, each with its set structure (weights only carry one). */
   exercises: {
     poolExerciseId: string;
@@ -1447,6 +1447,8 @@ export type PlanOptions = {
   schemes: { key: string; label: string }[];
   /** Core workouts for a Core day's rotation (v0.637): the library's and the person's own. */
   coreWorkouts: CoreWorkoutView[];
+  /** Arms days' workouts (v0.651), the library's then the person's own. */
+  armsWorkouts: CoreWorkoutView[];
 };
 
 /** A core workout as the plan editors show it, each movement with its sets in words. */
@@ -1480,7 +1482,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
     };
   });
 
-  const [exRows, hiit, core] = await Promise.all([
+  const [exRows, hiit, core, arms] = await Promise.all([
     prisma.poolExercise.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
@@ -1488,6 +1490,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
     }),
     loadBrowsableWorkouts(userId),
     coreWorkoutsFor(userId),
+    coreWorkoutsFor(userId, "arms"),
   ]);
 
   return {
@@ -1507,6 +1510,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
     hiitWorkouts: hiit.map((w) => ({ id: w.id, name: w.name, personal: w.personal })),
     schemes: SCHEME_CHOICES.map((c) => ({ key: c.key, label: c.label })),
     coreWorkouts: core.map(coreWorkoutView),
+    armsWorkouts: arms.map(coreWorkoutView),
   };
 }
 
@@ -2229,6 +2233,11 @@ export async function workoutRestFor(
   return { rest: (await planRestDay(userId, dateISO)) ? "planned" : null, extraLogged };
 }
 
+/** The plan has a workout (not Rest) on this weekday. */
+async function planWorkDay(userId: string, dateISO: string): Promise<boolean> {
+  return (await prisma.plannedWorkout.count({ where: { ...dayPlanWhere(userId, dateISO), isRest: false } })) > 0;
+}
+
 /** The plan makes this weekday Rest and plans nothing else on it. */
 async function planRestDay(userId: string, dateISO: string): Promise<boolean> {
   const [restRows, workRows] = await Promise.all([
@@ -2252,6 +2261,8 @@ export type WeekStripDay = {
   logged: boolean;
   /** The plan makes the weekday a rest day (v0.650). */
   restPlanned: boolean;
+  /** The plan has a workout that weekday (v0.651): a future day reads planned. */
+  planned: boolean;
 };
 
 /** The last `days` days up to today, for the day page's week strip. */
@@ -2259,19 +2270,22 @@ export async function loadWeekStrip(
   userId: string,
   today: string,
   days = 8,
+  /** The window's last day (v0.651): today by default; later to look ahead,
+   *  earlier to look back. */
+  end: string = today,
 ): Promise<{ days: WeekStripDay[]; overdue: string[] }> {
-  const from = addDays(today, -(days - 1));
+  const from = addDays(end, -(days - 1));
   const [tasks, sessions, overdue] = (await Promise.all([
     prisma.task.findMany({
       where: {
         userId,
         category: "EXERCISE",
-        dueDate: { gte: toDateColumn(from), lte: toDateColumn(today) },
+        dueDate: { gte: toDateColumn(from), lte: toDateColumn(end) },
       },
       select: { dueDate: true, status: true },
     }),
     prisma.workoutSession.findMany({
-      where: { userId, date: { gte: toDateColumn(from), lte: toDateColumn(today) } },
+      where: { userId, date: { gte: toDateColumn(from), lte: toDateColumn(end) } },
       select: { date: true, isRest: true },
     }),
     loadOverdueWorkoutDates(userId, today),
@@ -2282,7 +2296,10 @@ export async function loadWeekStrip(
   ];
   const taskBy = new Map(tasks.map((t) => [fromDateColumn(t.dueDate), t.status]));
   const dates = Array.from({ length: days }, (_, i) => addDays(from, i));
-  const restPlan = await Promise.all(dates.map((d) => planRestDay(userId, d)));
+  const [restPlan, workPlan] = await Promise.all([
+    Promise.all(dates.map((d) => planRestDay(userId, d))),
+    Promise.all(dates.map((d) => planWorkDay(userId, d))),
+  ]);
   const out: WeekStripDay[] = [];
   for (let i = 0; i < days; i++) {
     const date = addDays(from, i);
@@ -2294,6 +2311,7 @@ export async function loadWeekStrip(
       rested: own.some((s) => s.isRest),
       logged: own.some((s) => !s.isRest),
       restPlanned: restPlan[i],
+      planned: workPlan[i],
     });
   }
   return { days: out, overdue };

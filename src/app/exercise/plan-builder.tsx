@@ -377,7 +377,7 @@ function DayRow({
           >
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium">
-                {w.core ? "Core" : w.name}
+                {w.core ? (w.core.kind === "arms" ? "Arms" : "Core") : w.name}
                 {!w.core && !w.isRest && kindOf(w) !== "STRENGTH" && KIND_LABEL[kindOf(w)] !== w.name && (
                   <span className="ml-2 text-xs font-normal text-muted">{KIND_LABEL[kindOf(w)]}</span>
                 )}
@@ -546,7 +546,9 @@ function AddWorkoutModal({
     setPicked((prev) => ({ ...prev, [id]: { ...prev[id], metric } }));
 
   const chosen = Object.entries(picked);
-  const coreRot = category === "WEIGHTS" && muscle === "CORE" && coreMode === "rotation";
+  // Core and Arms (v0.651) both rotate through workouts.
+  const rotKind: "core" | "arms" = muscle === "ARMS" ? "arms" : "core";
+  const coreRot = category === "WEIGHTS" && (muscle === "CORE" || muscle === "ARMS") && coreMode === "rotation";
   const canSave = rest
     ? true
     : coreRot
@@ -561,7 +563,7 @@ function AddWorkoutModal({
       if (rest) {
         await addPlannedRestDay(userId, day);
       } else if (coreRot) {
-        const r = await setCoreDayAction(userId, { day, rotation: coreRotation, test: coreTest });
+        const r = await setCoreDayAction(userId, { day, rotation: coreRotation, test: coreTest, kind: rotKind });
         if (!r.ok) {
           setCoreError(r.error);
           return;
@@ -600,6 +602,9 @@ function AddWorkoutModal({
   const changeMuscle = (m: MuscleGroup | null) => {
     setMuscle(m);
     setPicked({});
+    // Core and Arms rotations hold different workouts (v0.651).
+    setCoreRotation([]);
+    setCoreError("");
   };
 
   return (
@@ -677,11 +682,11 @@ function AddWorkoutModal({
             </div>
           )}
 
-          {!rest && isWeights && muscle === "CORE" && (
+          {!rest && isWeights && (muscle === "CORE" || muscle === "ARMS") && (
             <div className="flex overflow-hidden rounded-xl border border-accent text-sm font-semibold" role="radiogroup">
               {(
                 [
-                  ["rotation", "Core rotation"],
+                  ["rotation", muscle === "ARMS" ? "Arms rotation" : "Core rotation"],
                   ["pick", "Pick movements"],
                 ] as const
               ).map(([k, label]) => (
@@ -702,8 +707,10 @@ function AddWorkoutModal({
           {coreRot ? (
             <div>
               <CoreRotationPicker
+                key={rotKind}
                 userId={userId}
                 pool={pool}
+                kind={rotKind}
                 rotation={coreRotation}
                 onRotation={setCoreRotation}
                 test={coreTest}
@@ -878,7 +885,7 @@ function AddWorkoutModal({
             onClick={save}
             className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-on-accent disabled:opacity-40"
           >
-            {saving ? "Adding…" : coreRot ? "Add core day" : "Add workout"}
+            {saving ? "Adding…" : coreRot ? `Add ${rotKind} day` : "Add workout"}
           </button>
         </div>
       </div>

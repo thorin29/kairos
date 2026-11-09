@@ -176,7 +176,7 @@ export function WorkoutLauncher({
                 ),
               )}
               {restDay ? (
-                <span className="font-medium text-muted">Rest day!</span>
+                <span className="font-medium text-muted">Rest day</span>
               ) : completeForToday ? (
                 <span className="font-medium text-emerald-600">Complete for today!</span>
               ) : (

@@ -6,8 +6,8 @@ import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { setSetting, WORKOUT_OVERDUE_DAYS, WORKOUT_OVERDUE_MAX } from "@/lib/settings";
-import { dayOfWeek, toDateColumn, todayISO } from "@/lib/dates";
-import type { SectionKind } from "@/lib/workouts/blocks";
+import { addDays, dayOfWeek, toDateColumn, todayISO } from "@/lib/dates";
+import { STRIP_PAGES_AHEAD, STRIP_PAGES_BACK, type SectionKind } from "@/lib/workouts/blocks";
 import {
   loadOverdueWorkoutDates,
   loadDayLogState,
@@ -1460,11 +1460,15 @@ export async function saveMovementSets(input: {
  *  past days are still open for logging. */
 export async function loadWorkoutWeek(
   userId: string,
+  /** Which 8 days (v0.651): 0 = the last 8 up to today, 1 = the next 8,
+   *  -1 = the 8 before, and so on. */
+  page = 0,
 ): Promise<{ days: WeekStripDay[]; overdue: string[]; today: string }> {
   await requireInteractive();
   await requireCanActFor(userId);
   const today = todayISO();
-  const r = await loadWeekStrip(userId, today);
+  const p = Math.max(-STRIP_PAGES_BACK, Math.min(STRIP_PAGES_AHEAD, Math.trunc(page) || 0));
+  const r = await loadWeekStrip(userId, today, 8, addDays(today, 8 * p));
   return { ...r, today };
 }
 
@@ -1708,14 +1712,17 @@ export async function deleteWarmupRoutine(userId: string, id: string): Promise<v
 
 // --- core days (v0.637) -------------------------------------------------------
 
-export async function loadCoreWorkouts(userId: string): Promise<CoreWorkout[]> {
+export async function loadCoreWorkouts(userId: string, kind: "core" | "arms" = "core"): Promise<CoreWorkout[]> {
   await requireInteractive();
   await requireCanActFor(userId);
-  return coreWorkoutsFor(userId);
+  return coreWorkoutsFor(userId, kind);
 }
 
 /** Save one's own core workout (new without an id). */
-export async function saveCoreWorkoutAction(userId: string, input: { id?: string | null; name: string; moves: unknown }) {
+export async function saveCoreWorkoutAction(
+  userId: string,
+  input: { id?: string | null; name: string; moves: unknown; kind?: "core" | "arms" },
+) {
   await requireInteractive();
   await requireCanActFor(userId);
   const r = await saveCoreWorkout(userId, input);
@@ -1733,7 +1740,7 @@ export async function deleteCoreWorkoutAction(userId: string, id: string): Promi
 /** Make a Core day on `day`, or change the rotation of `plannedWorkoutId`. */
 export async function setCoreDayAction(
   userId: string,
-  input: { plannedWorkoutId?: string | null; day?: number | null; rotation: string[]; test: boolean },
+  input: { plannedWorkoutId?: string | null; day?: number | null; rotation: string[]; test: boolean; kind?: "core" | "arms" },
 ) {
   await requireInteractive();
   await requireCanActFor(userId);

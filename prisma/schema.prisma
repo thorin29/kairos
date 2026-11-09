@@ -1326,10 +1326,13 @@ model CoreWorkout {
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   name      String
   moves     Json     @default("[]")
+  /// "core" or "arms" (v0.651): which rotation it belongs to.
+  kind      String   @default("core")
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
   @@index([ownerId])
+  @@index([ownerId, kind])
 }
 
 /// A person's own warm-up routine (v0.622): steps of reps or timed holds, as

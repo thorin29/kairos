@@ -293,7 +293,11 @@ export function dayProgress(
   return { done, total };
 }
 
-export type StripState = "done" | "partial" | "rest" | "open" | "expired" | "today" | "none";
+/** How far the week strip pages (v0.651), 8 days a page. */
+export const STRIP_PAGES_BACK = 8;
+export const STRIP_PAGES_AHEAD = 4;
+
+export type StripState = "done" | "partial" | "rest" | "open" | "expired" | "today" | "none" | "planned";
 
 export type StripDayIn = {
   date: string;
@@ -305,6 +309,8 @@ export type StripDayIn = {
   logged: boolean;
   /** The plan makes the weekday a rest day (v0.650). */
   restPlanned?: boolean;
+  /** The plan has a workout that weekday (v0.651). */
+  planned?: boolean;
 };
 
 /**
@@ -313,6 +319,8 @@ export type StripDayIn = {
  * isn't in it has expired.
  */
 export function stripState(d: StripDayIn, todayISO: string, overdue: ReadonlySet<string>): StripState {
+  // A day still to come (v0.651): what the plan has for it.
+  if (d.date > todayISO) return d.restPlanned ? "rest" : d.planned ? "planned" : "none";
   // Rested, but something else got done that day (a game): done (v0.650).
   if (d.rested) return d.logged ? "done" : "rest";
   if (d.restPlanned && !d.logged) return "rest";

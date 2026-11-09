@@ -25,14 +25,14 @@ import { Modal } from "./plan-file-panel";
  * rotates through, making your own, and the plan line for a Core day.
  */
 
-export function useCoreWorkouts(userId: string) {
+export function useCoreWorkouts(userId: string, kind: "core" | "arms" = "core") {
   const [list, setList] = useState<CoreWorkout[] | null>(null);
   const reload = () => {
-    loadCoreWorkouts(userId)
+    loadCoreWorkouts(userId, kind)
       .then(setList)
       .catch(() => setList([]));
   };
-  useEffect(reload, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(reload, [userId, kind]); // eslint-disable-line react-hooks/exhaustive-deps
   return { list, reload };
 }
 
@@ -47,6 +47,7 @@ export function CoreRotationPicker({
   onRotation,
   test,
   onTest,
+  kind = "core",
 }: {
   userId: string;
   pool: PoolEntry[];
@@ -54,8 +55,10 @@ export function CoreRotationPicker({
   onRotation: (r: string[]) => void;
   test: boolean;
   onTest: (t: boolean) => void;
+  /** An Arms day's rotation (v0.651): its own workouts, no plank test. */
+  kind?: "core" | "arms";
 }) {
-  const { list, reload } = useCoreWorkouts(userId);
+  const { list, reload } = useCoreWorkouts(userId, kind);
   const [peek, setPeek] = useState<CoreWorkout | null>(null);
   const [editing, setEditing] = useState<CoreWorkout | "new" | null>(null);
 
@@ -113,12 +116,14 @@ export function CoreRotationPicker({
       </ul>
       <button type="button" onClick={() => setEditing("new")} className={`${SECONDARY_LG} mt-2 w-full`}>
         <PlusIcon className="h-4 w-4" />
-        New core workout
+        {kind === "arms" ? "New arms workout" : "New core workout"}
       </button>
-      <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 text-sm">
-        <span>Plank test, first core day each month</span>
-        <input type="checkbox" checked={test} onChange={(e) => onTest(e.target.checked)} className="h-5 w-5 accent-accent" />
-      </label>
+      {kind === "core" && (
+        <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 text-sm">
+          <span>Plank test, first core day each month</span>
+          <input type="checkbox" checked={test} onChange={(e) => onTest(e.target.checked)} className="h-5 w-5 accent-accent" />
+        </label>
+      )}
 
       {peek && (
         <Modal title={peek.name} onClose={() => setPeek(null)}>
@@ -129,6 +134,7 @@ export function CoreRotationPicker({
         <CoreWorkoutEditor
           userId={userId}
           pool={pool}
+          kind={kind}
           initial={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
           onSaved={(id) => {
@@ -173,17 +179,24 @@ export function CoreWorkoutEditor({
   onClose,
   onSaved,
   onDeleted,
+  kind = "core",
 }: {
   userId: string;
   pool: PoolEntry[];
+  kind?: "core" | "arms";
   initial: CoreWorkout | null;
   onClose: () => void;
   onSaved: (id: string | null) => void;
   onDeleted: (id: string) => void;
 }) {
-  // Core movements first, then the rest of the strength and isometric pool.
+  // Core movements (or arms movements for an Arms workout, v0.651).
   const choices = pool
-    .filter((p) => p.isActive && (p.muscleGroup === "CORE" || p.pattern === "CORE" || p.category === "ISOMETRIC"))
+    .filter((p) =>
+      p.isActive &&
+      (kind === "arms"
+        ? p.muscleGroup === "ARMS"
+        : p.muscleGroup === "CORE" || p.pattern === "CORE" || p.category === "ISOMETRIC"),
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
   const [name, setName] = useState(initial?.name ?? "");
   const [rows, setRows] = useState<Draft[]>(
@@ -215,13 +228,13 @@ export function CoreWorkoutEditor({
           min: Number(r.min),
           max: Number(r.max || r.min),
         }));
-      const res = await saveCoreWorkoutAction(userId, { id: initial?.id ?? null, name, moves });
+      const res = await saveCoreWorkoutAction(userId, { id: initial?.id ?? null, name, moves, kind });
       if (res.ok) onSaved(res.id);
       else setError(res.error);
     });
 
   return (
-    <Modal title={initial ? "Edit core workout" : "New core workout"} onClose={onClose}>
+    <Modal title={`${initial ? "Edit" : "New"} ${kind === "arms" ? "arms" : "core"} workout`} onClose={onClose}>
       <div className="space-y-3">
         <input
           value={name}
@@ -338,6 +351,8 @@ export function CoreWorkoutEditor({
 /** A Core day in the plan editor: the workout planned now, and its rotation to change. */
 export function CorePlanLine({ userId, pool, workout }: { userId: string; pool: PoolEntry[]; workout: PlanWorkout }) {
   const core = workout.core!;
+  const kind = core.kind === "arms" ? "arms" : "core";
+  const label = kind === "arms" ? "Arms" : "Core";
   const [open, setOpen] = useState(false);
   const [rotation, setRotation] = useState(core.rotation);
   const [test, setTest] = useState(core.test);
@@ -355,13 +370,14 @@ export function CorePlanLine({ userId, pool, workout }: { userId: string; pool: 
         }}
         className="mt-0.5 block text-left text-xs font-semibold text-accent"
       >
-        {workout.name.replace(/^Core · /, "") || "Core"} ›
+        {workout.name.replace(/^(Core|Arms) · /, "") || label} ›
       </button>
       {open && (
-        <Modal title="Core rotation" onClose={() => setOpen(false)}>
+        <Modal title={`${label} rotation`} onClose={() => setOpen(false)}>
           <CoreRotationPicker
             userId={userId}
             pool={pool}
+            kind={kind}
             rotation={rotation}
             onRotation={setRotation}
             test={test}
@@ -374,7 +390,7 @@ export function CorePlanLine({ userId, pool, workout }: { userId: string; pool: 
               disabled={busy || rotation.length === 0}
               onClick={() =>
                 start(async () => {
-                  const r = await setCoreDayAction(userId, { plannedWorkoutId: workout.id, rotation, test });
+                  const r = await setCoreDayAction(userId, { plannedWorkoutId: workout.id, rotation, test, kind });
                   if (r.ok) setOpen(false);
                   else setError(r.error);
                 })

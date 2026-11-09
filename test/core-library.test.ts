@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  ARMS_LIBRARY,
   CORE_LIBRARY,
+  coreDayName,
+  libraryCoreWorkout,
   PLANK_TEST,
   cleanCoreDay,
   cleanCoreMoves,
@@ -139,5 +142,30 @@ describe("sides and clock entry (v0.642)", () => {
     expect(secondsFromTyped("")).toBe("");
     expect(clockText(126)).toBe("2:06");
     expect(clockText("")).toBe("");
+  });
+});
+
+describe("arms library (v0.651)", () => {
+  it("uses only library movements, logged the way the library says", () => {
+    for (const w of ARMS_LIBRARY) {
+      expect(w.kind).toBe("arms");
+      for (const m of w.moves) {
+        const key = libraryKeyFor(m.name);
+        expect(key, `${w.name}: ${m.name}`).not.toBeNull();
+        const entry = LIBRARY.find((e) => e.key === key)!;
+        expect(entry.metric, `${w.name}: ${m.name}`).toBe(m.kind === "TIME" ? "DURATION" : m.kind);
+      }
+    }
+  });
+  it("has its own ids, found like Core's, and names the day Arms", () => {
+    const ids = [...CORE_LIBRARY, ...ARMS_LIBRARY].map((w) => w.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(libraryCoreWorkout("lib:arms-ez")?.name).toBe("EZ bar classic");
+    expect(coreDayName(ARMS_LIBRARY[0], "arms")).toBe("Arms · EZ bar classic");
+    expect(coreDayName(CORE_LIBRARY[0])).toBe("Core · Core strength");
+  });
+  it("keeps an Arms day's kind through cleaning", () => {
+    expect(cleanCoreDay({ ...base, kind: "arms" }, "2026-11-09")?.kind).toBe("arms");
+    expect(cleanCoreDay(base, "2026-11-09")?.kind).toBeUndefined();
   });
 });
