@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-11 — Week strip holds still (v0.652.0 / app 0.462.0)
+
+The Today link took its own line only when off today, so the card grew and
+the page jumped as you paged. On the phone it now sits at the end of the
+date line (same height either way); on the web its line is always there,
+invisible on today. On the phone, opening a coming day also blanked the
+strip and looked frozen: each day load cleared the fetched pages and the
+page in view was never asked for again. Pages now stay until a fresh copy
+replaces them, the page in view refetches after every load, and the pager
+opens on the page holding the shown day. A coming day shows no progress
+bar. Network pauses Android makes while the app is in the background
+(blocked/unblocked around each widget refresh) are no longer logged to
+diagnostics; changes while the app is in use, and real losses, still are.
+
 ## 2026-11 — Week strip pages; Arms days (v0.651.0 / app 0.461.0)
 
 - **Looking ahead.** The day page's strip pages 8 days at a time (‹ › or a

@@ -903,13 +903,17 @@ function WeekStrip({
   const arrow = "flex h-9 w-7 shrink-0 items-center justify-center rounded-full text-lg font-semibold text-accent disabled:text-hairline";
   return (
     <div>
-      {(page !== 0 || selected !== today) && (
-        <div className="mb-1 flex justify-end">
-          <button type="button" onClick={onToday} className="text-xs font-semibold text-accent">
-            Today
-          </button>
-        </div>
-      )}
+      {/* Always takes its line, so the strip never moves when it shows (v0.652). */}
+      <div className="mb-1 flex h-4 justify-end">
+        <button
+          type="button"
+          onClick={onToday}
+          className={`text-xs font-semibold text-accent ${page !== 0 || selected !== today ? "" : "invisible"}`}
+          tabIndex={page !== 0 || selected !== today ? 0 : -1}
+        >
+          Today
+        </button>
+      </div>
       <div
         className="flex items-center gap-1"
         onTouchStart={(e) => {
