@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-11 — Rest days look like rest days (v0.650.0 / app 0.460.0)
+
+- The home Workouts card reads "Rest day!" on a rest day: the plan's Rest
+  ("planned") or Rest / skip pressed ("skipped"), from `workoutRestFor`. A
+  skipped day where something else was logged (a game, another workout) reads
+  "Complete for today!" — skipping the plan and playing a game is a workout
+  day. A planned rest day stays "Rest day!" whatever is logged. The card now
+  shows on a rest day even with no workout task.
+- Week strip: a rest day is a grey filled dot with its date (the app drew a
+  moon). Rested + something logged = done. Planned rest days (new
+  `restPlanned` on strip days) read as rest unless something was logged.
+- A skipped day's plan stays on the day page but faded (40%), on web as on
+  the app, so nothing looks open; a planned rest day still shows only what
+  was logged.
+
 ## 2026-11 — On a planned day, the plan decides "complete" (v0.649.0)
 
 Three paths completed the day's workout task outright: confirming a game

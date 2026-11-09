@@ -44,6 +44,7 @@ export function WorkoutLauncher({
   summaryNames,
   overdueCount = 0,
   completeForToday = false,
+  restDay = false,
   person = null,
 }: {
   userId: string;
@@ -70,6 +71,8 @@ export function WorkoutLauncher({
   overdueCount?: number;
   /** The summary button reads "Complete for today!" in green, like the phone. */
   completeForToday?: boolean;
+  /** v0.650: a rest day (the plan's Rest, or Rest / skip pressed). */
+  restDay?: boolean;
   /** The person's workout card data: when given, the overlay is the day page
    *  (sections, every-set logging), the same as Exercise → Log workout. */
   person?: PersonWorkout | null;
@@ -172,7 +175,9 @@ export function WorkoutLauncher({
                 </span>
                 ),
               )}
-              {completeForToday ? (
+              {restDay ? (
+                <span className="font-medium text-muted">Rest day!</span>
+              ) : completeForToday ? (
                 <span className="font-medium text-emerald-600">Complete for today!</span>
               ) : (
                 names.length === 0 &&

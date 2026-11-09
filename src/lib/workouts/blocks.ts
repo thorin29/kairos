@@ -303,6 +303,8 @@ export type StripDayIn = {
   rested: boolean;
   /** Anything logged that day (a session that isn't a rest). */
   logged: boolean;
+  /** The plan makes the weekday a rest day (v0.650). */
+  restPlanned?: boolean;
 };
 
 /**
@@ -311,7 +313,9 @@ export type StripDayIn = {
  * isn't in it has expired.
  */
 export function stripState(d: StripDayIn, todayISO: string, overdue: ReadonlySet<string>): StripState {
-  if (d.rested) return "rest";
+  // Rested, but something else got done that day (a game): done (v0.650).
+  if (d.rested) return d.logged ? "done" : "rest";
+  if (d.restPlanned && !d.logged) return "rest";
   if (d.task === "COMPLETE") return "done";
   if (d.task === "SKIPPED") return d.logged ? "done" : "rest";
   if (d.task === "PENDING") {

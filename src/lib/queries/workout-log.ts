@@ -2210,6 +2210,34 @@ export async function loadDayLogState(
 
 /** Plan entries in effect that day with nothing to log by movement (Warm-up,
  *  Cardio, a one-number plan), which loadTodayPlannedWorkouts leaves out. */
+/**
+ * Whether a day is a rest day for the home Workouts card and the week strip
+ * (v0.650): "planned" when the plan makes the weekday Rest and nothing else,
+ * "skipped" when Rest / skip was pressed that day. `extraLogged` = something
+ * else was logged that day (a game, a row, another workout).
+ */
+export async function workoutRestFor(
+  userId: string,
+  dateISO: string,
+): Promise<{ rest: "planned" | "skipped" | null; extraLogged: boolean }> {
+  const sessions = (await prisma.workoutSession.findMany({
+    where: { userId, date: toDateColumn(dateISO) },
+    select: { isRest: true },
+  })) as { isRest: boolean }[];
+  const extraLogged = sessions.some((s) => !s.isRest);
+  if (sessions.some((s) => s.isRest)) return { rest: "skipped", extraLogged };
+  return { rest: (await planRestDay(userId, dateISO)) ? "planned" : null, extraLogged };
+}
+
+/** The plan makes this weekday Rest and plans nothing else on it. */
+async function planRestDay(userId: string, dateISO: string): Promise<boolean> {
+  const [restRows, workRows] = await Promise.all([
+    prisma.plannedWorkout.count({ where: { ...dayPlanWhere(userId, dateISO), isRest: true } }),
+    prisma.plannedWorkout.count({ where: { ...dayPlanWhere(userId, dateISO), isRest: false } }),
+  ]);
+  return restRows > 0 && workRows === 0;
+}
+
 async function simplePlanIds(userId: string, dateISO: string): Promise<string[]> {
   const rows = (await prisma.plannedWorkout.findMany({ where: dayPlanWhere(userId, dateISO), select: { id: true } })) as {
     id: string;
@@ -2222,6 +2250,8 @@ export type WeekStripDay = {
   task: "PENDING" | "COMPLETE" | "SKIPPED" | null;
   rested: boolean;
   logged: boolean;
+  /** The plan makes the weekday a rest day (v0.650). */
+  restPlanned: boolean;
 };
 
 /** The last `days` days up to today, for the day page's week strip. */
@@ -2251,6 +2281,8 @@ export async function loadWeekStrip(
     string[],
   ];
   const taskBy = new Map(tasks.map((t) => [fromDateColumn(t.dueDate), t.status]));
+  const dates = Array.from({ length: days }, (_, i) => addDays(from, i));
+  const restPlan = await Promise.all(dates.map((d) => planRestDay(userId, d)));
   const out: WeekStripDay[] = [];
   for (let i = 0; i < days; i++) {
     const date = addDays(from, i);
@@ -2261,6 +2293,7 @@ export async function loadWeekStrip(
       task: status === "PENDING" || status === "COMPLETE" || status === "SKIPPED" ? status : null,
       rested: own.some((s) => s.isRest),
       logged: own.some((s) => !s.isRest),
+      restPlanned: restPlan[i],
     });
   }
   return { days: out, overdue };

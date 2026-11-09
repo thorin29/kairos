@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.649.0";
+export const APP_VERSION = "0.650.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.650.0",
+    summary: [
+      "Rest days say Rest day! on the Workouts card, whether the plan has them or you pressed Rest / skip.",
+      "A skipped day shows as a grey dot in the week, and its workouts fade so nothing looks open. If you logged a game or another workout that day, it counts as done.",
+    ],
+  },
   {
     version: "0.649.0",
     summary: ["A game or an extra workout no longer marks the day's workouts complete while a planned workout is still open."],

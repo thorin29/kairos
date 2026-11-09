@@ -16,7 +16,7 @@ import {
   loadExercisePool,
   loadHiitWorkoutsForBoard,
 } from "@/lib/queries/workouts";
-import { loadOverdueWorkoutDates } from "@/lib/queries/workout-log";
+import { loadOverdueWorkoutDates, workoutRestFor } from "@/lib/queries/workout-log";
 import { loadReadingProgress } from "@/lib/queries/reading";
 import { WorkoutLauncher } from "./workout-launcher";
 import { ProgramCard } from "@/app/exercise/program-card";
@@ -171,6 +171,10 @@ export default async function PersonPage({
     loadReadingProgress(id),
   ]);
   const boardPerson = board.people.find((p) => p.user.id === id) ?? null;
+  // A rest day (v0.650): the plan's Rest or Rest / skip pressed. The card reads
+  // "Rest day!", or "Complete for today!" when a skipped day got something else.
+  const restToday = await workoutRestFor(id, today);
+  const restDayToday = restToday.rest != null && !(restToday.rest === "skipped" && restToday.extraLogged);
   // "Start a workout program?" for someone with no plan and nothing logged lately.
   const showInvite = await inviteFor(id);
   const unitSystem = board.unitSystem;
@@ -564,7 +568,9 @@ export default async function PersonPage({
               ? choreHasContent
               : c === "READING"
                 ? readingProgress.length > 0
-                : catRows(c).length > 0 || (c === "BIBLE" && Boolean(personalToday)),
+                : catRows(c).length > 0 ||
+                  (c === "BIBLE" && Boolean(personalToday)) ||
+                  (c === "EXERCISE" && restToday.rest != null),
         );
         if (!anyBlock) {
           return <Card className="p-6 text-sm text-muted">Nothing scheduled today.</Card>;
@@ -642,7 +648,7 @@ export default async function PersonPage({
               if (c === "EXERCISE") {
                 const todayEx = catToday("EXERCISE");
                 const overdueEx = catOverdue("EXERCISE");
-                if (todayEx.length === 0 && overdueEx.length === 0) return null;
+                if (todayEx.length === 0 && overdueEx.length === 0 && restToday.rest == null) return null;
                 const wdToday = workoutDay(today);
                 return (
                   <section key="exercise">
@@ -664,15 +670,18 @@ export default async function PersonPage({
                         weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
                         todayISO={today}
                         person={boardPerson}
-                        summaryNames={todayEx.map((r: { title: string }) => r.title)}
+                        summaryNames={restToday.rest ? [] : todayEx.map((r: { title: string }) => r.title)}
+                        restDay={restDayToday}
                         overdueCount={overdueWorkoutDays.length}
                         // Same rule as the phone's home row: today's workout
                         // task is complete (every movement logged or skipped,
                         // or something else logged) and nothing is overdue.
                         completeForToday={
-                          todayEx.length > 0 &&
-                          todayEx.every((r: { status: string }) => r.status === "COMPLETE") &&
-                          overdueWorkoutDays.length === 0
+                          !restDayToday &&
+                          overdueWorkoutDays.length === 0 &&
+                          ((restToday.rest === "skipped" && restToday.extraLogged) ||
+                            (todayEx.length > 0 &&
+                              todayEx.every((r: { status: string }) => r.status === "COMPLETE")))
                         }
                       />
                     </Card>

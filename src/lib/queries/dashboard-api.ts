@@ -4,7 +4,7 @@ import { Category, TaskStatus } from "@/generated/prisma/client";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadWorkoutDayExtras, loadWorkoutPlanNames } from "@/lib/queries/workouts";
 import { sportLabels } from "@/lib/workouts/history-run";
-import { loadOverdueWorkoutDates } from "@/lib/queries/workout-log";
+import { loadOverdueWorkoutDates, workoutRestFor } from "@/lib/queries/workout-log";
 import { loadReadingProgress, type ReadingProgress } from "@/lib/queries/reading";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { CATEGORY_LABELS } from "@/lib/colors";
@@ -94,6 +94,12 @@ export type ApiDashboard = {
    *  workout whose exercises weren\u2019t logged) \u2014 matches the log screen, unlike
    *  the task-status overdue above. Drives the home Workouts button. */
   workoutOverdue: number;
+  /** v0.650: the day is a rest day — "planned" (the plan's Rest) or "skipped"
+   *  (Rest / skip pressed) — and whether anything else was logged. The home
+   *  Workouts card then reads "Rest day!" (or "Complete for today!" for a
+   *  skipped day with something else logged). */
+  workoutRest: "planned" | "skipped" | null;
+  workoutExtraLogged: boolean;
   /** Per-book reading-goal progress for the Book reading home section. */
   reading: ReadingProgress[];
   groups: { category: Category; label: string; items: ApiTask[] }[];
@@ -378,6 +384,7 @@ export async function loadApiDashboard(
   // future day must not invent a number for it.
   const workoutOverdue =
     dayISO === today ? (await loadOverdueWorkoutDates(userId, today)).length : 0;
+  const restDay = await workoutRestFor(userId, dayISO);
 
   return {
     date: dayISO,
@@ -386,6 +393,8 @@ export async function loadApiDashboard(
     categories,
     overdue,
     workoutOverdue,
+    workoutRest: restDay.rest,
+    workoutExtraLogged: restDay.extraLogged,
     reading,
     groups,
     personalReading,

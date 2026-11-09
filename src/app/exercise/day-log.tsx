@@ -459,8 +459,10 @@ export function DayLog({
         <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">Loading&hellip;</p>
       ) : (
         data &&
-        !isRestDay && (
-          <div className="space-y-5">
+        // A rest day in the plan shows only what was logged; a skipped day
+        // keeps its plan in view, faded, so nothing on it looks open (v0.650).
+        !state?.restPlanned && (
+          <div className={`space-y-5 ${state?.rested ? "opacity-40" : ""}`}>
             {withConditioning.map((s) => (
               <section key={s.key}>
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{s.title}</h4>
@@ -843,7 +845,8 @@ const STRIP_LOOK: Record<StripState, { dot: string; label: string }> = {
     dot: "border-accent bg-[linear-gradient(90deg,var(--color-accent)_50%,transparent_50%)]",
     label: "partly done",
   },
-  rest: { dot: "border-transparent bg-transparent", label: "rest" },
+  // A rest day: a grey dot under its date (v0.650; was a dash).
+  rest: { dot: "border-transparent bg-muted/45", label: "rest" },
   open: { dot: "border-amber-500 bg-transparent", label: "not logged yet" },
   expired: { dot: "border-hairline bg-hairline", label: "missed" },
   today: { dot: "border-accent bg-transparent", label: "today" },
@@ -885,12 +888,8 @@ function WeekStrip({
             <span className="text-[0.65rem] font-semibold uppercase text-muted">
               {d.date === today ? "Today" : WEEKDAY[dayOfWeek(d.date)]}
             </span>
-            <span className="tabular font-semibold">{dd}</span>
-            {st === "rest" ? (
-              <span className="h-0.5 w-2.5 rounded-full bg-muted" aria-hidden />
-            ) : (
-              <span className={`h-2.5 w-2.5 rounded-full border-2 ${look.dot}`} aria-hidden />
-            )}
+            <span className={`tabular font-semibold ${st === "rest" ? "text-muted" : ""}`}>{dd}</span>
+            <span className={`h-2.5 w-2.5 rounded-full border-2 ${look.dot}`} aria-hidden />
           </button>
         );
       })}

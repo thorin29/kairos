@@ -202,6 +202,11 @@ describe("stripState", () => {
     expect(stripState(d("2026-10-26", null), today, open)).toBe("none");
     expect(stripState(d("2026-10-26", null, true), today, open)).toBe("done");
   });
+  it("rest days: rested or planned, unless something else got done (v0.650)", () => {
+    expect(stripState(d("2026-10-28", "SKIPPED", true, true), today, open)).toBe("done");
+    expect(stripState({ ...d("2026-10-25", null), restPlanned: true }, today, open)).toBe("rest");
+    expect(stripState({ ...d("2026-10-25", null, true), restPlanned: true }, today, open)).toBe("done");
+  });
 });
 
 describe("pool movement metric (v0.609)", () => {

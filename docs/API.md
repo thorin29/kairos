@@ -1010,6 +1010,9 @@ the running program carries into its next block with these changes (same
 start date; maxes as sent), and plan entries the setup doesn't cover stay.
 `GET /api/v1/workouts/plan` movements add `about`.
 
+v0.650: `GET /api/v1/dashboard` adds `workoutRest` ("planned" | "skipped" |
+null) and `workoutExtraLogged`; week strip days add `restPlanned`.
+
 v0.646: `GET /api/v1/workouts` adds `restPlanned` — the plan makes this
 weekday a rest day and nothing else is planned. `title` is then "Rest day",
 and `loggedOther` also lists cardio and conditioning sessions (there are no
