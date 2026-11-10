@@ -136,8 +136,10 @@ export function DayLog({
     warmups?: { plannedWorkoutId: string; routine: WarmupRoutine | null }[];
   } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
-  // Which 8 days the strip shows (v0.651): 0 = up to today, + ahead, - back.
-  const [weekPage, setWeekPage] = useState(0);
+  // Other 8-day pages of the strip, fetched as it scrolls (v0.653).
+  const [stripPages, setStripPages] = useState<Record<number, WeekStripDay[]>>({});
+  const fetchedPages = useRef<Set<number>>(new Set());
+  const [resetTick, setResetTick] = useState(0);
   // A day still to come only previews its plan (v0.651).
   const future = date > todayISO;
   const [failed, setFailed] = useState(false);
@@ -191,13 +193,24 @@ export function DayLog({
   }, [userId, date, tick, person]);
   useEffect(() => {
     let live = true;
-    loadWorkoutWeek(userId, weekPage)
+    fetchedPages.current = new Set();
+    loadWorkoutWeek(userId, 0)
       .then((w) => live && setWeek(w))
       .catch(() => undefined);
     return () => {
       live = false;
     };
-  }, [userId, weekPage, tick, person]);
+  }, [userId, tick, person]);
+  const needPage = useCallback(
+    (p: number) => {
+      if (p === 0 || fetchedPages.current.has(p)) return;
+      fetchedPages.current.add(p);
+      loadWorkoutWeek(userId, p)
+        .then((w) => setStripPages((m) => ({ ...m, [p]: w.days })))
+        .catch(() => fetchedPages.current.delete(p));
+    },
+    [userId],
+  );
 
   // A past day shows the plan entries that existed then (v0.623): one made
   // later (a program started since) wasn't that day's plan.
@@ -341,10 +354,11 @@ export function DayLog({
           today={week.today}
           selected={date}
           onPick={(d) => setDate(d)}
-          page={weekPage}
-          onPage={setWeekPage}
+          pages={stripPages}
+          onNeedPage={needPage}
+          resetTick={resetTick}
           onToday={() => {
-            setWeekPage(0);
+            setResetTick((n) => n + 1);
             setDate(todayISO);
           }}
         />
@@ -876,14 +890,25 @@ const STRIP_LOOK: Record<StripState, { dot: string; label: string }> = {
   none: { dot: "border-transparent bg-transparent", label: "nothing planned" },
 };
 
+/** Days the strip reaches, in 8-day server pages: ~2 months back, ~1 ahead. */
+const STRIP_DAYS_BACK = STRIP_PAGES_BACK * 8;
+const STRIP_DAYS_AHEAD = STRIP_PAGES_AHEAD * 8;
+const pageOfOffset = (off: number) => (off > 0 ? Math.ceil(off / 8) : -Math.floor(-off / 8));
+
+/**
+ * The week strip (v0.653): scrolls freely, a day or many at a time; ‹ › jump
+ * a week. Every date shows at once; dots fill in as their pages load. The
+ * reset button (top right) comes back to today.
+ */
 function WeekStrip({
   days,
   overdue,
   today,
   selected,
   onPick,
-  page,
-  onPage,
+  pages,
+  onNeedPage,
+  resetTick,
   onToday,
 }: {
   days: WeekStripDay[];
@@ -891,70 +916,91 @@ function WeekStrip({
   today: string;
   selected: string;
   onPick: (d: string) => void;
-  /** Which 8 days (v0.651): 0 = up to today. */
-  page: number;
-  onPage: (p: number) => void;
+  pages: Record<number, WeekStripDay[]>;
+  onNeedPage: (p: number) => void;
+  resetTick: number;
   onToday: () => void;
 }) {
   const open = new Set(overdue);
-  // A swipe across the strip pages it, like the arrows (touch only).
-  const touchX = useRef<number | null>(null);
-  const go = (p: number) => onPage(Math.max(-STRIP_PAGES_BACK, Math.min(STRIP_PAGES_AHEAD, p)));
-  const arrow = "flex h-9 w-7 shrink-0 items-center justify-center rounded-full text-lg font-semibold text-accent disabled:text-hairline";
+  const all = useMemo(
+    () => Array.from({ length: STRIP_DAYS_BACK + STRIP_DAYS_AHEAD + 1 }, (_, i) => addDays(today, i - STRIP_DAYS_BACK)),
+    [today],
+  );
+  const byDate = useMemo(() => {
+    const m = new Map<string, WeekStripDay>();
+    for (const list of Object.values(pages)) for (const d of list) m.set(d.date, d);
+    for (const d of days) m.set(d.date, d);
+    return m;
+  }, [pages, days]);
+  const box = useRef<HTMLDivElement>(null);
+  const [first, setFirst] = useState(STRIP_DAYS_BACK - 7);
+  const cellW = () => (box.current ? box.current.clientWidth / 8 : 40);
+  const scrollToFirst = (i: number, smooth = true) => {
+    const el = box.current;
+    if (!el) return;
+    el.scrollTo({ left: Math.max(0, Math.min(all.length - 8, i)) * cellW(), behavior: smooth ? "smooth" : "auto" });
+  };
+  // Open on the shown day (at the right end, like today), and again on reset.
+  useEffect(() => {
+    const idx = all.indexOf(selected);
+    scrollToFirst((idx >= 0 ? idx : STRIP_DAYS_BACK) - 7, false);
+  }, [all]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (resetTick) scrollToFirst(STRIP_DAYS_BACK - 7);
+  }, [resetTick]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    onNeedPage(pageOfOffset(first - STRIP_DAYS_BACK));
+    onNeedPage(pageOfOffset(first + 7 - STRIP_DAYS_BACK));
+  }, [first, onNeedPage]);
+  const offToday = first !== STRIP_DAYS_BACK - 7 || selected !== today;
+  const arrow = "flex h-9 w-7 shrink-0 items-center justify-center rounded-full text-lg font-semibold text-accent";
   return (
     <div>
-      {/* Always takes its line, so the strip never moves when it shows (v0.652). */}
-      <div className="mb-1 flex h-4 justify-end">
+      <div className="mb-1 flex h-5 justify-end">
         <button
           type="button"
           onClick={onToday}
-          className={`text-xs font-semibold text-accent ${page !== 0 || selected !== today ? "" : "invisible"}`}
-          tabIndex={page !== 0 || selected !== today ? 0 : -1}
+          aria-label="Back to today"
+          title="Back to today"
+          className={`text-accent ${offToday ? "" : "invisible"}`}
+          tabIndex={offToday ? 0 : -1}
         >
-          Today
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M3 12a9 9 0 1 0 3-6.7" />
+            <path d="M3 4v5h5" />
+          </svg>
         </button>
       </div>
-      <div
-        className="flex items-center gap-1"
-        onTouchStart={(e) => {
-          touchX.current = e.touches[0]?.clientX ?? null;
-        }}
-        onTouchEnd={(e) => {
-          const x0 = touchX.current;
-          touchX.current = null;
-          const x1 = e.changedTouches[0]?.clientX;
-          if (x0 == null || x1 == null || Math.abs(x1 - x0) < 40) return;
-          go(page + (x1 < x0 ? 1 : -1));
-        }}
-      >
-        <button
-          type="button"
-          aria-label="Earlier days"
-          onClick={() => go(page - 1)}
-          disabled={page <= -STRIP_PAGES_BACK}
-          className={arrow}
-        >
+      <div className="flex items-center gap-1">
+        <button type="button" aria-label="Earlier days" onClick={() => scrollToFirst(first - 7)} className={arrow}>
           ‹
         </button>
-        <div className="grid flex-1 grid-cols-8 gap-1" role="group" aria-label="Days">
-          {days.map((d) => {
+        <div
+          ref={box}
+          onScroll={(e) => setFirst(Math.round(e.currentTarget.scrollLeft / cellW()))}
+          className="flex flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          role="group"
+          aria-label="Days"
+        >
+          {all.map((iso) => {
+            const d = byDate.get(iso) ?? { date: iso, task: null, rested: false, logged: false, restPlanned: false, planned: false };
             const st = stripState(d, today, open);
             const look = STRIP_LOOK[st];
-            const on = d.date === selected;
-            const [, , dd] = d.date.split("-").map(Number);
+            const on = iso === selected;
+            const [, , dd] = iso.split("-").map(Number);
             return (
               <button
-                key={d.date}
+                key={iso}
                 type="button"
-                onClick={() => onPick(d.date)}
+                onClick={() => onPick(iso)}
                 aria-pressed={on}
-                aria-label={`${WEEKDAY_LONG[dayOfWeek(d.date)]} ${dd}, ${look.label}`}
-                className={`flex min-h-[3.75rem] flex-col items-center justify-center gap-1 rounded-xl border text-xs transition-colors ${
+                aria-label={`${WEEKDAY_LONG[dayOfWeek(iso)]} ${dd}, ${look.label}`}
+                className={`flex min-h-[3.75rem] shrink-0 basis-[12.5%] flex-col items-center justify-center gap-1 rounded-xl border text-xs transition-colors ${
                   on ? "border-accent bg-accent/5" : "border-transparent hover:bg-ground"
                 }`}
               >
                 <span className="text-[0.65rem] font-semibold uppercase text-muted">
-                  {d.date === today ? "Today" : WEEKDAY[dayOfWeek(d.date)]}
+                  {iso === today ? "Today" : WEEKDAY[dayOfWeek(iso)]}
                 </span>
                 <span className={`tabular font-semibold ${st === "rest" ? "text-muted" : ""}`}>{dd}</span>
                 <span className={`h-2.5 w-2.5 rounded-full border-2 ${look.dot}`} aria-hidden />
@@ -962,13 +1008,7 @@ function WeekStrip({
             );
           })}
         </div>
-        <button
-          type="button"
-          aria-label="Later days"
-          onClick={() => go(page + 1)}
-          disabled={page >= STRIP_PAGES_AHEAD}
-          className={arrow}
-        >
+        <button type="button" aria-label="Later days" onClick={() => scrollToFirst(first + 7)} className={arrow}>
           ›
         </button>
       </div>

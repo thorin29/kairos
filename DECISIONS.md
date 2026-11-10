@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Week strip scrolls freely; reset in the corner (v0.653.0 / app 0.463.0)
+
+Paging a whole 8 days per swipe felt stiff, and the Today link repeated the
+"Today" on the date line. The strip is now one scrolling row of every day it
+reaches (~2 months back, ~1 ahead), eight in view, no snapping; ‹ › jump 7
+days; dates show at once and dots fill in as their 8-day pages load (the same
+`page` API, fetched for whatever is in view, once per day load). A reset
+icon in the top right (only when the strip or the day is away from today)
+scrolls back and selects today.
+
 ## 2026-11 — Week strip holds still (v0.652.0 / app 0.462.0)
 
 The Today link took its own line only when off today, so the card grew and
