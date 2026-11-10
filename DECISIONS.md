@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Game "How hard?": the check mark finishes it (v0.657.0 / app 0.467.0)
+
+0.656 removed the "How hard?" question after Yes; the ask was only to drop
+the extra Done step. The question is back after Yes, and choosing an effort
+(the check mark) saves it and clears the card. Skip still closes it without
+an answer. The Additional card's edit stays for changing it later.
+
 ## 2026-11 — Snap, one-tap game confirm, flexible minutes (v0.656.0 / app 0.466.0)
 
 - Week strip snaps to whole days (CSS scroll-snap on the web, a snap fling

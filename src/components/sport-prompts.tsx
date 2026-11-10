@@ -36,8 +36,7 @@ export function SportPrompts({
   const act = (p: Prompt, done: boolean) =>
     start(async () => {
       setHidden((s) => new Set(s).add(keyOf(p)));
-      // Yes saves and clears at once (v0.656); how hard it was is set from the
-      // day's Additional card.
+      if (done) setAsking((a) => [...a, { ...p, effort: null, hurt: null }]);
       // Confirm/decline for the occurrence the prompt is actually about, which
       // may be an earlier day carried forward — not necessarily today.
       if (done) await confirmSportWorkout(p.eventId, p.userId, p.dateISO);
@@ -57,7 +56,13 @@ export function SportPrompts({
   if (visible.length === 0 && asking.length === 0) return null;
 
   const feel = (p: Prompt, effort: Effort | null, hurt: HurtArea | null) => {
-    setAsking((a) => a.map((x) => (keyOf(x) === keyOf(p) ? { ...x, effort, hurt } : x)));
+    // The check mark saves and clears the card (v0.657, no Done step).
+    const prev = asking.find((x) => keyOf(x) === keyOf(p))?.effort ?? null;
+    setAsking((a) =>
+      effort && effort !== prev
+        ? a.filter((x) => keyOf(x) !== keyOf(p))
+        : a.map((x) => (keyOf(x) === keyOf(p) ? { ...x, effort, hurt } : x)),
+    );
     void saveMovementFeedback({ userId: p.userId, dateISO: p.dateISO, slot: sportSlot(p.eventId), effort, hurt }).catch(
       () => undefined,
     );
@@ -79,7 +84,7 @@ export function SportPrompts({
             onClick={() => setAsking((a) => a.filter((x) => keyOf(x) !== keyOf(p)))}
             className="text-xs font-semibold text-accent hover:underline"
           >
-            {p.effort || p.hurt ? "Done" : "Skip"}
+            Skip
           </button>
         </div>
       ))}
