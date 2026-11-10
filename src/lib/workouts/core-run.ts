@@ -10,6 +10,7 @@ import {
   cleanCoreMoves,
   coreDayMoves,
   coreDayName,
+  kindTag,
   coreMetric,
   coreScheme,
   libraryCoreWorkout,
@@ -44,7 +45,7 @@ function toWorkout(r: Row): CoreWorkout {
     gear: "",
     moves,
     mine: true,
-    ...(rotationKindOf(r.kind) === "arms" ? { kind: "arms" as const } : {}),
+    ...kindTag(rotationKindOf(r.kind)),
   };
 }
 
@@ -142,11 +143,14 @@ export async function setCoreDay(
   const kind = rotationKindOf(input.kind);
   const known = await coreWorkoutsFor(userId, kind);
   const rotation = ids.filter((id) => known.some((w) => w.id === id));
-  if (rotation.length === 0) return { ok: false, error: `Pick at least one ${kind === "arms" ? "arms" : "core"} workout.` };
-  // The plank test is Core's; an Arms day has none.
-  const test = kind === "core" && input.test !== false;
-  const tag = kind === "arms" ? { kind: "arms" as const } : {};
-  const group = kind === "arms" ? "ARMS" : "CORE";
+  if (rotation.length === 0) return { ok: false, error: `Pick at least one ${rotationLabel(kind).toLowerCase()} workout.` };
+  // Core has the plank test and Isometric its three holds (v0.661); an Arms
+  // day has none.
+  const test = kind !== "arms" && input.test !== false;
+  const tag = kindTag(kind);
+  // Isometric is its own category with no muscle group (v0.661).
+  const group = kind === "arms" ? "ARMS" : kind === "iso" ? null : "CORE";
+  const category = kind === "iso" ? "ISOMETRIC" : "WEIGHTS";
   const today = todayISO();
 
   if (input.plannedWorkoutId) {
@@ -170,7 +174,7 @@ export async function setCoreDay(
     };
     await prisma.plannedWorkout.update({
       where: { id: row.id },
-      data: { core: next as never, category: "WEIGHTS" as never, muscleGroup: group as never },
+      data: { core: next as never, category: category as never, muscleGroup: group as never },
     });
     await syncCoreDays(userId);
     return { ok: true, id: row.id };
@@ -186,7 +190,7 @@ export async function setCoreDay(
       dayOfWeek: day,
       name: rotationLabel(kind),
       sortOrder: count,
-      category: "WEIGHTS" as never,
+      category: category as never,
       muscleGroup: group as never,
       core: first as never,
     },
@@ -201,11 +205,13 @@ type Entry = { id: string; dayOfWeek: number; name: string; day: CoreDay; planne
 
 async function coreEntries(userId?: string): Promise<(Entry & { userId: string })[]> {
   const rows = (await prisma.plannedWorkout.findMany({
-    // Core and Arms days (v0.651) — both rotations.
+    // Core and Arms days (v0.651) and Isometric ones (v0.661) — all rotations.
     where: {
       ...(userId ? { userId } : {}),
-      category: "WEIGHTS" as never,
-      muscleGroup: { in: ["CORE", "ARMS"] as never },
+      OR: [
+        { category: "WEIGHTS" as never, muscleGroup: { in: ["CORE", "ARMS"] as never } },
+        { category: "ISOMETRIC" as never },
+      ],
     },
     orderBy: { sortOrder: "asc" },
     select: {
@@ -310,7 +316,7 @@ async function repairEarlyStep(e: Entry & { userId: string }, today: string): Pr
   const prevAt = (day.at - 1 + day.rotation.length) % day.rotation.length;
   const prev = await coreWorkoutFor(e.userId, day.rotation[prevAt]);
   if (!prev) return day;
-  const ids = (await resolveMoves(e.userId, coreDayMoves(prev, true))).map((m) => m.poolExerciseId);
+  const ids = (await resolveMoves(e.userId, coreDayMoves(prev, true, rotationKindOf(day.kind)))).map((m) => m.poolExerciseId);
   const hit = await loggedDays(e.userId, ids, lastDay, plusDays(lastDay, 1));
   if (hit.length === 0) return day;
   return {
@@ -340,7 +346,7 @@ export async function syncCoreDays(userId?: string, today: string = todayISO()):
         break;
       }
     }
-    const moves = await resolveMoves(e.userId, coreDayMoves(workout, day.withTest));
+    const moves = await resolveMoves(e.userId, coreDayMoves(workout, day.withTest, rotationKindOf(day.kind)));
     const want = moves.map((m) => ({ poolExerciseId: m.poolExerciseId, scheme: coreScheme(m), metric: coreMetric(m) }));
     const same =
       want.length === e.planned.length &&

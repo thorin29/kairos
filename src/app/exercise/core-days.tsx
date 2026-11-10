@@ -25,7 +25,11 @@ import { Modal } from "./plan-file-panel";
  * rotates through, making your own, and the plan line for a Core day.
  */
 
-export function useCoreWorkouts(userId: string, kind: "core" | "arms" = "core") {
+type Kind = "core" | "arms" | "iso";
+/** "Core" / "Arms" / "Isometric" (v0.661). */
+const LABEL: Record<Kind, string> = { core: "Core", arms: "Arms", iso: "Isometric" };
+
+export function useCoreWorkouts(userId: string, kind: Kind = "core") {
   const [list, setList] = useState<CoreWorkout[] | null>(null);
   const reload = () => {
     loadCoreWorkouts(userId, kind)
@@ -56,7 +60,7 @@ export function CoreRotationPicker({
   test: boolean;
   onTest: (t: boolean) => void;
   /** An Arms day's rotation (v0.651): its own workouts, no plank test. */
-  kind?: "core" | "arms";
+  kind?: "core" | "arms" | "iso";
 }) {
   const { list, reload } = useCoreWorkouts(userId, kind);
   const [peek, setPeek] = useState<CoreWorkout | null>(null);
@@ -116,11 +120,15 @@ export function CoreRotationPicker({
       </ul>
       <button type="button" onClick={() => setEditing("new")} className={`${SECONDARY_LG} mt-2 w-full`}>
         <PlusIcon className="h-4 w-4" />
-        {kind === "arms" ? "New arms workout" : "New core workout"}
+        New {LABEL[kind].toLowerCase()} workout
       </button>
-      {kind === "core" && (
+      {kind !== "arms" && (
         <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 text-sm">
-          <span>Plank test, first core day each month</span>
+          <span>
+            {kind === "iso"
+              ? "Monthly test (wall sit, dead hang, push-up hold), first isometric day each month"
+              : "Plank test, first core day each month"}
+          </span>
           <input type="checkbox" checked={test} onChange={(e) => onTest(e.target.checked)} className="h-5 w-5 accent-accent" />
         </label>
       )}
@@ -183,7 +191,7 @@ export function CoreWorkoutEditor({
 }: {
   userId: string;
   pool: PoolEntry[];
-  kind?: "core" | "arms";
+  kind?: Kind;
   initial: CoreWorkout | null;
   onClose: () => void;
   onSaved: (id: string | null) => void;
@@ -195,7 +203,10 @@ export function CoreWorkoutEditor({
       p.isActive &&
       (kind === "arms"
         ? p.muscleGroup === "ARMS"
-        : p.muscleGroup === "CORE" || p.pattern === "CORE" || p.category === "ISOMETRIC"),
+        : kind === "iso"
+          ? // Holds (v0.661): isometric movements and any logged as time.
+            p.category === "ISOMETRIC" || p.metric === "DURATION"
+          : p.muscleGroup === "CORE" || p.pattern === "CORE" || p.category === "ISOMETRIC"),
     )
     .sort((a, b) => a.name.localeCompare(b.name));
   const [name, setName] = useState(initial?.name ?? "");
@@ -212,7 +223,12 @@ export function CoreWorkoutEditor({
   const [busy, start] = useTransition();
 
   const add = () =>
-    setRows((r) => [...r, { poolExerciseId: "", kind: "REPS", sets: "3", min: "10", max: "15" }]);
+    setRows((r) => [
+      ...r,
+      kind === "iso"
+        ? { poolExerciseId: "", kind: "TIME", sets: "3", min: "30", max: "60" }
+        : { poolExerciseId: "", kind: "REPS", sets: "3", min: "10", max: "15" },
+    ]);
   const set = (i: number, patch: Partial<Draft>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
   const save = () =>
@@ -234,7 +250,7 @@ export function CoreWorkoutEditor({
     });
 
   return (
-    <Modal title={`${initial ? "Edit" : "New"} ${kind === "arms" ? "arms" : "core"} workout`} onClose={onClose}>
+    <Modal title={`${initial ? "Edit" : "New"} ${LABEL[kind].toLowerCase()} workout`} onClose={onClose}>
       <div className="space-y-3">
         <input
           value={name}
@@ -351,8 +367,8 @@ export function CoreWorkoutEditor({
 /** A Core day in the plan editor: the workout planned now, and its rotation to change. */
 export function CorePlanLine({ userId, pool, workout }: { userId: string; pool: PoolEntry[]; workout: PlanWorkout }) {
   const core = workout.core!;
-  const kind = core.kind === "arms" ? "arms" : "core";
-  const label = kind === "arms" ? "Arms" : "Core";
+  const kind: Kind = core.kind === "arms" ? "arms" : core.kind === "iso" ? "iso" : "core";
+  const label = LABEL[kind];
   const [open, setOpen] = useState(false);
   const [rotation, setRotation] = useState(core.rotation);
   const [test, setTest] = useState(core.test);
@@ -370,7 +386,7 @@ export function CorePlanLine({ userId, pool, workout }: { userId: string; pool: 
         }}
         className="mt-0.5 block text-left text-xs font-semibold text-accent"
       >
-        {workout.name.replace(/^(Core|Arms) · /, "") || label} ›
+        {workout.name.replace(/^(Core|Arms|Isometric) · /, "") || label} ›
       </button>
       {open && (
         <Modal title={`${label} rotation`} onClose={() => setOpen(false)}>

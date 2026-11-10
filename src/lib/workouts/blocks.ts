@@ -177,8 +177,10 @@ export function daySections(
     const tracked = w.movements.filter((m) => m.tracked);
     const splittable =
       tracked.length > 0 && tracked.every((m) => SET_METRICS.has(resolvedMetric(m, w.category)));
-    const key = w.muscleGroup ? `mg:${w.muscleGroup}` : `w:${w.id}`;
-    const title = w.muscleGroup ? MUSCLE_GROUP_LABEL[w.muscleGroup] : w.name;
+    // Isometric entries (v0.661) share one "Isometric" section.
+    const iso = !w.muscleGroup && w.category === "ISOMETRIC";
+    const key = w.muscleGroup ? `mg:${w.muscleGroup}` : iso ? "cat:ISOMETRIC" : `w:${w.id}`;
+    const title = w.muscleGroup ? MUSCLE_GROUP_LABEL[w.muscleGroup] : iso ? "Isometric" : w.name;
     if (!splittable) {
       add(key, "STRENGTH", title, [{ type: "card", workoutId: w.id }]);
       continue;

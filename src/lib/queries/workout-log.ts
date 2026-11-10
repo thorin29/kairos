@@ -37,7 +37,15 @@ import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
 import { coreDayView, coreWorkoutsFor, syncCoreDays } from "@/lib/workouts/core-run";
 import { aboutWithBellNote } from "@/lib/workouts/bells";
-import { cleanCoreDay, coreMoveLabel, switchesSides, type CoreWorkout } from "@/lib/workouts/core-library";
+import {
+  cleanCoreDay,
+  coreMoveLabel,
+  rotationKindOf,
+  switchesSides,
+  testCountFor,
+  testTitleFor,
+  type CoreWorkout,
+} from "@/lib/workouts/core-library";
 
 /**
  * The exercises scheduled for a person on a day, with any weight/reps already
@@ -177,6 +185,11 @@ export type TodayPlanned = {
   /** On a core day with the monthly plank test, the plank's pool id (v0.644):
    *  it gets its own card, apart from the workout. */
   coreTest?: string | null;
+  /** The month's test movements (v0.661): the plank on a Core day, three
+   *  holds on an Isometric one; empty when it isn't due. */
+  coreTests?: string[];
+  /** "Plank test" or "Monthly test". */
+  coreTestName?: string | null;
   exercises: PlannedMovement[];
   /** The plan's own session exists for the day: how a plan with nothing to
    *  enter (every movement untracked) shows that it was marked complete. */
@@ -447,11 +460,20 @@ export async function loadDayPlanProgress(
 /** All of a person's planned workouts for the day (a day can have several, e.g.
  *  Core AND Arms). Same per-plan shape as loadTodayPlannedWorkout, but every
  *  non-empty plan is returned so the card/logger can show them all. */
-/** The plank test's pool id when a core entry plans it (it's always first). */
+/** The plank test's pool id when a Core entry plans it (it's always first).
+ *  Isometric's test is in coreTestsOf only, so an older phone doesn't call
+ *  it a plank test. */
 function coreTestOf(core: unknown, exercises: { poolExerciseId: string }[]): string | null {
   if (core == null) return null;
   const d = cleanCoreDay(core, todayISO());
-  return d?.withTest ? (exercises[0]?.poolExerciseId ?? null) : null;
+  return d?.withTest && rotationKindOf(d.kind) === "core" ? (exercises[0]?.poolExerciseId ?? null) : null;
+}
+
+/** The month's test movements on a rotation day (they come first). */
+function coreTestsOf(core: unknown, exercises: { poolExerciseId: string }[]): string[] {
+  if (core == null) return [];
+  const d = cleanCoreDay(core, todayISO());
+  return exercises.slice(0, testCountFor(d)).map((e) => e.poolExerciseId);
 }
 
 /** The day's entries with an adjustment applied (v0.658). */
@@ -637,6 +659,10 @@ export async function loadTodayPlannedWorkouts(
       category: (plan as { category?: string | null }).category ?? null,
       core: (plan as { core?: unknown }).core != null,
       coreTest: coreTestOf((plan as { core?: unknown }).core, exercises),
+      coreTests: coreTestsOf((plan as { core?: unknown }).core, exercises),
+      coreTestName: (plan as { core?: unknown }).core != null
+        ? testTitleFor(rotationKindOf(cleanCoreDay((plan as { core?: unknown }).core, todayISO())?.kind))
+        : null,
       exercises,
       sessionLogged: hasSession(plan as { name: string; category: string | null }),
     });
@@ -1335,7 +1361,7 @@ export type PlanWorkoutLite = {
   warmup: string | null;
   /** A Core day's rotation (v0.637): workout ids in order, the monthly plank
    *  test, and which one is planned now. Null for anything else. */
-  core: { rotation: string[]; test: boolean; at: number; withTest?: boolean; kind?: "core" | "arms" } | null;
+  core: { rotation: string[]; test: boolean; at: number; withTest?: boolean; kind?: "core" | "arms" | "iso" } | null;
   /** Movements, each with its set structure (weights only carry one). */
   exercises: {
     poolExerciseId: string;
@@ -1485,6 +1511,8 @@ export type PlanOptions = {
   coreWorkouts: CoreWorkoutView[];
   /** Arms days' workouts (v0.651), the library's then the person's own. */
   armsWorkouts: CoreWorkoutView[];
+  /** Isometric workouts (v0.661). */
+  isoWorkouts: CoreWorkoutView[];
 };
 
 /** A core workout as the plan editors show it, each movement with its sets in words. */
@@ -1518,7 +1546,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
     };
   });
 
-  const [exRows, hiit, core, arms] = await Promise.all([
+  const [exRows, hiit, core, arms, iso] = await Promise.all([
     prisma.poolExercise.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
@@ -1527,6 +1555,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
     loadBrowsableWorkouts(userId),
     coreWorkoutsFor(userId),
     coreWorkoutsFor(userId, "arms"),
+    coreWorkoutsFor(userId, "iso"),
   ]);
 
   return {
@@ -1547,6 +1576,7 @@ export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
     schemes: SCHEME_CHOICES.map((c) => ({ key: c.key, label: c.label })),
     coreWorkouts: core.map(coreWorkoutView),
     armsWorkouts: arms.map(coreWorkoutView),
+    isoWorkouts: iso.map(coreWorkoutView),
   };
 }
 

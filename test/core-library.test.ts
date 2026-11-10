@@ -169,3 +169,45 @@ describe("arms library (v0.651)", () => {
     expect(cleanCoreDay(base, "2026-11-09")?.kind).toBeUndefined();
   });
 });
+
+import {
+  ISO_LIBRARY,
+  ISO_TEST,
+  coreDayMoves as isoDayMoves,
+  cleanCoreDay as isoClean,
+  rotationKindOf as isoKind,
+  rotationLabel as isoLabel,
+  stepCoreDay as isoStep,
+  testCountFor,
+  testTitleFor,
+} from "@/lib/workouts/core-library";
+import { LIBRARY as ALL_MOVES, nameKey as moveKey } from "@/lib/workouts/library";
+
+describe("isometric days (v0.661)", () => {
+  it("has its own workouts, every move a hold the library knows", () => {
+    expect(ISO_LIBRARY.length).toBe(6);
+    for (const w of ISO_LIBRARY) {
+      expect(w.kind).toBe("iso");
+      for (const m of w.moves) {
+        expect(m.kind).toBe("TIME");
+        expect(ALL_MOVES.some((x) => moveKey(x.name) === moveKey(m.name))).toBe(true);
+      }
+    }
+    for (const m of ISO_TEST) expect(ALL_MOVES.some((x) => moveKey(x.name) === moveKey(m.name))).toBe(true);
+    expect(isoKind("iso")).toBe("iso");
+    expect(isoLabel("iso")).toBe("Isometric");
+  });
+  it("puts the three test holds first when the month's test is due", () => {
+    const day = isoClean({ rotation: ["lib:iso-legs"], test: true, at: 0, since: "2026-11-02", kind: "iso" }, "2026-11-09")!;
+    expect(day.kind).toBe("iso");
+    const due = isoStep(day, [], "2026-11-09");
+    expect(due.withTest).toBe(true);
+    expect(testCountFor(due)).toBe(3);
+    const moves = isoDayMoves(ISO_LIBRARY[0], true, "iso").map((m) => m.name);
+    // Wall sit is in the test, so the workout's own wall sit isn't repeated.
+    expect(moves.slice(0, 3)).toEqual(["Wall sit", "Dead hang", "Push-up hold"]);
+    expect(moves.filter((n) => n === "Wall sit").length).toBe(1);
+    expect(testTitleFor("iso")).toBe("Monthly test");
+    expect(testTitleFor("core")).toBe("Plank test");
+  });
+});

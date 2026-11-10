@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     day: typeof b.day === "number" ? b.day : null,
     rotation: b.rotation,
     test: b.test,
-    // "arms" makes an Arms day (v0.651).
+    // "arms" makes an Arms day (v0.651), "iso" an Isometric one (v0.661).
     kind: b.kind,
   });
   return r.ok ? apiOk({ status: "ok", id: r.id }) : apiError("validation", r.error);

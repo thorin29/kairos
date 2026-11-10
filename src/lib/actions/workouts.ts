@@ -47,7 +47,7 @@ import {
 } from "@/lib/workouts/warmup-run";
 import { cleanRoutineKind, type RoutineKind, type WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { coreWorkoutsFor, deleteCoreWorkout, saveCoreWorkout, setCoreDay } from "@/lib/workouts/core-run";
-import type { CoreWorkout } from "@/lib/workouts/core-library";
+import { rotationKindOf, type CoreWorkout } from "@/lib/workouts/core-library";
 import { cardioDay, logCardio, removeCardio, setWarmupDone, type CardioEntry, type CardioIn } from "@/lib/workouts/cardio-run";
 import { loadDayOrders, orderForDay, saveDayOrder, type DayOrders } from "@/lib/workouts/day-order";
 import { conditioningFor, type ConditioningPlan } from "@/lib/workouts/conditioning-run";
@@ -1763,16 +1763,16 @@ export async function deleteWarmupRoutine(userId: string, id: string): Promise<v
 
 // --- core days (v0.637) -------------------------------------------------------
 
-export async function loadCoreWorkouts(userId: string, kind: "core" | "arms" = "core"): Promise<CoreWorkout[]> {
+export async function loadCoreWorkouts(userId: string, kind: "core" | "arms" | "iso" = "core"): Promise<CoreWorkout[]> {
   await requireInteractive();
   await requireCanActFor(userId);
-  return coreWorkoutsFor(userId, kind);
+  return coreWorkoutsFor(userId, rotationKindOf(kind));
 }
 
 /** Save one's own core workout (new without an id). */
 export async function saveCoreWorkoutAction(
   userId: string,
-  input: { id?: string | null; name: string; moves: unknown; kind?: "core" | "arms" },
+  input: { id?: string | null; name: string; moves: unknown; kind?: "core" | "arms" | "iso" },
 ) {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1791,7 +1791,7 @@ export async function deleteCoreWorkoutAction(userId: string, id: string): Promi
 /** Make a Core day on `day`, or change the rotation of `plannedWorkoutId`. */
 export async function setCoreDayAction(
   userId: string,
-  input: { plannedWorkoutId?: string | null; day?: number | null; rotation: string[]; test: boolean; kind?: "core" | "arms" },
+  input: { plannedWorkoutId?: string | null; day?: number | null; rotation: string[]; test: boolean; kind?: "core" | "arms" | "iso" },
 ) {
   await requireInteractive();
   await requireCanActFor(userId);

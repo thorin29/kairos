@@ -1049,6 +1049,13 @@ v0.651: `GET /api/v1/workouts/strip?page=N` — one 8-day page of the week strip
 (0 = up to today, + ahead, − back; clamped −8..4) → { days, overdue, today,
 page }. Strip days add `planned` (the plan has a workout that weekday).
 `GET /api/v1/workouts?date=` takes future dates (the plan's preview).
+v0.661 Isometric days: `kind: "iso"` everywhere Arms takes `kind` (`plan/core`,
+`core-workouts`, `?kind=iso`); plan options add `isoWorkouts`; the entry is
+category `ISOMETRIC` with no muscle group. With `test` on, the first
+isometric day of a month opens with three max holds (wall sit, dead hang,
+push-up hold). Day entries add `coreTests` (the test's pool ids — the plank
+on Core, the three holds on Isometric) and `coreTestName` ("Plank test" /
+"Monthly test"); `coreTest` stays the plank's id on Core days only.
 Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.

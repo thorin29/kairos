@@ -276,10 +276,27 @@ const MOBILITY: Short[] = [
   ["Leg swings", "LEGS", "MOBILITY", "", "R", "Hold a wall, swing one leg forward and back, then side to side. Both legs."],
 ];
 
+/** Isometric holds (v0.661), for Isometric days. Logged as time. */
+const ISOMETRIC: Short[] = [
+  ["Split squat hold", "LEGS", "SQUAT", "", "T", "Split stance, lower until both knees are at 90 degrees and hold. One side per set, switching each set."],
+  ["Lateral lunge hold", "LEGS", "SQUAT", "", "T", "Wide stance, sit into one hip with the other leg straight, chest up, hold. One side per set, switching each set."],
+  ["Horse stance", "LEGS", "SQUAT", "", "T", "Wide stance, toes out, lower slowly with the torso tall and hold. Hold the wall or rack if needed."],
+  ["Glute bridge hold", "LEGS", "HINGE", "", "T", "On your back, knees bent, drive the hips up, squeeze and hold."],
+  ["Single-leg glute bridge hold", "LEGS", "HINGE", "", "T", "Glute bridge hold with one leg lifted. One side per set, switching each set."],
+  ["Copenhagen plank", "LEGS", "CORE", "", "T", "Side plank with the top leg on a bench and the bottom leg free; knee on the bench to make it easier. One side per set, switching each set."],
+  ["Push-up hold", "CHEST", "PUSH", "", "T", "Lower to halfway down a push-up, elbows in, body straight, and hold."],
+  ["Chin-up hold", "BACK", "PULL", "pullup_bar", "T", "Pull up until the chin is over the bar and hold there."],
+  ["Mid-thigh pull hold", "FULL_BODY", "HINGE", "barbell", "T", "Bar set on the rack pins at mid-thigh, under them if needed. Pull up as hard as you can without it moving, flat back."],
+  ["Farmer hold", "FULL_BODY", "CARRY", "dumbbells", "T", "Heavy dumbbell or kettlebell in each hand, stand tall and hold. Log the time."],
+  ["Overhead kettlebell hold", "SHOULDERS", "PUSH", "kettlebells", "T", "One bell locked out overhead, ribs down, hold. One arm per set, switching each set."],
+  ["Plate pinch hold", "ARMS", "PULL", "barbell", "T", "Pinch two plates together smooth sides out and hold at your side."],
+];
+
 export const LIBRARY: readonly LibraryMovement[] = [
   ...build("WEIGHTS", STRENGTH),
   ...build("HIIT", CONDITIONING),
   ...build("STRETCHING", MOBILITY),
+  ...build("ISOMETRIC", ISOMETRIC),
 ];
 
 /** Name match for merging: case, plurals, hyphens and spaces ignored. */

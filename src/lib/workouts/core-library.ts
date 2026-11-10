@@ -42,8 +42,9 @@ export type CoreWorkout = {
   gear: string;
   moves: CoreMove[];
   mine: boolean;
-  /** "arms" for an Arms workout (v0.651); absent means Core. */
-  kind?: "arms";
+  /** "arms" for an Arms workout (v0.651), "iso" for Isometric (v0.661);
+   *  absent means Core. */
+  kind?: "arms" | "iso";
 };
 
 export const CORE_LIB_PREFIX = "lib:";
@@ -164,16 +165,71 @@ export const ARMS_LIBRARY: readonly CoreWorkout[] = ([
   ]),
 ] as CoreWorkout[]).map((w) => ({ ...w, kind: "arms" as const }));
 
-/** What a rotation day trains (v0.651): Core (the default) or Arms. */
-export type RotationKind = "core" | "arms";
-export const rotationKindOf = (v: unknown): RotationKind => (v === "arms" ? "arms" : "core");
+/**
+ * Isometric days (v0.661): the same rotation, every movement a timed hold.
+ * Holds build strength where the joint is held, with little wear, so they
+ * sit well beside lifting and Core days. Each range is the seconds to work
+ * up to before the hold gets longer.
+ */
+export const ISO_LIBRARY: readonly CoreWorkout[] = ([
+  lib("iso-legs", "Legs and hips", 15, "Wall, bench", [
+    ["Wall sit", "TIME", 3, 30, 60],
+    ["Split squat hold", "TIME", 4, 20, 40],
+    ["Glute bridge hold", "TIME", 3, 30, 60],
+    ["Copenhagen plank", "TIME", 4, 15, 30],
+  ]),
+  lib("iso-upper", "Hang and press", 15, "Pull-up bar", [
+    ["Dead hang", "TIME", 3, 20, 45],
+    ["Push-up hold", "TIME", 3, 20, 45],
+    ["Chin-up hold", "TIME", 3, 10, 30],
+    ["Hollow hold", "TIME", 3, 20, 40],
+  ]),
+  lib("iso-rack", "Rack pulls and holds", 15, "Barbell and rack, dumbbells", [
+    ["Mid-thigh pull hold", "TIME", 5, 6, 10],
+    ["Farmer hold", "TIME", 3, 30, 60],
+    ["Side plank", "TIME", 4, 30, 45],
+    ["Horse stance", "TIME", 3, 30, 60],
+  ]),
+  lib("iso-skater", "Skater holds", 15, "Bench", [
+    ["Horse stance", "TIME", 3, 30, 60],
+    ["Lateral lunge hold", "TIME", 4, 20, 40],
+    ["Copenhagen plank", "TIME", 4, 15, 30],
+    ["Single-leg glute bridge hold", "TIME", 4, 20, 40],
+  ]),
+  lib("iso-grip", "Grip and shoulders", 15, "Pull-up bar, kettlebells, dumbbells, plates", [
+    ["Dead hang", "TIME", 3, 20, 45],
+    ["Farmer hold", "TIME", 3, 30, 60],
+    ["Overhead kettlebell hold", "TIME", 4, 20, 40],
+    ["Plate pinch hold", "TIME", 3, 20, 40],
+  ]),
+  lib("iso-full", "Full-body holds", 15, "Wall, pull-up bar", [
+    ["Wall sit", "TIME", 2, 45, 90],
+    ["Push-up hold", "TIME", 2, 30, 60],
+    ["Dead hang", "TIME", 2, 30, 60],
+    ["Hollow hold", "TIME", 2, 30, 45],
+    ["Glute bridge hold", "TIME", 2, 45, 90],
+  ]),
+] as CoreWorkout[]).map((w) => ({ ...w, kind: "iso" as const }));
+
+/** What a rotation day trains (v0.651): Core (the default), Arms, or
+ *  Isometric holds (v0.661). */
+export type RotationKind = "core" | "arms" | "iso";
+export const rotationKindOf = (v: unknown): RotationKind => (v === "arms" ? "arms" : v === "iso" ? "iso" : "core");
 export const rotationLibrary = (kind: RotationKind): readonly CoreWorkout[] =>
-  kind === "arms" ? ARMS_LIBRARY : CORE_LIBRARY;
-/** "Core" / "Arms": the day's name and the plan entry's muscle group. */
-export const rotationLabel = (kind: RotationKind) => (kind === "arms" ? "Arms" : "Core");
+  kind === "arms" ? ARMS_LIBRARY : kind === "iso" ? ISO_LIBRARY : CORE_LIBRARY;
+/** "Core" / "Arms" / "Isometric": the day's name (and Core's and Arms'
+ *  muscle group). */
+export const rotationLabel = (kind: RotationKind) => (kind === "arms" ? "Arms" : kind === "iso" ? "Isometric" : "Core");
+/** The kind as stored on a workout or day: absent for Core. */
+export const kindTag = (kind: RotationKind): { kind?: "arms" | "iso" } => (kind === "core" ? {} : { kind });
 
 export function libraryCoreWorkout(id: string | null | undefined): CoreWorkout | null {
-  return CORE_LIBRARY.find((w) => w.id === id) ?? ARMS_LIBRARY.find((w) => w.id === id) ?? null;
+  return (
+    CORE_LIBRARY.find((w) => w.id === id) ??
+    ARMS_LIBRARY.find((w) => w.id === id) ??
+    ISO_LIBRARY.find((w) => w.id === id) ??
+    null
+  );
 }
 
 /** The monthly test: one max plank, scored on the PFT. */
@@ -184,6 +240,21 @@ export const PLANK_TEST: CoreMove = {
   min: PFT_PLANK_MIN_SEC,
   max: PFT_PLANK_MAX_SEC,
 };
+
+/**
+ * Isometric's monthly test (v0.661): three max holds that work different
+ * parts — legs, grip and shoulders, chest and arms. No plank: Core days
+ * already test it, and both can fall on the same day.
+ */
+export const ISO_TEST: readonly CoreMove[] = [
+  { name: "Wall sit", kind: "TIME", sets: 1, min: 60, max: 300 },
+  { name: "Dead hang", kind: "TIME", sets: 1, min: 30, max: 180 },
+  { name: "Push-up hold", kind: "TIME", sets: 1, min: 30, max: 180 },
+];
+
+/** The month's test for a kind: the plank (Core), three holds (Isometric), none (Arms). */
+export const testMovesFor = (kind: RotationKind): readonly CoreMove[] =>
+  kind === "core" ? [PLANK_TEST] : kind === "iso" ? ISO_TEST : [];
 
 /** The library entry for a movement name, for adding it to the pool. */
 export function libraryKeyFor(name: string): string | null {
@@ -209,7 +280,9 @@ const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padSt
  * work, and its timer switches sides.
  */
 export const switchesSides = (name: string) =>
-  /side plank|suitcase|overhead carry|waiter|single[- ]arm|one[- ]arm|copenhagen/i.test(name);
+  /side plank|suitcase|overhead carry|overhead kettlebell hold|waiter|single[- ]arm|one[- ]arm|copenhagen|split squat hold|lateral lunge hold|single[- ]leg glute bridge hold/i.test(
+    name,
+  );
 
 /** "3 × 8–12", "3 × 0:30–0:45", "1 × 1:10–3:45", "3 × 40 yd" (a carry). */
 export function coreMoveLabel(m: CoreMove): string {
@@ -266,8 +339,8 @@ export type CoreDay = {
   withTest: boolean;
   /** 2 once stored by v0.644+ (moves on a week after the log, not the day after). */
   v?: number;
-  /** "arms" for an Arms day (v0.651); absent means Core. */
-  kind?: "arms";
+  /** "arms" for an Arms day (v0.651), "iso" for Isometric (v0.661); absent means Core. */
+  kind?: "arms" | "iso";
 };
 
 export function cleanCoreDay(raw: unknown, todayISO: string): CoreDay | null {
@@ -287,7 +360,7 @@ export function cleanCoreDay(raw: unknown, todayISO: string): CoreDay | null {
     testedMonth: typeof o.testedMonth === "string" && /^\d{4}-\d{2}$/.test(o.testedMonth) ? o.testedMonth : null,
     withTest: o.withTest === true,
     ...(o.v === 2 ? { v: 2 } : {}),
-    ...(o.kind === "arms" ? { kind: "arms" as const } : {}),
+    ...kindTag(rotationKindOf(o.kind)),
   };
 }
 
@@ -327,11 +400,12 @@ export function stepCoreDay(day: CoreDay, loggedOn: readonly string[], todayISO:
   return next;
 }
 
-/** The moves a core day plans: the test first when it's due, each movement once. */
-export function coreDayMoves(workout: CoreWorkout | null, withTest: boolean): CoreMove[] {
+/** The moves a core day plans: the test first when it's due (the plank, or
+ *  Isometric's three holds), each movement once. */
+export function coreDayMoves(workout: CoreWorkout | null, withTest: boolean, kind: RotationKind = "core"): CoreMove[] {
   const out: CoreMove[] = [];
   const seen = new Set<string>();
-  for (const m of [...(withTest ? [PLANK_TEST] : []), ...(workout?.moves ?? [])]) {
+  for (const m of [...(withTest ? testMovesFor(kind) : []), ...(workout?.moves ?? [])]) {
     const k = m.poolExerciseId ?? nameKey(m.name);
     if (seen.has(k)) continue;
     seen.add(k);
@@ -339,6 +413,13 @@ export function coreDayMoves(workout: CoreWorkout | null, withTest: boolean): Co
   }
   return out;
 }
+
+/** How many of a day's first movements are the month's test (0 when it isn't due). */
+export const testCountFor = (day: { withTest?: boolean; kind?: string } | null | undefined): number =>
+  day?.withTest ? testMovesFor(rotationKindOf(day.kind)).length : 0;
+
+/** The test card's name on the day. */
+export const testTitleFor = (kind: RotationKind) => (kind === "iso" ? "Monthly test" : "Plank test");
 
 /** The plan entry's name: "Core · Hanging core", "Arms · EZ bar classic". */
 export const coreDayName = (workout: CoreWorkout | null, kind: RotationKind = "core") =>

@@ -29,6 +29,7 @@ import { ConditioningTimer } from "./conditioning-timer";
 import { EffortPicker } from "@/components/effort-picker";
 import { WarmupWindow } from "./warmup-window";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
+import { rotationKindOf, testCountFor, testTitleFor } from "@/lib/workouts/core-library";
 import { AddConditioning, BenchmarkCard, PickConditioningCard } from "./conditioning-picker";
 import type { BenchmarkState, PickPlan } from "@/lib/workouts/wod-run";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
@@ -328,11 +329,11 @@ export function DayLog({
     // "<id>" opens the core workout, "<id>|test" the month's plank test (v0.644).
     const [coreId, part] = openCore.split("|");
     const w = byId.get(coreId);
-    const testId = w ? coreTestId(w) : null;
+    const testIds = w ? coreTestIds(w) : [];
     const moves = (sections.flatMap((s) => s.items).filter(
       (it) => it.type === "movement" && it.workoutId === coreId,
     ) as { type: "movement"; workoutId: string; poolExerciseId: string; name: string; metric: Metric }[]).filter(
-      (m) => (part === "test" ? m.poolExerciseId === testId : m.poolExerciseId !== testId),
+      (m) => (part === "test" ? testIds.includes(m.poolExerciseId) : !testIds.includes(m.poolExerciseId)),
     );
     if (w) {
       return (
@@ -341,7 +342,7 @@ export function DayLog({
           userId={userId}
           dateISO={date}
           late={late}
-          title={part === "test" ? "Plank test" : w.name}
+          title={part === "test" ? testTitleFor(rotationKindOf(w.core?.kind)) : w.name}
           workoutId={w.id}
           moves={moves
             .map((m) => ({ ex: w.exercises.find((e) => e.poolExerciseId === m.poolExerciseId), metric: m.metric }))
@@ -695,11 +696,15 @@ export function DayLog({
                     const w = byId.get(it.workoutId);
                     // A Core day is one card for the whole workout (v0.639).
                     if (w?.core) {
-                      const testId = coreTestId(w);
-                      // The month's plank test is its own card (v0.644).
-                      if (testId && it.poolExerciseId === testId) {
-                        const m = data.state.movements[testId];
-                        const logged = !!m && m.setCount > 0;
+                      const testIds = coreTestIds(w);
+                      // The month's test is its own card (v0.644; Isometric's
+                      // three holds are one card, v0.661).
+                      if (testIds.includes(it.poolExerciseId)) {
+                        if (testIds[0] !== it.poolExerciseId) return null;
+                        const many = testIds.length > 1;
+                        const m = data.state.movements[testIds[0]];
+                        const doneTests = testIds.filter((id) => (data.state.movements[id]?.setCount ?? 0) > 0).length;
+                        const logged = many ? doneTests === testIds.length : !!m && m.setCount > 0;
                         return (
                           <button
                             key={`${it.workoutId}:test`}
@@ -708,9 +713,17 @@ export function DayLog({
                             className="flex min-h-[3.5rem] w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-accent"
                           >
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-semibold">Plank test</span>
+                              <span className="block truncate text-sm font-semibold">
+                                {testTitleFor(rotationKindOf(w.core.kind))}
+                              </span>
                               <span className="tabular block truncate text-xs text-muted">
-                                {logged ? m.summary : m?.last ? `Last time ${m.last}` : "Not logged yet"}
+                                {many
+                                  ? `${testIds.length} holds${doneTests > 0 ? ` · ${doneTests} logged` : ""}`
+                                  : logged
+                                    ? m.summary
+                                    : m?.last
+                                      ? `Last time ${m.last}`
+                                      : "Not logged yet"}
                               </span>
                             </span>
                             {logged && (
@@ -726,7 +739,7 @@ export function DayLog({
                         s.items.filter((x) => x.type === "movement" && x.workoutId === w.id) as {
                           poolExerciseId: string;
                         }[]
-                      ).filter((x) => x.poolExerciseId !== testId);
+                      ).filter((x) => !testIds.includes(x.poolExerciseId));
                       if (mine[0]?.poolExerciseId !== it.poolExerciseId) return null;
                       const done = mine.filter((x) => (data.state.movements[x.poolExerciseId]?.setCount ?? 0) > 0).length;
                       const all = mine.length > 0 && done === mine.length;
@@ -2099,6 +2112,8 @@ function SuggestionCard({ s, onAnswer }: { s: Suggestion; onAnswer: (answer: str
 }
 
 /** The plank test's pool id on a core day that has it this month (it's planned first). */
-function coreTestId(w: PlanWorkout): string | null {
-  return w.core?.withTest ? (w.exercises[0]?.poolExerciseId ?? null) : null;
+/** The month's test movements on a rotation day (they come first): the
+ *  plank on Core, three holds on Isometric (v0.661). */
+function coreTestIds(w: PlanWorkout): string[] {
+  return w.exercises.slice(0, testCountFor(w.core)).map((e) => e.poolExerciseId);
 }

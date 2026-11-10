@@ -3,6 +3,7 @@ import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { coreWorkoutsFor, saveCoreWorkout } from "@/lib/workouts/core-run";
 import { coreWorkoutView } from "@/lib/queries/workout-log";
+import { rotationKindOf } from "@/lib/workouts/core-library";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,8 +13,8 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
-  // ?kind=arms for Arms days (v0.651); Core otherwise.
-  const kind = req.nextUrl.searchParams.get("kind") === "arms" ? "arms" : "core";
+  // ?kind=arms for Arms days (v0.651), ?kind=iso for Isometric (v0.661); Core otherwise.
+  const kind = rotationKindOf(req.nextUrl.searchParams.get("kind"));
   return apiOk({ workouts: (await coreWorkoutsFor(authed.device.person.id, kind)).map(coreWorkoutView) });
 }
 

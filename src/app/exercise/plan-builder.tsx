@@ -378,7 +378,7 @@ function DayRow({
           >
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium">
-                {w.core ? (w.core.kind === "arms" ? "Arms" : "Core") : w.name}
+                {w.core ? (w.core.kind === "arms" ? "Arms" : w.core.kind === "iso" ? "Isometric" : "Core") : w.name}
                 {!w.core && !w.isRest && kindOf(w) !== "STRENGTH" && KIND_LABEL[kindOf(w)] !== w.name && (
                   <span className="ml-2 text-xs font-normal text-muted">{KIND_LABEL[kindOf(w)]}</span>
                 )}
@@ -552,9 +552,11 @@ function AddWorkoutModal({
     setPicked((prev) => ({ ...prev, [id]: { ...prev[id], metric } }));
 
   const chosen = Object.entries(picked);
-  // Core and Arms (v0.651) both rotate through workouts.
-  const rotKind: "core" | "arms" = muscle === "ARMS" ? "arms" : "core";
-  const coreRot = category === "WEIGHTS" && (muscle === "CORE" || muscle === "ARMS") && coreMode === "rotation";
+  // Core and Arms (v0.651) and Isometric (v0.661) all rotate through workouts.
+  const isIso = category === "ISOMETRIC";
+  const rotKind: "core" | "arms" | "iso" = isIso ? "iso" : muscle === "ARMS" ? "arms" : "core";
+  const rotatable = isIso || (category === "WEIGHTS" && (muscle === "CORE" || muscle === "ARMS"));
+  const coreRot = rotatable && coreMode === "rotation";
   const canSave = rest
     ? true
     : coreRot
@@ -688,11 +690,11 @@ function AddWorkoutModal({
             </div>
           )}
 
-          {!rest && isWeights && (muscle === "CORE" || muscle === "ARMS") && (
+          {!rest && rotatable && (
             <div className="flex overflow-hidden rounded-xl border border-accent text-sm font-semibold" role="radiogroup">
               {(
                 [
-                  ["rotation", muscle === "ARMS" ? "Arms rotation" : "Core rotation"],
+                  ["rotation", isIso ? "Isometric rotation" : muscle === "ARMS" ? "Arms rotation" : "Core rotation"],
                   ["pick", "Pick movements"],
                 ] as const
               ).map(([k, label]) => (

@@ -115,7 +115,7 @@ export type PlanWorkout = {
   /** A Warm-up's routine (v0.622): "lib:<key>" or a routine id; null: a plain check. */
   warmup?: string | null;
   /** A Core day's rotation (v0.637); null for anything else. */
-  core?: { rotation: string[]; test: boolean; at: number; withTest?: boolean; kind?: "core" | "arms" } | null;
+  core?: { rotation: string[]; test: boolean; at: number; withTest?: boolean; kind?: "core" | "arms" | "iso" } | null;
   hiit: {
     id: string;
     type: WorkoutType;

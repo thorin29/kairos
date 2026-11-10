@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11 — Isometric days (v0.661.0 / app 0.471.0)
+
+- A third rotation kind, `iso`, on the Core machinery: `ISO_LIBRARY` (six
+  workouts, every move a TIME hold with a range to work up through),
+  `CoreWorkout.kind` / `CoreDay.kind` "iso", own workouts in `CoreWorkout`
+  with kind "iso". Logged, targeted and moved on weekly exactly like Core.
+- The entry is category `ISOMETRIC` with no muscle group (no muscle group
+  fits holds, and a new one would touch every muscle-group list); its own day
+  section, "Isometric". `coreEntries` takes WEIGHTS + CORE/ARMS or any
+  ISOMETRIC entry whose `core` parses.
+- Monthly test (`ISO_TEST`): max wall sit (legs), dead hang (grip,
+  shoulders) and push-up hold (chest, arms), first, on the month's first
+  isometric day. No plank: Core days test it and both can share a day. One
+  "Monthly test" card on the day; `coreTests` / `coreTestName` carry it,
+  while `coreTest` stays Core's plank only so an older phone doesn't call
+  the holds a plank test. No score table (unlike the PFT plank); the
+  movements' own history shows the trend.
+- Twelve new library holds (category ISOMETRIC): split squat hold, lateral
+  lunge hold, horse stance, glute bridge hold, single-leg glute bridge hold,
+  Copenhagen plank, push-up hold, chin-up hold, mid-thigh pull hold, farmer
+  hold, overhead kettlebell hold, plate pinch hold. One-sided ones switch
+  sides set by set (`switchesSides`).
+- On a test day a workout move that's also a test hold (a wall sit) is done
+  once, as the test.
+- Short on time drops an Isometric entry (it isn't a pick); Low energy and
+  Sick keep it.
+
 ## 2026-11 — Warm-up card back to name + routine (v0.660.0 / app 0.470.0)
 
 0.658 listed every step on the day's warm-up card; the ask was to see
