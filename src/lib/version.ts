@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.657.0";
+export const APP_VERSION = "0.658.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.658.0",
+    summary: [
+      "Go light is now Adjust today: Low energy, Short on time, Sick, or Hurt. Short on time fits a warm-up and your picks into 15, 30 or 45 minutes.",
+      "The warm-up card lists every move, Shoulder prep included, and Shoulder prep changes from day to day.",
+    ],
+  },
   {
     version: "0.657.0",
     summary: ["After Yes on a game, How hard? is back; the check mark saves it and clears the card, with no Done step."],

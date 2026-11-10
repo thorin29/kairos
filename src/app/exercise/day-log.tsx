@@ -4,7 +4,7 @@ import { clockText as clockFromSeconds, secondsFromTyped } from "@/lib/workouts/
 import { SidesTimer } from "./sides-timer";
 import { PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG, SECONDARY_SM } from "./buttons";
 import { Modal } from "./plan-file-panel";
-import { GoLightModal } from "./go-light";
+import { AdjustTodayModal } from "./adjust-today";
 import { SportEditModal } from "./sport-edit";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
@@ -12,7 +12,7 @@ import {
   loadMovementSets,
   loadWorkoutWeek,
   restDay,
-  applyGoLightAction,
+  applyAdjustAction,
   saveMovementFeedback,
   answerWorkoutSuggestion,
   saveMovementSets,
@@ -28,11 +28,12 @@ import { ConditioningCard } from "./conditioning-card";
 import { ConditioningTimer } from "./conditioning-timer";
 import { EffortPicker } from "@/components/effort-picker";
 import { WarmupWindow } from "./warmup-window";
-import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
+import { stepAmount, type WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { AddConditioning, BenchmarkCard, PickConditioningCard } from "./conditioning-picker";
 import type { BenchmarkState, PickPlan } from "@/lib/workouts/wod-run";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
 import type { CardioEntry } from "@/lib/workouts/cardio-run";
+import type { AdjustView } from "@/lib/workouts/adjust-run";
 import type { DayLogState, LoggedOther, MovementLog, MovementSetRow, WeekStripDay } from "@/lib/queries/workout-log";
 import type { PersonWorkout, PlanExercise, PlanWorkout } from "@/lib/queries/workouts";
 import {
@@ -129,6 +130,7 @@ export function DayLog({
   const [date, setDate] = useState(initialDate && initialDate <= todayISO ? initialDate : todayISO);
   const [data, setData] = useState<{
     state: DayLogState;
+    adjusted?: AdjustView | null;
     loggedByPool: Record<string, LoggedSet>;
     order: SectionKind[];
     cardio: CardioEntry[];
@@ -143,7 +145,7 @@ export function DayLog({
   const [stripPages, setStripPages] = useState<Record<number, WeekStripDay[]>>({});
   const fetchedPages = useRef<Set<number>>(new Set());
   const [resetTick, setResetTick] = useState(0);
-  const [goLight, setGoLight] = useState(false);
+  const [adjusting, setAdjusting] = useState(false);
   const [editSport, setEditSport] = useState<LoggedOther | null>(null);
   // A day still to come only previews its plan (v0.651).
   const future = date > todayISO;
@@ -220,12 +222,19 @@ export function DayLog({
   // A past day shows the plan entries that existed then (v0.623): one made
   // later (a program started since) wasn't that day's plan.
   const planIds = data?.state.planIds;
+  // Adjust today (v0.658): what it dropped is off the day.
+  const dropped = data?.adjusted?.dropped;
   const workouts: PlanWorkout[] = useMemo(
     () =>
-      (person.plan[dayOfWeek(date)]?.workouts ?? []).filter(
-        (w) => !w.isRest && (date >= todayISO || !planIds || planIds.includes(w.id)),
-      ),
-    [person.plan, date, todayISO, planIds],
+      (person.plan[dayOfWeek(date)]?.workouts ?? [])
+        .filter((w) => !w.isRest && (date >= todayISO || !planIds || planIds.includes(w.id)))
+        .filter((w) => !dropped?.plans.includes(w.id))
+        .map((w) =>
+          dropped?.movements.length
+            ? { ...w, exercises: w.exercises.filter((e) => !dropped.movements.includes(e.poolExerciseId)) }
+            : w,
+        ),
+    [person.plan, date, todayISO, planIds, dropped],
   );
   const byId = useMemo(() => new Map(workouts.map((w) => [w.id, w])), [workouts]);
   const order = data?.order;
@@ -457,23 +466,23 @@ export function DayLog({
             Rest / skip day
           </button>
         )}
-        {/* Go light (v0.654): today only, until it's chosen. */}
-        {data && !isRestDay && date === todayISO && !state?.goLight && (
-          <button type="button" onClick={() => setGoLight(true)} className={`${SECONDARY_BTN} ml-2 mt-3`}>
-            Go light
+        {/* Adjust today (v0.658; was Go light): today only, until it's chosen. */}
+        {data && !isRestDay && date === todayISO && !data.adjusted && (
+          <button type="button" onClick={() => setAdjusting(true)} className={`${SECONDARY_BTN} ml-2 mt-3`}>
+            Adjust today
           </button>
         )}
       </div>
 
-      {state?.goLight && !isRestDay && (
+      {data?.adjusted && !isRestDay && (
         <p className="text-sm font-semibold text-accent">
-          Light day · {state.goLight.title} ·{" "}
+          {data.adjusted.label} ·{" "}
           <button
             type="button"
             className="underline"
             onClick={() =>
               startTransition(async () => {
-                await applyGoLightAction(userId, null);
+                await applyAdjustAction(userId, null);
                 setTick((n) => n + 1);
               })
             }
@@ -482,23 +491,23 @@ export function DayLog({
           </button>
         </p>
       )}
-      {state?.light && !state.goLight && !isRestDay && !future && (
+      {state?.light && !data?.adjusted && !isRestDay && !future && (
         <p className="text-sm font-semibold text-accent">
           Lighter today · {Math.round(state.light * 100)}% of the usual weights
         </p>
       )}
-      {goLight && (
-        <GoLightModal
+      {adjusting && (
+        <AdjustTodayModal
           userId={userId}
-          onClose={() => setGoLight(false)}
+          onClose={() => setAdjusting(false)}
           onDone={() => {
-            setGoLight(false);
+            setAdjusting(false);
             setTick((n) => n + 1);
           }}
           onRest={() =>
             startTransition(async () => {
               await restDay(userId, date);
-              setGoLight(false);
+              setAdjusting(false);
               setTick((n) => n + 1);
             })
           }
@@ -892,6 +901,17 @@ function WarmupRow({
       <button type="button" onClick={() => setOpen(true)} className="min-w-0 flex-1 text-left">
         <span className="block truncate text-sm font-semibold">{name}</span>
         {routine && <span className="block truncate text-xs text-muted">{routine.name}</span>}
+        {/* Each move, Shoulder prep's included, in line (v0.658). */}
+        {routine && routine.steps.length > 0 && (
+          <ul className="mt-1 space-y-0.5 text-xs text-muted">
+            {routine.steps.map((st, i) => (
+              <li key={i} className="flex justify-between gap-3">
+                <span className="min-w-0 truncate">{st.name}</span>
+                <span className="tabular shrink-0">{stepAmount(st)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </button>
       {open && (
         <WarmupWindow

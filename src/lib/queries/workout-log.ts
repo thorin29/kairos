@@ -30,8 +30,8 @@ import {
   type Program,
 } from "@/lib/workouts/programs";
 import { loadActiveProgram, plannedSlotFor, programInfoFor, type ProgramInfo } from "@/lib/workouts/program-run";
-import { dayGoLight, dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
-import { goKeep, goLightOptions, goOption, type GoAnswers, type GoPick } from "@/lib/workouts/go-light";
+import { dayAdjust, dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
+import { adjustKeep, type Adjust } from "@/lib/workouts/adjust";
 import type { Suggestion } from "@/lib/workouts/suggest";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
@@ -263,7 +263,7 @@ export async function loadTodayPlannedWorkout(
       name: true,
       muscleGroup: true,
       hiitWorkoutId: true,
-      hiitWorkout: { select: { type: true } },
+      hiitWorkout: { select: { type: true, movements: { select: { poolExercise: { select: { name: true } } } } } },
       exercises: {
         orderBy: { sortOrder: "asc" },
         select: {
@@ -346,7 +346,7 @@ export async function loadTodayPlannedWorkout(
  *  for it, so a plan built later never makes a past day look "overdue" (it was
  *  scheduled under a different, already-logged plan). Mirrors the generator's
  *  trainsSince clamp. */
-function dayPlanWhere(userId: string, dayISO: string) {
+export function dayPlanWhere(userId: string, dayISO: string) {
   return {
     userId,
     dayOfWeek: dayOfWeek(dayISO),
@@ -408,9 +408,15 @@ export async function loadDayPlanProgress(
       .filter((r) => r.name)
       .map((r) => `${(r.name as string).slice(0, 40)}|${r.category ?? ""}`),
   );
-  // Warm-up and Cardio plans are optional: they never hold the day open.
+  // Warm-up and Cardio plans are optional: they never hold the day open. A
+  // conditioning pick an adjustment dropped doesn't either (v0.658).
+  const adj = await dayAdjust(userId, dayISO);
   const soloPlans = allPlans.filter(
-    (p) => !p.hiitWorkoutId && p._count.exercises === 0 && !isOptionalCategory(p.category),
+    (p) =>
+      !p.hiitWorkoutId &&
+      p._count.exercises === 0 &&
+      !isOptionalCategory(p.category) &&
+      (!adj || adjustKeep(adj, [{ category: p.category, exercises: [] }])[0].stays),
   );
   // A Cardio plan (or an older Rowing / Running / Rucking one) is done by any
   // cardio that day: a Concept2 row, a run, jump rope.
@@ -448,10 +454,26 @@ function coreTestOf(core: unknown, exercises: { poolExerciseId: string }[]): str
   return d?.withTest ? (exercises[0]?.poolExerciseId ?? null) : null;
 }
 
+/** The day's entries with an adjustment applied (v0.658). */
+function trimForAdjust(
+  adj: Adjust,
+  out: NonNullable<TodayPlanned>[],
+  parts: Map<string, string[]>,
+): NonNullable<TodayPlanned>[] {
+  const keep = adjustKeep(
+    adj,
+    out.map((e) => ({ ...e, parts: parts.get(e.plannedWorkoutId) ?? [] })),
+  );
+  return out
+    .map((e, i) => ({ e, k: keep[i] }))
+    .filter(({ k }) => k.stays)
+    .map(({ e, k }) => ({ ...e, exercises: e.exercises.filter((x) => k.keep.includes(x.poolExerciseId)) }));
+}
+
 export async function loadTodayPlannedWorkouts(
   userId: string,
   dayISO: string,
-  /** Leave a Go light day untrimmed (v0.654): to count today's main lifts. */
+  /** Leave an adjusted day untrimmed (v0.658): to plan the adjustment. */
   opts: { full?: boolean } = {},
 ): Promise<NonNullable<TodayPlanned>[]> {
   await syncCoreDays(userId);
@@ -619,14 +641,16 @@ export async function loadTodayPlannedWorkouts(
       sessionLogged: hasSession(plan as { name: string; category: string | null }),
     });
   }
-  // Go light (v0.654): a light day keeps only its main lifts (or none). What's
-  // dropped is gone for the day — from the cards and from what completes it.
-  const go = opts.full ? null : await dayGoLight(userId, dayISO);
-  if (go) {
-    const keep = goKeep(go.key, go.minutes, out);
-    return out
-      .map((e, i) => ({ ...e, exercises: e.exercises.filter((x) => keep[i].includes(x.poolExerciseId)) }))
-      .filter((e) => e.exercises.length > 0 || e.category !== "WEIGHTS");
+  // Adjust today (v0.658): what an adjustment drops is gone for the day —
+  // from the cards and from what completes it.
+  const adj = opts.full ? null : await dayAdjust(userId, dayISO);
+  if (adj) {
+    const parts = new Map(
+      (plans as unknown as { id: string; hiitWorkout: { movements?: { poolExercise: { name: string } }[] } | null }[]).map(
+        (p) => [p.id, (p.hiitWorkout?.movements ?? []).map((m) => m.poolExercise.name)],
+      ),
+    );
+    return trimForAdjust(adj, out, parts);
   }
   return out;
 }
@@ -1799,6 +1823,12 @@ export async function loadMovementLog(
     earlier.map((s) => ({ weight: s.weight, reps: s.reps, date: fromDateColumn(s.session.date) })),
   );
   let target = await movementTarget(userId, dateISO, slotId, movement, last?.sets ?? [], records);
+  // Short on time without room for them, or sick: no extra sets after the
+  // main sets (v0.658). The warm-up sets always stay.
+  const adj = await dayAdjust(userId, dateISO);
+  if (target && adj && ((adj.mode === "time" && !adj.supp) || adj.mode === "sick")) {
+    target = { ...target, sets: target.sets.filter((x) => !x.supplemental) };
+  }
   const [light, poolRow, units] = await Promise.all([
     dayLightFactor(userId, dateISO),
     prisma.poolExercise.findUnique({
@@ -1868,7 +1898,7 @@ export const isCarry = (p: { pattern?: string | null; name?: string } | null | u
 
 /** A planned movement's targets for a day, from its set scheme and the
  *  person's program (v0.611). Null when the movement has no scheme. */
-async function movementTarget(
+export async function movementTarget(
   userId: string,
   dateISO: string,
   slotId: string,
@@ -1984,8 +2014,6 @@ export type DayLogState = {
   suggestion: Suggestion | null;
   /** Today was made lighter: the share of the usual weights. */
   light: number | null;
-  /** A Go light day (v0.654): the option chosen, for the header and Undo. */
-  goLight: { key: string; title: string; detail: string } | null;
   /** The plan entries in effect that day (an entry made later wasn't part of
    *  a past day), by id (v0.623). */
   planIds: string[];
@@ -2270,7 +2298,6 @@ export async function loadDayLogState(
     loggedTitle: logged.title,
     suggestion: await daySuggestionFor(userId, dateISO),
     light: await dayLightFactor(userId, dateISO),
-    goLight: await goLightView(userId, dateISO),
     planIds,
     loggedOther: logged.other,
     loggedAny: logged.any,
@@ -2296,27 +2323,6 @@ export async function workoutRestFor(
   const extraLogged = sessions.some((s) => !s.isRest);
   if (sessions.some((s) => s.isRest)) return { rest: "skipped", extraLogged };
   return { rest: (await planRestDay(userId, dateISO)) ? "planned" : null, extraLogged };
-}
-
-/** Today's main lifts: strength entries (not Core/Arms) with a movement. */
-async function mainLiftCount(userId: string, dateISO: string): Promise<number> {
-  const full = await loadTodayPlannedWorkouts(userId, dateISO, { full: true });
-  return full.filter((e) => e.category === "WEIGHTS" && !e.core && e.exercises.length > 0).length;
-}
-
-/** The Go light suggestion and alternatives for today's answers (v0.654). */
-export async function goLightPick(userId: string, dateISO: string, answers: GoAnswers): Promise<GoPick> {
-  return goLightOptions(answers, await mainLiftCount(userId, dateISO));
-}
-
-/** Today's Go light choice for the day page (v0.654). */
-export async function goLightView(
-  userId: string,
-  dateISO: string,
-): Promise<{ key: string; title: string; detail: string } | null> {
-  const go = await dayGoLight(userId, dateISO);
-  if (!go) return null;
-  return goOption(go.key, go.minutes, await mainLiftCount(userId, dateISO));
 }
 
 /** The plan has a workout (not Rest) on this weekday. */

@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-11 — Adjust today replaces Go light (v0.658.0 / app 0.468.0)
+
+- Four paths, each its own short flow; stored as the day answer
+  `"adj:" + JSON` (src/lib/workouts/adjust.ts) and applied where the plan is
+  read, like Go light was. Old `go:` answers read as their nearest path.
+- **Low energy**: same movements and sets at 65%. **Sick**: a lighter version
+  (main lifts at 50%, no BBB/FSL sets, no conditioning) or an easy day
+  (warm-up and cardio, no lifting). No above/below-the-neck question: too
+  sick to train is Rest / skip. **Hurt**: movements whose name (or entry
+  muscle group) loads the area come out, the rest at normal weight; a named
+  conditioning workout goes if any of its movements loads it.
+- **Short on time**: 15/30/45, no "Any". A quick warm-up always first (4 min,
+  6 with Shoulder prep on a lifting day). Weights keep the first main lift's
+  warm-up and work sets (never cut), then other main lifts, then BBB/FSL
+  sets, then extras, as they fit. Minutes per set come from the median gap
+  between the person's own logged weight sets (last 90 days, 20 s–8 min,
+  at least 15 gaps), else 2.5 per work set and 1 per warm-up set.
+  Conditioning uses its workout's minutes (or cap); cardio is 10/15/20 as
+  picked. The server works out what's kept on apply and stores it, so the
+  day doesn't shift as sets are logged. When the picks can't fit it offers
+  dropping a pick or the next longer time.
+- Low energy, Sick and Short on time log as LIGHT (nothing moves on); Hurt
+  counts normally.
+- What's dropped is reported as `adjusted.dropped` (plan ids and movement
+  ids). The web day page filters its plan by it (Go light never trimmed the
+  web page); the phone's `GET /workouts` already leaves dropped entries out of
+  `workouts`, `simple`, `conditioning` and `picks`.
+- Not built yet: Hurt's "a day for the healthy parts" when nothing is left
+  to lift; for now it offers Rest / skip (ROADMAP).
+- Shoulder prep has three sets of moves that take turns by day
+  (SHOULDER_PREPS); the warm-up card lists each step, prep included.
+
 ## 2026-11 — Game "How hard?": the check mark finishes it (v0.657.0 / app 0.467.0)
 
 0.656 removed the "How hard?" question after Yes; the ask was only to drop

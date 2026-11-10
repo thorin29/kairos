@@ -187,22 +187,47 @@ export const WARMUP_LIBRARY: readonly WarmupRoutineDef[] = [
 /**
  * Shoulder prep (v0.655): added to the warm-up on any day with weights, unless
  * the warm-up already has rotator cuff work. 90/90 rotation with a light
- * dumbbell works the cuff against gravity; at the side it takes a band.
+ * dumbbell works the cuff against gravity; at the side it takes a band. Three
+ * sets of moves take turns, a different one each day (v0.658); the first is
+ * SHOULDER_PREP.
  */
-export const SHOULDER_PREP: readonly WarmupStep[] = [
-  reps("90/90 external rotation, 2–5 lb", "12", true),
-  reps("Band external rotation, elbow at side", "12", true),
-  reps("Band pull-aparts", "15"),
-  reps("Scap push-ups", "12"),
+export const SHOULDER_PREPS: readonly (readonly WarmupStep[])[] = [
+  [
+    reps("90/90 external rotation, 2–5 lb", "12", true),
+    reps("Band external rotation, elbow at side", "12", true),
+    reps("Band pull-aparts", "15"),
+    reps("Scap push-ups", "12"),
+  ],
+  [
+    reps("Side-lying external rotation, 2–5 lb", "12", true),
+    reps("Band internal rotation, elbow at side", "12", true),
+    reps("Band face pulls", "15"),
+    reps("Prone Y-T-W raises", "8 each"),
+  ],
+  [
+    reps("Band external rotation at 90°", "12", true),
+    reps("Band dislocates", "10"),
+    reps("Wall slides", "10"),
+    reps("Band pull-aparts", "15"),
+  ],
 ];
+export const SHOULDER_PREP: readonly WarmupStep[] = SHOULDER_PREPS[0];
 export const SHOULDER_PREP_ID = "lib:shoulder-prep";
 const hasCuffWork = (steps: readonly WarmupStep[]) => steps.some((s) => /rotator|external rotation/i.test(s.name));
 
+/** The day's Shoulder prep: the sets take turns by day. */
+export function shoulderPrepFor(dateISO?: string): readonly WarmupStep[] {
+  if (!dateISO) return SHOULDER_PREP;
+  const day = Math.floor(Date.parse(`${dateISO}T12:00:00Z`) / 86_400_000);
+  return SHOULDER_PREPS[((day % SHOULDER_PREPS.length) + SHOULDER_PREPS.length) % SHOULDER_PREPS.length];
+}
+
 /** A routine for a day with weights: Shoulder prep added unless it's covered. */
-export function withShoulderPrep(r: WarmupRoutine | null, weights: boolean): WarmupRoutine | null {
+export function withShoulderPrep(r: WarmupRoutine | null, weights: boolean, dateISO?: string): WarmupRoutine | null {
   if (!weights) return r;
-  if (!r) return { id: SHOULDER_PREP_ID, name: "Shoulder prep", steps: [...SHOULDER_PREP], mine: false };
-  return hasCuffWork(r.steps) ? r : { ...r, steps: [...r.steps, ...SHOULDER_PREP] };
+  const prep = shoulderPrepFor(dateISO);
+  if (!r) return { id: SHOULDER_PREP_ID, name: "Shoulder prep", steps: [...prep], mine: false };
+  return hasCuffWork(r.steps) ? r : { ...r, steps: [...r.steps, ...prep] };
 }
 
 /**

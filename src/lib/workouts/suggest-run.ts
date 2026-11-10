@@ -1,5 +1,5 @@
 import "server-only";
-import { goAnswer, parseGo, type GoKey } from "@/lib/workouts/go-light";
+import { adjustAnswer, adjustIsLight, parseAdjust, type Adjust } from "@/lib/workouts/adjust";
 import { prisma } from "@/lib/prisma";
 import { addDays, fromDateColumn, toDateColumn } from "@/lib/dates";
 import type { MuscleGroup } from "@/lib/workouts/catalog";
@@ -33,19 +33,19 @@ export async function dayLightFactor(userId: string, dateISO: string): Promise<n
   return lightFactor(row?.answer);
 }
 
-/** Today's Go light choice (v0.654), or null. */
-export async function dayGoLight(userId: string, dateISO: string): Promise<{ key: GoKey; minutes: number } | null> {
+/** Today's adjustment (v0.658; Go light before), or null. */
+export async function dayAdjust(userId: string, dateISO: string): Promise<Adjust | null> {
   const row = (await prisma.workoutSuggestionAnswer.findUnique({
     where: { userId_date_key_slot: { userId, date: toDateColumn(dateISO), key: "day", slot: "" } },
     select: { answer: true },
   })) as { answer: string } | null;
-  return parseGo(row?.answer);
+  return parseAdjust(row?.answer);
 }
 
-/** Make today a Go light day (v0.654); replaces any earlier choice. */
-export async function setGoLight(userId: string, dateISO: string, key: GoKey, minutes: number): Promise<void> {
+/** Adjust today; replaces any earlier choice. */
+export async function setAdjust(userId: string, dateISO: string, a: Adjust): Promise<void> {
   const date = toDateColumn(dateISO);
-  const answer = goAnswer(key, minutes);
+  const answer = adjustAnswer(a);
   await prisma.workoutSuggestionAnswer.upsert({
     where: { userId_date_key_slot: { userId, date, key: "day", slot: "" } },
     create: { userId, date, key: "day", slot: "", answer },
@@ -53,14 +53,14 @@ export async function setGoLight(userId: string, dateISO: string, key: GoKey, mi
   });
 }
 
-/** Undo Go light: today's plan comes back whole. */
-export async function clearGoLight(userId: string, dateISO: string): Promise<void> {
+/** Undo: today's plan comes back whole. */
+export async function clearAdjust(userId: string, dateISO: string): Promise<void> {
   const date = toDateColumn(dateISO);
   const row = (await prisma.workoutSuggestionAnswer.findUnique({
     where: { userId_date_key_slot: { userId, date, key: "day", slot: "" } },
     select: { answer: true },
   })) as { answer: string } | null;
-  if (parseGo(row?.answer)) {
+  if (parseAdjust(row?.answer)) {
     await prisma.workoutSuggestionAnswer.delete({
       where: { userId_date_key_slot: { userId, date, key: "day", slot: "" } },
     });
@@ -69,7 +69,7 @@ export async function clearGoLight(userId: string, dateISO: string): Promise<voi
 
 /** LIGHT when today was made lighter, else the program's week (LIGHT/TEST). */
 export async function dayIntentFor(userId: string, dateISO: string): Promise<"LIGHT" | "TEST" | null> {
-  if (await dayLightFactor(userId, dateISO)) return "LIGHT";
+  if ((await dayLightFactor(userId, dateISO)) || adjustIsLight(await dayAdjust(userId, dateISO))) return "LIGHT";
   return programIntentFor(userId, dateISO);
 }
 

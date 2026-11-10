@@ -1,8 +1,16 @@
 "use server";
 
-import { cleanGoAnswers, isGoKey, type GoPick } from "@/lib/workouts/go-light";
-import { clearGoLight, setGoLight } from "@/lib/workouts/suggest-run";
-import { goLightPick } from "@/lib/queries/workout-log";
+import { cleanAdjust, CARDIO_CHOICES, TIME_CHOICES, type TimePick } from "@/lib/workouts/adjust";
+import { clearAdjust } from "@/lib/workouts/suggest-run";
+import {
+  adjustPreview,
+  adjustView,
+  applyAdjust,
+  shortPlanFor,
+  type AdjustPreview,
+  type AdjustView,
+  type ShortAnswer,
+} from "@/lib/workouts/adjust-run";
 
 import { revalidatePath } from "next/cache";
 import { logPlannedWorkout, logMovementSets, settleWorkoutTask, type MovementSetIn } from "@/lib/workouts/mark";
@@ -684,24 +692,37 @@ export async function restDay(userId: string, dateISO: string): Promise<void> {
   refresh();
 }
 
-/** Go light (v0.654), today only: the suggestion and alternatives. */
-export async function goLightOptionsAction(userId: string, answers: unknown): Promise<GoPick | null> {
+/** Adjust today (v0.658), Short on time: the estimates and the preview. */
+export async function adjustShortAction(
+  userId: string,
+  input: { minutes: number; picks: TimePick[]; cardioMin: number },
+): Promise<ShortAnswer> {
   await requireInteractive();
   await requireCanActFor(userId);
-  const a = cleanGoAnswers(answers);
-  return a ? goLightPick(userId, todayISO(), a) : null;
+  const minutes = TIME_CHOICES.includes(input.minutes as 15) ? input.minutes : 30;
+  const cardioMin = CARDIO_CHOICES.includes(input.cardioMin as 10) ? input.cardioMin : 10;
+  const picks = (["weights", "cardio", "conditioning"] as TimePick[]).filter((p) => input.picks.includes(p));
+  return shortPlanFor(userId, todayISO(), { minutes, picks, cardioMin });
 }
 
-/** Go light: make today light with the chosen option, or undo it (key null). */
-export async function applyGoLightAction(userId: string, key: string | null, minutes = 20): Promise<void> {
+/** Adjust today: the preview for Low energy, Sick or Hurt. */
+export async function adjustPreviewAction(userId: string, raw: unknown): Promise<AdjustPreview | null> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const a = cleanAdjust(raw);
+  return a && a.mode !== "time" ? adjustPreview(userId, todayISO(), a) : null;
+}
+
+/** Adjust today, or undo it (null). False when Short on time doesn't fit. */
+export async function applyAdjustAction(userId: string, raw: unknown | null): Promise<boolean> {
   await requireInteractive();
   await requireCanActFor(userId);
   const today = todayISO();
-  if (key == null) await clearGoLight(userId, today);
-  else if (isGoKey(key)) await setGoLight(userId, today, key, minutes);
-  else return;
+  if (raw == null) await clearAdjust(userId, today);
+  else if (!(await applyAdjust(userId, today, raw))) return false;
   await settleWorkoutTask(userId, today, { fallbackComplete: false });
   refresh();
+  return true;
 }
 
 /** Skip or un-skip one planned movement for a day. A skip counts as done for
@@ -1242,6 +1263,8 @@ export async function loadDayLog(
   dateISO: string,
 ): Promise<{
   state: DayLogState;
+  /** Today's adjustment (v0.658), with what it drops. */
+  adjusted: AdjustView | null;
   loggedByPool: Record<string, LoggedSet>;
   order: SectionKind[];
   cardio: CardioEntry[];
@@ -1256,8 +1279,9 @@ export async function loadDayLog(
   await requireInteractive();
   await requireCanActFor(userId);
   if (!ISO.test(dateISO)) throw new Error("Bad date");
-  const [state, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone, warmups] = await Promise.all([
+  const [state, adjusted, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone, warmups] = await Promise.all([
     loadDayLogState(userId, dateISO),
+    adjustView(userId, dateISO),
     loadLoggedWeights(userId, dateISO),
     orderForDay(userId, dayOfWeek(dateISO)),
     cardioDay(userId, dateISO),
@@ -1267,7 +1291,7 @@ export async function loadDayLog(
     conditioningOnDay(userId, dateISO),
     warmupsForDay(userId, dateISO),
   ]);
-  return { state, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone, warmups };
+  return { state, adjusted, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone, warmups };
 }
 
 // --- conditioning: Pick one, Build one, the monthly benchmark (v0.617) ------

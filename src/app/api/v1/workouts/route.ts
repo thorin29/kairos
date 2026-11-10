@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { goLightView,
+import {
   loadTodayPlannedWorkouts,
   loadOverdueWorkoutDays,
   loadDayLogState,
@@ -18,6 +18,7 @@ import { conditioningFor } from "@/lib/workouts/conditioning-run";
 import { benchmarkFor, conditioningOnDay, pickPlansFor } from "@/lib/workouts/wod-run";
 import { programInfoFor } from "@/lib/workouts/program-run";
 import { dayLightFactor, daySuggestionFor } from "@/lib/workouts/suggest-run";
+import { adjustView } from "@/lib/workouts/adjust-run";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +38,10 @@ export async function GET(req: NextRequest) {
   const userId = authed.device.person.id;
   const today = todayISO();
   const workouts = await loadTodayPlannedWorkouts(userId, date);
+  // What today's adjustment drops stays off the phone's day too (v0.658).
+  const adjusted = await adjustView(userId, date);
+  const gone = new Set(adjusted?.dropped.plans ?? []);
+  const kept = <T extends { plannedWorkoutId: string }>(list: T[]) => list.filter((x) => !gone.has(x.plannedWorkoutId));
   const order = await orderForDay(userId, dayOfWeek(date));
   const overdue = date === today ? await loadOverdueWorkoutDays(userId, date) : [];
 
@@ -89,22 +94,22 @@ export async function GET(req: NextRequest) {
     // The day's suggestion card and a lighter day, if chosen (v0.612).
     suggestion: await daySuggestionFor(userId, date),
     light: await dayLightFactor(userId, date),
-    // v0.654: a Go light day — { key, title, detail } — or null.
-    goLight: await goLightView(userId, date),
+    // v0.658: today's adjustment — { mode, label, dropped } — or null.
+    adjusted,
     // v0.615: the person's section order for this weekday; the day's Warm-up
     // and Cardio plans (no movements, so not in `workouts`); and the day's
     // cardio, Concept2 rows included, each with how it felt.
     order,
-    simple: await simplePlansFor(userId, date),
+    simple: kept(await simplePlansFor(userId, date)),
     cardio: await cardioDay(userId, date),
     // v0.616: the day's planned conditioning workouts, with what the timer
     // needs and the results to beat.
-    conditioning: await conditioningFor(userId, date),
+    conditioning: kept(await conditioningFor(userId, date)),
     // v0.617: Conditioning plans picked on the day (done by any conditioning
     // that day, with what was logged) and the monthly benchmark (OFFER or
     // SUGGEST, or null). Each conditioning plan also carries `about`,
     // `scaled` and the person's starting `version`.
-    picks: await pickPlansFor(userId, date),
+    picks: kept(await pickPlansFor(userId, date)),
     // v0.619: every conditioning result that day, for one-offs added to it.
     conditioningDone: await conditioningOnDay(userId, date),
     benchmark: await benchmarkFor(userId, date),

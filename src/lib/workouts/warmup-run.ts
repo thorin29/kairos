@@ -90,7 +90,7 @@ export async function dayWarmupRoutines(
   const out = new Map<string, WarmupRoutine | null>();
   values.forEach((v, i) => {
     const id = picked[i];
-    out.set(v ?? "", withShoulderPrep((id && byId.get(id)) || null, weights));
+    out.set(v ?? "", withShoulderPrep((id && byId.get(id)) || null, weights, dateISO));
   });
   return out;
 }

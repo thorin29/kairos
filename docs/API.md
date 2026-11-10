@@ -1023,12 +1023,18 @@ warm-up `routine` is resolved for the date, and on any day with a strength
 entry it ends with Shoulder prep unless it already has rotator cuff work
 (a plain check then becomes the "Shoulder prep" routine).
 
-v0.654: `POST /api/v1/workouts/go-light` (today only) — `{ action: "options",
-why: energy|sore|time|sick, minutes: 10|20|30, hurt, neck?: above|below }` →
-`{ rest, suggest, others }` (options `{ key: lighter|short|recovery, title,
-detail }`); `{ action: "apply", key, minutes }`; `{ action: "undo" }`.
-`GET /api/v1/workouts` adds `goLight` (the chosen option or null); on a Go
-light day the plan's `workouts` hold only what's left.
+v0.658: `POST /api/v1/workouts/adjust` (today only; replaces `go-light`) —
+`{ action: "short", minutes: 15|30|45, picks: [weights|cardio|conditioning],
+cardioMin: 10|15|20 }` → `{ items: [{ label, minutes|null }], total, fits,
+need, fixes: [{ label, drop?, minutes? }], weightsMin, conditioningMin,
+available: { weights, cardio, conditioning } }`; `{ action: "preview", mode:
+low | sick (how: light|easy) | hurt (area: shoulder|elbow|back|hip|knee|legs) }`
+→ `{ title, tag, note, lines: [{ label, detail, dropped }], empty }`;
+`{ action: "apply", mode, … }` (as above; a Short on time that doesn't fit is
+a validation error); `{ action: "undo" }`. `GET /api/v1/workouts` replaces
+`goLight` with `adjusted` (`{ mode, label, dropped: { plans, movements } }` or
+null) and leaves dropped entries out of `workouts`, `simple`, `conditioning`
+and `picks`.
 
 v0.651: `GET /api/v1/workouts/strip?page=N` — one 8-day page of the week strip
 (0 = up to today, + ahead, − back; clamped −8..4) → { days, overdue, today,
