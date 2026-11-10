@@ -1,7 +1,11 @@
 "use server";
 
+import { cleanGoAnswers, isGoKey, type GoPick } from "@/lib/workouts/go-light";
+import { clearGoLight, setGoLight } from "@/lib/workouts/suggest-run";
+import { goLightPick } from "@/lib/queries/workout-log";
+
 import { revalidatePath } from "next/cache";
-import { logPlannedWorkout, logMovementSets, type MovementSetIn } from "@/lib/workouts/mark";
+import { logPlannedWorkout, logMovementSets, settleWorkoutTask, type MovementSetIn } from "@/lib/workouts/mark";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
@@ -677,6 +681,26 @@ export async function restDay(userId: string, dateISO: string): Promise<void> {
   await requireCanActFor(userId);
   if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
   await setRestDay(userId, dateISO);
+  refresh();
+}
+
+/** Go light (v0.654), today only: the suggestion and alternatives. */
+export async function goLightOptionsAction(userId: string, answers: unknown): Promise<GoPick | null> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const a = cleanGoAnswers(answers);
+  return a ? goLightPick(userId, todayISO(), a) : null;
+}
+
+/** Go light: make today light with the chosen option, or undo it (key null). */
+export async function applyGoLightAction(userId: string, key: string | null, minutes = 20): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  const today = todayISO();
+  if (key == null) await clearGoLight(userId, today);
+  else if (isGoKey(key)) await setGoLight(userId, today, key, minutes);
+  else return;
+  await settleWorkoutTask(userId, today, { fallbackComplete: false });
   refresh();
 }
 

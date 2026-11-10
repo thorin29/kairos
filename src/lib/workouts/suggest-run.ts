@@ -1,4 +1,5 @@
 import "server-only";
+import { goAnswer, parseGo, type GoKey } from "@/lib/workouts/go-light";
 import { prisma } from "@/lib/prisma";
 import { addDays, fromDateColumn, toDateColumn } from "@/lib/dates";
 import type { MuscleGroup } from "@/lib/workouts/catalog";
@@ -30,6 +31,40 @@ export async function dayLightFactor(userId: string, dateISO: string): Promise<n
     select: { answer: true },
   })) as { answer: string } | null;
   return lightFactor(row?.answer);
+}
+
+/** Today's Go light choice (v0.654), or null. */
+export async function dayGoLight(userId: string, dateISO: string): Promise<{ key: GoKey; minutes: number } | null> {
+  const row = (await prisma.workoutSuggestionAnswer.findUnique({
+    where: { userId_date_key_slot: { userId, date: toDateColumn(dateISO), key: "day", slot: "" } },
+    select: { answer: true },
+  })) as { answer: string } | null;
+  return parseGo(row?.answer);
+}
+
+/** Make today a Go light day (v0.654); replaces any earlier choice. */
+export async function setGoLight(userId: string, dateISO: string, key: GoKey, minutes: number): Promise<void> {
+  const date = toDateColumn(dateISO);
+  const answer = goAnswer(key, minutes);
+  await prisma.workoutSuggestionAnswer.upsert({
+    where: { userId_date_key_slot: { userId, date, key: "day", slot: "" } },
+    create: { userId, date, key: "day", slot: "", answer },
+    update: { answer },
+  });
+}
+
+/** Undo Go light: today's plan comes back whole. */
+export async function clearGoLight(userId: string, dateISO: string): Promise<void> {
+  const date = toDateColumn(dateISO);
+  const row = (await prisma.workoutSuggestionAnswer.findUnique({
+    where: { userId_date_key_slot: { userId, date, key: "day", slot: "" } },
+    select: { answer: true },
+  })) as { answer: string } | null;
+  if (parseGo(row?.answer)) {
+    await prisma.workoutSuggestionAnswer.delete({
+      where: { userId_date_key_slot: { userId, date, key: "day", slot: "" } },
+    });
+  }
 }
 
 /** LIGHT when today was made lighter, else the program's week (LIGHT/TEST). */

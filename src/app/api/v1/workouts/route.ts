@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import {
+import { goLightView,
   loadTodayPlannedWorkouts,
   loadOverdueWorkoutDays,
   loadDayLogState,
@@ -89,6 +89,8 @@ export async function GET(req: NextRequest) {
     // The day's suggestion card and a lighter day, if chosen (v0.612).
     suggestion: await daySuggestionFor(userId, date),
     light: await dayLightFactor(userId, date),
+    // v0.654: a Go light day — { key, title, detail } — or null.
+    goLight: await goLightView(userId, date),
     // v0.615: the person's section order for this weekday; the day's Warm-up
     // and Cardio plans (no movements, so not in `workouts`); and the day's
     // cardio, Concept2 rows included, each with how it felt.

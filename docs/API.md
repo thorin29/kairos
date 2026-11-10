@@ -1010,6 +1010,13 @@ the running program carries into its next block with these changes (same
 start date; maxes as sent), and plan entries the setup doesn't cover stay.
 `GET /api/v1/workouts/plan` movements add `about`.
 
+v0.654: `POST /api/v1/workouts/go-light` (today only) — `{ action: "options",
+why: energy|sore|time|sick, minutes: 10|20|30, hurt, neck?: above|below }` →
+`{ rest, suggest, others }` (options `{ key: lighter|short|recovery, title,
+detail }`); `{ action: "apply", key, minutes }`; `{ action: "undo" }`.
+`GET /api/v1/workouts` adds `goLight` (the chosen option or null); on a Go
+light day the plan's `workouts` hold only what's left.
+
 v0.651: `GET /api/v1/workouts/strip?page=N` — one 8-day page of the week strip
 (0 = up to today, + ahead, − back; clamped −8..4) → { days, overdue, today,
 page }. Strip days add `planned` (the plan has a workout that weekday).
@@ -1459,7 +1466,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**183 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**184 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is

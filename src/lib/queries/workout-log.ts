@@ -30,7 +30,8 @@ import {
   type Program,
 } from "@/lib/workouts/programs";
 import { loadActiveProgram, plannedSlotFor, programInfoFor, type ProgramInfo } from "@/lib/workouts/program-run";
-import { dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
+import { dayGoLight, dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
+import { goKeep, goLightOptions, goOption, type GoAnswers, type GoPick } from "@/lib/workouts/go-light";
 import type { Suggestion } from "@/lib/workouts/suggest";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
@@ -450,6 +451,8 @@ function coreTestOf(core: unknown, exercises: { poolExerciseId: string }[]): str
 export async function loadTodayPlannedWorkouts(
   userId: string,
   dayISO: string,
+  /** Leave a Go light day untrimmed (v0.654): to count today's main lifts. */
+  opts: { full?: boolean } = {},
 ): Promise<NonNullable<TodayPlanned>[]> {
   await syncCoreDays(userId);
   const system = await loadWorkoutUnitSystem();
@@ -615,6 +618,15 @@ export async function loadTodayPlannedWorkouts(
       exercises,
       sessionLogged: hasSession(plan as { name: string; category: string | null }),
     });
+  }
+  // Go light (v0.654): a light day keeps only its main lifts (or none). What's
+  // dropped is gone for the day — from the cards and from what completes it.
+  const go = opts.full ? null : await dayGoLight(userId, dayISO);
+  if (go) {
+    const keep = goKeep(go.key, go.minutes, out);
+    return out
+      .map((e, i) => ({ ...e, exercises: e.exercises.filter((x) => keep[i].includes(x.poolExerciseId)) }))
+      .filter((e) => e.exercises.length > 0 || e.category !== "WEIGHTS");
   }
   return out;
 }
@@ -1972,6 +1984,8 @@ export type DayLogState = {
   suggestion: Suggestion | null;
   /** Today was made lighter: the share of the usual weights. */
   light: number | null;
+  /** A Go light day (v0.654): the option chosen, for the header and Undo. */
+  goLight: { key: string; title: string; detail: string } | null;
   /** The plan entries in effect that day (an entry made later wasn't part of
    *  a past day), by id (v0.623). */
   planIds: string[];
@@ -2206,6 +2220,7 @@ export async function loadDayLogState(
     loggedTitle: logged.title,
     suggestion: await daySuggestionFor(userId, dateISO),
     light: await dayLightFactor(userId, dateISO),
+    goLight: await goLightView(userId, dateISO),
     planIds,
     loggedOther: logged.other,
     loggedAny: logged.any,
@@ -2231,6 +2246,27 @@ export async function workoutRestFor(
   const extraLogged = sessions.some((s) => !s.isRest);
   if (sessions.some((s) => s.isRest)) return { rest: "skipped", extraLogged };
   return { rest: (await planRestDay(userId, dateISO)) ? "planned" : null, extraLogged };
+}
+
+/** Today's main lifts: strength entries (not Core/Arms) with a movement. */
+async function mainLiftCount(userId: string, dateISO: string): Promise<number> {
+  const full = await loadTodayPlannedWorkouts(userId, dateISO, { full: true });
+  return full.filter((e) => e.category === "WEIGHTS" && !e.core && e.exercises.length > 0).length;
+}
+
+/** The Go light suggestion and alternatives for today's answers (v0.654). */
+export async function goLightPick(userId: string, dateISO: string, answers: GoAnswers): Promise<GoPick> {
+  return goLightOptions(answers, await mainLiftCount(userId, dateISO));
+}
+
+/** Today's Go light choice for the day page (v0.654). */
+export async function goLightView(
+  userId: string,
+  dateISO: string,
+): Promise<{ key: string; title: string; detail: string } | null> {
+  const go = await dayGoLight(userId, dateISO);
+  if (!go) return null;
+  return goOption(go.key, go.minutes, await mainLiftCount(userId, dateISO));
 }
 
 /** The plan has a workout (not Rest) on this weekday. */

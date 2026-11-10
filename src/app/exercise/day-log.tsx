@@ -4,12 +4,14 @@ import { clockText as clockFromSeconds, secondsFromTyped } from "@/lib/workouts/
 import { SidesTimer } from "./sides-timer";
 import { PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG, SECONDARY_SM } from "./buttons";
 import { Modal } from "./plan-file-panel";
+import { GoLightModal } from "./go-light";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   loadDayLog,
   loadMovementSets,
   loadWorkoutWeek,
   restDay,
+  applyGoLightAction,
   saveMovementFeedback,
   answerWorkoutSuggestion,
   saveMovementSets,
@@ -140,6 +142,7 @@ export function DayLog({
   const [stripPages, setStripPages] = useState<Record<number, WeekStripDay[]>>({});
   const fetchedPages = useRef<Set<number>>(new Set());
   const [resetTick, setResetTick] = useState(0);
+  const [goLight, setGoLight] = useState(false);
   // A day still to come only previews its plan (v0.651).
   const future = date > todayISO;
   const [failed, setFailed] = useState(false);
@@ -452,12 +455,52 @@ export function DayLog({
             Rest / skip day
           </button>
         )}
+        {/* Go light (v0.654): today only, until it's chosen. */}
+        {data && !isRestDay && date === todayISO && !state?.goLight && (
+          <button type="button" onClick={() => setGoLight(true)} className={`${SECONDARY_BTN} ml-2 mt-3`}>
+            Go light
+          </button>
+        )}
       </div>
 
-      {state?.light && !isRestDay && !future && (
+      {state?.goLight && !isRestDay && (
+        <p className="text-sm font-semibold text-accent">
+          Light day · {state.goLight.title} ·{" "}
+          <button
+            type="button"
+            className="underline"
+            onClick={() =>
+              startTransition(async () => {
+                await applyGoLightAction(userId, null);
+                setTick((n) => n + 1);
+              })
+            }
+          >
+            Undo
+          </button>
+        </p>
+      )}
+      {state?.light && !state.goLight && !isRestDay && !future && (
         <p className="text-sm font-semibold text-accent">
           Lighter today · {Math.round(state.light * 100)}% of the usual weights
         </p>
+      )}
+      {goLight && (
+        <GoLightModal
+          userId={userId}
+          onClose={() => setGoLight(false)}
+          onDone={() => {
+            setGoLight(false);
+            setTick((n) => n + 1);
+          }}
+          onRest={() =>
+            startTransition(async () => {
+              await restDay(userId, date);
+              setGoLight(false);
+              setTick((n) => n + 1);
+            })
+          }
+        />
       )}
 
       {state?.suggestion && !isRestDay && !future && (

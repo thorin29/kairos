@@ -1,3 +1,4 @@
+import { GO_FACTOR, parseGo } from "@/lib/workouts/go-light";
 /**
  * Suggestions: simple rules that say why, shown as one quiet card and never
  * applied on their own (v0.612). Pure, shared by the web, the phone API and the
@@ -315,5 +316,8 @@ export function bigJump(weight: number | null, recentTop: number | null): number
 export function lightFactor(answer: string | null | undefined): number | null {
   if (answer === "ease") return RULES.easeIn;
   if (answer === "light") return RULES.light;
+  // A Go light day (v0.654) is a light day too: no records, nothing moves on.
+  const go = parseGo(answer);
+  if (go) return GO_FACTOR[go.key];
   return null;
 }

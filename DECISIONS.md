@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-11 — Go light (v0.654.0 / app 0.464.0)
+
+- A "Go light" button beside Rest / skip, today only. Up to three answers
+  (why: low energy / sore / short on time / sick — sick asks above or below
+  the neck; minutes 10/20/30; anything hurt) pick one suggestion and two
+  alternatives (`goLightOptions`, pure, go-light.ts):
+  - **Same lifts, lighter** — each strength entry's first movement (its main
+    lift) at 60%; extras and Core/Arms rotation days dropped. Low energy.
+  - **Short and sharp** — 1/2/3 main lifts for 10/20/30 min at 80%. Busy.
+  - **Mobility and an easy row** — no strength at all. Sore, hurt or sick.
+  - Sick below the neck adds "Rest might be best today" with Rest / skip.
+- The choice is the day's suggestion answer (`go:<key>:<minutes>`, the row
+  the "make it lighter" suggestion already used), so `lightFactor` scales
+  every target, `dayIntentFor` marks the day LIGHT (sessions drawn hollow on
+  charts, as a program's light week), and `loadTodayPlannedWorkouts` trims
+  the plan with `goKeep`. Because progress reads that same plan, finishing
+  what's left completes the day and keeps the streak; Undo deletes the answer
+  and the plan comes back whole. Light sets aren't excluded from records —
+  at 60–80% they don't beat them.
+- One route, `POST /api/v1/workouts/go-light` (options / apply / undo).
+
 ## 2026-11 — Week strip scrolls freely; reset in the corner (v0.653.0 / app 0.463.0)
 
 Paging a whole 8 days per swipe felt stiff, and the Today link repeated the
