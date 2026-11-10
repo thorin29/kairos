@@ -15,7 +15,12 @@ export type WarmupStep = {
   seconds?: number;
   /** Done on each side (a stretch, a lunge). */
   sides?: boolean;
+  /** How to do it (v0.659), behind an ⓘ. */
+  cue?: string;
 };
+
+/** Warm-up or Mobility (v0.659): both are lists of steps, done with a tap. */
+export type RoutineKind = "warmup" | "mobility";
 
 /** What a warm-up readies you for (v0.655), for "Match the day". */
 export type WarmupFocus = "lower" | "hinge" | "push" | "pull" | "core" | "arms" | "hockey" | "full";
@@ -26,8 +31,20 @@ export type WarmupRoutineDef = { key: string; name: string; steps: WarmupStep[];
  *  person's own (its id). */
 export type WarmupRoutine = { id: string; name: string; steps: WarmupStep[]; mine: boolean };
 
-const reps = (name: string, amount: string, sides = false): WarmupStep => ({ name, kind: "REPS", amount, ...(sides ? { sides } : {}) });
-const hold = (name: string, seconds: number, sides = false): WarmupStep => ({ name, kind: "TIME", seconds, ...(sides ? { sides } : {}) });
+const reps = (name: string, amount: string, sides = false, cue?: string): WarmupStep => ({
+  name,
+  kind: "REPS",
+  amount,
+  ...(sides ? { sides } : {}),
+  ...(cue ? { cue } : {}),
+});
+const hold = (name: string, seconds: number, sides = false, cue?: string): WarmupStep => ({
+  name,
+  kind: "TIME",
+  seconds,
+  ...(sides ? { sides } : {}),
+  ...(cue ? { cue } : {}),
+});
 
 /**
  * Ready-made routines. Jumps and throws follows Wendler: 10–15 fast, full
@@ -283,18 +300,118 @@ export function pickWarmupId(choice: WarmupChoice | null, dateISO: string, focus
 
 export const LIB_PREFIX = "lib:";
 
+/**
+ * Mobility routines (v0.659): range of motion, done on their own or after
+ * the work. Holds are slow and easy, never forced; go a little deeper over
+ * the weeks. Keys start "mob-".
+ */
+export const MOBILITY_LIBRARY: readonly WarmupRoutineDef[] = [
+  {
+    key: "mob-hips-hang",
+    name: "Hips, hang and squat",
+    steps: [
+      reps("Rotational hinge", "8", true, "Hinge at the hips and turn your chest toward the front leg. Long spine, slow."),
+      hold("Deep squat rock", 60, false, "Sit in the bottom without touching the ground. Rock side to side and forward and back."),
+      hold("Dead hang", 40, false, "Relax into the hang; small rotations side to side."),
+      hold("Hip external rotation on the incline bench", 45, true, "Shin across the bench, hips square, then bend forward over it."),
+      reps(
+        "Band hip internal rotation (PNF)",
+        "3 rounds",
+        true,
+        "Band pulls the knee out. Let it pull for 30 s, push against it for 10 s, then relax and rotate in further. Three times.",
+      ),
+      hold("Long lunge hip flexor", 45, true, "Long stance, squeeze the back leg's glute, stay tall."),
+      hold("Horse stance", 30, false, "Toes out, lower slowly, torso tall. Hold the wall or rack; go deeper over time."),
+    ],
+  },
+  {
+    key: "mob-hip-opener",
+    name: "Hip opener",
+    steps: [
+      reps("90/90 hip switches", "8 each way", false, "Sit tall and turn both knees side to side. Hands off the floor if you can."),
+      reps("Cossack squat", "6", true, "Wide stance, sit into one hip, the other leg straight with toes up."),
+      reps("Frog rock-backs", "10", false, "Knees wide on the floor, rock hips back toward the heels and forward."),
+      hold("Couch stretch", 45, true, "Back knee at the wall or bench, shin up it. Squeeze that glute."),
+      hold("Pigeon", 45, true, "Front shin across, hips square, fold forward slowly."),
+      reps("Hip CARs", "3 each way", true, "On all fours or standing: the biggest slow circle the hip can make, nothing else moving."),
+    ],
+  },
+  {
+    key: "mob-spine",
+    name: "Spine and upper back",
+    steps: [
+      reps("Cat-cow", "10", false, "Slow, one segment of the spine at a time."),
+      reps("Thread the needle", "8", true, "On all fours, reach under and then up to the ceiling. Eyes follow the hand."),
+      reps("Open book", "8", true, "On your side, knees bent, open the top arm across to the floor behind you."),
+      hold("Bench thoracic stretch", 45, false, "Kneel, elbows on the bench, hands together behind the head. Sink the chest."),
+      reps("Jefferson curl", "8", false, "No weight or a light one. Roll down one vertebra at a time, then back up."),
+      hold("Child's pose side reach", 30, true, "Walk both hands to one side and breathe into the ribs."),
+    ],
+  },
+  {
+    key: "mob-shoulders",
+    name: "Shoulders and overhead",
+    steps: [
+      hold("Dead hang", 40, false, "Relax into the hang; small rotations side to side."),
+      reps("Shoulder CARs", "3 each way", true, "The biggest slow circle the shoulder can make, ribs down."),
+      reps("Band dislocates", "10", false, "Wide grip, straight arms, over and back. Narrow the grip over time."),
+      reps("Wall slides", "10", false, "Back, head and forearms on the wall; slide up without losing contact."),
+      hold("Sleeper stretch", 30, true, "Lying on that side, arm at 90°, gently press the forearm down."),
+      reps("Steel club mills", "8 each way", false, "Light club, slow. Elbows close to the head."),
+    ],
+  },
+  {
+    key: "mob-ankles-knees",
+    name: "Ankles and knees",
+    steps: [
+      reps("Knee-to-wall ankle rocks", "10", true, "Heel down, drive the knee over the toes toward the wall."),
+      reps("Tibialis raises", "15", false, "Back against the wall, heels forward, lift the toes."),
+      hold("Calf stretch on a step", 45, true, "Heel off the step, knee straight, let it sink."),
+      hold("Spanish squat", 30, false, "Band behind the knees, anchored to the rack. Sit back, shins upright."),
+      hold("Heels-up deep squat", 45, false, "Heels on a plate, sit as deep as you can, chest tall."),
+      hold("Couch stretch", 45, true, "Back knee at the wall or bench, shin up it. Squeeze that glute."),
+    ],
+  },
+  {
+    key: "mob-skater",
+    name: "Skater hips",
+    steps: [
+      reps("Adductor rock-backs", "10", true, "On all fours, one leg out to the side; rock hips back."),
+      reps("Cossack squat", "6", true, "Wide stance, sit into one hip, the other leg straight with toes up."),
+      hold("Lateral lunge hold", 30, true, "Sit into one hip, chest up, the other leg long."),
+      hold("Copenhagen plank", 20, true, "Top leg on the bench, lift the hips. Knee on the bench to make it easier."),
+      hold("Hip flexor lunge with reach", 30, true, "Back glute tight, reach the same-side arm up and over."),
+      hold("Horse stance", 30, false, "Toes out, lower slowly, torso tall. Hold the wall or rack; go deeper over time."),
+    ],
+  },
+  {
+    key: "mob-cars",
+    name: "Joint circles (CARs)",
+    steps: [
+      reps("Neck CARs", "3 each way", false, "Slow circles, chin to chest, ear to shoulder, look up."),
+      reps("Shoulder CARs", "3 each way", true, "The biggest slow circle the shoulder can make, ribs down."),
+      reps("Spine CARs", "3", false, "Standing, roll down, around and up, one segment at a time."),
+      reps("Hip CARs", "3 each way", true, "Standing on one leg, the biggest slow circle the hip can make."),
+      reps("Ankle CARs", "5 each way", true, "Slow full circles, the shin still."),
+      reps("Wrist CARs", "5 each way", false, "Fists, slow full circles."),
+    ],
+  },
+];
+
+const ALL_LIBRARY = [...WARMUP_LIBRARY, ...MOBILITY_LIBRARY];
+
 export function libraryRoutine(id: string | null | undefined): WarmupRoutine | null {
   if (!id || !id.startsWith(LIB_PREFIX)) return null;
-  const def = WARMUP_LIBRARY.find((r) => LIB_PREFIX + r.key === id);
+  const def = ALL_LIBRARY.find((r) => LIB_PREFIX + r.key === id);
   return def ? { id, name: def.name, steps: def.steps, mine: false } : null;
 }
 
-export const LIBRARY_ROUTINES: readonly WarmupRoutine[] = WARMUP_LIBRARY.map((r) => ({
-  id: LIB_PREFIX + r.key,
-  name: r.name,
-  steps: r.steps,
-  mine: false,
-}));
+const asRoutine = (r: WarmupRoutineDef): WarmupRoutine => ({ id: LIB_PREFIX + r.key, name: r.name, steps: r.steps, mine: false });
+export const LIBRARY_ROUTINES: readonly WarmupRoutine[] = WARMUP_LIBRARY.map(asRoutine);
+export const MOBILITY_ROUTINES: readonly WarmupRoutine[] = MOBILITY_LIBRARY.map(asRoutine);
+
+/** A routine kind from a request or a stored row; anything else is a warm-up. */
+export const cleanRoutineKind = (v: unknown): RoutineKind => (v === "mobility" ? "mobility" : "warmup");
 
 /** Steps sent from a client, kept to what's valid: up to 30, names trimmed. */
 export function cleanSteps(raw: unknown): WarmupStep[] {
@@ -306,12 +423,14 @@ export function cleanSteps(raw: unknown): WarmupStep[] {
     const name = typeof s.name === "string" ? s.name.trim().slice(0, 60) : "";
     if (!name) continue;
     const sides = s.sides === true;
+    const cue = typeof s.cue === "string" ? s.cue.trim().slice(0, 300) : "";
+    const extra = { ...(sides ? { sides } : {}), ...(cue ? { cue } : {}) };
     if (s.kind === "TIME") {
       const sec = typeof s.seconds === "number" && Number.isFinite(s.seconds) ? Math.round(s.seconds) : 30;
-      out.push({ name, kind: "TIME", seconds: Math.min(Math.max(sec, 5), 3600), ...(sides ? { sides } : {}) });
+      out.push({ name, kind: "TIME", seconds: Math.min(Math.max(sec, 5), 3600), ...extra });
     } else {
       const amount = typeof s.amount === "string" ? s.amount.trim().slice(0, 30) : "";
-      out.push({ name, kind: "REPS", ...(amount ? { amount } : {}), ...(sides ? { sides } : {}) });
+      out.push({ name, kind: "REPS", ...(amount ? { amount } : {}), ...extra });
     }
   }
   return out;

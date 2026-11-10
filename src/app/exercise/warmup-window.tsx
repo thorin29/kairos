@@ -14,6 +14,7 @@ import {
   stepAmount,
   warmupChoiceValue,
   WARMUP_LIBRARY,
+  type RoutineKind,
   type WarmupRoutine,
   type WarmupStep,
 } from "@/lib/workouts/warmup-library";
@@ -24,12 +25,24 @@ const PRIMARY = PRIMARY_BTN;
 const QUIET = SECONDARY_BTN;
 const FIELD = "h-10 min-w-0 rounded-lg border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent";
 
+/** Words for a routine kind (v0.659): "warm-up" or "mobility routine". */
+const WORDS: Record<RoutineKind, { one: string; title: string; newOne: string }> = {
+  warmup: { one: "warm-up", title: "Warm-up", newOne: "New warm-up" },
+  mobility: { one: "routine", title: "Mobility", newOne: "New mobility routine" },
+};
+
 /** A routine's steps: name and amount, a timer on timed ones, and a tick each. */
 export function WarmupSteps({ steps }: { steps: WarmupStep[] }) {
   const [ticked, setTicked] = useState<Set<number>>(new Set());
   const [timing, setTiming] = useState<number | null>(null);
+  const [cue, setCue] = useState<WarmupStep | null>(null);
   return (
     <>
+      {cue && (
+        <Modal title={cue.name} onClose={() => setCue(null)}>
+          <p className="text-sm">{cue.cue}</p>
+        </Modal>
+      )}
       {timing != null && (
         <WarmupTimer
           steps={steps}
@@ -65,6 +78,16 @@ export function WarmupSteps({ steps }: { steps: WarmupStep[] }) {
                 <span className="block text-sm font-semibold">{s.name}</span>
                 <span className="tabular block text-xs text-muted">{stepAmount(s)}</span>
               </span>
+              {s.cue && (
+                <button
+                  type="button"
+                  onClick={() => setCue(s)}
+                  aria-label={`How to do ${s.name}`}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:text-accent"
+                >
+                  <InfoIcon className="h-4 w-4" />
+                </button>
+              )}
               {s.kind === "TIME" && (
                 <button
                   type="button"
@@ -95,6 +118,7 @@ export function WarmupWindow({
   onDone,
   onClose,
   onChanged,
+  kind = "warmup",
 }: {
   userId: string;
   plannedWorkoutId: string;
@@ -103,13 +127,16 @@ export function WarmupWindow({
   onDone: () => void;
   onClose: () => void;
   onChanged: () => void;
+  /** Mobility (v0.659) uses the same window. */
+  kind?: RoutineKind;
 }) {
   const [switching, setSwitching] = useState(false);
   return (
-    <Modal title={routine?.name ?? "Warm-up"} onClose={onClose}>
+    <Modal title={routine?.name ?? WORDS[kind].title} onClose={onClose}>
       {switching ? (
         <RoutinePicker
           userId={userId}
+          kind={kind}
           current={routine?.id ?? null}
           onPick={async (id) => {
             await setPlanWarmupRoutine(userId, plannedWorkoutId, id);
@@ -149,26 +176,29 @@ export function RoutinePicker({
   current,
   onPick,
   onBack,
+  kind = "warmup",
 }: {
   userId: string;
   current: string | null;
   onPick: (id: string | null) => void | Promise<void>;
   onBack?: () => void;
+  kind?: RoutineKind;
 }) {
   const [routines, setRoutines] = useState<WarmupRoutine[] | null>(null);
   const [editing, setEditing] = useState<WarmupRoutine | "new" | null>(null);
   const [busy, start] = useTransition();
   const load = () => {
-    loadWarmupRoutines(userId)
+    loadWarmupRoutines(userId, kind)
       .then(setRoutines)
       .catch(() => setRoutines([]));
   };
-  useEffect(load, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [userId, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (editing) {
     return (
       <RoutineEditor
         userId={userId}
+        kind={kind}
         routine={editing === "new" ? null : editing}
         onSaved={(id) => {
           setEditing(null);
@@ -218,7 +248,7 @@ export function RoutinePicker({
         routines.map((r) => row(r.id, r.name, r.steps.map((s) => s.name).join(" · "), r))
       )}
       <button type="button" onClick={() => setEditing("new")} className="text-sm font-semibold text-accent">
-        + New warm-up
+        + {WORDS[kind].newOne}
       </button>
     </div>
   );
@@ -233,10 +263,13 @@ export function WarmupChooser({
   userId,
   value,
   onChange,
+  kind = "warmup",
 }: {
   userId: string;
   value: string | null;
   onChange: (id: string | null) => void;
+  /** Mobility (v0.659): one routine or a rotation, no Match the day. */
+  kind?: RoutineKind;
 }) {
   const [routines, setRoutines] = useState<WarmupRoutine[] | null>(null);
   const [peek, setPeek] = useState<WarmupRoutine | null>(null);
@@ -247,11 +280,11 @@ export function WarmupChooser({
   const [rot, setRot] = useState<string[]>(choice?.mode === "rotation" ? choice.ids : []);
   const matchable = WARMUP_LIBRARY.filter((r) => r.focus?.length);
   const load = () => {
-    loadWarmupRoutines(userId)
+    loadWarmupRoutines(userId, kind)
       .then(setRoutines)
       .catch(() => setRoutines([]));
   };
-  useEffect(load, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [userId, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const row = (id: string | null, name: string, sub: string, r?: WarmupRoutine) => {
     const on = value === id;
@@ -296,14 +329,22 @@ export function WarmupChooser({
     );
   };
 
-  const modes: ["one" | "match" | "rotation", string][] = [
-    ["one", "One warm-up"],
-    ["match", "Match the day"],
-    ["rotation", "Rotation"],
-  ];
+  const modes: ["one" | "match" | "rotation", string][] =
+    kind === "mobility"
+      ? [
+          ["one", "One routine"],
+          ["rotation", "Rotation"],
+        ]
+      : [
+          ["one", "One warm-up"],
+          ["match", "Match the day"],
+          ["rotation", "Rotation"],
+        ];
   return (
     <div>
-      <div className="mb-3 grid grid-cols-3 overflow-hidden rounded-xl border border-accent text-sm font-semibold">
+      <div
+        className={`mb-3 grid ${modes.length === 2 ? "grid-cols-2" : "grid-cols-3"} overflow-hidden rounded-xl border border-accent text-sm font-semibold`}
+      >
         {modes.map(([k, label]) => (
           <button
             key={k}
@@ -417,7 +458,7 @@ export function WarmupChooser({
       {!routines && <p className="text-sm text-muted">Loading…</p>}
       <button type="button" onClick={() => setEditing("new")} className={`${SECONDARY_LG} mt-2 w-full`}>
         <PlusIcon className="h-4 w-4" />
-        New warm-up
+        {WORDS[kind].newOne}
       </button>
       {peek && (
         <Modal title={peek.name} onClose={() => setPeek(null)}>
@@ -425,9 +466,10 @@ export function WarmupChooser({
         </Modal>
       )}
       {editing && (
-        <Modal title={editing === "new" ? "New warm-up" : "Edit warm-up"} onClose={() => setEditing(null)}>
+        <Modal title={editing === "new" ? WORDS[kind].newOne : `Edit ${WORDS[kind].one}`} onClose={() => setEditing(null)}>
           <RoutineEditor
             userId={userId}
+            kind={kind}
             routine={editing === "new" ? null : editing}
             onSaved={(id) => {
               setEditing(null);
@@ -450,11 +492,13 @@ function RoutineEditor({
   routine,
   onSaved,
   onBack,
+  kind = "warmup",
 }: {
   userId: string;
   routine: WarmupRoutine | null;
   onSaved: (id: string | null) => void;
   onBack: () => void;
+  kind?: RoutineKind;
 }) {
   const [name, setName] = useState(routine?.name ?? "");
   const [steps, setSteps] = useState<DraftStep[]>(() =>
@@ -483,7 +527,7 @@ function RoutineEditor({
         ‹ Back
       </button>
       <input
-        aria-label="Warm-up name"
+        aria-label={`${WORDS[kind].title} name`}
         placeholder="Name"
         value={name}
         maxLength={60}
@@ -511,6 +555,14 @@ function RoutineEditor({
                 <TrashIcon className="h-4 w-4" />
               </button>
             </div>
+            <input
+              aria-label={`Step ${i + 1} how`}
+              placeholder="How (optional)"
+              value={s.cue ?? ""}
+              maxLength={300}
+              onChange={(e) => set(s.k, { cue: e.target.value })}
+              className={`${FIELD} w-full`}
+            />
             <div className="flex flex-wrap items-center gap-2">
               <div role="radiogroup" aria-label={`Step ${i + 1} kind`} className="flex rounded-full bg-ground p-0.5">
                 {(["REPS", "TIME"] as const).map((k) => (
@@ -609,6 +661,7 @@ function RoutineEditor({
                 id: routine?.id ?? null,
                 name,
                 steps: steps.map(({ k: _k, ...s }) => s),
+                kind,
               });
               if (!r.ok) setError(r.error);
               else onSaved(r.id);
@@ -628,10 +681,12 @@ export function WarmupPlanLine({
   userId,
   plannedWorkoutId,
   warmup,
+  kind = "warmup",
 }: {
   userId: string;
   plannedWorkoutId: string;
   warmup: string | null;
+  kind?: RoutineKind;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState<string | null>(null);
@@ -643,19 +698,20 @@ export function WarmupPlanLine({
     const c = parseWarmupChoice(warmup);
     if (c?.mode === "match") return setName("Match the day");
     if (c?.mode === "rotation") return setName(`Rotation · ${c.ids.length}`);
-    loadWarmupRoutines(userId)
+    loadWarmupRoutines(userId, kind)
       .then((rs) => setName(rs.find((r) => r.id === warmup)?.name ?? null))
       .catch(() => {});
-  }, [userId, warmup]);
+  }, [userId, warmup, kind]);
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="mt-0.5 text-xs font-semibold text-accent">
         {name ?? "Just a check"} ›
       </button>
       {open && (
-        <Modal title="Warm-up" onClose={() => setOpen(false)}>
+        <Modal title={WORDS[kind].title} onClose={() => setOpen(false)}>
           <WarmupChooser
             userId={userId}
+            kind={kind}
             value={warmup}
             onChange={async (id) => {
               await setPlanWarmupRoutine(userId, plannedWorkoutId, id);
@@ -673,20 +729,21 @@ export function WarmupPlanLine({
  * v0.624): the ready-made ones and your own, each opening to its steps, with
  * Edit (a ready-made one saves your own copy) and New.
  */
-export function WarmupLibrary({ userId }: { userId: string }) {
+export function WarmupLibrary({ userId, kind = "warmup" }: { userId: string; kind?: RoutineKind }) {
   const [routines, setRoutines] = useState<WarmupRoutine[] | null>(null);
   const [open, setOpen] = useState<WarmupRoutine | null>(null);
   const [editing, setEditing] = useState<WarmupRoutine | "new" | null>(null);
   const load = () => {
-    loadWarmupRoutines(userId)
+    loadWarmupRoutines(userId, kind)
       .then(setRoutines)
       .catch(() => setRoutines([]));
   };
-  useEffect(load, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [userId, kind]); // eslint-disable-line react-hooks/exhaustive-deps
   if (editing) {
     return (
       <RoutineEditor
         userId={userId}
+        kind={kind}
         routine={editing === "new" ? null : editing}
         onSaved={() => {
           setEditing(null);
@@ -717,7 +774,7 @@ export function WarmupLibrary({ userId }: { userId: string }) {
   return (
     <div className="space-y-5">
       <button type="button" onClick={() => setEditing("new")} className={`${PRIMARY} w-full`}>
-        + New warm-up
+        + {WORDS[kind].newOne}
       </button>
       {!routines ? (
         <p className="text-sm text-muted">Loading…</p>

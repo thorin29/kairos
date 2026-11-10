@@ -1,3 +1,5 @@
+import { routineFor } from "@/lib/workouts/warmup-run";
+import { parseWarmupChoice } from "@/lib/workouts/warmup-library";
 import { prisma } from "@/lib/prisma";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { cleanPlanScheme } from "@/lib/workouts/programs";
@@ -91,18 +93,20 @@ export async function addPlannedFromPoolCore(
       /** "same:3x5", "range:3x8-12", "wave"; "" or absent = any sets. */
       scheme?: string | null;
     }[];
-    /** A Warm-up's routine, chosen as it's added (v0.638): "lib:<key>" or one's own id. */
+    /** A Warm-up's (or Mobility's, v0.659) routine, chosen as it's added (v0.638): "lib:<key>" or one's own id. */
     warmup?: string | null;
   },
 ): Promise<void> {
   if (day < 0 || day > 6) return;
   let warmup: string | null = null;
-  if (input.category === "WARMUP" && input.warmup) {
-    if (input.warmup.startsWith("lib:")) warmup = input.warmup.slice(0, 80);
-    else {
-      const own = await prisma.warmupRoutine.findFirst({ where: { id: input.warmup, ownerId: userId }, select: { id: true } });
-      warmup = own?.id ?? null;
-    }
+  if ((input.category === "WARMUP" || input.category === "MOBILITY") && input.warmup) {
+    // One routine, "match" or a rotation (v0.659: any of them as it's added);
+    // every id must be one the person can use.
+    const choice = parseWarmupChoice(input.warmup);
+    const ids = choice?.mode === "one" ? [choice.id] : choice?.mode === "rotation" ? choice.ids : [];
+    let usable = !!choice;
+    for (const id of ids) if (!(await routineFor(userId, id))) usable = false;
+    warmup = usable ? input.warmup.slice(0, 500) : null;
   }
   if (!(input.category in CATEGORY_LABEL)) return;
   const label = (

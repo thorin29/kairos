@@ -547,11 +547,12 @@ describe("section order", () => {
       "WARMUP",
       "STRENGTH",
       "CONDITIONING",
+      "MOBILITY",
       "STRETCH",
       "SPORT",
     ]);
-    expect(cleanOrder(["SPORT", "STRENGTH"])).toEqual(["WARMUP", "CARDIO", "SPORT", "STRENGTH", "CONDITIONING", "STRETCH"]);
-    expect(cleanOrder(["STRENGTH", "CARDIO"])).toEqual(["WARMUP", "STRENGTH", "CARDIO", "CONDITIONING", "STRETCH", "SPORT"]);
+    expect(cleanOrder(["SPORT", "STRENGTH"])).toEqual(["WARMUP", "CARDIO", "SPORT", "STRENGTH", "CONDITIONING", "MOBILITY", "STRETCH"]);
+    expect(cleanOrder(["STRENGTH", "CARDIO"])).toEqual(["WARMUP", "STRENGTH", "CARDIO", "CONDITIONING", "MOBILITY", "STRETCH", "SPORT"]);
     expect(cleanOrder(null)[0]).toBe("WARMUP");
   });
 

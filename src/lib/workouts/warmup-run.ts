@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import {
   LIBRARY_ROUTINES,
+  MOBILITY_ROUTINES,
   LIB_PREFIX,
   cleanSteps,
   libraryRoutine,
@@ -9,6 +10,7 @@ import {
   parseWarmupChoice,
   pickWarmupId,
   withShoulderPrep,
+  type RoutineKind,
   type WarmupRoutine,
   type WarmupStep,
 } from "@/lib/workouts/warmup-library";
@@ -23,14 +25,15 @@ type Row = { id: string; name: string; steps: unknown };
 
 const toRoutine = (r: Row): WarmupRoutine => ({ id: r.id, name: r.name, steps: cleanSteps(r.steps), mine: true });
 
-/** The library's routines, then the person's own (A–Z). */
-export async function routinesFor(userId: string): Promise<WarmupRoutine[]> {
+/** The library's routines, then the person's own (A–Z), of one kind
+ *  (warm-ups, or Mobility from v0.659). */
+export async function routinesFor(userId: string, kind: RoutineKind = "warmup"): Promise<WarmupRoutine[]> {
   const own = (await prisma.warmupRoutine.findMany({
-    where: { ownerId: userId },
+    where: { ownerId: userId, kind },
     orderBy: { name: "asc" },
     select: { id: true, name: true, steps: true },
   })) as Row[];
-  return [...LIBRARY_ROUTINES, ...own.map(toRoutine)];
+  return [...(kind === "mobility" ? MOBILITY_ROUTINES : LIBRARY_ROUTINES), ...own.map(toRoutine)];
 }
 
 /** One routine by its id, if the person may use it. */
@@ -95,13 +98,31 @@ export async function dayWarmupRoutines(
   return out;
 }
 
+/** The day's Mobility routines (v0.659), keyed by each entry's stored
+ *  choice: one routine or a weekly rotation; nothing added. */
+export async function dayMobilityRoutines(
+  userId: string,
+  dateISO: string,
+  values: (string | null)[],
+): Promise<Map<string, WarmupRoutine | null>> {
+  const picked = values.map((v) => {
+    const c = parseWarmupChoice(v);
+    return c?.mode === "match" ? null : pickWarmupId(c, dateISO, "full");
+  });
+  const byId = await routinesById(userId, picked);
+  const out = new Map<string, WarmupRoutine | null>();
+  values.forEach((v, i) => out.set(v ?? "", (picked[i] && byId.get(picked[i]!)) || null));
+  return out;
+}
+
 /** Save the person's own routine (new without an id). */
 export async function saveRoutine(
   userId: string,
-  input: { id?: string | null; name: unknown; steps: unknown },
+  input: { id?: string | null; name: unknown; steps: unknown; kind?: RoutineKind },
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const kind: RoutineKind = input.kind === "mobility" ? "mobility" : "warmup";
   const name = typeof input.name === "string" ? input.name.trim().slice(0, 60) : "";
-  if (name.length < 2) return { ok: false, error: "Name the warm-up." };
+  if (name.length < 2) return { ok: false, error: kind === "mobility" ? "Name the routine." : "Name the warm-up." };
   const steps: WarmupStep[] = cleanSteps(input.steps);
   if (steps.length === 0) return { ok: false, error: "Add a step." };
   if (input.id && !input.id.startsWith(LIB_PREFIX)) {
@@ -112,7 +133,7 @@ export async function saveRoutine(
     if (n.count === 1) return { ok: true, id: input.id };
   }
   const made = (await prisma.warmupRoutine.create({
-    data: { ownerId: userId, name, steps: steps as never },
+    data: { ownerId: userId, name, steps: steps as never, kind },
     select: { id: true },
   })) as { id: string };
   return { ok: true, id: made.id };
@@ -124,28 +145,42 @@ export async function deleteRoutine(userId: string, id: string): Promise<void> {
   if (n.count > 0) await prisma.plannedWorkout.updateMany({ where: { userId, warmup: id }, data: { warmup: null } });
 }
 
-/** A Warm-up plan entry's routine (null: a plain check). */
+/** A Warm-up or Mobility plan entry's routine (null: a plain check). */
 export async function setPlanWarmup(userId: string, plannedWorkoutId: string, warmup: string | null): Promise<boolean> {
   // One routine, "match", or "rot:<id>,…" (v0.655): every id must be usable.
   const choice = parseWarmupChoice(warmup);
   const ids = choice?.mode === "one" ? [choice.id] : choice?.mode === "rotation" ? choice.ids : [];
   for (const id of ids) if (!(await routineFor(userId, id))) return false;
   const n = (await prisma.plannedWorkout.updateMany({
-    where: { id: plannedWorkoutId, userId, category: "WARMUP" },
+    where: { id: plannedWorkoutId, userId, category: { in: ["WARMUP", "MOBILITY"] as never } },
     data: { warmup: warmup || null },
   })) as { count: number };
   return n.count === 1;
 }
 
-/** The day's Warm-up plan entries and their routines (null: a plain check). */
+/** The day's Warm-up and Mobility plan entries and their routines (null: a
+ *  plain check). */
 export async function warmupsForDay(
   userId: string,
   dateISO: string,
 ): Promise<{ plannedWorkoutId: string; routine: WarmupRoutine | null }[]> {
   const rows = (await prisma.plannedWorkout.findMany({
-    where: { userId, dayOfWeek: new Date(`${dateISO}T00:00:00Z`).getUTCDay(), category: "WARMUP", isRest: false },
-    select: { id: true, warmup: true },
-  })) as { id: string; warmup: string | null }[];
-  const byValue = await dayWarmupRoutines(userId, dateISO, rows.map((r) => r.warmup));
-  return rows.map((r) => ({ plannedWorkoutId: r.id, routine: byValue.get(r.warmup ?? "") ?? null }));
+    where: {
+      userId,
+      dayOfWeek: new Date(`${dateISO}T00:00:00Z`).getUTCDay(),
+      category: { in: ["WARMUP", "MOBILITY"] as never },
+      isRest: false,
+    },
+    select: { id: true, warmup: true, category: true },
+  })) as { id: string; warmup: string | null; category: string }[];
+  const warm = rows.filter((r) => r.category === "WARMUP");
+  const mob = rows.filter((r) => r.category === "MOBILITY");
+  const [w, m] = await Promise.all([
+    dayWarmupRoutines(userId, dateISO, warm.map((r) => r.warmup)),
+    dayMobilityRoutines(userId, dateISO, mob.map((r) => r.warmup)),
+  ]);
+  return rows.map((r) => ({
+    plannedWorkoutId: r.id,
+    routine: (r.category === "MOBILITY" ? m : w).get(r.warmup ?? "") ?? null,
+  }));
 }

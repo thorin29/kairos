@@ -1,5 +1,5 @@
 import "server-only";
-import { dayWarmupRoutines } from "@/lib/workouts/warmup-run";
+import { dayMobilityRoutines, dayWarmupRoutines } from "@/lib/workouts/warmup-run";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
@@ -209,7 +209,8 @@ export async function setWarmupDone(
       where: { userId, date: toDateColumn(dateISO), isRest: false, name: plan.name, category: plan.category as never },
     });
   }
-  // A warm-up alone never finishes a day.
+  // A warm-up alone never finishes a day; Mobility (v0.659) counts like any
+  // plan, so the plan decides.
   await settleWorkoutTask(userId, dateISO, { fromSkip: !done });
   return true;
 }
@@ -217,11 +218,12 @@ export async function setWarmupDone(
 export type SimplePlan = {
   plannedWorkoutId: string;
   name: string;
-  /** WARMUP, or CARDIO (an older Rowing / Running / Rucking plan counts as CARDIO). */
-  category: "WARMUP" | "CARDIO";
+  /** WARMUP, MOBILITY (v0.659), or CARDIO (an older Rowing / Running /
+   *  Rucking plan counts as CARDIO). */
+  category: "WARMUP" | "MOBILITY" | "CARDIO";
   done: boolean;
   skipped: boolean;
-  /** A Warm-up's routine (v0.622); null: a plain check. */
+  /** A Warm-up's or Mobility's routine (v0.622); null: a plain check. */
   routine?: WarmupRoutine | null;
 };
 
@@ -239,7 +241,7 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
         dayOfWeek: new Date(`${dateISO}T00:00:00Z`).getUTCDay(),
         isRest: false,
         hiitWorkoutId: null,
-        category: { in: ["WARMUP", ...CARDIO_CATEGORIES] as never },
+        category: { in: ["WARMUP", "MOBILITY", ...CARDIO_CATEGORIES] as never },
         createdAt: { lt: new Date(Date.parse(`${dateISO}T00:00:00Z`) + 86_400_000) },
       },
       orderBy: { sortOrder: "asc" },
@@ -261,21 +263,27 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
     dateISO,
     plans.filter((p) => p.category === "WARMUP").map((p) => p.warmup),
   );
+  const mobility = await dayMobilityRoutines(
+    userId,
+    dateISO,
+    plans.filter((p) => p.category === "MOBILITY").map((p) => p.warmup),
+  );
   const anyCardio = sessions.some((row) => row.category != null && CARDIO_CATEGORIES.includes(row.category));
   const skipped = new Set(skips.map((k) => k.slot));
   return plans
     .filter((p) => p._count.exercises === 0)
     .map((p) => {
-      const warmup = p.category === "WARMUP";
+      const tap = p.category === "WARMUP" || p.category === "MOBILITY";
+      const category = tap ? (p.category as "WARMUP" | "MOBILITY") : ("CARDIO" as const);
       return {
         plannedWorkoutId: p.id,
         name: p.name,
-        category: warmup ? ("WARMUP" as const) : ("CARDIO" as const),
-        done: warmup
-          ? sessions.some((row) => row.category === "WARMUP" && (row.name ?? "").slice(0, 40) === p.name.slice(0, 40))
+        category,
+        done: tap
+          ? sessions.some((row) => row.category === category && (row.name ?? "").slice(0, 40) === p.name.slice(0, 40))
           : anyCardio,
         skipped: skipped.has(`plan:${p.id}`),
-        ...(warmup ? { routine: routines.get(p.warmup ?? "") ?? null } : {}),
+        ...(tap ? { routine: (category === "MOBILITY" ? mobility : routines).get(p.warmup ?? "") ?? null } : {}),
       };
     });
 }

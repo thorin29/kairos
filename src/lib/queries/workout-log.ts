@@ -1442,7 +1442,7 @@ function planDetail(w: {
   }
   if (w.isRest) return "";
   if (w.category === "CARDIO") return "Row, run, ruck or other";
-  if (w.category === "WARMUP") return "";
+  if (w.category === "WARMUP" || w.category === "MOBILITY") return "";
   if (w.exercises.length > 0) {
     return w.exercises
       .map((e) => (e.tracked ? e.poolExercise?.name ?? "—" : `${e.poolExercise?.name ?? "—"} (no log)`))
@@ -1497,7 +1497,7 @@ export const coreWorkoutView = (w: CoreWorkout): CoreWorkoutView => ({
 });
 
 // Rowing, running and rucking are one Cardio in the plan picker (v0.615).
-const PLAN_CAT_ORDER = ["WEIGHTS", "HIIT", "CARDIO", "WARMUP", "STRETCHING", "ISOMETRIC", "SPORT"];
+const PLAN_CAT_ORDER = ["WEIGHTS", "HIIT", "CARDIO", "WARMUP", "MOBILITY", "STRETCHING", "ISOMETRIC", "SPORT"];
 
 export async function loadPlanOptions(userId: string): Promise<PlanOptions> {
   const categories: PlanCategoryOption[] = PLAN_CAT_ORDER.map((c) => {

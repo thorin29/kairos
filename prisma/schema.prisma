@@ -1114,6 +1114,8 @@ enum WorkoutCategory {
   CARDIO
   /// A plan's warm-up (v0.615): no movements, done with a tap.
   WARMUP
+  /// Mobility (v0.659): a routine of holds and slow reps, done with a tap.
+  MOBILITY
 }
 
 enum WorkoutImplement {
@@ -1346,10 +1348,13 @@ model WarmupRoutine {
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   name      String
   steps     Json     @default("[]")
+  /// "warmup" or "mobility" (v0.659).
+  kind      String   @default("warmup")
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
   @@index([ownerId])
+  @@index([ownerId, kind])
 }
 
 // A workout rotation: an ordered cycle of days that repeats independent of the

@@ -1745,12 +1745,14 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [ ] ice-time: follow the rink's schedule index page to pick up each July's
   new links (tracked in the ice-time repo).
 
+- [ ] The day's "+ Conditioning" becomes "+ Additional": a picker for
+  conditioning, mobility, stretching or isometrics, added to that day only.
 - [ ] Adjust today, Hurt: when nothing is left to lift, offer a day for the
   healthy parts (e.g. upper body for a knee) instead of only Rest / skip.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.658.0 (migrations through 144_event_type_flex_time).
-- App versionName 0.468.0 / versionCode 535 / CLIENT_BUILD 535.
+- Web APP_VERSION 0.659.0 (migrations through 145_mobility).
+- App versionName 0.469.0 / versionCode 536 / CLIENT_BUILD 536.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

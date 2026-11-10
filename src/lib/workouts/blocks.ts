@@ -13,10 +13,10 @@ import {
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
 
-export type BlockKind = "WARMUP" | "CARDIO" | "STRENGTH" | "CONDITIONING" | "STRETCH" | "SPORT" | "OTHER";
+export type BlockKind = "WARMUP" | "CARDIO" | "STRENGTH" | "CONDITIONING" | "MOBILITY" | "STRETCH" | "SPORT" | "OTHER";
 
 /** The sections a person can put in order (OTHER always comes last). */
-export const SECTION_KINDS = ["WARMUP", "CARDIO", "STRENGTH", "CONDITIONING", "STRETCH", "SPORT"] as const;
+export const SECTION_KINDS = ["WARMUP", "CARDIO", "STRENGTH", "CONDITIONING", "MOBILITY", "STRETCH", "SPORT"] as const;
 export type SectionKind = (typeof SECTION_KINDS)[number];
 /** The order before anyone sets one: the mockup's. */
 export const DEFAULT_ORDER: readonly SectionKind[] = SECTION_KINDS;
@@ -42,10 +42,10 @@ export function cleanOrder(raw: unknown): SectionKind[] {
   return out;
 }
 
-/** Warm-up and Cardio plans hold no movements: done with a tap, or by any
- *  cardio logged that day. */
+/** Warm-up, Mobility and Cardio plans hold no movements: done with a tap,
+ *  or by any cardio logged that day. */
 export function isSimpleCategory(category: string | null | undefined): boolean {
-  return category === "WARMUP" || category === "CARDIO";
+  return category === "WARMUP" || category === "MOBILITY" || category === "CARDIO";
 }
 
 /** Categories whose sessions count as cardio (a Cardio plan is done by any). */
@@ -103,6 +103,8 @@ export function blockKind(category: WorkoutCategory | null, hasHiit: boolean): B
       return "CARDIO";
     case "WARMUP":
       return "WARMUP";
+    case "MOBILITY":
+      return "MOBILITY";
     case "STRETCHING":
       return "STRETCH";
     case "SPORT":
@@ -121,6 +123,7 @@ const KIND_TITLE: Record<BlockKind, string> = {
   CARDIO: "Cardio",
   STRENGTH: "",
   CONDITIONING: "Conditioning",
+  MOBILITY: "Mobility",
   STRETCH: "Stretching",
   SPORT: "Sport",
   OTHER: "Other",
@@ -132,6 +135,7 @@ export const KIND_LABEL: Record<SectionKind, string> = {
   CARDIO: "Cardio",
   STRENGTH: "Strength (each muscle group)",
   CONDITIONING: "Conditioning",
+  MOBILITY: "Mobility",
   STRETCH: "Stretching",
   SPORT: "Sport",
 };
@@ -237,6 +241,7 @@ const HEADLINE: Record<BlockKind, string> = {
   CARDIO: "Cardio",
   STRENGTH: "Strength",
   CONDITIONING: "Conditioning",
+  MOBILITY: "Mobility",
   STRETCH: "Stretching",
   SPORT: "Sport",
   OTHER: "Workout",

@@ -418,7 +418,7 @@ export async function applyImport(
         isRest: e.rest,
         hiitWorkoutId,
         sortOrder,
-        warmup: e.category === "WARMUP" && e.warmup && (await routineFor(userId, e.warmup)) ? e.warmup : null,
+        warmup: (e.category === "WARMUP" || e.category === "MOBILITY") && e.warmup && (await routineFor(userId, e.warmup)) ? e.warmup : null,
         exercises: { create: exercises.map((x) => ({ ...x, metric: x.metric as never })) },
       },
     });

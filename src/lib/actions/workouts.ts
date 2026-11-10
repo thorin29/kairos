@@ -45,7 +45,7 @@ import {
   setPlanWarmup,
   warmupsForDay,
 } from "@/lib/workouts/warmup-run";
-import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
+import { cleanRoutineKind, type RoutineKind, type WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { coreWorkoutsFor, deleteCoreWorkout, saveCoreWorkout, setCoreDay } from "@/lib/workouts/core-run";
 import type { CoreWorkout } from "@/lib/workouts/core-library";
 import { cardioDay, logCardio, removeCardio, setWarmupDone, type CardioEntry, type CardioIn } from "@/lib/workouts/cardio-run";
@@ -1736,17 +1736,20 @@ export async function deleteMyPlan(userId: string, id: string): Promise<void> {
 
 // --- warm-up routines (v0.622) ----------------------------------------------
 
-export async function loadWarmupRoutines(userId: string): Promise<WarmupRoutine[]> {
+export async function loadWarmupRoutines(userId: string, kind: RoutineKind = "warmup"): Promise<WarmupRoutine[]> {
   await requireInteractive();
   await requireCanActFor(userId);
-  return routinesFor(userId);
+  return routinesFor(userId, cleanRoutineKind(kind));
 }
 
 /** Save one's own routine (new without an id). */
-export async function saveWarmupRoutine(userId: string, input: { id?: string | null; name: string; steps: unknown }) {
+export async function saveWarmupRoutine(
+  userId: string,
+  input: { id?: string | null; name: string; steps: unknown; kind?: RoutineKind },
+) {
   await requireInteractive();
   await requireCanActFor(userId);
-  const r = await saveRoutine(userId, input);
+  const r = await saveRoutine(userId, { ...input, kind: cleanRoutineKind(input.kind) });
   if (r.ok) refresh();
   return r;
 }

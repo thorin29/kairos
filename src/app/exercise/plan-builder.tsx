@@ -55,6 +55,7 @@ const PLAN_CATEGORIES: WorkoutCategory[] = [
   "HIIT",
   "CARDIO",
   "WARMUP",
+  "MOBILITY",
   "STRETCHING",
   "ISOMETRIC",
   "SPORT",
@@ -427,8 +428,13 @@ function DayRow({
                 </div>
               ) : w.category === "CARDIO" ? (
                 <div className="mt-0.5 text-xs text-muted">Row, run, ruck or other</div>
-              ) : w.category === "WARMUP" ? (
-                <WarmupPlanLine userId={userId} plannedWorkoutId={w.id} warmup={w.warmup ?? null} />
+              ) : w.category === "WARMUP" || w.category === "MOBILITY" ? (
+                <WarmupPlanLine
+                  userId={userId}
+                  plannedWorkoutId={w.id}
+                  warmup={w.warmup ?? null}
+                  kind={w.category === "MOBILITY" ? "mobility" : "warmup"}
+                />
               ) : (
                 <div className="mt-0.5 text-xs text-muted">
                   {w.category
@@ -578,7 +584,7 @@ function AddWorkoutModal({
         await addPlannedWorkoutFromPool(userId, day, {
           category,
           muscleGroup: isWeights ? muscle : null,
-          ...(category === "WARMUP" ? { warmup: warmupId } : {}),
+          ...(category === "WARMUP" || category === "MOBILITY" ? { warmup: warmupId } : {}),
           exercises: metricOnly
             ? []
             : chosen.map(([poolExerciseId, p]) => ({
@@ -755,8 +761,14 @@ function AddWorkoutModal({
                 )}
               </select>
             </div>
-          ) : category === "WARMUP" ? (
-            <WarmupChooser userId={userId} value={warmupId} onChange={setWarmupId} />
+          ) : category === "WARMUP" || category === "MOBILITY" ? (
+            <WarmupChooser
+              key={category}
+              userId={userId}
+              kind={category === "MOBILITY" ? "mobility" : "warmup"}
+              value={warmupId}
+              onChange={setWarmupId}
+            />
           ) : simple ? null : metricOnly ? (
             <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">
               Adds a {CATEGORY_LABEL[category].toLowerCase()} day. You&rsquo;ll

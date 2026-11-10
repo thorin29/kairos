@@ -6,7 +6,7 @@ import { setWarmupDone } from "@/lib/workouts/cardio-run";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** A Warm-up plan done or not (v0.615). Body: { date, plannedWorkoutId, done, completedOn? }.
+/** A Warm-up (or Mobility, v0.659) plan done or not (v0.615). Body: { date, plannedWorkoutId, done, completedOn? }.
  *  The whole answer each time, so safe to replay. */
 export async function POST(req: NextRequest) {
   const authed = await requireDevice(req);

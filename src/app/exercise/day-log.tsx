@@ -628,11 +628,12 @@ export function DayLog({
                           />
                         );
                       }
-                      if (w.category === "WARMUP") {
+                      if (w.category === "WARMUP" || w.category === "MOBILITY") {
                         const done = cardDone(w.id);
                         return (
                           <WarmupRow
                             key={`${date}:${w.id}`}
+                            kind={w.category === "MOBILITY" ? "mobility" : "warmup"}
                             userId={userId}
                             plannedWorkoutId={w.id}
                             name={w.name}
@@ -882,7 +883,10 @@ function WarmupRow({
   skipped,
   onDone,
   onSkip,
+  kind = "warmup",
 }: {
+  /** Mobility (v0.659) shows the same way. */
+  kind?: "warmup" | "mobility";
   userId: string;
   plannedWorkoutId: string;
   name: string;
@@ -916,6 +920,7 @@ function WarmupRow({
       {open && (
         <WarmupWindow
           userId={userId}
+          kind={kind}
           plannedWorkoutId={plannedWorkoutId}
           routine={routine}
           done={finished}

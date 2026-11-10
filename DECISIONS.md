@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-11 — Mobility (v0.659.0 / app 0.469.0)
+
+- A new category, `MOBILITY` (migration 145), built on the Warm-up pieces: a
+  plan entry with no movements, its routine in `PlannedWorkout.warmup` (one
+  id or `rot:<ids>`, a step each week, no "Match the day"), done with a tap
+  through the same `setWarmupDone`. Unlike a Warm-up it isn't optional: a
+  planned Mobility holds the day open like any workout.
+- Routines share `WarmupRoutine`, with a `kind` column ("warmup" |
+  "mobility"); the library is `MOBILITY_LIBRARY` (keys `mob-*`), seven
+  routines: Hips, hang and squat (rotational hinge, deep squat rock, dead
+  hang, external rotation on the incline bench, band internal rotation PNF,
+  long-lunge hip flexor, horse stance), Hip opener, Spine and upper back,
+  Shoulders and overhead, Ankles and knees, Skater hips, and Joint circles
+  (CARs).
+- Steps gain `cue` (how to do it), shown behind an ⓘ and editable as
+  "How (optional)". Every library mobility step has one.
+- Its own day section, `MOBILITY`, after Conditioning by default.
+- Short on time drops Mobility (it isn't a pick); Low energy and Sick keep it.
+- `plan/add-pool` now takes a rotation (or "match") for a Warm-up as it's
+  added, not only one routine.
+- Next (ROADMAP): the day's "+ Conditioning" becomes "+ Additional" with a
+  picker — conditioning, mobility, stretching, isometrics.
+
 ## 2026-11 — Adjust today replaces Go light (v0.658.0 / app 0.468.0)
 
 - Four paths, each its own short flow; stored as the day answer

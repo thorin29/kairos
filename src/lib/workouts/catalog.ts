@@ -25,7 +25,9 @@ export type WorkoutCategory =
   /** A plan's "any cardio" (v0.615). */
   | "CARDIO"
   /** A plan's warm-up (v0.615). */
-  | "WARMUP";
+  | "WARMUP"
+  /** Mobility (v0.659): a routine, done with a tap. */
+  | "MOBILITY";
 
 export type Implement =
   | "BARBELL"
@@ -47,6 +49,7 @@ export const CATEGORY_LABEL: Record<WorkoutCategory, string> = {
   RUCKING: "Rucking",
   CARDIO: "Cardio",
   WARMUP: "Warm-up",
+  MOBILITY: "Mobility",
 };
 
 export const IMPLEMENT_LABEL: Record<Implement, string> = {

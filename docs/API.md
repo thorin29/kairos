@@ -974,6 +974,15 @@ POST /api/v1/workouts/warmups         { "id"?,"name","steps":[Step] } → { "sta
 POST /api/v1/workouts/warmups/delete  { "id" }                        // entries using it become a plain check
 POST /api/v1/workouts/plan/warmup     { "plannedWorkoutId","warmup":id|null }
 ```
+v0.659 Mobility: category `MOBILITY` (a plan entry with no movements, done
+with `POST /workouts/warmup` like a Warm-up, and counting toward the day
+unlike one); `GET /workouts/warmups?kind=mobility` lists Mobility routines
+(library ids `lib:mob-*`), `POST /workouts/warmups` takes `kind`; steps add
+`cue` (how to do it). A Mobility entry's `warmup` is one routine id or
+`rot:<id>,…` (weekly); `plan/add-pool` accepts either for Warm-up or
+Mobility. `simple[]` items can be `category: "MOBILITY"`; section kinds add
+`MOBILITY` (after Conditioning by default).
+
 `GET /api/v1/workouts` `simple[]` adds `routine` (a Warm-up's routine or
 null); `GET /api/v1/workouts/plan` workouts add `warmup` (the id or null);
 `GET /api/v1/workouts/programs` adds `warmups` (routines) and

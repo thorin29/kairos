@@ -99,6 +99,7 @@ export function WorkoutsGrid({
     personal ? (people[0]?.user.id ?? null) : null,
   );
   const [step, setStep] = useState<Step>("menu");
+  const [routineKind, setRoutineKind] = useState<"warmup" | "mobility">("warmup");
 
   // The overlay is one scrolling container and the steps swap inside it, so
   // scrolling down the menu to reach "Recent workouts" and then opening it
@@ -319,8 +320,8 @@ export function WorkoutsGrid({
                     />
                     <ActionButton
                       icon={FlameIcon}
-                      label="Warm-ups"
-                      sub="Create / edit"
+                      label="Routines"
+                      sub="Warm-up · Mobility"
                       onClick={() => setStep("warmups")}
                     />
                   </div>
@@ -384,8 +385,22 @@ export function WorkoutsGrid({
               {step === "warmups" && (
                 <div className="mt-4">
                   <BackLink onClick={() => setStep("menu")} />
-                  <h3 className="mb-3 font-display text-lg font-semibold">Warm-ups</h3>
-                  <WarmupLibrary userId={open.user.id} />
+                  <h3 className="mb-3 font-display text-lg font-semibold">Routines</h3>
+                  {/* Warm-ups and Mobility (v0.659) are both routines. */}
+                  <div className="mb-4 grid grid-cols-2 overflow-hidden rounded-xl border border-accent text-sm font-semibold">
+                    {(["warmup", "mobility"] as const).map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        aria-pressed={routineKind === k}
+                        onClick={() => setRoutineKind(k)}
+                        className={`min-h-[40px] ${routineKind === k ? "bg-accent text-on-accent" : "text-accent"}`}
+                      >
+                        {k === "warmup" ? "Warm-ups" : "Mobility"}
+                      </button>
+                    ))}
+                  </div>
+                  <WarmupLibrary key={routineKind} userId={open.user.id} kind={routineKind} />
                 </div>
               )}
 
@@ -1700,6 +1715,7 @@ const CATEGORY_CFG: Record<WorkoutCategory, CatCfg> = {
   ISOMETRIC: { choices: ["DURATION", "REPS"] },
   CARDIO: { locked: "DURATION" },
   WARMUP: { locked: "DURATION" },
+  MOBILITY: { locked: "DURATION" },
 };
 
 const METRIC_LABEL: Record<Metric, string> = {
