@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Warm-up card back to name + routine (v0.660.0 / app 0.470.0)
+
+0.658 listed every step on the day's warm-up card; the ask was to see
+Shoulder prep among the moves inside the routine, which it already is. The
+card shows the entry and routine names again. App: the day header's date no
+longer wraps — a weighted Spacer took half the row from it.
+
 ## 2026-11 — Mobility (v0.659.0 / app 0.469.0)
 
 - A new category, `MOBILITY` (migration 145), built on the Warm-up pieces: a

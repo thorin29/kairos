@@ -28,7 +28,7 @@ import { ConditioningCard } from "./conditioning-card";
 import { ConditioningTimer } from "./conditioning-timer";
 import { EffortPicker } from "@/components/effort-picker";
 import { WarmupWindow } from "./warmup-window";
-import { stepAmount, type WarmupRoutine } from "@/lib/workouts/warmup-library";
+import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { AddConditioning, BenchmarkCard, PickConditioningCard } from "./conditioning-picker";
 import type { BenchmarkState, PickPlan } from "@/lib/workouts/wod-run";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
@@ -905,17 +905,6 @@ function WarmupRow({
       <button type="button" onClick={() => setOpen(true)} className="min-w-0 flex-1 text-left">
         <span className="block truncate text-sm font-semibold">{name}</span>
         {routine && <span className="block truncate text-xs text-muted">{routine.name}</span>}
-        {/* Each move, Shoulder prep's included, in line (v0.658). */}
-        {routine && routine.steps.length > 0 && (
-          <ul className="mt-1 space-y-0.5 text-xs text-muted">
-            {routine.steps.map((st, i) => (
-              <li key={i} className="flex justify-between gap-3">
-                <span className="min-w-0 truncate">{st.name}</span>
-                <span className="tabular shrink-0">{stepAmount(st)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
       </button>
       {open && (
         <WarmupWindow
