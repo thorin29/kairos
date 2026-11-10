@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Warm-up on a sport day (v0.662.0 / app 0.472.0)
+
+- A sport day is one with a sport-flagged calendar event the person is in
+  (`sportOn`, same people as the "Did you play?" prompts), whether or not it
+  has happened yet.
+- The planned workout's warm-up comes first: nothing changes unless chosen.
+  Inside the Warm-up window a switch picks Workout or the sport ("Hockey" for
+  anything on the ice, else the event's title); the sport's routine is the
+  library's Hockey legs, for that day only (WorkoutSuggestionAnswer key
+  `warmupFor`). "None" is the card's existing Skip, which doesn't count
+  against the day.
+- Whenever the day's Warm-up isn't for the sport — no Warm-up planned, or a
+  morning lift and an evening game — the Warm-up section shows an optional
+  "Hockey warm-up" row that opens the routine with timers. It's never part
+  of the plan and isn't logged.
+
 ## 2026-11 — Isometric days (v0.661.0 / app 0.471.0)
 
 - A third rotation kind, `iso`, on the Core machinery: `ISO_LIBRARY` (six

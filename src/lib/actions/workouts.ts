@@ -44,6 +44,9 @@ import {
   saveRoutine,
   setPlanWarmup,
   warmupsForDay,
+  setWarmupForSport,
+  sportDayView,
+  type SportDayView,
 } from "@/lib/workouts/warmup-run";
 import { cleanRoutineKind, type RoutineKind, type WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { coreWorkoutsFor, deleteCoreWorkout, saveCoreWorkout, setCoreDay } from "@/lib/workouts/core-run";
@@ -692,6 +695,15 @@ export async function restDay(userId: string, dateISO: string): Promise<void> {
   refresh();
 }
 
+/** A sport day's Warm-up (v0.662): for the sport, or for the planned workout. */
+export async function setWarmupForSportAction(userId: string, dateISO: string, forSport: boolean): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
+  await setWarmupForSport(userId, dateISO, forSport);
+  refresh();
+}
+
 /** Adjust today (v0.658), Short on time: the estimates and the preview. */
 export async function adjustShortAction(
   userId: string,
@@ -1265,6 +1277,8 @@ export async function loadDayLog(
   state: DayLogState;
   /** Today's adjustment (v0.658), with what it drops. */
   adjusted: AdjustView | null;
+  /** A sport on the calendar that day (v0.662): the warm-up switch. */
+  sportDay: SportDayView | null;
   loggedByPool: Record<string, LoggedSet>;
   order: SectionKind[];
   cardio: CardioEntry[];
@@ -1279,9 +1293,10 @@ export async function loadDayLog(
   await requireInteractive();
   await requireCanActFor(userId);
   if (!ISO.test(dateISO)) throw new Error("Bad date");
-  const [state, adjusted, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone, warmups] = await Promise.all([
+  const [state, adjusted, sportDay, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone, warmups] = await Promise.all([
     loadDayLogState(userId, dateISO),
     adjustView(userId, dateISO),
+    sportDayView(userId, dateISO),
     loadLoggedWeights(userId, dateISO),
     orderForDay(userId, dayOfWeek(dateISO)),
     cardioDay(userId, dateISO),
@@ -1291,7 +1306,7 @@ export async function loadDayLog(
     conditioningOnDay(userId, dateISO),
     warmupsForDay(userId, dateISO),
   ]);
-  return { state, adjusted, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone, warmups };
+  return { state, adjusted, sportDay, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone, warmups };
 }
 
 // --- conditioning: Pick one, Build one, the monthly benchmark (v0.617) ------

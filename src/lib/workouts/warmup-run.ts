@@ -1,5 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { toDateColumn } from "@/lib/dates";
+import { sportOn } from "@/lib/sport/day";
 import {
   LIBRARY_ROUTINES,
   MOBILITY_ROUTINES,
@@ -75,6 +77,10 @@ export async function dayWarmupRoutines(
   dateISO: string,
   values: (string | null)[],
 ): Promise<Map<string, WarmupRoutine | null>> {
+  // Warming up for the day's sport instead (v0.662): its routine, that day only.
+  if (values.length > 0 && (await sportDayView(userId, dateISO))?.forSport) {
+    return new Map(values.map((v) => [v ?? "", SPORT_WARMUP]));
+  }
   const strength = (await prisma.plannedWorkout.findMany({
     where: {
       userId,
@@ -183,4 +189,42 @@ export async function warmupsForDay(
     plannedWorkoutId: r.id,
     routine: (r.category === "MOBILITY" ? m : w).get(r.warmup ?? "") ?? null,
   }));
+}
+
+// --- a sport on the day (v0.662) ----------------------------------------------
+
+/** The warm-up for a game or skate: the library's Hockey legs. */
+const SPORT_WARMUP: WarmupRoutine = libraryRoutine("lib:hockey-legs") as WarmupRoutine;
+const FOR_KEY = "warmupFor";
+
+/**
+ * A day with a sport on the calendar: what it's called, whether the day's
+ * Warm-up is for it instead of the planned workout (the plan's comes first
+ * unless changed), and its routine. Null on a day without one.
+ */
+export type SportDayView = { label: string; forSport: boolean; routine: WarmupRoutine };
+
+export async function sportDayView(userId: string, dateISO: string): Promise<SportDayView | null> {
+  const sport = await sportOn(userId, dateISO);
+  if (!sport) return null;
+  const row = (await prisma.workoutSuggestionAnswer.findUnique({
+    where: { userId_date_key_slot: { userId, date: toDateColumn(dateISO), key: FOR_KEY, slot: "" } },
+    select: { answer: true },
+  })) as { answer: string } | null;
+  return { label: sport.title, forSport: row?.answer === "sport", routine: SPORT_WARMUP };
+}
+
+/** The day's Warm-up for its sport (true) or for the planned workout (false). */
+export async function setWarmupForSport(userId: string, dateISO: string, forSport: boolean): Promise<void> {
+  const date = toDateColumn(dateISO);
+  const where = { userId_date_key_slot: { userId, date, key: FOR_KEY, slot: "" } };
+  if (forSport) {
+    await prisma.workoutSuggestionAnswer.upsert({
+      where,
+      create: { userId, date, key: FOR_KEY, slot: "", answer: "sport" },
+      update: { answer: "sport" },
+    });
+  } else {
+    await prisma.workoutSuggestionAnswer.deleteMany({ where: { userId, date, key: FOR_KEY, slot: "" } });
+  }
 }

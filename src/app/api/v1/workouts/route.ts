@@ -19,6 +19,7 @@ import { benchmarkFor, conditioningOnDay, pickPlansFor } from "@/lib/workouts/wo
 import { programInfoFor } from "@/lib/workouts/program-run";
 import { dayLightFactor, daySuggestionFor } from "@/lib/workouts/suggest-run";
 import { adjustView } from "@/lib/workouts/adjust-run";
+import { sportDayView } from "@/lib/workouts/warmup-run";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,6 +97,8 @@ export async function GET(req: NextRequest) {
     light: await dayLightFactor(userId, date),
     // v0.658: today's adjustment — { mode, label, dropped } — or null.
     adjusted,
+    // v0.662: a sport on the calendar — { label, forSport, routine } — or null.
+    sportDay: await sportDayView(userId, date),
     // v0.615: the person's section order for this weekday; the day's Warm-up
     // and Cardio plans (no movements, so not in `workouts`); and the day's
     // cardio, Concept2 rows included, each with how it felt.

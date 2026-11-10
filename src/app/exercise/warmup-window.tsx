@@ -119,6 +119,7 @@ export function WarmupWindow({
   onClose,
   onChanged,
   kind = "warmup",
+  sport,
 }: {
   userId: string;
   plannedWorkoutId: string;
@@ -129,10 +130,27 @@ export function WarmupWindow({
   onChanged: () => void;
   /** Mobility (v0.659) uses the same window. */
   kind?: RoutineKind;
+  /** A sport on the day (v0.662): warm up for the planned workout or for it. */
+  sport?: { label: string; forSport: boolean; onChange: (forSport: boolean) => void };
 }) {
   const [switching, setSwitching] = useState(false);
   return (
     <Modal title={routine?.name ?? WORDS[kind].title} onClose={onClose}>
+      {sport && !switching && (
+        <div className="mb-4 grid grid-cols-2 overflow-hidden rounded-xl border border-accent text-sm font-semibold">
+          {[false, true].map((v) => (
+            <button
+              key={String(v)}
+              type="button"
+              aria-pressed={sport.forSport === v}
+              onClick={() => sport.forSport !== v && sport.onChange(v)}
+              className={`min-h-[40px] ${sport.forSport === v ? "bg-accent text-on-accent" : "text-accent"}`}
+            >
+              {v ? sport.label : "Workout"}
+            </button>
+          ))}
+        </div>
+      )}
       {switching ? (
         <RoutinePicker
           userId={userId}

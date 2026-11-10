@@ -13,6 +13,7 @@ import {
   loadWorkoutWeek,
   restDay,
   applyAdjustAction,
+  setWarmupForSportAction,
   saveMovementFeedback,
   answerWorkoutSuggestion,
   saveMovementSets,
@@ -27,7 +28,7 @@ import { CardioCard } from "./cardio-card";
 import { ConditioningCard } from "./conditioning-card";
 import { ConditioningTimer } from "./conditioning-timer";
 import { EffortPicker } from "@/components/effort-picker";
-import { WarmupWindow } from "./warmup-window";
+import { WarmupSteps, WarmupWindow } from "./warmup-window";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { rotationKindOf, testCountFor, testTitleFor } from "@/lib/workouts/core-library";
 import { AddConditioning, BenchmarkCard, PickConditioningCard } from "./conditioning-picker";
@@ -35,6 +36,7 @@ import type { BenchmarkState, PickPlan } from "@/lib/workouts/wod-run";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
 import type { CardioEntry } from "@/lib/workouts/cardio-run";
 import type { AdjustView } from "@/lib/workouts/adjust-run";
+import type { SportDayView } from "@/lib/workouts/warmup-run";
 import type { DayLogState, LoggedOther, MovementLog, MovementSetRow, WeekStripDay } from "@/lib/queries/workout-log";
 import type { PersonWorkout, PlanExercise, PlanWorkout } from "@/lib/queries/workouts";
 import {
@@ -132,6 +134,7 @@ export function DayLog({
   const [data, setData] = useState<{
     state: DayLogState;
     adjusted?: AdjustView | null;
+    sportDay?: SportDayView | null;
     loggedByPool: Record<string, LoggedSet>;
     order: SectionKind[];
     cardio: CardioEntry[];
@@ -300,7 +303,13 @@ export function DayLog({
   );
   // A Conditioning section is always there, so + Conditioning sits where the
   // person's order puts conditioning, even on a day with none planned (v0.625).
-  const withConditioning = useMemo(() => withSection(sections, "CONDITIONING", order), [sections, order]);
+  // A sport on the day (v0.662) always has a Warm-up section, for its
+  // optional warm-up when the day's own isn't for it.
+  const sportDay = data?.sportDay ?? null;
+  const withConditioning = useMemo(() => {
+    const s = withSection(sections, "CONDITIONING", order);
+    return sportDay ? withSection(s, "WARMUP", order) : s;
+  }, [sections, order, sportDay]);
   const progress = dayProgress(sections, isDone);
   const late = date < todayISO;
   const completedOnISO = late ? todayISO : undefined;
@@ -638,6 +647,19 @@ export function DayLog({
                             userId={userId}
                             plannedWorkoutId={w.id}
                             name={w.name}
+                            sport={
+                              w.category === "WARMUP" && sportDay
+                                ? {
+                                    label: sportDay.label,
+                                    forSport: sportDay.forSport,
+                                    onChange: (v: boolean) =>
+                                      startTransition(async () => {
+                                        await setWarmupForSportAction(userId, date, v);
+                                        setTick((n) => n + 1);
+                                      }),
+                                  }
+                                : undefined
+                            }
                             routine={data.warmups?.find((x) => x.plannedWorkoutId === w.id)?.routine ?? null}
                             onChanged={() => setTick((n) => n + 1)}
                             done={done}
@@ -805,6 +827,11 @@ export function DayLog({
                   })}
                   {/* The day's Conditioning section, where the person's order puts
                       it (v0.625): one-offs logged, then + Conditioning. */}
+                  {/* The day's sport (v0.662): its warm-up, optional, when the
+                      planned Warm-up isn't for it. */}
+                  {s.kind === "WARMUP" && sportDay && !sportDay.forSport && (
+                    <SportWarmupRow label={sportDay.label} routine={sportDay.routine} />
+                  )}
                   {s.kind === "CONDITIONING" && (
                     <>
                       {(() => {
@@ -897,9 +924,12 @@ function WarmupRow({
   onDone,
   onSkip,
   kind = "warmup",
+  sport,
 }: {
   /** Mobility (v0.659) shows the same way. */
   kind?: "warmup" | "mobility";
+  /** A sport on the day (v0.662): warm up for it or for the planned workout. */
+  sport?: { label: string; forSport: boolean; onChange: (forSport: boolean) => void };
   userId: string;
   plannedWorkoutId: string;
   name: string;
@@ -923,6 +953,7 @@ function WarmupRow({
         <WarmupWindow
           userId={userId}
           kind={kind}
+          sport={sport}
           plannedWorkoutId={plannedWorkoutId}
           routine={routine}
           done={finished}
@@ -2116,4 +2147,30 @@ function SuggestionCard({ s, onAnswer }: { s: Suggestion; onAnswer: (answer: str
  *  plank on Core, three holds on Isometric (v0.661). */
 function coreTestIds(w: PlanWorkout): string[] {
   return w.exercises.slice(0, testCountFor(w.core)).map((e) => e.poolExerciseId);
+}
+
+/** A sport's warm-up on its day (v0.662): optional, never part of the plan —
+ *  opens its routine with timers. */
+function SportWarmupRow({ label, routine }: { label: string; routine: WarmupRoutine }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex min-h-[3rem] w-full items-center gap-3 rounded-xl border border-dashed border-hairline px-4 py-2.5 text-left hover:border-accent"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold">{label} warm-up</span>
+          <span className="block truncate text-xs text-muted">{routine.name}</span>
+        </span>
+        <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
+      </button>
+      {open && (
+        <Modal title={`${label} warm-up`} onClose={() => setOpen(false)}>
+          <WarmupSteps steps={routine.steps} />
+        </Modal>
+      )}
+    </>
+  );
 }

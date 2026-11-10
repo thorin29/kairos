@@ -1049,6 +1049,14 @@ v0.651: `GET /api/v1/workouts/strip?page=N` — one 8-day page of the week strip
 (0 = up to today, + ahead, − back; clamped −8..4) → { days, overdue, today,
 page }. Strip days add `planned` (the plan has a workout that weekday).
 `GET /api/v1/workouts?date=` takes future dates (the plan's preview).
+v0.662 Sport days: `GET /api/v1/workouts` adds `sportDay` — `{ label,
+forSport, routine }` when the caller has a sport-flagged calendar event that
+day (owner, participant, or a sport feed's owner/member), else null.
+`POST /api/v1/workouts/warmup-for` `{ date, forSport }`: true makes that
+day's Warm-up the sport's routine (Hockey legs); false (the default) keeps
+the planned workout's. With `forSport` false the day shows the sport's
+warm-up as an optional extra; skipping the Warm-up is "none".
+
 v0.661 Isometric days: `kind: "iso"` everywhere Arms takes `kind` (`plan/core`,
 `core-workouts`, `?kind=iso`); plan options add `isoWorkouts`; the entry is
 category `ISOMETRIC` with no muscle group. With `test` on, the first
@@ -1501,7 +1509,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**185 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**186 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
