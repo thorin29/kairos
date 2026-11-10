@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     return apiOk(await goLightPick(userId, today, a));
   }
   if (b.action === "apply") {
-    if (!isGoKey(b.key) || ![10, 20, 30].includes(b.minutes as number)) return apiError("validation", "Pick an option.");
+    if (!isGoKey(b.key) || ![0, 10, 20, 30].includes(b.minutes as number)) return apiError("validation", "Pick an option.");
     await setGoLight(userId, today, b.key, b.minutes as number);
     await settleWorkoutTask(userId, today, { fallbackComplete: false });
     return apiOk({ status: "ok" });

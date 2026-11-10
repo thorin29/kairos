@@ -5,7 +5,7 @@ import { fmtClock, rowSummary } from "@/lib/workouts/concept2";
 import { CARDIO_CATEGORIES, blockKind, isOptionalCategory, isSimpleCategory } from "@/lib/workouts/blocks";
 import { dayLabel, groupHistory, type HistorySession } from "@/lib/workouts/history";
 import { loadProgramSpans, sportLabels } from "@/lib/workouts/history-run";
-import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES, hiitResult } from "@/lib/workouts/catalog";
+import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES, hiitResult, EFFORT_LABEL } from "@/lib/workouts/catalog";
 import type { WorkoutType } from "@/generated/prisma/client";
 import { addDays, todayISO, dayOfWeek, fromDateColumn, toDateColumn, daysBetween, startOfWeek } from "@/lib/dates";
 import { metricUnit, type Metric, type MuscleGroup } from "@/lib/workouts/catalog";
@@ -1999,7 +1999,17 @@ export type DayLogState = {
 
 /** `label` is the short name for the page title: a game's event type
  *  ("Hockey game") rather than its event title (v0.625). */
-export type LoggedOther = { name: string; label: string; lines: { name: string; summary: string }[] };
+export type LoggedOther = {
+  name: string;
+  label: string;
+  lines: { name: string; summary: string }[];
+  /** A game or session confirmed from the calendar (v0.656): tap to set how
+   *  hard it was, and its minutes when its event type's time varies. */
+  sport?: { sessionId: string; minutes: number | null; flexTime: boolean; effort: string | null; hurt: string | null };
+};
+
+/** How a session felt, in a word, for a summary line. */
+const effortWord = (e: string) => ((EFFORT_LABEL as Record<string, string>)[e] ?? e).toLowerCase();
 
 /** The day's sessions outside its plans, by session name, each movement's
  *  sets in a few words. */
@@ -2015,6 +2025,8 @@ async function loggedOtherFor(
     where: { userId, date: toDateColumn(dateISO), isRest: false },
     orderBy: { createdAt: "asc" },
     select: {
+      id: true,
+      durationMin: true,
       name: true,
       category: true,
       sourceEventId: true,
@@ -2033,6 +2045,8 @@ async function loggedOtherFor(
       },
     },
   })) as {
+    id: string;
+    durationMin: number | null;
     name: string | null;
     category: string | null;
     sourceEventId: string | null;
@@ -2077,14 +2091,50 @@ async function loggedOtherFor(
     }
     byName.set(name, group);
   }
-  const other: LoggedOther[] = [...byName.entries()].map(([name, group]) => ({
-    name,
-    label: labelOf.get(name) ?? name,
-    lines:
-      group.size === 0
-        ? [{ name: labelOf.get(name) ?? name, summary: "Done" }]
-        : [...group.entries()].map(([m, sets]) => ({ name: m, summary: setsSummary(sets, sets[0]?.unit ?? null) || "Done" })),
-  }));
+  // Calendar-confirmed sessions (v0.656): minutes, how hard, and whether the
+  // event type's time varies, for the Additional card's edit.
+  const sportRows = rows.filter((r) => r.sourceEventId);
+  const [flexRows, feel] = sportRows.length
+    ? ((await Promise.all([
+        prisma.event.findMany({
+          where: { id: { in: sportRows.map((r) => r.sourceEventId!) } },
+          select: { id: true, eventType: { select: { sportFlexTime: true } } },
+        }),
+        prisma.workoutFeedback.findMany({
+          where: { userId, date: toDateColumn(dateISO), slot: { in: sportRows.map((r) => `sport:${r.sourceEventId}`) } },
+          select: { slot: true, effort: true, hurt: true },
+        }),
+      ])) as [
+        { id: string; eventType: { sportFlexTime: boolean } | null }[],
+        { slot: string; effort: string | null; hurt: string | null }[],
+      ])
+    : [[], []];
+  const flex = new Set(flexRows.filter((e) => e.eventType?.sportFlexTime).map((e) => e.id));
+  const sportFor = (name: string): LoggedOther["sport"] => {
+    const r = sportRows.find((x) => (x.name?.trim() || "") === name);
+    if (!r) return undefined;
+    const f = feel.find((x) => x.slot === `sport:${r.sourceEventId}`);
+    return {
+      sessionId: r.id,
+      minutes: r.durationMin,
+      flexTime: flex.has(r.sourceEventId!),
+      effort: f?.effort ?? null,
+      hurt: f?.hurt ?? null,
+    };
+  };
+  const other: LoggedOther[] = [...byName.entries()].map(([name, group]) => {
+    const sport = sportFor(name);
+    const done = sport ? [sport.minutes ? `${sport.minutes} min` : "Done", sport.effort ? effortWord(sport.effort) : ""].filter(Boolean).join(" · ") : "Done";
+    return {
+      name,
+      label: labelOf.get(name) ?? name,
+      lines:
+        group.size === 0
+          ? [{ name: labelOf.get(name) ?? name, summary: done }]
+          : [...group.entries()].map(([m, sets]) => ({ name: m, summary: setsSummary(sets, sets[0]?.unit ?? null) || "Done" })),
+      ...(sport ? { sport } : {}),
+    };
+  });
   return { other, any: rows.length > 0, title: headline.label, lifted };
 }
 

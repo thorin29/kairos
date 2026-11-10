@@ -131,6 +131,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
   const [name, setName] = useState(type.name);
   const [color, setColor] = useState<string>(type.color);
   const [sport, setSport] = useState(type.sportWorkout);
+  const [flex, setFlex] = useState(type.sportFlexTime);
   const [dur, setDur] = useState(
     type.defaultMinutes != null ? String(type.defaultMinutes) : "",
   );
@@ -145,6 +146,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
         color,
         sport,
         dur ? Number(dur) : null,
+        flex,
       );
       if (res.error) setError(res.error);
       else setEditing(false);
@@ -178,6 +180,17 @@ function TypeRow({ type }: { type: EventTypeRow }) {
           />
           Counts as a sport workout
         </label>
+        {sport && (
+          <label className="flex w-full items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={flex}
+              onChange={(e) => setFlex(e.target.checked)}
+              className="h-4 w-4 accent-[var(--color-accent)]"
+            />
+            Time varies (stick and puck, drop-in)
+          </label>
+        )}
         <label className="flex w-full items-center gap-2 text-sm">
           <span className="text-muted">Default length</span>
           <input
@@ -206,6 +219,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
             setName(type.name);
             setColor(type.color);
             setSport(type.sportWorkout);
+            setFlex(type.sportFlexTime);
             setDur(type.defaultMinutes != null ? String(type.defaultMinutes) : "");
             setError(null);
             setEditing(false);

@@ -1010,6 +1010,12 @@ the running program carries into its next block with these changes (same
 start date; maxes as sent), and plan entries the setup doesn't cover stay.
 `GET /api/v1/workouts/plan` movements add `about`.
 
+v0.656: `POST /api/v1/workouts/sport-session` { sessionId, minutes?, effort?,
+hurt? } — change a calendar-confirmed session; minutes only when its event
+type has `sportFlexTime` (new EventType column, migration 144). `loggedOther`
+entries add `sport: { sessionId, minutes, flexTime, effort, hurt }`. Go light
+`minutes` accepts 0 (any).
+
 v0.655: a Warm-up entry's `warmup` may be a routine id, `"match"` (fits the
 day's lifts, rotating among the matches weekly) or `"rot:<id>,<id>…"` (a
 weekly rotation); `POST /workouts/plan/warmup` accepts all three. The day's
@@ -1473,7 +1479,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**184 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**185 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is

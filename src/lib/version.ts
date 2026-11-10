@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.655.0";
+export const APP_VERSION = "0.656.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.656.0",
+    summary: [
+      "The week strip snaps to whole days.",
+      "Saying you did a game from the calendar saves it straight away; set how hard it was from its card under Additional on the day.",
+      "Event types can be marked \u201ctime varies\u201d (stick and puck, drop-in), so you can change how long you stayed.",
+      "Go light has an Any option for time. Match the day shows what each warm-up holds, and the warm-up rotation looks like the core rotation.",
+    ],
+  },
   {
     version: "0.655.0",
     summary: [

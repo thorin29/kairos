@@ -57,13 +57,13 @@ export function GoLightModal({
   onRest: () => void;
 }) {
   const [why, setWhy] = useState<GoWhy | null>(null);
-  const [minutes, setMinutes] = useState<10 | 20 | 30 | null>(null);
+  const [minutes, setMinutes] = useState<0 | 10 | 20 | 30 | null>(null);
   const [hurt, setHurt] = useState<boolean | null>(null);
   const [neck, setNeck] = useState<"above" | "below" | null>(null);
   const [pick, setPick] = useState<GoPick | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const ready = why && minutes && hurt != null && (why !== "sick" || neck);
+  const ready = why && minutes != null && hurt != null && (why !== "sick" || neck);
 
   return (
     <Modal title="Go light" onClose={onClose}>
@@ -93,6 +93,7 @@ export function GoLightModal({
                 [10, "10 min"],
                 [20, "20 min"],
                 [30, "30 min"],
+                [0, "Any"],
               ]}
               on={minutes}
               pick={setMinutes}

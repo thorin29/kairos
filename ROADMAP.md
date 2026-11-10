@@ -1747,7 +1747,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.655.0 (migrations through 143_rotation_kind).
-- App versionName 0.465.0 / versionCode 532 / CLIENT_BUILD 532.
+- Web APP_VERSION 0.656.0 (migrations through 144_event_type_flex_time).
+- App versionName 0.466.0 / versionCode 533 / CLIENT_BUILD 533.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

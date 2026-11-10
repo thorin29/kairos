@@ -319,11 +319,27 @@ export function WarmupChooser({
       {mode === "match" && (
         <>
           <ul className="divide-y divide-hairline">
-            {matchable.map((r) => (
-              <li key={r.key} className="py-2 text-sm font-semibold">
-                {r.name}
-              </li>
-            ))}
+            {matchable.map((d) => {
+              const r = routines?.find((x) => x.id === `lib:${d.key}`);
+              return (
+                <li key={d.key} className="flex items-center gap-3 py-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">{d.name}</span>
+                    <span className="block truncate text-xs text-muted">{d.steps.length} steps</span>
+                  </span>
+                  {r && (
+                    <button
+                      type="button"
+                      onClick={() => setPeek(r)}
+                      aria-label={`About ${d.name}`}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:text-accent"
+                    >
+                      <InfoIcon className="h-4 w-4" />
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
           <button type="button" onClick={() => onChange("match")} className={`${PRIMARY_BTN} mt-3 w-full`}>
             Save
@@ -332,6 +348,7 @@ export function WarmupChooser({
       )}
       {mode === "rotation" && (
         <>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted">In the rotation, in order</p>
           <ul className="divide-y divide-hairline">
             {routines?.map((r) => {
               const at = rot.indexOf(r.id);
@@ -342,13 +359,33 @@ export function WarmupChooser({
                     onClick={() => setRot(at >= 0 ? rot.filter((x) => x !== r.id) : [...rot, r.id])}
                     aria-pressed={at >= 0}
                     aria-label={`${at >= 0 ? "Remove" : "Add"} ${r.name}`}
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${
-                      at >= 0 ? "border-accent bg-accent text-on-accent" : "border-accent"
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${
+                      at >= 0 ? "border-accent bg-accent text-on-accent" : "border-accent text-accent"
                     }`}
                   >
                     {at >= 0 ? at + 1 : ""}
                   </button>
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{r.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setRot(at >= 0 ? rot.filter((x) => x !== r.id) : [...rot, r.id])}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <span className="block truncate text-sm font-semibold">{r.name}</span>
+                    <span className="block truncate text-xs text-muted">
+                      {r.steps.length} {r.steps.length === 1 ? "step" : "steps"}
+                      {r.mine ? " · Yours" : ""}
+                    </span>
+                  </button>
+                  {r.mine && (
+                    <button
+                      type="button"
+                      onClick={() => setEditing(r)}
+                      aria-label={`Edit ${r.name}`}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:text-accent"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setPeek(r)}

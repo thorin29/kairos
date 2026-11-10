@@ -102,6 +102,7 @@ export async function updateEventType(
   color: string,
   sportWorkout = false,
   defaultMinutes: number | null = null,
+  sportFlexTime = false,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   const clean = name.trim().slice(0, 40);
@@ -116,7 +117,7 @@ export async function updateEventType(
   await prisma.eventType
     .update({
       where: { id },
-      data: { name: clean, color, sportWorkout, defaultMinutes: mins },
+      data: { name: clean, color, sportWorkout, defaultMinutes: mins, sportFlexTime: sportWorkout && sportFlexTime },
     })
     .catch(() => {});
   revalidatePath("/calendar");

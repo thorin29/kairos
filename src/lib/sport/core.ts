@@ -67,3 +67,41 @@ export async function declineSportCore(
     create: { eventId, userId, date },
   });
 }
+
+/**
+ * Change a calendar-confirmed session afterwards (v0.656): how hard it was
+ * (and anything that hurt), and its minutes when the event type's time
+ * varies (stick and puck, drop-in) — a game or practice keeps its length.
+ */
+export async function editSportSessionCore(
+  userId: string,
+  input: { sessionId: unknown; minutes?: unknown; effort?: unknown; hurt?: unknown },
+): Promise<boolean> {
+  if (typeof input.sessionId !== "string") return false;
+  const s = (await prisma.workoutSession.findFirst({
+    where: { id: input.sessionId, userId, sourceEventId: { not: null } },
+    select: { id: true, date: true, sourceEventId: true },
+  })) as { id: string; date: Date; sourceEventId: string } | null;
+  if (!s) return false;
+  const m = Number(input.minutes);
+  if (input.minutes != null && Number.isFinite(m) && m >= 5 && m <= 600) {
+    const ev = (await prisma.event.findUnique({
+      where: { id: s.sourceEventId },
+      select: { eventType: { select: { sportFlexTime: true } } },
+    })) as { eventType: { sportFlexTime: boolean } | null } | null;
+    if (ev?.eventType?.sportFlexTime) {
+      await prisma.workoutSession.update({ where: { id: s.id }, data: { durationMin: Math.round(m) } });
+    }
+  }
+  if (input.effort !== undefined || input.hurt !== undefined) {
+    const effort = typeof input.effort === "string" && input.effort ? input.effort.slice(0, 20) : null;
+    const hurt = typeof input.hurt === "string" && input.hurt ? input.hurt.slice(0, 40) : null;
+    const slot = `sport:${s.sourceEventId}`;
+    await prisma.workoutFeedback.upsert({
+      where: { userId_date_slot: { userId, date: s.date, slot } },
+      create: { userId, date: s.date, slot, effort, hurt },
+      update: { effort, hurt },
+    });
+  }
+  return true;
+}

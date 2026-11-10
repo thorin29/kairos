@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-11 — Snap, one-tap game confirm, flexible minutes (v0.656.0 / app 0.466.0)
+
+- Week strip snaps to whole days (CSS scroll-snap on the web, a snap fling
+  on the phone).
+- "Did you do <game>?" Yes now saves and clears in one tap; the "How hard?"
+  card and its Done step are gone from Home. How hard (and anything that
+  hurt) is set from the session's card on the day page, whose section is
+  now "Additional" (was "Logged").
+- A confirmed session's minutes count toward weekly activity, and a stick
+  and puck or drop-in often isn't stayed for its full slot. Event types get
+  `sportFlexTime` ("Time varies", admin, only for sport types); the
+  Additional card's edit shows a minutes field only for those, and the server
+  only changes minutes for them — games and practices keep their length.
+  `POST /workouts/sport-session`, `editSportSessionCore`.
+- Go light's time adds Any (0): every main lift stays.
+- Warm-up chooser: Match the day lists its routines with ⓘ; Rotation uses the
+  Core rotation's layout (numbered squares, "In the rotation, in order",
+  steps · Yours, edit and ⓘ).
+
 ## 2026-11 — Warm-ups by the day; Shoulder prep (v0.655.0 / app 0.465.0)
 
 - Seven library routines, no weights, 6–8 min, each tagged with a focus:

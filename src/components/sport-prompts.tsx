@@ -36,7 +36,8 @@ export function SportPrompts({
   const act = (p: Prompt, done: boolean) =>
     start(async () => {
       setHidden((s) => new Set(s).add(keyOf(p)));
-      if (done) setAsking((a) => [...a, { ...p, effort: null, hurt: null }]);
+      // Yes saves and clears at once (v0.656); how hard it was is set from the
+      // day's Additional card.
       // Confirm/decline for the occurrence the prompt is actually about, which
       // may be an earlier day carried forward — not necessarily today.
       if (done) await confirmSportWorkout(p.eventId, p.userId, p.dateISO);

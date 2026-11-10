@@ -9,7 +9,8 @@
 export type GoWhy = "energy" | "sore" | "time" | "sick";
 export type GoAnswers = {
   why: GoWhy;
-  minutes: 10 | 20 | 30;
+  /** 0 = any amount of time (v0.656). */
+  minutes: 0 | 10 | 20 | 30;
   hurt: boolean;
   /** Sick only: above the neck (a cold) or below it (fever, chest, stomach). */
   neck?: "above" | "below";
@@ -27,7 +28,7 @@ export type GoPick = {
 export const GO_FACTOR: Record<GoKey, number> = { lighter: 0.6, short: 0.8, recovery: 0.6 };
 
 /** How many main lifts fit the time. */
-export const mainsFor = (minutes: number) => (minutes <= 10 ? 1 : minutes <= 20 ? 2 : 3);
+export const mainsFor = (minutes: number) => (minutes <= 0 ? 99 : minutes <= 10 ? 1 : minutes <= 20 ? 2 : 3);
 
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
@@ -56,7 +57,7 @@ export function goLightOptions(a: GoAnswers, mains: number): GoPick {
 }
 
 /** The stored day answer for a choice. */
-export const goAnswer = (key: GoKey, minutes: number) => `go:${key}:${mainsFor(minutes) * 10}`;
+export const goAnswer = (key: GoKey, minutes: number) => `go:${key}:${minutes <= 0 ? 0 : mainsFor(minutes) * 10}`;
 
 /** A stored day answer read back; null when it isn't a Go light choice. */
 export function parseGo(answer: string | null | undefined): { key: GoKey; minutes: number } | null {
@@ -89,8 +90,8 @@ export function goKeep(key: GoKey, minutes: number, entries: readonly EntryIn[])
 export function cleanGoAnswers(raw: unknown): GoAnswers | null {
   const o = (raw ?? {}) as Record<string, unknown>;
   const why = ["energy", "sore", "time", "sick"].includes(o.why as string) ? (o.why as GoWhy) : null;
-  const minutes = [10, 20, 30].includes(o.minutes as number) ? (o.minutes as 10 | 20 | 30) : null;
-  if (!why || !minutes) return null;
+  const minutes = [0, 10, 20, 30].includes(o.minutes as number) ? (o.minutes as 0 | 10 | 20 | 30) : null;
+  if (!why || minutes == null) return null;
   const neck = o.neck === "below" ? "below" : o.neck === "above" ? "above" : undefined;
   return { why, minutes, hurt: o.hurt === true, ...(why === "sick" ? { neck: neck ?? "above" } : {}) };
 }

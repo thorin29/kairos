@@ -5,6 +5,7 @@ import { SidesTimer } from "./sides-timer";
 import { PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG, SECONDARY_SM } from "./buttons";
 import { Modal } from "./plan-file-panel";
 import { GoLightModal } from "./go-light";
+import { SportEditModal } from "./sport-edit";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   loadDayLog,
@@ -32,7 +33,7 @@ import { AddConditioning, BenchmarkCard, PickConditioningCard } from "./conditio
 import type { BenchmarkState, PickPlan } from "@/lib/workouts/wod-run";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
 import type { CardioEntry } from "@/lib/workouts/cardio-run";
-import type { DayLogState, MovementLog, MovementSetRow, WeekStripDay } from "@/lib/queries/workout-log";
+import type { DayLogState, LoggedOther, MovementLog, MovementSetRow, WeekStripDay } from "@/lib/queries/workout-log";
 import type { PersonWorkout, PlanExercise, PlanWorkout } from "@/lib/queries/workouts";
 import {
   CARDIO_CATEGORIES,
@@ -143,6 +144,7 @@ export function DayLog({
   const fetchedPages = useRef<Set<number>>(new Set());
   const [resetTick, setResetTick] = useState(0);
   const [goLight, setGoLight] = useState(false);
+  const [editSport, setEditSport] = useState<LoggedOther | null>(null);
   // A day still to come only previews its plan (v0.651).
   const future = date > todayISO;
   const [failed, setFailed] = useState(false);
@@ -817,9 +819,15 @@ export function DayLog({
 
       {(state?.loggedOther?.length ?? 0) > 0 && (
         <section className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted">Logged</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted">Additional</p>
           {state!.loggedOther.map((g) => (
-            <div key={g.name} className="rounded-xl border border-hairline bg-surface px-4 py-3">
+            <div
+              key={g.name}
+              role={g.sport ? "button" : undefined}
+              tabIndex={g.sport ? 0 : undefined}
+              onClick={g.sport ? () => setEditSport(g) : undefined}
+              className={`rounded-xl border border-hairline bg-surface px-4 py-3 ${g.sport ? "cursor-pointer hover:border-accent" : ""}`}
+            >
               <p className="flex items-center gap-2 text-sm font-semibold">
                 <CheckIcon className="h-4 w-4 text-accent" />
                 {g.name}
@@ -837,6 +845,18 @@ export function DayLog({
         </section>
       )}
 
+      {editSport?.sport && (
+        <SportEditModal
+          userId={userId}
+          title={editSport.label}
+          sport={editSport.sport}
+          onClose={() => setEditSport(null)}
+          onSaved={() => {
+            setEditSport(null);
+            setTick((n) => n + 1);
+          }}
+        />
+      )}
       {extra && <div className="border-t border-hairline pt-5">{extra(date)}</div>}
     </div>
   );
@@ -1021,7 +1041,7 @@ function WeekStrip({
         <div
           ref={box}
           onScroll={(e) => setFirst(Math.round(e.currentTarget.scrollLeft / cellW()))}
-          className="flex flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex flex-1 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="group"
           aria-label="Days"
         >
@@ -1038,7 +1058,7 @@ function WeekStrip({
                 onClick={() => onPick(iso)}
                 aria-pressed={on}
                 aria-label={`${WEEKDAY_LONG[dayOfWeek(iso)]} ${dd}, ${look.label}`}
-                className={`flex min-h-[3.75rem] shrink-0 basis-[12.5%] flex-col items-center justify-center gap-1 rounded-xl border text-xs transition-colors ${
+                className={`flex min-h-[3.75rem] shrink-0 basis-[12.5%] snap-start flex-col items-center justify-center gap-1 rounded-xl border text-xs transition-colors ${
                   on ? "border-accent bg-accent/5" : "border-transparent hover:bg-ground"
                 }`}
               >

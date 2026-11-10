@@ -26,5 +26,8 @@ describe("go light (v0.654)", () => {
   it("stores and reads the choice", () => {
     expect(parseGo(goAnswer("short", 20))).toEqual({ key: "short", minutes: 20 });
     expect(parseGo("light")).toBeNull();
+    // Any amount of time (v0.656): every main lift stays.
+    expect(parseGo(goAnswer("short", 0))).toEqual({ key: "short", minutes: 0 });
+    expect(goKeep("short", 0, entries)).toEqual([[], ["squat"], ["bench"], [], ["row"]]);
   });
 });
