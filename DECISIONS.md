@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-11 — Stretching routines; program title only on program days (v0.663.0 / app 0.473.0)
+
+- Stretching is a routine kind ("stretching", library `STRETCH_LIBRARY`,
+  keys `str-*`), done with a tap like Mobility; no tracking. Range comes from
+  regular timed holds over weeks. Research behind the holds (ACSM FITT-VP):
+  static holds 10–30 s for most adults, 30–60 s for older adults, about 60 s
+  per joint in all, 2–3+ days a week with daily best, to mild tension, never
+  pain. Every library hold is 30 s or more (most 45–60 s, each side).
+  Routines: Full body, Goalie hips (90/90, butterfly fold, frog, pigeon, hip
+  internal rotation, kneeling hip flexor, deep squat), Front splits, Middle
+  splits, Hamstrings and low back, Shoulders/chest/neck, After skating.
+- `STRETCHING` becomes a simple category (isSimpleCategory): new entries
+  hold a routine, no movements. An older Stretching entry with movements is
+  left as it was and logs them (the routine paths filter
+  `exercises: { none: {} }` / `_count.exercises === 0`).
+- Day title: `program` (and its "Week n of m" line) shows only on a weekday
+  the active program put work on (`dayHasProgramWork`: an entry with a
+  `programRole`). Otherwise, with a program running, the title is the
+  day's own plan name from `loadWorkoutPlanNames`.
+- App: the movement screen's title shrinks to fit (down to 15 sp) before it
+  cuts off, and Swap is an outlined icon, so the bar keeps its height.
+
 ## 2026-11 — Warm-up on a sport day (v0.662.0 / app 0.472.0)
 
 - A sport day is one with a sport-flagged calendar event the person is in

@@ -220,7 +220,7 @@ export type SimplePlan = {
   name: string;
   /** WARMUP, MOBILITY (v0.659), or CARDIO (an older Rowing / Running /
    *  Rucking plan counts as CARDIO). */
-  category: "WARMUP" | "MOBILITY" | "CARDIO";
+  category: "WARMUP" | "MOBILITY" | "STRETCHING" | "CARDIO";
   done: boolean;
   skipped: boolean;
   /** A Warm-up's or Mobility's routine (v0.622); null: a plain check. */
@@ -241,7 +241,7 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
         dayOfWeek: new Date(`${dateISO}T00:00:00Z`).getUTCDay(),
         isRest: false,
         hiitWorkoutId: null,
-        category: { in: ["WARMUP", "MOBILITY", ...CARDIO_CATEGORIES] as never },
+        category: { in: ["WARMUP", "MOBILITY", "STRETCHING", ...CARDIO_CATEGORIES] as never },
         createdAt: { lt: new Date(Date.parse(`${dateISO}T00:00:00Z`) + 86_400_000) },
       },
       orderBy: { sortOrder: "asc" },
@@ -266,15 +266,15 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
   const mobility = await dayMobilityRoutines(
     userId,
     dateISO,
-    plans.filter((p) => p.category === "MOBILITY").map((p) => p.warmup),
+    plans.filter((p) => p.category === "MOBILITY" || p.category === "STRETCHING").map((p) => p.warmup),
   );
   const anyCardio = sessions.some((row) => row.category != null && CARDIO_CATEGORIES.includes(row.category));
   const skipped = new Set(skips.map((k) => k.slot));
   return plans
     .filter((p) => p._count.exercises === 0)
     .map((p) => {
-      const tap = p.category === "WARMUP" || p.category === "MOBILITY";
-      const category = tap ? (p.category as "WARMUP" | "MOBILITY") : ("CARDIO" as const);
+      const tap = p.category === "WARMUP" || p.category === "MOBILITY" || p.category === "STRETCHING";
+      const category = tap ? (p.category as "WARMUP" | "MOBILITY" | "STRETCHING") : ("CARDIO" as const);
       return {
         plannedWorkoutId: p.id,
         name: p.name,
@@ -283,7 +283,7 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
           ? sessions.some((row) => row.category === category && (row.name ?? "").slice(0, 40) === p.name.slice(0, 40))
           : anyCardio,
         skipped: skipped.has(`plan:${p.id}`),
-        ...(tap ? { routine: (category === "MOBILITY" ? mobility : routines).get(p.warmup ?? "") ?? null } : {}),
+        ...(tap ? { routine: (category === "WARMUP" ? routines : mobility).get(p.warmup ?? "") ?? null } : {}),
       };
     });
 }

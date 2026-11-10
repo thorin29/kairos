@@ -29,7 +29,7 @@ import {
   weekLabel,
   type Program,
 } from "@/lib/workouts/programs";
-import { loadActiveProgram, plannedSlotFor, programInfoFor, type ProgramInfo } from "@/lib/workouts/program-run";
+import { dayHasProgramWork, loadActiveProgram, plannedSlotFor, programInfoFor, type ProgramInfo } from "@/lib/workouts/program-run";
 import { dayAdjust, dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
 import { adjustKeep, type Adjust } from "@/lib/workouts/adjust";
 import type { Suggestion } from "@/lib/workouts/suggest";
@@ -1469,6 +1469,7 @@ function planDetail(w: {
   if (w.isRest) return "";
   if (w.category === "CARDIO") return "Row, run, ruck or other";
   if (w.category === "WARMUP" || w.category === "MOBILITY") return "";
+  if (w.category === "STRETCHING" && w.exercises.length === 0) return "";
   if (w.exercises.length > 0) {
     return w.exercises
       .map((e) => (e.tracked ? e.poolExercise?.name ?? "—" : `${e.poolExercise?.name ?? "—"} (no log)`))
@@ -2294,7 +2295,10 @@ export async function loadDayLogState(
     planIds.length === 0 &&
     (await prisma.plannedWorkout.count({ where: { ...dayPlanWhere(userId, dateISO), isRest: true } })) > 0;
   const logged = await loggedOtherFor(userId, dateISO, planned, restPlanned);
-  const program = await programInfoFor(userId, dateISO);
+  // The program titles only days it put work on (v0.663); a day with just
+  // its own entries (a Core day beside 5/3/1) is titled by them.
+  const active = await programInfoFor(userId, dateISO);
+  const program = active && (await dayHasProgramWork(userId, dateISO)) ? active : null;
 
   const movements: Record<string, DayMovementState> = {};
   for (const slot of slots) {
@@ -2321,7 +2325,9 @@ export async function loadDayLogState(
     restPlanned,
     program,
     programTitle: !program
-      ? null
+      ? active
+        ? ((await loadWorkoutPlanNames(userId)).get(dayOfWeek(dateISO)) ?? null)
+        : null
       : planIds.length === 0 && logged.lifted && logged.title
         ? `${program.name} \u00b7 ${logged.title}`
         : await programDayTitle(userId, dateISO, program.name),

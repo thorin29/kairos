@@ -38,3 +38,23 @@ describe("mobility (v0.659)", () => {
     expect(cleanRoutineKind("x")).toBe("warmup");
   });
 });
+
+import { STRETCH_LIBRARY, libraryRoutinesOf } from "@/lib/workouts/warmup-library";
+
+describe("stretching (v0.663)", () => {
+  it("holds every stretch for at least 30 seconds, with how-to", () => {
+    expect(STRETCH_LIBRARY.length).toBe(7);
+    for (const r of STRETCH_LIBRARY) {
+      expect(r.key.startsWith("str-")).toBe(true);
+      for (const s of r.steps) {
+        expect(s.kind).toBe("TIME");
+        expect(s.seconds ?? 0).toBeGreaterThanOrEqual(30);
+        expect(s.cue).toBeTruthy();
+      }
+    }
+    expect(libraryRoutinesOf("stretching").map((r) => r.name)).toContain("Goalie hips");
+    expect(cleanRoutineKind("stretching")).toBe("stretching");
+    expect(isSimpleCategory("STRETCHING")).toBe(true);
+    expect(blockKind("STRETCHING", false)).toBe("STRETCH");
+  });
+});

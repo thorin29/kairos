@@ -1049,6 +1049,15 @@ v0.651: `GET /api/v1/workouts/strip?page=N` — one 8-day page of the week strip
 (0 = up to today, + ahead, − back; clamped −8..4) → { days, overdue, today,
 page }. Strip days add `planned` (the plan has a workout that weekday).
 `GET /api/v1/workouts?date=` takes future dates (the plan's preview).
+v0.663 Stretching: a Stretching plan entry with no movements is a routine,
+like Mobility (`warmup` holds one id or `rot:<ids>`, done with `POST
+/workouts/warmup`, counts toward the day); `GET /workouts/warmups?kind=stretching`
+(library ids `lib:str-*`); `simple[]` items can be `category: "STRETCHING"`.
+A Stretching entry from before, with movements, still logs them. Plan options
+mark STRETCHING `simple`. The day's `program` and `programTitle` (v0.663):
+`program` is null on a weekday the active program put no work on, and the
+title is then the day's own plan name ("Core · Core strength").
+
 v0.662 Sport days: `GET /api/v1/workouts` adds `sportDay` — `{ label,
 forSport, routine }` when the caller has a sport-flagged calendar event that
 day (owner, participant, or a sport feed's owner/member), else null.

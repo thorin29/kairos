@@ -99,7 +99,7 @@ export async function addPlannedFromPoolCore(
 ): Promise<void> {
   if (day < 0 || day > 6) return;
   let warmup: string | null = null;
-  if ((input.category === "WARMUP" || input.category === "MOBILITY") && input.warmup) {
+  if ((input.category === "WARMUP" || input.category === "MOBILITY" || input.category === "STRETCHING") && input.warmup) {
     // One routine, "match" or a rotation (v0.659: any of them as it's added);
     // every id must be one the person can use.
     const choice = parseWarmupChoice(input.warmup);

@@ -638,12 +638,16 @@ export function DayLog({
                           />
                         );
                       }
-                      if (w.category === "WARMUP" || w.category === "MOBILITY") {
+                      if (
+                        w.category === "WARMUP" ||
+                        w.category === "MOBILITY" ||
+                        (w.category === "STRETCHING" && w.exercises.length === 0)
+                      ) {
                         const done = cardDone(w.id);
                         return (
                           <WarmupRow
                             key={`${date}:${w.id}`}
-                            kind={w.category === "MOBILITY" ? "mobility" : "warmup"}
+                            kind={w.category === "WARMUP" ? "warmup" : w.category === "MOBILITY" ? "mobility" : "stretching"}
                             userId={userId}
                             plannedWorkoutId={w.id}
                             name={w.name}
@@ -926,8 +930,8 @@ function WarmupRow({
   kind = "warmup",
   sport,
 }: {
-  /** Mobility (v0.659) shows the same way. */
-  kind?: "warmup" | "mobility";
+  /** Mobility (v0.659) and Stretching (v0.663) show the same way. */
+  kind?: "warmup" | "mobility" | "stretching";
   /** A sport on the day (v0.662): warm up for it or for the planned workout. */
   sport?: { label: string; forSport: boolean; onChange: (forSport: boolean) => void };
   userId: string;

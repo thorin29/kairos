@@ -29,6 +29,7 @@ const FIELD = "h-10 min-w-0 rounded-lg border border-hairline bg-surface px-3 te
 const WORDS: Record<RoutineKind, { one: string; title: string; newOne: string }> = {
   warmup: { one: "warm-up", title: "Warm-up", newOne: "New warm-up" },
   mobility: { one: "routine", title: "Mobility", newOne: "New mobility routine" },
+  stretching: { one: "routine", title: "Stretching", newOne: "New stretching routine" },
 };
 
 /** A routine's steps: name and amount, a timer on timed ones, and a tick each. */
@@ -348,7 +349,7 @@ export function WarmupChooser({
   };
 
   const modes: ["one" | "match" | "rotation", string][] =
-    kind === "mobility"
+    kind !== "warmup"
       ? [
           ["one", "One routine"],
           ["rotation", "Rotation"],

@@ -19,8 +19,9 @@ export type WarmupStep = {
   cue?: string;
 };
 
-/** Warm-up or Mobility (v0.659): both are lists of steps, done with a tap. */
-export type RoutineKind = "warmup" | "mobility";
+/** Warm-up, Mobility (v0.659) or Stretching (v0.663): lists of steps, done
+ *  with a tap. */
+export type RoutineKind = "warmup" | "mobility" | "stretching";
 
 /** What a warm-up readies you for (v0.655), for "Match the day". */
 export type WarmupFocus = "lower" | "hinge" | "push" | "pull" | "core" | "arms" | "hockey" | "full";
@@ -398,7 +399,118 @@ export const MOBILITY_LIBRARY: readonly WarmupRoutineDef[] = [
   },
 ];
 
-const ALL_LIBRARY = [...WARMUP_LIBRARY, ...MOBILITY_LIBRARY];
+/**
+ * Stretching routines (v0.663): static holds, done after training or on
+ * their own. Each hold is at least 30 seconds and about a minute per side in
+ * all (ACSM: 60 s per joint, 2–3+ days a week, daily gains most); stretch to
+ * mild tension, never pain, and breathe out into it. Range comes with weeks
+ * of regular holds, not by forcing one. The goalie and split routines are
+ * for the butterfly: hip rotation, adductors, hip flexors, hamstrings.
+ * Keys start "str-".
+ */
+export const STRETCH_LIBRARY: readonly WarmupRoutineDef[] = [
+  {
+    key: "str-full",
+    name: "Full body",
+    steps: [
+      hold("Standing calf stretch", 45, true, "Hands on the wall, back leg straight, heel down. Lean in."),
+      hold("Kneeling hip flexor stretch", 45, true, "Half-kneeling, squeeze the back glute and shift forward. Tall chest."),
+      hold("Seated hamstring stretch", 60, false, "Legs straight, hinge from the hips with a long back. Reach for the shins or feet."),
+      hold("Figure-4 glute stretch", 45, true, "On your back, ankle across the other knee, pull that thigh in."),
+      hold("Butterfly", 60, false, "Soles together, heels in, sit tall, let the knees drop. Lean forward from the hips."),
+      hold("Child's pose", 60, false, "Knees wide, sit back on the heels, arms long in front."),
+      hold("Doorway chest stretch", 45, true, "Forearm on the door frame at shoulder height, step through until the chest opens."),
+      hold("Cross-body shoulder stretch", 30, true, "Pull one straight arm across the chest with the other."),
+      hold("Overhead triceps stretch", 30, true, "Hand down the back, the other hand eases the elbow back."),
+      hold("Neck side stretch", 30, true, "Ear toward the shoulder, the other shoulder down. Gentle."),
+    ],
+  },
+  {
+    key: "str-goalie-hips",
+    name: "Goalie hips",
+    steps: [
+      hold("90/90 hold", 60, true, "Front and back knee at 90°. Sit tall, then lean over the front shin. Then turn and face the back leg for its inward rotation."),
+      hold("Butterfly fold", 60, false, "Soles together, heels a little forward, fold from the hips with a long back."),
+      hold("Frog stretch", 60, false, "Knees wide on the floor, ankles in line with the knees. Sink the hips back slowly."),
+      hold("Pigeon", 60, true, "Front shin across, back leg long, hips square. Fold forward when it settles."),
+      hold("Hip internal rotation hold", 45, true, "Seated, feet wide, knees bent. Drop one knee in toward the floor and hold."),
+      hold("Kneeling hip flexor stretch", 60, true, "Half-kneeling, squeeze the back glute and shift forward. Tall chest."),
+      hold("Deep squat hold", 60, false, "Heels down, elbows push the knees out, chest up."),
+    ],
+  },
+  {
+    key: "str-front-splits",
+    name: "Front splits",
+    steps: [
+      hold("Half split", 60, true, "From a kneel, front leg straight, hips back over the back knee. Toes up, long back."),
+      hold("Couch stretch", 60, true, "Back knee at the wall or bench, shin up it. Squeeze that glute."),
+      hold("Lizard lunge", 45, true, "Long lunge, both hands inside the front foot. Elbows down if they reach."),
+      hold("Pigeon", 45, true, "Front shin across, back leg long, hips square. Fold forward when it settles."),
+      hold(
+        "Front split hold",
+        60,
+        true,
+        "Hands on blocks or chairs, slide into the split with the hips square, only as low as you control. Lower the blocks over the weeks.",
+      ),
+    ],
+  },
+  {
+    key: "str-middle-splits",
+    name: "Middle splits",
+    steps: [
+      hold("Butterfly", 60, false, "Soles together, heels in, sit tall, let the knees drop."),
+      hold("Frog stretch", 60, false, "Knees wide on the floor, ankles in line with the knees. Sink the hips back slowly."),
+      hold("Kneeling adductor stretch", 45, true, "One knee down, the other leg straight out to the side, foot flat. Sit the hips back."),
+      hold("Cossack hold", 45, true, "Wide stance, sit into one hip, the other leg straight with toes up."),
+      hold("Pancake fold", 60, false, "Seated straddle, toes up, fold forward from the hips with a long back."),
+      hold(
+        "Middle split hold",
+        60,
+        false,
+        "Hands on blocks, slide the feet wide with toes up, hips over the heels. Or lie with legs up a wall and let them open.",
+      ),
+    ],
+  },
+  {
+    key: "str-hamstrings-back",
+    name: "Hamstrings and low back",
+    steps: [
+      hold("Band hamstring stretch", 60, true, "On your back, band around the foot, leg straight up. The other leg flat."),
+      hold("Seated forward fold", 60, false, "Legs together and straight, fold from the hips."),
+      hold("Knees to chest", 45, false, "On your back, hug both knees in, low back heavy."),
+      hold("Supine twist", 45, true, "On your back, drop both knees to one side, arms out, shoulders down."),
+      hold("Sphinx", 45, false, "Face down on the forearms, hips heavy, chest up."),
+      hold("Child's pose", 60, false, "Knees wide, sit back on the heels, arms long in front."),
+    ],
+  },
+  {
+    key: "str-upper",
+    name: "Shoulders, chest and neck",
+    steps: [
+      hold("Doorway chest stretch", 45, true, "Forearm on the door frame at shoulder height, step through until the chest opens."),
+      hold("Bench lat stretch", 60, false, "Kneel, elbows on the bench, hands together. Sink the chest toward the floor."),
+      hold("Cross-body shoulder stretch", 45, true, "Pull one straight arm across the chest with the other."),
+      hold("Sleeper stretch", 45, true, "On that side, arm out at 90°, gently press the forearm down."),
+      hold("Overhead triceps stretch", 30, true, "Hand down the back, the other hand eases the elbow back."),
+      hold("Neck side stretch", 30, true, "Ear toward the shoulder, the other shoulder down. Gentle."),
+      hold("Wrist stretch", 30, true, "Arm straight, palm up then palm down, the other hand eases the fingers back."),
+    ],
+  },
+  {
+    key: "str-after-skate",
+    name: "After skating",
+    steps: [
+      hold("Kneeling hip flexor stretch", 45, true, "Half-kneeling, squeeze the back glute and shift forward. Tall chest."),
+      hold("Butterfly", 45, false, "Soles together, heels in, sit tall, let the knees drop."),
+      hold("Side-lying quad stretch", 45, true, "On your side, pull the top heel to the glute, knees together."),
+      hold("Seated hamstring stretch", 45, false, "Legs straight, hinge from the hips with a long back."),
+      hold("Figure-4 glute stretch", 45, true, "On your back, ankle across the other knee, pull that thigh in."),
+      hold("Child's pose", 45, false, "Knees wide, sit back on the heels, arms long in front."),
+    ],
+  },
+];
+
+const ALL_LIBRARY = [...WARMUP_LIBRARY, ...MOBILITY_LIBRARY, ...STRETCH_LIBRARY];
 
 export function libraryRoutine(id: string | null | undefined): WarmupRoutine | null {
   if (!id || !id.startsWith(LIB_PREFIX)) return null;
@@ -409,9 +521,15 @@ export function libraryRoutine(id: string | null | undefined): WarmupRoutine | n
 const asRoutine = (r: WarmupRoutineDef): WarmupRoutine => ({ id: LIB_PREFIX + r.key, name: r.name, steps: r.steps, mine: false });
 export const LIBRARY_ROUTINES: readonly WarmupRoutine[] = WARMUP_LIBRARY.map(asRoutine);
 export const MOBILITY_ROUTINES: readonly WarmupRoutine[] = MOBILITY_LIBRARY.map(asRoutine);
+export const STRETCH_ROUTINES: readonly WarmupRoutine[] = STRETCH_LIBRARY.map(asRoutine);
 
 /** A routine kind from a request or a stored row; anything else is a warm-up. */
-export const cleanRoutineKind = (v: unknown): RoutineKind => (v === "mobility" ? "mobility" : "warmup");
+export const cleanRoutineKind = (v: unknown): RoutineKind =>
+  v === "mobility" ? "mobility" : v === "stretching" ? "stretching" : "warmup";
+
+/** The library routines of a kind. */
+export const libraryRoutinesOf = (kind: RoutineKind): readonly WarmupRoutine[] =>
+  kind === "mobility" ? MOBILITY_ROUTINES : kind === "stretching" ? STRETCH_ROUTINES : LIBRARY_ROUTINES;
 
 /** Steps sent from a client, kept to what's valid: up to 30, names trimmed. */
 export function cleanSteps(raw: unknown): WarmupStep[] {

@@ -42,10 +42,11 @@ export function cleanOrder(raw: unknown): SectionKind[] {
   return out;
 }
 
-/** Warm-up, Mobility and Cardio plans hold no movements: done with a tap,
- *  or by any cardio logged that day. */
+/** Warm-up, Mobility, Stretching (v0.663) and Cardio plans hold no
+ *  movements: done with a tap, or by any cardio logged that day. (A Stretching
+ *  entry from before v0.663 may still hold movements; it logs them.) */
 export function isSimpleCategory(category: string | null | undefined): boolean {
-  return category === "WARMUP" || category === "MOBILITY" || category === "CARDIO";
+  return category === "WARMUP" || category === "MOBILITY" || category === "STRETCHING" || category === "CARDIO";
 }
 
 /** Categories whose sessions count as cardio (a Cardio plan is done by any). */

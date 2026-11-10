@@ -121,6 +121,24 @@ export type ProgramInfo = {
   maxes: { poolExerciseId: string; name: string; weight: number; step: number }[];
 };
 
+/**
+ * The program as the day page shows it (v0.663): only on a weekday the
+ * program put work on. A day with only its own entries (a Core day beside
+ * 5/3/1) is titled by what's planned, not by the program.
+ */
+export async function dayProgramInfo(userId: string, dateISO: string): Promise<ProgramInfo | null> {
+  const p = await programInfoFor(userId, dateISO);
+  return p && (await dayHasProgramWork(userId, dateISO)) ? p : null;
+}
+
+/** The program put work on this weekday (an entry with a program lift). */
+export async function dayHasProgramWork(userId: string, dateISO: string): Promise<boolean> {
+  const n = (await prisma.plannedExercise.count({
+    where: { programRole: { not: null }, plannedWorkout: { userId, dayOfWeek: dayOfWeek(dateISO), isRest: false } },
+  })) as number;
+  return n > 0;
+}
+
 export async function programInfoFor(userId: string, dateISO: string): Promise<ProgramInfo | null> {
   // The program running that day: a day before it started isn't part of it
   // (v0.625), but one an earlier program covered is (v0.627).

@@ -16,7 +16,7 @@ import { orderForDay } from "@/lib/workouts/day-order";
 import { cardioDay, simplePlansFor } from "@/lib/workouts/cardio-run";
 import { conditioningFor } from "@/lib/workouts/conditioning-run";
 import { benchmarkFor, conditioningOnDay, pickPlansFor } from "@/lib/workouts/wod-run";
-import { programInfoFor } from "@/lib/workouts/program-run";
+import { dayProgramInfo } from "@/lib/workouts/program-run";
 import { dayLightFactor, daySuggestionFor } from "@/lib/workouts/suggest-run";
 import { adjustView } from "@/lib/workouts/adjust-run";
 import { sportDayView } from "@/lib/workouts/warmup-run";
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     loadWeekStrip(userId, today),
   ]);
   const first = dayWorkouts[0] ?? null;
-  const program = await programInfoFor(userId, date);
+  const program = await dayProgramInfo(userId, date);
   return apiOk({
     date,
     loggable: dayWorkouts.length > 0,

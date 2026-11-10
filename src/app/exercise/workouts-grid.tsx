@@ -99,7 +99,7 @@ export function WorkoutsGrid({
     personal ? (people[0]?.user.id ?? null) : null,
   );
   const [step, setStep] = useState<Step>("menu");
-  const [routineKind, setRoutineKind] = useState<"warmup" | "mobility">("warmup");
+  const [routineKind, setRoutineKind] = useState<"warmup" | "mobility" | "stretching">("warmup");
 
   // The overlay is one scrolling container and the steps swap inside it, so
   // scrolling down the menu to reach "Recent workouts" and then opening it
@@ -321,7 +321,7 @@ export function WorkoutsGrid({
                     <ActionButton
                       icon={FlameIcon}
                       label="Routines"
-                      sub="Warm-up · Mobility"
+                      sub="Warm-up · Mobility · Stretch"
                       onClick={() => setStep("warmups")}
                     />
                   </div>
@@ -387,8 +387,8 @@ export function WorkoutsGrid({
                   <BackLink onClick={() => setStep("menu")} />
                   <h3 className="mb-3 font-display text-lg font-semibold">Routines</h3>
                   {/* Warm-ups and Mobility (v0.659) are both routines. */}
-                  <div className="mb-4 grid grid-cols-2 overflow-hidden rounded-xl border border-accent text-sm font-semibold">
-                    {(["warmup", "mobility"] as const).map((k) => (
+                  <div className="mb-4 grid grid-cols-3 overflow-hidden rounded-xl border border-accent text-sm font-semibold">
+                    {(["warmup", "mobility", "stretching"] as const).map((k) => (
                       <button
                         key={k}
                         type="button"
@@ -396,7 +396,7 @@ export function WorkoutsGrid({
                         onClick={() => setRoutineKind(k)}
                         className={`min-h-[40px] ${routineKind === k ? "bg-accent text-on-accent" : "text-accent"}`}
                       >
-                        {k === "warmup" ? "Warm-ups" : "Mobility"}
+                        {k === "warmup" ? "Warm-ups" : k === "mobility" ? "Mobility" : "Stretching"}
                       </button>
                     ))}
                   </div>

@@ -45,6 +45,10 @@ import {
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
 
+/** The routine kind a done-with-a-tap category uses (v0.663). */
+const routineKindOf = (c: string | null | undefined): "warmup" | "mobility" | "stretching" =>
+  c === "MOBILITY" ? "mobility" : c === "STRETCHING" ? "stretching" : "warmup";
+
 /** The plan-builder value for a Conditioning plan picked on the day (v0.617). */
 const PICK_ON_THE_DAY = "pick";
 
@@ -428,12 +432,12 @@ function DayRow({
                 </div>
               ) : w.category === "CARDIO" ? (
                 <div className="mt-0.5 text-xs text-muted">Row, run, ruck or other</div>
-              ) : w.category === "WARMUP" || w.category === "MOBILITY" ? (
+              ) : w.category === "WARMUP" || w.category === "MOBILITY" || w.category === "STRETCHING" ? (
                 <WarmupPlanLine
                   userId={userId}
                   plannedWorkoutId={w.id}
                   warmup={w.warmup ?? null}
-                  kind={w.category === "MOBILITY" ? "mobility" : "warmup"}
+                  kind={routineKindOf(w.category)}
                 />
               ) : (
                 <div className="mt-0.5 text-xs text-muted">
@@ -586,7 +590,7 @@ function AddWorkoutModal({
         await addPlannedWorkoutFromPool(userId, day, {
           category,
           muscleGroup: isWeights ? muscle : null,
-          ...(category === "WARMUP" || category === "MOBILITY" ? { warmup: warmupId } : {}),
+          ...(category === "WARMUP" || category === "MOBILITY" || category === "STRETCHING" ? { warmup: warmupId } : {}),
           exercises: metricOnly
             ? []
             : chosen.map(([poolExerciseId, p]) => ({
@@ -763,11 +767,11 @@ function AddWorkoutModal({
                 )}
               </select>
             </div>
-          ) : category === "WARMUP" || category === "MOBILITY" ? (
+          ) : category === "WARMUP" || category === "MOBILITY" || category === "STRETCHING" ? (
             <WarmupChooser
               key={category}
               userId={userId}
-              kind={category === "MOBILITY" ? "mobility" : "warmup"}
+              kind={routineKindOf(category)}
               value={warmupId}
               onChange={setWarmupId}
             />

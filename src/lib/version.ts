@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.662.0";
+export const APP_VERSION = "0.663.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.663.0",
+    summary: [
+      "Stretching: add it to a day like Mobility, one routine or a rotation. Seven ready-made routines, including goalie hips and front and middle splits; every hold is 30 seconds or more.",
+      "A day without a program workout (a Core day beside 5/3/1) is titled by its own workout, not the program.",
+    ],
+  },
   {
     version: "0.662.0",
     summary: [
