@@ -5,6 +5,10 @@ import {
   LIB_PREFIX,
   cleanSteps,
   libraryRoutine,
+  dayFocus,
+  parseWarmupChoice,
+  pickWarmupId,
+  withShoulderPrep,
   type WarmupRoutine,
   type WarmupStep,
 } from "@/lib/workouts/warmup-library";
@@ -58,6 +62,39 @@ export async function routinesById(userId: string, ids: (string | null)[]): Prom
   return out;
 }
 
+/**
+ * The day's warm-up routines (v0.655), keyed by each entry's stored choice
+ * ("" for a plain check): "match" and rotations resolved for the date, and
+ * Shoulder prep added on any day with weights.
+ */
+export async function dayWarmupRoutines(
+  userId: string,
+  dateISO: string,
+  values: (string | null)[],
+): Promise<Map<string, WarmupRoutine | null>> {
+  const strength = (await prisma.plannedWorkout.findMany({
+    where: {
+      userId,
+      dayOfWeek: new Date(`${dateISO}T00:00:00Z`).getUTCDay(),
+      isRest: false,
+      category: "WEIGHTS" as never,
+      createdAt: { lt: new Date(Date.parse(`${dateISO}T00:00:00Z`) + 86_400_000) },
+    },
+    orderBy: { sortOrder: "asc" },
+    select: { muscleGroup: true },
+  })) as { muscleGroup: string | null }[];
+  const weights = strength.length > 0;
+  const focus = dayFocus(strength.map((s) => s.muscleGroup));
+  const picked = values.map((v) => pickWarmupId(parseWarmupChoice(v), dateISO, focus));
+  const byId = await routinesById(userId, picked);
+  const out = new Map<string, WarmupRoutine | null>();
+  values.forEach((v, i) => {
+    const id = picked[i];
+    out.set(v ?? "", withShoulderPrep((id && byId.get(id)) || null, weights));
+  });
+  return out;
+}
+
 /** Save the person's own routine (new without an id). */
 export async function saveRoutine(
   userId: string,
@@ -89,7 +126,10 @@ export async function deleteRoutine(userId: string, id: string): Promise<void> {
 
 /** A Warm-up plan entry's routine (null: a plain check). */
 export async function setPlanWarmup(userId: string, plannedWorkoutId: string, warmup: string | null): Promise<boolean> {
-  if (warmup && !(await routineFor(userId, warmup))) return false;
+  // One routine, "match", or "rot:<id>,…" (v0.655): every id must be usable.
+  const choice = parseWarmupChoice(warmup);
+  const ids = choice?.mode === "one" ? [choice.id] : choice?.mode === "rotation" ? choice.ids : [];
+  for (const id of ids) if (!(await routineFor(userId, id))) return false;
   const n = (await prisma.plannedWorkout.updateMany({
     where: { id: plannedWorkoutId, userId, category: "WARMUP" },
     data: { warmup: warmup || null },
@@ -106,6 +146,6 @@ export async function warmupsForDay(
     where: { userId, dayOfWeek: new Date(`${dateISO}T00:00:00Z`).getUTCDay(), category: "WARMUP", isRest: false },
     select: { id: true, warmup: true },
   })) as { id: string; warmup: string | null }[];
-  const byId = await routinesById(userId, rows.map((r) => r.warmup));
-  return rows.map((r) => ({ plannedWorkoutId: r.id, routine: (r.warmup && byId.get(r.warmup)) || null }));
+  const byValue = await dayWarmupRoutines(userId, dateISO, rows.map((r) => r.warmup));
+  return rows.map((r) => ({ plannedWorkoutId: r.id, routine: byValue.get(r.warmup ?? "") ?? null }));
 }

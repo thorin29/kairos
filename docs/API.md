@@ -1010,6 +1010,13 @@ the running program carries into its next block with these changes (same
 start date; maxes as sent), and plan entries the setup doesn't cover stay.
 `GET /api/v1/workouts/plan` movements add `about`.
 
+v0.655: a Warm-up entry's `warmup` may be a routine id, `"match"` (fits the
+day's lifts, rotating among the matches weekly) or `"rot:<id>,<id>…"` (a
+weekly rotation); `POST /workouts/plan/warmup` accepts all three. The day's
+warm-up `routine` is resolved for the date, and on any day with a strength
+entry it ends with Shoulder prep unless it already has rotator cuff work
+(a plain check then becomes the "Shoulder prep" routine).
+
 v0.654: `POST /api/v1/workouts/go-light` (today only) — `{ action: "options",
 why: energy|sore|time|sick, minutes: 10|20|30, hurt, neck?: above|below }` →
 `{ rest, suggest, others }` (options `{ key: lighter|short|recovery, title,

@@ -17,7 +17,10 @@ export type WarmupStep = {
   sides?: boolean;
 };
 
-export type WarmupRoutineDef = { key: string; name: string; steps: WarmupStep[] };
+/** What a warm-up readies you for (v0.655), for "Match the day". */
+export type WarmupFocus = "lower" | "hinge" | "push" | "pull" | "core" | "arms" | "hockey" | "full";
+
+export type WarmupRoutineDef = { key: string; name: string; steps: WarmupStep[]; focus?: WarmupFocus[] };
 
 /** A routine a plan or client sees: a library one ("lib:<key>") or the
  *  person's own (its id). */
@@ -78,7 +81,180 @@ export const WARMUP_LIBRARY: readonly WarmupRoutineDef[] = [
       reps("Back extensions", "10–15"),
     ],
   },
+  // v0.655: one per kind of day, no weights, 6–8 minutes.
+  {
+    key: "squat-legs",
+    name: "Squat and legs",
+    focus: ["lower"],
+    steps: [
+      reps("Leg swings, front to back", "10", true),
+      reps("Leg swings, side to side", "10", true),
+      reps("Hip circles", "10 each way"),
+      hold("Kneeling lunge stretch", 30, true),
+      reps("Cossack squats", "6", true),
+      reps("Glute bridges", "15"),
+      reps("Bodyweight squats", "15"),
+      reps("Walking lunges", "10", true),
+      reps("Calf raises", "15"),
+    ],
+  },
+  {
+    key: "deadlift-back",
+    name: "Deadlift and back",
+    focus: ["hinge"],
+    steps: [
+      reps("Cat-cow", "10"),
+      reps("Bird dogs", "8", true),
+      reps("Hip hinge drill", "15"),
+      reps("Glute bridges", "15"),
+      reps("Single-leg RDL, no weight", "8", true),
+      reps("Inchworms", "6"),
+      reps("Back extensions", "15"),
+      reps("Dead bugs", "10"),
+    ],
+  },
+  {
+    key: "upper-push",
+    name: "Upper push",
+    focus: ["push"],
+    steps: [
+      reps("Arm circles", "10 each way"),
+      reps("Thoracic open-books", "8", true),
+      reps("Wall slides", "10"),
+      reps("Push-up to down dog", "8"),
+      reps("Push-ups", "10–15"),
+      reps("Tricep dips", "10"),
+      hold("Front plank", 30),
+    ],
+  },
+  {
+    key: "upper-pull",
+    name: "Upper pull",
+    focus: ["pull"],
+    steps: [
+      hold("Dead hang", 30),
+      reps("Scap pull-ups", "10"),
+      reps("TRX rows", "12"),
+      reps("Cat-cow", "10"),
+      reps("Thoracic rotations", "8", true),
+      reps("Chin-ups", "5"),
+    ],
+  },
+  {
+    key: "core-day",
+    name: "Core day",
+    focus: ["core"],
+    steps: [
+      reps("Cat-cow", "10"),
+      reps("Dead bugs", "10"),
+      reps("Bird dogs", "8", true),
+      hold("Hollow hold", 20),
+      hold("Side plank", 20, true),
+      reps("Glute bridges", "15"),
+      reps("Hip circles", "10 each way"),
+    ],
+  },
+  {
+    key: "arms-day",
+    name: "Arms day",
+    focus: ["arms"],
+    steps: [
+      reps("Arm circles", "10 each way"),
+      reps("Wrist circles", "10 each way"),
+      hold("Forearm stretch", 30, true),
+      reps("Push-ups", "10"),
+      reps("TRX curls", "10"),
+      reps("Diamond push-ups", "8"),
+      reps("Tricep dips", "10"),
+      hold("Dead hang", 20),
+    ],
+  },
+  {
+    key: "hockey-legs",
+    name: "Hockey legs",
+    focus: ["hockey", "lower"],
+    steps: [
+      reps("Hip airplanes", "5", true),
+      reps("Lateral lunges", "8", true),
+      hold("Groin stretch", 30),
+      reps("Skater hops", "10", true),
+      reps("Glute bridges", "15"),
+      hold("Front plank", 30),
+    ],
+  },
 ];
+
+/**
+ * Shoulder prep (v0.655): added to the warm-up on any day with weights, unless
+ * the warm-up already has rotator cuff work. 90/90 rotation with a light
+ * dumbbell works the cuff against gravity; at the side it takes a band.
+ */
+export const SHOULDER_PREP: readonly WarmupStep[] = [
+  reps("90/90 external rotation, 2–5 lb", "12", true),
+  reps("Band external rotation, elbow at side", "12", true),
+  reps("Band pull-aparts", "15"),
+  reps("Scap push-ups", "12"),
+];
+export const SHOULDER_PREP_ID = "lib:shoulder-prep";
+const hasCuffWork = (steps: readonly WarmupStep[]) => steps.some((s) => /rotator|external rotation/i.test(s.name));
+
+/** A routine for a day with weights: Shoulder prep added unless it's covered. */
+export function withShoulderPrep(r: WarmupRoutine | null, weights: boolean): WarmupRoutine | null {
+  if (!weights) return r;
+  if (!r) return { id: SHOULDER_PREP_ID, name: "Shoulder prep", steps: [...SHOULDER_PREP], mine: false };
+  return hasCuffWork(r.steps) ? r : { ...r, steps: [...r.steps, ...SHOULDER_PREP] };
+}
+
+/**
+ * A Warm-up entry's choice (v0.655): one routine (its id), "match" (fits the
+ * day's lifts, rotating among the matches) or "rot:<id>,<id>…" (a list you
+ * order, a step on each week). Stored in PlannedWorkout.warmup as-is.
+ */
+export type WarmupChoice = { mode: "one"; id: string } | { mode: "match" } | { mode: "rotation"; ids: string[] };
+
+export function parseWarmupChoice(v: string | null | undefined): WarmupChoice | null {
+  if (!v) return null;
+  if (v === "match") return { mode: "match" };
+  if (v.startsWith("rot:")) {
+    const ids = v.slice(4).split(",").filter(Boolean).slice(0, 12);
+    return ids.length ? { mode: "rotation", ids } : null;
+  }
+  return { mode: "one", id: v };
+}
+
+export const warmupChoiceValue = (c: WarmupChoice): string =>
+  c.mode === "match" ? "match" : c.mode === "rotation" ? `rot:${c.ids.join(",")}` : c.id;
+
+/** Whole weeks since 1970-01-05 (a Monday): steps a rotation once a week. */
+export function weekIndex(dateISO: string): number {
+  return Math.floor((Date.parse(`${dateISO}T12:00:00Z`) - Date.parse("1970-01-05T00:00:00Z")) / (7 * 86_400_000));
+}
+
+/** The day's focus from its strength entries' muscle groups (the first wins). */
+export function dayFocus(groups: readonly (string | null)[]): WarmupFocus {
+  const map: Record<string, WarmupFocus> = {
+    LEGS: "lower",
+    DEADLIFT: "hinge",
+    BACK: "pull",
+    CHEST: "push",
+    SHOULDERS: "push",
+    ARMS: "arms",
+    CORE: "core",
+    FULL_BODY: "full",
+  };
+  for (const g of groups) if (g && map[g]) return map[g];
+  return "full";
+}
+
+/** Which routine id a choice means on a day; null for a plain check. */
+export function pickWarmupId(choice: WarmupChoice | null, dateISO: string, focus: WarmupFocus): string | null {
+  if (!choice) return null;
+  if (choice.mode === "one") return choice.id;
+  if (choice.mode === "rotation") return choice.ids[((weekIndex(dateISO) % choice.ids.length) + choice.ids.length) % choice.ids.length];
+  const fits = WARMUP_LIBRARY.filter((r) => r.focus?.includes(focus));
+  const pool = fits.length ? fits : WARMUP_LIBRARY.filter((r) => r.key === "hips-shoulders");
+  return LIB_PREFIX + pool[weekIndex(dateISO) % pool.length].key;
+}
 
 export const LIB_PREFIX = "lib:";
 

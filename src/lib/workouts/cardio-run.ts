@@ -1,5 +1,5 @@
 import "server-only";
-import { routinesById } from "@/lib/workouts/warmup-run";
+import { dayWarmupRoutines } from "@/lib/workouts/warmup-run";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
@@ -255,7 +255,12 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
     { name: string | null; category: string | null }[],
     { slot: string }[],
   ];
-  const routines = await routinesById(userId, plans.map((p) => p.warmup));
+  // Match / rotation resolved for the day, Shoulder prep on weight days (v0.655).
+  const routines = await dayWarmupRoutines(
+    userId,
+    dateISO,
+    plans.filter((p) => p.category === "WARMUP").map((p) => p.warmup),
+  );
   const anyCardio = sessions.some((row) => row.category != null && CARDIO_CATEGORIES.includes(row.category));
   const skipped = new Set(skips.map((k) => k.slot));
   return plans
@@ -270,7 +275,7 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
           ? sessions.some((row) => row.category === "WARMUP" && (row.name ?? "").slice(0, 40) === p.name.slice(0, 40))
           : anyCardio,
         skipped: skipped.has(`plan:${p.id}`),
-        ...(warmup ? { routine: (p.warmup && routines.get(p.warmup)) || null } : {}),
+        ...(warmup ? { routine: routines.get(p.warmup ?? "") ?? null } : {}),
       };
     });
 }

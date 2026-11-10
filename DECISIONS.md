@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-11 — Warm-ups by the day; Shoulder prep (v0.655.0 / app 0.465.0)
+
+- Seven library routines, no weights, 6–8 min, each tagged with a focus:
+  Squat and legs (lower), Deadlift and back (hinge), Upper push, Upper pull,
+  Core day, Arms day, Hockey legs (hockey + lower). The person's own
+  "Regular warm-up" stays their full-body routine.
+- A Warm-up entry's `warmup` string now carries a mode with no migration:
+  an id (one routine), `"match"`, or `"rot:<ids>"`. Match maps the day's
+  first strength entry's muscle group to a focus (LEGS→lower, DEADLIFT→hinge,
+  BACK→pull, CHEST/SHOULDERS→push, ARMS, CORE, else full) and steps through
+  the matching routines one per week; a rotation also steps once a week
+  (`weekIndex`, Monday-based) — by the calendar, not by completion, since a
+  warm-up is done on nearly every workout day and a stateless rule can't
+  drift.
+- **Shoulder prep** (90/90 external rotation 2–5 lb, band external rotation
+  with the elbow at the side, band pull-aparts, scap push-ups) is appended on
+  any day with a strength entry — Core and Arms days included — unless the
+  routine already has rotator cuff / external rotation work. The 90/90
+  position loads the cuff against gravity; at the side it needs a band
+  (a dumbbell there mostly works the biceps and front shoulder).
+- Resolved server-side in `dayWarmupRoutines` (cardio-run's simple plans and
+  `warmupsForDay`), so both apps show the right steps unchanged; the plan
+  editors' chooser gains a three-way switch.
+
 ## 2026-11 — Go light (v0.654.0 / app 0.464.0)
 
 - A "Go light" button beside Rest / skip, today only. Up to three answers

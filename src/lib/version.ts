@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.654.0";
+export const APP_VERSION = "0.655.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.655.0",
+    summary: [
+      "Seven new warm-ups, one for each kind of day: squat and legs, deadlift and back, upper push, upper pull, core, arms and hockey legs.",
+      "A warm-up can be one routine, match the day's lifts, or rotate through a list you pick.",
+      "Shoulder prep is added to the warm-up on any day with weights, unless it already has rotator cuff work.",
+    ],
+  },
   {
     version: "0.654.0",
     summary: ["Go light: on a low-energy, sore, busy or sick day, answer a few questions and get a lighter version of today. It counts as done, and you can undo it."],

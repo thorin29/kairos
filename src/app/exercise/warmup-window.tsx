@@ -9,7 +9,14 @@ import {
   setPlanWarmupRoutine,
 } from "@/lib/actions/workouts";
 import { CheckIcon, InfoIcon, PencilIcon, PlusIcon, TimerIcon, TrashIcon } from "@/components/icons";
-import { stepAmount, type WarmupRoutine, type WarmupStep } from "@/lib/workouts/warmup-library";
+import {
+  parseWarmupChoice,
+  stepAmount,
+  warmupChoiceValue,
+  WARMUP_LIBRARY,
+  type WarmupRoutine,
+  type WarmupStep,
+} from "@/lib/workouts/warmup-library";
 import { Modal } from "./plan-file-panel";
 import { WarmupTimer } from "./warmup-timer";
 
@@ -234,6 +241,11 @@ export function WarmupChooser({
   const [routines, setRoutines] = useState<WarmupRoutine[] | null>(null);
   const [peek, setPeek] = useState<WarmupRoutine | null>(null);
   const [editing, setEditing] = useState<WarmupRoutine | "new" | null>(null);
+  // One warm-up, Match the day, or a Rotation you order (v0.655).
+  const choice = parseWarmupChoice(value);
+  const [mode, setMode] = useState<"one" | "match" | "rotation">(choice?.mode ?? "one");
+  const [rot, setRot] = useState<string[]>(choice?.mode === "rotation" ? choice.ids : []);
+  const matchable = WARMUP_LIBRARY.filter((r) => r.focus?.length);
   const load = () => {
     loadWarmupRoutines(userId)
       .then(setRoutines)
@@ -284,12 +296,87 @@ export function WarmupChooser({
     );
   };
 
+  const modes: ["one" | "match" | "rotation", string][] = [
+    ["one", "One warm-up"],
+    ["match", "Match the day"],
+    ["rotation", "Rotation"],
+  ];
   return (
     <div>
-      <ul className="divide-y divide-hairline">
-        {row(null, "Just a check", "")}
-        {routines?.map((r) => row(r.id, r.name, `${r.steps.length} ${r.steps.length === 1 ? "step" : "steps"}${r.mine ? " · Yours" : ""}`, r))}
-      </ul>
+      <div className="mb-3 grid grid-cols-3 overflow-hidden rounded-xl border border-accent text-sm font-semibold">
+        {modes.map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            aria-pressed={mode === k}
+            onClick={() => setMode(k)}
+            className={`min-h-[40px] ${mode === k ? "bg-accent text-on-accent" : "text-accent"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {mode === "match" && (
+        <>
+          <ul className="divide-y divide-hairline">
+            {matchable.map((r) => (
+              <li key={r.key} className="py-2 text-sm font-semibold">
+                {r.name}
+              </li>
+            ))}
+          </ul>
+          <button type="button" onClick={() => onChange("match")} className={`${PRIMARY_BTN} mt-3 w-full`}>
+            Save
+          </button>
+        </>
+      )}
+      {mode === "rotation" && (
+        <>
+          <ul className="divide-y divide-hairline">
+            {routines?.map((r) => {
+              const at = rot.indexOf(r.id);
+              return (
+                <li key={r.id} className="flex items-center gap-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setRot(at >= 0 ? rot.filter((x) => x !== r.id) : [...rot, r.id])}
+                    aria-pressed={at >= 0}
+                    aria-label={`${at >= 0 ? "Remove" : "Add"} ${r.name}`}
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${
+                      at >= 0 ? "border-accent bg-accent text-on-accent" : "border-accent"
+                    }`}
+                  >
+                    {at >= 0 ? at + 1 : ""}
+                  </button>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{r.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPeek(r)}
+                    aria-label={`About ${r.name}`}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:text-accent"
+                  >
+                    <InfoIcon className="h-4 w-4" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <button
+            type="button"
+            disabled={rot.length === 0}
+            onClick={() => onChange(warmupChoiceValue({ mode: "rotation", ids: rot }))}
+            className={`${PRIMARY_BTN} mt-3 w-full disabled:opacity-50`}
+          >
+            Save
+          </button>
+        </>
+      )}
+      {mode === "one" && (
+        <ul className="divide-y divide-hairline">
+          {row(null, "Just a check", "")}
+          {routines?.map((r) => row(r.id, r.name, `${r.steps.length} ${r.steps.length === 1 ? "step" : "steps"}${r.mine ? " · Yours" : ""}`, r))}
+        </ul>
+      )}
       {!routines && <p className="text-sm text-muted">Loading…</p>}
       <button type="button" onClick={() => setEditing("new")} className={`${SECONDARY_LG} mt-2 w-full`}>
         <PlusIcon className="h-4 w-4" />
@@ -516,6 +603,9 @@ export function WarmupPlanLine({
       setName(null);
       return;
     }
+    const c = parseWarmupChoice(warmup);
+    if (c?.mode === "match") return setName("Match the day");
+    if (c?.mode === "rotation") return setName(`Rotation · ${c.ids.length}`);
     loadWarmupRoutines(userId)
       .then((rs) => setName(rs.find((r) => r.id === warmup)?.name ?? null))
       .catch(() => {});
