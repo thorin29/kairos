@@ -56,8 +56,15 @@ function Lines({ preview }: { preview: AdjustPreview }) {
       <ul className="mt-2 divide-y divide-hairline text-sm">
         {preview.lines.map((l, i) => (
           <li key={i} className="flex justify-between gap-3 py-1.5">
-            <span className={l.dropped ? "text-muted line-through" : ""}>{l.label}</span>
-            <span className="shrink-0 text-muted">{l.dropped ? "dropped" : (l.detail ?? "")}</span>
+            <span className={l.dropped ? "text-muted line-through" : l.standIn ? "font-medium" : ""}>
+              {l.label}
+              {l.standIn && (
+                <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-[0.65rem] font-bold uppercase text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                  Added
+                </span>
+              )}
+            </span>
+            <span className="text-right text-muted">{l.dropped ? "dropped" : (l.detail ?? "")}</span>
           </li>
         ))}
       </ul>
@@ -71,16 +78,20 @@ function Lines({ preview }: { preview: AdjustPreview }) {
  */
 export function AdjustTodayModal({
   userId,
+  sore = [],
   onClose,
   onDone,
   onRest,
 }: {
   userId: string;
+  /** Areas marked sore (v0.675): Hurt opens on the first. */
+  sore?: string[];
   onClose: () => void;
   onDone: () => void;
   onRest: () => void;
 }) {
   const [step, setStep] = useState<Step>("start");
+  const [replace, setReplace] = useState(true);
   const [preview, setPreview] = useState<AdjustPreview | null>(null);
   const [minutes, setMinutes] = useState<number>(30);
   const [picks, setPicks] = useState<TimePick[]>(["weights"]);
@@ -141,7 +152,19 @@ export function AdjustTodayModal({
           />
           <Option title="Short on time" detail="Fit a workout into the time you have" onClick={() => setStep("time")} />
           <Option title="Sick" detail="A lighter version or an easy day" onClick={() => setStep("sick")} />
-          <Option title="Hurt or injured" detail="Work around it" onClick={() => setStep("hurt")} />
+          <Option
+            title="Hurt or injured"
+            detail="Work around it"
+            onClick={() => {
+              setStep("hurt");
+              const first = HURT_AREAS.find(([k]) => sore.includes(k))?.[0];
+              if (first && !area) {
+                setArea(first);
+                setPreview(null);
+                loadPreview({ mode: "hurt", area: first, replace });
+              }
+            }}
+          />
         </div>
       )}
 
@@ -174,10 +197,24 @@ export function AdjustTodayModal({
               pick={(a) => {
                 setArea(a);
                 setPreview(null);
-                loadPreview({ mode: "hurt", area: a });
+                loadPreview({ mode: "hurt", area: a, replace });
               }}
             />
           </div>
+          {area && preview && (preview.canReplace || !replace) && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={replace}
+                onChange={(e) => {
+                  setReplace(e.target.checked);
+                  loadPreview({ mode: "hurt", area, replace: e.target.checked });
+                }}
+                className="h-4 w-4"
+              />
+              Add a replacement for each move left out
+            </label>
+          )}
           {area && preview && <Lines preview={preview} />}
           {preview?.empty ? (
             <button type="button" onClick={onRest} className={`${SECONDARY_BTN} w-full`}>
@@ -187,7 +224,7 @@ export function AdjustTodayModal({
             <button
               type="button"
               disabled={!area || !preview || pending}
-              onClick={() => apply({ mode: "hurt", area })}
+              onClick={() => apply({ mode: "hurt", area, replace })}
               className={`${PRIMARY_BTN} w-full disabled:opacity-50`}
             >
               Confirm

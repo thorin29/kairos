@@ -853,6 +853,7 @@ request: { "date","slot",                      // slot = the planned movement
            "hurt":"NECK"|"SHOULDER"|"ELBOW"|"WRIST"|"UPPER_BACK"|"LOWER_BACK"|
                   "HIP"|"KNEE"|"ANKLE"|"OTHER"|null }
 200: { "date","status":"saved" }              // the whole answer; both null clears
+                                              // a hurt (not OTHER) also marks that area sore (v0.675)
 
 GET  /api/v1/workouts/weekly
 200: { "weeks":[ { "start","days","sets","minutes","trained",
@@ -862,6 +863,23 @@ GET  /api/v1/workouts/weekly
                                 "status":"done"|"planned"|"missed"|"rest"|null } ] } ],  // 12, oldest first
        "inARow":int }                          // records.ts weeksInARow
 ```
+**Sore spots (v0.675).** Kept until marked better, never cleared on their own.
+Also in the workouts payload as `heat.sore`; the day carries `sore: [area]`.
+```
+GET  /api/v1/workouts/sore
+200: { "sore":[ { "area","since","from":string|null } ] }   // from: the movement whose "Something hurt?" marked it
+POST /api/v1/workouts/sore
+request: { "area":"NECK"|"SHOULDER"|"ELBOW"|"WRIST"|"UPPER_BACK"|"LOWER_BACK"|"HIP"|"KNEE"|"ANKLE",
+           "sore":true|false }                 // false = better
+200: { "sore":[ … ] }                          // the spots now marked; safe to replay
+```
+Adjust today's Hurt takes the same areas (the v0.658 ones — shoulder, elbow,
+back, hip, knee, legs — are still read), plus `"replace":bool` (default true):
+each movement left out gets a stand-in from the person's recent lifts, shown
+in the preview as a line with `"standIn":true`, and opened in the logger as
+that slot's swap. The preview also says `"canReplace"`. The day suggestion
+`sore` answers `around:<AREA>` to make today a Hurt day on that area.
+
 **Programs (v0.611).**
 ```
 GET  /api/v1/workouts/programs
@@ -1571,7 +1589,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**190 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**191 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is

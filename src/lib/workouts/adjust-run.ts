@@ -4,13 +4,19 @@ import { toDateColumn } from "@/lib/dates";
 import { dayPlanWhere, movementTarget } from "@/lib/queries/workout-log";
 import { dayAdjust, setAdjust } from "@/lib/workouts/suggest-run";
 import { roundLoad } from "@/lib/workouts/programs";
+import { groupsFor } from "@/lib/workouts/involvement";
+import type { MuscleGroup } from "@/lib/workouts/catalog";
+import { OPTIONAL_CATEGORIES } from "@/lib/workouts/blocks";
 import {
   ADJUST_FACTOR,
   adjustKeep,
   adjustLabel,
   cleanAdjust,
+  loadsArea,
   perSetFrom,
+  pickStandIns,
   planShort,
+  type HurtSwap,
   type Adjust,
   type AdjustMode,
   type EntryIn,
@@ -157,7 +163,8 @@ export async function shortPlanFor(
 }
 
 /** A preview line: a movement or entry, what it'll be, or that it's dropped. */
-export type AdjustLine = { label: string; detail: string | null; dropped: boolean };
+/** `standIn` (v0.675): a replacement for the movement on the line before. */
+export type AdjustLine = { label: string; detail: string | null; dropped: boolean; standIn?: boolean };
 export type AdjustPreview = {
   title: string;
   tag: string;
@@ -165,7 +172,58 @@ export type AdjustPreview = {
   lines: AdjustLine[];
   /** Hurt: nothing left to lift. */
   empty: boolean;
+  /** Hurt: stand-ins could be offered for what comes out (v0.675). */
+  canReplace?: boolean;
 };
+
+/** The person's lifts of the last eight weeks, how often, for stand-ins. */
+async function recentLifts(userId: string, dateISO: string) {
+  const since = new Date(Date.parse(`${dateISO}T00:00:00Z`) - 56 * 86_400_000).toISOString().slice(0, 10);
+  const rows = (await prisma.sessionSet.findMany({
+    where: {
+      finished: true,
+      poolExerciseId: { not: null },
+      OR: [{ reps: { gt: 0 } }, { seconds: { gt: 0 } }],
+      session: { userId, isRest: false, date: { gte: toDateColumn(since), lt: toDateColumn(dateISO) } },
+    },
+    select: {
+      poolExerciseId: true,
+      poolExercise: { select: { name: true, muscleGroup: true } },
+      session: { select: { date: true, category: true } },
+    },
+  })) as {
+    poolExerciseId: string;
+    poolExercise: { name: string; muscleGroup: string | null } | null;
+    session: { date: Date; category: string | null };
+  }[];
+  const by = new Map<string, { name: string; group: string | null; days: Set<number> }>();
+  for (const r of rows) {
+    if (!r.poolExercise || (r.session.category && (OPTIONAL_CATEGORIES.includes(r.session.category) || r.session.category === "HIIT"))) continue;
+    const c = by.get(r.poolExerciseId) ?? {
+      name: r.poolExercise.name,
+      group: groupsFor(r.poolExercise.name, r.poolExercise.muscleGroup as MuscleGroup | null).primary ?? null,
+      days: new Set<number>(),
+    };
+    c.days.add(r.session.date.getTime());
+    by.set(r.poolExerciseId, c);
+  }
+  return [...by].map(([id, c]) => ({ id, name: c.name, group: c.group, times: c.days.size }));
+}
+
+/** Stand-ins for what a hurt area takes out of today's lifting (v0.675). */
+async function standInsFor(userId: string, dateISO: string, a: Extract<Adjust, { mode: "hurt" }>, plans: PlanRow[]): Promise<HurtSwap[]> {
+  const out: { id: string; group: string | null }[] = [];
+  for (const p of plans) {
+    if (p.category !== "WEIGHTS") continue;
+    for (const e of p.exercises) {
+      if (!loadsArea(a.area, e.poolExercise.name, p.core != null ? null : p.muscleGroup)) continue;
+      out.push({ id: e.poolExerciseId, group: groupsFor(e.poolExercise.name, null).primary ?? (p.core != null ? "CORE" : p.muscleGroup) });
+    }
+  }
+  if (out.length === 0) return [];
+  const planIds = plans.flatMap((p) => p.exercises.map((e) => e.poolExerciseId));
+  return pickStandIns(a.area, out, await recentLifts(userId, dateISO), planIds);
+}
 
 /** Last time's sets for each movement: "3 × 5 · 155 lb" at a share. */
 async function lastLines(userId: string, dateISO: string, ids: string[], factor: number): Promise<Map<string, string>> {
@@ -193,9 +251,12 @@ async function lastLines(userId: string, dateISO: string, ids: string[], factor:
 /** The preview for Low energy, Sick and Hurt. */
 export async function adjustPreview(userId: string, dateISO: string, a: Adjust): Promise<AdjustPreview> {
   const plans = await dayPlan(userId, dateISO);
-  const keep = adjustKeep(a, plans.map(toEntry));
+  // Hurt: what could stand in, and whether this preview shows them.
+  const offered = a.mode === "hurt" ? await standInsFor(userId, dateISO, a, plans) : [];
+  const swaps = a.mode === "hurt" && a.replace !== false ? offered : [];
+  const keep = adjustKeep(a.mode === "hurt" ? { ...a, swaps: [] } : a, plans.map(toEntry));
   const factor = a.mode === "low" ? ADJUST_FACTOR.low : a.mode === "sick" ? ADJUST_FACTOR.sick : 1;
-  const ids = plans.flatMap((p) => p.exercises.map((e) => e.poolExerciseId));
+  const ids = [...plans.flatMap((p) => p.exercises.map((e) => e.poolExerciseId)), ...swaps.map((s) => s.to)];
   const lines = await lastLines(userId, dateISO, ids, factor);
   const out: AdjustLine[] = [];
   let lifts = 0;
@@ -208,6 +269,11 @@ export async function adjustPreview(userId: string, dateISO: string, a: Adjust):
         lifts += 1;
         if (on) kept += 1;
         out.push({ label: e.poolExercise.name, detail: on ? (lines.get(e.poolExerciseId) ?? null) : null, dropped: !on });
+        const s = on ? null : swaps.find((x) => x.from === e.poolExerciseId);
+        if (s) {
+          kept += 1;
+          out.push({ label: s.name, detail: [lines.get(s.to), `in place of ${e.poolExercise.name}`].filter(Boolean).join(" \u00b7 "), dropped: false, standIn: true });
+        }
       }
       return;
     }
@@ -236,6 +302,7 @@ export async function adjustPreview(userId: string, dateISO: string, a: Adjust):
     note,
     lines: out,
     empty: a.mode === "hurt" && lifts > 0 && kept === 0,
+    canReplace: offered.length > 0,
   };
 }
 
@@ -247,6 +314,11 @@ export async function applyAdjust(userId: string, dateISO: string, raw: unknown)
     const plan = await shortPlanFor(userId, dateISO, a);
     if (!plan.fits) return false;
     await setAdjust(userId, dateISO, { ...a, picks: a.picks.filter((p) => plan.available[p]), keep: plan.keep, supp: plan.supp, total: plan.total });
+    return true;
+  }
+  if (a.mode === "hurt") {
+    const swaps = a.replace !== false ? await standInsFor(userId, dateISO, a, await dayPlan(userId, dateISO)) : [];
+    await setAdjust(userId, dateISO, { mode: "hurt", area: a.area, replace: a.replace !== false, ...(swaps.length ? { swaps } : {}) });
     return true;
   }
   await setAdjust(userId, dateISO, a);

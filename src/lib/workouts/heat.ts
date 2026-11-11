@@ -91,6 +91,8 @@ export type HeatMap = {
   /** Cardio and conditioning charts (v0.674). */
   cardioCharts?: import("@/lib/workouts/endurance-charts").CardioCharts | null;
   conditioningCharts?: import("@/lib/workouts/endurance-charts").ConditioningCharts | null;
+  /** Sore spots (v0.675), until marked better. */
+  sore?: import("@/lib/workouts/sore").SoreSpot[];
 };
 
 const MAX_REPS_FOR_ESTIMATE = 12;

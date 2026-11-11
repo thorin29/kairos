@@ -1,7 +1,7 @@
 import "server-only";
 import { adjustAnswer, adjustIsLight, parseAdjust, type Adjust } from "@/lib/workouts/adjust";
 import { prisma } from "@/lib/prisma";
-import { addDays, fromDateColumn, toDateColumn } from "@/lib/dates";
+import { addDays, dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
 import type { MuscleGroup } from "@/lib/workouts/catalog";
 import type { RepRecord } from "@/lib/workouts/records";
 import {
@@ -14,6 +14,9 @@ import {
   type Suggestion,
 } from "@/lib/workouts/suggest";
 import { programIntentFor } from "@/lib/workouts/program-run";
+import { soreSpotsFor } from "@/lib/workouts/sore-run";
+import { SORE_LABEL } from "@/lib/workouts/sore";
+import { loadsArea } from "@/lib/workouts/adjust";
 
 /** The answers a person gave on a day: "<slot>|<key>" → answer. */
 async function answersOn(userId: string, dateISO: string): Promise<Map<string, string>> {
@@ -92,8 +95,32 @@ export async function answerSuggestion(
       create: { userId, date, key: k, slot: s, answer: a },
       update: { answer: a },
     });
+  // "Work around it" (v0.675) makes today a Hurt day on that area, with stand-ins.
+  if (answer.startsWith("around:")) {
+    const { applyAdjust } = await import("@/lib/workouts/adjust-run");
+    await put(key.slice(0, 40), slot.slice(0, 60), "around");
+    await applyAdjust(userId, dateISO, { mode: "hurt", area: answer.slice(7), replace: true });
+    return;
+  }
   await put(key.slice(0, 40), slot.slice(0, 60), answer.slice(0, 20));
   if (answer === "light" || answer === "ease") await put("day", "", answer);
+}
+
+/** The first sore spot today's plan loads, with those moves (v0.675). */
+async function soreToday(userId: string, dateISO: string): Promise<{ area: string; label: string; moves: string[] } | null> {
+  const spots = await soreSpotsFor(userId);
+  if (spots.length === 0) return null;
+  const plans = (await prisma.plannedWorkout.findMany({
+    where: { userId, dayOfWeek: dayOfWeek(dateISO), isRest: false, category: "WEIGHTS" as never, createdAt: { lt: toDateColumn(addDays(dateISO, 1)) } },
+    select: { muscleGroup: true, core: true, exercises: { orderBy: { sortOrder: "asc" }, select: { poolExercise: { select: { name: true } } } } },
+  })) as { muscleGroup: string | null; core: unknown; exercises: { poolExercise: { name: string } }[] }[];
+  for (const s of spots) {
+    const moves = plans.flatMap((p) =>
+      p.exercises.map((e) => e.poolExercise.name).filter((n) => loadsArea(s.area, n, p.core != null ? null : p.muscleGroup)),
+    );
+    if (moves.length) return { area: s.area, label: SORE_LABEL[s.area], moves: [...new Set(moves)] };
+  }
+  return null;
 }
 
 async function recentFeedback(userId: string, dateISO: string): Promise<FeedbackIn[]> {
@@ -134,7 +161,7 @@ async function planChangedOn(userId: string): Promise<string | null> {
 
 /** The day page's card for a person and day (at most one). */
 export async function daySuggestionFor(userId: string, dateISO: string): Promise<Suggestion | null> {
-  const [answers, feedback, last, intent, changed] = await Promise.all([
+  const [answers, feedback, last, intent, changed, sore] = await Promise.all([
     answersOn(userId, dateISO),
     recentFeedback(userId, dateISO),
     prisma.workoutSession.findFirst({
@@ -144,9 +171,11 @@ export async function daySuggestionFor(userId: string, dateISO: string): Promise
     }) as Promise<{ date: Date } | null>,
     programIntentFor(userId, dateISO),
     planChangedOn(userId),
+    soreToday(userId, dateISO),
   ]);
   const answered = new Set([...answers.keys()].filter((k) => k.startsWith("|")).map((k) => k.slice(1)));
   return daySuggestion({
+    sore,
     planChangedOn: changed,
     today: dateISO,
     lastTrained: last ? fromDateColumn(last.date) : null,
@@ -172,7 +201,7 @@ export async function movementSuggestionFor(input: {
   unit: string;
 }): Promise<{ suggestion: Suggestion | null; recentTop: number | null }> {
   const { userId, dateISO, slot, movement } = input;
-  const [answers, feedback, pool, sets] = await Promise.all([
+  const [answers, feedback, pool, sets, sore] = await Promise.all([
     answersOn(userId, dateISO),
     recentFeedback(userId, dateISO),
     prisma.poolExercise.findUnique({ where: { id: movement }, select: { name: true, muscleGroup: true } }) as Promise<{
@@ -191,6 +220,7 @@ export async function movementSuggestionFor(input: {
       orderBy: [{ setNumber: "asc" }],
       select: { weight: true, reps: true, session: { select: { date: true } } },
     }) as Promise<{ weight: number | null; reps: number | null; session: { date: Date } }[]>,
+    soreSpotsFor(userId),
   ]);
 
   const byDay = new Map<string, SessionIn["sets"][number][]>();
@@ -231,6 +261,7 @@ export async function movementSuggestionFor(input: {
     feedback,
     lastBestOn,
     answered,
+    sore,
   });
   return { suggestion, recentTop };
 }

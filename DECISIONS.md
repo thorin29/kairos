@@ -1,5 +1,33 @@
 # Decisions
 
+## 2026-11 — Sore spots, hurt days rebuilt (v0.675.0 / app 0.485.0)
+
+- One set of areas everywhere: "Something hurt?", sore spots and Adjust
+  today's Hurt all use NECK, SHOULDER, ELBOW, WRIST, UPPER_BACK, LOWER_BACK,
+  HIP, KNEE, ANKLE (Other only for "Something hurt?"). Hurt answers stored
+  with the v0.658 keys read as their nearest (back → lower back, knee and
+  legs → knee).
+- Sore spots (`sore.ts`, `sore-run.ts`, setting `workouts.sore.<userId>`):
+  one per area with the day it was marked and what marked it. Never cleared
+  on their own — only Better. A "Something hurt?" answer marks the area
+  (it doesn't clear it when the answer is removed). No migration.
+- The body map hatches the area in red on both views (`SORE_PATHS`, path
+  indices shared with the app); strips under the map show each spot with
+  Better, and "+ Sore spot" marks one.
+- The day card "Your knee is marked sore — Today has squat and lunge" (Work
+  around it / Not today) replaces the old "your X hurt on Tuesday, go
+  lighter?" card; the per-movement "Swap X today?" card goes by sore spots
+  too. Work around it makes today a Hurt day on that area, with stand-ins.
+  Adjust today's Hurt opens on the first sore area.
+- Stand-ins (`pickStandIns`): each movement Hurt takes out gets one of the
+  person's lifts from the last eight weeks that doesn't load the area and
+  isn't already in today's plan — same muscle group first, then the same
+  half of the body, then the one done most. Stored on the day's adjustment
+  (`swaps`) and shown as that slot's swap (`loggedAs`) until something is
+  logged, so the loggers, completion and history need nothing new; Undo
+  swap goes back. "Add a replacement for each move left out" turns them off.
+- A pause for an injury (the heat map not cooling) stays a separate item.
+
 ## 2026-11 — Chart pages line up (v0.674.1 / app 0.484.1)
 
 - Every chart page runs: filter chips (where there are any), the main

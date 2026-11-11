@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import {
   BACK_OUTLINES,
   BACK_PATHS,
@@ -44,6 +44,8 @@ type Props = {
   fillsBack?: Record<string, string>;
   /** Tap targets with nothing behind them are drawn inert and not clickable. */
   available?: NavRegion[];
+  /** Sore spots (v0.675): path indices per figure, hatched in red. */
+  sore?: { front: number[]; back: number[] };
   className?: string;
 };
 
@@ -60,6 +62,7 @@ function Figure({
   fills,
   available,
   label,
+  sore,
 }: {
   paths: BodyPath[];
   outlines: Record<string, string>;
@@ -71,7 +74,9 @@ function Figure({
   fills: Record<string, string>;
   available: Set<NavRegion> | null;
   label: string;
+  sore: number[];
 }) {
+  const hatch = `sore-${useId().replace(/:/g, "")}`;
   // One tab stop per TARGET, not per path. Legs alone is thirteen regions;
   // making each focusable would put seventy stops between the keyboard and the
   // rest of the page.
@@ -127,6 +132,23 @@ function Figure({
         );
       })}
 
+      {/* Sore spots (v0.675): hatched red over the regions, never tappable. */}
+      {sore.length > 0 && (
+        <defs>
+          <pattern id={hatch} width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="14" stroke="#c0392b" strokeWidth="5" />
+          </pattern>
+        </defs>
+      )}
+      {sore.map((i) =>
+        paths[i] ? (
+          <g key={`sore-${i}`} pointerEvents="none">
+            <path d={paths[i].d} fill="#f6c9c6" fillOpacity={0.55} stroke="#c0392b" strokeWidth={3} />
+            <path d={paths[i].d} fill={`url(#${hatch})`} fillOpacity={0.8} />
+          </g>
+        ) : null,
+      )}
+
       {/* One ring per selected target, traced from the UNION of its regions.
           Stroking each path instead rings every internal muscle seam. */}
       {[...selected].map((nav) =>
@@ -166,6 +188,7 @@ export default function BodyMap({
   fillsFront = {},
   fillsBack = {},
   available,
+  sore,
   className,
 }: Props) {
   const [focused, setFocused] = useState<NavRegion | null>(null);
@@ -194,6 +217,7 @@ export default function BodyMap({
         outlines={FRONT_OUTLINES}
         box={FRONT_VIEWBOX}
         label="Front of the body"
+        sore={sore?.front ?? []}
       />
       <Figure
         {...shared}
@@ -202,6 +226,7 @@ export default function BodyMap({
         outlines={BACK_OUTLINES}
         box={BACK_VIEWBOX}
         label="Back of the body"
+        sore={sore?.back ?? []}
       />
     </div>
   );

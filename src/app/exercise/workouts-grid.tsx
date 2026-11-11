@@ -29,6 +29,8 @@ import { DayLog } from "./day-log";
 import { MovementInfo } from "@/components/movement-info";
 import { WeeklyTraining } from "./weekly-training";
 import { CoreCard, CoreOverview, CorePage, LiftPage, LiftRows } from "./lift-page";
+import { SoreSpots, soreRegions } from "./sore-spots";
+import type { SoreSpot } from "@/lib/workouts/sore";
 import { CARDIO_COLOR, CONDITIONING_COLOR, CardioCard, CardioPage, ConditioningCard, ConditioningPage } from "./endurance-charts";
 import { Modal } from "./plan-file-panel";
 import type { CoreMove } from "@/lib/workouts/core-moves";
@@ -803,6 +805,9 @@ function LiftBlocks({
   const [plankOpen, setPlankOpen] = useState(false);
   const [coreAll, setCoreAll] = useState(false);
   const [cardioOpen, setCardioOpen] = useState(false);
+  // Sore spots (v0.675): marked here or by "Something hurt?", kept until Better.
+  const [sore, setSore] = useState<SoreSpot[]>(heat?.sore ?? []);
+  useEffect(() => setSore(heat?.sore ?? []), [heat?.sore]);
   const [condOpen, setCondOpen] = useState(false);
   // The training heat map (v0.664): one picture, no ranges.
   const training = heat?.training;
@@ -958,6 +963,7 @@ function LiftBlocks({
                   available={trainAvailable(training)}
                   fillsFront={heatShade}
                   fillsBack={heatShade}
+                  sore={soreRegions(sore)}
                 />
                 <div className="absolute left-1/2 top-0 -translate-x-1/2">
                   <EnduranceHeart data={training?.endurance ?? null} onOpen={() => setHeatPicked("ENDURANCE")} />
@@ -1008,11 +1014,13 @@ function LiftBlocks({
             available={available}
             fillsFront={fillsFront}
             fillsBack={fillsBack}
+            sore={soreRegions(sore)}
           />
           </>
           )}
         </div>
       )}
+      {heat && <SoreSpots userId={userId} spots={sore} onChange={setSore} />}
       {summaries.map((g) => (
         <div key={`sum-${g}`}>
           <p className="text-sm font-semibold" style={{ color: MG_COLOR[g] ?? "var(--color-accent)" }}>

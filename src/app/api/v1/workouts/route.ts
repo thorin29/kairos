@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { soreSpotsFor } from "@/lib/workouts/sore-run";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import {
@@ -97,6 +98,8 @@ export async function GET(req: NextRequest) {
     // The day's suggestion card and a lighter day, if chosen (v0.612).
     suggestion: await daySuggestionFor(userId, date),
     light: await dayLightFactor(userId, date),
+    // v0.675: areas marked sore — Adjust today opens Hurt on the first.
+    sore: (await soreSpotsFor(userId)).map((s) => s.area),
     // v0.658: today's adjustment — { mode, label, dropped } — or null.
     adjusted,
     // v0.662: a sport on the calendar — { label, forSport, routine } — or null.

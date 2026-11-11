@@ -8,13 +8,18 @@
  *   sick  A lighter version (main lifts at about 50%, no extra sets or
  *         conditioning) or an easy day (warm-up and cardio, no lifting).
  *   hurt  Moves that load the area come out; the rest stays at normal weight.
+ *         Each one out can be replaced (v0.675) by one of the person's own
+ *         recent lifts that doesn't load the area, logged as a swap.
  *
  * Stored as the day's answer ("adj:" + JSON) and applied where the plan is
  * read, so logging, completion and the streak need nothing new. Pure.
  */
 
+import { HURT_AREAS as FEEDBACK_AREAS, HURT_LABEL, type HurtArea as FeedbackArea } from "@/lib/workouts/catalog";
+
 export type AdjustMode = "low" | "time" | "sick" | "hurt";
-export type HurtArea = "shoulder" | "elbow" | "back" | "hip" | "knee" | "legs";
+/** The same areas as "Something hurt?" and sore spots (v0.675), less Other. */
+export type HurtArea = Exclude<FeedbackArea, "OTHER">;
 export type TimePick = "weights" | "cardio" | "conditioning";
 export type SickHow = "light" | "easy";
 export const TIME_CHOICES = [15, 30, 45] as const;
@@ -34,24 +39,35 @@ export type Adjust =
       supp: boolean;
       total: number;
     }
-  | { mode: "hurt"; area: HurtArea };
+  | {
+      mode: "hurt";
+      area: HurtArea;
+      /** Offer replacements for what comes out (default yes). */
+      replace?: boolean;
+      /** Worked out by the server: each planned movement out and its stand-in. */
+      swaps?: HurtSwap[];
+    };
 
-export const HURT_AREAS: [HurtArea, string][] = [
-  ["shoulder", "Shoulder"],
-  ["elbow", "Elbow / wrist"],
-  ["back", "Back"],
-  ["hip", "Hip"],
-  ["knee", "Knee / ankle"],
-  ["legs", "Legs"],
-];
-const AREA_WORD: Record<HurtArea, string> = {
-  shoulder: "shoulder",
-  elbow: "elbow / wrist",
-  back: "back",
-  hip: "hip",
-  knee: "knee / ankle",
-  legs: "legs",
+export type HurtSwap = { from: string; to: string; name: string };
+
+export const HURT_AREAS: [HurtArea, string][] = FEEDBACK_AREAS.filter((a): a is HurtArea => a !== "OTHER").map((a) => [
+  a,
+  HURT_LABEL[a],
+]);
+/** Areas stored before v0.675. */
+const LEGACY_AREA: Record<string, HurtArea> = {
+  shoulder: "SHOULDER",
+  elbow: "ELBOW",
+  back: "LOWER_BACK",
+  hip: "HIP",
+  knee: "KNEE",
+  legs: "KNEE",
 };
+export function hurtAreaOf(v: unknown): HurtArea | null {
+  if (typeof v !== "string") return null;
+  if (LEGACY_AREA[v]) return LEGACY_AREA[v];
+  return HURT_AREAS.some(([k]) => k === v) ? (v as HurtArea) : null;
+}
 
 /** Share of the usual weights. */
 export const ADJUST_FACTOR = { low: 0.65, sick: 0.5 } as const;
@@ -76,13 +92,12 @@ export function adjustLabel(a: Adjust): string {
     case "sick":
       return a.how === "easy" ? "Sick · Easy day" : "Sick · Lighter";
     case "hurt":
-      return `Working around your ${AREA_WORD[a.area]}`;
+      return `Working around your ${HURT_LABEL[a.area].toLowerCase()}`;
   }
 }
 
 export const adjustAnswer = (a: Adjust) => `adj:${JSON.stringify(a)}`;
 
-const isArea = (v: unknown): v is HurtArea => HURT_AREAS.some(([k]) => k === v);
 const isPick = (v: unknown): v is TimePick => v === "weights" || v === "cardio" || v === "conditioning";
 
 /** A stored day answer read back; null when it isn't an adjustment. Go light
@@ -112,8 +127,20 @@ export function cleanAdjust(raw: unknown, stored = false): Adjust | null {
       return { mode: "low" };
     case "sick":
       return { mode: "sick", how: o.how === "easy" ? "easy" : "light" };
-    case "hurt":
-      return isArea(o.area) ? { mode: "hurt", area: o.area } : null;
+    case "hurt": {
+      const area = hurtAreaOf(o.area);
+      if (!area) return null;
+      const swaps =
+        stored && Array.isArray(o.swaps)
+          ? (o.swaps as unknown[])
+              .filter((s): s is HurtSwap => {
+                const x = s as Record<string, unknown>;
+                return !!x && typeof x.from === "string" && typeof x.to === "string" && typeof x.name === "string";
+              })
+              .slice(0, 20)
+          : [];
+      return { mode: "hurt", area, replace: o.replace !== false, ...(swaps.length ? { swaps } : {}) };
+    }
     case "time": {
       const minutes = TIME_CHOICES.includes(o.minutes as 15) ? (o.minutes as number) : null;
       const picks = Array.isArray(o.picks) ? [...new Set(o.picks.filter(isPick))] : [];
@@ -140,29 +167,41 @@ const CARDIO = ["CARDIO", "RUNNING", "ROWING", "RUCKING"];
 
 /** Movements that load an area, by name (and the entry's muscle group). */
 const LOADS: Record<HurtArea, { re: RegExp; groups: string[] }> = {
-  shoulder: {
+  NECK: {
+    re: /shrug|overhead|military|push press|jerk|snatch|clean|handstand|headstand|upright row|farmer|carry|back squat|neck|deadlift|wrestl/i,
+    groups: ["SHOULDERS"],
+  },
+  WRIST: {
+    re: /curl|press|bench|push-?up|dip|clean|snatch|front squat|handstand|plank|burpee|kettlebell|farmer|carry|row|hang|pull-?up|chin-?up|wrist/i,
+    groups: ["ARMS"],
+  },
+  UPPER_BACK: {
+    re: /row|pull-?up|chin-?up|pull-?down|pulldown|shrug|deadlift|face pull|carry|farmer|snatch|clean|good morning/i,
+    groups: ["BACK"],
+  },
+  ANKLE: {
+    re: /run|sprint|jump|skip|box|lunge|calf|step-?up|skater|pistol|burpee|wall ball|thruster|squat|ankle/i,
+    groups: [],
+  },
+  SHOULDER: {
     re: /press|bench|dip|push-?up|pull-?up|chin-?up|fly|flye|raise|snatch|jerk|clean|overhead|handstand|thruster|wall ball|landmine|face pull|upright row|burpee/i,
     groups: ["CHEST", "SHOULDERS"],
   },
-  elbow: {
+  ELBOW: {
     re: /curl|extension|skull|press|bench|dip|push-?up|pull-?up|chin-?up|row|carry|farmer|hang|snatch|clean|kettlebell swing|burpee/i,
     groups: ["ARMS"],
   },
-  back: {
+  LOWER_BACK: {
     re: /deadlift|good morning|row|squat|swing|clean|snatch|back extension|hyperextension|carry|farmer|thruster|rdl|romanian|jefferson|sandbag/i,
     groups: ["DEADLIFT", "BACK"],
   },
-  hip: {
+  HIP: {
     re: /squat|deadlift|lunge|hip thrust|bridge|swing|step-?up|split|good morning|rdl|romanian|leg press|thruster|box jump|run|sprint|burpee/i,
     groups: ["LEGS", "DEADLIFT"],
   },
-  knee: {
+  KNEE: {
     re: /squat|lunge|step-?up|leg extension|leg press|leg curl|jump|split|run|sprint|box|skater|pistol|thruster|wall ball|burpee|calf|skip/i,
     groups: ["LEGS"],
-  },
-  legs: {
-    re: /squat|lunge|step-?up|leg |deadlift|rdl|romanian|good morning|hip thrust|bridge|jump|split|run|sprint|calf|thruster|wall ball|swing|burpee|skater|pistol/i,
-    groups: ["LEGS", "DEADLIFT"],
   },
 };
 
@@ -219,15 +258,59 @@ export function adjustKeep(a: Adjust, entries: readonly EntryIn[]): { keep: stri
       }
       case "hurt": {
         if (hiit) return whole(!(e.parts ?? []).some((p) => loadsArea(a.area, p)));
-        if (cat === "RUNNING") return whole(!["knee", "hip", "legs"].includes(a.area));
+        if (cat === "RUNNING") return whole(!["KNEE", "HIP", "ANKLE"].includes(a.area));
         if (!strength) return whole(true);
+        // A movement out with a stand-in stays, done as its swap.
+        const swapped = new Set((a.swaps ?? []).map((s) => s.from));
         const keep = e.exercises
-          .filter((x) => !loadsArea(a.area, x.name ?? "", e.core ? null : e.muscleGroup))
+          .filter((x) => swapped.has(x.poolExerciseId) || !loadsArea(a.area, x.name ?? "", e.core ? null : e.muscleGroup))
           .map((x) => x.poolExerciseId);
         return { keep, stays: keep.length > 0 };
       }
     }
   });
+}
+
+// --- hurt: stand-ins --------------------------------------------------------------
+
+const UPPER = ["CHEST", "BACK", "SHOULDERS", "ARMS"];
+const LOWER = ["LEGS", "DEADLIFT"];
+const halfOf = (g: string | null) => (g == null ? "?" : UPPER.includes(g) ? "upper" : LOWER.includes(g) ? "lower" : g);
+
+export type StandInCandidate = { id: string; name: string; group: string | null; times: number };
+
+/**
+ * A stand-in for each movement a hurt area takes out (v0.675), from the
+ * person's own recent lifts: never one that loads the area, is already in
+ * today's plan, or is already standing in. The same muscle group first, then
+ * the same half of the body (upper, lower, core), then whatever they do most.
+ * A movement with no candidate left gets none.
+ */
+export function pickStandIns(
+  area: HurtArea,
+  out: readonly { id: string; group: string | null }[],
+  candidates: readonly StandInCandidate[],
+  planIds: readonly string[],
+): HurtSwap[] {
+  const used = new Set(planIds);
+  const ok = candidates.filter((c) => !used.has(c.id) && !loadsArea(area, c.name, c.group));
+  const swaps: HurtSwap[] = [];
+  for (const o of out) {
+    let best: StandInCandidate | null = null;
+    let bestScore = -1;
+    for (const c of ok) {
+      if (used.has(c.id)) continue;
+      const score = (c.group != null && c.group === o.group ? 2000 : 0) + (halfOf(c.group) === halfOf(o.group) ? 1000 : 0) + Math.min(c.times, 999);
+      if (score > bestScore) {
+        best = c;
+        bestScore = score;
+      }
+    }
+    if (!best) continue;
+    used.add(best.id);
+    swaps.push({ from: o.id, to: best.id, name: best.name });
+  }
+  return swaps;
 }
 
 // --- short on time ------------------------------------------------------------

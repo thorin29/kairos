@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.674.1";
+export const APP_VERSION = "0.675.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.675.0",
+    summary: [
+      "Mark a sore spot under the body map. It shows on the map until you tap Better.",
+      "Answering \u201cSomething hurt?\u201d after a movement marks that spot too.",
+      "When today loads a sore spot, the day page offers to work around it.",
+      "Hurt in Adjust today can add a replacement for each move left out, from your own recent lifts. Neck is an area now.",
+    ],
+  },
   {
     version: "0.674.1",
     summary: [

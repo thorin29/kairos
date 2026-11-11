@@ -382,10 +382,15 @@ describe("suggestions (v0.612)", () => {
     expect(s?.key).toBe("back");
     expect(s?.actions[0].answer).toBe("ease");
   });
-  it("asks about a recent hurt, then hard days; quiet once answered or already light", () => {
-    const hurt = daySuggestion({ ...base, feedback: [{ date: "2026-10-27", effort: null, hurt: "SHOULDER" }] });
-    expect(hurt?.title).toBe("Your shoulder hurt on Tuesday. Go lighter today?");
-    expect(daySuggestion({ ...base, feedback: [{ date: "2026-10-27", effort: null, hurt: "SHOULDER" }], answered: new Set(["hurt"]) })).toBeNull();
+  it("offers to work around a sore spot today loads, then hard days; quiet once answered or already light", () => {
+    const sore = { area: "SHOULDER", label: "Shoulder", moves: ["Bench press", "Overhead press", "Dip"] };
+    const s = daySuggestion({ ...base, sore });
+    expect(s?.title).toBe("Your shoulder is marked sore");
+    expect(s?.why).toBe("Today has bench press, overhead press and 1 more.");
+    expect(s?.actions[0].answer).toBe("around:SHOULDER");
+    expect(daySuggestion({ ...base, sore, answered: new Set(["sore"]) })).toBeNull();
+    // A "Something hurt?" answer alone no longer asks: it marks the spot.
+    expect(daySuggestion({ ...base, feedback: [{ date: "2026-10-27", effort: null, hurt: "SHOULDER" }] })).toBeNull();
     const hard = [
       { date: "2026-10-29", effort: "TOO_HARD", hurt: null, group: "ARMS" },
       { date: "2026-10-27", effort: "TOO_HARD", hurt: null, group: "ARMS" },
@@ -438,9 +443,9 @@ describe("suggestions (v0.612)", () => {
     expect(movementSuggestion({ ...mv, history: [{ date: "2026-10-27", sets: s185, effort: "HARD" }, { date: "2026-10-20", sets: s185, effort: null }] })).toBeNull();
   });
   it("a hurt area that works this movement offers a swap", () => {
-    const s = movementSuggestion({ ...mv, history: [], feedback: [{ date: "2026-10-29", effort: null, hurt: "ELBOW" }] });
+    const s = movementSuggestion({ ...mv, history: [], sore: [{ area: "ELBOW", since: "2026-10-29" }] });
     expect(s?.key).toBe("hurt-swap");
-    expect(movementSuggestion({ ...mv, history: [], feedback: [{ date: "2026-10-29", effort: null, hurt: "KNEE" }] })).toBeNull();
+    expect(movementSuggestion({ ...mv, history: [], sore: [{ area: "KNEE", since: "2026-10-29" }] })).toBeNull();
   });
   it("a stalled lift: no new best in 6 weeks over 4+ sessions", () => {
     const h = ["2026-10-27", "2026-10-20", "2026-10-13", "2026-10-06"].map((date) => ({ date, sets: [{ weight: 180, reps: 3 }], effort: null }));

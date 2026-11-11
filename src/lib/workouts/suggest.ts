@@ -111,6 +111,8 @@ export function daySuggestion(input: {
   answered: ReadonlySet<string>;
   /** When the person last started a program or got a new plan. */
   planChangedOn?: string | null;
+  /** A sore spot today's plan loads (v0.675): the area and those moves. */
+  sore?: { area: string; label: string; moves: string[] } | null;
 }): Suggestion | null {
   const { today, answered } = input;
   if (input.light || input.programIntent) return null;
@@ -128,15 +130,18 @@ export function daySuggestion(input: {
     };
   }
 
-  const hurt = recentHurt(input.feedback, today);
-  if (hurt && !answered.has("hurt")) {
+  // A sore spot (v0.675; was "hurt lately" from the last week's answers —
+  // answering "Something hurt?" now marks the spot): work around it.
+  if (input.sore && input.sore.moves.length > 0 && !answered.has("sore")) {
+    const m = input.sore.moves.map((x) => x.toLowerCase());
+    const list = m.length <= 2 ? m.join(" and ") : `${m.slice(0, 2).join(", ")} and ${m.length - 2} more`;
     return {
-      key: "hurt",
-      title: `Your ${HURT_LABEL[hurt.area].toLowerCase()} hurt on ${whenLabel(hurt.date, today)}. Go lighter today?`,
-      why: "Lighter weights for a day, or swap whatever bothers it.",
+      key: "sore",
+      title: `Your ${input.sore.label.toLowerCase()} is marked sore`,
+      why: `Today has ${list}.`,
       actions: [
-        { answer: "light", label: "Lighter today" },
-        { answer: "dismiss", label: "It's fine" },
+        { answer: `around:${input.sore.area}`, label: "Work around it" },
+        { answer: "dismiss", label: "Not today" },
       ],
     };
   }
@@ -244,14 +249,18 @@ export function movementSuggestion(input: {
   /** The day the best ever (any rep count) was first set. */
   lastBestOn: string | null;
   answered: ReadonlySet<string>;
+  /** Sore spots (v0.675; was the last week's "Something hurt?" answers). */
+  sore?: readonly { area: string; since: string }[];
 }): Suggestion | null {
   const { today, answered, history } = input;
 
-  const hurt = recentHurt(input.feedback, today);
-  if (hurt && input.muscleGroup && HURT_GROUPS[hurt.area].includes(input.muscleGroup) && !answered.has("hurt-swap")) {
+  const hurt = (input.sore ?? []).find(
+    (s) => s.area in HURT_GROUPS && !!input.muscleGroup && HURT_GROUPS[s.area as HurtArea].includes(input.muscleGroup),
+  );
+  if (hurt && !answered.has("hurt-swap")) {
     return {
       key: "hurt-swap",
-      title: `Your ${HURT_LABEL[hurt.area].toLowerCase()} hurt on ${whenLabel(hurt.date, today)}. Swap ${input.name} today?`,
+      title: `Your ${HURT_LABEL[hurt.area as HurtArea].toLowerCase()} is marked sore. Swap ${input.name} today?`,
       why: "Something easier on it still counts for today.",
       actions: [
         { answer: "swap", label: "Swap" },

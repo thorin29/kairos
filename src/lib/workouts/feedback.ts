@@ -2,6 +2,8 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
 import { EFFORTS, HURT_AREAS, type Effort, type HurtArea } from "@/lib/workouts/catalog";
+import { isSoreArea } from "@/lib/workouts/sore";
+import { markSore } from "@/lib/workouts/sore-run";
 
 export type MovementFeedback = { effort: Effort | null; hurt: HurtArea | null };
 
@@ -33,4 +35,12 @@ export async function setMovementFeedback(
     create: { userId, date, slot, effort: fb.effort, hurt: fb.hurt },
     update: { effort: fb.effort, hurt: fb.hurt },
   });
+  // Something hurt marks it sore on the body map (v0.675) until it's better.
+  if (fb.hurt && isSoreArea(fb.hurt)) {
+    const pool = slot.includes(":")
+      ? null
+      : ((await prisma.poolExercise.findUnique({ where: { id: slot }, select: { name: true } })) as { name: string } | null);
+    const from = pool?.name ?? (slot.startsWith("cardio:") ? "Cardio" : slot.startsWith("sport:") ? "Sport" : slot.startsWith("hiit:") ? "Conditioning" : null);
+    await markSore(userId, fb.hurt, dateISO, from);
+  }
 }

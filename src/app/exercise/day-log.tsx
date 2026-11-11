@@ -570,6 +570,7 @@ export function DayLog({
       {adjusting && (
         <AdjustTodayModal
           userId={userId}
+          sore={state?.sore ?? []}
           onClose={() => setAdjusting(false)}
           onDone={() => {
             setAdjusting(false);

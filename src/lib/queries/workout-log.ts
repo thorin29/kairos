@@ -32,6 +32,7 @@ import {
 } from "@/lib/workouts/programs";
 import { dayHasProgramWork, loadActiveProgram, plannedSlotFor, programInfoFor, type ProgramInfo } from "@/lib/workouts/program-run";
 import { dayAdjust, dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
+import { soreSpotsFor } from "@/lib/workouts/sore-run";
 import { adjustKeep, type Adjust } from "@/lib/workouts/adjust";
 import type { Suggestion } from "@/lib/workouts/suggest";
 import type { HeatMap } from "@/lib/workouts/heat";
@@ -493,10 +494,20 @@ function trimForAdjust(
     adj,
     out.map((e) => ({ ...e, parts: parts.get(e.plannedWorkoutId) ?? [] })),
   );
+  // Hurt's stand-ins (v0.675) show as the day's swap until something is logged.
+  const standIn = new Map((adj.mode === "hurt" ? (adj.swaps ?? []) : []).map((s) => [s.from, s]));
   return out
     .map((e, i) => ({ e, k: keep[i] }))
     .filter(({ k }) => k.stays)
-    .map(({ e, k }) => ({ ...e, exercises: e.exercises.filter((x) => k.keep.includes(x.poolExerciseId)) }));
+    .map(({ e, k }) => ({
+      ...e,
+      exercises: e.exercises
+        .filter((x) => k.keep.includes(x.poolExerciseId))
+        .map((x) => {
+          const s = standIn.get(x.poolExerciseId);
+          return s && !x.loggedAs && x.value == null ? { ...x, loggedAs: { poolExerciseId: s.to, name: s.name } } : x;
+        }),
+    }));
 }
 
 export async function loadTodayPlannedWorkouts(
@@ -1831,9 +1842,16 @@ export async function loadMovementLog(
     { slot: string } | null,
   ];
   const swapped = daySets.find((s) => s.poolExerciseId && s.poolExerciseId !== slotId);
-  const loggedAs = swapped
+  let loggedAs = swapped
     ? { poolExerciseId: swapped.poolExerciseId as string, name: swapped.poolExercise?.name ?? "" }
     : null;
+  // Nothing logged yet on a hurt day: the stand-in picked for this slot opens
+  // as the swap (v0.675); Undo swap goes back to the planned movement.
+  if (!loggedAs && !doing && daySets.length === 0) {
+    const adj = await dayAdjust(userId, dateISO);
+    const s = adj?.mode === "hurt" ? adj.swaps?.find((x) => x.from === slotId) : undefined;
+    if (s) loggedAs = { poolExerciseId: s.to, name: s.name };
+  }
   const movement = doing || loggedAs?.poolExerciseId || slotId;
 
   const prior = (await prisma.sessionSet.findFirst({
@@ -2081,6 +2099,8 @@ export type DayLogState = {
    *  conditioning are left out: their own cards show them. */
   loggedOther: LoggedOther[];
   /** Anything at all logged that day (not a rest). */
+  /** Areas marked sore (v0.675): Adjust today opens Hurt on the first. */
+  sore: string[];
   loggedAny: boolean;
   /** Past rotation entries shown as the workout that day logged (v0.672). */
   asLogged?: { plannedWorkoutId: string; name: string; exercises: { poolExerciseId: string; name: string; metric: string; unit: string }[] }[];
@@ -2368,6 +2388,7 @@ export async function loadDayLogState(
     loggedTitle: logged.title,
     suggestion: await daySuggestionFor(userId, dateISO),
     light: await dayLightFactor(userId, dateISO),
+    sore: (await soreSpotsFor(userId)).map((s) => s.area),
     planIds,
     loggedOther: logged.other,
     loggedAny: logged.any,

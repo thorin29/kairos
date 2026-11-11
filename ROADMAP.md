@@ -1748,11 +1748,12 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] The day's "+ Conditioning" becomes "+ Additional": a picker for
   conditioning, mobility, stretching or isometrics, added to that day only
   (web 0.667 / app 0.477).
-- [ ] Adjust today, Hurt: when nothing is left to lift, offer a day for the
-  healthy parts (e.g. upper body for a knee) instead of only Rest / skip.
+- [x] Adjust today, Hurt: a stand-in for each move left out, from recent lifts
+  (v0.675), so a day emptied by the area becomes a day for the healthy parts.
+- [ ] Pause for an injury: weeks with a hurt area don't cool it on the heat map.
 
 From the original workouts plan, not built yet:
-- [ ] "Something hurt?" marked on the body map for that area.
+- [x] "Something hurt?" marked on the body map for that area (sore spots, v0.675).
 - [x] Planned light weeks shaded on the lift charts (web 0.670 / app 0.480,
   with lift rows and a page per lift).
 - [x] Cardio charts (v0.674) (reached from the Endurance heart and a Cardio section on
@@ -1770,7 +1771,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.674.1 (migrations through 147_day_extras).
-- App versionName 0.484.1 / versionCode 553 / CLIENT_BUILD 553.
+- Web APP_VERSION 0.675.0 (migrations through 147_day_extras).
+- App versionName 0.485.0 / versionCode 555 / CLIENT_BUILD 555.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

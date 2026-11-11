@@ -10,6 +10,7 @@ import {
 } from "@/lib/workouts/endurance-charts";
 import type { WorkoutType } from "@/lib/workouts/catalog";
 import { sportDayLabel } from "@/lib/sport/label";
+import { soreSpotsFor } from "@/lib/workouts/sore-run";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn } from "@/lib/dates";
 import { doneOn } from "@/lib/queries/movement-stats";
@@ -123,6 +124,7 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
     coreSummary: buildCoreSummary(coreMoves, heat.plank ?? [], todayISO),
     cardioCharts: buildCardioCharts(endurance.cardio, todayISO),
     conditioningCharts: buildConditioningCharts(endurance.conditioning, todayISO),
+    sore: await soreSpotsFor(userId),
   };
 }
 

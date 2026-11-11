@@ -52,6 +52,8 @@ import {
 import { cleanRoutineKind, type RoutineKind, type WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { coreWorkoutsFor, deleteCoreWorkout, saveCoreWorkout, setCoreDay } from "@/lib/workouts/core-run";
 import { rotationKindOf, type CoreWorkout } from "@/lib/workouts/core-library";
+import { isSoreArea, type SoreSpot } from "@/lib/workouts/sore";
+import { clearSore, markSore, soreSpotsFor } from "@/lib/workouts/sore-run";
 import { cardioDay, logCardio, removeCardio, setWarmupDone, type CardioEntry, type CardioIn } from "@/lib/workouts/cardio-run";
 import { loadDayOrders, orderForDay, saveDayOrder, type DayOrders } from "@/lib/workouts/day-order";
 import { conditioningFor, type ConditioningPlan } from "@/lib/workouts/conditioning-run";
@@ -1593,6 +1595,14 @@ export async function saveMovementFeedback(input: {
     effort: cleanEffort(input.effort),
     hurt: cleanHurt(input.hurt),
   });
+}
+
+/** Mark an area sore, or better (v0.675). Returns the spots now marked. */
+export async function setSoreSpot(userId: string, area: string, sore: boolean): Promise<SoreSpot[]> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!isSoreArea(area)) return soreSpotsFor(userId);
+  return sore ? markSore(userId, area, todayISO()) : clearSore(userId, area);
 }
 
 /** The weekly training chart's data for a person (v0.610). */

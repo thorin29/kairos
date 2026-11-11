@@ -6,6 +6,7 @@ import {
   cleanAdjust,
   loadsArea,
   parseAdjust,
+  pickStandIns,
   perSetFrom,
   planShort,
   type LiftIn,
@@ -30,9 +31,25 @@ describe("adjust today (v0.658)", () => {
     expect(kept(adjustKeep({ mode: "sick", how: "easy" }, entries))).toEqual([[], null, null, null, null, []]);
   });
   it("hurt drops what loads the area", () => {
-    expect(loadsArea("knee", "Back squat")).toBe(true);
-    expect(loadsArea("knee", "Bench press", "CHEST")).toBe(false);
-    expect(kept(adjustKeep({ mode: "hurt", area: "knee" }, entries))).toEqual([[], null, ["bench", "curl"], ["plank"], null, []]);
+    expect(loadsArea("KNEE", "Back squat")).toBe(true);
+    expect(loadsArea("KNEE", "Bench press", "CHEST")).toBe(false);
+    expect(kept(adjustKeep({ mode: "hurt", area: "KNEE" }, entries))).toEqual([[], null, ["bench", "curl"], ["plank"], null, []]);
+    // A stand-in keeps the movement it replaces (done as its swap, v0.675).
+    expect(kept(adjustKeep({ mode: "hurt", area: "KNEE", swaps: [{ from: "squat", to: "rdl", name: "Romanian deadlift" }] }, entries))[1]).toEqual(["squat"]);
+    expect(loadsArea("NECK", "Barbell shrug")).toBe(true);
+  });
+  it("picks stand-ins from recent lifts: same group, then same half, never one that loads the area", () => {
+    const cands = [
+      { id: "lp", name: "Leg press", group: "LEGS", times: 9 },
+      { id: "rdl", name: "Romanian deadlift", group: "DEADLIFT", times: 4 },
+      { id: "ht", name: "Hip thrust", group: "LEGS", times: 2 },
+      { id: "bench", name: "Bench press", group: "CHEST", times: 12 },
+      { id: "plank", name: "Plank", group: "CORE", times: 6 },
+    ];
+    const swaps = pickStandIns("KNEE", [{ id: "squat", group: "LEGS" }, { id: "lunge", group: "LEGS" }, { id: "ext", group: "LEGS" }], cands, ["squat", "lunge", "ext", "plank"]);
+    // Leg press loads the knee; the hip thrust is LEGS and doesn't by name, but
+    // LEGS as a group loads the knee, so the deadlift-group RDL goes first.
+    expect(swaps.map((s) => s.to)).toEqual(["rdl", "bench"]);
   });
   it("short on time keeps what fitted and the picked kinds", () => {
     const a = cleanAdjust({ mode: "time", minutes: 30, picks: ["weights", "conditioning"], keep: ["bench"] }, true)!;
@@ -42,7 +59,9 @@ describe("adjust today (v0.658)", () => {
     expect(cleanAdjust({ mode: "time", minutes: 20, picks: ["weights"] })).toBeNull();
   });
   it("stores and reads it back, and reads old Go light answers", () => {
-    expect(parseAdjust(adjustAnswer({ mode: "hurt", area: "back" }))).toEqual({ mode: "hurt", area: "back" });
+    expect(parseAdjust(adjustAnswer({ mode: "hurt", area: "LOWER_BACK" }))).toEqual({ mode: "hurt", area: "LOWER_BACK", replace: true });
+    // Areas stored before v0.675 read as the new ones.
+    expect(parseAdjust('adj:{"mode":"hurt","area":"back"}')).toEqual({ mode: "hurt", area: "LOWER_BACK", replace: true });
     expect(parseAdjust("go:lighter:20")).toEqual({ mode: "low" });
     expect(parseAdjust("go:recovery:0")).toEqual({ mode: "sick", how: "easy" });
     expect(parseAdjust("light")).toBeNull();
