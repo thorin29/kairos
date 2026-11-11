@@ -16,7 +16,8 @@ const setText = (v: number, reps?: number | null) => `${v}${reps ? ` × ${reps}`
 /** A small line of the top set per session, last 12 sessions. */
 function Spark({ points, color }: { points: GraphSeries["points"]; color: string }) {
   const pts = sorted(points).slice(-12);
-  if (pts.length < 2) return <span className="w-[84px] shrink-0" aria-hidden="true" />;
+  // Nothing to draw takes no room (v0.672), so the name can use it.
+  if (pts.length < 2) return null;
   const vals = pts.map((p) => p.value);
   const lo = Math.min(...vals);
   const hi = Math.max(...vals);
@@ -39,7 +40,7 @@ function Spark({ points, color }: { points: GraphSeries["points"]; color: string
 
 function TrendText({ s, todayISO }: { s: GraphSeries; todayISO: string }) {
   const t = liftTrend(s.points, s.best, todayISO);
-  if (!t) return <span className="w-16 shrink-0" />;
+  if (!t) return null;
   return (
     <span className="flex w-16 shrink-0 flex-col items-end text-right">
       {t.kind === "up" ? (
@@ -279,54 +280,108 @@ function CoreTrend({ m, todayISO }: { m: CoreMove; todayISO: string }) {
   );
 }
 
+const RECENT_CORE = 6;
+const mmss = (sec: number) => coreValueText("time", sec, null, "");
+
+/** One core row: name, best and last, and the trend in words (no line —
+ *  a core rotation has too many movements for a line each, v0.672). */
+function CoreRow({ m, unit, todayISO, first, onOpen }: { m: CoreMove; unit: string; todayISO: string; first: boolean; onOpen: () => void }) {
+  const last = m.points.at(-1);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`flex min-h-[52px] w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-ground/50 ${first ? "" : "border-t border-hairline"}`}
+    >
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="line-clamp-2 text-sm font-semibold">{m.name}</span>
+        <span className="truncate text-xs text-muted">
+          {m.best ? `Best ${coreValueText(m.kind, m.best.value, m.best.weight, unit)}` : ""}
+          {last ? ` · last ${coreValueText(m.kind, last.value, last.weight, unit)}` : ""}
+        </span>
+      </span>
+      <CoreTrend m={m} todayISO={todayISO} />
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="shrink-0 text-muted" aria-hidden="true">
+        <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  );
+}
+
 /**
- * Core's movements as rows (v0.671), by what they're done for — a hold's time
- * or reps — not weight: a weighted crunch is still about the reps, so its
- * weight shows as context ("12 × 25 lb"). A row opens the movement's page.
+ * Core (v0.671; v0.672): one card — the plank test first, then the core
+ * movements done most recently, by a hold's time or reps (weight only as
+ * context). The rest are a tap away, so a rotation of twenty movements
+ * isn't twenty rows. Every row opens its page, where the chart and tiles are.
  */
 export function CoreRows({
   moves,
-  color,
+  plank,
   unit,
   todayISO,
   onOpen,
+  onOpenPlank,
 }: {
   moves: CoreMove[];
-  color: string;
+  plank: { date: string; seconds: number; pft: number | null }[];
   unit: string;
   todayISO: string;
   onOpen: (m: CoreMove) => void;
+  onOpenPlank: () => void;
 }) {
-  if (moves.length === 0) return null;
+  const [all, setAll] = useState(false);
+  const recent = [...moves].sort((a, b) => ((a.points.at(-1)?.date ?? "") < (b.points.at(-1)?.date ?? "") ? 1 : -1));
+  const shown = recent.slice(0, RECENT_CORE);
+  const best = plank.length ? plank.reduce((a, b) => (b.seconds > a.seconds ? b : a)) : null;
+  const lastPlank = plank.at(-1);
   return (
-    <div className="mt-2 overflow-hidden rounded-xl border border-hairline bg-surface">
-      {moves.map((m, i) => {
-        const last = m.points.at(-1);
-        return (
-          <button
-            key={m.movement}
-            type="button"
-            onClick={() => onOpen(m)}
-            className={`flex min-h-[56px] w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-ground/50 ${
-              i > 0 ? "border-t border-hairline" : ""
-            }`}
-          >
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="line-clamp-2 text-sm font-semibold">{m.name}</span>
-              <span className="truncate text-xs text-muted">
-                {m.best ? `Best ${coreValueText(m.kind, m.best.value, m.best.weight, unit)}` : ""}
-                {last ? ` · last ${coreValueText(m.kind, last.value, last.weight, unit)}` : ""}
-              </span>
+    <>
+      <div className="mt-2 overflow-hidden rounded-xl border border-hairline bg-surface">
+        <button
+          type="button"
+          onClick={onOpenPlank}
+          className="flex min-h-[52px] w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-ground/50"
+        >
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-sm font-semibold">Plank test</span>
+            <span className="truncate text-xs text-muted">
+              {best ? `Best ${mmss(best.seconds)}${best.pft != null ? ` · ${best.pft} pts` : ""}` : "No plank logged yet"}
+              {lastPlank && best && lastPlank.date !== best.date ? ` · last ${mmss(lastPlank.seconds)}` : ""}
             </span>
-            <Spark points={m.points} color={color} />
-            <CoreTrend m={m} todayISO={todayISO} />
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="shrink-0 text-muted" aria-hidden="true">
-              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        );
-      })}
-    </div>
+          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="shrink-0 text-muted" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        {shown.map((m) => (
+          <CoreRow key={m.movement} m={m} unit={unit} todayISO={todayISO} first={false} onOpen={() => onOpen(m)} />
+        ))}
+      </div>
+      {recent.length > RECENT_CORE && (
+        <button type="button" onClick={() => setAll(true)} className="mt-2 text-sm font-semibold text-accent">
+          All core movements ({recent.length})
+        </button>
+      )}
+      {all && (
+        <Modal title="Core movements" onClose={() => setAll(false)}>
+          <div className="overflow-hidden rounded-xl border border-hairline bg-surface">
+            {[...moves].map((m, i) => (
+              <CoreRow
+                key={m.movement}
+                m={m}
+                unit={unit}
+                todayISO={todayISO}
+                first={i === 0}
+                onOpen={() => {
+                  setAll(false);
+                  onOpen(m);
+                }}
+              />
+            ))}
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
 

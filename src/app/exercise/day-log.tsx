@@ -173,6 +173,7 @@ export function DayLog({
   const [resetTick, setResetTick] = useState(0);
   const [adjusting, setAdjusting] = useState(false);
   const [editSport, setEditSport] = useState<LoggedOther | null>(null);
+  const [otherOpen, setOtherOpen] = useState<LoggedOther | null>(null);
   // A day still to come only previews its plan (v0.651).
   const future = date > todayISO;
   const [failed, setFailed] = useState(false);
@@ -266,9 +267,32 @@ export function DayLog({
   // never counted toward the day being done.
   const extras = data?.extras;
   const extraIds = useMemo(() => new Set((extras ?? []).map((x) => x.id)), [extras]);
+  // A past rotation day shows the workout it logged (v0.672), not this week's.
+  const asLogged = data?.state.asLogged;
+  const basePlan: PlanWorkout[] = useMemo(() => {
+    return planWorkouts.map((w) => {
+      const a = asLogged?.find((x) => x.plannedWorkoutId === w.id);
+      if (!a) return w;
+      return {
+        ...w,
+        name: a.name,
+        core: w.core ? { ...w.core, test: false, withTest: false } : w.core,
+        exercises: a.exercises.map((e) => ({
+          id: `${w.id}:${e.poolExerciseId}`,
+          poolExerciseId: e.poolExerciseId,
+          name: e.name,
+          muscleGroup: null,
+          tracked: true,
+          metric: e.metric as PlanWorkout["exercises"][number]["metric"],
+          scheme: null,
+          unit: e.unit,
+        })),
+      };
+    });
+  }, [planWorkouts, asLogged]);
   const workouts: PlanWorkout[] = useMemo(
-    () => [...planWorkouts, ...(extras ?? []).map(extraWorkout)],
-    [planWorkouts, extras],
+    () => [...basePlan, ...(extras ?? []).map(extraWorkout)],
+    [basePlan, extras],
   );
   const byId = useMemo(() => new Map(workouts.map((w) => [w.id, w])), [workouts]);
   const order = data?.order;
@@ -299,7 +323,7 @@ export function DayLog({
     [order, cardioCount],
   );
   const sections = useMemo(() => sectionsOf(workouts), [sectionsOf, workouts]);
-  const planSections = useMemo(() => sectionsOf(planWorkouts), [sectionsOf, planWorkouts]);
+  const planSections = useMemo(() => sectionsOf(basePlan), [sectionsOf, basePlan]);
   const removeExtra = (id: string) =>
     startTransition(async () => {
       await removeDayExtraAction(userId, id);
@@ -929,29 +953,40 @@ export function DayLog({
       {(state?.loggedOther?.length ?? 0) > 0 && (
         <section className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted">Additional</p>
+          {/* Name only (v0.672); tap for what was done. */}
           {state!.loggedOther.map((g) => (
-            <div
+            <button
               key={g.name}
-              role={g.sport ? "button" : undefined}
-              tabIndex={g.sport ? 0 : undefined}
-              onClick={g.sport ? () => setEditSport(g) : undefined}
-              className={`rounded-xl border border-hairline bg-surface px-4 py-3 ${g.sport ? "cursor-pointer hover:border-accent" : ""}`}
+              type="button"
+              onClick={() => (g.sport ? setEditSport(g) : setOtherOpen(g))}
+              className="flex min-h-[3.5rem] w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left hover:border-accent"
             >
-              <p className="flex items-center gap-2 text-sm font-semibold">
-                <CheckIcon className="h-4 w-4 text-accent" />
-                {g.name}
-              </p>
-              <ul className="mt-1 space-y-0.5 pl-6 text-sm">
-                {g.lines.map((l, i) => (
-                  <li key={i}>
-                    {l.name !== g.name && <span>{l.name} · </span>}
-                    <span className="tabular text-muted">{l.summary}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+              <CheckIcon className="h-4 w-4 shrink-0 text-accent" />
+              <span className="min-w-0 flex-1">
+                <span className="block line-clamp-2 text-sm font-semibold">{g.name}</span>
+                <span className="block truncate text-xs text-muted">
+                  {g.lines.length === 1 && g.lines[0].name === g.name
+                    ? g.lines[0].summary
+                    : `${g.lines.length} ${g.lines.length === 1 ? "movement" : "movements"}`}
+                </span>
+              </span>
+              <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
+            </button>
           ))}
         </section>
+      )}
+
+      {otherOpen && (
+        <Modal title={otherOpen.name} onClose={() => setOtherOpen(null)}>
+          <ul className="divide-y divide-hairline text-sm">
+            {otherOpen.lines.map((l, i) => (
+              <li key={i} className="flex justify-between gap-3 py-2">
+                <span>{l.name}</span>
+                <span className="tabular text-right text-muted">{l.summary}</span>
+              </li>
+            ))}
+          </ul>
+        </Modal>
       )}
 
       {editSport?.sport && (

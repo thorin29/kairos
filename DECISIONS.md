@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-11 — Warm-up cues, steady body map, Core card, Lower back, past rotation days (v0.672.0 / app 0.482.0)
+
+- Every warm-up library move (and the shoulder-prep sets) has a cue behind
+  its ⓘ (`WARMUP_CUES`, taken by name by the step helpers); a test keeps it so.
+- Heat map: the body map keeps its size in both views; the Endurance heart is
+  laid over the top centre, between the heads, instead of beside the map.
+- Core is one card: a Plank test row (best with PFT points, last; opens the
+  plank benchmark) and the six core movements done most recently, each with
+  best, last and the trend in words — no sparkline, since a rotation has
+  many movements. "All core movements (N)" opens the rest in a pop-up. Each
+  row opens its page (chart, then tiles), the same order as a lift's.
+- Lower back: good mornings and back extensions (and kin) light the same
+  place as a deadlift (map primary stays DEADLIFT) but are listed as
+  "LOWER_BACK" (`Involvement.shownAs`, `shownGroup`) — their own heading
+  beside the deadlifts, their own lighter brown on the map when shown alone,
+  and "Lower back" on Workout days and in a week's day words. Swings stay
+  with the deadlifts. "Good morning" is the exercise's name; singular is right.
+- A past day's rotation entry (core, arms, isometric) shows the workout that
+  day logged when the rotation has moved on (`asLoggedRotation` in
+  loadTodayPlannedWorkouts, `DayLogState.asLogged` for the web): its name and
+  the movements logged under it, without the month's test. The day stops
+  reading as undone/overdue and its sets stop landing under Additional.
+- Additional (logged outside the plan) cards show the name and a count;
+  tapping opens what was in them (a pop-up), on web and phone.
+- Phone week strip: snaps days to the left edge (`SnapPosition.Start`); the
+  default centre snap left half a day at each end with eight days in view.
+- Weekly training: date labels under the bars; kinds named like the workout
+  categories (Strength, Conditioning, Cardio, Sport, Mobility) in fixed
+  colours that never follow the theme's accent.
+- Lift rows: no sparkline or trend means no reserved space, so a name like
+  "Weighted back extension" stays on one line.
+
 ## 2026-11 — Weekly training chart, Core rows, the hinge family, sport warm-up (v0.671.0 / app 0.481.0)
 
 - Weekly training is the agreed mockup now (0.670 kept the old bars by

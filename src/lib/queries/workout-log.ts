@@ -195,6 +195,8 @@ export type TodayPlanned = {
   coreTestName?: string | null;
   /** Added to this day only from "+ Additional" (v0.667): optional. */
   extra?: boolean;
+  /** A past rotation day showing the workout it logged, not the current one (v0.672). */
+  asLogged?: boolean;
   exercises: PlannedMovement[];
   /** The plan's own session exists for the day: how a plan with nothing to
    *  enter (every movement untracked) shows that it was marked complete. */
@@ -531,9 +533,14 @@ export async function loadTodayPlannedWorkouts(
     },
   });
 
-  const plans = opts.withExtras
+  const withExtraRows = opts.withExtras
     ? [...planRows, ...((await extraPlanRows(userId, dayISO)) as unknown as typeof planRows)]
     : planRows;
+  // A past rotation day (v0.672): the core / arms / isometric entry holds the
+  // rotation's CURRENT workout, so a past day would show this week's workout
+  // and read as not done. When that day logged another workout of the
+  // rotation, the entry is that workout, as it was logged.
+  const plans = dayISO < todayISO() ? await asLoggedRotation(userId, dayISO, withExtraRows) : withExtraRows;
 
   // The day's skips and its sessions, read once for every plan below.
   const day = toDateColumn(dayISO);
@@ -677,6 +684,7 @@ export async function loadTodayPlannedWorkouts(
       exercises,
       sessionLogged: hasSession(plan as { name: string; category: string | null }),
       ...(isExtraId(plan.id) ? { extra: true } : {}),
+      ...((plan as { asLogged?: boolean }).asLogged ? { asLogged: true } : {}),
     });
   }
   // Adjust today (v0.658): what an adjustment drops is gone for the day —
@@ -2074,6 +2082,8 @@ export type DayLogState = {
   loggedOther: LoggedOther[];
   /** Anything at all logged that day (not a rest). */
   loggedAny: boolean;
+  /** Past rotation entries shown as the workout that day logged (v0.672). */
+  asLogged?: { plannedWorkoutId: string; name: string; exercises: { poolExerciseId: string; name: string; metric: string; unit: string }[] }[];
 };
 
 /** `label` is the short name for the page title: a game's event type
@@ -2361,6 +2371,13 @@ export async function loadDayLogState(
     planIds,
     loggedOther: logged.other,
     loggedAny: logged.any,
+    asLogged: planned
+      .filter((p) => p.asLogged)
+      .map((p) => ({
+        plannedWorkoutId: p.plannedWorkoutId,
+        name: p.name,
+        exercises: p.exercises.map((e) => ({ poolExerciseId: e.poolExerciseId, name: e.name, metric: e.metric, unit: e.unit })),
+      })),
   };
 }
 
@@ -2566,7 +2583,7 @@ export async function loadWeeklyTraining(
     const words = dayWords.get(d) ?? [];
     if (k === "lift") {
       for (const x of s.sets) {
-        const g = x.poolExercise ? groupsFor(x.poolExercise.name, x.poolExercise.muscleGroup as MuscleGroup | null).primary : null;
+        const g = x.poolExercise ? shownGroup(x.poolExercise.name, x.poolExercise.muscleGroup) : null;
         const w = g ? (GROUP_WORD[g] ?? null) : null;
         if (w && !words.includes(w)) words.push(w);
       }
@@ -2668,6 +2685,56 @@ const GROUP_WORD: Record<string, string> = {
   LEGS: "Legs",
   CORE: "Core",
   DEADLIFT: "Deadlift",
+  LOWER_BACK: "Lower back",
   FULL_BODY: "Full body",
 };
 const CARDIO_WORD: Record<string, string> = { ROWING: "Row", RUNNING: "Run", RUCKING: "Ruck", CARDIO: "Cardio" };
+
+/**
+ * Rotation entries on a past day, as logged (v0.672): an entry whose rotation
+ * has moved on ("Core · Rotation and power") on a day that logged another of
+ * its workouts ("Core · Core strength") becomes that workout — its name and the
+ * movements logged under it — so the day shows what was done and isn't overdue.
+ */
+async function asLoggedRotation<P extends { id: string; name: string; category: unknown; core?: unknown; exercises: unknown[] }>(
+  userId: string,
+  dayISO: string,
+  plans: P[],
+): Promise<P[]> {
+  const rot = plans.filter((p) => p.core && p.name.includes(" \u00b7 "));
+  if (rot.length === 0) return plans;
+  const sessions = (await prisma.workoutSession.findMany({
+    where: { userId, date: toDateColumn(dayISO), isRest: false },
+    select: {
+      name: true,
+      category: true,
+      sets: {
+        orderBy: [{ setNumber: "asc" }, { createdAt: "asc" }],
+        select: { poolExerciseId: true, weight: true, seconds: true, reps: true, poolExercise: { select: { name: true } } },
+      },
+    },
+  })) as {
+    name: string | null;
+    category: string | null;
+    sets: { poolExerciseId: string | null; weight: number | null; seconds: number | null; reps: number | null; poolExercise: { name: string } | null }[];
+  }[];
+  return plans.map((p) => {
+    if (!rot.includes(p)) return p;
+    const prefix = p.name.split(" \u00b7 ")[0] + " \u00b7 ";
+    const done = sessions.find(
+      (x) => x.name && x.name !== p.name && x.name.startsWith(prefix) && (x.category ?? null) === ((p.category as string | null) ?? null),
+    );
+    if (!done || done.sets.length === 0) return p;
+    const seen = new Set<string>();
+    const exercises: unknown[] = [];
+    for (const st of done.sets) {
+      if (!st.poolExerciseId || seen.has(st.poolExerciseId)) continue;
+      seen.add(st.poolExerciseId);
+      const metric = (st.seconds ?? 0) > 0 && !(st.reps && st.reps > 0) ? "DURATION" : (st.weight ?? 0) > 0 ? "WEIGHT" : "REPS";
+      exercises.push({ poolExerciseId: st.poolExerciseId, metric, tracked: true, poolExercise: { name: st.poolExercise?.name ?? "" } });
+    }
+    // Still one rotation card, without the month's test (that was the plan's).
+    const core = { ...(p.core as Record<string, unknown>), test: false, withTest: false };
+    return { ...p, name: done.name as string, exercises, core, asLogged: true };
+  });
+}

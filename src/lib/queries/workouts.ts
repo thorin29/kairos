@@ -36,8 +36,9 @@ import {
 export type GraphSeries = {
   exerciseId: string;
   name: string;
-  /** For stacking one progress block per muscle group. */
-  muscleGroup?: MuscleGroup | null;
+  /** For stacking one progress block per muscle group; "LOWER_BACK" for the
+   *  lower-back moves listed beside the deadlifts (v0.672). */
+  muscleGroup?: MuscleGroup | "LOWER_BACK" | null;
   unit: string;
   color: string;
   /** value = the day's heaviest weight (the record). reps = how many that set
@@ -534,7 +535,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         exerciseId: id, // pool movement id — the legend/series key
         name: meta.name,
         // The hinge family sits under Deadlift whatever it's filed under (v0.671).
-        muscleGroup: (shownGroup(meta.name, meta.muscleGroup ?? null) as MuscleGroup | null) ?? null,
+        muscleGroup: (shownGroup(meta.name, meta.muscleGroup ?? null) as MuscleGroup | "LOWER_BACK" | null) ?? null,
         unit: meta.muscleGroup ? weightUnits[meta.muscleGroup] : "",
         color: LINE_COLORS[i % LINE_COLORS.length],
         points: [...perMovementDay.get(id)!.entries()]

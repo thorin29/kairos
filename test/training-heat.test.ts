@@ -92,7 +92,9 @@ describe("hinge movements on the body (v0.671)", () => {
     // Only a bar hanging from the hands works the upper back.
     expect(groupsFor("Deadlift", null).secondary).toEqual(["LEGS", "BACK"]);
     expect(groupsFor("Romanian deadlift", "LEGS").secondary).toEqual(["LEGS", "BACK"]);
-    expect(shownGroup("Weighted back extension", "BACK")).toBe("DEADLIFT");
+    expect(shownGroup("Weighted back extension", "BACK")).toBe("LOWER_BACK");
+    expect(shownGroup("Good morning", "LEGS")).toBe("LOWER_BACK");
+    expect(shownGroup("Romanian deadlift", "LEGS")).toBe("DEADLIFT");
     expect(shownGroup("Bench press", "CHEST")).toBe("CHEST");
   });
 });

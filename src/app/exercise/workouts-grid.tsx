@@ -29,6 +29,7 @@ import { DayLog } from "./day-log";
 import { MovementInfo } from "@/components/movement-info";
 import { WeeklyTraining } from "./weekly-training";
 import { CorePage, CoreRows, LiftPage, LiftRows } from "./lift-page";
+import { Modal } from "./plan-file-panel";
 import type { CoreMove } from "@/lib/workouts/core-moves";
 import { ProgramCard } from "./program-card";
 import { WeightCalculator } from "./weight-calculator";
@@ -724,6 +725,8 @@ const MG_COLOR: Record<string, string> = {
   UPPER_BACK: "#139c86",
   FULL_BODY: "#e87ba4",
   DEADLIFT: "#9c6b3c",
+  // Lower-back moves (v0.672): beside the deadlifts, a lighter brown.
+  LOWER_BACK: "#c99a5b",
 };
 
 /** The same colour, faded, for a muscle a movement only assists with. */
@@ -739,7 +742,7 @@ const GRID_COLORS = [
 const MG_LABEL: Record<string, string> = {
   CHEST: "Chest", BACK: "Back", LEGS: "Legs", SHOULDERS: "Shoulders",
   ARMS: "Arms", CORE: "Core", GLUTES: "Glutes", CALVES: "Calves",
-  FOREARMS: "Forearms", UPPER_BACK: "Upper back", FULL_BODY: "Full body", DEADLIFT: "Deadlift",
+  FOREARMS: "Forearms", UPPER_BACK: "Upper back", FULL_BODY: "Full body", DEADLIFT: "Deadlift", LOWER_BACK: "Lower back",
 };
 
 /** Series grouped by the muscle group they are planned under, alphabetically. */
@@ -796,6 +799,7 @@ function LiftBlocks({
   // A lift's page (v0.670), opened from its row.
   const [liftOpen, setLiftOpen] = useState<{ s: LiftSeries; key: string; label: string } | null>(null);
   const [coreOpen, setCoreOpen] = useState<CoreMove | null>(null);
+  const [plankOpen, setPlankOpen] = useState(false);
   // The training heat map (v0.664): one picture, no ranges.
   const training = heat?.training;
   const heatShade = useMemo(() => trainFills(training), [training]);
@@ -809,8 +813,9 @@ function LiftBlocks({
     () =>
       withBest.map((s) => ({
         s,
-        nav: navRegionFor(s.name, s.muscleGroup ?? null),
-        ...groupsFor(s.name, s.muscleGroup ?? null),
+        // "LOWER_BACK" is a listing, not a muscle group: the rules know the move.
+        nav: navRegionFor(s.name, s.muscleGroup === "LOWER_BACK" ? "DEADLIFT" : (s.muscleGroup ?? null)),
+        ...groupsFor(s.name, s.muscleGroup === "LOWER_BACK" ? "DEADLIFT" : (s.muscleGroup ?? null)),
       })),
     [withBest],
   );
@@ -889,9 +894,13 @@ function LiftBlocks({
         }
       }
     }
-    for (const m of shown) {
+    // Lower-back moves paint the deadlift's place in their own colour, and a
+    // real deadlift shown with them wins (v0.672).
+    const lowerFirst = [...shown].sort((a, b) => (a.s.muscleGroup === "LOWER_BACK" ? -1 : 0) - (b.s.muscleGroup === "LOWER_BACK" ? -1 : 0));
+    for (const m of lowerFirst) {
+      const key = m.s.muscleGroup === "LOWER_BACK" ? "LOWER_BACK" : m.primary;
       for (const t of targets(m.view)) {
-        if (m.primary && MG_COLOR[m.primary]) t[m.primary] = MG_COLOR[m.primary];
+        if (m.primary && key && MG_COLOR[key]) t[m.primary] = MG_COLOR[key];
       }
     }
     for (const g of summaryGroups) {
@@ -936,17 +945,19 @@ function LiftBlocks({
           )}
           {heatOn ? (
             <div className="space-y-3">
-              <div className="flex items-center">
-                <div className="min-w-0 flex-1">
-                  <BodyMap
-                    selected={[]}
-                    onSelect={setHeatPicked}
-                    available={trainAvailable(training)}
-                    fillsFront={heatShade}
-                    fillsBack={heatShade}
-                  />
+              {/* The same size as the muscle map (v0.672): the heart sits between
+                  the two heads, so nothing moves when the view switches. */}
+              <div className="relative">
+                <BodyMap
+                  selected={[]}
+                  onSelect={setHeatPicked}
+                  available={trainAvailable(training)}
+                  fillsFront={heatShade}
+                  fillsBack={heatShade}
+                />
+                <div className="absolute left-1/2 top-0 -translate-x-1/2">
+                  <EnduranceHeart data={training?.endurance ?? null} onOpen={() => setHeatPicked("ENDURANCE")} />
                 </div>
-                <EnduranceHeart data={training?.endurance ?? null} onOpen={() => setHeatPicked("ENDURANCE")} />
               </div>
               <TrainKey />
               {heatPicked && (
@@ -996,17 +1007,20 @@ function LiftBlocks({
           <p className="text-sm font-semibold" style={{ color: MG_COLOR[g] ?? "var(--color-accent)" }}>
             {MG_LABEL[g] ?? g}
           </p>
-          {g === "CORE" && <PlankBench tests={heat?.plank ?? []} />}
           {g === "CORE" && (heat?.coreMoves?.length ?? 0) > 0 ? (
             <CoreRows
               moves={heat!.coreMoves!}
-              color={MG_COLOR.CORE}
+              plank={heat?.plank ?? []}
               unit={heat?.unit ?? ""}
               todayISO={todayISO}
               onOpen={setCoreOpen}
+              onOpenPlank={() => setPlankOpen(true)}
             />
           ) : (
-            <HeatGroupSummary data={summaryOf(g)} unit={heat?.unit ?? ""} />
+            <>
+              {g === "CORE" && <PlankBench tests={heat?.plank ?? []} />}
+              <HeatGroupSummary data={summaryOf(g)} unit={heat?.unit ?? ""} />
+            </>
           )}
         </div>
       ))}
@@ -1018,15 +1032,17 @@ function LiftBlocks({
           >
             {g.label}
           </p>
-          {g.key === "CORE" && <PlankBench tests={heat?.plank ?? []} />}
-          {/* Core by time or reps, not weight (v0.671). */}
+          {g.key === "CORE" && (heat?.coreMoves?.length ?? 0) === 0 && <PlankBench tests={heat?.plank ?? []} />}
+          {/* Core by time or reps, not weight (v0.671); the plank test is its
+              first row (v0.672). */}
           {g.key === "CORE" && (heat?.coreMoves?.length ?? 0) > 0 ? (
             <CoreRows
               moves={heat!.coreMoves!}
-              color={MG_COLOR.CORE}
+              plank={heat?.plank ?? []}
               unit={heat?.unit ?? ""}
               todayISO={todayISO}
               onOpen={setCoreOpen}
+              onOpenPlank={() => setPlankOpen(true)}
             />
           ) : (
           <LiftRows
@@ -1038,6 +1054,11 @@ function LiftBlocks({
           )}
         </div>
       ))}
+      {plankOpen && (
+        <Modal title="Plank test" onClose={() => setPlankOpen(false)}>
+          <PlankBench tests={heat?.plank ?? []} />
+        </Modal>
+      )}
       {coreOpen && (
         <CorePage
           move={coreOpen}

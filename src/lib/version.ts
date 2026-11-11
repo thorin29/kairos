@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.671.0";
+export const APP_VERSION = "0.672.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,19 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.672.0",
+    summary: [
+      "Every ready-made warm-up move has an ⓘ with how to do it, the hockey warm-up included.",
+      "The body map stays put when you switch to the heat map; the endurance heart sits between the two figures.",
+      "Core is one card: the plank test first, then your most recent core movements. All of them are a tap away.",
+      "Good mornings and back extensions are listed as Lower back, beside the deadlifts, and no longer show up as deadlift days.",
+      "A past core rotation day shows the workout you did that day, and isn't marked overdue.",
+      "Workouts done outside the plan show just their name; tap for what was in them.",
+      "Weekly training: dates under the bars, and Strength, Conditioning, Cardio and Sport in their own colours.",
+      "Lift rows give long names the room the small chart isn't using.",
+    ],
+  },
   {
     version: "0.671.0",
     summary: [

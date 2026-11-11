@@ -58,3 +58,11 @@ describe("stretching (v0.663)", () => {
     expect(blockKind("STRETCHING", false)).toBe("STRETCH");
   });
 });
+
+describe("warm-up cues (v0.672)", () => {
+  it("every ready-made warm-up move has a how-to", async () => {
+    const { WARMUP_LIBRARY, SHOULDER_PREPS } = await import("@/lib/workouts/warmup-library");
+    const missing = [...WARMUP_LIBRARY.flatMap((r) => r.steps), ...SHOULDER_PREPS.flat()].filter((s) => !s.cue).map((s) => s.name);
+    expect(missing).toEqual([]);
+  });
+});

@@ -32,19 +32,85 @@ export type WarmupRoutineDef = { key: string; name: string; steps: WarmupStep[];
  *  person's own (its id). */
 export type WarmupRoutine = { id: string; name: string; steps: WarmupStep[]; mine: boolean };
 
+/**
+ * How to do each warm-up move (v0.672), behind its ⓘ: a step with no cue of
+ * its own takes the one under its name here.
+ */
+const WARMUP_CUES: Record<string, string> = {
+  "Bike or row, easy": "Easy pace, just warming up. You should be able to talk.",
+  "Couch stretch": "Back knee on a pad against a wall or bench, shin up the wall, front foot planted. Squeeze the glute of the back leg and stay tall.",
+  "Dead hang": "Hang from a bar with straight arms and shoulders relaxed. Breathe.",
+  "Forearm stretch": "Arm straight, palm up, gently pull the fingers back with the other hand. Then palm down.",
+  "Frog stretch": "On hands and knees, knees wide, shins parallel, feet out. Rock the hips back slowly.",
+  "Front plank": "Forearms under shoulders, body in a straight line. Squeeze glutes and brace like you're about to be poked in the stomach.",
+  "Groin stretch": "Sit, soles of the feet together, knees out. Sit tall and press the knees gently toward the floor.",
+  "Hip flexor stretch": "Half kneel, tuck the hips under and squeeze the back glute. Shift forward a little until the front of the back hip stretches.",
+  "Hollow hold": "On your back, low back pressed into the floor, arms overhead and legs straight, both a few inches off the floor.",
+  "Jump rope": "Small, quick hops on the balls of the feet. Wrists turn the rope, not the arms.",
+  "Jumping jacks": "Light and quick, landing softly on the balls of the feet.",
+  "Kneeling lunge stretch": "Half kneel, tuck the hips under, then lean forward until the front of the back hip stretches. Stay tall.",
+  "Plank": "Forearms under shoulders, body in a straight line. Squeeze glutes and brace.",
+  "Side plank": "On one forearm, elbow under the shoulder, feet stacked. Lift the hips into a straight line from head to feet.",
+  "90/90 external rotation, 2–5 lb": "Elbow out at shoulder height and bent to 90°. Slowly rotate the forearm up and back without moving the elbow.",
+  "Arm circles": "Arms straight out to the sides. Small circles growing bigger, both directions.",
+  "Back extensions": "Hips on the pad, hinge down, then lift until your body is in a straight line. Squeeze the glutes; don't arch past straight.",
+  "Band dislocates": "Hold a band wide with straight arms. Bring it overhead and behind you, then back. Widen your grip if it pinches.",
+  "Band external rotation at 90°": "Band anchored in front, elbow at shoulder height bent to 90°. Rotate the forearm up and back, elbow still.",
+  "Band external rotation, elbow at side": "Elbow tucked at your side, bent to 90°. Rotate the hand out away from your belly, slowly back.",
+  "Band face pulls": "Band at face height. Pull it to your forehead, elbows high, ending with hands beside your ears.",
+  "Band internal rotation, elbow at side": "Elbow tucked at your side, bent to 90°, band pulling out. Rotate the hand in across your belly.",
+  "Band pull-aparts": "Band at chest height, arms straight. Pull it apart to your chest by squeezing the shoulder blades together.",
+  "Bird dogs": "On hands and knees, reach one arm and the opposite leg out long. Keep the hips level; pause, switch.",
+  "Bodyweight squats": "Feet shoulder-width, sit down between the heels with chest up, knees following the toes. Stand tall.",
+  "Box jumps or broad jumps": "Jump hard, land softly with bent knees. Step down from the box; reset between jumps.",
+  "Calf raises": "Rise onto the balls of the feet, pause at the top, lower slowly.",
+  "Cat-cow": "On hands and knees, round the whole back up, then let it sag and lift the chest. Slow, with your breath.",
+  "Chin-ups": "Palms facing you. Pull your chin over the bar, lower all the way under control.",
+  "Cossack squats": "Wide stance. Sit into one hip with that knee bent, other leg straight and toes up. Shift side to side.",
+  "Dead bugs": "On your back, arms up, knees over hips. Lower one arm and the opposite leg toward the floor, low back flat, return, switch.",
+  "Diamond push-ups": "Hands together under the chest, thumbs and fingers making a diamond. Elbows stay close.",
+  "Glute bridges": "On your back, feet flat. Drive through the heels and lift the hips until knees, hips and shoulders line up. Squeeze at the top.",
+  "Hip airplanes": "Stand on one leg, hinge forward with a flat back. Rotate the hips open and closed slowly. Hold something if you need to.",
+  "Hip circles": "Hands on hips, draw big slow circles with the hips, both directions.",
+  "Hip hinge drill": "Push the hips back with a flat back and soft knees until you feel the hamstrings, then drive the hips forward to stand.",
+  "Inchworms": "From standing, walk the hands out to a plank, then walk the feet up to the hands. Keep the legs as straight as you can.",
+  "Lateral lunges": "Step wide to one side and sit into that hip, other leg straight. Push back to the middle.",
+  "Leg swings": "Hold something for balance. Swing one leg front to back, then side to side, loose and controlled.",
+  "Leg swings, front to back": "Hold something for balance. Swing the leg forward and back, letting the range grow.",
+  "Leg swings, side to side": "Face a wall or rail. Swing the leg across the body and out to the side.",
+  "Medicine ball throws": "Explode up and throw the ball hard: overhead, chest pass or slam. Reset each throw.",
+  "Prone Y-T-W raises": "Face down on a bench or the floor. Lift the arms into a Y, then a T, then a W, squeezing the shoulder blades. Light and slow.",
+  "Push-up to down dog": "From the top of a push-up, push the hips up and back into an upside-down V, then return.",
+  "Push-ups": "Hands under the shoulders, body straight. Lower the chest near the floor, elbows about 45° from the body.",
+  "Scap pull-ups": "Hang with straight arms. Pull the shoulder blades down and together to lift a little, without bending the elbows.",
+  "Scap push-ups": "In a plank with straight arms, let the chest sink between the shoulder blades, then push the floor away.",
+  "Side-lying external rotation, 2–5 lb": "Lie on your side, top elbow tucked at your side bent to 90°. Rotate the weight up toward the ceiling, slowly down.",
+  "Single-leg RDL, no weight": "Stand on one leg, hinge forward as the other leg reaches back, flat back. Stand back up through the hip.",
+  "Skater hops": "Leap side to side from one leg to the other like a skater, landing softly and sticking each landing.",
+  "TRX curls": "Face the anchor, lean back on straight arms with palms up. Curl yourself up toward the hands.",
+  "TRX rows": "Face the anchor, lean back on straight arms. Pull your chest to the handles, squeezing the shoulder blades.",
+  "Thoracic open-books": "Lie on your side, knees bent, arms together in front. Open the top arm across to the other side, following it with your eyes.",
+  "Thoracic rotations": "On hands and knees, one hand behind your head. Rotate that elbow up toward the ceiling, then down toward the other arm.",
+  "Tricep dips": "Hands on a bench behind you. Lower until the elbows are about 90°, then press back up.",
+  "Walking lunges": "Long step forward, lower the back knee near the floor, front knee over the foot. Step through into the next one.",
+  "Wall slides": "Back, head and arms against a wall, elbows bent. Slide the arms up and down keeping contact with the wall.",
+  "World's greatest stretch": "Lunge forward, put the same-side hand down inside the front foot, then rotate the other arm up to the ceiling.",
+  "Wrist circles": "Clasp the hands or make fists and roll the wrists in circles, both ways.",
+};
+
 const reps = (name: string, amount: string, sides = false, cue?: string): WarmupStep => ({
   name,
   kind: "REPS",
   amount,
   ...(sides ? { sides } : {}),
-  ...(cue ? { cue } : {}),
+  ...((cue ?? WARMUP_CUES[name]) ? { cue: cue ?? WARMUP_CUES[name] } : {}),
 });
 const hold = (name: string, seconds: number, sides = false, cue?: string): WarmupStep => ({
   name,
   kind: "TIME",
   seconds,
   ...(sides ? { sides } : {}),
-  ...(cue ? { cue } : {}),
+  ...((cue ?? WARMUP_CUES[name]) ? { cue: cue ?? WARMUP_CUES[name] } : {}),
 });
 
 /**

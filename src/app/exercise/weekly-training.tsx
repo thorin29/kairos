@@ -8,15 +8,16 @@ const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "O
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type Kind = TrainingDay["kinds"][number];
-/** Lifting in the accent; the rest in steps that differ in lightness too. */
+/** Named like the workout categories (v0.672), in fixed colours, never the
+ *  theme's: an accent that happens to match one kind would read as it. */
 const KINDS: { key: Kind; label: string; color: string }[] = [
-  { key: "lift", label: "Lifting", color: "var(--color-accent)" },
-  { key: "conditioning", label: "Conditioning", color: "#eb6834" },
-  { key: "cardio", label: "Cardio", color: "#2a78d6" },
+  { key: "lift", label: "Strength", color: "#4f46e5" },
+  { key: "conditioning", label: "Conditioning", color: "#eda100" },
+  { key: "cardio", label: "Cardio", color: "#e34948" },
   { key: "sport", label: "Sport", color: "#139c86" },
   { key: "other", label: "Mobility", color: "#9aa3ad" },
 ];
-const colorOf = (k: Kind) => KINDS.find((x) => x.key === k)?.color ?? "var(--color-accent)";
+const colorOf = (k: Kind) => KINDS.find((x) => x.key === k)?.color ?? "#4f46e5";
 
 /**
  * Weekly training (v0.671; was days-trained bars, v0.610): a bar per week for
@@ -84,12 +85,17 @@ export function WeeklyTraining({ userId }: { userId: string }) {
                   />
                 ))}
               {!w.kinds && w.days > 0 && (
-                <span className="block w-full rounded-t-[3px] bg-accent" style={{ height: `${(w.days / max) * 100}%` }} />
+                <span className="block w-full rounded-t-[3px]" style={{ height: `${(w.days / max) * 100}%`, background: colorOf("lift") }} />
               )}
               <span className={`block h-[3px] w-full ${on ? "bg-ink" : "bg-transparent"}`} />
             </button>
           );
         })}
+      </div>
+      {/* Dates under the bars (v0.672). */}
+      <div className="tabular mt-1 flex justify-between text-[10px] text-muted">
+        {[0, 4, 8].map((i) => (data.weeks[i] ? <span key={i}>{label(data.weeks[i].start)}</span> : null))}
+        <span>This week</span>
       </div>
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
         {used.map((k) => (

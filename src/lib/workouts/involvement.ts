@@ -77,6 +77,13 @@ export type Involvement = {
    * glutes — so a back extension filed under Back still sits with them.
    */
   forcePrimary?: boolean;
+  /**
+   * Listed under its own name (v0.672): good mornings and back extensions are
+   * lower-back work. They light the same place on the map as a deadlift and
+   * sit beside the deadlifts, but they're "Lower back", never "Deadlift", in
+   * the lists and on Workout days.
+   */
+  shownAs?: "LOWER_BACK";
 };
 
 /** Keyword rules, first match wins — order matters. */
@@ -145,12 +152,12 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
     // a good morning, a back extension or a swing lights no Back.
     // A good morning hinges with the bar on the back.
     match: /\bgood ?mornings?\b/,
-    involvement: { suggestedPrimary: "DEADLIFT", secondary: ["LEGS"], view: "back", navRegion: "POSTERIOR_HIP", forcePrimary: true },
+    involvement: { suggestedPrimary: "DEADLIFT", secondary: ["LEGS"], view: "back", navRegion: "POSTERIOR_HIP", forcePrimary: true, shownAs: "LOWER_BACK" },
   },
   {
     // Back extensions and their kin work the lumbar erectors directly.
     match: /\b(back extension|hyperextension|reverse hyper|superman|jefferson curl)/,
-    involvement: { suggestedPrimary: "DEADLIFT", secondary: ["LEGS"], view: "back", navRegion: "POSTERIOR_HIP", forcePrimary: true },
+    involvement: { suggestedPrimary: "DEADLIFT", secondary: ["LEGS"], view: "back", navRegion: "POSTERIOR_HIP", forcePrimary: true, shownAs: "LOWER_BACK" },
   },
   {
     match: /\b(kettlebell|kb) swings?\b/,
@@ -313,9 +320,11 @@ export function navRegionFor(
   return g === "FULL_BODY" ? null : (g as NavRegion);
 }
 
-/** The group a movement is shown under (v0.671): the hinge family is always
- *  Deadlift, whatever it's filed under; everything else keeps its filing. */
-export function shownGroup<T extends string>(name: string, filed: T | null): T | MuscleGroup | null {
+/** The group a movement is listed under (v0.671): the hinge family is
+ *  Deadlift, and the lower-back moves in it "LOWER_BACK" (v0.672), whatever
+ *  they're filed under; everything else keeps its filing. */
+export function shownGroup(name: string, filed: string | null): string | null {
   const inv = involvementFor(name);
+  if (inv?.shownAs) return inv.shownAs;
   return inv?.forcePrimary ? inv.suggestedPrimary : filed;
 }
