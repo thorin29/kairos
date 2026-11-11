@@ -28,7 +28,7 @@ import { WarmupLibrary } from "./warmup-window";
 import { DayLog } from "./day-log";
 import { MovementInfo } from "@/components/movement-info";
 import { WeeklyTraining } from "./weekly-training";
-import { CorePage, CoreRows, LiftPage, LiftRows } from "./lift-page";
+import { CoreCard, CoreOverview, CorePage, LiftPage, LiftRows } from "./lift-page";
 import { Modal } from "./plan-file-panel";
 import type { CoreMove } from "@/lib/workouts/core-moves";
 import { ProgramCard } from "./program-card";
@@ -800,6 +800,7 @@ function LiftBlocks({
   const [liftOpen, setLiftOpen] = useState<{ s: LiftSeries; key: string; label: string } | null>(null);
   const [coreOpen, setCoreOpen] = useState<CoreMove | null>(null);
   const [plankOpen, setPlankOpen] = useState(false);
+  const [coreAll, setCoreAll] = useState(false);
   // The training heat map (v0.664): one picture, no ranges.
   const training = heat?.training;
   const heatShade = useMemo(() => trainFills(training), [training]);
@@ -968,12 +969,6 @@ function LiftBlocks({
                       ? training?.endurance
                       : training?.groups.find((g) => g.group === heatGroupOf(heatPicked))
                   }
-                  bests={
-                    heatPicked === "ENDURANCE"
-                      ? undefined
-                      : rangeOf(heat, "12w")?.groups.find((g) => g.group === heatGroupOf(heatPicked))?.bests
-                  }
-                  unit={heat?.unit ?? ""}
                   onClose={() => setHeatPicked(null)}
                 />
               )}
@@ -1007,15 +1002,8 @@ function LiftBlocks({
           <p className="text-sm font-semibold" style={{ color: MG_COLOR[g] ?? "var(--color-accent)" }}>
             {MG_LABEL[g] ?? g}
           </p>
-          {g === "CORE" && (heat?.coreMoves?.length ?? 0) > 0 ? (
-            <CoreRows
-              moves={heat!.coreMoves!}
-              plank={heat?.plank ?? []}
-              unit={heat?.unit ?? ""}
-              todayISO={todayISO}
-              onOpen={setCoreOpen}
-              onOpenPlank={() => setPlankOpen(true)}
-            />
+          {g === "CORE" && heat?.coreSummary ? (
+            <CoreCard summary={heat.coreSummary} color={MG_COLOR.CORE} onOpen={() => setCoreAll(true)} />
           ) : (
             <>
               {g === "CORE" && <PlankBench tests={heat?.plank ?? []} />}
@@ -1032,18 +1020,10 @@ function LiftBlocks({
           >
             {g.label}
           </p>
-          {g.key === "CORE" && (heat?.coreMoves?.length ?? 0) === 0 && <PlankBench tests={heat?.plank ?? []} />}
-          {/* Core by time or reps, not weight (v0.671); the plank test is its
-              first row (v0.672). */}
-          {g.key === "CORE" && (heat?.coreMoves?.length ?? 0) > 0 ? (
-            <CoreRows
-              moves={heat!.coreMoves!}
-              plank={heat?.plank ?? []}
-              unit={heat?.unit ?? ""}
-              todayISO={todayISO}
-              onOpen={setCoreOpen}
-              onOpenPlank={() => setPlankOpen(true)}
-            />
+          {g.key === "CORE" && !heat?.coreSummary && <PlankBench tests={heat?.plank ?? []} />}
+          {/* Core in one card (v0.673), opening the Core page. */}
+          {g.key === "CORE" && heat?.coreSummary ? (
+            <CoreCard summary={heat.coreSummary} color={MG_COLOR.CORE} onOpen={() => setCoreAll(true)} />
           ) : (
           <LiftRows
             series={g.items}
@@ -1054,6 +1034,17 @@ function LiftBlocks({
           )}
         </div>
       ))}
+      {coreAll && heat?.coreSummary && (
+        <CoreOverview
+          summary={heat.coreSummary}
+          moves={heat.coreMoves ?? []}
+          color={MG_COLOR.CORE}
+          unit={heat.unit ?? ""}
+          onOpenMove={setCoreOpen}
+          onOpenPlank={() => setPlankOpen(true)}
+          onClose={() => setCoreAll(false)}
+        />
+      )}
       {plankOpen && (
         <Modal title="Plank test" onClose={() => setPlankOpen(false)}>
           <PlankBench tests={heat?.plank ?? []} />

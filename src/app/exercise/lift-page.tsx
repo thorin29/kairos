@@ -9,6 +9,16 @@ import { estimatedMax, liftTrend, lightWeeks } from "@/lib/workouts/lift-stats";
 import { liftNextAction } from "@/lib/actions/workouts";
 import type { GraphSeries } from "@/lib/queries/workouts";
 import { coreValueText, type CoreMove } from "@/lib/workouts/core-moves";
+import {
+  GROUP_LABEL,
+  coreGroupOf,
+  moveChange,
+  pctText,
+  tagOf,
+  tagText,
+  type CoreSummary,
+  type CoreTag,
+} from "@/lib/workouts/core-progress";
 
 const sorted = (pts: GraphSeries["points"]) => [...pts].sort((a, b) => (a.date < b.date ? -1 : 1));
 const setText = (v: number, reps?: number | null) => `${v}${reps ? ` × ${reps}` : ""}`;
@@ -107,19 +117,27 @@ export function LiftRows({
   );
 }
 
-function Tile({ k, v, sub, tone }: { k: string; v: string; sub: string; tone?: "up" | "flat" }) {
-  return (
-    <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">{k}</p>
-      <p
-        className={`tabular mt-0.5 text-lg font-semibold ${
+function Tile({ k, v, sub, tone, onClick }: { k: string; v: string; sub: string; tone?: "up" | "flat"; onClick?: () => void }) {
+  const body = (
+    <>
+      <span className="block text-[10px] font-semibold uppercase tracking-widest text-muted">{k}</span>
+      <span
+        className={`tabular mt-0.5 block text-lg font-semibold ${
           tone === "up" ? "text-emerald-700 dark:text-emerald-400" : tone === "flat" ? "text-amber-700 dark:text-amber-400" : ""
         }`}
       >
         {v}
-      </p>
-      <p className="text-[11px] text-muted">{sub}</p>
-    </div>
+      </span>
+      <span className="block text-[11px] text-muted">{sub}</span>
+    </>
+  );
+  const cls = "rounded-xl border border-hairline bg-ground/40 px-3 py-2 text-left";
+  return onClick ? (
+    <button type="button" onClick={onClick} className={`${cls} transition-colors hover:border-accent`}>
+      {body}
+    </button>
+  ) : (
+    <div className={cls}>{body}</div>
   );
 }
 
@@ -260,128 +278,287 @@ export function LiftPage({
   );
 }
 
-/** Core's trend: "+15 s" / "+3 reps" over 30 days, else weeks since the best. */
-function CoreTrend({ m, todayISO }: { m: CoreMove; todayISO: string }) {
-  const t = liftTrend(m.points, m.best, todayISO);
-  if (!t) return <span className="w-16 shrink-0" />;
+const mmss = (sec: number) => coreValueText("time", sec, null, "");
+const TAG_TONE: Record<CoreTag, string> = {
+  up: "text-emerald-700 dark:text-emerald-400",
+  flat: "text-amber-700 dark:text-amber-400",
+  down: "text-red-700 dark:text-red-400",
+  new: "text-muted",
+};
+const monthOf = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+const Chevron = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="shrink-0 text-muted" aria-hidden="true">
+    <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+/** Core's progress line: the middle change across moves each week, with
+ *  plank tests as rings when asked. Percent against each move's start. */
+function CoreLine({
+  series,
+  tests,
+  color,
+  height,
+  axis,
+}: {
+  series: CoreSummary["series"];
+  tests?: CoreSummary["tests"];
+  color: string;
+  height: number;
+  axis?: boolean;
+}) {
+  if (series.length === 0) return null;
+  const W = 320;
+  const left = axis ? 36 : 4;
+  const top = 6;
+  const bottom = height - 8;
+  const vals = [0, ...series.map((p) => p.value), ...(tests ?? []).map((t) => t.value)];
+  const lo = Math.min(...vals);
+  const hi = Math.max(10, ...vals);
+  const t0 = Date.parse(`${series[0].date}T12:00:00Z`);
+  const t1 = Math.max(t0 + 86400000, Date.parse(`${series[series.length - 1].date}T12:00:00Z`) + 6 * 86400000);
+  const X = (iso: string) => left + ((Date.parse(`${iso}T12:00:00Z`) - t0) / (t1 - t0)) * (W - left - 4);
+  const Y = (v: number) => bottom - ((v - lo) / (hi - lo || 1)) * (bottom - top);
+  const line = series.map((p) => `${X(p.date).toFixed(1)},${Y(p.value).toFixed(1)}`).join(" ");
+  const first = series[0];
+  const last = series[series.length - 1];
+  const step = hi - lo > 40 ? 20 : 10;
+  const grid: number[] = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) grid.push(v);
   return (
-    <span className="flex w-16 shrink-0 flex-col items-end text-right">
-      {t.kind === "up" ? (
-        <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-          +{t.delta} {m.kind === "time" ? "s" : "reps"}
-        </span>
-      ) : (
-        <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">Flat</span>
-      )}
-      <span className="text-[11px] text-muted">
-        {t.kind === "up" ? "30 days" : `${t.weeks} ${t.weeks === 1 ? "week" : "weeks"}`}
-      </span>
-    </span>
+    <svg viewBox={`0 0 ${W} ${height}`} className="block w-full" style={{ height }} aria-hidden>
+      {axis &&
+        grid.map((v) => (
+          <g key={v}>
+            <line x1={left} x2={W} y1={Y(v)} y2={Y(v)} className="stroke-hairline" strokeWidth={1} />
+            <text x={0} y={Y(v) + 3} fontSize={10} className="fill-muted">
+              {v === 0 ? "Start" : pctText(v)}
+            </text>
+          </g>
+        ))}
+      {!axis && <line x1={left} x2={W - 4} y1={Y(0)} y2={Y(0)} className="stroke-hairline" strokeDasharray="3 3" strokeWidth={1} />}
+      <polygon points={`${X(first.date).toFixed(1)},${Y(Math.max(lo, 0))} ${line} ${X(last.date).toFixed(1)},${Y(Math.max(lo, 0))}`} fill={color} fillOpacity={0.14} />
+      <polyline points={line} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+      {!tests && <circle cx={X(last.date)} cy={Y(last.value)} r={4} fill={color} />}
+      {(tests ?? []).map((t) => (
+        <circle key={t.date} cx={X(t.date)} cy={Y(t.value)} r={4} className="fill-surface stroke-ink" strokeWidth={2} />
+      ))}
+    </svg>
   );
 }
 
-const RECENT_CORE = 6;
-const mmss = (sec: number) => coreValueText("time", sec, null, "");
-
-/** One core row: name, best and last, and the trend in words (no line —
- *  a core rotation has too many movements for a line each, v0.672). */
-function CoreRow({ m, unit, todayISO, first, onOpen }: { m: CoreMove; unit: string; todayISO: string; first: boolean; onOpen: () => void }) {
-  const last = m.points.at(-1);
+/**
+ * Core on the Workouts page (v0.673; was a row per movement, v0.671): one
+ * card that stays the same size however many core moves there are — the
+ * core's progress against each move's start, its line, and the plank test,
+ * core days this week and moves improving. Opens the Core page.
+ */
+export function CoreCard({ summary, color, onOpen }: { summary: CoreSummary; color: string; onOpen: () => void }) {
+  const best = summary.plankBest;
   return (
     <button
       type="button"
       onClick={onOpen}
-      className={`flex min-h-[52px] w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-ground/50 ${first ? "" : "border-t border-hairline"}`}
+      aria-label="Open Core"
+      className="mt-2 flex w-full flex-col gap-2.5 rounded-xl border border-hairline bg-surface p-3.5 text-left transition-colors hover:border-accent"
     >
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="line-clamp-2 text-sm font-semibold">{m.name}</span>
-        <span className="truncate text-xs text-muted">
-          {m.best ? `Best ${coreValueText(m.kind, m.best.value, m.best.weight, unit)}` : ""}
-          {last ? ` · last ${coreValueText(m.kind, last.value, last.weight, unit)}` : ""}
+      <span className="flex w-full items-start gap-2">
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">Core progress</span>
+          <span className="flex items-baseline gap-1.5">
+            <span className={`tabular text-2xl font-bold ${summary.change != null ? TAG_TONE[tagOf(summary.change)] : ""}`}>
+              {summary.change != null ? pctText(summary.change) : "\u2014"}
+            </span>
+            <span className="text-xs text-muted">
+              {summary.since ? `since ${monthOf(summary.since)}` : ""} · {summary.recent} {summary.recent === 1 ? "move" : "moves"}
+            </span>
+          </span>
+        </span>
+        <span className="mt-1.5">
+          <Chevron />
         </span>
       </span>
-      <CoreTrend m={m} todayISO={todayISO} />
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="shrink-0 text-muted" aria-hidden="true">
-        <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+      <CoreLine series={summary.series} color={color} height={60} />
+      <span className="grid w-full grid-cols-3 border-t border-hairline pt-2.5">
+        <span className="flex flex-col">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">Plank test</span>
+          <span className="tabular text-[15px] font-semibold">{best ? mmss(best.seconds) : "\u2014"}</span>
+          <span className="text-[11px] text-muted">{best?.pft != null ? `${best.pft} pts` : best ? "under 1:10" : "none yet"}</span>
+        </span>
+        <span className="flex flex-col">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">This week</span>
+          <span className="tabular text-[15px] font-semibold">{summary.daysThisWeek}</span>
+          <span className="text-[11px] text-muted">core {summary.daysThisWeek === 1 ? "day" : "days"}</span>
+        </span>
+        <span className="flex flex-col">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">Improving</span>
+          <span className="tabular text-[15px] font-semibold">
+            {summary.improving} of {summary.recent}
+          </span>
+          <span className="text-[11px] text-muted">moves</span>
+        </span>
+      </span>
     </button>
   );
 }
 
 /**
- * Core (v0.671; v0.672): one card — the plank test first, then the core
- * movements done most recently, by a hold's time or reps (weight only as
- * context). The rest are a tap away, so a rotation of twenty movements
- * isn't twenty rows. Every row opens its page, where the chart and tiles are.
+ * The Core page (v0.673): tiles, the progress line with the plank tests, and
+ * the moves done in the last eight weeks grouped by what they work, each
+ * with its last result and whether it's up. Older moves are a tap away.
+ * A move opens its own pop-up.
  */
-export function CoreRows({
+export function CoreOverview({
+  summary,
   moves,
-  plank,
+  color,
   unit,
-  todayISO,
-  onOpen,
+  onOpenMove,
   onOpenPlank,
+  onClose,
 }: {
+  summary: CoreSummary;
   moves: CoreMove[];
-  plank: { date: string; seconds: number; pft: number | null }[];
+  color: string;
   unit: string;
-  todayISO: string;
-  onOpen: (m: CoreMove) => void;
+  onOpenMove: (m: CoreMove) => void;
   onOpenPlank: () => void;
+  onClose: () => void;
 }) {
-  const [all, setAll] = useState(false);
-  const recent = [...moves].sort((a, b) => ((a.points.at(-1)?.date ?? "") < (b.points.at(-1)?.date ?? "") ? 1 : -1));
-  const shown = recent.slice(0, RECENT_CORE);
-  const best = plank.length ? plank.reduce((a, b) => (b.seconds > a.seconds ? b : a)) : null;
-  const lastPlank = plank.at(-1);
+  const [idleOpen, setIdleOpen] = useState(false);
+  const [info, setInfo] = useState(false);
+  const byId = new Map(moves.map((m) => [m.movement, m]));
+  const best = summary.plankBest;
+  const lastText = (m: CoreMove) => {
+    const p = m.points.at(-1);
+    return p ? coreValueText(m.kind, p.value, p.weight, unit) : "";
+  };
+  const months: string[] = [];
+  for (const p of summary.series) {
+    const mo = monthOf(p.date);
+    if (months.at(-1) !== mo) months.push(mo);
+  }
   return (
-    <>
-      <div className="mt-2 overflow-hidden rounded-xl border border-hairline bg-surface">
-        <button
-          type="button"
-          onClick={onOpenPlank}
-          className="flex min-h-[52px] w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-ground/50"
-        >
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-sm font-semibold">Plank test</span>
-            <span className="truncate text-xs text-muted">
-              {best ? `Best ${mmss(best.seconds)}${best.pft != null ? ` · ${best.pft} pts` : ""}` : "No plank logged yet"}
-              {lastPlank && best && lastPlank.date !== best.date ? ` · last ${mmss(lastPlank.seconds)}` : ""}
-            </span>
-          </span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="shrink-0 text-muted" aria-hidden="true">
-            <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        {shown.map((m) => (
-          <CoreRow key={m.movement} m={m} unit={unit} todayISO={todayISO} first={false} onOpen={() => onOpen(m)} />
-        ))}
-      </div>
-      {recent.length > RECENT_CORE && (
-        <button type="button" onClick={() => setAll(true)} className="mt-2 text-sm font-semibold text-accent">
-          All core movements ({recent.length})
-        </button>
-      )}
-      {all && (
-        <Modal title="Core movements" onClose={() => setAll(false)}>
-          <div className="overflow-hidden rounded-xl border border-hairline bg-surface">
-            {[...moves].map((m, i) => (
-              <CoreRow
-                key={m.movement}
-                m={m}
-                unit={unit}
-                todayISO={todayISO}
-                first={i === 0}
-                onOpen={() => {
-                  setAll(false);
-                  onOpen(m);
-                }}
-              />
+    <Modal title="Core" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-3 gap-2">
+          <Tile k="Plank test" v={best ? mmss(best.seconds) : "\u2014"} sub={best?.pft != null ? `${best.pft} pts` : "best"} onClick={onOpenPlank} />
+          <Tile k="This month" v={`${summary.daysThisMonth}`} sub="core days" />
+          <Tile k="New bests" v={`${summary.newBests30}`} sub="last 30 days" />
+        </div>
+        <div className="rounded-xl border border-hairline p-3">
+          <div className="flex items-center gap-1.5">
+            <p className="flex-1 text-[11px] font-semibold uppercase tracking-widest text-muted">Core progress</p>
+            <button
+              type="button"
+              onClick={() => setInfo(true)}
+              aria-label="About core progress"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted hover:bg-ground"
+            >
+              ⓘ
+            </button>
+          </div>
+          <CoreLine series={summary.series} tests={summary.tests} color={color} height={150} axis />
+          <div className="flex justify-between pl-9 text-[10px] text-muted">
+            {months.map((m, i) => (
+              <span key={`${m}-${i}`}>{m}</span>
             ))}
+          </div>
+          <div className="mt-2 flex gap-3.5 text-[11px] text-muted">
+            <span className="flex items-center gap-1.5">
+              <span className="h-[3px] w-3.5 rounded" style={{ background: color }} />
+              All moves
+            </span>
+            {summary.tests.length > 0 && (
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full border-2 border-ink" />
+                Plank test
+              </span>
+            )}
+          </div>
+        </div>
+        {summary.groups.map((g) => (
+          <div key={g.key} className="space-y-1.5">
+            <div className="flex items-baseline justify-between px-0.5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{g.label}</p>
+              <p className={`text-xs font-semibold ${TAG_TONE[tagOf(g.change)]}`}>
+                {g.change == null ? "" : tagOf(g.change) === "flat" ? "Flat" : pctText(g.change)}
+              </p>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-hairline bg-surface">
+              {g.moves.map((x, i) => {
+                const m = byId.get(x.movement);
+                if (!m) return null;
+                return (
+                  <button
+                    key={x.movement}
+                    type="button"
+                    onClick={() => onOpenMove(m)}
+                    className={`flex min-h-[52px] w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-ground/50 ${i ? "border-t border-hairline" : ""}`}
+                  >
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="line-clamp-2 text-sm font-semibold">{m.name}</span>
+                      <span className="truncate text-xs text-muted">Last {lastText(m)}</span>
+                    </span>
+                    <span className={`shrink-0 text-xs font-semibold ${TAG_TONE[x.tag]}`}>{tagText(x.tag, x.change)}</span>
+                    <Chevron />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        {summary.idle.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setIdleOpen(true)}
+            className="flex min-h-[48px] w-full items-center justify-between rounded-xl border border-hairline bg-surface px-3 text-sm"
+          >
+            <span className="font-medium">Not done lately</span>
+            <span className="flex items-center gap-1 text-muted">
+              {summary.idle.length} {summary.idle.length === 1 ? "move" : "moves"}
+              <Chevron />
+            </span>
+          </button>
+        )}
+      </div>
+      {idleOpen && (
+        <Modal title="Not done lately" onClose={() => setIdleOpen(false)}>
+          <div className="overflow-hidden rounded-xl border border-hairline bg-surface">
+            {summary.idle.map((id, i) => {
+              const m = byId.get(id);
+              if (!m) return null;
+              const last = m.points.at(-1);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onOpenMove(m)}
+                  className={`flex min-h-[52px] w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-ground/50 ${i ? "border-t border-hairline" : ""}`}
+                >
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="line-clamp-2 text-sm font-semibold">{m.name}</span>
+                    <span className="truncate text-xs text-muted">
+                      Last {lastText(m)}
+                      {last ? ` · ${formatShort(last.date)}` : ""}
+                    </span>
+                  </span>
+                  <Chevron />
+                </button>
+              );
+            })}
           </div>
         </Modal>
       )}
-    </>
+      {info && (
+        <Modal title="Core progress" onClose={() => setInfo(false)}>
+          <p className="text-sm">
+            Each move is compared with its first session: a hold by its time, reps by reps, a weighted set by its
+            estimated max. The line is the middle of those changes, so no one move counts more than another.
+          </p>
+        </Modal>
+      )}
+    </Modal>
   );
 }
 
@@ -404,13 +581,14 @@ export function CorePage({
 }) {
   const first = m.points[0];
   const last = m.points.at(-1);
-  const trend = liftTrend(m.points, m.best, todayISO);
   const word = m.kind === "time" ? "s" : "reps";
+  const change = moveChange(m);
   return (
     <Modal title={m.name} onClose={onClose}>
       <div className="space-y-4">
         <p className="-mt-2 text-sm font-semibold" style={{ color }}>
-          Core · {m.kind === "time" ? "longest hold, seconds" : "most reps"}
+          {GROUP_LABEL[coreGroupOf(m.name)]} · {m.points.length} {m.points.length === 1 ? "time" : "times"}
+          {first ? ` since ${formatShort(first.date)}` : ""}
         </p>
         <LineChart
           dots
@@ -419,16 +597,15 @@ export function CorePage({
           marks={marks.filter((x) => first && x.date >= first.date && x.date <= todayISO)}
           ring={m.best ? { date: m.best.date, value: m.best.value } : null}
         />
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <Tile k="Best" v={m.best ? coreValueText(m.kind, m.best.value, m.best.weight, unit) : "\u2014"} sub={m.best ? formatShort(m.best.date) : ""} />
+          <Tile k="First" v={first ? coreValueText(m.kind, first.value, first.weight, unit) : "\u2014"} sub={first ? formatShort(first.date) : ""} />
           <Tile
-            k="30 days"
-            v={trend?.kind === "up" ? `+${trend.delta} ${word}` : trend?.kind === "flat" ? "Flat" : "\u2014"}
-            sub={trend?.kind === "up" ? "still climbing" : trend?.kind === "flat" ? "no gain" : "no older session"}
-            tone={trend?.kind}
+            k="Change"
+            v={change == null ? "\u2014" : pctText(change)}
+            sub={last ? `last ${coreValueText(m.kind, last.value, last.weight, unit)}` : ""}
+            tone={change == null ? undefined : tagOf(change) === "up" ? "up" : "flat"}
           />
-          <Tile k="Sessions" v={`${m.points.length}`} sub={first ? `since ${formatShort(first.date)}` : ""} />
-          <Tile k="Last" v={last ? coreValueText(m.kind, last.value, last.weight, unit) : "\u2014"} sub={last ? formatShort(last.date) : ""} />
         </div>
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Recent sessions</p>

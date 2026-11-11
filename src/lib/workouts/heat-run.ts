@@ -1,5 +1,7 @@
 import "server-only";
 import { buildCoreMoves } from "@/lib/workouts/core-moves";
+import { buildCoreSummary } from "@/lib/workouts/core-progress";
+import { sportDayLabel } from "@/lib/sport/label";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn } from "@/lib/dates";
 import { doneOn } from "@/lib/queries/movement-stats";
@@ -103,7 +105,8 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
     todayISO,
     await pausesFor(userId),
   );
-  return { ...heat, training, marks, coreMoves: buildCoreMoves(sets) };
+  const coreMoves = buildCoreMoves(sets);
+  return { ...heat, training, marks, coreMoves, coreSummary: buildCoreSummary(coreMoves, heat.plank ?? [], todayISO) };
 }
 
 /** Days made lighter (Lighter today, or an Adjust today choice). */
@@ -181,8 +184,9 @@ async function cardioEntries(userId: string, effortOn: Map<string, string | null
         : r.category === "HIIT"
           ? (hiitEffort.get(day) ?? null)
           : (effortOn.get(`${day}|cardio:${r.id}`) ?? null);
-    const kind =
-      r.category === "SPORT" ? (/hockey|skate|puck|ice/i.test(r.name ?? "") ? "hockey" : (r.name ?? "sport").toLowerCase()) : KIND_WORD[r.category] ?? "cardio";
-    return { date: doneOn(r), minutes, effort, kind };
+    // A sport day goes by its sport, never the event's name (v0.673).
+    const kind = r.category === "SPORT" ? sportDayLabel(r.name).toLowerCase() : KIND_WORD[r.category] ?? "cardio";
+    const type = r.category === "SPORT" ? "sport" : r.category === "HIIT" ? "conditioning" : "cardio";
+    return { date: doneOn(r), minutes, effort, kind, type } as CardioEntry;
   });
 }

@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11 — Core in one card, Core page, this week in the map pop-ups (v0.673.0 / app 0.483.0)
+
+- Core no longer lists a row per movement (it grows with every new move).
+  One card: core progress, its weekly line, plank test, core days this week,
+  moves improving. It opens the Core page; a move opens its pop-up on top.
+- Core progress (`core-progress.ts`, pure, served as `heat.coreSummary`):
+  core moves are measured differently (seconds, reps, weighted reps), so
+  each is compared with its first session as a percent — its best in the
+  four weeks up to its last session against that first one (weighted reps
+  by Epley estimated max). The core's number is the median of the moves,
+  so no one move counts more. Up is +3% or more, down −5% or worse. A move
+  with one session is "New". The weekly line is that median as of each
+  week's end; plank tests are drawn the same way against the first test.
+- Moves are grouped by what they work, by name: Front (planks, fallouts,
+  rollouts, dead bugs), Sides and twist (side planks, carries, Pallof),
+  Leg raises and crunches; else Other. Moves not done in eight weeks go
+  under "Not done lately".
+- The move pop-up's tiles are Best, First and Change (against the first).
+- Map pop-ups (muscles and the Endurance heart) lead with this week, exact:
+  "N sets this week" (sets where the group is primary) with a row per
+  movement and its top set; "N min this week" (raw minutes, not the
+  effort-weighted minutes the warmth uses) with a row for sport, cardio and
+  conditioning. With nothing this week, the warmth line explains the colour.
+  The 12-week bests list left the pop-up.
+- Sport sessions are named by `sportDayLabel`, never the calendar event's
+  title (it can hold team names).
+
 ## 2026-11 — Warm-up cues, steady body map, Core card, Lower back, past rotation days (v0.672.0 / app 0.482.0)
 
 - Every warm-up library move (and the shoulder-prep sets) has a cue behind

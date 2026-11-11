@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.672.0";
+export const APP_VERSION = "0.673.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.673.0",
+    summary: [
+      "Core is one card on Workouts: your core progress, its line, the plank test, core days this week and moves improving.",
+      "Tap it for the Core page: the progress line with plank tests, and your moves grouped as Front, Sides and twist, and Leg raises and crunches.",
+      "Tapping a muscle or the heart shows this week: exact sets or minutes, then a row per movement, or for sport, cardio and conditioning.",
+      "Sport days are named by the sport, never the event.",
+    ],
+  },
   {
     version: "0.672.0",
     summary: [

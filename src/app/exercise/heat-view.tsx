@@ -282,31 +282,44 @@ export function EnduranceHeart({ data, onOpen }: { data: TrainGroup | null; onOp
   );
 }
 
-/** A tapped muscle (or the heart): why it's this colour, and its bests. */
+/** A tapped muscle (or the heart): this week — exact sets or minutes, and a
+ *  row per movement or kind (v0.673). With nothing this week, why it's this
+ *  colour instead. */
 export function TrainDetail({
   title,
   data,
-  bests,
-  unit,
   onClose,
 }: {
   title: string;
   data: TrainGroup | null | undefined;
-  bests?: HeatGroup["bests"];
-  unit: string;
   onClose: () => void;
 }) {
+  const week = data?.week;
   return (
     <Modal title={title} onClose={onClose}>
-      <div className="space-y-3 text-sm">
-        <p className="flex items-center gap-2">
+      <div className="space-y-2 text-sm">
+        <p className="flex items-center gap-2 text-base font-semibold">
           <span
             className="h-3 w-3 shrink-0 rounded-sm"
             style={{ background: (data && trainColor(data.level)) ?? "var(--color-figure)" }}
           />
-          {data?.line ?? "Nothing logged yet."}
+          {week?.headline ?? data?.line ?? "Nothing logged yet."}
         </p>
-        {bests && bests.length > 0 && <HeatBests bests={bests} unit={unit} />}
+        {week && week.rows.length === 0 && data?.line && <p className="text-muted">{data.line}</p>}
+        {week && week.rows.length > 0 && (
+          <ul className="divide-y divide-hairline border-t border-hairline">
+            {week.rows.map((r) => (
+              <li key={r.name} className="flex items-baseline gap-2.5 py-2">
+                <span className="h-1.5 w-1.5 shrink-0 -translate-y-0.5 rounded-full bg-muted" aria-hidden />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="font-semibold">{r.name}</span>
+                  <span className="text-xs text-muted">{r.detail}</span>
+                </span>
+                <span className="tabular shrink-0 font-semibold">{r.amount}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </Modal>
   );

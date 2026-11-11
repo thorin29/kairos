@@ -43,10 +43,21 @@ export type TrainSet = {
   light?: boolean;
 };
 
-export type CardioEntry = { date: string; minutes: number; effort?: string | null; kind: string };
+export type CardioEntry = {
+  date: string;
+  minutes: number;
+  effort?: string | null;
+  kind: string;
+  /** Which row of the Endurance pop-up it's on (v0.673). */
+  type?: "sport" | "cardio" | "conditioning";
+};
 export type Pause = { from: string; to: string };
 
-export type TrainGroup = { group: string; level: number; line: string };
+/** This week in a muscle's (or the heart's) pop-up (v0.673): a headline —
+ *  "16 sets this week", "148 min this week" — and a row per movement or kind. */
+export type WeekRow = { name: string; detail: string; amount: string };
+export type TrainWeek = { headline: string; rows: WeekRow[] };
+export type TrainGroup = { group: string; level: number; line: string; week?: TrainWeek };
 export type TrainingHeat = { groups: TrainGroup[]; endurance: TrainGroup | null; paused: boolean };
 
 const DAY = 86_400_000;
@@ -241,7 +252,7 @@ export function buildTrainingHeat(
       line = `trained ${recent.filter(Boolean).length} of the last ${plural(recent.length, "week")}`;
       if (st.sinceBest < 6 && lastGain && lastGain.pct > 0) line += ` · ${lastGain.name} max up ${lastGain.pct}%`;
     }
-    out.push({ group: g, level: st.warmth, line });
+    out.push({ group: g, level: st.warmth, line, week: muscleWeek(main, curWeek, today) });
   }
 
   return { groups: out, endurance: buildEndurance(cardio, weeks, curWeek, today, pauses, paused), paused };
@@ -287,5 +298,53 @@ function buildEndurance(
   if (paused) line = "Paused";
   else if (st.missed > 0) line = `${st.warmth > 0 ? "cooling" : "cooled"} · ${Math.round(load.get(curWeek) ?? 0)} hard minutes this week`;
   else line = `about ${avg} hard minutes a week${kinds.length ? ` · ${kinds.join(", ")}` : ""}`;
-  return { group: "ENDURANCE", level: st.warmth, line };
+  return { group: "ENDURANCE", level: st.warmth, line, week: enduranceWeek(mine, curWeek, today) };
+}
+
+const clock = (sec: number) => {
+  const m = Math.floor(sec / 60);
+  const x = Math.round(sec % 60);
+  return m > 0 ? `${m}:${String(x).padStart(2, "0")}` : `${x} s`;
+};
+const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
+
+/** A muscle's week: its sets, and a row per movement with its top set. */
+export function muscleWeek(main: readonly TrainSet[], curWeek: string, today: string): TrainWeek {
+  const mine = main.filter((s) => s.date >= curWeek && s.date <= today);
+  const by = new Map<string, { name: string; sets: TrainSet[] }>();
+  for (const s of mine) {
+    const m = by.get(s.movement) ?? { name: s.name, sets: [] };
+    m.sets.push(s);
+    by.set(s.movement, m);
+  }
+  const rows = [...by.values()]
+    .sort((a, b) => b.sets.length - a.sets.length || a.name.localeCompare(b.name))
+    .map((m) => {
+      const weighted = m.sets.filter((s) => (s.weight ?? 0) > 0 && (s.reps ?? 0) > 0);
+      let detail: string;
+      if (weighted.length) {
+        const top = weighted.reduce((a, b) => (epley(b.weight!, b.reps!) > epley(a.weight!, a.reps!) ? b : a));
+        detail = `Top set ${top.weight} \u00d7 ${top.reps}`;
+      } else if (m.sets.some((s) => (s.reps ?? 0) > 0)) detail = `Most reps ${Math.max(...m.sets.map((s) => s.reps ?? 0))}`;
+      else detail = `Longest ${clock(Math.max(...m.sets.map((s) => s.seconds ?? 0)))}`;
+      return { name: m.name, detail, amount: plural(m.sets.length, "set") };
+    });
+  return { headline: mine.length ? `${plural(mine.length, "set")} this week` : "No sets this week", rows };
+}
+
+/** Endurance's week: exact minutes (not weighted by effort), and a row for
+ *  sport, cardio and conditioning. */
+export function enduranceWeek(entries: readonly CardioEntry[], curWeek: string, today: string): TrainWeek {
+  const mine = entries.filter((c) => c.date >= curWeek && c.date <= today && c.minutes > 0);
+  const total = Math.round(mine.reduce((t, c) => t + c.minutes, 0));
+  const rows: WeekRow[] = [];
+  const kinds = (xs: CardioEntry[]) => [...new Set(xs.map((c) => cap(c.kind)))].join(", ");
+  const mins = (xs: CardioEntry[]) => `${Math.round(xs.reduce((t, c) => t + c.minutes, 0))} min`;
+  const sport = mine.filter((c) => c.type === "sport");
+  const cardio = mine.filter((c) => (c.type ?? "cardio") === "cardio");
+  const cond = mine.filter((c) => c.type === "conditioning");
+  if (sport.length) rows.push({ name: "Sport", detail: `${kinds(sport)} \u00b7 ${plural(sport.length, "session")}`, amount: mins(sport) });
+  if (cardio.length) rows.push({ name: "Cardio", detail: `${kinds(cardio)} \u00b7 ${plural(cardio.length, "session")}`, amount: mins(cardio) });
+  if (cond.length) rows.push({ name: "Conditioning", detail: plural(cond.length, "workout"), amount: mins(cond) });
+  return { headline: total > 0 ? `${total} min this week` : "No endurance this week", rows };
 }
