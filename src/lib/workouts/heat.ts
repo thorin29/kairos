@@ -88,6 +88,9 @@ export type HeatMap = {
   coreMoves?: import("@/lib/workouts/core-moves").CoreMove[];
   /** Core in one picture (v0.673): progress against each move's start. */
   coreSummary?: import("@/lib/workouts/core-progress").CoreSummary | null;
+  /** Cardio and conditioning charts (v0.674). */
+  cardioCharts?: import("@/lib/workouts/endurance-charts").CardioCharts | null;
+  conditioningCharts?: import("@/lib/workouts/endurance-charts").ConditioningCharts | null;
 };
 
 const MAX_REPS_FOR_ESTIMATE = 12;

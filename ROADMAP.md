@@ -1755,12 +1755,12 @@ From the original workouts plan, not built yet:
 - [ ] "Something hurt?" marked on the body map for that area.
 - [x] Planned light weeks shaded on the lift charts (web 0.670 / app 0.480,
   with lift rows and a page per lift).
-- [ ] Cardio charts (reached from the Endurance heart and a Cardio section on
+- [x] Cardio charts (v0.674) (reached from the Endurance heart and a Cardio section on
   the Workouts page; bar charts carry dates under them like Weekly training):
   per activity, this week / best / 30-day pace tiles,
   distance per week, pace per session (faster higher, dots by effort), best
   marked. Mockup agreed.
-- [ ] Conditioning charts: sessions, new bests, sessions per week, and each
+- [x] Conditioning charts (v0.674): sessions, new bests, sessions per week, and each
   workout done more than once with its results over time. Mockup agreed.
 - [ ] Family WOD: one workout the household does together, scaled per person.
 - [ ] Smarter suggestions: hockey-aware rules, push/pull balance, and a "plan
@@ -1770,7 +1770,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.673.1 (migrations through 147_day_extras).
-- App versionName 0.483.1 / versionCode 551 / CLIENT_BUILD 551.
+- Web APP_VERSION 0.674.0 (migrations through 147_day_extras).
+- App versionName 0.484.0 / versionCode 552 / CLIENT_BUILD 552.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

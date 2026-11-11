@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — Cardio and conditioning charts (v0.674.0 / app 0.484.0)
+
+- Both follow Core's pattern: a card on Workouts after the muscle groups,
+  opening a page whose order matches a lift's (chart, tiles, detail). The
+  Endurance pop-up's Cardio and Conditioning rows open them too. Colours are
+  the weekly-training kinds (cardio red, conditioning amber).
+- Cardio (`buildCardioCharts`, pure, `heat.cardioCharts`) is per activity:
+  rowing in meters with the split per 500 m, running and rucking in miles
+  or km (whichever most sessions used; the other is converted) with pace
+  per unit, other cardio in minutes with no pace. Pace dots are shaded by
+  how the session felt; the best counts only 1,000 m+ rows or a mile+ on
+  foot, so a hard 500 m doesn't stand as the best split. The 30-day change
+  is the median pace of the last 30 days against the 30 before.
+- Conditioning (`buildConditioningCharts`, `heat.conditioningCharts`): the
+  same name and version (Rx or Scaled) is the same workout. Timed types are
+  better lower, the rest higher. "New best" is the last attempt beating
+  every earlier one. Workouts with one scored attempt are "Done once".
+- Both come from the session query the endurance gauge already ran
+  (`cardioEntries` now returns the sessions too); no new route.
+
 ## 2026-11 — Core page order (v0.673.1 / app 0.483.1)
 
 - The Core page follows a lift's page: chart first, then tiles, then the

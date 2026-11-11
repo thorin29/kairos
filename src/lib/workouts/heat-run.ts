@@ -1,6 +1,14 @@
 import "server-only";
 import { buildCoreMoves } from "@/lib/workouts/core-moves";
 import { buildCoreSummary } from "@/lib/workouts/core-progress";
+import {
+  buildCardioCharts,
+  buildConditioningCharts,
+  type CardioActivityKey,
+  type CardioSession,
+  type ConditioningSession,
+} from "@/lib/workouts/endurance-charts";
+import type { WorkoutType } from "@/lib/workouts/catalog";
 import { sportDayLabel } from "@/lib/sport/label";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn } from "@/lib/dates";
@@ -99,14 +107,23 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
   }
   const heat = buildHeat(sets, todayISO, unit);
   const scores = scoreSets(sets);
+  const endurance = await cardioEntries(userId, effortOn);
   const training: TrainingHeat = buildTrainingHeat(
     sets.map((s, i) => ({ ...s, credit: scores[i].credit, light: light[i] })),
-    await cardioEntries(userId, effortOn),
+    endurance.entries,
     todayISO,
     await pausesFor(userId),
   );
   const coreMoves = buildCoreMoves(sets);
-  return { ...heat, training, marks, coreMoves, coreSummary: buildCoreSummary(coreMoves, heat.plank ?? [], todayISO) };
+  return {
+    ...heat,
+    training,
+    marks,
+    coreMoves,
+    coreSummary: buildCoreSummary(coreMoves, heat.plank ?? [], todayISO),
+    cardioCharts: buildCardioCharts(endurance.cardio, todayISO),
+    conditioningCharts: buildConditioningCharts(endurance.conditioning, todayISO),
+  };
 }
 
 /** Days made lighter (Lighter today, or an Adjust today choice). */
@@ -146,7 +163,10 @@ const KIND_WORD: Record<string, string> = {
  * conditioning, with minutes and how hard each felt (its own feedback;
  * conditioning goes by any conditioning feedback that day).
  */
-async function cardioEntries(userId: string, effortOn: Map<string, string | null>): Promise<CardioEntry[]> {
+async function cardioEntries(
+  userId: string,
+  effortOn: Map<string, string | null>,
+): Promise<{ entries: CardioEntry[]; cardio: CardioSession[]; conditioning: ConditioningSession[] }> {
   const rows = (await prisma.workoutSession.findMany({
     where: { userId, isRest: false, category: { in: [...CARDIO_CATEGORIES, "SPORT", "HIIT"] as never } },
     select: {
@@ -157,7 +177,9 @@ async function cardioEntries(userId: string, effortOn: Map<string, string | null
       category: true,
       durationMin: true,
       sourceEventId: true,
-      sets: { select: { seconds: true } },
+      workoutType: true,
+      version: true,
+      sets: { orderBy: { setNumber: "asc" }, select: { seconds: true, reps: true, meters: true, distance: true, unit: true, weight: true } },
     },
   })) as {
     id: string;
@@ -167,14 +189,25 @@ async function cardioEntries(userId: string, effortOn: Map<string, string | null
     category: string;
     durationMin: number | null;
     sourceEventId: string | null;
-    sets: { seconds: number | null }[];
+    workoutType: string | null;
+    version: string | null;
+    sets: {
+      seconds: number | null;
+      reps: number | null;
+      meters: number | null;
+      distance: number | null;
+      unit: string | null;
+      weight: number | null;
+    }[];
   }[];
   const hiitEffort = new Map<string, string | null>();
   for (const [k, v] of effortOn) {
     const [d, slot] = k.split("|");
     if (slot.startsWith("hiit:") || slot.startsWith("pick:")) hiitEffort.set(d, v);
   }
-  return rows.map((r) => {
+  const cardio: CardioSession[] = [];
+  const conditioning: ConditioningSession[] = [];
+  const entries = rows.map((r) => {
     const day = fromDateColumn(r.date);
     const secs = r.sets.reduce((t, x) => t + (x.seconds ?? 0), 0);
     const minutes = r.durationMin ?? (secs > 0 ? Math.round(secs / 60) : r.category === "HIIT" ? 15 : 0);
@@ -187,6 +220,35 @@ async function cardioEntries(userId: string, effortOn: Map<string, string | null
     // A sport day goes by its sport, never the event's name (v0.673).
     const kind = r.category === "SPORT" ? sportDayLabel(r.name).toLowerCase() : KIND_WORD[r.category] ?? "cardio";
     const type = r.category === "SPORT" ? "sport" : r.category === "HIIT" ? "conditioning" : "cardio";
+    if (CARDIO_CATEGORIES.includes(r.category)) {
+      const sum = (k: "meters" | "distance") => {
+        const xs = r.sets.map((x) => x[k]).filter((v): v is number => v != null && v > 0);
+        return xs.length ? xs.reduce((t, v) => t + v, 0) : null;
+      };
+      const loads = r.sets.map((x) => x.weight).filter((v): v is number => v != null && v > 0);
+      cardio.push({
+        date: doneOn(r),
+        activity: (["ROWING", "RUNNING", "RUCKING"].includes(r.category) ? r.category : "CARDIO") as CardioActivityKey,
+        meters: sum("meters"),
+        distance: sum("distance"),
+        unit: r.sets.find((x) => x.distance != null)?.unit ?? null,
+        seconds: secs > 0 ? secs : null,
+        minutes,
+        load: loads.length ? Math.max(...loads) : null,
+        effort,
+      });
+    } else if (r.category === "HIIT") {
+      conditioning.push({
+        date: doneOn(r),
+        name: r.name ?? "Conditioning",
+        type: (r.workoutType as WorkoutType | null) ?? null,
+        version: r.version,
+        reps: r.sets[0]?.reps ?? null,
+        seconds: r.sets[0]?.seconds ?? null,
+        minutes,
+      });
+    }
     return { date: doneOn(r), minutes, effort, kind, type } as CardioEntry;
   });
+  return { entries, cardio, conditioning };
 }

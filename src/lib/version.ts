@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.673.1";
+export const APP_VERSION = "0.674.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.674.0",
+    summary: [
+      "Cardio has its own card on Workouts: this week's minutes and each activity. Tap it for pace per session, distance per week and your best split or pace.",
+      "Conditioning has its own card too: this month's sessions and time. Tap it for workouts you've done more than once, each attempt as a dot, with new bests.",
+      "In the Endurance pop-up, tap Cardio or Conditioning to open its charts.",
+    ],
+  },
   {
     version: "0.673.1",
     summary: ["The Core page shows its chart first, then the tiles, like a lift's page."],

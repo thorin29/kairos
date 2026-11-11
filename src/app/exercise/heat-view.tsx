@@ -288,12 +288,16 @@ export function EnduranceHeart({ data, onOpen }: { data: TrainGroup | null; onOp
 export function TrainDetail({
   title,
   data,
+  onOpenRow,
   onClose,
 }: {
   title: string;
   data: TrainGroup | null | undefined;
+  /** The heart's Cardio and Conditioning rows open their pages (v0.674). */
+  onOpenRow?: (name: string) => void;
   onClose: () => void;
 }) {
+  const opens = (name: string) => !!onOpenRow && (name === "Cardio" || name === "Conditioning");
   const week = data?.week;
   return (
     <Modal title={title} onClose={onClose}>
@@ -308,16 +312,32 @@ export function TrainDetail({
         {week && week.rows.length === 0 && data?.line && <p className="text-muted">{data.line}</p>}
         {week && week.rows.length > 0 && (
           <ul className="divide-y divide-hairline border-t border-hairline">
-            {week.rows.map((r) => (
-              <li key={r.name} className="flex items-baseline gap-2.5 py-2">
-                <span className="h-1.5 w-1.5 shrink-0 -translate-y-0.5 rounded-full bg-muted" aria-hidden />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="font-semibold">{r.name}</span>
-                  <span className="text-xs text-muted">{r.detail}</span>
-                </span>
-                <span className="tabular shrink-0 font-semibold">{r.amount}</span>
-              </li>
-            ))}
+            {week.rows.map((r) => {
+              const body = (
+                <>
+                  <span className="h-1.5 w-1.5 shrink-0 -translate-y-0.5 rounded-full bg-muted" aria-hidden />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="font-semibold">{r.name}</span>
+                    <span className="text-xs text-muted">{r.detail}</span>
+                  </span>
+                  <span className="tabular shrink-0 font-semibold">{r.amount}</span>
+                </>
+              );
+              return (
+                <li key={r.name}>
+                  {opens(r.name) ? (
+                    <button type="button" onClick={() => onOpenRow!(r.name)} className="flex w-full items-baseline gap-2.5 py-2 text-left hover:bg-ground/50">
+                      {body}
+                      <span className="self-center text-muted" aria-hidden>
+                        ›
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="flex items-baseline gap-2.5 py-2">{body}</div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

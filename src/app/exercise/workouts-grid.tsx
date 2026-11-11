@@ -29,6 +29,7 @@ import { DayLog } from "./day-log";
 import { MovementInfo } from "@/components/movement-info";
 import { WeeklyTraining } from "./weekly-training";
 import { CoreCard, CoreOverview, CorePage, LiftPage, LiftRows } from "./lift-page";
+import { CARDIO_COLOR, CONDITIONING_COLOR, CardioCard, CardioPage, ConditioningCard, ConditioningPage } from "./endurance-charts";
 import { Modal } from "./plan-file-panel";
 import type { CoreMove } from "@/lib/workouts/core-moves";
 import { ProgramCard } from "./program-card";
@@ -801,6 +802,8 @@ function LiftBlocks({
   const [coreOpen, setCoreOpen] = useState<CoreMove | null>(null);
   const [plankOpen, setPlankOpen] = useState(false);
   const [coreAll, setCoreAll] = useState(false);
+  const [cardioOpen, setCardioOpen] = useState(false);
+  const [condOpen, setCondOpen] = useState(false);
   // The training heat map (v0.664): one picture, no ranges.
   const training = heat?.training;
   const heatShade = useMemo(() => trainFills(training), [training]);
@@ -969,6 +972,19 @@ function LiftBlocks({
                       ? training?.endurance
                       : training?.groups.find((g) => g.group === heatGroupOf(heatPicked))
                   }
+                  onOpenRow={
+                    heatPicked === "ENDURANCE"
+                      ? (row) => {
+                          if (row === "Cardio" && heat?.cardioCharts) {
+                            setHeatPicked(null);
+                            setCardioOpen(true);
+                          } else if (row === "Conditioning" && heat?.conditioningCharts) {
+                            setHeatPicked(null);
+                            setCondOpen(true);
+                          }
+                        }
+                      : undefined
+                  }
                   onClose={() => setHeatPicked(null)}
                 />
               )}
@@ -1034,6 +1050,25 @@ function LiftBlocks({
           )}
         </div>
       ))}
+      {/* Cardio and conditioning (v0.674), after the muscle groups. */}
+      {heat?.cardioCharts && (
+        <div>
+          <p className="text-sm font-semibold" style={{ color: CARDIO_COLOR }}>
+            Cardio
+          </p>
+          <CardioCard data={heat.cardioCharts} onOpen={() => setCardioOpen(true)} />
+        </div>
+      )}
+      {heat?.conditioningCharts && (
+        <div>
+          <p className="text-sm font-semibold" style={{ color: CONDITIONING_COLOR }}>
+            Conditioning
+          </p>
+          <ConditioningCard data={heat.conditioningCharts} onOpen={() => setCondOpen(true)} />
+        </div>
+      )}
+      {cardioOpen && heat?.cardioCharts && <CardioPage data={heat.cardioCharts} onClose={() => setCardioOpen(false)} />}
+      {condOpen && heat?.conditioningCharts && <ConditioningPage data={heat.conditioningCharts} onClose={() => setCondOpen(false)} />}
       {coreAll && heat?.coreSummary && (
         <CoreOverview
           summary={heat.coreSummary}
