@@ -4,6 +4,8 @@ import { addDays, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
 import { MAX_TASK_INTERVAL, TASK_FREQS, occursOn as occursOnRule } from "@/lib/tasks/recur-rule";
 
 const HORIZON_DAYS = 30;
+/** How far past the window to look for a series' next occurrence. */
+const NEXT_DAYS = 1100;
 
 type Template = {
   id: string;
@@ -92,7 +94,15 @@ export async function generateRecurringTasks(
 
   for (const t of templates) {
     const gf = `rtask:${t.id}`;
-    for (const iso of occurrenceDates(t, fromISO, toISO)) {
+    const dates = occurrenceDates(t, fromISO, toISO);
+    // Nothing due in the window (every 90 days, yearly, or a first due date
+    // months out): keep the next one anyway, so the series is on the task
+    // list (v0.669). Up to about three years ahead.
+    if (dates.length === 0) {
+      const next = occurrenceDates(t, addDays(toISO, 1), addDays(toISO, NEXT_DAYS))[0];
+      if (next) dates.push(next);
+    }
+    for (const iso of dates) {
       expected.set(`${gf}|${iso}`, {
         userId: t.userId,
         category: t.category as Category,
@@ -107,10 +117,12 @@ export async function generateRecurringTasks(
     }
   }
 
+  // From the window on, with no end: a next occurrence kept past the window
+  // must be seen, or it would be made again on every run.
   const existing = await prisma.task.findMany({
     where: {
       generatedFrom: { startsWith: "rtask:" },
-      dueDate: { gte: toDateColumn(fromISO), lte: toDateColumn(toISO) },
+      dueDate: { gte: toDateColumn(fromISO) },
     },
     select: { id: true, generatedFrom: true, dueDate: true, status: true },
   });

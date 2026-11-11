@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-11 — A repeating task's next occurrence is always on the list (v0.669.0)
+
+The generator only makes occurrences inside its 30-day window, and the task
+list shows a series by its occurrences, so a series with nothing due in the
+next 30 days (every 90 days, yearly, a first due date months out) vanished
+from the list. Before 0.668 the start was always today, which hid this. Now a
+series with nothing in the window keeps its next occurrence (looked for up to
+1100 days past the window). The reconcile reads occurrences from the window
+on with no end, so that row is seen on later runs and not made again, and is
+dropped as an orphan once the window has an occurrence of its own.
+
 ## 2026-11 — Repeating tasks: first due date, presets and Custom (v0.668.0 / app 0.478.0)
 
 - Bugs fixed: the server capped `interval` at 52 for every unit (meant for
