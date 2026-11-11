@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-11 — Core page order (v0.673.1 / app 0.483.1)
+
+- The Core page follows a lift's page: chart first, then tiles, then the
+  detail (the grouped moves). The move pop-up already did.
+
 ## 2026-11 — Core in one card, Core page, this week in the map pop-ups (v0.673.0 / app 0.483.0)
 
 - Core no longer lists a row per movement (it grows with every new move).

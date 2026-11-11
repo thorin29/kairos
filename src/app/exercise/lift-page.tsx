@@ -403,7 +403,7 @@ export function CoreCard({ summary, color, onOpen }: { summary: CoreSummary; col
 }
 
 /**
- * The Core page (v0.673): tiles, the progress line with the plank tests, and
+ * The Core page (v0.673): the progress line with the plank tests, tiles, and
  * the moves done in the last eight weeks grouped by what they work, each
  * with its last result and whether it's up. Older moves are a tap away.
  * A move opens its own pop-up.
@@ -441,11 +441,6 @@ export function CoreOverview({
   return (
     <Modal title="Core" onClose={onClose}>
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-2">
-          <Tile k="Plank test" v={best ? mmss(best.seconds) : "\u2014"} sub={best?.pft != null ? `${best.pft} pts` : "best"} onClick={onOpenPlank} />
-          <Tile k="This month" v={`${summary.daysThisMonth}`} sub="core days" />
-          <Tile k="New bests" v={`${summary.newBests30}`} sub="last 30 days" />
-        </div>
         <div className="rounded-xl border border-hairline p-3">
           <div className="flex items-center gap-1.5">
             <p className="flex-1 text-[11px] font-semibold uppercase tracking-widest text-muted">Core progress</p>
@@ -476,6 +471,11 @@ export function CoreOverview({
               </span>
             )}
           </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <Tile k="Plank test" v={best ? mmss(best.seconds) : "\u2014"} sub={best?.pft != null ? `${best.pft} pts` : "best"} onClick={onOpenPlank} />
+          <Tile k="This month" v={`${summary.daysThisMonth}`} sub="core days" />
+          <Tile k="New bests" v={`${summary.newBests30}`} sub="last 30 days" />
         </div>
         {summary.groups.map((g) => (
           <div key={g.key} className="space-y-1.5">
