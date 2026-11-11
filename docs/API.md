@@ -855,7 +855,11 @@ request: { "date","slot",                      // slot = the planned movement
 200: { "date","status":"saved" }              // the whole answer; both null clears
 
 GET  /api/v1/workouts/weekly
-200: { "weeks":[ { "start","days","sets","minutes","trained" } ],  // 12, oldest first
+200: { "weeks":[ { "start","days","sets","minutes","trained",
+                  "kinds":{ "lift","cardio","conditioning","sport","other" },  // days of each (v0.671)
+                  "planned":int,                // workout days the plan had
+                  "dayList":[ { "date","kinds":[kind],"label",               // Sun..Sat
+                                "status":"done"|"planned"|"missed"|"rest"|null } ] } ],  // 12, oldest first
        "inARow":int }                          // records.ts weeksInARow
 ```
 **Programs (v0.611).**
@@ -1007,6 +1011,12 @@ changed and then ended or switched (`setup` shaped like `setup` above, ready to
 start from; `extras` like `current`). `POST programs/version/forget { key }`
 removes one. Starting from a version is an ordinary `programs/start`.
 
+v0.671: `heat.coreMoves: [{ movement, name, kind: "time"|"reps", points:
+[{ date, value, weight|null }], best }]` — core movements by their longest
+hold or most reps a day (weight as context), for Core's rows. The hinge family
+(deadlifts, RDLs, good mornings, back extensions, swings) reports
+`muscleGroup` and `shadePrimary` "DEADLIFT" whatever it is filed under.
+
 v0.670: the progress read's `heat` gains `marks: [{ date, label }]` — days
 changed by Adjust today or Lighter today ("Sick", "Hurt", "Low energy",
 "Short", "Lighter"), marked on a lift's chart. `GET workouts/lift-next`
@@ -1104,6 +1114,10 @@ day (owner, participant, or a sport feed's owner/member), else null.
 day's Warm-up the sport's routine (Hockey legs); false (the default) keeps
 the planned workout's. With `forSport` false the day shows the sport's
 warm-up as an optional extra; skipping the Warm-up is "none".
+v0.671: `label` is "Hockey" unless the event's title, event type or calendar
+names another sport (a feed's titles are matchups, never the label);
+`sportDay.state` is "done", "skip" or null, set with `POST warmup-for
+{ date, state }` ("" or null clears) — it only marks the card.
 
 v0.661 Isometric days: `kind: "iso"` everywhere Arms takes `kind` (`plan/core`,
 `core-workouts`, `?kind=iso`); plan options add `isoWorkouts`; the entry is

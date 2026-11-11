@@ -8,6 +8,7 @@ import { formatShort } from "@/lib/dates";
 import { estimatedMax, liftTrend, lightWeeks } from "@/lib/workouts/lift-stats";
 import { liftNextAction } from "@/lib/actions/workouts";
 import type { GraphSeries } from "@/lib/queries/workouts";
+import { coreValueText, type CoreMove } from "@/lib/workouts/core-moves";
 
 const sorted = (pts: GraphSeries["points"]) => [...pts].sort((a, b) => (a.date < b.date ? -1 : 1));
 const setText = (v: number, reps?: number | null) => `${v}${reps ? ` × ${reps}` : ""}`;
@@ -87,7 +88,7 @@ export function LiftRows({
             }`}
           >
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-sm font-semibold">{s.name}</span>
+              <span className="line-clamp-2 text-sm font-semibold">{s.name}</span>
               <span className="truncate text-xs text-muted">
                 Best {setText(s.best!.value, s.best!.reps)}
                 {last ? ` · last ${setText(last.value, last.reps)}` : ""}
@@ -253,6 +254,141 @@ export function LiftPage({
             </ul>
           </div>
         )}
+      </div>
+    </Modal>
+  );
+}
+
+/** Core's trend: "+15 s" / "+3 reps" over 30 days, else weeks since the best. */
+function CoreTrend({ m, todayISO }: { m: CoreMove; todayISO: string }) {
+  const t = liftTrend(m.points, m.best, todayISO);
+  if (!t) return <span className="w-16 shrink-0" />;
+  return (
+    <span className="flex w-16 shrink-0 flex-col items-end text-right">
+      {t.kind === "up" ? (
+        <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+          +{t.delta} {m.kind === "time" ? "s" : "reps"}
+        </span>
+      ) : (
+        <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">Flat</span>
+      )}
+      <span className="text-[11px] text-muted">
+        {t.kind === "up" ? "30 days" : `${t.weeks} ${t.weeks === 1 ? "week" : "weeks"}`}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * Core's movements as rows (v0.671), by what they're done for — a hold's time
+ * or reps — not weight: a weighted crunch is still about the reps, so its
+ * weight shows as context ("12 × 25 lb"). A row opens the movement's page.
+ */
+export function CoreRows({
+  moves,
+  color,
+  unit,
+  todayISO,
+  onOpen,
+}: {
+  moves: CoreMove[];
+  color: string;
+  unit: string;
+  todayISO: string;
+  onOpen: (m: CoreMove) => void;
+}) {
+  if (moves.length === 0) return null;
+  return (
+    <div className="mt-2 overflow-hidden rounded-xl border border-hairline bg-surface">
+      {moves.map((m, i) => {
+        const last = m.points.at(-1);
+        return (
+          <button
+            key={m.movement}
+            type="button"
+            onClick={() => onOpen(m)}
+            className={`flex min-h-[56px] w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-ground/50 ${
+              i > 0 ? "border-t border-hairline" : ""
+            }`}
+          >
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="line-clamp-2 text-sm font-semibold">{m.name}</span>
+              <span className="truncate text-xs text-muted">
+                {m.best ? `Best ${coreValueText(m.kind, m.best.value, m.best.weight, unit)}` : ""}
+                {last ? ` · last ${coreValueText(m.kind, last.value, last.weight, unit)}` : ""}
+              </span>
+            </span>
+            <Spark points={m.points} color={color} />
+            <CoreTrend m={m} todayISO={todayISO} />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="shrink-0 text-muted" aria-hidden="true">
+              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** A core movement's page (v0.671): every day's longest hold or most reps,
+ *  with changed days marked and the best circled; its numbers; recent days. */
+export function CorePage({
+  move: m,
+  color,
+  unit,
+  marks,
+  todayISO,
+  onClose,
+}: {
+  move: CoreMove;
+  color: string;
+  unit: string;
+  marks: { date: string; label: string }[];
+  todayISO: string;
+  onClose: () => void;
+}) {
+  const first = m.points[0];
+  const last = m.points.at(-1);
+  const trend = liftTrend(m.points, m.best, todayISO);
+  const word = m.kind === "time" ? "s" : "reps";
+  return (
+    <Modal title={m.name} onClose={onClose}>
+      <div className="space-y-4">
+        <p className="-mt-2 text-sm font-semibold" style={{ color }}>
+          Core · {m.kind === "time" ? "longest hold, seconds" : "most reps"}
+        </p>
+        <LineChart
+          dots
+          legend={false}
+          series={[{ id: m.movement, name: m.name, color, unit: word, points: m.points.map((p) => ({ date: p.date, value: p.value })) }]}
+          marks={marks.filter((x) => first && x.date >= first.date && x.date <= todayISO)}
+          ring={m.best ? { date: m.best.date, value: m.best.value } : null}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <Tile k="Best" v={m.best ? coreValueText(m.kind, m.best.value, m.best.weight, unit) : "\u2014"} sub={m.best ? formatShort(m.best.date) : ""} />
+          <Tile
+            k="30 days"
+            v={trend?.kind === "up" ? `+${trend.delta} ${word}` : trend?.kind === "flat" ? "Flat" : "\u2014"}
+            sub={trend?.kind === "up" ? "still climbing" : trend?.kind === "flat" ? "no gain" : "no older session"}
+            tone={trend?.kind}
+          />
+          <Tile k="Sessions" v={`${m.points.length}`} sub={first ? `since ${formatShort(first.date)}` : ""} />
+          <Tile k="Last" v={last ? coreValueText(m.kind, last.value, last.weight, unit) : "\u2014"} sub={last ? formatShort(last.date) : ""} />
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Recent sessions</p>
+          <ul className="mt-1 divide-y divide-hairline text-sm">
+            {m.points
+              .slice(-5)
+              .reverse()
+              .map((p) => (
+                <li key={p.date} className="flex justify-between py-2">
+                  <span>{formatShort(p.date)}</span>
+                  <span className="tabular text-muted">{coreValueText(m.kind, p.value, p.weight, unit)}</span>
+                </li>
+              ))}
+          </ul>
+        </div>
       </div>
     </Modal>
   );

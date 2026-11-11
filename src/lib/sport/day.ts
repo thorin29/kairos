@@ -24,8 +24,8 @@ export async function sportOn(userId: string, dateISO: string): Promise<{ eventI
       startsAt: true,
       rrule: true,
       participants: { select: { userId: true } },
-      eventType: { select: { sportWorkout: true } },
-      externalCalendar: { select: { sportWorkout: true, userId: true, memberIds: true } },
+      eventType: { select: { sportWorkout: true, name: true } },
+      externalCalendar: { select: { sportWorkout: true, userId: true, memberIds: true, name: true } },
     },
     orderBy: { startsAt: "asc" },
   })) as {
@@ -35,8 +35,8 @@ export async function sportOn(userId: string, dateISO: string): Promise<{ eventI
     startsAt: Date;
     rrule: string | null;
     participants: { userId: string }[];
-    eventType: { sportWorkout: boolean } | null;
-    externalCalendar: { sportWorkout: boolean; userId: string | null; memberIds: string[] | null } | null;
+    eventType: { sportWorkout: boolean; name: string } | null;
+    externalCalendar: { sportWorkout: boolean; userId: string | null; memberIds: string[] | null; name: string } | null;
   }[];
   for (const e of events) {
     const mine =
@@ -48,7 +48,7 @@ export async function sportOn(userId: string, dateISO: string): Promise<{ eventI
     const on = e.rrule
       ? occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz).length > 0
       : localParts(e.startsAt).iso === dateISO;
-    if (on) return { eventId: e.id, title: sportDayLabel(e.title) };
+    if (on) return { eventId: e.id, title: sportDayLabel(e.title, e.eventType?.name, e.externalCalendar?.name) };
   }
   return null;
 }

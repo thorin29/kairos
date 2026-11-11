@@ -28,7 +28,8 @@ import { WarmupLibrary } from "./warmup-window";
 import { DayLog } from "./day-log";
 import { MovementInfo } from "@/components/movement-info";
 import { WeeklyTraining } from "./weekly-training";
-import { LiftPage, LiftRows } from "./lift-page";
+import { CorePage, CoreRows, LiftPage, LiftRows } from "./lift-page";
+import type { CoreMove } from "@/lib/workouts/core-moves";
 import { ProgramCard } from "./program-card";
 import { WeightCalculator } from "./weight-calculator";
 import type {
@@ -794,6 +795,7 @@ function LiftBlocks({
   const heatOn = !!heat && heatPrefs.on;
   // A lift's page (v0.670), opened from its row.
   const [liftOpen, setLiftOpen] = useState<{ s: LiftSeries; key: string; label: string } | null>(null);
+  const [coreOpen, setCoreOpen] = useState<CoreMove | null>(null);
   // The training heat map (v0.664): one picture, no ranges.
   const training = heat?.training;
   const heatShade = useMemo(() => trainFills(training), [training]);
@@ -995,7 +997,17 @@ function LiftBlocks({
             {MG_LABEL[g] ?? g}
           </p>
           {g === "CORE" && <PlankBench tests={heat?.plank ?? []} />}
-          <HeatGroupSummary data={summaryOf(g)} unit={heat?.unit ?? ""} />
+          {g === "CORE" && (heat?.coreMoves?.length ?? 0) > 0 ? (
+            <CoreRows
+              moves={heat!.coreMoves!}
+              color={MG_COLOR.CORE}
+              unit={heat?.unit ?? ""}
+              todayISO={todayISO}
+              onOpen={setCoreOpen}
+            />
+          ) : (
+            <HeatGroupSummary data={summaryOf(g)} unit={heat?.unit ?? ""} />
+          )}
         </div>
       ))}
       {[...groups, ...orphanGroups].map((g) => (
@@ -1007,14 +1019,35 @@ function LiftBlocks({
             {g.label}
           </p>
           {g.key === "CORE" && <PlankBench tests={heat?.plank ?? []} />}
+          {/* Core by time or reps, not weight (v0.671). */}
+          {g.key === "CORE" && (heat?.coreMoves?.length ?? 0) > 0 ? (
+            <CoreRows
+              moves={heat!.coreMoves!}
+              color={MG_COLOR.CORE}
+              unit={heat?.unit ?? ""}
+              todayISO={todayISO}
+              onOpen={setCoreOpen}
+            />
+          ) : (
           <LiftRows
             series={g.items}
             color={MG_COLOR[g.key] ?? g.items[0]?.color ?? "var(--color-accent)"}
             todayISO={todayISO}
             onOpen={(x) => setLiftOpen({ s: x, key: g.key, label: g.label })}
           />
+          )}
         </div>
       ))}
+      {coreOpen && (
+        <CorePage
+          move={coreOpen}
+          color={MG_COLOR.CORE}
+          unit={heat?.unit ?? ""}
+          marks={heat?.marks ?? []}
+          todayISO={todayISO}
+          onClose={() => setCoreOpen(null)}
+        />
+      )}
       {liftOpen && (
         <LiftPage
           userId={userId}

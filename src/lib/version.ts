@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.670.0";
+export const APP_VERSION = "0.671.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.671.0",
+    summary: [
+      "New Weekly training chart: each week split into lifting, conditioning, cardio and sport, with your planned days marked. Tap a week to see its days.",
+      "Core shows each movement by hold time or reps, not weight. Tap one for its page.",
+      "Deadlifts, RDLs, good mornings and back extensions all sit under Deadlift on the body map, with legs (and upper back for deadlifts) lightly shaded.",
+      "Long exercise names wrap to a second line instead of being cut off.",
+      "The sport warm-up says Hockey warm-up, is a white card, and can be skipped or ticked done.",
+    ],
+  },
   {
     version: "0.670.0",
     summary: [

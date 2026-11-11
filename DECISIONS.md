@@ -1,5 +1,36 @@
 # Decisions
 
+## 2026-11 — Weekly training chart, Core rows, the hinge family, sport warm-up (v0.671.0 / app 0.481.0)
+
+- Weekly training is the agreed mockup now (0.670 kept the old bars by
+  mistake): each week's bar split by days of each kind — lifting,
+  conditioning, cardio, sport, other (warm-up/mobility/stretching alone) — a
+  day with two kinds counting in each; a dashed mark at `planned` (the week's
+  workout tasks); tap a week for its seven days (kinds, a few words — muscle
+  groups for lifting, Row/Run, Hockey — and done / planned / missed / rest).
+  Beside Workout days on the web, after it on the phone.
+- Core is shown by what it's done for (`heat.coreMoves`, core-moves.ts): per
+  movement, the day's longest hold or most reps, weight only as context
+  ("12 × 25 lb"); a hold counts as time when it has more timed days than rep
+  days. Rows and a page like a lift's (best, 30 days, sessions, last, changed
+  days marked), replacing Core's lift rows and its hard-sets summary.
+- The hinge family — deadlifts, RDLs/stiff-legs, good mornings, back
+  extensions (and their kin), kettlebell swings — is always the Deadlift group
+  (`Involvement.forcePrimary`; `shownGroup` for grouping), whatever it's filed
+  under: a back extension filed under Back sits with the deadlifts. Legs are
+  the lightly shaded assist for all; Back (upper) only where a bar hangs from
+  the hands (deadlift, RDL). Core and Arms dropped from the deadlift's
+  secondaries: bracing and grip are real, but lighting them made the map read
+  as everything. The training heat map follows these groups.
+- Long names wrap to two lines on day cards, lift and core rows and warm-up
+  cards instead of one line with an ellipsis.
+- Sport warm-up: the label is "Hockey" unless the event's title, event type
+  or calendar names another sport (a subscribed feed's titles are matchups,
+  so the title is never the label). Which events count is still the sport
+  flag on the event type or the calendar. The card is white like the
+  Warm-up's, with Skip and a done check (`WorkoutSuggestionAnswer`
+  key `sportWarmup`); never part of the plan.
+
 ## 2026-11 — Lift rows and a page per lift (v0.670.0 / app 0.480.0)
 
 - The six tiles per movement, "Additional charts" and the Lift progress card

@@ -1,4 +1,5 @@
 import "server-only";
+import { shownGroup } from "@/lib/workouts/involvement";
 import { REP_BANDS, bandPoints } from "@/lib/workouts/records";
 import { prisma } from "@/lib/prisma";
 import { dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
@@ -532,7 +533,8 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       .map(([id, meta], i) => ({
         exerciseId: id, // pool movement id — the legend/series key
         name: meta.name,
-        muscleGroup: meta.muscleGroup ?? null,
+        // The hinge family sits under Deadlift whatever it's filed under (v0.671).
+        muscleGroup: (shownGroup(meta.name, meta.muscleGroup ?? null) as MuscleGroup | null) ?? null,
         unit: meta.muscleGroup ? weightUnits[meta.muscleGroup] : "",
         color: LINE_COLORS[i % LINE_COLORS.length],
         points: [...perMovementDay.get(id)!.entries()]

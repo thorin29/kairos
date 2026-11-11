@@ -70,6 +70,13 @@ export type Involvement = {
    * hip hinge is reached from the lower back and glutes, not from the thigh.
    */
   navRegion?: NavRegion;
+  /**
+   * The suggested primary wins over the group the movement is filed under
+   * (v0.671): the hinge family (deadlifts, RDLs, good mornings, back
+   * extensions, swings) is always the Deadlift group — the lower back and
+   * glutes — so a back extension filed under Back still sits with them.
+   */
+  forcePrimary?: boolean;
 };
 
 /** Keyword rules, first match wins — order matters. */
@@ -132,35 +139,33 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
 
   // --- hinge and legs ----------------------------------------------------
   {
-    // A good morning hinges with the bar on the back: hamstrings and glutes
-    // drive it, and the lumbar erectors (the core's, on the body map) work
-    // hard to hold the back flat (v0.665).
+    // The hinge family (v0.671): the lower back and glutes (Deadlift) lead,
+    // the hamstrings (Legs) assist. Only lifts that hang a load from the
+    // hands also work the upper back (lats and traps holding the bar in), so
+    // a good morning, a back extension or a swing lights no Back.
+    // A good morning hinges with the bar on the back.
     match: /\bgood ?mornings?\b/,
-    involvement: {
-      suggestedPrimary: "DEADLIFT",
-      secondary: ["LEGS", "CORE", "BACK"],
-      view: "back",
-      navRegion: "POSTERIOR_HIP",
-    },
+    involvement: { suggestedPrimary: "DEADLIFT", secondary: ["LEGS"], view: "back", navRegion: "POSTERIOR_HIP", forcePrimary: true },
   },
   {
-    // Back extensions and their kin work the lumbar erectors directly, with
-    // the glutes and hamstrings (v0.665).
+    // Back extensions and their kin work the lumbar erectors directly.
     match: /\b(back extension|hyperextension|reverse hyper|superman|jefferson curl)/,
-    involvement: { suggestedPrimary: "CORE", secondary: ["LEGS"], view: "back", navRegion: "POSTERIOR_HIP" },
+    involvement: { suggestedPrimary: "DEADLIFT", secondary: ["LEGS"], view: "back", navRegion: "POSTERIOR_HIP", forcePrimary: true },
   },
   {
     match: /\b(kettlebell|kb) swings?\b/,
-    involvement: { suggestedPrimary: "DEADLIFT", secondary: ["LEGS", "CORE"], view: "back", navRegion: "POSTERIOR_HIP" },
+    involvement: { suggestedPrimary: "DEADLIFT", secondary: ["LEGS"], view: "back", navRegion: "POSTERIOR_HIP", forcePrimary: true },
   },
   {
-    // Romanian / stiff-leg is a hamstring movement with the back holding position.
+    // Romanian / stiff-leg: hamstrings with the back holding position; the
+    // bar hangs from the hands, so the upper back holds it in.
     match: /\b(romanian|rdl|stiff[- ]?leg)/,
     involvement: {
       suggestedPrimary: "DEADLIFT",
-      secondary: ["LEGS", "BACK", "CORE"],
+      secondary: ["LEGS", "BACK"],
       view: "back",
       navRegion: "POSTERIOR_HIP",
+      forcePrimary: true,
     },
   },
   {
@@ -171,9 +176,10 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
     match: /\bdeadlift/,
     involvement: {
       suggestedPrimary: "DEADLIFT",
-      secondary: ["LEGS", "BACK", "CORE", "ARMS"],
+      secondary: ["LEGS", "BACK"],
       view: "back",
       navRegion: "POSTERIOR_HIP",
+      forcePrimary: true,
     },
   },
   {
@@ -276,7 +282,7 @@ export function groupsFor(
   view: "front" | "back" | "both";
 } {
   const inv = involvementFor(name);
-  const primary = filed ?? inv?.suggestedPrimary ?? null;
+  const primary = inv?.forcePrimary ? inv.suggestedPrimary : (filed ?? inv?.suggestedPrimary ?? null);
   // Where someone files a movement under a different group than the anatomy
   // suggests — a deadlift kept under Core — the suggested primary becomes a
   // secondary rather than disappearing. Otherwise that deadlift would shade
@@ -305,4 +311,11 @@ export function navRegionFor(
   // from the lower back and glutes.
   if (g === "DEADLIFT") return "POSTERIOR_HIP";
   return g === "FULL_BODY" ? null : (g as NavRegion);
+}
+
+/** The group a movement is shown under (v0.671): the hinge family is always
+ *  Deadlift, whatever it's filed under; everything else keeps its filing. */
+export function shownGroup<T extends string>(name: string, filed: T | null): T | MuscleGroup | null {
+  const inv = involvementFor(name);
+  return inv?.forcePrimary ? inv.suggestedPrimary : filed;
 }

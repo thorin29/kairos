@@ -207,16 +207,37 @@ const FOR_KEY = "warmupFor";
  * Warm-up is for it instead of the planned workout (the plan's comes first
  * unless changed), and its routine. Null on a day without one.
  */
-export type SportDayView = { label: string; forSport: boolean; routine: WarmupRoutine };
+/** `state` (v0.671): the sport warm-up ticked done or skipped for the day. */
+export type SportDayView = { label: string; forSport: boolean; routine: WarmupRoutine; state: "done" | "skip" | null };
 
 export async function sportDayView(userId: string, dateISO: string): Promise<SportDayView | null> {
   const sport = await sportOn(userId, dateISO);
   if (!sport) return null;
-  const row = (await prisma.workoutSuggestionAnswer.findUnique({
-    where: { userId_date_key_slot: { userId, date: toDateColumn(dateISO), key: FOR_KEY, slot: "" } },
-    select: { answer: true },
-  })) as { answer: string } | null;
-  return { label: sport.title, forSport: row?.answer === "sport", routine: SPORT_WARMUP };
+  const rows = (await prisma.workoutSuggestionAnswer.findMany({
+    where: { userId, date: toDateColumn(dateISO), key: { in: [FOR_KEY, STATE_KEY] }, slot: "" },
+    select: { key: true, answer: true },
+  })) as { key: string; answer: string }[];
+  const forSport = rows.some((r) => r.key === FOR_KEY && r.answer === "sport");
+  const st = rows.find((r) => r.key === STATE_KEY)?.answer;
+  return { label: sport.title, forSport, routine: SPORT_WARMUP, state: st === "done" || st === "skip" ? st : null };
+}
+
+const STATE_KEY = "sportWarmup";
+
+/** The day's sport warm-up ticked done, skipped, or neither (v0.671). It is
+ *  never part of the plan, so this only changes its card. */
+export async function setSportWarmupState(userId: string, dateISO: string, state: "done" | "skip" | null): Promise<void> {
+  const date = toDateColumn(dateISO);
+  const where = { userId_date_key_slot: { userId, date, key: STATE_KEY, slot: "" } };
+  if (state) {
+    await prisma.workoutSuggestionAnswer.upsert({
+      where,
+      create: { userId, date, key: STATE_KEY, slot: "", answer: state },
+      update: { answer: state },
+    });
+  } else {
+    await prisma.workoutSuggestionAnswer.deleteMany({ where: { userId, date, key: STATE_KEY, slot: "" } });
+  }
 }
 
 /** The day's Warm-up for its sport (true) or for the planned workout (false). */

@@ -14,6 +14,7 @@ import {
   restDay,
   applyAdjustAction,
   setWarmupForSportAction,
+  setSportWarmupStateAction,
   saveMovementFeedback,
   answerWorkoutSuggestion,
   saveMovementSets,
@@ -776,7 +777,7 @@ export function DayLog({
                             className="flex min-h-[3.5rem] w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-accent"
                           >
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-semibold">
+                              <span className="block line-clamp-2 text-sm font-semibold">
                                 {testTitleFor(rotationKindOf(w.core.kind))}
                               </span>
                               <span className="tabular block truncate text-xs text-muted">
@@ -814,7 +815,7 @@ export function DayLog({
                           className="flex min-h-[3.5rem] w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-accent"
                         >
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-semibold">{w.name}</span>
+                            <span className="block line-clamp-2 text-sm font-semibold">{w.name}</span>
                             <span className="tabular block truncate text-xs text-muted">
                               {mine.length} {mine.length === 1 ? "movement" : "movements"}
                               {done > 0 ? ` · ${done} logged` : ""}
@@ -856,7 +857,7 @@ export function DayLog({
                         className="flex min-h-[3.5rem] w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-accent"
                       >
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold">{it.name}</span>
+                          <span className="block line-clamp-2 text-sm font-semibold">{it.name}</span>
                           <span className="tabular block truncate text-xs text-muted">{detail}</span>
                         </span>
                         {logged && (
@@ -878,7 +879,17 @@ export function DayLog({
                   {/* The day's sport (v0.662): its warm-up, optional, when the
                       planned Warm-up isn't for it. */}
                   {s.kind === "WARMUP" && sportDay && !sportDay.forSport && (
-                    <SportWarmupRow label={sportDay.label} routine={sportDay.routine} />
+                    <SportWarmupRow
+                      label={sportDay.label}
+                      routine={sportDay.routine}
+                      state={sportDay.state ?? null}
+                      onState={(st) =>
+                        startTransition(async () => {
+                          await setSportWarmupStateAction(userId, date, st);
+                          setTick((n) => n + 1);
+                        })
+                      }
+                    />
                   )}
                   {s.kind === "CONDITIONING" && (
                     <>
@@ -997,7 +1008,7 @@ function WarmupRow({
   return (
     <div className="flex min-h-[3.5rem] items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3">
       <button type="button" onClick={() => setOpen(true)} className="min-w-0 flex-1 text-left">
-        <span className="block truncate text-sm font-semibold">{name}</span>
+        <span className="block line-clamp-2 text-sm font-semibold">{name}</span>
         {routine && routine.name !== name && <span className="block truncate text-xs text-muted">{routine.name}</span>}
       </button>
       {open && (
@@ -2212,29 +2223,61 @@ function coreTestIds(w: PlanWorkout): string[] {
   return w.exercises.slice(0, testCountFor(w.core)).map((e) => e.poolExerciseId);
 }
 
-/** A sport's warm-up on its day (v0.662): optional, never part of the plan —
- *  opens its routine with timers. */
-function SportWarmupRow({ label, routine }: { label: string; routine: WarmupRoutine }) {
+/** A sport's warm-up on its day (v0.662): optional, never part of the plan.
+ *  A white card like the Warm-up's (v0.671), with Skip and a done check; the
+ *  card opens its routine with timers. */
+function SportWarmupRow({
+  label,
+  routine,
+  state,
+  onState,
+}: {
+  label: string;
+  routine: WarmupRoutine;
+  state: "done" | "skip" | null;
+  onState: (st: "done" | "skip" | null) => void;
+}) {
   const [open, setOpen] = useState(false);
+  const title = `${label} warm-up`;
+  const done = state === "done";
+  const skipped = state === "skip";
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex min-h-[3rem] w-full items-center gap-3 rounded-xl border border-dashed border-hairline px-4 py-2.5 text-left hover:border-accent"
-      >
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">{label} warm-up</span>
-          <span className="block truncate text-xs text-muted">{routine.name}</span>
-        </span>
-        <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
+    <div className="flex min-h-[3.5rem] items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3">
+      <button type="button" onClick={() => setOpen(true)} className="min-w-0 flex-1 text-left">
+        <span className="block text-sm font-semibold leading-snug">{title}</span>
+        <span className="block truncate text-xs text-muted">{routine.name}</span>
       </button>
+      {!done && (
+        <button
+          type="button"
+          aria-pressed={skipped}
+          onClick={() => onState(skipped ? null : "skip")}
+          className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
+            skipped ? "border-hairline bg-ground text-muted" : "border-hairline text-muted hover:border-accent"
+          }`}
+        >
+          {skipped ? "Skipped" : "Skip"}
+        </button>
+      )}
+      {!skipped && (
+        <button
+          type="button"
+          aria-pressed={done}
+          aria-label={done ? `${title} done` : `Mark ${title} done`}
+          onClick={() => onState(done ? null : "done")}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[1.5px] border-accent transition-colors ${
+            done ? "bg-accent text-on-accent" : "bg-surface text-accent hover:bg-accent/10"
+          }`}
+        >
+          <CheckIcon className="h-5 w-5" />
+        </button>
+      )}
       {open && (
-        <Modal title={`${label} warm-up`} onClose={() => setOpen(false)}>
+        <Modal title={title} onClose={() => setOpen(false)}>
           <WarmupSteps steps={routine.steps} storeKey={`sport.${routine.id}`} />
         </Modal>
       )}
-    </>
+    </div>
   );
 }
 

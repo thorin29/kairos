@@ -80,12 +80,19 @@ describe("training heat (v0.664)", () => {
   });
 });
 
-import { groupsFor } from "@/lib/workouts/involvement";
-describe("hinge movements on the body (v0.665)", () => {
-  it("a good morning works the lower back (core) and legs", () => {
-    const g = groupsFor("Good morning", "LEGS");
-    expect(g.primary).toBe("LEGS");
-    expect(g.secondary).toEqual(expect.arrayContaining(["CORE", "DEADLIFT"]));
-    expect(groupsFor("Weighted back extension", null).primary).toBe("CORE");
+import { groupsFor, shownGroup } from "@/lib/workouts/involvement";
+describe("hinge movements on the body (v0.671)", () => {
+  it("the hinge family is Deadlift whatever it's filed under; legs assist", () => {
+    const gm = groupsFor("Good morning", "LEGS");
+    expect(gm.primary).toBe("DEADLIFT");
+    expect(gm.secondary).toEqual(["LEGS"]);
+    const be = groupsFor("Weighted back extension", "BACK");
+    expect(be.primary).toBe("DEADLIFT");
+    expect(be.secondary).toEqual(["LEGS"]);
+    // Only a bar hanging from the hands works the upper back.
+    expect(groupsFor("Deadlift", null).secondary).toEqual(["LEGS", "BACK"]);
+    expect(groupsFor("Romanian deadlift", "LEGS").secondary).toEqual(["LEGS", "BACK"]);
+    expect(shownGroup("Weighted back extension", "BACK")).toBe("DEADLIFT");
+    expect(shownGroup("Bench press", "CHEST")).toBe("CHEST");
   });
 });

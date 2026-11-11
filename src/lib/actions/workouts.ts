@@ -45,6 +45,7 @@ import {
   setPlanWarmup,
   warmupsForDay,
   setWarmupForSport,
+  setSportWarmupState,
   sportDayView,
   type SportDayView,
 } from "@/lib/workouts/warmup-run";
@@ -1882,4 +1883,12 @@ export async function liftNextAction(
   await requireInteractive();
   await requireCanActFor(userId);
   return liftNext(userId, String(poolExerciseId).slice(0, 60));
+}
+
+/** The day's sport warm-up: done, skipped, or neither (v0.671). */
+export async function setSportWarmupStateAction(userId: string, dateISO: string, state: "done" | "skip" | null): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!ISO.test(dateISO)) return;
+  await setSportWarmupState(userId, dateISO, state === "done" || state === "skip" ? state : null);
 }

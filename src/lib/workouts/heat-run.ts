@@ -1,4 +1,5 @@
 import "server-only";
+import { buildCoreMoves } from "@/lib/workouts/core-moves";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn } from "@/lib/dates";
 import { doneOn } from "@/lib/queries/movement-stats";
@@ -102,7 +103,7 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
     todayISO,
     await pausesFor(userId),
   );
-  return { ...heat, training, marks };
+  return { ...heat, training, marks, coreMoves: buildCoreMoves(sets) };
 }
 
 /** Days made lighter (Lighter today, or an Adjust today choice). */

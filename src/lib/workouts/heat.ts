@@ -84,6 +84,8 @@ export type HeatMap = {
   /** Days made lighter or changed (v0.670): "Sick", "Hurt", "Low energy",
    *  "Short", "Lighter". Marked on a lift's chart. */
   marks?: { date: string; label: string }[];
+  /** Core's movements by time or reps (v0.671), for Core's rows. */
+  coreMoves?: import("@/lib/workouts/core-moves").CoreMove[];
 };
 
 const MAX_REPS_FOR_ESTIMATE = 12;
