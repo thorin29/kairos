@@ -46,6 +46,8 @@ export type CoreSummary = {
   }[];
   /** Moves not done in eight weeks, most recent first. */
   idle: string[];
+  /** The last five core days, newest first, with the moves done (v0.674.1). */
+  recentDays: { date: string; moves: string[] }[];
 };
 
 const DAY = 86_400_000;
@@ -192,6 +194,14 @@ export function buildCoreSummary(
     improving,
     groups,
     idle,
+    recentDays: [...days]
+      .sort()
+      .reverse()
+      .slice(0, 5)
+      .map((date) => ({
+        date,
+        moves: live.filter((m) => m.points.some((p) => p.date === date)).map((m) => m.name).sort((a, b) => a.localeCompare(b)),
+      })),
   };
 }
 

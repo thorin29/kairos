@@ -237,6 +237,13 @@ export function CardioPage({ data, onClose }: { data: CardioCharts; onClose: () 
           ) : (
             <Tile k="30 days" v={`${a.sessions30}`} sub={a.sessions30 === 1 ? "session" : "sessions"} />
           )}
+          <Tile
+            k="Since best"
+            v={a.sinceBestWeeks == null ? "\u2014" : a.sinceBestWeeks < 1 ? "This week" : `${a.sinceBestWeeks} ${a.sinceBestWeeks === 1 ? "week" : "weeks"}`}
+            sub={a.pace?.best ? md(a.pace.best.date) : a.longest ? md(a.longest.date) : ""}
+          />
+          <Tile k="Sessions" v={`${a.count}`} sub={`since ${md(a.firstDate)}`} />
+          <Tile k="Last" v={a.last.text.replace(/ \/.*$/, "")} sub={md(a.last.date)} />
         </div>
         {a.pace && (
           <div className="rounded-xl border border-hairline p-3">
@@ -388,6 +395,22 @@ export function ConditioningPage({ data, onClose }: { data: ConditioningCharts; 
               <Chevron />
             </span>
           </button>
+        )}
+        {(data.recent?.length ?? 0) > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Recent sessions</p>
+            <ul className="mt-1 divide-y divide-hairline text-sm">
+              {data.recent.map((r, i) => (
+                <li key={`${r.date}-${i}`} className="flex justify-between gap-3 py-2">
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{r.name}</span>
+                    <span className="block text-xs text-muted">{dayLong(r.date)}</span>
+                  </span>
+                  <span className="tabular shrink-0 text-muted">{r.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
       {open && (

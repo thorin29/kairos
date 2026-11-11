@@ -521,6 +521,19 @@ export function CoreOverview({
             </span>
           </button>
         )}
+        {(summary.recentDays?.length ?? 0) > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Recent core days</p>
+            <ul className="mt-1 divide-y divide-hairline text-sm">
+              {summary.recentDays.map((d) => (
+                <li key={d.date} className="flex justify-between gap-3 py-2">
+                  <span className="shrink-0">{formatShort(d.date)}</span>
+                  <span className="text-right text-muted">{d.moves.join(", ")}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
       {idleOpen && (
         <Modal title="Not done lately" onClose={() => setIdleOpen(false)}>

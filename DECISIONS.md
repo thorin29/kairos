@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Chart pages line up (v0.674.1 / app 0.484.1)
+
+- Every chart page runs: filter chips (where there are any), the main
+  chart, tiles, the detail, then recent sessions last — the lift page's
+  order. Looks differ by workout; order and content line up.
+- Cardio's tiles add Since best, Sessions (since the first) and Last (its
+  pace, or minutes), to match a lift's six. Conditioning's page ends with
+  its last five sessions; the Core page ends with its last five core days
+  and the moves done (`CoreSummary.recentDays`).
+
 ## 2026-11 — Cardio and conditioning charts (v0.674.0 / app 0.484.0)
 
 - Both follow Core's pattern: a card on Workouts after the muscle groups,

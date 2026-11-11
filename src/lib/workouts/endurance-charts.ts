@@ -95,6 +95,13 @@ export type CardioActivity = {
   /** Other cardio's longest session, minutes. */
   longest: { date: string; minutes: number } | null;
   sessions30: number;
+  /** Every session, and the first one's day (v0.674.1). */
+  count: number;
+  firstDate: string;
+  /** The last session: its pace ("1:58.2 /500 m") or minutes. */
+  last: { date: string; text: string };
+  /** Whole weeks since the best pace (or longest session). */
+  sinceBestWeeks: number | null;
   recent: { date: string; text: string }[];
 };
 
@@ -182,6 +189,9 @@ export function buildCardioCharts(all: readonly CardioSession[], today: string):
       if (points.length === 0) pace = null;
     }
     const longest = measure === "min" ? list.reduce((a, b) => (b.minutes > a.minutes ? b : a)) : null;
+    const lastS = list[list.length - 1];
+    const lastPace = paceOf(lastS, measure);
+    const bestDate = pace?.best?.date ?? longest?.date ?? null;
     activities.push({
       key,
       label: ACT_LABEL[key],
@@ -195,6 +205,16 @@ export function buildCardioCharts(all: readonly CardioSession[], today: string):
       pace,
       longest: longest ? { date: longest.date, minutes: longest.minutes } : null,
       sessions30: list.filter((s) => s.date > plus(today, -30)).length,
+      count: list.length,
+      firstDate: list[0].date,
+      last: {
+        date: lastS.date,
+        text:
+          lastPace != null
+            ? `${measure === "m" ? split(lastPace) : clock(lastPace)} /${measure === "m" ? "500 m" : measure}`
+            : `${lastS.minutes} min`,
+      },
+      sinceBestWeeks: bestDate ? Math.floor((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${bestDate}T12:00:00Z`)) / (7 * DAY)) : null,
       recent: list
         .slice(-5)
         .reverse()
@@ -257,6 +277,8 @@ export type ConditioningCharts = {
   repeats: ConditioningRepeat[];
   once: { name: string; date: string; text: string }[];
   thisWeek: { count: number; minutes: number };
+  /** The last five sessions, newest first (v0.674.1). */
+  recent: { date: string; name: string; text: string }[];
 };
 
 function resultOf(s: ConditioningSession): { text: string; value: number; timed: boolean } | null {
@@ -326,6 +348,10 @@ export function buildConditioningCharts(all: readonly ConditioningSession[], tod
     repeats,
     once,
     thisWeek: { count: inWeek.length, minutes: Math.round(inWeek.reduce((t, s) => t + s.minutes, 0)) },
+    recent: sessions
+      .slice(-5)
+      .reverse()
+      .map((s) => ({ date: s.date, name: s.name, text: resultOf(s)?.text ?? "" })),
   };
 }
 

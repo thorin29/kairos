@@ -40,6 +40,10 @@ describe("cardio charts (v0.674)", () => {
     expect(split(118)).toBe("1:58.0");
     expect(r.recent[0].text).toBe("500 m · 1:40 · Solid");
     expect(c.thisWeek.lines).toEqual([{ label: "Rowing", detail: "2,500 m · 2 sessions" }]);
+    expect(r.count).toBe(5);
+    expect(r.firstDate).toBe("2026-09-20");
+    expect(r.last).toEqual({ date: "2026-11-10", text: "1:40.0 /500 m" });
+    expect(r.sinceBestWeeks).toBe(0);
   });
 
   it("goes by minutes for other cardio and converts km runs to the usual unit", () => {
@@ -100,5 +104,7 @@ describe("conditioning charts (v0.674)", () => {
     expect(c.newBests30).toBe(1);
     expect(c.month).toEqual({ count: 3, minutes: 45 });
     expect(c.weeks.at(-2)).toEqual({ start: "2026-11-02", count: 3 });
+    expect(c.recent[0]).toEqual({ date: "2026-11-05", name: "AMRAP 20", text: "13 rounds" });
+    expect(c.recent).toHaveLength(5);
   });
 });

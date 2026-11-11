@@ -53,6 +53,8 @@ describe("core progress (v0.673)", () => {
     expect(s.daysThisWeek).toBe(0);
     expect(s.daysThisMonth).toBe(2); // Nov 4 and 5
     expect(s.newBests30).toBe(2);
+    expect(s.recentDays[0]).toEqual({ date: "2026-11-05", moves: ["Planks"] });
+    expect(s.recentDays[1]).toEqual({ date: "2026-11-04", moves: ["Hanging leg raise", "Side plank"] });
   });
 
   it("is null with no core work", () => {
