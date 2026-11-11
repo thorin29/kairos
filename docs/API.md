@@ -319,6 +319,14 @@ POST /api/v1/tasks/{id}/uncomplete   mark it not-done             (idempotent)
 409: conflict    — workout prompts complete via the workout logger, not here
 ```
 
+Repeating tasks (`recur` on `POST /api/v1/tasks/add` and task edit), v0.668:
+`freq` DAILY | WEEKLY | MONTHLY | YEARLY, `interval` 1–999 (was capped at 52),
+`startDate` is the first due date and counts from it. WEEKLY with an empty
+`byday` lands on the start's weekday; MONTHLY on a day a month lacks lands on
+its last day; YEARLY on Feb 29 lands on Feb 28 in other years. The task list's
+repeat line reads "Every 90 days", "Weekly on Wed", "Monthly on the 30th",
+"Yearly on Jan 30".
+
 ### Chores overview — **built (v0.206)**
 The read-only chore overview the app's Chores screen paints, mirroring the web
 `/chores` page. Completion is **not** here — it's on the dashboard (`/dashboard`

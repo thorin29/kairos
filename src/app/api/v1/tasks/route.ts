@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { recurLabel } from "@/lib/tasks/recur-rule";
 import { apiOk } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { Category, TaskStatus } from "@/generated/prisma/client";
@@ -44,24 +45,16 @@ export async function GET(req: NextRequest) {
     }),
     prisma.recurringTask.findMany({
       where: { userId: { in: visible }, active: true },
-      select: { id: true, freq: true, interval: true, byday: true },
+      select: { id: true, freq: true, interval: true, byday: true, startDate: true },
     }),
   ]);
-  const DOW: Record<string, string> = {
-    SU: "Sun", MO: "Mon", TU: "Tue", WE: "Wed", TH: "Thu", FR: "Fri", SA: "Sat",
-  };
-  const recurLabel = (freq: string, interval: number, byday: string | null): string => {
-    const unit = freq === "DAILY" ? "day" : freq === "MONTHLY" ? "month" : "week";
-    const every = interval > 1 ? `Every ${interval} ${unit}s` : `Every ${unit}`;
-    if (freq === "WEEKLY" && byday) {
-      const days = byday.split(",").map((d) => DOW[d.trim()] ?? d).filter(Boolean);
-      if (days.length) return `${every} \u00b7 ${days.join(", ")}`;
-    }
-    return every;
-  };
   const repeatById = new Map<string, string>(
-    (templates as { id: string; freq: string; interval: number; byday: string | null }[]).map(
-      (t) => [`rtask:${t.id}`, recurLabel(t.freq, t.interval, t.byday)] as const,
+    (templates as { id: string; freq: string; interval: number; byday: string | null; startDate: Date }[]).map(
+      (t) =>
+        [
+          `rtask:${t.id}`,
+          recurLabel({ freq: t.freq, interval: t.interval, byday: t.byday, startISO: fromDateColumn(t.startDate) }),
+        ] as const,
     ),
   );
   type UserRow = { id: string; name: string; displayName: string | null; color: string | null };

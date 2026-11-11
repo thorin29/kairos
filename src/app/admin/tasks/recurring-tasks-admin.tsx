@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { DateField } from "@/components/date-field";
+import { recurLabel } from "@/lib/tasks/recur-rule";
 import {
   addRecurringTask,
   deleteRecurringTask,
@@ -21,11 +22,15 @@ const WEEKDAYS: [string, string][] = [
   ["SA", "Sat"],
 ];
 
-const UNIT: Record<string, string> = {
-  DAILY: "days",
-  WEEKLY: "weeks",
-  MONTHLY: "months",
-};
+// Ascending, as "Repeats every N …" reads (v0.668).
+const UNITS: [string, string][] = [
+  ["DAILY", "days"],
+  ["WEEKLY", "weeks"],
+  ["MONTHLY", "months"],
+  ["YEARLY", "years"],
+];
+const DOW = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+const dowOf = (iso: string) => DOW[new Date(`${iso}T12:00:00Z`).getUTCDay()] ?? "SU";
 
 export function RecurringTasksAdmin({
   people,
@@ -40,8 +45,19 @@ export function RecurringTasksAdmin({
     addRecurringTask,
     { error: null },
   );
-  const [freq, setFreq] = useState("WEEKLY");
+  // "Repeats": Daily, Weekly, Monthly, Yearly (every one, from the first due
+  // date), or Custom (every N days, weeks, months or years; weekdays) (v0.668).
+  const [repeat, setRepeat] = useState("WEEKLY");
+  const [unit, setUnit] = useState("DAILY");
+  const [every, setEvery] = useState(1);
+  const [days, setDays] = useState<string[]>([]);
+  const [start, setStart] = useState(today);
   const [endMode, setEndMode] = useState("NEVER");
+  const custom = repeat === "CUSTOM";
+  const freq = custom ? unit : repeat;
+  const interval = custom ? Math.max(1, Math.min(999, every || 1)) : 1;
+  const byday = freq !== "WEEKLY" ? [] : custom && days.length > 0 ? days : [dowOf(start)];
+  const preset = (f: string) => recurLabel({ freq: f, interval: 1, byday: null, startISO: start });
 
   return (
     <section className="mt-12 border-t border-hairline pt-8">
@@ -49,8 +65,8 @@ export function RecurringTasksAdmin({
         Recurring tasks
       </h2>
       <p className="mt-2 max-w-xl text-sm text-muted">
-        A repeating to-do that shows up on its own — daily, weekly on chosen
-        days, or monthly. It appears on the right days automatically.
+        A repeating to-do that shows up on its own, counted from its first due
+        date.
       </p>
 
       <form
@@ -87,65 +103,89 @@ export function RecurringTasksAdmin({
           </label>
         </div>
 
+        <input type="hidden" name="freq" value={freq} />
+        <input type="hidden" name="interval" value={interval} />
+        {byday.map((d) => (
+          <input key={d} type="hidden" name="byday" value={d} />
+        ))}
         <div className="flex flex-wrap items-end gap-3">
           <label className="block">
-            <span className="mb-1 block text-sm font-medium">Repeats</span>
-            <select
-              name="freq"
-              value={freq}
-              onChange={(e) => setFreq(e.target.value)}
-              className="rounded-lg border border-hairline px-3 py-2 text-sm"
-            >
-              <option value="DAILY">Daily</option>
-              <option value="WEEKLY">Weekly</option>
-              <option value="MONTHLY">Monthly</option>
-            </select>
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium">Every</span>
-            <span className="flex items-center gap-2">
-              <input
-                name="interval"
-                type="number"
-                min={1}
-                max={52}
-                defaultValue={1}
-                className="w-16 rounded-lg border border-hairline px-3 py-2 text-sm"
-              />
-              <span className="text-sm text-muted">{UNIT[freq]}</span>
-            </span>
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium">Starting</span>
+            <span className="mb-1 block text-sm font-medium">First due</span>
             <DateField
               name="startDate"
-              defaultValue={today}
-              ariaLabel="Start date"
+              value={start}
+              onChange={setStart}
+              ariaLabel="First due date"
               className="rounded-lg border border-hairline px-3 py-2 text-sm"
             />
           </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium">Repeats</span>
+            <select
+              value={repeat}
+              onChange={(e) => setRepeat(e.target.value)}
+              className="rounded-lg border border-hairline px-3 py-2 text-sm"
+            >
+              {["DAILY", "WEEKLY", "MONTHLY", "YEARLY"].map((f) => (
+                <option key={f} value={f}>
+                  {preset(f)}
+                </option>
+              ))}
+              <option value="CUSTOM">Custom…</option>
+            </select>
+          </label>
+          {custom && (
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium">Repeats every</span>
+              <span className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  value={every}
+                  onChange={(e) => setEvery(Number(e.target.value))}
+                  className="w-20 rounded-lg border border-hairline px-3 py-2 text-sm"
+                />
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  className="rounded-lg border border-hairline px-3 py-2 text-sm"
+                >
+                  {UNITS.map(([v, label]) => (
+                    <option key={v} value={v}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </span>
+            </label>
+          )}
         </div>
 
-        {freq === "WEEKLY" && (
+        {custom && unit === "WEEKLY" && (
           <div>
             <span className="mb-1 block text-sm font-medium">On</span>
             <div className="flex flex-wrap gap-2">
               {WEEKDAYS.map(([code, label]) => (
-                <label
+                <button
                   key={code}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-hairline px-3 py-1.5 text-sm transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10"
+                  type="button"
+                  aria-pressed={days.includes(code)}
+                  onClick={() => setDays((cur) => (cur.includes(code) ? cur.filter((d) => d !== code) : [...cur, code]))}
+                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    days.includes(code) ? "border-accent bg-accent/10" : "border-hairline"
+                  }`}
                 >
-                  <input
-                    type="checkbox"
-                    name="byday"
-                    value={code}
-                    className="h-4 w-4"
-                  />
                   {label}
-                </label>
+                </button>
               ))}
             </div>
           </div>
+        )}
+        {custom && (
+          <p className="text-sm text-muted">
+            {recurLabel({ freq, interval, byday: byday.join(","), startISO: start })}
+          </p>
         )}
 
         <div>

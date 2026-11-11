@@ -1,16 +1,9 @@
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import {
-  addDays,
-  dayOfWeek,
-  daysBetween,
-  fromDateColumn,
-  toDateColumn,
-  todayISO,
-} from "@/lib/dates";
+import { addDays, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
+import { MAX_TASK_INTERVAL, TASK_FREQS, occursOn as occursOnRule } from "@/lib/tasks/recur-rule";
 
 const HORIZON_DAYS = 30;
-const DOW = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
 
 type Template = {
   id: string;
@@ -32,40 +25,7 @@ type Template = {
 
 /** Whether a template lands on a given calendar day (ignoring the end rule). */
 function occursOn(t: Template, iso: string): boolean {
-  const startISO = fromDateColumn(t.startDate);
-  if (iso < startISO) return false;
-  const interval = Math.max(1, t.interval || 1);
-
-  if (t.freq === "DAILY") {
-    return daysBetween(startISO, iso) % interval === 0;
-  }
-
-  if (t.freq === "WEEKLY") {
-    const codes = (t.byday || "")
-      .split(",")
-      .map((x) => x.trim().toUpperCase())
-      .filter(Boolean);
-    if (codes.length > 0) {
-      if (!codes.includes(DOW[dayOfWeek(iso)])) return false;
-    } else if (dayOfWeek(iso) !== dayOfWeek(startISO)) {
-      return false;
-    }
-    if (interval === 1) return true;
-    // Every N-th week, aligned to the start's week (Sunday-based).
-    const startWeek = addDays(startISO, -dayOfWeek(startISO));
-    const thisWeek = addDays(iso, -dayOfWeek(iso));
-    return Math.floor(daysBetween(startWeek, thisWeek) / 7) % interval === 0;
-  }
-
-  if (t.freq === "MONTHLY") {
-    const [sy, sm, sd] = startISO.split("-").map(Number);
-    const [y, m, d] = iso.split("-").map(Number);
-    if (d !== sd) return false;
-    const months = (y - sy) * 12 + (m - sm);
-    return months >= 0 && months % interval === 0;
-  }
-
-  return false;
+  return occursOnRule({ freq: t.freq, interval: t.interval, byday: t.byday, startISO: fromDateColumn(t.startDate) }, iso);
 }
 
 /** The occurrence dates inside [windowFrom, windowTo], honoring the end rule. */
@@ -87,7 +47,7 @@ function occurrenceDates(
       : windowFrom;
   let n = 0;
   let guard = 0;
-  while (iso <= windowTo && guard++ < 4000) {
+  while (iso <= windowTo && guard++ < 40000) {
     if (untilISO && iso > untilISO) break;
     if (occursOn(t, iso)) {
       n++;
@@ -207,7 +167,7 @@ export async function generateRecurringTasks(
   return { created, removed: removed + pruned };
 }
 
-const FREQS = ["DAILY", "WEEKLY", "MONTHLY"];
+const FREQS: readonly string[] = TASK_FREQS;
 const ENDS = ["NEVER", "COUNT", "UNTIL"];
 
 export type RecurringInput = {
@@ -248,7 +208,7 @@ function normalizeRecurring(
   input: RecurringInput,
 ): { error: string } | { error: null; data: NormalizedRecurring } {
   const title = input.title.trim().slice(0, 120);
-  const interval = Math.max(1, Math.min(52, Math.round(input.interval) || 1));
+  const interval = Math.max(1, Math.min(MAX_TASK_INTERVAL, Math.round(input.interval) || 1));
   const byday = input.byday.map((d) => d.trim().toUpperCase()).filter(Boolean);
   const freq = FREQS.includes(input.freq) ? input.freq : "WEEKLY";
   const endMode = ENDS.includes(input.endMode) ? input.endMode : "NEVER";
@@ -259,9 +219,7 @@ function normalizeRecurring(
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate)) {
     return { error: "Pick a start date." };
   }
-  if (freq === "WEEKLY" && byday.length === 0) {
-    return { error: "Pick at least one weekday." };
-  }
+  // Weekly with no weekdays picked lands on the first due date's weekday.
   if (endMode === "COUNT" && (!maxCount || maxCount < 1)) {
     return { error: "Say how many times." };
   }
@@ -275,7 +233,7 @@ function normalizeRecurring(
       title,
       freq,
       interval,
-      byday: freq === "WEEKLY" ? byday.join(",") : null,
+      byday: freq === "WEEKLY" && byday.length > 0 ? byday.join(",") : null,
       startDate: toDateColumn(input.startDate),
       endMode,
       maxCount: endMode === "COUNT" ? maxCount : null,

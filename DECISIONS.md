@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-11 — Repeating tasks: first due date, presets and Custom (v0.668.0 / app 0.478.0)
+
+- Bugs fixed: the server capped `interval` at 52 for every unit (meant for
+  weeks), so "every 90 days" saved as 52; and turning Repeat on hid the due
+  date and the app sent today as the start, so the date picked was lost.
+- A repeating task's due date is its **first due date** (`startDate`), and
+  repeats count from it. The "no due dates for recurrent tasks" notice is gone.
+- Repeats: Daily, Weekly on <its weekday>, Monthly on the <day>, Yearly on
+  <date> — each "every one" from the first due date — or Custom: repeats every
+  N days / weeks / months / years (ascending), weekdays for weeks, and Ends.
+  The "Every X" field left the main form; Ends stays on the main form too so a
+  weekly task with an end date needs no Custom.
+- New YEARLY; `interval` 1–999. WEEKLY with no weekdays lands on the start's
+  weekday (the old "pick at least one weekday" error is gone). Monthly on a
+  day a month lacks lands on the last day (it used to skip the month); yearly
+  on Feb 29 lands on Feb 28. Hours and minutes are left out until there's a
+  use: tasks are once a day with a reminder time.
+- The rule and its label live in `src/lib/tasks/recur-rule.ts` (pure,
+  tested); the three copies of the repeat label (tasks page, tasks API, admin)
+  now share `recurLabel`. The occurrence walk's guard went from 4000 to
+  40000 days so a counted yearly series reaches its end.
+- Existing series keep their saved interval; one saved as 52 needs editing.
+
 ## 2026-11 — "+ Additional": day extras (v0.667.0 / app 0.477.0)
 
 - "+ Conditioning" is now "+ Additional": Conditioning (Pick one, Build one,
