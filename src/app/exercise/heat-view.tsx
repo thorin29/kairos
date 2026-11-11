@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { InfoIcon } from "@/components/icons";
-import { NAV_LABEL, type NavRegion } from "@/lib/workouts/involvement";
+import type { NavRegion } from "@/lib/workouts/involvement";
 import {
   DEFAULT_HEAT_RANGE,
   HEAT_RANGES,
@@ -16,20 +16,15 @@ import {
 } from "@/lib/workouts/heat";
 import { readPref, writePref } from "./conditioning-timer";
 import { Modal } from "./plan-file-panel";
+import type { TrainGroup, TrainingHeat } from "@/lib/workouts/training-heat";
 
 /**
- * The body map's heat view (v0.635): one hue, three strengths, by counted sets
- * a week over the chosen range. The toggle and range are kept per device.
+ * The body map's heat view (v0.635; v0.664 the training heat map: warmth by
+ * consistency and progress, no ranges). The toggle is kept per device.
  */
 
 const HEAT_ON_KEY = "kairos.heat.on";
 const HEAT_RANGE_KEY = "kairos.heat.range";
-
-const SHADE: Record<1 | 2 | 3, string> = {
-  1: "color-mix(in srgb, var(--color-accent) 40%, var(--color-figure-fade))",
-  2: "color-mix(in srgb, var(--color-accent) 70%, var(--color-figure-fade))",
-  3: "var(--color-accent)",
-};
 
 export function useHeatPrefs() {
   const [on, setOnState] = useState(false);
@@ -54,129 +49,8 @@ export function useHeatPrefs() {
 /** The group a tap target stands for in the heat view. */
 export const heatGroupOf = (nav: NavRegion) => (nav === "POSTERIOR_HIP" ? "DEADLIFT" : nav);
 
-export function heatFills(range: HeatRange | undefined): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const g of range?.groups ?? []) if (g.level > 0) out[g.group] = SHADE[g.level as 1 | 2 | 3];
-  return out;
-}
-
-export function heatAvailable(range: HeatRange | undefined): NavRegion[] {
-  const navs: NavRegion[] = [];
-  for (const g of range?.groups ?? []) {
-    if (g.level === 0) continue;
-    navs.push(g.group === "DEADLIFT" ? "POSTERIOR_HIP" : (g.group as NavRegion));
-  }
-  return navs;
-}
-
-export function HeatRangeChips({ value, onChange }: { value: HeatRangeKey; onChange: (k: HeatRangeKey) => void }) {
-  return (
-    <div className="flex flex-wrap justify-center gap-1.5" role="radiogroup" aria-label="Range">
-      {HEAT_RANGES.map((r) => {
-        const on = r.key === value;
-        return (
-          <button
-            key={r.key}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            aria-label={r.label}
-            onClick={() => onChange(r.key)}
-            className={`h-8 rounded-full border px-3 text-xs font-medium transition-colors ${
-              on ? "border-accent bg-accent text-white" : "border-accent text-accent hover:bg-accent/10"
-            }`}
-          >
-            {r.short}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-export function HeatKey() {
-  const [about, setAbout] = useState(false);
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted">
-      {(
-        [
-          [1, "Under 4"],
-          [2, "4–9"],
-          [3, "10+"],
-        ] as const
-      ).map(([lvl, label]) => (
-        <span key={lvl} className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-sm" style={{ background: SHADE[lvl] }} />
-          {label}
-        </span>
-      ))}
-      <span>sets a week</span>
-      <button
-        type="button"
-        onClick={() => setAbout(true)}
-        aria-label="About the heat map"
-        className="flex h-6 w-6 items-center justify-center rounded-full text-muted hover:text-accent"
-      >
-        <InfoIcon className="h-4 w-4" />
-      </button>
-      {about && (
-        <Modal title="Heat map" onClose={() => setAbout(false)}>
-          <div className="space-y-2 text-sm">
-            <p>Hard sets per muscle, averaged per week over the range you pick.</p>
-            <p>
-              A set counts in full when it ended within about 5 reps of what you could do, and half when 6–9 short.
-              Warm-ups and easy sets don&apos;t count. Marking a lift Hard counts it in full; Easy counts it half.
-            </p>
-            <p>Muscles a lift only helps with get half a set.</p>
-            <p>
-              Holds count in full at two-thirds of your longest or more, half at 40%. A plank counts in full at 1:10,
-              the Marine Corps PFT minimum, and shows its PFT points (3:45 is 100).
-            </p>
-            <p>Heavy sets are 6 reps or fewer near your best weight. They&apos;re what builds strength most.</p>
-            <p>Around 10 or more hard sets a week is a strong week for a muscle.</p>
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
 const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
-
-export function HeatDetail({
-  nav,
-  data,
-  unit,
-  onClose,
-}: {
-  nav: NavRegion;
-  data: HeatGroup | undefined;
-  unit: string;
-  onClose: () => void;
-}) {
-  return (
-    <Modal title={NAV_LABEL[nav]} onClose={onClose}>
-      {!data || data.perWeek === 0 ? (
-        <p className="text-sm text-muted">No hard sets in this range.</p>
-      ) : (
-        <div className="space-y-3 text-sm">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl border border-hairline px-3 py-2">
-              <p className="tabular text-xl font-semibold">{fmt(data.perWeek)}</p>
-              <p className="text-xs text-muted">sets a week</p>
-            </div>
-            <div className="rounded-xl border border-hairline px-3 py-2">
-              <p className="tabular text-xl font-semibold">{fmt(data.heavyPerWeek)}</p>
-              <p className="text-xs text-muted">heavy sets a week</p>
-            </div>
-          </div>
-          <HeatBests bests={data.bests} unit={unit} />
-        </div>
-      )}
-    </Modal>
-  );
-}
 
 export function HeatBests({ bests, unit }: { bests: HeatGroup["bests"]; unit: string }) {
   if (bests.length === 0) return null;
@@ -331,4 +205,109 @@ export function PlankBench({ tests }: { tests: PlankTest[] }) {
 
 export function rangeOf(heat: HeatMap | undefined, key: HeatRangeKey): HeatRange | undefined {
   return heat?.ranges.find((r) => r.key === key);
+}
+
+// --- the training heat map (v0.664) ------------------------------------------
+
+/** Warmth 1–5, pale yellow to red; −1 to −3, light to deep blue. The same on
+ *  every theme. Neutral (0) is the figure's own grey. */
+export const TRAIN_WARM = ["#fde68a", "#facc15", "#fb923c", "#ea580c", "#dc2626"] as const;
+export const TRAIN_COLD = ["#bfdbfe", "#60a5fa", "#2563eb"] as const;
+export const trainColor = (level: number): string | null =>
+  level > 0 ? TRAIN_WARM[Math.min(5, level) - 1] : level < 0 ? TRAIN_COLD[Math.min(3, -level) - 1] : null;
+
+export function trainFills(t: TrainingHeat | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const g of t?.groups ?? []) {
+    const c = trainColor(g.level);
+    if (c) out[g.group] = c;
+  }
+  return out;
+}
+
+/** Every group that has a story (trained at some point) can be tapped. */
+export function trainAvailable(t: TrainingHeat | undefined): NavRegion[] {
+  return (t?.groups ?? []).map((g) => (g.group === "DEADLIFT" ? "POSTERIOR_HIP" : (g.group as NavRegion)));
+}
+
+export function TrainKey() {
+  const [about, setAbout] = useState(false);
+  const sw = (c: string, k: string) => <span key={k} className="h-3 w-4 rounded-sm" style={{ background: c }} />;
+  return (
+    <div className="flex items-center justify-center gap-1 text-xs text-muted">
+      <span className="mr-1">cooled</span>
+      {[...TRAIN_COLD].reverse().map((c) => sw(c, c))}
+      {sw("var(--color-figure)", "n")}
+      {TRAIN_WARM.map((c) => sw(c, c))}
+      <span className="ml-1">hot</span>
+      <button
+        type="button"
+        onClick={() => setAbout(true)}
+        aria-label="About the heat map"
+        className="ml-1 flex h-6 w-6 items-center justify-center rounded-full text-muted hover:text-accent"
+      >
+        <InfoIcon className="h-4 w-4" />
+      </button>
+      {about && (
+        <Modal title="Heat map" onClose={() => setAbout(false)}>
+          <div className="space-y-2 text-sm">
+            <p>Each muscle warms a step for every week you give it real work, and fastest when you&apos;re coming back to where you were.</p>
+            <p>The hottest step is for training it steadily and setting a new best in the last six weeks.</p>
+            <p>A missed week cools it a step. It only turns blue after it&apos;s cooled to grey and you&apos;ve missed it about a month.</p>
+            <p>
+              Strength that keeps slipping for two weeks cools it too. Light, deload and test weeks, adjusted days, and
+              your first session back aren&apos;t judged.
+            </p>
+            <p>The heart is endurance: sport, rowing, running, rucking and conditioning, by minutes and how hard they felt.</p>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/** The endurance gauge: a heart in the same colours. */
+export function EnduranceHeart({ data, onOpen }: { data: TrainGroup | null; onOpen: () => void }) {
+  const c = data ? (trainColor(data.level) ?? "var(--color-figure)") : "var(--color-figure)";
+  return (
+    <button type="button" onClick={onOpen} className="flex flex-col items-center gap-0.5 text-[11px] text-muted" aria-label="Endurance">
+      <svg viewBox="0 0 24 22" className="h-9 w-9" aria-hidden>
+        <path
+          d="M12 21s-8.5-5.4-10.6-10.3C-0.2 6.7 2.3 2 6.6 2c2.2 0 3.9 1.2 5.4 3 1.5-1.8 3.2-3 5.4-3C21.7 2 24.2 6.7 22.6 10.7 20.5 15.6 12 21 12 21z"
+          fill={c}
+        />
+      </svg>
+      Endurance
+    </button>
+  );
+}
+
+/** A tapped muscle (or the heart): why it's this colour, and its bests. */
+export function TrainDetail({
+  title,
+  data,
+  bests,
+  unit,
+  onClose,
+}: {
+  title: string;
+  data: TrainGroup | null | undefined;
+  bests?: HeatGroup["bests"];
+  unit: string;
+  onClose: () => void;
+}) {
+  return (
+    <Modal title={title} onClose={onClose}>
+      <div className="space-y-3 text-sm">
+        <p className="flex items-center gap-2">
+          <span
+            className="h-3 w-3 shrink-0 rounded-sm"
+            style={{ background: (data && trainColor(data.level)) ?? "var(--color-figure)" }}
+          />
+          {data?.line ?? "Nothing logged yet."}
+        </p>
+        {bests && bests.length > 0 && <HeatBests bests={bests} unit={unit} />}
+      </div>
+    </Modal>
+  );
 }

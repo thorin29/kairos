@@ -74,7 +74,14 @@ export type HeatGroup = {
 export type HeatRange = { key: HeatRangeKey; label: string; groups: HeatGroup[] };
 /** A day's groups trained without weights (bodyweight or timed), for Workout days. */
 export type HeatDay = { date: string; groups: string[] };
-export type HeatMap = { unit: string; ranges: HeatRange[]; days?: HeatDay[]; plank?: PlankTest[] };
+export type HeatMap = {
+  unit: string;
+  ranges: HeatRange[];
+  days?: HeatDay[];
+  plank?: PlankTest[];
+  /** The training heat map (v0.664): warmth by consistency and progress. */
+  training?: import("@/lib/workouts/training-heat").TrainingHeat;
+};
 
 const MAX_REPS_FOR_ESTIMATE = 12;
 const epley = (w: number, reps: number) => w * (1 + Math.min(reps, MAX_REPS_FOR_ESTIMATE) / 30);

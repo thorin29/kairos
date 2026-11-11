@@ -57,19 +57,20 @@ import BodyMap from "@/components/body-map";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { focusGroups } from "@/lib/workouts/focus";
 import {
-  HeatDetail,
   HeatGroupSummary,
-  HeatKey,
+  EnduranceHeart,
+  TrainDetail,
+  TrainKey,
+  trainAvailable,
+  trainFills,
   PlankBench,
-  HeatRangeChips,
-  heatAvailable,
-  heatFills,
   heatGroupOf,
   rangeOf,
   useHeatPrefs,
 } from "./heat-view";
 import {
   groupsFor,
+  NAV_LABEL,
   navRegionFor,
   type NavRegion,
 } from "@/lib/workouts/involvement";
@@ -779,9 +780,10 @@ function LiftBlocks({
 }) {
   const heatPrefs = useHeatPrefs();
   const heatOn = !!heat && heatPrefs.on;
-  const heatRange = rangeOf(heat, heatPrefs.range);
-  const heatShade = useMemo(() => heatFills(heatRange), [heatRange]);
-  const [heatPicked, setHeatPicked] = useState<NavRegion | null>(null);
+  // The training heat map (v0.664): one picture, no ranges.
+  const training = heat?.training;
+  const heatShade = useMemo(() => trainFills(training), [training]);
+  const [heatPicked, setHeatPicked] = useState<NavRegion | "ENDURANCE" | null>(null);
   const withBest = useMemo(() => series.filter((s) => s.best), [series]);
 
   // Which region selects each movement, and which groups it lights up. These
@@ -918,19 +920,32 @@ function LiftBlocks({
           )}
           {heatOn ? (
             <div className="space-y-3">
-              <BodyMap
-                selected={[]}
-                onSelect={setHeatPicked}
-                available={heatAvailable(heatRange)}
-                fillsFront={heatShade}
-                fillsBack={heatShade}
-              />
-              <HeatKey />
-              <HeatRangeChips value={heatPrefs.range} onChange={heatPrefs.setRange} />
+              <div className="flex items-center">
+                <div className="min-w-0 flex-1">
+                  <BodyMap
+                    selected={[]}
+                    onSelect={setHeatPicked}
+                    available={trainAvailable(training)}
+                    fillsFront={heatShade}
+                    fillsBack={heatShade}
+                  />
+                </div>
+                <EnduranceHeart data={training?.endurance ?? null} onOpen={() => setHeatPicked("ENDURANCE")} />
+              </div>
+              <TrainKey />
               {heatPicked && (
-                <HeatDetail
-                  nav={heatPicked}
-                  data={heatRange?.groups.find((g) => g.group === heatGroupOf(heatPicked))}
+                <TrainDetail
+                  title={heatPicked === "ENDURANCE" ? "Endurance" : NAV_LABEL[heatPicked]}
+                  data={
+                    heatPicked === "ENDURANCE"
+                      ? training?.endurance
+                      : training?.groups.find((g) => g.group === heatGroupOf(heatPicked))
+                  }
+                  bests={
+                    heatPicked === "ENDURANCE"
+                      ? undefined
+                      : rangeOf(heat, "12w")?.groups.find((g) => g.group === heatGroupOf(heatPicked))?.bests
+                  }
                   unit={heat?.unit ?? ""}
                   onClose={() => setHeatPicked(null)}
                 />

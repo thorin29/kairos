@@ -5,7 +5,11 @@ import { doneOn } from "@/lib/queries/movement-stats";
 import { OPTIONAL_CATEGORIES } from "@/lib/workouts/blocks";
 import type { MuscleGroup } from "@/lib/workouts/catalog";
 import { groupsFor } from "@/lib/workouts/involvement";
-import { buildHeat, type HeatMap, type HeatSet } from "@/lib/workouts/heat";
+import { buildHeat, scoreSets, type HeatMap, type HeatSet } from "@/lib/workouts/heat";
+import { buildTrainingHeat, type CardioEntry, type Pause, type TrainingHeat } from "@/lib/workouts/training-heat";
+import { lightFactor } from "@/lib/workouts/suggest";
+import { parseAdjust } from "@/lib/workouts/adjust";
+import { CARDIO_CATEGORIES } from "@/lib/workouts/blocks";
 
 /** Groups that have a place on the body. Full body has none. */
 const ON_BODY = new Set(["CHEST", "BACK", "ARMS", "LEGS", "SHOULDERS", "CORE", "DEADLIFT"]);
@@ -31,7 +35,7 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
         poolExerciseId: true,
         swappedFromId: true,
         poolExercise: { select: { name: true, muscleGroup: true } },
-        session: { select: { date: true, completedOn: true, category: true } },
+        session: { select: { date: true, completedOn: true, category: true, intent: true } },
       },
     }),
     prisma.workoutFeedback.findMany({
@@ -46,7 +50,7 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
       poolExerciseId: string | null;
       swappedFromId: string | null;
       poolExercise: { name: string; muscleGroup: string | null } | null;
-      session: { date: Date; completedOn: Date | null; category: string | null };
+      session: { date: Date; completedOn: Date | null; category: string | null; intent: string | null };
     }[],
     { date: Date; slot: string; effort: string | null }[],
   ];
@@ -56,6 +60,8 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
   const groups = new Map<string, ReturnType<typeof groupsFor>>();
 
   const sets: HeatSet[] = [];
+  const light: boolean[] = [];
+  const adjusted = await adjustedDays(userId);
   for (const r of rows) {
     if (!r.poolExerciseId || !r.poolExercise) continue;
     if (r.session.category && OPTIONAL_CATEGORIES.includes(r.session.category)) continue;
@@ -83,6 +89,90 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
         effortOn.get(`${doneOn(r.session)}|${slot}`) ??
         null,
     });
+    // Light, deload and test weeks and adjusted days aren't judged for strength.
+    light.push(
+      r.session.intent === "LIGHT" || r.session.intent === "TEST" || adjusted.has(fromDateColumn(r.session.date)),
+    );
   }
-  return buildHeat(sets, todayISO, unit);
+  const heat = buildHeat(sets, todayISO, unit);
+  const scores = scoreSets(sets);
+  const training: TrainingHeat = buildTrainingHeat(
+    sets.map((s, i) => ({ ...s, credit: scores[i].credit, light: light[i] })),
+    await cardioEntries(userId, effortOn),
+    todayISO,
+    await pausesFor(userId),
+  );
+  return { ...heat, training };
+}
+
+/** Days made lighter (Lighter today, or an Adjust today choice). */
+async function adjustedDays(userId: string): Promise<Set<string>> {
+  const rows = (await prisma.workoutSuggestionAnswer.findMany({
+    where: { userId, key: "day" },
+    select: { date: true, answer: true },
+  })) as { date: Date; answer: string }[];
+  return new Set(rows.filter((r) => lightFactor(r.answer) != null || parseAdjust(r.answer)).map((r) => fromDateColumn(r.date)));
+}
+
+/** Pauses (none yet): when they exist, the weeks in them change nothing. */
+async function pausesFor(_userId: string): Promise<Pause[]> {
+  return [];
+}
+
+const KIND_WORD: Record<string, string> = {
+  ROWING: "rowing",
+  RUNNING: "running",
+  RUCKING: "rucking",
+  CARDIO: "cardio",
+  SPORT: "sport",
+  HIIT: "conditioning",
+};
+
+/**
+ * Endurance work: sport (hockey), rowing, running, rucking, other cardio and
+ * conditioning, with minutes and how hard each felt (its own feedback;
+ * conditioning goes by any conditioning feedback that day).
+ */
+async function cardioEntries(userId: string, effortOn: Map<string, string | null>): Promise<CardioEntry[]> {
+  const rows = (await prisma.workoutSession.findMany({
+    where: { userId, isRest: false, category: { in: [...CARDIO_CATEGORIES, "SPORT", "HIIT"] as never } },
+    select: {
+      id: true,
+      date: true,
+      completedOn: true,
+      name: true,
+      category: true,
+      durationMin: true,
+      sourceEventId: true,
+      sets: { select: { seconds: true } },
+    },
+  })) as {
+    id: string;
+    date: Date;
+    completedOn: Date | null;
+    name: string | null;
+    category: string;
+    durationMin: number | null;
+    sourceEventId: string | null;
+    sets: { seconds: number | null }[];
+  }[];
+  const hiitEffort = new Map<string, string | null>();
+  for (const [k, v] of effortOn) {
+    const [d, slot] = k.split("|");
+    if (slot.startsWith("hiit:") || slot.startsWith("pick:")) hiitEffort.set(d, v);
+  }
+  return rows.map((r) => {
+    const day = fromDateColumn(r.date);
+    const secs = r.sets.reduce((t, x) => t + (x.seconds ?? 0), 0);
+    const minutes = r.durationMin ?? (secs > 0 ? Math.round(secs / 60) : r.category === "HIIT" ? 15 : 0);
+    const effort =
+      r.category === "SPORT"
+        ? (effortOn.get(`${day}|sport:${r.sourceEventId}`) ?? null)
+        : r.category === "HIIT"
+          ? (hiitEffort.get(day) ?? null)
+          : (effortOn.get(`${day}|cardio:${r.id}`) ?? null);
+    const kind =
+      r.category === "SPORT" ? (/hockey|skate|puck|ice/i.test(r.name ?? "") ? "hockey" : (r.name ?? "sport").toLowerCase()) : KIND_WORD[r.category] ?? "cardio";
+    return { date: doneOn(r), minutes, effort, kind };
+  });
 }

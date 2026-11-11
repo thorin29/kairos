@@ -1049,6 +1049,11 @@ v0.651: `GET /api/v1/workouts/strip?page=N` — one 8-day page of the week strip
 (0 = up to today, + ahead, − back; clamped −8..4) → { days, overdue, today,
 page }. Strip days add `planned` (the plan has a workout that weekday).
 `GET /api/v1/workouts?date=` takes future dates (the plan's preview).
+v0.664 Training heat map: the heat object (`GET /api/v1/workouts/progress` and
+the web board) adds `training: { groups: [{ group, level, line }], endurance:
+{ group: "ENDURANCE", level, line } | null, paused }` — level −3 (cold) to 5
+(hot), 0 neutral; `line` says why. `ranges` stay for older phones.
+
 v0.663 Stretching: a Stretching plan entry with no movements is a routine,
 like Mobility (`warmup` holds one id or `rot:<ids>`, done with `POST
 /workouts/warmup`, counts toward the day); `GET /workouts/warmups?kind=stretching`

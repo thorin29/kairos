@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-11 — Training heat map replaces the volume heat map (v0.664.0 / app 0.474.0)
+
+The range-averaged volume shades (three accent tints, 1 week to All) didn't
+separate well and moved a lot between ranges. `training-heat.ts` replaces
+them with one cumulative state per muscle group, stepped week by week
+(Monday weeks) from its first week of real work:
+
+- Warmth −3..5, 0 neutral. A trained week (≥2 counted sets, heat.ts credit;
+  assisting muscles half) is +1, or +2 while below its earlier peak (fast
+  return). 5 needs a new best on one of its movements in the last 6 weeks,
+  else it tops out at 4.
+- A missed week is −1 down to 0; blue only from the 4th consecutive missed
+  week, one step at a time, deeper every 2 weeks, to −3 (strength largely
+  holds ~3 weeks untrained). Training again melts blue straight to 0.
+- Strength: each main movement's weekly best (Epley e1RM, longest hold or
+  most reps) against its best of the previous 12 weeks; the week's median
+  under 95% counts as a decline, two in a row cools −1 a week (can go blue);
+  a plateau stops it. Not judged: LIGHT/TEST sessions, adjusted or lighter
+  days, and a movement's first session after 21+ days off. Program-agnostic:
+  any logged movement, any program or none.
+- Pauses: a week with 4+ days in a pause changes nothing (`pausesFor`
+  returns none until pauses exist).
+- Endurance (the heart): sport, cardio, rowing, running, rucking and
+  conditioning minutes × effort (Easy ½, Solid/none 1, Hard 1½, Too hard 1¾).
+  ≥120 a week warms, <40 counts as missed, between holds; ≥200 allows the
+  top step. Hockey and the rest feed endurance only, not muscle warmth.
+- Colours fixed across themes: pale yellow → red (no maroon, so the top
+  stays bright in dark mode), three blues, the figure's grey for neutral.
+  Tapping a muscle shows its one-line reason and its bests.
+
 ## 2026-11 — Stretching routines; program title only on program days (v0.663.0 / app 0.473.0)
 
 - Stretching is a routine kind ("stretching", library `STRETCH_LIBRARY`,
