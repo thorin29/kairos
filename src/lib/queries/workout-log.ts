@@ -1694,14 +1694,10 @@ export async function loadOverdueWorkoutDays(
     if (seen.has(iso)) continue;
     seen.add(iso);
     const workouts = await loadTodayPlannedWorkouts(userId, iso);
-    // A scheduled workout is still due if none of its exercises were logged,
-    // whatever else happened that day — unless it was skipped through.
-    const unlogged = workouts.filter(
-      (w) =>
-        w.exercises.length > 0 &&
-        w.exercises.every((e) => e.value == null) &&
-        !planDone(w),
-    );
+    // A scheduled workout stays due until every movement in it is logged or
+    // skipped (v0.665; it used to drop out once any one was logged, taking the
+    // rest of a half-done day with it).
+    const unlogged = workouts.filter((w) => w.exercises.length > 0 && !planDone(w));
     if (unlogged.length > 0) out.push({ date: iso, workouts: unlogged });
   }
   return out;
@@ -1853,7 +1849,14 @@ export async function loadMovementLog(
   const records = repRecords(
     earlier.map((s) => ({ weight: s.weight, reps: s.reps, date: fromDateColumn(s.session.date) })),
   );
-  let target = await movementTarget(userId, dateISO, slotId, movement, last?.sets ?? [], records);
+  // How last time felt (v0.665): Easy steps a companion lift's weight up.
+  const lastFb = last
+    ? ((await prisma.workoutFeedback.findFirst({
+        where: { userId, date: toDateColumn(last.date), slot: { in: [slotId, movement] } },
+        select: { effort: true },
+      })) as { effort: string | null } | null)
+    : null;
+  let target = await movementTarget(userId, dateISO, slotId, movement, last?.sets ?? [], records, lastFb?.effort ?? null);
   // Short on time without room for them, or sick: no extra sets after the
   // main sets (v0.658). The warm-up sets always stay.
   const adj = await dayAdjust(userId, dateISO);
@@ -1936,6 +1939,8 @@ export async function movementTarget(
   movement: string,
   lastSets: MovementSetRow[],
   records: RepRecord[],
+  /** How the movement felt last time (EASY steps a companion lift up). */
+  lastEffort: string | null = null,
 ): Promise<MovementLog["target"]> {
   const planned = await plannedSlotFor(userId, dateISO, slotId);
   const scheme = parseScheme(planned?.scheme);
@@ -1974,6 +1979,7 @@ export async function movementTarget(
     bestForThree,
     // Only a program's own main lift moves up by itself (v0.627).
     progress: !!fromProgram && !!role?.main && movement === slotId,
+    lastEasy: lastEffort === "EASY",
   });
   if (sets.length === 0) return null;
   const intent = weekIntent(program, week);

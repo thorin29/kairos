@@ -79,3 +79,13 @@ describe("training heat (v0.664)", () => {
     expect(buildTrainingHeat([], easy, "2026-01-25").endurance?.level).toBe(0);
   });
 });
+
+import { groupsFor } from "@/lib/workouts/involvement";
+describe("hinge movements on the body (v0.665)", () => {
+  it("a good morning works the lower back (core) and legs", () => {
+    const g = groupsFor("Good morning", "LEGS");
+    expect(g.primary).toBe("LEGS");
+    expect(g.secondary).toEqual(expect.arrayContaining(["CORE", "DEADLIFT"]));
+    expect(groupsFor("Weighted back extension", null).primary).toBe("CORE");
+  });
+});

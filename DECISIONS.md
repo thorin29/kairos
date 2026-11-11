@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-11 — Late days stay until done; companion progression; Back keeps drafts (v0.665.0 / app 0.475.0)
+
+- Overdue: a past day's scheduled workout stays in the late list until
+  `planDone` (every tracked movement logged or skipped). Before, logging any
+  one movement dropped the whole workout, so a half-done leg day vanished.
+- Companion lifts (not a program's own main lift; RANGE or SAME schemes, last
+  time the same kind of work): targets go set by set from last time — each
+  set keeps its weight and steps up (10 lb lower / 5 upper, half in kg) only
+  when that set reached the top of its reps, or last time's feedback was
+  Easy. A range aims one rep higher per set up to the top, then restarts at
+  the bottom, heavier. After different work (heavy triples before a 5 × 10)
+  the old estimate still applies. Main lifts and 5/3/1 waves are unchanged.
+- Back never logs: typed-but-unticked values are kept as a draft per day and
+  movement (in memory while the page/app runs) and restored, unticked. Log
+  (and "Finish for now") still logs what's typed and complete.
+- Warm-up ticks persist per plan entry, routine and day (web: localStorage;
+  app: in memory while it runs).
+- Involvement rules for good mornings (Deadlift, with Legs, Core, Back),
+  back extensions/hyperextensions/reverse hypers/supermans/Jefferson curls
+  (Core, with Legs) and kettlebell swings: the lower back shades as Core.
+
 ## 2026-11 — Training heat map replaces the volume heat map (v0.664.0 / app 0.474.0)
 
 The range-averaged volume shades (three accent tints, 1 week to All) didn't

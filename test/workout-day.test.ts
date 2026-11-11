@@ -344,19 +344,19 @@ describe("programs (v0.611)", () => {
     const hand = targetsFor({ program: HAND_WAVE, week: 1, scheme: { kind: "WAVE", start: "2026-11-02" }, unit: "lb", trainingMax: 200, last: [] });
     expect(hand.some((x) => x.plus)).toBe(false);
   });
-  it("rep range: the weight holds (no step up by itself); one more rep, up to the top", () => {
+  it("rep range: each set one more rep, up to the top, then heavier (v0.665)", () => {
     const scheme = parseScheme("range:3x8-12")!;
     const top = targetsFor({ program: tens, week: 1, scheme, unit: "lb", lower: true, last: [12, 12, 12].map((r) => ({ weight: 100, reps: r })) });
-    expect(top).toEqual([1, 2, 3].map(() => ({ weight: 100, reps: 12 })));
+    expect(top).toEqual([1, 2, 3].map(() => ({ weight: 110, reps: 8 })));
     const main = targetsFor({ program: tens, week: 1, scheme, unit: "lb", lower: true, progress: true, last: [12, 12, 12].map((r) => ({ weight: 100, reps: r })) });
     expect(main).toEqual([1, 2, 3].map(() => ({ weight: 110, reps: 8 })));
     const more = targetsFor({ program: tens, week: 1, scheme, unit: "lb", last: [{ weight: 50, reps: 10 }, { weight: 50, reps: 9 }, { weight: 50, reps: 8 }] });
-    expect(more[0]).toEqual({ weight: 50, reps: 9 });
+    expect(more).toEqual([{ weight: 50, reps: 11 }, { weight: 50, reps: 10 }, { weight: 50, reps: 9 }]);
   });
-  it("same weight: holds once every rep was done; light week drops a set at 80%", () => {
+  it("same weight: steps up once every rep was done; light week drops a set at 80%", () => {
     const scheme = parseScheme("same:3x5")!;
     const done = [5, 5, 5].map((r) => ({ weight: 135, reps: r }));
-    expect(targetsFor({ program: full, week: 1, scheme, unit: "lb", last: done })[0]).toEqual({ weight: 135, reps: 5 });
+    expect(targetsFor({ program: full, week: 1, scheme, unit: "lb", last: done })[0]).toEqual({ weight: 140, reps: 5 });
     const light = targetsFor({ program: full, week: 4, scheme, unit: "lb", last: done });
     expect(light).toEqual([{ weight: 110, reps: 5 }, { weight: 110, reps: 5 }]);
   });

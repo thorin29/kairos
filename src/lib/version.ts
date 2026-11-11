@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.664.0";
+export const APP_VERSION = "0.665.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.665.0",
+    summary: [
+      "A late workout stays on today until every movement in it is logged or skipped.",
+      "Companion lifts (anything but a program's main lifts) step up a set only when that set reached the top of its reps, or the movement felt Easy.",
+      "Back from a movement never logs what you typed; it's kept for when you come back. Log still logs it.",
+      "Warm-up ticks stay when you close and reopen the warm-up.",
+      "Good mornings, back extensions and kettlebell swings show on the lower back in the heat map.",
+    ],
+  },
   {
     version: "0.664.0",
     summary: [

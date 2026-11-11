@@ -132,6 +132,28 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
 
   // --- hinge and legs ----------------------------------------------------
   {
+    // A good morning hinges with the bar on the back: hamstrings and glutes
+    // drive it, and the lumbar erectors (the core's, on the body map) work
+    // hard to hold the back flat (v0.665).
+    match: /\bgood ?mornings?\b/,
+    involvement: {
+      suggestedPrimary: "DEADLIFT",
+      secondary: ["LEGS", "CORE", "BACK"],
+      view: "back",
+      navRegion: "POSTERIOR_HIP",
+    },
+  },
+  {
+    // Back extensions and their kin work the lumbar erectors directly, with
+    // the glutes and hamstrings (v0.665).
+    match: /\b(back extension|hyperextension|reverse hyper|superman|jefferson curl)/,
+    involvement: { suggestedPrimary: "CORE", secondary: ["LEGS"], view: "back", navRegion: "POSTERIOR_HIP" },
+  },
+  {
+    match: /\b(kettlebell|kb) swings?\b/,
+    involvement: { suggestedPrimary: "DEADLIFT", secondary: ["LEGS", "CORE"], view: "back", navRegion: "POSTERIOR_HIP" },
+  },
+  {
     // Romanian / stiff-leg is a hamstring movement with the back holding position.
     match: /\b(romanian|rdl|stiff[- ]?leg)/,
     involvement: {

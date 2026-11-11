@@ -84,8 +84,26 @@ function dayLabel(iso: string): string {
 }
 
 /** What a Core day's screen can ask of one movement's section (v0.640). */
+/** Typed-but-unlogged set values per day and movement, kept while the page is
+ *  open (v0.665): Back leaves them here instead of logging them. */
+const DRAFTS = new Map<string, Record<number, { w: string; r: string; s: string }>>();
+function keepDraft(key: string, rows: readonly { saved: boolean; w: string; r: string; s: string }[]) {
+  const d: Record<number, { w: string; r: string; s: string }> = {};
+  rows.forEach((r, i) => {
+    if (!r.saved && (r.w || r.r || r.s)) d[i] = { w: r.w, r: r.r, s: r.s };
+  });
+  if (Object.keys(d).length) DRAFTS.set(key, d);
+  else DRAFTS.delete(key);
+}
+function withDraft<T extends { saved: boolean; w: string; r: string; s: string }>(rows: T[], key: string): T[] {
+  const d = DRAFTS.get(key);
+  if (!d) return rows;
+  return rows.map((r, i) => (d[i] && !r.saved ? { ...r, ...d[i] } : r));
+}
+
 type SectionHandle = {
-  save: () => Promise<void>;
+  /** Log (`logTyped`) or Back: Back keeps what's typed as a draft (v0.665). */
+  save: (logTyped?: boolean) => Promise<void>;
   skip: (want: boolean) => Promise<void>;
   /** Timed sets still open (blank, not ticked); 0 for an untimed or skipped movement. */
   openTimed: () => number;
@@ -1310,16 +1328,17 @@ function CoreLogger({
   const [effort, setEffort] = useState<Effort | null>(null);
   const [hurt, setHurt] = useState<HurtArea | null>(null);
   const timed = moves.some((m) => m.metric === "DURATION");
-  const finish = async () => {
+  // Log logs what's typed; Back keeps it as a draft (v0.665).
+  const finish = async (logTyped: boolean) => {
     setLeaving(true);
-    await Promise.all(ordered().map((h) => h.save().catch(() => {})));
+    await Promise.all(ordered().map((h) => h.save(logTyped).catch(() => {})));
     onBack();
   };
   return (
     <div className="space-y-6">
       <button
         type="button"
-        onClick={() => void finish()}
+        onClick={() => void finish(false)}
         disabled={leaving}
         className="inline-flex min-h-[2.75rem] items-center gap-1.5 text-sm font-semibold text-accent"
       >
@@ -1382,7 +1401,7 @@ function CoreLogger({
           filled
           loading={leaving}
           disabled={leaving}
-          onClick={() => void finish()}
+          onClick={() => void finish(true)}
         />
       </div>
       {timing?.sides && (
@@ -1469,7 +1488,7 @@ function MovementLogger({
       .then((l) => {
         if (!live) return;
         setLog(l);
-        setRows(rowsFrom(l));
+        setRows(withDraft(rowsFrom(l), `${dateISO}|${slotId}`));
         setSkipped(l.skipped);
         setSugg(l.suggestion ?? null);
         setEffort((l.feedback?.effort as Effort | null) ?? null);
@@ -1586,11 +1605,21 @@ function MovementLogger({
     void persist(next);
   };
 
-  // Log and Back both keep what was entered: anything typed (but not ticked)
-  // is saved on the way out. Log is the explicit "done with this movement".
-  const leave = async () => {
+  // Log saves anything typed (but not ticked) on the way out: the explicit
+  // "done with this movement". Back never logs (v0.665): what's typed is kept
+  // as a draft and is back, unticked, when the movement is opened again.
+  const leave = async (logTyped = false) => {
     setLeaving(true);
     const cur = latest.current;
+    const key = `${dateISO}|${slotId}`;
+    if (!logTyped) {
+      keepDraft(key, cur);
+      if (cur.some((r) => r.saved)) await persist(cur, true);
+      if (embedded) setLeaving(false);
+      else onBack();
+      return;
+    }
+    keepDraft(key, []);
     const next = cur.map((r) => (!r.saved && typed(r) && complete(r) ? { ...r, saved: true } : r));
     const changed = next.some((r, i) => r.saved !== cur[i].saved);
     if (changed || cur.some((r) => r.saved)) await persist(next, true);
@@ -1604,7 +1633,7 @@ function MovementLogger({
   // and the workout's "how did it feel".
   const handleRef = useRef<SectionHandle | null>(null);
   handleRef.current = {
-    save: leave,
+    save: (logTyped?: boolean) => leave(logTyped),
     skip: async (want: boolean) => {
       if (want !== skipped) await toggleSkip();
     },
@@ -1624,7 +1653,7 @@ function MovementLogger({
   };
   useEffect(() => {
     embedded?.(slotId, {
-      save: () => handleRef.current!.save(),
+      save: (logTyped?: boolean) => handleRef.current!.save(logTyped),
       skip: (w) => handleRef.current!.skip(w),
       openTimed: () => handleRef.current!.openTimed(),
       sides: () => handleRef.current!.sides(),
@@ -1726,7 +1755,7 @@ function MovementLogger({
       {!embedded && (
         <button
           type="button"
-          onClick={leave}
+          onClick={() => void leave(false)}
           disabled={leaving}
           className="inline-flex min-h-[2.75rem] items-center gap-1.5 text-sm font-semibold text-accent"
         >
@@ -2044,7 +2073,7 @@ function MovementLogger({
               onClick={() => {
                 const left = rows.filter((r) => !r.saved && !(typed(r) && complete(r))).length;
                 if (left > 0) setConfirmLeave(true);
-                else void leave();
+                else void leave(true);
               }}
             />
           </div>
@@ -2065,7 +2094,7 @@ function MovementLogger({
                   type="button"
                   onClick={() => {
                     setConfirmLeave(false);
-                    void leave();
+                    void leave(true);
                   }}
                   className={SECONDARY_BTN}
                 >
@@ -2172,7 +2201,7 @@ function SportWarmupRow({ label, routine }: { label: string; routine: WarmupRout
       </button>
       {open && (
         <Modal title={`${label} warm-up`} onClose={() => setOpen(false)}>
-          <WarmupSteps steps={routine.steps} />
+          <WarmupSteps steps={routine.steps} storeKey={`sport.${routine.id}`} />
         </Modal>
       )}
     </>

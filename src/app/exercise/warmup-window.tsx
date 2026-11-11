@@ -32,9 +32,36 @@ const WORDS: Record<RoutineKind, { one: string; title: string; newOne: string }>
   stretching: { one: "routine", title: "Stretching", newOne: "New stretching routine" },
 };
 
+/** Ticks kept per routine and day (v0.665), so closing the window and coming
+ *  back doesn't lose them. Browser storage, best effort. */
+const tickKey = (k: string) => `kairos.ticks.${k}.${new Date().toLocaleDateString("en-CA")}`;
+function readTicks(k?: string): Set<number> {
+  if (!k) return new Set();
+  try {
+    const v = JSON.parse(localStorage.getItem(tickKey(k)) ?? "[]");
+    return new Set(Array.isArray(v) ? v.filter((x) => typeof x === "number") : []);
+  } catch {
+    return new Set();
+  }
+}
+function writeTicks(k: string | undefined, t: Set<number>) {
+  if (!k) return;
+  try {
+    localStorage.setItem(tickKey(k), JSON.stringify([...t]));
+  } catch {
+    /* storage unavailable: ticks last as long as the window */
+  }
+}
+
 /** A routine's steps: name and amount, a timer on timed ones, and a tick each. */
-export function WarmupSteps({ steps }: { steps: WarmupStep[] }) {
-  const [ticked, setTicked] = useState<Set<number>>(new Set());
+export function WarmupSteps({ steps, storeKey }: { steps: WarmupStep[]; storeKey?: string }) {
+  const [ticked, setTickedState] = useState<Set<number>>(() => readTicks(storeKey));
+  const setTicked = (f: (t: Set<number>) => Set<number>) =>
+    setTickedState((cur) => {
+      const n = f(cur);
+      writeTicks(storeKey, n);
+      return n;
+    });
   const [timing, setTiming] = useState<number | null>(null);
   const [cue, setCue] = useState<WarmupStep | null>(null);
   return (
@@ -167,7 +194,7 @@ export function WarmupWindow({
       ) : (
         <div className="space-y-4">
           {routine ? (
-            <WarmupSteps steps={routine.steps} />
+            <WarmupSteps steps={routine.steps} storeKey={`${plannedWorkoutId}.${routine.id}`} />
           ) : (
             <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">No routine.</p>
           )}

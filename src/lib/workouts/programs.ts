@@ -667,6 +667,8 @@ export function targetsFor(input: {
    *  weight steps up once every set got every rep, as the program says. Off,
    *  the weight holds until the person changes it (companion lifts, own plans). */
   progress?: boolean;
+  /** Last time felt Easy: a companion lift steps up anyway (v0.665). */
+  lastEasy?: boolean;
 }): TargetSet[] {
   const { program, week, scheme, unit, lower, trainingMax, last } = input;
   const intent = weekIntent(program, week);
@@ -716,6 +718,33 @@ export function targetsFor(input: {
       ...(s.warmup ? { warmup: true } : {}),
       ...(s.supplemental ? { supplemental: true } : {}),
     }));
+  }
+
+  // A companion lift (anything but a program's own main lift) with sets last
+  // time (v0.665): each set keeps last time's weight, and steps up only when
+  // that set reached the top of its reps, or the whole movement felt Easy.
+  // A range aims one rep higher, up to the top, then starts again heavier.
+  // Only when last time was this kind of work: heavy triples before a 5 × 10
+  // go by what that strength allows (below), not set by set.
+  const lowReps = scheme.kind === "RANGE" ? scheme.min : scheme.kind === "SAME" ? scheme.reps : 0;
+  const done = last.filter((s) => s.weight != null && s.weight > 0 && (s.reps ?? 0) >= lowReps - 2);
+  if (!input.progress && (scheme.kind === "RANGE" || scheme.kind === "SAME") && done.length > 0 && done.length * 2 >= last.length) {
+    const top = scheme.kind === "RANGE" ? scheme.max : scheme.reps;
+    const low = lowReps;
+    const step = stepFor(lower, unit);
+    const count = intent === "LIGHT" ? Math.max(2, scheme.sets - 1) : scheme.sets;
+    return Array.from({ length: count }, (_, i) => {
+      const l = done[Math.min(i, done.length - 1)];
+      const lr = l.reps ?? 0;
+      let weight = l.weight as number;
+      let reps = scheme.kind === "RANGE" ? Math.min(top, Math.max(low, lr + 1)) : top;
+      if (lr >= top || input.lastEasy) {
+        weight += step;
+        reps = low;
+      }
+      if (intent === "LIGHT") weight = roundLoad(weight * 0.8, unit);
+      return { weight, reps };
+    });
   }
 
   // The weight comes from what last time says about these reps (v0.627): the
