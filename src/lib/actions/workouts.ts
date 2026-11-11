@@ -121,6 +121,7 @@ import {
 } from "@/lib/workouts/program-run";
 import type { ProgramVersion } from "@/lib/workouts/program-version";
 import { addDayExtra, dayExtrasFor, removeDayExtra, type DayExtraView } from "@/lib/workouts/day-extras-run";
+import { liftNext } from "@/lib/workouts/lift-next-run";
 import {
   CATEGORY_LABEL,
   MUSCLE_GROUP_LABEL,
@@ -1871,4 +1872,14 @@ export async function setPlanWarmupRoutine(userId: string, plannedWorkoutId: str
   const ok = await setPlanWarmup(userId, String(plannedWorkoutId), warmup ? String(warmup) : null);
   if (ok) refresh();
   return ok;
+}
+
+/** A lift's next planned top set (v0.670), for its page's chart. */
+export async function liftNextAction(
+  userId: string,
+  poolExerciseId: string,
+): Promise<{ date: string; weight: number; reps: number } | null> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return liftNext(userId, String(poolExerciseId).slice(0, 60));
 }

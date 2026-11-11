@@ -22,15 +22,13 @@ import {
   createAndLogHiitWorkout,
   requestShareHiitWorkout,
 } from "@/lib/actions/workouts";
-import { formatShort } from "@/lib/dates";
 import { PlanBuilder } from "./plan-builder";
 import { RotationBuilder } from "./rotation-builder";
 import { WarmupLibrary } from "./warmup-window";
 import { DayLog } from "./day-log";
 import { MovementInfo } from "@/components/movement-info";
-import { LineChart } from "@/components/line-chart";
-import { REP_BANDS } from "@/lib/workouts/records";
 import { WeeklyTraining } from "./weekly-training";
+import { LiftPage, LiftRows } from "./lift-page";
 import { ProgramCard } from "./program-card";
 import { WeightCalculator } from "./weight-calculator";
 import type {
@@ -224,6 +222,7 @@ export function WorkoutsGrid({
                     <PersonalTop
                       open={open}
                       todayDow={todayDow}
+                      todayISO={todayISO}
                       weekly={weeklyActivity}
                     />
                   )}
@@ -285,19 +284,29 @@ export function WorkoutsGrid({
                   {!personal && open.weightSeries.length > 0 && (
                     <div>
                       <LiftBlocks
+                        userId={open.user.id}
+                        todayISO={todayISO}
                         series={open.trackedSeries}
                         heat={open.heat}
                         todayGroups={focusGroups(open.planDays, todayDow)}
                       />
-                      <LiftDetailPanel
-                        all={open.trackedSeries}
-                        planDays={open.planDays}
-                        extraDays={open.heat.days}
-                      />
                     </div>
                   )}
 
-                  {!personal && <WeeklyTraining userId={open.user.id} />}
+                  {/* Workout days and Weekly training side by side (v0.670);
+                      stacked on a phone. */}
+                  {!personal && (
+                    <div className="grid items-start gap-3 sm:grid-cols-2">
+                      {open.weightSeries.length > 0 && (
+                        <LiftDetailPanel
+                          all={open.trackedSeries}
+                          planDays={open.planDays}
+                          extraDays={open.heat.days}
+                        />
+                      )}
+                      <WeeklyTraining userId={open.user.id} />
+                    </div>
+                  )}
 
                   <ProgramCard
                     userId={open.user.id}
@@ -322,7 +331,6 @@ export function WorkoutsGrid({
                     <ActionButton
                       icon={FlameIcon}
                       label="Routines"
-                      sub="Warm-up · Mobility · Stretch"
                       onClick={() => setStep("warmups")}
                     />
                   </div>
@@ -768,10 +776,14 @@ function byMuscleGroup(series: LiftSeries[]): { key: string; label: string; item
  * why there is no movement picker any more — a picker hid everything but one.
  */
 function LiftBlocks({
+  userId,
+  todayISO,
   series,
   todayGroups = [],
   heat,
 }: {
+  userId: string;
+  todayISO: string;
   series: LiftSeries[];
   /** Muscle groups today's plan asks for. The map opens on these. */
   todayGroups?: string[];
@@ -780,6 +792,8 @@ function LiftBlocks({
 }) {
   const heatPrefs = useHeatPrefs();
   const heatOn = !!heat && heatPrefs.on;
+  // A lift's page (v0.670), opened from its row.
+  const [liftOpen, setLiftOpen] = useState<{ s: LiftSeries; key: string; label: string } | null>(null);
   // The training heat map (v0.664): one picture, no ranges.
   const training = heat?.training;
   const heatShade = useMemo(() => trainFills(training), [training]);
@@ -993,10 +1007,25 @@ function LiftBlocks({
             {g.label}
           </p>
           {g.key === "CORE" && <PlankBench tests={heat?.plank ?? []} />}
-          <LiftHeadline series={g.items} />
-          <GroupCharts series={g.items} groupKey={g.key} />
+          <LiftRows
+            series={g.items}
+            color={MG_COLOR[g.key] ?? g.items[0]?.color ?? "var(--color-accent)"}
+            todayISO={todayISO}
+            onOpen={(x) => setLiftOpen({ s: x, key: g.key, label: g.label })}
+          />
         </div>
       ))}
+      {liftOpen && (
+        <LiftPage
+          userId={userId}
+          series={liftOpen.s}
+          color={MG_COLOR[liftOpen.key] ?? liftOpen.s.color}
+          groupLabel={liftOpen.label}
+          marks={heat?.marks ?? []}
+          todayISO={todayISO}
+          onClose={() => setLiftOpen(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1004,239 +1033,16 @@ function LiftBlocks({
 /** Groups with a place on the body (Deadlift is the lower back and glutes). */
 const ON_BODY = ["CHEST", "BACK", "SHOULDERS", "ARMS", "LEGS", "CORE", "DEADLIFT"];
 
-function LiftHeadline({ series }: { series: LiftSeries[] }) {
-  const lifts = series.filter((s) => s.best);
-  if (lifts.length === 0) return null;
-  // Numbers first, no chart. Six equal tiles in a fixed grid: they used to be
-  // fixed-width in a wrapping row, which left them bunched to the left with
-  // ragged gaps.
-  return (
-    <div className="mt-3 space-y-2">
-      {lifts.map((s) => {
-        const stats = liftStats(s);
-        const sorted = [...s.points].sort((a, b) => (a.date < b.date ? -1 : 1));
-        const first = sorted[0];
-        const last = sorted[sorted.length - 1];
-        return (
-          <div
-            key={s.exerciseId}
-            className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5"
-          >
-            <p className="mb-2 text-sm font-semibold">{s.name}</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <StatTile
-                k="record"
-                v={`${s.best!.value}`}
-                unit={s.unit}
-                sub={formatShort(s.best!.date)}
-              />
-              {/* Reps at the record, falling back to the best rep count
-                  logged at any weight. The record predates reps being stored,
-                  so this tile read "none logged yet" while LAST, two tiles
-                  over, showed the same movement at x2. */}
-              {(() => {
-                const topRep = (s.repMaxes ?? []).reduce<
-                  { reps: number; value: number } | null
-                >((a, b) => (a && a.reps >= b.reps ? a : b), null);
-                const atRecord = s.best!.reps;
-                const shown = atRecord ?? topRep?.reps ?? null;
-                return (
-                  <StatTile
-                    k="reps"
-                    v={shown ? `${shown}` : "\u2014"}
-                    unit={shown ? "reps" : ""}
-                    sub={
-                      atRecord
-                        ? "at the record"
-                        : topRep
-                          ? `best, at ${topRep.value} ${s.unit}`
-                          : "none logged yet"
-                    }
-                  />
-                );
-              })()}
-              <StatTile
-                k="30 days"
-                v={stats.delta === null ? "\u2014" : `${stats.delta > 0 ? "+" : ""}${stats.delta}`}
-                unit={stats.delta === null ? "" : s.unit}
-                sub={
-                  stats.delta === null
-                    ? "no older session"
-                    : stats.delta > 0
-                      ? "still climbing"
-                      : "flat"
-                }
-                tone={stats.delta !== null && stats.delta > 0 ? "up" : undefined}
-              />
-              <StatTile
-                k="since best"
-                v={stats.sincePR.replace(/^best /, "").replace(/ ago$/, "")}
-                unit=""
-                sub="last record"
-              />
-              <StatTile
-                k="sessions"
-                v={`${stats.sessions}`}
-                unit=""
-                sub={first ? `since ${formatShort(first.date)}` : ""}
-              />
-              <StatTile
-                k="last"
-                v={last ? `${last.value}` : "\u2014"}
-                unit={last ? `${s.unit}${last.reps ? ` \u00d7 ${last.reps}` : ""}` : ""}
-                sub={last ? formatShort(last.date) : ""}
-              />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/**
- * One disclosure per MUSCLE GROUP, at the foot of its movements.
- *
- * Arms with a close-grip bench and an EZ bar curl was two "Additional charts"
- * links and two near-identical plots; the group is the thing being looked at,
- * so its movements share one chart with a line each.
- */
-function GroupCharts({
-  series,
-  groupKey,
-}: {
-  series: LiftSeries[];
-  groupKey: string;
-}) {
-  const [open, setOpen] = useState(false);
-  // "All", or one rep range so a set of 5 is compared with other sets of 4–6.
-  const [band, setBand] = useState<string>("all");
-  const bands = REP_BANDS.filter((b) => series.some((s) => s.bands?.some((x) => x.key === b.key)));
-  const withReps = series.filter((s) => (s.repMaxes?.length ?? 0) > 0);
-  const tone = MG_COLOR[groupKey] ?? series[0]?.color ?? "var(--color-accent)";
-  return (
-    <div className="mt-2">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="text-sm font-semibold text-accent"
-      >
-        {open ? "Hide charts" : "Additional charts"}
-      </button>
-      {open && (
-        <div className="mt-2">
-          {bands.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1.5" role="group" aria-label="Reps">
-              {[{ key: "all", label: "All" }, ...bands].map((b) => (
-                <button
-                  key={b.key}
-                  type="button"
-                  aria-pressed={band === b.key}
-                  onClick={() => setBand(b.key)}
-                  className={`inline-flex h-9 items-center rounded-full border px-3 text-xs font-semibold transition-colors ${
-                    band === b.key ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
-                  }`}
-                >
-                  {b.label}
-                </button>
-              ))}
-            </div>
-          )}
-          {/* One plot for the group, a line per movement. Separate charts per
-              exercise drew the same axis twice to say less. */}
-          <LineChart
-            key={band}
-            weight
-            dots
-            series={series.map((s) => ({
-              id: s.exerciseId,
-              name: s.name,
-              color: s.color,
-              unit: s.unit,
-              points: band === "all" ? s.points : (s.bands?.find((x) => x.key === band)?.points ?? []),
-            }))}
-          />
-          {withReps.map((s) => {
-            const reps = s.repMaxes ?? [];
-            const max = Math.max(...reps.map((x) => x.value), 1);
-            return (
-              <div key={s.exerciseId} className="mt-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-                  Best reps per weight
-                </p>
-                <p className="text-sm">{s.name}</p>
-                {[...reps]
-                  .sort((a, b) => a.reps - b.reps)
-                  .map((r) => (
-                    <div key={r.reps} className="mt-1 flex items-center gap-2">
-                      <span className="w-14 shrink-0 text-xs text-muted">
-                        {r.reps} rep{r.reps === 1 ? "" : "s"}
-                      </span>
-                      <span className="h-2 min-w-0 flex-1 rounded-full bg-surface">
-                        <span
-                          className="block h-2 rounded-full"
-                          style={{
-                            width: `${(r.value / max) * 100}%`,
-                            background: tone,
-                          }}
-                        />
-                      </span>
-                      <span className="tabular w-20 shrink-0 text-right text-xs font-semibold">
-                        {r.value} {s.unit}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatTile({
-  k,
-  v,
-  unit,
-  sub,
-  tone,
-}: {
-  k: string;
-  v: string;
-  unit: string;
-  sub: string;
-  tone?: "up";
-}) {
-  return (
-    <div className="rounded-lg border border-hairline bg-surface px-2.5 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-        {k}
-      </p>
-      <p
-        className={`tabular font-display text-xl font-semibold leading-tight ${
-          tone === "up" ? "text-emerald-600" : ""
-        }`}
-      >
-        {v}
-        {unit && <span className="ml-0.5 text-xs font-normal text-muted">{unit}</span>}
-      </p>
-      {sub && <p className="text-[11px] text-muted">{sub}</p>}
-    </div>
-  );
-}
+type LiftSeries = PersonWorkout["weightSeries"][number];
 
 const DOW_ABBR = ["S", "M", "T", "W", "T", "F", "S"];
 
 const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-type LiftSeries = PersonWorkout["weightSeries"][number];
-
 /**
- * The three views behind the headline numbers, each on its own card:
- * what you can lift for a given rep count, which lifts are still moving, and
- * whether you have been turning up. Everything is derived from logged sets —
- * there are no estimated maxes anywhere, and no two lifts share a weight axis.
+ * Workout days: whether you have been turning up, a square per day over 16
+ * weeks, coloured by muscle group. (Lift progress moved onto each lift's row
+ * and page, v0.670.)
  */
 function LiftDetailPanel({
   all,
@@ -1253,31 +1059,6 @@ function LiftDetailPanel({
    *  view and does not need to be the first thing on the page. */
   chart?: React.ReactNode;
 }) {
-
-  // Change over 90 days per lift. Percent is the only honest way to put a
-  // deadlift and an overhead press on one axis; the real weights stay in the
-  // label so a 5lb gain on a light lift cannot masquerade as a big one.
-  const movement = all
-    .map((s) => {
-      const cutoff = new Date(Date.now() - 90 * 86400000)
-        .toISOString()
-        .slice(0, 10);
-      const window = s.points.filter((p) => p.date >= cutoff);
-      if (window.length < 2) return null;
-      const from = window[0].value;
-      const to = window.reduce((m, p) => Math.max(m, p.value), 0);
-      if (!from || to <= 0) return null;
-      return {
-        id: s.exerciseId,
-        name: s.name,
-        unit: s.unit,
-        from,
-        to,
-        pct: Math.round(((to - from) / from) * 100),
-      };
-    })
-    .filter((x): x is NonNullable<typeof x> => x !== null)
-    .sort((a, b) => b.pct - a.pct);
 
   // Did you train? Built from the days that carry a logged set, so it says
   // "sessions logged" and not "sessions" — a rested day leaves no mark here.
@@ -1394,7 +1175,7 @@ function LiftDetailPanel({
     return { background: `linear-gradient(90deg, ${stops})` };
   };
 
-  if (movement.length === 0 && trained.size === 0) {
+  if (trained.size === 0) {
     return null;
   }
 
@@ -1402,81 +1183,35 @@ function LiftDetailPanel({
     // Always visible. These two describe the WHOLE plan, and hiding them behind
     // a phrase that got lost on the page is exactly what buried them. The only
     // disclosure left is per movement, under its own six tiles.
-    <div className="mt-3">
+    <div className="min-w-0">
       <div className="space-y-2">
-          {movement.length > 0 && (
-            <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Lift progress
-              </p>
-              <p className="mt-0.5 text-xs text-muted">Change over 90 days</p>
-              <div className="mt-2 space-y-1.5">
-                {movement.map((m) => {
-                  // A fixed 30% scale, widened only if something beat it. With a
-                  // scale set by the best lift, a single movement always filled
-                  // the whole track and looked like a bar chart of one thing.
-                  const span = Math.max(
-                    30,
-                    ...movement.map((x) => Math.abs(x.pct)),
-                  );
-                  const stalled = m.pct < 10;
-                  return (
-                    <div key={m.id} className="flex items-center gap-2">
-                      <span className="w-24 shrink-0 truncate text-xs">
-                        {m.name}
-                      </span>
-                      <span className="h-2 min-w-0 flex-1 rounded-full bg-surface">
-                        <span
-                          className={`block h-2 rounded-full ${stalled ? "bg-amber-500" : "bg-accent"}`}
-                          style={{
-                            width: `${(Math.abs(m.pct) / span) * 100}%`,
-                          }}
-                        />
-                      </span>
-                      <span className="tabular w-10 shrink-0 text-right text-xs font-medium">
-                        {m.pct > 0 ? "+" : ""}
-                        {m.pct}%
-                      </span>
-                      <span className="tabular hidden w-24 shrink-0 text-right text-xs text-muted sm:block">
-                        {m.from}
-                        {"\u2192"}
-                        {m.to}
-                        {m.unit}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">
               Workout days
             </p>
             <div className="mt-2 flex gap-2 overflow-x-auto">
-              <div className="flex shrink-0 flex-col gap-[4px] pt-[18px]">
+              <div className="flex shrink-0 flex-col gap-[3px] pt-[18px]">
                 {rows.map((d) => (
-                  <span key={d} className="h-5 text-[11px] leading-5 text-muted">
+                  <span key={d} className="h-3.5 text-[10px] leading-[14px] text-muted">
                     {DOW_ABBR[d]}
                   </span>
                 ))}
               </div>
               <div>
-                <div className="flex gap-[4px]">
+                <div className="flex gap-[3px]">
                   {weeks.map((col, wi) => {
                     const m = col[0]?.date.slice(5, 7) ?? "";
                     const prev = wi > 0 ? weeks[wi - 1][0]?.date.slice(5, 7) : "";
                     return (
-                      <span key={wi} className="w-5 text-[11px] leading-4 text-muted">
+                      <span key={wi} className="w-3.5 overflow-visible whitespace-nowrap text-[10px] leading-4 text-muted">
                         {m && m !== prev ? MONTH_ABBR[Number(m) - 1] : ""}
                       </span>
                     );
                   })}
                 </div>
-                <div className="flex gap-[4px]">
+                <div className="flex gap-[3px]">
                   {weeks.map((col, wi) => (
-                    <div key={wi} className="flex flex-col gap-[4px]">
+                    <div key={wi} className="flex flex-col gap-[3px]">
                       {col.map((cell) => (
                         <span
                           key={cell.date}
@@ -1486,7 +1221,7 @@ function LiftDetailPanel({
                               : cell.date
                           }
                           style={cellStyle(cell.groups)}
-                          className={`h-5 w-5 rounded-[4px] ${cell.groups.length === 0 ? "bg-surface" : ""}`}
+                          className={`h-3.5 w-3.5 rounded-[3px] ${cell.groups.length === 0 ? "bg-surface" : ""}`}
                         />
                       ))}
                     </div>
@@ -1523,48 +1258,16 @@ function LiftDetailPanel({
   );
 }
 
-function liftStats(s: {
-  points: { date: string; value: number; reps?: number | null }[];
-  best?: { date: string; value: number; reps: number | null } | null;
-}): {
-  delta: number | null;
-  sincePR: string;
-  sessions: number;
-  recent: { date: string; value: number; reps?: number | null }[];
-} {
-  const pts = [...s.points].sort((a, b) => (a.date < b.date ? -1 : 1));
-  const recent = pts.slice(-5);
-
-  // Change over 30 days: today's best set against the best on or before the
-  // cutoff. Null when there is nothing that old to compare with, rather than
-  // pretending the first ever session was a gain.
-  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-  const before = pts.filter((p) => p.date <= cutoff);
-  const latest = pts[pts.length - 1]?.value ?? null;
-  const base = before.length ? Math.max(...before.map((p) => p.value)) : null;
-  const delta = latest != null && base != null ? Math.round(latest - base) : null;
-
-  let sincePR = "no best yet";
-  if (s.best) {
-    const days = Math.max(
-      0,
-      Math.round((Date.now() - new Date(`${s.best.date}T12:00:00Z`).getTime()) / 86400000),
-    );
-    const weeks = Math.floor(days / 7);
-    sincePR =
-      days <= 1 ? "best today" : weeks < 1 ? `best ${days} days ago` : `best ${weeks}w ago`;
-  }
-
-  return { delta, sincePR, sessions: pts.length, recent };
-}
 
 function PersonalTop({
   open,
   todayDow,
+  todayISO,
   weekly,
 }: {
   open: PersonWorkout;
   todayDow: number;
+  todayISO: string;
   weekly: WeeklyActivity[];
 }) {
   const graph = useMemo(() => chooseGraph(open, todayDow), [open, todayDow]);
@@ -1577,15 +1280,19 @@ function PersonalTop({
             {graph.label}
           </p>
           <LiftBlocks
+            userId={open.user.id}
+            todayISO={todayISO}
             series={open.trackedSeries}
             heat={open.heat}
             todayGroups={focusGroups(open.planDays, todayDow)}
           />
-          <LiftDetailPanel
-            all={open.trackedSeries}
-            planDays={open.planDays}
-            extraDays={open.heat.days}
-          />
+          <div className="mt-3">
+            <LiftDetailPanel
+              all={open.trackedSeries}
+              planDays={open.planDays}
+              extraDays={open.heat.days}
+            />
+          </div>
         </div>
       )}
 

@@ -61,7 +61,7 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
 
   const sets: HeatSet[] = [];
   const light: boolean[] = [];
-  const adjusted = await adjustedDays(userId);
+  const { days: adjusted, marks } = await adjustedDays(userId);
   for (const r of rows) {
     if (!r.poolExerciseId || !r.poolExercise) continue;
     if (r.session.category && OPTIONAL_CATEGORIES.includes(r.session.category)) continue;
@@ -102,17 +102,26 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
     todayISO,
     await pausesFor(userId),
   );
-  return { ...heat, training };
+  return { ...heat, training, marks };
 }
 
 /** Days made lighter (Lighter today, or an Adjust today choice). */
-async function adjustedDays(userId: string): Promise<Set<string>> {
+async function adjustedDays(userId: string): Promise<{ days: Set<string>; marks: { date: string; label: string }[] }> {
   const rows = (await prisma.workoutSuggestionAnswer.findMany({
     where: { userId, key: "day" },
     select: { date: true, answer: true },
   })) as { date: Date; answer: string }[];
-  return new Set(rows.filter((r) => lightFactor(r.answer) != null || parseAdjust(r.answer)).map((r) => fromDateColumn(r.date)));
+  const marks: { date: string; label: string }[] = [];
+  for (const r of rows) {
+    const adj = parseAdjust(r.answer);
+    const label = adj ? ADJUST_LABEL[adj.mode] ?? "Adjusted" : lightFactor(r.answer) != null ? "Lighter" : null;
+    if (label) marks.push({ date: fromDateColumn(r.date), label });
+  }
+  marks.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return { days: new Set(marks.map((m) => m.date)), marks };
 }
+
+const ADJUST_LABEL: Record<string, string> = { low: "Low energy", time: "Short", sick: "Sick", hurt: "Hurt" };
 
 /** Pauses (none yet): when they exist, the weeks in them change nothing. */
 async function pausesFor(_userId: string): Promise<Pause[]> {

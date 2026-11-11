@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11 — Lift rows and a page per lift (v0.670.0 / app 0.480.0)
+
+- The six tiles per movement, "Additional charts" and the Lift progress card
+  are gone from the Workouts page. Each muscle group's lifts are one card of
+  rows: best and last set, a sparkline of the top set per session (last 12),
+  and the 30-day change ("+10 lb") or weeks since the best ("Flat · 6 weeks").
+  Agreed against a mockup; the lift's page is enough for the detail.
+- A row opens the lift's page (web: a pop-up; app: a full screen): the rep
+  range chips and the dot chart, now with light weeks shaded (sessions with
+  intent LIGHT, by their Monday week), days changed by Adjust today or
+  Lighter today marked (`HeatMap.marks`, labels Sick / Hurt / Low energy /
+  Short / Lighter), the record circled, and the next planned top set drawn
+  dashed ahead (`liftNext`: the next planned day within two weeks with
+  nothing logged, its logger target's top set; `GET workouts/lift-next`).
+  Then tiles — record, est. max, 30 days, since best, sessions, last — best
+  weight for each rep count, and the last five sessions.
+- Estimated max is a tile, not a chart line (asked for): Epley from the best
+  set of 12 reps or fewer, rounded down to 5 lb / 2.5 kg
+  (`lift-stats.ts estimatedMax`; the app mirrors it).
+- Workout days and Weekly training sit side by side on the web (stacked under
+  640 px; the day squares shrank to 14 px so 16 weeks fit half the window).
+  On the phone Weekly training moved up to follow the Progress card, which
+  ends with Workout days.
+- The Routines button's "Warm-up · Mobility · Stretch" line is gone: in a
+  third of the row it wrapped past the card's fixed height and showed as
+  clipped lines on the phone.
+
 ## 2026-11 — A repeating task's next occurrence is always on the list (v0.669.0)
 
 The generator only makes occurrences inside its 30-day window, and the task

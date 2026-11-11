@@ -50,9 +50,24 @@ export function LineChart({
   series,
   weight = false,
   dots = false,
+  shade = [],
+  marks = [],
+  ring = null,
+  ahead = null,
+  legend = true,
 }: {
   series: Series[];
   weight?: boolean;
+  /** A lift's page (v0.670): weeks to shade (their Monday), light weeks. */
+  shade?: string[];
+  /** Days to label under the points ("Sick"). */
+  marks?: { date: string; label: string }[];
+  /** A point to circle: the record. */
+  ring?: { date: string; value: number } | null;
+  /** The next planned top set, drawn dashed ahead of the last session. */
+  ahead?: { date: string; value: number; label: string } | null;
+  /** The series chips under the chart (off for a single lift). */
+  legend?: boolean;
   /** Draw the sessions as discrete points with no connecting stroke. A line
    *  between two sessions claims a weight on the days between them, which for
    *  lifting is a day nobody trained. */
@@ -66,7 +81,7 @@ export function LineChart({
   const visible = series.filter((s) => !hidden.has(s.id));
 
   const { xMin, xMax, yMin, yMax, major, minor } = useMemo(() => {
-    const pts = visible.flatMap((s) => s.points);
+    const pts = [...visible.flatMap((s) => s.points), ...(ahead ? [{ date: ahead.date, value: ahead.value }] : [])];
     if (pts.length === 0) {
       return { xMin: 0, xMax: 1, yMin: 0, yMax: 1, major: [0, 1], minor: [] as number[] };
     }
@@ -101,7 +116,7 @@ export function LineChart({
     const n = 4;
     const ticks = Array.from({ length: n + 1 }, (_, i) => y0 + ((y1 - y0) * i) / n);
     return { xMin: Math.min(...xs), xMax: Math.max(...xs), yMin: y0, yMax: y1, major: ticks, minor: [] as number[] };
-  }, [visible, weight]);
+  }, [visible, weight, ahead]);
 
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
@@ -195,6 +210,34 @@ export function LineChart({
           {fmtDate(xMax)}
         </text>
 
+        {/* Light weeks shaded behind everything else (v0.670). */}
+        {shade.map((mon) => {
+          const a = Math.max(x(Date.parse(`${mon}T00:00:00Z`)) - 4, PAD.left);
+          const b = Math.min(x(Date.parse(`${mon}T00:00:00Z`) + 7 * 86400000) - 4, W - PAD.right);
+          if (b <= PAD.left || a >= W - PAD.right) return null;
+          return <rect key={`sh${mon}`} x={a} y={PAD.top} width={Math.max(6, b - a)} height={plotH} fill="var(--color-accent)" opacity={0.08} />;
+        })}
+        {marks.map((m) => {
+          const ms = Date.parse(`${m.date}T00:00:00Z`);
+          if (ms < xMin || ms > xMax) return null;
+          return (
+            <text key={`mk${m.date}`} x={x(ms)} y={PAD.top + plotH - 4} textAnchor="middle" fontSize={11} fontWeight={600} fill="#a35c00">
+              {m.label.toUpperCase()}
+            </text>
+          );
+        })}
+        {ring && (
+          <circle cx={x(Date.parse(`${ring.date}T00:00:00Z`))} cy={y(ring.value)} r={9} fill="none" stroke={series[0]?.color ?? "var(--color-accent)"} strokeWidth={1.5} />
+        )}
+        {ahead && (
+          <g>
+            <circle cx={x(Date.parse(`${ahead.date}T00:00:00Z`))} cy={y(ahead.value)} r={5.5} fill="var(--color-surface)" stroke={series[0]?.color ?? "var(--color-accent)"} strokeWidth={1.75} strokeDasharray="2 2" />
+            <text x={x(Date.parse(`${ahead.date}T00:00:00Z`)) - 8} y={y(ahead.value) - 10} textAnchor="end" fontSize={13} fontWeight={600} fill="var(--color-ink)">
+              {ahead.label}
+            </text>
+          </g>
+        )}
+
         {/* marks: a stroke through the points, or the points alone */}
         {visible.map((s) => {
           const d = s.points
@@ -245,7 +288,7 @@ export function LineChart({
         ) : null;
       })()}
 
-      <div className="mt-2 flex flex-wrap gap-1.5">
+      {legend && <div className="mt-2 flex flex-wrap gap-1.5">
         {series.map((s) => {
           const off = hidden.has(s.id);
           return (
@@ -263,7 +306,7 @@ export function LineChart({
             </button>
           );
         })}
-      </div>
+      </div>}
     </div>
   );
 }

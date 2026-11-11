@@ -81,6 +81,9 @@ export type HeatMap = {
   plank?: PlankTest[];
   /** The training heat map (v0.664): warmth by consistency and progress. */
   training?: import("@/lib/workouts/training-heat").TrainingHeat;
+  /** Days made lighter or changed (v0.670): "Sick", "Hurt", "Low energy",
+   *  "Short", "Lighter". Marked on a lift's chart. */
+  marks?: { date: string; label: string }[];
 };
 
 const MAX_REPS_FOR_ESTIMATE = 12;

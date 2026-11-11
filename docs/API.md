@@ -877,6 +877,7 @@ POST /api/v1/workouts/programs/end    { "restore":bool }   // true: back to the 
 POST /api/v1/workouts/programs/version/forget  { "key" }   // forget your version (v0.666)
 POST /api/v1/workouts/extras         { "date","kind","ref" }  // add to one day (v0.667) → { status, id }
 POST /api/v1/workouts/extras/remove  { "id" }                 // take it off the day
+GET  /api/v1/workouts/lift-next?movement=<poolExerciseId>  // { next: { date, weight, reps } | null } (v0.670)
 POST /api/v1/workouts/programs/block  { "raise":bool }     // end of a block
 POST /api/v1/workouts/programs/max    { "poolExerciseId","weight" }   // 0 clears
 POST /api/v1/workouts/invite          { "answer":"later"|"never" }
@@ -1005,6 +1006,12 @@ savedOn, setup, extras } }` — the caller's own version of each program they
 changed and then ended or switched (`setup` shaped like `setup` above, ready to
 start from; `extras` like `current`). `POST programs/version/forget { key }`
 removes one. Starting from a version is an ordinary `programs/start`.
+
+v0.670: the progress read's `heat` gains `marks: [{ date, label }]` — days
+changed by Adjust today or Lighter today ("Sick", "Hurt", "Low energy",
+"Short", "Lighter"), marked on a lift's chart. `GET workouts/lift-next`
+gives a lift's next planned top set (next planned day within two weeks with
+nothing logged yet), or null.
 
 v0.667 (day extras, "+ Additional"): `POST /api/v1/workouts/extras { date,
 kind, ref }` adds to that day only — `kind` "mobility" or "stretching" with a
@@ -1550,7 +1557,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**189 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**190 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
