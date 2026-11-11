@@ -21,8 +21,10 @@ import {
   checkConcept2,
   undoConcept2Row,
   setWarmup,
+  removeDayExtraAction,
   type LoggedSet,
 } from "@/lib/actions/workouts";
+import type { DayExtraView } from "@/lib/workouts/day-extras-run";
 import type { Concept2Day } from "@/lib/workouts/concept2-run";
 import { CardioCard } from "./cardio-card";
 import { ConditioningCard } from "./conditioning-card";
@@ -161,6 +163,7 @@ export function DayLog({
     benchmark: BenchmarkState;
     conditioningDone: { name: string; result: string | null }[];
     warmups?: { plannedWorkoutId: string; routine: WarmupRoutine | null }[];
+    extras?: DayExtraView[];
   } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
   // Other 8-day pages of the strip, fetched as it scrolls (v0.653).
@@ -246,7 +249,7 @@ export function DayLog({
   const planIds = data?.state.planIds;
   // Adjust today (v0.658): what it dropped is off the day.
   const dropped = data?.adjusted?.dropped;
-  const workouts: PlanWorkout[] = useMemo(
+  const planWorkouts: PlanWorkout[] = useMemo(
     () =>
       (person.plan[dayOfWeek(date)]?.workouts ?? [])
         .filter((w) => !w.isRest && (date >= todayISO || !planIds || planIds.includes(w.id)))
@@ -258,14 +261,22 @@ export function DayLog({
         ),
     [person.plan, date, todayISO, planIds, dropped],
   );
+  // What was added to this day only (v0.667): shown like plan entries, but
+  // never counted toward the day being done.
+  const extras = data?.extras;
+  const extraIds = useMemo(() => new Set((extras ?? []).map((x) => x.id)), [extras]);
+  const workouts: PlanWorkout[] = useMemo(
+    () => [...planWorkouts, ...(extras ?? []).map(extraWorkout)],
+    [planWorkouts, extras],
+  );
   const byId = useMemo(() => new Map(workouts.map((w) => [w.id, w])), [workouts]);
   const order = data?.order;
   const cardioCount = data?.cardio.length ?? 0;
-  const sections = useMemo(
-    () =>
+  const sectionsOf = useCallback(
+    (list: PlanWorkout[]) =>
       withCardio(
         daySections(
-          workouts.map((w): DayWorkoutIn => ({
+          list.map((w): DayWorkoutIn => ({
             id: w.id,
             name: w.name,
             category: w.category,
@@ -284,8 +295,15 @@ export function DayLog({
         cardioCount > 0,
         order,
       ),
-    [workouts, order, cardioCount],
+    [order, cardioCount],
   );
+  const sections = useMemo(() => sectionsOf(workouts), [sectionsOf, workouts]);
+  const planSections = useMemo(() => sectionsOf(planWorkouts), [sectionsOf, planWorkouts]);
+  const removeExtra = (id: string) =>
+    startTransition(async () => {
+      await removeDayExtraAction(userId, id);
+      setTick((n) => n + 1);
+    });
 
   const state = data?.state ?? null;
   // Marked a rest day, or a rest day in the plan (v0.646): no Rest / skip, no
@@ -328,7 +346,7 @@ export function DayLog({
     const s = withSection(sections, "CONDITIONING", order);
     return sportDay ? withSection(s, "WARMUP", order) : s;
   }, [sections, order, sportDay]);
-  const progress = dayProgress(sections, isDone);
+  const progress = dayProgress(planSections, isDone);
   const late = date < todayISO;
   const completedOnISO = late ? todayISO : undefined;
   const openDays = (week?.overdue ?? []).filter((d) => d !== date);
@@ -385,7 +403,7 @@ export function DayLog({
   }
 
   // The program and its main lift on a program day, else the kinds of work.
-  const title = state?.programTitle ?? state?.program?.name ?? dayHeadline(sections);
+  const title = state?.programTitle ?? state?.program?.name ?? dayHeadline(planSections);
 
   return (
     <div className="space-y-5">
@@ -684,6 +702,7 @@ export function DayLog({
                             }
                             routine={data.warmups?.find((x) => x.plannedWorkoutId === w.id)?.routine ?? null}
                             onChanged={() => setTick((n) => n + 1)}
+                            onRemove={extraIds.has(w.id) ? () => removeExtra(w.id) : undefined}
                             done={done}
                             skipped={state?.skippedPlans.includes(`plan:${w.id}`) ?? false}
                             onDone={(v) =>
@@ -787,7 +806,7 @@ export function DayLog({
                       if (mine[0]?.poolExerciseId !== it.poolExerciseId) return null;
                       const done = mine.filter((x) => (data.state.movements[x.poolExerciseId]?.setCount ?? 0) > 0).length;
                       const all = mine.length > 0 && done === mine.length;
-                      return (
+                      const card = (
                         <button
                           key={`${it.workoutId}:core`}
                           type="button"
@@ -808,6 +827,13 @@ export function DayLog({
                           )}
                           <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
                         </button>
+                      );
+                      if (!extraIds.has(w.id)) return card;
+                      return (
+                        <div key={`${it.workoutId}:core`} className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1">{card}</div>
+                          <RemoveExtra name={w.name} onRemove={() => removeExtra(w.id)} />
+                        </div>
                       );
                     }
                     const ex = w?.exercises.find((e) => e.poolExerciseId === it.poolExerciseId);
@@ -947,7 +973,10 @@ function WarmupRow({
   onSkip,
   kind = "warmup",
   sport,
+  onRemove,
 }: {
+  /** Added to this day only (v0.667): ✕ takes it off instead of Skip. */
+  onRemove?: () => void;
   /** Mobility (v0.659) and Stretching (v0.663) show the same way. */
   kind?: "warmup" | "mobility" | "stretching";
   /** A sport on the day (v0.662): warm up for it or for the planned workout. */
@@ -969,7 +998,7 @@ function WarmupRow({
     <div className="flex min-h-[3.5rem] items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3">
       <button type="button" onClick={() => setOpen(true)} className="min-w-0 flex-1 text-left">
         <span className="block truncate text-sm font-semibold">{name}</span>
-        {routine && <span className="block truncate text-xs text-muted">{routine.name}</span>}
+        {routine && routine.name !== name && <span className="block truncate text-xs text-muted">{routine.name}</span>}
       </button>
       {open && (
         <WarmupWindow
@@ -987,7 +1016,8 @@ function WarmupRow({
           onChanged={onChanged}
         />
       )}
-      {!finished && (
+      {onRemove && <RemoveExtra name={name} onRemove={onRemove} />}
+      {!finished && !onRemove && (
         <button
           type="button"
           aria-pressed={skipped}
@@ -2205,5 +2235,43 @@ function SportWarmupRow({ label, routine }: { label: string; routine: WarmupRout
         </Modal>
       )}
     </>
+  );
+}
+
+/** A day extra (v0.667) as a plan entry, so the day lays it out like one. */
+function extraWorkout(x: DayExtraView): PlanWorkout {
+  return {
+    id: x.id,
+    name: x.name,
+    category: x.category,
+    muscleGroup: null,
+    isRest: false,
+    warmup: x.routine?.id ?? null,
+    core: x.kind === "iso" ? { rotation: [x.ref], test: false, at: 0, withTest: false, kind: "iso" } : null,
+    hiit: null,
+    exercises: x.moves.map((m) => ({
+      id: `${x.id}:${m.poolExerciseId}`,
+      poolExerciseId: m.poolExerciseId,
+      name: m.name,
+      muscleGroup: null,
+      tracked: true,
+      metric: m.metric,
+      scheme: m.scheme,
+      unit: m.metric === "DURATION" ? "sec" : m.metric === "REPS" ? "reps" : "lb",
+    })),
+  };
+}
+
+/** ✕ on a day extra's card: takes it off the day. */
+function RemoveExtra({ name, onRemove }: { name: string; onRemove: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={`Remove ${name}`}
+      onClick={onRemove}
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
+    >
+      <XIcon className="h-4 w-4" />
+    </button>
   );
 }

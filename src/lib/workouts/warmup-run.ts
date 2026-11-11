@@ -2,6 +2,8 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
 import { sportOn } from "@/lib/sport/day";
+import { isExtraId } from "@/lib/workouts/day-extras";
+import { setDayExtraRoutine } from "@/lib/workouts/day-extras-run";
 import {
   libraryRoutinesOf,
   LIB_PREFIX,
@@ -152,6 +154,8 @@ export async function deleteRoutine(userId: string, id: string): Promise<void> {
 
 /** A Warm-up or Mobility plan entry's routine (null: a plain check). */
 export async function setPlanWarmup(userId: string, plannedWorkoutId: string, warmup: string | null): Promise<boolean> {
+  // A routine added to one day (v0.667) switches to another of its kind.
+  if (isExtraId(plannedWorkoutId)) return setDayExtraRoutine(userId, plannedWorkoutId, warmup);
   // One routine, "match", or "rot:<id>,…" (v0.655): every id must be usable.
   const choice = parseWarmupChoice(warmup);
   const ids = choice?.mode === "one" ? [choice.id] : choice?.mode === "rotation" ? choice.ids : [];

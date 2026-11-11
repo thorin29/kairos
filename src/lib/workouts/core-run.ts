@@ -59,7 +59,7 @@ export async function coreWorkoutsFor(userId: string, kind: RotationKind = "core
   return [...rotationLibrary(kind), ...own.map(toWorkout)];
 }
 
-async function coreWorkoutFor(userId: string, id: string): Promise<CoreWorkout | null> {
+export async function coreWorkoutFor(userId: string, id: string): Promise<CoreWorkout | null> {
   if (id.startsWith(CORE_LIB_PREFIX)) return libraryCoreWorkout(id);
   const r = (await prisma.coreWorkout.findFirst({
     where: { id, ownerId: userId },
@@ -240,7 +240,7 @@ async function coreEntries(userId?: string): Promise<(Entry & { userId: string }
 }
 
 /** Pool ids for the moves, adding library movements the pool doesn't have yet. */
-async function resolveMoves(userId: string, list: CoreMove[]): Promise<(CoreMove & { poolExerciseId: string })[]> {
+export async function resolveMoves(userId: string, list: CoreMove[]): Promise<(CoreMove & { poolExerciseId: string })[]> {
   const load = async () =>
     (await prisma.poolExercise.findMany({
       where: { OR: [{ ownerId: null }, { ownerId: userId }] },

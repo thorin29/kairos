@@ -120,6 +120,7 @@ import {
   type StartProgramInput,
 } from "@/lib/workouts/program-run";
 import type { ProgramVersion } from "@/lib/workouts/program-version";
+import { addDayExtra, dayExtrasFor, removeDayExtra, type DayExtraView } from "@/lib/workouts/day-extras-run";
 import {
   CATEGORY_LABEL,
   MUSCLE_GROUP_LABEL,
@@ -1292,6 +1293,8 @@ export async function loadDayLog(
   conditioningDone: { name: string; result: string | null }[];
   /** The day's Warm-up entries and their routines (v0.622). */
   warmups: { plannedWorkoutId: string; routine: WarmupRoutine | null }[];
+  /** What was added to this day only from "+ Additional" (v0.667). */
+  extras: DayExtraView[];
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1309,7 +1312,41 @@ export async function loadDayLog(
     conditioningOnDay(userId, dateISO),
     warmupsForDay(userId, dateISO),
   ]);
-  return { state, adjusted, sportDay, loggedByPool, order, cardio, conditioning, picks, benchmark, conditioningDone, warmups };
+  const extras = await dayExtrasFor(userId, dateISO);
+  return {
+    state,
+    adjusted,
+    sportDay,
+    loggedByPool,
+    order,
+    cardio,
+    conditioning,
+    picks,
+    benchmark,
+    conditioningDone,
+    warmups: [...warmups, ...extras.filter((x) => x.routine).map((x) => ({ plannedWorkoutId: x.id, routine: x.routine }))],
+    extras,
+  };
+}
+
+/** Add a routine or an isometric workout to one day only (v0.667). */
+export async function addDayExtraAction(
+  userId: string,
+  dateISO: string,
+  kind: string,
+  ref: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!ISO.test(dateISO)) return { ok: false, error: "Bad date" };
+  return addDayExtra(userId, dateISO, kind, ref);
+}
+
+/** Take a day extra off its day (v0.667). */
+export async function removeDayExtraAction(userId: string, id: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await removeDayExtra(userId, String(id));
 }
 
 // --- conditioning: Pick one, Build one, the monthly benchmark (v0.617) ------

@@ -1,5 +1,33 @@
 # Decisions
 
+## 2026-11 — "+ Additional": day extras (v0.667.0 / app 0.477.0)
+
+- "+ Conditioning" is now "+ Additional": Conditioning (Pick one, Build one,
+  Write your own, as before) or Mobility, Stretching or Isometrics — a
+  routine or an isometric workout added to that day only.
+- Stored as `DayExtra` (userId, date, kind, ref; migration 147_day_extras).
+  At most 6 a day; the same one twice is one. On the day each shows like a
+  plan entry under the id "extra_<id>" (`isExtraId`): a routine card in its
+  Mobility / Stretching section, or an Isometric card that opens the Core
+  logger.
+- Weekly plan rows were not used: 40-odd queries read PlannedWorkout as the
+  weekly plan, and each would need to learn to skip a one-day row. Instead
+  the few places that act on a plan entry by id resolve an extra id
+  (`extraPlanFor`): `setMovementSkipped`, `logPlannedWorkout`,
+  `logMovementSets`, `setWarmupDone`, `setPlanWarmup` (Switch changes the
+  extra's routine) and `plannedSlotFor` (an isometric move's sets come from
+  its workout, so the logger has targets).
+- Optional: extras never count toward the day being done. The day's progress
+  bar, the title, the task, the overdue list and the strip all read the plan
+  without them; `loadTodayPlannedWorkouts({ withExtras })` adds them only for
+  the day's cards (the phone's day read and `loadDayLogState`), and an
+  Adjust today trim leaves them alone.
+- An extra's card has ✕ (take it off) instead of Skip. Anything logged for
+  it stays; once off, its session shows under Additional like any one-off.
+- Logging an isometric extra whose movements match a planned Isometric
+  rotation's current workout can move that rotation on, as any log of those
+  movements would.
+
 ## 2026-11 — Your version of a program (v0.666.0 / app 0.476.0)
 
 - Ending a program, or switching to a different one, keeps its setup as the

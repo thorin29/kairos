@@ -1,6 +1,8 @@
 import "server-only";
 import { dayMobilityRoutines, dayWarmupRoutines } from "@/lib/workouts/warmup-run";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
+import { isExtraId } from "@/lib/workouts/day-extras";
+import { extraPlanFor } from "@/lib/workouts/day-extras-run";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
@@ -197,10 +199,13 @@ export async function setWarmupDone(
   done: boolean,
   completedOnISO?: string | null,
 ): Promise<boolean> {
-  const plan = (await prisma.plannedWorkout.findFirst({
-    where: { id: plannedWorkoutId, userId },
-    select: { name: true, category: true },
-  })) as { name: string; category: string | null } | null;
+  // A day extra (v0.667) is marked done like a plan entry.
+  const plan = (isExtraId(plannedWorkoutId)
+    ? await extraPlanFor(userId, plannedWorkoutId)
+    : await prisma.plannedWorkout.findFirst({
+        where: { id: plannedWorkoutId, userId },
+        select: { name: true, category: true },
+      })) as { name: string; category: string | null } | null;
   if (!plan) return false;
   if (done) {
     await logPlannedWorkout(userId, dateISO, plannedWorkoutId, [], { completedOnISO: completedOnISO ?? null });
@@ -225,6 +230,8 @@ export type SimplePlan = {
   skipped: boolean;
   /** A Warm-up's or Mobility's routine (v0.622); null: a plain check. */
   routine?: WarmupRoutine | null;
+  /** Added to this day only from "+ Additional" (v0.667). */
+  extra?: boolean;
 };
 
 /**

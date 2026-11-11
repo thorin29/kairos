@@ -36,6 +36,8 @@ import type { Suggestion } from "@/lib/workouts/suggest";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
 import { coreDayView, coreWorkoutsFor, syncCoreDays } from "@/lib/workouts/core-run";
+import { isExtraId } from "@/lib/workouts/day-extras";
+import { dayExtrasFor, extraPlanRows } from "@/lib/workouts/day-extras-run";
 import { aboutWithBellNote } from "@/lib/workouts/bells";
 import {
   cleanCoreDay,
@@ -190,6 +192,8 @@ export type TodayPlanned = {
   coreTests?: string[];
   /** "Plank test" or "Monthly test". */
   coreTestName?: string | null;
+  /** Added to this day only from "+ Additional" (v0.667): optional. */
+  extra?: boolean;
   exercises: PlannedMovement[];
   /** The plan's own session exists for the day: how a plan with nothing to
    *  enter (every movement untracked) shows that it was marked complete. */
@@ -495,13 +499,15 @@ function trimForAdjust(
 export async function loadTodayPlannedWorkouts(
   userId: string,
   dayISO: string,
-  /** Leave an adjusted day untrimmed (v0.658): to plan the adjustment. */
-  opts: { full?: boolean } = {},
+  /** Leave an adjusted day untrimmed (v0.658): to plan the adjustment.
+   *  `withExtras` (v0.667): the day's isometric extras too, for the day's
+   *  cards; never for what completes the day. */
+  opts: { full?: boolean; withExtras?: boolean } = {},
 ): Promise<NonNullable<TodayPlanned>[]> {
   await syncCoreDays(userId);
   const system = await loadWorkoutUnitSystem();
 
-  const plans = await prisma.plannedWorkout.findMany({
+  const planRows = await prisma.plannedWorkout.findMany({
     where: dayPlanWhere(userId, dayISO),
     orderBy: { sortOrder: "asc" },
     select: {
@@ -523,6 +529,10 @@ export async function loadTodayPlannedWorkouts(
       },
     },
   });
+
+  const plans = opts.withExtras
+    ? [...planRows, ...((await extraPlanRows(userId, dayISO)) as unknown as typeof planRows)]
+    : planRows;
 
   // The day's skips and its sessions, read once for every plan below.
   const day = toDateColumn(dayISO);
@@ -665,18 +675,20 @@ export async function loadTodayPlannedWorkouts(
         : null,
       exercises,
       sessionLogged: hasSession(plan as { name: string; category: string | null }),
+      ...(isExtraId(plan.id) ? { extra: true } : {}),
     });
   }
   // Adjust today (v0.658): what an adjustment drops is gone for the day —
-  // from the cards and from what completes it.
+  // from the cards and from what completes it. Extras added that day stay.
   const adj = opts.full ? null : await dayAdjust(userId, dayISO);
   if (adj) {
+    const extras = out.filter((w) => w.extra);
     const parts = new Map(
       (plans as unknown as { id: string; hiitWorkout: { movements?: { poolExercise: { name: string } }[] } | null }[]).map(
         (p) => [p.id, (p.hiitWorkout?.movements ?? []).map((m) => m.poolExercise.name)],
       ),
     );
-    return trimForAdjust(adj, out, parts);
+    return [...trimForAdjust(adj, out.filter((w) => !w.extra), parts), ...extras];
   }
   return out;
 }
@@ -2085,6 +2097,8 @@ async function loggedOtherFor(
   /** A planned rest day (v0.646): there are no Cardio or Conditioning
    *  sections to show a row or a conditioning workout, so list them too. */
   everything = false,
+  /** Names of routines added to the day (v0.667), shown on their own cards. */
+  alsoPlanned: string[] = [],
 ): Promise<{ other: LoggedOther[]; any: boolean; title: string; lifted: boolean }> {
   const rows = (await prisma.workoutSession.findMany({
     where: { userId, date: toDateColumn(dateISO), isRest: false },
@@ -2127,7 +2141,7 @@ async function loggedOtherFor(
     }[];
   }[];
   const slots = new Set(planned.flatMap((p) => p.exercises.map((e) => e.poolExerciseId)).filter(Boolean) as string[]);
-  const planNames = new Set(planned.map((p) => p.name.slice(0, 40).toLowerCase()));
+  const planNames = new Set([...planned.map((p) => p.name), ...alsoPlanned].map((n) => n.slice(0, 40).toLowerCase()));
   const typeOf = await sportLabels(rows.map((r) => r.sourceEventId));
   const short = (r: (typeof rows)[number]) => {
     const name = r.name?.trim() || (r.category ? (CATEGORY_LABEL as Record<string, string>)[r.category] ?? "Workout" : "Workout");
@@ -2220,7 +2234,7 @@ export async function loadDayLogState(
 ): Promise<DayLogState> {
   const day = toDateColumn(dateISO);
   const [planned, sets, skips, sessions] = (await Promise.all([
-    plannedIn ?? loadTodayPlannedWorkouts(userId, dateISO),
+    plannedIn ?? loadTodayPlannedWorkouts(userId, dateISO, { withExtras: true }),
     prisma.sessionSet.findMany({
       where: { session: { userId, date: day, isRest: false }, poolExerciseId: { not: null } },
       orderBy: [{ setNumber: "asc" }, { createdAt: "asc" }],
@@ -2300,7 +2314,9 @@ export async function loadDayLogState(
   const restPlanned =
     planIds.length === 0 &&
     (await prisma.plannedWorkout.count({ where: { ...dayPlanWhere(userId, dateISO), isRest: true } })) > 0;
-  const logged = await loggedOtherFor(userId, dateISO, planned, restPlanned);
+  // Routines added to the day (v0.667) show on their own cards, not as extra work.
+  const extraNames = (await dayExtrasFor(userId, dateISO)).filter((x) => x.kind !== "iso").map((x) => x.name);
+  const logged = await loggedOtherFor(userId, dateISO, planned, restPlanned, extraNames);
   // The program titles only days it put work on (v0.663); a day with just
   // its own entries (a Core day beside 5/3/1) is titled by them.
   const active = await programInfoFor(userId, dateISO);

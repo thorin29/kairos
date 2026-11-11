@@ -28,6 +28,8 @@ import type { EquipmentItem } from "@/lib/workouts/library";
 import { versionMoves } from "@/lib/workouts/wod-library";
 import type { BenchmarkState, MoveLine, PickPlan, WodChoice } from "@/lib/workouts/wod-run";
 import { ConditioningTimer } from "./conditioning-timer";
+import { ExtraPicker } from "./additional-picker";
+import type { DayExtraKind } from "@/lib/workouts/day-extras";
 
 type Version = "RX" | "SCALED";
 
@@ -534,8 +536,10 @@ function BuildOne({
 type Opened = "pick" | "build" | "own" | null;
 
 /**
- * A one-off conditioning session on any day, planned or not (v0.619): Pick
- * one, Build one or Write your own, logged as an extra.
+ * "+ Additional" on any day (v0.667; was + Conditioning, v0.619): a one-off
+ * conditioning session (Pick one, Build one or Write your own, logged as an
+ * extra), or a mobility or stretching routine or an isometric workout added
+ * to that day only.
  */
 export function AddConditioning({
   userId,
@@ -550,27 +554,67 @@ export function AddConditioning({
   onChanged: () => void;
   writeOwn?: (dateISO: string, onDone: () => void) => React.ReactNode;
 }) {
-  const [menu, setMenu] = useState(false);
+  // "top": the kinds; "conditioning": Pick one, Build one, Write your own.
+  const [menu, setMenu] = useState<"top" | "conditioning" | null>(null);
   const [opened, setOpened] = useState<Opened>(null);
+  const [extra, setExtra] = useState<DayExtraKind | null>(null);
   const finish = () => {
     setOpened(null);
     onChanged();
   };
   const choose = (o: Opened) => {
-    setMenu(false);
+    setMenu(null);
     setOpened(o);
   };
   return (
     <>
       <button
         type="button"
-        onClick={() => setMenu(true)}
+        onClick={() => setMenu("top")}
         className={SECONDARY_BTN}
       >
-        + Conditioning
+        + Additional
       </button>
-      {menu && (
-        <Modal title="Conditioning" onClose={() => setMenu(false)}>
+      {menu === "top" && (
+        <Modal title="Additional" onClose={() => setMenu(null)}>
+          <div className="grid gap-2">
+            <button type="button" onClick={() => setMenu("conditioning")} className={QUIET + " justify-center"}>
+              Conditioning
+            </button>
+            {(["mobility", "stretching", "iso"] as DayExtraKind[]).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => {
+                  setMenu(null);
+                  setExtra(k);
+                }}
+                className={QUIET + " justify-center"}
+              >
+                {k === "mobility" ? "Mobility" : k === "stretching" ? "Stretching" : "Isometrics"}
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
+      {extra && (
+        <ExtraPicker
+          userId={userId}
+          dateISO={dateISO}
+          kind={extra}
+          onDone={() => {
+            setExtra(null);
+            onChanged();
+          }}
+          onBack={() => {
+            setExtra(null);
+            setMenu("top");
+          }}
+          onClose={() => setExtra(null)}
+        />
+      )}
+      {menu === "conditioning" && (
+        <Modal title="Conditioning" onClose={() => setMenu(null)} onBack={() => setMenu("top")}>
           <div className="grid gap-2">
             <button type="button" onClick={() => choose("pick")} className={PRIMARY}>
               Pick one

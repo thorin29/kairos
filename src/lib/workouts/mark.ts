@@ -1,4 +1,6 @@
 import "server-only";
+import { isExtraId } from "@/lib/workouts/day-extras";
+import { extraPlanFor } from "@/lib/workouts/day-extras-run";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, toDateColumn } from "@/lib/dates";
@@ -229,10 +231,13 @@ export async function setMovementSkipped(
   poolExerciseId: string,
   skipped: boolean,
 ): Promise<boolean> {
-  const plan = (await prisma.plannedWorkout.findUnique({
-    where: { id: plannedWorkoutId },
-    select: { userId: true },
-  })) as { userId: string } | null;
+  // A day extra (v0.667) skips like a plan entry.
+  const plan = isExtraId(plannedWorkoutId)
+    ? await extraPlanFor(userId, plannedWorkoutId)
+    : ((await prisma.plannedWorkout.findUnique({
+        where: { id: plannedWorkoutId },
+        select: { userId: true },
+      })) as { userId: string } | null);
   if (!plan || plan.userId !== userId) return false;
   const slot = poolExerciseId || planSlot(plannedWorkoutId);
   const date = toDateColumn(dateISO);
@@ -503,10 +508,12 @@ export async function logPlannedWorkout(
     completedOnISO?: string | null;
   },
 ): Promise<{ conflict: LogConflict } | null> {
-  const plan = await prisma.plannedWorkout.findUnique({
-    where: { id: plannedWorkoutId },
-    select: { name: true, category: true, userId: true },
-  });
+  const plan = isExtraId(plannedWorkoutId)
+    ? await extraPlanFor(userId, plannedWorkoutId)
+    : await prisma.plannedWorkout.findUnique({
+        where: { id: plannedWorkoutId },
+        select: { name: true, category: true, userId: true },
+      });
   if (!plan || plan.userId !== userId) return null;
 
   const date = toDateColumn(dateISO);
@@ -758,15 +765,17 @@ export async function logMovementSets(
   input: { loggedId: string; metric: string; unit: string; sets: MovementSetIn[] },
   opts?: { completedOnISO?: string | null },
 ): Promise<"ok" | "not_found"> {
-  const plan = (await prisma.plannedWorkout.findUnique({
-    where: { id: plannedWorkoutId },
-    select: {
-      name: true,
-      category: true,
-      userId: true,
-      exercises: { select: { poolExerciseId: true } },
-    },
-  })) as {
+  const plan = (isExtraId(plannedWorkoutId)
+    ? await extraPlanFor(userId, plannedWorkoutId)
+    : await prisma.plannedWorkout.findUnique({
+        where: { id: plannedWorkoutId },
+        select: {
+          name: true,
+          category: true,
+          userId: true,
+          exercises: { select: { poolExerciseId: true } },
+        },
+      })) as {
     name: string;
     category: DbWorkoutCategory | null;
     userId: string;

@@ -20,6 +20,7 @@ import { dayProgramInfo } from "@/lib/workouts/program-run";
 import { dayLightFactor, daySuggestionFor } from "@/lib/workouts/suggest-run";
 import { adjustView } from "@/lib/workouts/adjust-run";
 import { sportDayView } from "@/lib/workouts/warmup-run";
+import { extraSimplePlans } from "@/lib/workouts/day-extras-run";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +39,8 @@ export async function GET(req: NextRequest) {
 
   const userId = authed.device.person.id;
   const today = todayISO();
-  const workouts = await loadTodayPlannedWorkouts(userId, date);
+  // The day's isometric extras (v0.667) are cards like any plan entry.
+  const workouts = await loadTodayPlannedWorkouts(userId, date, { withExtras: true });
   // What today's adjustment drops stays off the phone's day too (v0.658).
   const adjusted = await adjustView(userId, date);
   const gone = new Set(adjusted?.dropped.plans ?? []);
@@ -87,7 +89,7 @@ export async function GET(req: NextRequest) {
       : (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.programTitle ??
       ((program
         ? await programDayTitle(userId, date, program.name)
-        : dayHeadline(daySections(dayWorkouts.map(asDayWorkout), order))) ||
+        : dayHeadline(daySections(dayWorkouts.filter((w) => !w.extra).map(asDayWorkout), order))) ||
         ((dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.loggedTitle ?? "")),
     strip: { today, days: strip.days, overdue: strip.overdue },
     // The program and its week on this day (v0.611); null without one.
@@ -103,7 +105,7 @@ export async function GET(req: NextRequest) {
     // and Cardio plans (no movements, so not in `workouts`); and the day's
     // cardio, Concept2 rows included, each with how it felt.
     order,
-    simple: kept(await simplePlansFor(userId, date)),
+    simple: [...kept(await simplePlansFor(userId, date)), ...(await extraSimplePlans(userId, date))],
     cardio: await cardioDay(userId, date),
     // v0.616: the day's planned conditioning workouts, with what the timer
     // needs and the results to beat.

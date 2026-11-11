@@ -10,6 +10,7 @@ import { LIBRARY, guessPattern, nameKey } from "@/lib/workouts/library";
 import { applyLibrary, loadEquipment } from "@/lib/workouts/library-run";
 import { routineFor } from "@/lib/workouts/warmup-run";
 import { cleanVersion, setupDiffers, type ProgramVersion } from "@/lib/workouts/program-version";
+import { extraSlotFor } from "@/lib/workouts/day-extras-run";
 import {
   PROGRAMS,
   cleanPlanScheme,
@@ -951,7 +952,10 @@ export async function plannedSlotFor(
     select: { scheme: true, programRole: true, plannedWorkout: { select: { muscleGroup: true } } },
   })) as { scheme: string | null; programRole: string | null; plannedWorkout: { muscleGroup: string | null } }[];
   const r = rows.find((x) => x.scheme) ?? rows[0];
-  return r ? { scheme: r.scheme, programRole: r.programRole, muscleGroup: r.plannedWorkout.muscleGroup } : null;
+  if (r) return { scheme: r.scheme, programRole: r.programRole, muscleGroup: r.plannedWorkout.muscleGroup };
+  // An isometric workout added to the day (v0.667) brings its own sets.
+  const extra = await extraSlotFor(userId, dateISO, slot);
+  return extra ? { scheme: extra, programRole: null, muscleGroup: null } : null;
 }
 
 /** "Nov 3" for a saved plan's name. */

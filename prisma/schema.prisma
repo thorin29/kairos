@@ -94,6 +94,7 @@ model User {
   workoutFeedback  WorkoutFeedback[]
   programs         PersonProgram[]
   programVersions  ProgramVersion[]
+  dayExtras        DayExtra[]
   suggestionAnswers WorkoutSuggestionAnswer[]
   concept2Results Concept2Result[]
   sharedPlans     SharedPlan[]
@@ -1437,6 +1438,23 @@ model WorkoutMovementSkip {
 /// An answer to a workout suggestion for a day (v0.612): hides that card for
 /// the day. key "day" holds a lighter day ("light" / "ease"). slot is the
 /// planned movement for a movement card, '' for the day's.
+/// Something added to one day only from "+ Additional" (v0.667): a mobility
+/// or stretching routine, or an isometric workout. Optional: it never holds
+/// up the day being done.
+model DayExtra {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  /// "mobility", "stretching" or "iso".
+  kind      String
+  /// A routine ("lib:<key>" or own id) or an isometric workout ("lib:<key>" or own id).
+  ref       String
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+}
+
 model WorkoutSuggestionAnswer {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
