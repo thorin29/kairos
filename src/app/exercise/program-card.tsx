@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   answerProgramInvite,
   endProgramFor,
+  forgetProgramVersion,
   loadProgramsFor,
   nextProgramBlock,
   setProgramMax,
@@ -23,6 +24,7 @@ import { InfoIcon } from "@/components/icons";
 import { MovementInfo } from "@/components/movement-info";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { PlanLibrary } from "./my-plans";
+import type { ProgramVersion } from "@/lib/workouts/program-version";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const PRIMARY = PRIMARY_BTN;
@@ -37,7 +39,14 @@ type Data = {
   current: CurrentExtras;
   warmups: WarmupRoutine[];
   setup?: CurrentSetup | null;
+  /** The person's own version of each program they changed (v0.666). */
+  versions?: Record<string, ProgramVersion>;
 };
+
+function shortDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
 
 /**
  * A person's program on the Exercise page: the program and its week, training
@@ -67,6 +76,9 @@ export function ProgramCard({
 }) {
   const [data, setData] = useState<Data | null>(null);
   const [setup, setSetup] = useState<string | null>(null);
+  // A program with the person's own version: Default or Your version first (v0.666).
+  const [asking, setAsking] = useState<string | null>(null);
+  const [useVersion, setUseVersion] = useState(false);
   const [choosing, setChoosing] = useState(false);
   const [ending, setEnding] = useState(false);
   const [cycleOpen, setCycleOpen] = useState(false);
@@ -95,9 +107,62 @@ export function ProgramCard({
   };
 
   const program = setup ? data.choices.find((c) => c.key === setup) : undefined;
+  const version = program && useVersion ? data.versions?.[program.key] : undefined;
+  const edited = new Set(Object.keys(data.versions ?? {}));
+  const pick = (key: string) => {
+    setUseVersion(false);
+    if (data.versions?.[key]) setAsking(key);
+    else setSetup(key);
+  };
+  const askingChoice = asking ? data.choices.find((c) => c.key === asking) : undefined;
+  const askingVersion = asking ? data.versions?.[asking] : undefined;
   const windows = (
     <>
-      {choosing && !program && (
+      {askingChoice && askingVersion && !program && (
+        <Modal title={askingChoice.name} onClose={() => setAsking(null)} onBack={choosing ? () => setAsking(null) : undefined}>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setUseVersion(true);
+                setSetup(askingChoice.key);
+                setAsking(null);
+              }}
+              className={`${PRIMARY} justify-center`}
+            >
+              Your version · {shortDate(askingVersion.savedOn)}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUseVersion(false);
+                setSetup(askingChoice.key);
+                setAsking(null);
+              }}
+              className={`${QUIET} justify-center`}
+            >
+              Default
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  await forgetProgramVersion(userId, askingChoice.key);
+                  setUseVersion(false);
+                  setSetup(askingChoice.key);
+                  setAsking(null);
+                  void reload();
+                })
+              }
+              className="mt-1 text-sm font-semibold text-muted hover:text-ink"
+            >
+              Forget my version
+            </button>
+          </div>
+        </Modal>
+      )}
+      {choosing && !program && !asking && (
         <Modal title={data.active ? "Change program" : "Start a program"} onClose={() => setChoosing(false)}>
           <Chooser
             userId={userId}
@@ -111,7 +176,8 @@ export function ProgramCard({
                 : undefined
             }
             hasRotation={hasRotation}
-            onPick={setSetup}
+            edited={edited}
+            onPick={pick}
             onUsed={() => {
               setChoosing(false);
               done();
@@ -121,11 +187,22 @@ export function ProgramCard({
       )}
       {program && (
         <ProgramSetup
+          key={`${program.key}:${version ? "mine" : "default"}`}
           program={program}
-          current={data.current}
+          current={version?.extras ?? data.current}
           warmups={data.warmups}
           busy={pending}
-          onBack={choosing ? () => setSetup(null) : undefined}
+          initial={version?.setup}
+          nextMaxes={version?.setup.maxes}
+          fromVersion={!!version}
+          onBack={
+            choosing || data.versions?.[program.key]
+              ? () => {
+                  setSetup(null);
+                  if (data.versions?.[program.key]) setAsking(program.key);
+                }
+              : undefined
+          }
           onClose={() => {
             setSetup(null);
             setChoosing(false);
@@ -284,7 +361,7 @@ export function ProgramCard({
     return (
       <section className="space-y-3 rounded-2xl border border-accent/30 bg-accent/5 p-4">
         <h4 className="font-display text-base font-semibold">Start a workout program?</h4>
-        <ProgramList choices={data.choices.filter((c) => STARTERS.includes(c.key))} onPick={setSetup} />
+        <ProgramList choices={data.choices.filter((c) => STARTERS.includes(c.key))} edited={edited} onPick={pick} />
         <div className="flex flex-wrap gap-3 text-sm font-semibold">
           <button type="button" onClick={() => setChoosing(true)} className="text-accent">
             More
@@ -338,6 +415,7 @@ function Chooser({
   choices,
   onRotation,
   hasRotation,
+  edited,
   onPick,
   onUsed,
 }: {
@@ -345,6 +423,7 @@ function Chooser({
   choices: ProgramChoice[];
   onRotation?: () => void;
   hasRotation?: boolean;
+  edited: Set<string>;
   onPick: (key: string) => void;
   onUsed: () => void;
 }) {
@@ -372,7 +451,7 @@ function Chooser({
       </div>
       {tab === "programs" ? (
         <>
-          <ProgramList choices={choices} onPick={onPick} />
+          <ProgramList choices={choices} edited={edited} onPick={onPick} />
           {onRotation && (
             <button
               type="button"
@@ -393,7 +472,16 @@ function Chooser({
   );
 }
 
-function ProgramList({ choices, onPick }: { choices: ProgramChoice[]; onPick: (key: string) => void }) {
+function ProgramList({
+  choices,
+  edited,
+  onPick,
+}: {
+  choices: ProgramChoice[];
+  /** Programs with the person's own version get a small tag (v0.666). */
+  edited?: Set<string>;
+  onPick: (key: string) => void;
+}) {
   return (
     <div className="space-y-2">
       {choices.map((c) => (
@@ -404,7 +492,12 @@ function ProgramList({ choices, onPick }: { choices: ProgramChoice[]; onPick: (k
           className="block w-full rounded-xl border border-hairline bg-surface p-3 text-left transition-colors hover:border-accent"
         >
           <span className="flex items-baseline justify-between gap-2">
-            <span className="font-semibold">{c.name}</span>
+            <span className="flex items-center gap-2 font-semibold">
+              {c.name}
+              {edited?.has(c.key) && (
+                <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[0.65rem] font-bold uppercase text-accent">Edited</span>
+              )}
+            </span>
             <span className="shrink-0 text-xs text-muted">
               {c.days.length} days · {c.weeks} weeks
             </span>
@@ -563,6 +656,7 @@ function ProgramSetup({
   busy,
   initial,
   nextMaxes,
+  fromVersion = false,
   onBack,
   onClose,
   onStart,
@@ -575,6 +669,9 @@ function ProgramSetup({
   initial?: CurrentSetup;
   /** The next cycle's training maxes: the Maxes step edits these directly. */
   nextMaxes?: Record<string, number>;
+  /** Started from the person's own version (v0.666): its training maxes, and
+   *  90% of the best logged for a lift it has none for. */
+  fromVersion?: boolean;
   onBack?: () => void;
   onClose: () => void;
   onStart: (input: SetupInput) => void;
@@ -636,7 +733,11 @@ function ProgramSetup({
   // The next cycle: the field is the training max itself, already raised.
   const maxFor = (id: string) => {
     if (maxText[id] != null) return maxText[id];
-    if (nextMaxes) return nextMaxes[id] ? String(nextMaxes[id]) : "";
+    if (nextMaxes) {
+      if (nextMaxes[id]) return String(nextMaxes[id]);
+      const best = fromVersion ? bestOf(id) : null;
+      return best ? String(roundLoad(best * 0.9, "lb")) : "";
+    }
     const best = bestOf(id);
     return best ? String(best) : "";
   };
@@ -910,7 +1011,7 @@ function ProgramSetup({
             </button>
           ) : (
             <button type="button" disabled={busy} onClick={startNow} className={`${PRIMARY} flex-1 justify-center`}>
-              {busy ? "Starting…" : nextMaxes ? "Start next cycle" : "Start program"}
+              {busy ? "Starting…" : nextMaxes && !fromVersion ? "Start next cycle" : "Start program"}
             </button>
           )}
         </div>

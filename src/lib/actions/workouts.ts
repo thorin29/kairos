@@ -104,6 +104,8 @@ import {
   answerInvite,
   currentExtras,
   currentSetup,
+  versionsFor,
+  forgetVersion,
   endProgram,
   inviteFor,
   loadProgramChoices,
@@ -117,6 +119,7 @@ import {
   type ProgramInfo,
   type StartProgramInput,
 } from "@/lib/workouts/program-run";
+import type { ProgramVersion } from "@/lib/workouts/program-version";
 import {
   CATEGORY_LABEL,
   MUSCLE_GROUP_LABEL,
@@ -1570,6 +1573,7 @@ export async function loadProgramsFor(userId: string): Promise<{
   current: CurrentExtras;
   warmups: WarmupRoutine[];
   setup: CurrentSetup | null;
+  versions: Record<string, ProgramVersion>;
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1581,7 +1585,15 @@ export async function loadProgramsFor(userId: string): Promise<{
     routinesFor(userId),
     currentSetup(userId),
   ]);
-  return { choices, active, invite, current, warmups, setup };
+  const versions = await versionsFor(userId, choices);
+  return { choices, active, invite, current, warmups, setup, versions };
+}
+
+/** Forget the person's own version of a program (v0.666). */
+export async function forgetProgramVersion(userId: string, key: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await forgetVersion(userId, key);
 }
 
 export async function startProgramFor(userId: string, input: StartProgramInput): Promise<{ ok: boolean }> {

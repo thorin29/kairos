@@ -1750,9 +1750,20 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [ ] Adjust today, Hurt: when nothing is left to lift, offer a day for the
   healthy parts (e.g. upper body for a knee) instead of only Rest / skip.
 
+From the original workouts plan, not built yet:
+- [ ] "Something hurt?" marked on the body map for that area.
+- [ ] Planned light weeks shaded on the lift charts.
+- [ ] Cardio charts (distance, time, pace over weeks).
+- [ ] Conditioning charts (results per workout over time).
+- [ ] Family WOD: one workout the household does together, scaled per person.
+- [ ] Smarter suggestions: hockey-aware rules, push/pull balance, and a "plan
+  too big" nudge.
+- [ ] "Keep N sets" on a movement.
+- [ ] Weekly lift order that rotates.
+
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.665.0 (migrations through 145_mobility).
-- App versionName 0.475.0 / versionCode 542 / CLIENT_BUILD 542.
+- Web APP_VERSION 0.666.0 (migrations through 146_program_versions).
+- App versionName 0.476.0 / versionCode 543 / CLIENT_BUILD 543.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

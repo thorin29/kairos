@@ -9,6 +9,7 @@ import { savePlan } from "@/lib/workouts/plan-share-run";
 import { LIBRARY, guessPattern, nameKey } from "@/lib/workouts/library";
 import { applyLibrary, loadEquipment } from "@/lib/workouts/library-run";
 import { routineFor } from "@/lib/workouts/warmup-run";
+import { cleanVersion, setupDiffers, type ProgramVersion } from "@/lib/workouts/program-version";
 import {
   PROGRAMS,
   cleanPlanScheme,
@@ -391,8 +392,8 @@ export type CurrentSetup = {
   maxes: Record<string, number>;
 };
 
-export async function currentSetup(userId: string): Promise<CurrentSetup | null> {
-  const p = await loadActiveProgram(userId);
+export async function currentSetup(userId: string, loaded?: ActiveProgram | null): Promise<CurrentSetup | null> {
+  const p = loaded === undefined ? await loadActiveProgram(userId) : loaded;
   if (!p || p.days.length !== p.program.days.length) return null;
   const rows = (await prisma.plannedWorkout.findMany({
     where: { userId, isRest: false },
@@ -439,6 +440,57 @@ export async function currentSetup(userId: string): Promise<CurrentSetup | null>
     }),
   );
   return { key: p.program.key, days: p.days, picks, removed, schemes, added, maxes: p.trainingMaxes };
+}
+
+// --- your version (v0.666) -------------------------------------------------------
+
+/** Keep the running program's setup as the person's version of it, when it's
+ *  changed from the default (a newer one replaces the older). Before the
+ *  program ends: it reads the plan as it is. Never throws. */
+async function snapshotVersion(userId: string): Promise<void> {
+  try {
+    const p = await loadActiveProgram(userId);
+    if (!p) return;
+    const setup = await currentSetup(userId, p);
+    if (!setup) return;
+    const choice = (await loadProgramChoices(userId)).find((c) => c.key === p.program.key);
+    if (!choice || !setupDiffers(setup, choice)) return;
+    const extras = await currentExtras(userId);
+    const data = { setup: { setup, extras } as never, savedOn: toDateColumn(todayISO()) };
+    await prisma.programVersion.upsert({
+      where: { userId_programKey: { userId, programKey: p.program.key } },
+      create: { userId, programKey: p.program.key, ...data },
+      update: data,
+    });
+  } catch {
+    // Best effort: ending a program never fails over this.
+  }
+}
+
+/** The person's own versions, by program, made fit to start from today. */
+export async function versionsFor(userId: string, choices?: ProgramChoice[]): Promise<Record<string, ProgramVersion>> {
+  const rows = (await prisma.programVersion.findMany({
+    where: { userId },
+    select: { programKey: true, setup: true, savedOn: true },
+  })) as { programKey: string; setup: unknown; savedOn: Date }[];
+  if (rows.length === 0) return {};
+  const list = choices ?? (await loadProgramChoices(userId));
+  const pool = (await prisma.poolExercise.findMany({ where: { isActive: true }, select: { id: true } })) as { id: string }[];
+  const poolIds = new Set(pool.map((m) => m.id));
+  const out: Record<string, ProgramVersion> = {};
+  for (const r of rows) {
+    const choice = list.find((c) => c.key === r.programKey);
+    const saved = r.setup as { setup?: CurrentSetup; extras?: CurrentExtras } | null;
+    if (!choice || !saved?.setup || !saved.extras) continue;
+    const v = cleanVersion({ savedOn: fromDateColumn(r.savedOn), setup: saved.setup, extras: saved.extras }, choice, poolIds);
+    if (v) out[r.programKey] = v;
+  }
+  return out;
+}
+
+/** Forget the person's version of a program. */
+export async function forgetVersion(userId: string, programKey: string): Promise<void> {
+  await prisma.programVersion.deleteMany({ where: { userId, programKey } });
 }
 
 // --- start, end, next block -------------------------------------------------------
@@ -620,6 +672,7 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
   })) as { id: string; previousPlan: unknown } | null;
   const today = todayISO();
   if (prevActive && !next) {
+    await snapshotVersion(userId);
     await prisma.personProgram.update({
       where: { id: prevActive.id },
       data: { status: "ENDED", endedOn: toDateColumn(today) },
@@ -819,6 +872,7 @@ export async function endProgram(userId: string, restore: boolean): Promise<void
     select: { id: true, previousPlan: true },
   })) as { id: string; previousPlan: unknown } | null;
   if (!row) return;
+  await snapshotVersion(userId);
   await prisma.personProgram.update({
     where: { id: row.id },
     data: { status: "ENDED", endedOn: toDateColumn(todayISO()) },

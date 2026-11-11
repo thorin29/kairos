@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-11 — Your version of a program (v0.666.0 / app 0.476.0)
+
+- Ending a program, or switching to a different one, keeps its setup as the
+  person's version (`ProgramVersion`, one per person per program, migration
+  146_program_versions; a newer one replaces the older). It's read with the
+  same `currentSetup` "Make changes" uses (refactored to take an already
+  loaded program, so it runs before the row is marked ENDED), plus
+  `currentExtras` and the training maxes.
+- Saved only when `setupDiffers` from the default: days, a slot's movement, a
+  removed slot, companion sets or added lifts. Maxes alone never count (they
+  always differ), nor do extras (they start from whatever plan the person
+  had, so there's no fixed default to compare with). Carrying on into the
+  next cycle (`next`) saves nothing. `snapshotVersion` never throws.
+- Picking a program that has a version asks first: Your version (with its
+  date) or Default, plus "Forget my version". Your version opens the normal
+  setup seeded from it (`initial`, extras as `current`, its maxes as
+  training maxes; a main lift without one gets 90% of the best logged).
+- `cleanVersion` makes a saved version fit to start today: a movement gone
+  from the pool goes back to the slot's default, a gone added lift is
+  dropped, and a program whose number of days changed has no version.
+- A table, not a column on PersonProgram: history rows pile up, and Forget
+  needs one clear record.
+- Programs ended before this release have nothing saved.
+
 ## 2026-11 — Late days stay until done; companion progression; Back keeps drafts (v0.665.0 / app 0.475.0)
 
 - Overdue: a past day's scheduled workout stays in the late list until

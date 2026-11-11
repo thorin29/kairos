@@ -211,6 +211,7 @@ production:
 | A movement's kind from its name | `guessPattern` in `src/lib/workouts/library.ts`, used by `loadProgramChoices` for untagged pool movements |
 | Warm-ups (look through, edit, create) | `WarmupLibrary` in `src/app/exercise/warmup-window.tsx`, the Workouts page's Warm-ups step |
 | Saved plans (My plans) | `savePlan` / `savedPlansFor` / `renameSavedPlan` / `deleteSavedPlan` in `src/lib/workouts/plan-share-run.ts` (SharedPlan, status PRIVATE); UI `PlanLibrary` in `src/app/exercise/my-plans.tsx` |
+| Your version of a program (kept on end/switch, Default or Your version when picking) | `snapshotVersion` / `versionsFor` / `forgetVersion` in `src/lib/workouts/program-run.ts`; `setupDiffers` / `cleanVersion` in `program-version.ts` (pure); UI in `program-card.tsx` (`ProgramList` tag, the ask window, `ProgramSetup` `fromVersion`) |
 | Program setup steps, extras, end of cycle | `ProgramSetup` / `CycleEnd` / `Chooser` in `src/app/exercise/program-card.tsx`; `startProgram` / `currentExtras` / `nextBlock` (raises) in `program-run.ts` |
 | A program slot's movement choices and top-weight prefill | `loadProgramChoices` in `src/lib/workouts/program-run.ts` |
 | The 5/3/1 logger (% per set, plates button, no ±5) and the Timer tile | `DayLog` / movement logger in `src/app/exercise/day-log.tsx`; `pct` on target sets from `targetsFor` |

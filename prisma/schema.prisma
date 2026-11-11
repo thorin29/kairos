@@ -93,6 +93,7 @@ model User {
   workoutSkips     WorkoutMovementSkip[]
   workoutFeedback  WorkoutFeedback[]
   programs         PersonProgram[]
+  programVersions  ProgramVersion[]
   suggestionAnswers WorkoutSuggestionAnswer[]
   concept2Results Concept2Result[]
   sharedPlans     SharedPlan[]
@@ -1503,6 +1504,21 @@ model PersonProgram {
   createdAt      DateTime  @default(now())
 
   @@index([userId, status])
+}
+
+/// A person's own version of a program (v0.666): the setup it had when they
+/// ended or switched it, if they'd changed it from the default. One per program.
+model ProgramVersion {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  programKey String
+  /// { setup, extras }: the setup as "Make changes" reads it, and the extras.
+  setup      Json
+  savedOn    DateTime @db.Date
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, programKey])
 }
 
 /// How a movement felt for one person on one day, and anything that hurt

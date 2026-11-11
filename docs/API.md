@@ -866,6 +866,7 @@ POST /api/v1/workouts/programs/start  { "key","days":[weekday per program day],
                                         "picks":{ "<day>:<slot>": poolExerciseId|null },
                                         "tops":{ poolExerciseId: recent top weight } }
 POST /api/v1/workouts/programs/end    { "restore":bool }   // true: back to the old plan
+POST /api/v1/workouts/programs/version/forget  { "key" }   // forget your version (v0.666)
 POST /api/v1/workouts/programs/block  { "raise":bool }     // end of a block
 POST /api/v1/workouts/programs/max    { "poolExerciseId","weight" }   // 0 clears
 POST /api/v1/workouts/invite          { "answer":"later"|"never" }
@@ -988,6 +989,12 @@ null); `GET /api/v1/workouts/plan` workouts add `warmup` (the id or null);
 `GET /api/v1/workouts/programs` adds `warmups` (routines) and
 `current.warmupRoutine`; `programs/start` takes `warmupRoutine` ("" a plain
 check, unset keeps the old plan's).
+
+v0.666: `GET /api/v1/workouts/programs` adds `versions: { [programKey]: {
+savedOn, setup, extras } }` — the caller's own version of each program they
+changed and then ended or switched (`setup` shaped like `setup` above, ready to
+start from; `extras` like `current`). `POST programs/version/forget { key }`
+removes one. Starting from a version is an ordinary `programs/start`.
 
 v0.623: `GET /api/v1/workouts` adds `loggedOther: [ { name, lines: [ { name,
 summary } ] } ]` (logged that day outside its plans, cardio and conditioning
@@ -1523,7 +1530,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**186 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**187 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
