@@ -112,3 +112,20 @@ describe("sore spots hold the heat map (v0.686)", () => {
     expect(h.paused).toBe(false);
   });
 });
+
+describe("holds aren't judged for decline (v0.687)", () => {
+  it("shorter prescribed holds don't cool a trained group", () => {
+    // Legs every week: a steady squat plus a hold whose prescribed time drops.
+    const sets: TrainSet[] = [];
+    for (let i = 0; i < 10; i++) {
+      const date = plus("2026-01-05", 7 * i);
+      for (let k = 0; k < 3; k++) {
+        sets.push({ date, movement: "squat", name: "Back squat", primary: "LEGS", secondary: [], weight: 150, reps: 6, credit: 1 });
+        sets.push({ date, movement: "wallsit", name: "Wall sit", primary: "LEGS", secondary: [], weight: null, reps: null, seconds: i < 5 ? 60 : 20, credit: 1 });
+      }
+    }
+    const h = buildTrainingHeat(sets, [], "2026-03-12");
+    expect(level(h, "LEGS")).toBeGreaterThanOrEqual(4);
+    expect(h.groups.find((g) => g.group === "LEGS")?.line).not.toMatch(/down/);
+  });
+});

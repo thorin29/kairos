@@ -18,7 +18,8 @@
  *    movements, each against its own best of the 12 weeks before). A plateau
  *    stops the cooling. Light, deload and test weeks, adjusted days (low
  *    energy, sick, hurt, short on time) and the first session back after
- *    three weeks off are never judged for strength.
+ *    three weeks off are never judged for strength. Holds (time) can set a
+ *    best but never count as a decline: they're done for a set time (v0.687).
  *  - Paused weeks (four or more of the week's days in a pause) change nothing.
  *
  * Endurance is its own gauge, from hockey and other sport, rowing, running,
@@ -232,11 +233,15 @@ export function buildTrainingHeat(
         const before = m.days.filter((d) => d < w).pop();
         if (!before || Date.parse(`${w}T12:00:00Z`) - Date.parse(`${before}T12:00:00Z`) > BACK_GAP_DAYS * DAY) continue;
         const r = now / prior;
-        ratios.push(r);
         if (r > 1.0001) {
           newBest = true;
           lastGain = { name: m.name, pct: Math.round((r - 1) * 100) };
         }
+        // A hold is done for a set time (an isometric or core day's 20 s,
+        // 45 s, 1:00), not to failure, so a shorter one isn't a loss of
+        // strength (v0.687): holds can set a best but never count as a decline.
+        if (m.kind === "t") continue;
+        ratios.push(r);
         if (r < DECLINE) lastDecline = { name: m.name, pct: Math.round((1 - r) * 100) };
       }
       ratios.sort((a, b) => a - b);

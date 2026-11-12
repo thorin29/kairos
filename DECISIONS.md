@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Holds not judged for decline; reason line; midnight rollover (v0.687.0 / app 0.497.0)
+
+- Training heat: time-only sets (holds) can still set a new best but are left
+  out of the decline ratios. Isometric and core days prescribe a time (20 s,
+  45 s, 1:00), so a shorter hold isn't a loss; with holds in the week's
+  movements the median ratio (lower middle for an even count) read as a
+  decline every week, cooling Legs to grey despite steady squats.
+- The map pop-ups (web and app) show the group's line ("trained 6 of the last
+  6 weeks", "… max down 8% for 2 weeks", "Sore …") under the headline even when
+  the week has rows, so the colour is explained.
+- Midnight: web `DayRollover` (in the root layout) refreshes the page when the
+  local day changes (checked each minute and on becoming visible); the app
+  bumps `dataRevision` and Home's refresh when `LocalDate.now()` changes
+  (checked each minute). Client-held state that started from the old day (an
+  open day log's chosen date) keeps it until reopened.
+
 ## 2026-11 — Web Additional flow, training-kind colours, plan end date, sore holds (v0.686.0 / app 0.496.0)
 
 - Web day: one "+ Additional" at the bottom (the app's flow). Its pop-up opens

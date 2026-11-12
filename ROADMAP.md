@@ -1724,8 +1724,8 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [ ] Smaller, unconfirmed: farmer carries in `involvement.ts` are FULL_BODY with
   no nav region; nav regions beyond hip hinges unexamined; grouped charts squash
   a light accessory against a heavy lift; both clients compute "today" at
-  render, so neither rolls over at midnight; one household phone was still on
-  app v0.351.0.
+  render, so neither rolls over at midnight (fixed v0.687 / app 0.497); one
+  household phone was still on app v0.351.0.
 
 ## Scoring rework (web 0.603 / app 0.411)
 
@@ -1777,7 +1777,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.686.0 (migrations through 151_family_wod).
-- App versionName 0.496.0 / versionCode 568 / CLIENT_BUILD 568.
+- Web APP_VERSION 0.687.0 (migrations through 151_family_wod).
+- App versionName 0.497.0 / versionCode 569 / CLIENT_BUILD 569.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

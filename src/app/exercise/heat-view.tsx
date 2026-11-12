@@ -309,7 +309,8 @@ export function TrainDetail({
           />
           {week?.headline ?? data?.line ?? "Nothing logged yet."}
         </p>
-        {week && week.rows.length === 0 && data?.line && <p className="text-muted">{data.line}</p>}
+        {/* Why it's this colour (v0.687: shown with the week's rows too). */}
+        {week && data?.line && <p className="text-muted">{data.line}</p>}
         {week && week.rows.length > 0 && (
           <ul className="divide-y divide-hairline border-t border-hairline">
             {week.rows.map((r) => {

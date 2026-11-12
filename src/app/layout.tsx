@@ -7,6 +7,7 @@ import { AdminLock } from "@/components/admin-lock";
 import { Sidebar } from "@/components/sidebar";
 import { ContentPad } from "@/components/content-pad";
 import { TopDate } from "@/components/top-date";
+import { DayRollover } from "@/components/day-rollover";
 import { isAdmin, adminPinSet } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
 import { hiddenNavHrefs } from "@/lib/personal-scope";
@@ -124,6 +125,7 @@ export default async function RootLayout({
         />
 
         <TopDate label={formatLong(todayISO())} />
+        <DayRollover />
 
         <ContentPad>{children}</ContentPad>
 
