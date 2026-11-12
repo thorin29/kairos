@@ -11,6 +11,7 @@ import {
 import type { WorkoutType } from "@/lib/workouts/catalog";
 import { sportDayLabel } from "@/lib/sport/label";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
+import { workoutPausesFor } from "@/lib/workouts/pause-run";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn } from "@/lib/dates";
 import { doneOn } from "@/lib/queries/movement-stats";
@@ -147,8 +148,9 @@ async function adjustedDays(userId: string): Promise<{ days: Set<string>; marks:
 const ADJUST_LABEL: Record<string, string> = { low: "Low energy", time: "Short", sick: "Sick", hurt: "Hurt" };
 
 /** Pauses (none yet): when they exist, the weeks in them change nothing. */
-async function pausesFor(_userId: string): Promise<Pause[]> {
-  return [];
+async function pausesFor(userId: string): Promise<Pause[]> {
+  // Household pauses and the person's own (v0.678).
+  return (await workoutPausesFor(userId)).map((p) => ({ from: p.from, to: p.to }));
 }
 
 const KIND_WORD: Record<string, string> = {

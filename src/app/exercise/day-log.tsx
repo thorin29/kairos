@@ -568,6 +568,7 @@ export function DayLog({
           </button>
         </p>
       )}
+      {state?.paused && <p className="text-sm font-semibold text-accent">{state.paused}</p>}
       {state?.swappedWith && !isRestDay && (
         <p className="text-sm font-semibold text-accent">
           Swapped with {state.swappedWith} this week ·{" "}

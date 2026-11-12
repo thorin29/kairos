@@ -11,6 +11,7 @@ import {
   programDayTitle,
   loadWeekStrip,
   type TodayPlanned,
+  pausedLine,
 } from "@/lib/queries/workout-log";
 import { dayHeadline, daySections, type DayWorkoutIn } from "@/lib/workouts/blocks";
 import type { Metric, MuscleGroup, WorkoutCategory } from "@/lib/workouts/catalog";
@@ -102,6 +103,8 @@ export async function GET(req: NextRequest) {
     light: await dayLightFactor(userId, date),
     // v0.675: areas marked sore — Adjust today opens Hurt on the first.
     sore: (await soreSpotsFor(userId)).map((s) => s.area),
+    // v0.678: "Workouts paused · Sick through Fri, Nov 14", or null.
+    paused: await pausedLine(userId, date),
     // v0.677: the weekday this day traded plans with this week, or null.
     swappedWith: swapName(await swapsFor(userId), date),
     // v0.658: today's adjustment — { mode, label, dropped } — or null.

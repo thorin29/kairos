@@ -1767,12 +1767,14 @@ From the original workouts plan, not built yet:
 - [x] Smarter suggestions: hockey-aware rules, push/pull balance, and a "plan
   too big" nudge (v0.676).
 - [x] Swap a leg day with another day that week around a game (v0.677).
-- [ ] "Keep N sets" on a movement.
-- [ ] Weekly lift order that rotates.
+- [x] Workout pauses (v0.678): a household pause pauses everyone's workouts
+  (prompts, missed days, heat map, plan-too-big, suggestions); a person's own
+  pause for being sick, injured or other, from their Workouts menu.
+- Dropped for now: "Keep N sets" on a movement; a weekly lift order that rotates.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.677.1 (migrations through 149_ball_moves_weight).
-- App versionName 0.487.1 / versionCode 559 / CLIENT_BUILD 559.
+- Web APP_VERSION 0.678.0 (migrations through 150_workout_pause).
+- App versionName 0.488.0 / versionCode 560 / CLIENT_BUILD 560.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

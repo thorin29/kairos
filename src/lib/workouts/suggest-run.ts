@@ -20,6 +20,7 @@ import {
 } from "@/lib/workouts/suggest";
 import { programIntentFor } from "@/lib/workouts/program-run";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
+import { pauseOn, pausedDays, workoutPausesFor } from "@/lib/workouts/pause-run";
 import { planDow, swapDays, swapsFor, unswapDay } from "@/lib/workouts/day-swap-run";
 import { mondayOfWeek, planWeekday, swappedWith } from "@/lib/workouts/day-swap";
 import { SORE_LABEL } from "@/lib/workouts/sore";
@@ -255,13 +256,15 @@ async function planFitFor(userId: string, dateISO: string): Promise<TooBigInput 
   ])) as [{ dayOfWeek: number; category: string | null; createdAt: Date }[], { date: Date }[]];
   const done = new Set(sessions.map((s) => fromDateColumn(s.date)));
   const swaps = await swapsFor(userId);
+  // Paused days (v0.678) weren't planned.
+  const paused = pausedDays(await workoutPausesFor(userId, from), from, dateISO);
   const out: { date: string; planned: boolean; done: boolean }[] = [];
   for (let d = from; d < dateISO; d = addDays(d, 1)) {
     const end = Date.parse(`${addDays(d, 1)}T00:00:00Z`);
     const planned = plans.some(
       (p) => p.dayOfWeek === planWeekday(swaps, d) && p.createdAt.getTime() < end && !(p.category && OPTIONAL_CATEGORIES.includes(p.category)),
     );
-    out.push({ date: d, planned, done: done.has(d) });
+    out.push({ date: d, planned: planned && !paused.has(d), done: done.has(d) });
   }
   return planFit(out);
 }
@@ -356,6 +359,8 @@ async function planChangedOn(userId: string): Promise<string | null> {
 
 /** The day page's card for a person and day (at most one). */
 export async function daySuggestionFor(userId: string, dateISO: string): Promise<Suggestion | null> {
+  // A paused day (v0.678) asks nothing.
+  if (await pauseOn(userId, dateISO)) return null;
   const lifts = await todaysLifts(userId, dateISO);
   const [answers, feedback, last, intent, changed, sore, sport, tooBig, balance] = await Promise.all([
     answersOn(userId, dateISO),

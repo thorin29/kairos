@@ -54,6 +54,13 @@ import { cleanRoutineKind, type RoutineKind, type WarmupRoutine } from "@/lib/wo
 import { coreWorkoutsFor, deleteCoreWorkout, saveCoreWorkout, setCoreDay } from "@/lib/workouts/core-run";
 import { rotationKindOf, type CoreWorkout } from "@/lib/workouts/core-library";
 import { isSoreArea, type SoreSpot } from "@/lib/workouts/sore";
+import {
+  endWorkoutPause,
+  isPauseReason,
+  startWorkoutPause,
+  workoutPausesFor,
+  type WorkoutPauseInfo,
+} from "@/lib/workouts/pause-run";
 import { clearSore, markSore, soreSpotsFor } from "@/lib/workouts/sore-run";
 import { cardioDay, logCardio, removeCardio, setWarmupDone, type CardioEntry, type CardioIn } from "@/lib/workouts/cardio-run";
 import { loadDayOrders, orderForDay, saveDayOrder, type DayOrders } from "@/lib/workouts/day-order";
@@ -1596,6 +1603,32 @@ export async function saveMovementFeedback(input: {
     effort: cleanEffort(input.effort),
     hurt: cleanHurt(input.hurt),
   });
+}
+
+/** A person's workout pauses now and ahead (v0.678), household ones included. */
+export async function loadWorkoutPauses(userId: string): Promise<WorkoutPauseInfo[]> {
+  await requireCanActFor(userId);
+  return workoutPausesFor(userId, todayISO());
+}
+
+/** Pause a person's workouts from today through `untilISO` (v0.678). */
+export async function startPersonalPause(userId: string, reason: string, untilISO: string): Promise<WorkoutPauseInfo[]> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!isPauseReason(reason) || !/^\d{4}-\d{2}-\d{2}$/.test(untilISO)) return workoutPausesFor(userId, todayISO());
+  const today = todayISO();
+  await startWorkoutPause(userId, reason, today, untilISO > addDays(today, 90) ? addDays(today, 90) : untilISO);
+  await generateWorkoutTasks();
+  return workoutPausesFor(userId, today);
+}
+
+/** End a person's pause now (v0.678). */
+export async function endPersonalPause(userId: string, id: string): Promise<WorkoutPauseInfo[]> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await endWorkoutPause(userId, id, todayISO());
+  await generateWorkoutTasks();
+  return workoutPausesFor(userId, todayISO());
 }
 
 /** Mark an area sore, or better (v0.675). Returns the spots now marked. */

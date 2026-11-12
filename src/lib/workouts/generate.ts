@@ -131,6 +131,13 @@ export async function generateWorkoutTasks(
   })) as { key: string; value: string }[];
   const swaps = new Map(swapRows.map((r) => [r.key.slice("workouts.swap.".length), parseSwaps(r.value)]));
   const weekdayFor = (userId: string, iso: string) => planWeekday(swaps.get(userId), iso);
+  // A person's own pause (v0.678): no prompt on its days, like a household pause.
+  const ownPauses = (await prisma.workoutPause.findMany({
+    where: { endDate: { gte: toDateColumn(fromISO) }, startDate: { lte: toDateColumn(toISO) } },
+    select: { userId: true, startDate: true, endDate: true },
+  })) as { userId: string; startDate: Date; endDate: Date }[];
+  const ownPaused = (userId: string, iso: string) =>
+    ownPauses.some((p) => p.userId === userId && fromDateColumn(p.startDate) <= iso && fromDateColumn(p.endDate) >= iso);
 
   const pausedDates = new Set<string>();
   for (const p of pauses) {
@@ -188,6 +195,7 @@ export async function generateWorkoutTasks(
       if (fromDateColumn(s.effectiveFrom) > iso) continue;
       if (s.endDate && fromDateColumn(s.endDate) < iso) continue;
 
+      if (ownPaused(s.userId, iso)) continue;
       expected.set(`${s.userId}|${iso}`, {
         userId: s.userId,
         category: Category.EXERCISE,
@@ -205,6 +213,7 @@ export async function generateWorkoutTasks(
       if (since && iso < since) continue;
       const wStart = weeklyStart.get(userId);
       if (wStart && iso < wStart) continue;
+      if (ownPaused(userId, iso)) continue;
       expected.set(`${userId}|${iso}`, {
         userId,
         category: Category.EXERCISE,
@@ -218,6 +227,7 @@ export async function generateWorkoutTasks(
     // and rest slots don't.
     for (const { userId, shape } of rotationShapes) {
       if (!isRotationWorkoutDay(shape, iso)) continue;
+      if (ownPaused(userId, iso)) continue;
       expected.set(`${userId}|${iso}`, {
         userId,
         category: Category.EXERCISE,

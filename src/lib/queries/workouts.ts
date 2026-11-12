@@ -1,4 +1,5 @@
 import "server-only";
+import { pauseOn, pauseText } from "@/lib/workouts/pause-run";
 import { swapsFor } from "@/lib/workouts/day-swap-run";
 import { planWeekday, type DaySwap } from "@/lib/workouts/day-swap";
 import { shownGroup } from "@/lib/workouts/involvement";
@@ -276,6 +277,9 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     // A day swapped this week (v0.677) follows the other weekday's plan.
     const swaps = await swapsFor(person.id);
     const dow = planWeekday(swaps, todayISO);
+    // The household's pause, else the person's own (v0.678).
+    const ownPause = pausedName ? null : await pauseOn(person.id, todayISO);
+    const personPaused = pausedName ?? ownPause?.label ?? null;
     const [exercises, schedules, weightSets, task, todaySessions, plannedRows, recentSessions, rotationRow] =
       await Promise.all([
       prisma.exercise.findMany({
@@ -641,6 +645,8 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         kind: "paused",
         text: `Workouts are paused for ${pausedName}. Log anything you do to keep track.`,
       });
+    } else if (ownPause) {
+      reminders.push({ kind: "paused", text: `${pauseText(ownPause)}. Log anything you do to keep track.` });
     }
     for (const d of defs) {
       if (d.paused) {
@@ -774,10 +780,10 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       ),
       planDays,
       today: {
-        scheduled: pausedName ? [] : scheduled,
+        scheduled: personPaused ? [] : scheduled,
         workedOut,
         rested,
-        paused: pausedName,
+        paused: personPaused,
       },
       todayWorkouts,
       history,
@@ -786,7 +792,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       weeklyStart: (await getSetting(`weeklyStart:${person.id}`)) ?? "",
       weeklyActive: (await getSetting(`weeklyActive:${person.id}`)) !== "0",
       sectionOrder: await loadDayOrders(person.id),
-      todayPlanned: pausedName ? [] : todayPlanned,
+      todayPlanned: personPaused ? [] : todayPlanned,
       reminders,
     });
   }

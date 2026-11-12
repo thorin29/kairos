@@ -889,6 +889,19 @@ movement on today's first strength entry, `"added":true` on it, never holding
 the day open). Adjust modes gain `legs` (leg lifts at 70%), and Hurt takes area
 `LEGS` with `"why":"game"`.
 
+**Workout pauses, v0.678.**
+```
+GET  /api/v1/workouts/pause
+200: { "pauses":[ { "kind":"household"|"personal","id","label","reason":"SICK"|"HURT"|"OTHER"|null,
+                    "from","to" } ] }        // now and ahead; household ones from Admin
+POST /api/v1/workouts/pause
+request: { "reason":"SICK"|"HURT"|"OTHER", "until":"YYYY-MM-DD" }   // from today, up to 90 days
+      or { "end":"<pause id>" }              // ends it now; today is a normal day again
+200: { "pauses":[ … ] }
+```
+The day payload carries `paused` ("Workouts paused · Sick through Fri, Nov 14")
+or null; strip days carry `paused` and read as `restPlanned`.
+
 **Swapped days, v0.677.** The game card may carry `swap:<weekday 0–6>` ("Swap
 with Friday"): today and that day trade plans for this week. The day payload has
 `swappedWith` (a weekday name or null); answering key `swap` with `undo` puts
@@ -1603,7 +1616,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**191 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**192 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is

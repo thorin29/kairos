@@ -35,6 +35,8 @@ import {
 import { dayHasProgramWork, loadActiveProgram, plannedSlotFor, programInfoFor, type ProgramInfo } from "@/lib/workouts/program-run";
 import { dayAddedIds, dayAdjust, dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
+import { pauseOn, pauseText, pausedDays, workoutPausesFor } from "@/lib/workouts/pause-run";
+
 import { ADJUST_FACTOR, adjustKeep, loadsArea, type Adjust } from "@/lib/workouts/adjust";
 import { isWeightedHold } from "@/lib/workouts/library";
 import type { Suggestion } from "@/lib/workouts/suggest";
@@ -2164,6 +2166,8 @@ export type DayLogState = {
   /** Anything at all logged that day (not a rest). */
   /** Areas marked sore (v0.675): Adjust today opens Hurt on the first. */
   sore: string[];
+  /** "Workouts paused · Sick through Fri, Nov 14" (v0.678), or null. */
+  paused: string | null;
   /** The weekday this day traded plans with this week (v0.677), or null. */
   swappedWith: string | null;
   loggedAny: boolean;
@@ -2454,6 +2458,7 @@ export async function loadDayLogState(
     suggestion: await daySuggestionFor(userId, dateISO),
     light: await dayLightFactor(userId, dateISO),
     sore: (await soreSpotsFor(userId)).map((s) => s.area),
+    paused: await pausedLine(userId, dateISO),
     swappedWith: swapName(await swapsFor(userId), dateISO),
     planIds,
     loggedOther: logged.other,
@@ -2519,6 +2524,8 @@ export type WeekStripDay = {
   restPlanned: boolean;
   /** The plan has a workout that weekday (v0.651): a future day reads planned. */
   planned: boolean;
+  /** In a workout pause (v0.678); restPlanned is set too, for older clients. */
+  paused?: boolean;
 };
 
 /** The last `days` days up to today, for the day page's week strip. */
@@ -2552,10 +2559,13 @@ export async function loadWeekStrip(
   ];
   const taskBy = new Map(tasks.map((t) => [fromDateColumn(t.dueDate), t.status]));
   const dates = Array.from({ length: days }, (_, i) => addDays(from, i));
-  const [restPlan, workPlan] = await Promise.all([
+  const [restPlan, workPlan, pauses] = await Promise.all([
     Promise.all(dates.map((d) => planRestDay(userId, d))),
     Promise.all(dates.map((d) => planWorkDay(userId, d))),
+    workoutPausesFor(userId, from),
   ]);
+  // A paused day (v0.678) reads as a rest day, ahead or behind.
+  const paused = pausedDays(pauses, from, end);
   const out: WeekStripDay[] = [];
   for (let i = 0; i < days; i++) {
     const date = addDays(from, i);
@@ -2566,8 +2576,9 @@ export async function loadWeekStrip(
       task: status === "PENDING" || status === "COMPLETE" || status === "SKIPPED" ? status : null,
       rested: own.some((s) => s.isRest),
       logged: own.some((s) => !s.isRest),
-      restPlanned: restPlan[i],
-      planned: workPlan[i],
+      restPlanned: restPlan[i] || paused.has(date),
+      planned: workPlan[i] && !paused.has(date),
+      paused: paused.has(date),
     });
   }
   return { days: out, overdue };
@@ -2721,6 +2732,8 @@ export async function loadWeeklyTraining(
   }
   const inARow = weeksInARow(run);
 
+  // Paused days (v0.678) read as rest, "Paused".
+  const pausedSet = pausedDays(await workoutPausesFor(userId, from), from, addDays(from, 7 * weeks));
   const out: TrainingWeek[] = [];
   for (let i = 0; i < weeks; i++) {
     const start = addDays(from, 7 * i);
@@ -2736,7 +2749,17 @@ export async function loadWeeklyTraining(
       for (const k of ks) kinds[k]++;
       const task = taskOn.get(date);
       const status: TrainingDay["status"] =
-        ks.length > 0 ? "done" : task === "PENDING" ? (date < today ? "missed" : "planned") : task === "SKIPPED" ? "rest" : null;
+        ks.length > 0
+          ? "done"
+          : pausedSet.has(date)
+            ? "rest"
+            : task === "PENDING"
+              ? date < today
+                ? "missed"
+                : "planned"
+              : task === "SKIPPED"
+                ? "rest"
+                : null;
       const words = dayWords.get(date) ?? [];
       const label =
         ks.length > 0
@@ -2746,7 +2769,9 @@ export async function loadWeeklyTraining(
             : status === "missed"
               ? "Missed"
               : status === "rest"
-                ? "Rest"
+                ? pausedSet.has(date)
+                  ? "Paused"
+                  : "Rest"
                 : "";
       dayList.push({ date, kinds: ks, label, status });
     }
@@ -2824,4 +2849,10 @@ async function asLoggedRotation<P extends { id: string; name: string; category: 
     const core = { ...(p.core as Record<string, unknown>), test: false, withTest: false };
     return { ...p, name: done.name as string, exercises, core, asLogged: true };
   });
+}
+
+/** The day's pause as a line, or null (v0.678). */
+export async function pausedLine(userId: string, dateISO: string): Promise<string | null> {
+  const p = await pauseOn(userId, dateISO);
+  return p ? pauseText(p) : null;
 }

@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-11 — Workout pauses (v0.678.0 / app 0.488.0)
+
+- Household pauses (Admin → Pauses) already kept workout prompts off their
+  days; now they also stop the heat map cooling, drop out of "Is the plan too
+  big?", silence day suggestions, read as rest on the strip and in Weekly
+  training ("Paused"), and creating or removing one re-runs workout task
+  generation.
+- A person's own pause (`WorkoutPause`, migration 150): reason SICK / HURT /
+  OTHER, today through a chosen day (3 days, 1 week, 2 weeks or a date, up
+  to 90 days). Started and ended from that person's Workouts menu only; the
+  person or a parent (`requireCanActFor`). One at a time: a new one replaces
+  the person's own running or ahead. Ending it makes today a normal day.
+  Its days behave like a household pause's, for that person only.
+- `pause-run.ts` (`workoutPausesFor`, `pauseOn`) is the one place the two
+  kinds meet; the strip sets `restPlanned` on paused days as well as
+  `paused`, so older apps show them as rest. Logging still works on a
+  paused day.
+- "Keep N sets" and a rotating weekly lift order are dropped for now.
+
 ## 2026-11 — Weighted holds (v0.677.1 / app 0.487.1)
 
 - Farmer hold, overhead kettlebell hold and plate pinch hold stay timed (so

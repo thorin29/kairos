@@ -92,6 +92,7 @@ model User {
   workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
   workoutSkips     WorkoutMovementSkip[]
   workoutFeedback  WorkoutFeedback[]
+  workoutPauses    WorkoutPause[]
   programs         PersonProgram[]
   programVersions  ProgramVersion[]
   dayExtras        DayExtra[]
@@ -1545,6 +1546,21 @@ model ProgramVersion {
 /// How a movement felt for one person on one day, and anything that hurt
 /// (v0.610.0). `slot` is the planned movement's pool id. effort: EASY / SOLID /
 /// HARD / TOO_HARD; hurt: a HURT_AREAS key (src/lib/workouts/catalog.ts).
+/// A person's workout pause (v0.678): reason SICK, HURT or OTHER. Days from
+/// startDate through endDate get no workout prompts, count as neither done nor
+/// missed, and don't cool the heat map. Ending one early sets endDate.
+model WorkoutPause {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  reason    String   @default("OTHER")
+  createdAt DateTime @default(now())
+
+  @@index([userId, endDate])
+}
+
 model WorkoutFeedback {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

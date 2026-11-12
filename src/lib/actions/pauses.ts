@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { addDays, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
 import { isAdmin } from "@/lib/session";
 import { generateChores } from "@/lib/chores/generate";
+import { generateWorkoutTasks } from "@/lib/workouts/generate";
 
 export type PauseRow = {
   id: string;
@@ -84,6 +85,8 @@ export async function createPause(
 
   // Clear any chores already generated inside the window.
   await generateChores();
+  // Workouts pause with the household too (v0.678): prompts come off its days.
+  await generateWorkoutTasks();
 
   revalidatePath("/calendar");
   revalidatePath("/admin/chores");
@@ -107,6 +110,8 @@ export async function deletePause(id: string): Promise<{ error: string | null }>
 
   // Bring chores back for the freed-up days.
   await generateChores();
+  // Workouts pause with the household too (v0.678): prompts come off its days.
+  await generateWorkoutTasks();
 
   revalidatePath("/calendar");
   revalidatePath("/admin/chores");
