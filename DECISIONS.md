@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-11 — Endurance chart pop-ups; roadmap tidy (v0.693.0, web only)
+
+- `useChartTip` now on the Cardio page's pace chart (transparent r=10
+  targets drawn last, over the best ring), its weekly bars, Conditioning's
+  weekly bars and a workout's attempt dots (`Dots tips`). Bars take the
+  whole column as the target so an empty week can be pointed at; the
+  Workouts cards keep plain bars, since each card is one button.
+- The pop-up flips below only near the top of the SCREEN (was: of the
+  chart), so a tall bar's pop-up stays above it.
+- Conditioning's attempt dots were still the old amber; now
+  `CONDITIONING_COLOR`, lighter for other attempts.
+- Roadmap: the Android "rest of the native client" line ticked — Room and
+  WorkManager shipped, the phone camera scans the `kairos://join` QR, FCM
+  was replaced by local notifications.
+
 ## 2026-11 — Chart hover pop-up (v0.692.0, web only)
 
 - `components/chart-tip.tsx`: `useChartTip()` + `<ChartTip>` replace SVG

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "./plan-file-panel";
+import { ChartTip, useChartTip } from "@/components/chart-tip";
 import {
   clock,
   hoursText,
@@ -47,16 +48,49 @@ function Tile({ k, v, sub, tone }: { k: string; v: string; sub: string; tone?: "
   );
 }
 
-/** Twelve weekly bars with dates under them. */
-function WeekBars({ values, starts, color, height, label }: { values: number[]; starts: string[]; color: string; height: number; label: string }) {
+/** Twelve weekly bars with dates under them. With `tip` (on a page, not a
+ *  card, which is one big button) each week shows its number on hover or tap (v0.693). */
+function WeekBars({
+  values,
+  starts,
+  color,
+  height,
+  label,
+  tip,
+}: {
+  values: number[];
+  starts: string[];
+  color: string;
+  height: number;
+  label: string;
+  tip?: (v: number) => string;
+}) {
   const max = Math.max(1, ...values);
+  const { wrap, tip: shown, show, hide } = useChartTip();
   return (
-    <div>
+    <div ref={wrap} className="relative">
       <div className="flex items-end gap-1 border-b border-hairline" style={{ height }} role="img" aria-label={label}>
-        {values.map((v, i) => (
-          <span key={starts[i]} className="block flex-1 rounded-t-[3px]" style={{ height: `${(v / max) * 100}%`, background: color, minHeight: v > 0 ? 2 : 0 }} />
-        ))}
+        {values.map((v, i) =>
+          tip ? (
+            // The whole column is the target, so an empty week can be pointed at too.
+            <span
+              key={starts[i]}
+              data-tip=""
+              aria-label={`${tip(v)}, week of ${md(starts[i])}`}
+              className="flex h-full flex-1 cursor-pointer items-end"
+              onPointerEnter={(e) => show(e.currentTarget.firstElementChild ?? e.currentTarget, tip(v), `Week of ${md(starts[i])}`)}
+              onPointerLeave={(e) => {
+                if (e.pointerType !== "touch") hide();
+              }}
+            >
+              <span className="block w-full rounded-t-[3px]" style={{ height: `${(v / max) * 100}%`, background: color, minHeight: v > 0 ? 2 : 0 }} />
+            </span>
+          ) : (
+            <span key={starts[i]} className="block flex-1 rounded-t-[3px]" style={{ height: `${(v / max) * 100}%`, background: color, minHeight: v > 0 ? 2 : 0 }} />
+          ),
+        )}
       </div>
+      <ChartTip tip={shown} />
       <div className="tabular mt-1 flex justify-between text-[10px] text-muted">
         {[0, 4, 8].map((i) => (starts[i] ? <span key={i}>{md(starts[i])}</span> : null))}
         <span>This week</span>
@@ -108,6 +142,7 @@ export function CardioCard({ data, onOpen }: { data: CardioCharts; onOpen: () =>
 
 /** Pace per session: faster is higher, shaded by how it felt, the best ringed. */
 function PaceChart({ a }: { a: CardioActivity }) {
+  const { wrap, tip, markProps } = useChartTip();
   const p = a.pace!;
   const W = 334;
   const H = 170;
@@ -124,7 +159,13 @@ function PaceChart({ a }: { a: CardioActivity }) {
   const fmt = (s: number) => (a.measure === "m" ? split(s) : clock(s));
   const ticks = [a0 + (a1 - a0) * 0.2, (a0 + a1) / 2, a0 + (a1 - a0) * 0.8];
   const bi = p.best ? p.points.findIndex((x) => x.date === p.best!.date && Math.abs(x.sec - p.best!.sec) < 0.05) : -1;
+  const felt: Record<string, string> = { EASY: "Easy", SOLID: "Solid", HARD: "Hard", TOO_HARD: "Too hard" };
+  const tipOf = (x: (typeof p.points)[number]): [string, string] => [
+    a.measure === "m" ? `${split(x.sec)} /500 m` : `${clock(x.sec)} /${p.per}`,
+    `${md(x.date)}${x.effort && felt[x.effort] ? ` · ${felt[x.effort]}` : ""}`,
+  ];
   return (
+    <div ref={wrap} className="relative">
     <svg viewBox={`0 0 ${W} ${H}`} className="block w-full" role="img" aria-label={`Pace per ${p.per}`}>
       {ticks.map((t) => (
         <g key={t}>
@@ -145,7 +186,13 @@ function PaceChart({ a }: { a: CardioActivity }) {
           </text>
         </g>
       )}
+      {/* Hover and tap targets last, over the ring (v0.693). */}
+      {p.points.map((x, i) => (
+        <circle key={`t${x.date}-${i}`} cx={X(i)} cy={Y(x.sec)} r={10} fill="transparent" className="cursor-pointer" {...markProps(...tipOf(x))} />
+      ))}
     </svg>
+    <ChartTip tip={tip} />
+    </div>
   );
 }
 
@@ -210,7 +257,7 @@ export function CardioPage({ data, onClose }: { data: CardioCharts; onClose: () 
           <div className="rounded-xl border border-hairline p-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{volTitle}</p>
             <div className="mt-2">
-              <WeekBars values={a.weeks.map((w) => w.value)} starts={a.weeks.map((w) => w.start)} color={CARDIO_COLOR} height={90} label={volTitle} />
+              <WeekBars values={a.weeks.map((w) => w.value)} starts={a.weeks.map((w) => w.start)} color={CARDIO_COLOR} height={90} label={volTitle} tip={(v) => (a.measure === "min" ? `${num(v)} min` : `${num(v)} ${unitWord}`)} />
             </div>
           </div>
         )}
@@ -251,7 +298,7 @@ export function CardioPage({ data, onClose }: { data: CardioCharts; onClose: () 
           <div className="rounded-xl border border-hairline p-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{volTitle}</p>
             <div className="mt-2">
-              <WeekBars values={a.weeks.map((w) => w.value)} starts={a.weeks.map((w) => w.start)} color={CARDIO_COLOR} height={90} label={volTitle} />
+              <WeekBars values={a.weeks.map((w) => w.value)} starts={a.weeks.map((w) => w.start)} color={CARDIO_COLOR} height={90} label={volTitle} tip={(v) => (a.measure === "min" ? `${num(v)} min` : `${num(v)} ${unitWord}`)} />
             </div>
           </div>
         )}
@@ -311,25 +358,42 @@ export function ConditioningCard({ data, onOpen }: { data: ConditioningCharts; o
   );
 }
 
-/** Each attempt as a dot, better higher; the best darker. */
-function Dots({ r, w = 80, h = 30 }: { r: ConditioningRepeat; w?: number; h?: number }) {
+/** Each attempt as a dot, better higher; the best darker, in conditioning's
+ *  colour (v0.693, was the old amber). `tips` on the workout's page only. */
+function Dots({ r, w = 80, h = 30, tips = false }: { r: ConditioningRepeat; w?: number; h?: number; tips?: boolean }) {
+  const { wrap, tip, markProps } = useChartTip();
   const vals = r.results.map((x) => x.value);
   const lo = Math.min(...vals);
   const hi = Math.max(...vals);
   const n = r.results.length;
   const score = (v: number) => (hi === lo ? 0.5 : r.timed ? (hi - v) / (hi - lo) : (v - lo) / (hi - lo));
-  return (
+  const cx = (i: number) => (n === 1 ? w / 2 : 6 + i * ((w - 12) / (n - 1)));
+  const cy = (v: number) => h - 4 - score(v) * (h - 8);
+  const svg = (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden className="shrink-0">
       {r.results.map((x, i) => (
-        <circle
-          key={`${x.date}-${i}`}
-          cx={n === 1 ? w / 2 : 6 + i * ((w - 12) / (n - 1))}
-          cy={h - 4 - score(x.value) * (h - 8)}
-          r={x.best ? 4.5 : 3.5}
-          fill={x.best ? "#7a4a00" : "#f3c76a"}
-        />
+        <circle key={`${x.date}-${i}`} cx={cx(i)} cy={cy(x.value)} r={x.best ? 4.5 : 3.5} fill={x.best ? CONDITIONING_COLOR : "#f0abfc"} />
       ))}
+      {tips &&
+        r.results.map((x, i) => (
+          <circle
+            key={`t${x.date}-${i}`}
+            cx={cx(i)}
+            cy={cy(x.value)}
+            r={10}
+            fill="transparent"
+            className="cursor-pointer"
+            {...markProps(x.text, `${md(x.date)}${x.best ? " · best" : ""}`)}
+          />
+        ))}
     </svg>
+  );
+  if (!tips) return svg;
+  return (
+    <div ref={wrap} className="relative">
+      {svg}
+      <ChartTip tip={tip} />
+    </div>
   );
 }
 
@@ -347,7 +411,7 @@ export function ConditioningPage({ data, onClose }: { data: ConditioningCharts; 
         <div className="rounded-xl border border-hairline p-3">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Sessions per week</p>
           <div className="mt-2">
-            <WeekBars values={data.weeks.map((w) => w.count)} starts={data.weeks.map((w) => w.start)} color={CONDITIONING_COLOR} height={70} label="Sessions per week" />
+            <WeekBars values={data.weeks.map((w) => w.count)} starts={data.weeks.map((w) => w.start)} color={CONDITIONING_COLOR} height={70} label="Sessions per week" tip={(v) => (v === 1 ? "1 session" : `${v} sessions`)} />
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
@@ -422,7 +486,7 @@ export function ConditioningPage({ data, onClose }: { data: ConditioningCharts; 
             {open.timed ? "faster is better" : "more is better"}
           </p>
           <div className="flex justify-center">
-            <Dots r={open} w={300} h={90} />
+            <Dots r={open} w={300} h={90} tips />
           </div>
           <ul className="divide-y divide-hairline text-sm">
             {[...open.results].reverse().map((x, i) => (

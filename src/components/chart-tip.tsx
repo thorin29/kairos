@@ -21,8 +21,8 @@ export function useChartTip() {
     if (!box) return;
     const r = el.getBoundingClientRect();
     const top = r.top - box.top;
-    // Near the top of the chart there's no room above: show it underneath.
-    const below = top < 52;
+    // Near the top of the screen there's no room above: show it underneath.
+    const below = r.top < 64;
     setTip({ x: r.left + r.width / 2 - box.left, y: below ? r.bottom - box.top : top, below, width: box.width, title, detail });
   }, []);
   const hide = useCallback(() => setTip(null), []);

@@ -361,8 +361,10 @@ Characters. Each drawer entry keeps its web brand colour.
 - [x] Avatar API (web v0.201–0.203): device-authed `/api/v1/avatars/[file]`,
       `/me` sends `avatarUrl` + `avatarPosition`, app renders photos via Coil
       (token-authed) with the web's position/zoom transform.
-- [ ] Rest of the native client (`kairos-app`): QR enrollment scan, Room,
-      WorkManager, FCM.
+- [x] Rest of the native client (`kairos-app`): Room (offline cache) and
+      WorkManager (reminders, complete-from-notification) shipped; enrollment
+      is a `kairos://join` link, so the phone camera scans the QR code (no
+      in-app scanner); FCM replaced by local notifications (below).
 - [x] **Notifications epic** — shipped, but **local (AlarmManager + WorkManager),
       not FCM**: reminders are set **per event** (Proton/Google style — multiple,
       with lead times at start / minutes / hours / days / a week / custom), stored
@@ -1777,7 +1779,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.692.0 (migrations through 152_person_pause).
-- App versionName 0.500.0 / versionCode 572 / CLIENT_BUILD 572.
+- Web APP_VERSION 0.693.0 (migrations through 152_person_pause).
+- App versionName 0.501.0 / versionCode 573 / CLIENT_BUILD 573.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.
