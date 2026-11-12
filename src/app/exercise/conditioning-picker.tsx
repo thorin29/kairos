@@ -547,12 +547,15 @@ export function AddConditioning({
   completedOnISO,
   onChanged,
   writeOwn,
+  onFamilyWod,
 }: {
   userId: string;
   dateISO: string;
   completedOnISO?: string;
   onChanged: () => void;
   writeOwn?: (dateISO: string, onDone: () => void) => React.ReactNode;
+  /** "Family WOD" (v0.679): set one for the day, or suggest one. */
+  onFamilyWod?: () => void;
 }) {
   // "top": the kinds; "conditioning": Pick one, Build one, Write your own.
   const [menu, setMenu] = useState<"top" | "conditioning" | null>(null);
@@ -581,6 +584,18 @@ export function AddConditioning({
             <button type="button" onClick={() => setMenu("conditioning")} className={QUIET + " justify-center"}>
               Conditioning
             </button>
+            {onFamilyWod && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMenu(null);
+                  onFamilyWod();
+                }}
+                className={QUIET + " justify-center"}
+              >
+                Family WOD
+              </button>
+            )}
             {(["mobility", "stretching", "iso"] as DayExtraKind[]).map((k) => (
               <button
                 key={k}

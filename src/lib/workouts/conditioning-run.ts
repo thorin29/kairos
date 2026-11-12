@@ -51,33 +51,42 @@ export async function conditioningFor(userId: string, dateISO: string): Promise<
     orderBy: { sortOrder: "asc" },
     select: {
       id: true,
-      hiitWorkout: {
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          capSec: true,
-          about: true,
-          scaled: true,
-          movements: {
-            orderBy: { position: "asc" },
-            select: { reps: true, distance: true, weight: true, poolExercise: { select: { name: true } } },
-          },
-        },
-      },
+      hiitWorkout: { select: HIIT_FOR_PLAN },
     },
-  })) as {
-    id: string;
-    hiitWorkout: {
-      id: string;
-      name: string;
-      type: WorkoutType;
-      capSec: number | null;
-      about: string | null;
-      scaled: unknown;
-      movements: { reps: number | null; distance: number | null; weight: number | null; poolExercise: { name: string } | null }[];
-    } | null;
-  }[];
+  })) as { id: string; hiitWorkout: HiitForPlan | null }[];
+  return conditioningPlansOf(userId, dateISO, plans);
+}
+
+/** What a conditioning card needs of a workout. */
+export const HIIT_FOR_PLAN = {
+  id: true,
+  name: true,
+  type: true,
+  capSec: true,
+  about: true,
+  scaled: true,
+  movements: {
+    orderBy: { position: "asc" as const },
+    select: { reps: true, distance: true, weight: true, poolExercise: { select: { name: true } } },
+  },
+};
+export type HiitForPlan = {
+  id: string;
+  name: string;
+  type: WorkoutType;
+  capSec: number | null;
+  about: string | null;
+  scaled: unknown;
+  movements: { reps: number | null; distance: number | null; weight: number | null; poolExercise: { name: string } | null }[];
+};
+
+/** Conditioning cards for workouts on a day, each under its own id (a plan's,
+ *  or a family WOD's, v0.679). */
+export async function conditioningPlansOf(
+  userId: string,
+  dateISO: string,
+  plans: { id: string; hiitWorkout: HiitForPlan | null }[],
+): Promise<ConditioningPlan[]> {
   const list = plans.filter((p) => p.hiitWorkout);
   if (list.length === 0) return [];
 

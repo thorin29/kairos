@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { familyWodDay } from "@/lib/workouts/family-wod-run";
 import { planDow, swapsFor } from "@/lib/workouts/day-swap-run";
 import { swapName } from "@/lib/workouts/day-swap";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
@@ -120,6 +121,9 @@ export async function GET(req: NextRequest) {
     // v0.616: the day's planned conditioning workouts, with what the timer
     // needs and the results to beat.
     conditioning: kept(await conditioningFor(userId, date)),
+    // v0.679: the day's family WOD — the workout, who's in, the board, and
+    // `plan` (a conditioning card, id "fwod_<id>") when the person is in it.
+    familyWod: await familyWodDay(userId, date, await conditioningFor(userId, date)),
     // v0.617: Conditioning plans picked on the day (done by any conditioning
     // that day, with what was logged) and the monthly benchmark (OFFER or
     // SUGGEST, or null). Each conditioning plan also carries `about`,

@@ -1763,7 +1763,8 @@ From the original workouts plan, not built yet:
   marked. Mockup agreed.
 - [x] Conditioning charts (v0.674): sessions, new bests, sessions per week, and each
   workout done more than once with its results over time. Mockup agreed.
-- [ ] Family WOD: one workout the household does together, scaled per person.
+- [x] Family WOD (v0.679): a parent picks a day's workout and who's in; others
+  join; a board per WOD; anyone suggests one for a parent to approve.
 - [x] Smarter suggestions: hockey-aware rules, push/pull balance, and a "plan
   too big" nudge (v0.676).
 - [x] Swap a leg day with another day that week around a game (v0.677).
@@ -1774,7 +1775,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.678.0 (migrations through 150_workout_pause).
-- App versionName 0.488.0 / versionCode 560 / CLIENT_BUILD 560.
+- Web APP_VERSION 0.679.0 (migrations through 151_family_wod).
+- App versionName 0.489.0 / versionCode 561 / CLIENT_BUILD 561.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

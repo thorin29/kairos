@@ -889,6 +889,27 @@ movement on today's first strength entry, `"added":true` on it, never holding
 the day open). Adjust modes gain `legs` (leg lifts at 70%), and Hurt takes area
 `LEGS` with `"why":"game"`.
 
+**Family WOD, v0.679.**
+```
+GET  /api/v1/workouts/family-wod[?choices=1]
+200: { "parent":bool, "next":Wod|null, "ahead":[Wod], "past":[Wod],
+       "suggestions":[ { "id","date","hiitWorkoutId","name","byId","by","note" } ],
+       "people":[ { "userId","name" } ], "choices"?:[ { "hiitWorkoutId","name","typeLabel","minutes","kind" } ] }
+GET  /api/v1/workouts/family-wod?id=<id>   200: { "wod": Wod|null }
+Wod: { "id","date","hiitWorkoutId","name","type","typeLabel","movements":[string],
+       "members":[ { "userId","name","how":"ASSIGNED"|"JOINED" } ], "who","mine":how|null,
+       "board":[ { "userId","name","result","version":"RX"|"SCALED"|null,"rank","bestYet" } ],
+       "waiting":string|null, "logged":n }
+POST /api/v1/workouts/family-wod          // returns the GET payload
+anyone:  { "join":"<id>", "on":bool } | { "suggest":{ "date","hiitWorkoutId","note"? } } | { "withdraw":"<id>" }
+parents: { "set":{ "date","hiitWorkoutId","users":[ids],"suggestionId"? } } | { "remove":"<id>" } | { "decline":"<id>" }
+```
+Suggestions are all waiting ones for a parent (ADMIN or PARENT), the person's
+own otherwise. The day payload carries `familyWod`: a Wod plus `plan` (a
+conditioning card, `plannedWorkoutId` "fwod_<id>", logged through
+`workouts/conditioning/log` as usual) when the person is in it, and `inPlan`
+when their own plan already has the workout.
+
 **Workout pauses, v0.678.**
 ```
 GET  /api/v1/workouts/pause
@@ -1616,7 +1637,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**192 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**193 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is

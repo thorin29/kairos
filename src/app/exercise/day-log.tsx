@@ -31,6 +31,9 @@ import type { DayExtraView } from "@/lib/workouts/day-extras-run";
 import type { Concept2Day } from "@/lib/workouts/concept2-run";
 import { CardioCard } from "./cardio-card";
 import { ConditioningCard } from "./conditioning-card";
+import { FamilyWodDayCard, SetSheet, SuggestSheet } from "./family-wod";
+import { loadFamilyWod } from "@/lib/actions/family-wod";
+import type { FamilyWodDay } from "@/lib/workouts/family-wod-run";
 import { ConditioningTimer } from "./conditioning-timer";
 import { EffortPicker } from "@/components/effort-picker";
 import { WarmupSteps, WarmupWindow } from "./warmup-window";
@@ -171,7 +174,10 @@ export function DayLog({
     conditioningDone: { name: string; result: string | null }[];
     warmups?: { plannedWorkoutId: string; routine: WarmupRoutine | null }[];
     extras?: DayExtraView[];
+    familyWod?: FamilyWodDay | null;
   } | null>(null);
+  // + Additional → Family WOD (v0.679): set one (a parent) or suggest one.
+  const [fwodSheet, setFwodSheet] = useState<{ parent: boolean; people: { userId: string; name: string }[] } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
   // Other 8-day pages of the strip, fetched as it scrolls (v0.653).
   const [stripPages, setStripPages] = useState<Record<number, WeekStripDay[]>>({});
@@ -645,6 +651,32 @@ export function DayLog({
         <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">Couldn&rsquo;t load this day. Try again.</p>
       )}
 
+      {data?.familyWod && (
+        <FamilyWodDayCard
+          key={`fwod:${date}`}
+          userId={userId}
+          dateISO={date}
+          todayISO={todayISO}
+          wod={data.familyWod}
+          onChanged={() => setTick((n) => n + 1)}
+        />
+      )}
+      {fwodSheet &&
+        (fwodSheet.parent ? (
+          <SetSheet
+            people={fwodSheet.people}
+            todayISO={todayISO}
+            dateISO={date}
+            onClose={() => setFwodSheet(null)}
+            onDone={() => {
+              setFwodSheet(null);
+              setTick((n) => n + 1);
+            }}
+          />
+        ) : (
+          <SuggestSheet userId={userId} todayISO={todayISO} dateISO={date} onClose={() => setFwodSheet(null)} onDone={() => setFwodSheet(null)} />
+        ))}
+
       {!data && !failed ? (
         <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">Loading&hellip;</p>
       ) : (
@@ -953,6 +985,7 @@ export function DayLog({
                         // Conditioning done today that no card above shows: a one-off.
                         if (data.picks.length > 0) return null;
                         const planned = new Set(data.conditioning.map((c) => c.name.slice(0, 40)));
+                        if (data.familyWod) planned.add(data.familyWod.name.slice(0, 40));
                         const extra = data.conditioningDone.filter((c) => !planned.has(c.name.slice(0, 40)));
                         return extra.length > 0 ? (
                           <ul className="space-y-1 rounded-xl border border-hairline bg-surface px-4 py-3 text-sm">
@@ -972,6 +1005,14 @@ export function DayLog({
                         completedOnISO={completedOnISO}
                         onChanged={() => setTick((n) => n + 1)}
                         writeOwn={writeOwn}
+                        onFamilyWod={
+                          data.familyWod || date < todayISO
+                            ? undefined
+                            : () =>
+                                loadFamilyWod(userId)
+                                  .then((d) => setFwodSheet({ parent: d.parent, people: d.people }))
+                                  .catch(() => {})
+                        }
                       />
                     </>
                   )}

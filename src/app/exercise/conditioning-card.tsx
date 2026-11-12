@@ -21,12 +21,18 @@ export function ConditioningCard({
   workout,
   skipped,
   onChanged,
+  badge,
+  noSkip,
 }: {
   userId: string;
   dateISO: string;
   workout: ConditioningPlan;
   skipped: boolean;
   onChanged: () => void;
+  /** Above the name: "Family WOD" (v0.679). */
+  badge?: React.ReactNode;
+  /** An extra that can't be missed has no Skip (a family WOD). */
+  noSkip?: boolean;
 }) {
   const [timing, setTiming] = useState(false);
   const [manual, setManual] = useState(false);
@@ -80,8 +86,9 @@ export function ConditioningCard({
   ].filter(Boolean);
 
   return (
-    <div className="space-y-3 rounded-xl border border-hairline bg-surface px-4 py-3">
+    <div className={`space-y-3 rounded-xl border bg-surface px-4 py-3 ${badge ? "border-amber-400 dark:border-amber-600" : "border-hairline"}`}>
       <div>
+        {badge}
         <p className="text-base font-semibold">{workout.name}</p>
         <p className="text-sm text-muted">
           {WORKOUT_TYPE_LABEL[workout.type]}
@@ -171,7 +178,7 @@ export function ConditioningCard({
               {workout.today ? "Edit result" : "Log a result"}
             </button>
           )}
-          {!workout.today && (
+          {!workout.today && !noSkip && (
             <button
               type="button"
               aria-pressed={skipped}

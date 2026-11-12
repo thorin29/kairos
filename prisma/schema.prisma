@@ -93,6 +93,8 @@ model User {
   workoutSkips     WorkoutMovementSkip[]
   workoutFeedback  WorkoutFeedback[]
   workoutPauses    WorkoutPause[]
+  familyWodMembers FamilyWodMember[]
+  familyWodSuggestions FamilyWodSuggestion[]
   programs         PersonProgram[]
   programVersions  ProgramVersion[]
   dayExtras        DayExtra[]
@@ -1235,6 +1237,8 @@ model HiitWorkout {
 
   movements HiitWorkoutMovement[]
   planned   PlannedWorkout[]
+  familyWods FamilyWod[]
+  familyWodSuggestions FamilyWodSuggestion[]
 
   @@index([ownerId])
   @@index([approved])
@@ -1559,6 +1563,51 @@ model WorkoutPause {
   createdAt DateTime @default(now())
 
   @@index([userId, endDate])
+}
+
+/// A family workout of the day (v0.679): one shared conditioning workout on a
+/// day a parent picks, for the people they put in it and anyone who joins.
+/// An extra: never a missed day. Results are the HIIT sessions logged under
+/// the workout's name that day.
+model FamilyWod {
+  id            String      @id @default(cuid())
+  date          DateTime    @unique @db.Date
+  hiitWorkoutId String
+  hiitWorkout   HiitWorkout @relation(fields: [hiitWorkoutId], references: [id], onDelete: Cascade)
+  createdById   String?
+  createdAt     DateTime    @default(now())
+
+  members FamilyWodMember[]
+}
+
+/// Who's in a family WOD: ASSIGNED by a parent, or JOINED on their own.
+model FamilyWodMember {
+  familyWodId String
+  familyWod   FamilyWod @relation(fields: [familyWodId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  how         String    @default("ASSIGNED")
+  createdAt   DateTime  @default(now())
+
+  @@id([familyWodId, userId])
+  @@index([userId])
+}
+
+/// Anyone can suggest a family WOD for a day; a parent approves or declines.
+model FamilyWodSuggestion {
+  id            String      @id @default(cuid())
+  date          DateTime    @db.Date
+  hiitWorkoutId String
+  hiitWorkout   HiitWorkout @relation(fields: [hiitWorkoutId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note          String?
+  /// PENDING, APPROVED or DECLINED.
+  status        String      @default("PENDING")
+  decidedById   String?
+  createdAt     DateTime    @default(now())
+
+  @@index([status, date])
 }
 
 model WorkoutFeedback {

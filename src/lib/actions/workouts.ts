@@ -14,6 +14,7 @@ import {
 } from "@/lib/workouts/adjust-run";
 
 import { revalidatePath } from "next/cache";
+import { familyWodDay, type FamilyWodDay } from "@/lib/workouts/family-wod-run";
 import { logPlannedWorkout, logMovementSets, settleWorkoutTask, type MovementSetIn } from "@/lib/workouts/mark";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
@@ -1307,6 +1308,8 @@ export async function loadDayLog(
   warmups: { plannedWorkoutId: string; routine: WarmupRoutine | null }[];
   /** What was added to this day only from "+ Additional" (v0.667). */
   extras: DayExtraView[];
+  /** The day's family WOD (v0.679), or null. */
+  familyWod: FamilyWodDay | null;
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1324,7 +1327,7 @@ export async function loadDayLog(
     conditioningOnDay(userId, dateISO),
     warmupsForDay(userId, dateISO),
   ]);
-  const extras = await dayExtrasFor(userId, dateISO);
+  const [extras, familyWod] = await Promise.all([dayExtrasFor(userId, dateISO), familyWodDay(userId, dateISO, conditioning)]);
   return {
     state,
     adjusted,
@@ -1338,6 +1341,7 @@ export async function loadDayLog(
     conditioningDone,
     warmups: [...warmups, ...extras.filter((x) => x.routine).map((x) => ({ plannedWorkoutId: x.id, routine: x.routine }))],
     extras,
+    familyWod,
   };
 }
 

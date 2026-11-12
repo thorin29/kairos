@@ -31,6 +31,7 @@ import { WeeklyTraining } from "./weekly-training";
 import { CoreCard, CoreOverview, CorePage, LiftPage, LiftRows } from "./lift-page";
 import { SoreSpots, soreRegions } from "./sore-spots";
 import { WorkoutPausePanel } from "./workout-pause";
+import { FamilyWodSection } from "./family-wod";
 import type { SoreSpot } from "@/lib/workouts/sore";
 import { CARDIO_COLOR, CONDITIONING_COLOR, CardioCard, CardioPage, ConditioningCard, ConditioningPage } from "./endurance-charts";
 import { Modal } from "./plan-file-panel";
@@ -320,6 +321,8 @@ export function WorkoutsGrid({
                     onOpenRotation={() => setStep("rotation")}
                     hasRotation={!!open.rotation}
                   />
+
+                  <FamilyWodSection userId={open.user.id} todayISO={todayISO} />
 
                   <div className="grid grid-cols-3 gap-3">
                     <ActionButton

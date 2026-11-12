@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-11 — Family WOD (v0.679.0 / app 0.489.0)
+
+- Now and then, not on set weekdays: one `FamilyWod` per date (migration
+  151) with a shared workout (`hiitWorkoutId`) and `FamilyWodMember` rows,
+  `how` ASSIGNED (a parent put them in) or JOINED (they joined). A parent
+  sets it from the Workouts page's Family WOD section or from a day's
+  "+ Additional → Family WOD"; changing the people keeps anyone who joined.
+- Anyone sees the day's family WOD at the top of the day, rest and paused
+  days included. Members get the normal conditioning card (id
+  `fwod_<id>`, so feedback has its own slot) with no Skip: it's an extra,
+  done any time that day, never a missed day and never a workout task. Not
+  a member: Join. Someone who joined can leave until they log; someone put
+  in stays in. If the person's own plan has the same workout that day, the
+  plan's card is the one.
+- No results table: the board is the HIIT sessions logged under the
+  workout's name that day (as every conditioning result is), ranked Rx
+  before Scaled, best first, one row a person, "Best yet" when it beats
+  every earlier result of theirs on it in that version.
+- Suggestions (`FamilyWodSuggestion`): anyone, for a day from today up to
+  60 days on, with an optional note. A parent approves (the set sheet opens
+  with it, approving on save) or declines; the person can take it back
+  while it waits. Parents are an unlocked admin or a signed-in ADMIN or
+  PARENT; on the app, `role ADMIN` or `kind PARENT`.
+- Choices are the shared, approved workouts only.
+
 ## 2026-11 — Workout pauses (v0.678.0 / app 0.488.0)
 
 - Household pauses (Admin → Pauses) already kept workout prompts off their
