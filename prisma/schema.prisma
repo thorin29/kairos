@@ -437,6 +437,9 @@ model EventType {
   /// v0.656: how long you stayed varies (stick and puck, drop-in): a logged
   /// session's minutes can be changed. Games and practices leave it off.
   sportFlexTime Boolean @default(false)
+  /// v0.676: GAME, PRACTICE or OTHER for the hockey-aware suggestions; null =
+  /// told by the event's title.
+  sportKind String?
   defaultMinutes Int?
   // Default reminder (minutes before) pre-filled on new events of this type.
   defaultReminder Int?

@@ -101,6 +101,8 @@ export type EventTypeRow = {
   sportWorkout: boolean;
   /** v0.656: a logged session's minutes can be changed (stick and puck). */
   sportFlexTime: boolean;
+  /** v0.676: GAME, PRACTICE or OTHER; null = by the event's title. */
+  sportKind: string | null;
   defaultMinutes: number | null;
   defaultReminder: number | null;
 };
@@ -115,6 +117,7 @@ export async function loadEventTypes(): Promise<EventTypeRow[]> {
       color: true,
       sportWorkout: true,
       sportFlexTime: true,
+      sportKind: true,
       defaultMinutes: true,
       defaultReminder: true,
     },

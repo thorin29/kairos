@@ -433,6 +433,7 @@ export function WorkoutsGrid({
                     person={open}
                     todayISO={todayISO}
                     unitSystem={unitSystem}
+                    onOpen={(where) => setStep(where === "plan" ? "plan" : "menu")}
                     writeOwn={(d, done) => (
                       <HiitBuilder
                         pool={pool}

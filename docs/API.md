@@ -880,6 +880,15 @@ in the preview as a line with `"standIn":true`, and opened in the logger as
 that slot's swap. The preview also says `"canReplace"`. The day suggestion
 `sore` answers `around:<AREA>` to make today a Hurt day on that area.
 
+**Day suggestions, v0.676.** New cards on the workouts day payload's
+`suggestion`, answered through `workouts/suggestion` as before:
+`tournament` (lightweek), `game` (legs:light · legs:swap), `toobig` (editplan ·
+programs · later — the client opens the plan editor or programs for the first
+two; any answer asks again in 3 weeks), `balance` (add:<poolExerciseId> puts that
+movement on today's first strength entry, `"added":true` on it, never holding
+the day open). Adjust modes gain `legs` (leg lifts at 70%), and Hurt takes area
+`LEGS` with `"why":"game"`.
+
 **Programs (v0.611).**
 ```
 GET  /api/v1/workouts/programs

@@ -7,7 +7,10 @@
  *         lift's warm-up sets are never cut; extras go first.
  *   sick  A lighter version (main lifts at about 50%, no extra sets or
  *         conditioning) or an easy day (warm-up and cardio, no lifting).
+ *   legs  A game today or tomorrow (v0.676): leg lifts at about 70%, the rest
+ *         as planned.
  *   hurt  Moves that load the area come out; the rest stays at normal weight.
+ *         Also "swap legs" before a game: area LEGS, `why: "game"`.
  *         Each one out can be replaced (v0.675) by one of the person's own
  *         recent lifts that doesn't load the area, logged as a swap.
  *
@@ -17,9 +20,10 @@
 
 import { HURT_AREAS as FEEDBACK_AREAS, HURT_LABEL, type HurtArea as FeedbackArea } from "@/lib/workouts/catalog";
 
-export type AdjustMode = "low" | "time" | "sick" | "hurt";
-/** The same areas as "Something hurt?" and sore spots (v0.675), less Other. */
-export type HurtArea = Exclude<FeedbackArea, "OTHER">;
+export type AdjustMode = "low" | "time" | "sick" | "hurt" | "legs";
+/** The same areas as "Something hurt?" and sore spots (v0.675), less Other;
+ *  LEGS (v0.676) only for keeping legs fresh before a game. */
+export type HurtArea = Exclude<FeedbackArea, "OTHER"> | "LEGS";
 export type TimePick = "weights" | "cardio" | "conditioning";
 export type SickHow = "light" | "easy";
 export const TIME_CHOICES = [15, 30, 45] as const;
@@ -27,6 +31,7 @@ export const CARDIO_CHOICES = [10, 15, 20] as const;
 
 export type Adjust =
   | { mode: "low" }
+  | { mode: "legs" }
   | { mode: "sick"; how: SickHow }
   | {
       mode: "time";
@@ -46,14 +51,16 @@ export type Adjust =
       replace?: boolean;
       /** Worked out by the server: each planned movement out and its stand-in. */
       swaps?: HurtSwap[];
+      /** "game" (v0.676): legs kept fresh for a game, not an injury. */
+      why?: "game";
     };
 
 export type HurtSwap = { from: string; to: string; name: string };
 
-export const HURT_AREAS: [HurtArea, string][] = FEEDBACK_AREAS.filter((a): a is HurtArea => a !== "OTHER").map((a) => [
-  a,
-  HURT_LABEL[a],
-]);
+export const HURT_AREAS: [HurtArea, string][] = FEEDBACK_AREAS.filter((a): a is Exclude<FeedbackArea, "OTHER"> => a !== "OTHER").map(
+  (a) => [a, HURT_LABEL[a]],
+);
+const areaWord = (a: HurtArea) => (a === "LEGS" ? "legs" : HURT_LABEL[a].toLowerCase());
 /** Areas stored before v0.675. */
 const LEGACY_AREA: Record<string, HurtArea> = {
   shoulder: "SHOULDER",
@@ -66,11 +73,12 @@ const LEGACY_AREA: Record<string, HurtArea> = {
 export function hurtAreaOf(v: unknown): HurtArea | null {
   if (typeof v !== "string") return null;
   if (LEGACY_AREA[v]) return LEGACY_AREA[v];
+  if (v === "LEGS") return "LEGS";
   return HURT_AREAS.some(([k]) => k === v) ? (v as HurtArea) : null;
 }
 
 /** Share of the usual weights. */
-export const ADJUST_FACTOR = { low: 0.65, sick: 0.5 } as const;
+export const ADJUST_FACTOR = { low: 0.65, sick: 0.5, legs: 0.7 } as const;
 
 export function adjustFactor(a: Adjust | null): number | null {
   if (!a) return null;
@@ -79,8 +87,9 @@ export function adjustFactor(a: Adjust | null): number | null {
   return null;
 }
 
-/** Counts as a light day (no records move on): all but Hurt. */
-export const adjustIsLight = (a: Adjust | null) => !!a && a.mode !== "hurt";
+/** Counts as a light day (no records move on): all but Hurt and Lighter legs
+ *  (only the leg lifts are lighter, v0.676). */
+export const adjustIsLight = (a: Adjust | null) => !!a && a.mode !== "hurt" && a.mode !== "legs";
 
 /** The day header: "Short on time · 30 min", "Sick · Easy day". */
 export function adjustLabel(a: Adjust): string {
@@ -91,8 +100,10 @@ export function adjustLabel(a: Adjust): string {
       return `Short on time · ${a.minutes} min`;
     case "sick":
       return a.how === "easy" ? "Sick · Easy day" : "Sick · Lighter";
+    case "legs":
+      return "Lighter legs for the game";
     case "hurt":
-      return `Working around your ${HURT_LABEL[a.area].toLowerCase()}`;
+      return a.why === "game" ? "Legs kept fresh for the game" : `Working around your ${areaWord(a.area)}`;
   }
 }
 
@@ -125,6 +136,8 @@ export function cleanAdjust(raw: unknown, stored = false): Adjust | null {
   switch (o.mode) {
     case "low":
       return { mode: "low" };
+    case "legs":
+      return { mode: "legs" };
     case "sick":
       return { mode: "sick", how: o.how === "easy" ? "easy" : "light" };
     case "hurt": {
@@ -139,7 +152,13 @@ export function cleanAdjust(raw: unknown, stored = false): Adjust | null {
               })
               .slice(0, 20)
           : [];
-      return { mode: "hurt", area, replace: o.replace !== false, ...(swaps.length ? { swaps } : {}) };
+      return {
+        mode: "hurt",
+        area,
+        replace: o.replace !== false,
+        ...(swaps.length ? { swaps } : {}),
+        ...(o.why === "game" ? { why: "game" as const } : {}),
+      };
     }
     case "time": {
       const minutes = TIME_CHOICES.includes(o.minutes as 15) ? (o.minutes as number) : null;
@@ -178,6 +197,10 @@ const LOADS: Record<HurtArea, { re: RegExp; groups: string[] }> = {
   UPPER_BACK: {
     re: /row|pull-?up|chin-?up|pull-?down|pulldown|shrug|deadlift|face pull|carry|farmer|snatch|clean|good morning/i,
     groups: ["BACK"],
+  },
+  LEGS: {
+    re: /squat|lunge|step-?up|leg |deadlift|rdl|romanian|good morning|hip thrust|bridge|jump|split|calf|thruster|wall ball|swing|skater|pistol|leg press|leg curl|leg extension/i,
+    groups: ["LEGS", "DEADLIFT"],
   },
   ANKLE: {
     re: /run|sprint|jump|skip|box|lunge|calf|step-?up|skater|pistol|burpee|wall ball|thruster|squat|ankle/i,
@@ -237,6 +260,7 @@ export function adjustKeep(a: Adjust, entries: readonly EntryIn[]): { keep: stri
     if (cat === "WARMUP") return whole(true);
     switch (a.mode) {
       case "low":
+      case "legs":
         return whole(true);
       case "sick": {
         if (hiit) return whole(false);

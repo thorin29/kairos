@@ -4,7 +4,9 @@ import { adjustFactor, parseAdjust } from "@/lib/workouts/adjust";
  * applied on their own (v0.612). Pure, shared by the web, the phone API and the
  * tests. The thresholds live here so they can be tuned from real use.
  *
- *   day:      back after a break · something hurt lately · workouts felt hard
+ *   day:      back after a break · a sore spot today loads · a tournament or a
+ *             game today or tomorrow with leg work · the plan too big · little
+ *             pulling for the pressing · workouts felt hard (v0.676)
  *   movement: an area that hurt lately · the next weight · a stalled lift
  *   sets:     a big jump over the recent top (flagged on the set, not blocked)
  */
@@ -36,7 +38,32 @@ export const RULES = {
   light: 0.8,
   /** Back after a break: share of the usual weights. */
   easeIn: 0.9,
+  /** Plan too big: a third or more of planned days missed over 3 weeks, with
+   *  at least this many planned; asked again 3 weeks after Not now. */
+  tooBigShare: 1 / 3,
+  tooBigWeeks: 3,
+  tooBigMinPlanned: 6,
+  /** Balance: pressing with no pulling for 2 weeks (this many sets)… */
+  noPullPushSets: 6,
+  /** …or over 3 weeks at least this many pressing sets, twice the pulling. */
+  pushHeavySets: 12,
+  pushHeavyRatio: 2,
 } as const;
+
+/** Day-card inputs worked out from the calendar and logs (v0.676). */
+export type SportInput = {
+  today: { kind: string; label: string } | null;
+  tomorrow: { kind: string; label: string } | null;
+  /** Games in a tournament (3+ in 4 days) that today falls in; 0 if none. */
+  tournamentGames: number;
+};
+export type TooBigInput = { planned: number; done: number; worst: string[] };
+export type BalanceInput = { push: number; pull: number; window: 14 | 21; pick: { id: string; name: string } };
+
+const listOf = (xs: string[]) => {
+  const m = xs.map((x) => x.toLowerCase());
+  return m.length <= 2 ? m.join(" and ") : `${m.slice(0, 2).join(", ")} and ${m.length - 2} more`;
+};
 
 export type SuggestionAction = { answer: string; label: string };
 export type Suggestion = {
@@ -113,6 +140,12 @@ export function daySuggestion(input: {
   planChangedOn?: string | null;
   /** A sore spot today's plan loads (v0.675): the area and those moves. */
   sore?: { area: string; label: string; moves: string[] } | null;
+  /** v0.676: games around today, today's leg lifts, any lifting today. */
+  sport?: SportInput | null;
+  legMoves?: string[];
+  lifting?: boolean;
+  tooBig?: TooBigInput | null;
+  balance?: BalanceInput | null;
 }): Suggestion | null {
   const { today, answered } = input;
   if (input.light || input.programIntent) return null;
@@ -141,6 +174,64 @@ export function daySuggestion(input: {
       why: `Today has ${list}.`,
       actions: [
         { answer: `around:${input.sore.area}`, label: "Work around it" },
+        { answer: "dismiss", label: "Not today" },
+      ],
+    };
+  }
+
+  const sport = input.sport;
+  if (sport && sport.tournamentGames >= 3 && input.lifting && !answered.has("tournament")) {
+    return {
+      key: "tournament",
+      title: "Tournament this week",
+      why: `${sport.tournamentGames} games in 4 days. Lighter lifting until it's over?`,
+      actions: [
+        { answer: "lightweek", label: "Lighter week" },
+        { answer: "dismiss", label: "Not this time" },
+      ],
+    };
+  }
+  const game = sport?.today?.kind === "GAME" ? "today" : sport?.tomorrow?.kind === "GAME" ? "tomorrow" : null;
+  if (game && (input.legMoves ?? []).length > 0 && !answered.has("game")) {
+    return {
+      key: "game",
+      title: `Game ${game}`,
+      why: `Today has ${listOf(input.legMoves!)}.`,
+      actions: [
+        { answer: "legs:light", label: "Lighter legs" },
+        { answer: "legs:swap", label: "Swap legs" },
+        { answer: "dismiss", label: "Not today" },
+      ],
+    };
+  }
+
+  const big = input.tooBig;
+  if (big && big.planned >= RULES.tooBigMinPlanned && big.planned - big.done >= big.planned * RULES.tooBigShare && !answered.has("toobig")) {
+    return {
+      key: "toobig",
+      title: "Is the plan too big?",
+      why:
+        `${big.done} of ${big.planned} planned workouts done in ${RULES.tooBigWeeks} weeks.` +
+        (big.worst.length ? ` Missed most: ${big.worst.join(" and ")}.` : ""),
+      actions: [
+        { answer: "editplan", label: "Pick days to drop" },
+        { answer: "programs", label: "Smaller program" },
+        { answer: "later", label: "Not now" },
+      ],
+    };
+  }
+
+  const bal = input.balance;
+  if (bal && !answered.has("balance")) {
+    return {
+      key: "balance",
+      title: `Add ${bal.pick.name.toLowerCase()} today?`,
+      why:
+        bal.pull === 0
+          ? `No pulling in ${bal.window === 14 ? "2 weeks" : "3 weeks"}, and ${bal.push} pressing sets.`
+          : `${bal.push} pressing sets and ${bal.pull} pulling in 3 weeks.`,
+      actions: [
+        { answer: `add:${bal.pick.id}`, label: "Add it" },
         { answer: "dismiss", label: "Not today" },
       ],
     };
@@ -327,4 +418,40 @@ export function lightFactor(answer: string | null | undefined): number | null {
   if (answer === "light") return RULES.light;
   // Low energy and Sick (v0.658) lighten the weights too.
   return adjustFactor(parseAdjust(answer));
+}
+
+
+/** Pressing against pulling (v0.676): a balance card's numbers, or null. */
+export function pushPullBalance(
+  sets: readonly { date: string; pattern: string | null }[],
+  today: string,
+): { push: number; pull: number; window: 14 | 21 } | null {
+  const within = (n: number) => sets.filter((s) => days(s.date, today) > 0 && days(s.date, today) <= n);
+  const count = (xs: readonly { pattern: string | null }[], p: string) => xs.filter((s) => s.pattern === p).length;
+  const two = within(14);
+  if (count(two, "PULL") === 0 && count(two, "PUSH") >= RULES.noPullPushSets) return { push: count(two, "PUSH"), pull: 0, window: 14 };
+  const three = within(21);
+  const push = count(three, "PUSH");
+  const pull = count(three, "PULL");
+  if (push >= RULES.pushHeavySets && push >= RULES.pushHeavyRatio * pull) return { push, pull, window: 21 };
+  return null;
+}
+
+/** Planned days against done days (v0.676), and the weekdays missed most. */
+export function planFit(
+  daysIn: readonly { date: string; planned: boolean; done: boolean }[],
+): TooBigInput {
+  const planned = daysIn.filter((d) => d.planned);
+  const missed = new Map<number, number>();
+  for (const d of planned) {
+    if (d.done) continue;
+    const w = new Date(`${d.date}T12:00:00Z`).getUTCDay();
+    missed.set(w, (missed.get(w) ?? 0) + 1);
+  }
+  const worst = [...missed]
+    .filter(([, n]) => n >= 2)
+    .sort((a, b) => b[1] - a[1] || a[0] - b[0])
+    .slice(0, 2)
+    .map(([w]) => WEEKDAY[w]);
+  return { planned: planned.length, done: planned.filter((d) => d.done).length, worst };
 }

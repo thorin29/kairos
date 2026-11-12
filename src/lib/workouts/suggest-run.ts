@@ -9,6 +9,11 @@ import {
   daySuggestion,
   lightFactor,
   movementSuggestion,
+  planFit,
+  pushPullBalance,
+  type BalanceInput,
+  type SportInput,
+  type TooBigInput,
   type FeedbackIn,
   type SessionIn,
   type Suggestion,
@@ -17,6 +22,11 @@ import { programIntentFor } from "@/lib/workouts/program-run";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
 import { SORE_LABEL } from "@/lib/workouts/sore";
 import { loadsArea } from "@/lib/workouts/adjust";
+import { getSetting, setSetting } from "@/lib/settings";
+import { sportDaysBetween } from "@/lib/sport/day";
+import { tournamentDays } from "@/lib/sport/label";
+import { guessPattern } from "@/lib/workouts/library";
+import { OPTIONAL_CATEGORIES } from "@/lib/workouts/blocks";
 
 /** The answers a person gave on a day: "<slot>|<key>" → answer. */
 async function answersOn(userId: string, dateISO: string): Promise<Map<string, string>> {
@@ -95,6 +105,42 @@ export async function answerSuggestion(
       create: { userId, date, key: k, slot: s, answer: a },
       update: { answer: a },
     });
+  // Hockey (v0.676): lighter legs, or legs swapped out, for a game.
+  if (answer === "legs:light" || answer === "legs:swap") {
+    const { applyAdjust } = await import("@/lib/workouts/adjust-run");
+    await put(key.slice(0, 40), slot.slice(0, 60), "legs");
+    await applyAdjust(
+      userId,
+      dateISO,
+      answer === "legs:light" ? { mode: "legs" } : { mode: "hurt", area: "LEGS", why: "game", replace: true },
+    );
+    return;
+  }
+  // A tournament: lighter from today through the next three days.
+  if (answer === "lightweek") {
+    for (let i = 0; i < 4; i++) {
+      const d = toDateColumn(addDays(dateISO, i));
+      const has = await prisma.workoutSuggestionAnswer.findUnique({
+        where: { userId_date_key_slot: { userId, date: d, key: "day", slot: "" } },
+        select: { answer: true },
+      });
+      if (!has) await prisma.workoutSuggestionAnswer.create({ data: { userId, date: d, key: "day", slot: "", answer: "light" } });
+      await prisma.workoutSuggestionAnswer.upsert({
+        where: { userId_date_key_slot: { userId, date: d, key: "tournament", slot: "" } },
+        create: { userId, date: d, key: "tournament", slot: "", answer: "lightweek" },
+        update: { answer: "lightweek" },
+      });
+    }
+    return;
+  }
+  // Plan too big: asked again in three weeks, whichever way it was answered.
+  if (key === "toobig") await setSetting(tooBigKey(userId), addDays(dateISO, 7 * RULES.tooBigWeeks));
+  // Balance (v0.676): a pull added to today only.
+  if (answer.startsWith("add:")) {
+    await put(key.slice(0, 40), slot.slice(0, 60), "add");
+    await put("add", answer.slice(4, 64), "yes");
+    return;
+  }
   // "Work around it" (v0.675) makes today a Hurt day on that area, with stand-ins.
   if (answer.startsWith("around:")) {
     const { applyAdjust } = await import("@/lib/workouts/adjust-run");
@@ -104,6 +150,111 @@ export async function answerSuggestion(
   }
   await put(key.slice(0, 40), slot.slice(0, 60), answer.slice(0, 20));
   if (answer === "light" || answer === "ease") await put("day", "", answer);
+}
+
+const tooBigKey = (userId: string) => `workouts.toobig.${userId}`;
+
+/** Movements added to a day from a suggestion (v0.676), by pool id. */
+export async function dayAddedIds(userId: string, dateISO: string): Promise<string[]> {
+  const rows = (await prisma.workoutSuggestionAnswer.findMany({
+    where: { userId, date: toDateColumn(dateISO), key: "add" },
+    select: { slot: true },
+  })) as { slot: string }[];
+  return rows.map((r) => r.slot).filter(Boolean);
+}
+
+type WeightPlan = { muscleGroup: string | null; core: unknown; exercises: { poolExercise: { name: string; pattern: string | null } }[] };
+
+async function todaysLifts(userId: string, dateISO: string): Promise<WeightPlan[]> {
+  return (await prisma.plannedWorkout.findMany({
+    where: { userId, dayOfWeek: dayOfWeek(dateISO), isRest: false, category: "WEIGHTS" as never, createdAt: { lt: toDateColumn(addDays(dateISO, 1)) } },
+    select: {
+      muscleGroup: true,
+      core: true,
+      exercises: { orderBy: { sortOrder: "asc" }, select: { poolExercise: { select: { name: true, pattern: true } } } },
+    },
+  })) as WeightPlan[];
+}
+
+/** Games today, tomorrow and a tournament around today (v0.676). */
+async function sportAround(userId: string, dateISO: string): Promise<SportInput | null> {
+  const list = await sportDaysBetween(userId, addDays(dateISO, -3), addDays(dateISO, 3));
+  if (list.length === 0) return null;
+  const on = (d: string) => list.find((x) => x.date === d && x.kind === "GAME") ?? list.find((x) => x.date === d) ?? null;
+  const games = list.filter((x) => x.kind === "GAME").map((x) => x.date);
+  const tour = new Set(tournamentDays(games));
+  // In one, or one starts within three days: count its games around today.
+  const ahead = [...tour].some((d) => d >= dateISO && d <= addDays(dateISO, 3));
+  const near = games.filter((d) => tour.has(d) && d >= addDays(dateISO, -3) && d <= addDays(dateISO, 3));
+  const t = on(dateISO);
+  const m = on(addDays(dateISO, 1));
+  return {
+    today: t ? { kind: t.kind, label: t.label } : null,
+    tomorrow: m ? { kind: m.kind, label: m.label } : null,
+    tournamentGames: ahead ? near.length : 0,
+  };
+}
+
+/** Planned days against done days over the last three weeks (v0.676). */
+async function planFitFor(userId: string, dateISO: string): Promise<TooBigInput | null> {
+  const snooze = await getSetting(tooBigKey(userId));
+  if (snooze && snooze > dateISO) return null;
+  const from = addDays(dateISO, -7 * RULES.tooBigWeeks);
+  const [plans, sessions] = (await Promise.all([
+    prisma.plannedWorkout.findMany({
+      where: { userId, isRest: false },
+      select: { dayOfWeek: true, category: true, createdAt: true },
+    }),
+    prisma.workoutSession.findMany({
+      where: { userId, date: { gte: toDateColumn(from), lt: toDateColumn(dateISO) } },
+      select: { date: true },
+    }),
+  ])) as [{ dayOfWeek: number; category: string | null; createdAt: Date }[], { date: Date }[]];
+  const done = new Set(sessions.map((s) => fromDateColumn(s.date)));
+  const out: { date: string; planned: boolean; done: boolean }[] = [];
+  for (let d = from; d < dateISO; d = addDays(d, 1)) {
+    const end = Date.parse(`${addDays(d, 1)}T00:00:00Z`);
+    const planned = plans.some(
+      (p) => p.dayOfWeek === dayOfWeek(d) && p.createdAt.getTime() < end && !(p.category && OPTIONAL_CATEGORIES.includes(p.category)),
+    );
+    out.push({ date: d, planned, done: done.has(d) });
+  }
+  return planFit(out);
+}
+
+/** Pressing against pulling, and a pull to add today (v0.676). */
+async function balanceFor(userId: string, dateISO: string, plans: WeightPlan[]): Promise<BalanceInput | null> {
+  if (plans.length === 0) return null;
+  const pat = (name: string, p: string | null) => p ?? guessPattern(name);
+  if (plans.some((p) => p.exercises.some((e) => pat(e.poolExercise.name, e.poolExercise.pattern) === "PULL"))) return null;
+  if ((await dayAddedIds(userId, dateISO)).length > 0) return null;
+  const rows = (await prisma.sessionSet.findMany({
+    where: {
+      finished: true,
+      poolExerciseId: { not: null },
+      session: { userId, isRest: false, date: { gte: toDateColumn(addDays(dateISO, -56)), lt: toDateColumn(dateISO) } },
+    },
+    select: { poolExerciseId: true, poolExercise: { select: { name: true, pattern: true } }, session: { select: { date: true } } },
+  })) as { poolExerciseId: string; poolExercise: { name: string; pattern: string | null } | null; session: { date: Date } }[];
+  const sets = rows
+    .filter((r) => r.poolExercise)
+    .map((r) => ({ id: r.poolExerciseId, name: r.poolExercise!.name, date: fromDateColumn(r.session.date), pattern: pat(r.poolExercise!.name, r.poolExercise!.pattern) }));
+  const b = pushPullBalance(sets, dateISO);
+  if (!b) return null;
+  // The pull done most in eight weeks, else a row from the movement list.
+  const pulls = new Map<string, { name: string; n: number }>();
+  for (const s of sets) if (s.pattern === "PULL") pulls.set(s.id, { name: s.name, n: (pulls.get(s.id)?.n ?? 0) + 1 });
+  let pick = [...pulls].sort((a, b2) => b2[1].n - a[1].n)[0];
+  if (!pick) {
+    const pool = (await prisma.poolExercise.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, pattern: true },
+    })) as { id: string; name: string; pattern: string | null }[];
+    const cands = pool.filter((p) => pat(p.name, p.pattern) === "PULL").sort((a, b2) => Number(/row/i.test(b2.name)) - Number(/row/i.test(a.name)));
+    if (cands[0]) pick = [cands[0].id, { name: cands[0].name, n: 0 }];
+  }
+  if (!pick) return null;
+  return { ...b, pick: { id: pick[0], name: pick[1].name } };
 }
 
 /** The first sore spot today's plan loads, with those moves (v0.675). */
@@ -161,7 +312,8 @@ async function planChangedOn(userId: string): Promise<string | null> {
 
 /** The day page's card for a person and day (at most one). */
 export async function daySuggestionFor(userId: string, dateISO: string): Promise<Suggestion | null> {
-  const [answers, feedback, last, intent, changed, sore] = await Promise.all([
+  const lifts = await todaysLifts(userId, dateISO);
+  const [answers, feedback, last, intent, changed, sore, sport, tooBig, balance] = await Promise.all([
     answersOn(userId, dateISO),
     recentFeedback(userId, dateISO),
     prisma.workoutSession.findFirst({
@@ -172,10 +324,25 @@ export async function daySuggestionFor(userId: string, dateISO: string): Promise
     programIntentFor(userId, dateISO),
     planChangedOn(userId),
     soreToday(userId, dateISO),
+    sportAround(userId, dateISO),
+    planFitFor(userId, dateISO),
+    balanceFor(userId, dateISO, lifts),
   ]);
+  const legMoves = [
+    ...new Set(
+      lifts.flatMap((p) =>
+        p.exercises.map((e) => e.poolExercise.name).filter((n) => loadsArea("LEGS", n, p.core != null ? null : p.muscleGroup)),
+      ),
+    ),
+  ];
   const answered = new Set([...answers.keys()].filter((k) => k.startsWith("|")).map((k) => k.slice(1)));
   return daySuggestion({
     sore,
+    sport,
+    legMoves,
+    lifting: lifts.some((p) => p.exercises.length > 0),
+    tooBig,
+    balance,
     planChangedOn: changed,
     today: dateISO,
     lastTrained: last ? fromDateColumn(last.date) : null,

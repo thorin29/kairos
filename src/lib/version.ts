@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.675.0";
+export const APP_VERSION = "0.676.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.676.0",
+    summary: [
+      "A game today or tomorrow with leg work on the plan: the day offers lighter legs or swapping them out.",
+      "A tournament (3 games in 4 days) offers a lighter few days of lifting.",
+      "Lots of pressing and little pulling: the day offers to add a pull you've been doing.",
+      "Skipping a third of planned workouts over 3 weeks: the day asks if the plan is too big, with Pick days to drop, Smaller program or Not now.",
+      "Admin \u2192 Calendar: a sport event type can be set to Game, Practice or Other.",
+    ],
+  },
   {
     version: "0.675.0",
     summary: [

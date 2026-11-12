@@ -31,9 +31,9 @@ import {
   type Program,
 } from "@/lib/workouts/programs";
 import { dayHasProgramWork, loadActiveProgram, plannedSlotFor, programInfoFor, type ProgramInfo } from "@/lib/workouts/program-run";
-import { dayAdjust, dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
+import { dayAddedIds, dayAdjust, dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
-import { adjustKeep, type Adjust } from "@/lib/workouts/adjust";
+import { ADJUST_FACTOR, adjustKeep, loadsArea, type Adjust } from "@/lib/workouts/adjust";
 import type { Suggestion } from "@/lib/workouts/suggest";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
@@ -160,6 +160,8 @@ export type PlannedMovement = {
    *  actually done. Null means the planned movement itself. Lets the client show
    *  "Front squat (instead of Back squat)" with its value rather than a blank. */
   loggedAs?: { poolExerciseId: string; name: string } | null;
+  /** Added to the day from a suggestion (v0.676): never holds up completion. */
+  added?: boolean;
   /** A three-line history summary for the card: the record, the best rep count
    *  at any weight, and the most recent set. Null for anything not measured in
    *  weight, and for a movement with nothing logged yet.
@@ -220,7 +222,8 @@ export function planSlot(plannedWorkoutId: string): string {
  * complete that another still shows as open.
  */
 export function planDone(w: NonNullable<TodayPlanned>): boolean {
-  const tracked = w.exercises.filter((e) => e.tracked !== false);
+  // A movement added from a suggestion (v0.676) never holds the plan open.
+  const tracked = w.exercises.filter((e) => e.tracked !== false && !e.added);
   if (tracked.length === 0) {
     return (
       !!w.sessionLogged ||
@@ -708,9 +711,52 @@ export async function loadTodayPlannedWorkouts(
         (p) => [p.id, (p.hiitWorkout?.movements ?? []).map((m) => m.poolExercise.name)],
       ),
     );
-    return [...trimForAdjust(adj, out.filter((w) => !w.extra), parts), ...extras];
+    return withAdded(userId, dayISO, [...trimForAdjust(adj, out.filter((w) => !w.extra), parts), ...extras], system);
   }
-  return out;
+  return withAdded(userId, dayISO, out, system);
+}
+
+/**
+ * A movement added to the day from a suggestion (v0.676; "Add a row today?"):
+ * on the first strength entry, logged into it, and never holding up the day.
+ */
+async function withAdded(
+  userId: string,
+  dayISO: string,
+  out: NonNullable<TodayPlanned>[],
+  system: Awaited<ReturnType<typeof loadWorkoutUnitSystem>>,
+): Promise<NonNullable<TodayPlanned>[]> {
+  const ids = await dayAddedIds(userId, dayISO);
+  const host = out.find((w) => w.category === "WEIGHTS" && !w.extra && !w.core);
+  if (ids.length === 0 || !host) return out;
+  const have = new Set(out.flatMap((w) => w.exercises.map((e) => e.poolExerciseId)));
+  const add = ids.filter((id) => !have.has(id));
+  if (add.length === 0) return out;
+  const [pool, sets] = (await Promise.all([
+    prisma.poolExercise.findMany({ where: { id: { in: add } }, select: { id: true, name: true, metric: true } }),
+    prisma.sessionSet.findMany({
+      where: { session: { userId, date: toDateColumn(dayISO) }, poolExerciseId: { in: add } },
+      select: { poolExerciseId: true, swappedFromId: true, poolExercise: { select: { name: true } }, weight: true, reps: true, distance: true, meters: true, seconds: true },
+    }),
+  ])) as [{ id: string; name: string; metric: string | null }[], SlotLog[]];
+  const moves: PlannedMovement[] = pool.map((p) => {
+    const metric = p.metric ?? "WEIGHT";
+    const top = topSet(sets.filter((s) => s.poolExerciseId === p.id));
+    return {
+      poolExerciseId: p.id,
+      name: p.name,
+      metric,
+      unit: metricUnit(metric as Metric, system),
+      value: top ? valueForMetric(top, metric) : null,
+      loggedAs: null,
+      stats: null,
+      tracked: true,
+      reps: metric === "WEIGHT" && top ? top.reps : null,
+      skipped: false,
+      added: true,
+    };
+  });
+  return out.map((w) => (w === host ? { ...w, exercises: [...w.exercises, ...moves] } : w));
 }
 
 /**
@@ -1903,7 +1949,7 @@ export async function loadMovementLog(
   if (target && adj && ((adj.mode === "time" && !adj.supp) || adj.mode === "sick")) {
     target = { ...target, sets: target.sets.filter((x) => !x.supplemental) };
   }
-  const [light, poolRow, units] = await Promise.all([
+  const [dayLight, poolRow, units] = await Promise.all([
     dayLightFactor(userId, dateISO),
     prisma.poolExercise.findUnique({
       where: { id: movement },
@@ -1917,6 +1963,10 @@ export async function loadMovementLog(
     } | null>,
     loadWeightUnits(),
   ]);
+  // Lighter legs for a game (v0.676): only the leg lifts drop.
+  const light =
+    dayLight ??
+    (adj?.mode === "legs" && poolRow && loadsArea("LEGS", poolRow.name, poolRow.muscleGroup) ? ADJUST_FACTOR.legs : null);
   const unit = (poolRow?.muscleGroup && units[poolRow.muscleGroup as MuscleGroup]) || "lb";
   // A carry logs the weight and the distance walked (v0.640): the reps field
   // is yards (metres in metric).

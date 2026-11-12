@@ -139,6 +139,7 @@ export function DayLog({
   extra,
   initialDate,
   writeOwn,
+  onOpen,
 }: {
   person: PersonWorkout;
   todayISO: string;
@@ -149,6 +150,8 @@ export function DayLog({
   initialDate?: string;
   /** "Write your own" conditioning for the day (the workout builder). */
   writeOwn?: (dateISO: string, onDone: () => void) => React.ReactNode;
+  /** "Plan too big?" (v0.676): open the plan editor or the programs. */
+  onOpen?: (where: "plan" | "programs") => void;
 }) {
   const userId = person.user.id;
   const [date, setDate] = useState(initialDate && initialDate <= todayISO ? initialDate : todayISO);
@@ -595,6 +598,8 @@ export function DayLog({
             void answerWorkoutSuggestion({ userId, dateISO: date, key, answer })
               .then(() => setTick((n) => n + 1))
               .catch(() => {});
+            if (answer === "editplan") onOpen?.("plan");
+            else if (answer === "programs") onOpen?.("programs");
           }}
         />
       )}

@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11 — Smarter suggestions: hockey, balance, plan too big (v0.676.0 / app 0.486.0)
+
+- Games vs practices (`sportKindOf`): the event type's new Game / Practice /
+  Other setting (Admin → Calendar; migration 148, `EventType.sportKind`), else
+  the title (" @ " / " vs " a game; Practice, Stick & Puck, Skate a practice).
+  A tournament is 3+ games within 4 days (`tournamentDays`).
+- Day cards, in order after back-from-a-break and a sore spot: tournament
+  (Lighter week: the next four days are lighter days, unless already
+  adjusted), game today or tomorrow with leg work (Lighter legs: a new Adjust
+  mode `legs` — leg lifts at 70%, the rest as planned, not a light day for
+  records; Swap legs: Hurt on a LEGS area with `why: "game"`, stand-ins from
+  recent lifts), plan too big, push/pull balance, then hard days.
+- Plan too big: a third or more of planned days (non-optional entries, from
+  when they existed) with nothing logged over 3 weeks, at least 6 planned.
+  Names the two weekdays missed most. Any answer — Pick days to drop (opens
+  the plan editor), Smaller program (opens programs), Not now — asks again
+  in 3 weeks (`workouts.toobig.<userId>`). Nothing is changed for them.
+- Balance: pattern from the movement (or guessed by name). No pulling for 2
+  weeks with 6+ pressing sets, or over 3 weeks 12+ pressing sets and at least
+  twice the pulling. Only on a lifting day with no pull planned. "Add it"
+  puts the pull done most in 8 weeks (else a row from the movement list) on
+  today's first strength entry, for today only, logged into that entry, and
+  never holding the day open (`PlannedMovement.added`).
+- Swapping a leg day with another day of the same week is left for its own
+  release: every place that finds a day's plan by weekday (the day page, the
+  strip, workout tasks, the dashboard) would have to honour the swap.
+
 ## 2026-11 — Sore spots, hurt days rebuilt (v0.675.0 / app 0.485.0)
 
 - One set of areas everywhere: "Something hurt?", sore spots and Adjust

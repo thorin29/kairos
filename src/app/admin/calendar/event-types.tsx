@@ -132,6 +132,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
   const [color, setColor] = useState<string>(type.color);
   const [sport, setSport] = useState(type.sportWorkout);
   const [flex, setFlex] = useState(type.sportFlexTime);
+  const [kind, setKind] = useState<string>(type.sportKind ?? "");
   const [dur, setDur] = useState(
     type.defaultMinutes != null ? String(type.defaultMinutes) : "",
   );
@@ -147,6 +148,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
         sport,
         dur ? Number(dur) : null,
         flex,
+        kind || null,
       );
       if (res.error) setError(res.error);
       else setEditing(false);
@@ -191,6 +193,22 @@ function TypeRow({ type }: { type: EventTypeRow }) {
             Time varies (stick and puck, drop-in)
           </label>
         )}
+        {sport && (
+          <label className="flex w-full items-center gap-2 text-sm">
+            <span className="text-muted">Kind</span>
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value)}
+              aria-label="Game, practice or other"
+              className="h-9 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+            >
+              <option value="">By the event title</option>
+              <option value="GAME">Game</option>
+              <option value="PRACTICE">Practice</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </label>
+        )}
         <label className="flex w-full items-center gap-2 text-sm">
           <span className="text-muted">Default length</span>
           <input
@@ -220,6 +238,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
             setColor(type.color);
             setSport(type.sportWorkout);
             setFlex(type.sportFlexTime);
+            setKind(type.sportKind ?? "");
             setDur(type.defaultMinutes != null ? String(type.defaultMinutes) : "");
             setError(null);
             setEditing(false);

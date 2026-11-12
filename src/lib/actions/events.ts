@@ -103,9 +103,11 @@ export async function updateEventType(
   sportWorkout = false,
   defaultMinutes: number | null = null,
   sportFlexTime = false,
+  sportKind: string | null = null,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   const clean = name.trim().slice(0, 40);
+  const kind = sportWorkout && (sportKind === "GAME" || sportKind === "PRACTICE" || sportKind === "OTHER") ? sportKind : null;
   if (clean.length < 2) return { error: "Give the type a name." };
   if (!isHexColor(color)) return { error: "Pick a color." };
   const mins = normalizeMinutes(defaultMinutes);
@@ -117,7 +119,7 @@ export async function updateEventType(
   await prisma.eventType
     .update({
       where: { id },
-      data: { name: clean, color, sportWorkout, defaultMinutes: mins, sportFlexTime: sportWorkout && sportFlexTime },
+      data: { name: clean, color, sportWorkout, defaultMinutes: mins, sportFlexTime: sportWorkout && sportFlexTime, sportKind: kind },
     })
     .catch(() => {});
   revalidatePath("/calendar");
