@@ -1,6 +1,6 @@
 "use client";
 
-import { SECONDARY_BTN, SECONDARY_LG } from "./buttons";
+import { CHIP, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG, SECTION_CARD, SECTION_LABEL } from "./buttons";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
@@ -2014,8 +2014,8 @@ export function HiitBuilder({
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className={CAPTION}>Workout</label>
+      <div className={SECTION_CARD}>
+        <p className={SECTION_LABEL}>Workout</p>
         <select
           value={sel}
           onChange={(e) => setSel(e.target.value)}
@@ -2050,10 +2050,8 @@ export function HiitBuilder({
             </optgroup>
           )}
         </select>
-      </div>
 
       {isNew ? (
-        <>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={CAPTION}>Name</label>
@@ -2079,37 +2077,6 @@ export function HiitBuilder({
               </select>
             </div>
           </div>
-
-          <div>
-            <label className={CAPTION}>Movements (from the HIIT pool)</label>
-            {movements.length === 0 ? (
-              <p className="rounded-xl border border-hairline bg-ground/40 px-3 py-2 text-sm text-muted">
-                No HIIT movements in the pool yet — add them in the Workouts
-                admin.
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {movements.map((m) => {
-                  const on = picked.has(m.id);
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => toggle(m.id)}
-                      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                        on
-                          ? "border-accent bg-accent/10 text-accent"
-                          : "border-hairline text-muted hover:border-accent"
-                      }`}
-                    >
-                      {m.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </>
       ) : (
         active && (
           <div className="rounded-xl border border-hairline bg-ground/30 p-3 text-sm">
@@ -2147,8 +2114,40 @@ export function HiitBuilder({
           </div>
         )
       )}
+      </div>
 
-      <div>
+      {isNew && (
+          <div className={SECTION_CARD}>
+            <p className={SECTION_LABEL}>Movements</p>
+            {movements.length === 0 ? (
+              <p className="rounded-xl border border-hairline bg-ground/40 px-3 py-2 text-sm text-muted">
+                No HIIT movements in the pool yet — add them in the Workouts
+                admin.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {movements.map((m) => {
+                  const on = picked.has(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => toggle(m.id)}
+                      aria-pressed={on}
+                      className={CHIP(on)}
+                    >
+                      {m.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+      )}
+
+      <div className={SECTION_CARD}>
+        <p className={SECTION_LABEL}>Result</p>
+        <div>
         <label className={CAPTION}>{result.label}</label>
         {result.metric === "DURATION" ? (
           <div className="flex items-center gap-2">
@@ -2194,6 +2193,7 @@ export function HiitBuilder({
           className={FIELD}
         />
       </div>
+      </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
 
@@ -2201,7 +2201,7 @@ export function HiitBuilder({
         type="button"
         onClick={save}
         disabled={!canSave}
-        className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-on-accent disabled:opacity-40"
+        className={`${PRIMARY_BTN} w-full`}
       >
         {pending ? "Logging…" : "Log workout"}
       </button>

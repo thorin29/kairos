@@ -20,7 +20,7 @@ import {
 } from "@/lib/actions/workouts";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import { PlanFilePanel } from "./plan-file-panel";
-import { PRIMARY_BTN } from "./buttons";
+import { PRIMARY_BTN, SECTION_CARD, SECTION_LABEL } from "./buttons";
 import { blockKind, cleanOrder, isSimpleCategory, KIND_LABEL, type SectionKind } from "@/lib/workouts/blocks";
 import { SCHEME_CHOICES, schemeChoiceKey } from "@/lib/workouts/programs";
 import type { DayOrders } from "@/lib/workouts/day-order";
@@ -192,14 +192,22 @@ export function PlanBuilder({
       .catch(() => undefined);
   };
   return (
-    <div className="space-y-2">
-      <p className="text-sm text-muted">
-        Build a training day from your movement pool &mdash; pick a category,
-        choose the exercises, and mark which ones you want to log a number for.
-        A day can hold more than one workout; empty days are rest days.
-      </p>
-      <div className="flex flex-wrap items-center gap-2 pb-1">
-        <label className="text-sm font-medium">Starts on</label>
+    <div className="space-y-4">
+      {/* Dates, pause and order on one card (v0.691), like the other full pages. */}
+      <div className={SECTION_CARD}>
+      <div className="flex items-center justify-between gap-2">
+        <p className={SECTION_LABEL}>Schedule</p>
+        <button
+          type="button"
+          onClick={() => startWeeklyStart(() => void setWeeklyActive(userId, !weeklyActive))}
+          className="text-sm font-semibold text-accent hover:underline"
+        >
+          {weeklyActive ? "Pause" : "Resume"}
+        </button>
+      </div>
+      {!weeklyActive && <p className="text-sm font-semibold text-muted">Paused</p>}
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="w-14 text-sm font-medium">Starts</label>
         <DateField
           defaultValue={weeklyStart}
           onChange={(v) => v && startWeeklyStart(() => void setWeeklyStart(userId, v))}
@@ -212,14 +220,14 @@ export function PlanBuilder({
             onClick={() => startWeeklyStart(() => void setWeeklyStart(userId, ""))}
             className="text-xs font-medium text-muted hover:underline"
           >
-            Clear (start now)
+            Clear
           </button>
         ) : (
-          <span className="text-xs text-muted">Leave blank to start now.</span>
+          <span className="text-xs text-muted">Now</span>
         )}
       </div>
-      <div className="flex flex-wrap items-center gap-2 pb-1">
-        <label className="text-sm font-medium">Ends on</label>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="w-14 text-sm font-medium">Ends</label>
         <DateField
           defaultValue={weeklyEnd}
           onChange={(v) => v && startWeeklyStart(() => void setWeeklyEnd(userId, v))}
@@ -232,25 +240,13 @@ export function PlanBuilder({
             onClick={() => startWeeklyStart(() => void setWeeklyEnd(userId, ""))}
             className="text-xs font-medium text-muted hover:underline"
           >
-            Clear (no end)
+            Clear
           </button>
         ) : (
-          <span className="text-xs text-muted">Leave blank to keep going.</span>
+          <span className="text-xs text-muted">No end</span>
         )}
-        <button
-          type="button"
-          onClick={() => startWeeklyStart(() => void setWeeklyActive(userId, !weeklyActive))}
-          className="ml-auto text-sm font-medium text-accent hover:underline"
-        >
-          {weeklyActive ? "Pause weekly plan" : "Resume weekly plan"}
-        </button>
       </div>
-      {!weeklyActive && (
-        <p className="rounded-lg bg-surface px-3 py-2 text-sm text-muted">
-          Paused &mdash; no weekly prompts. A rotation, if any, still runs.
-        </p>
-      )}
-      <div className="rounded-xl border border-hairline bg-ground/30 p-3">
+      <div className="border-t border-hairline pt-3">
         <button
           type="button"
           aria-expanded={orderOpen}
@@ -268,6 +264,8 @@ export function PlanBuilder({
           </div>
         )}
       </div>
+      </div>
+      <p className={SECTION_LABEL}>Week</p>
       {plan.map((d) => (
         <DayRow
           key={d.day}
@@ -283,9 +281,7 @@ export function PlanBuilder({
           isToday={d.day === todayDow}
         />
       ))}
-      <div className="pt-2">
-        <PlanFilePanel userId={userId} />
-      </div>
+      <PlanFilePanel userId={userId} />
       {onDone && (
         <button type="button" onClick={onDone} className={`${PRIMARY_BTN} mt-2 w-full`}>
           Done
@@ -347,9 +343,7 @@ function DayRow({
 
   return (
     <div
-      className={`rounded-xl border p-3 ${
-        isToday ? "border-accent bg-accent/5" : "border-hairline bg-ground/30"
-      }`}
+      className={`rounded-xl border bg-surface px-4 py-3 ${isToday ? "border-accent" : "border-hairline"}`}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-sm font-semibold">
@@ -402,7 +396,7 @@ function DayRow({
         {listed.map((w) => (
           <div
             key={w.id}
-            className="flex items-start gap-2 rounded-lg bg-surface px-3 py-2 shadow-sm"
+            className="flex items-start gap-2 rounded-lg border border-hairline bg-ground/30 px-3 py-2"
           >
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium">
@@ -490,7 +484,7 @@ function DayRow({
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-hairline px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-dashed border-hairline px-3 text-sm font-medium text-muted hover:border-accent hover:text-accent"
         >
           <PlusIcon className="h-4 w-4" />
           Add workout

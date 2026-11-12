@@ -21,3 +21,13 @@ export const SECONDARY_LG = `${BASE} h-11 px-4 text-sm ${OUTLINE}`;
 
 /** Delete and the like: the secondary shape in red. */
 export const DANGER_BTN = `${BASE} h-10 px-4 text-sm border border-red-300 bg-surface text-red-700 hover:bg-red-50`;
+
+/** A page's section (v0.691): the white card the full pages share (Family
+ *  WOD, Pause, Edit plan, HIIT / CrossFit), headed by `SECTION_LABEL`. */
+export const SECTION_CARD = "space-y-4 rounded-xl border border-hairline bg-surface px-4 py-4";
+export const SECTION_LABEL = "text-xs font-semibold uppercase tracking-widest text-muted";
+/** A choice chip: filled when on. */
+export const CHIP = (on: boolean) =>
+  `inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold transition-colors ${
+    on ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+  }`;

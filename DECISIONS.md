@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — Edit plan and HIIT builder restyled (v0.691.0, web only)
+
+- `SECTION_CARD`, `SECTION_LABEL` and `CHIP` in `exercise/buttons.ts` are the
+  full pages' shared section card, its uppercase label and the filled choice
+  chip (as on Family WOD and Pause).
+- Edit plan: the intro paragraph and "leave blank" hints are gone (no
+  explanatory text in the UI); Schedule card holds Starts / Ends (blank reads
+  "Now" / "No end"), Pause / Resume and Order of the day; day rows are white
+  cards, today ringed in the accent.
+- HIIT / CrossFit: Workout (pick, or name and type), Movements (chips) and
+  Result (result and notes) cards, then the filled Log workout button. No
+  behaviour changes.
+
 ## 2026-11 — Carries on the map; endurance rises and eases (v0.690.0 / app 0.500.0)
 
 - Carries were FULL_BODY, which has no place on the map, and their assisting
