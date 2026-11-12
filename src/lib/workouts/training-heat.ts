@@ -4,27 +4,32 @@
  * start, with no time range to pick. Pure — heat-run.ts loads the sets.
  *
  * Each muscle group has a warmth from −3 (cold) to 5 (hot); 0 is neutral grey.
- *  - A week with real work for it (2 or more counted sets, scored as in
- *    heat.ts) warms it a step. Coming back after a break it warms two a week
- *    until it's back where it was (strength returns quickly after a layoff).
- *  - The top step is for consistent AND improving: a new best on one of its
- *    movements within the last six weeks. Steady but flat stops one below.
+ * Since v0.689 the colour is earned by progress and eases back when progress
+ * stops, so it rises and falls with training instead of filling up red:
+ *  - A trained week: 2 or more counted sets of the group's own movements
+ *    (scored as in heat.ts). Assisting work counts a quarter set and can't
+ *    make a week on its own (bench and rows don't train arms) — unless the
+ *    group had no direct work in the last 12 weeks, when it counts half.
+ *    A day with one logged set of a main movement (older logs held just the
+ *    top set) still counts the week.
+ *  - Trained regularly (4 of the last 6 weeks) is pale yellow; less is grey.
+ *  - Progress warms it: each main movement's best over the last 3 weeks
+ *    (estimated max, or reps for bodyweight) against 12 and 26 weeks back,
+ *    averaged over the group's movements. Up 3% in 12 weeks is yellow, 6%
+ *    orange; 6% and 12% over 6 months dark orange; 8% and 18% red.
+ *  - It moves up at most a step every 2 trained weeks. When progress stops it
+ *    eases down a step every 3 weeks, never below pale yellow while trained
+ *    regularly; down 5% or more over 12 weeks it drops a step a week.
  *  - A missed week cools it a step. It only goes blue once it's at neutral
- *    and still missed for four weeks running — strength holds for about three
- *    weeks without training and losses are measurable after three or four —
- *    then a step deeper every two more weeks, to −3.
- *  - A real loss of strength cools it too: two trained weeks running with its
- *    movements more than 5% under their recent best (median of the week's
- *    movements, each against its own best of the 12 weeks before). A plateau
- *    stops the cooling. Light, deload and test weeks, adjusted days (low
- *    energy, sick, hurt, short on time) and the first session back after
- *    three weeks off are never judged for strength. Holds (time) can set a
- *    best but never count as a decline: they're done for a set time (v0.687).
- *  - A program's start resets the comparison (v0.688): its weights come from
- *    a training max below your best, so from then on movements are judged
- *    only against what was done since it began. A day with one logged set
- *    (older logs held just the top set) still counts as a trained week.
- *  - Paused weeks (four or more of the week's days in a pause) change nothing.
+ *    and still missed for four weeks running, then a step deeper every two
+ *    more weeks, to −3.
+ *  - Light, deload and test weeks and adjusted days aren't counted for
+ *    strength. Holds (time) are done for a set time, so they never count for
+ *    progress or loss (v0.687). A program's start (v0.688) resets the 12-week
+ *    comparison: its weights come from a training max below your best.
+ *  - Paused weeks, and sore-held weeks that weren't trained, change nothing.
+ *  - "+31% since you started": each main movement's best of the last 6 weeks
+ *    against its first 3 weeks, averaged, shown in the pop-up.
  *
  * Endurance is its own gauge, from hockey and other sport, rowing, running,
  * rucking and conditioning: minutes, weighted by how hard each felt (Easy ½,
@@ -62,14 +67,25 @@ export type Pause = { from: string; to: string };
  *  "16 sets this week", "148 min this week" — and a row per movement or kind. */
 export type WeekRow = { name: string; detail: string; amount: string };
 export type TrainWeek = { headline: string; rows: WeekRow[] };
-export type TrainGroup = { group: string; level: number; line: string; week?: TrainWeek };
+export type TrainGroup = {
+  group: string;
+  level: number;
+  line: string;
+  week?: TrainWeek;
+  /** "+31% since you started" (v0.689), when there's enough history. */
+  since?: string;
+};
 export type TrainingHeat = { groups: TrainGroup[]; endurance: TrainGroup | null; paused: boolean };
 
 const DAY = 86_400_000;
 const MIN_CREDIT = 2;
+/** Assisting work's share of a set, and its share when the group has had no direct work. */
+const ASSIST = 0.25;
+const ASSIST_ONLY = 0.5;
+const REGULAR = 4; // trained weeks of the last 6
+const UP_EVERY = 2;
+const EASE_EVERY = 3;
 const DECLINE = 0.95;
-const LOOKBACK_WEEKS = 12;
-const BACK_GAP_DAYS = 21;
 
 /** The Monday on or before a day. */
 export function weekStart(iso: string): string {
@@ -156,6 +172,61 @@ function stepWeek(st: State, trained: boolean, ratio: number | null, newBest: bo
 }
 
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+const pct = (r: number) => Math.round(Math.abs(r - 1) * 100);
+
+type Move = { name: string; kind: "w" | "t" | "r"; weekBest: Map<string, number> };
+type Progress = { avg: number; top: { name: string; r: number }; low: { name: string; r: number }; span: number };
+
+const bestIn = (m: Move, from: string, to: string) => {
+  let b = 0;
+  for (const [w, v] of m.weekBest) if (w >= from && w <= to && v > b) b = v;
+  return b;
+};
+
+/**
+ * Progress at week `w` (v0.689): each movement's best of the last 3 weeks
+ * against its best of the 3 weeks ending `back` weeks earlier, as a ratio;
+ * their average, the best and worst mover, and how many weeks it spans. A
+ * program started since (`since`) moves the earlier window to its first
+ * weeks. Null when no movement has both.
+ */
+function progress(moves: readonly Move[], w: string, back: number, since: string): Progress | null {
+  const recentFrom = plusDays(w, -14);
+  let from = plusDays(w, -7 * (back + 2));
+  let to = plusDays(w, -7 * back);
+  if (since && since > from) {
+    from = since;
+    if (to < plusDays(since, 14)) to = plusDays(since, 14);
+  }
+  if (to >= recentFrom) return null;
+  const rs: { name: string; r: number }[] = [];
+  for (const m of moves) {
+    const now = bestIn(m, recentFrom, w);
+    const base = bestIn(m, from, to);
+    if (now > 0 && base > 0) rs.push({ name: m.name, r: now / base });
+  }
+  if (rs.length === 0) return null;
+  rs.sort((a, b) => a.r - b.r);
+  const avg = rs.reduce((t, x) => t + x.r, 0) / rs.length;
+  const span = Math.round((Date.parse(`${w}T12:00:00Z`) - Date.parse(`${to}T12:00:00Z`)) / (7 * DAY));
+  return { avg, top: rs[rs.length - 1], low: rs[0], span };
+}
+
+/** "+31% since you started" (v0.689): each movement's best of the last 6
+ *  weeks against its first 3, averaged; needs 8 weeks of history. */
+function sinceStart(moves: readonly Move[], curWeek: string): string | null {
+  const rs: number[] = [];
+  for (const m of moves) {
+    const first = [...m.weekBest.keys()].sort()[0];
+    if (!first || first > plusDays(curWeek, -56)) continue;
+    const base = bestIn(m, first, plusDays(first, 14));
+    const now = bestIn(m, plusDays(curWeek, -35), curWeek);
+    if (base > 0 && now > 0) rs.push(now / base);
+  }
+  if (rs.length === 0) return null;
+  const p = Math.round((rs.reduce((t, r) => t + r, 0) / rs.length - 1) * 100);
+  return p >= 1 ? `+${p}% since you started` : null;
+}
 
 /** Every muscle group's warmth and its one-line reason, and endurance's. */
 export function buildTrainingHeat(
@@ -189,34 +260,45 @@ export function buildTrainingHeat(
   const out: TrainGroup[] = [];
   for (const g of [...groups].sort()) {
     const mine = sets.filter((s) => s.date <= today && (s.primary === g || s.secondary.includes(g)));
-    const creditBy = new Map<string, number>();
+    // Direct and assisting credit kept apart (v0.689).
+    const direct = new Map<string, number>();
+    const assist = new Map<string, number>();
     for (const s of mine) {
       const w = weekStart(s.date);
-      creditBy.set(w, (creditBy.get(w) ?? 0) + (s.primary === g ? s.credit : s.credit / 2));
+      const into = s.primary === g ? direct : assist;
+      into.set(w, (into.get(w) ?? 0) + s.credit);
     }
     // Older logs often hold only the day's top set (v0.688): a day with one
-    // set of a main movement was still a workout, so its week counts as
-    // trained even though one set scores under the two-set bar.
+    // set of a main movement was still a workout, so its week counts.
     const perDay = new Map<string, number>();
     for (const s of mine) if (s.primary === g) perDay.set(`${s.movement}|${s.date}`, (perDay.get(`${s.movement}|${s.date}`) ?? 0) + 1);
     for (const s of mine) {
       if (s.primary !== g || perDay.get(`${s.movement}|${s.date}`) !== 1 || !strengthOf(s)) continue;
       const w = weekStart(s.date);
-      creditBy.set(w, Math.max(creditBy.get(w) ?? 0, MIN_CREDIT));
+      direct.set(w, Math.max(direct.get(w) ?? 0, MIN_CREDIT));
     }
+    const hadDirect = (w: string) => {
+      for (let k = 0; k < 12; k++) if ((direct.get(plusDays(w, -7 * k)) ?? 0) > 0) return true;
+      return false;
+    };
+    const trainedIn = (w: string) => {
+      const d = direct.get(w) ?? 0;
+      const a = assist.get(w) ?? 0;
+      if (!hadDirect(w)) return a * ASSIST_ONLY >= MIN_CREDIT;
+      return d >= MIN_CREDIT || (d > 0 && d + a * ASSIST >= MIN_CREDIT);
+    };
+
     // Strength: each main movement's best per week, judged sets only.
     const main = mine.filter((s) => s.primary === g);
-    const byMove = new Map<string, { name: string; kind: "w" | "t" | "r"; weekBest: Map<string, number>; days: string[] }>();
+    const byMove = new Map<string, Move>();
     for (const s of main) {
       const sc = strengthOf(s);
-      if (!sc) continue;
+      if (!sc || s.light) continue;
       let m = byMove.get(s.movement);
       if (!m) {
-        m = { name: s.name, kind: sc.kind, weekBest: new Map(), days: [] };
+        m = { name: s.name, kind: sc.kind, weekBest: new Map() };
         byMove.set(s.movement, m);
       }
-      m.days.push(s.date);
-      if (s.light) continue;
       if (m.kind !== sc.kind) {
         // Weighted beats the rest for the same movement.
         if (sc.kind !== "w") continue;
@@ -226,72 +308,93 @@ export function buildTrainingHeat(
       const w = weekStart(s.date);
       m.weekBest.set(w, Math.max(m.weekBest.get(w) ?? 0, sc.v));
     }
-    for (const m of byMove.values()) m.days.sort();
+    // Holds are done for a set time, not to failure (v0.687): never progress or loss.
+    const moves = [...byMove.values()].filter((m) => m.kind !== "t");
 
-    const st: State = { warmth: 0, peak: 0, missed: 0, decline: 0, sinceBest: 99, trainedWeeks: [], backFor: 0 };
-    let lastDecline: { name: string; pct: number } | null = null;
-    let lastGain: { name: string; pct: number } | null = null;
-    let lastTrained: string | null = null;
-    // A group counts from the first week it had real work (one that's only
-    // ever assisted isn't shown).
-    const start = weeks.find((w) => (creditBy.get(w) ?? 0) >= MIN_CREDIT);
+    // A group counts from the first week it was trained (one that's only
+    // ever assisted lightly isn't shown).
+    const start = weeks.find(trainedIn);
     if (!start) continue;
     const holds = held[g] ?? [];
+    const hist: boolean[] = [];
+    let level = 0;
+    let missed = 0;
+    let idx = 0;
+    let lastChange = -99;
+    let lastTrained: string | null = null;
+    let last: { regular: boolean; target: number; p12: Progress | null; p26: Progress | null } | null = null;
     for (const w of weeks) {
       if (w < start || weekPaused(w, pauses)) continue;
-      const trained = (creditBy.get(w) ?? 0) >= MIN_CREDIT;
+      const trained = trainedIn(w);
       // A sore week that wasn't trained changes nothing (v0.686).
       if (!trained && weekPaused(w, holds)) continue;
-      const ratios: number[] = [];
-      let newBest = false;
-      for (const m of byMove.values()) {
-        const now = m.weekBest.get(w);
-        if (now == null) continue;
-        let prior = 0;
-        const since = freshSince(w);
-        for (let k = 1; k <= LOOKBACK_WEEKS; k++) {
-          const pw = plusDays(w, -7 * k);
-          if (pw < since) break;
-          prior = Math.max(prior, m.weekBest.get(pw) ?? 0);
+      if (!trained) {
+        if (w === curWeek) continue; // the week isn't over
+        hist.push(false);
+        missed++;
+        if (level > 0) {
+          level--;
+          lastChange = idx;
+        } else if (missed >= 4) {
+          // Past neutral: blue, a step at a time, deeper every two more weeks.
+          const target = -Math.min(3, 1 + Math.floor((missed - 4) / 2));
+          level = Math.max(level - 1, Math.min(level, target));
         }
-        if (prior <= 0) continue;
-        // The first session back after three weeks off isn't judged.
-        const before = m.days.filter((d) => d < w).pop();
-        if (!before || Date.parse(`${w}T12:00:00Z`) - Date.parse(`${before}T12:00:00Z`) > BACK_GAP_DAYS * DAY) continue;
-        const r = now / prior;
-        if (r > 1.0001) {
-          newBest = true;
-          lastGain = { name: m.name, pct: Math.round((r - 1) * 100) };
-        }
-        // A hold is done for a set time (an isometric or core day's 20 s,
-        // 45 s, 1:00), not to failure, so a shorter one isn't a loss of
-        // strength (v0.687): holds can set a best but never count as a decline.
-        if (m.kind === "t") continue;
-        ratios.push(r);
-        if (r < DECLINE) lastDecline = { name: m.name, pct: Math.round((1 - r) * 100) };
+        idx++;
+        continue;
       }
-      ratios.sort((a, b) => a - b);
-      const ratio = ratios.length ? ratios[Math.floor((ratios.length - 1) / 2)] : null;
-      stepWeek(st, trained, ratio, newBest, w === curWeek);
-      if (trained) lastTrained = w;
+      hist.push(true);
+      missed = 0;
+      lastTrained = w;
+      const regular = hist.slice(-6).filter(Boolean).length >= REGULAR;
+      const p12 = progress(moves, w, 12, freshSince(w));
+      const p26 = progress(moves, w, 26, "");
+      let target = 0;
+      if (regular) {
+        target = 1;
+        const a12 = p12?.avg ?? 0;
+        const a26 = p26?.avg ?? 0;
+        if (p12 && a12 >= 1.03) target = 2;
+        if (p12 && a12 >= 1.06) target = 3;
+        if (target === 3 && p26 && a26 >= 1.12) target = 4;
+        if (p12 && p26 && a12 >= 1.08 && a26 >= 1.18) target = 5;
+      }
+      last = { regular, target, p12, p26 };
+      if (level < 0) {
+        level = 0; // back from a layoff: out of the blue
+        lastChange = idx;
+      } else if (target > level && idx - lastChange >= UP_EVERY) {
+        level++;
+        lastChange = idx;
+      } else if (target < level) {
+        const declining = !!p12 && p12.avg <= DECLINE;
+        if (idx - lastChange >= (declining ? 1 : EASE_EVERY)) {
+          level--;
+          lastChange = idx;
+        }
+      }
+      idx++;
     }
-    const recent = st.trainedWeeks.slice(-8);
+
+    const recent = hist.slice(-6);
     let line: string;
     const soreNow = holds.some((p) => p.from <= today && p.to >= today);
     if (paused) line = "Paused";
     else if (soreNow) line = "Sore · not cooling while it heals";
-    else if (!lastTrained) line = "Not trained yet";
-    else if (st.decline >= 2 && lastDecline) line = `${lastDecline.name} max down ${lastDecline.pct}% for ${st.decline} weeks`;
-    else if (st.missed > 0) {
+    else if (!lastTrained || !last) line = "Not trained yet";
+    else if (missed > 0) {
       const ago = Math.round((Date.parse(`${curWeek}T12:00:00Z`) - Date.parse(`${lastTrained}T12:00:00Z`)) / (7 * DAY));
-      line = `last trained ${plural(ago, "week")} ago${st.warmth > 0 ? " · cooling" : ""}`;
-    }
-    else if (st.backFor > 0 && st.warmth < st.peak) line = `back ${plural(st.backFor, "week")} · warming toward where you were`;
-    else {
-      line = `trained ${recent.filter(Boolean).length} of the last ${plural(recent.length, "week")}`;
-      if (st.sinceBest < 6 && lastGain && lastGain.pct > 0) line += ` · ${lastGain.name} max up ${lastGain.pct}%`;
-    }
-    out.push({ group: g, level: st.warmth, line, week: muscleWeek(main, curWeek, today) });
+      line = `last trained ${plural(ago, "week")} ago${level > 0 ? " · cooling" : ""}`;
+    } else if (last.p12 && last.p12.avg <= DECLINE) {
+      line = `${last.p12.low.name} down ${pct(last.p12.low.r)}% in ${plural(last.p12.span, "week")}`;
+    } else if (!last.regular) line = `trained ${recent.filter(Boolean).length} of the last ${plural(recent.length, "week")}`;
+    else if (last.p12 && last.p12.avg >= 1.03) {
+      line = `${last.p12.top.name} up ${pct(last.p12.top.r)}% in ${plural(last.p12.span, "week")}`;
+      if (level >= 4 && last.p26 && last.p26.avg >= 1.12) line += ` · ${pct(last.p26.avg)}% in 6 months`;
+    } else if (level > last.target) line = "level lately · easing";
+    else line = "trained regularly · about level";
+    const gain = sinceStart(moves, curWeek);
+    out.push({ group: g, level, line, week: muscleWeek(main, curWeek, today), ...(gain ? { since: gain } : {}) });
   }
 
   return { groups: out, endurance: buildEndurance(cardio, weeks, curWeek, today, pauses, paused), paused };

@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-11 — Heat map earned by progress, not streaks (v0.689.0 / app 0.499.0)
+
+- The old rule warmed a group a step per trained week and capped at red with
+  any new best in six weeks, so steady training filled the map red in about
+  six weeks and kept it there. Arms read red from bench, rows, press and
+  pull-ups counting half a set each.
+- Now: trained regularly (4 of the last 6 weeks) is pale yellow; colour above
+  that comes from progress — each main movement's best of the last 3 weeks
+  against 12 and 26 weeks back, averaged. 3% / 6% over 12 weeks for yellow /
+  orange; dark orange adds 12% over 6 months; red is 8% over 12 weeks and 18%
+  over 6 months (around month 6–7 of steady progress, or a strong block).
+- It rises at most a step every 2 trained weeks and eases a step every 3 when
+  progress stops (a step a week when down 5%), never below pale yellow while
+  trained regularly. Missed weeks and blue work as before.
+- Assisting work counts ¼ and can't make a week alone; ½ and can when the
+  group had no direct work in 12 weeks (bodyweight-only routines).
+- Holds never count for progress or loss. A program start moves the 12-week
+  comparison window to its first weeks; the 26-week one isn't moved.
+- Long-term progress is a pop-up line ("+31% since you started"), not a map
+  toggle or stars — the user found both too busy. Endurance is unchanged.
+
 ## 2026-11 — Heat map from real data; one-person pauses in Admin (v0.688.0 / app 0.498.0)
 
 - Checked against a household export: Legs read grey ("back squats max down

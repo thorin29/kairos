@@ -251,13 +251,10 @@ export function TrainKey() {
       {about && (
         <Modal small title="Heat map" onClose={() => setAbout(false)}>
           <div className="space-y-2 text-sm">
-            <p>Each muscle warms a step for every week you give it real work, and fastest when you&apos;re coming back to where you were.</p>
-            <p>The hottest step is for training it steadily and setting a new best in the last six weeks.</p>
-            <p>A missed week cools it a step. It only turns blue after it&apos;s cooled to grey and you&apos;ve missed it about a month.</p>
-            <p>
-              Strength that keeps slipping for two weeks cools it too. Light, deload and test weeks, adjusted days, and
-              your first session back aren&apos;t judged.
-            </p>
+            <p>Pale yellow: trained regularly, 4 of the last 6 weeks with the muscle&apos;s own exercises.</p>
+            <p>It warms as you get stronger: up 3% over 12 weeks is yellow, 6% orange. Red is a strong run over about 6 months.</p>
+            <p>When progress stalls it eases back, but not below pale yellow while you keep training.</p>
+            <p>A missed week cools it a step. Blue after about a month off.</p>
             <p>The heart is endurance: sport, rowing, running, rucking and conditioning, by minutes and how hard they felt.</p>
           </div>
         </Modal>
@@ -311,6 +308,7 @@ export function TrainDetail({
         </p>
         {/* Why it's this colour (v0.687: shown with the week's rows too). */}
         {week && data?.line && <p className="text-muted">{data.line}</p>}
+        {data?.since && <p className="text-xs text-muted">{data.since}</p>}
         {week && week.rows.length > 0 && (
           <ul className="divide-y divide-hairline border-t border-hairline">
             {week.rows.map((r) => {
