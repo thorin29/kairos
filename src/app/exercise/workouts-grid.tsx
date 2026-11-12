@@ -1263,32 +1263,35 @@ function LiftDetailPanel({
     if (groups.length === 0) return {};
     const cs = groups.map((g) => groupColor.get(g) ?? "var(--color-accent)");
     if (cs.length === 1) return { background: cs[0] };
-    // Two reads best as a diagonal split. Three or more cannot extend that, so
-    // they become equal vertical bands: one rule that degrades predictably,
-    // where wedges or quarters at 18px turn to mud.
+    // Two reads best as a diagonal split.
     if (cs.length === 2) {
       return {
         background: `linear-gradient(135deg, ${cs[0]} 0 50%, ${cs[1]} 50% 100%)`,
       };
     }
-    // Three and four cut the square from its centre — thirds as wedges, four as
-    // quadrants — which stays legible at this size because every piece meets in
-    // the middle. Five or more would be slivers, so those become bands instead.
-    if (cs.length === 3 || cs.length === 4) {
-      const n = cs.length;
-      // from 0deg points up, so four pieces land as true quadrants and three as
-      // even wedges. Both meet in the middle, which is what keeps them readable
-      // at 18px where slivers would not be.
-      const wedges = cs
-        .map((c, i) => `${c} ${(i / n) * 360}deg ${((i + 1) / n) * 360}deg`)
-        .join(", ");
-      return { background: `conic-gradient(from 0deg, ${wedges})` };
-    }
-    const n = cs.length;
-    const stops = cs
-      .map((c, i) => `${c} ${(i / n) * 100}% ${((i + 1) / n) * 100}%`)
-      .join(", ");
-    return { background: `linear-gradient(90deg, ${stops})` };
+    // Three or more draw as tiles inside the cell (v0.681): see cellTiles.
+    return {};
+  };
+  /** Three or more groups: a small grid, one tile per group — two across up to
+   *  four, three across up to nine; a short last row shares its width. Tap the
+   *  day for the names. */
+  const cellTiles = (groups: string[]) => {
+    if (groups.length < 3) return null;
+    const cs = groups.slice(0, 9).map((g) => groupColor.get(g) ?? "var(--color-accent)");
+    const cols = cs.length <= 4 ? 2 : 3;
+    const rowsOf: string[][] = [];
+    for (let i = 0; i < cs.length; i += cols) rowsOf.push(cs.slice(i, i + cols));
+    return (
+      <span className="flex h-full w-full flex-col gap-px overflow-hidden rounded-[3px]">
+        {rowsOf.map((r, i) => (
+          <span key={i} className="flex flex-1 gap-px">
+            {r.map((c, j) => (
+              <span key={j} className="flex-1" style={{ background: c }} />
+            ))}
+          </span>
+        ))}
+      </span>
+    );
   };
 
   if (trained.size === 0) {
@@ -1337,8 +1340,10 @@ function LiftDetailPanel({
                             title={`${cell.date} \u2014 ${cell.groups.map((g) => labelOf(g)).join(", ")}`}
                             onClick={() => setDayOpen(cell.date)}
                             style={cellStyle(cell.groups)}
-                            className="h-3.5 w-3.5 rounded-[3px]"
-                          />
+                            className="block h-3.5 w-3.5 rounded-[3px]"
+                          >
+                            {cellTiles(cell.groups)}
+                          </button>
                         ) : (
                           <span key={cell.date} title={cell.date} className="h-3.5 w-3.5 rounded-[3px] bg-surface" />
                         ),

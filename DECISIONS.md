@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-11 — Pages, not sheets; one Add flow (v0.682.0 / app 0.492.0)
+
+- App rule: anything you search, fill in or step through is a full page
+  (`ui/common/FullPage`: top bar, back arrow, the page background, white
+  cards); small centred pop-ups only for short choices, confirmations, ⓘ,
+  date pickers and the tap-a-day breakdown. No bottom sheets: Pick one /
+  Build one, Add cardio, the plan file sheets, the routine picker and both
+  swap-a-movement lists became pages; the warm-up, core and endurance
+  helpers now draw through `FullPage`. The web keeps its Modal for now.
+- One Add button on the day ("+ Additional"), replacing it in the
+  Conditioning section and "Log an additional workout": Conditioning,
+  Family WOD, Strength, Cardio, Sport, Mobility, Stretching, Isometrics,
+  Something else. Cardio uses the Cardio card's Add page, so cardio is added
+  one way; Strength, Sport and Something else open the log flow as a page.
+- Conditioning is one page with a Pick · Generator switch ("Build one"
+  renamed so it's clear the app makes it). "Write your own" became "Create
+  new" and goes to the existing HIIT/CrossFit create page: this page picks,
+  it doesn't write.
+- Workout days: three or more groups draw as tiles (two across up to four,
+  three across up to nine, a short last row sharing its width) instead of
+  wedges or stripes.
+
 ## 2026-11 — Tap a day; Family WOD tidy (v0.681.0 / app 0.491.0)
 
 - Workout days: a day with work opens a small pop-up listing each colour's

@@ -470,7 +470,7 @@ function BuildOne({
   }
 
   return (
-    <Modal title="Build one" onClose={onClose}>
+    <Modal title="Generator" onClose={onClose}>
       {failed ? (
         <p className="text-sm text-red-700">Couldn&rsquo;t load the equipment. Try again.</p>
       ) : !data ? (
@@ -635,11 +635,11 @@ export function AddConditioning({
               Pick one
             </button>
             <button type="button" onClick={() => choose("build")} className={QUIET + " justify-center"}>
-              Build one
+              Generator
             </button>
             {writeOwn && (
               <button type="button" onClick={() => choose("own")} className={QUIET + " justify-center"}>
-                Write your own
+                Create new
               </button>
             )}
           </div>
@@ -652,7 +652,7 @@ export function AddConditioning({
         <BuildOne userId={userId} dateISO={dateISO} completedOnISO={completedOnISO} onDone={finish} onClose={() => setOpened(null)} />
       )}
       {opened === "own" && writeOwn && (
-        <Modal title="Write your own" onClose={() => setOpened(null)}>
+        <Modal title="Create new" onClose={() => setOpened(null)}>
           {writeOwn(dateISO, finish)}
         </Modal>
       )}
@@ -742,11 +742,11 @@ export function PickConditioningCard({
             Pick one
           </button>
           <button type="button" onClick={() => setOpened("build")} className={QUIET}>
-            Build one
+            Generator
           </button>
           {writeOwn && (
             <button type="button" onClick={() => setOpened("own")} className={QUIET}>
-              Write your own
+              Create new
             </button>
           )}
         </div>
@@ -759,7 +759,7 @@ export function PickConditioningCard({
         <BuildOne userId={userId} dateISO={dateISO} completedOnISO={completedOnISO} onDone={finish} onClose={() => setOpened(null)} />
       )}
       {opened === "own" && writeOwn && (
-        <Modal title="Write your own" onClose={() => setOpened(null)}>
+        <Modal title="Create new" onClose={() => setOpened(null)}>
           {writeOwn(dateISO, finish)}
         </Modal>
       )}
