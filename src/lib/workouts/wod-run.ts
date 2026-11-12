@@ -1,4 +1,5 @@
 import "server-only";
+import { planDow } from "@/lib/workouts/day-swap-run";
 import { prisma } from "@/lib/prisma";
 import { getSetting, setSetting } from "@/lib/settings";
 import { addDays, dayOfWeek, fromDateColumn, toDateColumn } from "@/lib/dates";
@@ -504,7 +505,7 @@ export async function pickPlansFor(userId: string, dateISO: string): Promise<Pic
   const plans = (await prisma.plannedWorkout.findMany({
     where: {
       userId,
-      dayOfWeek: dayOfWeek(dateISO),
+      dayOfWeek: await planDow(userId, dateISO),
       isRest: false,
       hiitWorkoutId: null,
       category: "HIIT" as never,

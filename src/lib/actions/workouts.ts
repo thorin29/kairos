@@ -1,5 +1,6 @@
 "use server";
 
+import { planDow } from "@/lib/workouts/day-swap-run";
 import { cleanAdjust, CARDIO_CHOICES, TIME_CHOICES, type TimePick } from "@/lib/workouts/adjust";
 import { clearAdjust } from "@/lib/workouts/suggest-run";
 import {
@@ -1308,7 +1309,7 @@ export async function loadDayLog(
     adjustView(userId, dateISO),
     sportDayView(userId, dateISO),
     loadLoggedWeights(userId, dateISO),
-    orderForDay(userId, dayOfWeek(dateISO)),
+    orderForDay(userId, await planDow(userId, dateISO)),
     cardioDay(userId, dateISO),
     conditioningFor(userId, dateISO),
     pickPlansFor(userId, dateISO),

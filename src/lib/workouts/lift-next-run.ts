@@ -1,4 +1,6 @@
 import "server-only";
+import { planDow, swapsFor } from "@/lib/workouts/day-swap-run";
+import { planWeekday } from "@/lib/workouts/day-swap";
 import { prisma } from "@/lib/prisma";
 import { addDays, dayOfWeek, todayISO } from "@/lib/dates";
 import { dayPlanWhere, loadMovementLog } from "@/lib/queries/workout-log";
@@ -20,11 +22,13 @@ export async function liftNext(
   const days = new Set(rows.map((r) => r.plannedWorkout.dayOfWeek).filter((d): d is number => d != null));
   if (days.size === 0) return null;
   const today = todayISO();
+  const swaps = await swapsFor(userId);
   for (let i = 0; i <= 14; i++) {
     const date = addDays(today, i);
-    if (!days.has(dayOfWeek(date))) continue;
+    const dow = planWeekday(swaps, date);
+    if (!days.has(dow)) continue;
     const planned = (await prisma.plannedExercise.findFirst({
-      where: { poolExerciseId, plannedWorkout: dayPlanWhere(userId, date) },
+      where: { poolExerciseId, plannedWorkout: dayPlanWhere(userId, date, dow) },
       select: { id: true },
     })) as { id: string } | null;
     if (!planned) continue;

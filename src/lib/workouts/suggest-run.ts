@@ -20,6 +20,8 @@ import {
 } from "@/lib/workouts/suggest";
 import { programIntentFor } from "@/lib/workouts/program-run";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
+import { planDow, swapDays, swapsFor, unswapDay } from "@/lib/workouts/day-swap-run";
+import { mondayOfWeek, planWeekday, swappedWith } from "@/lib/workouts/day-swap";
 import { SORE_LABEL } from "@/lib/workouts/sore";
 import { loadsArea } from "@/lib/workouts/adjust";
 import { getSetting, setSetting } from "@/lib/settings";
@@ -116,6 +118,18 @@ export async function answerSuggestion(
     );
     return;
   }
+  // Swap today's leg day with a later day this week (v0.677), or undo it.
+  if (answer.startsWith("swap:")) {
+    await put(key.slice(0, 40), slot.slice(0, 60), "swap");
+    await swapDays(userId, dateISO, Number(answer.slice(5)));
+    return;
+  }
+  if (key === "swap" && answer === "undo") {
+    await unswapDay(userId, dateISO);
+    // The day's suggestions can ask again.
+    await prisma.workoutSuggestionAnswer.deleteMany({ where: { userId, date: toDateColumn(dateISO), key: "game" } });
+    return;
+  }
   // A tournament: lighter from today through the next three days.
   if (answer === "lightweek") {
     for (let i = 0; i < 4; i++) {
@@ -167,7 +181,7 @@ type WeightPlan = { muscleGroup: string | null; core: unknown; exercises: { pool
 
 async function todaysLifts(userId: string, dateISO: string): Promise<WeightPlan[]> {
   return (await prisma.plannedWorkout.findMany({
-    where: { userId, dayOfWeek: dayOfWeek(dateISO), isRest: false, category: "WEIGHTS" as never, createdAt: { lt: toDateColumn(addDays(dateISO, 1)) } },
+    where: { userId, dayOfWeek: await planDow(userId, dateISO), isRest: false, category: "WEIGHTS" as never, createdAt: { lt: toDateColumn(addDays(dateISO, 1)) } },
     select: {
       muscleGroup: true,
       core: true,
@@ -178,7 +192,7 @@ async function todaysLifts(userId: string, dateISO: string): Promise<WeightPlan[
 
 /** Games today, tomorrow and a tournament around today (v0.676). */
 async function sportAround(userId: string, dateISO: string): Promise<SportInput | null> {
-  const list = await sportDaysBetween(userId, addDays(dateISO, -3), addDays(dateISO, 3));
+  const list = await sportDaysBetween(userId, addDays(dateISO, -3), addDays(dateISO, 8));
   if (list.length === 0) return null;
   const on = (d: string) => list.find((x) => x.date === d && x.kind === "GAME") ?? list.find((x) => x.date === d) ?? null;
   const games = list.filter((x) => x.kind === "GAME").map((x) => x.date);
@@ -188,12 +202,41 @@ async function sportAround(userId: string, dateISO: string): Promise<SportInput 
   const near = games.filter((d) => tour.has(d) && d >= addDays(dateISO, -3) && d <= addDays(dateISO, 3));
   const t = on(dateISO);
   const m = on(addDays(dateISO, 1));
+  const gameDays = new Set(games);
+  const gameNear = (t?.kind === "GAME" || m?.kind === "GAME");
   return {
     today: t ? { kind: t.kind, label: t.label } : null,
     tomorrow: m ? { kind: m.kind, label: m.label } : null,
     tournamentGames: ahead ? near.length : 0,
+    swapWith: gameNear ? await swapTarget(userId, dateISO, gameDays) : null,
   };
 }
+
+/**
+ * A later day this week to trade today's leg day with (v0.677): one that lifts
+ * without leg work, with no game that day or the next, so the legs land away
+ * from the games. Neither day already swapped. The first that fits.
+ */
+async function swapTarget(userId: string, dateISO: string, gameDays: Set<string>): Promise<{ dow: number; day: string } | null> {
+  const swaps = await swapsFor(userId);
+  if (swappedWith(swaps, dateISO) != null) return null;
+  const plans = (await prisma.plannedWorkout.findMany({
+    where: { userId, isRest: false, category: "WEIGHTS" as never, createdAt: { lt: toDateColumn(addDays(dateISO, 1)) } },
+    select: { dayOfWeek: true, muscleGroup: true, core: true, exercises: { select: { poolExercise: { select: { name: true } } } } },
+  })) as { dayOfWeek: number; muscleGroup: string | null; core: unknown; exercises: { poolExercise: { name: string } }[] }[];
+  const sunday = addDays(mondayOfWeek(dateISO), 6);
+  for (let d = addDays(dateISO, 1); d <= sunday; d = addDays(d, 1)) {
+    if (swappedWith(swaps, d) != null) continue;
+    if (gameDays.has(d) || gameDays.has(addDays(d, 1))) continue;
+    const mine = plans.filter((p) => p.dayOfWeek === dayOfWeek(d));
+    const lifts = mine.some((p) => p.exercises.length > 0);
+    const legs = mine.some((p) => p.exercises.some((e) => loadsArea("LEGS", e.poolExercise.name, p.core != null ? null : p.muscleGroup)));
+    if (lifts && !legs) return { dow: dayOfWeek(d), day: WEEKDAY_NAME[dayOfWeek(d)] };
+  }
+  return null;
+}
+
+const WEEKDAY_NAME = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 /** Planned days against done days over the last three weeks (v0.676). */
 async function planFitFor(userId: string, dateISO: string): Promise<TooBigInput | null> {
@@ -211,11 +254,12 @@ async function planFitFor(userId: string, dateISO: string): Promise<TooBigInput 
     }),
   ])) as [{ dayOfWeek: number; category: string | null; createdAt: Date }[], { date: Date }[]];
   const done = new Set(sessions.map((s) => fromDateColumn(s.date)));
+  const swaps = await swapsFor(userId);
   const out: { date: string; planned: boolean; done: boolean }[] = [];
   for (let d = from; d < dateISO; d = addDays(d, 1)) {
     const end = Date.parse(`${addDays(d, 1)}T00:00:00Z`);
     const planned = plans.some(
-      (p) => p.dayOfWeek === dayOfWeek(d) && p.createdAt.getTime() < end && !(p.category && OPTIONAL_CATEGORIES.includes(p.category)),
+      (p) => p.dayOfWeek === planWeekday(swaps, d) && p.createdAt.getTime() < end && !(p.category && OPTIONAL_CATEGORIES.includes(p.category)),
     );
     out.push({ date: d, planned, done: done.has(d) });
   }
@@ -262,7 +306,7 @@ async function soreToday(userId: string, dateISO: string): Promise<{ area: strin
   const spots = await soreSpotsFor(userId);
   if (spots.length === 0) return null;
   const plans = (await prisma.plannedWorkout.findMany({
-    where: { userId, dayOfWeek: dayOfWeek(dateISO), isRest: false, category: "WEIGHTS" as never, createdAt: { lt: toDateColumn(addDays(dateISO, 1)) } },
+    where: { userId, dayOfWeek: await planDow(userId, dateISO), isRest: false, category: "WEIGHTS" as never, createdAt: { lt: toDateColumn(addDays(dateISO, 1)) } },
     select: { muscleGroup: true, core: true, exercises: { orderBy: { sortOrder: "asc" }, select: { poolExercise: { select: { name: true } } } } },
   })) as { muscleGroup: string | null; core: unknown; exercises: { poolExercise: { name: string } }[] }[];
   for (const s of spots) {

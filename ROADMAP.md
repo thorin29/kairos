@@ -1766,14 +1766,13 @@ From the original workouts plan, not built yet:
 - [ ] Family WOD: one workout the household does together, scaled per person.
 - [x] Smarter suggestions: hockey-aware rules, push/pull balance, and a "plan
   too big" nudge (v0.676).
-- [ ] Swap a leg day with another day that week around a game (the plan's
-  weekday lookups need to honour a one-week swap).
+- [x] Swap a leg day with another day that week around a game (v0.677).
 - [ ] "Keep N sets" on a movement.
 - [ ] Weekly lift order that rotates.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.676.1 (migrations through 149_ball_moves_weight).
-- App versionName 0.486.0 / versionCode 557 / CLIENT_BUILD 557.
+- Web APP_VERSION 0.677.0 (migrations through 149_ball_moves_weight).
+- App versionName 0.487.0 / versionCode 558 / CLIENT_BUILD 558.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

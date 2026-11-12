@@ -2,6 +2,7 @@ import { Category } from "@/generated/prisma/client";
 import { OPTIONAL_CATEGORIES } from "@/lib/workouts/blocks";
 import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
 import { prisma } from "@/lib/prisma";
+import { parseSwaps, planWeekday } from "@/lib/workouts/day-swap";
 import {
   addDays,
   dayOfWeek,
@@ -123,6 +124,13 @@ export async function generateWorkoutTasks(
   for (const r of weeklyPausedRows) {
     if (r.value === "0") weeklyPaused.add(r.key.slice("weeklyActive:".length));
   }
+  // Days swapped for a week (v0.677): a day's prompt follows the plan it took.
+  const swapRows = (await prisma.appSetting.findMany({
+    where: { key: { startsWith: "workouts.swap." } },
+    select: { key: true, value: true },
+  })) as { key: string; value: string }[];
+  const swaps = new Map(swapRows.map((r) => [r.key.slice("workouts.swap.".length), parseSwaps(r.value)]));
+  const weekdayFor = (userId: string, iso: string) => planWeekday(swaps.get(userId), iso);
 
   const pausedDates = new Set<string>();
   for (const p of pauses) {
@@ -176,7 +184,7 @@ export async function generateWorkoutTasks(
 
     for (const s of schedules) {
       if (weeklyPaused.has(s.userId)) continue;
-      if (s.dayOfWeek !== dow) continue;
+      if (s.dayOfWeek !== (swaps.has(s.userId) ? weekdayFor(s.userId, iso) : dow)) continue;
       if (fromDateColumn(s.effectiveFrom) > iso) continue;
       if (s.endDate && fromDateColumn(s.endDate) < iso) continue;
 
@@ -192,7 +200,7 @@ export async function generateWorkoutTasks(
     for (const key of trains) {
       const sep = key.lastIndexOf("|");
       const userId = key.slice(0, sep);
-      if (Number(key.slice(sep + 1)) !== dow) continue;
+      if (Number(key.slice(sep + 1)) !== weekdayFor(userId, iso)) continue;
       const since = trainsSince.get(key);
       if (since && iso < since) continue;
       const wStart = weeklyStart.get(userId);
@@ -276,7 +284,7 @@ export async function generateWorkoutTasks(
   for (const t of pastPending) {
     const userId = (t.generatedFrom ?? "").slice("workout:".length);
     const iso = fromDateColumn(t.dueDate);
-    const key = `${userId}|${dayOfWeek(iso)}`;
+    const key = `${userId}|${weekdayFor(userId, iso)}`;
     const rot = rotByUser.get(userId);
     const backed =
       planDow.has(key) ||

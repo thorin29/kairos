@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — Swapped days; sore spots only from the band-aid (v0.677.0 / app 0.487.0)
+
+- A swap trades two weekdays' plans for one Monday-start week
+  (`day-swap.ts`, setting `workouts.swap.<userId>`, kept four weeks back so
+  history days read the plan they followed). One resolver, `planWeekday`
+  (server `planDow`, `dayPlanWhereFor`), now stands behind every weekday
+  plan lookup: the day page and logger, plan progress and task settling,
+  workout task generation (prompts and strays move with the swap), the
+  Workouts board and person cards (`PersonWorkout.swaps`), the dashboard and
+  person page workout titles, programs, conditioning, Concept2 rows, lift
+  next targets and the suggestions. Core rotation advancement and program
+  rotations still count by the real weekday.
+- The game card adds "Swap with <day>" when a later day this week lifts
+  without leg work, has no game that day or the next, and neither day is
+  already swapped. The day shows "Swapped with Friday this week · Undo"
+  (`swappedWith`); Undo is the suggestion answer `swap`/`undo`.
+- Sore spots: the "+ Sore spot" button is gone; spots come from a workout's
+  "Something hurt?" (the band-aid). The strip under the map shows the
+  band-aid icon, the area and Better, only while something is marked.
+
 ## 2026-11 — Ball moves log weight (v0.676.1)
 
 - The eight medicine ball and slam ball moves in the movement library log

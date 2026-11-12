@@ -1,5 +1,6 @@
 "use client";
 
+import { planWeekday, type DaySwap } from "@/lib/workouts/day-swap";
 import { useEffect, useMemo, useState } from "react";
 import { CheckIcon, DumbbellIcon } from "@/components/icons";
 import { formatShort, addDays, dayOfWeek } from "@/lib/dates";
@@ -40,6 +41,7 @@ export function WorkoutLauncher({
   hiitWorkouts,
   unitSystem,
   weekPlan,
+  swaps = [],
   todayISO,
   summaryNames,
   overdueCount = 0,
@@ -62,6 +64,8 @@ export function WorkoutLauncher({
   /** The person's weekly plan, indexed by ISO weekday, so a picked day shows
    *  that day's scheduled workout. */
   weekPlan: PlanWorkout[][];
+  /** Days swapped this week (v0.677): a day shows the plan it took. */
+  swaps?: DaySwap[];
   todayISO: string;
   /** When set, render ONE summary button for all of the day's workouts (their
    *  names, with an "N overdue" tag) instead of a per-workout row. */
@@ -139,7 +143,7 @@ export function WorkoutLauncher({
   }, [open, userId, logDate, todayISO]);
 
   const onOriginal = logDate === dateISO;
-  const dayWorkouts = onOriginal ? workouts : weekPlan[dayOfWeek(logDate)] ?? [];
+  const dayWorkouts = onOriginal ? workouts : weekPlan[planWeekday(swaps, logDate)] ?? [];
 
   return (
     <div className="px-4 py-3">
@@ -326,7 +330,7 @@ export function WorkoutLauncher({
                       {overdueDates.length === 1 ? "Overdue workout" : "Overdue workouts"}
                     </h4>
                     {overdueDates.map((od) => {
-                      const w = weekPlan[dayOfWeek(od)] ?? [];
+                      const w = weekPlan[planWeekday(swaps, od)] ?? [];
                       if (w.length === 0) return null;
                       return (
                         <div

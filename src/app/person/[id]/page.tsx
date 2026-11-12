@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { planWeekday } from "@/lib/workouts/day-swap";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadPersonDay } from "@/lib/queries/overview";
@@ -182,7 +183,7 @@ export default async function PersonPage({
   // For a workout prompt on day D: the plan for D's weekday, plus what's already
   // logged that day (today from live sessions, earlier days from history).
   function workoutDay(dateISO: string) {
-    const dow = dayOfWeek(dateISO);
+    const dow = planWeekday(boardPerson?.swaps, dateISO);
     const workouts = (boardPerson?.plan[dow]?.workouts ?? []).filter(
       (w) => !w.isRest,
     );
@@ -211,7 +212,7 @@ export default async function PersonPage({
     const isWorkoutPrompt =
       t.category === "EXERCISE" && (t.generatedFrom ?? "").startsWith("workout:");
     const title = isWorkoutPrompt
-      ? (workoutNames.get(dayOfWeek(dueISO)) ?? t.title)
+      ? (workoutNames.get(planWeekday(boardPerson?.swaps, dueISO)) ?? t.title)
       : t.title;
 
     // School items show their class or subject, type, and when they're due
@@ -372,6 +373,7 @@ export default async function PersonPage({
           hiitWorkouts={hiitWorkouts}
           unitSystem={unitSystem}
           weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
+          swaps={boardPerson?.swaps ?? []}
           todayISO={today}
           person={boardPerson}
         />
@@ -668,6 +670,7 @@ export default async function PersonPage({
                         hiitWorkouts={hiitWorkouts}
                         unitSystem={unitSystem}
                         weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
+          swaps={boardPerson?.swaps ?? []}
                         todayISO={today}
                         person={boardPerson}
                         summaryNames={restToday.rest ? [] : todayEx.map((r: { title: string }) => r.title)}

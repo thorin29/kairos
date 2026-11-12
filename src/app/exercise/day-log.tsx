@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { planWeekday } from "@/lib/workouts/day-swap";
 import { clockText as clockFromSeconds, secondsFromTyped } from "@/lib/workouts/clock-entry";
 import { SidesTimer } from "./sides-timer";
 import { PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG, SECONDARY_SM } from "./buttons";
@@ -154,6 +156,7 @@ export function DayLog({
   onOpen?: (where: "plan" | "programs") => void;
 }) {
   const userId = person.user.id;
+  const router = useRouter();
   const [date, setDate] = useState(initialDate && initialDate <= todayISO ? initialDate : todayISO);
   const [data, setData] = useState<{
     state: DayLogState;
@@ -256,7 +259,7 @@ export function DayLog({
   const dropped = data?.adjusted?.dropped;
   const planWorkouts: PlanWorkout[] = useMemo(
     () =>
-      (person.plan[dayOfWeek(date)]?.workouts ?? [])
+      (person.plan[planWeekday(person.swaps, date)]?.workouts ?? [])
         .filter((w) => !w.isRest && (date >= todayISO || !planIds || planIds.includes(w.id)))
         .filter((w) => !dropped?.plans.includes(w.id))
         .map((w) =>
@@ -565,6 +568,24 @@ export function DayLog({
           </button>
         </p>
       )}
+      {state?.swappedWith && !isRestDay && (
+        <p className="text-sm font-semibold text-accent">
+          Swapped with {state.swappedWith} this week ·{" "}
+          <button
+            type="button"
+            className="underline"
+            onClick={() =>
+              startTransition(async () => {
+                await answerWorkoutSuggestion({ userId, dateISO: date, key: "swap", answer: "undo" });
+                setTick((n) => n + 1);
+                router.refresh();
+              })
+            }
+          >
+            Undo
+          </button>
+        </p>
+      )}
       {state?.light && !data?.adjusted && !isRestDay && !future && (
         <p className="text-sm font-semibold text-accent">
           Lighter today · {Math.round(state.light * 100)}% of the usual weights
@@ -596,7 +617,11 @@ export function DayLog({
             const key = state.suggestion!.key;
             setData((cur) => (cur ? { ...cur, state: { ...cur.state, suggestion: null } } : cur));
             void answerWorkoutSuggestion({ userId, dateISO: date, key, answer })
-              .then(() => setTick((n) => n + 1))
+              .then(() => {
+                setTick((n) => n + 1);
+                // A swapped day changes the week's plan the page holds.
+                if (answer.startsWith("swap:")) router.refresh();
+              })
               .catch(() => {});
             if (answer === "editplan") onOpen?.("plan");
             else if (answer === "programs") onOpen?.("programs");

@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
-import { dayPlanWhere, movementTarget } from "@/lib/queries/workout-log";
+import { dayPlanWhereFor, movementTarget } from "@/lib/queries/workout-log";
 import { dayAdjust, setAdjust } from "@/lib/workouts/suggest-run";
 import { roundLoad } from "@/lib/workouts/programs";
 import { groupsFor } from "@/lib/workouts/involvement";
@@ -43,7 +43,7 @@ type PlanRow = {
 
 async function dayPlan(userId: string, dateISO: string): Promise<PlanRow[]> {
   return (await prisma.plannedWorkout.findMany({
-    where: dayPlanWhere(userId, dateISO),
+    where: await dayPlanWhereFor(userId, dateISO),
     orderBy: { sortOrder: "asc" },
     select: {
       id: true,

@@ -1,4 +1,6 @@
 import type { NextRequest } from "next/server";
+import { planDow, swapsFor } from "@/lib/workouts/day-swap-run";
+import { swapName } from "@/lib/workouts/day-swap";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
@@ -46,7 +48,7 @@ export async function GET(req: NextRequest) {
   const adjusted = await adjustView(userId, date);
   const gone = new Set(adjusted?.dropped.plans ?? []);
   const kept = <T extends { plannedWorkoutId: string }>(list: T[]) => list.filter((x) => !gone.has(x.plannedWorkoutId));
-  const order = await orderForDay(userId, dayOfWeek(date));
+  const order = await orderForDay(userId, await planDow(userId, date));
   const overdue = date === today ? await loadOverdueWorkoutDays(userId, date) : [];
 
   // Every-set logging (v0.608): each movement carries its day's sets in a few
@@ -100,6 +102,8 @@ export async function GET(req: NextRequest) {
     light: await dayLightFactor(userId, date),
     // v0.675: areas marked sore — Adjust today opens Hurt on the first.
     sore: (await soreSpotsFor(userId)).map((s) => s.area),
+    // v0.677: the weekday this day traded plans with this week, or null.
+    swappedWith: swapName(await swapsFor(userId), date),
     // v0.658: today's adjustment — { mode, label, dropped } — or null.
     adjusted,
     // v0.662: a sport on the calendar — { label, forSport, routine } — or null.

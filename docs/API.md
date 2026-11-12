@@ -889,6 +889,11 @@ movement on today's first strength entry, `"added":true` on it, never holding
 the day open). Adjust modes gain `legs` (leg lifts at 70%), and Hurt takes area
 `LEGS` with `"why":"game"`.
 
+**Swapped days, v0.677.** The game card may carry `swap:<weekday 0–6>` ("Swap
+with Friday"): today and that day trade plans for this week. The day payload has
+`swappedWith` (a weekday name or null); answering key `swap` with `undo` puts
+both days back. Every plan read for a date follows the swap.
+
 **Programs (v0.611).**
 ```
 GET  /api/v1/workouts/programs

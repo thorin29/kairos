@@ -1,4 +1,6 @@
 import "server-only";
+import { planDow, swapsFor } from "@/lib/workouts/day-swap-run";
+import { swapName } from "@/lib/workouts/day-swap";
 import { prisma } from "@/lib/prisma";
 import { slotForDate } from "@/lib/workouts/rotation";
 import { fmtClock, rowSummary } from "@/lib/workouts/concept2";
@@ -70,7 +72,7 @@ export async function loadTodayExercises(
   userId: string,
   dayISO: string,
 ): Promise<TodayLogExercise[]> {
-  const dow = dayOfWeek(dayISO);
+  const dow = await planDow(userId, dayISO);
 
   const [exercises, schedules, sets] = await Promise.all([
     prisma.exercise.findMany({
@@ -276,7 +278,7 @@ export async function loadTodayPlannedWorkout(
   userId: string,
   dayISO: string,
 ): Promise<TodayPlanned> {
-  const dow = dayOfWeek(dayISO);
+  const dow = await planDow(userId, dayISO);
   const system = await loadWorkoutUnitSystem();
 
   const plan = await prisma.plannedWorkout.findFirst({
@@ -370,13 +372,19 @@ export async function loadTodayPlannedWorkout(
  *  for it, so a plan built later never makes a past day look "overdue" (it was
  *  scheduled under a different, already-logged plan). Mirrors the generator's
  *  trainsSince clamp. */
-export function dayPlanWhere(userId: string, dayISO: string) {
+export function dayPlanWhere(userId: string, dayISO: string, dow: number = dayOfWeek(dayISO)) {
   return {
     userId,
-    dayOfWeek: dayOfWeek(dayISO),
+    dayOfWeek: dow,
     isRest: false,
     createdAt: { lt: toDateColumn(addDays(dayISO, 1)) },
   };
+}
+
+/** dayPlanWhere for the weekday the day follows this week (a swapped day,
+ *  v0.677). */
+export async function dayPlanWhereFor(userId: string, dayISO: string) {
+  return dayPlanWhere(userId, dayISO, await planDow(userId, dayISO));
 }
 
 /**
@@ -397,7 +405,7 @@ export async function loadDayPlanProgress(
   const [movementPlans, allPlans, skipRows, sessionRows] = (await Promise.all([
     loadTodayPlannedWorkouts(userId, dayISO),
     prisma.plannedWorkout.findMany({
-      where: dayPlanWhere(userId, dayISO),
+      where: await dayPlanWhereFor(userId, dayISO),
       select: {
         id: true,
         name: true,
@@ -525,7 +533,7 @@ export async function loadTodayPlannedWorkouts(
   const system = await loadWorkoutUnitSystem();
 
   const planRows = await prisma.plannedWorkout.findMany({
-    where: dayPlanWhere(userId, dayISO),
+    where: await dayPlanWhereFor(userId, dayISO),
     orderBy: { sortOrder: "asc" },
     select: {
       id: true,
@@ -847,7 +855,7 @@ export async function loadWorkoutProgress(
 ): Promise<WorkoutProgress> {
   const system = await loadWorkoutUnitSystem();
   const weightUnit = metricUnit("WEIGHT" as Metric, system);
-  const dow = dayOfWeek(todayISO);
+  const dow = await planDow(userId, todayISO);
 
   const [plans, recent, rotationRow] = await Promise.all([
     prisma.plannedWorkout.findMany({
@@ -2151,6 +2159,8 @@ export type DayLogState = {
   /** Anything at all logged that day (not a rest). */
   /** Areas marked sore (v0.675): Adjust today opens Hurt on the first. */
   sore: string[];
+  /** The weekday this day traded plans with this week (v0.677), or null. */
+  swappedWith: string | null;
   loggedAny: boolean;
   /** Past rotation entries shown as the workout that day logged (v0.672). */
   asLogged?: { plannedWorkoutId: string; name: string; exercises: { poolExerciseId: string; name: string; metric: string; unit: string }[] }[];
@@ -2303,7 +2313,7 @@ async function loggedOtherFor(
 /** A program day's title, as on the home card: the program and the day's main
  *  lift ("5/3/1 · Bench press"), or just the program on a day without one. */
 export async function programDayTitle(userId: string, dateISO: string, programName: string): Promise<string> {
-  const t = (await loadWorkoutPlanNames(userId)).get(dayOfWeek(dateISO));
+  const t = (await loadWorkoutPlanNames(userId)).get(await planDow(userId, dateISO));
   return t && t.startsWith(programName) ? t : programName;
 }
 
@@ -2395,7 +2405,7 @@ export async function loadDayLogState(
   // The plan marks this weekday a rest day and nothing else is planned (v0.646).
   const restPlanned =
     planIds.length === 0 &&
-    (await prisma.plannedWorkout.count({ where: { ...dayPlanWhere(userId, dateISO), isRest: true } })) > 0;
+    (await prisma.plannedWorkout.count({ where: { ...(await dayPlanWhereFor(userId, dateISO)), isRest: true } })) > 0;
   // Routines added to the day (v0.667) show on their own cards, not as extra work.
   const extraNames = (await dayExtrasFor(userId, dateISO)).filter((x) => x.kind !== "iso").map((x) => x.name);
   const logged = await loggedOtherFor(userId, dateISO, planned, restPlanned, extraNames);
@@ -2430,7 +2440,7 @@ export async function loadDayLogState(
     program,
     programTitle: !program
       ? active
-        ? ((await loadWorkoutPlanNames(userId)).get(dayOfWeek(dateISO)) ?? null)
+        ? ((await loadWorkoutPlanNames(userId)).get(await planDow(userId, dateISO)) ?? null)
         : null
       : planIds.length === 0 && logged.lifted && logged.title
         ? `${program.name} \u00b7 ${logged.title}`
@@ -2439,6 +2449,7 @@ export async function loadDayLogState(
     suggestion: await daySuggestionFor(userId, dateISO),
     light: await dayLightFactor(userId, dateISO),
     sore: (await soreSpotsFor(userId)).map((s) => s.area),
+    swappedWith: swapName(await swapsFor(userId), dateISO),
     planIds,
     loggedOther: logged.other,
     loggedAny: logged.any,
@@ -2475,20 +2486,20 @@ export async function workoutRestFor(
 
 /** The plan has a workout (not Rest) on this weekday. */
 async function planWorkDay(userId: string, dateISO: string): Promise<boolean> {
-  return (await prisma.plannedWorkout.count({ where: { ...dayPlanWhere(userId, dateISO), isRest: false } })) > 0;
+  return (await prisma.plannedWorkout.count({ where: { ...(await dayPlanWhereFor(userId, dateISO)), isRest: false } })) > 0;
 }
 
 /** The plan makes this weekday Rest and plans nothing else on it. */
 async function planRestDay(userId: string, dateISO: string): Promise<boolean> {
   const [restRows, workRows] = await Promise.all([
-    prisma.plannedWorkout.count({ where: { ...dayPlanWhere(userId, dateISO), isRest: true } }),
-    prisma.plannedWorkout.count({ where: { ...dayPlanWhere(userId, dateISO), isRest: false } }),
+    prisma.plannedWorkout.count({ where: { ...(await dayPlanWhereFor(userId, dateISO)), isRest: true } }),
+    prisma.plannedWorkout.count({ where: { ...(await dayPlanWhereFor(userId, dateISO)), isRest: false } }),
   ]);
   return restRows > 0 && workRows === 0;
 }
 
 async function simplePlanIds(userId: string, dateISO: string): Promise<string[]> {
-  const rows = (await prisma.plannedWorkout.findMany({ where: dayPlanWhere(userId, dateISO), select: { id: true } })) as {
+  const rows = (await prisma.plannedWorkout.findMany({ where: await dayPlanWhereFor(userId, dateISO), select: { id: true } })) as {
     id: string;
   }[];
   return rows.map((r) => r.id);

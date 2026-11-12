@@ -1,4 +1,6 @@
 import "server-only";
+import { swapsFor } from "@/lib/workouts/day-swap-run";
+import { planWeekday, type DaySwap } from "@/lib/workouts/day-swap";
 import { shownGroup } from "@/lib/workouts/involvement";
 import { REP_BANDS, bandPoints } from "@/lib/workouts/records";
 import { prisma } from "@/lib/prisma";
@@ -134,6 +136,8 @@ export type PlanWorkout = {
 export type PlanDay = { day: number; workouts: PlanWorkout[] };
 
 export type PersonWorkout = {
+  /** Days swapped this week or lately (v0.677): plan[planWeekday(swaps, day)]. */
+  swaps: DaySwap[];
   user: { id: string; name: string; color: string; avatarPath: string | null; avatarPosition: string | null };
   categories: WorkoutCategory[];
   exercises: ExerciseDef[];
@@ -244,7 +248,6 @@ export async function loadWorkoutDayExtras(userId: string): Promise<Map<number, 
 export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard> {
   // Core days move on to the workout now due before anything reads the plan (v0.637).
   await syncCoreDays(undefined, todayISO);
-  const dow = dayOfWeek(todayISO);
   const today = toDateColumn(todayISO);
 
   // A household pause (vacation) covering today pauses everyone's workout for
@@ -270,6 +273,9 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
   const cards: PersonWorkout[] = [];
 
   for (const person of people) {
+    // A day swapped this week (v0.677) follows the other weekday's plan.
+    const swaps = await swapsFor(person.id);
+    const dow = planWeekday(swaps, todayISO);
     const [exercises, schedules, weightSets, task, todaySessions, plannedRows, recentSessions, rotationRow] =
       await Promise.all([
       prisma.exercise.findMany({
@@ -749,6 +755,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     }
 
     cards.push({
+      swaps,
       user: {
         id: person.id,
         name: person.displayName ?? person.name,

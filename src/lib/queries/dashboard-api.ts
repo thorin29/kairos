@@ -1,4 +1,6 @@
 import { pendingSportPrompts } from "@/lib/workouts/generate";
+import { swapsFor } from "@/lib/workouts/day-swap-run";
+import { planWeekday } from "@/lib/workouts/day-swap";
 import "server-only";
 import { Category, TaskStatus } from "@/generated/prisma/client";
 import { loadPersonDay } from "@/lib/queries/overview";
@@ -199,8 +201,10 @@ export async function loadApiDashboard(
   const gameLines = games
     .sort((a, b) => a.startMin - b.startMin)
     .map((e) => [gameKinds.get(e.eventId) ?? e.title, e.allDay ? "" : e.timeLabel.split(/\s[–-]\s/)[0]].filter(Boolean).join(" "));
+  // A day swapped this week (v0.677) is named after the plan it took.
+  const swaps = await swapsFor(userId);
   const workoutLine = (dueISO: string) =>
-    [...(workoutExtras.get(dayOfWeek(dueISO)) ?? []), ...(dueISO === dayISO ? gameLines : [])].join(" \u00b7 ") || null;
+    [...(workoutExtras.get(planWeekday(swaps, dueISO)) ?? []), ...(dueISO === dayISO ? gameLines : [])].join(" \u00b7 ") || null;
 
   const rows: ApiTask[] = tasks.map((t) => {
     const dueISO = fromDateColumn(t.dueDate);
@@ -208,7 +212,7 @@ export async function loadApiDashboard(
       t.category === Category.EXERCISE &&
       (t.generatedFrom ?? "").startsWith("workout:");
     const title = isWorkout
-      ? (workoutNames.get(dayOfWeek(dueISO)) ?? t.title)
+      ? (workoutNames.get(planWeekday(swaps, dueISO)) ?? t.title)
       : t.title;
 
     const sw = t.schoolWork;

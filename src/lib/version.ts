@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.676.1";
+export const APP_VERSION = "0.677.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.677.0",
+    summary: [
+      "Game coming with a leg day: the card can also swap today with a later day this week that has no leg work and no game near it. The swap ends with the week, and Undo puts both days back.",
+      "Sore spots now come only from a workout's band-aid (\u201cSomething hurt?\u201d). The map shows them with Better, and nothing when nothing hurts.",
+    ],
+  },
   {
     version: "0.676.1",
     summary: ["Medicine ball and slam ball moves (rotational throw, ball slam, wall ball and the rest) log the ball's weight with the reps."],

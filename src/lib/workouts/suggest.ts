@@ -56,6 +56,8 @@ export type SportInput = {
   tomorrow: { kind: string; label: string } | null;
   /** Games in a tournament (3+ in 4 days) that today falls in; 0 if none. */
   tournamentGames: number;
+  /** A later day this week to trade today's plan with (v0.677). */
+  swapWith?: { dow: number; day: string } | null;
 };
 export type TooBigInput = { planned: number; done: number; worst: string[] };
 export type BalanceInput = { push: number; pull: number; window: 14 | 21; pick: { id: string; name: string } };
@@ -200,6 +202,7 @@ export function daySuggestion(input: {
       actions: [
         { answer: "legs:light", label: "Lighter legs" },
         { answer: "legs:swap", label: "Swap legs" },
+        ...(sport?.swapWith ? [{ answer: `swap:${sport.swapWith.dow}`, label: `Swap with ${sport.swapWith.day}` }] : []),
         { answer: "dismiss", label: "Not today" },
       ],
     };

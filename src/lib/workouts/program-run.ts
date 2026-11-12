@@ -1,4 +1,5 @@
 import "server-only";
+import { planDow } from "@/lib/workouts/day-swap-run";
 import { prisma } from "@/lib/prisma";
 import { addDays, dayOfWeek, fromDateColumn, startOfWeek, toDateColumn, todayISO } from "@/lib/dates";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
@@ -136,7 +137,7 @@ export async function dayProgramInfo(userId: string, dateISO: string): Promise<P
 /** The program put work on this weekday (an entry with a program lift). */
 export async function dayHasProgramWork(userId: string, dateISO: string): Promise<boolean> {
   const n = (await prisma.plannedExercise.count({
-    where: { programRole: { not: null }, plannedWorkout: { userId, dayOfWeek: dayOfWeek(dateISO), isRest: false } },
+    where: { programRole: { not: null }, plannedWorkout: { userId, dayOfWeek: await planDow(userId, dateISO), isRest: false } },
   })) as number;
   return n > 0;
 }
@@ -948,7 +949,7 @@ export async function plannedSlotFor(
   slot: string,
 ): Promise<{ scheme: string | null; programRole: string | null; muscleGroup: string | null } | null> {
   const rows = (await prisma.plannedExercise.findMany({
-    where: { poolExerciseId: slot, plannedWorkout: { userId, dayOfWeek: dayOfWeek(dateISO) } },
+    where: { poolExerciseId: slot, plannedWorkout: { userId, dayOfWeek: await planDow(userId, dateISO) } },
     select: { scheme: true, programRole: true, plannedWorkout: { select: { muscleGroup: true } } },
   })) as { scheme: string | null; programRole: string | null; plannedWorkout: { muscleGroup: string | null } }[];
   const r = rows.find((x) => x.scheme) ?? rows[0];
