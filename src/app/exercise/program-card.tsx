@@ -269,7 +269,7 @@ export function ProgramCard({
           </button>
         </div>
         {ending && (
-          <Modal title={`End ${a.name}?`} onClose={() => setEnding(false)}>
+          <Modal small title={`End ${a.name}?`} onClose={() => setEnding(false)}>
             <div className="flex flex-col gap-2">
               <button
                 type="button"
@@ -1017,7 +1017,7 @@ function ProgramSetup({
         </div>
       </div>
       {tmHelp && (
-        <Modal title="Training max" onClose={() => setTmHelp(false)}>
+        <Modal small title="Training max" onClose={() => setTmHelp(false)}>
           <p className="text-sm">
             The program works from 90% of your max, its training max. Every set is a share of it (65%, 75%, 85%…), which
             keeps the weights ones you can lift well and leaves room to keep going up. Enter your best; the app does the

@@ -249,7 +249,7 @@ export function TrainKey() {
         <InfoIcon className="h-4 w-4" />
       </button>
       {about && (
-        <Modal title="Heat map" onClose={() => setAbout(false)}>
+        <Modal small title="Heat map" onClose={() => setAbout(false)}>
           <div className="space-y-2 text-sm">
             <p>Each muscle warms a step for every week you give it real work, and fastest when you&apos;re coming back to where you were.</p>
             <p>The hottest step is for training it steadily and setting a new best in the last six weeks.</p>
@@ -300,7 +300,7 @@ export function TrainDetail({
   const opens = (name: string) => !!onOpenRow && (name === "Cardio" || name === "Conditioning");
   const week = data?.week;
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal small title={title} onClose={onClose}>
       <div className="space-y-2 text-sm">
         <p className="flex items-center gap-2 text-base font-semibold">
           <span

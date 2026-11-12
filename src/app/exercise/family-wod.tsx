@@ -589,7 +589,7 @@ function WorkoutInfo({
   onClose: () => void;
 }) {
   return (
-    <Modal title={choice.name} onClose={onClose}>
+    <Modal small title={choice.name} onClose={onClose}>
       <p className="text-sm text-muted">
         {choice.typeLabel}
         {choice.minutes ? ` · about ${choice.minutes} min` : ""}

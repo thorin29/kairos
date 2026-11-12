@@ -189,7 +189,7 @@ export function WorkoutsGrid({
           className={
             personal
               ? ""
-              : "animate-backdrop-fade fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6"
+              : "animate-backdrop-fade fixed inset-0 z-50 overflow-y-auto bg-ground"
           }
           role={personal ? undefined : "dialog"}
           aria-modal={personal ? undefined : "true"}
@@ -200,10 +200,12 @@ export function WorkoutsGrid({
             onClick={(e) => e.stopPropagation()}
             style={personal ? undefined : { transformOrigin: origin }}
             className={
-              personal ? "w-full" : "animate-card-zoom my-4 w-full max-w-2xl"
+              // Full screen (v0.683) so the charts get the width; the
+              // content keeps a readable column on wide screens.
+              personal ? "w-full" : "animate-card-zoom mx-auto w-full max-w-6xl sm:p-4"
             }
           >
-            <div className="rounded-2xl border border-hairline bg-surface p-6 shadow-xl">
+            <div className={personal ? "rounded-2xl border border-hairline bg-surface p-6 shadow-xl" : "min-h-screen bg-surface p-4 sm:min-h-0 sm:rounded-2xl sm:border sm:border-hairline sm:p-6"}>
               {!personal && (
                 <div className="flex items-start justify-between gap-3">
                   <PersonAvatar
@@ -1269,29 +1271,11 @@ function LiftDetailPanel({
         background: `linear-gradient(135deg, ${cs[0]} 0 50%, ${cs[1]} 50% 100%)`,
       };
     }
-    // Three or more draw as tiles inside the cell (v0.681): see cellTiles.
-    return {};
-  };
-  /** Three or more groups: a small grid, one tile per group — two across up to
-   *  four, three across up to nine; a short last row shares its width. Tap the
-   *  day for the names. */
-  const cellTiles = (groups: string[]) => {
-    if (groups.length < 3) return null;
-    const cs = groups.slice(0, 9).map((g) => groupColor.get(g) ?? "var(--color-accent)");
-    const cols = cs.length <= 4 ? 2 : 3;
-    const rowsOf: string[][] = [];
-    for (let i = 0; i < cs.length; i += cols) rowsOf.push(cs.slice(i, i + cols));
-    return (
-      <span className="flex h-full w-full flex-col gap-px overflow-hidden rounded-[3px]">
-        {rowsOf.map((r, i) => (
-          <span key={i} className="flex flex-1 gap-px">
-            {r.map((c, j) => (
-              <span key={j} className="flex-1" style={{ background: c }} />
-            ))}
-          </span>
-        ))}
-      </span>
-    );
+    // Three or more (v0.683): pie slices from the centre, one per group,
+    // however many. At seven and up the colours blur; tapping the day lists them.
+    const n = cs.length;
+    const wedges = cs.map((c, i) => `${c} ${(i / n) * 360}deg ${((i + 1) / n) * 360}deg`).join(", ");
+    return { background: `conic-gradient(from 0deg, ${wedges})` };
   };
 
   if (trained.size === 0) {
@@ -1341,9 +1325,7 @@ function LiftDetailPanel({
                             onClick={() => setDayOpen(cell.date)}
                             style={cellStyle(cell.groups)}
                             className="block h-3.5 w-3.5 rounded-[3px]"
-                          >
-                            {cellTiles(cell.groups)}
-                          </button>
+                          />
                         ) : (
                           <span key={cell.date} title={cell.date} className="h-3.5 w-3.5 rounded-[3px] bg-surface" />
                         ),
@@ -1355,6 +1337,7 @@ function LiftDetailPanel({
             </div>
             {dayOpen && (
               <Modal
+                small
                 title={new Date(`${dayOpen}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })}
                 onClose={() => setDayOpen(null)}
               >

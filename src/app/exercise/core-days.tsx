@@ -134,7 +134,7 @@ export function CoreRotationPicker({
       )}
 
       {peek && (
-        <Modal title={peek.name} onClose={() => setPeek(null)}>
+        <Modal small title={peek.name} onClose={() => setPeek(null)}>
           <CoreMovesList moves={peek.moves} />
         </Modal>
       )}

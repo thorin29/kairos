@@ -1053,7 +1053,7 @@ export function DayLog({
       )}
 
       {otherOpen && (
-        <Modal title={otherOpen.name} onClose={() => setOtherOpen(null)}>
+        <Modal small title={otherOpen.name} onClose={() => setOtherOpen(null)}>
           <ul className="divide-y divide-hairline text-sm">
             {otherOpen.lines.map((l, i) => (
               <li key={i} className="flex justify-between gap-3 py-2">
@@ -2234,7 +2234,7 @@ function MovementLogger({
           </div>
           )}
           {confirmLeave && (
-            <Modal title="Finish early?" onClose={() => setConfirmLeave(false)}>
+            <Modal small title="Finish early?" onClose={() => setConfirmLeave(false)}>
               <p className="text-sm">
                 {(() => {
                   const left = rows.filter((r) => !r.saved && !(typed(r) && complete(r))).length;

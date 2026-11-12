@@ -67,7 +67,7 @@ export function WarmupSteps({ steps, storeKey }: { steps: WarmupStep[]; storeKey
   return (
     <>
       {cue && (
-        <Modal title={cue.name} onClose={() => setCue(null)}>
+        <Modal small title={cue.name} onClose={() => setCue(null)}>
           <p className="text-sm">{cue.cue}</p>
         </Modal>
       )}
@@ -507,7 +507,7 @@ export function WarmupChooser({
         {WORDS[kind].newOne}
       </button>
       {peek && (
-        <Modal title={peek.name} onClose={() => setPeek(null)}>
+        <Modal small title={peek.name} onClose={() => setPeek(null)}>
           <WarmupSteps steps={peek.steps} />
         </Modal>
       )}

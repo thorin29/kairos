@@ -28,6 +28,7 @@ import type { EquipmentItem } from "@/lib/workouts/library";
 import { versionMoves } from "@/lib/workouts/wod-library";
 import type { BenchmarkState, MoveLine, PickPlan, WodChoice } from "@/lib/workouts/wod-run";
 import { ConditioningTimer } from "./conditioning-timer";
+import { Modal } from "./plan-file-panel";
 import { ExtraPicker } from "./additional-picker";
 import type { DayExtraKind } from "@/lib/workouts/day-extras";
 
@@ -61,42 +62,6 @@ export function VersionToggle({ value, onChange }: { value: Version; onChange: (
   );
 }
 
-/** A centred window on wide screens, a bottom sheet on phones. */
-function Modal({ title, onClose, onBack, children }: { title: string; onClose: () => void; onBack?: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
-      <div
-        role="dialog"
-        aria-label={title}
-        className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-2 border-b border-hairline px-4 py-3">
-          {onBack && (
-            <button
-              type="button"
-              aria-label="Back"
-              onClick={onBack}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
-            >
-              ‹
-            </button>
-          )}
-          <h3 className="min-w-0 flex-1 truncate text-base font-semibold">{title}</h3>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="overflow-y-auto px-4 py-4">{children}</div>
-      </div>
-    </div>
-  );
-}
 
 const lineUp = (moves: BuiltWorkout["moves"]): MoveLine[] => moves.map((m) => ({ ...m, line: formatHiitMovement(m) }));
 
@@ -579,7 +544,7 @@ export function AddConditioning({
         + Additional
       </button>
       {menu === "top" && (
-        <Modal title="Additional" onClose={() => setMenu(null)}>
+        <Modal small title="Additional" onClose={() => setMenu(null)}>
           <div className="grid gap-2">
             <button type="button" onClick={() => setMenu("conditioning")} className={QUIET + " justify-center"}>
               Conditioning
@@ -629,7 +594,7 @@ export function AddConditioning({
         />
       )}
       {menu === "conditioning" && (
-        <Modal title="Conditioning" onClose={() => setMenu(null)} onBack={() => setMenu("top")}>
+        <Modal small title="Conditioning" onClose={() => setMenu(null)} onBack={() => setMenu("top")}>
           <div className="grid gap-2">
             <button type="button" onClick={() => choose("pick")} className={PRIMARY}>
               Pick one

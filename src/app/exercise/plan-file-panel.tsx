@@ -1,7 +1,7 @@
 "use client";
 
 import { PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG } from "./buttons";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   exportMyWorkouts,
   importWorkouts,
@@ -20,37 +20,76 @@ import type { ImportPreview, SharedPlanRow } from "@/lib/workouts/plan-share-run
 const PRIMARY = PRIMARY_BTN;
 const QUIET = SECONDARY_BTN;
 
-export function Modal({ title, onClose, onBack, children }: { title: string; onClose: () => void; onBack?: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
-      <div
-        role="dialog"
-        aria-label={title}
-        className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-2 border-b border-hairline px-4 py-3">
-          {onBack && (
+/**
+ * The Workouts pages' one overlay (v0.683): a full page, like the app's —
+ * a top bar with Back and the title, the page background, the content in a
+ * readable column — so charts and lists get the whole screen. [small] keeps a
+ * centred pop-up for short choices, confirmations and ⓘ.
+ */
+export function Modal({
+  title,
+  onClose,
+  onBack,
+  children,
+  small,
+}: {
+  title: string;
+  onClose: () => void;
+  onBack?: () => void;
+  children: React.ReactNode;
+  small?: boolean;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") (onBack ?? onClose)();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onBack, onClose]);
+
+  if (small) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+        <div
+          role="dialog"
+          aria-label={title}
+          className="flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl bg-surface shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-2 border-b border-hairline px-4 py-3">
+            <h3 className="min-w-0 flex-1 truncate text-base font-semibold">{title}</h3>
             <button
               type="button"
-              aria-label="Back"
-              onClick={onBack}
+              aria-label="Close"
+              onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
             >
-              ‹
+              ✕
             </button>
-          )}
-          <h3 className="min-w-0 flex-1 truncate text-base font-semibold">{title}</h3>
+          </div>
+          <div className="space-y-4 overflow-y-auto px-4 py-4">{children}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-50 flex flex-col bg-ground">
+      <div className="border-b border-hairline bg-surface">
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-2 px-2 py-2 sm:px-4">
           <button
             type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
+            aria-label="Back"
+            onClick={onBack ?? onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-ink hover:bg-ground"
           >
-            ✕
+            ‹
           </button>
+          <h3 className="min-w-0 flex-1 truncate font-display text-lg font-semibold">{title}</h3>
         </div>
-        <div className="space-y-4 overflow-y-auto px-4 py-4">{children}</div>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-3xl space-y-4 px-4 py-4 pb-10">{children}</div>
       </div>
     </div>
   );

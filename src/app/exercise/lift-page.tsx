@@ -536,7 +536,7 @@ export function CoreOverview({
         )}
       </div>
       {idleOpen && (
-        <Modal title="Not done lately" onClose={() => setIdleOpen(false)}>
+        <Modal small title="Not done lately" onClose={() => setIdleOpen(false)}>
           <div className="overflow-hidden rounded-xl border border-hairline bg-surface">
             {summary.idle.map((id, i) => {
               const m = byId.get(id);
@@ -564,7 +564,7 @@ export function CoreOverview({
         </Modal>
       )}
       {info && (
-        <Modal title="Core progress" onClose={() => setInfo(false)}>
+        <Modal small title="Core progress" onClose={() => setInfo(false)}>
           <p className="text-sm">
             Each move is compared with its first session: a hold by its time, reps by reps, a weighted set by its
             estimated max. The line is the middle of those changes, so no one move counts more than another.

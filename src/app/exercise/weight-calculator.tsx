@@ -233,11 +233,11 @@ export function WeightCalculator({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-3 sm:items-center"
+      className="fixed inset-0 z-50 overflow-y-auto bg-ground"
       onClick={onClose}
     >
       <div
-        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-hairline bg-surface p-5 shadow-xl"
+        className="mx-auto min-h-full w-full max-w-3xl bg-surface p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-2 flex items-center justify-between">

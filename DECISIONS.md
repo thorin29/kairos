@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Full-screen web overlays; pie slices for any count (v0.683.0 / app 0.493.0)
+
+- Web, Workouts: the person panel (opened from the grid) is full screen,
+  content in a column up to 6xl so Workout days and Weekly training fit side
+  by side without a scrollbar. The shared `Modal` (plan-file-panel; the
+  conditioning picker's private copy removed) is now a full page — top bar
+  with Back, page background, a 3xl column, Escape goes back — like the app's
+  `FullPage`. `small` keeps a centred pop-up for short choices, confirmations
+  and info (16 uses: the Additional menu, ⓘ and help, Finish early?, End
+  program?, map and tap-a-day breakdowns). Add cardio, the plan builder and
+  the weight calculator overlays went full screen too. Other sections keep
+  their own overlays for now.
+- Workout days: three or more groups are pie slices, no gaps, however many
+  (supersedes v0.682's tiles). Past six the colours blur on purpose; tapping
+  the day lists them.
+
 ## 2026-11 — Pages, not sheets; one Add flow (v0.682.0 / app 0.492.0)
 
 - App rule: anything you search, fill in or step through is a full page

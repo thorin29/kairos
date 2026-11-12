@@ -436,7 +436,7 @@ export function ConditioningPage({ data, onClose }: { data: ConditioningCharts; 
         </Modal>
       )}
       {onceOpen && (
-        <Modal title="Done once" onClose={() => setOnceOpen(false)}>
+        <Modal small title="Done once" onClose={() => setOnceOpen(false)}>
           <ul className="divide-y divide-hairline text-sm">
             {data.once.map((x, i) => (
               <li key={`${x.name}-${i}`} className="flex justify-between gap-3 py-2">

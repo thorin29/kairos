@@ -1775,7 +1775,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.682.0 (migrations through 151_family_wod).
-- App versionName 0.492.0 / versionCode 564 / CLIENT_BUILD 564.
+- Web APP_VERSION 0.683.0 (migrations through 151_family_wod).
+- App versionName 0.493.0 / versionCode 565 / CLIENT_BUILD 565.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

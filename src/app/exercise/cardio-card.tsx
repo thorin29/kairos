@@ -204,13 +204,13 @@ export function CardioCard({
 
       {adding && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 overflow-y-auto bg-ground"
           onClick={() => setAdding(false)}
         >
           <div
             role="dialog"
             aria-label="Add cardio"
-            className="flex max-h-[85vh] w-full max-w-md flex-col overflow-y-auto rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl"
+            className="mx-auto flex min-h-full w-full max-w-3xl flex-col bg-surface"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
