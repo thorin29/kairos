@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — One Family WOD button; training maxes locked (v0.685.0 / app 0.495.0)
+
+- The Family WOD page shows one button: New family WOD for a parent,
+  Suggest one for anyone else (a parent's suggestion was the same thing with
+  an extra step).
+- Training maxes on the running program are shown, not edited (web program
+  card, app Programs). They hold for the program and change at a cycle's end
+  (Next cycle / with changes) or by restarting it. `setProgramMax` and the
+  route stay for the setup and cycle-end flows.
+- ROADMAP tidy: sport events → workouts is done (the "did you do it?"
+  prompt); overdue Phase 2 superseded by the overdue window and Skip overdue;
+  the per-person pause is done for workouts, open for chores.
+
 ## 2026-11 — Range calendar, nine buttons, wider Workout days, full-screen overlays (v0.684.0 / app 0.494.0)
 
 - Pause workouts drops the 3 days / 1 week / 2 weeks chips and the date

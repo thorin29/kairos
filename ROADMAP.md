@@ -622,8 +622,8 @@ the remaining personal-view items:
             at read time (v0.126.0, moved to the user card in v0.127.0)
       - [x] Phase 1b — log a workout (or rest day) for a past day via a date
             picker on the Log screen, completing that day's prompt (v0.128.0)
-      - [ ] Phase 2 — expire an overdue workout when the next one for the same
-            muscle group comes due (matches the main group, ignores sub-work)
+      - [x] Phase 2 — superseded: an overdue workout ages out after the overdue
+            window (Admin setting), and "Skip overdue" clears them by hand
 - [ ] Personal Bible reading plan (alongside the family plan)
 - [x] Leisure book reading: add a book (name + length in pages or chapters),
       log daily, never overdue, not a checklist item. A Reading section with
@@ -651,7 +651,8 @@ the remaining personal-view items:
       add/edit form; shared events show on each member's calendar in everyone's
       colours as split bands or a wheel-mixed blend (avoids brown), toggled under
       Admin → Calendar. Editing syncs participants (v0.129.0)
-- [ ] Past sport event auto-logs as a workout for the selected users
+- [x] Past sport event logs as a workout — done as a "did you do it?" prompt
+      for calendar sport events (Yes logs it; v0.656 edits it afterwards)
 - [x] Recurrent classes: ask if they end at semester end and tie to that
       semester; if none exists, prompt to create one. The class form prompts for
       a term on recurring classes (bounding the meeting to the term's dates) and
@@ -1464,6 +1465,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] Paused banner at the top of the Chores page while a pause is active,
       mirroring the workout card's paused note (v0.77.0)
 - [ ] Per-person pause: pause one person's workouts and chores for a date range
+      (workouts done, v0.678 / v0.680 with planned ranges; chores still open)
       (e.g. one kid away at camp) while the rest of the household carries on —
       the household pause stays the all-of-us case
 - [ ] Auto-suppress hand-added one-off tasks that fall on paused days too
@@ -1775,7 +1777,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.684.0 (migrations through 151_family_wod).
-- App versionName 0.494.0 / versionCode 566 / CLIENT_BUILD 566.
+- Web APP_VERSION 0.685.0 (migrations through 151_family_wod).
+- App versionName 0.495.0 / versionCode 567 / CLIENT_BUILD 567.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

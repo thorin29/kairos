@@ -8,7 +8,6 @@ import {
   forgetProgramVersion,
   loadProgramsFor,
   nextProgramBlock,
-  setProgramMax,
   startProgramFor,
 } from "@/lib/actions/workouts";
 import { SCHEME_CHOICES, parseScheme, roundLoad, schemeLabel } from "@/lib/workouts/programs";
@@ -244,18 +243,13 @@ export function ProgramCard({
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-muted">Training maxes</p>
             <div className="mt-1 divide-y divide-hairline">
+              {/* Shown only (v0.685): a training max holds for the program and
+                  changes at the end of a cycle or by restarting it. */}
               {a.maxes.map((m) => (
-                <MaxRow
-                  key={m.poolExerciseId}
-                  name={m.name}
-                  weight={m.weight}
-                  onSave={(w) =>
-                    start(async () => {
-                      await setProgramMax(userId, m.poolExerciseId, w);
-                      done();
-                    })
-                  }
-                />
+                <div key={m.poolExerciseId} className="flex items-center gap-3 py-2">
+                  <span className="min-w-0 flex-1 truncate text-sm">{m.name}</span>
+                  <span className="tabular text-sm font-semibold">{m.weight}</span>
+                </div>
               ))}
             </div>
           </div>
@@ -509,29 +503,6 @@ function ProgramList({
   );
 }
 
-function MaxRow({ name, weight, onSave }: { name: string; weight: number; onSave: (w: number) => void }) {
-  const [v, setV] = useState(String(weight));
-  useEffect(() => setV(String(weight)), [weight]);
-  const n = Number(v);
-  const changed = v.trim() !== "" && Number.isFinite(n) && n > 0 && n !== weight;
-  return (
-    <div className="flex items-center gap-3 py-2">
-      <span className="min-w-0 flex-1 truncate text-sm">{name}</span>
-      <input
-        aria-label={`${name} training max`}
-        inputMode="decimal"
-        value={v}
-        onChange={(e) => setV(e.target.value)}
-        className="tabular h-9 w-20 rounded-lg border border-hairline bg-surface px-2 text-right text-sm outline-none focus:border-accent"
-      />
-      {changed && (
-        <button type="button" onClick={() => onSave(n)} className="text-sm font-semibold text-accent">
-          Save
-        </button>
-      )}
-    </div>
-  );
-}
 
 /** End of a cycle: each lift's raise (+5 upper, +10 lower to start, 0 holds
  *  it), Next cycle, Repeat, or Switch program. */

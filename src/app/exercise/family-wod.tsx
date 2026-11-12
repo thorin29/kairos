@@ -405,7 +405,8 @@ export function FamilyWodPage({
       )}
 
       <div className="flex gap-2">
-        {data.parent && (
+        {/* One button (v0.685): a parent sets one; anyone else suggests one. */}
+        {data.parent ? (
           <button
             type="button"
             onClick={() => setView({ kind: "set" })}
@@ -413,14 +414,15 @@ export function FamilyWodPage({
           >
             New family WOD
           </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setView({ kind: "suggest" })}
+            className={`${PRIMARY_BTN} flex-1`}
+          >
+            Suggest one
+          </button>
         )}
-        <button
-          type="button"
-          onClick={() => setView({ kind: "suggest" })}
-          className={`${SECONDARY_BTN} flex-1`}
-        >
-          Suggest one
-        </button>
       </div>
 
       {data.parent && data.ahead.length > 0 && (
