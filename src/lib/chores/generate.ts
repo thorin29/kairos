@@ -70,14 +70,17 @@ export async function generateChores(
       startDate: { lte: toDateColumn(toISO) },
       endDate: { gte: toDateColumn(fromISO) },
     },
-    select: { startDate: true, endDate: true },
+    select: { startDate: true, endDate: true, userId: true },
   });
   const pausedDates = new Set<string>();
-  for (const p of pauses) {
+  // One person's pause (v0.688): only their chores step aside.
+  const personPaused = new Set<string>();
+  for (const p of pauses as { startDate: Date; endDate: Date; userId: string | null }[]) {
     let d = fromDateColumn(p.startDate);
     const end = fromDateColumn(p.endDate);
     while (d <= end) {
-      pausedDates.add(d);
+      if (p.userId) personPaused.add(`${p.userId}|${d}`);
+      else pausedDates.add(d);
       d = addDays(d, 1);
     }
   }
@@ -107,6 +110,7 @@ export async function generateChores(
       if (a.effectiveTo && fromDateColumn(a.effectiveTo) < iso) continue;
       if (!weekInPhase(iso, a.chore.intervalWeeks, fromDateColumn(a.effectiveFrom)))
         continue;
+      if (personPaused.has(`${a.userId}|${iso}`)) continue;
 
       expected.set(`${a.id}|${iso}`, {
         userId: a.userId,

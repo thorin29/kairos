@@ -257,7 +257,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
   // the day: the plan prompt steps aside and a note takes its place, but the
   // "log something else" path stays open so a session can still be recorded.
   const activePause = await prisma.pause.findFirst({
-    where: { startDate: { lte: today }, endDate: { gte: today } },
+    where: { userId: null, startDate: { lte: today }, endDate: { gte: today } },
     orderBy: { startDate: "asc" },
     select: { name: true },
   });

@@ -1464,8 +1464,9 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       of what a household pause silences
 - [x] Paused banner at the top of the Chores page while a pause is active,
       mirroring the workout card's paused note (v0.77.0)
-- [ ] Per-person pause: pause one person's workouts and chores for a date range
-      (workouts done, v0.678 / v0.680 with planned ranges; chores still open)
+- [x] Per-person pause: pause one person's workouts and chores for a date range
+      (a person's own from Workouts, v0.678/0.680; Admin → Calendar → Vacations
+      & pauses for one person's chores and workouts, v0.688)
       (e.g. one kid away at camp) while the rest of the household carries on —
       the household pause stays the all-of-us case
 - [ ] Auto-suppress hand-added one-off tasks that fall on paused days too
@@ -1777,7 +1778,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.687.0 (migrations through 151_family_wod).
-- App versionName 0.497.0 / versionCode 569 / CLIENT_BUILD 569.
+- Web APP_VERSION 0.688.0 (migrations through 152_person_pause).
+- App versionName 0.498.0 / versionCode 570 / CLIENT_BUILD 570.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

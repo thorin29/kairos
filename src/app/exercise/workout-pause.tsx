@@ -188,7 +188,7 @@ export function WorkoutPausePage({ userId, todayISO, onBack }: { userId: string;
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="text-sm font-semibold">
                   {p.label}
-                  {p.kind === "household" ? " · household" : ""}
+                  {p.kind === "household" ? " · household" : p.kind === "admin" ? " · set by a parent" : ""}
                 </span>
                 <span className="text-xs text-muted">{spanText(p, todayISO)}</span>
               </span>

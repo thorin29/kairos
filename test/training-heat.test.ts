@@ -129,3 +129,24 @@ describe("holds aren't judged for decline (v0.687)", () => {
     expect(h.groups.find((g) => g.group === "LEGS")?.line).not.toMatch(/down/);
   });
 });
+
+describe("programs and top-set logs (v0.688)", () => {
+  const sq = (date: string, weight: number, reps: number, n = 3): TrainSet[] =>
+    Array.from({ length: n }, () => ({ date, movement: "squat", name: "Back squat", primary: "LEGS", secondary: [], weight, reps, credit: 1 }));
+  it("a program's lighter weights aren't a loss once it starts", () => {
+    // Heavy singles for weeks (one top set a day), then 5/3/1 from a lower training max.
+    const before = [0, 1, 2, 3].flatMap((i) => sq(plus("2026-10-05", 7 * i), 185, 3, 1));
+    const program = [...sq("2026-11-02", 140, 5), ...sq("2026-11-09", 150, 6)];
+    const sets = [...before, ...program];
+    const without = buildTrainingHeat(sets, [], "2026-11-12");
+    expect(without.groups.find((g) => g.group === "LEGS")?.line).toMatch(/down/);
+    const withStart = buildTrainingHeat(sets, [], "2026-11-12", [], {}, ["2026-11-02"]);
+    expect(level(withStart, "LEGS")).toBeGreaterThan(level(without, "LEGS") ?? 0);
+    expect(withStart.groups.find((g) => g.group === "LEGS")?.line).not.toMatch(/down/);
+  });
+  it("a day with only its top set logged still counts as trained", () => {
+    const sets = [0, 1, 2, 3, 4, 5].flatMap((i) => sq(plus("2026-10-05", 7 * i), 185, 3, 1));
+    const h = buildTrainingHeat(sets, [], "2026-11-12");
+    expect(h.groups.find((g) => g.group === "LEGS")?.line).toMatch(/^trained 6 of the last 6/);
+  });
+});

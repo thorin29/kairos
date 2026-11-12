@@ -81,7 +81,7 @@ export async function generateWorkoutTasks(
         startDate: { lte: toDateColumn(toISO) },
         endDate: { gte: toDateColumn(fromISO) },
       },
-      select: { startDate: true, endDate: true },
+      select: { startDate: true, endDate: true, userId: true },
     }),
     // People on a rotation are scheduled by their cycle, not by weekday.
     prisma.workoutRotation.findMany({
@@ -146,11 +146,15 @@ export async function generateWorkoutTasks(
     where: { endDate: { gte: toDateColumn(fromISO) }, startDate: { lte: toDateColumn(toISO) } },
     select: { userId: true, startDate: true, endDate: true },
   })) as { userId: string; startDate: Date; endDate: Date }[];
+  // An admin's pause for one person (v0.688) works the same way.
+  const personPauses = (pauses as { userId: string | null; startDate: Date; endDate: Date }[]).filter((p) => p.userId);
   const ownPaused = (userId: string, iso: string) =>
-    ownPauses.some((p) => p.userId === userId && fromDateColumn(p.startDate) <= iso && fromDateColumn(p.endDate) >= iso);
+    [...ownPauses, ...personPauses].some(
+      (p) => p.userId === userId && fromDateColumn(p.startDate) <= iso && fromDateColumn(p.endDate) >= iso,
+    );
 
   const pausedDates = new Set<string>();
-  for (const p of pauses) {
+  for (const p of (pauses as { userId: string | null; startDate: Date; endDate: Date }[]).filter((x) => !x.userId)) {
     let d = fromDateColumn(p.startDate);
     const end = fromDateColumn(p.endDate);
     while (d <= end) {

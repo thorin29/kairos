@@ -117,6 +117,7 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
     todayISO,
     await pausesFor(userId),
     await soreHolds(userId, todayISO),
+    await programStarts(userId),
   );
   const coreMoves = buildCoreMoves(sets);
   return {
@@ -148,6 +149,12 @@ async function adjustedDays(userId: string): Promise<{ days: Set<string>; marks:
 }
 
 const ADJUST_LABEL: Record<string, string> = { low: "Low energy", time: "Short", sick: "Sick", hurt: "Hurt" };
+
+/** The days the person's programs started, ended ones included (v0.688). */
+async function programStarts(userId: string): Promise<string[]> {
+  const rows = (await prisma.personProgram.findMany({ where: { userId }, select: { startedOn: true } })) as { startedOn: Date }[];
+  return rows.map((r) => fromDateColumn(r.startedOn));
+}
 
 /** Each muscle group a sore spot holds, from the day it was marked to today
  *  (v0.686): those weeks don't cool it. */

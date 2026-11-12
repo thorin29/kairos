@@ -914,7 +914,7 @@ when their own plan already has the workout.
 **Workout pauses, v0.678.**
 ```
 GET  /api/v1/workouts/pause
-200: { "pauses":[ { "kind":"household"|"personal","id","label","reason":"SICK"|"HURT"|"OTHER"|null,
+200: { "pauses":[ { "kind":"household"|"admin"|"personal","id","label","reason":"SICK"|"HURT"|"VACATION"|"OTHER"|null,
                     "from","to" } ] }        // now and ahead; household ones from Admin
 POST /api/v1/workouts/pause
 request: { "reason":"SICK"|"HURT"|"VACATION"|"OTHER", "from"?:"YYYY-MM-DD", "until":"YYYY-MM-DD" }

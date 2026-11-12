@@ -25,6 +25,8 @@ export async function loadPausedDates(
 ): Promise<Set<string>> {
   const pauses = await prisma.pause.findMany({
     where: {
+      // The household's only (v0.688): a person's pause is theirs alone.
+      userId: null,
       startDate: { lte: toDateColumn(toISO) },
       endDate: { gte: toDateColumn(fromISO) },
     },
@@ -68,7 +70,35 @@ export async function clearPausedTasks(dayISO: string): Promise<number> {
       OR: [{ generatedFrom: { not: null } }, { choreId: { not: null } }],
     },
   });
-  return res.count;
+  return res.count + (await clearPersonPausedTasks(dayISO));
+}
+
+/** The same for one person's pauses (v0.688): their chores and workout
+ *  prompts on those days, nobody else's. */
+async function clearPersonPausedTasks(dayISO: string): Promise<number> {
+  const from = addDays(dayISO, -120);
+  const to = addDays(dayISO, 30);
+  const pauses = (await prisma.pause.findMany({
+    where: { userId: { not: null }, startDate: { lte: toDateColumn(to) }, endDate: { gte: toDateColumn(from) } },
+    select: { userId: true, startDate: true, endDate: true },
+  })) as { userId: string; startDate: Date; endDate: Date }[];
+  let n = 0;
+  for (const p of pauses) {
+    const s = fromDateColumn(p.startDate) < from ? from : fromDateColumn(p.startDate);
+    const e = fromDateColumn(p.endDate) > to ? to : fromDateColumn(p.endDate);
+    if (e < s) continue;
+    const res = await prisma.task.deleteMany({
+      where: {
+        userId: p.userId,
+        status: TaskStatus.PENDING,
+        category: { in: PAUSABLE_CATEGORIES },
+        dueDate: { gte: toDateColumn(s), lte: toDateColumn(e) },
+        OR: [{ generatedFrom: { not: null } }, { choreId: { not: null } }],
+      },
+    });
+    n += res.count;
+  }
+  return n;
 }
 
 /**
@@ -80,7 +110,7 @@ export async function loadActivePause(
 ): Promise<ActivePause | null> {
   const day = toDateColumn(dayISO);
   const pause = await prisma.pause.findFirst({
-    where: { startDate: { lte: day }, endDate: { gte: day } },
+    where: { userId: null, startDate: { lte: day }, endDate: { gte: day } },
     orderBy: { startDate: "asc" },
     select: { name: true, startDate: true, endDate: true },
   });

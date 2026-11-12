@@ -93,6 +93,7 @@ model User {
   workoutSkips     WorkoutMovementSkip[]
   workoutFeedback  WorkoutFeedback[]
   workoutPauses    WorkoutPause[]
+  pauses           Pause[]
   familyWodMembers FamilyWodMember[]
   familyWodSuggestions FamilyWodSuggestion[]
   programs         PersonProgram[]
@@ -1708,9 +1709,14 @@ model Pause {
   startDate DateTime  @db.Date
   endDate   DateTime  @db.Date
   eventId   String? // the generated all-day calendar event, removed with the pause
+  /// v0.688: one person's pause (away at camp, say) — their chores and
+  /// workouts only. Null is the household's: everyone.
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
 
   @@index([startDate, endDate])
+  @@index([userId])
 }
 
 // ---------------------------------------------------------------------------

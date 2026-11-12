@@ -7,6 +7,7 @@ import { addDays, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
 import { isAdmin } from "@/lib/session";
 import { generateChores } from "@/lib/chores/generate";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
+import { clearPausedTasks } from "@/lib/queries/pauses";
 
 export type PauseRow = {
   id: string;
@@ -14,21 +15,32 @@ export type PauseRow = {
   type: PauseType;
   startISO: string;
   endISO: string;
+  /** v0.688: the person it pauses, or null for the household. */
+  who: string | null;
 };
 
 /** Active and upcoming pauses only. Past ones stop showing in admin (the list
  *  would grow forever) but their calendar event stays for posterity. */
 export async function loadPauses(): Promise<PauseRow[]> {
-  const rows = await prisma.pause.findMany({
+  const rows = (await prisma.pause.findMany({
     where: { endDate: { gte: toDateColumn(todayISO()) } },
     orderBy: { startDate: "asc" },
-  });
+    include: { user: { select: { name: true, displayName: true } } },
+  })) as unknown as {
+    id: string;
+    name: string;
+    type: string;
+    startDate: Date;
+    endDate: Date;
+    user: { name: string; displayName: string | null } | null;
+  }[];
   return rows.map((p) => ({
     id: p.id,
     name: p.name,
     type: p.type as PauseType,
     startISO: fromDateColumn(p.startDate),
     endISO: fromDateColumn(p.endDate),
+    who: p.user ? p.user.displayName?.trim() || p.user.name : null,
   }));
 }
 
@@ -44,6 +56,12 @@ export async function createPause(
   const rawType = String(formData.get("type") ?? "VACATION");
   const startISO = String(formData.get("start") ?? "").trim();
   const endISO = String(formData.get("end") ?? "").trim();
+  // v0.688: "" is everyone; a person's id pauses just them.
+  const whoId = String(formData.get("who") ?? "").trim();
+  const who = whoId
+    ? ((await prisma.user.findFirst({ where: { id: whoId, isActive: true }, select: { id: true } })) as { id: string } | null)
+    : null;
+  if (whoId && !who) return { error: "Pick who it's for." };
 
   const type: PauseType = rawType === "OTHER" ? "OTHER" : "VACATION";
   const label = name || (type === "OTHER" ? "Break" : "Vacation");
@@ -60,9 +78,11 @@ export async function createPause(
 
   // A multi-day all-day event marks the break on the calendar and shades its
   // days. endsAt is exclusive, so it runs to the day after the last paused day.
+  // One person's pause marks their calendar only.
   const event = await prisma.event.create({
     data: {
-      isFamily: true,
+      isFamily: !who,
+      ...(who ? { userId: who.id } : {}),
       kind: EventKind.PAUSE,
       title: label,
       startsAt: toDateColumn(startISO),
@@ -80,11 +100,14 @@ export async function createPause(
       startDate: toDateColumn(startISO),
       endDate: toDateColumn(endISO),
       eventId: event.id,
+      ...(who ? { userId: who.id } : {}),
     },
   });
 
-  // Clear any chores already generated inside the window.
+  // Clear any chores already generated inside the window (and, for one person,
+  // their pending ones already due inside it).
   await generateChores();
+  await clearPausedTasks(todayISO());
   // Workouts pause with the household too (v0.678): prompts come off its days.
   await generateWorkoutTasks();
 

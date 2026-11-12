@@ -12,8 +12,9 @@ export { PAUSE_REASONS, PAUSE_WORD, isPauseReason, okPauseRange, pausedDays, typ
  * don't cool the heat map. Logging still works on a paused day.
  */
 export type WorkoutPauseInfo = {
-  /** "household" from Admin, else the person's own. */
-  kind: "household" | "personal";
+  /** "household" from Admin for everyone, "admin" from Admin for this person
+   *  alone (v0.688), else the person's own. */
+  kind: "household" | "admin" | "personal";
   id: string;
   /** "Sick", "Injured", "Paused", or the household pause's name. */
   label: string;
@@ -27,17 +28,21 @@ export type WorkoutPauseInfo = {
 export async function workoutPausesFor(userId: string, fromISO = "1970-01-01"): Promise<WorkoutPauseInfo[]> {
   const from = toDateColumn(fromISO);
   const [house, own] = (await Promise.all([
-    prisma.pause.findMany({ where: { endDate: { gte: from } }, select: { id: true, name: true, startDate: true, endDate: true } }),
+    // The household's pauses and an admin's pause for this person (v0.688).
+    prisma.pause.findMany({
+      where: { endDate: { gte: from }, OR: [{ userId: null }, { userId }] },
+      select: { id: true, name: true, startDate: true, endDate: true, userId: true },
+    }),
     prisma.workoutPause.findMany({
       where: { userId, endDate: { gte: from } },
       select: { id: true, reason: true, startDate: true, endDate: true },
     }),
   ])) as [
-    { id: string; name: string; startDate: Date; endDate: Date }[],
+    { id: string; name: string; startDate: Date; endDate: Date; userId: string | null }[],
     { id: string; reason: string; startDate: Date; endDate: Date }[],
   ];
   return [
-    ...house.map((p) => ({ kind: "household" as const, id: p.id, label: p.name, reason: null, from: fromDateColumn(p.startDate), to: fromDateColumn(p.endDate) })),
+    ...house.map((p) => ({ kind: (p.userId ? "admin" : "household") as "admin" | "household", id: p.id, label: p.name, reason: null, from: fromDateColumn(p.startDate), to: fromDateColumn(p.endDate) })),
     ...own.map((p) => {
       const reason = isPauseReason(p.reason) ? p.reason : "OTHER";
       return { kind: "personal" as const, id: p.id, label: PAUSE_WORD[reason], reason, from: fromDateColumn(p.startDate), to: fromDateColumn(p.endDate) };

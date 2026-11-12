@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-11 — Heat map from real data; one-person pauses in Admin (v0.688.0 / app 0.498.0)
+
+- Checked against a household export: Legs read grey ("back squats max down
+  12% for 2 weeks") and Back "bent over row max down 30%". Two causes, not the
+  holds: (1) a 5/3/1 program started 2026-11-02 and its sets come from a
+  training max below the old heavy singles, so each week looked like a loss;
+  (2) the older logs kept only the day's top set, so those weeks scored under
+  the two-set bar and didn't count as trained.
+- Fixes in `buildTrainingHeat`: `fresh` (each `PersonProgram.startedOn`)
+  limits the decline lookback to weeks since the latest program start, so a
+  program is judged against itself; a day with exactly one logged set of a
+  main movement counts its week as trained. On the export, Legs goes to the
+  top step ("trained 6 of the last 6 weeks · back squats max up 10%") and Back
+  likewise; Arms stays where it was.
+- One-person pauses: `Pause.userId` (migration 152; null = the household).
+  Admin → Calendar → Vacations & pauses gets Who (Everyone or a person). A
+  person's pause skips their chores (chores/generate) and workout prompts
+  (workouts/generate, as `ownPaused`), clears their pending ones on those days
+  (`clearPausedTasks`), marks their own calendar instead of the family's, and
+  shows on their Pause page as "set by a parent" (`WorkoutPauseInfo.kind`
+  "admin", no End). Household banners and the board's pause stay household-
+  only. Each person's own sick / injured / vacation pause stays on their
+  Workouts menu.
+
 ## 2026-11 — Holds not judged for decline; reason line; midnight rollover (v0.687.0 / app 0.497.0)
 
 - Training heat: time-only sets (holds) can still set a new best but are left

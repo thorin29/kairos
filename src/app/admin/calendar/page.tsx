@@ -162,7 +162,7 @@ export default async function AdminCalendarPage() {
       <div className="mt-10">
         <SectionHeading>Vacations &amp; pauses</SectionHeading>
         <Card className="p-5">
-          <PauseForm pauses={pauses} />
+          <PauseForm pauses={pauses} people={people.map((p) => ({ id: p.id, name: p.displayName?.trim() || p.name }))} />
         </Card>
       </div>
     </main>

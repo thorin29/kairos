@@ -20,6 +20,10 @@
  *    energy, sick, hurt, short on time) and the first session back after
  *    three weeks off are never judged for strength. Holds (time) can set a
  *    best but never count as a decline: they're done for a set time (v0.687).
+ *  - A program's start resets the comparison (v0.688): its weights come from
+ *    a training max below your best, so from then on movements are judged
+ *    only against what was done since it began. A day with one logged set
+ *    (older logs held just the top set) still counts as a trained week.
  *  - Paused weeks (four or more of the week's days in a pause) change nothing.
  *
  * Endurance is its own gauge, from hockey and other sport, rowing, running,
@@ -162,7 +166,14 @@ export function buildTrainingHeat(
   /** Per group, the spans a sore spot holds it (v0.686): those weeks don't
    *  cool it, like a pause for that group alone. */
   held: Readonly<Record<string, readonly Pause[]>> = {},
+  /** Days a program started (v0.688). A program's weights come from a
+   *  training max set below your best, so from its first week movements are
+   *  compared only with what was done since it started. */
+  fresh: readonly string[] = [],
 ): TrainingHeat {
+  const freshWeeks = [...new Set(fresh.map(weekStart))].sort();
+  /** The week a program started on or before `w`, or "" when none. */
+  const freshSince = (w: string) => freshWeeks.filter((f) => f <= w).pop() ?? "";
   const firstDates = [...sets.map((s) => s.date), ...cardio.map((c) => c.date)].filter((d) => d <= today).sort();
   const curWeek = weekStart(today);
   const paused = weekPaused(curWeek, pauses);
@@ -182,6 +193,16 @@ export function buildTrainingHeat(
     for (const s of mine) {
       const w = weekStart(s.date);
       creditBy.set(w, (creditBy.get(w) ?? 0) + (s.primary === g ? s.credit : s.credit / 2));
+    }
+    // Older logs often hold only the day's top set (v0.688): a day with one
+    // set of a main movement was still a workout, so its week counts as
+    // trained even though one set scores under the two-set bar.
+    const perDay = new Map<string, number>();
+    for (const s of mine) if (s.primary === g) perDay.set(`${s.movement}|${s.date}`, (perDay.get(`${s.movement}|${s.date}`) ?? 0) + 1);
+    for (const s of mine) {
+      if (s.primary !== g || perDay.get(`${s.movement}|${s.date}`) !== 1 || !strengthOf(s)) continue;
+      const w = weekStart(s.date);
+      creditBy.set(w, Math.max(creditBy.get(w) ?? 0, MIN_CREDIT));
     }
     // Strength: each main movement's best per week, judged sets only.
     const main = mine.filter((s) => s.primary === g);
@@ -227,7 +248,12 @@ export function buildTrainingHeat(
         const now = m.weekBest.get(w);
         if (now == null) continue;
         let prior = 0;
-        for (let k = 1; k <= LOOKBACK_WEEKS; k++) prior = Math.max(prior, m.weekBest.get(plusDays(w, -7 * k)) ?? 0);
+        const since = freshSince(w);
+        for (let k = 1; k <= LOOKBACK_WEEKS; k++) {
+          const pw = plusDays(w, -7 * k);
+          if (pw < since) break;
+          prior = Math.max(prior, m.weekBest.get(pw) ?? 0);
+        }
         if (prior <= 0) continue;
         // The first session back after three weeks off isn't judged.
         const before = m.days.filter((d) => d < w).pop();

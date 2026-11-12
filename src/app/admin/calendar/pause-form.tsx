@@ -21,7 +21,7 @@ function fmt(iso: string): string {
   });
 }
 
-export function PauseForm({ pauses }: { pauses: PauseRow[] }) {
+export function PauseForm({ pauses, people = [] }: { pauses: PauseRow[]; people?: { id: string; name: string }[] }) {
   const [state, formAction, pending] = useActionState(createPause, {
     error: null as string | null,
   });
@@ -33,10 +33,10 @@ export function PauseForm({ pauses }: { pauses: PauseRow[] }) {
   return (
     <div>
       <p className="mb-3 text-sm text-muted">
-        Pause the household for a vacation or break. No chores are due while it
-        lasts, those days don&rsquo;t count against anyone&rsquo;s score, and
-        chores start again the day after it ends. It also drops a shaded event
-        on the calendar.
+        Pause everyone, or one person (away at camp, say), for a vacation or
+        break. No chores or workouts are due while it lasts, those days
+        don&rsquo;t count against anyone&rsquo;s score, and they start again the
+        day after it ends. It also drops a shaded event on the calendar.
       </p>
 
       {pauses.length > 0 && (
@@ -48,6 +48,7 @@ export function PauseForm({ pauses }: { pauses: PauseRow[] }) {
             >
               <span className="text-sm">
                 <span className="font-medium">{p.name}</span>
+                <span className="text-muted"> · {p.who ?? "Everyone"}</span>
                 <span className="text-muted">
                   {" "}
                   · {fmt(p.startISO)} – {fmt(p.endISO)}
@@ -79,6 +80,17 @@ export function PauseForm({ pauses }: { pauses: PauseRow[] }) {
             placeholder="Vacation to the Grand Canyon"
             className={`${field} w-full`}
           />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Who</label>
+          <select name="who" defaultValue="" className={field}>
+            <option value="">Everyone</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium">Type</label>
