@@ -1,8 +1,8 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { addDays, fromDateColumn, toDateColumn } from "@/lib/dates";
-import { PAUSE_WORD, isPauseReason, type PauseReason } from "@/lib/workouts/pause";
-export { PAUSE_REASONS, PAUSE_WORD, isPauseReason, pausedDays, type PauseReason } from "@/lib/workouts/pause";
+import { PAUSE_WORD, fitPause, isPauseReason, type PauseReason } from "@/lib/workouts/pause";
+export { PAUSE_REASONS, PAUSE_WORD, isPauseReason, okPauseRange, pausedDays, type PauseReason } from "@/lib/workouts/pause";
 
 /**
  * Workout pauses (v0.678): a household pause (Admin → Pauses, a vacation)
@@ -58,19 +58,38 @@ const dayText = (iso: string) => `${DOW[new Date(`${iso}T12:00:00Z`).getUTCDay()
 /** "Workouts paused · Sick through Fri, Nov 14". */
 export const pauseText = (p: WorkoutPauseInfo) => `Workouts paused · ${p.label} through ${dayText(p.to)}`;
 
-/** Start a person's pause today through `untilISO`; their own pause already
- *  running or ahead is replaced. */
-export async function startWorkoutPause(userId: string, reason: PauseReason, todayISO: string, untilISO: string): Promise<void> {
-  const to = untilISO < todayISO ? todayISO : untilISO;
-  await prisma.workoutPause.deleteMany({ where: { userId, startDate: { gte: toDateColumn(todayISO) } } });
-  await prisma.workoutPause.updateMany({
-    where: { userId, startDate: { lt: toDateColumn(todayISO) }, endDate: { gte: toDateColumn(todayISO) } },
-    data: { endDate: toDateColumn(addDays(todayISO, -1)) },
-  });
-  await prisma.workoutPause.create({ data: { userId, reason, startDate: toDateColumn(todayISO), endDate: toDateColumn(to) } });
+/**
+ * Add a person's pause from `fromISO` through `toISO` (v0.680: any start from
+ * today on, so one can be planned). Their own pauses it overlaps give way: see
+ * `fitPause`. Checked by `okPauseRange` first.
+ */
+export async function startWorkoutPause(userId: string, reason: PauseReason, fromISO: string, toISO: string): Promise<void> {
+  const own = (await prisma.workoutPause.findMany({
+    where: { userId, endDate: { gte: toDateColumn(fromISO) }, startDate: { lte: toDateColumn(toISO) } },
+    select: { id: true, reason: true, startDate: true, endDate: true },
+  })) as { id: string; reason: string; startDate: Date; endDate: Date }[];
+  const fit = fitPause(
+    own.map((p) => ({ id: p.id, from: fromDateColumn(p.startDate), to: fromDateColumn(p.endDate) })),
+    fromISO,
+    toISO,
+  );
+  const reasonOf = new Map(own.map((p) => [p.id, p.reason]));
+  await prisma.$transaction([
+    prisma.workoutPause.deleteMany({ where: { id: { in: fit.remove }, userId } }),
+    ...fit.update.map((u) =>
+      prisma.workoutPause.update({ where: { id: u.id }, data: { startDate: toDateColumn(u.from), endDate: toDateColumn(u.to) } }),
+    ),
+    ...fit.add.map((a) =>
+      prisma.workoutPause.create({
+        data: { userId, reason: reasonOf.get(a.like) ?? "OTHER", startDate: toDateColumn(a.from), endDate: toDateColumn(a.to) },
+      }),
+    ),
+    prisma.workoutPause.create({ data: { userId, reason, startDate: toDateColumn(fromISO), endDate: toDateColumn(toISO) } }),
+  ]);
 }
 
-/** End a person's pause now: today is a normal day again. */
+/** End a person's pause now (today is a normal day again), or remove one
+ *  that hasn't started. */
 export async function endWorkoutPause(userId: string, id: string, todayISO: string): Promise<void> {
   const p = (await prisma.workoutPause.findFirst({ where: { id, userId }, select: { startDate: true } })) as { startDate: Date } | null;
   if (!p) return;

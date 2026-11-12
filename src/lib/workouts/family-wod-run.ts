@@ -69,7 +69,16 @@ export type FamilyWodOverview = {
   people: { userId: string; name: string }[];
 };
 
-export type FamilyWodChoice = { hiitWorkoutId: string; name: string; typeLabel: string; minutes: number | null; kind: string | null };
+export type FamilyWodChoice = {
+  hiitWorkoutId: string;
+  name: string;
+  typeLabel: string;
+  minutes: number | null;
+  kind: string | null;
+  /** What it is, for its ⓘ (v0.680): the movements, Rx, and its note. */
+  movements: string[];
+  about: string | null;
+};
 
 const personName = (u: { name: string; displayName: string | null } | null | undefined) => u?.displayName?.trim() || u?.name || "";
 
@@ -271,14 +280,38 @@ export async function familyWodChoices(): Promise<FamilyWodChoice[]> {
   const rows = (await prisma.hiitWorkout.findMany({
     where: { approved: true, ownerId: null },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, type: true, capSec: true, minutes: true, kind: true, heroWod: true },
-  })) as { id: string; name: string; type: WorkoutType; capSec: number | null; minutes: number | null; kind: string | null; heroWod: boolean }[];
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      capSec: true,
+      minutes: true,
+      kind: true,
+      heroWod: true,
+      about: true,
+      movements: HIIT_FOR_PLAN.movements,
+    },
+  })) as {
+    id: string;
+    name: string;
+    type: WorkoutType;
+    capSec: number | null;
+    minutes: number | null;
+    kind: string | null;
+    heroWod: boolean;
+    about: string | null;
+    movements: HiitForPlan["movements"];
+  }[];
   return rows.map((w) => ({
     hiitWorkoutId: w.id,
     name: w.name,
     typeLabel: typeLabel(w.type, w.capSec),
     minutes: w.minutes,
     kind: w.kind ?? (w.heroWod ? "HERO" : null),
+    movements: w.movements
+      .filter((m) => m.poolExercise)
+      .map((m) => formatHiitMovement({ name: m.poolExercise!.name, reps: m.reps, distance: m.distance, weight: m.weight })),
+    about: w.about,
   }));
 }
 

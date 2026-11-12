@@ -58,6 +58,7 @@ import { isSoreArea, type SoreSpot } from "@/lib/workouts/sore";
 import {
   endWorkoutPause,
   isPauseReason,
+  okPauseRange,
   startWorkoutPause,
   workoutPausesFor,
   type WorkoutPauseInfo,
@@ -1615,13 +1616,15 @@ export async function loadWorkoutPauses(userId: string): Promise<WorkoutPauseInf
   return workoutPausesFor(userId, todayISO());
 }
 
-/** Pause a person's workouts from today through `untilISO` (v0.678). */
-export async function startPersonalPause(userId: string, reason: string, untilISO: string): Promise<WorkoutPauseInfo[]> {
+/** Pause a person's workouts from `fromISO` through `untilISO` (v0.678; any
+ *  start from today on, v0.680). */
+export async function startPersonalPause(userId: string, reason: string, fromISO: string, untilISO: string): Promise<WorkoutPauseInfo[]> {
   await requireInteractive();
   await requireCanActFor(userId);
-  if (!isPauseReason(reason) || !/^\d{4}-\d{2}-\d{2}$/.test(untilISO)) return workoutPausesFor(userId, todayISO());
   const today = todayISO();
-  await startWorkoutPause(userId, reason, today, untilISO > addDays(today, 90) ? addDays(today, 90) : untilISO);
+  const range = okPauseRange(fromISO, untilISO, today);
+  if (!isPauseReason(reason) || !range) return workoutPausesFor(userId, today);
+  await startWorkoutPause(userId, reason, range.from, range.to);
   await generateWorkoutTasks();
   return workoutPausesFor(userId, today);
 }

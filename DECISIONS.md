@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Full pages for Family WOD and pauses; planned pauses (v0.680.0 / app 0.490.0)
+
+- Family WOD and Pause workouts are full pages (web: person-panel steps
+  `familywod` and `pause`; app: routes `FamilyWod`, `FamilyWodEdit`,
+  `WorkoutPause`), each with a summary card on the Workouts menu. A day's
+  "+ Additional → Family WOD" opens the set/suggest page in place of the day.
+- A family WOD is for one date. A new one starts with nobody in: people are
+  tapped in, "Everyone" last. Choices carry `movements` and `about` for an ⓘ
+  pop-up, and names wrap instead of truncating.
+- Personal pauses take a first day (today up to a year ahead) and a last day
+  (at most 180 days long), so they can be planned; reason VACATION joins
+  SICK, HURT and OTHER (stored as text, no migration). Several can exist; a
+  new one makes room among the person's own (`fitPause`: inside ones go,
+  overlapping ones are trimmed, one covering both ends is split). One not
+  started yet is removed rather than ended.
+
 ## 2026-11 — Family WOD (v0.679.0 / app 0.489.0)
 
 - Now and then, not on set weekdays: one `FamilyWod` per date (migration

@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { addDays, todayISO } from "@/lib/dates";
+import { todayISO } from "@/lib/dates";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
-import { endWorkoutPause, isPauseReason, startWorkoutPause, workoutPausesFor } from "@/lib/workouts/pause-run";
+import { endWorkoutPause, isPauseReason, okPauseRange, startWorkoutPause, workoutPausesFor } from "@/lib/workouts/pause-run";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,9 +16,10 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Start a pause from today: { reason: "SICK"|"HURT"|"OTHER", until: "YYYY-MM-DD" }
- * (up to 90 days; replaces the person's own pause running or ahead). Or end
- * one now: { end: "<pause id>" }. Returns the pauses now and ahead.
+ * Add a pause: { reason: "SICK"|"HURT"|"VACATION"|"OTHER", from?: "YYYY-MM-DD"
+ * (default today; up to a year ahead), until: "YYYY-MM-DD" } (at most 180
+ * days; the person's own pauses it overlaps give way). Or end one now, or
+ * remove one ahead: { end: "<pause id>" }. Returns the pauses now and ahead.
  */
 export async function POST(req: NextRequest) {
   const authed = await requireDevice(req);
@@ -29,9 +30,9 @@ export async function POST(req: NextRequest) {
   if (typeof b?.end === "string") {
     await endWorkoutPause(userId, b.end, today);
   } else {
-    const until = typeof b?.until === "string" && /^\d{4}-\d{2}-\d{2}$/.test(b.until) ? b.until : null;
-    if (!isPauseReason(b?.reason) || !until) return apiError("validation", "reason and until (YYYY-MM-DD) are required.");
-    await startWorkoutPause(userId, b.reason, today, until > addDays(today, 90) ? addDays(today, 90) : until);
+    const range = okPauseRange(typeof b?.from === "string" ? b.from : today, b?.until, today);
+    if (!isPauseReason(b?.reason) || !range) return apiError("validation", "reason, and until on or after from (YYYY-MM-DD, from today on), are required.");
+    await startWorkoutPause(userId, b.reason, range.from, range.to);
   }
   await generateWorkoutTasks();
   return apiOk({ pauses: await workoutPausesFor(userId, today) });

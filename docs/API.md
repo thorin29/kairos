@@ -894,7 +894,8 @@ the day open). Adjust modes gain `legs` (leg lifts at 70%), and Hurt takes area
 GET  /api/v1/workouts/family-wod[?choices=1]
 200: { "parent":bool, "next":Wod|null, "ahead":[Wod], "past":[Wod],
        "suggestions":[ { "id","date","hiitWorkoutId","name","byId","by","note" } ],
-       "people":[ { "userId","name" } ], "choices"?:[ { "hiitWorkoutId","name","typeLabel","minutes","kind" } ] }
+       "people":[ { "userId","name" } ],
+       "choices"?:[ { "hiitWorkoutId","name","typeLabel","minutes","kind","movements":[string],"about" } ] }  // movements/about v0.680
 GET  /api/v1/workouts/family-wod?id=<id>   200: { "wod": Wod|null }
 Wod: { "id","date","hiitWorkoutId","name","type","typeLabel","movements":[string],
        "members":[ { "userId","name","how":"ASSIGNED"|"JOINED" } ], "who","mine":how|null,
@@ -916,8 +917,10 @@ GET  /api/v1/workouts/pause
 200: { "pauses":[ { "kind":"household"|"personal","id","label","reason":"SICK"|"HURT"|"OTHER"|null,
                     "from","to" } ] }        // now and ahead; household ones from Admin
 POST /api/v1/workouts/pause
-request: { "reason":"SICK"|"HURT"|"OTHER", "until":"YYYY-MM-DD" }   // from today, up to 90 days
-      or { "end":"<pause id>" }              // ends it now; today is a normal day again
+request: { "reason":"SICK"|"HURT"|"VACATION"|"OTHER", "from"?:"YYYY-MM-DD", "until":"YYYY-MM-DD" }
+         // v0.680: from defaults to today, may be up to a year ahead; at most 180 days long;
+         // the person's own pauses it overlaps are trimmed, split or removed
+      or { "end":"<pause id>" }              // ends it now (today is a normal day again); one ahead is removed
 200: { "pauses":[ … ] }
 ```
 The day payload carries `paused` ("Workouts paused · Sick through Fri, Nov 14")

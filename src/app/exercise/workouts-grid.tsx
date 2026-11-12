@@ -30,8 +30,8 @@ import { MovementInfo } from "@/components/movement-info";
 import { WeeklyTraining } from "./weekly-training";
 import { CoreCard, CoreOverview, CorePage, LiftPage, LiftRows } from "./lift-page";
 import { SoreSpots, soreRegions } from "./sore-spots";
-import { WorkoutPausePanel } from "./workout-pause";
-import { FamilyWodSection } from "./family-wod";
+import { WorkoutPauseCard, WorkoutPausePage } from "./workout-pause";
+import { FamilyWodCard, FamilyWodPage } from "./family-wod";
 import type { SoreSpot } from "@/lib/workouts/sore";
 import { CARDIO_COLOR, CONDITIONING_COLOR, CardioCard, CardioPage, ConditioningCard, ConditioningPage } from "./endurance-charts";
 import { Modal } from "./plan-file-panel";
@@ -80,7 +80,7 @@ import {
   type NavRegion,
 } from "@/lib/workouts/involvement";
 
-type Step = "menu" | "plan" | "log" | "history" | "browse" | "rotation" | "warmups";
+type Step = "menu" | "plan" | "log" | "history" | "browse" | "rotation" | "warmups" | "familywod" | "pause";
 
 export function WorkoutsGrid({
   people,
@@ -322,7 +322,7 @@ export function WorkoutsGrid({
                     hasRotation={!!open.rotation}
                   />
 
-                  <FamilyWodSection userId={open.user.id} todayISO={todayISO} />
+                  <FamilyWodCard userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("familywod")} />
 
                   <div className="grid grid-cols-3 gap-3">
                     <ActionButton
@@ -344,7 +344,7 @@ export function WorkoutsGrid({
                     />
                   </div>
 
-                  <WorkoutPausePanel userId={open.user.id} todayISO={todayISO} />
+                  <WorkoutPauseCard userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("pause")} />
 
                   <button
                     type="button"
@@ -429,6 +429,18 @@ export function WorkoutsGrid({
                   <BackLink onClick={() => setStep("menu")} />
                   <h3 className="mb-3 font-display text-lg font-semibold">Rotation</h3>
                   <RotationBuilder userId={open.user.id} rotation={open.rotation} />
+                </div>
+              )}
+
+              {step === "familywod" && (
+                <div className="mt-4">
+                  <FamilyWodPage userId={open.user.id} todayISO={todayISO} onBack={() => setStep("menu")} />
+                </div>
+              )}
+
+              {step === "pause" && (
+                <div className="mt-4">
+                  <WorkoutPausePage userId={open.user.id} todayISO={todayISO} onBack={() => setStep("menu")} />
                 </div>
               )}
 

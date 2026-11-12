@@ -31,7 +31,7 @@ import type { DayExtraView } from "@/lib/workouts/day-extras-run";
 import type { Concept2Day } from "@/lib/workouts/concept2-run";
 import { CardioCard } from "./cardio-card";
 import { ConditioningCard } from "./conditioning-card";
-import { FamilyWodDayCard, SetSheet, SuggestSheet } from "./family-wod";
+import { FamilyWodDayCard, FamilyWodEditor } from "./family-wod";
 import { loadFamilyWod } from "@/lib/actions/family-wod";
 import type { FamilyWodDay } from "@/lib/workouts/family-wod-run";
 import { ConditioningTimer } from "./conditioning-timer";
@@ -442,6 +442,24 @@ export function DayLog({
   // The program and its main lift on a program day, else the kinds of work.
   const title = state?.programTitle ?? state?.program?.name ?? dayHeadline(planSections);
 
+  // + Additional → Family WOD (v0.680): a full page in place of the day.
+  if (fwodSheet) {
+    return (
+      <FamilyWodEditor
+        mode={fwodSheet.parent ? "set" : "suggest"}
+        userId={userId}
+        todayISO={todayISO}
+        people={fwodSheet.people}
+        dateISO={date}
+        onBack={() => setFwodSheet(null)}
+        onDone={() => {
+          setFwodSheet(null);
+          setTick((n) => n + 1);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-5">
       {week && (
@@ -661,21 +679,6 @@ export function DayLog({
           onChanged={() => setTick((n) => n + 1)}
         />
       )}
-      {fwodSheet &&
-        (fwodSheet.parent ? (
-          <SetSheet
-            people={fwodSheet.people}
-            todayISO={todayISO}
-            dateISO={date}
-            onClose={() => setFwodSheet(null)}
-            onDone={() => {
-              setFwodSheet(null);
-              setTick((n) => n + 1);
-            }}
-          />
-        ) : (
-          <SuggestSheet userId={userId} todayISO={todayISO} dateISO={date} onClose={() => setFwodSheet(null)} onDone={() => setFwodSheet(null)} />
-        ))}
 
       {!data && !failed ? (
         <p className="rounded-xl bg-ground/50 p-3 text-sm text-muted">Loading&hellip;</p>

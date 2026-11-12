@@ -164,27 +164,10 @@ export function FamilyWodDayCard({
 
 // --- the Workouts page ---------------------------------------------------------
 
-type Sheet =
-  | { kind: "board"; id: string }
-  | { kind: "suggest" }
-  | { kind: "parents" }
-  | { kind: "set"; wod?: FamilyWodView; suggestion?: FamilyWodSuggestionView; dateISO?: string }
-  | null;
+type Overview = FamilyWodOverview & { parent: boolean };
 
-/**
- * Family WOD on the Workouts page (v0.679): today's or the next one, Join,
- * the board and past ones, Suggest one, and for parents what's ahead and the
- * suggestions to look at.
- */
-export function FamilyWodSection({ userId, todayISO }: { userId: string; todayISO: string }) {
-  const [data, setData] = useState<(FamilyWodOverview & { parent: boolean }) | null>(null);
-  const [sheet, setSheet] = useState<Sheet>(null);
-  const [pending, start] = useTransition();
-
-  const reload = () =>
-    loadFamilyWod(userId)
-      .then(setData)
-      .catch(() => {});
+function useFamilyWod(userId: string, key = 0) {
+  const [data, setData] = useState<Overview | null>(null);
   useEffect(() => {
     let live = true;
     loadFamilyWod(userId)
@@ -193,12 +176,123 @@ export function FamilyWodSection({ userId, todayISO }: { userId: string; todayIS
     return () => {
       live = false;
     };
-  }, [userId]);
+  }, [userId, key]);
+  const reload = () =>
+    loadFamilyWod(userId)
+      .then(setData)
+      .catch(() => {});
+  return { data, reload };
+}
 
+/** A full page's header: Back and the title, like the other Workouts pages. */
+function PageHead({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <div>
+      <button type="button" onClick={onBack} className="mb-3 text-sm font-medium text-accent hover:underline">
+        &lsaquo; Back
+      </button>
+      <h3 className="font-display text-lg font-semibold">{title}</h3>
+    </div>
+  );
+}
+
+/**
+ * Family WOD on the Workouts menu (v0.679; v0.680 a summary that opens its
+ * page): today's or the next one, or "None set".
+ */
+export function FamilyWodCard({ userId, todayISO, onOpen }: { userId: string; todayISO: string; onOpen: () => void }) {
+  const { data } = useFamilyWod(userId);
   if (!data) return null;
   const next = data.next;
-  const last = data.past[0] ?? null;
-  const waiting = data.suggestions;
+  const n = data.parent ? data.suggestions.length : 0;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left hover:border-accent"
+    >
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className={LABEL}>Family WOD</span>
+        {next ? (
+          <>
+            <span className="text-base font-semibold">{next.name}</span>
+            <span className="text-xs text-muted">
+              {whenText(next.date, todayISO)} · {next.who}
+              {next.mine ? "" : " · Join"}
+            </span>
+          </>
+        ) : (
+          <span className="text-sm text-muted">None set</span>
+        )}
+        {n > 0 && (
+          <span className="text-xs font-semibold text-accent">
+            {n} {n === 1 ? "suggestion" : "suggestions"} to look at
+          </span>
+        )}
+      </span>
+      <span aria-hidden className="text-muted">
+        ›
+      </span>
+    </button>
+  );
+}
+
+type View =
+  | { kind: "home" }
+  | { kind: "board"; id: string }
+  | { kind: "set"; wod?: FamilyWodView; suggestion?: FamilyWodSuggestionView }
+  | { kind: "suggest" };
+
+/**
+ * The Family WOD page (v0.680, full page): the next one with Join, boards and
+ * past ones, Suggest one; for parents, New family WOD, what's coming up and
+ * the suggestions to approve.
+ */
+export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; todayISO: string; onBack: () => void }) {
+  const { data, reload } = useFamilyWod(userId);
+  const [view, setView] = useState<View>({ kind: "home" });
+  const [pending, start] = useTransition();
+  const home = () => setView({ kind: "home" });
+  if (!data) return <PageHead title="Family WOD" onBack={onBack} />;
+
+  if (view.kind === "set" || view.kind === "suggest") {
+    return (
+      <FamilyWodEditor
+        mode={view.kind}
+        userId={userId}
+        todayISO={todayISO}
+        people={data.people}
+        wod={view.kind === "set" ? view.wod : undefined}
+        suggestion={view.kind === "set" ? view.suggestion : undefined}
+        onBack={home}
+        onDone={() => {
+          home();
+          void reload();
+        }}
+      />
+    );
+  }
+
+  const shown = [...data.ahead.filter((w) => w.date <= todayISO), ...data.past];
+  if (view.kind === "board") {
+    const wod = shown.find((w) => w.id === view.id) ?? data.ahead.find((w) => w.id === view.id);
+    return (
+      <div className="space-y-4">
+        <PageHead title={wod ? wod.name : "Board"} onBack={home} />
+        {wod && (
+          <div className="rounded-xl border border-hairline bg-surface px-4 py-3">
+            <p className="text-sm text-muted">
+              {dayText(wod.date)} · {wod.typeLabel}
+            </p>
+            {wod.board.length > 0 ? <BoardRows rows={wod.board} /> : <p className="py-2 text-sm text-muted">No results yet.</p>}
+            {wod.waiting && <p className="text-xs text-muted">{wod.waiting}</p>}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const next = data.next;
   const join = (id: string, on: boolean) =>
     start(async () => {
       try {
@@ -209,10 +303,11 @@ export function FamilyWodSection({ userId, todayISO }: { userId: string; todayIS
     });
 
   return (
-    <div className="space-y-3 rounded-xl border border-hairline bg-surface px-4 py-3">
-      <p className={LABEL}>Family WOD</p>
+    <div className="space-y-5">
+      <PageHead title="Family WOD" onBack={onBack} />
+
       {next ? (
-        <div className="space-y-1">
+        <div className="space-y-1 rounded-xl border border-amber-400 bg-surface px-4 py-3 dark:border-amber-600">
           <p className="text-sm text-muted">{whenText(next.date, todayISO)}</p>
           <p className="text-lg font-semibold">{next.name}</p>
           <p className="text-sm text-muted">{next.typeLabel}</p>
@@ -234,170 +329,156 @@ export function FamilyWodSection({ userId, todayISO }: { userId: string; todayIS
               Leave
             </button>
           )}
+          {next.date <= todayISO && (next.board.length > 0 || next.waiting) && (
+            <div className="border-t border-hairline pt-2">
+              {next.board.length > 0 && <BoardRows rows={next.board} />}
+              {next.waiting && <p className="text-xs text-muted">{next.waiting}</p>}
+            </div>
+          )}
         </div>
       ) : (
-        !last && <p className="text-sm text-muted">None set.</p>
+        <p className="text-sm text-muted">None set.</p>
       )}
 
       <div className="flex gap-2">
-        {(next || last) && (
-          <button type="button" onClick={() => setSheet({ kind: "board", id: (next && next.date <= todayISO ? next : last ?? next)!.id })} className={`${SECONDARY_BTN} flex-1`}>
-            Board
+        {data.parent && (
+          <button type="button" onClick={() => setView({ kind: "set" })} className={`${PRIMARY_BTN} flex-1`}>
+            New family WOD
           </button>
         )}
-        <button type="button" onClick={() => setSheet({ kind: "suggest" })} className={`${SECONDARY_BTN} flex-1`}>
+        <button type="button" onClick={() => setView({ kind: "suggest" })} className={`${SECONDARY_BTN} flex-1`}>
           Suggest one
         </button>
       </div>
 
-      {last && last.board.length > 0 && (
-        <div className="border-t border-hairline pt-2">
-          <p className="text-xs text-muted">
-            {dayText(last.date)} · {last.name}
-          </p>
-          <BoardRows rows={last.board} limit={3} />
+      {data.parent && data.ahead.length > 0 && (
+        <div>
+          <p className={LABEL}>Coming up</p>
+          <ul className="divide-y divide-hairline">
+            {data.ahead.map((w) => (
+              <li key={w.id} className="flex items-center gap-3 py-2.5">
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-sm font-semibold">
+                    {whenText(w.date, todayISO)} · {w.name}
+                  </span>
+                  <span className="text-xs text-muted">{w.who}</span>
+                </span>
+                <button type="button" onClick={() => setView({ kind: "set", wod: w })} className={SECONDARY_SM}>
+                  Edit
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
-      {data.parent ? (
-        <button
-          type="button"
-          onClick={() => setSheet({ kind: "parents" })}
-          className="flex w-full items-center justify-between border-t border-hairline pt-2 text-sm font-semibold text-accent"
-        >
-          <span>{waiting.length > 0 ? `${waiting.length} ${waiting.length === 1 ? "suggestion" : "suggestions"} to look at` : "Set a family WOD"}</span>
-          <span aria-hidden>›</span>
-        </button>
-      ) : (
-        waiting.map((s) => (
-          <div key={s.id} className="flex items-center gap-2 border-t border-hairline pt-2 text-xs text-muted">
-            <span className="min-w-0 flex-1 truncate">
-              You suggested {s.name} for {dayText(s.date)} · waiting
-            </span>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                start(async () => {
-                  await withdrawFamilyWodAction(userId, s.id).catch(() => {});
-                  await reload();
-                })
-              }
-              className="font-semibold hover:text-ink"
-            >
-              Take back
-            </button>
-          </div>
-        ))
+      {data.suggestions.length > 0 && (
+        <div>
+          <p className={LABEL}>{data.parent ? "Suggestions" : "Your suggestions"}</p>
+          <ul className="divide-y divide-hairline">
+            {data.suggestions.map((s) => (
+              <li key={s.id} className="space-y-2 py-2.5">
+                <p className="text-sm font-semibold">{s.name}</p>
+                <p className="text-xs text-muted">
+                  {data.parent ? `${s.by} suggested it for ` : "For "}
+                  {dayText(s.date)}
+                  {s.note ? ` · “${s.note}”` : ""}
+                  {data.parent ? "" : " · waiting"}
+                </p>
+                <div className="flex gap-2">
+                  {data.parent ? (
+                    <>
+                      <button type="button" onClick={() => setView({ kind: "set", suggestion: s })} className={PRIMARY_BTN}>
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() =>
+                          start(async () => {
+                            await declineFamilyWodAction(s.id).catch(() => {});
+                            await reload();
+                          })
+                        }
+                        className={SECONDARY_BTN}
+                      >
+                        Decline
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() =>
+                        start(async () => {
+                          await withdrawFamilyWodAction(userId, s.id).catch(() => {});
+                          await reload();
+                        })
+                      }
+                      className={SECONDARY_SM}
+                    >
+                      Take back
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
-      {sheet?.kind === "board" && (
-        <BoardSheet data={data} id={sheet.id} todayISO={todayISO} onPick={(id) => setSheet({ kind: "board", id })} onClose={() => setSheet(null)} />
-      )}
-      {sheet?.kind === "suggest" && (
-        <SuggestSheet
-          userId={userId}
-          todayISO={todayISO}
-          onClose={() => setSheet(null)}
-          onDone={() => {
-            setSheet(null);
-            void reload();
-          }}
-        />
-      )}
-      {sheet?.kind === "parents" && (
-        <ParentsSheet
-          data={data}
-          todayISO={todayISO}
-          onSet={(s) => setSheet(s)}
-          onChanged={reload}
-          onClose={() => setSheet(null)}
-        />
-      )}
-      {sheet?.kind === "set" && (
-        <SetSheet
-          people={data.people}
-          todayISO={todayISO}
-          wod={sheet.wod}
-          suggestion={sheet.suggestion}
-          dateISO={sheet.dateISO}
-          onBack={() => setSheet({ kind: "parents" })}
-          onClose={() => setSheet(null)}
-          onDone={() => {
-            setSheet({ kind: "parents" });
-            void reload();
-          }}
-        />
+      {shown.length > 0 && (
+        <div>
+          <p className={LABEL}>Boards</p>
+          <ul className="divide-y divide-hairline">
+            {shown.map((w) => (
+              <li key={w.id}>
+                <button type="button" onClick={() => setView({ kind: "board", id: w.id })} className="flex w-full items-center gap-3 py-2.5 text-left">
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="text-sm font-semibold">{w.name}</span>
+                    <span className="text-xs text-muted">
+                      {dayText(w.date)} · {w.logged} of {w.members.length} logged
+                      {w.board[0] ? ` · ${w.board[0].name} ${w.board[0].result}` : ""}
+                    </span>
+                  </span>
+                  <span aria-hidden className="text-muted">
+                    ›
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
 }
 
-function BoardSheet({
-  data,
-  id,
-  todayISO,
-  onPick,
-  onClose,
-}: {
-  data: FamilyWodOverview;
-  id: string;
-  todayISO: string;
-  onPick: (id: string) => void;
-  onClose: () => void;
-}) {
-  const all = [...data.ahead.filter((w) => w.date <= todayISO), ...data.past];
-  const wod = all.find((w) => w.id === id) ?? data.ahead.find((w) => w.id === id) ?? null;
+/** What a workout is: its type, movements and note, in a pop-up. */
+function WorkoutInfo({ choice, onClose }: { choice: FamilyWodChoice; onClose: () => void }) {
   return (
-    <Modal title="Family WOD" onClose={onClose}>
-      <div className="space-y-4">
-        {wod && (
-          <div>
-            <p className="text-sm font-semibold">
-              {dayText(wod.date)} · {wod.name} · {wod.typeLabel}
-            </p>
-            {wod.board.length > 0 ? <BoardRows rows={wod.board} /> : <p className="py-2 text-sm text-muted">No results yet.</p>}
-            {wod.waiting && <p className="text-xs text-muted">{wod.waiting}</p>}
-          </div>
-        )}
-        {all.filter((w) => w.id !== id).length > 0 && (
-          <div>
-            <p className={LABEL}>Past WODs</p>
-            <ul className="divide-y divide-hairline">
-              {all
-                .filter((w) => w.id !== id)
-                .map((w) => (
-                  <li key={w.id}>
-                    <button type="button" onClick={() => onPick(w.id)} className="flex w-full items-center gap-3 py-2.5 text-left">
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-sm font-semibold">{w.name}</span>
-                        <span className="truncate text-xs text-muted">
-                          {dayText(w.date)} · {w.logged} of {w.members.length} logged
-                        </span>
-                      </span>
-                      {w.board[0] && (
-                        <span className="text-xs text-muted">
-                          {w.board[0].name} {w.board[0].result}
-                        </span>
-                      )}
-                      <span aria-hidden className="text-muted">
-                        ›
-                      </span>
-                    </button>
-                  </li>
-                ))}
-            </ul>
-          </div>
-        )}
-      </div>
+    <Modal title={choice.name} onClose={onClose}>
+      <p className="text-sm text-muted">
+        {choice.typeLabel}
+        {choice.minutes ? ` · about ${choice.minutes} min` : ""}
+      </p>
+      {choice.movements.length > 0 && (
+        <ul className="space-y-1 text-sm">
+          {choice.movements.map((m, i) => (
+            <li key={i}>{m}</li>
+          ))}
+        </ul>
+      )}
+      {choice.about && <p className="text-sm">{choice.about}</p>}
     </Modal>
   );
 }
 
-/** A searchable list of the shared workouts. */
+/** A searchable list of the shared workouts: full names, ⓘ for what each is. */
 function WorkoutPick({ value, onChange }: { value: string | null; onChange: (c: FamilyWodChoice) => void }) {
   const [choices, setChoices] = useState<FamilyWodChoice[] | null>(null);
   const [q, setQ] = useState("");
+  const [info, setInfo] = useState<FamilyWodChoice | null>(null);
   useEffect(() => {
     loadFamilyWodChoices()
       .then(setChoices)
@@ -415,218 +496,76 @@ function WorkoutPick({ value, onChange }: { value: string | null; onChange: (c: 
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search workouts"
         aria-label="Search workouts"
-        className="h-10 w-full rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
+        className="h-11 w-full rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
       />
-      <ul className="max-h-56 divide-y divide-hairline overflow-y-auto rounded-xl border border-hairline">
+      <ul className="divide-y divide-hairline rounded-xl border border-hairline">
         {list.map((c) => (
-          <li key={c.hiitWorkoutId}>
+          <li key={c.hiitWorkoutId} className={`flex items-center gap-1 ${value === c.hiitWorkoutId ? "bg-accent/10" : ""}`}>
+            <button type="button" aria-pressed={value === c.hiitWorkoutId} onClick={() => onChange(c)} className="flex min-w-0 flex-1 flex-col px-3 py-2.5 text-left">
+              <span className="text-sm font-semibold">{c.name}</span>
+              <span className="text-xs text-muted">
+                {c.typeLabel}
+                {c.minutes && !c.typeLabel.includes("min") ? ` · ${c.minutes} min` : ""}
+              </span>
+            </button>
             <button
               type="button"
-              aria-pressed={value === c.hiitWorkoutId}
-              onClick={() => onChange(c)}
-              className={`flex w-full items-center gap-2 px-3 py-2 text-left ${value === c.hiitWorkoutId ? "bg-accent/10" : ""}`}
+              aria-label={`What is ${c.name}?`}
+              onClick={() => setInfo(c)}
+              className="mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink"
             >
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{c.name}</span>
-              <span className="shrink-0 text-xs text-muted">
-                {c.typeLabel}
-                {c.minutes ? ` · ${c.minutes} min` : ""}
-              </span>
+              ⓘ
             </button>
           </li>
         ))}
         {list.length === 0 && <li className="px-3 py-2 text-sm text-muted">No match.</li>}
       </ul>
+      {info && <WorkoutInfo choice={info} onClose={() => setInfo(null)} />}
     </div>
   );
 }
 
-function DayInput({ value, todayISO, onChange }: { value: string; todayISO: string; onChange: (v: string) => void }) {
-  return (
-    <input
-      type="date"
-      aria-label="Day"
-      value={value}
-      min={todayISO}
-      max={addDays(todayISO, 60)}
-      onChange={(e) => e.target.value && onChange(e.target.value)}
-      className="h-10 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
-    />
-  );
-}
+const CHIP = (on: boolean) =>
+  `inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold ${
+    on ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+  }`;
 
-export function SuggestSheet({
+/**
+ * Set (a parent) or suggest a family WOD, as a full page (v0.680). It's for
+ * one day only. Nobody is in until picked: tap who's doing it.
+ */
+export function FamilyWodEditor({
+  mode,
   userId,
   todayISO,
-  dateISO,
-  onClose,
-  onDone,
-}: {
-  userId: string;
-  todayISO: string;
-  /** Set from a day's + Additional: that day only. */
-  dateISO?: string;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const [date, setDate] = useState(dateISO ?? todayISO);
-  const [pick, setPick] = useState<FamilyWodChoice | null>(null);
-  const [note, setNote] = useState("");
-  const [error, setError] = useState("");
-  const [pending, start] = useTransition();
-  return (
-    <Modal title="Suggest a family WOD" onClose={onClose}>
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="w-12 text-sm text-muted">Day</span>
-          {dateISO ? <span className="text-sm font-semibold">{dayText(date)}</span> : <DayInput value={date} todayISO={todayISO} onChange={setDate} />}
-        </div>
-        <WorkoutPick value={pick?.hiitWorkoutId ?? null} onChange={setPick} />
-        <input
-          value={note}
-          maxLength={140}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Note (optional)"
-          aria-label="Note"
-          className="h-10 w-full rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
-        />
-        {error && <p className="text-sm text-red-700">{error}</p>}
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className={SECONDARY_BTN}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={pending || !pick}
-            onClick={() =>
-              start(async () => {
-                const r = await suggestFamilyWodAction({ userId, dateISO: date, hiitWorkoutId: pick!.hiitWorkoutId, note }).catch(() => ({
-                  ok: false as const,
-                  error: "Couldn't send it.",
-                }));
-                if (r.ok) onDone();
-                else setError(r.error);
-              })
-            }
-            className={PRIMARY_BTN}
-          >
-            Suggest
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function ParentsSheet({
-  data,
-  todayISO,
-  onSet,
-  onChanged,
-  onClose,
-}: {
-  data: FamilyWodOverview;
-  todayISO: string;
-  onSet: (s: Sheet) => void;
-  onChanged: () => Promise<void>;
-  onClose: () => void;
-}) {
-  const [pending, start] = useTransition();
-  return (
-    <Modal title="Family WOD" onClose={onClose}>
-      <div className="space-y-5">
-        <button type="button" onClick={() => onSet({ kind: "set" })} className={`${PRIMARY_BTN} w-full`}>
-          New family WOD
-        </button>
-        {data.ahead.length > 0 && (
-          <div>
-            <p className={LABEL}>Coming up</p>
-            <ul className="divide-y divide-hairline">
-              {data.ahead.map((w) => (
-                <li key={w.id} className="flex items-center gap-3 py-2.5">
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-sm font-semibold">{whenText(w.date, todayISO)}</span>
-                    <span className="truncate text-xs text-muted">
-                      {w.name} · {w.who}
-                    </span>
-                  </span>
-                  <button type="button" onClick={() => onSet({ kind: "set", wod: w })} className={SECONDARY_SM}>
-                    Edit
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {data.suggestions.length > 0 && (
-          <div>
-            <p className={LABEL}>Suggestions</p>
-            <ul className="divide-y divide-hairline">
-              {data.suggestions.map((s) => (
-                <li key={s.id} className="space-y-2 py-2.5">
-                  <p className="text-sm font-semibold">{s.name}</p>
-                  <p className="text-xs text-muted">
-                    {s.by} suggested it for {dayText(s.date)}
-                    {s.note ? ` · “${s.note}”` : ""}
-                  </p>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => onSet({ kind: "set", suggestion: s })} className={PRIMARY_BTN}>
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() =>
-                        start(async () => {
-                          await declineFamilyWodAction(s.id).catch(() => {});
-                          await onChanged();
-                        })
-                      }
-                      className={SECONDARY_BTN}
-                    >
-                      Decline
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-    </Modal>
-  );
-}
-
-/** A parent sets (or edits) a day's family WOD: the day, the workout, who's in. */
-export function SetSheet({
   people,
-  todayISO,
   wod,
   suggestion,
   dateISO,
   onBack,
-  onClose,
   onDone,
 }: {
-  people: { userId: string; name: string }[];
+  mode: "set" | "suggest";
+  userId: string;
   todayISO: string;
+  people: { userId: string; name: string }[];
   wod?: FamilyWodView;
   suggestion?: FamilyWodSuggestionView;
+  /** From a day's + Additional: that day only. */
   dateISO?: string;
-  onBack?: () => void;
-  onClose: () => void;
+  onBack: () => void;
   onDone: () => void;
 }) {
   const [date, setDate] = useState(wod?.date ?? suggestion?.date ?? dateISO ?? todayISO);
   const [pick, setPick] = useState<{ id: string; name: string } | null>(
     wod ? { id: wod.hiitWorkoutId, name: wod.name } : suggestion ? { id: suggestion.hiitWorkoutId, name: suggestion.name } : null,
   );
-  const [changing, setChanging] = useState(!pick);
-  const [who, setWho] = useState<Set<string>>(
-    new Set(wod ? wod.members.filter((m) => m.how === "ASSIGNED").map((m) => m.userId) : people.map((p) => p.userId)),
-  );
+  const [who, setWho] = useState<Set<string>>(new Set(wod ? wod.members.filter((m) => m.how === "ASSIGNED").map((m) => m.userId) : []));
+  const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
-  const everyone = people.every((p) => who.has(p.userId));
+  const fixedDay = !!wod || !!dateISO;
+  const everyone = people.length > 0 && people.every((p) => who.has(p.userId));
   const toggle = (id: string) =>
     setWho((cur) => {
       const n = new Set(cur);
@@ -634,97 +573,97 @@ export function SetSheet({
       else n.add(id);
       return n;
     });
-  const chip = (on: boolean) =>
-    `inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
-      on ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
-    }`;
+  const title = mode === "suggest" ? "Suggest a family WOD" : wod ? "Edit family WOD" : suggestion ? "Approve family WOD" : "New family WOD";
+  const save = () =>
+    start(async () => {
+      const fail = { ok: false as const, error: "Couldn't save it." };
+      const r =
+        mode === "suggest"
+          ? await suggestFamilyWodAction({ userId, dateISO: date, hiitWorkoutId: pick!.id, note }).catch(() => fail)
+          : await setFamilyWodAction({ dateISO: date, hiitWorkoutId: pick!.id, userIds: [...who], suggestionId: suggestion?.id ?? null }).catch(
+              () => fail,
+            );
+      if (r.ok) onDone();
+      else setError(r.error);
+    });
 
   return (
-    <Modal title={wod ? "Edit family WOD" : "New family WOD"} onClose={onClose} onBack={onBack}>
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="w-12 text-sm text-muted">Day</span>
-          {wod || dateISO ? <span className="text-sm font-semibold">{dayText(date)}</span> : <DayInput value={date} todayISO={todayISO} onChange={setDate} />}
-        </div>
+    <div className="space-y-5">
+      <PageHead title={title} onBack={onBack} />
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">Day</p>
+        {fixedDay ? (
+          <p className="text-base">{dayText(date)}</p>
+        ) : (
+          <input
+            type="date"
+            aria-label="Day"
+            value={date}
+            min={todayISO}
+            max={addDays(todayISO, 60)}
+            onChange={(e) => e.target.value && setDate(e.target.value)}
+            className="h-11 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
+          />
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">Workout{pick ? `: ${pick.name}` : ""}</p>
+        <WorkoutPick value={pick?.id ?? null} onChange={(c) => setPick({ id: c.hiitWorkoutId, name: c.name })} />
+      </div>
+
+      {mode === "set" ? (
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <span className="w-12 text-sm text-muted">WOD</span>
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold">{pick?.name ?? "Pick one below"}</span>
-            {pick && !changing && (
-              <button type="button" onClick={() => setChanging(true)} className={SECONDARY_SM}>
-                Change
-              </button>
-            )}
-          </div>
-          {changing && (
-            <WorkoutPick
-              value={pick?.id ?? null}
-              onChange={(c) => {
-                setPick({ id: c.hiitWorkoutId, name: c.name });
-                setChanging(false);
-              }}
-            />
-          )}
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm text-muted">Who&rsquo;s in</p>
+          <p className="text-sm font-semibold">Who&rsquo;s doing it</p>
           <div className="flex flex-wrap gap-2">
+            {people.map((p) => (
+              <button key={p.userId} type="button" aria-pressed={who.has(p.userId)} onClick={() => toggle(p.userId)} className={CHIP(who.has(p.userId))}>
+                {p.name}
+              </button>
+            ))}
             <button
               type="button"
               aria-pressed={everyone}
               onClick={() => setWho(everyone ? new Set() : new Set(people.map((p) => p.userId)))}
-              className={chip(everyone)}
+              className={CHIP(everyone)}
             >
               Everyone
             </button>
-            {people.map((p) => (
-              <button key={p.userId} type="button" aria-pressed={who.has(p.userId)} onClick={() => toggle(p.userId)} className={chip(who.has(p.userId))}>
-                {p.name}
-              </button>
-            ))}
           </div>
         </div>
-        {error && <p className="text-sm text-red-700">{error}</p>}
-        <div className="flex flex-wrap justify-end gap-2">
-          {wod && (
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                start(async () => {
-                  await deleteFamilyWodAction(wod.id).catch(() => {});
-                  onDone();
-                })
-              }
-              className={`${DANGER_BTN} mr-auto`}
-            >
-              Remove
-            </button>
-          )}
-          <button type="button" onClick={onClose} className={SECONDARY_BTN}>
-            Cancel
-          </button>
+      ) : (
+        <input
+          value={note}
+          maxLength={140}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Note (optional)"
+          aria-label="Note"
+          className="h-11 w-full rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
+        />
+      )}
+
+      {error && <p className="text-sm text-red-700">{error}</p>}
+      <div className="flex flex-wrap gap-2">
+        <button type="button" disabled={pending || !pick || (mode === "set" && who.size === 0)} onClick={save} className={`${PRIMARY_BTN} flex-1`}>
+          {mode === "suggest" ? "Suggest" : suggestion ? "Approve" : wod ? "Save" : "Set family WOD"}
+        </button>
+        {wod && (
           <button
             type="button"
-            disabled={pending || !pick || who.size === 0}
+            disabled={pending}
             onClick={() =>
               start(async () => {
-                const r = await setFamilyWodAction({
-                  dateISO: date,
-                  hiitWorkoutId: pick!.id,
-                  userIds: [...who],
-                  suggestionId: suggestion?.id ?? null,
-                }).catch(() => ({ ok: false as const, error: "Couldn't save it." }));
-                if (r.ok) onDone();
-                else setError(r.error);
+                await deleteFamilyWodAction(wod.id).catch(() => {});
+                onDone();
               })
             }
-            className={PRIMARY_BTN}
+            className={DANGER_BTN}
           >
-            {suggestion ? "Approve" : "Set family WOD"}
+            Remove
           </button>
-        </div>
+        )}
       </div>
-    </Modal>
+    </div>
   );
 }
