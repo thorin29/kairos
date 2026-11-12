@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { weightGrid } from "@/components/line-chart";
+import { ChartTip, useChartTip } from "@/components/chart-tip";
 import type { MovementComparison } from "@/lib/queries/workouts";
 
 /**
@@ -32,6 +33,7 @@ const LABEL_H = 26;
 export function CompareView({ movements }: { movements: MovementComparison[] }) {
   const weightMovements = movements.filter((m) => m.metric === "WEIGHT");
   const [id, setId] = useState(weightMovements[0]?.poolExerciseId ?? "");
+  const { wrap, tip, markProps, wrapProps } = useChartTip();
   const current =
     weightMovements.find((m) => m.poolExerciseId === id) ?? weightMovements[0];
   if (!current) return null;
@@ -116,6 +118,7 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
 
   return (
     <Shell current={current} movements={weightMovements} onPick={setId}>
+      <div ref={wrap} className="relative" {...wrapProps}>
       <div className="overflow-x-auto">
         <svg
           viewBox={`0 0 ${width} ${height}`}
@@ -187,10 +190,11 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
                       height={h}
                       rx={3}
                       fill={g.color}
-                    >
-                      {/* Hover gives the weight, which the axis only approximates. */}
-                      <title>{`${g.name} — ${b.value} ${current.unit} × ${b.reps} on ${b.date}`}</title>
-                    </rect>
+                      className="cursor-pointer"
+                      aria-label={`${g.name} — ${b.value} ${current.unit} × ${b.reps} on ${b.date}`}
+                      /* Hover gives the weight, which the axis only approximates (v0.692: a pop-up). */
+                      {...markProps(`${b.value} ${current.unit} × ${b.reps}`, `${g.name} · ${tipDate(b.date)}`)}
+                    />
                     {/* A bar exists because a set was done, so x1 is implied.
                         Only a count worth noticing is written. Muted, but still
                         darker than any gridline, and tucked against the bar. */}
@@ -225,9 +229,15 @@ export function CompareView({ movements }: { movements: MovementComparison[] }) 
           ))}
         </svg>
       </div>
+      <ChartTip tip={tip} />
+      </div>
     </Shell>
   );
 }
+
+/** "Oct 3" from "2026-10-03". */
+const tipDate = (iso: string) =>
+  new Date(`${iso}T12:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
 
 function Shell({
   current,

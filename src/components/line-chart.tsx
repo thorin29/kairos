@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ChartTip, useChartTip } from "./chart-tip";
 
 export type Series = {
   id: string;
@@ -77,6 +78,7 @@ export function LineChart({
   // The tapped point, named under the chart (a hover title never shows on a
   // phone).
   const [picked, setPicked] = useState<{ id: string; i: number } | null>(null);
+  const { wrap, tip, show, hide, markProps, wrapProps } = useChartTip();
 
   const visible = series.filter((s) => !hidden.has(s.id));
 
@@ -148,7 +150,7 @@ export function LineChart({
   }
 
   return (
-    <div>
+    <div ref={wrap} className="relative" {...wrapProps}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full"
@@ -257,7 +259,17 @@ export function LineChart({
                 const cx = x(Date.parse(`${p.date}T00:00:00Z`));
                 const cy = y(p.value);
                 return (
-                  <g key={i} onClick={() => setPicked(on ? null : { id: s.id, i })} className="cursor-pointer">
+                  <g
+                    key={i}
+                    {...markProps(...pointTip(s, p))}
+                    aria-label={pointText(s, p)}
+                    onClick={(e) => {
+                      setPicked(on ? null : { id: s.id, i });
+                      if (on) hide();
+                      else show(e.currentTarget, ...pointTip(s, p));
+                    }}
+                    className="cursor-pointer"
+                  >
                     <circle cx={cx} cy={cy} r={10} fill="transparent" />
                     {/* A light or test day is drawn hollow: it isn't meant to beat anything. */}
                     <circle
@@ -267,9 +279,7 @@ export function LineChart({
                       fill={p.intent ? "var(--color-surface)" : s.color}
                       stroke={p.intent ? s.color : dots || on ? "var(--surface)" : undefined}
                       strokeWidth={p.intent ? 1.75 : dots || on ? 1.5 : undefined}
-                    >
-                      <title>{pointText(s, p)}</title>
-                    </circle>
+                    />
                   </g>
                 );
               })}
@@ -278,15 +288,7 @@ export function LineChart({
         })}
       </svg>
 
-      {(() => {
-        const s = picked ? visible.find((v) => v.id === picked.id) : undefined;
-        const p = s && picked ? s.points[picked.i] : undefined;
-        return s && p ? (
-          <p className="tabular mt-1 text-center text-sm">
-            <span className="font-semibold">{pointText(s, p)}</span>
-          </p>
-        ) : null;
-      })()}
+      <ChartTip tip={tip} />
 
       {legend && <div className="mt-2 flex flex-wrap gap-1.5">
         {series.map((s) => {
@@ -309,6 +311,18 @@ export function LineChart({
       </div>}
     </div>
   );
+}
+
+/** The hover pop-up (v0.692): "185 lb × 3" over "Bench press · Oct 19". */
+function pointTip(s: Series, p: Series["points"][number]): [string, string] {
+  const date = new Date(Date.parse(`${p.date}T00:00:00Z`)).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  const reps = p.reps != null && p.reps > 0 ? ` × ${p.reps}` : "";
+  const kind = p.intent === "LIGHT" ? " · light day" : p.intent === "TEST" ? " · test day" : "";
+  return [`${p.value} ${s.unit}${reps}`, `${s.name} · ${date}${kind}`];
 }
 
 /** "Bench press · 185 lb × 3 · Oct 19". */

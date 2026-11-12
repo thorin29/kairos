@@ -1032,10 +1032,8 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
 - [x] Workout card pop-out: the opened panel scales up and pulls into focus
       from the tapped side, with the resting card's action icons held softly
       out of focus (v0.29.0)
-- [ ] Better card animation: the *actual card* pops out — the tapped tile lifts
-      from its slot and grows into the centre of the screen as it expands,
-      rather than a separate panel fading in over it (shared-element / FLIP
-      transition from the card's real position to the enlarged view)
+- Dropped: a shared-element animation where the tapped tile itself grows into
+  the open card (visual polish only)
 - [x] Add a workout from the card — one-off log; the type drives the metric
       (running→distance, rowing→meters, rucking→distance+load, weights, HIIT),
       and names default to the type (v0.30.0)
@@ -1086,7 +1084,7 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       labelled "Muscle group" with a per-group unit switch (v0.39.0)
 - [x] Per-person progress graph on the opened card (above the buttons), pool-based
       and reflecting today's planned muscle group/exercises (v0.40.0)
-- [ ] Chart point hover tooltip is a native title for now; richer hover popup later
+- [x] Chart point hover pop-up: a small card beside the point, at once; tap on a phone (v0.692)
 - [x] Comparative graphs across people for the same pool exercise or workout
       (v0.38.0) — Compare section on the Workouts page, a line per person of
       best-per-day for a chosen pool movement
@@ -1154,7 +1152,8 @@ own exercises, optionally schedules them, and records what they did.
       from when building a plan
 - [x] Multiple sets per exercise
 - [x] Concept2 (rower) import, web v0.614.0. Other devices later.
-- [ ] Read-only progress overview across the household in admin
+- Dropped: a read-only household progress overview in Admin — covered by the
+  Workouts page's cards, Compare, and Admin → Exercise's page per person
 
 ### Workouts rework (planned)
 
@@ -1778,7 +1777,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.691.0 (migrations through 152_person_pause).
+- Web APP_VERSION 0.692.0 (migrations through 152_person_pause).
 - App versionName 0.500.0 / versionCode 572 / CLIENT_BUILD 572.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

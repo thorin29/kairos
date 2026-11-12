@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-11 — Chart hover pop-up (v0.692.0, web only)
+
+- `components/chart-tip.tsx`: `useChartTip()` + `<ChartTip>` replace SVG
+  `<title>` tooltips (slow, plain, never on touch). A mark spreads
+  `markProps(title, detail)` and carries `data-tip`; a mouse shows it on
+  hover, a tap keeps it until the next tap anywhere (a document
+  listener while it's open). It sits above the
+  point, or below when within ~50 px of the chart's top, clamped to the
+  chart's width. Marks keep an `aria-label` with the full text.
+- Used by LineChart (replacing its tap-for-a-line-under-the-chart), Compare's
+  bars and the plank-test chart.
+- Dropped from the roadmap: the household progress overview in Admin
+  (covered by the Workouts cards, Compare and Admin → Exercise per person)
+  and the shared-element card animation.
+
 ## 2026-11 — Edit plan and HIIT builder restyled (v0.691.0, web only)
 
 - `SECTION_CARD`, `SECTION_LABEL` and `CHIP` in `exercise/buttons.ts` are the

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { InfoIcon } from "@/components/icons";
+import { ChartTip, useChartTip } from "@/components/chart-tip";
 import type { NavRegion } from "@/lib/workouts/involvement";
 import {
   DEFAULT_HEAT_RANGE,
@@ -122,6 +123,7 @@ function Tile({ k, v, unit, sub, up }: { k: string; v: string; unit?: string; su
  * pass (1:10) and full marks (3:45).
  */
 export function PlankBench({ tests }: { tests: PlankTest[] }) {
+  const { wrap, tip, markProps, wrapProps } = useChartTip();
   if (tests.length === 0)
     return (
       <div className="mt-2 rounded-xl border border-hairline bg-ground/40 px-3 py-2.5">
@@ -165,7 +167,8 @@ export function PlankBench({ tests }: { tests: PlankTest[] }) {
         <Tile k="tests" v={`${tests.length}`} sub={`since ${shortDate(tests[0].date)}`} />
       </div>
       {tests.length > 1 && (
-        <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full" role="img" aria-label="Plank tests over time">
+        <div ref={wrap} className="relative mt-3" {...wrapProps}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Plank tests over time">
           {[
             [PFT_PLANK_MIN_SEC, "1:10"],
             [PFT_PLANK_MAX_SEC, "3:45"],
@@ -187,9 +190,10 @@ export function PlankBench({ tests }: { tests: PlankTest[] }) {
           ))}
           <path d={line} fill="none" stroke="var(--color-accent)" strokeWidth={2} strokeLinejoin="round" />
           {tests.map((t) => (
-            <circle key={t.date} cx={x(t.date)} cy={y(t.seconds)} r={3} fill="var(--color-accent)">
-              <title>{`${shortDate(t.date)}: ${clock(t.seconds)} · ${pts(t)}`}</title>
-            </circle>
+            <g key={t.date} className="cursor-pointer" {...markProps(clock(t.seconds), `${shortDate(t.date)} · ${pts(t)}`)}>
+              <circle cx={x(t.date)} cy={y(t.seconds)} r={10} fill="transparent" />
+              <circle cx={x(t.date)} cy={y(t.seconds)} r={3} fill="var(--color-accent)" />
+            </g>
           ))}
           <text x={pad.l} y={H - 4} fontSize="9" fill="currentColor" opacity={0.6}>
             {shortDate(tests[0].date)}
@@ -198,6 +202,8 @@ export function PlankBench({ tests }: { tests: PlankTest[] }) {
             {shortDate(last.date)}
           </text>
         </svg>
+        <ChartTip tip={tip} />
+        </div>
       )}
     </div>
   );
