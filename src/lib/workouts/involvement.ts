@@ -255,9 +255,21 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
     match: /\b(clean|snatch|thruster|burpee|jerk)/,
     involvement: { suggestedPrimary: "FULL_BODY", secondary: ["LEGS", "SHOULDERS", "BACK", "CORE"] },
   },
+  // --- carries (v0.690) -----------------------------------------------------
+  // Each has a place on the body: one-sided carries are core work (resisting
+  // the lean), overhead ones shoulders, and farmer carries and holds grip
+  // (forearms, so Arms) with the traps and core holding.
   {
-    match: /\b(farmer|carry|suitcase)/,
-    involvement: { suggestedPrimary: "FULL_BODY", secondary: ["CORE", "BACK", "ARMS"] },
+    match: /\b(suitcase|single[- ]?arm|one[- ]?arm|offset|uneven)\b.*\b(carry|walk|hold)\b/,
+    involvement: { suggestedPrimary: "CORE", secondary: ["ARMS", "BACK", "SHOULDERS"] },
+  },
+  {
+    match: /\b(overhead|waiter)\b.*\b(carry|walk)\b/,
+    involvement: { suggestedPrimary: "SHOULDERS", secondary: ["CORE", "ARMS"] },
+  },
+  {
+    match: /\b(farmer|carry|yoke)\b|\bfarmers\b/,
+    involvement: { suggestedPrimary: "ARMS", secondary: ["BACK", "CORE", "LEGS"] },
   },
 ];
 
@@ -289,7 +301,10 @@ export function groupsFor(
   view: "front" | "back" | "both";
 } {
   const inv = involvementFor(name);
-  const primary = inv?.forcePrimary ? inv.suggestedPrimary : (filed ?? inv?.suggestedPrimary ?? null);
+  // Filed under Full body (no place on the map), a movement the table knows
+  // takes its suggested primary instead (v0.690: a farmer carry lights Arms).
+  const own = filed === "FULL_BODY" && inv ? null : filed;
+  const primary = inv?.forcePrimary ? inv.suggestedPrimary : (own ?? inv?.suggestedPrimary ?? null);
   // Where someone files a movement under a different group than the anatomy
   // suggests — a deadlift kept under Core — the suggested primary becomes a
   // secondary rather than disappearing. Otherwise that deadlift would shade
@@ -312,7 +327,7 @@ export function navRegionFor(
 ): NavRegion | null {
   const inv = involvementFor(name);
   if (inv?.navRegion) return inv.navRegion;
-  const g = filed ?? inv?.suggestedPrimary ?? null;
+  const g = (filed === "FULL_BODY" && inv ? null : filed) ?? inv?.suggestedPrimary ?? null;
   if (g === null) return null;
   // FULL_BODY has no single place on the body to press; Deadlift is reached
   // from the lower back and glutes.

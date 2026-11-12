@@ -255,7 +255,7 @@ export function TrainKey() {
             <p>It warms as you get stronger: up 3% over 12 weeks is yellow, 6% orange. Red is a strong run over about 6 months.</p>
             <p>When progress stalls it eases back, but not below pale yellow while you keep training.</p>
             <p>A missed week cools it a step. Blue after about a month off.</p>
-            <p>The heart is endurance: sport, rowing, running, rucking and conditioning, by minutes and how hard they felt.</p>
+            <p>The heart is endurance: sport, rowing, running, rucking and conditioning, by minutes and how hard they felt. About 120 hard minutes a week is yellow; doing more than you used to warms it.</p>
           </div>
         </Modal>
       )}

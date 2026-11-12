@@ -1162,6 +1162,10 @@ v0.651: `GET /api/v1/workouts/strip?page=N` — one 8-day page of the week strip
 (0 = up to today, + ahead, − back; clamped −8..4) → { days, overdue, today,
 page }. Strip days add `planned` (the plan has a workout that weekday).
 `GET /api/v1/workouts?date=` takes future dates (the plan's preview).
+v0.690: `training.endurance.level` follows the same rise-and-ease rules (see
+training-heat.ts); carries resolve to a group (farmer → ARMS, suitcase and
+one-arm → CORE, overhead → SHOULDERS), also when filed under FULL_BODY.
+
 v0.689: `training.groups[]` items may add `since` — "+31% since you started"
 (each main movement's best of the last 6 weeks against its first 3 weeks,
 averaged; 8 weeks of history needed). `level` is now earned by progress over

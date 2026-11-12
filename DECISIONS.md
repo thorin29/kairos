@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Carries on the map; endurance rises and eases (v0.690.0 / app 0.500.0)
+
+- Carries were FULL_BODY, which has no place on the map, and their assisting
+  credit stopped counting once assisting work fell to ¼ (v0.689). Now farmer
+  carries and holds are Arms (grip) with back, core and legs assisting;
+  suitcase / one-arm / offset carries are Core; overhead carries Shoulders.
+  A movement filed under Full body that the table knows takes the table's
+  primary; any other filing still wins.
+- Endurance used the old streak rule (red at 200 weighted min for five
+  weeks, and stayed). Now: 60 weighted minutes is an active week, 4 of 6
+  active is pale yellow, a 4-week average of 120 yellow, and progress on the
+  6-week average against 12 / 26 weeks back gives orange (+10%), dark orange
+  (+20%) and red (200+ a week, +15% and +25%). Same 2-week rise, 3-week ease.
+- Roadmap: ticked cardio graphs, sport/stretching/isometric, HIIT/CrossFit
+  and its pool, multiple sets — all shipped earlier.
+
 ## 2026-11 — Heat map earned by progress, not streaks (v0.689.0 / app 0.499.0)
 
 - The old rule warmed a group a step per trained week and capped at red with

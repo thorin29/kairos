@@ -90,21 +90,28 @@ describe("training heat (v0.689: earned by progress, eases back)", () => {
     expect(h.paused).toBe(true);
     expect(level(h, "CHEST")).toBe(before);
   });
-  it("endurance from minutes and how hard they felt", () => {
-    const games = [0, 1, 2, 3, 4].flatMap((i) => [
-      { date: plus("2026-01-05", 7 * i), minutes: 70, effort: "HARD", kind: "hockey" },
+  it("endurance: steady at the guideline is yellow; more over months warms it (v0.690)", () => {
+    const week = (i: number, hockey: number) => [
+      { date: plus("2026-01-05", 7 * i), minutes: hockey, effort: "HARD", kind: "hockey" },
       { date: plus("2026-01-07", 7 * i), minutes: 20, effort: "SOLID", kind: "rowing" },
-    ]);
-    const h = buildTrainingHeat([], games, "2026-02-08");
-    // 125 weighted minutes a week: warms to 4; the top step needs 200.
-    expect(h.endurance?.level).toBe(4);
-    expect(h.endurance?.line).toMatch(/about 125 hard minutes a week · hockey, rowing/);
+    ];
+    // 125 weighted minutes a week, every week for 30 weeks: yellow, never red.
+    const steady = Array.from({ length: 30 }, (_, i) => week(i, 70)).flat();
+    const h = buildTrainingHeat([], steady, "2026-07-29");
+    expect(h.endurance?.level).toBe(2);
+    expect(h.endurance?.line).toMatch(/^about 125 hard minutes a week · (hockey, rowing|rowing, hockey)$/);
+    // Building from about 125 to about 270 a week over 36 weeks.
+    const building = Array.from({ length: 36 }, (_, i) => week(i, 70 + i * 3)).flat();
+    const b = buildTrainingHeat([], building, "2026-09-09");
+    expect(b.endurance?.level).toBeGreaterThanOrEqual(4);
+    expect(b.endurance?.line).toMatch(/up \d+% in 12 weeks/);
+    // Easy rucking (30 weighted minutes): missed weeks, never warms.
     const easy = [0, 1, 2].map((i) => ({ date: plus("2026-01-05", 7 * i), minutes: 60, effort: "EASY", kind: "rucking" }));
     expect(buildTrainingHeat([], easy, "2026-01-25").endurance?.level).toBe(0);
   });
 });
 
-import { groupsFor, shownGroup } from "@/lib/workouts/involvement";
+import { groupsFor, navRegionFor, shownGroup } from "@/lib/workouts/involvement";
 describe("hinge movements on the body (v0.671)", () => {
   it("the hinge family is Deadlift whatever it's filed under; legs assist", () => {
     const gm = groupsFor("Good morning", "LEGS");
@@ -174,5 +181,20 @@ describe("programs and top-set logs (v0.688)", () => {
     const h = buildTrainingHeat(sets, [], "2026-11-12");
     expect(level(h, "LEGS")).toBe(1);
     expect(h.groups.find((g) => g.group === "LEGS")?.line).toBe("trained regularly · about level");
+  });
+});
+
+describe("carries on the body (v0.690)", () => {
+  it("each carry lights a group, even filed under Full body", () => {
+    expect(groupsFor("Farmer carry", null).primary).toBe("ARMS");
+    expect(groupsFor("Farmer hold", "FULL_BODY").primary).toBe("ARMS");
+    expect(groupsFor("Suitcase carry", null).primary).toBe("CORE");
+    expect(groupsFor("Single arm farmer carry", null).primary).toBe("CORE");
+    expect(groupsFor("Overhead carry", null).primary).toBe("SHOULDERS");
+    // A deliberate filing still wins.
+    expect(groupsFor("Farmer carry", "CORE").primary).toBe("CORE");
+    expect(navRegionFor("Farmer carry", "FULL_BODY")).toBe("ARMS");
+    // Unknown full-body movements keep Full body.
+    expect(groupsFor("Turkish get-up", "FULL_BODY").primary).toBe("FULL_BODY");
   });
 });

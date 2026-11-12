@@ -1145,14 +1145,14 @@ own exercises, optionally schedules them, and records what they did.
 - [x] Progress graph — a coloured line per tracked lift, with a legend and
       show/hide toggles
 - [x] Measurement system in admin, with per-exercise unit override
-- [ ] Running and rowing (single-metric graphs)
-- [ ] Sport, stretching, isometric
-- [ ] HIIT / Crossfit — user-defined workouts with a result
+- [x] Running and rowing (single-metric graphs) — the Cardio card
+- [x] Sport, stretching, isometric
+- [x] HIIT / Crossfit — user-defined workouts with a result
 - [x] Major muscle groups on weightlifting workouts — per-group progress blocks,
       the body map, and "No group" for lifts like the deadlift (v0.545–0.556)
-- [ ] A pool of HIIT / Crossfit workouts (timed, intervals, stations) to draw
+- [x] A pool of HIIT / Crossfit workouts (timed, intervals, stations) to draw
       from when building a plan
-- [ ] Multiple sets per exercise (estimated one-rep max dropped: charts show actual weights only)
+- [x] Multiple sets per exercise
 - [x] Concept2 (rower) import, web v0.614.0. Other devices later.
 - [ ] Read-only progress overview across the household in admin
 
@@ -1778,7 +1778,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.689.0 (migrations through 152_person_pause).
-- App versionName 0.499.0 / versionCode 571 / CLIENT_BUILD 571.
+- Web APP_VERSION 0.690.0 (migrations through 152_person_pause).
+- App versionName 0.500.0 / versionCode 572 / CLIENT_BUILD 572.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

@@ -33,9 +33,12 @@
  *
  * Endurance is its own gauge, from hockey and other sport, rowing, running,
  * rucking and conditioning: minutes, weighted by how hard each felt (Easy ½,
- * Solid 1, Hard 1½, Too hard 1¾). About 150 moderate minutes a week is the
- * usual health guideline: 120 or more weighted minutes warms it, under 40
- * counts as missed, between holds steady; 200 or more is the top step.
+ * Solid 1, Hard 1½, Too hard 1¾). Since v0.690 it rises and eases like the
+ * muscles: 60 weighted minutes is an active week (under 40 missed, between
+ * holds); active 4 of the last 6 weeks is pale yellow; averaging 120 a week
+ * (about the 150-minute health guideline) yellow; and that up 10% on 12 weeks
+ * ago (6-week averages) orange, up 20% on 26 weeks ago dark orange. Red is
+ * 200 a week, up 15% and 25%. Steady at the guideline stays yellow.
  */
 
 export type TrainSet = {
@@ -119,56 +122,6 @@ function strengthOf(s: TrainSet): { kind: "w" | "t" | "r"; v: number } | null {
   if (reps > 0) return { kind: "r", v: reps };
   if ((s.seconds ?? 0) > 0) return { kind: "t", v: s.seconds as number };
   return null;
-}
-
-type State = {
-  warmth: number;
-  peak: number;
-  missed: number;
-  decline: number;
-  /** Weeks since the last new best (a big number when there's never been one). */
-  sinceBest: number;
-  trainedWeeks: boolean[];
-  backFor: number;
-};
-
-function stepWeek(st: State, trained: boolean, ratio: number | null, newBest: boolean, current: boolean): void {
-  if (newBest) st.sinceBest = 0;
-  else st.sinceBest++;
-  if (!trained) {
-    if (current) return; // the week isn't over
-    st.trainedWeeks.push(false);
-    st.missed++;
-    st.decline = 0;
-    st.backFor = 0;
-    if (st.warmth > 0) st.warmth -= 1;
-    else if (st.missed >= 4) {
-      // Past neutral: blue, a step at a time, deeper every two more weeks.
-      const target = -Math.min(3, 1 + Math.floor((st.missed - 4) / 2));
-      st.warmth = Math.max(st.warmth - 1, Math.min(st.warmth, target));
-    }
-    return;
-  }
-  st.trainedWeeks.push(true);
-  const wasOff = st.missed >= 3;
-  st.missed = 0;
-  st.backFor = wasOff ? 1 : st.backFor > 0 ? st.backFor + 1 : 0;
-  if (ratio != null && ratio < DECLINE) st.decline++;
-  else st.decline = 0;
-  if (st.decline >= 2) {
-    st.warmth = Math.max(-3, st.warmth - 1);
-    return;
-  }
-  if (st.warmth < 0) {
-    st.warmth = 0;
-    return;
-  }
-  // Two a week back up to where it was, one a week past it; the top step
-  // needs a recent best.
-  const cap = st.sinceBest < 6 ? 5 : 4;
-  const up = st.warmth + 2 <= st.peak ? st.warmth + 2 : st.warmth + 1;
-  st.warmth = Math.min(cap, up);
-  st.peak = Math.max(st.peak, st.warmth);
 }
 
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
@@ -401,6 +354,9 @@ export function buildTrainingHeat(
 }
 
 const EFFORT_FACTOR: Record<string, number> = { EASY: 0.5, SOLID: 1, HARD: 1.5, TOO_HARD: 1.75 };
+/** Weighted minutes a week: an active week, and under this a missed one. */
+const ENDURANCE_ACTIVE = 60;
+const ENDURANCE_MISSED = 40;
 
 function buildEndurance(
   cardio: readonly CardioEntry[],
@@ -417,30 +373,86 @@ function buildEndurance(
     const w = weekStart(c.date);
     load.set(w, (load.get(w) ?? 0) + c.minutes * (EFFORT_FACTOR[c.effort ?? ""] ?? 1));
   }
-  const st: State = { warmth: 0, peak: 0, missed: 0, decline: 0, sinceBest: 99, trainedWeeks: [], backFor: 0 };
+  // Average weighted minutes over `n` counted weeks ending `back` weeks before `w`.
   const counted: string[] = [];
+  const avgOver = (end: number, n: number) => {
+    const xs = counted.slice(Math.max(0, end - n + 1), end + 1);
+    return xs.length === n ? xs.reduce((t, w) => t + (load.get(w) ?? 0), 0) / n : null;
+  };
   const start = weekStart(mine.map((c) => c.date).sort()[0]);
+  const hist: boolean[] = [];
+  let level = 0;
+  let missed = 0;
+  let idx = 0;
+  let lastChange = -99;
+  let up12: number | null = null;
   for (const w of weeks) {
     if (w < start || weekPaused(w, pauses)) continue;
     const l = load.get(w) ?? 0;
     const current = w === curWeek;
-    if (l >= 120) stepWeek(st, true, null, l >= 200, current);
-    else if (l < 40) stepWeek(st, false, null, false, current);
-    else if (!current) {
-      // Between: holds steady, and isn't a missed week.
-      st.sinceBest++;
-      st.missed = 0;
+    if (current && l < ENDURANCE_ACTIVE) break; // the week isn't over
+    counted.push(w);
+    const i = counted.length - 1;
+    if (l < ENDURANCE_MISSED) {
+      hist.push(false);
+      missed++;
+      if (level > 0) {
+        level--;
+        lastChange = idx;
+      } else if (missed >= 4) {
+        const target = -Math.min(3, 1 + Math.floor((missed - 4) / 2));
+        level = Math.max(level - 1, Math.min(level, target));
+      }
+      idx++;
+      continue;
     }
-    if (!current) counted.push(w);
+    missed = 0;
+    hist.push(l >= ENDURANCE_ACTIVE);
+    if (l < ENDURANCE_ACTIVE) {
+      idx++; // a light week holds steady
+      continue;
+    }
+    const regular = hist.slice(-6).filter(Boolean).length >= REGULAR;
+    const now4 = avgOver(i, 4) ?? 0;
+    const now6 = avgOver(i, 6);
+    const was12 = avgOver(i - 12, 6);
+    const was26 = avgOver(i - 26, 6);
+    const r12 = now6 && was12 ? now6 / was12 : null;
+    const r26 = now6 && was26 ? now6 / was26 : null;
+    up12 = r12;
+    let target = 0;
+    if (regular) {
+      target = 1;
+      if (now4 >= 120) target = 2;
+      if (target === 2 && r12 != null && r12 >= 1.1) target = 3;
+      if (target === 3 && r26 != null && r26 >= 1.2) target = 4;
+      if (now4 >= 200 && r12 != null && r12 >= 1.15 && r26 != null && r26 >= 1.25) target = 5;
+    }
+    if (level < 0) {
+      level = 0;
+      lastChange = idx;
+    } else if (target > level && idx - lastChange >= UP_EVERY) {
+      level++;
+      lastChange = idx;
+    } else if (target < level && idx - lastChange >= EASE_EVERY) {
+      level--;
+      lastChange = idx;
+    }
+    idx++;
   }
-  const last4 = counted.slice(-4);
+  const done = counted.filter((w) => w !== curWeek);
+  const last4 = done.slice(-4);
   const avg = last4.length ? Math.round(last4.reduce((t, w) => t + (load.get(w) ?? 0), 0) / last4.length) : 0;
   const kinds = [...new Set(mine.filter((c) => c.date >= plusDays(today, -28)).map((c) => c.kind))].slice(0, 3);
   let line: string;
   if (paused) line = "Paused";
-  else if (st.missed > 0) line = `${st.warmth > 0 ? "cooling" : "cooled"} · ${Math.round(load.get(curWeek) ?? 0)} hard minutes this week`;
-  else line = `about ${avg} hard minutes a week${kinds.length ? ` · ${kinds.join(", ")}` : ""}`;
-  return { group: "ENDURANCE", level: st.warmth, line, week: enduranceWeek(mine, curWeek, today) };
+  else if (missed > 0) line = `${level > 0 ? "cooling" : "cooled"} · ${Math.round(load.get(curWeek) ?? 0)} hard minutes this week`;
+  else {
+    line = `about ${avg} hard minutes a week`;
+    if (up12 != null && up12 >= 1.1) line += ` · up ${pct(up12)}% in 12 weeks`;
+    else if (kinds.length) line += ` · ${kinds.join(", ")}`;
+  }
+  return { group: "ENDURANCE", level, line, week: enduranceWeek(mine, curWeek, today) };
 }
 
 const clock = (sec: number) => {
