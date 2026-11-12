@@ -1166,6 +1166,8 @@ function LiftDetailPanel({
    *  view and does not need to be the first thing on the page. */
   chart?: React.ReactNode;
 }) {
+  // Tap a day (v0.680): what each colour was that day.
+  const [dayOpen, setDayOpen] = useState<string | null>(null);
 
   // Did you train? Built from the days that carry a logged set, so it says
   // "sessions logged" and not "sessions" — a rested day leaves no mark here.
@@ -1200,12 +1202,19 @@ function LiftDetailPanel({
   );
 
   const byDate = new Map<string, string[]>();
+  // date -> group -> the movements done in it, for the tap-a-day pop-up.
+  const movesByDate = new Map<string, Map<string, string[]>>();
   for (const s of all) {
     const g = groupOf(s);
     for (const p of s.points) {
       const list = byDate.get(p.date) ?? [];
       if (!list.includes(g)) list.push(g);
       byDate.set(p.date, list);
+      const day = movesByDate.get(p.date) ?? new Map<string, string[]>();
+      const moves = day.get(g) ?? [];
+      if (!moves.includes(s.name)) moves.push(s.name);
+      day.set(g, moves);
+      movesByDate.set(p.date, day);
     }
   }
   for (const d of extraDays) {
@@ -1319,23 +1328,46 @@ function LiftDetailPanel({
                 <div className="flex gap-[3px]">
                   {weeks.map((col, wi) => (
                     <div key={wi} className="flex flex-col gap-[3px]">
-                      {col.map((cell) => (
-                        <span
-                          key={cell.date}
-                          title={
-                            cell.groups.length
-                              ? `${cell.date} \u2014 ${cell.groups.map((g) => labelOf(g)).join(", ")}`
-                              : cell.date
-                          }
-                          style={cellStyle(cell.groups)}
-                          className={`h-3.5 w-3.5 rounded-[3px] ${cell.groups.length === 0 ? "bg-surface" : ""}`}
-                        />
-                      ))}
+                      {col.map((cell) =>
+                        cell.groups.length ? (
+                          <button
+                            key={cell.date}
+                            type="button"
+                            aria-label={`${cell.date}: ${cell.groups.map((g) => labelOf(g)).join(", ")}`}
+                            title={`${cell.date} \u2014 ${cell.groups.map((g) => labelOf(g)).join(", ")}`}
+                            onClick={() => setDayOpen(cell.date)}
+                            style={cellStyle(cell.groups)}
+                            className="h-3.5 w-3.5 rounded-[3px]"
+                          />
+                        ) : (
+                          <span key={cell.date} title={cell.date} className="h-3.5 w-3.5 rounded-[3px] bg-surface" />
+                        ),
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
             </div>
+            {dayOpen && (
+              <Modal
+                title={new Date(`${dayOpen}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })}
+                onClose={() => setDayOpen(null)}
+              >
+                <ul className="space-y-3">
+                  {(byDate.get(dayOpen) ?? []).map((g) => (
+                    <li key={g} className="flex items-start gap-2.5">
+                      <span className="mt-1 h-3.5 w-3.5 shrink-0 rounded-[3px]" style={{ background: groupColor.get(g) }} />
+                      <span className="flex flex-col">
+                        <span className="text-sm font-semibold">{labelOf(g)}</span>
+                        {(movesByDate.get(dayOpen)?.get(g) ?? []).length > 0 && (
+                          <span className="text-xs text-muted">{movesByDate.get(dayOpen)!.get(g)!.join(" \u00b7 ")}</span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </Modal>
+            )}
             <div className="mt-2 grid grid-cols-[repeat(4,auto)] justify-start gap-x-3.5 gap-y-1 text-[11px] text-muted">
               {groupsSeen.map((g) => (
                 <span key={g} className="flex items-center gap-1.5">

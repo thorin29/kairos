@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Modal } from "./plan-file-panel";
-import { PRIMARY_BTN, SECONDARY_BTN, SECONDARY_SM, DANGER_BTN } from "./buttons";
+import {
+  PRIMARY_BTN,
+  SECONDARY_BTN,
+  SECONDARY_SM,
+  DANGER_BTN,
+} from "./buttons";
 import { ConditioningCard } from "./conditioning-card";
 import {
   declineFamilyWodAction,
@@ -24,10 +29,29 @@ import type {
 } from "@/lib/workouts/family-wod-run";
 import { addDays } from "@/lib/dates";
 
-const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const dayText = (iso: string) => `${DOW[new Date(`${iso}T12:00:00Z`).getUTCDay()]}, ${MONTH[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;
-const whenText = (iso: string, today: string) => (iso === today ? "Today" : iso === addDays(today, 1) ? "Tomorrow" : dayText(iso));
+const dayText = (iso: string) =>
+  `${DOW[new Date(`${iso}T12:00:00Z`).getUTCDay()]}, ${MONTH[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;
+const whenText = (iso: string, today: string) =>
+  iso === today
+    ? "Today"
+    : iso === addDays(today, 1)
+      ? "Tomorrow"
+      : dayText(iso);
 
 const LABEL = "text-xs font-semibold uppercase tracking-widest text-muted";
 
@@ -40,7 +64,13 @@ function Badge({ children }: { children: React.ReactNode }) {
 }
 
 /** A board's rows: rank, name, Best yet, Rx or Scaled, the result. */
-export function BoardRows({ rows, limit }: { rows: BoardRow[]; limit?: number }) {
+export function BoardRows({
+  rows,
+  limit,
+}: {
+  rows: BoardRow[];
+  limit?: number;
+}) {
   const list = limit ? rows.slice(0, limit) : rows;
   return (
     <ul className="divide-y divide-hairline">
@@ -49,18 +79,26 @@ export function BoardRows({ rows, limit }: { rows: BoardRow[]; limit?: number })
           <span className="w-5 text-sm font-bold text-muted">{r.rank}</span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm font-semibold">{r.name}</span>
-            {r.bestYet && <span className="text-[11px] font-semibold text-green-700 dark:text-green-400">Best yet</span>}
+            {r.bestYet && (
+              <span className="text-[11px] font-semibold text-green-700 dark:text-green-400">
+                Best yet
+              </span>
+            )}
           </span>
           {r.version && (
             <span
               className={`rounded-md border px-1.5 text-[11px] font-semibold ${
-                r.version === "RX" ? "border-accent text-accent" : "border-hairline text-muted"
+                r.version === "RX"
+                  ? "border-accent text-accent"
+                  : "border-hairline text-muted"
               }`}
             >
               {r.version === "RX" ? "Rx" : "Scaled"}
             </span>
           )}
-          <span className="tabular min-w-[4rem] text-right text-sm font-bold">{r.result}</span>
+          <span className="tabular min-w-[4rem] text-right text-sm font-bold">
+            {r.result}
+          </span>
         </li>
       ))}
     </ul>
@@ -103,7 +141,9 @@ export function FamilyWodDayCard({
       <div className="rounded-xl border border-hairline bg-surface px-4 py-3">
         <p className={LABEL}>{past ? "Board" : "Board so far"}</p>
         {wod.board.length > 0 && <BoardRows rows={wod.board} />}
-        {wod.waiting && <p className="mt-1 text-xs text-muted">{wod.waiting}</p>}
+        {wod.waiting && (
+          <p className="mt-1 text-xs text-muted">{wod.waiting}</p>
+        )}
       </div>
     ) : null;
 
@@ -125,7 +165,12 @@ export function FamilyWodDayCard({
           }
         />
         {wod.mine === "JOINED" && !wod.plan.today && (
-          <button type="button" disabled={pending} onClick={() => join(false)} className="text-xs font-semibold text-muted hover:text-ink">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => join(false)}
+            className="text-xs font-semibold text-muted hover:text-ink"
+          >
             Leave the family WOD
           </button>
         )}
@@ -143,16 +188,32 @@ export function FamilyWodDayCard({
             {wod.name} · {wod.typeLabel}
           </span>
           <span className="truncate text-xs text-muted">
-            {wod.inPlan ? "In your plan today" : wod.who === "Everyone" ? "Everyone\u2019s in" : wod.members.length > 0 ? `${wod.who} ${wod.members.length === 1 ? "is" : "are"} in` : ""}
+            {wod.inPlan
+              ? "In your plan today"
+              : wod.who === "Everyone"
+                ? "Everyone\u2019s in"
+                : wod.members.length > 0
+                  ? `${wod.who} ${wod.members.length === 1 ? "is" : "are"} in`
+                  : ""}
           </span>
         </span>
         {!wod.inPlan && !past && !wod.mine && (
-          <button type="button" disabled={pending} onClick={() => join(true)} className={PRIMARY_BTN}>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => join(true)}
+            className={PRIMARY_BTN}
+          >
             Join
           </button>
         )}
         {!wod.inPlan && !past && wod.mine === "JOINED" && future && (
-          <button type="button" disabled={pending} onClick={() => join(false)} className={SECONDARY_SM}>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => join(false)}
+            className={SECONDARY_SM}
+          >
             Leave
           </button>
         )}
@@ -188,7 +249,11 @@ function useFamilyWod(userId: string, key = 0) {
 function PageHead({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <div>
-      <button type="button" onClick={onBack} className="mb-3 text-sm font-medium text-accent hover:underline">
+      <button
+        type="button"
+        onClick={onBack}
+        className="mb-3 text-sm font-medium text-accent hover:underline"
+      >
         &lsaquo; Back
       </button>
       <h3 className="font-display text-lg font-semibold">{title}</h3>
@@ -200,7 +265,15 @@ function PageHead({ title, onBack }: { title: string; onBack: () => void }) {
  * Family WOD on the Workouts menu (v0.679; v0.680 a summary that opens its
  * page): today's or the next one, or "None set".
  */
-export function FamilyWodCard({ userId, todayISO, onOpen }: { userId: string; todayISO: string; onOpen: () => void }) {
+export function FamilyWodCard({
+  userId,
+  todayISO,
+  onOpen,
+}: {
+  userId: string;
+  todayISO: string;
+  onOpen: () => void;
+}) {
   const { data } = useFamilyWod(userId);
   if (!data) return null;
   const next = data.next;
@@ -248,7 +321,15 @@ type View =
  * past ones, Suggest one; for parents, New family WOD, what's coming up and
  * the suggestions to approve.
  */
-export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; todayISO: string; onBack: () => void }) {
+export function FamilyWodPage({
+  userId,
+  todayISO,
+  onBack,
+}: {
+  userId: string;
+  todayISO: string;
+  onBack: () => void;
+}) {
   const { data, reload } = useFamilyWod(userId);
   const [view, setView] = useState<View>({ kind: "home" });
   const [pending, start] = useTransition();
@@ -275,7 +356,9 @@ export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; to
 
   const shown = [...data.ahead.filter((w) => w.date <= todayISO), ...data.past];
   if (view.kind === "board") {
-    const wod = shown.find((w) => w.id === view.id) ?? data.ahead.find((w) => w.id === view.id);
+    const wod =
+      shown.find((w) => w.id === view.id) ??
+      data.ahead.find((w) => w.id === view.id);
     return (
       <div className="space-y-4">
         <PageHead title={wod ? wod.name : "Board"} onBack={home} />
@@ -284,7 +367,11 @@ export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; to
             <p className="text-sm text-muted">
               {dayText(wod.date)} · {wod.typeLabel}
             </p>
-            {wod.board.length > 0 ? <BoardRows rows={wod.board} /> : <p className="py-2 text-sm text-muted">No results yet.</p>}
+            {wod.board.length > 0 ? (
+              <BoardRows rows={wod.board} />
+            ) : (
+              <p className="py-2 text-sm text-muted">No results yet.</p>
+            )}
             {wod.waiting && <p className="text-xs text-muted">{wod.waiting}</p>}
           </div>
         )}
@@ -320,19 +407,31 @@ export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; to
             </ul>
           )}
           {!next.mine && (
-            <button type="button" disabled={pending} onClick={() => join(next.id, true)} className={`${PRIMARY_BTN} mt-2 w-full`}>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => join(next.id, true)}
+              className={`${PRIMARY_BTN} mt-2 w-full`}
+            >
               Join
             </button>
           )}
           {next.mine === "JOINED" && next.logged === 0 && (
-            <button type="button" disabled={pending} onClick={() => join(next.id, false)} className="mt-1 text-xs font-semibold text-muted hover:text-ink">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => join(next.id, false)}
+              className="mt-1 text-xs font-semibold text-muted hover:text-ink"
+            >
               Leave
             </button>
           )}
           {next.date <= todayISO && (next.board.length > 0 || next.waiting) && (
             <div className="border-t border-hairline pt-2">
               {next.board.length > 0 && <BoardRows rows={next.board} />}
-              {next.waiting && <p className="text-xs text-muted">{next.waiting}</p>}
+              {next.waiting && (
+                <p className="text-xs text-muted">{next.waiting}</p>
+              )}
             </div>
           )}
         </div>
@@ -342,11 +441,19 @@ export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; to
 
       <div className="flex gap-2">
         {data.parent && (
-          <button type="button" onClick={() => setView({ kind: "set" })} className={`${PRIMARY_BTN} flex-1`}>
+          <button
+            type="button"
+            onClick={() => setView({ kind: "set" })}
+            className={`${PRIMARY_BTN} flex-1`}
+          >
             New family WOD
           </button>
         )}
-        <button type="button" onClick={() => setView({ kind: "suggest" })} className={`${SECONDARY_BTN} flex-1`}>
+        <button
+          type="button"
+          onClick={() => setView({ kind: "suggest" })}
+          className={`${SECONDARY_BTN} flex-1`}
+        >
           Suggest one
         </button>
       </div>
@@ -363,7 +470,11 @@ export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; to
                   </span>
                   <span className="text-xs text-muted">{w.who}</span>
                 </span>
-                <button type="button" onClick={() => setView({ kind: "set", wod: w })} className={SECONDARY_SM}>
+                <button
+                  type="button"
+                  onClick={() => setView({ kind: "set", wod: w })}
+                  className={SECONDARY_SM}
+                >
                   Edit
                 </button>
               </li>
@@ -374,7 +485,9 @@ export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; to
 
       {data.suggestions.length > 0 && (
         <div>
-          <p className={LABEL}>{data.parent ? "Suggestions" : "Your suggestions"}</p>
+          <p className={LABEL}>
+            {data.parent ? "Suggestions" : "Your suggestions"}
+          </p>
           <ul className="divide-y divide-hairline">
             {data.suggestions.map((s) => (
               <li key={s.id} className="space-y-2 py-2.5">
@@ -388,7 +501,11 @@ export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; to
                 <div className="flex gap-2">
                   {data.parent ? (
                     <>
-                      <button type="button" onClick={() => setView({ kind: "set", suggestion: s })} className={PRIMARY_BTN}>
+                      <button
+                        type="button"
+                        onClick={() => setView({ kind: "set", suggestion: s })}
+                        className={PRIMARY_BTN}
+                      >
                         Approve
                       </button>
                       <button
@@ -411,7 +528,9 @@ export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; to
                       disabled={pending}
                       onClick={() =>
                         start(async () => {
-                          await withdrawFamilyWodAction(userId, s.id).catch(() => {});
+                          await withdrawFamilyWodAction(userId, s.id).catch(
+                            () => {},
+                          );
                           await reload();
                         })
                       }
@@ -433,12 +552,19 @@ export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; to
           <ul className="divide-y divide-hairline">
             {shown.map((w) => (
               <li key={w.id}>
-                <button type="button" onClick={() => setView({ kind: "board", id: w.id })} className="flex w-full items-center gap-3 py-2.5 text-left">
+                <button
+                  type="button"
+                  onClick={() => setView({ kind: "board", id: w.id })}
+                  className="flex w-full items-center gap-3 py-2.5 text-left"
+                >
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="text-sm font-semibold">{w.name}</span>
                     <span className="text-xs text-muted">
-                      {dayText(w.date)} · {w.logged} of {w.members.length} logged
-                      {w.board[0] ? ` · ${w.board[0].name} ${w.board[0].result}` : ""}
+                      {dayText(w.date)} · {w.logged} of {w.members.length}{" "}
+                      logged
+                      {w.board[0]
+                        ? ` · ${w.board[0].name} ${w.board[0].result}`
+                        : ""}
                     </span>
                   </span>
                   <span aria-hidden className="text-muted">
@@ -455,7 +581,13 @@ export function FamilyWodPage({ userId, todayISO, onBack }: { userId: string; to
 }
 
 /** What a workout is: its type, movements and note, in a pop-up. */
-function WorkoutInfo({ choice, onClose }: { choice: FamilyWodChoice; onClose: () => void }) {
+function WorkoutInfo({
+  choice,
+  onClose,
+}: {
+  choice: FamilyWodChoice;
+  onClose: () => void;
+}) {
   return (
     <Modal title={choice.name} onClose={onClose}>
       <p className="text-sm text-muted">
@@ -475,7 +607,13 @@ function WorkoutInfo({ choice, onClose }: { choice: FamilyWodChoice; onClose: ()
 }
 
 /** A searchable list of the shared workouts: full names, ⓘ for what each is. */
-function WorkoutPick({ value, onChange }: { value: string | null; onChange: (c: FamilyWodChoice) => void }) {
+function WorkoutPick({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (c: FamilyWodChoice) => void;
+}) {
   const [choices, setChoices] = useState<FamilyWodChoice[] | null>(null);
   const [q, setQ] = useState("");
   const [info, setInfo] = useState<FamilyWodChoice | null>(null);
@@ -486,7 +624,9 @@ function WorkoutPick({ value, onChange }: { value: string | null; onChange: (c: 
   }, []);
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return (choices ?? []).filter((c) => !t || c.name.toLowerCase().includes(t));
+    return (choices ?? []).filter(
+      (c) => !t || c.name.toLowerCase().includes(t),
+    );
   }, [choices, q]);
   if (!choices) return <p className="text-sm text-muted">Loading&hellip;</p>;
   return (
@@ -500,12 +640,22 @@ function WorkoutPick({ value, onChange }: { value: string | null; onChange: (c: 
       />
       <ul className="divide-y divide-hairline rounded-xl border border-hairline">
         {list.map((c) => (
-          <li key={c.hiitWorkoutId} className={`flex items-center gap-1 ${value === c.hiitWorkoutId ? "bg-accent/10" : ""}`}>
-            <button type="button" aria-pressed={value === c.hiitWorkoutId} onClick={() => onChange(c)} className="flex min-w-0 flex-1 flex-col px-3 py-2.5 text-left">
+          <li
+            key={c.hiitWorkoutId}
+            className={`flex items-center gap-1 ${value === c.hiitWorkoutId ? "bg-accent/10" : ""}`}
+          >
+            <button
+              type="button"
+              aria-pressed={value === c.hiitWorkoutId}
+              onClick={() => onChange(c)}
+              className="flex min-w-0 flex-1 flex-col px-3 py-2.5 text-left"
+            >
               <span className="text-sm font-semibold">{c.name}</span>
               <span className="text-xs text-muted">
                 {c.typeLabel}
-                {c.minutes && !c.typeLabel.includes("min") ? ` · ${c.minutes} min` : ""}
+                {c.minutes && !c.typeLabel.includes("min")
+                  ? ` · ${c.minutes} min`
+                  : ""}
               </span>
             </button>
             <button
@@ -518,7 +668,9 @@ function WorkoutPick({ value, onChange }: { value: string | null; onChange: (c: 
             </button>
           </li>
         ))}
-        {list.length === 0 && <li className="px-3 py-2 text-sm text-muted">No match.</li>}
+        {list.length === 0 && (
+          <li className="px-3 py-2 text-sm text-muted">No match.</li>
+        )}
       </ul>
       {info && <WorkoutInfo choice={info} onClose={() => setInfo(null)} />}
     </div>
@@ -527,7 +679,9 @@ function WorkoutPick({ value, onChange }: { value: string | null; onChange: (c: 
 
 const CHIP = (on: boolean) =>
   `inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold ${
-    on ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+    on
+      ? "border-accent bg-accent text-on-accent"
+      : "border-hairline hover:border-accent"
   }`;
 
 /**
@@ -556,11 +710,23 @@ export function FamilyWodEditor({
   onBack: () => void;
   onDone: () => void;
 }) {
-  const [date, setDate] = useState(wod?.date ?? suggestion?.date ?? dateISO ?? todayISO);
-  const [pick, setPick] = useState<{ id: string; name: string } | null>(
-    wod ? { id: wod.hiitWorkoutId, name: wod.name } : suggestion ? { id: suggestion.hiitWorkoutId, name: suggestion.name } : null,
+  const [date, setDate] = useState(
+    wod?.date ?? suggestion?.date ?? dateISO ?? todayISO,
   );
-  const [who, setWho] = useState<Set<string>>(new Set(wod ? wod.members.filter((m) => m.how === "ASSIGNED").map((m) => m.userId) : []));
+  const [pick, setPick] = useState<{ id: string; name: string } | null>(
+    wod
+      ? { id: wod.hiitWorkoutId, name: wod.name }
+      : suggestion
+        ? { id: suggestion.hiitWorkoutId, name: suggestion.name }
+        : null,
+  );
+  const [who, setWho] = useState<Set<string>>(
+    new Set(
+      wod
+        ? wod.members.filter((m) => m.how === "ASSIGNED").map((m) => m.userId)
+        : [],
+    ),
+  );
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -573,16 +739,31 @@ export function FamilyWodEditor({
       else n.add(id);
       return n;
     });
-  const title = mode === "suggest" ? "Suggest a family WOD" : wod ? "Edit family WOD" : suggestion ? "Approve family WOD" : "New family WOD";
+  const title =
+    mode === "suggest"
+      ? "Suggest a family WOD"
+      : wod
+        ? "Edit family WOD"
+        : suggestion
+          ? "Approve family WOD"
+          : "New family WOD";
   const save = () =>
     start(async () => {
       const fail = { ok: false as const, error: "Couldn't save it." };
       const r =
         mode === "suggest"
-          ? await suggestFamilyWodAction({ userId, dateISO: date, hiitWorkoutId: pick!.id, note }).catch(() => fail)
-          : await setFamilyWodAction({ dateISO: date, hiitWorkoutId: pick!.id, userIds: [...who], suggestionId: suggestion?.id ?? null }).catch(
-              () => fail,
-            );
+          ? await suggestFamilyWodAction({
+              userId,
+              dateISO: date,
+              hiitWorkoutId: pick!.id,
+              note,
+            }).catch(() => fail)
+          : await setFamilyWodAction({
+              dateISO: date,
+              hiitWorkoutId: pick!.id,
+              userIds: [...who],
+              suggestionId: suggestion?.id ?? null,
+            }).catch(() => fail);
       if (r.ok) onDone();
       else setError(r.error);
     });
@@ -591,41 +772,59 @@ export function FamilyWodEditor({
     <div className="space-y-5">
       <PageHead title={title} onBack={onBack} />
 
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">Day</p>
-        {fixedDay ? (
-          <p className="text-base">{dayText(date)}</p>
-        ) : (
-          <input
-            type="date"
-            aria-label="Day"
-            value={date}
-            min={todayISO}
-            max={addDays(todayISO, 60)}
-            onChange={(e) => e.target.value && setDate(e.target.value)}
-            className="h-11 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
-          />
-        )}
-      </div>
+      {/* The day and the workout on one card (v0.680), who's in on the next. */}
+      <div className="space-y-4 rounded-xl border border-hairline bg-surface px-4 py-4">
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">Day</p>
+          {fixedDay ? (
+            <p className="text-base">{dayText(date)}</p>
+          ) : (
+            <input
+              type="date"
+              aria-label="Day"
+              value={date}
+              min={todayISO}
+              max={addDays(todayISO, 60)}
+              onChange={(e) => e.target.value && setDate(e.target.value)}
+              className="h-11 rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
+            />
+          )}
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">Workout{pick ? `: ${pick.name}` : ""}</p>
-        <WorkoutPick value={pick?.id ?? null} onChange={(c) => setPick({ id: c.hiitWorkoutId, name: c.name })} />
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">
+            Workout{pick ? `: ${pick.name}` : ""}
+          </p>
+          <WorkoutPick
+            value={pick?.id ?? null}
+            onChange={(c) => setPick({ id: c.hiitWorkoutId, name: c.name })}
+          />
+        </div>
       </div>
 
       {mode === "set" ? (
-        <div className="space-y-2">
+        <div className="space-y-2 rounded-xl border border-hairline bg-surface px-4 py-4">
           <p className="text-sm font-semibold">Who&rsquo;s doing it</p>
           <div className="flex flex-wrap gap-2">
             {people.map((p) => (
-              <button key={p.userId} type="button" aria-pressed={who.has(p.userId)} onClick={() => toggle(p.userId)} className={CHIP(who.has(p.userId))}>
+              <button
+                key={p.userId}
+                type="button"
+                aria-pressed={who.has(p.userId)}
+                onClick={() => toggle(p.userId)}
+                className={CHIP(who.has(p.userId))}
+              >
                 {p.name}
               </button>
             ))}
             <button
               type="button"
               aria-pressed={everyone}
-              onClick={() => setWho(everyone ? new Set() : new Set(people.map((p) => p.userId)))}
+              onClick={() =>
+                setWho(
+                  everyone ? new Set() : new Set(people.map((p) => p.userId)),
+                )
+              }
               className={CHIP(everyone)}
             >
               Everyone
@@ -633,20 +832,33 @@ export function FamilyWodEditor({
           </div>
         </div>
       ) : (
-        <input
-          value={note}
-          maxLength={140}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Note (optional)"
-          aria-label="Note"
-          className="h-11 w-full rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
-        />
+        <div className="rounded-xl border border-hairline bg-surface px-4 py-4">
+          <input
+            value={note}
+            maxLength={140}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Note (optional)"
+            aria-label="Note"
+            className="h-11 w-full rounded-full border border-hairline bg-surface px-4 text-sm outline-none focus:border-accent"
+          />
+        </div>
       )}
 
       {error && <p className="text-sm text-red-700">{error}</p>}
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={pending || !pick || (mode === "set" && who.size === 0)} onClick={save} className={`${PRIMARY_BTN} flex-1`}>
-          {mode === "suggest" ? "Suggest" : suggestion ? "Approve" : wod ? "Save" : "Set family WOD"}
+        <button
+          type="button"
+          disabled={pending || !pick || (mode === "set" && who.size === 0)}
+          onClick={save}
+          className={`${PRIMARY_BTN} flex-1`}
+        >
+          {mode === "suggest"
+            ? "Suggest"
+            : suggestion
+              ? "Approve"
+              : wod
+                ? "Save"
+                : "Set family WOD"}
         </button>
         {wod && (
           <button

@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Tap a day; Family WOD tidy (v0.681.0 / app 0.491.0)
+
+- Workout days: a day with work opens a small pop-up listing each colour's
+  group and the movements done in it that day. The cell drawing is unchanged
+  (no cap on pieces); the pop-up is how a busy day is read.
+- Family WOD's `people` comes back with the viewer first, then the
+  household's order, so the person on the device leads the chips.
+- The set/suggest page puts the day and workout on one card and who's in (or
+  the note) on another.
+
 ## 2026-11 — Full pages for Family WOD and pauses; planned pauses (v0.680.0 / app 0.490.0)
 
 - Family WOD and Pause workouts are full pages (web: person-panel steps

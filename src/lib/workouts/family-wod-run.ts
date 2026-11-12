@@ -271,7 +271,8 @@ export async function familyWodOverview(viewerId: string | null, todayISO: strin
       by: personName(s.user),
       note: s.note,
     })),
-    people: all,
+    // The person on the device first (v0.680), then the household's order.
+    people: [...all.filter((p) => p.userId === viewerId), ...all.filter((p) => p.userId !== viewerId)],
   };
 }
 
