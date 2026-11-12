@@ -11,6 +11,7 @@ import {
 import type { WorkoutType } from "@/lib/workouts/catalog";
 import { sportDayLabel } from "@/lib/sport/label";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
+import { soreHeatGroups } from "@/lib/workouts/adjust";
 import { workoutPausesFor } from "@/lib/workouts/pause-run";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn } from "@/lib/dates";
@@ -115,6 +116,7 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
     endurance.entries,
     todayISO,
     await pausesFor(userId),
+    await soreHolds(userId, todayISO),
   );
   const coreMoves = buildCoreMoves(sets);
   return {
@@ -146,6 +148,16 @@ async function adjustedDays(userId: string): Promise<{ days: Set<string>; marks:
 }
 
 const ADJUST_LABEL: Record<string, string> = { low: "Low energy", time: "Short", sick: "Sick", hurt: "Hurt" };
+
+/** Each muscle group a sore spot holds, from the day it was marked to today
+ *  (v0.686): those weeks don't cool it. */
+async function soreHolds(userId: string, todayISO: string): Promise<Record<string, Pause[]>> {
+  const out: Record<string, Pause[]> = {};
+  for (const s of await soreSpotsFor(userId)) {
+    for (const g of soreHeatGroups(s.area)) (out[g] ??= []).push({ from: s.since, to: todayISO });
+  }
+  return out;
+}
 
 /** Pauses (none yet): when they exist, the weeks in them change nothing. */
 async function pausesFor(userId: string): Promise<Pause[]> {

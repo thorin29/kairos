@@ -361,6 +361,7 @@ export function WorkoutsGrid({
                     todayDow={todayDow}
                     pool={pool}
                     weeklyStart={open.weeklyStart}
+                    weeklyEnd={open.weeklyEnd}
                     weeklyActive={open.weeklyActive}
                     sectionOrder={open.sectionOrder}
                     hiitWorkouts={hiitWorkouts.filter(
@@ -445,20 +446,16 @@ export function WorkoutsGrid({
                         onDone={done}
                       />
                     )}
-                    extra={(d) => (
-                      <>
-                        <h4 className="mb-3 font-display text-sm font-semibold">
-                          Log an additional workout
-                        </h4>
-                        <CustomWorkoutForm
-                          userId={open.user.id}
-                          unitSystem={unitSystem}
-                          pool={pool}
-                          hiitWorkouts={hiitWorkouts}
-                          dateISO={d}
-                          onDone={() => setStep("menu")}
-                        />
-                      </>
+                    extra={(d, kind, done) => (
+                      <CustomWorkoutForm
+                        userId={open.user.id}
+                        unitSystem={unitSystem}
+                        pool={pool}
+                        hiitWorkouts={hiitWorkouts}
+                        dateISO={d}
+                        initialCategory={kind === "sport" ? "SPORT" : "WEIGHTS"}
+                        onDone={done ?? (() => setStep("menu"))}
+                      />
                     )}
                   />
                 </div>
@@ -1604,6 +1601,7 @@ export function CustomWorkoutForm({
   hiitWorkouts,
   dateISO,
   onDone,
+  initialCategory = "WEIGHTS",
 }: {
   userId: string;
   unitSystem: UnitSystem;
@@ -1611,15 +1609,17 @@ export function CustomWorkoutForm({
   hiitWorkouts: BoardHiitWorkout[];
   dateISO: string;
   onDone: () => void;
+  /** Where it opens (v0.686): Strength from + Additional, Sport, or any. */
+  initialCategory?: WorkoutCategory;
 }) {
-  const [category, setCategory] = useState<WorkoutCategory>("WEIGHTS");
+  const [category, setCategory] = useState<WorkoutCategory>(initialCategory);
   const [conflict, setConflict] = useState<{ name: string; summary: string } | null>(
     null,
   );
   const [poolId, setPoolId] = useState(
-    () => pool.find((p) => p.category === "WEIGHTS" && p.isActive)?.id ?? "",
+    () => pool.find((p) => p.category === initialCategory && p.isActive)?.id ?? "",
   );
-  const [metric, setMetric] = useState<Metric>("WEIGHT");
+  const [metric, setMetric] = useState<Metric>(() => defaultMetric(CATEGORY_CFG[initialCategory]));
   const [amount, setAmount] = useState(""); // reps / distance / meters / weight
   const [min, setMin] = useState("");
   const [sec, setSec] = useState("");

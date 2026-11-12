@@ -13,9 +13,11 @@ import {
 } from "@/lib/workouts/endurance-charts";
 
 /** The weekly-training colours (v0.672), so a kind reads the same everywhere. */
-export const CARDIO_COLOR = "#e34948";
-export const CONDITIONING_COLOR = "#eda100";
-const EFFORT_SHADE: Record<string, string> = { EASY: "#f3a5a4", SOLID: "#e34948", HARD: "#8f1f1e", TOO_HARD: "#8f1f1e" };
+// v0.686: the same colours as Weekly training's Cardio and Conditioning,
+// which no muscle group uses.
+export const CARDIO_COLOR = "#0ea5e9";
+export const CONDITIONING_COLOR = "#c026d3";
+const EFFORT_SHADE: Record<string, string> = { EASY: "#9fd9f6", SOLID: "#0ea5e9", HARD: "#075985", TOO_HARD: "#075985" };
 
 const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const md = (iso: string) => `${MONTH[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;

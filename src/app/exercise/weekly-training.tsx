@@ -12,9 +12,11 @@ type Kind = TrainingDay["kinds"][number];
  *  theme's: an accent that happens to match one kind would read as it. */
 const KINDS: { key: Kind; label: string; color: string }[] = [
   { key: "lift", label: "Strength", color: "#4f46e5" },
-  { key: "conditioning", label: "Conditioning", color: "#eda100" },
-  { key: "cardio", label: "Cardio", color: "#e34948" },
-  { key: "sport", label: "Sport", color: "#139c86" },
+  // v0.686: colours no muscle group uses, so Cardio never reads as Chest,
+  // Conditioning as Core or Sport as Upper back.
+  { key: "conditioning", label: "Conditioning", color: "#c026d3" },
+  { key: "cardio", label: "Cardio", color: "#0ea5e9" },
+  { key: "sport", label: "Sport", color: "#65a30d" },
   { key: "other", label: "Mobility", color: "#9aa3ad" },
 ];
 const colorOf = (k: Kind) => KINDS.find((x) => x.key === k)?.color ?? "#4f46e5";

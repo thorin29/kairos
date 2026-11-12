@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-11 — Web Additional flow, training-kind colours, plan end date, sore holds (v0.686.0 / app 0.496.0)
+
+- Web day: one "+ Additional" at the bottom (the app's flow). Its pop-up opens
+  full pages: Conditioning (`ConditioningPage`, a Pick · Generator switch;
+  Create new is the HiitBuilder), Family WOD, Strength / Sport / Something
+  else (`CustomWorkoutForm` with `initialCategory`, via DayLog's `extra(d,
+  kind, done)`), Cardio (`AddCardioPage`, the same page as the Cardio card's
+  Add), Mobility / Stretching / Isometrics. The Conditioning section shows
+  only with a pick to make or a one-off result; "Log an additional workout"
+  under the day is gone.
+- Weekly training and the cardio / conditioning charts: Cardio #0ea5e9,
+  Conditioning #c026d3, Sport #65a30d (were Chest's red, Core's amber and
+  Upper back's green). Muscle-group colours are unchanged.
+- Weekly plan end date: setting `weeklyEnd:<userId>` (web Ends on, app Ends
+  on, API `POST workouts/plan/start {end}`; `GET workouts/plan` returns
+  `weeklyEnd`). Task generation skips days after it, like the start date.
+  Programs still end on their own.
+- Sore spots hold the heat map: each spot holds the groups its area's
+  loading movements belong to (`soreHeatGroups`, from the Hurt-day table,
+  plus Lower back), from the day it was marked until Better. Held weeks that
+  weren't trained don't cool the group; the line reads "Sore · not cooling
+  while it heals".
+
 ## 2026-11 — One Family WOD button; training maxes locked (v0.685.0 / app 0.495.0)
 
 - The Family WOD page shows one button: New family WOD for a parent,

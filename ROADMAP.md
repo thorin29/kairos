@@ -1123,7 +1123,7 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       after due) up to "Until next due", which holds it until the same weekday
       comes round again (pure succession). Defaults to "Until next due"
       (v0.75.0)
-- [ ] Workout plans: optional end date (plan expiry); no end date is fine too
+- [x] Workout plans: optional end date (plan expiry); no end date is fine too (v0.686)
 - [x] Household pause (vacation) also pauses workouts — no workout prompts
       generated for anyone on covered days, so nothing shows as due or overdue;
       logging stays open for the record, and workouts resume the day after the
@@ -1752,7 +1752,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   (web 0.667 / app 0.477).
 - [x] Adjust today, Hurt: a stand-in for each move left out, from recent lifts
   (v0.675), so a day emptied by the area becomes a day for the healthy parts.
-- [ ] Pause for an injury: weeks with a hurt area don't cool it on the heat map.
+- [x] Pause for an injury: weeks with a sore area don't cool its groups on the heat map (v0.686).
 
 From the original workouts plan, not built yet:
 - [x] "Something hurt?" marked on the body map for that area (sore spots, v0.675).
@@ -1777,7 +1777,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.685.0 (migrations through 151_family_wod).
-- App versionName 0.495.0 / versionCode 567 / CLIENT_BUILD 567.
+- Web APP_VERSION 0.686.0 (migrations through 151_family_wod).
+- App versionName 0.496.0 / versionCode 568 / CLIENT_BUILD 568.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector: deployed and running; Xbox totals come from real game sessions.

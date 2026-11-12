@@ -228,6 +228,13 @@ const LOADS: Record<HurtArea, { re: RegExp; groups: string[] }> = {
   },
 };
 
+/** The muscle groups a sore area holds on the heat map (v0.686): the ones
+ *  its loading movements belong to, plus Lower back for the lower back. */
+export function soreHeatGroups(area: HurtArea): string[] {
+  const g = LOADS[area]?.groups ?? [];
+  return area === "LOWER_BACK" ? [...g, "LOWER_BACK"] : [...g];
+}
+
 /** The movement loads a hurt area. */
 export function loadsArea(area: HurtArea, name: string, muscleGroup?: string | null): boolean {
   const l = LOADS[area];

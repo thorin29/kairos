@@ -158,6 +158,9 @@ export function buildTrainingHeat(
   cardio: readonly CardioEntry[],
   today: string,
   pauses: readonly Pause[] = [],
+  /** Per group, the spans a sore spot holds it (v0.686): those weeks don't
+   *  cool it, like a pause for that group alone. */
+  held: Readonly<Record<string, readonly Pause[]>> = {},
 ): TrainingHeat {
   const firstDates = [...sets.map((s) => s.date), ...cardio.map((c) => c.date)].filter((d) => d <= today).sort();
   const curWeek = weekStart(today);
@@ -211,9 +214,12 @@ export function buildTrainingHeat(
     // ever assisted isn't shown).
     const start = weeks.find((w) => (creditBy.get(w) ?? 0) >= MIN_CREDIT);
     if (!start) continue;
+    const holds = held[g] ?? [];
     for (const w of weeks) {
       if (w < start || weekPaused(w, pauses)) continue;
       const trained = (creditBy.get(w) ?? 0) >= MIN_CREDIT;
+      // A sore week that wasn't trained changes nothing (v0.686).
+      if (!trained && weekPaused(w, holds)) continue;
       const ratios: number[] = [];
       let newBest = false;
       for (const m of byMove.values()) {
@@ -240,7 +246,9 @@ export function buildTrainingHeat(
     }
     const recent = st.trainedWeeks.slice(-8);
     let line: string;
+    const soreNow = holds.some((p) => p.from <= today && p.to >= today);
     if (paused) line = "Paused";
+    else if (soreNow) line = "Sore · not cooling while it heals";
     else if (!lastTrained) line = "Not trained yet";
     else if (st.decline >= 2 && lastDecline) line = `${lastDecline.name} max down ${lastDecline.pct}% for ${st.decline} weeks`;
     else if (st.missed > 0) {

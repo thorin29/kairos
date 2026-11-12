@@ -29,7 +29,7 @@ import {
 } from "@/lib/actions/workouts";
 import type { DayExtraView } from "@/lib/workouts/day-extras-run";
 import type { Concept2Day } from "@/lib/workouts/concept2-run";
-import { CardioCard } from "./cardio-card";
+import { AddCardioPage, CardioCard } from "./cardio-card";
 import { ConditioningCard } from "./conditioning-card";
 import { FamilyWodDayCard, FamilyWodEditor } from "./family-wod";
 import { loadFamilyWod } from "@/lib/actions/family-wod";
@@ -149,8 +149,9 @@ export function DayLog({
   person: PersonWorkout;
   todayISO: string;
   unitSystem: UnitSystem;
-  /** Rendered under the day (the "log an additional workout" form). */
-  extra?: (dateISO: string) => React.ReactNode;
+  /** The log form for "+ Additional → Strength / Sport / Something else"
+   *  (v0.686; was its own section under the day). */
+  extra?: (dateISO: string, kind?: "strength" | "sport" | "other", onDone?: () => void) => React.ReactNode;
   /** The day it opens on (a home-page prompt carried over from an earlier day). */
   initialDate?: string;
   /** "Write your own" conditioning for the day (the workout builder). */
@@ -379,10 +380,18 @@ export function DayLog({
   // A sport on the day (v0.662) always has a Warm-up section, for its
   // optional warm-up when the day's own isn't for it.
   const sportDay = data?.sportDay ?? null;
+  // v0.686: Conditioning shows when there's a pick to make or a one-off result;
+  // adding moved to the day's one "+ Additional" button at the bottom.
+  const oneOffs = useMemo(() => {
+    if (!data) return 0;
+    const planned = new Set(data.conditioning.map((c) => c.name.slice(0, 40)));
+    if (data.familyWod) planned.add(data.familyWod.name.slice(0, 40));
+    return data.conditioningDone.filter((c) => !planned.has(c.name.slice(0, 40))).length;
+  }, [data]);
   const withConditioning = useMemo(() => {
-    const s = withSection(sections, "CONDITIONING", order);
+    const s = (data?.picks.length ?? 0) > 0 || oneOffs > 0 ? withSection(sections, "CONDITIONING", order) : sections;
     return sportDay ? withSection(s, "WARMUP", order) : s;
-  }, [sections, order, sportDay]);
+  }, [sections, order, sportDay, data, oneOffs]);
   const progress = dayProgress(planSections, isDone);
   const late = date < todayISO;
   const completedOnISO = late ? todayISO : undefined;
@@ -1001,22 +1010,7 @@ export function DayLog({
                           </ul>
                         ) : null;
                       })()}
-                      <AddConditioning
-                        key={`addc:${date}`}
-                        userId={userId}
-                        dateISO={date}
-                        completedOnISO={completedOnISO}
-                        onChanged={() => setTick((n) => n + 1)}
-                        writeOwn={writeOwn}
-                        onFamilyWod={
-                          data.familyWod || date < todayISO
-                            ? undefined
-                            : () =>
-                                loadFamilyWod(userId)
-                                  .then((d) => setFwodSheet({ parent: d.parent, people: d.people }))
-                                  .catch(() => {})
-                        }
-                      />
+
                     </>
                   )}
                 </div>
@@ -1077,7 +1071,40 @@ export function DayLog({
           }}
         />
       )}
-      {extra && <div className="border-t border-hairline pt-5">{extra(date)}</div>}
+      {/* The day's one Add button (v0.686, like the app's): a short pop-up of
+          kinds, each opening a full page. */}
+      {data && (
+        <div className="border-t border-hairline pt-5">
+        <AddConditioning
+                        key={`addc:${date}`}
+                        userId={userId}
+                        dateISO={date}
+                        completedOnISO={completedOnISO}
+                        onChanged={() => setTick((n) => n + 1)}
+                        writeOwn={writeOwn}
+                        logOther={extra ? (kind, done) => extra(date, kind, done) : undefined}
+                        addCardio={(done, back) => (
+                          <AddCardioPage
+                            userId={userId}
+                            dateISO={date}
+                            completedOnISO={completedOnISO}
+                            unitSystem={unitSystem}
+                            onSaved={done}
+                            onClose={done}
+                            onBack={back}
+                          />
+                        )}
+                        onFamilyWod={
+                          data.familyWod || date < todayISO
+                            ? undefined
+                            : () =>
+                                loadFamilyWod(userId)
+                                  .then((d) => setFwodSheet({ parent: d.parent, people: d.people }))
+                                  .catch(() => {})
+                        }
+                      />
+        </div>
+      )}
     </div>
   );
 }

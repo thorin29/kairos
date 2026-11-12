@@ -13,6 +13,8 @@ export async function GET(req: NextRequest) {
   if ("response" in authed) return authed.response;
   const days = await loadPlan(authed.device.person.id);
   const weeklyStart = (await getSetting(`weeklyStart:${authed.device.person.id}`)) ?? "";
+  // v0.686: the plan's last day, or "".
+  const weeklyEnd = (await getSetting(`weeklyEnd:${authed.device.person.id}`)) ?? "";
   const weeklyActive = (await getSetting(`weeklyActive:${authed.device.person.id}`)) !== "0";
-  return apiOk({ days, weeklyStart, weeklyActive });
+  return apiOk({ days, weeklyStart, weeklyEnd, weeklyActive });
 }

@@ -113,6 +113,16 @@ export async function generateWorkoutTasks(
   for (const r of weeklyStartRows) {
     if (r.value) weeklyStart.set(r.key.slice("weeklyStart:".length), r.value);
   }
+  // An optional end date (v0.686): after it, the weekly plan stops — no
+  // prompts, nothing overdue. Empty/absent means it runs on.
+  const weeklyEndRows = (await prisma.appSetting.findMany({
+    where: { key: { startsWith: "weeklyEnd:" } },
+    select: { key: true, value: true },
+  })) as { key: string; value: string }[];
+  const weeklyEnd = new Map<string, string>();
+  for (const r of weeklyEndRows) {
+    if (r.value) weeklyEnd.set(r.key.slice("weeklyEnd:".length), r.value);
+  }
 
   // A paused weekly plan (weeklyActive:"0") produces no weekly prompts, so it can
   // sit alongside a rotation and be turned back on later. Default (absent) is on.
@@ -213,6 +223,8 @@ export async function generateWorkoutTasks(
       if (since && iso < since) continue;
       const wStart = weeklyStart.get(userId);
       if (wStart && iso < wStart) continue;
+      const wEnd = weeklyEnd.get(userId);
+      if (wEnd && iso > wEnd) continue;
       if (ownPaused(userId, iso)) continue;
       expected.set(`${userId}|${iso}`, {
         userId,

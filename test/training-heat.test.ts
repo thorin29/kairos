@@ -98,3 +98,17 @@ describe("hinge movements on the body (v0.671)", () => {
     expect(shownGroup("Bench press", "CHEST")).toBe("CHEST");
   });
 });
+
+describe("sore spots hold the heat map (v0.686)", () => {
+  it("a sore group doesn't cool while it heals", () => {
+    const sets = bench("2026-01-05", 8, (i) => 135 + i * 5);
+    const cooled = level(buildTrainingHeat(sets, [], "2026-04-29"), "CHEST") ?? 0;
+    const held = { CHEST: [{ from: "2026-03-02", to: "2026-04-29" }] };
+    const h = buildTrainingHeat(sets, [], "2026-04-29", [], held);
+    expect(level(h, "CHEST")).toBe(5);
+    expect(level(h, "CHEST")).toBeGreaterThan(cooled);
+    expect(h.groups.find((g) => g.group === "CHEST")?.line).toMatch(/^Sore/);
+    // Arms (assisting only) aren't held by a chest hold.
+    expect(h.paused).toBe(false);
+  });
+});

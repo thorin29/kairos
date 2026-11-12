@@ -162,6 +162,8 @@ export type PersonWorkout = {
   rotation: RotationData | null;
   /** Optional future date the weekly plan begins on; "" = active now. */
   weeklyStart: string;
+  /** The weekly plan's last day (v0.686), or "". */
+  weeklyEnd: string;
   /** Whether the weekly plan is active (false = paused, can run alongside a rotation). */
   weeklyActive: boolean;
   /** The day page's section order: every day, and weekdays with their own (v0.615). */
@@ -790,6 +792,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       plan,
       rotation,
       weeklyStart: (await getSetting(`weeklyStart:${person.id}`)) ?? "",
+      weeklyEnd: (await getSetting(`weeklyEnd:${person.id}`)) ?? "",
       weeklyActive: (await getSetting(`weeklyActive:${person.id}`)) !== "0",
       sectionOrder: await loadDayOrders(person.id),
       todayPlanned: personPaused ? [] : todayPlanned,

@@ -15,6 +15,7 @@ import {
   setCoreDayAction,
   setPlannedScheme,
   setWeeklyStart,
+  setWeeklyEnd,
   setWeeklyActive,
 } from "@/lib/actions/workouts";
 import { PlusIcon, TrashIcon } from "@/components/icons";
@@ -138,6 +139,7 @@ export function PlanBuilder({
   pool,
   hiitWorkouts,
   weeklyStart,
+  weeklyEnd = "",
   weeklyActive,
   sectionOrder,
   onDone,
@@ -149,6 +151,8 @@ export function PlanBuilder({
   pool: PoolEntry[];
   hiitWorkouts: BoardHiitWorkout[];
   weeklyStart: string;
+  /** The plan's last day (v0.686), or "" for no end. */
+  weeklyEnd?: string;
   weeklyActive: boolean;
   sectionOrder: DayOrders;
 }) {
@@ -156,7 +160,7 @@ export function PlanBuilder({
   // Every change saves as it's made (v0.645): "Saved" shows each time the
   // plan comes back changed, and Done at the bottom leaves.
   const [savedAt, setSavedAt] = useState(0);
-  const sig = JSON.stringify([plan, weeklyStart, weeklyActive]);
+  const sig = JSON.stringify([plan, weeklyStart, weeklyEnd, weeklyActive]);
   const firstSig = useRef(sig);
   useEffect(() => {
     if (sig !== firstSig.current) {
@@ -212,6 +216,26 @@ export function PlanBuilder({
           </button>
         ) : (
           <span className="text-xs text-muted">Leave blank to start now.</span>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 pb-1">
+        <label className="text-sm font-medium">Ends on</label>
+        <DateField
+          defaultValue={weeklyEnd}
+          onChange={(v) => v && startWeeklyStart(() => void setWeeklyEnd(userId, v))}
+          ariaLabel="Weekly plan ends on"
+          className="tabular h-9 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+        />
+        {weeklyEnd ? (
+          <button
+            type="button"
+            onClick={() => startWeeklyStart(() => void setWeeklyEnd(userId, ""))}
+            className="text-xs font-medium text-muted hover:underline"
+          >
+            Clear (no end)
+          </button>
+        ) : (
+          <span className="text-xs text-muted">Leave blank to keep going.</span>
         )}
         <button
           type="button"

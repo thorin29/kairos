@@ -227,6 +227,9 @@ function PickOne({
   openId,
   onDone,
   onClose,
+  header,
+  footer,
+  title = "Pick one",
 }: {
   userId: string;
   dateISO: string;
@@ -234,6 +237,11 @@ function PickOne({
   openId?: string;
   onDone: () => void;
   onClose: () => void;
+  /** On the Conditioning page (v0.686): the Pick · Generator switch. */
+  header?: React.ReactNode;
+  /** Under the list: Create new. */
+  footer?: React.ReactNode;
+  title?: string;
 }) {
   const [data, setData] = useState<{ choices: WodChoice[]; version: Version; equipment: EquipmentItem[] } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -315,7 +323,8 @@ function PickOne({
   );
 
   return (
-    <Modal title="Pick one" onClose={onClose}>
+    <Modal title={title} onClose={onClose}>
+      {header}
       {failed ? (
         <p className="text-sm text-red-700">Couldn&rsquo;t load the workouts. Try again.</p>
       ) : !data ? (
@@ -356,6 +365,7 @@ function PickOne({
           )}
         </div>
       )}
+      {footer}
     </Modal>
   );
 }
@@ -368,12 +378,16 @@ function BuildOne({
   completedOnISO,
   onDone,
   onClose,
+  header,
+  title = "Generator",
 }: {
   userId: string;
   dateISO: string;
   completedOnISO?: string;
   onDone: () => void;
   onClose: () => void;
+  header?: React.ReactNode;
+  title?: string;
 }) {
   const [data, setData] = useState<{ version: Version; equipment: EquipmentItem[] } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -435,7 +449,8 @@ function BuildOne({
   }
 
   return (
-    <Modal title="Generator" onClose={onClose}>
+    <Modal title={title} onClose={onClose}>
+      {header}
       {failed ? (
         <p className="text-sm text-red-700">Couldn&rsquo;t load the equipment. Try again.</p>
       ) : !data ? (
@@ -501,10 +516,10 @@ function BuildOne({
 type Opened = "pick" | "build" | "own" | null;
 
 /**
- * "+ Additional" on any day (v0.667; was + Conditioning, v0.619): a one-off
- * conditioning session (Pick one, Build one or Write your own, logged as an
- * extra), or a mobility or stretching routine or an isometric workout added
- * to that day only.
+ * "+ Additional" (v0.667; v0.686 the day's one Add button, like the app's): a
+ * short pop-up of kinds, each opening a full page — Conditioning (Pick ·
+ * Generator), the Family WOD, Strength, Cardio, Sport, Mobility, Stretching,
+ * Isometrics, or Something else (every category).
  */
 export function AddConditioning({
   userId,
@@ -513,6 +528,8 @@ export function AddConditioning({
   onChanged,
   writeOwn,
   onFamilyWod,
+  logOther,
+  addCardio,
 }: {
   userId: string;
   dateISO: string;
@@ -521,107 +538,137 @@ export function AddConditioning({
   writeOwn?: (dateISO: string, onDone: () => void) => React.ReactNode;
   /** "Family WOD" (v0.679): set one for the day, or suggest one. */
   onFamilyWod?: () => void;
+  /** Strength, Sport or Something else: the log form (v0.686). */
+  logOther?: (kind: "strength" | "sport" | "other", onDone: () => void) => React.ReactNode;
+  /** Cardio: the Cardio card's Add page (v0.686). */
+  addCardio?: (onDone: () => void, onBack: () => void) => React.ReactNode;
 }) {
-  // "top": the kinds; "conditioning": Pick one, Build one, Write your own.
-  const [menu, setMenu] = useState<"top" | "conditioning" | null>(null);
-  const [opened, setOpened] = useState<Opened>(null);
-  const [extra, setExtra] = useState<DayExtraKind | null>(null);
-  const finish = () => {
-    setOpened(null);
+  type Page = "conditioning" | "cardio" | "strength" | "sport" | "other" | DayExtraKind;
+  const [menu, setMenu] = useState(false);
+  const [page, setPage] = useState<Page | null>(null);
+  const done = () => {
+    setPage(null);
     onChanged();
   };
-  const choose = (o: Opened) => {
-    setMenu(null);
-    setOpened(o);
+  const back = () => {
+    setPage(null);
+    setMenu(true);
   };
+  const go = (p: Page) => {
+    setMenu(false);
+    setPage(p);
+  };
+  const LOG_TITLE = { strength: "Strength", sport: "Sport", other: "Log a workout" } as const;
+  const item = (label: string, onClick: () => void) => (
+    <button key={label} type="button" onClick={onClick} className={QUIET + " justify-center"}>
+      {label}
+    </button>
+  );
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setMenu("top")}
-        className={SECONDARY_BTN}
-      >
+      <button type="button" onClick={() => setMenu(true)} className={`${SECONDARY_BTN} w-full justify-center`}>
         + Additional
       </button>
-      {menu === "top" && (
-        <Modal small title="Additional" onClose={() => setMenu(null)}>
+      {menu && (
+        <Modal small title="Additional" onClose={() => setMenu(false)}>
           <div className="grid gap-2">
-            <button type="button" onClick={() => setMenu("conditioning")} className={QUIET + " justify-center"}>
-              Conditioning
-            </button>
-            {onFamilyWod && (
-              <button
-                type="button"
-                onClick={() => {
-                  setMenu(null);
-                  onFamilyWod();
-                }}
-                className={QUIET + " justify-center"}
-              >
-                Family WOD
-              </button>
+            {item("Conditioning", () => go("conditioning"))}
+            {onFamilyWod &&
+              item("Family WOD", () => {
+                setMenu(false);
+                onFamilyWod();
+              })}
+            {logOther && item("Strength", () => go("strength"))}
+            {addCardio && item("Cardio", () => go("cardio"))}
+            {logOther && item("Sport", () => go("sport"))}
+            {(["mobility", "stretching", "iso"] as DayExtraKind[]).map((k) =>
+              item(k === "mobility" ? "Mobility" : k === "stretching" ? "Stretching" : "Isometrics", () => go(k)),
             )}
-            {(["mobility", "stretching", "iso"] as DayExtraKind[]).map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => {
-                  setMenu(null);
-                  setExtra(k);
-                }}
-                className={QUIET + " justify-center"}
-              >
-                {k === "mobility" ? "Mobility" : k === "stretching" ? "Stretching" : "Isometrics"}
-              </button>
-            ))}
-          </div>
-        </Modal>
-      )}
-      {extra && (
-        <ExtraPicker
-          userId={userId}
-          dateISO={dateISO}
-          kind={extra}
-          onDone={() => {
-            setExtra(null);
-            onChanged();
-          }}
-          onBack={() => {
-            setExtra(null);
-            setMenu("top");
-          }}
-          onClose={() => setExtra(null)}
-        />
-      )}
-      {menu === "conditioning" && (
-        <Modal small title="Conditioning" onClose={() => setMenu(null)} onBack={() => setMenu("top")}>
-          <div className="grid gap-2">
-            <button type="button" onClick={() => choose("pick")} className={PRIMARY}>
-              Pick one
-            </button>
-            <button type="button" onClick={() => choose("build")} className={QUIET + " justify-center"}>
-              Generator
-            </button>
-            {writeOwn && (
-              <button type="button" onClick={() => choose("own")} className={QUIET + " justify-center"}>
-                Create new
+            {logOther && (
+              <button type="button" onClick={() => go("other")} className="h-10 text-sm font-semibold text-muted hover:text-ink">
+                Something else
               </button>
             )}
           </div>
         </Modal>
       )}
-      {opened === "pick" && (
-        <PickOne userId={userId} dateISO={dateISO} completedOnISO={completedOnISO} onDone={finish} onClose={() => setOpened(null)} />
+      {page === "conditioning" && (
+        <ConditioningPage userId={userId} dateISO={dateISO} completedOnISO={completedOnISO} onDone={done} onClose={() => setPage(null)} writeOwn={writeOwn} />
       )}
-      {opened === "build" && (
-        <BuildOne userId={userId} dateISO={dateISO} completedOnISO={completedOnISO} onDone={finish} onClose={() => setOpened(null)} />
-      )}
-      {opened === "own" && writeOwn && (
-        <Modal title="Create new" onClose={() => setOpened(null)}>
-          {writeOwn(dateISO, finish)}
+      {page === "cardio" && addCardio?.(done, back)}
+      {(page === "strength" || page === "sport" || page === "other") && logOther && (
+        <Modal title={LOG_TITLE[page]} onClose={() => setPage(null)} onBack={back}>
+          {logOther(page, done)}
         </Modal>
+      )}
+      {(page === "mobility" || page === "stretching" || page === "iso") && (
+        <ExtraPicker userId={userId} dateISO={dateISO} kind={page} onDone={done} onBack={back} onClose={() => setPage(null)} />
       )}
     </>
+  );
+}
+
+/**
+ * Conditioning, one full page (v0.686, like the app's): a Pick · Generator
+ * switch at the top. Pick lists the workouts to do; Generator has the app make
+ * one. "Create new" goes to the HIIT/CrossFit builder: this page is for
+ * picking, not writing.
+ */
+export function ConditioningPage({
+  userId,
+  dateISO,
+  completedOnISO,
+  start = "pick",
+  onDone,
+  onClose,
+  writeOwn,
+}: {
+  userId: string;
+  dateISO: string;
+  completedOnISO?: string;
+  start?: "pick" | "build";
+  onDone: () => void;
+  onClose: () => void;
+  writeOwn?: (dateISO: string, onDone: () => void) => React.ReactNode;
+}) {
+  const [mode, setMode] = useState<"pick" | "build">(start);
+  const [creating, setCreating] = useState(false);
+  if (creating && writeOwn) {
+    return (
+      <Modal title="Create new" onClose={onClose} onBack={() => setCreating(false)}>
+        {writeOwn(dateISO, onDone)}
+      </Modal>
+    );
+  }
+  const header = (
+    <div className="flex gap-1.5 rounded-xl border border-hairline bg-surface p-2" role="group" aria-label="Pick or generate">
+      <button type="button" aria-pressed={mode === "pick"} onClick={() => setMode("pick")} className={`${CHIP(mode === "pick")} flex-1 justify-center`}>
+        Pick
+      </button>
+      <button type="button" aria-pressed={mode === "build"} onClick={() => setMode("build")} className={`${CHIP(mode === "build")} flex-1 justify-center`}>
+        Generator
+      </button>
+    </div>
+  );
+  return mode === "pick" ? (
+    <PickOne
+      userId={userId}
+      dateISO={dateISO}
+      completedOnISO={completedOnISO}
+      onDone={onDone}
+      onClose={onClose}
+      title="Conditioning"
+      header={header}
+      footer={
+        writeOwn ? (
+          <button type="button" onClick={() => setCreating(true)} className="text-sm font-semibold text-accent hover:underline">
+            Create new
+          </button>
+        ) : null
+      }
+    />
+  ) : (
+    <BuildOne userId={userId} dateISO={dateISO} completedOnISO={completedOnISO} onDone={onDone} onClose={onClose} title="Conditioning" header={header} />
   );
 }
 
@@ -717,11 +764,16 @@ export function PickConditioningCard({
         </div>
       )}
 
-      {opened === "pick" && (
-        <PickOne userId={userId} dateISO={dateISO} completedOnISO={completedOnISO} onDone={finish} onClose={() => setOpened(null)} />
-      )}
-      {opened === "build" && (
-        <BuildOne userId={userId} dateISO={dateISO} completedOnISO={completedOnISO} onDone={finish} onClose={() => setOpened(null)} />
+      {(opened === "pick" || opened === "build") && (
+        <ConditioningPage
+          userId={userId}
+          dateISO={dateISO}
+          completedOnISO={completedOnISO}
+          start={opened}
+          onDone={finish}
+          onClose={() => setOpened(null)}
+          writeOwn={writeOwn}
+        />
       )}
       {opened === "own" && writeOwn && (
         <Modal title="Create new" onClose={() => setOpened(null)}>

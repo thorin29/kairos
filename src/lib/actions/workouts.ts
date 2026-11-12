@@ -192,6 +192,18 @@ export async function setWeeklyStart(userId: string, dateISO: string): Promise<v
   refresh();
 }
 
+/** The weekly plan's last day (v0.686), or "" for no end. After it the plan
+ *  stops: no prompts, nothing overdue. */
+export async function setWeeklyEnd(userId: string, dateISO: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!userId) return;
+  const clean = /^\d{4}-\d{2}-\d{2}$/.test(dateISO) ? dateISO : "";
+  await setSetting(`weeklyEnd:${userId}`, clean);
+  await generateWorkoutTasks();
+  refresh();
+}
+
 /** Pause or resume the weekly plan (so it can run alongside a rotation, or be
  *  turned off without deleting it). */
 export async function setWeeklyActive(userId: string, active: boolean): Promise<void> {

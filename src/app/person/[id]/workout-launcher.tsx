@@ -278,18 +278,16 @@ export function WorkoutLauncher({
                       onDone={done}
                     />
                   )}
-                  extra={(d) => (
-                    <>
-                      <h4 className="mb-3 font-display text-sm font-semibold">Log an additional workout</h4>
-                      <CustomWorkoutForm
-                        userId={userId}
-                        unitSystem={unitSystem}
-                        pool={pool}
-                        hiitWorkouts={hiitWorkouts}
-                        dateISO={d}
-                        onDone={() => setOpen(false)}
-                      />
-                    </>
+                  extra={(d, kind, done) => (
+                    <CustomWorkoutForm
+                      userId={userId}
+                      unitSystem={unitSystem}
+                      pool={pool}
+                      hiitWorkouts={hiitWorkouts}
+                      dateISO={d}
+                      initialCategory={kind === "sport" ? "SPORT" : "WEIGHTS"}
+                      onDone={done ?? (() => setOpen(false))}
+                    />
                   )}
                 />
               </div>
