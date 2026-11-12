@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-11 — Weighted holds (v0.677.1 / app 0.487.1)
+
+- Farmer hold, overhead kettlebell hold and plate pinch hold stay timed (so
+  the isometric days and the hold timer work as before) and take a weight
+  beside each time (`MovementLog.holdUnit`, `isWeightedHold` in library.ts);
+  the weight is saved on the set like any other. The mid-thigh pull hold stays
+  time only: the bar is pinned, so there's no weight to log. Their charts
+  still follow the time.
+
 ## 2026-11 — Swapped days; sore spots only from the band-aid (v0.677.0 / app 0.487.0)
 
 - A swap trades two weekdays' plans for one Monday-start week

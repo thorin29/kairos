@@ -88,3 +88,12 @@ describe("ball moves take weight (v0.676.1)", () => {
     expect(coreMetric({ name: "Sit-up", kind: "REPS", sets: 3, min: 20, max: 25 })).toBe("REPS");
   });
 });
+
+describe("weighted holds (v0.677.1)", () => {
+  it("farmer, overhead kettlebell and plate pinch holds take a weight beside the time", async () => {
+    const { isWeightedHold } = await import("@/lib/workouts/library");
+    expect(["Farmer hold", "Overhead kettlebell hold", "Plate pinch hold"].every((n) => isWeightedHold({ name: n }))).toBe(true);
+    expect(isWeightedHold({ name: "Mid-thigh pull hold" })).toBe(false);
+    expect(isWeightedHold({ name: "Farmer carry" })).toBe(false);
+  });
+});

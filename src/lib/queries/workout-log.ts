@@ -36,6 +36,7 @@ import { dayHasProgramWork, loadActiveProgram, plannedSlotFor, programInfoFor, t
 import { dayAddedIds, dayAdjust, dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
 import { ADJUST_FACTOR, adjustKeep, loadsArea, type Adjust } from "@/lib/workouts/adjust";
+import { isWeightedHold } from "@/lib/workouts/library";
 import type { Suggestion } from "@/lib/workouts/suggest";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
@@ -1844,6 +1845,9 @@ export type MovementLog = {
   about: string | null;
   /** What the reps field counts, when not reps: "yd" / "m" for a carry (v0.640). */
   repsUnit?: string | null;
+  /** A timed hold with a weight in hand (v0.677.1): the weight's unit; each
+   *  set takes a weight beside its time. Null otherwise. */
+  holdUnit?: string | null;
   /** Done a side at a time, a set per side (v0.642): its timer switches sides. */
   sides?: boolean;
 };
@@ -2020,6 +2024,7 @@ export async function loadMovementLog(
     // Dumbbells and kettlebells: the ⓘ says the weight is one bell's (v0.648).
     about: aboutWithBellNote(poolRow?.about ?? null, poolRow?.name ?? "", poolRow?.equipment),
     repsUnit,
+    holdUnit: isWeightedHold(poolRow) ? unit : null,
     sides: switchesSides(poolRow?.name ?? ""),
   };
 }

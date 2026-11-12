@@ -287,7 +287,7 @@ const ISOMETRIC: Short[] = [
   ["Push-up hold", "CHEST", "PUSH", "", "T", "Lower to halfway down a push-up, elbows in, body straight, and hold."],
   ["Chin-up hold", "BACK", "PULL", "pullup_bar", "T", "Pull up until the chin is over the bar and hold there."],
   ["Mid-thigh pull hold", "FULL_BODY", "HINGE", "barbell", "T", "Bar set on the rack pins at mid-thigh, under them if needed. Pull up as hard as you can without it moving, flat back."],
-  ["Farmer hold", "FULL_BODY", "CARRY", "dumbbells", "T", "Heavy dumbbell or kettlebell in each hand, stand tall and hold. Log the time."],
+  ["Farmer hold", "FULL_BODY", "CARRY", "dumbbells", "T", "Heavy dumbbell or kettlebell in each hand, stand tall and hold. Log the weight and the time."],
   ["Overhead kettlebell hold", "SHOULDERS", "PUSH", "kettlebells", "T", "One bell locked out overhead, ribs down, hold. One arm per set, switching each set."],
   ["Plate pinch hold", "ARMS", "PULL", "barbell", "T", "Pinch two plates together smooth sides out and hold at your side."],
 ];
@@ -342,3 +342,8 @@ export function planLibraryMerge(
 }
 
 export { watchUrl } from "@/lib/workouts/watch";
+
+/** A hold with a weight in hand (farmer, overhead kettlebell, plate pinch;
+ *  v0.677.1): timed as usual, with the weight held beside each time. */
+export const isWeightedHold = (p: { name?: string } | null | undefined) =>
+  !!p && /farmer hold|overhead kettlebell hold|plate pinch hold/i.test(p.name ?? "");

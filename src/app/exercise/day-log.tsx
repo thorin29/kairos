@@ -1609,8 +1609,11 @@ function MovementLogger({
   }, [userId, dateISO, slotId]);
 
   const hintW = (r: Row) => (r.hintW != null && r.w === "" && !r.saved ? r.hintW + shift : r.hintW);
+  // A timed hold with a weight in hand (v0.677.1): a weight beside each time.
+  const holdUnit = metric === "DURATION" ? (log?.holdUnit ?? null) : null;
+  const showW = metric === "WEIGHT" || !!holdUnit;
   const valueOf = (r: Row) => ({
-    weight: metric === "WEIGHT" ? (num(r.w) ?? hintW(r)) : null,
+    weight: showW ? (num(r.w) ?? hintW(r)) : null,
     reps: metric === "WEIGHT" || metric === "REPS" ? (num(r.r) ?? r.hintR) : null,
     seconds: metric === "DURATION" ? (num(r.s) ?? r.hintS) : null,
   });
@@ -1853,7 +1856,7 @@ function MovementLogger({
   const suppRows = rows.filter((r) => r.supplemental);
   const suppLabel = suppRows.length ? `${suppRows.length} × ${suppRows[0].hintR ?? ""}` : "";
   const cols =
-    metric === "WEIGHT"
+    showW
       ? "grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem_2.75rem] sm:grid-cols-[2rem_5.5rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem_2.75rem]"
       : "grid-cols-[2rem_minmax(0,1fr)_2.75rem_2.75rem] sm:grid-cols-[2rem_5.5rem_minmax(0,1fr)_2.75rem_2.75rem]";
 
@@ -1956,7 +1959,7 @@ function MovementLogger({
             >
               <span>Set</span>
               <span className="hidden sm:block">Last time</span>
-              {metric === "WEIGHT" && <span>Weight ({unit})</span>}
+              {showW && <span>Weight ({holdUnit ?? unit})</span>}
               <span>{metric === "DURATION" ? "Time" : repsUnit ? `Distance (${repsUnit})` : "Reps"}</span>
               <span className="text-center">Done</span>
               <span />
@@ -1990,7 +1993,7 @@ function MovementLogger({
                       <span className="tabular hidden text-sm text-muted sm:block">
                         {r.added ? "new" : lastText(lastSets[i], metric)}
                       </span>
-                      {metric === "WEIGHT" && (
+                      {showW && (
                         <input
                           aria-label={`Weight, set ${i + 1}`}
                           inputMode="decimal"
