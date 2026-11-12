@@ -75,3 +75,16 @@ describe("push/pull balance (v0.676)", () => {
     expect(s?.actions[0].answer).toBe("add:row");
   });
 });
+
+describe("ball moves take weight (v0.676.1)", () => {
+  it("every medicine ball and slam ball move logs weight and reps", async () => {
+    const { LIBRARY } = await import("@/lib/workouts/library");
+    const { coreMetric } = await import("@/lib/workouts/core-library");
+    const balls = LIBRARY.filter((e) => /med_balls|slam_ball/.test(e.equipment.join(",")));
+    expect(balls.length).toBeGreaterThan(0);
+    for (const e of balls) expect([e.name, e.metric]).toEqual([e.name, "WEIGHT"]);
+    // An own workout saved as reps only still asks for the ball's weight.
+    expect(coreMetric({ name: "Rotational throw", kind: "REPS", sets: 4, min: 6, max: 8 })).toBe("WEIGHT");
+    expect(coreMetric({ name: "Sit-up", kind: "REPS", sets: 3, min: 20, max: 25 })).toBe("REPS");
+  });
+});

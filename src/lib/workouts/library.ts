@@ -199,10 +199,10 @@ const STRENGTH: Short[] = [
   ["TRX pike", "CORE", "CORE", "trx", "R", "Feet in the cradles in a push-up position, lift the hips up into a pike, lower back."],
   ["TRX Pallof press", "CORE", "CORE", "trx", "R", "Stand side-on to the anchor, both handles at the chest, leaning slightly into the strap. Press straight out, hold 2 seconds without turning, bring back. Reps are each side."],
   // Medicine ball and slam ball strength
-  ["Chest pass", "CHEST", "PUSH", "med_balls", "R", "Ball at the chest, push it hard to a partner or a wall and catch it back."],
-  ["Rotational throw", "CORE", "CORE", "med_balls", "R", "Side-on to a wall, turn away, then throw the ball into the wall with a fast turn of the hips. Both sides."],
-  ["Sit-up throw", "CORE", "CORE", "med_balls", "R", "Sit-up holding the ball overhead, throw it to a partner or a wall at the top, catch and go down."],
-  ["Rotational slam", "CORE", "CORE", "slam_ball", "R", "Lift the ball over one shoulder and slam it down outside the opposite foot. Alternate sides."],
+  ["Chest pass", "CHEST", "PUSH", "med_balls", "W", "Ball at the chest, push it hard to a partner or a wall and catch it back."],
+  ["Rotational throw", "CORE", "CORE", "med_balls", "W", "Side-on to a wall, turn away, then throw the ball into the wall with a fast turn of the hips. Both sides."],
+  ["Sit-up throw", "CORE", "CORE", "med_balls", "W", "Sit-up holding the ball overhead, throw it to a partner or a wall at the top, catch and go down."],
+  ["Rotational slam", "CORE", "CORE", "slam_ball", "W", "Lift the ball over one shoulder and slam it down outside the opposite foot. Alternate sides."],
   // Pull-up bar
   ["Dead hang", "BACK", "PULL", "pullup_bar", "T", "Hang from the bar with straight arms and active shoulders. Log the time.", ["pull-up", 1]],
   ["Scapular pull-up", "BACK", "PULL", "pullup_bar", "R", "From a hang, pull the shoulders down and back without bending the arms, then relax.", ["pull-up", 2]],
@@ -252,10 +252,10 @@ const STRENGTH: Short[] = [
 ];
 
 const CONDITIONING: Short[] = [
-  ["Ball slam", "FULL_BODY", "CONDITIONING", "slam_ball", "R", "Lift the ball overhead on your toes and slam it into the floor as hard as you can. Squat to pick it up."],
-  ["Over-shoulder toss", "FULL_BODY", "HINGE", "slam_ball", "R", "Pick the ball up from the floor and throw it back over one shoulder. Alternate sides."],
-  ["Wall ball", "FULL_BODY", "SQUAT", "med_balls", "R", "Ball at the chest, squat, and as you stand throw it to a target high on the wall. Catch and go into the next squat."],
-  ["Overhead throw", "FULL_BODY", "CONDITIONING", "med_balls", "R", "Ball overhead, throw it forward as far as you can, chase it, repeat."],
+  ["Ball slam", "FULL_BODY", "CONDITIONING", "slam_ball", "W", "Lift the ball overhead on your toes and slam it into the floor as hard as you can. Squat to pick it up."],
+  ["Over-shoulder toss", "FULL_BODY", "HINGE", "slam_ball", "W", "Pick the ball up from the floor and throw it back over one shoulder. Alternate sides."],
+  ["Wall ball", "FULL_BODY", "SQUAT", "med_balls", "W", "Ball at the chest, squat, and as you stand throw it to a target high on the wall. Catch and go into the next squat."],
+  ["Overhead throw", "FULL_BODY", "CONDITIONING", "med_balls", "W", "Ball overhead, throw it forward as far as you can, chase it, repeat."],
   ["Mountain climber", "FULL_BODY", "CONDITIONING", "", "R", "Push-up position, drive the knees to the chest one after the other, fast. Each knee is a rep."],
   ["Burpee", "FULL_BODY", "CONDITIONING", "", "R", "Drop the chest to the floor, push up, jump the feet in and jump up with a clap overhead."],
   ["Box jump", "LEGS", "SQUAT", "boxes", "R", "Swing the arms and jump onto the box, landing softly. Stand tall, step down."],

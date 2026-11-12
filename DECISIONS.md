@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-11 — Ball moves log weight (v0.676.1)
+
+- The eight medicine ball and slam ball moves in the movement library log
+  weight and reps ("W"), and the core rotations ask for them that way. A
+  test keeps every ball move weighted. `coreMetric` also asks for weight
+  when an own workout lists a weighted library move as reps only.
+- Migration 149 moves the existing movements and plan entries for those
+  eight from REPS to WEIGHT. Sets already logged as reps stay as they were.
+
 ## 2026-11 — Smarter suggestions: hockey, balance, plan too big (v0.676.0 / app 0.486.0)
 
 - Games vs practices (`sportKindOf`): the event type's new Game / Practice /

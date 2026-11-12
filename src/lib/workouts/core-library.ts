@@ -69,8 +69,8 @@ export const CORE_LIBRARY: readonly CoreWorkout[] = [
     ["Weighted back extension", "WEIGHT", 3, 8, 12],
   ]),
   lib("rotation", "Rotation and power", 20, "Med ball, slam ball, TRX, kettlebell", [
-    ["Rotational throw", "REPS", 4, 6, 8],
-    ["Rotational slam", "REPS", 3, 8, 10],
+    ["Rotational throw", "WEIGHT", 4, 6, 8],
+    ["Rotational slam", "WEIGHT", 3, 8, 10],
     ["TRX Pallof press", "REPS", 3, 10, 12],
     ["Kettlebell windmill", "WEIGHT", 3, 5, 8],
     ["TRX pike", "REPS", 3, 8, 12],
@@ -103,8 +103,8 @@ export const CORE_LIBRARY: readonly CoreWorkout[] = [
     ["Dead bug", "REPS", 3, 12, 16],
   ]),
   lib("slam-clubs", "Slam ball and clubs", 15, "Slam ball, clubs", [
-    ["Rotational slam", "REPS", 3, 8, 10],
-    ["Ball slam", "REPS", 3, 10, 15],
+    ["Rotational slam", "WEIGHT", 3, 8, 10],
+    ["Ball slam", "WEIGHT", 3, 10, 15],
     ["Club swipe", "WEIGHT", 3, 8, 10],
     ["Russian twist", "REPS", 3, 20, 30],
   ]),
@@ -269,7 +269,11 @@ export function coreScheme(m: CoreMove): string {
 }
 
 export function coreMetric(m: CoreMove): "REPS" | "DURATION" | "WEIGHT" {
-  return m.kind === "TIME" ? "DURATION" : m.kind;
+  if (m.kind === "TIME") return "DURATION";
+  // A move done with a ball or a bell takes its weight too (v0.676.1), even
+  // in an own workout saved as reps only.
+  if (m.kind === "REPS" && LIBRARY.find((e) => nameKey(e.name) === nameKey(m.name))?.metric === "WEIGHT") return "WEIGHT";
+  return m.kind;
 }
 
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
