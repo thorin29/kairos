@@ -250,7 +250,7 @@ export function BookProgress({
       {/* Editor — a pop-up over the grid, staged until Save. */}
       {openBook && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6"
+          className="fixed inset-0 z-50 overflow-y-auto bg-ground"
           onClick={close}
           role="dialog"
           aria-modal="true"
@@ -258,7 +258,7 @@ export function BookProgress({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-3xl bg-surface shadow-xl sm:rounded-3xl"
+            className="mx-auto flex min-h-full w-full max-w-3xl flex-col bg-surface sm:my-6 sm:min-h-0 sm:rounded-2xl sm:border sm:border-hairline"
           >
             <div
               className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-4"

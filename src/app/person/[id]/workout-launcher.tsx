@@ -241,7 +241,7 @@ export function WorkoutLauncher({
 
       {open && (
         <div
-          className="animate-backdrop-fade fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6"
+          className="animate-backdrop-fade fixed inset-0 z-50 overflow-y-auto bg-ground"
           role="dialog"
           aria-modal="true"
           aria-label={`Log ${title}`}
@@ -249,7 +249,7 @@ export function WorkoutLauncher({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="animate-card-zoom my-4 w-full max-w-2xl"
+            className="animate-card-zoom mx-auto w-full max-w-6xl sm:p-4"
           >
             {person ? (
               <div className="rounded-2xl border border-hairline bg-surface p-6 shadow-xl">

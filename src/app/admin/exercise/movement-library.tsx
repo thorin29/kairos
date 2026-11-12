@@ -169,13 +169,13 @@ export function WorkoutsLibrary({ status }: { status: WodLibraryStatus }) {
       </Card>
       {picking && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 overflow-y-auto bg-ground"
           onClick={() => setPicking(false)}
         >
           <div
             role="dialog"
             aria-label="Pick workouts"
-            className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl"
+            className="mx-auto flex min-h-full w-full max-w-3xl flex-col bg-surface sm:my-6 sm:min-h-0 sm:rounded-2xl sm:border sm:border-hairline"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-hairline px-4 py-3">

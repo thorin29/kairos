@@ -219,15 +219,15 @@ export function AddressAdmin({ addresses }: { addresses: AdminAddress[] }) {
 
       {open && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[60] overflow-y-auto bg-ground"
           onClick={close}
         >
-          <div className="absolute inset-0 bg-black/40" />
+          <div className="fixed inset-0 bg-ground" />
           <div
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl"
+            className="relative mx-auto min-h-full w-full max-w-3xl bg-surface p-5 sm:my-6 sm:min-h-0 sm:rounded-2xl sm:border sm:border-hairline sm:p-6"
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-xl font-semibold">

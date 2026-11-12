@@ -717,3 +717,22 @@ export function BookmarkIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+/** Two bars: Pause workouts (v0.684). */
+export function PauseIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M9 5v14M15 5v14" />
+    </svg>
+  );
+}
+
+/** A clock face: Recent workouts (v0.684). */
+export function ClockIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z" />
+      <path d="M12 8v4l2.5 2.5" />
+    </svg>
+  );
+}

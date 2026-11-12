@@ -64,14 +64,14 @@ export function AddSchoolWork({
 
   return (
     <div
-      className="animate-backdrop-fade fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
+      className="animate-backdrop-fade fixed inset-0 z-[70] overflow-y-auto bg-ground"
       onClick={() => setOpen(false)}
     >
       <form
         ref={formRef}
         action={formAction}
         onClick={(e) => e.stopPropagation()}
-        className="my-8 w-full max-w-lg rounded-2xl border border-hairline bg-surface p-5 shadow-xl"
+        className="mx-auto min-h-full w-full max-w-3xl bg-surface p-5 sm:my-6 sm:min-h-0 sm:rounded-2xl sm:border sm:border-hairline sm:p-6"
       >
       {people ? null : <input type="hidden" name="userId" value={userId} />}
       <div className="grid gap-4 sm:grid-cols-2">

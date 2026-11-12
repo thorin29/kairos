@@ -1,7 +1,7 @@
 "use client";
 
 import { SECONDARY_BTN, SECONDARY_LG } from "./buttons";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
 import {
@@ -14,6 +14,7 @@ import {
   TrashIcon,
   RefreshIcon,
   TrophyIcon,
+  ClockIcon,
 } from "@/components/icons";
 import {
   deleteWorkoutSession,
@@ -30,8 +31,9 @@ import { MovementInfo } from "@/components/movement-info";
 import { WeeklyTraining } from "./weekly-training";
 import { CoreCard, CoreOverview, CorePage, LiftPage, LiftRows } from "./lift-page";
 import { SoreSpots, soreRegions } from "./sore-spots";
-import { WorkoutPauseCard, WorkoutPausePage } from "./workout-pause";
-import { FamilyWodCard, FamilyWodPage } from "./family-wod";
+import { WorkoutPauseButton, WorkoutPausePage } from "./workout-pause";
+import { ActionButton } from "./action-button";
+import { FamilyWodButton, FamilyWodPage } from "./family-wod";
 import type { SoreSpot } from "@/lib/workouts/sore";
 import { CARDIO_COLOR, CONDITIONING_COLOR, CardioCard, CardioPage, ConditioningCard, ConditioningPage } from "./endurance-charts";
 import { Modal } from "./plan-file-panel";
@@ -80,7 +82,7 @@ import {
   type NavRegion,
 } from "@/lib/workouts/involvement";
 
-type Step = "menu" | "plan" | "log" | "history" | "browse" | "rotation" | "warmups" | "familywod" | "pause";
+type Step = "menu" | "plan" | "log" | "history" | "browse" | "rotation" | "warmups" | "familywod" | "pause" | "hiit";
 
 export function WorkoutsGrid({
   people,
@@ -324,8 +326,9 @@ export function WorkoutsGrid({
                     hasRotation={!!open.rotation}
                   />
 
-                  <FamilyWodCard userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("familywod")} />
-
+                  {/* The same nine buttons as the app (v0.684), three to a row:
+                      plan, log, routines; browse, HIIT/CrossFit, calculator;
+                      Family WOD, Pause, Recent. The last row says what's on. */}
                   <div className="grid grid-cols-3 gap-3">
                     <ActionButton
                       icon={CalendarPlusIcon}
@@ -333,50 +336,15 @@ export function WorkoutsGrid({
                       onClick={() => setStep("plan")}
                       primary={!hasPlan}
                     />
-                    <ActionButton
-                      icon={DumbbellIcon}
-                      label="Log workout"
-                      onClick={() => setStep("log")}
-                      primary={hasPlan}
-                    />
-                    <ActionButton
-                      icon={FlameIcon}
-                      label="Routines"
-                      onClick={() => setStep("warmups")}
-                    />
+                    <ActionButton icon={DumbbellIcon} label="Log workout" onClick={() => setStep("log")} primary={hasPlan} />
+                    <ActionButton icon={FlameIcon} label="Routines" onClick={() => setStep("warmups")} />
+                    <ActionButton icon={BookIcon} label="Browse workouts" onClick={() => setStep("browse")} />
+                    <ActionButton icon={PlusIcon} label="HIIT / CrossFit" sub="Create / edit" onClick={() => setStep("hiit")} />
+                    <ActionButton icon={DumbbellIcon} label="Calculator" onClick={() => setCalcOpen(true)} />
+                    <FamilyWodButton userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("familywod")} />
+                    <WorkoutPauseButton userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("pause")} />
+                    <ActionButton icon={ClockIcon} label="Recent" onClick={() => setStep("history")} />
                   </div>
-
-                  <WorkoutPauseCard userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("pause")} />
-
-                  <button
-                    type="button"
-                    onClick={() => setStep("browse")}
-                    className={`${SECONDARY_LG} w-full`}
-                  >
-                    <BookIcon className="h-4 w-4" />
-                    Browse workouts
-                  </button>
-
-                  {personal && (
-                    <button
-                      type="button"
-                      onClick={() => setCalcOpen(true)}
-                      className={`${SECONDARY_LG} w-full`}
-                    >
-                      <DumbbellIcon className="h-4 w-4" />
-                      Weight calculator
-                    </button>
-                  )}
-
-                  {open.history.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setStep("history")}
-                      className="text-sm font-medium text-muted underline-offset-2 hover:text-ink hover:underline"
-                    >
-                      Recent workouts →
-                    </button>
-                  )}
                 </div>
               )}
 
@@ -431,6 +399,20 @@ export function WorkoutsGrid({
                   <BackLink onClick={() => setStep("menu")} />
                   <h3 className="mb-3 font-display text-lg font-semibold">Rotation</h3>
                   <RotationBuilder userId={open.user.id} rotation={open.rotation} />
+                </div>
+              )}
+
+              {step === "hiit" && (
+                <div className="mt-4">
+                  <BackLink onClick={() => setStep("menu")} />
+                  <h3 className="mb-3 font-display text-lg font-semibold">HIIT / CrossFit</h3>
+                  <HiitBuilder
+                    pool={pool}
+                    workouts={hiitWorkouts.filter((w) => w.ownerId === null || w.ownerId === open.user.id)}
+                    userId={open.user.id}
+                    dateISO={todayISO}
+                    onDone={() => setStep("menu")}
+                  />
                 </div>
               )}
 
@@ -1170,6 +1152,21 @@ function LiftDetailPanel({
 }) {
   // Tap a day (v0.680): what each colour was that day.
   const [dayOpen, setDayOpen] = useState<string | null>(null);
+  // Workout days fills the card's width (v0.684): 18px squares, as many weeks
+  // as fit, from 16 up to a year. Measured, so a wide screen shows more.
+  const [gridW, setGridW] = useState(0);
+  const roRef = useRef<ResizeObserver | null>(null);
+  const gridRef = useCallback((el: HTMLDivElement | null) => {
+    roRef.current?.disconnect();
+    roRef.current = null;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setGridW(e.contentRect.width));
+    ro.observe(el);
+    roRef.current = ro;
+  }, []);
+  const CELL = 18;
+  const GAP = 4;
+  const nWeeks = Math.max(16, Math.min(52, Math.floor((gridW - 24 + GAP) / (CELL + GAP)) || 16));
 
   // Did you train? Built from the days that carry a logged set, so it says
   // "sessions logged" and not "sessions" — a rested day leaves no mark here.
@@ -1248,8 +1245,8 @@ function LiftDetailPanel({
     // today minus the weekday — on a Wednesday the current week was missing
     // and today never appeared at all.
     const start = new Date(end);
-    start.setDate(start.getDate() - start.getDay() - 15 * 7);
-    for (let w = 0; w < 16; w++) {
+    start.setDate(start.getDate() - start.getDay() - (nWeeks - 1) * 7);
+    for (let w = 0; w < nWeeks; w++) {
       const col: Cell[] = [];
       for (const dow of rows) {
         const day = new Date(start.getTime() + (w * 7 + dow) * 86400000);
@@ -1292,29 +1289,29 @@ function LiftDetailPanel({
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">
               Workout days
             </p>
-            <div className="mt-2 flex gap-2 overflow-x-auto">
-              <div className="flex shrink-0 flex-col gap-[3px] pt-[18px]">
+            <div ref={gridRef} className="mt-2 flex gap-2 overflow-x-auto">
+              <div className="flex shrink-0 flex-col gap-[4px] pt-[18px]">
                 {rows.map((d) => (
-                  <span key={d} className="h-3.5 text-[10px] leading-[14px] text-muted">
+                  <span key={d} className="h-[18px] text-[11px] leading-[18px] text-muted">
                     {DOW_ABBR[d]}
                   </span>
                 ))}
               </div>
               <div>
-                <div className="flex gap-[3px]">
+                <div className="flex gap-[4px]">
                   {weeks.map((col, wi) => {
                     const m = col[0]?.date.slice(5, 7) ?? "";
                     const prev = wi > 0 ? weeks[wi - 1][0]?.date.slice(5, 7) : "";
                     return (
-                      <span key={wi} className="w-3.5 overflow-visible whitespace-nowrap text-[10px] leading-4 text-muted">
+                      <span key={wi} className="w-[18px] shrink-0 overflow-visible whitespace-nowrap text-[11px] leading-4 text-muted">
                         {m && m !== prev ? MONTH_ABBR[Number(m) - 1] : ""}
                       </span>
                     );
                   })}
                 </div>
-                <div className="flex gap-[3px]">
+                <div className="flex gap-[4px]">
                   {weeks.map((col, wi) => (
-                    <div key={wi} className="flex flex-col gap-[3px]">
+                    <div key={wi} className="flex flex-col gap-[4px]">
                       {col.map((cell) =>
                         cell.groups.length ? (
                           <button
@@ -1324,10 +1321,10 @@ function LiftDetailPanel({
                             title={`${cell.date} \u2014 ${cell.groups.map((g) => labelOf(g)).join(", ")}`}
                             onClick={() => setDayOpen(cell.date)}
                             style={cellStyle(cell.groups)}
-                            className="block h-3.5 w-3.5 rounded-[3px]"
+                            className="block h-[18px] w-[18px] rounded-[4px]"
                           />
                         ) : (
-                          <span key={cell.date} title={cell.date} className="h-3.5 w-3.5 rounded-[3px] bg-surface" />
+                          <span key={cell.date} title={cell.date} className="h-[18px] w-[18px] rounded-[4px] bg-surface" />
                         ),
                       )}
                     </div>
@@ -1506,36 +1503,6 @@ function ActionChip({ icon: Icon }: { icon: IconType }) {
 }
 
 // Clickable in the opened (larger) card.
-function ActionButton({
-  icon: Icon,
-  label,
-  sub,
-  onClick,
-  primary,
-}: {
-  icon: IconType;
-  label: string;
-  /** A smaller line under the label ("Create / edit"). */
-  sub?: string;
-  onClick: () => void;
-  primary?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center text-xs font-semibold transition-colors ${
-        primary
-          ? "border-accent bg-accent/10 text-accent"
-          : "border-hairline text-ink hover:border-accent hover:text-accent"
-      }`}
-    >
-      <Icon className="h-6 w-6" />
-      {label}
-      {sub && <span className="-mt-1 text-[11px] font-medium text-muted">{sub}</span>}
-    </button>
-  );
-}
 
 function BackLink({ onClick }: { onClick: () => void }) {
   return (

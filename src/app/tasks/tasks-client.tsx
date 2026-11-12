@@ -95,12 +95,12 @@ function TasksModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 overflow-y-auto bg-ground"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl bg-surface shadow-xl"
+        className="relative mx-auto flex min-h-full w-full max-w-3xl flex-col bg-surface sm:my-6 sm:min-h-0 sm:rounded-2xl sm:border sm:border-hairline"
         role="dialog"
         aria-modal="true"
       >

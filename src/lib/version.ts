@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.683.0";
+export const APP_VERSION = "0.684.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.684.0",
+    summary: [
+      "Pause workouts: pick the first and last day on a calendar; the range highlights.",
+      "Workouts menu: nine buttons like the app, Family WOD, Pause and Recent included.",
+      "Workout days: bigger squares, and as many weeks as fit the width.",
+      "Pop-ups for chores, school, money, games, tasks, calendar events and admin open full screen.",
+    ],
+  },
   {
     version: "0.683.0",
     summary: [

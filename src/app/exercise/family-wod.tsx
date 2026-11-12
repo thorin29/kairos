@@ -9,6 +9,8 @@ import {
   DANGER_BTN,
 } from "./buttons";
 import { ConditioningCard } from "./conditioning-card";
+import { ActionButton } from "./action-button";
+import { PeopleIcon } from "@/components/icons";
 import {
   declineFamilyWodAction,
   deleteFamilyWodAction,
@@ -262,52 +264,15 @@ function PageHead({ title, onBack }: { title: string; onBack: () => void }) {
 }
 
 /**
- * Family WOD on the Workouts menu (v0.679; v0.680 a summary that opens its
- * page): today's or the next one, or "None set".
+ * Family WOD on the Workouts menu (v0.679; v0.684 a button like Edit plan):
+ * under the label, the next one's day, else suggestions waiting for a parent.
  */
-export function FamilyWodCard({
-  userId,
-  todayISO,
-  onOpen,
-}: {
-  userId: string;
-  todayISO: string;
-  onOpen: () => void;
-}) {
+export function FamilyWodButton({ userId, todayISO, onOpen }: { userId: string; todayISO: string; onOpen: () => void }) {
   const { data } = useFamilyWod(userId);
-  if (!data) return null;
-  const next = data.next;
-  const n = data.parent ? data.suggestions.length : 0;
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left hover:border-accent"
-    >
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className={LABEL}>Family WOD</span>
-        {next ? (
-          <>
-            <span className="text-base font-semibold">{next.name}</span>
-            <span className="text-xs text-muted">
-              {whenText(next.date, todayISO)} · {next.who}
-              {next.mine ? "" : " · Join"}
-            </span>
-          </>
-        ) : (
-          <span className="text-sm text-muted">None set</span>
-        )}
-        {n > 0 && (
-          <span className="text-xs font-semibold text-accent">
-            {n} {n === 1 ? "suggestion" : "suggestions"} to look at
-          </span>
-        )}
-      </span>
-      <span aria-hidden className="text-muted">
-        ›
-      </span>
-    </button>
-  );
+  const next = data?.next ?? null;
+  const n = data?.parent ? data.suggestions.length : 0;
+  const sub = next ? whenText(next.date, todayISO) : n > 0 ? `${n} to look at` : undefined;
+  return <ActionButton icon={PeopleIcon} label="Family WOD" sub={sub} onClick={onOpen} primary={next?.date === todayISO} />;
 }
 
 type View =

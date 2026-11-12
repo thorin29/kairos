@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-11 — Range calendar, nine buttons, wider Workout days, full-screen overlays (v0.684.0 / app 0.494.0)
+
+- Pause workouts drops the 3 days / 1 week / 2 weeks chips and the date
+  inputs for a month calendar: first tap the first day, second the last
+  (capped at 180 days), a third starts again; the range is tinted, the ends
+  filled, today ringed, past days off. Web `RangeCalendar`, app
+  `PauseRangeCalendar`.
+- The Workouts menu is nine icon buttons, three to a row, on both: Edit
+  plan, Log workout, Routines; Browse workouts, HIIT / CrossFit, Calculator;
+  Family WOD, Pause, Recent. Family WOD and Pause show what's on under the
+  label (the next WOD's day or suggestions waiting; "Until Nov 14" / "From
+  Nov 20"). Web `ActionButton` moved to `action-button.tsx`; web HIIT /
+  CrossFit opens the existing HiitBuilder as a step. New icons: People/Users,
+  Pause, Clock.
+- Web Workout days: 18px squares (were 14) and as many weeks as the card's
+  width fits, 16 up to 52, measured with a ResizeObserver.
+- The other web content overlays (chores and school cards, money and admin
+  money forms, game detail, add school work, a person's workout launcher,
+  admin chore move, movement library, book progress, addresses, tasks, the
+  calendar's add-event windows) open full screen: the page background with
+  the content on one surface in a column (up to 3xl; 4xl for events; 6xl for
+  the workout launcher), edge to edge on a phone. Small pop-ups stay small:
+  PIN and admin unlock, sign out, colour and avatar pickers, effort picker,
+  catch-up, a day's log, shared tally, grocery quick edit, event popovers.
+
 ## 2026-11 — Full-screen web overlays; pie slices for any count (v0.683.0 / app 0.493.0)
 
 - Web, Workouts: the person panel (opened from the grid) is full screen,

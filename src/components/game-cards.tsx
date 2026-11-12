@@ -169,13 +169,13 @@ function Overlay({ row, onClose }: { row: GameMonitorRow; onClose: () => void })
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 overflow-y-auto bg-ground"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-2xl bg-surface p-6 shadow-2xl"
+        className="mx-auto min-h-full w-full max-w-3xl bg-surface p-5 sm:my-6 sm:min-h-0 sm:rounded-2xl sm:border sm:border-hairline sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3">

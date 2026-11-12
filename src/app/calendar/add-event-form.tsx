@@ -668,11 +668,11 @@ function EventModal({
           : "Add class";
     return (
       <div
-        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
+        className="fixed inset-0 z-50 overflow-y-auto bg-ground"
         onClick={onClose}
       >
         <div
-          className="my-4 w-full max-w-4xl rounded-2xl bg-surface p-5 shadow-xl"
+          className="mx-auto min-h-full w-full max-w-4xl bg-surface p-5 sm:my-6 sm:min-h-0 sm:rounded-2xl sm:border sm:border-hairline sm:p-6"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mb-3 flex items-center justify-between">
@@ -735,11 +735,11 @@ function EventModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-50 overflow-y-auto bg-ground"
       onClick={onClose}
     >
       <div
-        className="my-4 w-full max-w-4xl rounded-2xl bg-surface p-5 shadow-xl"
+        className="mx-auto min-h-full w-full max-w-4xl bg-surface p-5 sm:my-6 sm:min-h-0 sm:rounded-2xl sm:border sm:border-hairline sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
