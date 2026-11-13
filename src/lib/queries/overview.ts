@@ -6,6 +6,7 @@ import {
   loadActivePause,
   PAUSABLE_CATEGORIES,
 } from "@/lib/queries/pauses";
+import { rollPausedPlans } from "@/lib/school/plan-pause";
 
 export type CategorySummary = {
   category: Category;
@@ -38,6 +39,7 @@ export type PersonSummary = {
  * the original due date survives for reporting.
  */
 export async function loadDay(dayISO: string): Promise<PersonSummary[]> {
+  await rollPausedPlans(); // paused classes never show as late (v0.702)
   const day = toDateColumn(dayISO);
   const stale = await loadStaleContext(dayISO);
   const activePause = await loadActivePause(dayISO);
@@ -315,6 +317,7 @@ export async function loadOpenTasks(
 
 /** Full task rows for one person on one day, overdue items first. */
 export async function loadPersonDay(userId: string, dayISO: string) {
+  await rollPausedPlans(); // paused classes never show as late (v0.702)
   const day = toDateColumn(dayISO);
   const stale = await loadStaleContext(dayISO);
   const activePause = await loadActivePause(dayISO);

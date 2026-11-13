@@ -1991,6 +1991,10 @@ model ClassPlan {
   /// Front-load extra items so the plan finishes by the last term day even when
   /// it wouldn't fit at one a day. Off = a flat perDay spread (may overflow).
   fitToTerm Boolean         @default(false)
+  /// Paused (v0.702): no schedule. Only the next undone unit has work, due
+  /// on the next class day and rolled forward instead of going late; finishing
+  /// it brings the next one. Resume lays the rest out again.
+  paused    Boolean         @default(false)
   status    ClassPlanStatus @default(DRAFT)
   units     ClassPlanUnit[]
   createdAt DateTime        @default(now())

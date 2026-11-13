@@ -27,6 +27,7 @@ export async function reschedulePlanForward(planId: string, today: string): Prom
     select: {
       id: true,
       status: true,
+      paused: true,
       bothTerms: true,
       perDay: true,
       weekdays: true,
@@ -49,7 +50,8 @@ export async function reschedulePlanForward(planId: string, today: string): Prom
       },
     },
   });
-  if (!plan || plan.status !== "PUBLISHED") return;
+  // A paused plan has no schedule to pull in (v0.702).
+  if (!plan || plan.status !== "PUBLISHED" || plan.paused) return;
 
   const allTerms = await prisma.term.findMany({
     orderBy: { startDate: "asc" },

@@ -12,7 +12,8 @@ import { noSchoolDaysFor } from "@/lib/school/school-days";
 import { pickClassColor } from "@/lib/palette";
 import { getHolidayColor } from "@/lib/holidays";
 import { addSchoolWorkToTodayCore, reschedulePlanForward } from "@/lib/school/plan-core";
-import { applyRebaseline } from "@/lib/school/rebaseline-core";
+import { applyRebaseline, resumePlanSchedule } from "@/lib/school/rebaseline-core";
+import { ensurePausedNext, resetPausedRoll } from "@/lib/school/plan-pause";
 
 function dISO(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -424,6 +425,28 @@ export async function rebaselineSchool(
   return { classes: res.classes, items: res.items };
 }
 
+/** Pause or resume a published class plan (v0.702). Paused: no schedule, one
+ *  open item at a time that never goes late (lib/school/plan-pause.ts).
+ *  Resumed: every remaining unit laid out from the next school day at the
+ *  plan's pace, even past the deadline. */
+export async function setClassPlanPaused(planId: string, paused: boolean): Promise<void> {
+  await requireAdmin();
+  const plan = await prisma.classPlan.findUnique({
+    where: { id: planId },
+    select: { status: true, paused: true, class: { select: { userId: true } } },
+  });
+  if (!plan || plan.status !== "PUBLISHED" || plan.paused === paused) return;
+  await prisma.classPlan.update({ where: { id: planId }, data: { paused } });
+  if (paused) await ensurePausedNext(planId, { createFrom: todayISO(), pullIn: true });
+  else await resumePlanSchedule(planId);
+  resetPausedRoll();
+  revalidatePath("/");
+  revalidatePath("/tasks");
+  revalidatePath("/calendar");
+  revalidatePath(`/person/${plan.class.userId}`);
+  revalidatePath("/admin/school", "layout");
+}
+
 export type ClassFormInput = {
   studentId: string;
   className: string;
@@ -570,7 +593,8 @@ export async function unpublishClassPlan(planId: string): Promise<void> {
     where: { id: planId },
     select: { class: { select: { userId: true } } },
   });
-  await prisma.classPlan.update({ where: { id: planId }, data: { status: "DRAFT" } });
+  // A draft has no schedule to pause; republishing schedules it normally.
+  await prisma.classPlan.update({ where: { id: planId }, data: { status: "DRAFT", paused: false } });
   revalidatePath("/admin/school");
   revalidatePath(`/admin/school/plan/${planId}`);
   if (plan?.class.userId) revalidatePath(`/person/${plan.class.userId}`);

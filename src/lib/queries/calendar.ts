@@ -13,6 +13,7 @@ import { CATEGORY_COLORS } from "@/lib/colors";
 const MEDICAL_RED = "#dc2626";
 import { getHolidayColor, holidayEntries } from "@/lib/holidays";
 import { bgKeyForKind, bgKeyForHoliday } from "@/lib/event-bg";
+import { rollPausedPlans } from "@/lib/school/plan-pause";
 
 export type GridEvent = {
   // The whole event's true local bounds (for editing; segments below are per-day).
@@ -941,6 +942,7 @@ export async function loadTasksForDays(
   days: string[],
   userId?: string | string[],
 ): Promise<DayTask[]> {
+  await rollPausedPlans(); // paused classes never show as late (v0.702)
   const rows = await prisma.task.findMany({
     where: {
       ...idFilter(userId),

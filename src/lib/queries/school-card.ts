@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { todayISO } from "@/lib/dates";
+import { rollPausedPlans } from "@/lib/school/plan-pause";
 import { noSchoolDaysFor } from "@/lib/school/school-days";
 import { spreadUnits, spreadUnitsFit } from "@/lib/school/plan-builder";
 import { loadSubjectColors, displaySubjectColor } from "@/lib/school/subject-colors";
@@ -48,6 +49,10 @@ export type SchoolProgress = {
   onTrack: boolean; // projected to finish on or before the target
   pace: "ahead" | "behind" | null; // vs where the plan expects them by today
   catchUp: { rate: number; days: number | null } | null; // suggested pace if behind
+  /** Paused (v0.702): no schedule, so no pace or finish; `done` of `total` instead. */
+  paused: boolean;
+  done: number;
+  total: number;
 };
 export type SchoolProgressData = {
   targetISO: string | null; // the finish-by date (end of Spring)
@@ -59,6 +64,7 @@ export type SchoolProgressData = {
  *  end), whether they're ahead/behind the plan's expected pace, and — if behind
  *  — how hard they'd have to push to finish on time. Drives the School card. */
 export async function loadSchoolProgress(userId: string): Promise<SchoolProgressData> {
+  await rollPausedPlans();
   const today = todayISO();
   const [subjectColors, plans, allTerms] = await Promise.all([
     loadSubjectColors(),
@@ -71,6 +77,7 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
         startDate: true,
         fitToTerm: true,
         bothTerms: true,
+        paused: true,
         class: {
           select: { name: true, color: true, termId: true, subject: { select: { name: true } } },
         },
@@ -123,6 +130,22 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
       const undone = p.units.filter((u) => !isDone(u)).sort((a, b) => a.seq - b.seq);
       const remaining = undone.length;
       const doneCount = p.units.length - remaining;
+      const color = subjectColors.get(p.class.subject?.name ?? "") ?? null;
+      if (p.paused) {
+        return {
+          className: p.class.name,
+          subject: p.class.subject?.name ?? null,
+          color,
+          finishISO: null,
+          remaining,
+          onTrack: true,
+          pace: null,
+          catchUp: null,
+          paused: true,
+          done: doneCount,
+          total: p.units.length,
+        };
+      }
 
       // Dynamic projected finish: spread the remaining units from today at the
       // plan's rate; anything that doesn't fit the term is projected past its end.
@@ -206,12 +229,15 @@ export async function loadSchoolProgress(userId: string): Promise<SchoolProgress
       return {
         className: p.class.name,
         subject: p.class.subject?.name ?? null,
-        color: subjectColors.get(p.class.subject?.name ?? "") ?? null,
+        color,
         finishISO,
         remaining,
         onTrack,
         pace,
         catchUp,
+        paused: false,
+        done: doneCount,
+        total: p.units.length,
       };
     })
     .sort((a, b) => a.className.localeCompare(b.className));

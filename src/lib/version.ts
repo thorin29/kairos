@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.701.0";
+export const APP_VERSION = "0.702.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -166,11 +166,19 @@ export const MIGRATIONS = [
   "151_family_wod",
   "152_person_pause",
   "153_companion_growth_float",
+  "154_class_plan_paused",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.702.0",
+    summary: [
+      "Pause a class for one student from Curriculum plans. A paused class has no schedule: the next lesson is always on their list, never late, and the one after shows up as soon as it's done (or pull it into today to do more).",
+      "Resume lays out the rest from the next school day.",
+    ],
+  },
   {
     version: "0.701.0",
     summary: [

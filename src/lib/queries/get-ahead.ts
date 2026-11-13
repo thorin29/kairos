@@ -3,6 +3,7 @@ import { TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { addDays, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
 import { GET_AHEAD_FACTOR, roundBonus } from "@/lib/scoring/bonus";
+import { rollPausedPlans } from "@/lib/school/plan-pause";
 
 export type GetAheadChore = {
   taskId: string;
@@ -30,6 +31,7 @@ export async function loadGetAhead(
   userId: string,
   dayISO: string = todayISO(),
 ): Promise<GetAheadChore[]> {
+  await rollPausedPlans(); // paused classes never show as late (v0.702)
   const horizon = addDays(dayISO, HORIZON_DAYS);
 
   // Every live instance of any scheduled chore across the window — needed both

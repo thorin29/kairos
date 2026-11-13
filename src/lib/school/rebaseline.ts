@@ -64,6 +64,9 @@ export function rebaselinePlan(
     fitToTerm: boolean;
     terms: Term[]; // the plan's own windows
     holidays: Set<string>;
+    /** Resume (v0.702): lay out every undone unit whether or not anything is
+     *  overdue and whatever the deadline says. */
+    force?: boolean;
   },
 ): RebaselineResult {
   const live = units.filter((u) => !u.done && !u.skipped).sort((a, b) => a.seq - b.seq);
@@ -75,7 +78,7 @@ export function rebaselinePlan(
     : null;
   const base = { overdue, deadline, currentFinish, newFinish: null, firstDate: null, moves: [] };
 
-  if (overdue === 0) return { ...base, status: "onSchedule" };
+  if (live.length === 0 || (overdue === 0 && !opts.force)) return { ...base, status: "onSchedule" };
   if (!deadline) return { ...base, status: "noTerm" };
 
   const asPlan: PlanUnit[] = live.map((u) => ({ label: u.id, type: u.type, load: u.load }));
@@ -94,15 +97,15 @@ export function rebaselinePlan(
   const firstDate = dates[0] ?? null;
   // spreadUnitsFit leaves a date null only when no school day is left before
   // the deadline at all; spreadUnits never does (it runs past the deadline).
-  if (dates.some((d) => d == null)) return { ...base, firstDate, status: "pastDeadline" };
+  if (dates.some((d) => d == null) && !opts.force) return { ...base, firstDate, status: "pastDeadline" };
   const newFinish = dates[dates.length - 1] as string;
-  if (newFinish > deadline) return { ...base, firstDate, newFinish, status: "pastDeadline" };
+  if (newFinish > deadline && !opts.force) return { ...base, firstDate, newFinish, status: "pastDeadline" };
 
   return {
     ...base,
     status: "ready",
     firstDate,
     newFinish,
-    moves: live.map((u, i) => ({ id: u.id, date: dates[i] as string })),
+    moves: live.flatMap((u, i) => (dates[i] ? [{ id: u.id, date: dates[i] as string }] : [])),
   };
 }

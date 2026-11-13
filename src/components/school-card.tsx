@@ -166,6 +166,11 @@ export function SchoolCard({
                               style={{ backgroundColor: p.color || "#94a3b8" }}
                             />
                             <span className="truncate">{p.className}</span>
+                            {p.paused && (
+                              <span className="shrink-0 rounded bg-ground px-1.5 py-0.5 text-[10px] font-medium text-muted">
+                                paused
+                              </span>
+                            )}
                             {p.pace === "behind" && (
                               <span className="shrink-0 rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
                                 falling behind
@@ -177,7 +182,11 @@ export function SchoolCard({
                               </span>
                             )}
                           </span>
-                          {p.finishISO ? (
+                          {p.paused ? (
+                            <span className="shrink-0 text-xs text-muted">
+                              {p.done}/{p.total}
+                            </span>
+                          ) : p.finishISO ? (
                             p.catchUp ? (
                               <button
                                 type="button"

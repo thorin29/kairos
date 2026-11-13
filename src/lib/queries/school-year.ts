@@ -246,6 +246,7 @@ export async function loadStudentBars(): Promise<StudentBars[]> {
       orderBy: { createdAt: "asc" },
       select: {
         bothTerms: true,
+        paused: true,
         class: {
           select: {
             name: true,
@@ -326,7 +327,8 @@ export async function loadStudentBars(): Promise<StudentBars[]> {
       const scheduledDays = p.units
         .filter((u) => u.scheduledDate)
         .map((u) => dISO(u.scheduledDate as Date));
-      const overflowCount = p.units.filter((u) => !u.done && !u.scheduledDate).length;
+      // A paused class has no schedule, so nothing of it projects as overflow.
+      const overflowCount = p.paused ? 0 : p.units.filter((u) => !u.done && !u.scheduledDate).length;
 
       const color =
         subjectColors.get(p.class.subject?.name ?? "") ??

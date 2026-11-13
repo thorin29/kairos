@@ -27,7 +27,7 @@ export type TermCompileOption = {
 export async function loadTermCompileOptions(): Promise<TermCompileOption[]> {
   const [plans, terms] = await Promise.all([
     prisma.classPlan.findMany({
-      where: { status: "PUBLISHED" },
+      where: { status: "PUBLISHED", paused: false },
       select: {
         bothTerms: true,
         class: { select: { termId: true, user: { select: { id: true, name: true } } } },
@@ -100,7 +100,7 @@ export async function loadTermCompile(
     where: {
       workId: { not: null },
       scheduledDate: { gte: term.startDate, lte: term.endDate },
-      plan: { status: "PUBLISHED", class: { userId: studentId } },
+      plan: { status: "PUBLISHED", paused: false, class: { userId: studentId } },
     },
     select: {
       id: true,

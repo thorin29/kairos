@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { afterPlanUnitChange } from "@/lib/school/plan-pause";
 
 /**
  * Mirror a task's completion onto the curriculum plan unit behind it.
@@ -22,8 +23,8 @@ export async function syncPlanUnitDone(
 ): Promise<void> {
   const work = (await prisma.schoolWork.findUnique({
     where: { taskId },
-    select: { planUnit: { select: { id: true } } },
-  })) as { planUnit: { id: string } | null } | null;
+    select: { planUnit: { select: { id: true, plan: { select: { id: true, paused: true } } } } },
+  })) as { planUnit: { id: string; plan: { id: string; paused: boolean } } | null } | null;
 
   const unitId = work?.planUnit?.id;
   if (!unitId) return;
@@ -32,4 +33,7 @@ export async function syncPlanUnitDone(
     where: { id: unitId },
     data: { done: complete },
   });
+
+  // A paused class keeps one open item: finishing it brings the next (v0.702).
+  if (work?.planUnit?.plan.paused) await afterPlanUnitChange(work.planUnit.plan.id);
 }

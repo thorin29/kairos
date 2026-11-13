@@ -1,6 +1,7 @@
 import { TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
+import { rollPausedPlans } from "@/lib/school/plan-pause";
 
 export type AheadItem = { taskId: string; label: string; dueISO: string };
 export type SchoolAheadSubject = { subject: string; items: AheadItem[] };
@@ -21,6 +22,7 @@ export async function loadSchoolGetAhead(
   userId: string,
   dayISO: string = todayISO(),
 ): Promise<SchoolAheadSubject[]> {
+  await rollPausedPlans(); // paused classes never show as late (v0.702)
   const rows = await prisma.task.findMany({
     where: {
       userId,

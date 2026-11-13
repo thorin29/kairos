@@ -26,6 +26,7 @@ import { loadSchoolGetAhead } from "@/lib/queries/school-get-ahead";
 import { loadDaySchedule } from "@/lib/queries/calendar";
 import { pendingMoneyCount } from "@/lib/queries/money";
 import { pendingBibleRewards } from "@/lib/bible-rewards";
+import { rollPausedPlans } from "@/lib/school/plan-pause";
 
 /**
  * The `/api/v1/dashboard` payload: the same "my day" the web personal view
@@ -179,6 +180,7 @@ export async function loadApiDashboard(
   today: string,
   isAdmin = false,
 ): Promise<ApiDashboard> {
+  await rollPausedPlans(); // paused classes never show as late (v0.702)
   await ensureGenerated(dayISO, today);
   const getAhead = dayISO === today ? await loadGetAhead(userId, today) : [];
   const [schoolProg, schoolAhead] = dayISO === today

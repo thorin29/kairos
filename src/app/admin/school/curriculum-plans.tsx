@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { importClassPlansFromCsv } from "@/lib/actions/class-plans";
 import { deleteSchoolClass } from "@/lib/actions/school-year";
+import { setClassPlanPaused } from "@/lib/actions/class-plans";
 import type { PlanRow } from "@/lib/queries/class-plan";
 
 export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
@@ -104,6 +105,11 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
                     >
                       {p.status}
                     </span>
+                    {p.paused && (
+                      <span className="ml-1.5 rounded bg-ground px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">
+                        paused
+                      </span>
+                    )}
                   </p>
                   <p className="text-xs text-muted">
                     {p.subject ? `${p.subject} \u00b7 ` : ""}
@@ -112,6 +118,15 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
+                  {p.status === "PUBLISHED" && (
+                    <button
+                      onClick={() => start(async () => { await setClassPlanPaused(p.id, !p.paused); })}
+                      disabled={pending}
+                      className="text-xs font-medium text-accent hover:underline disabled:opacity-50"
+                    >
+                      {p.paused ? "Resume" : "Pause"}
+                    </button>
+                  )}
                   <Link
                     href={`/admin/school/plan/${p.id}`}
                     className="text-xs font-medium text-accent hover:underline"
@@ -135,7 +150,7 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
                   </button>
                 </div>
               </div>
-              {p.remaining > 0 && (
+              {p.remaining > 0 && !p.paused && (
                 <div className="mt-2 border-t border-hairline pt-2 text-xs">
                   <p className="text-muted">
                     Starts at <span className="font-medium text-ink">{p.firstItem}</span> &middot; projected finish{" "}

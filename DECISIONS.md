@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-11 — Pausing a class for one student (v0.702.0, migration 154)
+
+For a class a student should work through at their own pace, with no
+schedule to fall behind on.
+
+- **One switch per plan** (a plan is one student's class): Pause / Resume on
+  each published plan in Curriculum plans, with a "paused" badge.
+- **Paused means one open item.** Only the next undone unit (plan order) has
+  work; later units lose their pending work and dates, so nothing is
+  scheduled ahead. On pause, that item is due on the class's next meeting day
+  (today if it meets today), even if it was dated later or is overdue.
+- **Never late.** Once a day, before the school views read anything,
+  `rollPausedPlans` moves a paused class's open item that's now in the past to
+  the next class day. Rolling (rather than `lateAfter`) keeps every overdue
+  count, the app and past days' stats right without teaching each of them a
+  new rule: past days never hold a paused item.
+- **One a day, more if they want.** Finishing the open item (any path:
+  `syncPlanUnitDone` is the one hook) creates the next, due on the class day
+  after today. It shows under "Do some extra work", so the student can pull it
+  into today and keep going. Reopening an earlier item makes it the open one
+  again.
+- **Progress shows what's done:** a paused row reads "paused" and done/total,
+  with no pace tag or finish date. Catch up, compress, the term compile and
+  the year calendar's overflow all leave paused plans out.
+- **Resume** lays out every remaining unit from the next school day at the
+  plan's own pace (re-fit if it's fit to term), even past the deadline.
+  Unpublishing a plan clears the pause; republishing schedules it normally.
+- **App:** unchanged. It shows a paused class with no finish date; a "paused"
+  label there would need an API field and an app release.
+
 ## 2026-11 — Re-baselining school work that's behind (v0.701.0)
 
 Some students had fallen well behind on curriculum plans that would still

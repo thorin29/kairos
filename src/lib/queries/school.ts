@@ -18,6 +18,7 @@ import {
   SCHOOL_ROLLOVER_SNOOZE,
 } from "@/lib/settings";
 import type { SchoolWorkType } from "@/generated/prisma/client";
+import { rollPausedPlans } from "@/lib/school/plan-pause";
 
 export type SchoolItem = {
   id: string;
@@ -51,6 +52,7 @@ export type PersonSchool = {
  * first, so a parent can see and manage assignments and tests across the house.
  */
 export async function loadSchoolAdmin(): Promise<PersonSchool[]> {
+  await rollPausedPlans(); // paused classes never show as late (v0.702)
   const today = todayISO();
 
   const [people, tasks] = await Promise.all([

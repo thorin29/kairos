@@ -77,10 +77,17 @@ type Worked = { plan: LoadedPlan; result: RebaselineResult };
 
 /** Every published plan (one student's, or everyone's) with what a restart from
  *  the next school day would do to it. */
-async function workOut(userId: string | null, today: string): Promise<Worked[]> {
+async function workOut(
+  userId: string | null,
+  today: string,
+  only?: { planId: string; force: boolean },
+): Promise<Worked[]> {
   const [plans, allTerms] = await Promise.all([
     prisma.classPlan.findMany({
-      where: { status: "PUBLISHED", ...(userId ? { class: { userId } } : {}) },
+      // Paused plans have no schedule to restart (v0.702); Resume handles them.
+      where: only
+        ? { id: only.planId, status: "PUBLISHED" }
+        : { status: "PUBLISHED", paused: false, ...(userId ? { class: { userId } } : {}) },
       select: planSelect,
     }),
     prisma.term.findMany({
@@ -113,6 +120,7 @@ async function workOut(userId: string | null, today: string): Promise<Worked[]> 
       fitToTerm: plan.fitToTerm,
       terms,
       holidays,
+      force: only?.force ?? false,
     });
     return { plan, result };
   });
@@ -171,57 +179,73 @@ export async function applyRebaseline(userId: string | null): Promise<Rebaseline
     }
     if (result.status !== "ready") continue;
 
-    const byId = new Map(plan.units.map((u) => [u.id, u]));
-    const subject = plan.class.subject?.name ?? null;
-    let moved = 0;
-    await prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        for (const m of result.moves) {
-          const unit = byId.get(m.id);
-          if (!unit) continue;
-          const date = toDateColumn(m.date);
-          const isTest = unit.type === "TEST";
-          const task = unit.work?.task;
-          if (unit.work && task) {
-            if (dISO(task.dueDate) === m.date && unit.scheduledDate && dISO(unit.scheduledDate) === m.date) continue;
-            // Keep where it was FIRST planned (as "do some extra work" does), so a
-            // lesson reads "moved from …" rather than losing its history.
-            await tx.task.update({
-              where: { id: task.id },
-              data: { dueDate: date, originalDueDate: task.originalDueDate ?? task.dueDate },
-            });
-            await tx.schoolWork.update({ where: { id: unit.work.id }, data: { startDate: isTest ? null : date } });
-          } else {
-            // An item that never got its work (it didn't fit before) — create it.
-            const created = await tx.task.create({
-              data: {
-                userId: plan.class.userId,
-                title: unit.label,
-                category: Category.SCHOOL,
-                dueDate: date,
-                schoolWork: {
-                  create: {
-                    type: unit.type as SchoolWorkType,
-                    subject,
-                    classId: plan.class.id,
-                    dateSpecific: isTest,
-                    startDate: isTest ? null : date,
-                  },
-                },
-              },
-              select: { schoolWork: { select: { id: true } } },
-            });
-            await tx.classPlanUnit.update({ where: { id: unit.id }, data: { workId: created.schoolWork!.id } });
-          }
-          await tx.classPlanUnit.update({ where: { id: unit.id }, data: { scheduledDate: date } });
-          moved += 1;
-        }
-      },
-      { timeout: 60_000 },
-    );
+    const moved = await applyMoves(plan, result.moves);
     classes += 1;
     items += moved;
     users.add(plan.class.userId);
   }
   return { classes, items, userIds: [...users] };
+}
+
+/** Write a plan's new dates: the task's due date (first planned date kept in
+ *  originalDueDate), the school work's start date (null for tests) and the
+ *  unit's scheduled date, creating work for any unit that never had it. */
+async function applyMoves(plan: LoadedPlan, moves: { id: string; date: string }[]): Promise<number> {
+  const byId = new Map(plan.units.map((u) => [u.id, u]));
+  const subject = plan.class.subject?.name ?? null;
+  let moved = 0;
+  await prisma.$transaction(
+    async (tx: Prisma.TransactionClient) => {
+      for (const m of moves) {
+        const unit = byId.get(m.id);
+        if (!unit) continue;
+        const date = toDateColumn(m.date);
+        const isTest = unit.type === "TEST";
+        const task = unit.work?.task;
+        if (unit.work && task) {
+          if (dISO(task.dueDate) === m.date && unit.scheduledDate && dISO(unit.scheduledDate) === m.date) continue;
+          // Keep where it was FIRST planned (as "do some extra work" does), so a
+          // lesson reads "moved from …" rather than losing its history.
+          await tx.task.update({
+            where: { id: task.id },
+            data: { dueDate: date, originalDueDate: task.originalDueDate ?? task.dueDate },
+          });
+          await tx.schoolWork.update({ where: { id: unit.work.id }, data: { startDate: isTest ? null : date } });
+        } else {
+          // An item that never got its work (it didn't fit before) — create it.
+          const created = await tx.task.create({
+            data: {
+              userId: plan.class.userId,
+              title: unit.label,
+              category: Category.SCHOOL,
+              dueDate: date,
+              schoolWork: {
+                create: {
+                  type: unit.type as SchoolWorkType,
+                  subject,
+                  classId: plan.class.id,
+                  dateSpecific: isTest,
+                  startDate: isTest ? null : date,
+                },
+              },
+            },
+            select: { schoolWork: { select: { id: true } } },
+          });
+          await tx.classPlanUnit.update({ where: { id: unit.id }, data: { workId: created.schoolWork!.id } });
+        }
+        await tx.classPlanUnit.update({ where: { id: unit.id }, data: { scheduledDate: date } });
+        moved += 1;
+      }
+    },
+    { timeout: 60_000 },
+  );
+  return moved;
+}
+
+/** Resume a paused plan (v0.702): lay out every undone unit from the next school
+ *  day at the plan's own pace (re-fit if it's fit to term), even if that runs
+ *  past the deadline. The caller clears the paused flag first. */
+export async function resumePlanSchedule(planId: string): Promise<void> {
+  const [w] = await workOut(null, todayISO(), { planId, force: true });
+  if (w && w.result.status === "ready") await applyMoves(w.plan, w.result.moves);
 }

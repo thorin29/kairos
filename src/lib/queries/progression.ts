@@ -43,6 +43,7 @@ import {
   type SeasonState,
   type StatKey,
 } from "@/lib/scoring/progression";
+import { rollPausedPlans } from "@/lib/school/plan-pause";
 
 export type StatProgress = {
   key: StatKey;
@@ -147,6 +148,7 @@ const EPOCH = "2000-01-01";
  * whole RPG over; a plain month rollover only refills the season tier.
  */
 export async function loadProgression(): Promise<PersonProgress[]> {
+  await rollPausedPlans(); // paused classes never show as late (v0.702)
   const today = todayISO();
   const seasonCfg = await getSeasonConfig();
   const seasonWin = resolveSeasonWindow(seasonCfg, today);
