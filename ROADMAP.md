@@ -8,135 +8,142 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (14 Oct 2026, web v0.581.0 / app v0.389.0, versionCode 446)
+## Current status (13 Nov 2026, web v0.695.0 / app v0.501.0, versionCode 573)
 
-**Most recent work (web v0.527–0.581, app v0.336–0.389, migrations 115–121):**
+Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
+`CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
+DECISIONS.md (web and app). The workouts plan behind most of this run is kept
+in the project docs (workouts-plan, workouts-programs-plan, workouts-next-plan).
 
-- **Calendar import from email** (web 0.581 / app 0.389): an `.ics` invite opens
-  New event pre-filled — tap or Share the attachment to the phone app, or use
-  **Import .ics** on the web form. One rule (`src/lib/calendar/ics-import.ts`)
-  mirrored on the phone (`IcsImport.kt`, which reads the file on-device) and
-  held to parity by `scripts/ics-parity/`. A file with a whole schedule points
-  to subscribing instead.
-- **Calendar notes + per-person filing** (web 0.580 / app 0.387–0.388): a short
-  note on Events and Medical appointments only (`event-notes.ts`, mirrored in
-  `NoteField.kt`); a parent on the phone can file an event under anyone in the
-  house, the owner resolved once on the server in `create-event.ts`.
-- **Workouts, end to end**: reps logged with the weight; a clickable **body map**
-  that navigates muscle groups (selection and shading are separate fields, the
-  involvement table stays on the server); per-muscle-group progress blocks and
-  grouped bar charts ("Compare" as a bar per weight); a per-movement **history
-  block** (Best weight / Best reps / Latest, server-computed in
-  `movement-stats.ts`) right of the entry fields on both clients; `completedOn`
-  so an overdue workout counts for its **due** day but shows on the day it was
-  **done**; one-day swaps remembered on the set (`swappedFrom`); movements that
-  belong to no muscle group; held movements logged as minutes:seconds; web
-  logging delegating to the same `logPlannedWorkout` the phone uses; and
-  **per-movement logging** — each movement on a Log workout card has its own
-  Rest / Calculator / Log buttons.
-- **School**: completing schoolwork anywhere marks its curriculum plan unit done
-  (`syncPlanUnitDone` in `plan-unit-sync.ts`, migration 118 backfills); the
-  extra-work picker; original due dates ("ahead of Oct 20" / "moved from");
-  behind work tinted red on the card.
-- **Family goals** carry across months until a parent approves them, judged on
-  their own month, on both clients; approval is enforced on the server.
-- **Companions progression reworked**: growth stages, deepening as a phase,
-  shiny, growth banked across a shelf trip (`companions-tenure.ts`), bringing an
-  older companion back from the gallery, and one XP bar broken at the stage
-  boundaries. The 3-hatches-a-month cap is gone. Settled rule: **`stage` is
-  earned, `phase` is current activity — never infer one from the other.**
-- **Groceries**: per-line quantity (×N), 30 more icons and the full shipped icon
-  set offered as suggestions (244 items).
-- **Dashboard for a given day**: a page requested for tomorrow computes that
-  day's schedule, chores, reading-goal progress and Bible rewards.
-- **Profiles**: the display name is a parent's call; everyone else still edits
-  their own picture, colour and birthday.
+**Most recent work (web v0.582–0.695, app v0.390–0.501, migrations 122–152):**
 
-**Previous run (web v0.495–0.526, app v0.288–0.335):** the `kairos:` icon set,
-the calendar time model, concurrent/pausable workout plans, and offline-create
-identity — detailed under "Shipped — Sept 25–29 2026 run" below.
+- **Workouts rework, phases 0–9** (web 0.606–0.618, app 0.414–0.426): a
+  workouts export; every set logged, with last time's sets as hints; records by
+  rep count, how a movement felt and "something hurt"; **programs** that write
+  the plan (5/3/1, Boring But Big, 5/3/1 for Beginners and Wave loading from
+  0.620, with training maxes, warm-up sets and end-of-cycle raises);
+  suggestions that never act on their own; household **equipment** and a
+  starting movement library with an ⓘ how-to for each move; **Concept2** sync
+  per person; Cardio and Warm-up as plan categories; a **conditioning timer**
+  for every format (EMOM, AMRAP, Tabata, for time); a named-workouts library
+  with Rx and Scaled; a monthly benchmark; and plan export, import and
+  household sharing with a parent's approval. My plans and "your version" of
+  a program keep changes across switches (0.620, 0.666).
+- **What a day can hold:** warm-up routines with a timer (0.622, 0.655),
+  **core days** with a rotation and a monthly plank test scored on the Marine
+  Corps PFT (0.637–0.644), arms rotations (0.651), **mobility** (0.659),
+  **isometrics** with a monthly test (0.661) and **stretching** (0.663). **Adjust
+  today** (Low energy, Short on time, Sick, Hurt; 0.654–0.658, stand-ins for
+  a hurt day in 0.675). The week strip pages back and ahead (0.651–0.656). On
+  the phone a running timer keeps going outside the app, as a notification
+  and a floating window.
+- **Workouts page** (web 0.684 / app 0.494): nine action buttons. A single **+
+  Additional** (0.667, rebuilt 0.686) covers Conditioning (Pick · Generator,
+  where Create new opens the HIIT/CrossFit builder), Family WOD, Strength,
+  Cardio, Sport, Mobility, Stretching, Isometrics and something else, each on
+  its own page. A plan can have an end date (0.686).
+- **Progress views:** lift rows with a trend line, and a page per lift showing
+  estimated max, light weeks shaded, marked days and the next set (0.670).
+  Also a **Weekly training** chart (0.671), a Core card and page (0.673), and
+  **Cardio and Conditioning** charts (0.674). The **Workout days** grid draws
+  three or more kinds as pie slices with no gaps, and a tap opens the day's
+  breakdown (0.681–0.683). Kind colours are Cardio #0ea5e9, Conditioning
+  #c026d3 and Sport #65a30d (0.686). A **chart hover pop-up** works on lift
+  charts, Compare, the plank test and the endurance charts, with tap on phones
+  (0.692–0.693).
+- **Training heat map** (0.664, redesigned 0.689–0.690,
+  `src/lib/workouts/training-heat.ts`): the colour is earned by progress and
+  eases back, so the map rises and falls instead of filling red.
+  - Pale yellow means trained regularly (4 of the last 6 weeks).
+  - Yellow, orange, dark orange and red come from each main movement's best
+    over the last 3 weeks compared with 12 and 26 weeks back.
+  - It moves up at most a step every 2 trained weeks and eases a step every 3
+    weeks when progress stalls.
+  - Assisting work counts ¼ of a set and holds never count for progress.
+  - A program start resets the 12-week comparison; sore holds and pauses
+    freeze it.
+  - The endurance heart follows the same rules on weighted minutes. The pop-up
+    shows "+N% since you started".
+  - Carries map to a region (0.690): farmer → arms (grip), suitcase or one-arm
+    → core, overhead → shoulders.
+  - No map toggle and no stars, by decision.
+- **Smarter suggestions** (0.675–0.677): sore spots on the body map,
+  hockey-aware days (a game, a tournament), push/pull balance, a "plan too
+  big" nudge, and swapping a leg day away from a game for that week. A sport
+  event type can be Game, Practice or Other.
+- **Family WOD** (0.679–0.685, migration 151): a parent picks a family workout
+  for a day and people opt in. The person on the device is listed first, and
+  nobody is selected by default. Each WOD gets a board, anyone can suggest one
+  for a parent to approve, and it never counts as missed.
+- **Pauses** (0.678–0.688, migrations 150 and 152): a person's own workout
+  pause (Sick, Injured, Vacation or Other) picked on a range calendar, up to
+  180 days and plannable ahead. A household pause covers everyone's workouts.
+  An admin can pause one person's chores and workouts from Admin → Calendar
+  (`Pause.userId`). Paused days get no prompts, never count as missed and
+  don't cool the heat map.
+- **Companion lifts** (0.665, 0.694): lifts that aren't a program's main lift
+  step up only after **Easy**, and only for sets that hit their reps. The step
+  size comes from the movement, not the plan slot. Dumbbells and kettlebells
+  step to the next size in the household equipment list. Program main lifts
+  and 5/3/1 waves are unchanged, and training maxes on a running program are
+  read-only (0.685).
+- **One UI rule on both platforms** (web 0.680–0.684, app 0.490–0.492):
+  anything you search, fill in or step through is a full page (app
+  `ui/common/FullPage.kt`; web `Modal`, with `Modal small` for a centred
+  pop-up). Small pop-ups are only for short choices, confirmations, ⓘ, date
+  pickers and breakdowns. No pull-up sheets. Web Edit plan and the HIIT
+  builder use the shared `SECTION_CARD` / `SECTION_LABEL` / `CHIP` (0.691).
+  Both clients roll over at midnight (0.687 / app 0.497).
+- **Elsewhere:**
+  - **Hockey page** from the ice-time container (0.600–0.602; public skate
+    0.641).
+  - **Scoring rework** with "How scoring works" (0.603).
+  - **Change your own password** (0.605 / app 0.413).
+  - **Companion profile icons** (0.582 / app 0.392).
+  - One family-goal vote per person per month (0.583), and shared-chore turn
+    reminders (0.584).
+  - The **Android home-screen widget** (0.588 / app 0.398 on).
+  - Calendar fixes for all-day and repeating events (0.590, 0.597), the
+    Anniversary type (0.591) and the Marine Corps Birthday holiday (0.592).
+  - Groceries renamed **Shopping**, plus about 65 more icons (0.594–0.598).
+  - Repeating tasks: Yearly and every N days (0.668–0.669).
+  - App **Settings reorganized** (app 0.501): profile card, Account (Password,
+    Devices, Sign out), Look & feel, Notifications & reminders, Connected apps,
+    Parents, Help & about.
+- **0.695:** `MIGRATIONS` in `version.ts` had stopped at 127, so `/about` wasn't
+  checking migrations 128–152. They're registered now.
 
+**Earlier runs:** see "Shipped — Sept 30 – Oct 14 2026 run" and the sections
+before it, below. The large efforts from before that (app offline support, the
+Settings epic, local notifications, the curriculum planner, sport attendance,
+companions art) are recorded there and in DECISIONS.md.
 
-The web is mature and the **Android app has reached parity** across every
-daily-use section (Home, Calendar, Chores, Bible, Reading, School, Workouts,
-Groceries, Money, Characters; Game time is now a live monitoring feature).
-Since the last status note
-the following large efforts shipped:
+**Still open** (the 25 Sep audit list, re-checked 13 Nov against the code):
 
-- **App offline support** (the whole optimism effort): a read-through HTTP cache
-  + a durable offline write queue that replays on reconnect, and optimistic UI
-  across chores, tasks, school, reading, bible, groceries, money, calendar, and
-  workout logging. Add-then-delete offline cancels cleanly. (Was the big open
-  item under Security hardening.)
-- **Settings epic** (app + web): an app Settings screen reached by a gear next
-  to your name — **Appearance** (dark mode + eight color themes, per-device),
-  **Profile** (photo + framing + your synced color, with an HSV custom-color
-  picker), and **Notifications**. The web gets the same **themes + dark mode**
-  household-wide from **Admin → Appearance**. 24-hour clock option on the app.
-- **Notifications** (app, local — not FCM): per-event reminders set on each event
-  (Proton/Google style, multiple, custom lead times), a master on/off + test +
-  a link to Android's per-channel sound/vibration settings, and a firing engine
-  (exact alarms via AlarmManager + a WorkManager refresh + reboot re-arm) that
-  posts the event name at the reminder time. Default OFF at every gate.
-- **Web admin additions**: **Admin → Tasks** (edit every one-off task — rename,
-  re-date, reassign, delete) and **editable school assignments** in Admin → School.
-- **Companions**: the full 52-creature roster art across all six eras is in;
-  incubate → hatch → choose collection shipped earlier.
-- **Curriculum planner (v0.378–0.395, Stages 1–2 shipped)**: class-plan data model
-  + schedule builder, CSV/paste/file intake *and* a wizard "Build a class" form,
-  the review/reorder screen with publish-class, term compile with heavy-day flags
-  and drag-to-rebalance, school-year setup with breaks, and the get-ahead /
-  finish-by-term-end behaviour. **In use and considered complete** — a class is
-  reopened for change by unpublishing it back to draft, editing and republishing,
-  which is what a term-level draft gate would have bought (full spec under School
-  below).
-- **Sport attendance rework (v0.371–0.377)**: attendance prompts now go to
-  **everyone** on an event (owner + added people + subscribed-team-calendar
-  members), persist until answered (up to a week, with the day shown), and log
-  the event's real duration on confirm. Subscribed sport calendars get prompts +
-  icons when flagged sport in admin; non-participant subscribed events show grey;
-  new calendars default visible (opt-out).
-- **App instant return + cache fallback (app v0.204–0.209)**: sections show their
-  last data immediately from in-memory snapshots and refresh in the background
-  (a thin top line shows the refresh); screens fall back to cached data when the
-  server is unreachable even if the phone reports online. (The 0.204 nav-state
-  approach broke navigation and was reverted — see the app DECISIONS.md.)
+- personal defaults (starting page) and a **web** personal settings page;
+  the web still uses Admin → Appearance;
+- export of the household to JSON (workouts have their own export);
+- a dashboard weather panel;
+- a month/week completion grid;
+- drag-and-drop reordering;
+- Kairos-side TOTP;
+- an admin audit trail;
+- Bible balance by verse count.
 
-> **Status audit — 25 Sep 2026 (verified against deployed code, web + app):** the
-> personal-view scoping epic is essentially shipped — a real personal-vs-shared-
-> wall-tablet **device mode** (`deviceMode()` / `personalUserId()` /
-> `personalVisibleIds()`) scopes Reading (#6), School (#7), Game time (#8),
-> Workouts (#9), Transactions (#11) and Character (#12) to the signed-in person;
-> the **Personal calendar** (per-person view/colours/filters via
-> `recolorForPersonal`) is live; **collaborative chores**, the **chore rotation
-> helper**, and the Bible **preset plans** + **importer** are all built; and the
-> **app** has a full Settings area (Appearance, Profile, Notifications, Default
-> reminders, Diagnostics, Update). Boxes below flipped to `[x]` accordingly.
-> Still genuinely OPEN: change-your-own-password, personal defaults (starting
-> page), a **web** personal settings page/sidebar icon (web still uses Admin →
-> Appearance), export-to-JSON, weather panel, month/week completion grid,
-> dnd-kit reordering, Kairos-side TOTP, admin audit trail, and Bible balance-by-
-> verse-count. #2 (home) and #4 (chores) self-scope, but some listed UI micro-
-> tweaks in those two weren't individually verified — left unchecked.
+Also agreed and not built:
+
+- the Seasons quality signal (workout progress, such as the heat scoring, into
+  Strength; reading beyond the plan into Wisdom);
+- removing the Remaining sets −5 / 0 / +5 control on the app's log-a-movement
+  screen;
+- the game-time gaps (see Game time below);
+- ice-time following a schedule index page.
 
 Next up, roughly in order:
-- **Saved addresses** (shipped) — a shared address book so event locations
-  are picked, not retyped, and carry a full address for phone navigation.
-  Self-contained (no external geocoder): type-ahead runs over the saved list.
-  Increments, all shipped: **(1, v0.301)** data model + Admin → Addresses intake
-  pop-up + grouped, editable list; **(2, v0.303)** web calendar location combobox
-  (browse on tap, filter as you type) + "did you mean?" dedup; **(3, web v0.304 /
-  app v0.158)** device API + the app's combobox and phone submissions (a member's
-  land PENDING); **(4, v0.305)** admin "Pending approval" queue.
-  Categories are drawn from event types + subscribed calendars, plus "General".
-- **Web event editor reminders** are intentionally *not* built — reminders are
-  app-only for now (per decision). The per-type default-reminder field exists in
-  the schema but has no UI, kept OFF so nothing auto-notifies.
-- The lighter collect mechanic for the 50+ roster (the collection gallery itself
-  — owned + silhouettes — has shipped).
-- **Dashboard weather/forecast**, per-person dashboard ordering, and the
-  remaining follow-up prompts.
-- Assorted smaller items enumerated per-section below.
+- The Seasons quality signal: today Strength mostly counts that you worked out.
+- App: remove the Remaining sets −5 / 0 / +5 control.
+- Dashboard weather and forecast, per-person dashboard ordering.
+- Assorted smaller items listed per section below.
 
 ---
 
@@ -1233,9 +1240,15 @@ resolved daily totals to Kairos. See the collector repo's `README.md` /
       gamerpic). App: parents tap a card for detail; a child sees their own
       detail as the main view
 - [x] Per-system Xbox/Steam icon per person, automatic from the collector
-- [ ] Minecraft Java — invisible to both Xbox presence and Steam; cleanest is the
-      server log / RCON if we host the server, else Family Safety PC time or a
-      PC process-watcher
+- [x] PC app usage through Family Safety: the collector's `ally` source reads the
+      Family Safety `applications` sensor and credits only allowlisted apps
+      (`GAME_APPS`) — app-open time at ~5-minute resolution, lowest precedence
+- [ ] Minecraft Java — invisible to Xbox presence and Steam. Partly covered on a
+      managed Family Safety PC when `GAME_APPS` lists the launcher (via `ally`);
+      untracked on a shared or unmanaged PC. Exact play times need the server
+      log / RCON if we host the server — a decision, not built
+- [ ] Play through the Xbox app on a shared family PC doesn't surface reliably
+      in Home Assistant; probably no sensor-based fix
 - [ ] (Retired) daily allowance, weekly tokens, timer, award-a-token — replaced
       by monitoring
 
@@ -1410,8 +1423,9 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] Test scores: mark a test done, enter a score out of a total; a higher
       score feeds the Scholar stat, so doing well (not just finishing) lifts
       School toward being your focus (v0.115.0)
-- [ ] More quality signals feeding the signature: workout intensity/volume
-      into Strength, reading beyond the plan into Wisdom
+- [ ] More quality signals feeding the signature: workout progress (e.g. the
+      heat map's progress scoring) into Strength, reading beyond the plan into
+      Wisdom. Today Strength mostly counts that you worked out
 - [x] Companion starter variety + roster (3 creatures across eras) so people
       don't all share one; class bug fixed (no false "Athlete"); pixel XP bar
       showing level progress grouped by domain colour (v0.116.0)
@@ -1620,17 +1634,19 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 
 ## Pending — app parity (from the Sept web run, v0.318–0.333)
 
-- [ ] **App UI for subscribed-event reminders** — the server side is live (migration
+- [x] **App UI for subscribed-event reminders** (verified 13 Nov: `setSubscribedReminders`
+  in the app's CalendarScreen) — the server side is live (migration
   88 `locationOverride`, `/notifications/upcoming` includes external-with-reminders,
-  `saveSubscribedExtras`); the app needs a screen to set per-event reminders on a
-  subscribed feed. (Reminders on subscribed feeds are app-only by design; the web
+  `saveSubscribedExtras`); the app sets per-event reminders on a subscribed
+  feed. (Reminders on subscribed feeds are app-only by design; the web
   editor was removed.)
-- [ ] **App class form parity** — bring the app's class creation to match the web's
+- [x] **App class form parity** (verified 13 Nov in `CalendarAddClassScreen`; the one-time
+  pop-up when switching a new event's type to Class was not found and stays open) — the app's class creation matches the web's
   rebuilt class form (Subject combobox, Student, Type, Shared-with/Reminders, Meets-on,
-  Start/End/Runs, Class type, Semester, Color, homework) with the same defaults, and a
-  one-time pop-up when switching a new event's type to Class.
-- [ ] **App class-form + share-with layout** — the owner-excluded Share-with and the
-  reordered class form are web-only.
+  Start/End/Runs, Class type, Semester, Color, homework).
+- [x] **App class-form + share-with layout** — the app's Shared with leaves out the
+  student (verified 13 Nov).
+- [ ] App: the one-time pop-up when switching a new event's type to Class.
 
 ## Shipped — Sept 23–24 2026 run (web v0.458–0.483, app v0.271–0.287)
 
@@ -1644,9 +1660,8 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] **Companions** — babies grow on clean days, streak-driven egg rarity + pity,
   gallery shows real stage, egg cap 3/month with a "hatch next month" message.
   *(The monthly cap was removed in v0.574 — growth paces hatching now.)*
-- [ ] **School catch-up note (OPEN)** — the "Do N a day…" pace note stopped showing for
-  behind subjects. Pace math verified consistent (orange ⇒ note); break is delivery or
-  data. The past-year-spring theory was wrong and reverted (year one). Needs live values.
+- [x] **School catch-up note** — the "Do N a day…" pace note stopped showing for
+  behind subjects. Fixed in app 0.288: the home screen's school detail had lost it.
 - [x] **Monthly framing + Scoring & rewards admin page** — season→month wording,
   admin-only scoring-start and days-to-finish controls.
 
@@ -1714,20 +1729,20 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] **Companion profile icons** (web 0.582 / app 0.392) — in the app's gallery,
   tap an owned companion → Use as profile picture → pick a stage you've reached.
   Phone-only to choose; shown everywhere. See DECISIONS.
-- [ ] **School catch-up note** — see "School catch-up note (OPEN)" above.
+- [x] **School catch-up note** — fixed in app 0.288 (see above).
 - [x] **Offline** — done on the phone (app 0.292–0.313 and since): every
   screen paints from the Room page cache and works offline; offline writes,
   calendar events included, queue and replay with temp-id correlation. Gap:
   a calendar day never opened while online shows a "not synced yet" note.
-- [ ] **Game time** — Minecraft Java can't be tracked without a decision (host the
-  server for RCON/logs, or accept it); PC play through the Xbox app on a shared
-  family PC doesn't surface reliably in Home Assistant and probably has no
-  sensor-based fix. Tracked in the collector repo.
-- [ ] Smaller, unconfirmed: farmer carries in `involvement.ts` are FULL_BODY with
-  no nav region; nav regions beyond hip hinges unexamined; grouped charts squash
-  a light accessory against a heavy lift; both clients compute "today" at
-  render, so neither rolls over at midnight (fixed v0.687 / app 0.497); one
-  household phone was still on app v0.351.0.
+- [ ] **Game time** — Minecraft Java is only partly tracked (via `ally` on a managed
+  Family Safety PC); exact times need a decision (host the server for
+  RCON/logs, or accept it). PC play through the Xbox app on a shared family PC
+  doesn't surface reliably in Home Assistant and probably has no sensor-based
+  fix. Tracked in the collector repo.
+- [ ] Smaller, unconfirmed: nav regions beyond hip hinges and carries
+  unexamined; grouped charts squash a light accessory against a heavy lift.
+  (Done since: carries map to a region, v0.690; midnight rollover, v0.687 /
+  app 0.497.)
 
 ## Scoring rework (web 0.603 / app 0.411)
 
@@ -1755,6 +1770,15 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] Adjust today, Hurt: a stand-in for each move left out, from recent lifts
   (v0.675), so a day emptied by the area becomes a day for the healthy parts.
 - [x] Pause for an injury: weeks with a sore area don't cool its groups on the heat map (v0.686).
+- [x] Workouts page: nine buttons (v0.684 / app 0.494); Workout days draws three
+  or more kinds as pie slices, tap a day for the breakdown (v0.681–0.683).
+- [x] Heat map earned by progress and easing back (v0.689–0.690,
+  `training-heat.ts`); carries mapped to arms, core or shoulders (v0.690).
+  A map toggle and stars were both rejected.
+- [x] Companion lifts step up only after Easy, by the movement's step;
+  dumbbells and kettlebells step through the sizes owned (v0.694).
+- [x] Full pages for anything you search, fill in or step through, on both
+  clients; no pull-up sheets (web 0.680–0.684 / app 0.490–0.492).
 
 From the original workouts plan, not built yet:
 - [x] "Something hurt?" marked on the body map for that area (sore spots, v0.675).
@@ -1774,12 +1798,16 @@ From the original workouts plan, not built yet:
 - [x] Swap a leg day with another day that week around a game (v0.677).
 - [x] Workout pauses (v0.678): a household pause pauses everyone's workouts
   (prompts, missed days, heat map, plan-too-big, suggestions); a person's own
-  pause for being sick, injured or other, from their Workouts menu.
+  pause for being sick, injured or other, from their Workouts menu. Range
+  calendar, Vacation and planned-ahead pauses (v0.680–0.684); an admin pauses
+  one person from Admin → Calendar (v0.688, migration 152).
 - Dropped for now: "Keep N sets" on a movement; a weekly lift order that rotates.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.694.0 (migrations through 152_person_pause).
+- Web APP_VERSION 0.695.0 (migrations through 152_person_pause, all registered
+  in `MIGRATIONS` since 0.695).
 - App versionName 0.501.0 / versionCode 573 / CLIENT_BUILD 573.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
-- Collector: deployed and running; Xbox totals come from real game sessions.
+- Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
+  plus the `ally` PC source where `GAME_APPS` is set.

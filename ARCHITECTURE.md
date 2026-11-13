@@ -219,9 +219,15 @@ production:
 | Cardio and conditioning charts | `buildCardioCharts` / `buildConditioningCharts` in `src/lib/workouts/endurance-charts.ts` (pure); `heat.cardioCharts` / `heat.conditioningCharts` (heat-run.ts); `src/app/exercise/endurance-charts.tsx`; app `EnduranceCharts.kt` |
 | Smarter day suggestions (hockey, balance, plan too big) | `daySuggestion` / `pushPullBalance` / `planFit` in `suggest.ts` (pure); `sportAround` / `planFitFor` / `balanceFor` / `dayAddedIds` in `suggest-run.ts`; `sportKindOf` / `tournamentDays` in `src/lib/sport/label.ts`; `sportDaysBetween` in `src/lib/sport/day.ts`; added movements in `withAdded` (workout-log.ts) |
 | Family WOD | `src/lib/workouts/family-wod.ts` (pure) / `family-wod-run.ts`; `FamilyWod`, `FamilyWodMember`, `FamilyWodSuggestion`; `actions/family-wod.ts`; route `workouts/family-wod`; day payloads' `familyWod`; web `family-wod.tsx`, app `FamilyWod.kt` |
-| Workout pauses (household and personal) | `src/lib/workouts/pause.ts` (pure) / `pause-run.ts`; `WorkoutPause` model; generate.ts, heat-run.ts, the strip, Weekly training, suggest-run.ts; `WorkoutPauseCard` / `WorkoutPausePage` (web `workout-pause.tsx`), `WorkoutPauseCard` / `WorkoutPauseScreen` (app `WorkoutPause.kt`) |
+| Workout pauses (household, personal, and one person set by an admin) | `src/lib/workouts/pause.ts` (pure; reasons, `PAUSE_MAX_DAYS` 180) / `pause-run.ts`; `WorkoutPause` model; an admin's one-person pause is `Pause.userId` (migration 152; null = household), honoured by workouts/generate and `clearPausedTasks`; generate.ts, heat-run.ts, the strip, Weekly training, suggest-run.ts; `WorkoutPauseCard` / `WorkoutPausePage` (web `workout-pause.tsx`), `WorkoutPauseCard` / `WorkoutPauseScreen` (app `WorkoutPause.kt`) |
 | Swapped days (one week) | `src/lib/workouts/day-swap.ts` (pure `planWeekday`) / `day-swap-run.ts` (`planDow`, `swapDays`); `dayPlanWhereFor` in workout-log.ts; generate.ts reads every person's swaps |
 | Sore spots and hurt-day stand-ins | `src/lib/workouts/sore.ts` (pure, `SORE_PATHS`) / `sore-run.ts`; `pickStandIns` in `adjust.ts`; `standInsFor` in `adjust-run.ts`; `SoreSpots` in `src/app/exercise/sore-spots.tsx`; app `SoreSpots.kt`, `BodyMap(soreFront, soreBack)` |
+| The training heat map: a group's colour earned by progress and eased back (v0.689), the endurance heart on weighted minutes (v0.690), "+N% since you started" | `buildTrainingHeat` / `weekPaused` in `src/lib/workouts/training-heat.ts` (pure; the rules are in its header comment); sets loaded and program starts, pauses and sore holds passed in by `heat-run.ts`. Carries resolve to a region in `navRegionFor` (`involvement.ts`): farmer → ARMS, suitcase / one-arm → CORE, overhead → SHOULDERS |
+| A companion lift's next weight (steps only after Easy, only for sets that hit their reps; step size from the movement, not the plan slot) | `targetsFor` (`lastEasy`) / `stepFor` in `src/lib/workouts/programs.ts`; dumbbell and kettlebell sizes from Admin's equipment list via `bellOf` / `nextBell` / `bellAtOrUnder` in `src/lib/workouts/bells.ts` (pure) and `bellSizesFor` in `library-run.ts`. Program main lifts and 5/3/1 waves are unchanged |
+| The chart hover pop-up (lift charts, Compare, plank test, cardio and conditioning charts) | `useChartTip` / `ChartTip` in `src/components/chart-tip.tsx` |
+| Full page vs small pop-up on the web | `Modal` in `src/app/exercise/plan-file-panel.tsx` is a full page; `Modal small` is a centred pop-up for short choices, confirmations, ⓘ, date pickers and breakdowns. The app's twin is `ui/common/FullPage.kt`. No pull-up sheets on either |
+| Workout-page section cards and chips (Edit plan, HIIT builder) | `SECTION_CARD` / `SECTION_LABEL` / `CHIP` in `src/app/exercise/buttons.ts` |
+| A page left open past midnight | `DayRollover` in `src/components/day-rollover.tsx` (root layout); the app bumps `dataRevision` when `LocalDate.now()` changes |
 | This week in the map pop-ups | `muscleWeek` / `enduranceWeek` in `training-heat.ts` (`TrainGroup.week`); `TrainDetail` in `heat-view.tsx`; app `TrainDetailDialog` |
 | Lift rows and a lift's page (sparkline, trend, est. max, light weeks, marks, next target) | `src/app/exercise/lift-page.tsx` (`LiftRows`, `LiftPage`); pure numbers `src/lib/workouts/lift-stats.ts`; next target `lift-next-run.ts`; marks `heat-run.ts`; chart overlays `components/line-chart.tsx` (`shade`, `marks`, `ring`, `ahead`); app `WorkoutChart.kt` (`LiftRow`, `LiftPageDialog`) |
 | Repeating tasks: when they land and their label (Daily / Weekly / Monthly / Yearly / every N) | `src/lib/tasks/recur-rule.ts` (pure); generator `src/lib/tasks/recurring.ts`; forms `admin/tasks/recurring-tasks-admin.tsx` and the app's AssignTaskScreen |
@@ -256,7 +262,8 @@ fed by a subsystem that lives across three repositories:
   credentials and does no merge logic — it just upserts what it's given at
   `POST /api/v1/game-time/ingest` (auth `X-Ingest-Token`; contract in docs/API.md).
 - **Collector (`kairos-game-collector`)** — the only thing that talks to Xbox (via
-  Home Assistant) and Steam. It resolves each kid's actual game-session time
+  Home Assistant), Steam, and Family Safety PC app usage (the `ally` source,
+  allowlisted by `GAME_APPS`). It resolves each kid's actual game-session time
   (online presence is *not* counted), applies the Steam-primary merge, and pushes
   resolved daily rollups to the ingest endpoint. Its own repo holds the detection
   model and decisions.
@@ -307,16 +314,20 @@ PIN — `/chores` and `/admin/chores`, `/bible` and `/admin/bible`.
   reverses, or narrows a standing decision — a security posture, an auth
   boundary, a scoring rule, the mobile contract — updates DECISIONS.md in the
   same release, the same way version.ts and ROADMAP.md are always touched.
-- `scripts/preflight.sh` is the gate before shipping: `typecheck-report.mjs
-  --changed` (strict at the lines you edited, excusing only the noise the
-  missing Prisma client causes), `check-jsx-escapes.py` and
-  `check-prisma-select.py`. It is deliberately not part of `npm run build` —
+- `scripts/preflight.sh` is the gate before shipping. It generates the real
+  Prisma client, against a stand-in schema engine where the engine download is
+  blocked, and runs a full type check with it. Only if generation fails does
+  it fall back to `typecheck-report.mjs --changed`, which is strict at the
+  lines you edited. It then runs `check-jsx-escapes.py` and
+  `check-prisma-select.py`. It removes the client it made, since
+  `src/generated` isn't git-ignored. It is deliberately not part of `npm run build` —
   the builder image may lack Python, and a check that breaks the deploy it
   protects is worse than none.
 - Without a generated Prisma client every query result types as `any` locally,
   so a field read that was never selected passes `tsc` and fails in Docker.
-  Hand-audit every new Prisma call against `schema.prisma`;
-  `check-prisma-select.py` catches the common shape of the mistake.
+  preflight now generates one, but still hand-audit every new Prisma `select`
+  against `schema.prisma`; `check-prisma-select.py` catches the common shape
+  of the mistake.
 - Migrations are idempotent (`IF NOT EXISTS`, guarded `CREATE TYPE`) and are
   registered at the END of `MIGRATIONS` in `src/lib/version.ts` — the array is
   order-sensitive. Derive at read time; never store computed values.

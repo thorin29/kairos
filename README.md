@@ -26,19 +26,26 @@ schedule.
 - **Bible reading.** Generate a plan of any length; the app divides the text so
   nothing is read twice, with per-weekday chapter counts you control, and
   tracks how far the household has actually come.
-- **Workouts.** Per-person weekly plans or rotations of movements, each movement
-  logged on its own with the weight and reps (or a hold time) you actually did.
-  Progress opens on a body map: tap a muscle group to see its lifts, with best
-  weight, best reps and your latest session beside the entry fields, per-group
-  charts, and a workout-days grid. A missed workout counts for the day it was
-  due and shows on the day you did it.
+- **Workouts.** Per-person plans, rotations or **programs** (5/3/1, Boring But
+  Big, wave loading and more) that write the plan, with every set logged
+  against last time's. A day can hold warm-ups, strength, core, cardio,
+  conditioning (with a timer for every format and a library of named workouts,
+  Rx or Scaled), mobility, stretching and isometrics. Suggestions offer the
+  next weight, a lighter day or a swap around a sore spot, and never act on
+  their own. Progress lives on a body map with a **training heat map** whose
+  colour is earned by getting stronger and eases back when progress stalls,
+  plus an endurance gauge, a page per lift, weekly training, cardio and
+  conditioning charts, and a workout-days grid. A parent can set a **family
+  WOD** that people opt into. Anyone can pause their own workouts when sick,
+  injured or away, and rows sync from **Concept2**.
 - **Game time.** A per-person view of how much each kid actually played today,
   this week, and this month, with a per-game breakdown and per-system icons.
   Monitoring only — the numbers are pulled automatically for awareness, not
   enforced (the old allowance/token model was retired). A standalone collector
-  service watches Xbox (via Home Assistant) and Steam and pushes resolved daily
+  service watches Xbox (via Home Assistant), Steam, and allowlisted PC apps
+  through Family Safety, and pushes resolved daily
   totals to `/api/v1/game-time/ingest`; Kairos owns the durable history.
-- **Groceries.** A shared shopping list that learns the items you buy and their
+- **Shopping.** A shared shopping list that learns the items you buy and their
   icons — including a custom set of 244 colourful icons for the items and stores
   that emoji handle badly, offered as suggestions and searchable from the admin
   picker. A line can carry a quantity (×10). Drag items to reorder them or move them between stores. Tap **Shop** on
@@ -54,11 +61,16 @@ schedule.
   location and note — leaving only whose calendar, the type and reminders.
 - **Subscribed calendars.** Point it at any public ICS feed and those events
   land on the same grid.
+- **Hockey.** Open ice for the coming week (stick and puck, drop-in, parent and
+  child, public skate) with sign-up counts, read from a separate
+  `ice-time` container (its own repo). Add a session
+  to the calendar in one tap.
 - **Themes and dark mode.** A household-wide color theme (eight options) and
   dark mode, set from Admin → Appearance.
 - **Companion Android app.** A native phone client (repo `kairos-app`) mirrors
   the personal view over the `/api/v1` API, works offline, and adds per-device
-  themes, profile editing, and local calendar reminders.
+  themes, profile editing, local calendar reminders, a home-screen widget for
+  the next 7 days, and a workout timer that keeps running outside the app.
 - **Overdue carries forward.** Anything left unfinished is flagged and shown
   again the next day without losing its original due date.
 - **School pace.** Work completed anywhere marks the curriculum plan done; work
@@ -80,9 +92,11 @@ Built:
 - [x] Overview dashboard with per-category completion
 - [x] Chores — weekly patterns, shared and collaborative, daily generation
 - [x] Bible reading plan generator with progress tracking
-- [x] Workouts — routines assigned by weekday, logged with sets and reps
+- [x] Workouts — plans, rotations and programs, every set logged, a progress
+      heat map, conditioning with a timer, family WODs and pauses
 - [x] Game time — automatic monitoring, fed by the game-time collector
-- [x] Groceries — a learning shared list, with per-store shopping trips
+- [x] Shopping — a learning shared list, with per-store shopping trips
+- [x] Hockey — the week's open ice from the ice-time container
 - [x] Week and month calendar views, plus a signed-in **personal calendar**
       (its own day/3-day/week/month/agenda views, per-user filters and colours)
 - [x] ICS calendar subscriptions

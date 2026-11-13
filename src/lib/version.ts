@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.694.0";
+export const APP_VERSION = "0.695.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -140,11 +140,42 @@ export const MIGRATIONS = [
   "125_workout_movement_skip",
   "126_anniversary_kind",
   "127_marine_corps_birthday",
+  "128_pool_movement_metric",
+  "129_workout_feedback",
+  "130_programs",
+  "131_suggestion_answers",
+  "132_movement_library",
+  "133_concept2",
+  "134_cardio_warmup",
+  "135_emom",
+  "136_wod_library",
+  "137_shared_plans",
+  "138_deadlift_group",
+  "139_deadlift_move",
+  "140_warmup_routines",
+  "141_bodyweight_reps",
+  "142_core_workouts",
+  "143_rotation_kind",
+  "144_event_type_flex_time",
+  "145_mobility",
+  "146_program_versions",
+  "147_day_extras",
+  "148_event_type_sport_kind",
+  "149_ball_moves_weight",
+  "150_workout_pause",
+  "151_family_wod",
+  "152_person_pause",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.695.0",
+    summary: [
+      "About now checks every database update, including the workout ones added since October.",
+    ],
+  },
   {
     version: "0.694.0",
     summary: [

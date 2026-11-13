@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11 — Every migration registered; docs brought current (v0.695.0, web only)
+
+- `MIGRATIONS` in `src/lib/version.ts` had stopped at `127_marine_corps_birthday`
+  while `prisma/migrations` reached `152_person_pause`. Deploys were unaffected,
+  because Prisma applies the folder. But `/about` compares the database against
+  this list, so a partial upload missing any of 128–152 would have read as "all
+  applied". All 25 are now appended in order. The rule stands: a release that
+  adds a migration appends it at the END of `MIGRATIONS` in the same change.
+  Check it with `ls prisma/migrations` against the list's last entry.
+- The docs were audited against the code and the `CHANGES` history.
+  - ROADMAP's "Current status" had sat at 14 Oct (0.581 / app 0.389). It was
+    rewritten from 0.582–0.695 and app 0.390–0.501.
+  - Finished items were ticked: the school catch-up note (fixed in app 0.288),
+    subscribed-event reminders and class-form parity in the app, carries on
+    the map, and midnight rollover.
+  - README now covers the workouts rework and the Hockey page, and says
+    Shopping instead of Groceries.
+  - ARCHITECTURE gained rows for `training-heat.ts`, companion-lift stepping
+    with bell sizes, `chart-tip.tsx`, the full-page rule, `SECTION_CARD` and
+    `DayRollover`, and now describes preflight's real Prisma client.
+  - API.md's inventory lists the newer workout routes and notes 0.694's
+    unchanged shape.
+- Minecraft Java is documented from the collector's code, not the old note. It
+  is partly tracked through the `ally` source on a managed Family Safety PC
+  when `GAME_APPS` lists the launcher, and untracked on a shared or unmanaged
+  PC. Exact play times still need a decision (host the server for RCON).
+
 ## 2026-11 — Companion lifts step only after Easy; bells step by sizes owned (v0.694.0, web only)
 
 - v0.665 stepped a companion set up when that set reached the top of its
