@@ -1175,7 +1175,9 @@ unchanged.
 v0.664 Training heat map: the heat object (`GET /api/v1/workouts/progress` and
 the web board) adds `training: { groups: [{ group, level, line }], endurance:
 { group: "ENDURANCE", level, line } | null, paused }` — level −3 (cold) to 5
-(hot), 0 neutral; `line` says why. `ranges` stay for older phones.
+(hot), 0 neutral; `line` says why. `ranges` are still sent: both clients read
+only the "12w" range, for the 12-week summary under a muscle group that has
+no weight charts (holds or bodyweight only). The other four ranges are unused.
 
 v0.663 Stretching: a Stretching plan entry with no movements is a routine,
 like Mobility (`warmup` holds one id or `rot:<ids>`, done with `POST

@@ -1,5 +1,38 @@
 # Decisions
 
+## 2026-11 — Loose ends: shared web, PIN stays, one-offs never pause, dead heat code (docs; app 0.502.0)
+
+- **The web is a shared device.** It gets no personal settings: no sidebar
+  settings icon, no personal defaults. Personal settings live in the phone
+  app. Admin keeps its PIN on the web, because it is nearly always the shared
+  screen. The ROADMAP items for a web settings area, personal defaults and
+  "a parent's login grants admin" are dropped.
+- **Hand-added one-off tasks never pause.** A household or personal pause
+  silences only what Kairos schedules (`PAUSABLE_CATEGORIES`: chores and
+  workout prompts). The "auto-suppress one-offs on paused days" item is
+  dropped.
+- **Remaining sets removed from the app** (0.502.0). The −5 / 0 / +5 row on
+  the log-a-movement screen moved the grey hint weights of sets not entered
+  yet. The row, `RoundStep`, `shiftBy`, `step` and the `shift` state are gone,
+  so hints are last time's (or the program's) weights. The web logger's own
+  "Remaining sets" (`day-log.tsx`) is untouched; whether it goes too is open.
+- **Dead heat-map code removed from the app** (0.502.0): `HEAT_RANGES`,
+  `HeatRangeChips`, `heatFills`, `heatAvailable`, `heatShade`, `HeatKey`,
+  `HeatDetailDialog`, `HeatStat`. The server's `ranges` stay: both clients
+  read the "12w" range for `HeatGroupSummary`. API.md had called them "for
+  older phones"; corrected.
+- **ROADMAP cleaned against the code.**
+  - Ticked as done: device modes, per-resource ownership, personal views, the
+    dashboard follow-up prompts, recurring tasks, per-device revocation, the
+    Authelia bypass, the Room page cache, app offline support, the API
+    surface, calendar phases and cycle-based workouts.
+  - Removed as superseded: the FCM notifications epic (local notifications
+    instead), the retired game-time allowance, PWA and a native wrapper (the
+    native app), expanding subscribed repeat rules, the one-time Class pop-up
+    (the app goes straight to the class form), web gestures, the old
+    companion-eras idea line (built; essence lives on in the collect
+    mechanic), and the duplicate personal Bible plan lines.
+
 ## 2026-11 — Every migration registered; docs brought current (v0.695.0, web only)
 
 - `MIGRATIONS` in `src/lib/version.ts` had stopped at `127_marine_corps_birthday`

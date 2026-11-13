@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.695.0 / app v0.501.0, versionCode 573)
+## Current status (13 Nov 2026, web v0.695.0 / app v0.502.0, versionCode 574)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -120,8 +120,6 @@ companions art) are recorded there and in DECISIONS.md.
 
 **Still open** (the 25 Sep audit list, re-checked 13 Nov against the code):
 
-- personal defaults (starting page) and a **web** personal settings page;
-  the web still uses Admin → Appearance;
 - export of the household to JSON (workouts have their own export);
 - a dashboard weather panel;
 - a month/week completion grid;
@@ -134,14 +132,11 @@ Also agreed and not built:
 
 - the Seasons quality signal (workout progress, such as the heat scoring, into
   Strength; reading beyond the plan into Wisdom);
-- removing the Remaining sets −5 / 0 / +5 control on the app's log-a-movement
-  screen;
 - the game-time gaps (see Game time below);
 - ice-time following a schedule index page.
 
 Next up, roughly in order:
 - The Seasons quality signal: today Strength mostly counts that you worked out.
-- App: remove the Remaining sets −5 / 0 / +5 control.
 - Dashboard weather and forecast, per-person dashboard ordering.
 - Assorted smaller items listed per section below.
 
@@ -149,11 +144,10 @@ Next up, roughly in order:
 
 ## Personal settings (per-user, non-admin)
 
-- [ ] A settings area reached from a **settings icon in the sidebar**, shown
-      when someone is signed into their own account. Distinct from the admin
-      panel: these are personal preferences, not household administration.
-      Icon is deliberately held back until the area exists, so there's no dead
-      button in the sidebar.
+Decided 13 Nov: the web is a shared device, so it has no personal settings
+(no settings icon, no personal defaults). Personal settings live in the phone
+app's Settings. Admin keeps its PIN on the web for the same reason.
+
 - [x] Change your own password (web 0.605 profile page / app 0.413 Settings).
 - [x] Appearance / themes — light and **dark mode**, plus **eight color themes**
       (teal, olive, green, blue, purple, pink, orange, red). Shipped in the app
@@ -166,9 +160,6 @@ Next up, roughly in order:
       precedence in DECISIONS.md). Your personal view is recoloured and
       filtered per-person; the shared wall-tablet view keeps the household-wide
       settings.
-- [ ] Personal defaults (starting page and other per-user preferences as they
-      come up). Default calendar view is covered by the Personal calendar epic.
-- [ ] Update `README.md` and `ARCHITECTURE.md` when this ships.
 
 ---
 
@@ -208,7 +199,7 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
 - [x] Admin enrollment UI (v0.179): a per-person "Phone app" panel on the
       household page — generate a one-time code (short code + QR), and list /
       revoke that person's enrolled devices. Independent of web login.
-- [~] Rest of the `/api/v1` surface. Built: auth `POST /auth/login` + `/auth/reauth` (v0.187–0.188 — the layered
+- [x] Rest of the `/api/v1` surface. Built: auth `POST /auth/login` + `/auth/reauth` (v0.187–0.188 — the layered
       login+code enrollment and the credential-version re-login gate), device
       visibility (v0.189 — `GET /devices` · `POST /devices/{id}/revoke` +
       new-device email alert), `GET /dashboard`
@@ -229,9 +220,9 @@ model** (per-person device tokens) and the **`/api/v1` contract** (docs/API.md).
       Remaining: non-weight/multi-set/HIIT workout logging, rewards, calendar
       phases 2-5 (time-grids, add/edit, options drawer, colour personalisation),
       companions, push, sync. Additive-only; logic reused from existing server
-      code.
-- [ ] Add the Authelia bypass — now unblocked; scope it to **`/api/v1` only**
-      (DECISIONS.md). Infra change on the server, not in this repo.
+      code. (done: 193 routes, and the app has caught up with the web)
+- [x] Add the Authelia bypass — now unblocked; scope it to **`/api/v1` only**
+      (DECISIONS.md). Infra change on the server, not in this repo. (done, in use for a long time)
 - [x] Native Kotlin client scaffold + enrollment/sign-in (`kairos-app` v0.1.0):
       Compose + Retrofit + kotlinx.serialization, device token encrypted in the
       Android Keystore, configurable base URL (no host baked in), and a
@@ -292,7 +283,7 @@ Characters. Each drawer entry keeps its web brand colour.
       `GET /chores`. Completion stays on Home (dashboard tasks); management stays
       the PIN-gated `/admin/chores`, web-only. Pool *claim* deferred to a future
       dashboard action.
-- [~] **Calendar — phased.** Phases 1, 2, 4 done + Phase 3a (web v0.210-0.214,
+- [x] **Calendar — phased.** Phases 1, 2, 4 done + Phase 3a (web v0.210-0.214,
       app v0.27-0.32): read-only **Month / Agenda** + **Week / 3-day / Day
       time-grids** (viewer-tz localisation, overlap lanes, all-day row, swipe
       paging), the reworked **month grid** (uniform cells, chips), the right-side
@@ -309,7 +300,7 @@ Characters. Each drawer entry keeps its web brand colour.
       Calendar, Timezone, Repeats) render as a left-anchored popup rather than a
       true dropdown attached to the field — switch to a proper anchored dropdown. Also by end of epic: the dashboard should be
       able to **ask whether sporting calendar events were completed** (it's
-      calendar-event-driven — see Dashboard).
+      calendar-event-driven — see Dashboard). (done: recurring edit / delete one occurrence and per-person colours shipped since)
 - [x] **Remaining sections to parity:** School and Characters (CharacterScreen)
       shipped; **Game time** was rebuilt from the retired allowance model into an
       automatic monitoring feature (collector container → Kairos → web + app),
@@ -382,19 +373,6 @@ Characters. Each drawer entry keeps its web brand colour.
       the event name, and re-arms on reboot. Reminders are **app-only** (no web
       event-editor reminders for now); the per-type default field exists in the
       schema, kept OFF, with no UI. Originally specced below as FCM/push:
-- [ ] (superseded) **Notifications epic** (via FCM, typed deep-link targets: `chore:<id>`,
-      `reward:<id>`, `event:<id>`, `reading:<ref>`). **App- and user-specific**
-      (a per-device, per-user concern — not a household setting). Design:
-      - **Start with calendar events only**; chores and school work come later.
-      - **Per-event-type defaults**, since event types already exist
-        (appointments, class, work shift, birthdays, plus any user-added
-        categories) — each user sets a default lead time per type (e.g. "15 min
-        before"), overridable per event.
-      - **Default OFF** for everything, so we don't train users to silence us; a
-        user opts in per type / per event. Ramp up only once it's proven useful.
-      - Needs: FCM token registration per device, a per-user/-device notification
-        prefs store, a scheduler that fires on the event's instant minus lead
-        time (respecting the event's timezone), and quiet-hours later.
 - [x] **Offline** for the personal daily surface and the calendar (two-way),
       replaying writes through the same POST endpoints — see the phone app.
 
@@ -410,13 +388,13 @@ Characters. Each drawer entry keeps its web brand colour.
       of day and sky, moon phase
 - [ ] Weekly forecast page styled after Breezy Weather
 - [ ] Month and week completion grid — every person's rate by day
-- [ ] **Follow-up prompts on the home dashboard** (nudge, don't nag):
+- [x] **Follow-up prompts on the home dashboard** (nudge, don't nag):
       - **"Did this happen?" for sporting calendar events** — after a sport event
         passes, ask whether it was completed (feeds scoring/streaks). Calendar-
         event-driven, so integrate by the end of the calendar epic.
       - **"Did you go?" for classes** — confirm class attendance/completion.
       - **Bible reading rewards ready** — remind when a reward is available to
-        claim.
+        claim. (all three done: sport attendance prompts, class "did you attend", the Bible-reward nudge on the home page; verified 13 Nov)
 
 ## People and profiles
 
@@ -458,9 +436,9 @@ Characters. Each drawer entry keeps its web brand colour.
   OIDC is a possible *additional* login method later (the Immich pattern —
   one user table, OIDC layered on, auto-register off to keep invite-only). Not
   social OAuth: it fights the no-email-for-kids and blocked-browser cases.
-- [ ] **Device modes** — a device is shared/kiosk (the wall tablet, no login)
+- [x] **Device modes** — a device is shared/kiosk (the wall tablet, no login)
       or personal (a phone, signed in). Nothing is gated behind login yet; this
-      is the next phase.
+      is the next phase. (done: `deviceMode()` in `src/lib/device.ts`, verified 13 Nov)
 - [x] **Device modes shipped.** Admin → Device toggles this screen between
       Shared (whole household) and Personal (the signed-in person), stored per
       device in a signed cookie. Default is shared, so existing installs are
@@ -479,9 +457,9 @@ Characters. Each drawer entry keeps its web brand colour.
       *and* writes are gated, so Kairos is much closer to standing on its own —
       though keeping Authelia in front remains the sound default (defence in
       depth, and it carries 2FA).
-- [ ] **Per-resource ownership** (finer than session-level): e.g. on a personal
+- [x] **Per-resource ownership** (finer than session-level): e.g. on a personal
       device, only log your own workout. Not needed for the shared tablet, where
-      acting for the whole household is the point. Revisit with the phone app.
+      acting for the whole household is the point. Revisit with the phone app. (done: `requireCanActFor` in `src/lib/gate.ts`, verified 13 Nov)
 
 #### Personal-view scoping (for the phone app screens)
 
@@ -533,22 +511,14 @@ the remaining personal-view items:
         jumping to any date; neighbouring-month days are tappable too. The month
         view already fills the screen and carries the add (+). Menus stay clean
         with no explanatory text.
-  - [ ] **D — gestures (deferred, native-first).** Native swipe/one-finger
-        scroll gets built in the Kotlin app, where it belongs, against the
-        proven contract. Web views navigate with prev/next until then.
-        *Known issue to fix if/when web swipe is built: the current web calendar
-        needs a two-finger drag to page because one finger scrolls the grid —
-        single-finger should page.*
 - [ ] Kairos-side TOTP for the eventual app API path that bypasses Authelia.
 - [ ] **"Act as me" step-up** on the shared tablet — attribute a single action
       to a person (tap avatar, optional personal PIN) without turning the
       tablet into a private session. The grocery "I'm going shopping → cart"
       flow now exists as a shared run; this would let a run be tied to one
       person (their name on the trip, their staples) if that ever proves useful.
-- [ ] **Personal / focused views** on a signed-in device, plus a summary page
-      that's one tap away rather than front-and-centre.
-- [ ] Admin is still a separate axis (the shared PIN). Later: let a personal
-      account carry the admin capability so a parent's login grants it directly.
+- [x] **Personal / focused views** on a signed-in device, plus a summary page
+      that's one tap away rather than front-and-centre. (done: the personal-view scoping below, verified 13 Nov)
 - [ ] Audit trail of admin changes
 
 ## Chores
@@ -623,7 +593,7 @@ the remaining personal-view items:
       picked from a half-hour drop-down (off-grid times still typable), an event
       can end on a later day (past midnight in one entry), and overlapping week
       blocks draw the longer one leftmost \u2014 day view unchanged (v0.123.0)
-- [~] Cycle-based workouts: choose specific rest days, N-day rotations off the
+- [x] Cycle-based workouts: choose specific rest days, N-day rotations off the
       weekly grid.
       - [x] Phase 1a — rotation model + fixed rest days that pause the cycle +
             builder with 10-day preview, on each person's own workout card
@@ -633,7 +603,6 @@ the remaining personal-view items:
             picker on the Log screen, completing that day's prompt (v0.128.0)
       - [x] Phase 2 — superseded: an overdue workout ages out after the overdue
             window (Admin setting), and "Skip overdue" clears them by hand
-- [ ] Personal Bible reading plan (alongside the family plan)
 - [x] Leisure book reading: add a book (name + length in pages or chapters),
       log daily, never overdue, not a checklist item. A Reading section with
       per-person books + progress; feeds Scholar XP slightly (normalized across
@@ -675,9 +644,6 @@ the remaining personal-view items:
 - [ ] Memory verses: assign verses to memorise, track progress, and count them
       toward the Wisdom stat (reciting/marking one done nudges you above the
       reading baseline)
-- [ ] Personal reading plan creation: a person can build and follow their own
-      reading plan alongside the shared family plan, so reading beyond the
-      family minimum is possible and shows up as above-baseline Wisdom
 - [ ] Export a plan for editing and re-import
 - [x] Coverage counts the whole run of the published plan, not just the
       current calendar year, and books can be marked already-read so the
@@ -706,10 +672,6 @@ the remaining personal-view items:
       (Monday + Wednesday), defaulting to the start day's weekday (v0.74.0)
 - [x] Selected day shows tasks on the left and schedule on the right
 - [x] Deletion rules: parents only for repeating events and birthdays
-- [~] Expand recurrence rules from subscribed feeds — not needed: the public
-      feeds in use list every occurrence with real dates rather than a repeat
-      rule, so nothing to expand. (The weekday-repeat work landed on manually
-      added events instead — see the Recurrence line above.)
 - [x] Edit an existing event — from the event menu (long-press / right-click).
       For a repeating event you choose "this event only" (a detached override on
       that date) or "all events in the series"; single overrides render in place
@@ -1249,8 +1211,6 @@ resolved daily totals to Kairos. See the collector repo's `README.md` /
       log / RCON if we host the server — a decision, not built
 - [ ] Play through the Xbox app on a shared family PC doesn't surface reliably
       in Home Assistant; probably no sensor-based fix
-- [ ] (Retired) daily allowance, weekly tokens, timer, award-a-token — replaced
-      by monitoring
 
 ## Groceries
 
@@ -1347,8 +1307,6 @@ until the run is finished:
       of the item name so the catalog and icon matching are unaffected. — the note field exists on a line but
       isn't surfaced in the add form yet
 - [ ] Recurring staples that re-add themselves on a cadence
-- [ ] Installable on a phone as a PWA, so a shopper has the list in the aisle
-- [ ] Optional native Android wrapper if a PWA proves too limiting
 
 ## Scoring and gamification
 
@@ -1447,12 +1405,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       WW2, Imaginary) are in — 52 creatures
 - [ ] Season tier rewards: cosmetic unlocks only for the individual track —
       avatar flair and evolving companions, no money (storage)
-- [ ] Companions: original collectible creatures across style "eras" (Modern,
-      '80s toon, arcade pixel, vintage rubber-hose B&W), drawn from random eggs;
-      the skill-blend colour lives on the card frame so it works across every
-      style; active companion tints live, collected ones minted; duplicates give
-      shinies and essence toward a chosen one (art via ChatGPT/Nano Banana/
-      Scenario, storage for the collection) — co-op raids a later opt-in game
 - [ ] Year-end reward, then the year is archived
 
 ## Pauses and vacations
@@ -1484,7 +1436,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       & pauses for one person's chores and workouts, v0.688)
       (e.g. one kid away at camp) while the rest of the household carries on —
       the household pause stays the all-of-us case
-- [ ] Auto-suppress hand-added one-off tasks that fall on paused days too
 
 ## Tasks and appointments
 
@@ -1495,7 +1446,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] **Admin → Tasks** page: every one-off task in one place; a pencil edits the
       whole list — rename, re-date, reassign to another person, or delete
 - [x] Web Tasks page + app Tasks screen (assign, complete, per-person)
-- [ ] Recurring tasks
+- [x] Recurring tasks (done: `src/lib/tasks/recur-rule.ts`, v0.668)
 
 ## Interface
 
@@ -1529,7 +1480,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       (stuck on the first-visited page, incompatible with the shared section
       route) and was reverted in 0.205. Don't reattempt nav-state preservation
       without first giving each section its own nav destination (app DECISIONS.md).
-- [ ] Room (on-device SQLite database) as the durable source of truth for
+- [x] Room (on-device SQLite database) as the durable source of truth for
       screen data on Android. Repositories would read the local DB instantly and
       refresh it from the API in the background, so every screen — including a
       cold start after the app is killed — renders immediately from last-known
@@ -1537,7 +1488,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       per screen, ViewModel/repository rewrite, migrations), so do it
       incrementally, calendar first, only if **cold-start** latency still bothers
       us after the lighter cache-first pass above (which covers in-session instant
-      navigation but not a fresh cold start from a killed process).
+      navigation but not a fresh cold start from a killed process). (done as a Room page cache: `data/local/KairosDatabase`, `PayloadCacheDao`; every screen paints from it, cold start included)
 
 ## Onboarding
 - [ ] First-run setup wizard for a brand-new Kairos: create the first person
@@ -1586,10 +1537,10 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       the edge on every admin navigation (v0.176). A true inactivity auto-lock
       (rolling idle timeout) for the shared wall tablet is still open.
       (Personal sessions are deliberately long — a phone should stay signed in.)
-- [ ] Per-device session revocation: personal sessions are stateless, so
+- [x] Per-device session revocation: personal sessions are stateless, so
       "sign out everywhere" is currently all-or-nothing via `credentialVersion`.
       A Session table would allow listing and revoking individual devices —
-      worth it once the phone app is real.
+      worth it once the phone app is real. (done for phones: `Device` rows, Settings → Devices with Revoke; reachable since app 0.501)
 - [x] **App offline support (BIG)** — shipped across the app: read-through HTTP
       cache; a durable DataStore write queue that replays on reconnect (5xx/network
       retried, 4xx dropped); optimistic UI on chores, tasks, school, reading, bible,
@@ -1600,7 +1551,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       online-only (can't be queued as text). Two-way calendar edit was the stated
       later phase and is effectively covered by the optimistic calendar work.
       Original spec:
-- [ ] (done) **App offline support (BIG — high priority, its own dedicated effort).**
+- [x] **App offline support (BIG — high priority, its own dedicated effort).**
       The app must be usable without a signal for the shared, read-mostly surfaces.
       Today every screen fetches live over the Cloudflared tunnel, so a dropped
       signal shows a spinner and nothing loads (the calendar is the worst offender).
@@ -1618,19 +1569,15 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       `AlertDialog`/`Dialog` call sites were converted to the house `AnimatedDialog`
       across HomeScreen, AppRoot, the bible wizards, calendar, and the workout
       create/edit + wizard confirms. Original note:
-- [ ] (done) **App UI consistency — pop-ups & dropdowns (ongoing).** Standard is recorded
-      in DECISIONS ("App UI: dialogs and dropdowns use shared animated components"):
-      every pop-up must use `AnimatedDialog` (ui/common) and every select must use
-      `RollPicker` (ui/common). Done so far: workout share + share-confirmation
-      dialogs, the home workout menu, and all workout-form dropdowns (v0.62–0.68).
-      STILL TODO — convert the remaining `AlertDialog`/`Dialog` call sites, and note
-      that some dialogs ADDED since (the calendar colour picker v0.71.0, the
-      manage-custom-exercises screen, the log wizard's confirm) were built with
-      AlertDialog/Dialog and also need converting. Call sites span calendar
-      (CalendarScreen colour picker + confirms, CalendarAddEvent's SelectorOverlay
-      which is still a custom selector, not RollPicker), bible (PlanWizard,
-      PersonalPlanSection), recent workouts, AppRoot, and the workout create/edit +
-      wizard confirms.
+- [ ] **App pop-ups added since that conversion** (re-checked 13 Nov): 19 files
+      use Material's stock `AlertDialog` instead of `AnimatedDialog`, which breaks
+      the house rule. Mostly workouts (WorkoutChart, WorkoutLogScreen,
+      MovementSetsScreen, ProgramsScreen, CoreDays, CardioBlock, EnduranceCharts,
+      HeatView, FamilyWod, AdditionalPicker, WarmupScreens, PlanFileSheets,
+      EditPlanScreen, CustomWorkoutForm, ConditioningCard), plus
+      AppearanceScreen, DefaultRemindersScreen, AssignTaskScreen,
+      CalendarAddEvent / LocationField, and the sign-in RecoverDialog /
+      ForgotPasswordDialog. Mechanical, but touches many screens.
 
 ## Pending — app parity (from the Sept web run, v0.318–0.333)
 
@@ -1646,7 +1593,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   Start/End/Runs, Class type, Semester, Color, homework).
 - [x] **App class-form + share-with layout** — the app's Shared with leaves out the
   student (verified 13 Nov).
-- [ ] App: the one-time pop-up when switching a new event's type to Class.
 
 ## Shipped — Sept 23–24 2026 run (web v0.458–0.483, app v0.271–0.287)
 
@@ -1739,10 +1685,15 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   RCON/logs, or accept it). PC play through the Xbox app on a shared family PC
   doesn't surface reliably in Home Assistant and probably has no sensor-based
   fix. Tracked in the collector repo.
-- [ ] Smaller, unconfirmed: nav regions beyond hip hinges and carries
-  unexamined; grouped charts squash a light accessory against a heavy lift.
-  (Done since: carries map to a region, v0.690; midnight rollover, v0.687 /
-  app 0.497.)
+- [ ] Body-map regions: 21 of the 168 library movements are full-body (power
+  clean, thrusters, snatches, Turkish get-up, wall ball, burpee, bear crawl…)
+  and reach no place on the body map by design (`navRegionFor` returns null
+  for FULL_BODY). Decide whether any should show somewhere. (Checked 13 Nov.
+  Done since: carries, v0.690; midnight rollover, v0.687 / app 0.497. Grouped
+  charts squashing a light lift against a heavy one is gone: every lift has
+  its own row and chart since v0.670.)
+- [x] Remaining sets −5 / 0 / +5 control removed from the app's log-a-movement
+  screen (app 0.502.0). The web logger still has its own "Remaining sets".
 
 ## Scoring rework (web 0.603 / app 0.411)
 
@@ -1807,7 +1758,7 @@ From the original workouts plan, not built yet:
 
 - Web APP_VERSION 0.695.0 (migrations through 152_person_pause, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.501.0 / versionCode 573 / CLIENT_BUILD 573.
+- App versionName 0.502.0 / versionCode 574 / CLIENT_BUILD 574.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.
