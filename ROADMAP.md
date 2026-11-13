@@ -140,12 +140,10 @@ Also agreed and not built:
 
 - the Seasons quality signal (workout progress into Strength; reading beyond
   the plan into Wisdom), kept as is for now;
-- calibrating growth pace and egg rarity (needs a fresh scoring snapshot);
 - the game-time gaps (see Game time below);
 - ice-time following a schedule index page.
 
 Next up, roughly in order:
-- Calibrate growth pace and egg rarity from a fresh scoring snapshot.
 - The features listed per section below, to explore later.
 
 ---
@@ -1698,11 +1696,21 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   egg luck from the last 14 days' completion; Life from confirmed team sport;
   bar colours from what earned the growth; scoring snapshot shows the real
   rules; "How scoring works" on web and in app Settings. docs/SCORING.md.
-- [ ] Calibrate growth pace and egg rarity against real data (replaces the old
-  "calibrate incubation XP" line: incubation XP was replaced by growth in
-  0.603). Needs a fresh scoring snapshot (Admin → Season planner) and a target
-  pace: how often a kid should hatch, and how rare a rare should feel.
-  Also checks the family-goal target (15 may now be easy).
+- [x] Calibrate growth pace and egg rarity against real data (13 Nov, from the
+  scoring snapshot at Admin → Settings → Scoring & rewards; replaces the old
+  "calibrate incubation XP" line, since incubation XP became growth in 0.603).
+  Target agreed: an egg about every 3 weeks, rares feel about right.
+  - The children doing their usual work (about 60–75% of each day's list) earn
+    4.3–5.2 growth a week, so an egg every 2.3–2.8 weeks. That's on target, so
+    nothing changes: still 12 to adult (and 6 more to deepen) and a +2 perfect
+    week.
+  - At 100% with perfect weeks it is 9 a week (an egg about every 1.3 weeks),
+    which is the parents' pace.
+  - Egg luck at that completion is 0.3–0.5: rare or legendary about 16–22% of
+    hatches, against 8% with no luck and 36% at full luck. Kept.
+  - Family goal: at that pace a child ends the month with 18–22 days of work,
+    so 15 means finishing about half the list. Kept at 15.
+  - Re-check if the workload changes a lot.
 
 ## Hockey (web 0.600 / app 0.409)
 

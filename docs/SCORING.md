@@ -106,8 +106,8 @@ to exactly what was earned.
 ## 5. This month and the family goal
 
 - `monthlyCredit` = sum of day credits in the season window, today live.
-- A child meets the goal at `month.goalCleanDays` (admin: Season planner, "Days to
-  finish the month", default 15) days of work. The family goal is met when every
+- A child meets the goal at `month.goalCleanDays` (Admin → Settings → Scoring &
+  rewards, "Days to finish the month", default 15) days of work. The family goal is met when every
   child meets it; a carried goal is judged on its own month (`creditBySeason`).
 - `season.tier` (completion in eighths, +2 bonus tiers) is still computed for
   older apps but is no longer shown — "This month: X / target days" replaced it,
@@ -130,7 +130,8 @@ XP mix, so logging reading recoloured squares without filling any. Squares from
 
 ## Where to look when numbers seem wrong
 
-1. Admin → Season planner → copy the scoring snapshot. It has, per person,
+1. Admin → Settings → Scoring & rewards (`/admin/season`, once called the
+   Season planner) → copy the scoring snapshot. It has, per person,
    days of work this month, completion by skill, today's credit, growth, phase,
    luck and the last 14 days' completion.
 2. Low growth with high level: their list is long and partially done — check

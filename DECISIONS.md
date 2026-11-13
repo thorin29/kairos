@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Growth pace and egg rarity checked against real data: no change (docs only, 13 Nov)
+
+- From a scoring snapshot, the target was an egg about every three weeks, with
+  rares feeling about right as they are.
+- The children's usual completion (about 60–75% of each day's list) gives
+  4.3–5.2 growth a week, so an egg every 2.3–2.8 weeks: on target. Full
+  completion with perfect weeks is about 1.3 weeks.
+- Egg luck there is 0.3–0.5, so rare or legendary comes up on about 16–22% of
+  hatches. A family-goal target of 15 days means finishing about half the
+  list.
+- Nothing changes: 12 to adult, 6 to deepen, a +2 perfect week, the rarity
+  weights in `rarityWeights`, and a target of 15.
+- The snapshot is at Admin → Settings → Scoring & rewards (`/admin/season`;
+  older docs called it the Season planner). It holds household names, so it
+  stays out of the repo.
+
 ## 2026-11 — Admin auto-lock, full-body moves, one heat range, web Remaining sets gone (v0.696.0 / app 0.503.0)
 
 - **Admin auto-lock after idle time.** `adminIdleMinutes` (5, 15, 30, 60 or
