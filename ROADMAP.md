@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.697.0 / app v0.503.0, versionCode 575)
+## Current status (13 Nov 2026, web v0.698.0 / app v0.503.0, versionCode 575)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -110,6 +110,9 @@ in the project docs (workouts-plan, workouts-programs-plan, workouts-next-plan).
   - App **Settings reorganized** (app 0.501): profile card, Account (Password,
     Devices, Sign out), Look & feel, Notifications & reminders, Connected apps,
     Parents, Help & about.
+- **Security updates (0.698):** Next.js 15.5.29 (two critical image-optimizer
+  advisories), the unused `/_next/image` endpoint off, Prisma 7.10.1,
+  Nodemailer 10. A code-level threat review follows.
 - **Character switching (0.697, migration 153):** growth stays with the
   character that earned it (a day splits at the switch), parts of a square
   are no longer rounded away (`growthBanked` was an integer), and deepening
@@ -144,7 +147,7 @@ Also agreed and not built:
 
 - the Seasons quality signal (workout progress into Strength; reading beyond
   the plan into Wisdom), kept as is for now;
-- the game-time gaps (see Game time below);
+- play on a shared or unmanaged PC isn't tracked (see Game time below);
 - ice-time following a schedule index page.
 
 Next up, roughly in order:
@@ -1002,7 +1005,8 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
 - [x] Event background images — per-kind/holiday background art on the event
       block and detail popup, dark scrim for legibility, graceful when a file is
       missing. Plumbing shipped; drop JPGs into public/event-bg/ (v0.99.2)
-- [ ] Weather on the calendar/dashboard — daily conditions and temps
+- [ ] Weather on the calendar — daily conditions and temps (the dashboard panel
+  is under Dashboard)
 - [ ] Moon phases displayed on the calendar
 
 ## Workouts
@@ -1211,10 +1215,10 @@ resolved daily totals to Kairos. See the collector repo's `README.md` /
 - [x] PC app usage through Family Safety: the collector's `ally` source reads the
       Family Safety `applications` sensor and credits only allowlisted apps
       (`GAME_APPS`) — app-open time at ~5-minute resolution, lowest precedence
-- [ ] Minecraft Java — invisible to Xbox presence and Steam. Partly covered on a
-      managed Family Safety PC when `GAME_APPS` lists the launcher (via `ally`);
-      untracked on a shared or unmanaged PC. Exact play times need the server
-      log / RCON if we host the server — a decision, not built
+- [x] Minecraft Java — decided 13 Nov: no server will be hosted, so partial
+      tracking is accepted. App-open time via `ally` on a managed Family Safety
+      PC when `GAME_APPS` lists the launcher; untracked on a shared or
+      unmanaged PC. Exact play times (server log / RCON) are not pursued.
 - [ ] Play through the Xbox app on a shared family PC doesn't surface reliably
       in Home Assistant; probably no sensor-based fix
 
@@ -1531,6 +1535,10 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       sessions are HMAC-signed with a 32-byte secret generated on first use and
       kept in `AppSetting` (`sessionSecret`), not a weak default — a fresh
       install mints its own.
+- [ ] Code-level threat review (next): sign-in and sessions, who can act for
+      whom (API routes and server actions), server-side fetches (ICS, Concept2,
+      ice-time), uploads, CSRF and error leakage. Findings reported before any
+      fixes. Dependencies patched first (0.698).
 - [ ] Threat model / internet exposure: the first-party password flow is now
       the "real auth" the PIN scheme was deferring, so exposing Kairos past the
       LAN is closer to reasonable — but it still wants HTTPS (have it via
@@ -1679,11 +1687,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   screen paints from the Room page cache and works offline; offline writes,
   calendar events included, queue and replay with temp-id correlation. Gap:
   a calendar day never opened while online shows a "not synced yet" note.
-- [ ] **Game time** — Minecraft Java is only partly tracked (via `ally` on a managed
-  Family Safety PC); exact times need a decision (host the server for
-  RCON/logs, or accept it). PC play through the Xbox app on a shared family PC
-  doesn't surface reliably in Home Assistant and probably has no sensor-based
-  fix. Tracked in the collector repo.
 - [x] Full-body moves (v0.696): lifts get the muscle that drives them (cleans,
   snatches, thrusters → Legs; clean and press → Shoulders; Turkish get-up →
   Core; mid-thigh pull → Back), and conditioning moves logged as sets
@@ -1767,7 +1770,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.697.0 (migrations through 153_companion_growth_float, all registered
+- Web APP_VERSION 0.698.0 (migrations through 153_companion_growth_float, all registered
   in `MIGRATIONS` since 0.695).
 - App versionName 0.503.0 / versionCode 575 / CLIENT_BUILD 575.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).

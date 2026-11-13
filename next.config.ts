@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   // the bundler can't follow, so it's external too.
   serverExternalPackages: ["pg", "@prisma/adapter-pg", "nodemailer"],
 
+  // Nothing uses next/image, so Next's image-resizing endpoint (/_next/image)
+  // is switched off: it serves no purpose here and has carried critical
+  // advisories (remote code execution via crafted AVIF / SVG, fixed in 15.5.28).
+  images: { unoptimized: true },
+
   experimental: {
     // Profile photos post through a server action, and the default cap is
     // 1 MB — smaller than a phone snapshot.

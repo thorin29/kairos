@@ -1,5 +1,57 @@
 # Decisions
 
+## 2026-11 — Security updates: Next.js, Prisma, Nodemailer; image endpoint off (v0.698.0)
+
+- **Next.js 15.5.21 → 15.5.29.** This fixes two critical unauthenticated
+  remote-code-execution advisories in the image optimizer (crafted AVIF / SVG),
+  a server-action denial of service, and SSG/ISR cache poisoning. It's a patch
+  within 15.5; no code changes were needed.
+- **`images: { unoptimized: true }`.** Nothing uses `next/image`, so
+  `/_next/image` is switched off and now 404s. middleware.ts skips that path,
+  so before this it was reachable without sign-in. Turning it off removes the
+  surface whatever the advisories say next. Re-enable it only together with a
+  current Next.
+- **Prisma 7.9.0 → 7.10.1** (client, adapter-pg, CLI; pinned exactly, because
+  `latest` points at an 8.0 release candidate). The flagged parts were the
+  CLI's dev tooling, not the running app.
+- **Nodemailer 9 → 10.5.0** (a process-global DNS cache reused the TLS
+  servername across transports). The only breaking change is "Node 20+", and
+  the image runs node:22. It ships its own types, so `@types/nodemailer` is
+  removed. `send.ts` is unchanged.
+- `npm audit fix` also updated indirect packages (sharp, nanoid,
+  source-map-js) without breaking changes.
+- **Remaining:** Next's own bundled PostCSS 8.4.31. It's build-time only (it
+  processes Kairos's own CSS, never user input), and the fix is Next 16, so it
+  waits for a planned 16 upgrade.
+- **Checked:**
+  - preflight (full type check);
+  - a production `next build`;
+  - the standalone server: pages 200, `/_next/image` 404, `/api/v1/me` 401
+    JSON;
+  - Nodemailer 10 loads via both `require` and `import`, and sends through a
+    JSON transport;
+  - vitest.
+  Real SMTP delivery wasn't tested here; Admin → Settings → Email → Send test
+  is the check after deploying.
+- The code-level threat review is next. Its findings will be reported before
+  any fixes.
+
+## 2026-11 — Three decisions recorded (docs only, 13 Nov)
+
+- **Hockey trusts the rink's own numbers.** "Full" comes from the rink's
+  `RemainingSpots`, passed through unchanged by ice-time, even when it
+  disagrees with enrolled / max. A rink can show "2/3, Remaining spots: 0"
+  while it holds a dropped spot (seen 13 Nov, on the rink's own page too).
+  Kairos follows the rink: it never offers a spot the rink won't sell, and the
+  count flips to open on the next read after the rink frees it. This is not a
+  bug, so there's no "held" state and no max − enrolled override.
+- **Minecraft Java stays partly tracked.** No server will be hosted, so exact
+  play times (server log / RCON) are not pursued. The collector's `ally`
+  source covers app-open time on a managed Family Safety PC; a shared or
+  unmanaged PC stays untracked.
+- **Growth lost to switches before 0.697 is not restored.** Switches aren't
+  logged, so it couldn't be rebuilt exactly, and it won't be patched by hand.
+
 ## 2026-11 — Switching characters keeps growth with the one that earned it (v0.697.0, migration 153)
 
 A child reported losing a newly hatched character's progress after switching
