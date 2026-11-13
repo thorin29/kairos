@@ -5,7 +5,7 @@ which covers what exists and what doesn't.
 
 ## Stack
 
-Next.js 15 (App Router) · TypeScript · Prisma 7 · PostgreSQL · Tailwind 4
+Next.js 16 (App Router) · TypeScript · Prisma 7 · PostgreSQL · Tailwind 4
 
 Dependencies are pinned to exact versions and installed with `npm ci` against
 a committed lockfile, so a rebuild months from now produces the same image.
@@ -84,8 +84,8 @@ themselves, as before. Children use the phone app, never the web. First run
 (no admin has a password yet) stays open so setup can finish.
 
 - **One implementation:** `src/lib/web-gate.ts` holds the rules (session
-  check, first run, PIN-bound unlock). `middleware.ts` (Node runtime, every
-  request, soft navigations included) and the app (`currentUser`, `isAdmin`,
+  check, first run, PIN-bound unlock). `proxy.ts` (Next 16's name for
+  middleware; always Node, every request, soft navigations included) and the app (`currentUser`, `isAdmin`,
   `loginRequired`) both call it.
 - **No environment needed:** the secret comes from `appSecret()`, generated on
   first use and stored in `AppSetting`; `SESSION_SECRET` only overrides it.
@@ -95,7 +95,7 @@ themselves, as before. Children use the phone app, never the web. First run
   15 minutes per device. The unlock cookie is signed with the PIN hash, so
   changing the PIN ends every other unlock, and it auto-locks after idle time.
 - **Guards in two places:** guards live in server actions, not only in the UI,
-  and middleware guards `/admin`, so a new sub-page is protected the moment it
+  and `proxy.ts` guards `/admin`, so a new sub-page is protected the moment it
   exists. The unlock page sits outside `/admin`, because a door can't be
   behind the lock it opens.
 - **Helpers stay out of action files:** every export of a `"use server"` file
@@ -146,7 +146,7 @@ Two properties are load-bearing. First, only a SHA-256 of every secret is
 stored — enrollment codes and device tokens alike, exactly like an `Invite` — so
 a database leak yields nothing usable. Second, `/api/v1` does its own auth on
 every request in the route handlers (`src/lib/api/device-auth.ts`), so it is
-**exempt from the login-gate middleware** rather than redirected to `/login`.
+**exempt from the login gate in `proxy.ts`** rather than redirected to `/login`.
 That per-request self-authentication is also what makes a scoped Authelia
 `/api/v1` bypass safe: the app never relies on Authelia to protect it. The
 public endpoints (sign-in, join, join check, forgot, recover, meta, and the
@@ -240,8 +240,8 @@ production:
 | Sore spots and hurt-day stand-ins | `src/lib/workouts/sore.ts` (pure, `SORE_PATHS`) / `sore-run.ts`; `pickStandIns` in `adjust.ts`; `standInsFor` in `adjust-run.ts`; `SoreSpots` in `src/app/exercise/sore-spots.tsx`; app `SoreSpots.kt`, `BodyMap(soreFront, soreBack)` |
 | The training heat map: a group's colour earned by progress and eased back (v0.689), the endurance heart on weighted minutes (v0.690), "+N% since you started" | `buildTrainingHeat` / `weekPaused` in `src/lib/workouts/training-heat.ts` (pure; the rules are in its header comment); sets loaded and program starts, pauses and sore holds passed in by `heat-run.ts`. Carries resolve to a region in `navRegionFor` (`involvement.ts`): farmer → ARMS, suitcase / one-arm → CORE, overhead → SHOULDERS |
 | A companion lift's next weight (steps only after Easy, only for sets that hit their reps; step size from the movement, not the plan slot) | `targetsFor` (`lastEasy`) / `stepFor` in `src/lib/workouts/programs.ts`; dumbbell and kettlebell sizes from Admin's equipment list via `bellOf` / `nextBell` / `bellAtOrUnder` in `src/lib/workouts/bells.ts` (pure) and `bellSizesFor` in `library-run.ts`. Program main lifts and 5/3/1 waves are unchanged |
-| The web sign-in gate: session check, first run, PIN-bound unlock (v0.699) | `src/lib/web-gate.ts` (`webSessionUser`, `webBootstrapOpen`, `signAdminUnlock` / `adminUnlockValid`); `src/middleware.ts` (Node runtime; frame headers via `FRAME_ANCESTORS`); baseline headers in `next.config.ts`; `safeNext` (`src/lib/safe-next.ts`) for the sign-in redirect |
-| Admin auto-lock after idle time (v0.696) | `adminIdleMinutes` / `ADMIN_IDLE_CHOICES` / `touchAdminSession` / `startAdminSession` in `src/lib/session.ts`; `touchAdminAction` / `setAdminIdleAction` in `src/lib/actions/admin-lock.ts`; `AdminIdleLock` in `src/app/admin/admin-idle-lock.tsx` (rendered by the admin layout); the setting on Admin → Settings → Device (`device-controls.tsx`). Cookie format unchanged for middleware.ts |
+| The web sign-in gate: session check, first run, PIN-bound unlock (v0.699) | `src/lib/web-gate.ts` (`webSessionUser`, `webBootstrapOpen`, `signAdminUnlock` / `adminUnlockValid`); `src/proxy.ts` (Next 16 proxy, formerly `middleware.ts`; frame headers via `FRAME_ANCESTORS`); baseline headers in `next.config.ts`; `safeNext` (`src/lib/safe-next.ts`) for the sign-in redirect |
+| Admin auto-lock after idle time (v0.696) | `adminIdleMinutes` / `ADMIN_IDLE_CHOICES` / `touchAdminSession` / `startAdminSession` in `src/lib/session.ts`; `touchAdminAction` / `setAdminIdleAction` in `src/lib/actions/admin-lock.ts`; `AdminIdleLock` in `src/app/admin/admin-idle-lock.tsx` (rendered by the admin layout); the setting on Admin → Settings → Device (`device-controls.tsx`). Cookie format unchanged for proxy.ts |
 | Full-body moves: a muscle for lifts, heart minutes for conditioning moves (v0.696) | the whole-body rules, `endurance` and `heartMinutes` in `src/lib/workouts/involvement.ts`; the extra heart entries in `loadHeat` (`heat-run.ts`) |
 | An event that ends before it starts (web form; the app's `timeInvalid`) | `timeInvalid` in `src/app/calendar/add-event-form.tsx`; `TimeSelect`'s `invalid` (`src/components/time-select.tsx`) |
 | The chart hover pop-up (lift charts, Compare, plank test, cardio and conditioning charts) | `useChartTip` / `ChartTip` in `src/components/chart-tip.tsx` |

@@ -232,7 +232,7 @@ Prisma field read was selected. When the calendar-file import rule changes, run
 
 ## Tech
 
-Next.js 15 (App Router) · TypeScript · Prisma 7 · PostgreSQL · Tailwind CSS
+Next.js 16 (App Router) · TypeScript · Prisma 7 · PostgreSQL · Tailwind CSS
 
 ## License
 

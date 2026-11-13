@@ -61,7 +61,7 @@ request/response shapes under "Auth & identity" below.
 
 Now that the token surface exists, the Authelia bypass is unblocked but must be
 scoped to `/api/v1` only (DECISIONS.md). `/api/v1` authenticates every request
-itself; it is exempt from the app's own login-gate middleware and never relies
+itself; it is exempt from the app's own login gate (`src/proxy.ts`) and never relies
 on Authelia to protect it.
 
 ---

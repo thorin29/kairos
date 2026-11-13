@@ -74,7 +74,7 @@ export default async function RootLayout({
   const sidebarExpanded = (await cookies()).get("sidebar")?.value === "1";
 
   // When login is required, every page but the public ones needs a session.
-  // This is a hard-load backstop; middleware enforces it on every navigation.
+  // This is a hard-load backstop; proxy.ts enforces it on every navigation.
   if (gate && !me && !isPublicPath(path)) {
     redirect(`/login?next=${encodeURIComponent(path)}`);
   }

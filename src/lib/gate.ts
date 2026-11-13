@@ -4,7 +4,7 @@ import { isAdmin } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
 
 /**
- * Sign-in is required everywhere on the web (v0.699; middleware.ts enforces it
+ * Sign-in is required everywhere on the web (v0.699; proxy.ts enforces it
  * on every request, web-gate.ts holds the rules). Only a parent's account can
  * sign in, and the shared screen then acts for the household, so the guards
  * below pass for it exactly as the old open mode did. The one exception is

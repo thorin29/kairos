@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.699.0 / app v0.504.0, versionCode 576)
+## Current status (13 Nov 2026, web v0.700.0 / app v0.504.0, versionCode 576)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -110,6 +110,10 @@ in the project docs (workouts-plan, workouts-programs-plan, workouts-next-plan).
   - App **Settings reorganized** (app 0.501): profile card, Account (Password,
     Devices, Sign out), Look & feel, Notifications & reminders, Connected apps,
     Parents, Help & about.
+- **Next.js 16 (0.700):** its own release. Clears the last production audit
+  warning (Next 15's bundled PostCSS, build-time only). `middleware.ts` is now
+  `proxy.ts`; builds use Turbopack; `next lint` is gone (there was no ESLint
+  set up, so the script was dropped).
 - **Threat review and fixes (0.699 / app 0.504):** sign-in required on every
   web page, parents only (the shared screen signs in once); PIN 3 tries per 15
   min per device and bound to the PIN; frame and nosniff headers; sign-in
@@ -1771,7 +1775,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.699.0 (migrations through 153_companion_growth_float, all registered
+- Web APP_VERSION 0.700.0 on Next.js 16.4.6 (migrations through 153_companion_growth_float, all registered
   in `MIGRATIONS` since 0.695).
 - App versionName 0.504.0 / versionCode 576 / CLIENT_BUILD 576.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).

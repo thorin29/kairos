@@ -65,7 +65,7 @@ export function UserBadge({
       await logoutUser();
       setConfirm(false);
       // Full navigation so the layout re-runs: chrome resets to signed-out and,
-      // when the gate is on, middleware sends us to the login screen.
+      // when the gate is on, proxy.ts sends us to the login screen.
       window.location.assign("/");
     });
 

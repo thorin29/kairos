@@ -5,8 +5,8 @@ import { appSecret } from "@/lib/secret";
 import { getSetting } from "@/lib/settings";
 
 /**
- * The web's sign-in gate (v0.699), one implementation for middleware.ts (Node
- * runtime, every request) and the app code (currentUser, isAdmin).
+ * The web's sign-in gate (v0.699), one implementation for proxy.ts (Node
+ * runtime, every request; middleware.ts before v0.700) and the app code (currentUser, isAdmin).
  *
  * - Sign-in is required everywhere on the web. There is no switch; it doesn't
  *   depend on REQUIRE_LOGIN or SESSION_SECRET (the secret comes from appSecret,
@@ -40,7 +40,7 @@ let bootCache: { at: number; open: boolean } | null = null;
 const BOOT_TTL_MS = 15_000;
 
 /** True while no active admin has a password (a fresh install). Cached briefly:
- *  middleware asks on every request. Once closed it stays closed for good in
+ *  proxy.ts asks on every request. Once closed it stays closed for good in
  *  this process, so removing the last admin password can't reopen the site
  *  until a restart (and then only if it's really true). */
 export async function webBootstrapOpen(): Promise<boolean> {

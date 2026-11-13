@@ -46,7 +46,7 @@ export async function setAdminIdleMinutes(minutes: number): Promise<void> {
 
 /** Start (or refresh) an unlock. The session isn't tied to a person — the PIN
  *  is shared — so the cookie carries only an expiry and its signature (the
- *  format the edge check in middleware.ts reads). Returns the expiry. */
+ *  format the per-request check in proxy.ts reads). Returns the expiry. */
 export async function startAdminSession(): Promise<number> {
   const minutes = await adminIdleMinutes();
   const expires = Date.now() + minutes * 60_000;

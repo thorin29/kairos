@@ -1,5 +1,36 @@
 # Decisions
 
+## 2026-11 — Next.js 16 (v0.700.0)
+
+Its own release because it's a major version. Reason: the last production
+audit warning was Next 15's bundled PostCSS (build-time only, not exploitable
+here), and only Next 16 drops it. `npm audit --omit=dev` is now clean. React
+stays at 19.2.8 (Next 16 needs 19.2 or later); `@types/react` 19.2.18 and
+`@types/react-dom` 19.2.7.
+
+- **`src/middleware.ts` is now `src/proxy.ts`**, exporting `proxy`. Same gate,
+  same matcher, same headers. Proxy is always the Node runtime and refuses a
+  `runtime` option, so that line went (0.699 had set it to Node anyway).
+- **Builds use Turbopack** (Next 16's default). There's no custom webpack
+  config, so nothing to port. The companion-sprite route builds file paths at
+  runtime, which made Turbopack trace the whole project (source, docs, tests)
+  into the server output; `turbopackIgnore` comments on those two calls keep
+  it out. `public/` is copied into the image separately, as before.
+- **`next lint` was removed by Next 16.** No ESLint config or package was ever
+  installed, so the `lint` script was dropped rather than replaced. The type
+  check (`scripts/preflight.sh`, and `next build` itself) is the check.
+- **`tsconfig.json`**: Next 16 rewrote `jsx` to `react-jsx` and added
+  `.next/dev/types` (dev and build now write to separate folders). Committed
+  so builds don't modify a tracked file.
+- **Checked and not affected:** no sync `cookies()` / `headers()` / `params` /
+  `searchParams` access (the type check passes), no `revalidateTag`, no
+  parallel-route slots, no `scroll-behavior` override, no AMP or runtime
+  config, `next/image` unused and image optimization already off. Node 22 in
+  the Docker image meets the 20.9 minimum.
+- **Not changed:** the dev-only test tools (Vitest 3 and its Vite) still show
+  audit advisories. They never reach the image; moving to Vitest 5 is a
+  separate job.
+
 ## 2026-11 — Sign-in required everywhere on the web, parents only; threat-review fixes (v0.699.0 / app 0.504.0)
 
 From the code-level threat review (13 Nov):

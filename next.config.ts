@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
 
   // Baseline headers on every response, static files included (v0.699). Who
-  // may frame Kairos is set per request in middleware.ts (FRAME_ANCESTORS can
+  // may frame Kairos is set per request in proxy.ts (FRAME_ANCESTORS can
   // change it at runtime; these are fixed at build).
   async headers() {
     return [

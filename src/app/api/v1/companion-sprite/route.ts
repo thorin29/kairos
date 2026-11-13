@@ -8,7 +8,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Where the sprites live at runtime. Next standalone usually runs from /app with
-// public at /app/public, but process.cwd() can differ, so try both.
+// public at /app/public, but process.cwd() can differ, so try both. The
+// turbopackIgnore comments keep the build from tracing the whole project into
+// the server output (v0.700): public/ is copied into the image on its own.
 const BASES = [
   path.join(process.cwd(), "public", "companions"),
   "/app/public/companions",
@@ -34,7 +36,7 @@ export async function GET(req: NextRequest) {
   if (!rel.endsWith(".png")) return new NextResponse("Not found", { status: 404 });
 
   for (const base of BASES) {
-    const full = path.join(base, ...parts);
+    const full = path.join(/*turbopackIgnore: true*/ base, ...parts);
     if (!full.startsWith(base)) continue;
     try {
       const data = await readFile(full);
@@ -53,7 +55,7 @@ export async function GET(req: NextRequest) {
     const diag = await Promise.all(
       BASES.map(async (b) => {
         try {
-          const entries = await readdir(b);
+          const entries = await readdir(/*turbopackIgnore: true*/ b);
           return `${b} -> [${entries.slice(0, 8).join(", ")}]`;
         } catch (e) {
           return `${b} -> ERR ${(e as Error).message}`;
