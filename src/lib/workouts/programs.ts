@@ -11,6 +11,7 @@
  */
 import type { MuscleGroup } from "@/lib/workouts/catalog";
 import type { Pattern } from "@/lib/workouts/library";
+import { bellAtOrUnder, nextBell } from "@/lib/workouts/bells";
 
 /** One set of a "work up to a top set" week: reps at a share of the training
  *  max; `plus` is a 5/3/1 "+" set, as many good reps as you can (v0.620). */
@@ -667,10 +668,18 @@ export function targetsFor(input: {
    *  weight steps up once every set got every rep, as the program says. Off,
    *  the weight holds until the person changes it (companion lifts, own plans). */
   progress?: boolean;
-  /** Last time felt Easy: a companion lift steps up anyway (v0.665). */
+  /** Last time felt Easy: the only thing that steps a companion lift up (v0.694). */
   lastEasy?: boolean;
+  /** Dumbbell or kettlebell sizes on hand (v0.694): steps go to the next bell
+   *  owned, and lighter or estimated weights to a bell that's there. */
+  sizes?: readonly number[] | null;
 }): TargetSet[] {
   const { program, week, scheme, unit, lower, trainingMax, last } = input;
+  const bells = input.sizes && input.sizes.length > 0 ? input.sizes : null;
+  /** One step up: the next bell owned (none heavier: stays), else + step. */
+  const up = (w: number, step: number) => (bells ? (nextBell(w, bells) ?? w) : w + step);
+  /** A computed weight made loadable: a bell that's there, else rounded. */
+  const load = (w: number) => (bells ? bellAtOrUnder(w, bells) : roundLoad(w, unit));
   const intent = weekIntent(program, week);
 
   if (intent === "TEST") {
@@ -721,9 +730,10 @@ export function targetsFor(input: {
   }
 
   // A companion lift (anything but a program's own main lift) with sets last
-  // time (v0.665): each set keeps last time's weight, and steps up only when
-  // that set reached the top of its reps, or the whole movement felt Easy.
-  // A range aims one rep higher, up to the top, then starts again heavier.
+  // time (v0.665): each set keeps last time's weight. Since v0.694 it steps up
+  // only when last time felt Easy AND that set reached the top of its reps —
+  // Solid, Hard or no answer holds (finishing the reps alone used to step it).
+  // A range aims one rep higher, up to the top, and holds there until Easy.
   // Only when last time was this kind of work: heavy triples before a 5 × 10
   // go by what that strength allows (below), not set by set.
   const lowReps = scheme.kind === "RANGE" ? scheme.min : scheme.kind === "SAME" ? scheme.reps : 0;
@@ -738,11 +748,15 @@ export function targetsFor(input: {
       const lr = l.reps ?? 0;
       let weight = l.weight as number;
       let reps = scheme.kind === "RANGE" ? Math.min(top, Math.max(low, lr + 1)) : top;
-      if (lr >= top || input.lastEasy) {
-        weight += step;
-        reps = low;
+      if (lr >= top && input.lastEasy) {
+        const next = up(weight, step);
+        // The heaviest bell already: it stays, at the top of the reps.
+        if (next > weight) {
+          weight = next;
+          reps = low;
+        }
       }
-      if (intent === "LIGHT") weight = roundLoad(weight * 0.8, unit);
+      if (intent === "LIGHT") weight = load(weight * 0.8);
       return { weight, reps };
     });
   }
@@ -758,7 +772,7 @@ export function targetsFor(input: {
     .map((s) => s.weight as number);
   let weight: number | null = proven.length ? Math.max(...proven) : null;
   const estimate = weightForReps(last, aimReps, unit, scheme.sets);
-  if (estimate != null && (weight == null || estimate > weight)) weight = estimate;
+  if (estimate != null && (weight == null || estimate > weight)) weight = bells ? bellAtOrUnder(estimate, bells) : estimate;
   let sets = scheme.sets;
   let reps: number;
   const lastReps = last.map((s) => s.reps ?? 0).slice(0, scheme.sets);
@@ -768,8 +782,9 @@ export function targetsFor(input: {
     // top; a program's main lift then steps up and starts the range again.
     const allTop = lastReps.length >= scheme.sets && lastReps.every((x) => x >= scheme.max);
     if (input.progress && weight != null && allTop) {
-      weight += step;
-      reps = scheme.min;
+      const next = up(weight, step);
+      reps = next > weight ? scheme.min : scheme.max; // no heavier bell: stay at the top
+      weight = next;
     } else {
       const lowest = lastReps.length ? Math.min(...lastReps) : scheme.min - 1;
       reps = Math.min(scheme.max, Math.max(scheme.min, lowest + 1));
@@ -777,12 +792,12 @@ export function targetsFor(input: {
   } else {
     reps = scheme.reps;
     const allDone = lastReps.length >= scheme.sets && lastReps.every((x) => x >= scheme.reps);
-    if (input.progress && weight != null && allDone) weight += step;
+    if (input.progress && weight != null && allDone) weight = up(weight, step);
   }
 
   if (intent === "LIGHT") {
     sets = Math.max(2, sets - 1);
-    weight = weight != null ? roundLoad(weight * 0.8, unit) : null;
+    weight = weight != null ? load(weight * 0.8) : null;
   }
   return Array.from({ length: sets }, () => ({ weight, reps }));
 }

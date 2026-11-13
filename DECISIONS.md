@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — Companion lifts step only after Easy; bells step by sizes owned (v0.694.0, web only)
+
+- v0.665 stepped a companion set up when that set reached the top of its
+  reps OR the movement felt Easy, so on a fixed scheme (5 × 12) finishing
+  every rep bumped every set however it felt — a Solid reverse fly got +10.
+  Now it steps only when last time felt Easy AND that set reached its reps;
+  Solid, Hard, Too hard or no answer holds. A range still climbs a rep per
+  set to the top, then holds there until Easy. A program's own main lift
+  (`progress`) and 5/3/1 waves are unchanged.
+- The step's size came from the plan slot (`role.lower`): a fly placed in
+  the 5/3/1 Hinge slot (good mornings, 5 × 12) stepped 10 lb. It now comes
+  from the movement done (LEGS or DEADLIFT → lower), a swap included.
+- Dumbbells and kettlebells (`bellOf`) step to the next size in the
+  household's equipment list (`bellSizesFor`, Admin's sizes, same unit):
+  10 → 20 with 5, 10, 20; at the heaviest bell it holds (a range stays at the
+  top of its reps). Light-week 80%, estimates and main-lift steps land on a
+  bell owned (`bellAtOrUnder`, `nextBell`). No sizes listed: steps as before.
+- The "Try … for your top set?" suggestion (no program target) needs Easy
+  too (was Easy or Solid) and names the next bell owned, or nothing at the top.
+
 ## 2026-11 — Endurance chart pop-ups; roadmap tidy (v0.693.0, web only)
 
 - `useChartTip` now on the Cardio page's pace chart (transparent r=10

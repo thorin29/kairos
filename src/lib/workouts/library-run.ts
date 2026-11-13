@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { getSetting, setSetting } from "@/lib/settings";
 import { defaultMetricFor } from "@/lib/workouts/catalog";
+import { bellOf } from "@/lib/workouts/bells";
 import {
   DEFAULT_EQUIPMENT,
   LIBRARY,
@@ -44,6 +45,19 @@ export function cleanEquipment(raw: unknown): EquipmentItem[] {
     });
   }
   return out;
+}
+
+/**
+ * The bell sizes on hand for a dumbbell or kettlebell movement (v0.694), from
+ * the household's equipment, in the movement's unit; null when it isn't a bell
+ * movement or no sizes are listed (then weights step as usual).
+ */
+export async function bellSizesFor(name: string, equipment: string | null | undefined, unit: string): Promise<number[] | null> {
+  const bell = bellOf(name, equipment);
+  if (!bell) return null;
+  const item = (await loadEquipment()).find((e) => e.key === (bell === "dumbbell" ? "dumbbells" : "kettlebells"));
+  if (!item || !item.have || item.sizes.length === 0 || (item.unit && item.unit !== unit)) return null;
+  return [...item.sizes].sort((a, b) => a - b);
 }
 
 /** The household's equipment: what's saved, else the starting list. */

@@ -12,6 +12,7 @@ import { adjustFactor, parseAdjust } from "@/lib/workouts/adjust";
  */
 import type { MuscleGroup } from "@/lib/workouts/catalog";
 import { EFFORT_LABEL, HURT_LABEL, type Effort, type HurtArea } from "@/lib/workouts/catalog";
+import { nextBell } from "@/lib/workouts/bells";
 
 export const RULES = {
   /** Days without a workout before "welcome back". */
@@ -345,6 +346,8 @@ export function movementSuggestion(input: {
   answered: ReadonlySet<string>;
   /** Sore spots (v0.675; was the last week's "Something hurt?" answers). */
   sore?: readonly { area: string; since: string }[];
+  /** Bell sizes on hand (v0.694): "Try" names the next bell owned. */
+  sizes?: readonly number[] | null;
 }): Suggestion | null {
   const { today, answered, history } = input;
 
@@ -367,10 +370,12 @@ export function movementSuggestion(input: {
     const a = topOf(history[0].sets);
     const b = topOf(history[1].sets);
     const effort = history[0].effort as Effort | null;
-    const easyEnough = effort === "EASY" || effort === "SOLID";
-    if (a && b && a.weight === b.weight && a.reps >= b.reps && a.reps > 0 && easyEnough) {
-      const step = input.unit === "kg" ? (input.lower ? 5 : 2.5) : input.lower ? 10 : 5;
-      const w = a.weight + step;
+    // Only Easy earns a step (v0.694; Solid used to count too).
+    const easyEnough = effort === "EASY";
+    const step = input.unit === "kg" ? (input.lower ? 5 : 2.5) : input.lower ? 10 : 5;
+    const next = a ? (input.sizes?.length ? nextBell(a.weight, input.sizes) : a.weight + step) : null;
+    if (a && b && next != null && a.weight === b.weight && a.reps >= b.reps && a.reps > 0 && easyEnough) {
+      const w = next;
       return {
         key: "next",
         title: `Try ${w} for your top set?`,

@@ -415,6 +415,8 @@ export async function movementSuggestionFor(input: {
   records: readonly RepRecord[];
   lower: boolean;
   unit: string;
+  /** Bell sizes on hand (v0.694). */
+  sizes?: readonly number[] | null;
 }): Promise<{ suggestion: Suggestion | null; recentTop: number | null }> {
   const { userId, dateISO, slot, movement } = input;
   const [answers, feedback, pool, sets, sore] = await Promise.all([
@@ -474,6 +476,7 @@ export async function movementSuggestionFor(input: {
     hasTarget: input.hasTarget,
     lower: input.lower,
     unit: input.unit,
+    sizes: input.sizes ?? null,
     feedback,
     lastBestOn,
     answered,

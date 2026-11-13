@@ -46,6 +46,7 @@ import { coreDayView, coreWorkoutsFor, syncCoreDays } from "@/lib/workouts/core-
 import { isExtraId } from "@/lib/workouts/day-extras";
 import { dayExtrasFor, extraPlanRows } from "@/lib/workouts/day-extras-run";
 import { aboutWithBellNote } from "@/lib/workouts/bells";
+import { bellSizesFor } from "@/lib/workouts/library-run";
 import {
   cleanCoreDay,
   coreMoveLabel,
@@ -1949,7 +1950,7 @@ export async function loadMovementLog(
   const records = repRecords(
     earlier.map((s) => ({ weight: s.weight, reps: s.reps, date: fromDateColumn(s.session.date) })),
   );
-  // How last time felt (v0.665): Easy steps a companion lift's weight up.
+  // How last time felt (v0.665): only Easy steps a companion lift's weight up (v0.694).
   const lastFb = last
     ? ((await prisma.workoutFeedback.findFirst({
         where: { userId, date: toDateColumn(last.date), slot: { in: [slotId, movement] } },
@@ -2009,8 +2010,9 @@ export async function loadMovementLog(
     movement,
     hasTarget: !!target,
     records,
-    lower: poolRow?.muscleGroup === "LEGS",
+    lower: poolRow?.muscleGroup === "LEGS" || poolRow?.muscleGroup === "DEADLIFT",
     unit,
+    sizes: poolRow ? await bellSizesFor(poolRow.name, poolRow.equipment, unit) : null,
   });
   return {
     sets: daySets.map(setRow),
@@ -2065,12 +2067,22 @@ export async function movementTarget(
   const units = await loadWeightUnits();
   const unit = units[(planned.muscleGroup ?? "CHEST") as MuscleGroup] ?? "lb";
   const bestForThree = records.filter((r) => r.reps >= 3).reduce((m, r) => Math.max(m, r.weight), 0) || null;
+  // The movement actually done (a swap's own), not the slot (v0.694): its
+  // body part sets the step (a fly in the Hinge slot steps like a fly), and
+  // dumbbells and kettlebells step to the sizes the household has.
+  const moveRow = (await prisma.poolExercise.findUnique({
+    where: { id: movement },
+    select: { name: true, muscleGroup: true, equipment: true },
+  })) as { name: string; muscleGroup: string | null; equipment: string | null } | null;
+  const moveLower = moveRow ? moveRow.muscleGroup === "LEGS" || moveRow.muscleGroup === "DEADLIFT" : !!role?.lower;
+  const sizes = moveRow ? await bellSizesFor(moveRow.name, moveRow.equipment, unit) : null;
   const sets = targetsFor({
     program,
     week,
     scheme,
     unit,
-    lower: role?.lower,
+    lower: moveLower,
+    sizes,
     // A swap keeps the scheme but not the planned lift's training max.
     trainingMax:
       movement !== slotId

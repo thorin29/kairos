@@ -26,3 +26,18 @@ export function aboutWithBellNote(about: string | null, name: string, equipment?
   if (!bell) return about;
   return [about?.trim(), bellWeightNote(bell)].filter(Boolean).join(" ");
 }
+
+/**
+ * Bell sizes on hand (v0.694): the next one up from `w`, or null when `w` is
+ * already the heaviest. A weight step on dumbbells goes to the next bell the
+ * household owns (10 → 20 with 5, 10, 20), never a size that isn't there.
+ */
+export function nextBell(w: number, sizes: readonly number[]): number | null {
+  return [...sizes].sort((a, b) => a - b).find((s) => s > w + 1e-9) ?? null;
+}
+
+/** The heaviest bell at or under `w`, else the lightest there is. */
+export function bellAtOrUnder(w: number, sizes: readonly number[]): number {
+  const sorted = [...sizes].sort((a, b) => a - b);
+  return sorted.filter((s) => s <= w + 1e-9).pop() ?? sorted[0];
+}

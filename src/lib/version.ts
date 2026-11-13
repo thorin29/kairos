@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.693.0";
+export const APP_VERSION = "0.694.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -145,6 +145,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.694.0",
+    summary: [
+      "Extra lifts (not a program's main lift) only suggest more weight after you mark them Easy. Solid, Hard, or no answer keeps the same weight.",
+      "Dumbbells and kettlebells step to the next size you own (Admin → equipment), never one you don't have.",
+      "A lift's step size comes from the exercise itself, so a fly steps like a fly even in a leg-day slot.",
+    ],
+  },
   {
     version: "0.693.0",
     summary: [

@@ -86,22 +86,20 @@ describe("companion weights", () => {
     const t = targetsFor({ program, week: 1, scheme: parseScheme("same:5x10")!, unit: "lb", last: heavy });
     expect(t.map((x) => x.weight)).toEqual([100, 100, 100, 100, 100]);
   });
-  it("steps a set up only when it reached its reps, or the movement felt Easy (v0.665)", () => {
+  it("steps a set up only when it felt Easy AND that set reached its reps (v0.694)", () => {
     const scheme = parseScheme("same:5x10")!;
     const done = [10, 10, 10, 10, 10].map((reps) => ({ weight: 130, reps }));
-    expect(targetsFor({ program, week: 1, scheme, unit: "lb", last: done }).map((x) => x.weight)).toEqual([135, 135, 135, 135, 135]);
+    // Every rep done but not Easy (Solid, Hard, no answer): holds.
+    expect(targetsFor({ program, week: 1, scheme, unit: "lb", last: done }).map((x) => x.weight)).toEqual([130, 130, 130, 130, 130]);
+    expect(targetsFor({ program, week: 1, scheme, unit: "lb", last: done, lastEasy: true }).map((x) => x.weight)).toEqual([135, 135, 135, 135, 135]);
+    // Easy, but sets that fell short hold.
     const missed = [10, 10, 10, 9, 8].map((reps) => ({ weight: 130, reps }));
-    expect(targetsFor({ program, week: 1, scheme, unit: "lb", last: missed }).map((x) => x.weight)).toEqual([135, 135, 135, 130, 130]);
     expect(targetsFor({ program, week: 1, scheme, unit: "lb", last: missed, lastEasy: true }).map((x) => x.weight)).toEqual([
-      135, 135, 135, 135, 135,
+      135, 135, 135, 130, 130,
     ]);
-    // Ramped sets keep their own weights.
+    // Ramped sets keep their own weights; Solid holds every one.
     const ramp = [10, 10, 20, 20, 20].map((weight) => ({ weight, reps: 12 }));
-    expect(
-      targetsFor({ program, week: 1, scheme: parseScheme("same:5x12")!, unit: "lb", last: ramp.map((s, i) => (i === 4 ? { ...s, reps: 10 } : s)) }).map(
-        (x) => x.weight,
-      ),
-    ).toEqual([15, 15, 25, 25, 20]);
+    expect(targetsFor({ program, week: 1, scheme: parseScheme("same:5x12")!, unit: "lb", last: ramp }).map((x) => x.weight)).toEqual([10, 10, 20, 20, 20]);
   });
 });
 
