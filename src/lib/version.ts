@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.695.0";
+export const APP_VERSION = "0.696.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -170,6 +170,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.696.0",
+    summary: [
+      "Admin locks itself after a set time with no use: 5, 15 or 30 minutes, 1 or 4 hours (Admin → Settings → Device).",
+      "Full-body lifts like cleans, thrusters and the Turkish get-up now show on the body map; burpees, slams and jump rope add to the heart.",
+      "The Remaining sets −5 / +5 buttons are gone from logging a movement.",
+      "An event that ends before it starts turns the end red, and Save waits until it's fixed.",
+    ],
+  },
   {
     version: "0.695.0",
     summary: [

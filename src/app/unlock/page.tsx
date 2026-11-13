@@ -23,7 +23,7 @@ export default async function UnlockPage() {
           Admin PIN
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Unlocks the admin area for a few hours.
+          Unlocks the admin area.
         </p>
       </header>
 

@@ -18,7 +18,7 @@ import { fromDateColumn } from "@/lib/dates";
 import { doneOn } from "@/lib/queries/movement-stats";
 import { OPTIONAL_CATEGORIES } from "@/lib/workouts/blocks";
 import type { MuscleGroup } from "@/lib/workouts/catalog";
-import { groupsFor } from "@/lib/workouts/involvement";
+import { groupsFor, heartMinutes, involvementFor } from "@/lib/workouts/involvement";
 import { buildHeat, scoreSets, type HeatMap, type HeatSet } from "@/lib/workouts/heat";
 import { buildTrainingHeat, type CardioEntry, type Pause, type TrainingHeat } from "@/lib/workouts/training-heat";
 import { lightFactor } from "@/lib/workouts/suggest";
@@ -75,6 +75,9 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
 
   const sets: HeatSet[] = [];
   const light: boolean[] = [];
+  // Conditioning moves logged as sets outside a conditioning workout (v0.696):
+  // minutes for the endurance heart, by day and movement.
+  const extraHeart = new Map<string, { date: string; minutes: number; effort: string | null }>();
   const { days: adjusted, marks } = await adjustedDays(userId);
   for (const r of rows) {
     if (!r.poolExerciseId || !r.poolExercise) continue;
@@ -86,8 +89,22 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
     }
     const primary = g.primary && ON_BODY.has(g.primary) ? g.primary : null;
     const secondary = g.secondary.filter((x) => ON_BODY.has(x) && x !== "DEADLIFT");
-    if (!primary && secondary.length === 0) continue;
     const slot = r.swappedFromId ?? r.poolExerciseId;
+    if (!primary && secondary.length === 0) {
+      if (r.session.category !== "HIIT" && involvementFor(r.poolExercise.name)?.endurance) {
+        const day = doneOn(r.session);
+        const key = `${day}|${r.poolExerciseId}`;
+        const e = extraHeart.get(key) ?? {
+          date: day,
+          minutes: 0,
+          effort:
+            effortOn.get(`${fromDateColumn(r.session.date)}|${slot}`) ?? effortOn.get(`${day}|${slot}`) ?? null,
+        };
+        e.minutes += heartMinutes(r.seconds);
+        extraHeart.set(key, e);
+      }
+      continue;
+    }
     sets.push({
       date: doneOn(r.session),
       movement: r.poolExerciseId,
@@ -111,9 +128,13 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
   const heat = buildHeat(sets, todayISO, unit);
   const scores = scoreSets(sets);
   const endurance = await cardioEntries(userId, effortOn);
+  const heartEntries: CardioEntry[] = [
+    ...endurance.entries,
+    ...[...extraHeart.values()].map((e) => ({ ...e, kind: "conditioning", type: "conditioning" as const })),
+  ];
   const training: TrainingHeat = buildTrainingHeat(
     sets.map((s, i) => ({ ...s, credit: scores[i].credit, light: light[i] })),
-    endurance.entries,
+    heartEntries,
     todayISO,
     await pausesFor(userId),
     await soreHolds(userId, todayISO),

@@ -62,12 +62,15 @@ export function TimeSelect({
   onChange,
   ariaLabel,
   className = "",
+  invalid = false,
 }: {
   name?: string;
   value: string;
   onChange: (v: string) => void;
   ariaLabel?: string;
   className?: string;
+  /** Red border and text: the time can't be saved as it is (end before start). */
+  invalid?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -182,8 +185,9 @@ export function TimeSelect({
       <button
         type="button"
         aria-label={ariaLabel}
+        aria-invalid={invalid || undefined}
         onClick={() => setOpen((o) => !o)}
-        className="tabular flex h-11 w-full items-center justify-between rounded-full border border-hairline bg-surface px-5 text-left outline-none focus:border-accent"
+        className={`tabular flex h-11 w-full items-center justify-between rounded-full border bg-surface px-5 text-left outline-none focus:border-accent ${invalid ? "border-red-500 text-red-700" : "border-hairline"}`}
       >
         <span>{label}</span>
         <svg

@@ -132,7 +132,7 @@ describe("timed holds and core days", () => {
 
   it("reports the longest hold with PFT points", () => {
     const heat = buildHeat([hold("2026-09-01", 100), hold("2026-11-01", 150)], "2026-11-04");
-    const core = heat.ranges.find((r) => r.key === "4w")!.groups.find((g) => g.group === "CORE")!;
+    const core = heat.ranges.find((r) => r.key === "12w")!.groups.find((g) => g.group === "CORE")!;
     expect(core.bests[0]).toMatchObject({ kind: "time", from: 100, to: 150, pft: 71 });
   });
 

@@ -1463,8 +1463,7 @@ function lastText(s: MovementSetRow | undefined, metric: Metric): string {
  * One movement, every set. Last time's sets fill each box as a greyed hint;
  * typing replaces only that box. ✓ saves the set straight away (the movement
  * is sent whole each time, so it's safe to repeat). Removing a saved set asks
- * first. "Remaining sets" moves the hints of sets not entered yet, never what
- * was typed. Log finishes: it saves anything typed but not ticked, then goes
+ * first. Log finishes: it saves anything typed but not ticked, then goes
  * back to the day.
  */
 /**
@@ -1637,12 +1636,10 @@ function MovementLogger({
 }) {
   const slotId = exercise.poolExerciseId;
   const unit = metric === "WEIGHT" ? exercise.unit || "lb" : metric === "REPS" ? "reps" : "sec";
-  const step = unit === "kg" ? 2.5 : 5;
 
   const [log, setLog] = useState<MovementLog | null>(null);
   const [failed, setFailed] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
-  const [shift, setShift] = useState(0);
   const [doing, setDoing] = useState<{ id: string; name: string } | null>(null);
   const [picking, setPicking] = useState(false);
   const [confirmKey, setConfirmKey] = useState<number | null>(null);
@@ -1680,7 +1677,7 @@ function MovementLogger({
     };
   }, [userId, dateISO, slotId]);
 
-  const hintW = (r: Row) => (r.hintW != null && r.w === "" && !r.saved ? r.hintW + shift : r.hintW);
+  const hintW = (r: Row) => r.hintW;
   // A timed hold with a weight in hand (v0.677.1): a weight beside each time.
   const holdUnit = metric === "DURATION" ? (log?.holdUnit ?? null) : null;
   const showW = metric === "WEIGHT" || !!holdUnit;
@@ -1762,7 +1759,7 @@ function MovementLogger({
         w: "",
         r: "",
         s: "",
-        hintW: v.weight != null ? v.weight - shift : null,
+        hintW: v.weight ?? null,
         hintR: v.reps,
         hintS: v.seconds,
         saved: false,
@@ -1892,7 +1889,7 @@ function MovementLogger({
       const open = rows.filter((r) => !r.saved && r.w === "" && r.hintW != null);
       const max = Math.max(...open.map((r) => r.hintW as number));
       setRows((rs) =>
-        rs.map((r) => (open.includes(r) && r.hintW === max ? { ...r, hintW: (s.weight as number) - shift } : r)),
+        rs.map((r) => (open.includes(r) && r.hintW === max ? { ...r, hintW: s.weight as number } : r)),
       );
     } else if (answer === "swap") {
       setPicking(true);
@@ -2188,30 +2185,6 @@ function MovementLogger({
                 >
                   Same as last time
                 </button>
-              )}
-              {metric === "WEIGHT" && hasHints && !strict && (
-                <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted">
-                  Remaining sets
-                  <button
-                    type="button"
-                    onClick={() => setShift((s) => s - step)}
-                    aria-label={`Lower the remaining sets by ${step} ${unit}`}
-                    className="tabular h-10 w-11 rounded-full border border-hairline text-sm font-bold text-ink hover:border-accent"
-                  >
-                    −{fmtNumber(step)}
-                  </button>
-                  <span className="tabular min-w-[3.25rem] text-center text-xs font-semibold text-accent">
-                    {shift === 0 ? "" : `${shift > 0 ? "+" : "−"}${fmtNumber(Math.abs(shift))} ${unit}`}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShift((s) => s + step)}
-                    aria-label={`Raise the remaining sets by ${step} ${unit}`}
-                    className="tabular h-10 w-11 rounded-full border border-hairline text-sm font-bold text-ink hover:border-accent"
-                  >
-                    +{fmtNumber(step)}
-                  </button>
-                </span>
               )}
             </div>
           </div>

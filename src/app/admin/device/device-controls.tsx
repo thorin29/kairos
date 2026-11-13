@@ -6,6 +6,15 @@ import {
   setDeviceModeAction,
   setRequireLoginAction,
 } from "@/lib/actions/device";
+import { setAdminIdleAction } from "@/lib/actions/admin-lock";
+
+const IDLE_LABELS: [number, string][] = [
+  [5, "5 min"],
+  [15, "15 min"],
+  [30, "30 min"],
+  [60, "1 hr"],
+  [240, "4 hr"],
+];
 import type { DeviceMode } from "@/lib/device";
 
 export function DeviceControls({
@@ -14,12 +23,14 @@ export function DeviceControls({
   loginable,
   pinSet,
   edgeEnforced,
+  idleMinutes,
 }: {
   mode: DeviceMode;
   requireLogin: boolean;
   loginable: number;
   pinSet: boolean;
   edgeEnforced: boolean;
+  idleMinutes: number;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -30,6 +41,16 @@ export function DeviceControls({
     setError(null);
     start(async () => {
       const r = await setDeviceModeAction(next);
+      if (r.error) setError(r.error);
+      else router.refresh();
+    });
+  };
+
+  const pickIdle = (minutes: number) => {
+    if (minutes === idleMinutes) return;
+    setError(null);
+    start(async () => {
+      const r = await setAdminIdleAction(minutes);
       if (r.error) setError(r.error);
       else router.refresh();
     });
@@ -74,6 +95,32 @@ export function DeviceControls({
           ))}
         </div>
       </section>
+
+      {pinSet && (
+        <section className="space-y-3 rounded-2xl border border-hairline bg-surface p-5">
+          <div>
+            <p className="font-medium">Auto-lock</p>
+            <p className="text-sm text-muted">Locks admin after no use for</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {IDLE_LABELS.map(([m, label]) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => pickIdle(m)}
+                disabled={pending}
+                className={`h-11 flex-1 rounded-full border px-3 text-sm font-medium transition-colors disabled:opacity-50 ${
+                  idleMinutes === m
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-hairline bg-ground text-muted hover:text-ink"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="space-y-3 rounded-2xl border border-hairline bg-surface p-5">
         <div className="flex items-start justify-between gap-4">

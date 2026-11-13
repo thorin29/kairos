@@ -84,6 +84,13 @@ export type Involvement = {
    * the lists and on Workout days.
    */
   shownAs?: "LOWER_BACK";
+  /**
+   * Conditioning work with no one muscle to credit (v0.696): burpees, bear
+   * crawls, jump rope, slams, wall balls, throws. Logged as sets outside a
+   * conditioning workout, they add minutes to the endurance heart instead
+   * (heat-run.ts); inside one, the workout's own minutes already count.
+   */
+  endurance?: boolean;
 };
 
 /** Keyword rules, first match wins — order matters. */
@@ -251,6 +258,42 @@ const RULES: { match: RegExp; involvement: Involvement }[] = [
   },
 
   // --- whole-body ---------------------------------------------------------
+  // Full-body moves split (v0.696). Lifts get the muscle that drives them, so
+  // they reach a place on the body map and count for it; conditioning moves
+  // feed the endurance heart (`endurance`). Mobility (inchworm, world's
+  // greatest stretch) stays out: warm-up work counts for neither.
+  {
+    match: /\b(over ?shoulder toss|ball slam|slam ball|slam|wall ?ball|throw|toss)\b/,
+    involvement: { suggestedPrimary: "FULL_BODY", secondary: [], endurance: true },
+  },
+  {
+    match: /\b(burpee|bear crawl|jump ?rope|skipping|skip rope)/,
+    involvement: { suggestedPrimary: "FULL_BODY", secondary: [], endurance: true },
+  },
+  {
+    match: /\bclean (and )?(press|jerk)\b|\bjerk\b/,
+    involvement: { suggestedPrimary: "SHOULDERS", secondary: ["LEGS", "CORE", "ARMS"] },
+  },
+  {
+    match: /\b(clean|snatch)\b/,
+    involvement: { suggestedPrimary: "LEGS", secondary: ["BACK", "SHOULDERS", "CORE"] },
+  },
+  {
+    match: /\bthruster/,
+    involvement: { suggestedPrimary: "LEGS", secondary: ["SHOULDERS", "CORE", "ARMS"] },
+  },
+  {
+    match: /\bget ?up\b/,
+    involvement: { suggestedPrimary: "CORE", secondary: ["SHOULDERS", "LEGS"] },
+  },
+  {
+    match: /\bover ?(the )?shoulder\b/,
+    involvement: { suggestedPrimary: "LEGS", secondary: ["BACK", "CORE"] },
+  },
+  {
+    match: /\bmid ?thigh pull\b/,
+    involvement: { suggestedPrimary: "BACK", secondary: ["LEGS", "ARMS"], suggestedMetric: "DURATION" },
+  },
   {
     match: /\b(clean|snatch|thruster|burpee|jerk)/,
     involvement: { suggestedPrimary: "FULL_BODY", secondary: ["LEGS", "SHOULDERS", "BACK", "CORE"] },
@@ -286,6 +329,13 @@ export function involvementFor(name: string): Involvement | null {
   const n = normalise(name);
   for (const r of RULES) if (r.match.test(n)) return r.involvement;
   return null;
+}
+
+/** A conditioning move's set as heart minutes (v0.696): its time when it was
+ *  timed (jump rope, a bear crawl for time), else a minute a set, which is
+ *  about a set of burpees or slams with the breath after it. */
+export function heartMinutes(seconds: number | null): number {
+  return seconds != null && seconds > 0 ? seconds / 60 : 1;
 }
 
 /**

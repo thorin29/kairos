@@ -194,7 +194,8 @@ describe("carries on the body (v0.690)", () => {
     // A deliberate filing still wins.
     expect(groupsFor("Farmer carry", "CORE").primary).toBe("CORE");
     expect(navRegionFor("Farmer carry", "FULL_BODY")).toBe("ARMS");
-    // Unknown full-body movements keep Full body.
-    expect(groupsFor("Turkish get-up", "FULL_BODY").primary).toBe("FULL_BODY");
+    // Unknown full-body movements keep Full body (the get-up is known since v0.696: Core).
+    expect(groupsFor("Mystery complex", "FULL_BODY").primary).toBe("FULL_BODY");
+    expect(groupsFor("Turkish get-up", "FULL_BODY").primary).toBe("CORE");
   });
 });

@@ -640,6 +640,16 @@ function EventModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repeatingSeries, allDay, startDate, startTime, endTime]);
 
+  // The app's rule (CalendarAddEvent.kt timeInvalid): an all-day event can't
+  // end before it starts, and a timed one must end after it starts. The end
+  // goes red and Save stays off until it's fixed. A repeating series' end is a
+  // time only (the next day when earlier), so it is never invalid.
+  const timeInvalid = repeatingSeries
+    ? false
+    : allDay
+      ? endDate < startDate
+      : daysBetween(startDate, endDate) * 1440 + hhmmToMin(endTime) - hhmmToMin(startTime) <= 0;
+
   const [state, formAction, pending] = useActionState(
     editing ? updateEvent : addEvent,
     initial,
@@ -908,7 +918,7 @@ function EventModal({
                       min={startDate}
                       value={endDate}
                       onChange={setEndDate}
-                      className={`tabular ${field}`}
+                      className={`tabular ${timeInvalid ? field.replace("border-hairline", "border-red-500 text-red-700") : field}`}
                     />
                   </div>
                 )}
@@ -959,6 +969,7 @@ function EventModal({
                       value={endTime}
                       onChange={setEndTime}
                       className="min-w-0 flex-[2]"
+                      invalid={timeInvalid}
                     />
                     {repeatingSeries && endDate > startDate && (
                       <span className="shrink-0 text-xs text-muted">next day</span>
@@ -1266,7 +1277,7 @@ function EventModal({
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || timeInvalid}
               className="inline-flex h-11 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent shadow-sm transition-all hover:shadow-md hover:brightness-110 disabled:opacity-50"
             >
               {pending

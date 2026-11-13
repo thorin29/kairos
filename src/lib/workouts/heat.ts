@@ -42,15 +42,12 @@ export type HeatSet = {
 
 export type SetScore = { credit: number; heavy: boolean };
 
-export const HEAT_RANGES = [
-  { key: "1w", label: "1 week", short: "1 wk", days: 7 },
-  { key: "4w", label: "4 weeks", short: "4 wk", days: 28 },
-  { key: "12w", label: "12 weeks", short: "12 wk", days: 84 },
-  { key: "6m", label: "6 months", short: "6 mo", days: 182 },
-  { key: "all", label: "All", short: "All", days: null },
-] as const;
+/** The one range still built (v0.696): both clients read only the 12-week
+ *  summary, for a muscle with no weight charts (`HeatGroupSummary`). The 1-week,
+ *  4-week, 6-month and all-time ranges fed the range picker the training heat
+ *  map replaced in v0.664. `ranges` stays an array so the contract is unchanged. */
+export const HEAT_RANGES = [{ key: "12w", label: "12 weeks", short: "12 wk", days: 84 }] as const;
 export type HeatRangeKey = (typeof HEAT_RANGES)[number]["key"];
-export const DEFAULT_HEAT_RANGE: HeatRangeKey = "12w";
 
 export type HeatBest = {
   name: string;
@@ -239,8 +236,6 @@ const addDaysISO = (iso: string, n: number) => {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 };
-const daysBetween = (a: string, b: string) =>
-  Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 
 /** Best weight at the rep count done most in the range, then and now. */
 function bestsFor(sets: readonly HeatSet[], group: string, from: string, today: string): HeatBest[] {
@@ -301,10 +296,9 @@ function bestsFor(sets: readonly HeatSet[], group: string, from: string, today: 
   return out;
 }
 
-/** Every range, every group that has been trained, as of `today`. */
+/** The 12-week range, every group that has been trained, as of `today`. */
 export function buildHeat(sets: readonly HeatSet[], today: string, unit = "lb"): HeatMap {
   const scores = scoreSets(sets);
-  const first = sets.reduce<string | null>((m, s) => (m == null || s.date < m ? s.date : m), null);
   const groups = new Set<string>();
   for (const s of sets) {
     if (s.primary) groups.add(s.primary);
@@ -312,8 +306,8 @@ export function buildHeat(sets: readonly HeatSet[], today: string, unit = "lb"):
   }
 
   const ranges: HeatRange[] = HEAT_RANGES.map((r) => {
-    const from = r.days != null ? addDaysISO(today, -(r.days - 1)) : (first ?? today);
-    const days = r.days ?? Math.max(7, daysBetween(from, today) + 1);
+    const from = addDaysISO(today, -(r.days - 1));
+    const days = r.days;
     const weeks = days / 7;
     const credit = new Map<string, number>();
     const heavy = new Map<string, number>();

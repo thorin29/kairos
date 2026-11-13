@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.695.0 / app v0.502.0, versionCode 574)
+## Current status (13 Nov 2026, web v0.696.0 / app v0.503.0, versionCode 575)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -110,6 +110,14 @@ in the project docs (workouts-plan, workouts-programs-plan, workouts-next-plan).
   - App **Settings reorganized** (app 0.501): profile card, Account (Password,
     Devices, Sign out), Look & feel, Notifications & reminders, Connected apps,
     Parents, Help & about.
+- **Loose ends (web 0.696 / app 0.502–0.503):**
+  - admin auto-lock after idle time (Admin → Settings → Device);
+  - full-body moves on the body map and the heart;
+  - the web all-day form's red end and disabled Save;
+  - Remaining sets removed on both clients;
+  - the heat map's unused ranges and dead app code removed;
+  - every app pop-up on `AnimatedDialog`;
+  - the ROADMAP checked against the code.
 - **0.695:** `MIGRATIONS` in `version.ts` had stopped at 127, so `/about` wasn't
   checking migrations 128–152. They're registered now.
 
@@ -130,23 +138,25 @@ companions art) are recorded there and in DECISIONS.md.
 
 Also agreed and not built:
 
-- the Seasons quality signal (workout progress, such as the heat scoring, into
-  Strength; reading beyond the plan into Wisdom);
+- the Seasons quality signal (workout progress into Strength; reading beyond
+  the plan into Wisdom), kept as is for now;
+- calibrating growth pace and egg rarity (needs a fresh scoring snapshot);
 - the game-time gaps (see Game time below);
 - ice-time following a schedule index page.
 
 Next up, roughly in order:
-- The Seasons quality signal: today Strength mostly counts that you worked out.
-- Dashboard weather and forecast, per-person dashboard ordering.
-- Assorted smaller items listed per section below.
+- Calibrate growth pace and egg rarity from a fresh scoring snapshot.
+- The features listed per section below, to explore later.
 
 ---
 
 ## Personal settings (per-user, non-admin)
 
 Decided 13 Nov: the web is a shared device, so it has no personal settings
-(no settings icon, no personal defaults). Personal settings live in the phone
-app's Settings. Admin keeps its PIN on the web for the same reason.
+to build. The code keeps Personal mode as an admin option (Admin →
+Settings → Device), with its profile page (picture, colour, password,
+Concept2, workout timer), but it isn't advertised; personal settings
+belong in the phone app. Admin keeps its PIN on the web for the same reason.
 
 - [x] Change your own password (web 0.605 profile page / app 0.413 Settings).
 - [x] Appearance / themes — light and **dark mode**, plus **eight color themes**
@@ -373,6 +383,11 @@ Characters. Each drawer entry keeps its web brand colour.
       the event name, and re-arms on reboot. Reminders are **app-only** (no web
       event-editor reminders for now); the per-type default field exists in the
       schema, kept OFF, with no UI. Originally specced below as FCM/push:
+- Push stays **local** by decision (13 Nov): no FCM. If server-triggered,
+  instant notifications are ever wanted (a parent sets a Family WOD, an
+  approval lands), the option is self-hosted **UnifiedPush** (an ntfy
+  container on the server) rather than FCM: no Google account or keys, and
+  household notifications stay in the house. Not planned; noted as the path.
 - [x] **Offline** for the personal daily surface and the calendar (two-way),
       replaying writes through the same POST endpoints — see the phone app.
 
@@ -468,12 +483,6 @@ scoping is worth doing regardless of the app; the layout tweaks are really the
 phone screens. Track A (the non-personal fixes) shipped in 0.159.0; these are
 the remaining personal-view items:
 
-- [ ] #2 Home/card: open straight onto the card contents (not the summary
-      tile); completeness bars at the top; drop the "personal view — {name}"
-      banner and the red exclamation; surface up-for-grabs and always-open
-      chores that are currently missing from the personal home.
-- [ ] #4 (personal half): "This week" and "Weekly rotation" show only the
-      signed-in user; keep shared chores; (always-open counts shipped in 0.159).
 - [x] #6 Reading — only your own reading.
 - [x] #7 School — only your classes, assignments, tests.
 - [x] #8 Game time — only you.
@@ -729,9 +738,9 @@ the remaining personal-view items:
       shows the same start and end; multi-day all-day events keep their full span;
       storage still uses an exclusive end (last day + 1). Both clients have Starts
       and Ends fields, and flipping the All-day switch normalises the dates/times.
-- [ ] **Web all-day cosmetics** — the web form still *displays* the exclusive end
-      date and lacks the app's red-field / disabled-Save feedback. Capability is
-      the same on both clients; only the polish differs. Small.
+- [x] **Web all-day cosmetics** — the web form shows inclusive dates (v0.521–0.526),
+      and since v0.696 an end before the start turns the end red and keeps Save
+      off, the app's rule (`timeInvalid`).
 - [x] All-day events shade their whole day column in a light tint of their
       colour, decided per event: a "Shade this day" box on the add-event form
       and a per-person "shade this birthday" toggle. Several shaded events on one
@@ -776,11 +785,6 @@ the remaining personal-view items:
       the Type dropdown alongside the built-in kinds, with no separate "Custom"
       heading (v0.73.0). "Other" was dropped from the built-in list — add it as
       a custom type if ever needed (v0.74.0)
-- [ ] Built-in event kinds (Appointment, Class, Work shift, Birthday) stay
-      coloured by person by design, so they can't be recoloured or renamed like
-      custom types. Possible future option: let an admin give a built-in kind
-      its own colour, or set it to the family colour, without touching the
-      per-person colouring elsewhere
 - [x] Family calendar colour accepts any custom hex, not just presets (v0.43.0)
 - [x] Family-owned subscribed calendars: a subscribed (ICS) feed can belong to
       the shared Family identity ("Family (shared)" in the subscribe form)
@@ -1399,8 +1403,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [ ] Lighter collect mechanic for a 50+ roster: streak/token/coin currency to
       earn or buy eggs; essence banked from would-be duplicates toward a chosen
       creature; egg-era selection
-- [ ] Calibrate incubation XP and rarity odds against the Season planner once
-      all events are locked in (levels/odds driven by real workload)
 - [x] New eras' art: all seven eras (Modern, '80s/'90s, Arcade, Dragon, Vintage,
       WW2, Imaginary) are in — 52 creatures
 - [ ] Season tier rewards: cosmetic unlocks only for the individual track —
@@ -1533,10 +1535,11 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       Cloudflared) plus a decision on what's reachable. The phone app forces
       this: an allowlisted APK on a child's device must reach Kairos over the
       tunnel. Revisit when device modes land.
-- [~] Session lifetime / auto-lock: admin unlock is now 4h and is re-checked at
-      the edge on every admin navigation (v0.176). A true inactivity auto-lock
-      (rolling idle timeout) for the shared wall tablet is still open.
-      (Personal sessions are deliberately long — a phone should stay signed in.)
+- [x] Session lifetime / auto-lock: admin locks after a set time with no admin
+      activity (5, 15, 30 min, 1 or 4 hr; Admin → Settings → Device, v0.696).
+      Opening an admin page or tapping on one pushes it back; the page goes to
+      the PIN screen when it runs out. (Personal sessions are deliberately long
+      — a phone should stay signed in.)
 - [x] Per-device session revocation: personal sessions are stateless, so
       "sign out everywhere" is currently all-or-nothing via `credentialVersion`.
       A Session table would allow listing and revoking individual devices —
@@ -1569,15 +1572,9 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       `AlertDialog`/`Dialog` call sites were converted to the house `AnimatedDialog`
       across HomeScreen, AppRoot, the bible wizards, calendar, and the workout
       create/edit + wizard confirms. Original note:
-- [ ] **App pop-ups added since that conversion** (re-checked 13 Nov): 19 files
-      use Material's stock `AlertDialog` instead of `AnimatedDialog`, which breaks
-      the house rule. Mostly workouts (WorkoutChart, WorkoutLogScreen,
-      MovementSetsScreen, ProgramsScreen, CoreDays, CardioBlock, EnduranceCharts,
-      HeatView, FamilyWod, AdditionalPicker, WarmupScreens, PlanFileSheets,
-      EditPlanScreen, CustomWorkoutForm, ConditioningCard), plus
-      AppearanceScreen, DefaultRemindersScreen, AssignTaskScreen,
-      CalendarAddEvent / LocationField, and the sign-in RecoverDialog /
-      ForgotPasswordDialog. Mechanical, but touches many screens.
+- [x] **App pop-ups added since that conversion**: all 43 stock `AlertDialog`s
+      in 22 files now use `AnimatedDialog` (app 0.503.0), whose content shrinks
+      first so its buttons stay on screen.
 
 ## Pending — app parity (from the Sept web run, v0.318–0.333)
 
@@ -1685,15 +1682,14 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   RCON/logs, or accept it). PC play through the Xbox app on a shared family PC
   doesn't surface reliably in Home Assistant and probably has no sensor-based
   fix. Tracked in the collector repo.
-- [ ] Body-map regions: 21 of the 168 library movements are full-body (power
-  clean, thrusters, snatches, Turkish get-up, wall ball, burpee, bear crawl…)
-  and reach no place on the body map by design (`navRegionFor` returns null
-  for FULL_BODY). Decide whether any should show somewhere. (Checked 13 Nov.
-  Done since: carries, v0.690; midnight rollover, v0.687 / app 0.497. Grouped
-  charts squashing a light lift against a heavy one is gone: every lift has
-  its own row and chart since v0.670.)
-- [x] Remaining sets −5 / 0 / +5 control removed from the app's log-a-movement
-  screen (app 0.502.0). The web logger still has its own "Remaining sets".
+- [x] Full-body moves (v0.696): lifts get the muscle that drives them (cleans,
+  snatches, thrusters → Legs; clean and press → Shoulders; Turkish get-up →
+  Core; mid-thigh pull → Back), and conditioning moves logged as sets
+  (burpee, bear crawl, jump rope, slams, wall ball, throws) add minutes to the
+  endurance heart. Mobility (inchworm, world's greatest stretch) stays out.
+  Grouped charts squashing a light lift: gone since every lift has its own
+  chart (v0.670).
+- [x] Remaining sets −5 / 0 / +5 control removed: app 0.502.0, web v0.696.
 
 ## Scoring rework (web 0.603 / app 0.411)
 
@@ -1702,8 +1698,11 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   egg luck from the last 14 days' completion; Life from confirmed team sport;
   bar colours from what earned the growth; scoring snapshot shows the real
   rules; "How scoring works" on web and in app Settings. docs/SCORING.md.
-- [ ] Re-check with a fresh snapshot after two weeks (growth rate per kid,
-  family-goal target — 15 may now be easy).
+- [ ] Calibrate growth pace and egg rarity against real data (replaces the old
+  "calibrate incubation XP" line: incubation XP was replaced by growth in
+  0.603). Needs a fresh scoring snapshot (Admin → Season planner) and a target
+  pace: how often a kid should hatch, and how rare a rare should feel.
+  Also checks the family-goal target (15 may now be easy).
 
 ## Hockey (web 0.600 / app 0.409)
 
@@ -1756,9 +1755,9 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.695.0 (migrations through 152_person_pause, all registered
+- Web APP_VERSION 0.696.0 (migrations through 152_person_pause, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.502.0 / versionCode 574 / CLIENT_BUILD 574.
+- App versionName 0.503.0 / versionCode 575 / CLIENT_BUILD 575.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.

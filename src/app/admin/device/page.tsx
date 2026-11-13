@@ -3,17 +3,18 @@ import { LockButton } from "../lock-button";
 import { deviceMode } from "@/lib/device";
 import { loginRequired } from "@/lib/gate";
 import { loginableCount } from "@/lib/accounts";
-import { adminPinSet } from "@/lib/session";
+import { adminPinSet, adminIdleMinutes } from "@/lib/session";
 import { DeviceControls } from "./device-controls";
 
 export const dynamic = "force-dynamic";
 
 export default async function DeviceAdminPage() {
-  const [mode, gate, loginable, pinSet] = await Promise.all([
+  const [mode, gate, loginable, pinSet, idleMinutes] = await Promise.all([
     deviceMode(),
     loginRequired(),
     loginableCount(),
     adminPinSet(),
+    adminIdleMinutes(),
   ]);
   // Whether the edge (middleware) gate is actually active. This is the only
   // thing that secures a public site on every navigation; the in-app toggle
@@ -46,6 +47,7 @@ export default async function DeviceAdminPage() {
         loginable={loginable}
         pinSet={pinSet}
         edgeEnforced={edgeEnforced}
+        idleMinutes={idleMinutes}
       />
     </main>
   );

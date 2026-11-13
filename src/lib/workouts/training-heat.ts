@@ -39,6 +39,9 @@
  * (about the 150-minute health guideline) yellow; and that up 10% on 12 weeks
  * ago (6-week averages) orange, up 20% on 26 weeks ago dark orange. Red is
  * 200 a week, up 15% and 25%. Steady at the guideline stays yellow.
+ * Conditioning moves logged as sets outside a conditioning workout (burpees,
+ * slams, jump rope; involvement.ts `endurance`) add their time, or a minute a
+ * set, as conditioning (v0.696, heat-run.ts).
  */
 
 export type TrainSet = {

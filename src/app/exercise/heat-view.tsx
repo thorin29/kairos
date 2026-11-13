@@ -5,8 +5,6 @@ import { InfoIcon } from "@/components/icons";
 import { ChartTip, useChartTip } from "@/components/chart-tip";
 import type { NavRegion } from "@/lib/workouts/involvement";
 import {
-  DEFAULT_HEAT_RANGE,
-  HEAT_RANGES,
   type HeatGroup,
   type HeatMap,
   type HeatRange,
@@ -25,26 +23,18 @@ import type { TrainGroup, TrainingHeat } from "@/lib/workouts/training-heat";
  */
 
 const HEAT_ON_KEY = "kairos.heat.on";
-const HEAT_RANGE_KEY = "kairos.heat.range";
 
 export function useHeatPrefs() {
   const [on, setOnState] = useState(false);
-  const [range, setRangeState] = useState<HeatRangeKey>(DEFAULT_HEAT_RANGE);
   // Read after mount so the server render and the first client render agree.
   useEffect(() => {
     setOnState(readPref(HEAT_ON_KEY, "0") === "1");
-    const r = readPref(HEAT_RANGE_KEY, DEFAULT_HEAT_RANGE);
-    if (HEAT_RANGES.some((x) => x.key === r)) setRangeState(r as HeatRangeKey);
   }, []);
   const setOn = (v: boolean) => {
     setOnState(v);
     writePref(HEAT_ON_KEY, v ? "1" : "0");
   };
-  const setRange = (v: HeatRangeKey) => {
-    setRangeState(v);
-    writePref(HEAT_RANGE_KEY, v);
-  };
-  return { on, setOn, range, setRange };
+  return { on, setOn };
 }
 
 /** The group a tap target stands for in the heat view. */

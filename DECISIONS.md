@@ -1,5 +1,59 @@
 # Decisions
 
+## 2026-11 — Admin auto-lock, full-body moves, one heat range, web Remaining sets gone (v0.696.0 / app 0.503.0)
+
+- **Admin auto-lock after idle time.** `adminIdleMinutes` (5, 15, 30, 60 or
+  240; default 240) in Admin → Settings → Device, shown only when a PIN is set.
+  - The unlock cookie keeps its `expires.signature` format, so the edge check
+    in middleware.ts is unchanged; only its length moved from a fixed 4 hours
+    to the setting.
+  - `AdminIdleLock` (admin layout, client) calls `touchAdminAction` on every
+    admin page and on taps or typing (at most once a minute).
+    `touchAdminSession` re-issues a still-valid cookie with a fresh expiry and
+    never starts an unlock. When the time runs out the page goes to `/unlock`.
+  - The layout guard alone only covers hard loads, which is why activity is
+    tracked on the client.
+- **Full-body moves split** (involvement.ts).
+  - Lifts get the muscle that drives them: cleans, snatches, thrusters and
+    the sandbag over shoulder → Legs; clean and press / jerk → Shoulders;
+    Turkish get-up → Core; mid-thigh pull → Back. They now count for that
+    muscle's progress like any of its own lifts.
+  - Conditioning moves (burpee, bear crawl, jump rope, slams, wall ball,
+    throws) carry `endurance` and no muscle. Logged as sets outside a
+    conditioning workout, they add minutes to the heart: their time, or one
+    minute a set (`heartMinutes`), as a conditioning entry. Inside a
+    conditioning workout the workout's minutes already count, so nothing is
+    added twice.
+  - A move filed under a real muscle (rotational slam under Core) keeps that
+    muscle and adds no heart minutes. Mobility moves stay out.
+- **One heat range.** `buildHeat` builds only "12w", the one both clients
+  read (`HeatGroupSummary`). `ranges` stays an array so the contract and old
+  phones are unaffected. The web's unused saved range preference
+  (`kairos.heat.range`) is gone.
+- **Web Remaining sets removed** (`day-log.tsx`), matching app 0.502. Hints
+  are last time's or the program's weights.
+- **Web all-day form** uses the app's rule (`timeInvalid`): an all-day event
+  can't end before it starts, and a timed one must end after it starts.
+  - The end goes red (`TimeSelect invalid`, the end date's border) and Save
+    stays off until it's fixed.
+  - A repeating series is never invalid, because its end is a time only.
+- **App pop-ups:** all 43 stock `AlertDialog`s (22 files) are now
+  `AnimatedDialog`. `AnimatedDialog`'s content sits in
+  `Column(Modifier.weight(1f, fill = false))`, so long content shrinks before
+  the buttons leave the screen, as Material's dialog does.
+- **Decisions recorded, no code:**
+  - Push stays local; self-hosted UnifiedPush (ntfy) is the noted path if
+    instant server pushes are ever wanted, never FCM.
+  - The web keeps Personal mode as an unadvertised admin option.
+  - Built-in event-kind colours and the web personal-view tweaks (#2, #4)
+    are dropped.
+  - The collector's `_post` default timeout goes from 20 to 5 the next time
+    the collector is changed.
+- **XP calibration is still open.** 0.603 replaced incubation XP with growth
+  (12 to adult, then an egg) and tilted rarity by the last 14 days'
+  completion, but neither has been checked against real data since. It needs
+  a fresh scoring snapshot and a target pace.
+
 ## 2026-11 — Loose ends: shared web, PIN stays, one-offs never pause, dead heat code (docs; app 0.502.0)
 
 - **The web is a shared device.** It gets no personal settings: no sidebar

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/session";
+import { AdminIdleLock } from "./admin-idle-lock";
 
 /**
  * One guard for every admin route. Putting it in the layout rather than in
@@ -15,5 +16,10 @@ export default async function AdminLayout({
   // the guard redirect that page to itself, which is an infinite loop and a
   // 500 rather than a login prompt.
   if (!(await isAdmin())) redirect("/unlock");
-  return <>{children}</>;
+  return (
+    <>
+      <AdminIdleLock />
+      {children}
+    </>
+  );
 }

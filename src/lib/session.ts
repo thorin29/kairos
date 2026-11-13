@@ -7,7 +7,11 @@ import { hashPin, verifyPin } from "@/lib/auth";
 import { cookieSecure } from "@/lib/cookie-flags";
 
 const COOKIE = "fd_admin";
-const UNLOCK_HOURS = 4;
+const ADMIN_IDLE_KEY = "adminIdleMinutes";
+/** Auto-lock choices, minutes with no admin activity (v0.696, Admin → Settings
+ *  → Device). 240 keeps the old four hours, now counted from the last use. */
+export const ADMIN_IDLE_CHOICES = [5, 15, 30, 60, 240] as const;
+const DEFAULT_IDLE_MINUTES = 240;
 const SECRET_KEY = "sessionSecret";
 const ADMIN_PIN_KEY = "adminPinHash";
 // Mirror of gate.ts's REQUIRE_LOGIN key. Read directly here (rather than
@@ -21,8 +25,10 @@ const REQUIRE_LOGIN_KEY = "requireLogin";
  *
  * The only thing behind a lock is administration. A single shared PIN guards
  * it — any admin uses the same PIN — and the PIN is optional: with none set,
- * admin is simply open. An unlock lasts a few hours, then lapses on its own so
- * an unattended tablet doesn't stay open.
+ * admin is simply open. An unlock lapses after a set time with no admin
+ * activity (`adminIdleMinutes`), so an unattended tablet doesn't stay open.
+ * Each admin page opened, and taps on one, push the time back
+ * (`touchAdminSession`, from AdminIdleLock in the admin layout).
  */
 async function secret(): Promise<string> {
   const env = process.env.SESSION_SECRET;
@@ -60,10 +66,23 @@ export async function adminPinSet(): Promise<boolean> {
   return (await adminPinHash()) !== null;
 }
 
+/** Minutes of no admin activity before the unlock lapses. */
+export async function adminIdleMinutes(): Promise<number> {
+  const n = Number(await getSetting(ADMIN_IDLE_KEY));
+  return (ADMIN_IDLE_CHOICES as readonly number[]).includes(n) ? n : DEFAULT_IDLE_MINUTES;
+}
+
+export async function setAdminIdleMinutes(minutes: number): Promise<void> {
+  if (!(ADMIN_IDLE_CHOICES as readonly number[]).includes(minutes)) throw new Error("Not a choice.");
+  await setSetting(ADMIN_IDLE_KEY, String(minutes));
+}
+
 /** Start (or refresh) an unlock. The session isn't tied to a person — the PIN
- *  is shared — so the cookie carries only an expiry and its signature. */
-export async function startAdminSession(): Promise<void> {
-  const expires = Date.now() + UNLOCK_HOURS * 3_600_000;
+ *  is shared — so the cookie carries only an expiry and its signature (the
+ *  format the edge check in middleware.ts reads). Returns the expiry. */
+export async function startAdminSession(): Promise<number> {
+  const minutes = await adminIdleMinutes();
+  const expires = Date.now() + minutes * 60_000;
   const payload = String(expires);
 
   const store = await cookies();
@@ -72,8 +91,18 @@ export async function startAdminSession(): Promise<void> {
     sameSite: "lax",
     secure: await cookieSecure(),
     path: "/",
-    maxAge: UNLOCK_HOURS * 3600,
+    maxAge: minutes * 60,
   });
+  return expires;
+}
+
+/** Admin activity: push a current unlock's expiry back by the idle time.
+ *  `{ open: true }` when no PIN is set (nothing to lock); `{ expires: null }`
+ *  when the unlock has already lapsed. Never starts an unlock on its own. */
+export async function touchAdminSession(): Promise<{ open: boolean; expires: number | null }> {
+  if (!(await adminPinSet())) return { open: true, expires: null };
+  if (!(await hasValidUnlockCookie())) return { open: false, expires: null };
+  return { open: false, expires: await startAdminSession() };
 }
 
 export async function endAdminSession(): Promise<void> {
