@@ -2,11 +2,8 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { DateField } from "@/components/date-field";
-import {
-  createPause,
-  deletePause,
-  type PauseRow,
-} from "@/lib/actions/pauses";
+import { createPause, deletePause } from "@/lib/actions/pauses";
+import type { PauseRow } from "@/lib/queries/pause-list";
 import { PlusIcon } from "@/components/icons";
 
 const field =

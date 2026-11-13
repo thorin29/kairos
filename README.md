@@ -170,8 +170,14 @@ newer image.
 ### 3. Create your household
 
 Open `http://<host>:8642` and follow the setup prompts. The first account you
-create is a parent; add everyone else from the same screen. Parent accounts are
-protected by a PIN.
+create is a parent; add everyone else from the same screen, then invite each
+person to the phone app, which is where passwords are set.
+
+The web requires a parent's sign-in on every page. Children sign in on the
+phone app, not the web. A shared screen is signed in once by a parent and then
+works for the whole household. Until some parent has a password (a fresh
+install), the web stays open so you can finish setup. Admin settings also sit
+behind an optional shared PIN, which keeps others out of settings.
 
 ## Configuration
 
@@ -184,6 +190,9 @@ protected by a PIN.
 | `DATA_DIR` | no | Where uploads and backups are written. Defaults to `/app/data`. |
 | `WEATHER_LAT` / `WEATHER_LON` | no | Coordinates for the weather panel |
 | `ACCUWEATHER_API_KEY` | no | Required only if using AccuWeather |
+| `SESSION_SECRET` | no | Signs sign-in cookies. Without it Kairos makes and stores its own. |
+| `FRAME_ANCESTORS` | no | Who may show Kairos in a frame (CSP `frame-ancestors`). Defaults to the same site only, e.g. `'self' https://dashboard.example.com` for a dashboard that embeds it. |
+| `REAL_IP_HEADER` | no | The header your proxy puts the client address in, for sign-in and PIN rate limits. Defaults to Cloudflare's, then `X-Forwarded-For`. |
 
 See `.env.example` for the full list.
 
@@ -195,10 +204,12 @@ appdata share.
 
 ## A note on security
 
-Authentication is a profile picker with PINs on parent accounts. That is meant
-to keep a household honest on a trusted network — it is **not** hardened for
-exposure to the internet. If you publish this beyond your LAN, put it behind a
-reverse proxy with real authentication in front.
+The web needs a parent's password on every page, and the phone app uses
+per-device tokens that can be revoked one at a time. Sign-in, invite codes and
+the PIN are rate-limited. Even so, Kairos is built for a household on a trusted
+network. If you publish it beyond your LAN, put it behind a reverse proxy with
+real authentication in front, with a bypass for `/api/v1` only, which
+authenticates every request itself.
 
 ## Development
 
@@ -213,8 +224,8 @@ npm run dev
 The codebase is organized by domain under `src/`, so each feature area can be
 worked on without touching the others.
 
-Before shipping, run `scripts/preflight.sh` — a typecheck strict on the lines
-you changed, a scan for raw `\uXXXX` escapes in JSX text, and a check that every
+Before shipping, run `scripts/preflight.sh` — a full typecheck with the real
+Prisma client, a scan for raw `\uXXXX` escapes in JSX text, and a check that every
 Prisma field read was selected. When the calendar-file import rule changes, run
 `scripts/ics-parity/check.sh` against a clone of the app repo too (it needs
 `kotlinc` and `tsx`).

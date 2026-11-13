@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { rateLimit, rateLimitReset } from "@/lib/rate-limit";
+import { clientIpFromHeaders } from "@/lib/api/request";
 import {
   adminPinSet,
   clearAdminPin,
@@ -33,12 +35,14 @@ export async function unlockAdmin(
     return { error: "Enter your 4 to 8 digit PIN.", ok: false };
   }
 
-  // One shared PIN, so one shared window — enough to blunt a kid working
-  // through combinations without locking a parent out for long.
-  const limit = rateLimit("admin-pin", 10, 10 * 60_000);
+  // 3 tries per 15 minutes, per device (v0.699). The PIN keeps others out of
+  // settings; it isn't a security boundary (sign-in is). Counting per device
+  // means one person burning tries can't lock a parent out on another screen.
+  const pinKey = `admin-pin:${clientIpFromHeaders(await headers())}`;
+  const limit = rateLimit(pinKey, 3, 15 * 60_000);
   if (!limit.ok) {
     return {
-      error: `Too many attempts. Try again in ${limit.retryAfterSec}s.`,
+      error: `Too many tries. Try again in ${Math.max(1, Math.ceil(limit.retryAfterSec / 60))} min.`,
       ok: false,
     };
   }
@@ -47,7 +51,7 @@ export async function unlockAdmin(
     return { error: "That PIN doesn't match.", ok: false };
   }
 
-  rateLimitReset("admin-pin");
+  rateLimitReset(pinKey);
   await startAdminSession();
   revalidatePath("/", "layout");
   return { error: null, ok: true };
@@ -82,7 +86,9 @@ export async function saveAdminPinAction(input: {
   }
 
   await saveAdminPin(newPin);
-  await startAdminSession(); // keep whoever set it unlocked
+  // The unlock is signed with the PIN hash, so this ends every other device's
+  // unlock; re-issue it here to keep whoever set it unlocked.
+  await startAdminSession();
   revalidatePath("/", "layout");
   revalidatePath("/setup");
   return { error: null };

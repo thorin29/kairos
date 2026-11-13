@@ -28,18 +28,23 @@ export function bearerToken(req: NextRequest): string | null {
  * account / per code — so a spoofed header can't by itself defeat throttling.
  */
 export function clientIp(req: NextRequest): string {
+  return clientIpFromHeaders(req.headers);
+}
+
+/** The same, from a plain Headers (server actions read `headers()`). */
+export function clientIpFromHeaders(h: Headers): string {
   const configured = process.env.REAL_IP_HEADER?.toLowerCase().trim();
   if (configured) {
-    const v = req.headers.get(configured);
+    const v = h.get(configured);
     const first = v?.split(",")[0].trim();
     if (first) return first;
   }
-  const cf = req.headers.get("cf-connecting-ip")?.trim();
+  const cf = h.get("cf-connecting-ip")?.trim();
   if (cf) return cf;
-  const xff = req.headers.get("x-forwarded-for");
+  const xff = h.get("x-forwarded-for");
   if (xff) {
     const first = xff.split(",")[0].trim();
     if (first) return first;
   }
-  return req.headers.get("x-real-ip")?.trim() || "unknown";
+  return h.get("x-real-ip")?.trim() || "unknown";
 }

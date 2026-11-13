@@ -74,20 +74,34 @@ nobody, but remain against their original date.
 Shared chores are the exception: unassigned, claimed by whoever gets to them,
 and rescheduled a fixed number of days after each *completion*.
 
-### There is no per-person sign-in
+### The web needs a parent's sign-in; the shared screen then acts for everyone
 
-The dashboard is a shared household screen. Everyone sees everything and
-completes their own work without identifying themselves.
+Since v0.699 every web page and server action requires a signed-in **parent**
+(an ADMIN account with a password). There is no switch. A shared screen is
+signed in once by a parent and then works for the whole household, so
+everyone sees everything and completes their own work without identifying
+themselves, as before. Children use the phone app, never the web. First run
+(no admin has a password yet) stays open so setup can finish.
 
-The only thing behind a lock is administration: a parent's PIN unlocks the
-admin area for a few hours. Sessions are a signed cookie with a secret
-generated on first use and stored in `AppSetting` — no session table, no
-environment variable.
-
-Guards live in server actions, not only in the UI, and the guard for `/admin`
-is in the route layout so a new sub-page is protected the moment it exists.
-The unlock page deliberately sits outside `/admin`, because a door can't be
-behind the lock it opens.
+- **One implementation:** `src/lib/web-gate.ts` holds the rules (session
+  check, first run, PIN-bound unlock). `middleware.ts` (Node runtime, every
+  request, soft navigations included) and the app (`currentUser`, `isAdmin`,
+  `loginRequired`) both call it.
+- **No environment needed:** the secret comes from `appSecret()`, generated on
+  first use and stored in `AppSetting`; `SESSION_SECRET` only overrides it.
+  `REQUIRE_LOGIN` is no longer read.
+- **Admin on top of sign-in:** an optional shared PIN, a nuisance guard so
+  others don't change settings, not a security boundary. It allows 3 tries per
+  15 minutes per device. The unlock cookie is signed with the PIN hash, so
+  changing the PIN ends every other unlock, and it auto-locks after idle time.
+- **Guards in two places:** guards live in server actions, not only in the UI,
+  and middleware guards `/admin`, so a new sub-page is protected the moment it
+  exists. The unlock page sits outside `/admin`, because a door can't be
+  behind the lock it opens.
+- **Helpers stay out of action files:** every export of a `"use server"` file
+  is a callable server action. Unguarded helpers that API routes share
+  (`school/structure-core.ts`, `school/plan-core.ts`,
+  `calendar/subscribed-reminders-core.ts`) live in plain modules instead.
 
 ### Plans are data, generators are code
 
@@ -126,7 +140,7 @@ The native phone client talks to a versioned REST surface at `/api/v1`
 (docs/API.md), not to Server Actions. It is **additive** — the same domain logic
 behind a second door — and is the first place per-person identity enters the
 system. A phone enrolls to one `Person` and carries a bearer **device token**;
-the web wall tablet stays identity-free.
+the web is signed in by a parent and acts for the household.
 
 Two properties are load-bearing. First, only a SHA-256 of every secret is
 stored — enrollment codes and device tokens alike, exactly like an `Invite` — so
@@ -134,9 +148,11 @@ a database leak yields nothing usable. Second, `/api/v1` does its own auth on
 every request in the route handlers (`src/lib/api/device-auth.ts`), so it is
 **exempt from the login-gate middleware** rather than redirected to `/login`.
 That per-request self-authentication is also what makes a scoped Authelia
-`/api/v1` bypass safe: the app never relies on Authelia to protect it. The one
-unauthenticated endpoint, `/auth/enroll`, is public by design and guarded
-instead by a one-time, short-lived, rate-limited code.
+`/api/v1` bypass safe: the app never relies on Authelia to protect it. The
+public endpoints (sign-in, join, join check, forgot, recover, meta, and the
+game-time ingest with its own service token) are listed in
+`scripts/check-api-auth.mjs`; join and recover are guarded by one-time,
+short-lived, rate-limited codes.
 
 ### A rule lives in one place; a phone copy is tested against it
 
@@ -224,6 +240,7 @@ production:
 | Sore spots and hurt-day stand-ins | `src/lib/workouts/sore.ts` (pure, `SORE_PATHS`) / `sore-run.ts`; `pickStandIns` in `adjust.ts`; `standInsFor` in `adjust-run.ts`; `SoreSpots` in `src/app/exercise/sore-spots.tsx`; app `SoreSpots.kt`, `BodyMap(soreFront, soreBack)` |
 | The training heat map: a group's colour earned by progress and eased back (v0.689), the endurance heart on weighted minutes (v0.690), "+N% since you started" | `buildTrainingHeat` / `weekPaused` in `src/lib/workouts/training-heat.ts` (pure; the rules are in its header comment); sets loaded and program starts, pauses and sore holds passed in by `heat-run.ts`. Carries resolve to a region in `navRegionFor` (`involvement.ts`): farmer → ARMS, suitcase / one-arm → CORE, overhead → SHOULDERS |
 | A companion lift's next weight (steps only after Easy, only for sets that hit their reps; step size from the movement, not the plan slot) | `targetsFor` (`lastEasy`) / `stepFor` in `src/lib/workouts/programs.ts`; dumbbell and kettlebell sizes from Admin's equipment list via `bellOf` / `nextBell` / `bellAtOrUnder` in `src/lib/workouts/bells.ts` (pure) and `bellSizesFor` in `library-run.ts`. Program main lifts and 5/3/1 waves are unchanged |
+| The web sign-in gate: session check, first run, PIN-bound unlock (v0.699) | `src/lib/web-gate.ts` (`webSessionUser`, `webBootstrapOpen`, `signAdminUnlock` / `adminUnlockValid`); `src/middleware.ts` (Node runtime; frame headers via `FRAME_ANCESTORS`); baseline headers in `next.config.ts`; `safeNext` (`src/lib/safe-next.ts`) for the sign-in redirect |
 | Admin auto-lock after idle time (v0.696) | `adminIdleMinutes` / `ADMIN_IDLE_CHOICES` / `touchAdminSession` / `startAdminSession` in `src/lib/session.ts`; `touchAdminAction` / `setAdminIdleAction` in `src/lib/actions/admin-lock.ts`; `AdminIdleLock` in `src/app/admin/admin-idle-lock.tsx` (rendered by the admin layout); the setting on Admin → Settings → Device (`device-controls.tsx`). Cookie format unchanged for middleware.ts |
 | Full-body moves: a muscle for lifts, heart minutes for conditioning moves (v0.696) | the whole-body rules, `endurance` and `heartMinutes` in `src/lib/workouts/involvement.ts`; the extra heart entries in `loadHeat` (`heat-run.ts`) |
 | An event that ends before it starts (web form; the app's `timeInvalid`) | `timeInvalid` in `src/app/calendar/add-event-form.tsx`; `TimeSelect`'s `invalid` (`src/components/time-select.tsx`) |

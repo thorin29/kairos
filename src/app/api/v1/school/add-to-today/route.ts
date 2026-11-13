@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { prisma } from "@/lib/prisma";
-import { addSchoolWorkToTodayCore } from "@/lib/actions/class-plans";
+import { addSchoolWorkToTodayCore } from "@/lib/school/plan-core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

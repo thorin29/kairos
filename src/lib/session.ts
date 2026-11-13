@@ -1,62 +1,29 @@
 import "server-only";
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getSetting, setSetting, clearSetting } from "@/lib/settings";
 import { hashPin, verifyPin } from "@/lib/auth";
 import { cookieSecure } from "@/lib/cookie-flags";
+import { ADMIN_COOKIE, adminUnlockValid, signAdminUnlock, webBootstrapOpen, webSessionUser, USER_COOKIE } from "@/lib/web-gate";
 
-const COOKIE = "fd_admin";
+const COOKIE = ADMIN_COOKIE;
 const ADMIN_IDLE_KEY = "adminIdleMinutes";
 /** Auto-lock choices, minutes with no admin activity (v0.696, Admin → Settings
  *  → Device). 240 keeps the old four hours, now counted from the last use. */
 export const ADMIN_IDLE_CHOICES = [5, 15, 30, 60, 240] as const;
 const DEFAULT_IDLE_MINUTES = 240;
-const SECRET_KEY = "sessionSecret";
 const ADMIN_PIN_KEY = "adminPinHash";
-// Mirror of gate.ts's REQUIRE_LOGIN key. Read directly here (rather than
-// importing from gate.ts) because gate.ts imports from this module.
-const REQUIRE_LOGIN_KEY = "requireLogin";
 
 /**
- * There is no per-person sign-in. The dashboard is a shared household screen:
- * everyone sees everything and checks off their own work without identifying
- * themselves, which is the whole point of a wall tablet.
- *
- * The only thing behind a lock is administration. A single shared PIN guards
- * it — any admin uses the same PIN — and the PIN is optional: with none set,
- * admin is simply open. An unlock lapses after a set time with no admin
+ * The web requires a parent's sign-in everywhere (v0.699, web-gate.ts); the
+ * shared screen then acts for the household. On top of that, administration
+ * sits behind a single shared PIN, a nuisance guard so others don't change
+ * settings, not a security boundary. The PIN is optional: with none set, a
+ * signed-in parent is simply admin. An unlock lapses after a set time with no admin
  * activity (`adminIdleMinutes`), so an unattended tablet doesn't stay open.
  * Each admin page opened, and taps on one, push the time back
  * (`touchAdminSession`, from AdminIdleLock in the admin layout).
  */
-async function secret(): Promise<string> {
-  const env = process.env.SESSION_SECRET;
-  if (env && env.length >= 16) return env;
-
-  const existing = await prisma.appSetting.findUnique({
-    where: { key: SECRET_KEY },
-  });
-  if (existing) return existing.value;
-
-  const row = await prisma.appSetting.upsert({
-    where: { key: SECRET_KEY },
-    update: {},
-    create: { key: SECRET_KEY, value: randomBytes(32).toString("hex") },
-  });
-  return row.value;
-}
-
-function sign(payload: string, key: string): string {
-  return createHmac("sha256", key).update(payload).digest("hex");
-}
-
-function safeEqual(a: string, b: string): boolean {
-  const x = Buffer.from(a);
-  const y = Buffer.from(b);
-  return x.length === y.length && timingSafeEqual(x, y);
-}
-
 /** The shared admin PIN hash, or null when admin isn't gated. */
 async function adminPinHash(): Promise<string | null> {
   return getSetting(ADMIN_PIN_KEY);
@@ -83,10 +50,10 @@ export async function setAdminIdleMinutes(minutes: number): Promise<void> {
 export async function startAdminSession(): Promise<number> {
   const minutes = await adminIdleMinutes();
   const expires = Date.now() + minutes * 60_000;
-  const payload = String(expires);
-
   const store = await cookies();
-  store.set(COOKIE, `${payload}.${sign(payload, await secret())}`, {
+  // Signed with a key that includes the PIN hash (web-gate.ts), so changing
+  // the PIN ends every other device's unlock.
+  store.set(COOKIE, await signAdminUnlock(String(expires)), {
     httpOnly: true,
     sameSite: "lax",
     secure: await cookieSecure(),
@@ -112,27 +79,17 @@ export async function endAdminSession(): Promise<void> {
 
 async function hasValidUnlockCookie(): Promise<boolean> {
   const store = await cookies();
-  const raw = store.get(COOKIE)?.value;
-  if (!raw) return false;
-
-  const parts = raw.split(".");
-  if (parts.length !== 2) return false;
-
-  const [expires, signature] = parts;
-  if (!safeEqual(signature, sign(expires, await secret()))) return false;
-  if (Number(expires) < Date.now()) return false;
-  return true;
+  return adminUnlockValid(store.get(COOKIE)?.value);
 }
 
+/** Admin: a signed-in parent (or first run, before anyone can sign in), plus a
+ *  current unlock when a PIN is set. */
 export async function isAdmin(): Promise<boolean> {
-  if (!(await adminPinSet())) {
-    // No PIN set. On a private LAN tablet that means admin is open, as it
-    // always has been. But if the install is public (sign-in required), don't
-    // fall open — refuse admin rather than handing it to everyone who's signed
-    // in. The toggle below won't let sign-in be turned on without a PIN, so in
-    // practice this is belt-and-suspenders for a hand-edited setting.
-    return (await getSetting(REQUIRE_LOGIN_KEY)) !== "true";
+  if (!(await webBootstrapOpen())) {
+    const store = await cookies();
+    if (!(await webSessionUser(store.get(USER_COOKIE)?.value))) return false;
   }
+  if (!(await adminPinSet())) return true;
   return hasValidUnlockCookie();
 }
 
@@ -192,7 +149,8 @@ export async function verifyAdminPin(pin: string): Promise<boolean> {
   return verifyPin(pin, hash);
 }
 
-/** Set (or change) the shared admin PIN. */
+/** Set (or change) the shared admin PIN. Every existing unlock stops verifying
+ *  (the unlock is signed with the PIN hash); callers re-issue their own. */
 export async function saveAdminPin(pin: string): Promise<void> {
   await setSetting(ADMIN_PIN_KEY, hashPin(pin));
 }

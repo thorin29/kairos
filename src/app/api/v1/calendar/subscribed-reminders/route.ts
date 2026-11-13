@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { setSubscribedRemindersCore } from "@/lib/actions/calendars";
+import { setSubscribedRemindersCore } from "@/lib/calendar/subscribed-reminders-core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

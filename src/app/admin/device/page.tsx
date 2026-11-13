@@ -1,28 +1,17 @@
 import { AdminBack } from "@/components/admin-back";
 import { LockButton } from "../lock-button";
 import { deviceMode } from "@/lib/device";
-import { loginRequired } from "@/lib/gate";
-import { loginableCount } from "@/lib/accounts";
 import { adminPinSet, adminIdleMinutes } from "@/lib/session";
 import { DeviceControls } from "./device-controls";
 
 export const dynamic = "force-dynamic";
 
 export default async function DeviceAdminPage() {
-  const [mode, gate, loginable, pinSet, idleMinutes] = await Promise.all([
+  const [mode, pinSet, idleMinutes] = await Promise.all([
     deviceMode(),
-    loginRequired(),
-    loginableCount(),
     adminPinSet(),
     adminIdleMinutes(),
   ]);
-  // Whether the edge (middleware) gate is actually active. This is the only
-  // thing that secures a public site on every navigation; the in-app toggle
-  // alone doesn't. Both env vars must be set.
-  const edgeEnforced =
-    process.env.REQUIRE_LOGIN === "true" &&
-    !!process.env.SESSION_SECRET &&
-    process.env.SESSION_SECRET.length >= 16;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
@@ -34,8 +23,7 @@ export default async function DeviceAdminPage() {
             Device
           </h1>
           <p className="mt-1 max-w-xl text-sm text-muted">
-            How this particular screen behaves, and whether the whole app
-            requires signing in.
+            How this particular screen behaves.
           </p>
         </div>
         <LockButton />
@@ -43,10 +31,7 @@ export default async function DeviceAdminPage() {
 
       <DeviceControls
         mode={mode}
-        requireLogin={gate}
-        loginable={loginable}
         pinSet={pinSet}
-        edgeEnforced={edgeEnforced}
         idleMinutes={idleMinutes}
       />
     </main>

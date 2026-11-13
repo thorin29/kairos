@@ -1,15 +1,10 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/user-session";
 import { LoginForm } from "./login-form";
+import { safeNext } from "@/lib/safe-next";
 
 export const dynamic = "force-dynamic";
 
-/** A relative in-app path, or "/" — never an absolute URL, so `next` can't be
- *  used to bounce a session somewhere off-site. */
-function safeNext(value: string | undefined): string {
-  if (value && value.startsWith("/") && !value.startsWith("//")) return value;
-  return "/";
-}
 
 export default async function LoginPage({
   searchParams,
@@ -34,15 +29,14 @@ export default async function LoginPage({
           Sign in
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Your personal account. The shared tablet doesn&rsquo;t need this.
+          A parent&rsquo;s account.
         </p>
       </header>
 
       <LoginForm next={dest} />
 
       <p className="mt-8 text-center text-sm text-muted">
-        No account yet? A parent can send you an invite from the household
-        settings.
+        Kids sign in with the Kairos app.
       </p>
     </main>
   );

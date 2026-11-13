@@ -7,7 +7,7 @@ import {
   mergeSubjectCore,
   approveTermCore,
   mergeTermCore,
-} from "@/lib/actions/school";
+} from "@/lib/school/structure-core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

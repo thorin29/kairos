@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { persistClass } from "@/lib/actions/school";
+import { persistClass } from "@/lib/school/structure-core";
 import { getClassFromCalendarMode } from "@/lib/settings";
 
 export const runtime = "nodejs";

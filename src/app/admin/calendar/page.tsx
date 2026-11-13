@@ -11,7 +11,7 @@ import { DisplayPrefs } from "./display-prefs";
 import { PauseForm } from "./pause-form";
 import { Holidays } from "./holidays";
 import { loadHolidayList, getHolidayColor } from "@/lib/holidays";
-import { loadPauses } from "@/lib/actions/pauses";
+import { loadPauses } from "@/lib/queries/pause-list";
 
 export const dynamic = "force-dynamic";
 

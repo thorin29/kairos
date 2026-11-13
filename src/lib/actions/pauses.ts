@@ -9,40 +9,6 @@ import { generateChores } from "@/lib/chores/generate";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { clearPausedTasks } from "@/lib/queries/pauses";
 
-export type PauseRow = {
-  id: string;
-  name: string;
-  type: PauseType;
-  startISO: string;
-  endISO: string;
-  /** v0.688: the person it pauses, or null for the household. */
-  who: string | null;
-};
-
-/** Active and upcoming pauses only. Past ones stop showing in admin (the list
- *  would grow forever) but their calendar event stays for posterity. */
-export async function loadPauses(): Promise<PauseRow[]> {
-  const rows = (await prisma.pause.findMany({
-    where: { endDate: { gte: toDateColumn(todayISO()) } },
-    orderBy: { startDate: "asc" },
-    include: { user: { select: { name: true, displayName: true } } },
-  })) as unknown as {
-    id: string;
-    name: string;
-    type: string;
-    startDate: Date;
-    endDate: Date;
-    user: { name: string; displayName: string | null } | null;
-  }[];
-  return rows.map((p) => ({
-    id: p.id,
-    name: p.name,
-    type: p.type as PauseType,
-    startISO: fromDateColumn(p.startDate),
-    endISO: fromDateColumn(p.endDate),
-    who: p.user ? p.user.displayName?.trim() || p.user.name : null,
-  }));
-}
 
 export type PauseState = { error: string | null };
 

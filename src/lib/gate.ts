@@ -1,26 +1,17 @@
 import "server-only";
-import { getSetting } from "@/lib/settings";
+import { webBootstrapOpen } from "@/lib/web-gate";
 import { isAdmin } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
 
 /**
- * Login-gating is a single switch, off by default so existing installs and a
- * fresh first run are unchanged. Turned on (for a public domain), every page
- * requires a session and the conditional guards below start enforcing.
- *
- * The design point: in the shared model most actions are intentionally open
- * (anyone at the tablet checks off a chore). These guards therefore do nothing
- * in open mode and only bite once login is required — at which point the shared
- * tablet is itself signed in as an admin, so it still passes.
+ * Sign-in is required everywhere on the web (v0.699; middleware.ts enforces it
+ * on every request, web-gate.ts holds the rules). Only a parent's account can
+ * sign in, and the shared screen then acts for the household, so the guards
+ * below pass for it exactly as the old open mode did. The one exception is
+ * first run, before any admin has a password, when there's no one to sign in.
  */
-export const REQUIRE_LOGIN = "requireLogin";
-
 export async function loginRequired(): Promise<boolean> {
-  // The environment variable is authoritative for a public deployment, because
-  // it's the only signal edge middleware can read to enforce the gate on every
-  // navigation. The in-app toggle still works for a LAN-only install.
-  if (process.env.REQUIRE_LOGIN === "true") return true;
-  return (await getSetting(REQUIRE_LOGIN)) === "true";
+  return !(await webBootstrapOpen());
 }
 
 /** Paths reachable without a session even when gating is on. */

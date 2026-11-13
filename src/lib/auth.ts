@@ -36,6 +36,10 @@ export function verifyPin(pin: string, stored: string): boolean {
   return scryptVerify(pin, stored);
 }
 
+/** The one minimum password length, for every place a password is set (the
+ *  phone's join/reset flow and changing your own; v0.699 unified 6 → 8). */
+export const MIN_PASSWORD = 8;
+
 export function hashPassword(password: string): string {
   return scryptHash(password);
 }

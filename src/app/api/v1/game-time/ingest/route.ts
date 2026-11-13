@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { apiOk, apiError } from "@/lib/api/errors";
 
@@ -44,6 +45,13 @@ type DayEntry = {
   };
 };
 
+function same(given: string | null, expected: string): boolean {
+  if (given == null) return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 function tokenOk(req: NextRequest): boolean {
   const expected = process.env.GAMETIME_INGEST_TOKEN;
   if (!expected) return false;
@@ -52,7 +60,8 @@ function tokenOk(req: NextRequest): boolean {
     ? auth.slice(7).trim()
     : null;
   const header = req.headers.get("x-ingest-token");
-  return bearer === expected || header === expected;
+  // Constant-time comparison (v0.699).
+  return same(bearer, expected) || same(header, expected);
 }
 
 async function resolveUserId(e: DayEntry): Promise<{ id: string; name: string } | null> {

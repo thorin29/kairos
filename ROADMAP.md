@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.698.0 / app v0.503.0, versionCode 575)
+## Current status (13 Nov 2026, web v0.699.0 / app v0.504.0, versionCode 576)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -110,6 +110,11 @@ in the project docs (workouts-plan, workouts-programs-plan, workouts-next-plan).
   - App **Settings reorganized** (app 0.501): profile card, Account (Password,
     Devices, Sign out), Look & feel, Notifications & reminders, Connected apps,
     Parents, Help & about.
+- **Threat review and fixes (0.699 / app 0.504):** sign-in required on every
+  web page, parents only (the shared screen signs in once); PIN 3 tries per 15
+  min per device and bound to the PIN; frame and nosniff headers; sign-in
+  redirect, calendar-feed address filter, one 8-character password minimum,
+  and helpers moved out of server-action files.
 - **Security updates (0.698):** Next.js 15.5.29 (two critical image-optimizer
   advisories), the unused `/_next/image` endpoint off, Prisma 7.10.1,
   Nodemailer 10. A code-level threat review follows.
@@ -1535,16 +1540,12 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       sessions are HMAC-signed with a 32-byte secret generated on first use and
       kept in `AppSetting` (`sessionSecret`), not a weak default — a fresh
       install mints its own.
-- [ ] Code-level threat review (next): sign-in and sessions, who can act for
-      whom (API routes and server actions), server-side fetches (ICS, Concept2,
-      ice-time), uploads, CSRF and error leakage. Findings reported before any
-      fixes. Dependencies patched first (0.698).
-- [ ] Threat model / internet exposure: the first-party password flow is now
-      the "real auth" the PIN scheme was deferring, so exposing Kairos past the
-      LAN is closer to reasonable — but it still wants HTTPS (have it via
-      Cloudflared) plus a decision on what's reachable. The phone app forces
-      this: an allowlisted APK on a child's device must reach Kairos over the
-      tunnel. Revisit when device modes land.
+- [x] Code-level threat review (13 Nov): two medium and seven low findings,
+      all fixed in 0.699 (see DECISIONS). Dependencies patched first (0.698).
+- [x] Threat model / internet exposure: closed 13 Nov. HTTPS via the tunnel,
+      `/api/v1` self-authenticated with revocable device tokens, sign-in
+      required on every web page (0.699), and rate limits on every sign-in
+      path.
 - [x] Session lifetime / auto-lock: admin locks after a set time with no admin
       activity (5, 15, 30 min, 1 or 4 hr; Admin → Settings → Device, v0.696).
       Opening an admin page or tapping on one pushes it back; the page goes to
@@ -1770,9 +1771,9 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.698.0 (migrations through 153_companion_growth_float, all registered
+- Web APP_VERSION 0.699.0 (migrations through 153_companion_growth_float, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.503.0 / versionCode 575 / CLIENT_BUILD 575.
+- App versionName 0.504.0 / versionCode 576 / CLIENT_BUILD 576.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.

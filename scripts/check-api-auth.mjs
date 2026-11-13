@@ -16,7 +16,6 @@ const ROOT = join("src", "app", "api", "v1");
 const PUBLIC = new Set([
   "meta/route.ts",
   "auth/login/route.ts",
-  "auth/enroll/route.ts",
   "auth/join/route.ts",
   "auth/join/check/route.ts",
   "auth/forgot/route.ts",

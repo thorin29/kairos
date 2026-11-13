@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { MIN_PASSWORD } from "@/lib/auth";
 import { apiError, apiOk } from "@/lib/api/errors";
 import {
   redeemJoin,
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
       return apiError("forbidden", "That password doesn't match. Try again.");
     }
     if (result.reason === "weak") {
-      return apiError("validation", "Choose a password of at least 6 characters.", {
+      return apiError("validation", `Choose a password of at least ${MIN_PASSWORD} characters.`, {
         fields: { password: "weak" },
       });
     }

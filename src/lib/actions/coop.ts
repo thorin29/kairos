@@ -1,5 +1,6 @@
 "use server";
 
+import { requireCanActFor } from "@/lib/gate";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/session";
 import {
@@ -25,6 +26,8 @@ export async function proposeCoopReward(input: {
   detail: string;
   proposedById: string;
 }): Promise<{ error: string | null }> {
+  // The person proposing must be one the signed-in screen may act for (v0.699).
+  if (input.proposedById) await requireCanActFor(input.proposedById);
   const r = await proposeCoopCore(input);
   bump();
   return r;
@@ -34,6 +37,7 @@ export async function toggleCoopVote(input: {
   proposalId: string;
   userId: string;
 }): Promise<{ error: string | null }> {
+  await requireCanActFor(input.userId);
   const r = await toggleCoopVoteCore(input);
   bump();
   return r;

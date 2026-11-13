@@ -160,7 +160,7 @@ request:  { "token": "ABCD2345", "password": "…",
             "expiresAt": "2027-08-28T00:00:00.000Z",
             "person": { …see /me… } }
 403:      forbidden       — invite invalid/expired, or wrong password on an existing account
-422:      validation      — token or password missing, or password too weak (<6)
+422:      validation      — token or password missing, or password too weak (<8 since v0.699; one MIN_PASSWORD)
 429:      rate_limited
 ```
 The `token` is the invitation code — case-insensitive, and spaces/dashes are

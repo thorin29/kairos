@@ -9,6 +9,7 @@ import {
   newInviteToken,
   normalizeInviteCode,
   hashToken,
+  MIN_PASSWORD,
 } from "@/lib/auth";
 
 /**
@@ -18,7 +19,7 @@ import {
  * that pages can also read, with the thin mutations layered on top.
  */
 const INVITE_DAYS = 7;
-export const MIN_PASSWORD = 8;
+export { MIN_PASSWORD };
 
 export type AccountState = {
   userId: string;
@@ -86,7 +87,7 @@ export async function loginableCount(): Promise<number> {
 export async function authenticate(
   identifier: string,
   password: string,
-): Promise<{ id: string; credentialVersion: number } | null> {
+): Promise<{ id: string; credentialVersion: number; role: "ADMIN" | "MEMBER" } | null> {
   const id = identifier.trim();
   if (!id) return null;
 
@@ -99,11 +100,11 @@ export async function authenticate(
         { email: { equals: id, mode: "insensitive" } },
       ],
     },
-    select: { id: true, passwordHash: true, credentialVersion: true },
+    select: { id: true, passwordHash: true, credentialVersion: true, role: true },
   });
   if (!user?.passwordHash) return null;
   if (!verifyPassword(password, user.passwordHash)) return null;
-  return { id: user.id, credentialVersion: user.credentialVersion };
+  return { id: user.id, credentialVersion: user.credentialVersion, role: user.role };
 }
 
 /** The email an invite should go to, if any. */

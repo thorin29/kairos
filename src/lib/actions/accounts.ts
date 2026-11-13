@@ -1,5 +1,6 @@
 "use server";
 
+import { clientIpFromHeaders } from "@/lib/api/request";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { requireAdmin, verifyAdminPin } from "@/lib/session";
@@ -36,8 +37,7 @@ export async function loginUser(
   // Two limits: per-identifier (someone hammering one account) and a looser
   // per-IP ceiling (someone spraying many identifiers from one source). Either
   // tripping blocks the attempt.
-  const ipHeader = (await headers()).get("x-forwarded-for") ?? "";
-  const ip = ipHeader.split(",")[0].trim() || "unknown";
+  const ip = clientIpFromHeaders(await headers());
   const key = `login:${identifier.toLowerCase()}`;
   const ipKey = `login-ip:${ip}`;
   const limit = rateLimit(key, 10, 10 * 60_000);
@@ -55,6 +55,12 @@ export async function loginUser(
     // One message for both cases, so a wrong identifier can't be told from a
     // wrong password.
     return { error: "That login and password don't match.", ok: false };
+  }
+  // Web sign-in is for parents (v0.699): the shared screen is signed in by an
+  // admin and then acts for the household. Said only after the password checks
+  // out, so it reveals nothing to someone guessing.
+  if (user.role !== "ADMIN") {
+    return { error: "Only a parent can sign in here. Use the Kairos app on your phone.", ok: false };
   }
 
   rateLimitReset(key);

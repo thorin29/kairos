@@ -1,5 +1,79 @@
 # Decisions
 
+## 2026-11 — Sign-in required everywhere on the web, parents only; threat-review fixes (v0.699.0 / app 0.504.0)
+
+From the code-level threat review (13 Nov):
+
+- **The web always requires a parent's sign-in.**
+  - Before, web actions checked nobody unless `REQUIRE_LOGIN` and
+    `SESSION_SECRET` were set as container variables, because the edge
+    middleware couldn't read the database.
+  - Now middleware runs on the **Node runtime** and checks every request
+    through `web-gate.ts` against the database (the DB-stored secret, the
+    user, credentialVersion and role). That one implementation is shared with
+    `currentUser` / `isAdmin`.
+  - `REQUIRE_LOGIN` and the Device page's "Require sign-in" switch
+    (`setRequireLoginAction`) are gone.
+- **Web sign-in is for admins only.** A shared screen is signed in by a parent
+  and keeps acting for the household, which the guards already allow for an
+  admin. A child's account is refused at sign-in ("use the app"), and a
+  child's existing web cookie stops verifying. Children use the phone app
+  (device tokens, untouched).
+- **First run** (no active admin with a password) stays open so setup can
+  happen. Once closed, it stays closed for the life of the process.
+- **The PIN is a nuisance guard, not security:**
+  - 3 tries per 15 minutes, keyed per device, so one person can't lock a
+    parent out elsewhere;
+  - 4–8 digits still;
+  - the unlock cookie is signed with a key that includes the PIN hash, so
+    changing or clearing the PIN ends every other device's unlock;
+  - with no PIN, a signed-in parent is admin.
+- **Headers.**
+  - `X-Content-Type-Options: nosniff` and `Referrer-Policy: same-origin` on
+    every response (`next.config.ts`).
+  - Middleware sends CSP `frame-ancestors` (default `'self'`, plus
+    `X-Frame-Options: SAMEORIGIN`). The `FRAME_ANCESTORS` variable can widen
+    it for a dashboard that embeds Kairos.
+- **Sign-in `next` redirect:** `/\evil.com` was accepted and the browser
+  read it as `//evil.com`. `safeNext` (`src/lib/safe-next.ts`) now refuses
+  backslashes, control characters and `//`.
+- **Calendar-feed address filter:** `dns.lookup` returns IPv4-mapped IPv6 as
+  `::ffff:7f00:1`, which the old string check let through. `isBlockedIp` now
+  parses IPv6 to bytes and catches mapped, compatible, NAT64 (64:ff9b::/96)
+  and 6to4 (2002::/16) forms, plus bracketed literals and zone ids. It also
+  blocks 192.0.0.0/24 and 198.18.0.0/15.
+- **One minimum password (8)** everywhere (`MIN_PASSWORD` in auth.ts). The
+  phone join/reset flow had allowed 6; app 0.504 matches.
+- **Co-op propose and vote** web actions now `requireCanActFor` the person.
+- **Unguarded helpers moved out of `"use server"` files**, since every export
+  there is a callable action. The build manifest registered all 376; IDs are
+  random per build and these weren't shipped to browsers, so this was defence
+  in depth. The moves:
+  - the school approve/merge cores, `persistClass`, `meetingEventData` and
+    `WEEKDAY_TOKENS` → `school/structure-core.ts`;
+  - `addSchoolWorkToTodayCore` and `reschedulePlanForward` →
+    `school/plan-core.ts`;
+  - `setSubscribedRemindersCore` → `calendar/subscribed-reminders-core.ts`;
+  - `loadPauses` → `queries/pause-list.ts`.
+- **Smaller fixes:** the game-time ingest token is compared in constant time;
+  the stale `auth/enroll` entry is off the public-route list; `loginUser`
+  rate-limits by the same client address as the API (`clientIpFromHeaders`,
+  honouring `REAL_IP_HEADER`).
+- **Checked:**
+  - unit tests (safeNext, isBlockedIp); DB tests (`web-gate.test.ts`: first
+    run, admin-only, expiry, tamper, credential version, PIN-bound unlock);
+  - a production build and the standalone server driven by Playwright:
+    signed out → /login; `/api/v1` → 401 JSON; headers present; a child
+    refused; a parent signs in and `/\evil.com` stays on site; PIN screen,
+    a 4th wrong PIN refused, another device unlocking; first run open.
+- **Reviewed and sound:**
+  - password hashing, signed cookies, device tokens, invite codes, and
+    forgot-password not revealing who has an account;
+  - all 186 guarded API routes, ownership on every by-ID change, and
+    parent-only role checks;
+  - uploads, the sprite route, and the absence of risky HTML or links;
+  - no committed secrets.
+
 ## 2026-11 — Security updates: Next.js, Prisma, Nodemailer; image endpoint off (v0.698.0)
 
 - **Next.js 15.5.21 → 15.5.29.** This fixes two critical unauthenticated

@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashToken, hashPassword, verifyPassword, normalizeInviteCode } from "@/lib/auth";
+import { hashToken, hashPassword, verifyPassword, normalizeInviteCode, MIN_PASSWORD } from "@/lib/auth";
 import { companionAvatarOf, isIcon, iconGlyph, isUploaded } from "@/lib/avatars";
 import { STAGE_NAMES } from "@/lib/companions";
 import { apiError } from "@/lib/api/errors";
@@ -180,7 +180,7 @@ export async function redeemJoin(
   // person can't confirm the old one). A "join" invite creates a password for a
   // new account, or confirms it for an existing one adding a device.
   const settingPassword = !hasPassword || invite.purpose === "reset";
-  if (settingPassword && password.length < 6) {
+  if (settingPassword && password.length < MIN_PASSWORD) {
     return { ok: false, reason: "weak" };
   }
   if (!settingPassword && !verifyPassword(password, user.passwordHash as string)) {

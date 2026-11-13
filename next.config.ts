@@ -15,6 +15,21 @@ const nextConfig: NextConfig = {
   // advisories (remote code execution via crafted AVIF / SVG, fixed in 15.5.28).
   images: { unoptimized: true },
 
+  // Baseline headers on every response, static files included (v0.699). Who
+  // may frame Kairos is set per request in middleware.ts (FRAME_ANCESTORS can
+  // change it at runtime; these are fixed at build).
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "same-origin" },
+        ],
+      },
+    ];
+  },
+
   experimental: {
     // Profile photos post through a server action, and the default cap is
     // 1 MB — smaller than a phone snapshot.
