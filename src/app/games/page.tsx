@@ -22,7 +22,7 @@ export default async function GamesPage() {
           <h2 className="mt-3 font-display text-lg font-semibold">No game time yet</h2>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
             Once the kids play, their time and games show up here — pulled
-            automatically from Xbox and Steam.
+            automatically from Xbox, Steam and the ROG Ally.
           </p>
         </div>
       ) : (

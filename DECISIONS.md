@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11 — ROG Ally as a third game-time source (v0.705.0)
+
+Collector 5.0.0 adds a third source, `"ally"`: per-app usage on a handheld
+Windows PC from Microsoft Family Safety. Its minutes are already merged into
+the credited total on the collector's side. The payload shape is unchanged:
+`"ally"` can now appear in a friend's `platforms` list and in a game row's
+`platform`.
+
+- **No ingest, schema or minutes change.** The ingest route stores
+  `platforms` as given (comma-joined) and each title's `platform` as given; it
+  never branched on the value.
+- **The icon:** `PlatformIcons` (`src/components/game-cards.tsx`, the /games
+  household cards and the per-kid detail) now draws from one ordered list
+  (Xbox, Steam, ROG Ally), each its brand mark in its brand colour. The
+  Ally has no logo of its own (it's sold under ASUS's Republic of Gamers
+  brand), so it shows the ROG mark from Simple Icons (`republicofgamers`,
+  #FF0029), the same source as the Steam glyph, labelled "ROG Ally". 0.704
+  first shipped a generic handheld outline; it was replaced before deploy.
+- **Unknown values draw nothing.** A source not in the list is skipped (no
+  icon, no crash), and the hover title names only the known ones, so a future
+  source needs only a new list entry.
+- **Branching checked:** nothing else in the web reads `platforms` or a
+  title's `platform` by value. Top games merge by title only, so a game played
+  on two sources still shows once.
+- **App:** the Game time screen gets the same icon in a follow-up release; it
+  reads the same `platforms` list from `/api/v1/game-time`.
+
 ## 2026-11 — Late classes in Catch up; paused classes in the app (v0.703.0 / app 0.505.0)
 
 - **Catch up lists every late class.** A class with nothing overdue that's

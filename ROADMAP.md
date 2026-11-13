@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.703.0 / app v0.505.0, versionCode 577)
+## Current status (13 Nov 2026, web v0.705.0 / app v0.505.0, versionCode 577)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -110,6 +110,11 @@ in the project docs (workouts-plan, workouts-programs-plan, workouts-next-plan).
   - App **Settings reorganized** (app 0.501): profile card, Account (Password,
     Devices, Sign out), Look & feel, Notifications & reminders, Connected apps,
     Parents, Help & about.
+- **ROG Ally icon on Game time (0.705; 0.704 superseded before deploy):** the
+  collector's third source (`"ally"`, collector 5.0.0) gets the ROG logo beside
+  Xbox and Steam; unknown
+  sources draw nothing. App follow-up pending (the Game time screen needs the
+  same icon).
 - **Paused classes (0.702, migration 154):** pause a class per student; it
   keeps one open item that never goes late, the next appears when it's done,
   and Resume lays the rest out again. The app shows it as "paused" with
@@ -1784,7 +1789,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.703.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
+- Web APP_VERSION 0.705.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
   in `MIGRATIONS` since 0.695).
 - App versionName 0.505.0 / versionCode 577 / CLIENT_BUILD 577.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
