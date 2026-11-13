@@ -1,5 +1,43 @@
 # Decisions
 
+## 2026-11 — Re-baselining school work that's behind (v0.701.0)
+
+Some students had fallen well behind on curriculum plans that would still
+finish before the end of the year. Being behind never reshuffles a schedule
+(`reschedulePlanForward` only moves future work), so the overdue lessons piled up as late work.
+Now an admin can restart it.
+
+- **Where:** a Catch up section at the top of Curriculum & schedule, shown
+  only when someone has overdue plan work. One button per student and a
+  Re-baseline all; each asks for a confirm that names the restart day.
+- **What moves:** every undone unit of a behind class (overdue, today's and
+  future), oldest first by plan order, from the **next school day after
+  today**. Today's work moves too, or yesterday's lessons would land after
+  today's. It's meant to run after school is done for the day, so work not
+  yet logged isn't moved by accident. Excused (skipped) items stay put;
+  completed ones are never touched.
+- **When a class is skipped:** the deadline is the end of the class's own
+  window (the last term's end for a whole-year plan, its term's end for a
+  one-term plan, so a term class re-baselines against its term). A plan at
+  its own lessons per day that would finish after that is left alone, and
+  shown locked: some students' work deliberately runs past the semester for
+  them to self-manage. A **fit-to-term** plan re-fits to its deadline instead
+  (extra items on the first days, as when it was published) and is never
+  skipped.
+- **What updates:** the task's due date, the school work's start date (null
+  for tests, as everywhere) and the plan unit's scheduled date. Every admin
+  screen reads those (Student work, plan view, the year calendar, the School
+  card), so they're all current at once. The first planned date is kept in
+  `originalDueDate`, so a lesson still reads "moved from …". A unit whose task
+  was completed but whose `done` flag never caught up is fixed on the way.
+- **Worked out twice:** the preview and the apply each work it out from the
+  database, so a stale page can't move the wrong things; a second run on the
+  same day moves nothing (nothing is overdue).
+- **Known effect:** past days stop counting the moved lessons as missed,
+  because they're no longer due on those days. That's the point of a
+  re-baseline, but it does make earlier days' completion look better.
+- Curriculum plans now show "fit to term" on plans that use it.
+
 ## 2026-11 — Next.js 16 (v0.700.0)
 
 Its own release because it's a major version. Reason: the last production

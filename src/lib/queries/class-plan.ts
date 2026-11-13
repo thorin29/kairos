@@ -14,6 +14,7 @@ export type PlanRow = {
   className: string;
   subject: string | null;
   term: string;
+  fitToTerm: boolean;
   status: string;
   total: number;
   done: number;
@@ -101,6 +102,7 @@ export async function loadClassPlans(): Promise<PlanRow[]> {
       className: p.class.name,
       subject: p.class.subject?.name ?? null,
       term: p.bothTerms ? "Both semesters" : windows[0]?.name ?? "\u2014",
+      fitToTerm: p.fitToTerm,
       status: p.status,
       total: p.units.length,
       done: p.units.length - undone.length,

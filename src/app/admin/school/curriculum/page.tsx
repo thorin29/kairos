@@ -8,17 +8,21 @@ import { loadYearCalendar, loadStudentBars } from "@/lib/queries/school-year";
 import { CurriculumPlans } from "../curriculum-plans";
 import { ClassPlanForm } from "../class-plan-form";
 import { YearCalendar } from "../year/year-calendar";
+import { CatchUp } from "../catch-up";
+import { loadRebaselinePreview } from "@/lib/school/rebaseline-core";
 
 export const dynamic = "force-dynamic";
 
 export default async function SchoolCurriculumPage() {
-  const [classPlans, termOptions, structure, cal, students] = await Promise.all([
+  const [classPlans, termOptions, structure, cal, students, catchUp] = await Promise.all([
     loadClassPlans(),
     loadTermCompileOptions(),
     loadSchoolStructure(),
     loadYearCalendar(),
     loadStudentBars(),
+    loadRebaselinePreview(),
   ]);
+  const anyBehind = catchUp.some((s) => s.behind.length > 0);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -29,6 +33,15 @@ export default async function SchoolCurriculumPage() {
       <header className="mb-6 mt-3 border-b border-hairline pb-4">
         <h1 className="font-display text-2xl font-semibold tracking-tight">Curriculum &amp; schedule</h1>
       </header>
+
+      {anyBehind && (
+        <section className="mb-10">
+          <SectionHeading>Catch up</SectionHeading>
+          <div className="mt-3">
+            <CatchUp students={catchUp} />
+          </div>
+        </section>
+      )}
 
       {cal.hasYear && (
         <section className="mb-10">

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.700.0";
+export const APP_VERSION = "0.701.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -171,6 +171,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.701.0",
+    summary: [
+      "Catch up on Curriculum & schedule: re-baseline a student who's behind, or everyone at once. Their overdue lessons restart from the next school day, oldest first, for every class that still finishes on time.",
+      "Curriculum plans show which classes are fit to term.",
+    ],
+  },
   {
     version: "0.700.0",
     summary: ["Updated to Next.js 16 under the hood."],

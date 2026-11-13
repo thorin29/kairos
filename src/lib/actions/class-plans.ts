@@ -12,6 +12,7 @@ import { noSchoolDaysFor } from "@/lib/school/school-days";
 import { pickClassColor } from "@/lib/palette";
 import { getHolidayColor } from "@/lib/holidays";
 import { addSchoolWorkToTodayCore, reschedulePlanForward } from "@/lib/school/plan-core";
+import { applyRebaseline } from "@/lib/school/rebaseline-core";
 
 function dISO(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -404,6 +405,23 @@ export async function rescheduleAllPublishedPlansForward(): Promise<void> {
   for (const p of plans) await reschedulePlanForward(p.id, today);
   revalidatePath("/");
   revalidatePath("/admin/school");
+}
+
+/** Re-baseline behind-schedule classes (v0.701): one student's, or everyone's
+ *  when userId is null. Restarts their undone plan work, oldest first, from the
+ *  next school day; classes that would then finish past their deadline are
+ *  left alone (rules in lib/school/rebaseline.ts). */
+export async function rebaselineSchool(
+  userId: string | null,
+): Promise<{ classes: number; items: number }> {
+  await requireAdmin();
+  const res = await applyRebaseline(userId);
+  revalidatePath("/");
+  revalidatePath("/tasks");
+  revalidatePath("/calendar");
+  for (const id of res.userIds) revalidatePath(`/person/${id}`);
+  revalidatePath("/admin/school", "layout");
+  return { classes: res.classes, items: res.items };
 }
 
 export type ClassFormInput = {
