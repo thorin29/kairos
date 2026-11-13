@@ -120,6 +120,7 @@ export type ApiDashboard = {
       className: string; subject: string | null; color: string | null;
       finishISO: string | null; remaining: number; onTrack: boolean;
       pace: "ahead" | "behind" | null; catchUpRate: number | null; catchUpDays: number | null;
+      paused: boolean; done: number; total: number; // v0.703: a paused class (no schedule)
     }[];
     getAhead: { subject: string; items: { taskId: string; title: string; dueISO: string }[] }[];
   } | null;
@@ -415,6 +416,7 @@ export async function loadApiDashboard(
             className: c.className, subject: c.subject, color: c.color,
             finishISO: c.finishISO, remaining: c.remaining, onTrack: c.onTrack,
             pace: c.pace, catchUpRate: c.catchUp?.rate ?? null, catchUpDays: c.catchUp?.days ?? null,
+            paused: c.paused, done: c.done, total: c.total,
           })),
           getAhead: schoolAhead.map((sub) => ({
             subject: sub.subject,

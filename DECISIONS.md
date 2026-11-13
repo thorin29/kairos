@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-11 — Late classes in Catch up; paused classes in the app (v0.703.0 / app 0.505.0)
+
+- **Catch up lists every late class.** A class with nothing overdue that's
+  still set to finish after its deadline (a whole-year Geography ending in
+  June, say) wasn't listed, because there was nothing to restart. It's now
+  shown locked beside the behind ones, without an overdue count, so every
+  class that runs past the year is in one place. It still isn't moved.
+- **"Falling behind" after a re-baseline:** the tag means an undone lesson
+  dated before today. A re-baseline leaves none, so the tag clears until a
+  lesson is missed again; a locked class keeps it. Now covered by a test.
+- **API:** school progress rows (`/api/v1/school` and the dashboard) carry
+  `paused`, `done` and `total`; the app shows "paused" and done/total for a
+  paused class instead of a finish date.
+
 ## 2026-11 — Pausing a class for one student (v0.702.0, migration 154)
 
 For a class a student should work through at their own pace, with no
@@ -27,8 +41,7 @@ schedule to fall behind on.
 - **Resume** lays out every remaining unit from the next school day at the
   plan's own pace (re-fit if it's fit to term), even past the deadline.
   Unpublishing a plan clears the pause; republishing schedules it normally.
-- **App:** unchanged. It shows a paused class with no finish date; a "paused"
-  label there would need an API field and an app release.
+- **App:** shown as "paused" with done/total from app 0.505 (server 0.703).
 
 ## 2026-11 — Re-baselining school work that's behind (v0.701.0)
 

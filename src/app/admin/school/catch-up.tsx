@@ -103,7 +103,8 @@ export function CatchUp({ students }: { students: RebaselineStudent[] }) {
                 ) : (
                   <li key={c.planId} className="flex items-center justify-between gap-3 text-muted/70">
                     <span>
-                      {c.className} &middot; {c.overdue} overdue
+                      {c.className}
+                      {c.overdue > 0 ? ` \u00b7 ${c.overdue} overdue` : ""}
                     </span>
                     <span className="inline-flex items-center gap-1" title="Would finish after its last school day">
                       <LockIcon className="h-3 w-3" /> past {c.deadline ? formatShort(c.deadline) : "\u2014"}

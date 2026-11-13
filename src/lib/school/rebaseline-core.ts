@@ -17,7 +17,8 @@ function dISO(d: Date): string {
 export type RebaselineClass = {
   planId: string;
   className: string;
-  status: RebaselineResult["status"];
+  /** "late": nothing overdue, but set to finish after its deadline. */
+  status: RebaselineResult["status"] | "late";
   overdue: number;
   deadline: string | null;
   currentFinish: string | null;
@@ -27,7 +28,8 @@ export type RebaselineClass = {
 export type RebaselineStudent = {
   userId: string;
   name: string;
-  /** Classes with overdue work (ready or past the deadline), by name. */
+  /** Classes with overdue work (ready or past the deadline) or set to finish
+   *  after their deadline, by name. */
   behind: RebaselineClass[];
   /** Overdue items across the ready classes. */
   overdue: number;
@@ -138,11 +140,18 @@ export async function loadRebaselinePreview(): Promise<RebaselineStudent[]> {
       s = { userId: u.userId, name: u.user.name, behind: [], overdue: 0, firstDate: null, sort: u.user.sortOrder };
       byUser.set(u.userId, s);
     }
-    if (result.status !== "ready" && result.status !== "pastDeadline") continue;
+    // On schedule but set to finish after the deadline: nothing to restart, but
+    // shown locked so every late class is in one place.
+    const late =
+      result.status === "onSchedule" &&
+      result.currentFinish != null &&
+      result.deadline != null &&
+      result.currentFinish > result.deadline;
+    if (result.status !== "ready" && result.status !== "pastDeadline" && !late) continue;
     s.behind.push({
       planId: plan.id,
       className: u.name,
-      status: result.status,
+      status: late ? "late" : result.status,
       overdue: result.overdue,
       deadline: result.deadline,
       currentFinish: result.currentFinish,

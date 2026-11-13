@@ -97,6 +97,9 @@ export async function GET(req: NextRequest) {
             pace: c.pace, // "ahead" | "behind" | null
             catchUpRate: c.catchUp?.rate ?? null,
             catchUpDays: c.catchUp?.days ?? null,
+            paused: c.paused, // v0.703: no schedule; show done of total instead
+            done: c.done,
+            total: c.total,
           })),
           getAhead: ahead.map((s) => ({
             subject: s.subject,

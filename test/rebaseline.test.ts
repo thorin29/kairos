@@ -102,6 +102,7 @@ describe("rebaselinePlan", () => {
 let prisma: typeof import("@/lib/prisma").prisma;
 let applyRebaseline: typeof import("@/lib/school/rebaseline-core").applyRebaseline;
 let loadRebaselinePreview: typeof import("@/lib/school/rebaseline-core").loadRebaselinePreview;
+let loadSchoolProgress: typeof import("@/lib/queries/school-card").loadSchoolProgress;
 const d = (iso: string) => new Date(`${iso}T00:00:00Z`);
 const iso = (x: Date | null | undefined) => (x ? x.toISOString().slice(0, 10) : null);
 
@@ -148,6 +149,7 @@ describe.skipIf(!process.env.DATABASE_URL)("re-baselining against the database",
   beforeAll(async () => {
     ({ prisma } = await import("@/lib/prisma"));
     ({ applyRebaseline, loadRebaselinePreview } = await import("@/lib/school/rebaseline-core"));
+    ({ loadSchoolProgress } = await import("@/lib/queries/school-card"));
   });
   beforeEach(async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -164,6 +166,13 @@ describe.skipIf(!process.env.DATABASE_URL)("re-baselining against the database",
   afterAll(async () => {
     vi.useRealTimers();
     await prisma.$disconnect();
+  });
+
+  it("lists an on-schedule class that's set to finish late, locked", async () => {
+    await plan(uid, termId, "Science", [{ date: "2026-11-13" }, { date: "2026-12-21" }]);
+    const sam = (await loadRebaselinePreview()).find((s) => s.userId === uid)!;
+    expect(sam.behind.map((c) => [c.className, c.status, c.overdue])).toEqual([["Science", "late", 0]]);
+    expect(sam.overdue).toBe(0);
   });
 
   it("moves a behind class, keeps where each item was first planned, and leaves a late class alone", async () => {
@@ -203,6 +212,10 @@ describe.skipIf(!process.env.DATABASE_URL)("re-baselining against the database",
     const geo = await unitsOf(late);
     expect(iso(geo[0].scheduledDate)).toBe("2026-11-12");
     expect(iso(geo[0].work!.task.dueDate)).toBe("2026-11-12");
+
+    // The moved class stops saying "falling behind"; the late one still does.
+    const pace = Object.fromEntries((await loadSchoolProgress(uid)).progress.map((p) => [p.className, p.pace]));
+    expect(pace).toEqual({ Grammar: null, Geography: "behind" });
 
     // Run again: nothing is overdue now, so nothing moves.
     expect(await applyRebaseline(null)).toMatchObject({ classes: 0, items: 0 });

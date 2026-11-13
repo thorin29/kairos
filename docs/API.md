@@ -1572,6 +1572,11 @@ app's completion UI depends on (app 0.252 needs server 0.448 — deploy both):
   open. While this is true the client holds off on "Complete for today!" even if
   every assignment is done, so the check-in isn't skipped.
 
+- **v0.703:** each school progress row (here and in the dashboard's
+  `school.progress`) gains `paused` (bool), `done` and `total` (ints). A paused
+  class has no schedule: `pace`, `finishISO` and the catch-up fields are null,
+  and the client shows "paused" with `done`/`total` instead (app 0.505).
+
 "Complete for today!" is shown only when everything still *due today* is done
 (it counts what's left, not the day's total) and no attendance prompt is pending.
 

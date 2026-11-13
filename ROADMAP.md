@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.702.0 / app v0.504.0, versionCode 576)
+## Current status (13 Nov 2026, web v0.703.0 / app v0.505.0, versionCode 577)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -112,8 +112,9 @@ in the project docs (workouts-plan, workouts-programs-plan, workouts-next-plan).
     Parents, Help & about.
 - **Paused classes (0.702, migration 154):** pause a class per student; it
   keeps one open item that never goes late, the next appears when it's done,
-  and Resume lays the rest out again. The app shows a paused class with no
-  finish date (no "paused" label there yet).
+  and Resume lays the rest out again. The app shows it as "paused" with
+  done/total (app 0.505, server 0.703). Catch up also lists late-but-on-
+  schedule classes, locked (0.703).
 - **School catch up (0.701):** re-baseline a behind student (or everyone) from
   Curriculum & schedule. Undone plan work restarts from the next school day,
   oldest first; a class that would then finish past its deadline is left for
@@ -1783,9 +1784,9 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.702.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
+- Web APP_VERSION 0.703.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.504.0 / versionCode 576 / CLIENT_BUILD 576.
+- App versionName 0.505.0 / versionCode 577 / CLIENT_BUILD 577.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.
