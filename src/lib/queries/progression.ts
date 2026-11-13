@@ -112,9 +112,11 @@ export type PersonProgress = {
      *  back when it retires, so bringing it out of the gallery resumes rather
      *  than restarting. Zero when there is no companion. */
     growth: number;
-    /** The same growth without today's live credit — what is banked if it goes
-     *  to the gallery now (today then belongs to whoever takes over). */
+    /** The same growth without today's live credit (today can still change). */
     settledGrowth: number;
+    /** Deepening progress (0..6) while deepening, else null. Banked with the
+     *  companion when it goes to the gallery, so it resumes (v0.697). */
+    deepenProgress: number | null;
     /** Today's part of `growth` (drawn lighter: it can still change today). */
     pendingGrowth: number;
     /** Growth needed to finish the current phase: 12 to adult while growing,
@@ -215,7 +217,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     seasonKey: string | null;
     eggsThisSeason: number;
   };
-  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number; acquiredAt: Date; deepeningStartedAt: Date | null; growthBanked: number; tenureStartedAt: Date | null; mintedStage: number | null };
+  type ActiveRow = { userId: string; species: string; shiny: boolean; activeSinceXp: number; acquiredAt: Date; deepeningStartedAt: Date | null; growthBanked: number; tenureStartedAt: Date | null; mintedStage: number | null; tenureCreditOffset: number; deepenBanked: number | null };
   const stateByUser = new Map(
     (compStates as StateRow[]).map((s) => [s.userId, s]),
   );
@@ -503,6 +505,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
             eggCapped: false,
             growth: 0,
             settledGrowth: 0,
+            deepenProgress: null,
             pendingGrowth: 0,
             phaseGoal: null,
             phaseProgress: 0,
@@ -527,9 +530,19 @@ export async function loadProgression(): Promise<PersonProgress[]> {
         // shelved before 0.576 hold only their stage's floor, not what they
         // earned, so "earned minus what the shelf holds" credited a fresh
         // hatchling with months of old growth. See DECISIONS 0.602.1.
-        const totalGrowth = banked + growthSince(tenureISO);
-        const settledGrowth = banked + settledSince(tenureISO);
-        const deepenGrowth = deepFromISO ? growthSince(deepFromISO) : 0;
+        // Work stays with whoever was active when it was done (v0.697): the
+        // tenure day's credit the outgoing companion had already earned at the
+        // switch (`tenureCreditOffset`) is not this one's. Capped at the day's
+        // credit, which can fall later in the day if more is added to the list.
+        const offset = Math.min(active.tenureCreditOffset ?? 0, dayCredit(a.days.get(tenureISO)));
+        const totalGrowth = banked + growthSince(tenureISO) - offset;
+        const settledGrowth = banked + settledSince(tenureISO) - (tenureISO < today ? offset : 0);
+        // Deepening resumes from what it banked on the shelf (v0.697); counted
+        // from its own start day, minus the switch offset when that is the
+        // tenure day.
+        const deepenGrowth = deepFromISO
+          ? (active.deepenBanked ?? 0) + growthSince(deepFromISO) - (deepFromISO === tenureISO ? offset : 0)
+          : 0;
         const ph = companionPhase({
           growth: totalGrowth,
           deepenGrowth,
@@ -561,6 +574,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
           eggReady: ph.eggReady,
           eggCapped: false,
           settledGrowth,
+          deepenProgress: ph.phase === "deepening" ? Math.min(deepenGrowth, DEEPEN_GROWTH) : null,
           pendingGrowth: Math.max(0, totalGrowth - settledGrowth),
           phaseGoal,
           phaseProgress,

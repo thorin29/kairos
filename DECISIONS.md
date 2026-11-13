@@ -1,5 +1,43 @@
 # Decisions
 
+## 2026-11 — Switching characters keeps growth with the one that earned it (v0.697.0, migration 153)
+
+A child reported losing a newly hatched character's progress after switching
+it out and back. Run against a real database, three things turned up:
+
+- **Bug: `growthBanked` was an INTEGER** (migration 121, from when growth was
+  whole squares). Since 0.603 a day can be worth part of a square, so banking
+  2.33 stored 2, and under half a square stored 0. Every switch lost (or
+  gained) up to half a square.
+  - Migration 153 makes it DOUBLE PRECISION.
+  - Fractions already rounded away can't be recovered, because switches
+    aren't logged.
+- **Rule changed: a day was credited to whoever held it at its end.** That
+  was the 0.603 rule. A character hatched and switched out the same evening
+  lost its hatch day to the next one, which is the reported case.
+  - Now the outgoing character banks everything, today so far included.
+  - The incoming one stores `tenureCreditOffset` (the day's credit at the
+    switch) and counts only what's earned after it, capped so it never goes
+    negative. The day is split at the switch.
+  - A first companion gets the whole day. Perfect weeks still go to whoever
+    holds the week when it ends.
+- **Rule changed: switching away mid-deepen reset the deepen.** Now its
+  progress is banked (`deepenBanked`), and on return deepening restarts from
+  the banked amount.
+- `test/companion-switch.test.ts` runs `activateCompanionCore` and
+  `loadProgression` against a database, with the clock set to specific days.
+  It covers:
+  - away and back the same day;
+  - parts of a square;
+  - the hatch-day case;
+  - a day split at the switch;
+  - a list that grows after a switch;
+  - deepening resuming.
+  It skips without `DATABASE_URL`. It loads the database modules lazily, so
+  it needs no generated client to skip.
+- The earlier "random switch histories sum exactly" test was a pure model. It
+  could never have caught a column type, so this one runs the real code.
+
 ## 2026-11 — Growth pace and egg rarity checked against real data: no change (docs only, 13 Nov)
 
 - From a scoring snapshot, the target was an egg about every three weeks, with

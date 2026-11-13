@@ -163,7 +163,7 @@ production:
 | Body map figure colours (web and app) | `--color-figure*` in `src/app/globals.css`; the app's `figureColors(dark)` holds the same values |
 | A movement's Best weight / Best reps / Latest | `src/lib/queries/movement-stats.ts` |
 | Schoolwork completion marks the plan unit done | `syncPlanUnitDone` in `src/lib/school/plan-unit-sync.ts` |
-| Companion growth banked across a shelf trip | `src/lib/companions-tenure.ts` (banks `settledGrowth`); which companion a day or week belongs to in `src/lib/companions-growth.ts` |
+| Companion growth banked across a shelf trip (stays with whoever earned it, v0.697) | `src/lib/companions-tenure.ts` (banks `growth`, today included, and `deepenBanked`; the incoming one gets `tenureCreditOffset`); the offset applied in `loadProgression` (`progression.ts`); DB test `test/companion-switch.test.ts`; which companion a day or week belongs to in `src/lib/companions-growth.ts` |
 | What a day is worth (growth, the month, the family goal, egg luck) | `dayCredit` and friends in `src/lib/companions-growth.ts` — map in docs/SCORING.md |
 | The character's row of squares (web + phone) | `growthRow` in `src/lib/scoring/growth-cells.ts` |
 | "How scoring works" text (web `/scoring` + phone Settings) | `scoringGuide` in `src/lib/scoring/guide.ts` |

@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.696.0 / app v0.503.0, versionCode 575)
+## Current status (13 Nov 2026, web v0.697.0 / app v0.503.0, versionCode 575)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -110,6 +110,10 @@ in the project docs (workouts-plan, workouts-programs-plan, workouts-next-plan).
   - App **Settings reorganized** (app 0.501): profile card, Account (Password,
     Devices, Sign out), Look & feel, Notifications & reminders, Connected apps,
     Parents, Help & about.
+- **Character switching (0.697, migration 153):** growth stays with the
+  character that earned it (a day splits at the switch), parts of a square
+  are no longer rounded away (`growthBanked` was an integer), and deepening
+  resumes after a trip to the gallery.
 - **Loose ends (web 0.696 / app 0.502–0.503):**
   - admin auto-lock after idle time (Admin → Settings → Device);
   - full-body moves on the body map and the heart;
@@ -1763,7 +1767,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.696.0 (migrations through 152_person_pause, all registered
+- Web APP_VERSION 0.697.0 (migrations through 153_companion_growth_float, all registered
   in `MIGRATIONS` since 0.695).
 - App versionName 0.503.0 / versionCode 575 / CLIENT_BUILD 575.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).

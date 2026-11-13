@@ -83,25 +83,41 @@ egg (none yet) → hatch → GROWING ──(growth reaches 12)──► ADULT: e
 
 ## 4. Switching characters (the gallery)
 
-A tenure = the span a character is active. Rules (`companions-growth.ts`):
+A tenure = the span a character is active. **Growth stays with the character
+that was active when the work was done** (v0.697). Rules (`progression.ts`,
+`companions-tenure.ts`):
 
-- A **day belongs to whoever is active at its end.** A tenure starts on the
-  household day it was activated (`todayISO(date)`, never the UTC date — that
-  turned evening switches into "tomorrow" and lost the day; fixed 0.602).
-- Retiring (switching away or hatching) **banks settled growth only** — up to
-  yesterday (`settledGrowth`). Today moves with the character that takes over,
-  so it is never counted twice (0.603).
+- Retiring (switching away or hatching) **banks everything it earned, today so
+  far included** (`growth`), in `growthBanked` (a double since migration 153).
+- The incoming character's tenure starts on the household day it was activated
+  (`todayISO(date)`, never the UTC date, fixed 0.602). It carries
+  `tenureCreditOffset`, the day's credit already earned at the switch, which is
+  not its own. The tenure day counts `credit − offset`, capped at the day's
+  credit so it never goes negative if the list grows later. A first companion
+  (nothing to switch from) gets the whole day.
+- A day is therefore split at the switch: work before it stays with the
+  outgoing character, work after it goes to the incoming one. Away and back on
+  the same day changes nothing.
+- **Deepening resumes:** shelved mid-deepen, its progress is banked in
+  `deepenBanked`. Coming back restarts `deepeningStartedAt` and adds the banked
+  progress. Before 0.697 it came back adult, at 0 of 6.
 - A **perfect week belongs to whoever holds it when it ends** (its last day on or
   after the tenure's start). Before 0.602 a mid-week switch lost the week.
 - `bankedGrowthFloor(mintedStage)`: a shelved character never comes back below
   the stage the gallery showed. Rows shelved before 0.576 have `growthBanked 0`
-  and rely on this floor — **they hold only the stage minimum, not what they
+  and rely on this floor. **They hold only the stage minimum, not what they
   earned**, so "everything earned − what the shelf holds" is NOT lost growth.
   0.602.0 assumed it was and turned a new hatchling into an adult (reverted in
   0.602.1). Growth lost to old switches can't be rebuilt: switches aren't logged.
 
-Tested: random switch histories (several switches a day, today live) always sum
-to exactly what was earned.
+**History.**
+- 0.603–0.696: `growthBanked` was an INTEGER, so every switch rounded the
+  banked growth (2.33 → 2; under half a square → 0).
+- Before 0.697, a whole day went to whoever was active at its end, so a
+  character switched out on the day it hatched lost that day to the next one.
+- The old "random switch history" test used a pure model and could not see the
+  column type. `test/companion-switch.test.ts` runs the real switch code
+  against a database (it needs `DATABASE_URL`; it skips otherwise).
 
 ## 5. This month and the family goal
 

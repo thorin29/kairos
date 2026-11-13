@@ -11,14 +11,18 @@ import { loadProgression } from "@/lib/queries/progression";
  * credits it for every day it spent shelved (measuring from `acquiredAt`) or
  * wipes what it did (measuring from the day it returns).
  *
- * `totalGrowth` is what the caller already computed for the live companion, so
- * this never recomputes progression just to put something down.
+ * `totalGrowth` is everything it earned, today's credit so far included (v0.697:
+ * work stays with the companion that was active when it was done; the one
+ * taking over starts from `tenureCreditOffset`). `deepen` is its deepening
+ * progress when it is mid-deepen, banked so it resumes, else null.
+ * Both come from the progression the caller already computed.
  */
 export function retireActiveCompanionOp(input: {
   companionId: string;
   totalGrowth: number;
   stage: number;
   shiny: boolean;
+  deepen: number | null;
 }) {
   // Returns the operation rather than awaiting it, so a caller that is already
   // building a $transaction can include it and a caller that is not can await
@@ -32,8 +36,10 @@ export function retireActiveCompanionOp(input: {
       // carry the answer the live view used to derive.
       shiny: input.shiny,
       deepeningStartedAt: null,
+      deepenBanked: input.deepen,
       growthBanked: input.totalGrowth,
       tenureStartedAt: null,
+      tenureCreditOffset: 0,
     },
   });
 }
@@ -43,8 +49,8 @@ export function retireActiveCompanionOp(input: {
  *
  * The one in the slot is retired first, banking its growth, so swapping back
  * and forth never loses or invents progress. The returning companion resumes at
- * the growth it banked: a shelved hatchling comes back a hatchling, and one
- * shelved as an adult is adult again and can be deepened straight away.
+ * the growth it banked: a shelved hatchling comes back a hatchling, one shelved
+ * as an adult is adult again, and one shelved mid-deepen carries on deepening.
  *
  * Callers own their own auth + cache refresh.
  */
@@ -60,7 +66,7 @@ export async function activateCompanionCore(
 
   const target = await prisma.companion.findUnique({
     where: { userId_species: { userId, species } },
-    select: { id: true, isActive: true, species: true, mintedStage: true },
+    select: { id: true, isActive: true, species: true, mintedStage: true, deepenBanked: true },
   });
   if (!target) return { error: "You don't own that one yet." };
   if (target.isActive) {
@@ -77,11 +83,12 @@ export async function activateCompanionCore(
     ops.push(
       retireActiveCompanionOp({
         companionId: active.id,
-        // Settled growth only: today's credit moves with the companion that
-        // takes over, so it is never counted twice (companions-growth.ts).
-        totalGrowth: me.companion.settledGrowth,
+        // Everything it earned, today so far included; the incoming one's
+        // offset keeps today from being counted twice.
+        totalGrowth: me.companion.growth,
         stage: me.companion.stage,
         shiny: me.companion.shiny,
+        deepen: me.companion.deepenProgress,
       }),
     );
   }
@@ -91,12 +98,14 @@ export async function activateCompanionCore(
       data: {
         isActive: true,
         tenureStartedAt: new Date(),
+        // Today's credit so far belongs to the one going to the gallery.
+        tenureCreditOffset: active ? me.todayCredit : 0,
         // The gallery shows an unminted shelf row as adult (stage ?? 2), so it
         // comes back as one: the minted stage is what bankedGrowthFloor reads.
         mintedStage: target.mintedStage ?? 2,
-        // A returning companion is not mid-deepen. If it was deepened before it
-        // is still shiny; if it was not, it starts that choice fresh.
-        deepeningStartedAt: null,
+        // Shelved mid-deepen: it carries on from what it banked (deepenBanked,
+        // counted from now). Otherwise not deepening: shiny if it finished one.
+        deepeningStartedAt: target.deepenBanked != null ? new Date() : null,
       },
     }),
   );

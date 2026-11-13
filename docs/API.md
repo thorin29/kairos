@@ -1484,8 +1484,10 @@ Progression (v0.574–0.578), settled after three bugs from conflating them:
 companion is doing now. Nothing about one may be inferred from the other** —
 shiny does not mean adult. An egg appears only once the active companion is
 fully grown; deepening is a phase worked through after that. Activating an
-older companion banks the current one's growth and resumes the returning one's
-(`companions-tenure.ts`, migration 121). There is no monthly hatch cap.
+older companion banks the current one's growth, today so far included, and
+resumes the returning one's, deepening included (`companions-tenure.ts`,
+migrations 121 and 153; v0.697: a day splits at the switch). No shape change.
+There is no monthly hatch cap.
 
 **Growth and the month (v0.603, rules in docs/SCORING.md).** Each day is worth
 the share of its effort finished (0..1, today live). `GET /api/v1/characters`

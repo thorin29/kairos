@@ -89,11 +89,12 @@ export async function hatchEggCore(
       ops.push(
         retireActiveCompanionOp({
           companionId: active.id,
-          // Settled growth only: today's credit moves with the companion that
-        // takes over, so it is never counted twice (companions-growth.ts).
-        totalGrowth: me.companion.settledGrowth,
+          // Everything it earned, today so far included; the hatchling's
+          // offset keeps today from being counted twice (v0.697).
+          totalGrowth: me.companion.growth,
           stage: me.companion.stage,
           shiny: me.companion.shiny,
+          deepen: me.companion.deepenProgress,
         }),
       );
     }
@@ -105,6 +106,9 @@ export async function hatchEggCore(
           isActive: true,
           activeSinceXp: lifetimeXp,
           tenureStartedAt: new Date(),
+          // Today's work before the hatch stays with the one it was done for.
+          // A first companion (nothing active) gets the whole day.
+          tenureCreditOffset: active ? me.todayCredit : 0,
         },
       }),
     );
@@ -121,7 +125,7 @@ export async function hatchEggCore(
     // deepening growth is done, which is the signal that there is an egg again.
     await prisma.companion.update({
       where: { id: active.id },
-      data: { deepeningStartedAt: new Date() },
+      data: { deepeningStartedAt: new Date(), deepenBanked: null },
     });
   }
 

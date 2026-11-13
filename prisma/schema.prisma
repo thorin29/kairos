@@ -1857,10 +1857,14 @@ model Companion {
   deepeningStartedAt DateTime?
   /// Growth earned in PREVIOUS tenures, banked when it went to the gallery.
   /// Lets a companion be brought back without losing what it had grown.
-  growthBanked  Int      @default(0)
+  growthBanked  Float    @default(0) // Float since 153: growth comes in parts of a square
   /// When the current tenure began. Null for a companion that has only ever had
   /// one, where `acquiredAt` is the same thing.
   tenureStartedAt DateTime?
+  // Today's credit the outgoing companion had already earned at activation (153).
+  tenureCreditOffset Float @default(0)
+  // Deepening progress banked on the shelf; null when not deepening (153).
+  deepenBanked  Float?
 
   @@unique([userId, species])
   @@index([userId])
