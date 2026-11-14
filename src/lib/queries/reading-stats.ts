@@ -1,7 +1,6 @@
 import "server-only";
-import { prisma } from "@/lib/prisma";
-import { fromDateColumn, toDateColumn } from "@/lib/dates";
-import { BOOKS, parsePassage, type Group } from "@/lib/bible/books";
+import { BOOKS, type Group } from "@/lib/bible/books";
+import { familyEraSet, personalEraSet } from "@/lib/bible/era-core";
 
 export type GroupProgress = {
   label: string;
@@ -26,57 +25,34 @@ export type ReadingStats = {
 
 const TOTAL = BOOKS.reduce((n, b) => n + b.chapters, 0);
 
-/**
- * Coverage from the scheduled plan up to today — what the household has been
- * *taken through*, which is what a schedule can honestly claim. Whether a
- * given person ticked their box is a separate number, on their own card.
- *
- * Distinct chapters are counted, so a passage read twice in a year doesn't
- * inflate the total past 100%.
- */
-export async function loadReadingStats(
+const GROUP_NAMES: Group[] = [
+  "Pentateuch",
+  "History",
+  "Wisdom",
+  "Major Prophets",
+  "Minor Prophets",
+  "Gospels",
+  "Acts",
+  "Paul",
+  "General Epistles",
+  "Revelation",
+];
+
+/** Coverage figures from a set of "Book|chapter" keys read, plus the hand-marked
+ *  rows (a book counts as "already read" when all its chapters are marked). */
+function statsFrom(
   todayISO: string,
-): Promise<ReadingStats> {
-  const year = todayISO.slice(0, 4);
-
-  // Everything the published plan has taken the household through so far —
-  // the whole run of it up to today, not just this calendar year — plus any
-  // books an admin marked as already read. Extras (Christmas, Easter) are
-  // left out so a one-off can't inflate the figure.
-  const [days, completions] = await Promise.all([
-    prisma.readingDay.findMany({
-      where: {
-        plan: { isPublished: true, ownerId: null },
-        isExtra: false,
-        day: { lte: toDateColumn(todayISO) },
-      },
-      select: { passage: true, day: true },
-    }),
-    prisma.chapterCompletion.findMany({
-      select: { bookName: true, chapter: true },
-    }),
-  ]);
-
+  seen: Set<string>,
+  manual: { bookName: string; chapter: number }[],
+): ReadingStats {
   const byName = new Map(BOOKS.map((b) => [b.name, b]));
-  const seen = new Set<string>();
-
-  for (const d of days) {
-    if (fromDateColumn(d.day) > todayISO) continue;
-    for (const ref of parsePassage(d.passage)) {
-      seen.add(`${ref.book}|${ref.chapter}`);
-    }
-  }
-
-  // Manually marked chapters — the household's own baseline.
   const manualByBook = new Map<string, Set<number>>();
-  for (const { bookName, chapter } of completions) {
+  for (const { bookName, chapter } of manual) {
     if (!byName.has(bookName)) continue;
-    seen.add(`${bookName}|${chapter}`);
     if (!manualByBook.has(bookName)) manualByBook.set(bookName, new Set());
     manualByBook.get(bookName)!.add(chapter);
   }
 
-  // A book counts as "already read" when every one of its chapters is marked.
   const completedBooks = BOOKS.filter((b) => {
     const marked = manualByBook.get(b.name);
     return marked && marked.size >= b.chapters;
@@ -98,26 +74,13 @@ export async function loadReadingStats(
     };
   };
 
-  const groupNames: Group[] = [
-    "Pentateuch",
-    "History",
-    "Wisdom",
-    "Major Prophets",
-    "Minor Prophets",
-    "Gospels",
-    "Acts",
-    "Paul",
-    "General Epistles",
-    "Revelation",
-  ];
-
   return {
-    yearISO: year,
+    yearISO: todayISO.slice(0, 4),
     totalChapters: TOTAL,
     readChapters: seen.size,
     ot: { label: "Old Testament", ...countFor((n) => byName.get(n)!.testament === "OT") },
     nt: { label: "New Testament", ...countFor((n) => byName.get(n)!.testament === "NT") },
-    groups: groupNames.map((g) => ({
+    groups: GROUP_NAMES.map((g) => ({
       label: g,
       ...countFor((n) => byName.get(n)!.group === g),
     })),
@@ -133,91 +96,36 @@ export async function loadReadingStats(
 }
 
 /**
+ * Coverage from the scheduled plan up to today — what the household has been
+ * *taken through*, which is what a schedule can honestly claim — plus the
+ * chapters an admin marked by hand, both counted from the start of the current
+ * reading era (v0.723). Extras (Christmas, Easter) are left out so a one-off
+ * can't inflate the figure. Distinct chapters are counted, so a passage read
+ * twice doesn't push the total past 100%.
+ */
+export async function loadReadingStats(
+  todayISO: string,
+): Promise<ReadingStats> {
+  const { seen, manual } = await familyEraSet(todayISO);
+  return statsFrom(todayISO, seen, manual);
+}
+
+/**
  * The same coverage figures, but for one person's own reading record
- * (UserChapterRead) instead of the household plan + shared marks. Used on the
- * Bible page when someone is signed in on a personal account.
+ * (UserChapterRead) in their current era, instead of the household plan +
+ * shared marks.
  */
 export async function loadPersonalReadingStats(
   userId: string,
   todayISO: string,
 ): Promise<ReadingStats> {
-  const year = todayISO.slice(0, 4);
-  const reads = await prisma.userChapterRead.findMany({
-    where: { userId },
-    select: { bookName: true, chapter: true },
-  });
-
-  const byName = new Map(BOOKS.map((b) => [b.name, b]));
-  const seen = new Set<string>();
-  const readByBook = new Map<string, Set<number>>();
-  for (const { bookName, chapter } of reads) {
-    if (!byName.has(bookName)) continue;
-    seen.add(`${bookName}|${chapter}`);
-    if (!readByBook.has(bookName)) readByBook.set(bookName, new Set());
-    readByBook.get(bookName)!.add(chapter);
-  }
-
-  const completedBooks = BOOKS.filter((b) => {
-    const marked = readByBook.get(b.name);
-    return marked && marked.size >= b.chapters;
-  }).map((b) => b.name);
-
-  const countFor = (predicate: (bookName: string) => boolean) => {
-    const books = BOOKS.filter((b) => predicate(b.name));
-    const chapters = books.reduce((n, b) => n + b.chapters, 0);
-    let read = 0;
-    for (const b of books) {
-      for (let c = 1; c <= b.chapters; c++) {
-        if (seen.has(`${b.name}|${c}`)) read += 1;
-      }
-    }
-    return {
-      chapters,
-      read,
-      percent: chapters ? Math.round((read / chapters) * 100) : 0,
-    };
-  };
-
-  const groupNames: Group[] = [
-    "Pentateuch",
-    "History",
-    "Wisdom",
-    "Major Prophets",
-    "Minor Prophets",
-    "Gospels",
-    "Acts",
-    "Paul",
-    "General Epistles",
-    "Revelation",
-  ];
-
-  return {
-    yearISO: year,
-    totalChapters: TOTAL,
-    readChapters: seen.size,
-    ot: { label: "Old Testament", ...countFor((n) => byName.get(n)!.testament === "OT") },
-    nt: { label: "New Testament", ...countFor((n) => byName.get(n)!.testament === "NT") },
-    groups: groupNames.map((g) => ({
-      label: g,
-      ...countFor((n) => byName.get(n)!.group === g),
-    })),
-    booksTouched: new Set([...seen].map((k) => k.split("|")[0])).size,
-    completedBooks,
-    wholeBible: BOOKS.every((b) => {
-      for (let c = 1; c <= b.chapters; c++) {
-        if (!seen.has(`${b.name}|${c}`)) return false;
-      }
-      return true;
-    }),
-  };
+  const { seen, manual } = await personalEraSet(userId);
+  return statsFrom(todayISO, seen, manual);
 }
 
 /** The "book|chapter" keys a person has personally read — for pre-filling the
  *  tracker editor. */
 export async function loadPersonalReadKeys(userId: string): Promise<string[]> {
-  const reads = await prisma.userChapterRead.findMany({
-    where: { userId },
-    select: { bookName: true, chapter: true },
-  });
-  return reads.map((r) => `${r.bookName}|${r.chapter}`);
+  const { manual } = await personalEraSet(userId);
+  return manual.map((r) => `${r.bookName}|${r.chapter}`);
 }

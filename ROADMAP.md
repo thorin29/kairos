@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (14 Nov 2026, web v0.722.0 / app v0.520.0, versionCode 592)
+## Current status (14 Nov 2026, web v0.723.0 / app v0.521.0, versionCode 593)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -625,6 +625,12 @@ the remaining personal-view items:
 - [x] Balance by verse count rather than chapter count so days stay even (v0.722)
 - [x] Per-weekday chapter counts, including a lighter Sunday as an option
 - [x] Guarantee no passage is scheduled twice within a plan (v0.722)
+- [x] Reading eras with a section comparison and a count of full passes, family
+      and personal (v0.723)
+- [x] Add readings to a plan: pick chapters or type passages; push back, add to
+      days, or some of each (v0.723)
+- [x] Import (dated, or passages with a start date and weekdays) and export in
+      the same format, web and app (v0.723)
 - [x] Preset plans generated from book lists (canonical, historical,
       chronological, New Testament only) — generated here, not copied from
       published plans
@@ -1812,9 +1818,9 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.722.0 on Next.js 16.4.6 (migrations through 155_drop_school_proposals, all registered
+- Web APP_VERSION 0.723.0 on Next.js 16.4.6 (migrations through 156_reading_eras, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.520.0 / versionCode 592 / CLIENT_BUILD 592.
+- App versionName 0.521.0 / versionCode 593 / CLIENT_BUILD 593.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.

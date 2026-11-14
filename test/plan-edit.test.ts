@@ -1,0 +1,117 @@
+import { describe, expect, it } from "vitest";
+import { addReadings, formatPlanText, joinChapters, parsePlanText } from "@/lib/bible/plan-edit";
+import { decodeSnapshot, encodeSnapshot, isFullPass, sectionCounts, CANON_KEYS } from "@/lib/bible/eras";
+
+const plan = [
+  { iso: "2026-12-22", passage: "Revelation 14-15" },
+  { iso: "2026-12-23", passage: "Revelation 16-17" },
+  { iso: "2026-12-24", passage: "Revelation 18" },
+  { iso: "2026-12-25", passage: "Revelation 19" },
+];
+const three = ["Luke 2:1-20", "Isaiah 9:1-7", "Psalm 96"];
+
+describe("addReadings", () => {
+  it("pushes the plan back", () => {
+    const r = addReadings(plan, three, "2026-12-23", "push");
+    expect(r.error).toBeNull();
+    expect(r.days.map((d) => d.passage)).toEqual([
+      "Revelation 14-15",
+      ...three,
+      "Revelation 16-17",
+      "Revelation 18",
+      "Revelation 19",
+    ]);
+    expect(r.days[4]).toMatchObject({ iso: "2026-12-26", tag: "moved", fromISO: "2026-12-23" });
+    expect(r.endISO).toBe("2026-12-28");
+    expect(r.oldEndISO).toBe("2026-12-25");
+  });
+
+  it("adds to existing days without moving the end", () => {
+    const r = addReadings(plan, three, "2026-12-23", "add");
+    expect(r.endISO).toBe("2026-12-25");
+    expect(r.days[1]).toMatchObject({ passage: "Revelation 16-17; Luke 2:1-20", tag: "added" });
+    expect(r.days[3].passage).toBe("Revelation 19; Psalm 96");
+  });
+
+  it("some of each moves the end by the own-day count", () => {
+    const r = addReadings(plan, three, "2026-12-23", "mix", 1);
+    expect(r.endISO).toBe("2026-12-26");
+    expect(r.days[1]).toMatchObject({ iso: "2026-12-23", passage: "Luke 2:1-20", tag: "new" });
+    expect(r.days[2]).toMatchObject({ iso: "2026-12-24", passage: "Revelation 16-17; Isaiah 9:1-7" });
+  });
+
+  it("keeps a weekday-only plan on its weekdays", () => {
+    // Mon/Wed/Fri plan.
+    const isos = ["2026-11-16", "2026-11-18", "2026-11-20", "2026-11-23", "2026-11-25", "2026-11-27", "2026-11-30", "2026-12-02", "2026-12-04"];
+    const mwf = isos.map((iso, i) => ({ iso, passage: `John ${i + 1}` }));
+    const r = addReadings(mwf, ["Psalm 1", "Psalm 2"], "2026-12-02", "push");
+    expect(r.days.slice(-5).map((d) => d.iso)).toEqual(["2026-11-30", "2026-12-02", "2026-12-04", "2026-12-07", "2026-12-09"]);
+  });
+
+  it("starts on a day the plan skips without moving earlier readings", () => {
+    const r = addReadings(plan, ["Psalm 1"], "2026-12-21", "push");
+    expect(r.days[0]).toMatchObject({ iso: "2026-12-21", passage: "Psalm 1" });
+    expect(r.days[1]).toMatchObject({ iso: "2026-12-22", tag: "" });
+  });
+
+  it("appends past the end", () => {
+    const r = addReadings(plan, ["Psalm 1"], "2027-01-05", "add");
+    expect(r.days[r.days.length - 1]).toMatchObject({ iso: "2027-01-05", tag: "new" });
+  });
+});
+
+describe("joinChapters", () => {
+  it("joins runs and separates the rest", () => {
+    expect(
+      joinChapters([
+        { book: "Luke", chapter: 2 },
+        { book: "Luke", chapter: 3 },
+        { book: "Acts", chapter: 1 },
+      ]),
+    ).toBe("Luke 2-3; Acts 1");
+  });
+});
+
+describe("parsePlanText", () => {
+  it("reads dated lines and a name", () => {
+    const p = parsePlanText("# My plan\n2026-12-01, John 1\n12/2/2026, John 2-3\nnonsense\n2026-12-01, Psalm 1");
+    expect(p.name).toBe("My plan");
+    expect(p.dated).toBe(true);
+    expect(p.days).toEqual([
+      { iso: "2026-12-01", passage: "John 1; Psalm 1" },
+      { iso: "2026-12-02", passage: "John 2-3" },
+    ]);
+    expect(p.skipped).toEqual(["nonsense"]);
+  });
+
+  it("lays out undated passages on the chosen weekdays", () => {
+    const p = parsePlanText("John 1\nJohn 2\nJohn 3", { startISO: "2026-12-05", weekdays: [1, 3] });
+    expect(p.days.map((d) => d.iso)).toEqual(["2026-12-07", "2026-12-09", "2026-12-14"]);
+  });
+
+  it("asks for a start date when undated", () => {
+    expect(parsePlanText("John 1").error).toBe("Pick a start date.");
+  });
+
+  it("round-trips through export", () => {
+    const days = [
+      { iso: "2026-12-01", passage: "John 1" },
+      { iso: "2026-12-02", passage: "Psalm 23; Psalm 24" },
+    ];
+    const p = parsePlanText(formatPlanText("Advent", days));
+    expect(p.name).toBe("Advent");
+    expect(p.days).toEqual(days);
+  });
+});
+
+describe("era snapshots", () => {
+  it("encode and decode", () => {
+    const set = new Set(["Genesis|1", "Revelation|22"]);
+    const snap = encodeSnapshot(set);
+    expect(snap).toHaveLength(1189);
+    expect(decodeSnapshot(snap)).toEqual(set);
+    expect(sectionCounts(set).find((s) => s.label === "Pentateuch")?.read).toBe(1);
+    expect(isFullPass(set)).toBe(false);
+    expect(isFullPass(new Set(CANON_KEYS))).toBe(true);
+  });
+});

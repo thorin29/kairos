@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { toDateColumn } from "@/lib/dates";
 import { buildPlan, type Selection, type Pace } from "@/lib/bible/plan-builder";
 import { parsePassage, BOOK_BY_NAME } from "@/lib/bible/books";
+import { eraFloor, restampPersonal } from "@/lib/bible/era-core";
 
 /**
  * The guard-free core of personal Bible reading, shared by the web server
@@ -123,10 +124,14 @@ export async function markPersonalReadingCore(
       data: refs.map((r) => ({ userId, bookName: r.book, chapter: r.chapter })),
       skipDuplicates: true,
     });
+    await restampPersonal(userId, refs);
   } else {
+    // Only this era's reads are undone; an earlier era's stay (they feed Wisdom).
+    const floor = await eraFloor(userId);
     await prisma.userChapterRead.deleteMany({
       where: {
         userId,
+        ...(floor.at ? { completedAt: { gte: floor.at } } : {}),
         OR: refs.map((r) => ({ bookName: r.book, chapter: r.chapter })),
       },
     });
@@ -150,12 +155,22 @@ export async function saveMyBookChaptersCore(
     (c) => Number.isInteger(c) && c >= 1 && c <= book.chapters,
   );
 
-  await prisma.userChapterRead.deleteMany({ where: { userId, bookName } });
+  // The editor shows this era's chapters, so only this era's are replaced.
+  const floor = await eraFloor(userId);
+  await prisma.userChapterRead.deleteMany({
+    where: {
+      userId,
+      bookName,
+      chapter: { notIn: valid },
+      ...(floor.at ? { completedAt: { gte: floor.at } } : {}),
+    },
+  });
   if (valid.length > 0) {
     await prisma.userChapterRead.createMany({
       data: valid.map((chapter) => ({ userId, bookName, chapter })),
       skipDuplicates: true,
     });
+    await restampPersonal(userId, valid.map((chapter) => ({ book: bookName, chapter })));
   }
   revalidatePath("/bible");
   revalidatePath(`/person/${userId}`);
@@ -182,9 +197,11 @@ export async function saveMyBooksCore(
       }));
     });
     await prisma.userChapterRead.createMany({ data: rows, skipDuplicates: true });
+    await restampPersonal(userId, rows.map((r) => ({ book: r.bookName, chapter: r.chapter })));
   } else {
+    const floor = await eraFloor(userId);
     await prisma.userChapterRead.deleteMany({
-      where: { userId, bookName: { in: names } },
+      where: { userId, bookName: { in: names }, ...(floor.at ? { completedAt: { gte: floor.at } } : {}) },
     });
   }
   revalidatePath("/bible");

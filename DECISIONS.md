@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-11 — Bible: reading eras, adding readings, import / export (v0.723.0)
+
+- `ReadingEra` (migration 156): one pass at the Bible, family (no owner) or
+  one person's. The open era's start is the floor every coverage figure
+  counts from: plan days on or after its date and hand marks / personal reads
+  stamped after it. Starting a new era closes the open one with a snapshot
+  (one character per chapter in canon order) and opens a new one at 0%. With
+  no era yet, everything so far is kept as "Before eras". Full passes count
+  the closed eras whose snapshot covers all 1,189 chapters, plus the open one.
+- No rows are deleted to start an era (personal reads feed Wisdom). Marking a
+  chapter again restamps it into the current era; unmarking, and the
+  checklist editor, only touch this era's rows.
+- The section chart compares this era (thick bar) with any earlier era (thin,
+  faded), OT and NT in their own colours. Personal plans get eras too, with
+  the same view. A parent starts the family's; anyone starts their own.
+- `src/lib/bible/plan-edit.ts` (pure, previewed in the browser and saved on
+  the server): `addReadings` — push back, add to days, or some of each (the
+  first N readings get their own days). Reading days follow the plan's own
+  weekdays when the plan spans two weeks or more. Picked chapters join up
+  ("Luke 2-3"); a long press or shift-click puts a chapter on the last
+  reading's day.
+- Import reads dated lines (YYYY-MM-DD or M/D/YYYY, comma or tab) or passages
+  alone laid out from a start date on chosen weekdays; a "#" line names the
+  plan; same-date lines join. Export writes the same dated format, so a plan
+  round-trips. Family: a new draft, or into an existing plan (replacing from
+  the first date). Personal: replaces the person's plan from the first date.
+  The old CSV importer and its action are gone.
+- Not done from the mockup: "a plan with no end date always pushes back" — a
+  plan doesn't record its pace, so all three choices are always offered.
+
 ## 2026-11 — Bible plans: even out by verses, never a chapter twice (v0.722.0)
 
 - `src/lib/bible/verses.ts`: verses per chapter for all 66 books (ESV
@@ -17,9 +47,7 @@
   count, since that's what was asked for.
 - `expandSegments` drops a chapter already chosen (overlapping ranges, a book
   listed twice); `repeats` counts them and the preview says so.
-- Still open on the Bible list, mocked up first: import / export format,
-  reading eras with a count of full passes, and adding readings to a plan
-  (push back / add to days / some of each).
+- Import / export, reading eras and adding readings followed in v0.723.
 
 ## 2026-11 — Rotator cuff before any upper-body work in a warm-up (v0.721.0)
 

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.722.0";
+export const APP_VERSION = "0.723.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -168,11 +168,20 @@ export const MIGRATIONS = [
   "153_companion_growth_float",
   "154_class_plan_paused",
   "155_drop_school_proposals",
+  "156_reading_eras",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.723.0",
+    summary: [
+      "Bible reading eras: start a new pass at 0%, compare sections with an earlier era, and count full passes. Personal plans get them too.",
+      "Add readings to a plan by picking chapters or typing passages: push the plan back, add to days, or some of each.",
+      "Import a plan (dated, or passages with a start date and weekdays) and export one in the same format.",
+    ],
+  },
   {
     version: "0.722.0",
     summary: ["New Bible plans can even out days by verses, and a plan never schedules the same chapter twice."],

@@ -8,6 +8,7 @@ import {
   formatLong,
 } from "@/lib/dates";
 import { parsePassage } from "@/lib/bible/books";
+import { personalEraSet } from "@/lib/bible/era-core";
 
 export type PersonalPlanDay = {
   iso: string;
@@ -50,10 +51,7 @@ export async function loadPersonalPlan(
       orderBy: { day: "asc" },
       select: { day: true, passage: true },
     }),
-    prisma.userChapterRead.findMany({
-      where: { userId },
-      select: { bookName: true, chapter: true },
-    }),
+    personalEraSet(userId).then((r) => r.manual),
     prisma.readingDay.count({
       where: { planId: plan.id, day: { gte: toDateColumn(today) } },
     }),

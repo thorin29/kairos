@@ -10,6 +10,8 @@ import {
   deletePersonalPlan,
   markPersonalReading,
 } from "@/lib/actions/personal-plan";
+import { exportPlanAction } from "@/lib/actions/reading-edit";
+import { downloadText } from "@/components/plan-import";
 
 export function PersonalPlanSection({
   userId,
@@ -87,7 +89,26 @@ function PlanView({
               : "Plan complete"}
           </p>
         </div>
-        <div className="flex gap-2 text-xs">
+        <div className="flex flex-wrap gap-3 text-xs">
+          <a href="/bible/add" className="font-medium text-accent hover:underline">
+            Add readings
+          </a>
+          <a href="/bible/import" className="font-medium text-accent hover:underline">
+            Import
+          </a>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const res = await exportPlanAction(plan.id);
+                if (res) downloadText(res.fileName, res.text);
+              })
+            }
+            className="font-medium text-accent hover:underline"
+          >
+            Export
+          </button>
           <button
             type="button"
             onClick={() => setReplacing(true)}
@@ -298,6 +319,12 @@ function PlanCreator({
         >
           {pending ? "Building\u2026" : "Create plan"}
         </button>
+        <a
+          href="/bible/import"
+          className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-sm font-medium text-muted hover:text-ink"
+        >
+          Import a plan
+        </a>
         {onCancel && (
           <button
             type="button"

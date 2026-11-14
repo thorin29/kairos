@@ -3,7 +3,7 @@ import { listPlans } from "@/lib/actions/reading";
 import { fromDateColumn, formatShort, todayISO } from "@/lib/dates";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
-import { ImportForm } from "./import-form";
+import { PlanImport } from "@/components/plan-import";
 import { PlanActions } from "./plan-actions";
 
 export const dynamic = "force-dynamic";
@@ -134,7 +134,7 @@ export default async function AdminBiblePage() {
 
       <section>
         <SectionHeading>Import a plan</SectionHeading>
-        <ImportForm />
+        <PlanImport target={{ scope: "family" }} plans={plans.map((p) => ({ id: p.id, name: p.name }))} />
       </section>
     </main>
   );

@@ -108,6 +108,7 @@ model User {
   books            Book[]
   chapterReads     UserChapterRead[]
   readingPlans     ReadingPlan[]     @relation("ReadingPlans")
+  readingEras      ReadingEra[]      @relation("ReadingEras")
   workoutRotation  WorkoutRotation?  @relation("WorkoutRotation")
   hiitWorkouts     HiitWorkout[]
   poolExercises  PoolExercise[]
@@ -780,6 +781,25 @@ model ReadingDay {
 
   @@unique([planId, day])
   @@index([planId, day])
+}
+
+// A reading era: one pass at the Bible. Coverage counts from the open era's
+// start, so starting a new era resets the figures to 0% while the closed era
+// keeps what it reached as a snapshot (one character per chapter, in canon
+// order, "1" = read). Family eras have no owner; a personal era belongs to one
+// person. An era with no start is "Before eras": everything up to the first.
+model ReadingEra {
+  id        String    @id @default(cuid())
+  ownerId   String?
+  owner     User?     @relation("ReadingEras", fields: [ownerId], references: [id], onDelete: Cascade)
+  startedAt DateTime?
+  startedOn DateTime? @db.Date
+  endedAt   DateTime?
+  endedOn   DateTime? @db.Date
+  snapshot  String?
+  createdAt DateTime  @default(now())
+
+  @@index([ownerId])
 }
 
 // What a household has already read, marked by an admin, at chapter

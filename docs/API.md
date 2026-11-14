@@ -765,6 +765,29 @@ request: { "name","bookNames":[ "Genesis", … ],"startISO":"YYYY-MM-DD","chapte
 POST /api/v1/reading/plan/delete   delete this person's plan (read chapters stay)
 200:     { "status":"ok" }
 
+GET  /api/v1/reading/eras?scope=family|mine     // v0.723
+200:     { "current": Era, "past": [Era], "passes":int }   // past newest first
+         Era = { "id","label","startISO"|null,"endISO"|null,"read","percent","full",
+                 "sections":[ { "label","testament":"OT"|"NT","read","chapters" } ] }
+POST /api/v1/reading/eras          { "scope":"family"|"mine" } -> the same payload
+         starts a new era; family needs an admin (403 otherwise)
+
+POST /api/v1/reading/plan/add      { "scope","readings":[ "Luke 2", … ],"startISO",
+                                     "mode":"push"|"add"|"mix","ownDays"?,"preview"? }
+200:     { "planName","oldEndISO","endISO","rows":[ { "iso","passage","tag","fromISO"? } ] }
+         family goes into the published plan that brackets startISO (else the
+         last); family needs an admin. tag: "new" | "added" | "moved" | ""
+
+POST /api/v1/reading/plan/import   { "scope","text","startISO"?,"weekdays"?:[0-6],"preview"? }
+200:     { "name","dated","count","firstISO","lastISO","days":[ { "iso","passage" } ],
+           "skipped":[string],"saved" }
+         undated text needs startISO + weekdays. Mine replaces this person's plan
+         from the first date; family (admin) replaces the published family plan
+         from the first date, or starts a draft when there is none
+
+GET  /api/v1/reading/plan/export?scope=family|mine
+200:     { "name","fileName","text" }   // "# name" then "YYYY-MM-DD, passage" lines
+
 POST /api/v1/reading/mark          tick/untick a day's reading
 request: { "passage":"Acts 27-28","read":bool }   // read defaults true
 200:     { "status":"ok" }         // marks exactly that passage's chapters. idempotent

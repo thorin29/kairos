@@ -6,6 +6,8 @@ import {
   publishPlan,
   unpublishPlan,
 } from "@/lib/actions/reading";
+import { exportPlanAction } from "@/lib/actions/reading-edit";
+import { downloadText } from "@/components/plan-import";
 import { TrashIcon } from "@/components/icons";
 
 export function PlanActions({
@@ -21,6 +23,25 @@ export function PlanActions({
 
   return (
     <span className="flex items-center gap-2">
+      <a
+        href={`/admin/bible/add?plan=${id}`}
+        className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-xs font-medium text-muted hover:border-accent hover:text-accent"
+      >
+        Add readings
+      </a>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          startTransition(async () => {
+            const res = await exportPlanAction(id);
+            if (res) downloadText(res.fileName, res.text);
+          })
+        }
+        className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-xs font-medium text-muted hover:border-accent hover:text-accent disabled:opacity-50"
+      >
+        Export
+      </button>
       <button
         type="button"
         disabled={pending}

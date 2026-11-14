@@ -115,7 +115,14 @@ The generator (`src/lib/bible/plan-builder.ts`) is a pure function with no
 server dependencies, which is what lets the same code preview a plan in the
 browser as the form is filled in and build the saved one on the server. The
 server never accepts the preview's output — only the inputs cross the wire and
-the schedule is rebuilt on arrival, so the two can't drift.
+the schedule is rebuilt on arrival, so the two can't drift. The same goes for
+adding readings and importing (`src/lib/bible/plan-edit.ts`): the browser
+previews with the function the server saves with.
+
+Coverage counts from the start of the current reading era
+(`src/lib/bible/era-core.ts`). A closed era keeps a snapshot string, one
+character per chapter, rather than its rows, so starting an era never deletes
+anything.
 
 ### Position is laid out, not scrolled to
 

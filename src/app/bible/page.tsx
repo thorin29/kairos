@@ -20,6 +20,9 @@ import {
 import { ReadingCards, type ReadingCard } from "@/components/reading-cards";
 import { Card, SectionHeading } from "@/components/ui";
 import { TrophyIcon } from "@/components/icons";
+import { ReadingEras } from "@/components/reading-eras";
+import { loadEras } from "@/lib/bible/era-core";
+import { isAdmin } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +41,14 @@ export default async function BiblePage() {
   const today = todayISO();
   await generateReadingTasks(today);
 
-  const [publishedPlans, stats] = await Promise.all([
+  const [publishedPlans, stats, familyEras, admin] = await Promise.all([
     prisma.readingPlan.findMany({
       where: { isPublished: true, ownerId: null },
       orderBy: { startDate: "asc" },
     }),
     loadReadingStats(today),
+    loadEras(null, today),
+    isAdmin(),
   ]);
 
   // The plan whose dates bracket today (for the page subtitle) — or the next one
@@ -66,14 +71,15 @@ export default async function BiblePage() {
   // though a person may be signed in to log their own reading elsewhere.
   const me = await currentUser();
   const showPersonal = (await deviceMode()) === "personal" && !!me;
-  const [personalStats, personalKeys, personalPlan] =
+  const [personalStats, personalKeys, personalPlan, personalEras] =
     showPersonal && me
       ? await Promise.all([
           loadPersonalReadingStats(me.id, today),
           loadPersonalReadKeys(me.id),
           loadPersonalPlan(me.id),
+          loadEras(me.id, today),
         ])
-      : [null, [] as string[], null];
+      : [null, [] as string[], null, null];
 
   // A window either side of today, so yesterday's missed reading and the
   // next few days are one swipe away.
@@ -166,22 +172,9 @@ export default async function BiblePage() {
           ))}
         </div>
 
-        <Card className="mt-4 divide-y divide-hairline">
-          {stats.groups.map((g) => (
-            <div key={g.label} className="flex items-center gap-4 px-5 py-3">
-              <span className="w-36 shrink-0 text-sm">{g.label}</span>
-              <span className="flex-1">
-                <Bar percent={g.percent} color="#0f5c63" />
-              </span>
-              <span className="tabular w-14 shrink-0 text-right text-sm text-muted">
-                {g.percent}%
-              </span>
-              <span className="tabular w-20 shrink-0 text-right text-xs text-muted">
-                {g.read}/{g.chapters}
-              </span>
-            </div>
-          ))}
-        </Card>
+        <div className="mt-4">
+          <ReadingEras eras={familyEras} ownerId={null} canStart={admin} />
+        </div>
       </section>
     </>
   );
@@ -217,22 +210,11 @@ export default async function BiblePage() {
           ))}
         </div>
 
-        <Card className="mt-4 divide-y divide-hairline">
-          {personalStats.groups.map((g) => (
-            <div key={g.label} className="flex items-center gap-4 px-5 py-3">
-              <span className="w-36 shrink-0 text-sm">{g.label}</span>
-              <span className="flex-1">
-                <Bar percent={g.percent} color={me.color} />
-              </span>
-              <span className="tabular w-14 shrink-0 text-right text-sm text-muted">
-                {g.percent}%
-              </span>
-              <span className="tabular w-20 shrink-0 text-right text-xs text-muted">
-                {g.read}/{g.chapters}
-              </span>
-            </div>
-          ))}
-        </Card>
+        {personalEras && (
+          <div className="mt-4">
+            <ReadingEras eras={personalEras} ownerId={me.id} canStart />
+          </div>
+        )}
 
         <div className="mt-6">
           <SectionHeading>Your plan</SectionHeading>
