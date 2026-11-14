@@ -34,7 +34,7 @@ const Chevron = () => (
 
 function Tile({ k, v, sub, tone }: { k: string; v: string; sub: string; tone?: "up" | "down" }) {
   return (
-    <div className="rounded-xl border border-hairline bg-ground/40 px-3 py-2">
+    <div className="rounded-xl border border-hairline bg-surface px-3 py-2">
       <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">{k}</p>
       <p
         className={`tabular mt-0.5 text-lg font-semibold ${
@@ -230,7 +230,7 @@ export function CardioPage({ data, onClose }: { data: CardioCharts; onClose: () 
           </div>
         )}
         {a.pace && a.pace.points.length > 0 ? (
-          <div className="rounded-xl border border-hairline p-3">
+          <div className="rounded-xl border border-hairline bg-surface p-3">
             <div className="flex items-baseline justify-between">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{a.measure === "m" ? "Split per 500 m" : `Pace per ${per}`}</p>
               <span className="text-[11px] text-muted">Faster is higher</span>
@@ -254,7 +254,7 @@ export function CardioPage({ data, onClose }: { data: CardioCharts; onClose: () 
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-hairline p-3">
+          <div className="rounded-xl border border-hairline bg-surface p-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{volTitle}</p>
             <div className="mt-2">
               <WeekBars values={a.weeks.map((w) => w.value)} starts={a.weeks.map((w) => w.start)} color={CARDIO_COLOR} height={90} label={volTitle} tip={(v) => (a.measure === "min" ? `${num(v)} min` : `${num(v)} ${unitWord}`)} />
@@ -295,14 +295,14 @@ export function CardioPage({ data, onClose }: { data: CardioCharts; onClose: () 
           <Tile k="Last" v={a.last.text.replace(/ \/.*$/, "")} sub={md(a.last.date)} />
         </div>
         {a.pace && (
-          <div className="rounded-xl border border-hairline p-3">
+          <div className="rounded-xl border border-hairline bg-surface p-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{volTitle}</p>
             <div className="mt-2">
               <WeekBars values={a.weeks.map((w) => w.value)} starts={a.weeks.map((w) => w.start)} color={CARDIO_COLOR} height={90} label={volTitle} tip={(v) => (a.measure === "min" ? `${num(v)} min` : `${num(v)} ${unitWord}`)} />
             </div>
           </div>
         )}
-        <div>
+        <div className="rounded-xl border border-hairline bg-surface p-3">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Recent sessions</p>
           <ul className="mt-1 divide-y divide-hairline text-sm">
             {a.recent.map((r, i) => (
@@ -408,7 +408,7 @@ export function ConditioningPage({ data, onClose }: { data: ConditioningCharts; 
   return (
     <Modal title="Conditioning" onClose={onClose}>
       <div className="space-y-4">
-        <div className="rounded-xl border border-hairline p-3">
+        <div className="rounded-xl border border-hairline bg-surface p-3">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Sessions per week</p>
           <div className="mt-2">
             <WeekBars values={data.weeks.map((w) => w.count)} starts={data.weeks.map((w) => w.start)} color={CONDITIONING_COLOR} height={70} label="Sessions per week" tip={(v) => (v === 1 ? "1 session" : `${v} sessions`)} />
@@ -463,7 +463,7 @@ export function ConditioningPage({ data, onClose }: { data: ConditioningCharts; 
           </button>
         )}
         {(data.recent?.length ?? 0) > 0 && (
-          <div>
+          <div className="rounded-xl border border-hairline bg-surface p-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Recent sessions</p>
             <ul className="mt-1 divide-y divide-hairline text-sm">
               {data.recent.map((r, i) => (
@@ -485,10 +485,10 @@ export function ConditioningPage({ data, onClose }: { data: ConditioningCharts; 
             {open.kind ? `${open.kind} · ` : ""}
             {open.timed ? "faster is better" : "more is better"}
           </p>
-          <div className="flex justify-center">
+          <div className="flex justify-center rounded-xl border border-hairline bg-surface p-3">
             <Dots r={open} w={300} h={90} tips />
           </div>
-          <ul className="divide-y divide-hairline text-sm">
+          <ul className="divide-y divide-hairline rounded-xl border border-hairline bg-surface px-3 text-sm">
             {[...open.results].reverse().map((x, i) => (
               <li key={`${x.date}-${i}`} className="flex justify-between py-2">
                 <span>{dayLong(x.date)}</span>

@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-11 — Workout chart pages on cards (v0.715.0)
+
+- The full-screen chart pages (a lift, a core move, Core, Cardio,
+  Conditioning and one conditioning workout) put each block on a card
+  (`bg-surface`, hairline border): the chart with its rep filters, the stat
+  tiles (were `bg-ground/40`, which vanished on the page background), best
+  weight per rep count and recent sessions. Small pop-ups are unchanged.
+
 ## 2026-11 — No more class approvals (v0.714.0 / app 0.514.0)
 
 - Class approvals are removed: a child adding a class in the app could

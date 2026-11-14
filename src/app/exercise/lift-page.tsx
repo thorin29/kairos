@@ -131,7 +131,7 @@ function Tile({ k, v, sub, tone, onClick }: { k: string; v: string; sub: string;
       <span className="block text-[11px] text-muted">{sub}</span>
     </>
   );
-  const cls = "rounded-xl border border-hairline bg-ground/40 px-3 py-2 text-left";
+  const cls = "rounded-xl border border-hairline bg-surface px-3 py-2 text-left";
   return onClick ? (
     <button type="button" onClick={onClick} className={`${cls} transition-colors hover:border-accent`}>
       {body}
@@ -195,6 +195,7 @@ export function LiftPage({
         <p className="-mt-2 text-sm font-semibold" style={{ color }}>
           {groupLabel}
         </p>
+        <div className="space-y-3 rounded-xl border border-hairline bg-surface p-3">
         {bands.length > 0 && (
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Reps">
             {[{ key: "all", label: "All" }, ...bands].map((b) => (
@@ -223,6 +224,7 @@ export function LiftPage({
           ring={band === "all" && s.best ? { date: s.best.date, value: s.best.value } : null}
           ahead={band === "all" && next ? { date: next.date, value: next.weight, label: `${dayName(next.date)} ${setText(next.weight, next.reps)}` } : null}
         />
+        </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <Tile k="Record" v={s.best ? setText(s.best.value, s.best.reps) : "—"} sub={s.best ? formatShort(s.best.date) : "none yet"} />
           <Tile k="Est. max" v={est ? `${est} ${s.unit}` : "—"} sub={est ? "one rep, estimated" : "needs a set of 12 or fewer"} />
@@ -237,7 +239,7 @@ export function LiftPage({
           <Tile k="Last" v={last ? setText(last.value, last.reps) : "—"} sub={last ? formatShort(last.date) : ""} />
         </div>
         {reps.length > 0 && (
-          <div>
+          <div className="rounded-xl border border-hairline bg-surface p-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Best weight for each rep count</p>
             {reps.map((r) => (
               <div key={r.reps} className="mt-1.5 flex items-center gap-2">
@@ -255,7 +257,7 @@ export function LiftPage({
           </div>
         )}
         {pts.length > 0 && (
-          <div>
+          <div className="rounded-xl border border-hairline bg-surface p-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Recent sessions</p>
             <ul className="mt-1 divide-y divide-hairline text-sm">
               {pts
@@ -441,7 +443,7 @@ export function CoreOverview({
   return (
     <Modal title="Core" onClose={onClose}>
       <div className="space-y-4">
-        <div className="rounded-xl border border-hairline p-3">
+        <div className="rounded-xl border border-hairline bg-surface p-3">
           <div className="flex items-center gap-1.5">
             <p className="flex-1 text-[11px] font-semibold uppercase tracking-widest text-muted">Core progress</p>
             <button
@@ -522,7 +524,7 @@ export function CoreOverview({
           </button>
         )}
         {(summary.recentDays?.length ?? 0) > 0 && (
-          <div>
+          <div className="rounded-xl border border-hairline bg-surface p-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Recent core days</p>
             <ul className="mt-1 divide-y divide-hairline text-sm">
               {summary.recentDays.map((d) => (
@@ -603,6 +605,7 @@ export function CorePage({
           {GROUP_LABEL[coreGroupOf(m.name)]} · {m.points.length} {m.points.length === 1 ? "time" : "times"}
           {first ? ` since ${formatShort(first.date)}` : ""}
         </p>
+        <div className="rounded-xl border border-hairline bg-surface p-3">
         <LineChart
           dots
           legend={false}
@@ -610,6 +613,7 @@ export function CorePage({
           marks={marks.filter((x) => first && x.date >= first.date && x.date <= todayISO)}
           ring={m.best ? { date: m.best.date, value: m.best.value } : null}
         />
+        </div>
         <div className="grid grid-cols-3 gap-2">
           <Tile k="Best" v={m.best ? coreValueText(m.kind, m.best.value, m.best.weight, unit) : "\u2014"} sub={m.best ? formatShort(m.best.date) : ""} />
           <Tile k="First" v={first ? coreValueText(m.kind, first.value, first.weight, unit) : "\u2014"} sub={first ? formatShort(first.date) : ""} />
@@ -620,7 +624,7 @@ export function CorePage({
             tone={change == null ? undefined : tagOf(change) === "up" ? "up" : "flat"}
           />
         </div>
-        <div>
+        <div className="rounded-xl border border-hairline bg-surface p-3">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Recent sessions</p>
           <ul className="mt-1 divide-y divide-hairline text-sm">
             {m.points
