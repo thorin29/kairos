@@ -1547,11 +1547,12 @@ export async function loadMovementSets(
   dateISO: string,
   slotId: string,
   doing?: string | null,
+  test = false,
 ): Promise<MovementLog> {
   await requireInteractive();
   await requireCanActFor(userId);
   if (!ISO.test(dateISO) || !slotId) throw new Error("Bad request");
-  return loadMovementLog(userId, dateISO, slotId, doing ?? null);
+  return loadMovementLog(userId, dateISO, slotId, doing ?? null, test === true);
 }
 
 /**

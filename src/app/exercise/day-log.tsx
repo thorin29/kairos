@@ -434,6 +434,7 @@ export function DayLog({
           dateISO={date}
           late={late}
           title={part === "test" ? testTitleFor(rotationKindOf(w.core?.kind)) : w.name}
+          test={part === "test"}
           workoutId={w.id}
           moves={moves
             .map((m) => ({ ex: w.exercises.find((e) => e.poolExerciseId === m.poolExerciseId), metric: m.metric }))
@@ -882,11 +883,14 @@ export function DayLog({
                               </span>
                               <span className="tabular block truncate text-xs text-muted">
                                 {many
-                                  ? `${testIds.length} holds${doneTests > 0 ? ` · ${doneTests} logged` : ""}`
+                                  ? doneTests > 0
+                                    ? `${testIds.length} holds · ${doneTests} logged`
+                                    : lastTestLine(testIds.map((id) => data.state.movements[id]?.lastTest ?? ""))
+                                      ?? `${testIds.length} holds`
                                   : logged
                                     ? m.summary
-                                    : m?.last
-                                      ? `Last time ${m.last}`
+                                    : m?.lastTest
+                                      ? `Last time ${m.lastTest}`
                                       : "Not logged yet"}
                               </span>
                             </span>
@@ -1482,6 +1486,7 @@ function CoreLogger({
   moves,
   completedOnISO,
   onBack,
+  test = false,
 }: {
   userId: string;
   dateISO: string;
@@ -1491,6 +1496,8 @@ function CoreLogger({
   moves: { ex: PlanExercise; metric: Metric }[];
   completedOnISO?: string;
   onBack: () => void;
+  /** The month's test (v0.707): last time is the last test. */
+  test?: boolean;
 }) {
   const sections = useRef(new Map<string, SectionHandle>());
   const register = useCallback((slot: string, h: SectionHandle) => {
@@ -1536,6 +1543,7 @@ function CoreLogger({
           completedOnISO={completedOnISO}
           onBack={() => {}}
           embedded={register}
+          test={test}
         />
       ))}
       {!skipped && (
@@ -1620,6 +1628,7 @@ function MovementLogger({
   completedOnISO,
   onBack,
   embedded,
+  test = false,
 }: {
   userId: string;
   dateISO: string;
@@ -1633,6 +1642,8 @@ function MovementLogger({
    *  Timer, Log or "how did it feel" of its own — the screen's do it through
    *  what's registered here. */
   embedded?: (slot: string, handle: SectionHandle) => void;
+  /** Opened from the month's test card (v0.707): hints from the last test. */
+  test?: boolean;
 }) {
   const slotId = exercise.poolExerciseId;
   const unit = metric === "WEIGHT" ? exercise.unit || "lb" : metric === "REPS" ? "reps" : "sec";
@@ -1660,7 +1671,7 @@ function MovementLogger({
 
   useEffect(() => {
     let live = true;
-    loadMovementSets(userId, dateISO, slotId)
+    loadMovementSets(userId, dateISO, slotId, null, test)
       .then((l) => {
         if (!live) return;
         setLog(l);
@@ -1856,7 +1867,7 @@ function MovementLogger({
     setPicking(false);
     setDoing(p ? { id: p.id, name: p.name } : null);
     try {
-      const l = await loadMovementSets(userId, dateISO, slotId, p?.id ?? slotId);
+      const l = await loadMovementSets(userId, dateISO, slotId, p?.id ?? slotId, test);
       const last = l.last?.sets ?? [];
       setRows((rs) =>
         rs.map((r, i) =>
@@ -2333,6 +2344,12 @@ function SuggestionCard({ s, onAnswer }: { s: Suggestion; onAnswer: (answer: str
 /** The plank test's pool id on a core day that has it this month (it's planned first). */
 /** The month's test movements on a rotation day (they come first): the
  *  plank on Core, three holds on Isometric (v0.661). */
+/** An Isometric test card's line before anything's logged (v0.707): last
+ *  test's holds in order, or null when there's no earlier test. */
+function lastTestLine(parts: string[]): string | null {
+  return parts.every((p) => p) ? `Last time ${parts.join(" \u00b7 ")}` : null;
+}
+
 function coreTestIds(w: PlanWorkout): string[] {
   return w.exercises.slice(0, testCountFor(w.core)).map((e) => e.poolExerciseId);
 }

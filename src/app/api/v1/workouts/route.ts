@@ -64,7 +64,9 @@ export async function GET(req: NextRequest) {
       ...w,
       exercises: w.exercises.map((e) => {
         const m = e.poolExerciseId ? st.movements[e.poolExerciseId] : undefined;
-        return m ? { ...e, setCount: m.setCount, summary: m.summary, last: m.last } : e;
+        // A monthly-test movement's last time is the last test (v0.707).
+        const isTest = !!e.poolExerciseId && (w.coreTests ?? []).includes(e.poolExerciseId);
+        return m ? { ...e, setCount: m.setCount, summary: m.summary, last: isTest ? m.lastTest : m.last } : e;
       }),
     }));
   };

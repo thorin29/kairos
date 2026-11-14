@@ -822,7 +822,7 @@ client reads a multi-set day as its top set.
 
 **One movement's sets (every-set logging, v0.608).**
 ```
-GET  /api/v1/workouts/sets?date=YYYY-MM-DD&slot=<planned poolExerciseId>[&doing=<swap id>]
+GET  /api/v1/workouts/sets?date=YYYY-MM-DD&slot=<planned poolExerciseId>[&doing=<swap id>][&test=1]
 200: { "sets":[ Set ], "loggedAs":{ poolExerciseId,name }|null,
        "last":{ "date","sets":[ Set ] }|null,   // hints; `doing` picks whose history
        "skipped":bool,
@@ -834,6 +834,10 @@ GET  /api/v1/workouts/sets?date=YYYY-MM-DD&slot=<planned poolExerciseId>[&doing=
        "recentTop":num|null,                     // heaviest in the last 14 days (big-jump note)
        "name":str, "about":str|null }            // the movement being done and its how-to (v0.613)
 Set: { "weight":num|null, "reps":int|null, "seconds":int|null }
+v0.707: `test=1` (opened from the month's test card) makes `last` the last
+TEST: the most recent earlier day every hold in the test was logged with one
+set (null when there's none). The day payload's exercises do the same: a
+movement in `coreTests` carries the last test's summary in `last`.
 
 POST /api/v1/workouts/sets
 request: { "date","plannedWorkoutId","slotId","loggedId",   // loggedId = a swap, else slotId

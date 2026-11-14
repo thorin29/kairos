@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-11 — Monthly tests compare with the last test (v0.707.0 / app 0.507.0)
+
+- **The problem:** a test's "Last time" (and the greyed hints inside it) was
+  the last day the move was done. The plank isn't in any Core rotation, so
+  that was usually last month's test; but Isometric's wall sit, dead hang and
+  push-up hold are also in its regular workouts, so their "last time" was a
+  3 × 30s day, not last month's max.
+- **What counts as a test day** (`src/lib/workouts/test-history.ts`): tests
+  aren't tagged when logged, so it's recognised by shape: the most recent
+  earlier day on which every hold in the test was logged with exactly one
+  set. The test is one max hold each; the regular workouts do 2–3 sets. It
+  works on existing history with no migration. A day where the holds were
+  done one set each outside a test would count too; that's rare.
+- **Where it shows:** the test card (the plank's "Last time …"; Isometric's
+  "Last time 1:35 · 1:02 · 0:48" until one is logged) and the hints in the
+  test's logger (`loadMovementLog(..., test)`, `workouts/sets?test=1`). The
+  same holds opened from a regular workout still show the last workout. A
+  swap shows the swapped movement's history, as before.
+- **App 0.507** shows the same; the plank card needed nothing (the day
+  payload's `last` is the last test for test movements).
+
 ## 2026-11 — Full Content-Security-Policy; Vitest 5 (v0.706.0 / app 0.506.0)
 
 Both were optional follow-ups from the threat review; done now so the header

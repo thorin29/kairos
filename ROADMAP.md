@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.706.0 / app v0.506.0, versionCode 578)
+## Current status (13 Nov 2026, web v0.707.0 / app v0.507.0, versionCode 579)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -110,6 +110,9 @@ in the project docs (workouts-plan, workouts-programs-plan, workouts-next-plan).
   - App **Settings reorganized** (app 0.501): profile card, Account (Password,
     Devices, Sign out), Look & feel, Notifications & reminders, Connected apps,
     Parents, Help & about.
+- **Monthly tests compare with the last test (0.707 / app 0.507):** the
+  test card's "Last time" and its hints are last month's test, not the last
+  regular workout with the same holds.
 - **Full Content-Security-Policy and Vitest 5 (0.706):** scripts need a
   per-request nonce (set in `proxy.ts`); the dev-only test tools move to
   Vitest 5 / Vite 8, so a full `npm audit` is clean too.
@@ -1791,9 +1794,9 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.706.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
+- Web APP_VERSION 0.707.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.506.0 / versionCode 578 / CLIENT_BUILD 578.
+- App versionName 0.507.0 / versionCode 579 / CLIENT_BUILD 579.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.

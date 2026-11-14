@@ -17,6 +17,7 @@ import { loadStaleContext } from "@/lib/chores/stale";
 import { groupsFor, navRegionFor, shownGroup } from "@/lib/workouts/involvement";
 import { sportDayLabel } from "@/lib/sport/label";
 import { setsSummary, topSet } from "@/lib/workouts/sets";
+import { lastTestsFor } from "@/lib/workouts/test-history";
 import { repRecords, REP_BANDS, bandPoints, weeksInARow, type RepRecord } from "@/lib/workouts/records";
 import {
   parseScheme,
@@ -1871,6 +1872,8 @@ export async function loadMovementLog(
   dateISO: string,
   slotId: string,
   doing?: string | null,
+  /** Opened from the month's test card (v0.707): last time is the last test. */
+  test = false,
 ): Promise<MovementLog> {
   const day = toDateColumn(dateISO);
   const [daySets, skip] = (await Promise.all([
@@ -1921,7 +1924,11 @@ export async function loadMovementLog(
     select: { session: { select: { date: true } } },
   })) as { session: { date: Date } } | null;
   let last: MovementLog["last"] = null;
-  if (prior) {
+  const lastTest = test && movement === slotId ? (await lastTestsFor(userId, [movement], day)).get(movement) : undefined;
+  if (test && movement === slotId) {
+    // The test is measured against the last test, not the last regular set.
+    if (lastTest) last = { date: lastTest.date, sets: lastTest.sets.map(setRow) };
+  } else if (prior) {
     const rows = (await prisma.sessionSet.findMany({
       where: { poolExerciseId: movement, session: { userId, isRest: false, date: prior.session.date } },
       orderBy: [{ setNumber: "asc" }, { createdAt: "asc" }],
@@ -2135,6 +2142,9 @@ export type DayMovementState = {
   loggedAs: string | null;
   /** The last earlier day's sets in a few words, for a movement not done yet. */
   last: string;
+  /** For a monthly-test movement (v0.707): the last TEST's result in a few
+   *  words ("" when there's none). The test card shows this, not `last`. */
+  lastTest: string;
 };
 
 export type DayLogState = {
@@ -2435,6 +2445,7 @@ export async function loadDayLogState(
   const active = await programInfoFor(userId, dateISO);
   const program = active && (await dayHasProgramWork(userId, dateISO)) ? active : null;
 
+  const tests = await lastTestsFor(userId, slots as string[], day);
   const movements: Record<string, DayMovementState> = {};
   for (const slot of slots) {
     const today = bySlot.get(slot) ?? [];
@@ -2446,6 +2457,10 @@ export async function loadDayLogState(
       skipped: skipped.has(slot),
       loggedAs: swap?.poolExercise?.name ?? null,
       last: prev ? setsSummary(prev.rows, prev.rows[0]?.unit ?? null) : "",
+      lastTest: (() => {
+        const t = tests.get(slot as string);
+        return t ? setsSummary(t.sets, t.sets[0]?.unit ?? null) : "";
+      })(),
     };
   }
 

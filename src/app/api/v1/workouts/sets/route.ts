@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
   const slot = q.get("slot") ?? "";
   if (!ISO.test(date)) return apiError("validation", "date must be YYYY-MM-DD.");
   if (!slot) return apiError("validation", "slot is required.");
-  const log = await loadMovementLog(authed.device.person.id, date, slot, q.get("doing") || null);
+  // test=1: opened from the month's test card, so last time is the last test (v0.707).
+  const log = await loadMovementLog(authed.device.person.id, date, slot, q.get("doing") || null, q.get("test") === "1");
   return apiOk(log);
 }
 
