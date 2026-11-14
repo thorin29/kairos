@@ -1,5 +1,6 @@
 "use client";
 
+import { QrCode } from "@/components/qr-code";
 import { useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/avatar";
 import { LinkIcon, TrashIcon, CheckIcon, PencilIcon, XIcon } from "@/components/icons";
@@ -28,6 +29,7 @@ export function AccountRow({
   const [pending, startTransition] = useTransition();
   const [link, setLink] = useState<string | null>(null);
   const [code, setCode] = useState<string | null>(null);
+  const [qr, setQr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const [emailedTo, setEmailedTo] = useState<string | null>(null);
@@ -63,6 +65,7 @@ export function AccountRow({
         setCode(res.token);
         // A paste/deep-link form of the same code (carries only the token).
         setLink(`kairos://join?token=${res.token}`);
+        setQr(res.qr ?? null);
       }
       setEmailedTo(res.emailedTo ?? null);
       setEmailError(res.emailError ?? null);
@@ -93,6 +96,7 @@ export function AccountRow({
     startTransition(async () => {
       setLink(null);
       setCode(null);
+      setQr(null);
       await revokeInviteAction(account.userId);
     });
 
@@ -100,6 +104,7 @@ export function AccountRow({
     startTransition(async () => {
       setLink(null);
       setCode(null);
+      setQr(null);
       await disableLoginAction(account.userId);
     });
 
@@ -344,6 +349,12 @@ export function AccountRow({
               )}
             </button>
           </div>
+          {qr && (
+            <div className="mt-3 flex flex-col items-center gap-1.5">
+              <QrCode text={qr} size={200} label="Invitation QR code" />
+              <p className="text-xs text-muted">Scan in the app with Scan code</p>
+            </div>
+          )}
           <p className="mt-2 text-xs text-muted">
             Or send a link that pastes into the app:{" "}
             <span className="break-all font-mono">{link}</span>

@@ -4,3 +4,10 @@
 export function appJoinLink(token: string): string {
   return `kairos://join?token=${token}`;
 }
+
+/** What the invitation QR holds (v0.719): the deep link plus this server's
+ *  address, so a new phone scanning it in the app skips typing the server.
+ *  Built at runtime from the server's own settings; shown only to an admin. */
+export function appJoinQr(token: string, server: string | null): string {
+  return server ? `${appJoinLink(token)}&server=${encodeURIComponent(server)}` : appJoinLink(token);
+}

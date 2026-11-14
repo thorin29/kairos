@@ -175,7 +175,7 @@ export function WorkoutLauncher({
               {!completeForToday && remaining.length > 0 && (
                 <span className="flex items-center">
                   {overdueCount > 0 && <span className="mx-1.5">&middot;</span>}
-                  Left: {remaining.slice(0, 4).join(" \u00b7 ")}
+                  Remaining: {remaining.slice(0, 4).join(" \u00b7 ")}
                   {remaining.length > 4 ? ` +${remaining.length - 4}` : ""}
                 </span>
               )}

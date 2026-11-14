@@ -16,7 +16,8 @@ import {
 } from "@/lib/accounts";
 import { startUserSession, endUserSession, currentUser } from "@/lib/user-session";
 import { rateLimit, rateLimitReset } from "@/lib/rate-limit";
-import { appJoinLink } from "@/lib/url";
+import { appJoinLink, appJoinQr } from "@/lib/url";
+import { configuredBaseUrl } from "@/lib/mail/config";
 import { sendInviteEmail, sendTestEmail } from "@/lib/mail/send";
 import { saveSmtp, type SmtpInput } from "@/lib/mail/config";
 
@@ -93,6 +94,18 @@ export async function logoutSharedDevice(
  *  saved as part of sending, so a parent doesn't have to Save it first; the
  *  reason it fell back to a link (no address, or email not set up) is reported
  *  so it isn't silent. Admin only. */
+/** This server's address for the invitation QR (v0.719): the configured
+ *  public URL, else the address this page was opened on. */
+async function serverAddress(): Promise<string | null> {
+  const configured = await configuredBaseUrl();
+  if (configured) return configured;
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  if (!host) return null;
+  const proto = (h.get("x-forwarded-proto") ?? "https").split(",")[0].trim();
+  return `${proto}://${host}`;
+}
+
 export async function createInviteAction(
   userId: string,
   email?: string,
@@ -100,6 +113,8 @@ export async function createInviteAction(
 ): Promise<{
   error: string | null;
   token?: string;
+  /** The QR's text (v0.719): the deep link with this server's address. */
+  qr?: string;
   expiresAt?: string;
   emailedTo?: string;
   emailError?: string;
@@ -144,6 +159,7 @@ export async function createInviteAction(
   return {
     error: null,
     token,
+    qr: appJoinQr(token, await serverAddress()),
     expiresAt: expiresAt.toISOString(),
     emailedTo,
     emailError,

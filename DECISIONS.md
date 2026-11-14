@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-11 — Invitation QR with the server address; "Remaining" (v0.719.0 / app 0.519.0)
+
+- The invite box (Admin → household account row) shows a QR again, drawn as
+  SVG squares from `qrcode-generator` (`components/qr-code.tsx`, no images or
+  innerHTML; dark on white with a quiet zone for either theme).
+- It holds `kairos://join?token=…&server=<address>` (`appJoinQr`): the
+  address is the configured public URL, else the address the admin page was
+  opened on. Built at runtime and shown only to an admin; nothing in the repo.
+  The emailed and pasted links stay token-only. Owner's call to include the
+  server, reversing v0.179's "token only" so a new phone sets up in one scan.
+- The phone's in-app Scan code (app 0.519) reads it with CameraX + ZXing core;
+  a code typed or pasted still works the same way.
+- The workout card's started-not-finished list is labelled "Remaining".
+
 ## 2026-11 — Re-judge today once under the new completion rule (v0.718.0)
 
 - 0.716 only re-judged a day when something on it was saved, so a day closed
