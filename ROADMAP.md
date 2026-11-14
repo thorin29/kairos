@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (14 Nov 2026, web v0.720.0 / app v0.520.0, versionCode 592)
+## Current status (14 Nov 2026, web v0.721.0 / app v0.520.0, versionCode 592)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -1812,7 +1812,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.720.0 on Next.js 16.4.6 (migrations through 155_drop_school_proposals, all registered
+- Web APP_VERSION 0.721.0 on Next.js 16.4.6 (migrations through 155_drop_school_proposals, all registered
   in `MIGRATIONS` since 0.695).
 - App versionName 0.520.0 / versionCode 592 / CLIENT_BUILD 592.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).

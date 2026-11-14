@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — Rotator cuff before any upper-body work in a warm-up (v0.721.0)
+
+- `withShoulderPrep` used to add Shoulder prep at the end. Now the prep goes
+  in as one block ahead of the routine's first arm or upper-body step
+  (push-ups, pull-ups, curls, rows, dips, arm or wrist circles, presses and
+  the like; `UPPER` in warmup-library.ts), or at the end when nothing works
+  the arms. A routine with its own cuff steps (rotator / external or internal
+  rotation) gets them moved ahead of its first upper-body step (`cuffFirst`),
+  on every day, not only weight days. Everything else keeps its order.
+- Applies to the day's warm-up wherever it's resolved (plan choice, match,
+  rotation, a one-day switch), so the phone gets it from the server with no
+  app change. The routine library itself is unchanged.
+
 ## 2026-11 — A sport's warm-up goes with the game; who voted (v0.720.0 / app 0.520.0)
 
 - Reverses part of 0.716: the warm-up for a game on the calendar (the card

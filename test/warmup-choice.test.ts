@@ -35,10 +35,14 @@ describe("warm-up choices (v0.655)", () => {
   });
   it("adds Shoulder prep on weight days unless the cuff is covered", () => {
     const legs = libraryRoutine("lib:squat-legs")!;
-    expect(withShoulderPrep(legs, true)!.steps.slice(-SHOULDER_PREP.length)).toEqual([...SHOULDER_PREP]);
-    expect(withShoulderPrep(legs, false)).toBe(legs);
+    // The prep goes in as one block (v0.721: ahead of any upper-body step).
+    const withPrep = withShoulderPrep(legs, true)!.steps;
+    const at = withPrep.findIndex((x) => x.name === SHOULDER_PREP[0].name);
+    expect(withPrep.slice(at, at + SHOULDER_PREP.length)).toEqual([...SHOULDER_PREP]);
+    expect(withPrep.length).toBe(legs.steps.length + SHOULDER_PREP.length);
+    expect(withShoulderPrep(legs, false)).toEqual(legs);
     const mine = { id: "x", name: "Regular", mine: true, steps: [{ name: "Rotator cuff - light weight", kind: "REPS" as const }] };
-    expect(withShoulderPrep(mine, true)).toBe(mine);
+    expect(withShoulderPrep(mine, true)).toEqual(mine);
     expect(withShoulderPrep(null, true)?.name).toBe("Shoulder prep");
   });
 });

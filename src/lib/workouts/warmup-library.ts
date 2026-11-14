@@ -299,6 +299,24 @@ export const SHOULDER_PREP: readonly WarmupStep[] = SHOULDER_PREPS[0];
 export const SHOULDER_PREP_ID = "lib:shoulder-prep";
 const hasCuffWork = (steps: readonly WarmupStep[]) => steps.some((s) => /rotator|external rotation/i.test(s.name));
 
+/** Rotator cuff steps, and anything else that works the arms or upper body
+ *  (v0.721): the cuff goes before all of it. */
+const CUFF = /rotator|external rotation|internal rotation/i;
+const UPPER =
+  /push-?up|pull-?up|chin-?up|\bdips?\b|press|curl|\brows?\b|arm circle|wrist|forearm|hang\b|tricep|bicep|face pull|pull-apart|y-t-w|dislocate|shoulder|scap|wall slide|club|medicine ball|throw|inchworm|down dog|overhead/i;
+const isUpper = (s: WarmupStep) => !CUFF.test(s.name) && UPPER.test(s.name);
+
+/** The routine's rotator cuff steps moved ahead of its first upper-body or arm
+ *  step (v0.721); everything else keeps its order. */
+export function cuffFirst(steps: readonly WarmupStep[]): WarmupStep[] {
+  const first = steps.findIndex(isUpper);
+  if (first < 0) return [...steps];
+  const late = steps.filter((s, i) => i > first && CUFF.test(s.name));
+  if (late.length === 0) return [...steps];
+  const rest = steps.filter((s, i) => !(i > first && CUFF.test(s.name)));
+  return [...rest.slice(0, first), ...late, ...rest.slice(first)];
+}
+
 /** The day's Shoulder prep: the sets take turns by day. */
 export function shoulderPrepFor(dateISO?: string): readonly WarmupStep[] {
   if (!dateISO) return SHOULDER_PREP;
@@ -306,12 +324,17 @@ export function shoulderPrepFor(dateISO?: string): readonly WarmupStep[] {
   return SHOULDER_PREPS[((day % SHOULDER_PREPS.length) + SHOULDER_PREPS.length) % SHOULDER_PREPS.length];
 }
 
-/** A routine for a day with weights: Shoulder prep added unless it's covered. */
+/** A routine for a day with weights: Shoulder prep added unless it's covered.
+ *  The cuff work always comes before any upper-body or arm step (v0.721): the
+ *  prep goes in ahead of the first one, and a routine's own cuff steps move up. */
 export function withShoulderPrep(r: WarmupRoutine | null, weights: boolean, dateISO?: string): WarmupRoutine | null {
-  if (!weights) return r;
+  if (!weights) return r ? { ...r, steps: cuffFirst(r.steps) } : r;
   const prep = shoulderPrepFor(dateISO);
   if (!r) return { id: SHOULDER_PREP_ID, name: "Shoulder prep", steps: [...prep], mine: false };
-  return hasCuffWork(r.steps) ? r : { ...r, steps: [...r.steps, ...prep] };
+  if (hasCuffWork(r.steps)) return { ...r, steps: cuffFirst(r.steps) };
+  const first = r.steps.findIndex(isUpper);
+  const steps = first < 0 ? [...r.steps, ...prep] : [...r.steps.slice(0, first), ...prep, ...r.steps.slice(first)];
+  return { ...r, steps };
 }
 
 /**
