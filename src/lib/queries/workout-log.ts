@@ -4,7 +4,7 @@ import { swapName } from "@/lib/workouts/day-swap";
 import { prisma } from "@/lib/prisma";
 import { slotForDate } from "@/lib/workouts/rotation";
 import { fmtClock, rowSummary } from "@/lib/workouts/concept2";
-import { CARDIO_CATEGORIES, blockKind, isOptionalCategory, isSimpleCategory } from "@/lib/workouts/blocks";
+import { CARDIO_CATEGORIES, blockKind, isSimpleCategory } from "@/lib/workouts/blocks";
 import { dayLabel, groupHistory, type HistorySession } from "@/lib/workouts/history";
 import { loadProgramSpans, sportLabels } from "@/lib/workouts/history-run";
 import { formatHiitMovement, WORKOUT_TYPE_LABEL, METRIC_LABEL_SHORT, defaultMetricFor, metricChoicesFor, MUSCLE_GROUPS, MUSCLE_GROUP_LABEL, CATEGORY_LABEL, METRIC_ONLY_CATEGORIES, hiitResult, EFFORT_LABEL } from "@/lib/workouts/catalog";
@@ -46,6 +46,7 @@ import { loadHeat } from "@/lib/workouts/heat-run";
 import { coreDayView, coreWorkoutsFor, syncCoreDays } from "@/lib/workouts/core-run";
 import { isExtraId } from "@/lib/workouts/day-extras";
 import { dayExtrasFor, extraPlanRows } from "@/lib/workouts/day-extras-run";
+import { sportDayView } from "@/lib/workouts/warmup-run";
 import { aboutWithBellNote } from "@/lib/workouts/bells";
 import { bellSizesFor } from "@/lib/workouts/library-run";
 import {
@@ -183,7 +184,14 @@ export type PlannedMovement = {
   reps?: number | null;
   /** Skipped for this day. Counts as done for this movement. */
   skipped?: boolean;
+  /** Sets logged but the movement not finished (v0.716): sets still to tick
+   *  and Log not pressed. Doesn't count as done yet. */
+  open?: boolean;
 };
+
+/** The day-scoped marker for a movement left with sets to go (v0.716). */
+export const OPEN_KEY = "moveOpen";
+export const openSlot = (plannedWorkoutId: string, slotId: string) => `${plannedWorkoutId}|${slotId}`;
 
 
 export type TodayPlanned = {
@@ -237,7 +245,7 @@ export function planDone(w: NonNullable<TodayPlanned>): boolean {
       (w.exercises.length > 0 && w.exercises.every((e) => e.skipped))
     );
   }
-  return tracked.every((e) => e.value != null || !!e.skipped);
+  return tracked.every((e) => (e.value != null && !e.open) || !!e.skipped);
 }
 
 /** Anything actually recorded against this plan for its day. */
@@ -405,7 +413,16 @@ export async function dayPlanWhereFor(userId: string, dayISO: string) {
 export async function loadDayPlanProgress(
   userId: string,
   dayISO: string,
-): Promise<{ done: boolean; logged: boolean; planNames: string[]; planCount: number; pickConditioning: boolean }> {
+): Promise<{
+  done: boolean;
+  logged: boolean;
+  planNames: string[];
+  planCount: number;
+  pickConditioning: boolean;
+  /** What's left (v0.716): open movements by name (or the plan's name when
+   *  none of it is done), then warm-ups, cardio and the like. */
+  remaining: string[];
+}> {
   const day = toDateColumn(dayISO);
   const [movementPlans, allPlans, skipRows, sessionRows] = (await Promise.all([
     loadTodayPlannedWorkouts(userId, dayISO),
@@ -445,14 +462,14 @@ export async function loadDayPlanProgress(
       .filter((r) => r.name)
       .map((r) => `${(r.name as string).slice(0, 40)}|${r.category ?? ""}`),
   );
-  // Warm-up and Cardio plans are optional: they never hold the day open. A
-  // conditioning pick an adjustment dropped doesn't either (v0.658).
+  // Warm-up and Cardio plans count too (v0.716): the day is done when they're
+  // done or skipped, like everything else. A conditioning pick an adjustment
+  // dropped doesn't hold it open (v0.658).
   const adj = await dayAdjust(userId, dayISO);
   const soloPlans = allPlans.filter(
     (p) =>
       !p.hiitWorkoutId &&
       p._count.exercises === 0 &&
-      !isOptionalCategory(p.category) &&
       (!adj || adjustKeep(adj, [{ category: p.category, exercises: [] }])[0].stays),
   );
   // A Cardio plan (or an older Rowing / Running / Rucking one) is done by any
@@ -472,12 +489,29 @@ export async function loadDayPlanProgress(
   const soloDone = soloPlans.map(
     (p, i) => soloLogged[i] || skipped.has(planSlot(p.id)),
   );
+  // A sport's warm-up beside the planned one (v0.716): done or skipped on its
+  // card, or not yet. When the day's Warm-up is for the sport it's that entry.
+  const sport = await sportDayView(userId, dayISO);
+  const sportOpen = sport != null && !sport.forSport && sport.state == null;
+  const remaining: string[] = [];
+  for (const p of movementPlans) {
+    if (planDone(p)) continue;
+    const tracked = p.exercises.filter((e) => e.tracked !== false && !e.added);
+    const left = tracked.filter((e) => !e.skipped && (e.value == null || e.open));
+    if (left.length === tracked.length) remaining.push(p.name);
+    else remaining.push(...left.map((e) => e.loggedAs?.name || e.name));
+  }
+  soloPlans.forEach((p, i) => {
+    if (!soloDone[i]) remaining.push(p.name);
+  });
+  if (sportOpen) remaining.push(`${sport.label} warm-up`);
   return {
-    done: movementPlans.every(planDone) && soloDone.every(Boolean),
-    logged: movementPlans.some(planHasLog) || soloLogged.some(Boolean),
+    done: movementPlans.every(planDone) && soloDone.every(Boolean) && !sportOpen,
+    logged: movementPlans.some(planHasLog) || soloLogged.some(Boolean) || sport?.state === "done",
     planNames: allPlans.map((p) => p.name.slice(0, 40)),
-    planCount: movementPlans.length + soloPlans.length,
+    planCount: movementPlans.length + soloPlans.length + (sport != null && !sport.forSport ? 1 : 0),
     pickConditioning: soloPlans.some(isPick),
+    remaining: [...new Set(remaining)],
   };
 }
 
@@ -571,7 +605,7 @@ export async function loadTodayPlannedWorkouts(
 
   // The day's skips and its sessions, read once for every plan below.
   const day = toDateColumn(dayISO);
-  const [skipRows, sessionRows] = (await Promise.all([
+  const [skipRows, sessionRows, openRows] = (await Promise.all([
     prisma.workoutMovementSkip.findMany({
       where: { userId, date: day },
       select: { slot: true },
@@ -580,8 +614,13 @@ export async function loadTodayPlannedWorkouts(
       where: { userId, date: day, isRest: false },
       select: { name: true, category: true },
     }),
-  ])) as [{ slot: string }[], { name: string | null; category: string | null }[]];
+    prisma.workoutSuggestionAnswer.findMany({
+      where: { userId, date: day, key: OPEN_KEY },
+      select: { slot: true },
+    }),
+  ])) as [{ slot: string }[], { name: string | null; category: string | null }[], { slot: string }[]];
   const skipped = new Set(skipRows.map((r) => r.slot));
+  const openSlots = new Set(openRows.map((r) => r.slot));
   // A HIIT plan's name is cut to 40 characters and its session's to 60, so
   // compare on the shorter.
   const sessionKeys = new Set(
@@ -695,6 +734,7 @@ export async function loadTodayPlannedWorkouts(
         // weight. Without it the phone came back with the weight alone.
         reps: metric === "WEIGHT" && logged ? logged.reps : null,
         skipped: skipped.has(pe.poolExerciseId),
+        open: !!logged && openSlots.has(openSlot(plan.id, pe.poolExerciseId)),
       };
     });
     out.push({

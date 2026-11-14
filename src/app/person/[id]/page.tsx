@@ -17,7 +17,7 @@ import {
   loadExercisePool,
   loadHiitWorkoutsForBoard,
 } from "@/lib/queries/workouts";
-import { loadOverdueWorkoutDates, workoutRestFor } from "@/lib/queries/workout-log";
+import { loadDayPlanProgress, loadOverdueWorkoutDates, workoutRestFor } from "@/lib/queries/workout-log";
 import { loadReadingProgress } from "@/lib/queries/reading";
 import { WorkoutLauncher } from "./workout-launcher";
 import { ProgramCard } from "@/app/exercise/program-card";
@@ -175,6 +175,10 @@ export default async function PersonPage({
   // A rest day (v0.650): the plan's Rest or Rest / skip pressed. The card reads
   // "Rest day!", or "Complete for today!" when a skipped day got something else.
   const restToday = await workoutRestFor(id, today);
+  // Started but not finished (v0.716): what's left, for the workout card.
+  const progressToday = restToday.rest ? null : await loadDayPlanProgress(id, today);
+  const workoutLeft =
+    progressToday && progressToday.logged && !progressToday.done ? progressToday.remaining : [];
   const restDayToday = restToday.rest != null && !(restToday.rest === "skipped" && restToday.extraLogged);
   // "Start a workout program?" for someone with no plan and nothing logged lately.
   const showInvite = await inviteFor(id);
@@ -674,6 +678,7 @@ export default async function PersonPage({
                         todayISO={today}
                         person={boardPerson}
                         summaryNames={restToday.rest ? [] : todayEx.map((r: { title: string }) => r.title)}
+                        remaining={workoutLeft}
                         restDay={restDayToday}
                         overdueCount={overdueWorkoutDays.length}
                         // Same rule as the phone's home row: today's workout

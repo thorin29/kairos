@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-11 — "Complete for today!" means everything; the card shows what's left (v0.716.0 / app 0.516.0)
+
+- A movement used to count as done as soon as one set was saved, and
+  warm-ups and cardio never held the day open, so the home card said
+  "Complete for today!" with sets, a warm-up or a sport's warm-up still to do.
+- Now a movement is done when all its sets are ticked or Log is pressed (or
+  it's skipped). Both set loggers send `open: true` with a save while sets are
+  left and Log hasn't been pressed; the server keeps a day marker
+  (`WorkoutSuggestionAnswer` key `moveOpen`, slot `<plan>|<slot>`) and
+  `planDone` treats that movement as not done. No `open` = finished, so older
+  clients and past days behave as before. No migration.
+- `loadDayPlanProgress` counts Warm-up / Cardio plans (done or skipped) and a
+  sport's warm-up beside the plan (its card's done / skip), and returns
+  `remaining`: open movements by name, or the plan's name when none of it is
+  done, then the rest ("EZ bar skull crusher · Warm-up · Hockey warm-up").
+  Changing the sport warm-up's state or which warm-up the day uses re-settles
+  the day.
+- Home card (web and app): before anything is logged, today's workout names
+  as before; once started and not finished, "Left" and that list; then
+  "Complete for today!". `GET /dashboard` adds `workoutRemaining`.
+
 ## 2026-11 — Workout chart pages on cards (v0.715.0)
 
 - The full-screen chart pages (a lift, a core move, Core, Cardio,

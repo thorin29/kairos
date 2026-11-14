@@ -46,6 +46,7 @@ export function WorkoutLauncher({
   summaryNames,
   overdueCount = 0,
   completeForToday = false,
+  remaining = [],
   restDay = false,
   person = null,
 }: {
@@ -75,6 +76,8 @@ export function WorkoutLauncher({
   overdueCount?: number;
   /** The summary button reads "Complete for today!" in green, like the phone. */
   completeForToday?: boolean;
+  /** Started and not finished (v0.716): what's left, shown instead of the names. */
+  remaining?: string[];
   /** v0.650: a rest day (the plan's Rest, or Rest / skip pressed). */
   restDay?: boolean;
   /** The person's workout card data: when given, the overlay is the day page
@@ -169,7 +172,14 @@ export function WorkoutLauncher({
                   {overdueCount} overdue
                 </span>
               )}
-              {!completeForToday && (overdueCount > 0 ? names.slice(0, 2) : names.slice(0, 3)).map(
+              {!completeForToday && remaining.length > 0 && (
+                <span className="flex items-center">
+                  {overdueCount > 0 && <span className="mx-1.5">&middot;</span>}
+                  Left: {remaining.slice(0, 4).join(" \u00b7 ")}
+                  {remaining.length > 4 ? ` +${remaining.length - 4}` : ""}
+                </span>
+              )}
+              {!completeForToday && remaining.length === 0 && (overdueCount > 0 ? names.slice(0, 2) : names.slice(0, 3)).map(
                 (n, i) => (
                 <span key={`${n}-${i}`} className="flex items-center">
                   {(i > 0 || overdueCount > 0) && (

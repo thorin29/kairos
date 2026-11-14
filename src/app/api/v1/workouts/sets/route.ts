@@ -70,7 +70,8 @@ export async function POST(req: NextRequest) {
       unit: typeof raw?.unit === "string" ? raw.unit.slice(0, 12) : "",
       sets,
     },
-    { completedOnISO: completedOn },
+    // open (v0.716): sets still to tick and Log not pressed.
+    { completedOnISO: completedOn, open: raw?.open === true },
   );
   if (r === "not_found") return apiError("not_found", "That movement isn't in this plan.");
   return apiOk({ date, status: "saved" });

@@ -843,7 +843,8 @@ POST /api/v1/workouts/sets
 request: { "date","plannedWorkoutId","slotId","loggedId",   // loggedId = a swap, else slotId
            "metric":"WEIGHT"|"REPS"|"DURATION","unit",
            "sets":[ Set ],                      // every saved set, in order; [] clears
-           "completedOn":"YYYY-MM-DD"|null }    // set when logged late
+           "completedOn":"YYYY-MM-DD"|null,     // set when logged late
+           "open":true|false }                  // v0.716: sets left to tick, Log not pressed
 200: { "date","status":"saved" }   404 not_found: the slot isn't in that plan
 ```
 A replace, so the same call adds, edits and removes, and a queued offline copy
@@ -1218,6 +1219,12 @@ on Core, the three holds on Isometric) and `coreTestName` ("Plank test" /
 Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
+
+v0.716: `GET /api/v1/dashboard` adds `workoutRemaining` (string[] | null):
+once today's workout is started and not finished, what's left by movement or
+plan name; null otherwise. A day's workout is done only when every movement is
+finished (all sets ticked or Log pressed) or skipped, and warm-ups, cardio and
+a sport's warm-up are done or skipped.
 
 v0.650: `GET /api/v1/dashboard` adds `workoutRest` ("planned" | "skipped" |
 null) and `workoutExtraLogged`; week strip days add `restPlanned`.

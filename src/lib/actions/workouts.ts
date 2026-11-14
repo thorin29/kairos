@@ -732,6 +732,7 @@ export async function setWarmupForSportAction(userId: string, dateISO: string, f
   await requireCanActFor(userId);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
   await setWarmupForSport(userId, dateISO, forSport);
+  await settleWorkoutTask(userId, dateISO, { fromSkip: true });
   refresh();
 }
 
@@ -1573,6 +1574,8 @@ export async function saveMovementSets(input: {
   sets: MovementSetIn[];
   completedOnISO?: string | null;
   final?: boolean;
+  /** Sets still to tick and Log not pressed (v0.716). */
+  open?: boolean;
 }): Promise<{ ok: boolean }> {
   await requireInteractive();
   await requireCanActFor(input.userId);
@@ -1584,7 +1587,7 @@ export async function saveMovementSets(input: {
     input.plannedWorkoutId,
     input.slotId,
     { loggedId: input.loggedId, metric: input.metric, unit: input.unit, sets: input.sets },
-    { completedOnISO: input.completedOnISO ?? null },
+    { completedOnISO: input.completedOnISO ?? null, open: input.open === true && !input.final },
   );
   if (input.final) refresh();
   return { ok: r === "ok" };
@@ -1971,4 +1974,6 @@ export async function setSportWarmupStateAction(userId: string, dateISO: string,
   await requireCanActFor(userId);
   if (!ISO.test(dateISO)) return;
   await setSportWarmupState(userId, dateISO, state === "done" || state === "skip" ? state : null);
+  // It counts toward the day now (v0.716).
+  await settleWorkoutTask(userId, dateISO, { fromSkip: state !== "done" });
 }

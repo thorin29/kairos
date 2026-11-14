@@ -1739,6 +1739,8 @@ function MovementLogger({
         sets: next.filter((r) => r.saved).map(valueOf),
         completedOnISO: completedOnISO ?? null,
         final,
+        // Sets still to tick and Log not pressed (v0.716): not done yet.
+        open: !final && next.some((r) => !r.saved),
       });
       setStatus(res.ok ? "saved" : "error");
       return res.ok;

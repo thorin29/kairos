@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (14 Nov 2026, web v0.715.0 / app v0.515.0, versionCode 587)
+## Current status (14 Nov 2026, web v0.716.0 / app v0.516.0, versionCode 588)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -1800,13 +1800,18 @@ From the original workouts plan, not built yet:
   Settings, shown once and replayable from Settings › Help & about.
 - **No class approvals (0.714 / app 0.514):** semesters and subjects are
   added in Admin → School only; a class can have no semester.
+- **Workout completion (0.716 / app 0.516):** a day's workout is complete only
+  when every movement is finished (all sets or Log) or skipped, warm-ups,
+  cardio and a sport's warm-up included; once started, the home card lists
+  what's left. The app tour opens smoother and points from the menu at
+  Settings.
 - Dropped for now: "Keep N sets" on a movement; a weekly lift order that rotates.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.715.0 on Next.js 16.4.6 (migrations through 155_drop_school_proposals, all registered
+- Web APP_VERSION 0.716.0 on Next.js 16.4.6 (migrations through 155_drop_school_proposals, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.515.0 / versionCode 587 / CLIENT_BUILD 587.
+- App versionName 0.516.0 / versionCode 588 / CLIENT_BUILD 588.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.

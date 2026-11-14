@@ -53,9 +53,9 @@ export function isSimpleCategory(category: string | null | undefined): boolean {
 export const CARDIO_CATEGORIES: readonly string[] = ["CARDIO", "ROWING", "RUNNING", "RUCKING"];
 
 /**
- * Plans that are part of the day but never hold it open (v0.615.1): a Warm-up
- * or Cardio left undone doesn't make the day late or missed. They still show
- * and count in the day's progress, and a past day can still take them.
+ * Warm-up and Cardio plans (v0.615.1). They used to never hold the day open;
+ * since v0.716 the day's completion counts them like any plan (done or
+ * skipped). Kept for the places that still treat them as extras.
  */
 export const OPTIONAL_CATEGORIES: readonly string[] = ["WARMUP", ...CARDIO_CATEGORIES];
 export function isOptionalCategory(category: string | null | undefined): boolean {

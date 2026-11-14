@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { CATEGORY_LABEL, type WorkoutCategory } from "@/lib/workouts/catalog";
-import { loadDayPlanProgress, planSlot } from "@/lib/queries/workout-log";
+import { loadDayPlanProgress, OPEN_KEY, openSlot, planSlot } from "@/lib/queries/workout-log";
 import { topSet } from "@/lib/workouts/sets";
 import { dayIntentFor } from "@/lib/workouts/suggest-run";
 import type { WorkoutCategory as DbWorkoutCategory } from "@/generated/prisma/client";
@@ -763,7 +763,9 @@ export async function logMovementSets(
   plannedWorkoutId: string,
   slotId: string,
   input: { loggedId: string; metric: string; unit: string; sets: MovementSetIn[] },
-  opts?: { completedOnISO?: string | null },
+  /** `open` (v0.716): sets still to tick and Log not pressed, so the movement
+   *  doesn't count as done yet. Absent or false = finished. */
+  opts?: { completedOnISO?: string | null; open?: boolean },
 ): Promise<"ok" | "not_found"> {
   const plan = (isExtraId(plannedWorkoutId)
     ? await extraPlanFor(userId, plannedWorkoutId)
@@ -869,6 +871,16 @@ export async function logMovementSets(
   if (rows.length > 0) {
     // Logging a movement un-skips it: it was done after all.
     await prisma.workoutMovementSkip.deleteMany({ where: { userId, date, slot: slotId } });
+  }
+  const mark = openSlot(plannedWorkoutId, slotId);
+  if (opts?.open && rows.length > 0) {
+    await prisma.workoutSuggestionAnswer.upsert({
+      where: { userId_date_key_slot: { userId, date, key: OPEN_KEY, slot: mark } },
+      create: { userId, date, key: OPEN_KEY, slot: mark, answer: "1" },
+      update: { answer: "1" },
+    });
+  } else {
+    await prisma.workoutSuggestionAnswer.deleteMany({ where: { userId, date, key: OPEN_KEY, slot: mark } });
   }
   await settleWorkoutTask(userId, dateISO, { fallbackComplete: true });
   return "ok";

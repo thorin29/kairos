@@ -6,7 +6,7 @@ import { Category, TaskStatus } from "@/generated/prisma/client";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadWorkoutDayExtras, loadWorkoutPlanNames } from "@/lib/queries/workouts";
 import { sportLabels } from "@/lib/workouts/history-run";
-import { loadOverdueWorkoutDates, workoutRestFor } from "@/lib/queries/workout-log";
+import { loadDayPlanProgress, loadOverdueWorkoutDates, workoutRestFor } from "@/lib/queries/workout-log";
 import { loadReadingProgress, type ReadingProgress } from "@/lib/queries/reading";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { CATEGORY_LABELS } from "@/lib/colors";
@@ -103,6 +103,10 @@ export type ApiDashboard = {
    *  skipped day with something else logged). */
   workoutRest: "planned" | "skipped" | null;
   workoutExtraLogged: boolean;
+  /** Once the day's workout is started and not finished (v0.716): what's left,
+   *  by movement or plan name ("EZ bar skull crusher", "Warm-up"). Null before
+   *  it starts, when it's done, and on other days. */
+  workoutRemaining: string[] | null;
   /** Per-book reading-goal progress for the Book reading home section. */
   reading: ReadingProgress[];
   groups: { category: Category; label: string; items: ApiTask[] }[];
@@ -392,6 +396,11 @@ export async function loadApiDashboard(
   const workoutOverdue =
     dayISO === today ? (await loadOverdueWorkoutDates(userId, today)).length : 0;
   const restDay = await workoutRestFor(userId, dayISO);
+  let workoutRemaining: string[] | null = null;
+  if (dayISO === today && !restDay.rest) {
+    const progress = await loadDayPlanProgress(userId, dayISO);
+    if (progress.logged && !progress.done && progress.remaining.length > 0) workoutRemaining = progress.remaining;
+  }
 
   return {
     date: dayISO,
@@ -402,6 +411,7 @@ export async function loadApiDashboard(
     workoutOverdue,
     workoutRest: restDay.rest,
     workoutExtraLogged: restDay.extraLogged,
+    workoutRemaining,
     reading,
     groups,
     personalReading,

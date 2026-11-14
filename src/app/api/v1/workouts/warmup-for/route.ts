@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { setSportWarmupState, setWarmupForSport } from "@/lib/workouts/warmup-run";
+import { settleWorkoutTask } from "@/lib/workouts/mark";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,8 +20,10 @@ export async function POST(req: NextRequest) {
   if (b && "state" in b) {
     const st = b.state === "done" || b.state === "skip" ? b.state : null;
     await setSportWarmupState(authed.device.person.id, date, st);
+    await settleWorkoutTask(authed.device.person.id, date, { fromSkip: st !== "done" });
     return apiOk({ date, status: "saved" });
   }
   await setWarmupForSport(authed.device.person.id, date, b?.forSport === true);
+  await settleWorkoutTask(authed.device.person.id, date, { fromSkip: true });
   return apiOk({ date, status: "saved" });
 }
