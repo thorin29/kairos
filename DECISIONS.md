@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — A sport's warm-up goes with the game; who voted (v0.720.0 / app 0.520.0)
+
+- Reverses part of 0.716: the warm-up for a game on the calendar (the card
+  beside the planned Warm-up) no longer holds the day's workout open or lists
+  under Remaining, so a finished workout gets its credit in the day's percent
+  before the game. Choosing it as the day's Warm-up (the Hockey tab) still
+  makes it that plan entry, which counts like any warm-up.
+- Today is re-judged once more (`workout.settledV4`), both ways this time, so
+  a workout held open only by the game's warm-up completes.
+- `GET /api/v1/coop` proposals add `voterNames` (parents only, else empty);
+  the app's family goal shows "Voted: …" under each idea for parents. The web
+  already shows every face on each idea, highlighted when they voted.
+
 ## 2026-11 — Invitation QR with the server address; "Remaining" (v0.719.0 / app 0.519.0)
 
 - The invite box (Admin → household account row) shows a QR again, drawn as

@@ -222,7 +222,8 @@ export async function resettleCompletedWorkoutsOnce(
 // V3 (v0.718): today only, under the v0.716 rule (warm-ups, cardio and a
 // sport's warm-up count; an open movement isn't done). Past days keep what
 // they were judged as, so the new rule never turns them overdue after the fact.
-const RESETTLE_TODAY_KEY = "workout.settledV3";
+// V4 (v0.720): again, both ways, after a sport's warm-up stopped counting.
+const RESETTLE_TODAY_KEY = "workout.settledV4";
 
 export async function resettleTodayOnce(todayISO: string): Promise<void> {
   const done = await prisma.appSetting.findUnique({ where: { key: RESETTLE_TODAY_KEY } });
@@ -230,17 +231,19 @@ export async function resettleTodayOnce(todayISO: string): Promise<void> {
   const tasks = (await prisma.task.findMany({
     where: {
       category: "EXERCISE",
-      status: "COMPLETE",
+      status: { in: ["COMPLETE", "PENDING"] as never },
       generatedFrom: { startsWith: "workout:" },
       dueDate: toDateColumn(todayISO),
     },
-    select: { id: true, userId: true },
-  })) as { id: string; userId: string }[];
+    select: { id: true, userId: true, status: true },
+  })) as { id: string; userId: string; status: string }[];
   for (const t of tasks) {
     const target = await workoutTaskTarget(t.userId, todayISO, false);
-    if (target === "PENDING" || target === "SKIPPED") {
-      await prisma.task.update({ where: { id: t.id }, data: { status: target, completedAt: null } });
-    }
+    if (target === "LEAVE" || target === t.status) continue;
+    await prisma.task.update({
+      where: { id: t.id },
+      data: { status: target, completedAt: target === "COMPLETE" ? new Date() : null },
+    });
   }
   await prisma.appSetting.upsert({
     where: { key: RESETTLE_TODAY_KEY },

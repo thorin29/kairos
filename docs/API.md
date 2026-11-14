@@ -1220,11 +1220,15 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.720: `GET /api/v1/coop` proposals add `voterNames` (string[]; parents only,
+empty otherwise). A sport's warm-up beside the plan no longer counts toward the
+day's workout or `workoutRemaining`.
+
 v0.716: `GET /api/v1/dashboard` adds `workoutRemaining` (string[] | null):
 once today's workout is started and not finished, what's left by movement or
 plan name; null otherwise. A day's workout is done only when every movement is
-finished (all sets ticked or Log pressed) or skipped, and warm-ups, cardio and
-a sport's warm-up are done or skipped.
+finished (all sets ticked or Log pressed) or skipped, and warm-ups and cardio
+are done or skipped (a sport's warm-up stopped counting in v0.720).
 
 v0.650: `GET /api/v1/dashboard` adds `workoutRest` ("planned" | "skipped" |
 null) and `workoutExtraLogged`; week strip days add `restPlanned`.

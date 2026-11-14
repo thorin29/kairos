@@ -46,7 +46,6 @@ import { loadHeat } from "@/lib/workouts/heat-run";
 import { coreDayView, coreWorkoutsFor, syncCoreDays } from "@/lib/workouts/core-run";
 import { isExtraId } from "@/lib/workouts/day-extras";
 import { dayExtrasFor, extraPlanRows } from "@/lib/workouts/day-extras-run";
-import { sportDayView } from "@/lib/workouts/warmup-run";
 import { aboutWithBellNote } from "@/lib/workouts/bells";
 import { bellSizesFor } from "@/lib/workouts/library-run";
 import {
@@ -489,10 +488,9 @@ export async function loadDayPlanProgress(
   const soloDone = soloPlans.map(
     (p, i) => soloLogged[i] || skipped.has(planSlot(p.id)),
   );
-  // A sport's warm-up beside the planned one (v0.716): done or skipped on its
-  // card, or not yet. When the day's Warm-up is for the sport it's that entry.
-  const sport = await sportDayView(userId, dayISO);
-  const sportOpen = sport != null && !sport.forSport && sport.state == null;
+  // A sport's warm-up beside the planned one goes with the game, not the
+  // workout (v0.720): it never holds the day open or lists as remaining. When
+  // the day's Warm-up is for the sport, it's that plan entry and counts as one.
   const remaining: string[] = [];
   for (const p of movementPlans) {
     if (planDone(p)) continue;
@@ -504,12 +502,11 @@ export async function loadDayPlanProgress(
   soloPlans.forEach((p, i) => {
     if (!soloDone[i]) remaining.push(p.name);
   });
-  if (sportOpen) remaining.push(`${sport.label} warm-up`);
   return {
-    done: movementPlans.every(planDone) && soloDone.every(Boolean) && !sportOpen,
-    logged: movementPlans.some(planHasLog) || soloLogged.some(Boolean) || sport?.state === "done",
+    done: movementPlans.every(planDone) && soloDone.every(Boolean),
+    logged: movementPlans.some(planHasLog) || soloLogged.some(Boolean),
     planNames: allPlans.map((p) => p.name.slice(0, 40)),
-    planCount: movementPlans.length + soloPlans.length + (sport != null && !sport.forSport ? 1 : 0),
+    planCount: movementPlans.length + soloPlans.length,
     pickConditioning: soloPlans.some(isPick),
     remaining: [...new Set(remaining)],
   };

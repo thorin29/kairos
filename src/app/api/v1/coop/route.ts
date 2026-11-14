@@ -43,6 +43,10 @@ export async function GET(req: NextRequest) {
       status: p.status,
       votes: p.votes,
       iVoted: p.voterIds.includes(me.id),
+      // Who voted (v0.720): parents only, like the web's vote row.
+      voterNames: isAdmin
+        ? p.voterIds.map((id) => data.people.find((x) => x.id === id)?.name).filter((n): n is string => !!n)
+        : [],
     })),
     // A goal picked in an earlier window and never checked off. Appended at the
     // END and nullable, so an app build that predates it decodes and ignores it
