@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (14 Nov 2026, web v0.712.0 / app v0.511.0, versionCode 583)
+## Current status (14 Nov 2026, web v0.713.0 / app v0.512.0, versionCode 584)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -1794,13 +1794,15 @@ From the original workouts plan, not built yet:
   day's warm-up window changes only that day; the plan and rotation stay.
   The app's Switch shows just the list (0.511); a switched warm-up keeps
   Shoulder prep and gives way to the Hockey tab (0.712).
+- **Chore grace day (0.713 / app 0.512):** a chore that comes due for someone
+  else stays on the missed owner's list one more day, tinted overdue.
 - Dropped for now: "Keep N sets" on a movement; a weekly lift order that rotates.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.712.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
+- Web APP_VERSION 0.713.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.511.0 / versionCode 583 / CLIENT_BUILD 583.
+- App versionName 0.512.0 / versionCode 584 / CLIENT_BUILD 584.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.

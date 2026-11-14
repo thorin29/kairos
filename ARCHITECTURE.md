@@ -66,9 +66,10 @@ scheduler.
 
 ### Chore expiry is by succession
 
-An unfinished chore expires the moment the same chore next comes due for
-anyone — the floor only needs vacuuming once. Never on a timer, so a monthly
-chore stays live for its whole month. Expired instances grey out and count for
+An unfinished chore expires the day after the same chore next comes due for
+anyone — the floor only needs vacuuming once, but a miss gets one day of grace
+(v0.713) to be logged, shown as overdue. Never on a timer, so a monthly chore
+stays live for its whole month. Expired instances grey out and count for
 nobody, but remain against their original date.
 
 Shared chores are the exception: unassigned, claimed by whoever gets to them,

@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — One day of grace for superseded chores (v0.713.0 / app 0.512.0)
+
+- Chores still expire by succession, but a day later: an unfinished instance
+  stays actionable through the day the same chore next comes due (for anyone)
+  and expires the day after. Example: dog clean-up missed by one child
+  yesterday stays on his list today, overdue, while the other child has
+  today's; both can check theirs off. The successor is untouched.
+- `loadStaleContext` now finds each chore's newest instance due *before*
+  today (`latestBefore`) instead of on or before today; `isStale` is otherwise
+  the same. Still read-time only: no migration, no backfill. The rule applies
+  everywhere `isStale` is used (lists, scores, missed counts), so a miss is
+  recorded one day later than before. Workout prompts keep their own window.
+- In grace a chore is simply overdue, so it gets the overdue tint already on
+  the web's task row; the app's chore list rows get the same light red tint
+  as behind school work.
+
 ## 2026-11 — A day's switched warm-up keeps Shoulder prep and yields to Hockey (v0.712.0)
 
 - 0.711's one-day switch replaced the entry's routine outright, so it lost

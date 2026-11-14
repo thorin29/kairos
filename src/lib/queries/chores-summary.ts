@@ -30,8 +30,8 @@ export type ChoreSummary = {
 };
 
 /**
- * Because expiry is by succession, the gap between occurrences is exactly
- * how long an unfinished instance stays live. A chore assigned only on
+ * Because expiry is by succession, the gap between occurrences (plus the one
+ * day of grace, v0.713) is how long an unfinished instance stays live. A chore assigned only on
  * Monday gives seven days to catch up; Monday and Wednesday gives two and
  * five. Surfacing the gaps makes that visible before it surprises anyone.
  */

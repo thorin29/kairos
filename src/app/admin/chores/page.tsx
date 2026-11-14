@@ -243,8 +243,8 @@ export default async function ChoresPage() {
                 ))}
             </Card>
             <p className="mt-2 text-xs text-muted">
-              A chore stays open until the same chore comes due again. The
-              number after each slot is how many days that is.
+              A chore stays open until the day after the same chore comes due
+              again. The number after each slot is how many days until it does.
             </p>
           </section>
         </div>
