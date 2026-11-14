@@ -785,6 +785,7 @@ export function DayLog({
                         return (
                           <WarmupRow
                             key={`${date}:${w.id}`}
+                            dateISO={date}
                             kind={w.category === "WARMUP" ? "warmup" : w.category === "MOBILITY" ? "mobility" : "stretching"}
                             userId={userId}
                             plannedWorkoutId={w.id}
@@ -1116,6 +1117,7 @@ export function DayLog({
 /** A Warm-up in the plan: done with a tap (tap again to undo), or skipped. */
 function WarmupRow({
   userId,
+  dateISO,
   plannedWorkoutId,
   name,
   routine,
@@ -1135,6 +1137,7 @@ function WarmupRow({
   /** A sport on the day (v0.662): warm up for it or for the planned workout. */
   sport?: { label: string; forSport: boolean; onChange: (forSport: boolean) => void };
   userId: string;
+  dateISO: string;
   plannedWorkoutId: string;
   name: string;
   /** Its routine (v0.622): tapping the card opens it; null is a plain check. */
@@ -1156,6 +1159,7 @@ function WarmupRow({
       {open && (
         <WarmupWindow
           userId={userId}
+          dateISO={dateISO}
           kind={kind}
           sport={sport}
           plannedWorkoutId={plannedWorkoutId}

@@ -6,6 +6,7 @@ import {
   deleteWarmupRoutine,
   loadWarmupRoutines,
   saveWarmupRoutine,
+  setDayWarmupRoutine,
   setPlanWarmupRoutine,
 } from "@/lib/actions/workouts";
 import { CheckIcon, InfoIcon, PencilIcon, PlusIcon, TimerIcon, TrashIcon } from "@/components/icons";
@@ -136,10 +137,11 @@ export function WarmupSteps({ steps, storeKey }: { steps: WarmupStep[]; storeKey
 
 /**
  * The day's warm-up in a window (v0.622): its routine's steps with timers,
- * switching to another routine (which changes that day's plan), and Done.
+ * switching to another routine for this day only (v0.711), and Done.
  */
 export function WarmupWindow({
   userId,
+  dateISO,
   plannedWorkoutId,
   routine,
   done,
@@ -150,6 +152,7 @@ export function WarmupWindow({
   sport,
 }: {
   userId: string;
+  dateISO: string;
   plannedWorkoutId: string;
   routine: WarmupRoutine | null;
   done: boolean;
@@ -185,7 +188,7 @@ export function WarmupWindow({
           kind={kind}
           current={routine?.id ?? null}
           onPick={async (id) => {
-            await setPlanWarmupRoutine(userId, plannedWorkoutId, id);
+            await setDayWarmupRoutine(userId, dateISO, plannedWorkoutId, id);
             setSwitching(false);
             onChanged();
           }}

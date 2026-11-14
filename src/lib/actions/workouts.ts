@@ -44,6 +44,7 @@ import {
   deleteRoutine,
   routinesFor,
   saveRoutine,
+  setDayWarmupSwap,
   setPlanWarmup,
   warmupsForDay,
   setWarmupForSport,
@@ -1935,6 +1936,21 @@ export async function setPlanWarmupRoutine(userId: string, plannedWorkoutId: str
   await requireInteractive();
   await requireCanActFor(userId);
   const ok = await setPlanWarmup(userId, String(plannedWorkoutId), warmup ? String(warmup) : null);
+  if (ok) refresh();
+  return ok;
+}
+
+/** Switch a Warm-up entry's routine for one day only (v0.711). */
+export async function setDayWarmupRoutine(
+  userId: string,
+  dateISO: string,
+  plannedWorkoutId: string,
+  warmup: string | null,
+): Promise<boolean> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateISO))) return false;
+  const ok = await setDayWarmupSwap(userId, String(dateISO), String(plannedWorkoutId), warmup ? String(warmup) : null);
   if (ok) refresh();
   return ok;
 }

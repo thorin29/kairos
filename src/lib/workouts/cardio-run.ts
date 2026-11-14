@@ -1,5 +1,5 @@
 import "server-only";
-import { dayMobilityRoutines, dayWarmupRoutines } from "@/lib/workouts/warmup-run";
+import { dayMobilityRoutines, daySwaps, dayWarmupRoutines } from "@/lib/workouts/warmup-run";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { isExtraId } from "@/lib/workouts/day-extras";
 import { extraPlanFor } from "@/lib/workouts/day-extras-run";
@@ -275,6 +275,7 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
     dateISO,
     plans.filter((p) => p.category === "MOBILITY" || p.category === "STRETCHING").map((p) => p.warmup),
   );
+  const swaps = await daySwaps(userId, dateISO);
   const anyCardio = sessions.some((row) => row.category != null && CARDIO_CATEGORIES.includes(row.category));
   const skipped = new Set(skips.map((k) => k.slot));
   return plans
@@ -290,7 +291,13 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
           ? sessions.some((row) => row.category === category && (row.name ?? "").slice(0, 40) === p.name.slice(0, 40))
           : anyCardio,
         skipped: skipped.has(`plan:${p.id}`),
-        ...(tap ? { routine: (category === "WARMUP" ? routines : mobility).get(p.warmup ?? "") ?? null } : {}),
+        ...(tap
+          ? {
+              routine: swaps.has(p.id)
+                ? (swaps.get(p.id) ?? null)
+                : ((category === "WARMUP" ? routines : mobility).get(p.warmup ?? "") ?? null),
+            }
+          : {}),
       };
     });
 }

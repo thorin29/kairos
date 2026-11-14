@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-11 — Switching a day's warm-up is for that day only (v0.711.0 / app 0.510.0)
+
+- **Switch in the day's warm-up window no longer edits the plan.** It used to
+  write the weekday's plan entry, which changed every following week and
+  replaced a rotation. Now the choice is stored for that date and plan entry
+  only (`WorkoutSuggestionAnswer`, key `warmupSwap`, slot = plan entry id;
+  "-" is a plain check), so no migration. Changing a warm-up for good stays in
+  the plan builder.
+- **The swap wins over match / rotation / shoulder prep for that entry,**
+  since it is an explicit choice for the day. The sport-day choice is
+  separate and unchanged. Routines added to one day were already day-only.
+- `POST /api/v1/workouts/day-warmup { date, plannedWorkoutId, warmup }` for
+  the app; `plan/warmup` keeps its meaning (the plan).
+
 ## 2026-11 — Backgrounds, Graphite and a tidier Appearance picker (v0.710.0 / app 0.509.0)
 
 - **Backgrounds are a second choice beside the color theme,** independent of

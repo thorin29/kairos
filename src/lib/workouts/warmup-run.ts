@@ -167,6 +167,54 @@ export async function setPlanWarmup(userId: string, plannedWorkoutId: string, wa
   return n.count === 1;
 }
 
+// --- a one-day switch (v0.711) -------------------------------------------------
+
+const SWAP_KEY = "warmupSwap";
+const SWAP_PLAIN = "-";
+
+/** Switch one plan entry's routine for a single day; the plan and any
+ *  rotation stay as they are. Null puts the plan's routine back. */
+export async function setDayWarmupSwap(
+  userId: string,
+  dateISO: string,
+  plannedWorkoutId: string,
+  warmup: string | null,
+): Promise<boolean> {
+  // A routine added to one day is already day-only.
+  if (isExtraId(plannedWorkoutId)) return setDayExtraRoutine(userId, plannedWorkoutId, warmup);
+  if (warmup && !(await routineFor(userId, warmup))) return false;
+  const plan = await prisma.plannedWorkout.findFirst({
+    where: { id: plannedWorkoutId, userId, category: { in: ["WARMUP", "MOBILITY", "STRETCHING"] as never } },
+    select: { id: true },
+  });
+  if (!plan) return false;
+  const date = toDateColumn(dateISO);
+  const answer = warmup || SWAP_PLAIN;
+  await prisma.workoutSuggestionAnswer.upsert({
+    where: { userId_date_key_slot: { userId, date, key: SWAP_KEY, slot: plannedWorkoutId } },
+    create: { userId, date, key: SWAP_KEY, slot: plannedWorkoutId, answer },
+    update: { answer },
+  });
+  return true;
+}
+
+/** The day's switched routines by plan entry (null: switched to a plain check). */
+export async function daySwaps(userId: string, dateISO: string): Promise<Map<string, WarmupRoutine | null>> {
+  const rows = (await prisma.workoutSuggestionAnswer.findMany({
+    where: { userId, date: toDateColumn(dateISO), key: SWAP_KEY },
+    select: { slot: true, answer: true },
+  })) as { slot: string; answer: string }[];
+  const out = new Map<string, WarmupRoutine | null>();
+  for (const r of rows) {
+    if (r.answer === SWAP_PLAIN) out.set(r.slot, null);
+    else {
+      const routine = await routineFor(userId, r.answer);
+      if (routine) out.set(r.slot, routine);
+    }
+  }
+  return out;
+}
+
 /** The day's Warm-up, Mobility and Stretching (no movements, v0.663) plan
  *  entries and their routines (null: a plain check). */
 export async function warmupsForDay(
@@ -186,13 +234,14 @@ export async function warmupsForDay(
   })) as { id: string; warmup: string | null; category: string }[];
   const warm = rows.filter((r) => r.category === "WARMUP");
   const mob = rows.filter((r) => r.category !== "WARMUP");
-  const [w, m] = await Promise.all([
+  const [w, m, swaps] = await Promise.all([
     dayWarmupRoutines(userId, dateISO, warm.map((r) => r.warmup)),
     dayMobilityRoutines(userId, dateISO, mob.map((r) => r.warmup)),
+    daySwaps(userId, dateISO),
   ]);
   return rows.map((r) => ({
     plannedWorkoutId: r.id,
-    routine: (r.category === "MOBILITY" ? m : w).get(r.warmup ?? "") ?? null,
+    routine: swaps.has(r.id) ? (swaps.get(r.id) ?? null) : ((r.category === "MOBILITY" ? m : w).get(r.warmup ?? "") ?? null),
   }));
 }
 
