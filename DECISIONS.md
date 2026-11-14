@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-11 — Roadmap tidied against the code (v0.709.0)
+
+- **One backlog list** at the top of ROADMAP.md now holds every open item;
+  each was checked against the code on 13 Nov.
+- **Dropped:** "act as me" on the shared tablet; Kairos-side TOTP (the API
+  that skips Authelia has device tokens and password + code enrollment);
+  shift entry and hours totals under Work; recurring grocery staples;
+  bonus-size tuning; a lighter collect mechanic; the interface items (nav-bar
+  motion, icon badges, touch tiles, phone layouts: the web is a shared screen
+  and phones use the app).
+- **Closed as done:** the School card (overdue, today, progress, extra work;
+  "Edit completion" covers bulk-marking); per-person dashboard ordering (the
+  household order drives it); the first-run setup (the /setup first-run
+  flow).
+- **Added:** mark a subscribed calendar as Work, the one Work item wanted.
+- **Checked, still open:** the Family filter. The Family badge selects
+  everyone; family events and holidays always show; it isn't its own toggle.
+
 ## 2026-11 — Bodyweight work-up hints start from last time (v0.708.0 / app 0.508.0)
 
 - **The problem:** a program's target filled every set's hint, so 5 × 10

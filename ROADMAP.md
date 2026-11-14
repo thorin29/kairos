@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.708.0 / app v0.508.0, versionCode 580)
+## Current status (13 Nov 2026, web v0.709.0 / app v0.508.0, versionCode 580)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -165,27 +165,30 @@ before it, below. The large efforts from before that (app offline support, the
 Settings epic, local notifications, the curriculum planner, sport attendance,
 companions art) are recorded there and in DECISIONS.md.
 
-**Still open** (the 25 Sep audit list, re-checked 13 Nov against the code):
+**Backlog** (every open item in the sections below, checked against the code
+13 Nov; dropped on 13 Nov: "act as me", Kairos-side TOTP, shift entry and
+hours totals, recurring staples, bonus-size tuning, a lighter collect
+mechanic, and the interface polish and phone-layout items):
 
-- export of the household to JSON (workouts have their own export);
-- a dashboard weather panel;
-- a month/week completion grid;
-- drag-and-drop reordering;
-- Kairos-side TOTP;
-- an admin audit trail;
-- Bible balance by verse count.
-
-Also agreed and not built:
-
-- the Seasons quality signal (workout progress into Strength; reading beyond
-  the plan into Wisdom), kept as is for now;
-- PC play beyond the ROG Ally: maybe a small program on the PC that reports
-  play time (see Game time below);
-- ice-time picking up each season's new schedule links from the rink's index
+- Household: export everything to JSON (workouts already have their own
+  export); an admin audit trail.
+- Dashboard: a weather panel and a weekly forecast page; a month/week
+  completion grid.
+- Chores: smooth animated card reordering (dragging to reorder already works).
+- Bible: balance days by verse count; never schedule a passage twice in a
+  plan; import a personal plan by pasting it; export a plan and re-import it;
+  memory verses; reading eras; admin bulk-complete through a date; an admin
+  override for one day; a count of full passes; a "currently reading" nudge.
+- Calendar: a Family filter that toggles family events on its own (today the
+  Family badge selects everyone, and family events and holidays always show);
+  mark a subscribed calendar as Work; per-event background images with an
+  upload picker; weather and moon phases.
+- Scoring: quality signals into the Seasons (workout progress into Strength,
+  reading beyond the plan into Wisdom); season tier rewards (cosmetic); a
+  year-end reward, then archive the year.
+- Game time: PC play beyond the ROG Ally (maybe a small program on the PC).
+- ice-time: pick up each season's new schedule links from the rink's index
   page (it reads the schedules today; the new links are pasted each July).
-
-Next up, roughly in order:
-- The features listed per section below, to explore later.
 
 ---
 
@@ -456,7 +459,8 @@ Characters. Each drawer entry keeps its web brand colour.
 - [x] Photo upload or preset icon, per-person colour, display name
 - [x] Birthdays, with age, recurring annually on the calendar
 - [x] Parent and child roles
-- [ ] Per-person dashboard ordering
+- [x] Per-person dashboard ordering: the household order (drag on the
+      setup page) is the order people appear everywhere, the dashboard included
 
 ## Access control
 
@@ -559,12 +563,6 @@ the remaining personal-view items:
         jumping to any date; neighbouring-month days are tappable too. The month
         view already fills the screen and carries the add (+). Menus stay clean
         with no explanatory text.
-- [ ] Kairos-side TOTP for the eventual app API path that bypasses Authelia.
-- [ ] **"Act as me" step-up** on the shared tablet — attribute a single action
-      to a person (tap avatar, optional personal PIN) without turning the
-      tablet into a private session. The grocery "I'm going shopping → cart"
-      flow now exists as a shared run; this would let a run be tied to one
-      person (their name on the trip, their staples) if that ever proves useful.
 - [x] **Personal / focused views** on a signed-in device, plus a summary page
       that's one tap away rather than front-and-centre. (done: the personal-view scoping below, verified 13 Nov)
 - [ ] Audit trail of admin changes
@@ -835,8 +833,7 @@ the remaining personal-view items:
 ## Work
 
 - [x] Work shifts as calendar events with hours
-- [ ] Shift entry designed for the job rather than as a generic event
-- [ ] Hours totals per week and per pay period
+- [ ] Mark a subscribed calendar as Work, so its events show as work
 
 ## School
 
@@ -1015,12 +1012,14 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
       keeps the remaining work moving. The term-level draft/published gate
       originally sketched here was **not** built and is not wanted — Stage 2
       rebalances in place, and unpublish → edit → republish covers the case.
-- [ ] **Schoolwork card** (overdue + today + get-ahead) and **admin bulk-mark**.
+- [x] **Schoolwork card** (overdue + today + get-ahead) and **admin bulk-mark**.
       *Get-ahead shipped (v0.383):* the person dashboard shows a "Get ahead in
       school" card — pick a subject, see the next upcoming item, complete it
       early; steps through future items per subject. *v0.384:* quizzes/tests from
       a published plan are eligible too (self-paced courses); standalone
       hand-added tests stay excluded.
+      *Done (13 Nov check):* the School card has overdue, today, progress and
+      "Do some extra work"; Student work's "Edit completion" covers bulk-marking.
 - [x] **Catch-up / finish-by-term-end (v0.384):** `fitToTerm` on a plan
       (`spreadUnitsFit`) front-loads extra items onto the earliest school days so
       a plan that wouldn't fit at one a day lands on the last term day instead.
@@ -1351,7 +1350,6 @@ until the run is finished:
       supported — the column is an integer on the line, deliberately kept out
       of the item name so the catalog and icon matching are unaffected. — the note field exists on a line but
       isn't surfaced in the add form yet
-- [ ] Recurring staples that re-add themselves on a cadence
 
 ## Scoring and gamification
 
@@ -1382,7 +1380,6 @@ until the run is finished:
       promptness bonus on up-for-grabs shared chores: full the day it's
       available or before, half a day later, nothing after. Bonuses are the
       tiebreak that separates a board sitting at 100% (v0.108.0)
-- [ ] Admin control to tune the bonus sizes (they ship as sensible constants)
 
 ### Seasons (RPG progression)
 
@@ -1441,9 +1438,6 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       find (app `GalleryScreen`, `/api/v1/characters/collection`); an owned one
       can be made active again (v0.576 / app 0.383). Minted keepsakes keep the
       stage they reached (`mintedStage`).
-- [ ] Lighter collect mechanic for a 50+ roster: streak/token/coin currency to
-      earn or buy eggs; essence banked from would-be duplicates toward a chosen
-      creature; egg-era selection
 - [x] New eras' art: all seven eras (Modern, '80s/'90s, Arcade, Dragon, Vintage,
       WW2, Imaginary) are in — 52 creatures
 - [ ] Season tier rewards: cosmetic unlocks only for the individual track —
@@ -1501,16 +1495,7 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       page without returning to the dashboard
 - [x] Fixed icon positions so the bar never reflows between pages
 - [x] Current section shown by a larger, filled, coloured icon
-- [ ] Motion on the bar: icons that grow and settle on selection, a sliding
-      indicator that travels between them, and page content that transitions
-      rather than snapping
-- [ ] Icon badges — overdue count, unclaimed chores, unread plan days
 - [x] Dark mode (app per-device + web from Admin → Appearance)
-- [ ] Large touch tiles on each person's page for exercise, school, and
-      reading
-- [ ] Phone layout for the week grid
-- [ ] Phone layout throughout — the top bar behaves differently on narrow
-      screens and each page needs checking on a handset
 
 ## Offline-first (potential — not committed)
 - [x] **Lighter cache-first pass shipped (app v0.204–0.209).** In-session instant
@@ -1534,10 +1519,9 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       navigation but not a fresh cold start from a killed process). (done as a Room page cache: `data/local/KairosDatabase`, `PayloadCacheDao`; every screen paints from it, cold start included)
 
 ## Onboarding
-- [ ] First-run setup wizard for a brand-new Kairos: create the first person
-      (the admin), optionally set a shared admin PIN (PIN is optional), and add
-      the rest of the household — so a fresh install has a guided path instead
-      of dropping you into an empty dashboard
+- [x] First-run setup: a fresh install opens /setup, which asks for the first
+      person (they become the admin), then the rest of the household and an
+      optional shared PIN (closed 13 Nov; same as "First-run household setup")
 
 ## Security hardening
 - [x] Brute-force protection: wrong admin-PIN and wrong login-password attempts
@@ -1802,7 +1786,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.708.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
+- Web APP_VERSION 0.709.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
   in `MIGRATIONS` since 0.695).
 - App versionName 0.508.0 / versionCode 580 / CLIENT_BUILD 580.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
