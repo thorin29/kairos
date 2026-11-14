@@ -1684,7 +1684,7 @@ silently invisible:
 - **auth/** `login`, `join`, `join/check`, `forgot`, `recover`, `reauth`, `refresh`, `revoke`, `password` (change your own: `{ current, next }` → `{ ok, error? }`; v0.605) · **meta**, **me**, `me/avatar`, `me/avatar/companion`, `me/color`, `me/birthday`, **devices**, `devices/[id]/revoke`, `avatars/[file]`
 - **dashboard**, **tasks** (`add`, `[id]/complete`, `[id]/uncomplete`, `[id]/update`, `[id]/edit-data`, `[id]/delete`), **chores** (`always-open`, `claim`, `claim-complete`, `release`)
 - **calendar** (`event`, `event/update`, `event/delete`, `prefs`, `subscribed-reminders`), **event-names**, **event-bg**, **addresses**, **sport/confirm**, **sport/decline**, **notifications/meta**, **notifications/upcoming**
-- **school** (`add`, `add-to-today`, `approvals`, `rename`, `delete`), **classes**, **classes/form**
+- **school** (`add`, `add-to-today`, `rename`, `delete`; `approvals` removed in v0.714), **classes**, **classes/form**
 - **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
 - **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)

@@ -236,8 +236,6 @@ export type TermRow = {
   name: string;
   startISO: string;
   endISO: string;
-  pending: boolean;
-  proposedBy: string | null;
 };
 
 export type ClassRow = {
@@ -278,15 +276,8 @@ export type PersonClasses = {
   classes: ClassRow[];
 };
 
-export type SubjectRow = { id: string; name: string; pending: boolean; proposedBy: string | null; baseSubject: string | null; color: string | null; resolvedColor: string | null };
+export type SubjectRow = { id: string; name: string; baseSubject: string | null; color: string | null; resolvedColor: string | null };
 export type ClassTypeRow = { id: string; name: string };
-
-function proposerName(
-  id: string | null | undefined,
-  nameById: Map<string, string>,
-): string | null {
-  return id ? nameById.get(id) ?? null : null;
-}
 
 export async function loadSchoolStructure(): Promise<{
   terms: TermRow[];
@@ -336,7 +327,7 @@ export async function loadSchoolStructure(): Promise<{
     prisma.subject.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, pending: true, proposedById: true, baseSubject: true, color: true },
+      select: { id: true, name: true, baseSubject: true, color: true },
     }),
     prisma.classType.findMany({
       where: { isActive: true },
@@ -403,8 +394,6 @@ export async function loadSchoolStructure(): Promise<{
       name: t.name,
       startISO: fromDateColumn(t.startDate),
       endISO: fromDateColumn(t.endDate),
-      pending: (t as { pending?: boolean }).pending ?? false,
-      proposedBy: proposerName((t as { proposedById?: string | null }).proposedById, nameById),
     })),
     people: people.map((p) => ({
       id: p.id,
@@ -417,8 +406,6 @@ export async function loadSchoolStructure(): Promise<{
     subjects: subjects.map((sub) => ({
       id: sub.id,
       name: sub.name,
-      pending: (sub as { pending?: boolean }).pending ?? false,
-      proposedBy: proposerName((sub as { proposedById?: string | null }).proposedById, nameById),
       baseSubject: (sub as { baseSubject?: string | null }).baseSubject ?? null,
       color: (sub as { color?: string | null }).color ?? null,
       resolvedColor: subjectColors.get(sub.name) ?? null,
@@ -813,7 +800,7 @@ export async function loadSubjectGroups(): Promise<SubjectGroup[]> {
   const [subjectColor, subjects, classes] = await Promise.all([
     loadSubjectColors(),
     prisma.subject.findMany({
-      where: { isActive: true, pending: false },
+      where: { isActive: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),

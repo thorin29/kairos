@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-11 — No more class approvals (v0.714.0 / app 0.514.0)
+
+- Class approvals are removed: a child adding a class in the app could
+  propose a new subject or semester, which waited in a "Needs approval" queue
+  (web admin panel, app Settings › Parents › Class approvals, a badge on the
+  menu). Now only an admin adds subjects and semesters, in Admin → School; a
+  non-admin picks from the lists (typing a new subject is refused with "Pick a
+  subject from the list.", a new semester is ignored). Nothing was pending, so
+  migration 155 just drops `Subject.pending/proposedById` and
+  `Term.pending/proposedById`. `GET/POST /api/v1/school/approvals` and the
+  approve/merge actions are gone.
+- A class never needed a semester on the server; the forms did. The calendar
+  class form (web) and Add class (app) get "No semester" and lose "Add a new
+  semester", so summer or winter-break work can be set up with its own dates.
+
 ## 2026-11 — One day of grace for superseded chores (v0.713.0 / app 0.512.0)
 
 - Chores still expire by succession, but a day later: an unfinished instance

@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
   const attendPrompts = await pendingClassPrompts(today);
   const needsAttendanceSet = new Set(attendPrompts.map((p) => p.userId));
   const classOptions = await loadClassOptions();
-  const terms = structure.terms.filter((t) => !t.pending);
+  const terms = structure.terms;
 
   const rawTerm = req.nextUrl.searchParams.get("term");
   const current = terms.find((t) => t.startISO <= today && today <= t.endISO) ?? null;
@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
     seasonHint: selected ? selected.name : "All time",
     terms: terms.map((t) => ({ id: t.id, name: t.name })),
     selectedTermId: selected ? selected.id : null,
-    subjects: structure.subjects.filter((s) => !s.pending).map((s) => s.name),
+    subjects: structure.subjects.map((s) => s.name),
     types: SCHOOL_TYPES.map((t) => ({ key: t, label: SCHOOL_TYPE_LABEL[t] })),
     canActFor: shownPeople
       .filter((p) => actForIds.includes(p.id))

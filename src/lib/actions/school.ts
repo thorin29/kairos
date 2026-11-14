@@ -3,11 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { syncPlanUnitDone } from "@/lib/school/plan-unit-sync";
 import {
-  approveSubjectCore,
-  approveTermCore,
   meetingEventData,
-  mergeSubjectCore,
-  mergeTermCore,
   persistClass,
   schoolStructureRevalidate,
   WEEKDAY_TOKENS,
@@ -540,33 +536,6 @@ export async function deleteSubjectGroup(id: string): Promise<void> {
   if (count > 0) return;
   await prisma.subject.delete({ where: { id } }).catch(() => {});
   schoolStructureRevalidate();
-}
-
-// --- approval of user-proposed subjects & terms -------------------------------
-
-export async function approveSubject(id: string, name: string): Promise<void> {
-  await requireAdmin();
-  return approveSubjectCore(id, name);
-}
-
-export async function mergeSubject(pendingId: string, targetId: string): Promise<void> {
-  await requireAdmin();
-  return mergeSubjectCore(pendingId, targetId);
-}
-
-export async function approveTerm(
-  id: string,
-  name: string,
-  start: string,
-  end: string,
-): Promise<void> {
-  await requireAdmin();
-  return approveTermCore(id, name, start, end);
-}
-
-export async function mergeTerm(pendingId: string, targetId: string): Promise<void> {
-  await requireAdmin();
-  return mergeTermCore(pendingId, targetId);
 }
 
 export async function addClassType(

@@ -144,8 +144,6 @@ model Term {
   startDate    DateTime      @db.Date
   endDate      DateTime      @db.Date
   sortOrder    Int           @default(0)
-  pending      Boolean       @default(false)
-  proposedById String?
   createdAt    DateTime      @default(now())
   classes      SchoolClass[]
 }
@@ -203,8 +201,6 @@ model Subject {
   base          BaseSubject? @relation(fields: [baseSubjectId], references: [id], onDelete: SetNull)
   sortOrder    Int           @default(0)
   isActive     Boolean       @default(true)
-  pending      Boolean       @default(false)
-  proposedById String?
   createdAt    DateTime      @default(now())
   classes      SchoolClass[]
 }

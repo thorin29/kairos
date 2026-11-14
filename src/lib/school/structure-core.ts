@@ -94,11 +94,9 @@ export async function persistClass(
   // the block's event id, so we can remove it once the real class exists.
   const replaceEventId =
     String(formData.get("replaceEventId") ?? "").trim() || null;
-  // A non-admin (forcedOwnerId set) can propose a new subject/term, but it stays
-  // pending until an admin approves it, so it's hidden from everyone else's
-  // pickers meanwhile. An admin's inline additions are approved immediately.
-  const proposerNonAdmin = forcedOwnerId !== undefined;
-  const proposedById = proposerNonAdmin ? forcedOwnerId : null;
+  // Only an admin adds subjects and semesters (v0.714): a non-admin
+  // (forcedOwnerId set) picks from the lists. There's no approval queue.
+  const nonAdmin = forcedOwnerId !== undefined;
 
   // The class name comes from the Subject pool now (like chores pick from the
   // master list). Either an existing subject is chosen, or a new one is typed
@@ -115,16 +113,17 @@ export async function persistClass(
   let subjectId: string | null = null;
   let name = rawName;
   if (newSubject) {
-    const subj = await prisma.subject.upsert({
+    const existing = await prisma.subject.findUnique({
       where: { name: newSubject },
-      update: {},
-      create: {
-        name: newSubject,
-        pending: proposerNonAdmin,
-        proposedById,
-      },
       select: { id: true, name: true },
     });
+    if (!existing && nonAdmin) return { error: "Pick a subject from the list." };
+    const subj =
+      existing ??
+      (await prisma.subject.create({
+        data: { name: newSubject },
+        select: { id: true, name: true },
+      }));
     subjectId = subj.id;
     name = subj.name;
   } else if (subjectIdRaw) {
@@ -159,6 +158,7 @@ export async function persistClass(
   const newTermStart = String(formData.get("newTermStart") ?? "");
   const newTermEnd = String(formData.get("newTermEnd") ?? "");
   if (
+    !nonAdmin &&
     newTermName.length >= 2 &&
     /^\d{4}-\d{2}-\d{2}$/.test(newTermStart) &&
     /^\d{4}-\d{2}-\d{2}$/.test(newTermEnd) &&
@@ -171,8 +171,6 @@ export async function persistClass(
         startDate: toDateColumn(newTermStart),
         endDate: toDateColumn(newTermEnd),
         sortOrder: termCount,
-        pending: proposerNonAdmin,
-        proposedById,
       },
       select: { id: true },
     });
@@ -347,93 +345,3 @@ export async function persistClass(
   return { error: null };
 }
 
-// Auth-free cores so both the web admin actions and the app's device-auth API
-// route share one implementation.
-export async function approveSubjectCore(id: string, name: string): Promise<void> {
-  const clean = name.trim().slice(0, 60);
-  if (clean.length < 2) return;
-  await prisma
-    .$transaction([
-      prisma.subject.update({
-        where: { id },
-        data: { name: clean, pending: false, proposedById: null },
-      }),
-      prisma.schoolClass.updateMany({
-        where: { subjectId: id },
-        data: { name: clean },
-      }),
-    ])
-    .catch(() => {});
-  schoolStructureRevalidate();
-}
-
-export async function mergeSubjectCore(
-  pendingId: string,
-  targetId: string,
-): Promise<void> {
-  if (pendingId === targetId) return;
-  const target = await prisma.subject.findUnique({
-    where: { id: targetId },
-    select: { name: true },
-  });
-  if (!target) return;
-  await prisma
-    .$transaction([
-      prisma.schoolClass.updateMany({
-        where: { subjectId: pendingId },
-        data: { subjectId: targetId, name: target.name },
-      }),
-      prisma.subject.delete({ where: { id: pendingId } }),
-    ])
-    .catch(() => {});
-  schoolStructureRevalidate();
-}
-
-export async function approveTermCore(
-  id: string,
-  name: string,
-  start: string,
-  end: string,
-): Promise<void> {
-  const clean = name.trim().slice(0, 60);
-  if (clean.length < 2) return;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
-    return;
-  }
-  if (end < start) return;
-  await prisma.term
-    .update({
-      where: { id },
-      data: {
-        name: clean,
-        startDate: toDateColumn(start),
-        endDate: toDateColumn(end),
-        pending: false,
-        proposedById: null,
-      },
-    })
-    .catch(() => {});
-  schoolStructureRevalidate();
-}
-
-export async function mergeTermCore(
-  pendingId: string,
-  targetId: string,
-): Promise<void> {
-  if (pendingId === targetId) return;
-  const target = await prisma.term.findUnique({
-    where: { id: targetId },
-    select: { id: true },
-  });
-  if (!target) return;
-  await prisma
-    .$transaction([
-      prisma.schoolClass.updateMany({
-        where: { termId: pendingId },
-        data: { termId: targetId },
-      }),
-      prisma.term.delete({ where: { id: pendingId } }),
-    ])
-    .catch(() => {});
-  schoolStructureRevalidate();
-}

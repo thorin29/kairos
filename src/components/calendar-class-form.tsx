@@ -201,7 +201,7 @@ export function CalendarClassForm({
     : "";
   const [color, setColor] = useState(editing?.color ?? "");
   const [classTypeId, setClassTypeId] = useState(editing?.classTypeId ?? "");
-  const [termSel, setTermSel] = useState(editing?.termId ?? terms[0]?.id ?? "__new__");
+  const [termSel, setTermSel] = useState(editing ? (editing.termId ?? "") : (terms[0]?.id ?? ""));
   const startInit = editing?.meetingStart || start || "";
   const [startTime, setStartTime] = useState(startInit);
   const [endTime, setEndTime] = useState(
@@ -463,27 +463,11 @@ export function CalendarClassForm({
             onChange={setTermSel}
             className="mt-1.5"
             options={[
+              { value: "", label: "No semester" },
               ...terms.map((t) => ({ value: t.id, label: t.name })),
-              { value: "__new__", label: "+ Add a new semester" },
             ]}
           />
-          <input
-            type="hidden"
-            name="termId"
-            value={termSel === "__new__" ? "" : termSel}
-          />
-          {termSel === "__new__" && (
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              <input
-                name="newTermName"
-                maxLength={60}
-                placeholder="Semester name"
-                className={FIELD}
-              />
-              <DateField name="newTermStart" wrapperClassName="" />
-              <DateField name="newTermEnd" wrapperClassName="" />
-            </div>
-          )}
+          <input type="hidden" name="termId" value={termSel} />
         </div>
 
         <div>
