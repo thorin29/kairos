@@ -219,6 +219,36 @@ export async function resettleCompletedWorkoutsOnce(
   });
 }
 
+// V3 (v0.718): today only, under the v0.716 rule (warm-ups, cardio and a
+// sport's warm-up count; an open movement isn't done). Past days keep what
+// they were judged as, so the new rule never turns them overdue after the fact.
+const RESETTLE_TODAY_KEY = "workout.settledV3";
+
+export async function resettleTodayOnce(todayISO: string): Promise<void> {
+  const done = await prisma.appSetting.findUnique({ where: { key: RESETTLE_TODAY_KEY } });
+  if (done) return;
+  const tasks = (await prisma.task.findMany({
+    where: {
+      category: "EXERCISE",
+      status: "COMPLETE",
+      generatedFrom: { startsWith: "workout:" },
+      dueDate: toDateColumn(todayISO),
+    },
+    select: { id: true, userId: true },
+  })) as { id: string; userId: string }[];
+  for (const t of tasks) {
+    const target = await workoutTaskTarget(t.userId, todayISO, false);
+    if (target === "PENDING" || target === "SKIPPED") {
+      await prisma.task.update({ where: { id: t.id }, data: { status: target, completedAt: null } });
+    }
+  }
+  await prisma.appSetting.upsert({
+    where: { key: RESETTLE_TODAY_KEY },
+    update: { value: new Date().toISOString() },
+    create: { key: RESETTLE_TODAY_KEY, value: new Date().toISOString() },
+  });
+}
+
 /**
  * Skip or un-skip one planned movement for a day, then settle the day. A
  * skipped movement counts as done for it. `poolExerciseId` empty means the

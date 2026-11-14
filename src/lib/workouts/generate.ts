@@ -19,7 +19,7 @@ import {
   type RotationShape,
 } from "@/lib/workouts/rotation";
 import { WORKOUT_OVERDUE_MAX } from "@/lib/settings";
-import { resettleCompletedWorkoutsOnce } from "@/lib/workouts/mark";
+import { resettleCompletedWorkoutsOnce, resettleTodayOnce } from "@/lib/workouts/mark";
 
 const HORIZON_DAYS = 14;
 
@@ -337,6 +337,7 @@ export async function generateWorkoutTasks(
   // Once ever: re-judge days completed under the pre-0.586 rule, where logging
   // one movement completed the whole day. Cheap no-op after the first run.
   await resettleCompletedWorkoutsOnce(backfillStart, todayISO());
+  await resettleTodayOnce(todayISO());
   return { created, removed };
 }
 

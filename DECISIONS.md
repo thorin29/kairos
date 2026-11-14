@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — Re-judge today once under the new completion rule (v0.718.0)
+
+- 0.716 only re-judged a day when something on it was saved, so a day closed
+  earlier under the old rule (warm-ups and a sport's warm-up didn't count)
+  kept reading "Complete for today!". `resettleTodayOnce` runs once from the
+  task generator (every dashboard load) and lowers today's COMPLETE workout
+  tasks the new rule says aren't done. Today only: past days keep their
+  verdict, so the stricter rule never makes them overdue after the fact.
+- Verified against a local database: a movement saved with `open` holds the
+  day open and lists in `remaining`; saving it finished completes the day.
+- Sets saved before 0.716 carry no marker and still read as finished; ticking
+  or unticking any set on that movement (or pressing Log) sets it right.
+
 ## 2026-11 — Day page "Logged" follows the open marker (v0.717.0 / app 0.517.0)
 
 - `DayMovementState` gains `open` (and the phone's exercises already carry
