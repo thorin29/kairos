@@ -9,12 +9,12 @@ export const dynamic = "force-dynamic";
 export default async function AdminAppearancePage() {
   const admin = await currentAdmin();
   if (!admin) redirect("/unlock");
-  const { theme, dark } = await getAppearance();
+  const { theme, mode, background } = await getAppearance();
   const familyColor = await getFamilyColor();
   const familyAvatar = await getFamilyAvatar();
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-8">
+    <main className="mx-auto max-w-4xl px-6 py-8">
       <AdminBack />
 
       <header className="mb-8 mt-5 border-b border-hairline pb-5">
@@ -22,15 +22,14 @@ export default async function AdminAppearancePage() {
           Appearance
         </h1>
         <p className="mt-2 max-w-xl text-muted">
-          A color theme and dark mode for the whole household&rsquo;s web view.
-          Everyone sees the same look here; the phone app has its own per-device
-          setting.
+          The household&rsquo;s web view. Each phone picks its own in the app.
         </p>
       </header>
 
       <AppearanceAdmin
         theme={theme}
-        dark={dark}
+        mode={mode}
+        background={background}
         familyColor={familyColor}
         familyAvatar={familyAvatar}
       />

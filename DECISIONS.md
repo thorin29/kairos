@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-11 — Backgrounds, Graphite and a tidier Appearance picker (v0.710.0 / app 0.509.0)
+
+- **Backgrounds are a second choice beside the color theme,** independent of
+  it: Classic (the original cool grey / navy, and the default, so nothing
+  changes until someone picks), Stone, Mist, Linen, Sage, Lavender, Blush and
+  Two-tone (linen page, sage cards). Each sets the neutrals only (page, card,
+  border, shaded band, muted text, ink) and has a matching dark set that
+  Mode switches to. Mocked up and agreed on the design canvas first.
+- **Graphite,** a warm dark grey, is a ninth color; its dark-mode accent is a
+  light warm grey (#c9c4bc) with dark text on it.
+- **Web: `appearance.mode`** (system / light / dark) and
+  `appearance.background` settings. The old on/off `appearance.dark` is read
+  when no mode is saved, so a dark household stays dark, and is kept in step.
+  "System" sets the `dark` class in the browser before paint with a tiny
+  script that carries the request's CSP nonce, and follows the device live.
+  Background CSS is `html[data-bg]`; light rules carry `:not(.dark)` so they
+  never outrank the dark ones.
+- **The picker** (web Admin → Appearance; app Settings → Appearance): a live
+  preview, Mode as one segmented control, Color as one row of dots with the
+  name on the right (the app's one-row-per-color list is gone), Background as
+  eight tiles that show the current mode's colors. Everything else on those
+  pages is unchanged. The web stays one choice for the household; the app is
+  per phone, as before.
+- **Not changed:** the home-screen widget keeps the Classic neutrals (it
+  follows the color and mode as before).
+- **ROADMAP corrections:** the household order is set by dragging the person
+  cards in Admin → Chores (not the setup page), and first-run setup is one
+  /setup page with sections, not a step-by-step wizard.
+
 ## 2026-11 — Roadmap tidied against the code (v0.709.0)
 
 - **One backlog list** at the top of ROADMAP.md now holds every open item;

@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.709.0 / app v0.508.0, versionCode 580)
+## Current status (13 Nov 2026, web v0.710.0 / app v0.509.0, versionCode 581)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -110,6 +110,12 @@ in the project docs (workouts-plan, workouts-programs-plan, workouts-next-plan).
   - App **Settings reorganized** (app 0.501): profile card, Account (Password,
     Devices, Sign out), Look & feel, Notifications & reminders, Connected apps,
     Parents, Help & about.
+- **Backgrounds and a new picker (0.710 / app 0.509):** eight backgrounds
+  (Classic, the original, plus Stone, Mist, Linen, Sage, Lavender, Blush,
+  Two-tone), each with a light and a dark set, chosen independently of the
+  color theme; a ninth color, Graphite; the web gets System / Light / Dark.
+  The Appearance screens are a preview, Mode, one row of color dots and one
+  row of background tiles.
 - **Bodyweight work-up hints (0.708 / app 0.508):** a reps or timed movement
   with no weight starts each target set from last time's value for that set;
   the target stays in the scheme ("Today 5 × 10"). First time and warm-ups
@@ -459,8 +465,9 @@ Characters. Each drawer entry keeps its web brand colour.
 - [x] Photo upload or preset icon, per-person colour, display name
 - [x] Birthdays, with age, recurring annually on the calendar
 - [x] Parent and child roles
-- [x] Per-person dashboard ordering: the household order (drag on the
-      setup page) is the order people appear everywhere, the dashboard included
+- [x] Per-person dashboard ordering: the household order (drag the person
+      cards in Admin → Chores) is the order people appear everywhere, the
+      dashboard included
 
 ## Access control
 
@@ -1519,9 +1526,10 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
       navigation but not a fresh cold start from a killed process). (done as a Room page cache: `data/local/KairosDatabase`, `PayloadCacheDao`; every screen paints from it, cold start included)
 
 ## Onboarding
-- [x] First-run setup: a fresh install opens /setup, which asks for the first
-      person (they become the admin), then the rest of the household and an
-      optional shared PIN (closed 13 Nov; same as "First-run household setup")
+- [x] First-run setup: an empty database sends the dashboard to /setup, one
+      page where the first person added becomes the admin, then the rest of
+      the household, Accounts (one-time links to set passwords) and the shared
+      PIN (one page with sections, not a step-by-step wizard)
 
 ## Security hardening
 - [x] Brute-force protection: wrong admin-PIN and wrong login-password attempts
@@ -1786,9 +1794,9 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.709.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
+- Web APP_VERSION 0.710.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.508.0 / versionCode 580 / CLIENT_BUILD 580.
+- App versionName 0.509.0 / versionCode 581 / CLIENT_BUILD 581.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.

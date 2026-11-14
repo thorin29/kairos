@@ -63,13 +63,14 @@ export const dynamic = "force-dynamic";
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [unlocked, pinSet, me, gate, path, appearance] = await Promise.all([
+  const [unlocked, pinSet, me, gate, path, appearance, nonce] = await Promise.all([
     isAdmin(),
     adminPinSet(),
     currentUser(),
     loginRequired(),
     headers().then((h) => h.get("x-pathname") ?? "/"),
     getAppearance(),
+    headers().then((h) => h.get("x-nonce") ?? undefined),
   ]);
   const sidebarExpanded = (await cookies()).get("sidebar")?.value === "1";
 
@@ -93,7 +94,27 @@ export default async function RootLayout({
     : ["", null];
 
   return (
-    <html lang="en" data-theme={appearance.theme} className={appearance.dark ? "dark" : undefined}>
+    <html
+      lang="en"
+      data-theme={appearance.theme}
+      data-bg={appearance.background}
+      className={appearance.mode === "dark" ? "dark" : undefined}
+      // "system" sets the dark class in the browser before paint (below).
+      suppressHydrationWarning
+    >
+      {appearance.mode === "system" && (
+        <head>
+          {/* Follow the device's light/dark setting, live (v0.710). Carries
+              the request's CSP nonce, like Next's own scripts. */}
+          <script
+            nonce={nonce}
+            dangerouslySetInnerHTML={{
+              __html:
+                "(function(){var q=window.matchMedia('(prefers-color-scheme: dark)');function a(){document.documentElement.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()",
+            }}
+          />
+        </head>
+      )}
       <body
         className={`${bricolage.variable} ${plexSans.variable} ${plexMono.variable} min-h-dvh bg-ground text-ink antialiased`}
       >

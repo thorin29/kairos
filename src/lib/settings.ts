@@ -1,5 +1,12 @@
 import "server-only";
-import { THEME_NAMES, type ThemeName } from "@/lib/themes";
+import {
+  APPEARANCE_MODES,
+  BACKGROUND_NAMES,
+  THEME_NAMES,
+  type AppearanceMode,
+  type BackgroundName,
+  type ThemeName,
+} from "@/lib/themes";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_FAMILY_COLOR } from "@/lib/palette";
 
@@ -138,18 +145,36 @@ export async function getSetting(key: string): Promise<string | null> {
 // --- Appearance (household theme, admin-set) ------------------------------
 
 export const APPEARANCE_THEME = "appearance.theme";
-export const APPEARANCE_DARK = "appearance.dark";
+export const APPEARANCE_DARK = "appearance.dark"; // the old on/off switch
+export const APPEARANCE_MODE = "appearance.mode"; // v0.710: system | light | dark
+export const APPEARANCE_BACKGROUND = "appearance.background"; // v0.710
 
-/** The whole-household theme + dark mode, applied to <html> in the layout. */
-export async function getAppearance(): Promise<{ theme: ThemeName; dark: boolean }> {
-  const [t, d] = await Promise.all([
+/** The whole-household theme, mode and background, applied to <html> in the
+ *  layout. A household that only ever set the old dark switch keeps it: no
+ *  mode saved yet reads that switch (on = dark, else light). */
+export async function getAppearance(): Promise<{
+  theme: ThemeName;
+  mode: AppearanceMode;
+  background: BackgroundName;
+}> {
+  const [t, d, m, b] = await Promise.all([
     getSetting(APPEARANCE_THEME),
     getSetting(APPEARANCE_DARK),
+    getSetting(APPEARANCE_MODE),
+    getSetting(APPEARANCE_BACKGROUND),
   ]);
   const theme = (THEME_NAMES as readonly string[]).includes(t ?? "")
     ? (t as ThemeName)
     : "teal";
-  return { theme, dark: d === "1" };
+  const mode: AppearanceMode = (APPEARANCE_MODES as readonly string[]).includes(m ?? "")
+    ? (m as AppearanceMode)
+    : d === "1"
+      ? "dark"
+      : "light";
+  const background: BackgroundName = (BACKGROUND_NAMES as readonly string[]).includes(b ?? "")
+    ? (b as BackgroundName)
+    : "classic";
+  return { theme, mode, background };
 }
 
 // Who may create a class from the calendar's "Class" event type. "admin" (the

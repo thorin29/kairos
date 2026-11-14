@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.709.0";
+export const APP_VERSION = "0.710.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -172,6 +172,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.710.0",
+    summary: [
+      "Appearance: choose a background (Classic, Stone, Mist, Linen, Sage, Lavender, Blush or Two-tone) separately from the color, with a new Graphite color.",
+      "The web can follow the device's light or dark setting.",
+    ],
+  },
   {
     version: "0.709.0",
     summary: ["Housekeeping: the roadmap is up to date."],

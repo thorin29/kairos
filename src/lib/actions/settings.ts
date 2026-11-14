@@ -3,8 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { TaskStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { SCORING_START, SEASON_MODE, SEASON_WEEKS, SEASON_ANCHOR, SEASON_WEEKS_MAX, setSetting, APPEARANCE_THEME, APPEARANCE_DARK } from "@/lib/settings";
-import { THEME_NAMES, type ThemeName } from "@/lib/themes";
+import { SCORING_START, SEASON_MODE, SEASON_WEEKS, SEASON_ANCHOR, SEASON_WEEKS_MAX, setSetting, APPEARANCE_THEME, APPEARANCE_DARK, APPEARANCE_MODE, APPEARANCE_BACKGROUND } from "@/lib/settings";
+import {
+  APPEARANCE_MODES,
+  BACKGROUND_NAMES,
+  THEME_NAMES,
+  type AppearanceMode,
+  type BackgroundName,
+  type ThemeName,
+} from "@/lib/themes";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { isAdmin, requireAdmin } from "@/lib/session";
 
@@ -110,9 +117,24 @@ export async function setAppearanceTheme(theme: string): Promise<void> {
   revalidatePath("/", "layout");
 }
 
-/** Turn dark mode on or off for the household (admin only). */
-export async function setAppearanceDark(on: boolean): Promise<void> {
+/** Light, dark, or follow the device, for the household (admin only; v0.710
+ *  replaces the on/off dark switch, which is kept in step for older reads). */
+export async function setAppearanceMode(mode: string): Promise<void> {
   await requireAdmin();
-  await setSetting(APPEARANCE_DARK, on ? "1" : "0");
+  const m: AppearanceMode = (APPEARANCE_MODES as readonly string[]).includes(mode)
+    ? (mode as AppearanceMode)
+    : "light";
+  await setSetting(APPEARANCE_MODE, m);
+  await setSetting(APPEARANCE_DARK, m === "dark" ? "1" : "0");
+  revalidatePath("/", "layout");
+}
+
+/** The household's background (admin only; v0.710). */
+export async function setAppearanceBackground(name: string): Promise<void> {
+  await requireAdmin();
+  const b: BackgroundName = (BACKGROUND_NAMES as readonly string[]).includes(name)
+    ? (name as BackgroundName)
+    : "classic";
+  await setSetting(APPEARANCE_BACKGROUND, b);
   revalidatePath("/", "layout");
 }

@@ -197,6 +197,37 @@ html.dark[data-theme="pink"]   { --color-accent: #f77fbe; --color-on-accent: #36
 html.dark[data-theme="orange"] { --color-accent: #fb9e4b; --color-on-accent: #331705; --color-sidebar: #40280f; }
 html.dark[data-theme="red"]    { --color-accent: #f48078; --color-on-accent: #330a07; --color-sidebar: #411e1b; }
 
+/* --- Appearance picker swatches (v0.710): each carries its light and dark
+   colours, so it shows the right one in either mode with no script. --- */
+.appearance-swatch { background: var(--sw-l); }
+html.dark .appearance-swatch { background: var(--sw-d); }
+.appearance-tile { background: var(--bg-l); }
+.appearance-tile-card { background: var(--card-l); border: 1px solid var(--line-l); }
+html.dark .appearance-tile { background: var(--bg-d); }
+html.dark .appearance-tile-card { background: var(--card-d); border-color: var(--line-d); }
+
+/* --- Graphite theme (v0.710) --- */
+html[data-theme="graphite"] { --color-accent: #4f4b46; --color-sidebar: #a8a29a; }
+html.dark[data-theme="graphite"] { --color-accent: #c9c4bc; --color-on-accent: #1c1a17; --color-sidebar: #33302c; }
+
+/* --- Backgrounds (v0.710): the neutrals, independent of the colour theme.
+   "classic" is the original look above, so it has no rules here. Light rules
+   carry :not(.dark) so they never outrank the dark ones. --- */
+html:not(.dark)[data-bg="stone"] { --color-ground: #e7e5e1; --color-surface: #ffffff; --color-hairline: #d6d2cc; --color-shade: #dedad4; --color-shade-soft: #e3e1dc; --color-muted: #5d5852; --color-ink: #1c1a17; }
+html.dark[data-bg="stone"] { --color-ground: #141312; --color-surface: #1f1d1b; --color-hairline: #33302c; --color-shade: #282623; --color-shade-soft: #24221f; --color-muted: #a8a29a; --color-ink: #ece9e4; }
+html:not(.dark)[data-bg="mist"] { --color-ground: #e2eaf3; --color-surface: #ffffff; --color-hairline: #cfdbe8; --color-shade: #d6e1ec; --color-shade-soft: #dde6f0; --color-muted: #516377; --color-ink: #10202f; }
+html.dark[data-bg="mist"] { --color-ground: #0d1626; --color-surface: #17233a; --color-hairline: #2a3a55; --color-shade: #1f2d47; --color-shade-soft: #1b2840; --color-muted: #9aaccb; --color-ink: #e6edf7; }
+html:not(.dark)[data-bg="linen"] { --color-ground: #f0eadf; --color-surface: #fffdf8; --color-hairline: #e0d7c6; --color-shade: #e8e0d0; --color-shade-soft: #ede6d9; --color-muted: #675e50; --color-ink: #221d14; }
+html.dark[data-bg="linen"] { --color-ground: #15120e; --color-surface: #221d17; --color-hairline: #362f26; --color-shade: #2b251e; --color-shade-soft: #26211a; --color-muted: #ab9f8e; --color-ink: #efe8dc; }
+html:not(.dark)[data-bg="sage"] { --color-ground: #e6eadf; --color-surface: #fbfcf8; --color-hairline: #d5dbcb; --color-shade: #dde3d3; --color-shade-soft: #e2e7da; --color-muted: #56624f; --color-ink: #162013; }
+html.dark[data-bg="sage"] { --color-ground: #10140f; --color-surface: #1b211a; --color-hairline: #2d362b; --color-shade: #252c23; --color-shade-soft: #20261e; --color-muted: #9ba792; --color-ink: #e6ebe1; }
+html:not(.dark)[data-bg="lavender"] { --color-ground: #e9e6f0; --color-surface: #fdfcff; --color-hairline: #d9d3e4; --color-shade: #e0dbe9; --color-shade-soft: #e5e2ed; --color-muted: #5b5570; --color-ink: #1b1828; }
+html.dark[data-bg="lavender"] { --color-ground: #13101b; --color-surface: #1f1a2b; --color-hairline: #332c45; --color-shade: #282237; --color-shade-soft: #241e31; --color-muted: #a79fbd; --color-ink: #ebe7f3; }
+html:not(.dark)[data-bg="blush"] { --color-ground: #f2e6ea; --color-surface: #fffafb; --color-hairline: #e4d3d9; --color-shade: #ecdde2; --color-shade-soft: #f0e2e7; --color-muted: #6b5a61; --color-ink: #24161c; }
+html.dark[data-bg="blush"] { --color-ground: #181014; --color-surface: #261a20; --color-hairline: #3d2b33; --color-shade: #30212a; --color-shade-soft: #2b1e25; --color-muted: #b39ca7; --color-ink: #f1e6eb; }
+html:not(.dark)[data-bg="twotone"] { --color-ground: #ede6d8; --color-surface: #f6f8ef; --color-hairline: #dcd6c4; --color-shade: #e5e9da; --color-shade-soft: #eae7d9; --color-muted: #5c5b4b; --color-ink: #1e1d14; }
+html.dark[data-bg="twotone"] { --color-ground: #15120e; --color-surface: #1b2119; --color-hairline: #2f3529; --color-shade: #252c22; --color-shade-soft: #20261e; --color-muted: #a3a690; --color-ink: #ebe9df; }
+
 /* --- Dark mode: Tailwind's pale status tints ---
    Banners and error boxes use the stock palette (bg-amber-50, bg-red-50,
    text-red-700…), which is built for light pages: in dark mode they stayed
