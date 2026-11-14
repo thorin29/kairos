@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-11 — Bible plans: even out by verses, never a chapter twice (v0.722.0)
+
+- `src/lib/bible/verses.ts`: verses per chapter for all 66 books (ESV
+  versification, 31,103 verses; from the MIT-licensed
+  bible-passage-reference-parser data, extracted once and checked against
+  books.ts chapter counts).
+- `buildPlan({ balance: "verses" })`: a day aims at a share of verses instead
+  of a chapter count. Weekly pace: N chapters a day becomes N average chapters'
+  worth of verses for the selection; finish-by-date: the verses left over the
+  days left. Chapters are added while that brings the day closer to its share,
+  never split, so Psalm 119 reads alone and short psalms group. Keep books
+  whole still holds (a book's last stretch is swept up within 1.35× a day).
+- Admin → Bible → Generate: "Even out by verses", on by default. Personal
+  plans: a finish-date plan evens out by verses; "N chapters a day" keeps its
+  count, since that's what was asked for.
+- `expandSegments` drops a chapter already chosen (overlapping ranges, a book
+  listed twice); `repeats` counts them and the preview says so.
+- Still open on the Bible list, mocked up first: import / export format,
+  reading eras with a count of full passes, and adding readings to a plan
+  (push back / add to days / some of each).
+
 ## 2026-11 — Rotator cuff before any upper-body work in a warm-up (v0.721.0)
 
 - `withShoulderPrep` used to add Shoulder prep at the end. Now the prep goes

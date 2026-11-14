@@ -180,6 +180,7 @@ export async function generatePlan(
     pace,
     keepBooksWhole: formData.get("whole") === "on",
     extras,
+    balance: formData.get("balance") === "on" ? "verses" : "chapters",
   });
 
   if (built.error) return { ...emptyGenerate, error: built.error };

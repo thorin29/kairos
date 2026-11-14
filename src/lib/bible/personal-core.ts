@@ -53,7 +53,15 @@ export function buildPersonalDays(input: PersonalPlanInput): {
     pace = { kind: "weekly", perWeekday: { 0: cpd, 1: cpd, 2: cpd, 3: cpd, 4: cpd, 5: cpd, 6: cpd } };
   }
 
-  const built = buildPlan({ segments, startISO: input.startISO, pace, keepBooksWhole: false });
+  // A finish-date plan evens out by verses (v0.722); "N chapters a day" keeps
+  // its count, since that's what was asked for.
+  const built = buildPlan({
+    segments,
+    startISO: input.startISO,
+    pace,
+    keepBooksWhole: false,
+    balance: pace.kind === "finish" ? "verses" : "chapters",
+  });
   if (built.error) return { error: built.error };
   if (built.days.length === 0 || built.days.length > MAX_DAYS)
     return { error: "That plan is empty or far too long." };

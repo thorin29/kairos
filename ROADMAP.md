@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (14 Nov 2026, web v0.721.0 / app v0.520.0, versionCode 592)
+## Current status (14 Nov 2026, web v0.722.0 / app v0.520.0, versionCode 592)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -181,10 +181,8 @@ mechanic, and the interface polish and phone-layout items):
 - Dashboard: a weather panel and a weekly forecast page; a month/week
   completion grid.
 - Chores: smooth animated card reordering (dragging to reorder already works).
-- Bible: balance days by verse count; never schedule a passage twice in a
-  plan; import a personal plan by pasting it; export a plan and re-import it;
-  memory verses; reading eras; admin bulk-complete through a date; an admin
-  override for one day; a count of full passes; a "currently reading" nudge.
+- Bible: import a personal plan by pasting it; export a plan and re-import it;
+  memory verses; reading eras; adding readings to a plan; a count of full passes; a "currently reading" nudge.
 - Calendar: a Family filter that toggles family events on its own (today the
   Family badge selects everyone, and family events and holidays always show);
   mark a subscribed calendar as Work; per-event background images with an
@@ -624,9 +622,9 @@ the remaining personal-view items:
       not fixed to canonical order
 - [x] Extra one-off readings pinned to a date (Christmas, Easter) that don't
       count towards coverage
-- [ ] Balance by verse count rather than chapter count so days stay even
+- [x] Balance by verse count rather than chapter count so days stay even (v0.722)
 - [x] Per-weekday chapter counts, including a lighter Sunday as an option
-- [ ] Guarantee no passage is scheduled twice within a plan
+- [x] Guarantee no passage is scheduled twice within a plan (v0.722)
 - [x] Preset plans generated from book lists (canonical, historical,
       chronological, New Testament only) — generated here, not copied from
       published plans
@@ -703,9 +701,11 @@ the remaining personal-view items:
       percentage reflects where the household actually is
 - [ ] **Reading eras** — statistics accumulate across successive plans and
       reset only when an admin says so
-- [ ] Admin bulk-complete: mark everything read through a chosen date, for
-      everyone
-- [ ] Admin override for a single day across the whole household
+- Dropped (Nov 2026): admin bulk-complete through a date
+- [ ] Add readings to the plan (was "admin override for a day"): passages from
+      a date, one a day, pushing the plan back, doubling up on existing days, or
+      some of each with the end date moved by a chosen number of days; a plan
+      with no end date always pushes back (mocked up Nov 2026)
 - [x] Mark reading read by chapter, not only whole books — a book part way
       through (Psalms) can be ticked as far as it's been read
 - [x] Plan progress marks its chapters automatically as the days pass,
@@ -1812,7 +1812,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.721.0 on Next.js 16.4.6 (migrations through 155_drop_school_proposals, all registered
+- Web APP_VERSION 0.722.0 on Next.js 16.4.6 (migrations through 155_drop_school_proposals, all registered
   in `MIGRATIONS` since 0.695).
 - App versionName 0.520.0 / versionCode 592 / CLIENT_BUILD 592.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).

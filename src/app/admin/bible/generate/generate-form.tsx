@@ -88,6 +88,7 @@ export function GenerateForm({
   const [paceKind, setPaceKind] = useState<"weekly" | "finish">("weekly");
   const [finishISO, setFinishISO] = useState("");
   const [whole, setWhole] = useState(true);
+  const [byVerses, setByVerses] = useState(true);
 
   const [extras, setExtras] = useState<Extra[]>([]);
   const [extraDate, setExtraDate] = useState("");
@@ -116,8 +117,9 @@ export function GenerateForm({
             : { kind: "weekly", perWeekday },
         keepBooksWhole: whole,
         extras,
+        balance: byVerses ? "verses" : "chapters",
       }),
-    [segments, startISO, paceKind, finishISO, perWeekday, activeWeekdays, whole, extras],
+    [segments, startISO, paceKind, finishISO, perWeekday, activeWeekdays, whole, extras, byVerses],
   );
 
   const toggleBook = (name: string) =>
@@ -444,6 +446,22 @@ export function GenerateForm({
               </span>
             </span>
           </label>
+
+          <label className="flex items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              name="balance"
+              checked={byVerses}
+              onChange={(e) => setByVerses(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-accent"
+            />
+            <span>
+              Even out by verses
+              <span className="block text-xs text-muted">
+                Days come out about the same length: fewer long chapters, more short ones.
+              </span>
+            </span>
+          </label>
         </Card>
       </section>
 
@@ -470,6 +488,12 @@ export function GenerateForm({
                   </div>
                 ))}
               </div>
+
+              {preview.repeats > 0 && (
+                <p className="mb-3 rounded-2xl border border-hairline bg-ground/50 p-3 text-sm text-muted">
+                  {preview.repeats} {preview.repeats === 1 ? "chapter is" : "chapters are"} chosen twice and scheduled once.
+                </p>
+              )}
 
               {preview.leftover > 0 && (
                 <p className="mb-3 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">

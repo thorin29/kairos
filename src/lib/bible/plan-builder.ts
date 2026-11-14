@@ -11,6 +11,7 @@
  */
 
 import { BOOK_BY_NAME } from "@/lib/bible/books";
+import { versesIn } from "@/lib/bible/verses";
 
 /** A stretch of one book. Segments are read in the order they're listed. */
 export type Selection = {
@@ -39,6 +40,10 @@ export type BuildOptions = {
   /** A day's reading never runs across two books. */
   keepBooksWhole: boolean;
   extras?: Extra[];
+  /** "verses" (v0.722): days even out by verse count, so a day of long
+   *  chapters is shorter in chapters and a day of short ones longer. Chapters
+   *  are never split. Default "chapters": the pace's counts as given. */
+  balance?: "chapters" | "verses";
 };
 
 export type BuiltDay = { iso: string; passage: string; isExtra: boolean };
@@ -51,6 +56,8 @@ export type BuildResult = {
   endISO: string | null;
   /** Chapters that didn't fit before the finish date, if any. */
   leftover: number;
+  /** Chapters chosen more than once and scheduled only the first time (v0.722). */
+  repeats: number;
   error: string | null;
 };
 
@@ -88,9 +95,12 @@ function daysBetween(a: string, b: string): number {
 
 export type ChapterRef = { book: string; chapter: number };
 
-/** The chosen chapters, in listed order. */
+/** The chosen chapters, in listed order. A chapter chosen twice (overlapping
+ *  ranges, a book listed again) is kept only the first time (v0.722), so a
+ *  plan never schedules the same passage twice. */
 export function expandSegments(segments: Selection[]): ChapterRef[] {
   const out: ChapterRef[] = [];
+  const seen = new Set<string>();
 
   for (const item of segments) {
     const book = BOOK_BY_NAME.get(item.book);
@@ -99,10 +109,28 @@ export function expandSegments(segments: Selection[]): ChapterRef[] {
     const from = Math.max(1, item.from ?? 1);
     const to = Math.min(book.chapters, item.to ?? book.chapters);
 
-    for (let c = from; c <= to; c++) out.push({ book: book.name, chapter: c });
+    for (let c = from; c <= to; c++) {
+      const key = `${book.name}|${c}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ book: book.name, chapter: c });
+    }
   }
 
   return out;
+}
+
+/** Chapters the selection lists more than once. */
+function repeatCount(segments: Selection[]): number {
+  let listed = 0;
+  for (const item of segments) {
+    const book = BOOK_BY_NAME.get(item.book);
+    if (!book) continue;
+    const from = Math.max(1, item.from ?? 1);
+    const to = Math.min(book.chapters, item.to ?? book.chapters);
+    if (to >= from) listed += to - from + 1;
+  }
+  return Math.max(0, listed - expandSegments(segments).length);
 }
 
 /**
@@ -158,6 +186,7 @@ export function buildPlan(options: BuildOptions): BuildResult {
     startISO: null,
     endISO: null,
     leftover: 0,
+    repeats: 0,
     error: null,
   };
 
@@ -231,8 +260,54 @@ export function buildPlan(options: BuildOptions): BuildResult {
 
   const perWeekday = options.pace.kind === "weekly" ? options.pace.perWeekday : null;
 
+  // Verse balancing (v0.722): a day aims at a share of verses instead of a
+  // count of chapters. A weekly count of N becomes N average chapters' worth.
+  const verseMode = options.balance === "verses";
+  const vOf = (c: ChapterRef) => versesIn(c.book, c.chapter);
+  const totalVerses = chapters.reduce((n, c) => n + vOf(c), 0);
+  const avgVerses = totalVerses / chapters.length;
+  let versesLeft = totalVerses;
+
+  /** How many chapters, from `at`, make one day's reading. */
+  const takeFrom = (at: number, targetCh: number, targetV: number | null): number => {
+    const remaining = chapters.length - at;
+    let n: number;
+    if (targetV == null) {
+      n = Math.min(targetCh, remaining);
+    } else {
+      // Add chapters while that brings the day closer to its verse share.
+      n = 0;
+      let sum = 0;
+      while (at + n < chapters.length) {
+        const next = vOf(chapters[at + n]);
+        if (n > 0 && Math.abs(sum + next - targetV) >= Math.abs(sum - targetV)) break;
+        sum += next;
+        n++;
+      }
+    }
+    if (options.keepBooksWhole) {
+      const book = chapters[at].book;
+      let inBook = 0;
+      let bookVerses = 0;
+      while (at + inBook < chapters.length && chapters[at + inBook].book === book) {
+        bookVerses += vOf(chapters[at + inBook]);
+        inBook++;
+      }
+      n = Math.min(n, inBook);
+      // Sweep up a stub of the book rather than leaving it alone.
+      if (targetV == null ? inBook <= targetCh + 1 : bookVerses <= targetV * 1.35) n = inBook;
+    }
+    return Math.max(1, Math.min(n, remaining));
+  };
+
   const scheduled: BuiltDay[] = [];
   let cursor = 0;
+  const schedule = (iso: string, n: number) => {
+    const chunk = chapters.slice(cursor, cursor + n);
+    versesLeft -= chunk.reduce((t, c) => t + vOf(c), 0);
+    scheduled.push({ iso, passage: labelChapters(chunk), isExtra: false });
+    cursor += n;
+  };
 
   for (let d = 0; d < dates.length && cursor < chapters.length; d++) {
     const iso = dates[d];
@@ -241,34 +316,11 @@ export function buildPlan(options: BuildOptions): BuildResult {
 
     // Weekly mode uses that weekday's count; finish mode recomputes an even
     // share every day so the remainder spreads rather than piling on the end.
-    const target = perWeekday
+    const targetCh = perWeekday
       ? Math.max(1, Math.floor(perWeekday[weekdayOf(iso)] ?? 1))
       : Math.ceil(remainingChapters / remainingDays);
-
-    let take = Math.min(target, remainingChapters);
-
-    if (options.keepBooksWhole) {
-      const book = chapters[cursor].book;
-      let inBook = 0;
-      while (
-        cursor + inBook < chapters.length &&
-        chapters[cursor + inBook].book === book
-      ) {
-        inBook++;
-      }
-      take = Math.min(take, inBook);
-      // Sweep up a stub of a chapter or two rather than leaving it alone.
-      if (inBook <= target + 1) take = inBook;
-    }
-
-    take = Math.max(1, Math.min(take, remainingChapters));
-
-    scheduled.push({
-      iso,
-      passage: labelChapters(chapters.slice(cursor, cursor + take)),
-      isExtra: false,
-    });
-    cursor += take;
+    const targetV = verseMode ? (perWeekday ? targetCh * avgVerses : versesLeft / remainingDays) : null;
+    schedule(iso, takeFrom(cursor, targetCh, targetV));
   }
 
   // Keeping books whole can use days faster than expected; top up in weekly
@@ -281,30 +333,8 @@ export function buildPlan(options: BuildOptions): BuildResult {
     let guard = 0;
     while (cursor < chapters.length && scheduled.length < MAX_DAYS && guard < MAX_DAYS * 8) {
       if (weekdays.includes(weekdayOf(iso)) && !extraDates.has(iso)) {
-        const remainingChapters = chapters.length - cursor;
-        const target = Math.max(1, Math.floor(perWeekday![weekdayOf(iso)] ?? 1));
-        let take = Math.min(target, remainingChapters);
-
-        if (options.keepBooksWhole) {
-          const book = chapters[cursor].book;
-          let inBook = 0;
-          while (
-            cursor + inBook < chapters.length &&
-            chapters[cursor + inBook].book === book
-          ) {
-            inBook++;
-          }
-          take = Math.min(take, inBook);
-          if (inBook <= target + 1) take = inBook;
-        }
-
-        take = Math.max(1, take);
-        scheduled.push({
-          iso,
-          passage: labelChapters(chapters.slice(cursor, cursor + take)),
-          isExtra: false,
-        });
-        cursor += take;
+        const targetCh = Math.max(1, Math.floor(perWeekday![weekdayOf(iso)] ?? 1));
+        schedule(iso, takeFrom(cursor, targetCh, verseMode ? targetCh * avgVerses : null));
       }
       iso = shift(iso, 1);
       guard++;
@@ -328,6 +358,7 @@ export function buildPlan(options: BuildOptions): BuildResult {
     startISO: days.length > 0 ? days[0].iso : null,
     endISO: days.length > 0 ? days[days.length - 1].iso : null,
     leftover: chapters.length - cursor,
+    repeats: repeatCount(options.segments),
     error:
       days.length === 0
         ? "Nothing to schedule."
