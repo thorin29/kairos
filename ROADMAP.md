@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (13 Nov 2026, web v0.707.0 / app v0.507.0, versionCode 579)
+## Current status (13 Nov 2026, web v0.708.0 / app v0.508.0, versionCode 580)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -110,6 +110,10 @@ in the project docs (workouts-plan, workouts-programs-plan, workouts-next-plan).
   - App **Settings reorganized** (app 0.501): profile card, Account (Password,
     Devices, Sign out), Look & feel, Notifications & reminders, Connected apps,
     Parents, Help & about.
+- **Bodyweight work-up hints (0.708 / app 0.508):** a reps or timed movement
+  with no weight starts each target set from last time's value for that set;
+  the target stays in the scheme ("Today 5 × 10"). First time and warm-ups
+  keep the target.
 - **Monthly tests compare with the last test (0.707 / app 0.507):** the
   test card's "Last time" and its hints are last month's test, not the last
   regular workout with the same holds.
@@ -175,8 +179,10 @@ Also agreed and not built:
 
 - the Seasons quality signal (workout progress into Strength; reading beyond
   the plan into Wisdom), kept as is for now;
-- play on a shared or unmanaged PC isn't tracked (see Game time below);
-- ice-time following a schedule index page.
+- PC play beyond the ROG Ally: maybe a small program on the PC that reports
+  play time (see Game time below);
+- ice-time picking up each season's new schedule links from the rink's index
+  page (it reads the schedules today; the new links are pasted each July).
 
 Next up, roughly in order:
 - The features listed per section below, to explore later.
@@ -1247,8 +1253,9 @@ resolved daily totals to Kairos. See the collector repo's `README.md` /
       tracking is accepted. App-open time via `ally` on a managed Family Safety
       PC when `GAME_APPS` lists the launcher; untracked on a shared or
       unmanaged PC. Exact play times (server log / RCON) are not pursued.
-- [ ] Play through the Xbox app on a shared family PC doesn't surface reliably
-      in Home Assistant; probably no sensor-based fix
+- [ ] PC play time: maybe a small program running on the PC that reports what
+      was played and for how long (the ROG Ally is already covered through
+      Microsoft Family Safety, collector 5.0.0)
 
 ## Groceries
 
@@ -1750,8 +1757,9 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
   container (Admin → Hockey). Add to calendar pre-fills New event.
 - [x] **Hockey layout per person** (web 0.601 / app 0.410) — sections start
   collapsed; open/closed and the order set with Arrange are saved per person.
-- [ ] ice-time: follow the rink's schedule index page to pick up each July's
-  new links (tracked in the ice-time repo).
+- [ ] ice-time: find each season's new schedule links on the rink's index page
+  instead of pasting them each July (it already reads the schedules; tracked
+  in the ice-time repo).
 
 - [x] The day's "+ Conditioning" becomes "+ Additional": a picker for
   conditioning, mobility, stretching or isometrics, added to that day only
@@ -1794,9 +1802,9 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.707.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
+- Web APP_VERSION 0.708.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.507.0 / versionCode 579 / CLIENT_BUILD 579.
+- App versionName 0.508.0 / versionCode 580 / CLIENT_BUILD 580.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.

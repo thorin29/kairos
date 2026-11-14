@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-11 — Bodyweight work-up hints start from last time (v0.708.0 / app 0.508.0)
+
+- **The problem:** a program's target filled every set's hint, so 5 × 10
+  pull-ups showed "10" in each box even for someone at 3 a set, and ticking an
+  empty box logged 10.
+- **The rule:** for a movement logged as reps or time with no weight (a
+  bodyweight move working up to its target), a target set's hint is last
+  time's value for that set. Ticking an empty box logs that. The target stays
+  in the scheme line ("Today 5 × 10").
+- **Unchanged:** the first time (no last time for that set), warm-up sets,
+  and any weighted movement or set with a weight (5/3/1, programs with a
+  training max) keep the target as the hint. A set beyond last time's count
+  takes the target.
+- **Where:** `workUpHint` in `src/app/exercise/day-log.tsx` (web) and in the
+  app's `MovementSetsViewModel`; no server change.
+- **Also:** ROADMAP wording for PC play time (maybe a small program on the PC;
+  the ROG Ally is covered) and for ice-time (it reads the rink's schedules
+  today; the open item is picking up each season's new links on its own).
+
 ## 2026-11 — Monthly tests compare with the last test (v0.707.0 / app 0.507.0)
 
 - **The problem:** a test's "Last time" (and the greyed hints inside it) was

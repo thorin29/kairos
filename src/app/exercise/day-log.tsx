@@ -1375,7 +1375,24 @@ const num = (v: string): number | null => {
   return v.trim() !== "" && Number.isFinite(n) && n > 0 ? n : null;
 };
 
-function rowsFrom(log: MovementLog): Row[] {
+/**
+ * Working up to a bodyweight target (v0.708): for a reps or timed movement
+ * with no weight, a target set's hint is last time's value for that set, not
+ * the target, so ticking an empty box logs what was done last time. The
+ * target stays in the scheme above ("Today 5 × 10"). The first time (no last
+ * time for the set) and warm-up sets keep the target.
+ */
+function workUpHint(
+  metric: Metric | undefined,
+  t: { reps: number; seconds?: number; warmup?: boolean; weight: number | null } | undefined,
+  l: { reps: number | null; seconds: number | null } | undefined,
+): { r: number | null; s: number | null } | null {
+  if (!t || !l || t.warmup || metric === "WEIGHT" || t.weight != null) return null;
+  if (metric === "DURATION") return l.seconds != null ? { r: t.reps, s: l.seconds } : null;
+  return l.reps != null ? { r: l.reps, s: t.seconds ?? null } : null;
+}
+
+function rowsFrom(log: MovementLog, metric?: Metric): Row[] {
   const last = log.last?.sets ?? [];
   // A program's targets fill the hints in place of last time; a target with no
   // weight yet (no training max) falls back to last time's weight.
@@ -1388,8 +1405,8 @@ function rowsFrom(log: MovementLog): Row[] {
       r: s.reps != null ? String(s.reps) : "",
       s: s.seconds != null ? String(s.seconds) : "",
       hintW: target[i] ? (target[i].weight ?? last[i]?.weight ?? null) : (last[i]?.weight ?? null),
-      hintR: target[i] ? target[i].reps : (last[i]?.reps ?? null),
-      hintS: target[i]?.seconds ?? last[i]?.seconds ?? null,
+      hintR: workUpHint(metric, target[i], last[i])?.r ?? (target[i] ? target[i].reps : (last[i]?.reps ?? null)),
+      hintS: workUpHint(metric, target[i], last[i])?.s ?? target[i]?.seconds ?? last[i]?.seconds ?? null,
       saved: true,
       added: i >= Math.max(last.length, target.length),
       top: target[i]?.top,
@@ -1408,8 +1425,8 @@ function rowsFrom(log: MovementLog): Row[] {
         r: "",
         s: "",
         hintW: t.weight ?? last[i]?.weight ?? null,
-        hintR: t.reps,
-        hintS: t.seconds ?? last[i]?.seconds ?? null,
+        hintR: workUpHint(metric, t, last[i])?.r ?? t.reps,
+        hintS: workUpHint(metric, t, last[i])?.s ?? t.seconds ?? last[i]?.seconds ?? null,
         saved: false,
         added: false,
         top: t.top,
@@ -1428,8 +1445,8 @@ function rowsFrom(log: MovementLog): Row[] {
       r: "",
       s: "",
       hintW: t.weight ?? last[i]?.weight ?? null,
-      hintR: t.reps,
-      hintS: t.seconds ?? last[i]?.seconds ?? null,
+      hintR: workUpHint(metric, t, last[i])?.r ?? t.reps,
+      hintS: workUpHint(metric, t, last[i])?.s ?? t.seconds ?? last[i]?.seconds ?? null,
       saved: false,
       added: false,
       top: t.top,
@@ -1675,7 +1692,7 @@ function MovementLogger({
       .then((l) => {
         if (!live) return;
         setLog(l);
-        setRows(withDraft(rowsFrom(l), `${dateISO}|${slotId}`));
+        setRows(withDraft(rowsFrom(l, metric), `${dateISO}|${slotId}`));
         setSkipped(l.skipped);
         setSugg(l.suggestion ?? null);
         setEffort((l.feedback?.effort as Effort | null) ?? null);
