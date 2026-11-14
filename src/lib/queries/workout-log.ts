@@ -2177,6 +2177,8 @@ export type DayMovementState = {
   /** The day's sets in a few words ("5 sets · top 185 × 1"); empty when none. */
   summary: string;
   setCount: number;
+  /** Sets logged but not finished (v0.716): sets left to tick, Log not pressed. */
+  open: boolean;
   skipped: boolean;
   /** Swapped for the day: the movement done instead. */
   loggedAs: string | null;
@@ -2487,6 +2489,7 @@ export async function loadDayLogState(
 
   const tests = await lastTestsFor(userId, slots as string[], day);
   const movements: Record<string, DayMovementState> = {};
+  const openSlots = new Set(planned.flatMap((p) => p.exercises.filter((e) => e.open).map((e) => e.poolExerciseId)));
   for (const slot of slots) {
     const today = bySlot.get(slot) ?? [];
     const swap = today.find((s) => s.poolExerciseId !== slot);
@@ -2494,6 +2497,7 @@ export async function loadDayLogState(
     movements[slot] = {
       summary: setsSummary(today, today[0]?.unit ?? null),
       setCount: today.length,
+      open: today.length > 0 && openSlots.has(slot as string),
       skipped: skipped.has(slot),
       loggedAs: swap?.poolExercise?.name ?? null,
       last: prev ? setsSummary(prev.rows, prev.rows[0]?.unit ?? null) : "",

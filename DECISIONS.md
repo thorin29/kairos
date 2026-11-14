@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-11 — Day page "Logged" follows the open marker (v0.717.0 / app 0.517.0)
+
+- `DayMovementState` gains `open` (and the phone's exercises already carry
+  it from `PlannedMovement.open`). The web day page's Logged chip, the Core
+  card's count and "Logged", and the movement's done state treat a movement
+  with sets left and Log not pressed as not done.
+- Sets saved before 0.716 have no marker, so they read as finished; the next
+  tick or Log on that movement sets it right.
+
 ## 2026-11 — "Complete for today!" means everything; the card shows what's left (v0.716.0 / app 0.516.0)
 
 - A movement used to count as done as soon as one set was saved, and

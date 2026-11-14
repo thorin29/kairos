@@ -368,7 +368,8 @@ export function DayLog({
       if (!state) return false;
       if (it.type === "movement") {
         const m = state.movements[it.poolExerciseId];
-        return !!m && (m.setCount > 0 || m.skipped);
+        // Sets left to tick and Log not pressed isn't done yet (v0.716).
+        return !!m && ((m.setCount > 0 && !m.open) || m.skipped);
       }
       if (it.type === "card") return cardDone(it.workoutId);
       return false;
@@ -910,7 +911,10 @@ export function DayLog({
                         }[]
                       ).filter((x) => !testIds.includes(x.poolExerciseId));
                       if (mine[0]?.poolExerciseId !== it.poolExerciseId) return null;
-                      const done = mine.filter((x) => (data.state.movements[x.poolExerciseId]?.setCount ?? 0) > 0).length;
+                      const done = mine.filter((x) => {
+                        const mv = data.state.movements[x.poolExerciseId];
+                        return (mv?.setCount ?? 0) > 0 && !mv?.open;
+                      }).length;
                       const all = mine.length > 0 && done === mine.length;
                       const card = (
                         <button
@@ -965,7 +969,7 @@ export function DayLog({
                           <span className="block line-clamp-2 text-sm font-semibold">{it.name}</span>
                           <span className="tabular block truncate text-xs text-muted">{detail}</span>
                         </span>
-                        {logged && (
+                        {logged && !m.open && (
                           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
                             Logged
                           </span>
