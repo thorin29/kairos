@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (14 Nov 2026, web v0.711.0 / app v0.510.0, versionCode 582)
+## Current status (14 Nov 2026, web v0.712.0 / app v0.511.0, versionCode 583)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -1792,13 +1792,15 @@ From the original workouts plan, not built yet:
   one person from Admin → Calendar (v0.688, migration 152).
 - **Warm-up Switch is for the day (0.711 / app 0.510):** switching in the
   day's warm-up window changes only that day; the plan and rotation stay.
+  The app's Switch shows just the list (0.511); a switched warm-up keeps
+  Shoulder prep and gives way to the Hockey tab (0.712).
 - Dropped for now: "Keep N sets" on a movement; a weekly lift order that rotates.
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.711.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
+- Web APP_VERSION 0.712.0 on Next.js 16.4.6 (migrations through 154_class_plan_paused, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.510.0 / versionCode 582 / CLIENT_BUILD 582.
+- App versionName 0.511.0 / versionCode 583 / CLIENT_BUILD 583.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.

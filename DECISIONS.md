@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-11 — A day's switched warm-up keeps Shoulder prep and yields to Hockey (v0.712.0)
+
+- 0.711's one-day switch replaced the entry's routine outright, so it lost
+  the rotator-cuff Shoulder prep added on weights days, and it beat the
+  sport-day choice: the window's Hockey tab still showed the switched routine.
+- `daySwaps` now takes the entries with their categories. A switched Warm-up
+  goes through `withShoulderPrep` like the plan's own choice, and is ignored
+  while the day's Warm-up is for its sport (Hockey shows Hockey legs; back on
+  Workout, the switched one returns). Mobility and Stretching are unchanged.
+- The Hockey tab chooses what the day's Warm-up is. On Workout, the sport's
+  warm-up stays a separate optional card on the log.
+
 ## 2026-11 — Switching a day's warm-up is for that day only (v0.711.0 / app 0.510.0)
 
 - **Switch in the day's warm-up window no longer edits the plan.** It used to

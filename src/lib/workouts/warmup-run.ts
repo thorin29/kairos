@@ -73,15 +73,8 @@ export async function routinesById(userId: string, ids: (string | null)[]): Prom
  * ("" for a plain check): "match" and rotations resolved for the date, and
  * Shoulder prep added on any day with weights.
  */
-export async function dayWarmupRoutines(
-  userId: string,
-  dateISO: string,
-  values: (string | null)[],
-): Promise<Map<string, WarmupRoutine | null>> {
-  // Warming up for the day's sport instead (v0.662): its routine, that day only.
-  if (values.length > 0 && (await sportDayView(userId, dateISO))?.forSport) {
-    return new Map(values.map((v) => [v ?? "", SPORT_WARMUP]));
-  }
+/** Whether the day has weights planned, and their focus. */
+async function dayStrength(userId: string, dateISO: string): Promise<{ weights: boolean; focus: ReturnType<typeof dayFocus> }> {
   const strength = (await prisma.plannedWorkout.findMany({
     where: {
       userId,
@@ -93,8 +86,19 @@ export async function dayWarmupRoutines(
     orderBy: { sortOrder: "asc" },
     select: { muscleGroup: true },
   })) as { muscleGroup: string | null }[];
-  const weights = strength.length > 0;
-  const focus = dayFocus(strength.map((s) => s.muscleGroup));
+  return { weights: strength.length > 0, focus: dayFocus(strength.map((s) => s.muscleGroup)) };
+}
+
+export async function dayWarmupRoutines(
+  userId: string,
+  dateISO: string,
+  values: (string | null)[],
+): Promise<Map<string, WarmupRoutine | null>> {
+  // Warming up for the day's sport instead (v0.662): its routine, that day only.
+  if (values.length > 0 && (await sportDayView(userId, dateISO))?.forSport) {
+    return new Map(values.map((v) => [v ?? "", SPORT_WARMUP]));
+  }
+  const { weights, focus } = await dayStrength(userId, dateISO);
   const picked = values.map((v) => pickWarmupId(parseWarmupChoice(v), dateISO, focus));
   const byId = await routinesById(userId, picked);
   const out = new Map<string, WarmupRoutine | null>();
@@ -198,19 +202,39 @@ export async function setDayWarmupSwap(
   return true;
 }
 
-/** The day's switched routines by plan entry (null: switched to a plain check). */
-export async function daySwaps(userId: string, dateISO: string): Promise<Map<string, WarmupRoutine | null>> {
+/**
+ * The day's switched routines by plan entry (null: switched to a plain
+ * check), given each entry's category. A Warm-up switched for the day still
+ * gets Shoulder prep on a weights day, and gives way when the day's Warm-up
+ * is for its sport (v0.712).
+ */
+export async function daySwaps(
+  userId: string,
+  dateISO: string,
+  entries: { id: string; category: string | null }[],
+): Promise<Map<string, WarmupRoutine | null>> {
+  const out = new Map<string, WarmupRoutine | null>();
+  if (entries.length === 0) return out;
   const rows = (await prisma.workoutSuggestionAnswer.findMany({
-    where: { userId, date: toDateColumn(dateISO), key: SWAP_KEY },
+    where: { userId, date: toDateColumn(dateISO), key: SWAP_KEY, slot: { in: entries.map((e) => e.id) } },
     select: { slot: true, answer: true },
   })) as { slot: string; answer: string }[];
-  const out = new Map<string, WarmupRoutine | null>();
+  if (rows.length === 0) return out;
+  const categoryOf = new Map(entries.map((e) => [e.id, e.category]));
+  let warm: { forSport: boolean; weights: boolean } | null = null;
   for (const r of rows) {
-    if (r.answer === SWAP_PLAIN) out.set(r.slot, null);
-    else {
-      const routine = await routineFor(userId, r.answer);
-      if (routine) out.set(r.slot, routine);
+    const routine = r.answer === SWAP_PLAIN ? null : await routineFor(userId, r.answer);
+    if (r.answer !== SWAP_PLAIN && !routine) continue;
+    if (categoryOf.get(r.slot) !== "WARMUP") {
+      out.set(r.slot, routine);
+      continue;
     }
+    warm ??= {
+      forSport: (await sportDayView(userId, dateISO))?.forSport ?? false,
+      weights: (await dayStrength(userId, dateISO)).weights,
+    };
+    if (warm.forSport) continue;
+    out.set(r.slot, withShoulderPrep(routine, warm.weights, dateISO));
   }
   return out;
 }
@@ -237,7 +261,7 @@ export async function warmupsForDay(
   const [w, m, swaps] = await Promise.all([
     dayWarmupRoutines(userId, dateISO, warm.map((r) => r.warmup)),
     dayMobilityRoutines(userId, dateISO, mob.map((r) => r.warmup)),
-    daySwaps(userId, dateISO),
+    daySwaps(userId, dateISO, rows),
   ]);
   return rows.map((r) => ({
     plannedWorkoutId: r.id,

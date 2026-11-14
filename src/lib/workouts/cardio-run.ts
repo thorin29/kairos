@@ -275,7 +275,7 @@ export async function simplePlansFor(userId: string, dateISO: string): Promise<S
     dateISO,
     plans.filter((p) => p.category === "MOBILITY" || p.category === "STRETCHING").map((p) => p.warmup),
   );
-  const swaps = await daySwaps(userId, dateISO);
+  const swaps = await daySwaps(userId, dateISO, plans);
   const anyCardio = sessions.some((row) => row.category != null && CARDIO_CATEGORIES.includes(row.category));
   const skipped = new Set(skips.map((k) => k.slot));
   return plans
