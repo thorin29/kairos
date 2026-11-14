@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-11 — Full Content-Security-Policy; Vitest 5 (v0.706.0 / app 0.506.0)
+
+Both were optional follow-ups from the threat review; done now so the header
+and the audit are both complete.
+
+- **The policy** (`src/lib/csp.ts`, set by `proxy.ts` on every request it
+  sees, redirects included):
+  `default-src 'self'; script-src 'self' 'nonce-…' 'strict-dynamic';
+  style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
+  font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self';
+  form-action 'self'; frame-ancestors <FRAME_ANCESTORS or 'self'>`.
+- **Scripts:** a fresh random nonce per request goes on the request's policy
+  (and `x-nonce`); Next reads it and stamps every script it renders.
+  'strict-dynamic' lets the chunks those scripts load run. Every HTML page
+  was already rendered per request, so nothing loses static rendering.
+  Kairos has no inline or third-party scripts of its own.
+- **Styles stay 'unsafe-inline':** the UI sets colours through `style`
+  attributes everywhere, which a nonce can't cover. Inline styles can't run
+  code, so the script rule is where the protection is.
+- **No `upgrade-insecure-requests`:** Kairos is also reached over plain HTTP
+  on the LAN, where that directive would break every asset.
+- **Dev only:** `'unsafe-eval'` (React's dev error stacks) and `ws:`/`wss:`
+  for hot reload.
+- **`FRAME_ANCESTORS`** still widens framing exactly as before;
+  `X-Frame-Options: SAMEORIGIN` is still sent when it isn't set.
+- **Vitest 5.1 with Vite 8** (exact). Test-only, never in the image; the
+  config needed no change. `npm audit` (dev included) is now clean.
+- **App 0.506:** the Game time screen shows the ROG logo for `"ally"`, from
+  one ordered list like the web, so an unknown source draws nothing.
+
 ## 2026-11 — ROG Ally as a third game-time source (v0.705.0)
 
 Collector 5.0.0 adds a third source, `"ally"`: per-app usage on a handheld

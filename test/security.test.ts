@@ -28,3 +28,18 @@ describe("calendar feeds can't reach the server's own network (v0.699)", () => {
   it.each(blocked)("blocks %s", (ip) => expect(isBlockedIp(ip)).toBe(true));
   it.each(allowed)("allows %s", (ip) => expect(isBlockedIp(ip)).toBe(false));
 });
+
+describe("content security policy (v0.706)", () => {
+  it("lets scripts run only with the request's nonce, and keeps framing to the same site", async () => {
+    const { contentSecurityPolicy, newNonce } = await import("@/lib/csp");
+    const n = newNonce();
+    expect(n).not.toBe(newNonce());
+    const csp = contentSecurityPolicy(n, false);
+    expect(csp).toContain(`script-src 'self' 'nonce-${n}' 'strict-dynamic'`);
+    expect(csp).not.toContain("unsafe-eval");
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("frame-ancestors 'self'");
+    expect(csp).not.toContain("upgrade-insecure-requests");
+    expect(contentSecurityPolicy(n, true)).toContain("'unsafe-eval'");
+  });
+});

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.705.0";
+export const APP_VERSION = "0.706.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -172,6 +172,13 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.706.0",
+    summary: [
+      "Security: pages only run Kairos's own scripts now.",
+      "The app shows the ROG logo on Game time (app 0.506).",
+    ],
+  },
   {
     version: "0.705.0",
     summary: ["Game time shows the ROG logo beside Xbox and Steam for time played on the ROG Ally."],
