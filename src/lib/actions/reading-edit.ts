@@ -13,6 +13,7 @@ import {
   type PlanRef,
 } from "@/lib/bible/plan-edit-core";
 import type { AddResult } from "@/lib/bible/plan-edit";
+import { startOver } from "@/lib/bible/tracker-core";
 
 /** A family plan is a parent's to change; a personal plan its owner's. */
 async function editablePlan(planId: string): Promise<PlanRef | null> {
@@ -53,4 +54,17 @@ export async function exportPlanAction(
 ): Promise<{ name: string; fileName: string; text: string } | null> {
   const plan = await editablePlan(planId);
   return plan ? exportPlanCore(plan) : null;
+}
+
+/** "Start over" on the tracker: the family's (a parent) or one person's. Every
+ *  bar goes back to 0%; times read and milestones are kept. */
+export async function startOverAction(ownerId: string | null): Promise<{ error: string | null }> {
+  await requireInteractive();
+  if (ownerId === null) {
+    if (!(await isAdmin())) return { error: "Only a parent can start the family over." };
+  } else {
+    await requireCanActFor(ownerId);
+  }
+  await startOver(ownerId);
+  return { error: null };
 }

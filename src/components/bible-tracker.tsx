@@ -5,6 +5,7 @@ import type { LevelView, Milestone, TrackerPayload } from "@/lib/bible/tracker-c
 import { formatSpan, SECTION_LABEL } from "@/lib/bible/tracker";
 import { BOOKS } from "@/lib/bible/books";
 import { Card } from "@/components/ui";
+import { startOverAction } from "@/lib/actions/reading-edit";
 
 const OT = "#7C3AED";
 const NT = "#2563EB";
@@ -51,14 +52,24 @@ const KIND_LABEL: Record<Milestone["kind"], string> = {
   book: "Book",
   plan: "Plan",
   manual: "Manual",
+  reset: "Start over",
 };
 
 /**
  * How many times each book, section, testament and the whole Bible has been
  * read, how far the next time has got, and the milestones (v0.724).
  */
-export function BibleTracker({ tracker }: { tracker: TrackerPayload }) {
+export function BibleTracker({
+  tracker,
+  ownerId,
+  canStartOver,
+}: {
+  tracker: TrackerPayload;
+  ownerId: string | null;
+  canStartOver: boolean;
+}) {
   const [filter, setFilter] = useState("all");
+  const [pending, start] = useTransition();
   const kinds = FILTERS.find((f) => f.key === filter)?.kinds ?? [];
   const shown = tracker.milestones.filter((m) => kinds.length === 0 || kinds.includes(m.kind));
 
@@ -83,6 +94,22 @@ export function BibleTracker({ tracker }: { tracker: TrackerPayload }) {
           );
         })}
       </div>
+
+      {canStartOver && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              if (confirm("Start over? Every bar goes back to 0%. Times read and milestones are kept."))
+                start(async () => void (await startOverAction(ownerId)));
+            }}
+            className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50"
+          >
+            Start over
+          </button>
+        </div>
+      )}
 
       <Card className="space-y-2.5 p-5">
         {tracker.sections.map((s) => {

@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.725.0";
+export const APP_VERSION = "0.726.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -170,11 +170,19 @@ export const MIGRATIONS = [
   "155_drop_school_proposals",
   "156_reading_eras",
   "157_bible_tracker",
+  "158_tracker_reset",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.726.0",
+    summary: [
+      "Bible tracker: starting a finished book again shows its new time through.",
+      "Start over sets every bar back to 0%; times read and milestones are kept.",
+    ],
+  },
   {
     version: "0.725.0",
     summary: ["Bible tracker bars show this time through the Bible: a finished testament or section stays full until the whole Bible is done."],

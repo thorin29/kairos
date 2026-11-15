@@ -14,10 +14,10 @@ export type ReadingProgress = {
  * open manual run's marks (v0.724).
  */
 export async function loadReadingProgress(todayISO: string): Promise<ReadingProgress> {
-  const [{ tracker, events }, manual] = await Promise.all([loadTrackerCore(null, todayISO), manualKeys(null)]);
+  const [{ events, startedOver }, manual] = await Promise.all([loadTrackerCore(null, todayISO), manualKeys(null)]);
   const mine = new Set(manual);
   return {
-    planCovered: aheadKeys(events, tracker.bible.times).filter((k) => !mine.has(k)),
+    planCovered: aheadKeys(events, startedOver).filter((k) => !mine.has(k)),
     manualCovered: manual,
   };
 }

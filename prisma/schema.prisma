@@ -818,6 +818,16 @@ model BibleRead {
   @@index([runId])
 }
 
+// "Start over": every tracker bar counts from here (v0.726). The ×counts and
+// milestones still count every read. scope: "family" or a user id.
+model TrackerReset {
+  id    String   @id @default(cuid())
+  scope String
+  at    DateTime @default(now())
+
+  @@index([scope])
+}
+
 // One stretch of manual checklist marking. Open while endedAt is null; the
 // first mark after a reset opens the next. startedAt null: untimed (what was
 // logged before tracking began).

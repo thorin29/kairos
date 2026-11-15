@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-11 — Tracker: a book started again, and Start over (v0.726.0)
+
+- A level finished in this time through the Bible stays full, unless one of
+  its chapters is read again: then its bar shows its new time through (its
+  section and testament follow, since they've been started again too).
+- "Start over" (`TrackerReset`, migration 158; family: a parent, personal:
+  anyone for themselves) sets every bar back to 0%: bars, "since" dates and the
+  checklist's covered shading count only reads after the latest one. ×counts,
+  completions and their timing still count every read; it's logged as a
+  milestone ("Started over"). Web: a button above the sections; app: the plan
+  ⋮ menu.
+
 ## 2026-11 — Tracker bars measure this time through the Bible (v0.725.0)
 
 - 0.724 drew each level's bar toward its own next time, so finishing the NT

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { loadTracker, resetManual } from "@/lib/bible/tracker-core";
+import { loadTracker, resetManual, startOver } from "@/lib/bible/tracker-core";
 import { todayISO } from "@/lib/dates";
 
 export const runtime = "nodejs";
@@ -16,8 +16,9 @@ export async function GET(req: NextRequest) {
   return apiOk(await loadTracker(mine ? authed.device.person.id : null, todayISO()));
 }
 
-/** { scope, action: "reset" } — end the manual reading. The family's needs a
- *  parent. Answers with the tracker. */
+/** { scope, action } — "reset": end the manual reading; "startOver": every bar
+ *  back to 0% (times read and milestones kept). The family's needs a parent.
+ *  Answers with the tracker. */
 export async function POST(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
@@ -27,12 +28,13 @@ export async function POST(req: NextRequest) {
   } catch {
     return apiError("validation", "Expected a JSON body.");
   }
-  if (body.action !== "reset") return apiError("validation", "Unknown action.");
+  if (body.action !== "reset" && body.action !== "startOver") return apiError("validation", "Unknown action.");
   const mine = body.scope === "mine";
   if (!mine && authed.device.person.role !== "ADMIN") {
-    return apiError("forbidden", "Only a parent can reset the family's manual reading.");
+    return apiError("forbidden", "Only a parent can change the family's progress.");
   }
   const owner = mine ? authed.device.person.id : null;
-  await resetManual(owner);
+  if (body.action === "startOver") await startOver(owner);
+  else await resetManual(owner);
   return apiOk(await loadTracker(owner, todayISO()));
 }

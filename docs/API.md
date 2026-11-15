@@ -776,8 +776,10 @@ GET  /api/v1/reading/tracker?scope=family|mine   // v0.724 (replaces /reading/er
 GET /api/v1/reading also carries family.endsWhenDone and personal.plan.endKind
 ("DATE" | "DONE") from v0.724; card passages show a day's extra after " + ".
 
-POST /api/v1/reading/tracker       { "scope","action":"reset" } -> the same payload
-         ends the manual reading; family needs an admin (403 otherwise)
+POST /api/v1/reading/tracker       { "scope","action":"reset"|"startOver" } -> the same payload
+         reset ends the manual reading; startOver (v0.726) sets every bar to 0%
+         (times read kept). Family needs an admin (403 otherwise).
+         milestone kind "reset" = a start over
 
 POST /api/v1/reading/plan/add      { "scope","readings":[ "Luke 2", … ],"startISO",
                                      "mode":"push"|"add"|"mix","ownDays"?,"preview"? }

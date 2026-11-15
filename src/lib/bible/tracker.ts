@@ -34,12 +34,14 @@ export type Level = {
   testament: "OT" | "NT" | null;
   chapters: number;
   times: number;
-  /** Chapters read in the current time through the whole Bible. */
+  /** Chapters read in the current time through (see `progress`). */
   ahead: number;
-  /** % of chapters read in the current time through the whole Bible — so a
-   *  testament finished part way through stays full until the Bible is done. */
+  /** % of chapters read in the current time through the whole Bible — a
+   *  testament finished part way through stays full until the Bible is done,
+   *  unless it's started again. Counted from the last "Start over". */
   progress: number;
-  /** When the current time through started (first read since the last). */
+  /** When the current time through started (first read since the last, or
+   *  since the last "Start over"). */
   sinceISO: string | null;
   completions: Completion[];
 };
@@ -74,8 +76,9 @@ function level(
   testament: "OT" | "NT" | null,
   keys: string[],
   byKey: Map<string, ReadEvent[]>,
-  /** Times through the whole Bible; progress counts reads beyond it. Omitted
-   *  for the whole Bible itself. */
+  /** Reads since the last "Start over" — what the bars are drawn from. */
+  recent: Map<string, ReadEvent[]>,
+  /** Times through the whole Bible since then. Omitted for the Bible itself. */
   floor?: number,
 ): Level {
   let times = Infinity;
@@ -111,9 +114,21 @@ function level(
     prevAt = at;
   }
 
-  const base = floor ?? times;
-  const ahead = keys.filter((k) => (byKey.get(k)?.length ?? 0) > base).length;
-  const since = all.find((e) => e.at > prevAt);
+  // The bar: a level finished in this time through the Bible stays full until
+  // the Bible is done — unless it has been started again, when it shows its new
+  // time through. Counted from the last "Start over".
+  let recentTimes = Infinity;
+  for (const k of keys) recentTimes = Math.min(recentTimes, recent.get(k)?.length ?? 0);
+  if (!Number.isFinite(recentTimes)) recentTimes = 0;
+  const own = keys.filter((k) => (recent.get(k)?.length ?? 0) > recentTimes).length;
+  const ahead = floor !== undefined && recentTimes > floor && own === 0 ? keys.length : own;
+
+  let lastRecent = -Infinity;
+  if (recentTimes > 0) for (const k of keys) lastRecent = Math.max(lastRecent, recent.get(k)![recentTimes - 1].at);
+  let since: ReadEvent | undefined;
+  for (const k of keys) {
+    for (const e of recent.get(k) ?? []) if (e.at > lastRecent && (!since || e.at < since.at)) since = e;
+  }
   return {
     key,
     label,
@@ -136,7 +151,7 @@ export type Tracker = {
   books: Level[];
 };
 
-export function buildTracker(events: ReadEvent[]): Tracker {
+function group(events: ReadEvent[]): Map<string, ReadEvent[]> {
   const byKey = new Map<string, ReadEvent[]>();
   for (const e of events) {
     const list = byKey.get(e.key);
@@ -144,20 +159,30 @@ export function buildTracker(events: ReadEvent[]): Tracker {
     else byKey.set(e.key, [e]);
   }
   for (const list of byKey.values()) list.sort((a, b) => a.at - b.at);
+  return byKey;
+}
+
+/** `startedOverAt`: the last "Start over" — every bar counts from there; the
+ *  ×counts and completions always count everything. */
+export function buildTracker(events: ReadEvent[], startedOverAt: number | null = null): Tracker {
+  const byKey = group(events);
+  const recent = startedOverAt === null ? byKey : group(events.filter((e) => e.at >= startedOverAt));
 
   const ot = BOOKS.filter((b) => b.testament === "OT");
   const nt = BOOKS.filter((b) => b.testament === "NT");
-  const bible = level("bible", "Whole Bible", "bible", null, keysOf(BOOKS), byKey);
-  const f = bible.times;
+  const all = keysOf(BOOKS);
+  const bible = level("bible", "Whole Bible", "bible", null, all, byKey, recent);
+  let f = Infinity;
+  for (const k of all) f = Math.min(f, recent.get(k)?.length ?? 0);
   return {
     bible,
-    ot: level("ot", "Old Testament", "testament", "OT", keysOf(ot), byKey, f),
-    nt: level("nt", "New Testament", "testament", "NT", keysOf(nt), byKey, f),
+    ot: level("ot", "Old Testament", "testament", "OT", keysOf(ot), byKey, recent, f),
+    nt: level("nt", "New Testament", "testament", "NT", keysOf(nt), byKey, recent, f),
     sections: SECTIONS.map((g) => {
       const books = BOOKS.filter((b) => b.group === g);
-      return level(g, SECTION_LABEL[g] ?? g, "section", books[0].testament, keysOf(books), byKey, f);
+      return level(g, SECTION_LABEL[g] ?? g, "section", books[0].testament, keysOf(books), byKey, recent, f);
     }),
-    books: BOOKS.map((b) => level(b.name, b.name, "book", b.testament, keysOf([b]), byKey, f)),
+    books: BOOKS.map((b) => level(b.name, b.name, "book", b.testament, keysOf([b]), byKey, recent, f)),
   };
 }
 

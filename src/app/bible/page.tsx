@@ -21,6 +21,7 @@ import { ReadingCards, type ReadingCard } from "@/components/reading-cards";
 import { SectionHeading } from "@/components/ui";
 import { BibleTracker, ManualRun } from "@/components/bible-tracker";
 import { loadTracker } from "@/lib/bible/tracker-core";
+import { isAdmin } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +29,13 @@ export default async function BiblePage() {
   const today = todayISO();
   await generateReadingTasks(today);
 
-  const [publishedPlans, familyTracker] = await Promise.all([
+  const [publishedPlans, familyTracker, admin] = await Promise.all([
     prisma.readingPlan.findMany({
       where: { isPublished: true, ownerId: null },
       orderBy: { startDate: "asc" },
     }),
     loadTracker(null, today),
+    isAdmin(),
   ]);
 
   // The plan whose dates bracket today (for the page subtitle) — or the next one
@@ -131,7 +133,7 @@ export default async function BiblePage() {
         <div className="mb-4">
           <SectionHeading>Family reading</SectionHeading>
         </div>
-        <BibleTracker tracker={familyTracker} />
+        <BibleTracker tracker={familyTracker} ownerId={null} canStartOver={admin} />
       </section>
     </>
   );
@@ -142,7 +144,7 @@ export default async function BiblePage() {
         <div className="mb-4">
           <SectionHeading>Your reading</SectionHeading>
         </div>
-        {personalTracker && <BibleTracker tracker={personalTracker} />}
+        {personalTracker && <BibleTracker tracker={personalTracker} ownerId={me.id} canStartOver />}
 
         <div className="mt-6">
           <SectionHeading>Your plan</SectionHeading>

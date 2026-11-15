@@ -285,7 +285,7 @@ export type LevelView = Omit<Level, "completions">;
 export type Milestone = {
   /** null: finished before tracking began. */
   atISO: string | null;
-  kind: LevelKind | "plan" | "manual";
+  kind: LevelKind | "plan" | "manual" | "reset";
   label: string;
   detail: string;
   days: number | null;
@@ -311,14 +311,29 @@ async function readEvents(scope: string): Promise<ReadEvent[]> {
   return rows.map((r) => ({ key: `${r.bookName}|${r.chapter}`, at: r.readAt.getTime(), timed: r.timed }));
 }
 
+async function startedOverAt(scope: string): Promise<number | null> {
+  const r = await prisma.trackerReset.findFirst({ where: { scope }, orderBy: { at: "desc" }, select: { at: true } });
+  return r ? r.at.getTime() : null;
+}
+
 /** The tracker counts and the raw events, for callers that need both. */
-export async function loadTrackerCore(ownerId: string | null, todayISO: string): Promise<{ tracker: Tracker; events: ReadEvent[] }> {
+export async function loadTrackerCore(
+  ownerId: string | null,
+  todayISO: string,
+): Promise<{ tracker: Tracker; events: ReadEvent[]; startedOver: number | null }> {
   if (!ownerId) {
     await syncFamilyPlanReads(todayISO);
     await seedFamilyOnce(todayISO);
   }
-  const events = await readEvents(scopeOf(ownerId));
-  return { tracker: buildTracker(events), events };
+  const scope = scopeOf(ownerId);
+  const [events, startedOver] = await Promise.all([readEvents(scope), startedOverAt(scope)]);
+  return { tracker: buildTracker(events, startedOver), events, startedOver };
+}
+
+/** "Start over": every bar back to 0%. Times read and milestones are kept. */
+export async function startOver(ownerId: string | null): Promise<void> {
+  await prisma.trackerReset.create({ data: { scope: scopeOf(ownerId) } });
+  revalidate(ownerId);
 }
 
 const view = ({ completions: _c, ...rest }: Level): LevelView => rest;
@@ -328,10 +343,11 @@ export async function loadTracker(ownerId: string | null, todayISO: string): Pro
   const { tracker: t } = await loadTrackerCore(ownerId, todayISO);
   await recordPlanCompletions(ownerId, todayISO);
 
-  const [plansDone, runs, open] = await Promise.all([
+  const [plansDone, runs, open, resets] = await Promise.all([
     prisma.readingPlanDone.findMany({ where: { scope }, orderBy: { completedAt: "desc" } }),
     prisma.manualReadingRun.findMany({ where: { scope, endedAt: { not: null }, chapters: { gt: 0 } } }),
     openRun(scope, ownerId, false),
+    prisma.trackerReset.findMany({ where: { scope }, select: { at: true } }),
   ]);
   const openCount = open ? await prisma.bibleRead.count({ where: { runId: open.id } }) : 0;
 
@@ -366,6 +382,9 @@ export async function loadTracker(ownerId: string | null, todayISO: string): Pro
       days: r.startedAt ? Math.max(1, Math.round((end.getTime() - r.startedAt.getTime()) / 86_400_000) + 1) : null,
     });
   }
+  for (const r of resets) {
+    milestones.push({ atISO: r.at.toISOString().slice(0, 10), kind: "reset", label: "Started over", detail: "", days: null });
+  }
   milestones.sort((a, b) => (b.atISO ?? "").localeCompare(a.atISO ?? ""));
 
   const bests: { label: string; days: number }[] = [];
@@ -396,10 +415,14 @@ export async function loadTracker(ownerId: string | null, todayISO: string): Pro
   };
 }
 
-/** Chapters already read toward the next whole-Bible time (for the checklist's
- *  "covered" shading). */
-export function aheadKeys(events: ReadEvent[], times: number): string[] {
+/** Chapters already read in this time through the whole Bible, since the last
+ *  "Start over" (for the checklist's "covered" shading). */
+export function aheadKeys(events: ReadEvent[], startedOver: number | null): string[] {
   const count = new Map<string, number>();
-  for (const e of events) count.set(e.key, (count.get(e.key) ?? 0) + 1);
-  return [...count.entries()].filter(([, n]) => n > times).map(([k]) => k);
+  for (const e of events) if (startedOver === null || e.at >= startedOver) count.set(e.key, (count.get(e.key) ?? 0) + 1);
+  let floor = Infinity;
+  for (const k of CANON) floor = Math.min(floor, count.get(k) ?? 0);
+  return [...count.entries()].filter(([, n]) => n > floor).map(([k]) => k);
 }
+
+const CANON = [...BOOK_BY_NAME.values()].flatMap((b) => Array.from({ length: b.chapters }, (_, i) => `${b.name}|${i + 1}`));
