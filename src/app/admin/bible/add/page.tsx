@@ -36,7 +36,6 @@ export default async function AddFamilyReadingsPage({
         days={days}
         defaultStartISO={start > today ? start : today}
         backHref="/admin/bible"
-        endsWhenDone={plan.endKind === "DONE"}
       />
     </main>
   );

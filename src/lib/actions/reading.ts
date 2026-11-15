@@ -47,8 +47,9 @@ export async function generatePlan(
     return { ...emptyGenerate, error: "Only a parent can build a plan." };
   }
 
+  const appendTo = String(formData.get("appendTo") ?? "") || null;
   const name = String(formData.get("name") ?? "").trim().slice(0, 80);
-  if (name.length < 2) return { ...emptyGenerate, error: "Name the plan." };
+  if (!appendTo && name.length < 2) return { ...emptyGenerate, error: "Name the plan." };
 
   const segments = decodeSegments(String(formData.get("segments") ?? ""));
   const startISO = String(formData.get("start") ?? "");
@@ -94,6 +95,46 @@ export async function generatePlan(
   if (built.error) return { ...emptyGenerate, error: built.error };
   if (built.days.length === 0 || built.days.length > MAX_DAYS) {
     return { ...emptyGenerate, error: "That plan is empty or far too long." };
+  }
+
+  // "Add to <plan>": the generated days extend that plan (replacing any of its
+  // days from the first new one), so carrying on stays one plan.
+  if (appendTo) {
+    const target = await prisma.readingPlan.findFirst({
+      where: { id: appendTo, ownerId: null },
+      select: { id: true, name: true, isPublished: true },
+    });
+    if (!target) return { ...emptyGenerate, error: "That plan is gone." };
+    const first = toDateColumn(built.days[0].iso);
+    await prisma.$transaction(async (tx) => {
+      await tx.readingDay.deleteMany({ where: { planId: target.id, day: { gte: first } } });
+      await tx.readingDay.createMany({
+        data: built.days.map((d) => ({
+          planId: target.id,
+          day: toDateColumn(d.iso),
+          passage: d.passage.slice(0, 120),
+          isExtra: d.isExtra,
+        })),
+      });
+      const range = await tx.readingDay.aggregate({ where: { planId: target.id }, _min: { day: true }, _max: { day: true } });
+      await tx.readingPlan.update({
+        where: { id: target.id },
+        data: { startDate: range._min.day, endDate: range._max.day },
+      });
+    });
+    // It goes on, so it isn't finished after all.
+    await prisma.readingPlanDone.deleteMany({ where: { planId: target.id } });
+    if (target.isPublished) await generateReadingTasks();
+    revalidatePath("/admin/bible");
+    revalidatePath("/bible");
+    return {
+      error: null,
+      created: built.days.length,
+      name: target.name,
+      startISO: built.startISO,
+      endISO: built.endISO,
+      leftover: built.leftover,
+    };
   }
 
   await prisma.readingPlan.create({
@@ -244,4 +285,58 @@ export async function listPlans(): Promise<PlanPreview[]> {
     startISO: p.startDate ? fromDateColumn(p.startDate) : null,
     endISO: p.endDate ? fromDateColumn(p.endDate) : null,
   }));
+}
+
+/**
+ * Combine a plan into the one it carries on from: its days move into `intoId`
+ * (its own win on any shared date), it's deleted, and the earlier plan is no
+ * longer counted as finished. The family's reads move with the days, so
+ * nothing is counted twice.
+ */
+export async function combinePlans(intoId: string, fromId: string): Promise<{ error: string | null }> {
+  await requireAdmin();
+  if (intoId === fromId) return { error: "Pick another plan." };
+  const [into, from] = await Promise.all([
+    prisma.readingPlan.findFirst({ where: { id: intoId, ownerId: null }, select: { id: true, isPublished: true } }),
+    prisma.readingPlan.findFirst({
+      where: { id: fromId, ownerId: null },
+      select: { id: true, isPublished: true, days: { select: { day: true, passage: true, isExtra: true, extra: true } } },
+    }),
+  ]);
+  if (!into || !from) return { error: "That plan is gone." };
+
+  await prisma.$transaction(async (tx) => {
+    if (from.days.length) {
+      await tx.readingDay.deleteMany({ where: { planId: into.id, day: { in: from.days.map((d) => d.day) } } });
+      await tx.readingDay.createMany({
+        data: from.days.map((d) => ({ planId: into.id, day: d.day, passage: d.passage, isExtra: d.isExtra, extra: d.extra })),
+      });
+    }
+    // Family reads keyed to the old plan's days now belong to the combined one.
+    await tx.$executeRaw`
+      DELETE FROM "BibleRead" r
+      WHERE r."scope" = 'family' AND r."sourceKey" LIKE ${from.id + "|%"}
+        AND EXISTS (
+          SELECT 1 FROM "BibleRead" o
+          WHERE o."scope" = 'family' AND o."source" = r."source" AND o."bookName" = r."bookName"
+            AND o."chapter" = r."chapter"
+            AND o."sourceKey" = ${into.id} || substring(r."sourceKey" from ${from.id.length + 1}::int)
+        )`;
+    await tx.$executeRaw`
+      UPDATE "BibleRead" SET "sourceKey" = ${into.id} || substring("sourceKey" from ${from.id.length + 1}::int)
+      WHERE "scope" = 'family' AND "sourceKey" LIKE ${from.id + "|%"}`;
+    await tx.readingPlanDone.deleteMany({ where: { planId: { in: [into.id, from.id] } } });
+    await tx.readingPlan.delete({ where: { id: from.id } });
+    const range = await tx.readingDay.aggregate({ where: { planId: into.id }, _min: { day: true }, _max: { day: true } });
+    await tx.readingPlan.update({
+      where: { id: into.id },
+      data: { startDate: range._min.day, endDate: range._max.day, ...(from.isPublished ? { isPublished: true } : {}) },
+    });
+  });
+
+  await generateReadingTasks();
+  revalidatePath("/admin/bible");
+  revalidatePath("/bible");
+  revalidatePath("/");
+  return { error: null };
 }

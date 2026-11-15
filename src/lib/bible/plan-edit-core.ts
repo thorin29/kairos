@@ -108,18 +108,16 @@ export type AddInput = {
   readings: string[];
   startISO: string;
   mode: AddMode;
-  ownDays?: number;
   preview?: boolean;
 };
 
-/** A plan that ends when its readings are done has no date to hold, so added
- *  readings always push it back. */
 export async function addReadingsCore(plan: PlanRef, input: AddInput): Promise<AddResult> {
   const days = await planDays(plan.id);
-  const mode = plan.endKind === "DONE" ? "push" : input.mode;
-  const res = addReadings(days, input.readings, input.startISO, mode, input.ownDays ?? 0);
+  const res = addReadings(days, input.readings, input.startISO, input.mode);
   if (res.error || input.preview) return res;
   await replaceFrom(plan, input.startISO, res.days);
+  // Inserting readings into a finished plan means it isn't finished after all.
+  if (input.mode === "push") await prisma.readingPlanDone.deleteMany({ where: { planId: plan.id } });
   return res;
 }
 

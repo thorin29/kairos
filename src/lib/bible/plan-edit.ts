@@ -20,7 +20,10 @@ export function dayLabel(passage: string, extra: string | null | undefined): str
   return passage ? `${passage} + ${extra}` : extra;
 }
 
-export type AddMode = "push" | "add" | "mix";
+/** "add": additional readings on the same days (extras — never counted toward
+ *  the plan, end date unchanged). "push": inserted into the plan — they count,
+ *  and the readings after them move later. */
+export type AddMode = "push" | "add";
 
 export type EditedDay = PlanDay & {
   /** "new": a reading on its own day; "added": stacked onto an existing day;
@@ -54,15 +57,12 @@ function nextReadingDay(iso: string, weekdays: Set<number>): string {
 }
 
 /**
- * Places `readings` (one per day, in order) into a plan from `startISO`, as
- * extras: a reading on its own day is an extra day, one on top of a day is
- * that day's extra.
+ * Places `readings` (one per day, in order) into a plan from `startISO`.
  *
- * - push: each reading gets its own day; everything from the start date moves
- *   later by that many reading days.
- * - add: readings go on top of the plan's days from the start date.
- * - mix: the first `ownDays` readings get their own days (the end moves that
- *   many reading days), the rest go on top of the days after them.
+ * - push (insert): each reading becomes a plan day of its own; everything from
+ *   the start date moves later by that many reading days.
+ * - add (additional): each reading is the extra on a day from the start date
+ *   (an extra day past the plan's end).
  *
  * Reading days follow the plan's own weekdays, so a weekday-only plan stays
  * weekday-only.
@@ -72,7 +72,6 @@ export function addReadings(
   readings: string[],
   startISO: string,
   mode: AddMode,
-  ownDays = 0,
 ): AddResult {
   const sorted = [...days].sort((a, b) => a.iso.localeCompare(b.iso));
   const oldEndISO = sorted.length ? sorted[sorted.length - 1].iso : null;
@@ -83,7 +82,7 @@ export function addReadings(
   if (!/^\d{4}-\d{2}-\d{2}$/.test(startISO)) return { error: "Pick a start date.", days: [], oldEndISO, endISO: oldEndISO };
 
   const n = list.length;
-  const own = mode === "push" ? n : mode === "add" ? 0 : Math.max(0, Math.min(n, Math.round(ownDays)));
+  const own = mode === "push" ? n : 0;
   const weekdays = readingWeekdays(sorted);
 
   const before = sorted.filter((d) => d.iso < startISO);
@@ -100,7 +99,7 @@ export function addReadings(
   const placed: (EditedDay | null)[] = slots.map(() => null);
 
   for (let i = 0; i < own; i++) {
-    placed[i] = { iso: slots[i], passage: list[i], isExtra: true, tag: "new" };
+    placed[i] = { iso: slots[i], passage: list[i], isExtra: false, tag: "new" };
   }
   after.forEach((d, j) => {
     const idx = j + gap + shift;

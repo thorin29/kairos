@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import type { LevelView, TrackerPayload } from "@/lib/bible/tracker-core";
 import { formatSpan } from "@/lib/bible/tracker";
-import { BOOKS } from "@/lib/bible/books";
 import { Card } from "@/components/ui";
 import { startOverAction } from "@/lib/actions/reading-edit";
 
@@ -43,18 +42,16 @@ export function BibleTracker({
   tracker,
   ownerId,
   canStartOver,
+  booksHref,
 }: {
   tracker: TrackerPayload;
   ownerId: string | null;
   canStartOver: boolean;
+  /** The all-books page the cards and sections open. */
+  booksHref: string;
 }) {
-  const [pending, start] = useTransition();
-  // Books open in a window: the Whole Bible card shows all 66, a testament card
-  // its books, a section row its books.
-  const [books, setBooks] = useState<{ title: string; keys: string[] } | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const shown = tracker.milestones;
-  const openBooks = (title: string, pick: (b: (typeof BOOKS)[number]) => boolean) =>
-    setBooks({ title, keys: BOOKS.filter(pick).map((b) => b.name) });
 
   return (
     <div className="space-y-4">
@@ -62,12 +59,9 @@ export function BibleTracker({
         {[tracker.bible, tracker.ot, tracker.nt].map((l) => {
           const color = colorOf(l);
           return (
-            <button
+            <a
               key={l.key}
-              type="button"
-              onClick={() =>
-                openBooks(l.label, (b) => l.kind === "bible" || b.testament === l.testament)
-              }
+              href={booksHref}
               className="block w-full space-y-2 rounded-2xl border border-hairline bg-surface p-5 text-left hover:border-accent"
             >
               <div className="flex items-center justify-between">
@@ -75,40 +69,39 @@ export function BibleTracker({
                 <Times n={l.times} color={color} />
               </div>
               <Bar pct={l.progress} color={color} />
-              <p className="tabular text-xs text-muted">
-                {l.kind === "bible"
-                  ? `${l.progress}% toward ×${l.times + 1}${l.sinceISO ? ` · since ${med(l.sinceISO)}` : ""}`
-                  : `${l.progress}% this time through`}
-              </p>
-            </button>
+              <p className="tabular text-xs text-muted">{l.progress}%</p>
+            </a>
           );
         })}
       </div>
 
-      {canStartOver && (
-        <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">
+          {tracker.bible.sinceISO ? `Progress since ${med(tracker.bible.sinceISO)}` : ""}
+        </p>
+        {canStartOver && (
           <button
             type="button"
-            disabled={pending}
-            onClick={() => {
-              if (confirm("Start over? Every bar goes back to 0%. Times read and milestones are kept."))
-                start(async () => void (await startOverAction(ownerId)));
-            }}
-            className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50"
+            onClick={() => setConfirming(true)}
+            className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-sm font-medium hover:border-accent hover:text-accent"
           >
             Start over
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       <Card className="space-y-2.5 p-5">
+        <div className="flex justify-end">
+          <a href={booksHref} className="text-sm font-semibold text-accent hover:underline">
+            All books ›
+          </a>
+        </div>
         {tracker.sections.map((s) => {
           const color = colorOf(s);
           return (
-            <button
+            <a
               key={s.key}
-              type="button"
-              onClick={() => openBooks(s.label, (b) => b.group === s.key)}
+              href={booksHref}
               className="grid w-full grid-cols-[8.5rem_1fr_auto] items-center gap-3 rounded-lg py-0.5 text-left text-sm hover:bg-hairline/40"
             >
               <span>{s.label}</span>
@@ -117,7 +110,7 @@ export function BibleTracker({
                 <Times n={s.times} color={color} />
                 <span className="tabular w-9 text-right text-xs text-muted">{s.progress}%</span>
               </span>
-            </button>
+            </a>
           );
         })}
       </Card>
@@ -150,58 +143,8 @@ export function BibleTracker({
         )}
       </Card>
 
-      {books && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={books.title}
-          onClick={() => setBooks(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-surface p-5 shadow-xl"
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <p className="font-display text-lg font-semibold">{books.title}</p>
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setBooks(null)}
-                className="h-9 w-9 rounded-full text-lg text-muted hover:bg-hairline"
-              >
-                ×
-              </button>
-            </div>
-            <div className="space-y-4">
-              {tracker.sections
-                .filter((s) => books.keys.some((k) => BOOKS.find((x) => x.name === k)?.group === s.key))
-                .map((s) => (
-                  <div key={s.key}>
-                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-muted">{s.label}</p>
-                    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                      {tracker.books
-                        .filter((b) => books.keys.includes(b.key) && BOOKS.find((x) => x.name === b.key)?.group === s.key)
-                        .map((b) => {
-                          const color = colorOf(b);
-                          return (
-                            <div key={b.key} className="space-y-1 rounded-lg border border-hairline px-2 py-1.5">
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="truncate text-xs">{b.label}</span>
-                                <span className="text-[11px] font-bold" style={{ color }}>
-                                  ×{b.times}
-                                </span>
-                              </div>
-                              <Bar pct={b.progress} color={color} h="h-1" />
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </div>
+      {confirming && (
+        <StartOverDialog ownerId={ownerId} allowNewPlan={ownerId !== null} onClose={() => setConfirming(false)} />
       )}
     </div>
   );
@@ -241,6 +184,78 @@ export function ManualRun({
       >
         Reset
       </button>
+    </div>
+  );
+}
+
+/** Start over: keep the plan (bars back to 0%), or — for a personal plan — end
+ *  it and start a new one. Either way times read and milestones stay. */
+function StartOverDialog({
+  ownerId,
+  allowNewPlan,
+  onClose,
+}: {
+  ownerId: string | null;
+  allowNewPlan: boolean;
+  onClose: () => void;
+}) {
+  const [choice, setChoice] = useState<"keep" | "new">("keep");
+  const [pending, start] = useTransition();
+  const options = [
+    ["keep", "Keep my current plan", ["Progress bars go back to 0%.", "Your plan resets starting with today's reading."]],
+    ...(allowNewPlan
+      ? ([["new", "End this plan and start a new one", ["Your current plan ends today.", "Progress resets to zero, and the plan builder will open to create a new plan."]]] as const)
+      : []),
+  ] as const;
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Start over" onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg space-y-4 rounded-2xl bg-surface p-6 shadow-xl">
+        <p className="font-display text-xl font-semibold">Start over</p>
+        <p className="text-sm">How do you want to start over?</p>
+        {options.map(([k, title, lines]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setChoice(k)}
+            className={`flex w-full gap-3 rounded-2xl p-4 text-left ${choice === k ? "border-2 border-accent" : "border border-hairline"}`}
+          >
+            <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${choice === k ? "border-accent" : "border-hairline"}`}>
+              {choice === k && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
+            </span>
+            <span>
+              <span className="block font-semibold">{title}</span>
+              {lines.map((l) => (
+                <span key={l} className="block text-sm text-muted">
+                  {l}
+                </span>
+              ))}
+            </span>
+          </button>
+        ))}
+        <div className="rounded-2xl border border-hairline p-4 text-sm">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted">Either way</p>
+          <p>Books you&rsquo;ve already finished stay counted. If you&rsquo;ve read Romans twice, it still shows ×2.</p>
+          <p>Your milestones stay, and &ldquo;Started over&rdquo; is added.</p>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="inline-flex h-11 items-center rounded-full border border-hairline px-5 text-sm font-medium">
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                await startOverAction(ownerId, choice === "new");
+                onClose();
+              })
+            }
+            className="inline-flex h-11 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent disabled:opacity-50"
+          >
+            Start over
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -133,7 +133,7 @@ export default async function BiblePage() {
         <div className="mb-4">
           <SectionHeading>Family reading</SectionHeading>
         </div>
-        <BibleTracker tracker={familyTracker} ownerId={null} canStartOver={admin} />
+        <BibleTracker tracker={familyTracker} ownerId={null} canStartOver={admin} booksHref="/bible/books" />
       </section>
     </>
   );
@@ -144,7 +144,7 @@ export default async function BiblePage() {
         <div className="mb-4">
           <SectionHeading>Your reading</SectionHeading>
         </div>
-        {personalTracker && <BibleTracker tracker={personalTracker} ownerId={me.id} canStartOver />}
+        {personalTracker && <BibleTracker tracker={personalTracker} ownerId={me.id} canStartOver booksHref="/bible/books?mine=1" />}
 
         <div className="mt-6">
           <SectionHeading>Your plan</SectionHeading>

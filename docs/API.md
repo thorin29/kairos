@@ -784,7 +784,9 @@ POST /api/v1/reading/tracker       { "scope","action":"reset"|"startOver" } -> t
          milestone kind "reset" = a start over
 
 POST /api/v1/reading/plan/add      { "scope","readings":[ "Luke 2", … ],"startISO",
-                                     "mode":"push"|"add"|"mix","ownDays"?,"preview"? }
+                                     "mode":"add"|"push","preview"? }
+         add: additional readings (extras on the same days); push: inserted into
+         the plan (counted; later readings move back). "mix" (≤0.728) = push
 200:     { "planName","oldEndISO","endISO","rows":[ { "iso","passage","tag","fromISO"? } ] }
          family goes into the published plan that brackets startISO (else the
          last); family needs an admin. tag: "new" | "added" | "moved" | "".

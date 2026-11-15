@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-11 — Bible round 3: one plan, two ways to add, start over choices (v0.729.0)
+
+- Carry on made a second plan, so the first one finished as far as the tracker
+  could tell. Admin → Bible now offers "Combine with <plan>" on a plan that
+  starts after another ends: its days move into the earlier plan, it's
+  deleted, the earlier one's "finished" record goes, and the family's reads
+  are re-keyed to the combined plan (raw SQL; `substring(... from n::int)` —
+  without the cast Postgres treats the parameter as a regex). The generator's
+  Carry on defaults to "Add to <plan>", which extends that plan instead.
+- Add readings has two ways, replacing push back / add to days / some of
+  each: Additional readings (extras on the same days, never counted toward
+  the plan, end date unchanged) and Insert into the plan (plan readings that
+  count; later readings move back; the new end date is shown). Both are
+  offered whatever the plan's `endKind`; the API maps the old "mix" to insert.
+  Three steps: what (pick a testament, section, book, then chapters — or
+  type), how, review.
+- An All books page (/bible/books, ?mine=1) replaces the pop-ups: a card per
+  section, small tiles. The cards and sections link to it. "Progress since
+  <date>" sits under the cards.
+- Start over asks: keep the plan (bars to 0%) or — personal only — end it and
+  start a new one (the plan is deleted, not counted as finished, and the plan
+  builder shows). Family import / export stay on the web.
+
 ## 2026-11 — Extras don't start a finished book again (v0.728.0)
 
 - The app can't read intent from chapters, so it goes by where a read came

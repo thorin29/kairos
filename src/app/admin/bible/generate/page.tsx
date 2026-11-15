@@ -57,6 +57,7 @@ export default async function GeneratePlanPage() {
         carryOn={coverage.remaining}
         carryOnChapters={coverage.remainingChapters}
         publishedName={published?.name ?? null}
+        publishedId={published?.id ?? null}
       />
     </main>
   );

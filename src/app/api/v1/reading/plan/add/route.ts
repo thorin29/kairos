@@ -6,9 +6,9 @@ import { addReadingsCore, familyPlanFor, personalPlanOf } from "@/lib/bible/plan
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Add readings to the family plan (a parent) or this person's plan: push the
- *  plan back, add to existing days, or some of each. `preview: true` returns
- *  the new days without saving. */
+/** Add readings to the family plan (a parent) or this person's plan: as
+ *  additional readings on the same days, or inserted into the plan (moving the
+ *  rest later). `preview: true` returns the new days without saving. */
 export async function POST(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
@@ -29,14 +29,10 @@ export async function POST(req: NextRequest) {
   const readings = Array.isArray(body.readings)
     ? body.readings.filter((r): r is string => typeof r === "string")
     : [];
-  const mode = body.mode === "add" ? "add" : body.mode === "mix" ? "mix" : "push";
-  const res = await addReadingsCore(plan, {
-    readings,
-    startISO,
-    mode,
-    ownDays: typeof body.ownDays === "number" ? body.ownDays : 0,
-    preview: body.preview === true,
-  });
+  // "add": additional readings on the same days; "push" (and the old "mix"):
+  // inserted into the plan.
+  const mode = body.mode === "add" ? "add" : "push";
+  const res = await addReadingsCore(plan, { readings, startISO, mode, preview: body.preview === true });
   if (res.error) return apiError("validation", res.error);
   return apiOk({
     planName: plan.name,

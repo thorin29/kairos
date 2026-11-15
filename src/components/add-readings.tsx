@@ -2,53 +2,49 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BOOKS, BOOK_BY_NAME, parsePassage } from "@/lib/bible/books";
-import { addReadings, dayLabel, joinChapters, type AddMode, type PlanDay } from "@/lib/bible/plan-edit";
+import { BOOKS, parsePassage } from "@/lib/bible/books";
+import { SECTIONS, SECTION_LABEL } from "@/lib/bible/tracker";
+import { addReadings, joinChapters, type AddMode, type PlanDay } from "@/lib/bible/plan-edit";
 import { addReadingsAction } from "@/lib/actions/reading-edit";
 import { formatShortYear, formatWeekday } from "@/lib/dates";
 import { Card } from "@/components/ui";
 
 type Item = { id: number; refs: { book: string; chapter: number }[] } | { id: number; text: string };
 
-function label(item: Item): string {
-  return "text" in item ? item.text : joinChapters(item.refs);
-}
+const label = (item: Item) => ("text" in item ? item.text : joinChapters(item.refs));
 
-const MODES: { key: AddMode; label: string }[] = [
-  { key: "push", label: "Push the plan back" },
-  { key: "add", label: "Add to those days" },
-  { key: "mix", label: "Some of each" },
-];
+const med = (iso: string) =>
+  new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }).format(
+    new Date(`${iso}T00:00:00.000Z`),
+  );
 
 /**
- * Add readings to a plan: pick chapters (each tap is a day; shift-click or a
- * long press puts it on the last reading's day) or type passages, then choose
- * how they fit. The preview is worked out here with the same function the
- * server saves with.
+ * Add readings in three steps: what (pick chapters, a level at a time, or type
+ * passages), how (additional readings on the same days, or inserted into the
+ * plan), and a review of the days that change. The preview is worked out here
+ * with the same function the server saves with.
  */
 export function AddReadings({
   planId,
   days,
   defaultStartISO,
   backHref,
-  endsWhenDone = false,
 }: {
   planId: string;
   days: PlanDay[];
   defaultStartISO: string;
   backHref: string;
-  /** The plan ends when its readings are done: readings always push it back. */
-  endsWhenDone?: boolean;
 }) {
   const router = useRouter();
+  const [step, setStep] = useState(0);
   const [tab, setTab] = useState<"pick" | "type">("pick");
-  const [book, setBook] = useState<string>("Luke");
+  const [testament, setTestament] = useState<"OT" | "NT" | null>(null);
+  const [section, setSection] = useState<string | null>(null);
+  const [book, setBook] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [typed, setTyped] = useState("");
   const [startISO, setStartISO] = useState(defaultStartISO);
-  const [chosenMode, setMode] = useState<AddMode>("push");
-  const mode: AddMode = endsWhenDone ? "push" : chosenMode;
-  const [ownDays, setOwnDays] = useState(1);
+  const [mode, setMode] = useState<AddMode>("add");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const nextId = useRef(1);
@@ -56,12 +52,13 @@ export function AddReadings({
   const longPressed = useRef(false);
 
   const readings = items.map(label);
-  const preview = useMemo(
-    () => (readings.length ? addReadings(days, readings, startISO, mode, ownDays) : null),
-    [days, readings.join("\n"), startISO, mode, ownDays],
-  );
+  const key = readings.join("\n");
+  const insert = useMemo(() => (readings.length ? addReadings(days, readings, startISO, "push") : null), [days, key, startISO]); // eslint-disable-line react-hooks/exhaustive-deps
+  const additional = useMemo(() => (readings.length ? addReadings(days, readings, startISO, "add") : null), [days, key, startISO]); // eslint-disable-line react-hooks/exhaustive-deps
+  const chosen = mode === "push" ? insert : additional;
 
   const addChapter = (chapter: number, sameDay: boolean) => {
+    if (!book) return;
     setItems((cur) => {
       const last = cur[cur.length - 1];
       if (sameDay && last && "refs" in last) {
@@ -83,115 +80,201 @@ export function AddReadings({
     setTyped("");
   };
 
-  const chapters = BOOK_BY_NAME.get(book)?.chapters ?? 0;
-  const shown = preview?.error
-    ? []
-    : (preview?.days ?? []).filter((d, i, all) => d.iso >= startISO || all[i + 1]?.iso >= startISO);
-
   const save = () =>
     start(async () => {
-      const res = await addReadingsAction(planId, { readings, startISO, mode, ownDays });
+      const res = await addReadingsAction(planId, { readings, startISO, mode });
       if (res.error) setError(res.error);
       else router.push(backHref);
     });
 
   const seg = (on: boolean) =>
     `h-10 flex-1 px-3 text-sm font-semibold ${on ? "bg-accent text-on-accent" : "bg-surface text-accent"}`;
+  const row = "flex w-full items-center justify-between border-t border-hairline px-4 py-3 text-left text-sm first:border-t-0 hover:bg-hairline/40";
+  const pill = (primary: boolean) =>
+    `inline-flex h-11 items-center rounded-full px-5 text-sm font-medium disabled:opacity-50 ${
+      primary ? "bg-accent text-on-accent" : "border border-hairline"
+    }`;
+
+  const steps = (
+    <div className="flex gap-4 text-sm">
+      {["What", "How", "Review"].map((s, i) => (
+        <span key={s} className={`flex items-center gap-1.5 ${i === step ? "font-semibold text-accent" : "text-muted"}`}>
+          <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full border text-[11px] ${i === step ? "border-accent" : "border-hairline"}`}>
+            {i + 1}
+          </span>
+          {s}
+        </span>
+      ))}
+    </div>
+  );
+
+  const crumbs = (
+    <p className="text-sm text-muted">
+      <button type="button" onClick={() => { setTestament(null); setSection(null); setBook(null); }} className="hover:text-accent">
+        Books
+      </button>
+      {testament && (
+        <>
+          {" › "}
+          <button type="button" onClick={() => { setSection(null); setBook(null); }} className="hover:text-accent">
+            {testament === "OT" ? "Old Testament" : "New Testament"}
+          </button>
+        </>
+      )}
+      {section && (
+        <>
+          {" › "}
+          <button type="button" onClick={() => setBook(null)} className="hover:text-accent">
+            {SECTION_LABEL[section] ?? section}
+          </button>
+        </>
+      )}
+      {book && <span className="font-semibold text-ink">{` › ${book}`}</span>}
+    </p>
+  );
 
   return (
     <div className="space-y-5">
-      <Card className="space-y-4 p-5">
-        <div className="flex overflow-hidden rounded-xl border border-accent">
-          <button type="button" className={seg(tab === "pick")} onClick={() => setTab("pick")}>
-            Pick chapters
-          </button>
-          <button type="button" className={seg(tab === "type")} onClick={() => setTab("type")}>
-            Type passages
-          </button>
-        </div>
+      {steps}
 
-        {tab === "pick" ? (
-          <div className="space-y-3">
-            <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
-              {BOOKS.map((b) => (
-                <button
-                  key={b.name}
-                  type="button"
-                  onClick={() => setBook(b.name)}
-                  className={`h-8 rounded-full border px-3 text-xs font-medium ${
-                    b.name === book ? "border-accent bg-accent text-on-accent" : "border-hairline"
-                  }`}
-                >
-                  {b.name}
-                </button>
-              ))}
+      {step === 0 && (
+        <>
+          <Card className="space-y-4 p-5">
+            <div className="flex overflow-hidden rounded-xl border border-accent">
+              <button type="button" className={seg(tab === "pick")} onClick={() => setTab("pick")}>
+                Pick chapters
+              </button>
+              <button type="button" className={seg(tab === "type")} onClick={() => setTab("type")}>
+                Type passages
+              </button>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {Array.from({ length: chapters }, (_, i) => i + 1).map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onPointerDown={() => {
-                    longPressed.current = false;
-                    pressTimer.current = window.setTimeout(() => {
-                      longPressed.current = true;
-                      addChapter(c, true);
-                    }, 450);
-                  }}
-                  onPointerUp={() => pressTimer.current && window.clearTimeout(pressTimer.current)}
-                  onPointerLeave={() => pressTimer.current && window.clearTimeout(pressTimer.current)}
-                  onClick={(e) => {
-                    if (longPressed.current) return;
-                    addChapter(c, e.shiftKey);
-                  }}
-                  className="tabular h-9 w-10 rounded-lg border border-hairline text-sm hover:border-accent"
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <textarea
-              rows={4}
-              value={typed}
-              onChange={(e) => setTyped(e.target.value)}
-              spellCheck={false}
-              placeholder={"Luke 2:1-20\nIsaiah 9:1-7\nPsalm 96"}
-              aria-label="Passages, one per day"
-              className="tabular w-full rounded-2xl border border-hairline bg-surface px-4 py-3 text-sm outline-none focus:border-accent"
-            />
-            <button
-              type="button"
-              onClick={addTyped}
-              className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-sm font-medium hover:border-accent"
-            >
-              Add to the list
-            </button>
-          </div>
-        )}
 
-        {items.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {items.map((it) => (
-              <span key={it.id} className="inline-flex items-center gap-1 rounded-full bg-accent/10 py-1 pl-3 pr-1 text-sm">
-                {label(it)}
-                <button
-                  type="button"
-                  aria-label={`Remove ${label(it)}`}
-                  onClick={() => setItems((cur) => cur.filter((x) => x.id !== it.id))}
-                  className="h-6 w-6 rounded-full text-muted hover:bg-hairline"
-                >
-                  ×
+            {tab === "pick" ? (
+              <div className="space-y-3">
+                {crumbs}
+                {!testament && (
+                  <div className="overflow-hidden rounded-2xl border border-hairline">
+                    {(["OT", "NT"] as const).map((t) => (
+                      <button key={t} type="button" className={row} onClick={() => setTestament(t)}>
+                        <span>
+                          {t === "OT" ? "Old Testament" : "New Testament"}
+                          <span className="block text-xs text-muted">{BOOKS.filter((b) => b.testament === t).length} books</span>
+                        </span>
+                        <span className="text-muted">›</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {testament && !section && (
+                  <div className="overflow-hidden rounded-2xl border border-hairline">
+                    {SECTIONS.filter((g) => BOOKS.find((b) => b.group === g)?.testament === testament).map((g) => {
+                      const books = BOOKS.filter((b) => b.group === g);
+                      return (
+                        <button key={g} type="button" className={row} onClick={() => setSection(g)}>
+                          <span>
+                            {SECTION_LABEL[g] ?? g}
+                            {books.length > 1 && (
+                              <span className="block text-xs text-muted">
+                                {books[0].name} – {books[books.length - 1].name}
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-muted">›</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {section && !book && (
+                  <div className="overflow-hidden rounded-2xl border border-hairline">
+                    {BOOKS.filter((b) => b.group === section).map((b) => (
+                      <button key={b.name} type="button" className={row} onClick={() => setBook(b.name)}>
+                        <span>{b.name}</span>
+                        <span className="text-muted">›</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {book && (
+                  <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-10">
+                    {Array.from({ length: BOOKS.find((b) => b.name === book)?.chapters ?? 0 }, (_, i) => i + 1).map((c) => {
+                      const picked = items.some((it) => "refs" in it && it.refs.some((r) => r.book === book && r.chapter === c));
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onPointerDown={() => {
+                            longPressed.current = false;
+                            pressTimer.current = window.setTimeout(() => {
+                              longPressed.current = true;
+                              addChapter(c, true);
+                            }, 450);
+                          }}
+                          onPointerUp={() => pressTimer.current && window.clearTimeout(pressTimer.current)}
+                          onPointerLeave={() => pressTimer.current && window.clearTimeout(pressTimer.current)}
+                          onClick={(e) => {
+                            if (longPressed.current) return;
+                            addChapter(c, e.shiftKey);
+                          }}
+                          className={`tabular h-9 rounded-lg border text-sm ${
+                            picked ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <textarea
+                  rows={4}
+                  value={typed}
+                  onChange={(e) => setTyped(e.target.value)}
+                  spellCheck={false}
+                  placeholder={"Luke 2:1-20\nIsaiah 9:1-7\nPsalm 96"}
+                  aria-label="Passages, one per day"
+                  className="tabular w-full rounded-2xl border border-hairline bg-surface px-4 py-3 text-sm outline-none focus:border-accent"
+                />
+                <button type="button" onClick={addTyped} className={pill(false)}>
+                  Add to the list
                 </button>
-              </span>
-            ))}
-          </div>
-        )}
+              </div>
+            )}
+          </Card>
 
-        <div className="flex flex-wrap items-end gap-4">
-          <label className="text-sm">
+          <Card className="space-y-2 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Readings to add</p>
+            {items.length === 0 ? (
+              <p className="text-sm text-muted">Nothing yet.</p>
+            ) : (
+              items.map((it, i) => (
+                <div key={it.id} className="flex items-center justify-between text-sm">
+                  <span>
+                    <span className="text-muted">Day {i + 1} · </span>
+                    {label(it)}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${label(it)}`}
+                    onClick={() => setItems((cur) => cur.filter((x) => x.id !== it.id))}
+                    className="h-7 w-7 rounded-full text-muted hover:bg-hairline"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))
+            )}
+            <p className="text-xs text-muted">Each chapter is a day. Long-press or shift-click to add it to the day before.</p>
+          </Card>
+        </>
+      )}
+
+      {step === 1 && (
+        <Card className="space-y-4 p-5">
+          <label className="block text-sm">
             <span className="mb-1 block font-medium">Starting</span>
             <input
               type="date"
@@ -200,69 +283,83 @@ export function AddReadings({
               className="h-10 rounded-full border border-hairline bg-surface px-4"
             />
           </label>
-          {!endsWhenDone && (
-          <div className="min-w-[18rem] flex-1">
-            <span className="mb-1 block text-sm font-medium">How they fit</span>
-            <div className="flex overflow-hidden rounded-xl border border-accent">
-              {MODES.map((m) => (
-                <button key={m.key} type="button" className={seg(mode === m.key)} onClick={() => setMode(m.key)}>
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          )}
-        </div>
-
-        {mode === "mix" && readings.length > 0 && (
-          <label className="flex items-center gap-2 text-sm">
-            Move the end date by
-            <input
-              type="number"
-              min={0}
-              max={readings.length}
-              value={ownDays}
-              onChange={(e) => setOwnDays(Math.max(0, Math.min(readings.length, Number(e.target.value) || 0)))}
-              className="tabular h-9 w-16 rounded-full border border-hairline bg-surface px-3"
-            />
-            reading {ownDays === 1 ? "day" : "days"}
-          </label>
-        )}
-      </Card>
-
-      {preview && (
-        <Card className="p-5">
-          <div className="mb-3 flex items-baseline justify-between">
-            <span className="text-sm font-semibold">Preview</span>
-            {preview.endISO && (
-              <span className="text-xs text-muted">
-                Ends {formatShortYear(preview.endISO)}
-                {preview.oldEndISO && preview.oldEndISO !== preview.endISO
-                  ? ` (was ${formatShortYear(preview.oldEndISO)})`
-                  : ""}
+          <p className="text-sm">
+            {readings.length} {readings.length === 1 ? "reading" : "readings"} · starting {med(startISO)}
+          </p>
+          {(
+            [
+              ["add", "Additional readings", ["Additional passages on the same days as your current reading plan.", "End date of the overall plan does not change."]],
+              [
+                "push",
+                "Insert into the plan",
+                [
+                  "Shifts the end date of the plan.",
+                  `Readings after ${med(startISO)} move ${readings.length} ${readings.length === 1 ? "day" : "days"} later.`,
+                  insert?.endISO && insert.oldEndISO
+                    ? `Plan will end ${med(insert.endISO)} instead of ${med(insert.oldEndISO)}.`
+                    : "",
+                ],
+              ],
+            ] as const
+          ).map(([k, title, lines]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setMode(k)}
+              className={`flex w-full gap-3 rounded-2xl p-4 text-left ${mode === k ? "border-2 border-accent" : "border border-hairline"}`}
+            >
+              <span
+                className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                  mode === k ? "border-accent" : "border-hairline"
+                }`}
+              >
+                {mode === k && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
               </span>
-            )}
-          </div>
-          {preview.error ? (
-            <p className="text-sm text-red-700">{preview.error}</p>
+              <span>
+                <span className="block font-semibold">{title}</span>
+                {lines.filter(Boolean).map((l) => (
+                  <span key={l} className="block text-sm text-muted">
+                    {l}
+                  </span>
+                ))}
+              </span>
+            </button>
+          ))}
+        </Card>
+      )}
+
+      {step === 2 && chosen && (
+        <Card className="p-5">
+          <p className="mb-3 text-sm">
+            {mode === "add"
+              ? `Additional readings · plan still ends ${chosen.oldEndISO ? med(chosen.oldEndISO) : ""}`
+              : `Inserted · plan ends ${chosen.endISO ? med(chosen.endISO) : ""}`}
+          </p>
+          {chosen.error ? (
+            <p className="text-sm text-red-700">{chosen.error}</p>
           ) : (
             <div className="max-h-96 divide-y divide-hairline overflow-y-auto">
-              {shown.map((d) => (
-                <div
-                  key={d.iso}
-                  className={`flex gap-3 px-2 py-2 text-sm ${d.tag === "new" || d.tag === "added" ? "bg-accent/5" : ""}`}
-                >
-                  <span className="tabular w-28 shrink-0 text-xs text-muted">
-                    {formatWeekday(d.iso)}, {formatShortYear(d.iso)}
-                  </span>
-                  <span className={`flex-1 ${d.tag === "new" || d.tag === "added" ? "font-semibold" : ""}`}>
-                    {dayLabel(d.passage, d.extra)}
-                  </span>
-                  <span className="text-xs text-muted">
-                    {d.tag === "new" ? "new" : d.tag === "added" ? "added" : d.fromISO ? `was ${formatShortYear(d.fromISO)}` : ""}
-                  </span>
-                </div>
-              ))}
+              {chosen.days
+                .filter((d, i, all) => d.iso >= startISO || all[i + 1]?.iso >= startISO)
+                .slice(0, 40)
+                .map((d) => (
+                  <div key={d.iso} className="flex gap-3 py-2 text-sm">
+                    <span className="tabular w-28 shrink-0 text-xs text-muted">
+                      {formatWeekday(d.iso)}, {formatShortYear(d.iso)}
+                    </span>
+                    <span className="flex-1">
+                      {d.tag === "new" ? (
+                        <span className="font-semibold text-accent">{d.passage}</span>
+                      ) : (
+                        <>
+                          {d.passage}
+                          {d.extra && <span className="font-semibold text-accent">{` + ${d.extra}`}</span>}
+                        </>
+                      )}
+                    </span>
+                    <span className="text-xs text-muted">{d.fromISO ? `was ${formatShortYear(d.fromISO)}` : ""}</span>
+                  </div>
+                ))}
             </div>
           )}
         </Card>
@@ -273,20 +370,22 @@ export function AddReadings({
       <div className="flex justify-end gap-2">
         <button
           type="button"
-          onClick={() => router.push(backHref)}
-          className="inline-flex h-11 items-center rounded-full border border-hairline px-5 text-sm font-medium"
+          onClick={() => (step === 0 ? router.push(backHref) : setStep(step - 1))}
+          className={pill(false)}
         >
-          Cancel
+          {step === 0 ? "Cancel" : "Back"}
         </button>
-        <button
-          type="button"
-          disabled={pending || !preview || !!preview.error}
-          onClick={save}
-          className="inline-flex h-11 items-center rounded-full bg-accent px-5 text-sm font-medium text-on-accent disabled:opacity-50"
-        >
-          Add {readings.length || ""} {readings.length === 1 ? "reading" : "readings"}
-        </button>
+        {step < 2 ? (
+          <button type="button" disabled={readings.length === 0} onClick={() => setStep(step + 1)} className={pill(true)}>
+            Next
+          </button>
+        ) : (
+          <button type="button" disabled={pending || !chosen || !!chosen.error} onClick={save} className={pill(true)}>
+            Add {readings.length} {readings.length === 1 ? "reading" : "readings"}
+          </button>
+        )}
       </div>
     </div>
   );
 }
+

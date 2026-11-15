@@ -14,6 +14,14 @@ export default async function AdminBiblePage() {
   const plans = await listPlans();
 
   const published = plans.find((p) => p.isPublished);
+  // The plan another one carries on from: the latest to end before it starts.
+  const previousOf = (p: (typeof plans)[number]) => {
+    if (!p.startISO) return null;
+    const before = plans
+      .filter((o) => o.id !== p.id && o.endISO && o.endISO < p.startISO!)
+      .sort((a, b) => b.endISO!.localeCompare(a.endISO!))[0];
+    return before ? { id: before.id, name: before.name } : null;
+  };
 
   // Preview the next stretch of whatever is live, so publishing can be
   // checked at a glance rather than trusted.
@@ -66,6 +74,7 @@ export default async function AdminBiblePage() {
                   id={p.id}
                   name={p.name}
                   isPublished={p.isPublished}
+                  combineWith={previousOf(p)}
                 />
               </div>
             ))}

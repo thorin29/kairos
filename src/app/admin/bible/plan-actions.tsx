@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import {
+  combinePlans,
   deletePlan,
   publishPlan,
   unpublishPlan,
@@ -14,15 +15,31 @@ export function PlanActions({
   id,
   name,
   isPublished,
+  combineWith = null,
 }: {
   id: string;
   name: string;
   isPublished: boolean;
+  /** The plan this one carries on from, to fold it back into. */
+  combineWith?: { id: string; name: string } | null;
 }) {
   const [pending, startTransition] = useTransition();
 
   return (
-    <span className="flex items-center gap-2">
+    <span className="flex flex-wrap items-center gap-2">
+      {combineWith && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            if (!confirm(`Combine ${name} into ${combineWith.name}? Its days move into ${combineWith.name} and it becomes one plan.`)) return;
+            startTransition(async () => void (await combinePlans(combineWith.id, id)));
+          }}
+          className="inline-flex h-9 items-center rounded-full border border-accent px-4 text-xs font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
+        >
+          Combine with {combineWith.name}
+        </button>
+      )}
       <a
         href={`/admin/bible/add?plan=${id}`}
         className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-xs font-medium text-muted hover:border-accent hover:text-accent"

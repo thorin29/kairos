@@ -26,7 +26,7 @@ export default async function AddMyReadingsPage() {
         <h1 className="font-display text-3xl font-semibold tracking-tight">Add readings</h1>
         <p className="mt-1 text-muted">{plan.name}</p>
       </header>
-      <AddReadings planId={plan.id} days={days} defaultStartISO={start > today ? start : today} backHref="/bible" endsWhenDone={plan.endKind === "DONE"} />
+      <AddReadings planId={plan.id} days={days} defaultStartISO={start > today ? start : today} backHref="/bible" />
     </main>
   );
 }

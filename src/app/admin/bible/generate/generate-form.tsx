@@ -61,12 +61,18 @@ export function GenerateForm({
   carryOn,
   carryOnChapters,
   publishedName,
+  publishedId,
 }: {
   defaultStart: string;
   carryOn: Selection[];
   carryOnChapters: number;
   publishedName: string | null;
+  publishedId: string | null;
 }) {
+  // Carrying on adds to the same plan by default, so it stays one plan.
+  const [target, setTarget] = useState<"append" | "new">(
+    carryOn.length > 0 && publishedId ? "append" : "new",
+  );
   const [state, formAction, pending] = useActionState(generatePlan, initial);
 
   const [segments, setSegments] = useState<Selection[]>(() =>
@@ -331,7 +337,30 @@ export function GenerateForm({
         <SectionHeading>When</SectionHeading>
 
         <Card className="space-y-5 p-5">
+          {publishedId && publishedName && (
+            <div className="flex overflow-hidden rounded-xl border border-accent sm:max-w-md">
+              {(
+                [
+                  ["append", `Add to ${publishedName}`],
+                  ["new", "New plan"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setTarget(key)}
+                  className={`h-10 flex-1 px-3 text-sm font-semibold ${
+                    target === key ? "bg-accent text-on-accent" : "bg-surface text-accent"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {target === "append" && publishedId && <input type="hidden" name="appendTo" value={publishedId} />}
           <div className="grid gap-4 sm:grid-cols-2">
+            {target === "new" || !publishedId ? (
             <div>
               <label htmlFor="gen-name" className="mb-1.5 block text-sm font-medium">
                 Plan name
@@ -345,6 +374,9 @@ export function GenerateForm({
                 className="h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent"
               />
             </div>
+            ) : (
+              <div />
+            )}
 
             <div>
               <label htmlFor="gen-start" className="mb-1.5 block text-sm font-medium">

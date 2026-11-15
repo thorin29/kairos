@@ -23,7 +23,7 @@ describe("addReadings", () => {
       "Revelation 19",
     ]);
     expect(r.days[4]).toMatchObject({ iso: "2026-12-26", tag: "moved", fromISO: "2026-12-23" });
-    expect(r.days[1]).toMatchObject({ isExtra: true, tag: "new" });
+    expect(r.days[1]).toMatchObject({ isExtra: false, tag: "new" });
     expect(r.endISO).toBe("2026-12-28");
     expect(r.oldEndISO).toBe("2026-12-25");
   });
@@ -33,13 +33,6 @@ describe("addReadings", () => {
     expect(r.endISO).toBe("2026-12-25");
     expect(r.days[1]).toMatchObject({ passage: "Revelation 16-17", extra: "Luke 2:1-20", tag: "added" });
     expect(r.days[3].extra).toBe("Psalm 96");
-  });
-
-  it("some of each moves the end by the own-day count", () => {
-    const r = addReadings(plan, three, "2026-12-23", "mix", 1);
-    expect(r.endISO).toBe("2026-12-26");
-    expect(r.days[1]).toMatchObject({ iso: "2026-12-23", passage: "Luke 2:1-20", tag: "new" });
-    expect(r.days[2]).toMatchObject({ iso: "2026-12-24", passage: "Revelation 16-17", extra: "Isaiah 9:1-7" });
   });
 
   it("keeps a weekday-only plan on its weekdays", () => {
