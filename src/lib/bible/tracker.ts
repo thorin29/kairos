@@ -186,6 +186,33 @@ export function buildTracker(events: ReadEvent[], startedOverAt: number | null =
   };
 }
 
+/**
+ * Milestones fold into bigger ones: a finished book only shows until its
+ * section finishes, a section until its testament, a testament until the whole
+ * Bible. Returns the completions still worth showing.
+ */
+export function rollUp(t: Tracker): { level: Level; completion: Completion }[] {
+  const parent = new Map<string, Level>();
+  for (const b of t.books) {
+    const g = BOOKS.find((x) => x.name === b.key)?.group;
+    const sec = t.sections.find((s) => s.key === g);
+    if (sec) parent.set(`book:${b.key}`, sec);
+  }
+  for (const s of t.sections) parent.set(`section:${s.key}`, s.testament === "OT" ? t.ot : t.nt);
+  parent.set("testament:ot", t.bible);
+  parent.set("testament:nt", t.bible);
+
+  const out: { level: Level; completion: Completion }[] = [];
+  for (const l of [t.bible, t.ot, t.nt, ...t.sections, ...t.books]) {
+    const p = parent.get(`${l.kind}:${l.key}`);
+    for (const c of l.completions) {
+      if (p && p.completions.some((pc) => pc.atISO >= c.atISO)) continue;
+      out.push({ level: l, completion: c });
+    }
+  }
+  return out;
+}
+
 /** What a plan covers, from its chapters: all 66 books, a full testament or
  *  section, or less. */
 export function planKind(keys: Set<string>): "bible" | "section" | "book" {

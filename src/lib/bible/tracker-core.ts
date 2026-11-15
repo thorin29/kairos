@@ -6,6 +6,7 @@ import { BOOK_BY_NAME, parsePassage, type ChapterRef } from "@/lib/bible/books";
 import {
   buildTracker,
   planKind,
+  rollUp,
   PLAN_KIND_LABEL,
   type Level,
   type LevelKind,
@@ -351,17 +352,17 @@ export async function loadTracker(ownerId: string | null, todayISO: string): Pro
   ]);
   const openCount = open ? await prisma.bibleRead.count({ where: { runId: open.id } }) : 0;
 
+  // Smaller milestones fold into bigger ones; plans stay; only the latest
+  // manual reading and start over; at most five, newest first.
   const milestones: Milestone[] = [];
-  for (const l of [t.bible, t.ot, t.nt, ...t.sections, ...t.books]) {
-    for (const c of l.completions) {
-      milestones.push({
-        atISO: c.beforeTracking ? null : c.atISO,
-        kind: l.kind,
-        label: l.kind === "book" ? `Finished ${l.label}` : l.label,
-        detail: `×${c.n}`,
-        days: c.days,
-      });
-    }
+  for (const { level: l, completion: c } of rollUp(t)) {
+    milestones.push({
+      atISO: c.beforeTracking ? null : c.atISO,
+      kind: l.kind,
+      label: l.kind === "book" ? `Finished ${l.label}` : l.label,
+      detail: `×${c.n}`,
+      days: c.days,
+    });
   }
   for (const p of plansDone) {
     milestones.push({
@@ -372,7 +373,8 @@ export async function loadTracker(ownerId: string | null, todayISO: string): Pro
       days: p.days,
     });
   }
-  for (const r of runs) {
+  const lastRun = [...runs].sort((a, b) => b.endedAt!.getTime() - a.endedAt!.getTime())[0];
+  for (const r of lastRun ? [lastRun] : []) {
     const end = r.endedAt!;
     milestones.push({
       atISO: end.toISOString().slice(0, 10),
@@ -382,7 +384,8 @@ export async function loadTracker(ownerId: string | null, todayISO: string): Pro
       days: r.startedAt ? Math.max(1, Math.round((end.getTime() - r.startedAt.getTime()) / 86_400_000) + 1) : null,
     });
   }
-  for (const r of resets) {
+  const lastReset = [...resets].sort((a, b) => b.at.getTime() - a.at.getTime())[0];
+  for (const r of lastReset ? [lastReset] : []) {
     milestones.push({ atISO: r.at.toISOString().slice(0, 10), kind: "reset", label: "Started over", detail: "", days: null });
   }
   milestones.sort((a, b) => (b.atISO ?? "").localeCompare(a.atISO ?? ""));
@@ -403,7 +406,7 @@ export async function loadTracker(ownerId: string | null, todayISO: string): Pro
     nt: view(t.nt),
     sections: t.sections.map(view),
     books: t.books.map(view),
-    milestones: milestones.slice(0, 300),
+    milestones: milestones.slice(0, 5),
     bests,
     plansCompleted: plansDone.length,
     manual: {

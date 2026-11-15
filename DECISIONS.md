@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-11 — Tracker: books on tap, milestones roll up (v0.727.0)
+
+- The 66-book grid is no longer always open. Tapping the Whole Bible card
+  opens all books in a window, a testament card its books, a section row its
+  books (web: a modal; app: a dialog).
+- Milestones are folded on the server (`rollUp` in tracker.ts) so web and app
+  match: a finished book shows only until its section finishes, a section
+  until its testament, a testament until the whole Bible. Finished plans stay;
+  only the latest manual reading and start over; at most five, newest first.
+  Bests and plans completed sit on one line in the header. The filters are
+  gone.
+
 ## 2026-11 — Tracker: a book started again, and Start over (v0.726.0)
 
 - A level finished in this time through the Bible stays full, unless one of

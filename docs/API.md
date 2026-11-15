@@ -772,7 +772,9 @@ GET  /api/v1/reading/tracker?scope=family|mine   // v0.724 (replaces /reading/er
            "manual": { "open","startedISO"|null,"untimed","chapters" } }
          Level = { "key","label","kind","testament"|null,"chapters","times","ahead",
                    "progress","sinceISO"|null }. atISO null: before tracking.
-         kind: bible | testament | section | book | plan | manual
+         kind: bible | testament | section | book | plan | manual | reset.
+         milestones are rolled up (v0.727): a finished level hides the ones it's
+         made of; plans kept; latest manual + start over only; at most 5
 GET /api/v1/reading also carries family.endsWhenDone and personal.plan.endKind
 ("DATE" | "DONE") from v0.724; card passages show a day's extra after " + ".
 

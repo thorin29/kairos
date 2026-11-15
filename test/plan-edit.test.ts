@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { addReadings, formatPlanText, joinChapters, parsePlanText } from "@/lib/bible/plan-edit";
-import { buildTracker, planKind, formatSpan } from "@/lib/bible/tracker";
+import { buildTracker, planKind, formatSpan, rollUp } from "@/lib/bible/tracker";
 import { BOOKS } from "@/lib/bible/books";
 
 const plan = [
@@ -174,6 +174,22 @@ describe("tracker", () => {
     const jude = t.books.find((b) => b.key === "Jude")!;
     expect(jude.times).toBe(1);
     expect(jude.completions[0]).toMatchObject({ days: null, beforeTracking: true });
+  });
+
+  it("rolls finished books up into their section and testament", () => {
+    const DAYMS = 86_400_000;
+    const gospels = keysOf(["Matthew", "Mark", "Luke", "John"]);
+    const t = buildTracker([
+      ...gospels.map((key, i) => ({ key, at: i * DAYMS, timed: true })),
+      ...keysOf(["Romans"]).map((key, i) => ({ key, at: 200 * DAYMS + i, timed: true })),
+    ]);
+    const shown = rollUp(t).map((x) => x.level.label);
+    expect(shown).toContain("Gospels");
+    expect(shown).toContain("Romans");
+    expect(shown).not.toContain("Matthew");
+    const nt = BOOKS.filter((b) => b.testament === "NT").map((b) => b.name);
+    const all = buildTracker(keysOf(nt).map((key, i) => ({ key, at: i, timed: true })));
+    expect(rollUp(all).map((x) => x.level.label)).toEqual(["New Testament"]);
   });
 
   it("labels plans by what they cover", () => {
