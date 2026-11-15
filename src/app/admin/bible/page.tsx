@@ -5,6 +5,7 @@ import { fromDateColumn, formatShort, todayISO } from "@/lib/dates";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
 import { PlanImport } from "@/components/plan-import";
+import { StartOverButton } from "@/components/bible-tracker";
 import { PlanActions } from "./plan-actions";
 
 export const dynamic = "force-dynamic";
@@ -146,6 +147,18 @@ export default async function AdminBiblePage() {
       <section>
         <SectionHeading>Import a plan</SectionHeading>
         <PlanImport target={{ scope: "family" }} plans={plans.map((p) => ({ id: p.id, name: p.name }))} />
+      </section>
+
+      <section className="mt-10">
+        <SectionHeading>Start over</SectionHeading>
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <p className="max-w-md text-sm text-muted">Reset the family&rsquo;s progress bars to 0%. The plan keeps going.</p>
+          <StartOverButton
+            ownerId={null}
+            allowNewPlan={false}
+            className="inline-flex h-10 items-center rounded-full border border-hairline px-5 text-sm font-medium hover:border-accent hover:text-accent"
+          />
+        </Card>
       </section>
     </main>
   );

@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-11 — Start over is a last resort (v0.730.0)
+
+- It came off the Bible reading pages. Family: a "Start over" section at the
+  bottom of Admin → Bible (keep the plan only; family plans are built on the
+  web, and the app has no family Start over). Personal: the last link in the
+  plan's options on the web, and the bottom of Edit plan in the app, with
+  both choices. The confirmation's box is "Note", bulleted.
+
 ## 2026-11 — Bible round 3: one plan, two ways to add, start over choices (v0.729.0)
 
 - Carry on made a second plan, so the first one finished as far as the tracker

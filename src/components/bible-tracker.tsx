@@ -40,17 +40,12 @@ function Bar({ pct, color, h = "h-2" }: { pct: number; color: string; h?: string
  */
 export function BibleTracker({
   tracker,
-  ownerId,
-  canStartOver,
   booksHref,
 }: {
   tracker: TrackerPayload;
-  ownerId: string | null;
-  canStartOver: boolean;
   /** The all-books page the cards and sections open. */
   booksHref: string;
 }) {
-  const [confirming, setConfirming] = useState(false);
   const shown = tracker.milestones;
 
   return (
@@ -79,15 +74,6 @@ export function BibleTracker({
         <p className="text-sm text-muted">
           {tracker.bible.sinceISO ? `Progress since ${med(tracker.bible.sinceISO)}` : ""}
         </p>
-        {canStartOver && (
-          <button
-            type="button"
-            onClick={() => setConfirming(true)}
-            className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-sm font-medium hover:border-accent hover:text-accent"
-          >
-            Start over
-          </button>
-        )}
       </div>
 
       <Card className="space-y-2.5 p-5">
@@ -143,9 +129,6 @@ export function BibleTracker({
         )}
       </Card>
 
-      {confirming && (
-        <StartOverDialog ownerId={ownerId} allowNewPlan={ownerId !== null} onClose={() => setConfirming(false)} />
-      )}
     </div>
   );
 }
@@ -190,7 +173,7 @@ export function ManualRun({
 
 /** Start over: keep the plan (bars back to 0%), or — for a personal plan — end
  *  it and start a new one. Either way times read and milestones stay. */
-function StartOverDialog({
+export function StartOverDialog({
   ownerId,
   allowNewPlan,
   onClose,
@@ -233,9 +216,11 @@ function StartOverDialog({
           </button>
         ))}
         <div className="rounded-2xl border border-hairline p-4 text-sm">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted">Either way</p>
-          <p>Books you&rsquo;ve already finished stay counted. If you&rsquo;ve read Romans twice, it still shows ×2.</p>
-          <p>Your milestones stay, and &ldquo;Started over&rdquo; is added.</p>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted">Note</p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Books you&rsquo;ve already finished stay counted. If you&rsquo;ve read Romans twice, it still shows ×2.</li>
+            <li>Your milestones stay, and &ldquo;Started over&rdquo; is added.</li>
+          </ul>
         </div>
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="inline-flex h-11 items-center rounded-full border border-hairline px-5 text-sm font-medium">
@@ -257,5 +242,19 @@ function StartOverDialog({
         </div>
       </div>
     </div>
+  );
+}
+
+/** The last-resort Start over, kept with the plan settings (Admin → Bible for
+ *  the family, the personal plan's options for a person). */
+export function StartOverButton({ ownerId, allowNewPlan, className }: { ownerId: string | null; allowNewPlan: boolean; className?: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={className}>
+        Start over
+      </button>
+      {open && <StartOverDialog ownerId={ownerId} allowNewPlan={allowNewPlan} onClose={() => setOpen(false)} />}
+    </>
   );
 }

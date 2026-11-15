@@ -12,6 +12,7 @@ import {
 } from "@/lib/actions/personal-plan";
 import { exportPlanAction } from "@/lib/actions/reading-edit";
 import { downloadText } from "@/components/plan-import";
+import { StartOverButton } from "@/components/bible-tracker";
 
 export function PersonalPlanSection({
   userId,
@@ -129,6 +130,7 @@ function PlanView({
           >
             Delete
           </button>
+          <StartOverButton ownerId={userId} allowNewPlan className="font-medium text-muted hover:text-accent" />
         </div>
       </div>
 
