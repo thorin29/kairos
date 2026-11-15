@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (15 Nov 2026, web v0.727.0 / app v0.524.0, versionCode 596)
+## Current status (15 Nov 2026, web v0.728.0 / app v0.524.0, versionCode 596)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -632,6 +632,7 @@ the remaining personal-view items:
 - [x] Tracker bars per time through the Bible; a book started again resets;
       Start over keeps times read (v0.725–0.726)
 - [x] Books open from a section or card; milestones roll up, five at most (v0.727)
+- [x] Extras never start a finished book again (v0.728)
 - [x] Add readings to a plan: pick chapters or type passages; push back, add to
       days, or some of each (v0.723)
 - [x] Import (dated, or passages with a start date and weekdays) and export in
@@ -1823,7 +1824,7 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.727.0 on Next.js 16.4.6 (migrations through 158_tracker_reset, all registered
+- Web APP_VERSION 0.728.0 on Next.js 16.4.6 (migrations through 158_tracker_reset, all registered
   in `MIGRATIONS` since 0.695).
 - App versionName 0.524.0 / versionCode 596 / CLIENT_BUILD 596.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).

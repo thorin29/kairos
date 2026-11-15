@@ -307,9 +307,14 @@ export type TrackerPayload = {
 async function readEvents(scope: string): Promise<ReadEvent[]> {
   const rows = await prisma.bibleRead.findMany({
     where: { scope },
-    select: { bookName: true, chapter: true, readAt: true, timed: true },
+    select: { bookName: true, chapter: true, readAt: true, timed: true, source: true },
   });
-  return rows.map((r) => ({ key: `${r.bookName}|${r.chapter}`, at: r.readAt.getTime(), timed: r.timed }));
+  return rows.map((r) => ({
+    key: `${r.bookName}|${r.chapter}`,
+    at: r.readAt.getTime(),
+    timed: r.timed,
+    extra: r.source === "extra",
+  }));
 }
 
 async function startedOverAt(scope: string): Promise<number | null> {

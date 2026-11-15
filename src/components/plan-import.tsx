@@ -9,7 +9,7 @@ import { Card } from "@/components/ui";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
-const SAMPLE = "# My reading plan\n2026-12-01, John 1\n2026-12-02, John 2-3\n12/3/2026, Psalm 23; Psalm 24";
+const SAMPLE = "# My reading plan\n2026-12-01, John 1\n2026-12-02, John 2-3 + Luke 2:1-20\n12/3/2026, Psalm 23; Psalm 24\n2026-12-04, + Isaiah 9:1-7";
 
 /**
  * Import a plan from pasted text or a .csv / .txt file. Dated lines keep their

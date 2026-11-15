@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Extras don't start a finished book again (v0.728.0)
+
+- The app can't read intent from chapters, so it goes by where a read came
+  from: plan days and manual marks are deliberate and start a finished book
+  (and its section and testament) again; extras — added readings, a plan's
+  Christmas / Easter days, "+" lines in a typed or imported plan — are
+  one-offs and leave its bar full. Extras still count toward ×counts and
+  milestones. Typed extras can be verse-specific ("+ Luke 2:1-20"); the web
+  import example now shows a "+" line.
+
 ## 2026-11 — Tracker: books on tap, milestones roll up (v0.727.0)
 
 - The 66-book grid is no longer always open. Tapping the Whole Bible card

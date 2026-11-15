@@ -12,7 +12,9 @@
  */
 import { BOOKS, type Group } from "@/lib/bible/books";
 
-export type ReadEvent = { key: string; at: number; timed: boolean };
+/** `extra`: a one-off reading (an added reading, a Christmas or Easter day) —
+ *  it counts, but never starts a finished book again. */
+export type ReadEvent = { key: string; at: number; timed: boolean; extra?: boolean };
 
 export type LevelKind = "bible" | "testament" | "section" | "book";
 
@@ -38,7 +40,8 @@ export type Level = {
   ahead: number;
   /** % of chapters read in the current time through the whole Bible — a
    *  testament finished part way through stays full until the Bible is done,
-   *  unless it's started again. Counted from the last "Start over". */
+   *  unless a plan reading or manual mark starts it again (extras don't).
+   *  Counted from the last "Start over". */
   progress: number;
   /** When the current time through started (first read since the last, or
    *  since the last "Start over"). */
@@ -121,10 +124,20 @@ function level(
   for (const k of keys) recentTimes = Math.min(recentTimes, recent.get(k)?.length ?? 0);
   if (!Number.isFinite(recentTimes)) recentTimes = 0;
   const own = keys.filter((k) => (recent.get(k)?.length ?? 0) > recentTimes).length;
-  const ahead = floor !== undefined && recentTimes > floor && own === 0 ? keys.length : own;
 
   let lastRecent = -Infinity;
   if (recentTimes > 0) for (const k of keys) lastRecent = Math.max(lastRecent, recent.get(k)![recentTimes - 1].at);
+
+  // Only a plan reading or a manual mark starts a finished level again; extras
+  // since it finished leave the bar full.
+  let restarted = false;
+  for (const k of keys) {
+    if ((recent.get(k) ?? []).some((e) => e.at > lastRecent && !e.extra)) {
+      restarted = true;
+      break;
+    }
+  }
+  const ahead = floor !== undefined && recentTimes > floor && (own === 0 || !restarted) ? keys.length : own;
   let since: ReadEvent | undefined;
   for (const k of keys) {
     for (const e of recent.get(k) ?? []) if (e.at > lastRecent && (!since || e.at < since.at)) since = e;

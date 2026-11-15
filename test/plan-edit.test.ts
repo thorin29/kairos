@@ -163,6 +163,15 @@ describe("tracker", () => {
     expect(a).toMatchObject({ times: 1, progress: Math.floor((1 / 28) * 100) });
   });
 
+  it("an extra doesn't start a finished book again; a plan reading does", () => {
+    const acts = keysOf(["Acts"]);
+    const done = acts.map((key, i) => ({ key, at: i, timed: true }));
+    const withExtra = buildTracker([...done, { key: "Acts|1", at: 1000, timed: true, extra: true }]);
+    expect(withExtra.books.find((b) => b.key === "Acts")?.progress).toBe(100);
+    const withPlan = buildTracker([...done, { key: "Acts|1", at: 1000, timed: true }]);
+    expect(withPlan.books.find((b) => b.key === "Acts")?.progress).toBe(Math.floor((1 / 28) * 100));
+  });
+
   it("start over: bars from zero, times kept", () => {
     const t = buildTracker(keysOf(nt).map((key, i) => ({ key, at: i, timed: true })), 10_000);
     expect(t.nt).toMatchObject({ times: 1, progress: 0 });
