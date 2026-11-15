@@ -7,8 +7,7 @@ import {
   todayISO,
   formatLong,
 } from "@/lib/dates";
-import { parsePassage } from "@/lib/bible/books";
-import { personalEraSet } from "@/lib/bible/era-core";
+import { dayLabel } from "@/lib/bible/plan-edit";
 
 export type PersonalPlanDay = {
   iso: string;
@@ -20,6 +19,8 @@ export type PersonalPlanDay = {
 export type PersonalPlan = {
   id: string;
   name: string;
+  /** "DONE": ends when its readings are done, so added readings push it back. */
+  endKind: string;
   startISO: string | null;
   endISO: string | null;
   remaining: number;
@@ -49,27 +50,34 @@ export async function loadPersonalPlan(
         },
       },
       orderBy: { day: "asc" },
-      select: { day: true, passage: true },
+      select: { day: true, passage: true, extra: true },
     }),
-    personalEraSet(userId).then((r) => r.manual),
+    prisma.bibleRead.findMany({
+      where: { scope: userId, sourceKey: { startsWith: `${plan.id}|` } },
+      distinct: ["sourceKey"],
+      select: { sourceKey: true },
+    }),
+    // Extras never count toward what's left of the plan.
     prisma.readingDay.count({
-      where: { planId: plan.id, day: { gte: toDateColumn(today) } },
+      where: { planId: plan.id, isExtra: false, day: { gte: toDateColumn(today) } },
     }),
   ]);
 
-  const readSet = new Set(reads.map((r) => `${r.bookName}|${r.chapter}`));
+  const ticked = new Set(reads.map((r) => r.sourceKey));
   const days: PersonalPlanDay[] = window.map((d) => {
     const iso = fromDateColumn(d.day);
-    const refs = parsePassage(d.passage);
-    const read =
-      refs.length > 0 &&
-      refs.every((r) => readSet.has(`${r.book}|${r.chapter}`));
-    return { iso, label: formatLong(iso), passage: d.passage, read };
+    return {
+      iso,
+      label: formatLong(iso),
+      passage: dayLabel(d.passage, d.extra),
+      read: ticked.has(`${plan.id}|${iso}`),
+    };
   });
 
   return {
     id: plan.id,
     name: plan.name,
+    endKind: plan.endKind,
     startISO: plan.startDate ? fromDateColumn(plan.startDate) : null,
     endISO: plan.endDate ? fromDateColumn(plan.endDate) : null,
     remaining,

@@ -708,6 +708,7 @@ export default async function PersonPage({
                       <PersonalDayReading
                         userId={id}
                         passage={personalToday.passage}
+                        dayISO={personalToday.iso}
                         read={personalToday.read}
                       />
                     )}

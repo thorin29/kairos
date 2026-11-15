@@ -195,7 +195,7 @@ export async function loadProgression(): Promise<PersonProgress[]> {
       },
     }),
     // Personal Bible reading feeds Wisdom slightly (one row per chapter read).
-    prisma.userChapterRead.findMany({ select: { userId: true } }),
+    prisma.bibleRead.findMany({ where: { ownerId: { not: null } }, select: { ownerId: true } }),
     // Confirmed team sport (a practice or game from the calendar, "Yes, I did
     // it") feeds Life: showing up for the team. The same confirmation also
     // completes the day's workout task (Strength) — that is the workout; this
@@ -331,10 +331,12 @@ export async function loadProgression(): Promise<PersonProgress[]> {
     a.statXp.SCHOOL += xp;
   }
 
-  // Personal Bible reading lifts Wisdom a little, one row per chapter read.
+  // Personal Bible reading lifts Wisdom a little, one per chapter read (each
+  // read counts since v0.724, so reading a book again adds again).
   const chaptersByUser = new Map<string, number>();
-  for (const r of chapterReads as { userId: string }[]) {
-    chaptersByUser.set(r.userId, (chaptersByUser.get(r.userId) ?? 0) + 1);
+  for (const r of chapterReads as { ownerId: string | null }[]) {
+    if (!r.ownerId) continue;
+    chaptersByUser.set(r.ownerId, (chaptersByUser.get(r.ownerId) ?? 0) + 1);
   }
   for (const [userId, count] of chaptersByUser) {
     const a = acc.get(userId);

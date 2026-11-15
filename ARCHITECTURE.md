@@ -119,10 +119,9 @@ the schedule is rebuilt on arrival, so the two can't drift. The same goes for
 adding readings and importing (`src/lib/bible/plan-edit.ts`): the browser
 previews with the function the server saves with.
 
-Coverage counts from the start of the current reading era
-(`src/lib/bible/era-core.ts`). A closed era keeps a snapshot string, one
-character per chapter, rather than its rows, so starting an era never deletes
-anything.
+Every chapter read is a row (`BibleRead`), so counts and timing are worked
+out from the ledger each time (`src/lib/bible/tracker.ts`, pure) rather than
+stored: a level has been read as many times as its least-read chapter.
 
 ### Position is laid out, not scrolled to
 

@@ -29,7 +29,7 @@ export async function loadCoverage(planId?: string): Promise<Coverage> {
 
   if (plan) {
     const days = await prisma.readingDay.findMany({
-      where: { planId: plan.id },
+      where: { planId: plan.id, isExtra: false },
       select: { passage: true },
     });
 

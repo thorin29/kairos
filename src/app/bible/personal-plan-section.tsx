@@ -32,10 +32,12 @@ export function PersonalPlanSection({
 export function PersonalDayReading({
   userId,
   passage,
+  dayISO,
   read,
 }: {
   userId: string;
   passage: string;
+  dayISO: string;
   read: boolean;
 }) {
   const [pending, start] = useTransition();
@@ -46,7 +48,7 @@ export function PersonalDayReading({
         checked={read}
         disabled={pending}
         onChange={(e) =>
-          start(() => markPersonalReading(userId, passage, e.target.checked))
+          start(() => markPersonalReading(userId, passage, e.target.checked, dayISO))
         }
         className="h-5 w-5 shrink-0"
       />
@@ -146,7 +148,7 @@ function PlanView({
                 disabled={pending}
                 onChange={(e) =>
                   start(() =>
-                    markPersonalReading(userId, d.passage, e.target.checked),
+                    markPersonalReading(userId, d.passage, e.target.checked, d.iso),
                   )
                 }
                 className="h-5 w-5 shrink-0"

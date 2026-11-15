@@ -2,8 +2,6 @@
 
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { isAdmin } from "@/lib/session";
-import { todayISO } from "@/lib/dates";
-import { startNewEra } from "@/lib/bible/era-core";
 import {
   addReadingsCore,
   exportPlanCore,
@@ -55,16 +53,4 @@ export async function exportPlanAction(
 ): Promise<{ name: string; fileName: string; text: string } | null> {
   const plan = await editablePlan(planId);
   return plan ? exportPlanCore(plan) : null;
-}
-
-/** Start a new reading era: the family's (a parent) or one person's. */
-export async function startEraAction(ownerId: string | null): Promise<{ error: string | null }> {
-  await requireInteractive();
-  if (ownerId === null) {
-    if (!(await isAdmin())) return { error: "Only a parent can start a new family era." };
-  } else {
-    await requireCanActFor(ownerId);
-  }
-  await startNewEra(ownerId, todayISO());
-  return { error: null };
 }

@@ -4,6 +4,7 @@ import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import {
   saveMyBookChaptersCore,
   saveMyBooksCore,
+  resetMyManualCore,
 } from "@/lib/bible/personal-core";
 
 // Personal Bible reading is logged per person, the same household way chores and
@@ -31,4 +32,11 @@ export async function saveMyBooks(
   await requireInteractive();
   await requireCanActFor(userId);
   await saveMyBooksCore(userId, bookNames, read);
+}
+
+/** End `userId`'s manual reading: marks stay counted, the checklist clears. */
+export async function resetMyManual(userId: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await resetMyManualCore(userId);
 }

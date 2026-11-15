@@ -1,10 +1,10 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { toDateColumn } from "@/lib/dates";
+import { daysBetween, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
+import { dayLabel } from "@/lib/bible/plan-edit";
 import { buildPlan, type Selection, type Pace } from "@/lib/bible/plan-builder";
-import { parsePassage, BOOK_BY_NAME } from "@/lib/bible/books";
-import { eraFloor, restampPersonal } from "@/lib/bible/era-core";
+import { keepFinishedPlans, markPlanDay, resetManual, setManualBooks, setManualChapters } from "@/lib/bible/tracker-core";
 
 /**
  * The guard-free core of personal Bible reading, shared by the web server
@@ -77,12 +77,15 @@ export async function generatePersonalPlanCore(
   const b = buildPersonalDays(input);
   if (b.error || !b.days) return { error: b.error };
 
+  await keepFinishedPlans(userId, todayISO());
   await prisma.readingPlan.deleteMany({ where: { ownerId: userId } });
   await prisma.readingPlan.create({
     data: {
       name: b.name!,
       ownerId: userId,
       isPublished: true,
+      // "N chapters a day" runs until its readings are done; a finish date is a date.
+      endKind: input.endISO ? "DATE" : "DONE",
       notes: `${b.totalChapters} chapters over ${b.days.length} days`,
       startDate: toDateColumn(b.days[0].iso),
       endDate: toDateColumn(b.days[b.days.length - 1].iso),
@@ -103,108 +106,60 @@ export async function generatePersonalPlanCore(
 
 export async function deletePersonalPlanCore(userId: string): Promise<void> {
   if (!userId) return;
+  await keepFinishedPlans(userId, todayISO());
   await prisma.readingPlan.deleteMany({ where: { ownerId: userId } });
   revalidatePath("/bible");
   revalidatePath(`/person/${userId}`);
 }
 
-/** Tick (or untick) a day's reading: mark exactly that passage's chapters in the
- *  person's own record, which feeds their coverage stats and Wisdom. */
+/** Tick (or untick) a day of the person's plan. With the day's date the day is
+ *  found directly; an older app sends only the passage, so the plan's day with
+ *  that passage (nearest today) is used. Its plan reading and any extra count on
+ *  the tracker; only the plan reading counts toward the plan. */
 export async function markPersonalReadingCore(
   userId: string,
   passage: string,
   read: boolean,
+  dayISO?: string | null,
 ): Promise<void> {
   if (!userId) return;
-  const refs = parsePassage(passage);
-  if (refs.length === 0) return;
-
-  if (read) {
-    await prisma.userChapterRead.createMany({
-      data: refs.map((r) => ({ userId, bookName: r.book, chapter: r.chapter })),
-      skipDuplicates: true,
-    });
-    await restampPersonal(userId, refs);
-  } else {
-    // Only this era's reads are undone; an earlier era's stay (they feed Wisdom).
-    const floor = await eraFloor(userId);
-    await prisma.userChapterRead.deleteMany({
-      where: {
-        userId,
-        ...(floor.at ? { completedAt: { gte: floor.at } } : {}),
-        OR: refs.map((r) => ({ bookName: r.book, chapter: r.chapter })),
-      },
-    });
-  }
-  revalidatePath("/bible");
-  revalidatePath(`/person/${userId}`);
-  revalidatePath("/");
-}
-
-/** Replace a book's read chapters for `userId` with exactly this set. */
-export async function saveMyBookChaptersCore(
-  userId: string,
-  bookName: string,
-  chapters: number[],
-): Promise<void> {
-  if (!userId) return;
-  const book = BOOK_BY_NAME.get(bookName);
-  if (!book) return;
-
-  const valid = [...new Set(chapters)].filter(
-    (c) => Number.isInteger(c) && c >= 1 && c <= book.chapters,
-  );
-
-  // The editor shows this era's chapters, so only this era's are replaced.
-  const floor = await eraFloor(userId);
-  await prisma.userChapterRead.deleteMany({
-    where: {
-      userId,
-      bookName,
-      chapter: { notIn: valid },
-      ...(floor.at ? { completedAt: { gte: floor.at } } : {}),
-    },
+  const plan = await prisma.readingPlan.findFirst({
+    where: { ownerId: userId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
   });
-  if (valid.length > 0) {
-    await prisma.userChapterRead.createMany({
-      data: valid.map((chapter) => ({ userId, bookName, chapter })),
-      skipDuplicates: true,
+  if (!plan) return;
+  let iso = dayISO && /^\d{4}-\d{2}-\d{2}$/.test(dayISO) ? dayISO : null;
+  if (!iso) {
+    const days = await prisma.readingDay.findMany({
+      where: { planId: plan.id },
+      select: { day: true, passage: true, extra: true },
     });
-    await restampPersonal(userId, valid.map((chapter) => ({ book: bookName, chapter })));
+    const today = todayISO();
+    const hits = days
+      .filter((d) => d.passage === passage || dayLabel(d.passage, d.extra) === passage)
+      .map((d) => fromDateColumn(d.day))
+      .sort((a, b) => Math.abs(daysBetween(today, a)) - Math.abs(daysBetween(today, b)));
+    iso = hits[0] ?? null;
   }
-  revalidatePath("/bible");
-  revalidatePath(`/person/${userId}`);
-  revalidatePath("/");
+  if (!iso) return;
+  await markPlanDay(userId, plan.id, iso, read);
 }
 
-/** Mark or clear several whole books at once for `userId`. */
-export async function saveMyBooksCore(
-  userId: string,
-  bookNames: string[],
-  read: boolean,
-): Promise<void> {
+/** Make this person's open manual run hold exactly these chapters of a book. */
+export async function saveMyBookChaptersCore(userId: string, bookName: string, chapters: number[]): Promise<void> {
   if (!userId) return;
-  const names = bookNames.filter((b) => BOOK_BY_NAME.has(b));
-  if (names.length === 0) return;
+  await setManualChapters(userId, bookName, chapters);
+}
 
-  if (read) {
-    const rows = names.flatMap((bookName) => {
-      const book = BOOK_BY_NAME.get(bookName)!;
-      return Array.from({ length: book.chapters }, (_, i) => ({
-        userId,
-        bookName,
-        chapter: i + 1,
-      }));
-    });
-    await prisma.userChapterRead.createMany({ data: rows, skipDuplicates: true });
-    await restampPersonal(userId, rows.map((r) => ({ book: r.bookName, chapter: r.chapter })));
-  } else {
-    const floor = await eraFloor(userId);
-    await prisma.userChapterRead.deleteMany({
-      where: { userId, bookName: { in: names }, ...(floor.at ? { completedAt: { gte: floor.at } } : {}) },
-    });
-  }
-  revalidatePath("/bible");
-  revalidatePath(`/person/${userId}`);
-  revalidatePath("/");
+/** Mark or clear several whole books at once in this person's manual run. */
+export async function saveMyBooksCore(userId: string, bookNames: string[], read: boolean): Promise<void> {
+  if (!userId) return;
+  await setManualBooks(userId, bookNames, read);
+}
+
+/** End this person's manual reading (marks stay counted). */
+export async function resetMyManualCore(userId: string): Promise<void> {
+  if (!userId) return;
+  await resetManual(userId);
 }

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { parsePlanText } from "@/lib/bible/plan-edit";
+import { dayLabel, parsePlanText } from "@/lib/bible/plan-edit";
 import { importPlanAction } from "@/lib/actions/reading-edit";
 import { formatShortYear, todayISO } from "@/lib/dates";
 import { Card } from "@/components/ui";
@@ -146,7 +146,7 @@ export function PlanImport({
               <ul className="tabular mt-2 max-h-48 space-y-0.5 overflow-y-auto text-xs text-muted">
                 {parsed.days.slice(0, 30).map((d) => (
                   <li key={d.iso}>
-                    {formatShortYear(d.iso)} · {d.passage}
+                    {formatShortYear(d.iso)} · {d.isExtra ? `+ ${d.passage}` : dayLabel(d.passage, d.extra)}
                   </li>
                 ))}
                 {parsed.days.length > 30 && <li>…</li>}

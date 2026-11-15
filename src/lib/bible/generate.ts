@@ -2,6 +2,7 @@ import "server-only";
 import { Category } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { addDays, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
+import { dayLabel } from "@/lib/bible/plan-edit";
 
 const HORIZON_DAYS = 14;
 
@@ -31,6 +32,7 @@ export async function generateReadingTasks(
     select: {
       day: true,
       passage: true,
+      extra: true,
       planId: true,
       plan: { select: { startDate: true } },
     },
@@ -45,7 +47,7 @@ export async function generateReadingTasks(
   // day ISO -> { passage, planId }, later-starting plan overwriting on overlap.
   const byDay = new Map<string, { passage: string; planId: string }>();
   for (const d of planDays) {
-    byDay.set(fromDateColumn(d.day), { passage: d.passage, planId: d.planId });
+    byDay.set(fromDateColumn(d.day), { passage: dayLabel(d.passage, d.extra), planId: d.planId });
   }
 
   const expected = new Map<

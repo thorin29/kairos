@@ -1,5 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { dayLabel } from "@/lib/bible/plan-edit";
+import { familyPlanFor } from "@/lib/bible/plan-edit-core";
 import {
   addDays,
   formatLong,
@@ -44,6 +46,9 @@ export type ReadingPagePayload = {
     remaining: number;
     lastDayISO: string | null;
     stats: ReadingStats;
+    /** The current family plan ends when its readings are done (v0.724):
+     *  added readings always push it back. */
+    endsWhenDone: boolean;
   };
   personal: {
     color: string;
@@ -62,11 +67,12 @@ export async function loadReadingPagePayload(
   userId: string,
   todayISO: string,
 ): Promise<ReadingPagePayload> {
-  const [publishedCount, stats] = await Promise.all([
+  const [publishedCount, stats, currentPlan] = await Promise.all([
     prisma.readingPlan.count({
       where: { isPublished: true, ownerId: null },
     }),
     loadReadingStats(todayISO),
+    familyPlanFor(todayISO),
   ]);
 
   const havePlan = publishedCount > 0;
@@ -84,12 +90,12 @@ export async function loadReadingPagePayload(
           },
         },
         orderBy: [{ plan: { startDate: "asc" } }, { day: "asc" }],
-        select: { day: true, passage: true },
+        select: { day: true, passage: true, extra: true },
       })
     : [];
 
   const byDay = new Map<string, string>();
-  for (const d of window) byDay.set(fromDateColumn(d.day), d.passage);
+  for (const d of window) byDay.set(fromDateColumn(d.day), dayLabel(d.passage, d.extra));
 
   const cards: ReadingCardPayload[] = [...byDay.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
@@ -106,6 +112,7 @@ export async function loadReadingPagePayload(
         ? prisma.readingDay.count({
             where: {
               plan: { isPublished: true, ownerId: null },
+              isExtra: false,
               day: { gte: toDateColumn(todayISO) },
             },
           })
@@ -139,11 +146,11 @@ export async function loadReadingPagePayload(
           },
         },
         orderBy: { day: "asc" },
-        select: { day: true, passage: true },
+        select: { day: true, passage: true, extra: true },
       })
     : [];
   const personalByDay = new Map<string, string>();
-  for (const d of personalWindow) personalByDay.set(fromDateColumn(d.day), d.passage);
+  for (const d of personalWindow) personalByDay.set(fromDateColumn(d.day), dayLabel(d.passage, d.extra));
   const personalCards: ReadingCardPayload[] = [...personalByDay.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([iso, passage]) => ({ iso, passage, label: formatLong(iso) }));
@@ -154,7 +161,7 @@ export async function loadReadingPagePayload(
   const [personalRemaining, personalLast] = await Promise.all([
     havePersonalPlan
       ? prisma.readingDay.count({
-          where: { plan: { ownerId: userId }, day: { gte: toDateColumn(todayISO) } },
+          where: { plan: { ownerId: userId }, isExtra: false, day: { gte: toDateColumn(todayISO) } },
         })
       : Promise.resolve(0),
     havePersonalPlan
@@ -175,6 +182,7 @@ export async function loadReadingPagePayload(
       remaining,
       lastDayISO: last ? fromDateColumn(last.day) : null,
       stats,
+      endsWhenDone: currentPlan?.endKind === "DONE",
     },
     personal: {
       color: user?.color ?? "#64748b",

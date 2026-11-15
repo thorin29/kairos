@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { BOOKS, BOOK_BY_NAME, parsePassage } from "@/lib/bible/books";
-import { addReadings, joinChapters, type AddMode, type PlanDay } from "@/lib/bible/plan-edit";
+import { addReadings, dayLabel, joinChapters, type AddMode, type PlanDay } from "@/lib/bible/plan-edit";
 import { addReadingsAction } from "@/lib/actions/reading-edit";
 import { formatShortYear, formatWeekday } from "@/lib/dates";
 import { Card } from "@/components/ui";
@@ -31,11 +31,14 @@ export function AddReadings({
   days,
   defaultStartISO,
   backHref,
+  endsWhenDone = false,
 }: {
   planId: string;
   days: PlanDay[];
   defaultStartISO: string;
   backHref: string;
+  /** The plan ends when its readings are done: readings always push it back. */
+  endsWhenDone?: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<"pick" | "type">("pick");
@@ -43,7 +46,8 @@ export function AddReadings({
   const [items, setItems] = useState<Item[]>([]);
   const [typed, setTyped] = useState("");
   const [startISO, setStartISO] = useState(defaultStartISO);
-  const [mode, setMode] = useState<AddMode>("push");
+  const [chosenMode, setMode] = useState<AddMode>("push");
+  const mode: AddMode = endsWhenDone ? "push" : chosenMode;
   const [ownDays, setOwnDays] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -196,6 +200,7 @@ export function AddReadings({
               className="h-10 rounded-full border border-hairline bg-surface px-4"
             />
           </label>
+          {!endsWhenDone && (
           <div className="min-w-[18rem] flex-1">
             <span className="mb-1 block text-sm font-medium">How they fit</span>
             <div className="flex overflow-hidden rounded-xl border border-accent">
@@ -206,6 +211,7 @@ export function AddReadings({
               ))}
             </div>
           </div>
+          )}
         </div>
 
         {mode === "mix" && readings.length > 0 && (
@@ -250,7 +256,7 @@ export function AddReadings({
                     {formatWeekday(d.iso)}, {formatShortYear(d.iso)}
                   </span>
                   <span className={`flex-1 ${d.tag === "new" || d.tag === "added" ? "font-semibold" : ""}`}>
-                    {d.passage}
+                    {dayLabel(d.passage, d.extra)}
                   </span>
                   <span className="text-xs text-muted">
                     {d.tag === "new" ? "new" : d.tag === "added" ? "added" : d.fromISO ? `was ${formatShortYear(d.fromISO)}` : ""}

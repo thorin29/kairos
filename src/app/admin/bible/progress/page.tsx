@@ -2,11 +2,15 @@ import { AdminBack } from "@/components/admin-back";
 import { loadReadingProgress } from "@/lib/queries/reading-progress";
 import { todayISO } from "@/lib/dates";
 import { BookProgress } from "../book-progress";
+import { ManualRun } from "@/components/bible-tracker";
+import { loadTracker } from "@/lib/bible/tracker-core";
+import { resetFamilyManual } from "@/lib/actions/reading";
 
 export const dynamic = "force-dynamic";
 
 export default async function FamilyProgressPage() {
-  const progress = await loadReadingProgress(todayISO());
+  const today = todayISO();
+  const [progress, tracker] = await Promise.all([loadReadingProgress(today), loadTracker(null, today)]);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -23,6 +27,7 @@ export default async function FamilyProgressPage() {
         </p>
       </header>
 
+      <ManualRun manual={tracker.manual} onReset={resetFamilyManual} />
       <BookProgress
         initialManual={progress.manualCovered}
         planCovered={progress.planCovered}

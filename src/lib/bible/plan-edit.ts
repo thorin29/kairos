@@ -9,7 +9,16 @@
 import { addDays, dayOfWeek, daysBetween } from "@/lib/dates";
 import { parsePassage } from "@/lib/bible/books";
 
-export type PlanDay = { iso: string; passage: string; isExtra?: boolean };
+/** A plan day. `isExtra`: the whole day is an extra reading; `extra`: a reading
+ *  added on top of the day's plan reading. Extras count on the tracker, never
+ *  toward the plan. */
+export type PlanDay = { iso: string; passage: string; isExtra?: boolean; extra?: string | null };
+
+/** A day's reading as shown: the plan reading, then any extra. */
+export function dayLabel(passage: string, extra: string | null | undefined): string {
+  if (!extra) return passage;
+  return passage ? `${passage} + ${extra}` : extra;
+}
 
 export type AddMode = "push" | "add" | "mix";
 
@@ -45,7 +54,9 @@ function nextReadingDay(iso: string, weekdays: Set<number>): string {
 }
 
 /**
- * Places `readings` (one per day, in order) into a plan from `startISO`.
+ * Places `readings` (one per day, in order) into a plan from `startISO`, as
+ * extras: a reading on its own day is an extra day, one on top of a day is
+ * that day's extra.
  *
  * - push: each reading gets its own day; everything from the start date moves
  *   later by that many reading days.
@@ -89,7 +100,7 @@ export function addReadings(
   const placed: (EditedDay | null)[] = slots.map(() => null);
 
   for (let i = 0; i < own; i++) {
-    placed[i] = { iso: slots[i], passage: list[i], tag: "new" };
+    placed[i] = { iso: slots[i], passage: list[i], isExtra: true, tag: "new" };
   }
   after.forEach((d, j) => {
     const idx = j + gap + shift;
@@ -98,6 +109,7 @@ export function addReadings(
       iso,
       passage: d.passage,
       isExtra: d.isExtra,
+      extra: d.extra ?? null,
       tag: iso === d.iso ? "" : "moved",
       fromISO: iso === d.iso ? undefined : d.iso,
     };
@@ -105,8 +117,8 @@ export function addReadings(
   for (let i = own; i < n; i++) {
     const cur = placed[i];
     placed[i] = cur
-      ? { ...cur, passage: `${cur.passage}; ${list[i]}`.slice(0, MAX_PASSAGE), isExtra: false, tag: "added" }
-      : { iso: slots[i], passage: list[i], tag: "new" };
+      ? { ...cur, extra: (cur.extra ? `${cur.extra}; ${list[i]}` : list[i]).slice(0, MAX_PASSAGE), tag: "added" }
+      : { iso: slots[i], passage: list[i], isExtra: true, tag: "new" };
   }
 
   const out: EditedDay[] = [
@@ -155,6 +167,19 @@ export function normalizeDate(value: string): string | null {
   return null;
 }
 
+/** "Rev 16-17 + Luke 2" → plan reading and extra; "+ Luke 2" → an extra day. */
+function splitExtra(text: string): { passage: string; extra: string | null } {
+  const i = text.indexOf("+");
+  if (i < 0) return { passage: text.trim(), extra: null };
+  return { passage: text.slice(0, i).trim(), extra: text.slice(i + 1).trim() || null };
+}
+
+function readable(text: string): boolean {
+  const { passage, extra } = splitExtra(text);
+  if (!passage && !extra) return false;
+  return (!passage || parsePassage(passage).length > 0) && (!extra || parsePassage(extra).length > 0);
+}
+
 function splitDated(line: string): { iso: string; passage: string } | null {
   const sep = line.includes("\t") ? line.indexOf("\t") : line.indexOf(",");
   if (sep < 0) return null;
@@ -189,16 +214,23 @@ export function parsePlanText(
   const dated = lines.some((l) => splitDated(l) !== null);
   const skipped: string[] = [];
   const byDay = new Map<string, string>();
+  const join = (a: string | undefined, b: string) => {
+    if (!a) return b;
+    const x = splitExtra(a);
+    const y = splitExtra(b);
+    const passage = [x.passage, y.passage].filter(Boolean).join("; ");
+    const extra = [x.extra, y.extra].filter(Boolean).join("; ");
+    return extra ? `${passage} + ${extra}` : passage;
+  };
 
   if (dated) {
     for (const line of lines) {
       const row = splitDated(line);
-      if (!row || !row.passage || parsePassage(row.passage).length === 0) {
+      if (!row || !readable(row.passage)) {
         skipped.push(line.slice(0, 60));
         continue;
       }
-      const prev = byDay.get(row.iso);
-      byDay.set(row.iso, prev ? `${prev}; ${row.passage}` : row.passage);
+      byDay.set(row.iso, join(byDay.get(row.iso), row.passage));
     }
   } else {
     const start = opts.startISO ?? "";
@@ -212,7 +244,7 @@ export function parsePlanText(
     let iso = start;
     for (let i = 0; i < 7 && !weekdays.has(dayOfWeek(iso)); i++) iso = addDays(iso, 1);
     for (const line of lines) {
-      if (parsePassage(line).length === 0) {
+      if (!readable(line)) {
         skipped.push(line.slice(0, 60));
         continue;
       }
@@ -221,9 +253,15 @@ export function parsePlanText(
     }
   }
 
-  const days = [...byDay.entries()]
+  const days: PlanDay[] = [...byDay.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([iso, passage]) => ({ iso, passage: passage.slice(0, MAX_PASSAGE) }));
+    .map(([iso, text]) => {
+      const { passage, extra } = splitExtra(text);
+      if (!passage) return { iso, passage: (extra ?? "").slice(0, MAX_PASSAGE), isExtra: true };
+      return extra
+        ? { iso, passage: passage.slice(0, MAX_PASSAGE), extra: extra.slice(0, MAX_PASSAGE) }
+        : { iso, passage: passage.slice(0, MAX_PASSAGE) };
+    });
 
   if (days.length === 0) {
     return { error: "Nothing readable in that.", name, dated, days, skipped };
@@ -234,11 +272,16 @@ export function parsePlanText(
   return { error: null, name, dated, days, skipped: skipped.slice(0, 20) };
 }
 
-/** A plan as text, in the same dated format import reads. */
+/** A plan as text, in the same dated format import reads. Extras follow a "+":
+ *  "2026-12-23, Revelation 16-17 + Luke 2", or "2026-12-24, + Isaiah 9" for an
+ *  extra day. */
 export function formatPlanText(name: string, days: PlanDay[]): string {
   const rows = [...days]
     .sort((a, b) => a.iso.localeCompare(b.iso))
-    .map((d) => `${d.iso}, ${d.passage}`);
+    .map((d) => {
+      if (d.isExtra) return `${d.iso}, + ${[d.passage, d.extra].filter(Boolean).join("; ")}`;
+      return d.extra ? `${d.iso}, ${d.passage} + ${d.extra}` : `${d.iso}, ${d.passage}`;
+    });
   return [`# ${name}`, ...rows].join("\n") + "\n";
 }
 

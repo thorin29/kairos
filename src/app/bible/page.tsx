@@ -1,13 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import { loadPersonalReadingStats, loadPersonalReadKeys } from "@/lib/queries/reading-stats";
-import { loadReadingStats } from "@/lib/queries/reading-stats";
+import { dayLabel } from "@/lib/bible/plan-edit";
+import { loadPersonalReadKeys } from "@/lib/queries/reading-stats";
 import { loadPersonalPlan } from "@/lib/queries/personal-plan";
 import { PersonalPlanSection } from "@/app/bible/personal-plan-section";
 import { currentUser } from "@/lib/user-session";
 import { deviceMode } from "@/lib/device";
 import { ProgressTabs } from "@/components/personal-bible";
 import { BookProgress } from "@/app/admin/bible/book-progress";
-import { saveMyBookChapters, saveMyBooks } from "@/lib/actions/personal-bible";
+import { saveMyBookChapters, saveMyBooks, resetMyManual } from "@/lib/actions/personal-bible";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import {
   addDays,
@@ -18,37 +18,22 @@ import {
   todayISO,
 } from "@/lib/dates";
 import { ReadingCards, type ReadingCard } from "@/components/reading-cards";
-import { Card, SectionHeading } from "@/components/ui";
-import { TrophyIcon } from "@/components/icons";
-import { ReadingEras } from "@/components/reading-eras";
-import { loadEras } from "@/lib/bible/era-core";
-import { isAdmin } from "@/lib/session";
+import { SectionHeading } from "@/components/ui";
+import { BibleTracker, ManualRun } from "@/components/bible-tracker";
+import { loadTracker } from "@/lib/bible/tracker-core";
 
 export const dynamic = "force-dynamic";
-
-function Bar({ percent, color }: { percent: number; color: string }) {
-  return (
-    <div
-      className="flex h-2 w-full overflow-hidden rounded-full bg-hairline"
-      aria-hidden
-    >
-      <span style={{ width: `${percent}%`, backgroundColor: color }} />
-    </div>
-  );
-}
 
 export default async function BiblePage() {
   const today = todayISO();
   await generateReadingTasks(today);
 
-  const [publishedPlans, stats, familyEras, admin] = await Promise.all([
+  const [publishedPlans, familyTracker] = await Promise.all([
     prisma.readingPlan.findMany({
       where: { isPublished: true, ownerId: null },
       orderBy: { startDate: "asc" },
     }),
-    loadReadingStats(today),
-    loadEras(null, today),
-    isAdmin(),
+    loadTracker(null, today),
   ]);
 
   // The plan whose dates bracket today (for the page subtitle) — or the next one
@@ -71,15 +56,10 @@ export default async function BiblePage() {
   // though a person may be signed in to log their own reading elsewhere.
   const me = await currentUser();
   const showPersonal = (await deviceMode()) === "personal" && !!me;
-  const [personalStats, personalKeys, personalPlan, personalEras] =
+  const [personalTracker, personalKeys, personalPlan] =
     showPersonal && me
-      ? await Promise.all([
-          loadPersonalReadingStats(me.id, today),
-          loadPersonalReadKeys(me.id),
-          loadPersonalPlan(me.id),
-          loadEras(me.id, today),
-        ])
-      : [null, [] as string[], null, null];
+      ? await Promise.all([loadTracker(me.id, today), loadPersonalReadKeys(me.id), loadPersonalPlan(me.id)])
+      : [null, [] as string[], null];
 
   // A window either side of today, so yesterday's missed reading and the
   // next few days are one swipe away.
@@ -100,12 +80,12 @@ export default async function BiblePage() {
           },
         },
         orderBy: [{ plan: { startDate: "asc" } }, { day: "asc" }],
-        select: { day: true, passage: true },
+        select: { day: true, passage: true, extra: true },
       })
     : [];
 
   const byDay = new Map<string, string>();
-  for (const d of window) byDay.set(fromDateColumn(d.day), d.passage);
+  for (const d of window) byDay.set(fromDateColumn(d.day), dayLabel(d.passage, d.extra));
 
   const cards: ReadingCard[] = [...byDay.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
@@ -120,6 +100,7 @@ export default async function BiblePage() {
     ? await prisma.readingDay.count({
         where: {
           plan: { isPublished: true, ownerId: null },
+          isExtra: false,
           day: { gte: toDateColumn(today) },
         },
       })
@@ -147,74 +128,21 @@ export default async function BiblePage() {
       )}
 
       <section>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-4">
           <SectionHeading>Family reading</SectionHeading>
-          {stats.wholeBible && (
-            <span className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-on-accent">
-              <TrophyIcon className="h-4 w-4" />
-              Whole Bible read
-            </span>
-          )}
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[stats.ot, stats.nt].map((g) => (
-            <Card key={g.label} className="p-5">
-              <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-sm font-medium">{g.label}</span>
-                <span className="tabular text-lg font-medium">{g.percent}%</span>
-              </div>
-              <Bar percent={g.percent} color="#0f5c63" />
-              <p className="tabular mt-2 text-xs text-muted">
-                {g.read} of {g.chapters} chapters
-              </p>
-            </Card>
-          ))}
-        </div>
-
-        <div className="mt-4">
-          <ReadingEras eras={familyEras} ownerId={null} canStart={admin} />
-        </div>
+        <BibleTracker tracker={familyTracker} />
       </section>
     </>
   );
 
   const personalContent =
-    personalStats && me ? (
+    personalTracker && me ? (
       <section>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-4">
           <SectionHeading>Your reading</SectionHeading>
-          {personalStats.wholeBible && (
-            <span
-              className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold text-white"
-              style={{ backgroundColor: me.color }}
-            >
-              <TrophyIcon className="h-4 w-4" />
-              Whole Bible read
-            </span>
-          )}
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[personalStats.ot, personalStats.nt].map((g) => (
-            <Card key={g.label} className="p-5">
-              <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-sm font-medium">{g.label}</span>
-                <span className="tabular text-lg font-medium">{g.percent}%</span>
-              </div>
-              <Bar percent={g.percent} color={me.color} />
-              <p className="tabular mt-2 text-xs text-muted">
-                {g.read} of {g.chapters} chapters
-              </p>
-            </Card>
-          ))}
-        </div>
-
-        {personalEras && (
-          <div className="mt-4">
-            <ReadingEras eras={personalEras} ownerId={me.id} canStart />
-          </div>
-        )}
+        {personalTracker && <BibleTracker tracker={personalTracker} />}
 
         <div className="mt-6">
           <SectionHeading>Your plan</SectionHeading>
@@ -229,6 +157,9 @@ export default async function BiblePage() {
         <div className="mt-6">
           <SectionHeading>Manual checklist</SectionHeading>
           <div className="mt-2" />
+          {personalTracker && (
+            <ManualRun manual={personalTracker.manual} onReset={resetMyManual.bind(null, me.id)} />
+          )}
           <BookProgress
             initialManual={personalKeys}
             planCovered={[]}
@@ -244,7 +175,7 @@ export default async function BiblePage() {
       
 
       <main className="mx-auto max-w-4xl px-6 py-6">
-        {showPersonal && personalStats && me ? (
+        {showPersonal && personalTracker && me ? (
           <ProgressTabs family={familyContent} personal={personalContent} />
         ) : (
           familyContent

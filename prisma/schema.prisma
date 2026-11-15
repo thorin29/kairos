@@ -108,7 +108,9 @@ model User {
   books            Book[]
   chapterReads     UserChapterRead[]
   readingPlans     ReadingPlan[]     @relation("ReadingPlans")
-  readingEras      ReadingEra[]      @relation("ReadingEras")
+  bibleReads       BibleRead[]       @relation("BibleReads")
+  manualRuns       ManualReadingRun[] @relation("ManualRuns")
+  plansDone        ReadingPlanDone[] @relation("PlansDone")
   workoutRotation  WorkoutRotation?  @relation("WorkoutRotation")
   hiitWorkouts     HiitWorkout[]
   poolExercises  PoolExercise[]
@@ -757,6 +759,10 @@ model ReadingPlan {
 
   isPublished Boolean @default(false)
 
+  // "DATE": ends on its last day. "DONE": built as chapters a day, so it ends
+  // when its readings are done — adding readings always pushes it back.
+  endKind String @default("DATE")
+
   startDate DateTime? @db.Date
   endDate   DateTime? @db.Date
 
@@ -779,27 +785,71 @@ model ReadingDay {
   // the plan proper has actually taken the household through.
   isExtra Boolean @default(false)
 
+  // A reading added on top of the day's plan reading (v0.724). Like isExtra,
+  // it counts on the tracker but never toward the plan.
+  extra String?
+
   @@unique([planId, day])
   @@index([planId, day])
 }
 
-// A reading era: one pass at the Bible. Coverage counts from the open era's
-// start, so starting a new era resets the figures to 0% while the closed era
-// keeps what it reached as a snapshot (one character per chapter, in canon
-// order, "1" = read). Family eras have no owner; a personal era belongs to one
-// person. An era with no start is "Before eras": everything up to the first.
-model ReadingEra {
-  id        String    @id @default(cuid())
+// Every chapter read, one row per read, so the tracker can count how many
+// times each book, section, testament and the whole Bible has been read, and
+// time each time through (v0.724). `scope` is "family" or a user id. Family
+// plan days become rows as they pass (sourceKey "planId|YYYY-MM-DD"); a
+// person's ticked plan days likewise; extras are source "extra"; manual
+// checklist marks are source "manual" and belong to a manual run. `timed`
+// is false for what was already logged when tracking began.
+model BibleRead {
+  id        String   @id @default(cuid())
+  scope     String
   ownerId   String?
-  owner     User?     @relation("ReadingEras", fields: [ownerId], references: [id], onDelete: Cascade)
+  owner     User?    @relation("BibleReads", fields: [ownerId], references: [id], onDelete: Cascade)
+  bookName  String
+  chapter   Int
+  readAt    DateTime
+  source    String
+  sourceKey String?
+  runId     String?
+  timed     Boolean  @default(true)
+
+  @@unique([scope, source, sourceKey, bookName, chapter])
+  @@index([scope])
+  @@index([runId])
+}
+
+// One stretch of manual checklist marking. Open while endedAt is null; the
+// first mark after a reset opens the next. startedAt null: untimed (what was
+// logged before tracking began).
+model ManualReadingRun {
+  id        String    @id @default(cuid())
+  scope     String
+  ownerId   String?
+  owner     User?     @relation("ManualRuns", fields: [ownerId], references: [id], onDelete: Cascade)
   startedAt DateTime?
-  startedOn DateTime? @db.Date
   endedAt   DateTime?
-  endedOn   DateTime? @db.Date
-  snapshot  String?
+  chapters  Int       @default(0)
   createdAt DateTime  @default(now())
 
-  @@index([ownerId])
+  @@index([scope])
+}
+
+// A finished plan, kept so the record outlives the plan (a new personal plan
+// replaces the old one). kind: "bible" | "section" | "book".
+model ReadingPlanDone {
+  id          String    @id @default(cuid())
+  scope       String
+  ownerId     String?
+  owner       User?     @relation("PlansDone", fields: [ownerId], references: [id], onDelete: Cascade)
+  planId      String    @unique
+  name        String
+  kind        String
+  startOn     DateTime? @db.Date
+  endOn       DateTime? @db.Date
+  days        Int
+  completedAt DateTime
+
+  @@index([scope])
 }
 
 // What a household has already read, marked by an admin, at chapter

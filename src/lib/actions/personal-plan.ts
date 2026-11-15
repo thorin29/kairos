@@ -37,8 +37,9 @@ export async function markPersonalReading(
   userId: string,
   passage: string,
   read: boolean,
+  dayISO?: string,
 ): Promise<void> {
   await requireInteractive();
   await requireCanActFor(userId);
-  await markPersonalReadingCore(userId, passage, read);
+  await markPersonalReadingCore(userId, passage, read, dayISO);
 }

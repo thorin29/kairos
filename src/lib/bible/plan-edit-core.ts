@@ -20,7 +20,7 @@ import {
  * who may touch the plan (a parent for a family plan, the owner for theirs).
  */
 
-export type PlanRef = { id: string; name: string; ownerId: string | null; isPublished: boolean };
+export type PlanRef = { id: string; name: string; ownerId: string | null; isPublished: boolean; endKind: string };
 
 /** The family plan readings go into: the published plan whose dates bracket
  *  the day, else the one that ends last. */
@@ -28,7 +28,7 @@ export async function familyPlanFor(dayISO: string | null): Promise<PlanRef | nu
   const plans = await prisma.readingPlan.findMany({
     where: { ownerId: null, isPublished: true },
     orderBy: { endDate: "asc" },
-    select: { id: true, name: true, ownerId: true, isPublished: true, startDate: true, endDate: true },
+    select: { id: true, name: true, ownerId: true, isPublished: true, endKind: true, startDate: true, endDate: true },
   });
   if (plans.length === 0) return null;
   const hit = dayISO
@@ -39,14 +39,14 @@ export async function familyPlanFor(dayISO: string | null): Promise<PlanRef | nu
       )
     : undefined;
   const p = hit ?? plans[plans.length - 1];
-  return { id: p.id, name: p.name, ownerId: p.ownerId, isPublished: p.isPublished };
+  return { id: p.id, name: p.name, ownerId: p.ownerId, isPublished: p.isPublished, endKind: p.endKind };
 }
 
 export async function personalPlanOf(userId: string): Promise<PlanRef | null> {
   const p = await prisma.readingPlan.findFirst({
     where: { ownerId: userId },
     orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, ownerId: true, isPublished: true },
+    select: { id: true, name: true, ownerId: true, isPublished: true, endKind: true },
   });
   return p;
 }
@@ -54,7 +54,7 @@ export async function personalPlanOf(userId: string): Promise<PlanRef | null> {
 export async function planRef(planId: string): Promise<PlanRef | null> {
   return prisma.readingPlan.findUnique({
     where: { id: planId },
-    select: { id: true, name: true, ownerId: true, isPublished: true },
+    select: { id: true, name: true, ownerId: true, isPublished: true, endKind: true },
   });
 }
 
@@ -62,9 +62,9 @@ async function planDays(planId: string): Promise<PlanDay[]> {
   const rows = await prisma.readingDay.findMany({
     where: { planId },
     orderBy: { day: "asc" },
-    select: { day: true, passage: true, isExtra: true },
+    select: { day: true, passage: true, isExtra: true, extra: true },
   });
-  return rows.map((r) => ({ iso: fromDateColumn(r.day), passage: r.passage, isExtra: r.isExtra }));
+  return rows.map((r) => ({ iso: fromDateColumn(r.day), passage: r.passage, isExtra: r.isExtra, extra: r.extra }));
 }
 
 /** Rewrite a plan's days from `fromISO` on, and keep its date range in step. */
@@ -79,6 +79,7 @@ async function replaceFrom(plan: PlanRef, fromISO: string, days: PlanDay[]): Pro
           day: toDateColumn(d.iso),
           passage: d.passage,
           isExtra: d.isExtra ?? false,
+          extra: d.extra ?? null,
         })),
       });
     }
@@ -111,9 +112,12 @@ export type AddInput = {
   preview?: boolean;
 };
 
+/** A plan that ends when its readings are done has no date to hold, so added
+ *  readings always push it back. */
 export async function addReadingsCore(plan: PlanRef, input: AddInput): Promise<AddResult> {
   const days = await planDays(plan.id);
-  const res = addReadings(days, input.readings, input.startISO, input.mode, input.ownDays ?? 0);
+  const mode = plan.endKind === "DONE" ? "push" : input.mode;
+  const res = addReadings(days, input.readings, input.startISO, mode, input.ownDays ?? 0);
   if (res.error || input.preview) return res;
   await replaceFrom(plan, input.startISO, res.days);
   return res;
@@ -163,10 +167,15 @@ export async function importPlanCore(
       startDate: toDateColumn(parsed.days[0].iso),
       endDate: toDateColumn(parsed.days[parsed.days.length - 1].iso),
       days: {
-        create: parsed.days.map((d) => ({ day: toDateColumn(d.iso), passage: d.passage })),
+        create: parsed.days.map((d) => ({
+          day: toDateColumn(d.iso),
+          passage: d.passage,
+          isExtra: d.isExtra ?? false,
+          extra: d.extra ?? null,
+        })),
       },
     },
-    select: { id: true, name: true, ownerId: true, isPublished: true },
+    select: { id: true, name: true, ownerId: true, isPublished: true, endKind: true },
   });
   await afterChange(plan);
   return { ...parsed, saved: true };

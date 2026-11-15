@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
   if (!passage.trim()) return apiError("validation", "passage is required.");
   const read = raw?.read !== false; // default true
 
-  await markPersonalReadingCore(authed.device.person.id, passage, read);
+  const dayISO = typeof raw?.iso === "string" ? raw.iso : null;
+  await markPersonalReadingCore(authed.device.person.id, passage, read, dayISO);
   return apiOk({ status: "ok" });
 }

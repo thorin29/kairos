@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { dayLabel } from "@/lib/bible/plan-edit";
 import { listPlans } from "@/lib/actions/reading";
 import { fromDateColumn, formatShort, todayISO } from "@/lib/dates";
 import { AdminBack } from "@/components/admin-back";
@@ -25,6 +26,7 @@ export default async function AdminBiblePage() {
     : [];
 
   const remaining = upcoming.filter((d) => fromDateColumn(d.day) >= today);
+  const planDaysLeft = remaining.filter((d) => !d.isExtra).length;
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -91,14 +93,14 @@ export default async function AdminBiblePage() {
                     <span className="tabular w-20 shrink-0 text-xs text-muted">
                       {formatShort(fromDateColumn(d.day))}
                     </span>
-                    <span>{d.passage}</span>
+                    <span>{dayLabel(d.passage, d.extra)}</span>
                   </li>
                 ))}
               </ul>
             )}
           </Card>
           <p className="tabular mt-2 text-xs text-muted">
-            {remaining.length} days left
+            {planDaysLeft} days left
             {remaining.length > 0
               ? ` · runs out ${formatShort(fromDateColumn(remaining[remaining.length - 1].day))}`
               : ""}

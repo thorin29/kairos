@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireInteractive } from "@/lib/gate";
 import { prisma } from "@/lib/prisma";
-import { fromDateColumn, toDateColumn } from "@/lib/dates";
+import { fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
 import { isAdmin, requireAdmin } from "@/lib/session";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import {
@@ -13,8 +13,7 @@ import {
   type Extra,
   type Pace,
 } from "@/lib/bible/plan-builder";
-import { BOOK_BY_NAME } from "@/lib/bible/books";
-import { restampFamily } from "@/lib/bible/era-core";
+import { resetManual, setManualBooks, setManualChapter, setManualChapters, keepFinishedPlans } from "@/lib/bible/tracker-core";
 
 export type GenerateState = {
   error: string | null;
@@ -100,6 +99,7 @@ export async function generatePlan(
   await prisma.readingPlan.create({
     data: {
       name,
+      endKind: pace.kind === "finish" ? "DATE" : "DONE",
       notes: `Generated ${built.totalChapters} chapters over ${built.days.length} days`,
       startDate: toDateColumn(built.days[0].iso),
       endDate: toDateColumn(built.days[built.days.length - 1].iso),
@@ -135,114 +135,34 @@ export async function generatePlan(
 // everything and catches up if they fall behind.
 // ---------------------------------------------------------------
 
-/** Every chapter of a book, as "Book|chapter" strings won't help here. */
-function chaptersOf(bookName: string): number[] {
-  const book = BOOK_BY_NAME.get(bookName);
-  if (!book) return [];
-  return Array.from({ length: book.chapters }, (_, i) => i + 1);
+export async function setChapterRead(bookName: string, chapter: number, read: boolean): Promise<void> {
+  await requireAdmin();
+  await setManualChapter(null, bookName, chapter, read);
 }
 
-export async function setChapterRead(
-  bookName: string,
-  chapter: number,
-  read: boolean,
-): Promise<void> {
+/** Make the family's open manual run hold exactly these chapters of a book —
+ *  the editor stages changes and commits them on Save. */
+export async function setBookChapters(bookName: string, chapters: number[]): Promise<void> {
   await requireAdmin();
-  const book = BOOK_BY_NAME.get(bookName);
-  if (!book || chapter < 1 || chapter > book.chapters) return;
-
-  if (read) {
-    await prisma.chapterCompletion.upsert({
-      where: { bookName_chapter: { bookName, chapter } },
-      update: { completedAt: new Date() },
-      create: { bookName, chapter },
-    });
-  } else {
-    await prisma.chapterCompletion.deleteMany({ where: { bookName, chapter } });
-  }
-
-  revalidatePath("/admin/bible");
-  revalidatePath("/bible");
-}
-
-/**
- * Replace a book's hand-marked chapters with exactly this set — the whole
- * book's manual marks are deleted and rewritten. Lets the editor stage changes
- * and commit them in one go on Save, rather than saving every tap.
- */
-export async function setBookChapters(
-  bookName: string,
-  chapters: number[],
-): Promise<void> {
-  await requireAdmin();
-  const book = BOOK_BY_NAME.get(bookName);
-  if (!book) return;
-
-  const valid = [...new Set(chapters)].filter(
-    (c) => Number.isInteger(c) && c >= 1 && c <= book.chapters,
-  );
-
-  await prisma.chapterCompletion.deleteMany({ where: { bookName } });
-  if (valid.length > 0) {
-    await prisma.chapterCompletion.createMany({
-      data: valid.map((chapter) => ({ bookName, chapter })),
-      skipDuplicates: true,
-    });
-  }
-
-  revalidatePath("/admin/bible");
-  revalidatePath("/admin/bible/progress");
-  revalidatePath("/bible");
+  await setManualChapters(null, bookName, chapters);
 }
 
 /** Mark or clear a whole book at once. */
-export async function setBookRead(
-  bookName: string,
-  read: boolean,
-): Promise<void> {
+export async function setBookRead(bookName: string, read: boolean): Promise<void> {
   await requireAdmin();
-  const chapters = chaptersOf(bookName);
-  if (chapters.length === 0) return;
-
-  if (read) {
-    await prisma.chapterCompletion.createMany({
-      data: chapters.map((chapter) => ({ bookName, chapter })),
-      skipDuplicates: true,
-    });
-    await restampFamily(chapters.map((chapter) => ({ book: bookName, chapter })));
-  } else {
-    await prisma.chapterCompletion.deleteMany({ where: { bookName } });
-  }
-
-  revalidatePath("/admin/bible");
-  revalidatePath("/bible");
+  await setManualBooks(null, [bookName], read);
 }
 
 /** Mark or clear several whole books — Old or New Testament in one go. */
-export async function setBooksRead(
-  bookNames: string[],
-  read: boolean,
-): Promise<void> {
+export async function setBooksRead(bookNames: string[], read: boolean): Promise<void> {
   await requireAdmin();
-  const rows = bookNames.flatMap((bookName) =>
-    chaptersOf(bookName).map((chapter) => ({ bookName, chapter })),
-  );
-  if (rows.length === 0) return;
+  await setManualBooks(null, bookNames, read);
+}
 
-  if (read) {
-    await prisma.chapterCompletion.createMany({
-      data: rows,
-      skipDuplicates: true,
-    });
-    await restampFamily(rows.map((r) => ({ book: r.bookName, chapter: r.chapter })));
-  } else {
-    await prisma.chapterCompletion.deleteMany({
-      where: { bookName: { in: bookNames.filter((b) => BOOK_BY_NAME.has(b)) } },
-    });
-  }
-
-  revalidatePath("/admin/bible");
-  revalidatePath("/bible");
+/** End the family's manual reading (marks stay counted). */
+export async function resetFamilyManual(): Promise<void> {
+  await requireAdmin();
+  await resetManual(null);
 }
 
 /** Only one plan is live; publishing a new one retires the old. */
@@ -288,6 +208,7 @@ export async function unpublishPlan(id: string): Promise<void> {
 
 export async function deletePlan(id: string): Promise<void> {
   await requireAdmin();
+  await keepFinishedPlans(null, todayISO());
 
   await prisma.task.deleteMany({
     where: { category: "BIBLE", generatedFrom: `plan:${id}`, status: "PENDING" },

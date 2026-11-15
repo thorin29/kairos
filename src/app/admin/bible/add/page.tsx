@@ -22,7 +22,7 @@ export default async function AddFamilyReadingsPage({
 
   const today = todayISO();
   const start = plan.startDate ? fromDateColumn(plan.startDate) : today;
-  const days = plan.days.map((d) => ({ iso: fromDateColumn(d.day), passage: d.passage, isExtra: d.isExtra }));
+  const days = plan.days.map((d) => ({ iso: fromDateColumn(d.day), passage: d.passage, isExtra: d.isExtra, extra: d.extra }));
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
@@ -36,6 +36,7 @@ export default async function AddFamilyReadingsPage({
         days={days}
         defaultStartISO={start > today ? start : today}
         backHref="/admin/bible"
+        endsWhenDone={plan.endKind === "DONE"}
       />
     </main>
   );

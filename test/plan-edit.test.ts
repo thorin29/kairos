@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addReadings, formatPlanText, joinChapters, parsePlanText } from "@/lib/bible/plan-edit";
-import { decodeSnapshot, encodeSnapshot, isFullPass, sectionCounts, CANON_KEYS } from "@/lib/bible/eras";
+import { buildTracker, planKind, formatSpan } from "@/lib/bible/tracker";
+import { BOOKS } from "@/lib/bible/books";
 
 const plan = [
   { iso: "2026-12-22", passage: "Revelation 14-15" },
@@ -22,6 +23,7 @@ describe("addReadings", () => {
       "Revelation 19",
     ]);
     expect(r.days[4]).toMatchObject({ iso: "2026-12-26", tag: "moved", fromISO: "2026-12-23" });
+    expect(r.days[1]).toMatchObject({ isExtra: true, tag: "new" });
     expect(r.endISO).toBe("2026-12-28");
     expect(r.oldEndISO).toBe("2026-12-25");
   });
@@ -29,15 +31,15 @@ describe("addReadings", () => {
   it("adds to existing days without moving the end", () => {
     const r = addReadings(plan, three, "2026-12-23", "add");
     expect(r.endISO).toBe("2026-12-25");
-    expect(r.days[1]).toMatchObject({ passage: "Revelation 16-17; Luke 2:1-20", tag: "added" });
-    expect(r.days[3].passage).toBe("Revelation 19; Psalm 96");
+    expect(r.days[1]).toMatchObject({ passage: "Revelation 16-17", extra: "Luke 2:1-20", tag: "added" });
+    expect(r.days[3].extra).toBe("Psalm 96");
   });
 
   it("some of each moves the end by the own-day count", () => {
     const r = addReadings(plan, three, "2026-12-23", "mix", 1);
     expect(r.endISO).toBe("2026-12-26");
     expect(r.days[1]).toMatchObject({ iso: "2026-12-23", passage: "Luke 2:1-20", tag: "new" });
-    expect(r.days[2]).toMatchObject({ iso: "2026-12-24", passage: "Revelation 16-17; Isaiah 9:1-7" });
+    expect(r.days[2]).toMatchObject({ iso: "2026-12-24", passage: "Revelation 16-17", extra: "Isaiah 9:1-7" });
   });
 
   it("keeps a weekday-only plan on its weekdays", () => {
@@ -104,14 +106,62 @@ describe("parsePlanText", () => {
   });
 });
 
-describe("era snapshots", () => {
-  it("encode and decode", () => {
-    const set = new Set(["Genesis|1", "Revelation|22"]);
-    const snap = encodeSnapshot(set);
-    expect(snap).toHaveLength(1189);
-    expect(decodeSnapshot(snap)).toEqual(set);
-    expect(sectionCounts(set).find((s) => s.label === "Pentateuch")?.read).toBe(1);
-    expect(isFullPass(set)).toBe(false);
-    expect(isFullPass(new Set(CANON_KEYS))).toBe(true);
+describe("extras in import / export", () => {
+  it("round-trips a day's extra and an extra day", () => {
+    const days = [
+      { iso: "2026-12-23", passage: "Revelation 16-17", extra: "Luke 2" },
+      { iso: "2026-12-24", passage: "Isaiah 9", isExtra: true },
+    ];
+    const text = formatPlanText("Advent", days);
+    expect(text).toContain("2026-12-23, Revelation 16-17 + Luke 2");
+    expect(text).toContain("2026-12-24, + Isaiah 9");
+    expect(parsePlanText(text).days).toEqual(days);
+  });
+});
+
+const keysOf = (names: string[]) =>
+  BOOKS.filter((b) => names.includes(b.name)).flatMap((b) =>
+    Array.from({ length: b.chapters }, (_, i) => `${b.name}|${i + 1}`),
+  );
+
+describe("tracker", () => {
+  const DAY = 86_400_000;
+  const nt = BOOKS.filter((b) => b.testament === "NT").map((b) => b.name);
+  const ot = BOOKS.filter((b) => b.testament === "OT").map((b) => b.name);
+
+  it("counts NT twice and OT once, and times each time through", () => {
+    const t0 = Date.UTC(2026, 0, 1);
+    const events = [
+      ...keysOf(nt).map((key, i) => ({ key, at: t0 + i * 1000, timed: true })),
+      ...keysOf(ot).map((key, i) => ({ key, at: t0 + 30 * DAY + i * 1000, timed: true })),
+      ...keysOf(nt).map((key, i) => ({ key, at: t0 + 90 * DAY + i * 1000, timed: true })),
+    ];
+    const t = buildTracker(events);
+    expect(t.nt.times).toBe(2);
+    expect(t.ot.times).toBe(1);
+    expect(t.bible.times).toBe(1);
+    expect(t.bible.progress).toBe(Math.floor((260 / 1189) * 100));
+    expect(t.nt.completions[1].days).toBe(1);
+    expect(t.books.find((b) => b.key === "Romans")?.times).toBe(2);
+  });
+
+  it("logged reads count but aren't timed", () => {
+    const t = buildTracker(keysOf(["Jude"]).map((key) => ({ key, at: 0, timed: false })));
+    const jude = t.books.find((b) => b.key === "Jude")!;
+    expect(jude.times).toBe(1);
+    expect(jude.completions[0]).toMatchObject({ days: null, beforeTracking: true });
+  });
+
+  it("labels plans by what they cover", () => {
+    expect(planKind(new Set(keysOf([...ot, ...nt])))).toBe("bible");
+    expect(planKind(new Set(keysOf(["Matthew", "Mark", "Luke", "John"])))).toBe("section");
+    expect(planKind(new Set(keysOf(["Romans", "James"])))).toBe("book");
+  });
+
+  it("formats spans", () => {
+    expect(formatSpan(3)).toBe("3 days");
+    expect(formatSpan(21)).toBe("3 weeks");
+    expect(formatSpan(122)).toBe("4 months");
+    expect(formatSpan(426)).toBe("1 year 2 months");
   });
 });

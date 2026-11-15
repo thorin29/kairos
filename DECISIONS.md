@@ -1,5 +1,48 @@
 # Decisions
 
+## 2026-11 — Bible tracker replaces reading eras (v0.724.0)
+
+- Every chapter read is a row in `BibleRead` (migration 157; scope "family" or
+  a user id). A level (book, section, testament, whole Bible) has been read as
+  many times as its least-read chapter; its n-th time through finishes with the
+  last of its chapters' n-th reads and started with the first read after the
+  time before. Pure in `src/lib/bible/tracker.ts`; ledger, manual runs and the
+  payload in `tracker-core.ts`. So "NT twice, OT once" shows NT ×2, OT ×1,
+  Whole Bible ×1 with no special case.
+- Sources: the family's published plan days become rows as they pass (synced
+  on load; later-starting plan wins a shared day; only the last month is
+  re-checked once rows exist); a person's ticked plan days ("planId|date");
+  extras (source "extra", count on the tracker only); manual checklist marks
+  (source "manual", in a `ManualReadingRun`). Re-reads are new rows, so
+  Wisdom XP now counts each read.
+- Manual: the checklist shows the open run's marks. Reset ends the run (kept
+  as a milestone with its chapters and span); marks stay counted; the next
+  mark opens a new, timed run.
+- Already logged: each person's `UserChapterRead` rows were copied by the
+  migration into an open, untimed manual run (×1, no time). The family's hand
+  marks are copied on first load into an untimed run, skipping chapters the
+  published plan already covered. `UserChapterRead` and `ChapterCompletion`
+  are no longer written; they stay as the record they were.
+- Milestones are worked out from the ledger each time, plus finished plans
+  (`ReadingPlanDone`, kept so a replaced personal plan's finish isn't lost; a
+  family plan finishes when its last plan day passes, a person's when every
+  plan day is ticked) and ended manual runs. Bests: fastest timed whole Bible,
+  NT, OT. Plan type is from what it covers: all 66 books, a full testament or
+  section, or less.
+- Plans record how they end (`endKind`): "N chapters a day" plans end when
+  their readings are done, so added readings always push them back; finish-date
+  plans and imports end on a date and offer all three choices.
+- Added readings are extras: a reading on its own day is an extra day
+  (`isExtra`), one on top of a day goes in the day's new `extra` field. Extras
+  never count toward a plan's coverage, days left or completion. Export/import
+  write them after a "+" ("2026-12-23, Revelation 16-17 + Luke 2"; "+ Isaiah 9"
+  for an extra day). Readings added with 0.723 were saved as plan reading and
+  can't be told apart.
+- Eras (0.723) are gone: `ReadingEra` dropped, the eras route removed. The app
+  0.521's eras calls fail quietly and it falls back to the old cards.
+- Marking a personal day takes its date (`iso`); an older app's passage-only
+  mark finds the plan day with that passage nearest today.
+
 ## 2026-11 — Bible: reading eras, adding readings, import / export (v0.723.0)
 
 - `ReadingEra` (migration 156): one pass at the Bible, family (no owner) or

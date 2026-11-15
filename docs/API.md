@@ -765,18 +765,27 @@ request: { "name","bookNames":[ "Genesis", … ],"startISO":"YYYY-MM-DD","chapte
 POST /api/v1/reading/plan/delete   delete this person's plan (read chapters stay)
 200:     { "status":"ok" }
 
-GET  /api/v1/reading/eras?scope=family|mine     // v0.723
-200:     { "current": Era, "past": [Era], "passes":int }   // past newest first
-         Era = { "id","label","startISO"|null,"endISO"|null,"read","percent","full",
-                 "sections":[ { "label","testament":"OT"|"NT","read","chapters" } ] }
-POST /api/v1/reading/eras          { "scope":"family"|"mine" } -> the same payload
-         starts a new era; family needs an admin (403 otherwise)
+GET  /api/v1/reading/tracker?scope=family|mine   // v0.724 (replaces /reading/eras)
+200:     { "bible","ot","nt": Level, "sections":[Level], "books":[Level],
+           "milestones":[ { "atISO"|null,"kind","label","detail","days"|null } ],
+           "bests":[ { "label","days" } ], "plansCompleted":int,
+           "manual": { "open","startedISO"|null,"untimed","chapters" } }
+         Level = { "key","label","kind","testament"|null,"chapters","times","ahead",
+                   "progress","sinceISO"|null }. atISO null: before tracking.
+         kind: bible | testament | section | book | plan | manual
+GET /api/v1/reading also carries family.endsWhenDone and personal.plan.endKind
+("DATE" | "DONE") from v0.724; card passages show a day's extra after " + ".
+
+POST /api/v1/reading/tracker       { "scope","action":"reset" } -> the same payload
+         ends the manual reading; family needs an admin (403 otherwise)
 
 POST /api/v1/reading/plan/add      { "scope","readings":[ "Luke 2", … ],"startISO",
                                      "mode":"push"|"add"|"mix","ownDays"?,"preview"? }
 200:     { "planName","oldEndISO","endISO","rows":[ { "iso","passage","tag","fromISO"? } ] }
          family goes into the published plan that brackets startISO (else the
-         last); family needs an admin. tag: "new" | "added" | "moved" | ""
+         last); family needs an admin. tag: "new" | "added" | "moved" | "".
+         Readings are extras (v0.724): rows carry isExtra / extra. A plan that
+         ends when done (endKind "DONE") always pushes back
 
 POST /api/v1/reading/plan/import   { "scope","text","startISO"?,"weekdays"?:[0-6],"preview"? }
 200:     { "name","dated","count","firstISO","lastISO","days":[ { "iso","passage" } ],
@@ -789,7 +798,7 @@ GET  /api/v1/reading/plan/export?scope=family|mine
 200:     { "name","fileName","text" }   // "# name" then "YYYY-MM-DD, passage" lines
 
 POST /api/v1/reading/mark          tick/untick a day's reading
-request: { "passage":"Acts 27-28","read":bool }   // read defaults true
+request: { "passage":"Acts 27-28","read":bool,"iso"? }   // read defaults true; iso (v0.724) picks the day
 200:     { "status":"ok" }         // marks exactly that passage's chapters. idempotent
 
 POST /api/v1/reading/books         replace one book's read chapters (staged Save)
