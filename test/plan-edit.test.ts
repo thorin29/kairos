@@ -145,6 +145,14 @@ describe("tracker", () => {
     expect(t.books.find((b) => b.key === "Romans")?.times).toBe(2);
   });
 
+  it("keeps a finished testament full until the whole Bible is done", () => {
+    const t = buildTracker(keysOf(nt).map((key, i) => ({ key, at: i, timed: true })));
+    expect(t.nt).toMatchObject({ times: 1, progress: 100 });
+    expect(t.ot).toMatchObject({ times: 0, progress: 0 });
+    expect(t.books.find((b) => b.key === "Acts")?.progress).toBe(100);
+    expect(t.bible.progress).toBe(Math.floor((260 / 1189) * 100));
+  });
+
   it("logged reads count but aren't timed", () => {
     const t = buildTracker(keysOf(["Jude"]).map((key) => ({ key, at: 0, timed: false })));
     const jude = t.books.find((b) => b.key === "Jude")!;

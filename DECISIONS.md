@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Tracker bars measure this time through the Bible (v0.725.0)
+
+- 0.724 drew each level's bar toward its own next time, so finishing the NT
+  dropped it to 0% (×1) while the rest of the Bible was still going. Now every
+  book, section and testament counts chapters read beyond the whole Bible's
+  count: the NT stays at 100% until the Bible is finished, then everything
+  starts over together. The ×count is unchanged. The Whole Bible card still
+  says "toward ×N"; the others say "this time through". The app reads the
+  same `progress`, so it needs no change.
+
 ## 2026-11 — Bible tracker replaces reading eras (v0.724.0)
 
 - Every chapter read is a row in `BibleRead` (migration 157; scope "family" or

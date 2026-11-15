@@ -34,9 +34,10 @@ export type Level = {
   testament: "OT" | "NT" | null;
   chapters: number;
   times: number;
-  /** Chapters already read toward the next time. */
+  /** Chapters read in the current time through the whole Bible. */
   ahead: number;
-  /** % of chapters already read toward the next time. */
+  /** % of chapters read in the current time through the whole Bible — so a
+   *  testament finished part way through stays full until the Bible is done. */
   progress: number;
   /** When the current time through started (first read since the last). */
   sinceISO: string | null;
@@ -73,6 +74,9 @@ function level(
   testament: "OT" | "NT" | null,
   keys: string[],
   byKey: Map<string, ReadEvent[]>,
+  /** Times through the whole Bible; progress counts reads beyond it. Omitted
+   *  for the whole Bible itself. */
+  floor?: number,
 ): Level {
   let times = Infinity;
   for (const k of keys) times = Math.min(times, byKey.get(k)?.length ?? 0);
@@ -107,7 +111,8 @@ function level(
     prevAt = at;
   }
 
-  const ahead = keys.filter((k) => (byKey.get(k)?.length ?? 0) > times).length;
+  const base = floor ?? times;
+  const ahead = keys.filter((k) => (byKey.get(k)?.length ?? 0) > base).length;
   const since = all.find((e) => e.at > prevAt);
   return {
     key,
@@ -142,15 +147,17 @@ export function buildTracker(events: ReadEvent[]): Tracker {
 
   const ot = BOOKS.filter((b) => b.testament === "OT");
   const nt = BOOKS.filter((b) => b.testament === "NT");
+  const bible = level("bible", "Whole Bible", "bible", null, keysOf(BOOKS), byKey);
+  const f = bible.times;
   return {
-    bible: level("bible", "Whole Bible", "bible", null, keysOf(BOOKS), byKey),
-    ot: level("ot", "Old Testament", "testament", "OT", keysOf(ot), byKey),
-    nt: level("nt", "New Testament", "testament", "NT", keysOf(nt), byKey),
+    bible,
+    ot: level("ot", "Old Testament", "testament", "OT", keysOf(ot), byKey, f),
+    nt: level("nt", "New Testament", "testament", "NT", keysOf(nt), byKey, f),
     sections: SECTIONS.map((g) => {
       const books = BOOKS.filter((b) => b.group === g);
-      return level(g, SECTION_LABEL[g] ?? g, "section", books[0].testament, keysOf(books), byKey);
+      return level(g, SECTION_LABEL[g] ?? g, "section", books[0].testament, keysOf(books), byKey, f);
     }),
-    books: BOOKS.map((b) => level(b.name, b.name, "book", b.testament, keysOf([b]), byKey)),
+    books: BOOKS.map((b) => level(b.name, b.name, "book", b.testament, keysOf([b]), byKey, f)),
   };
 }
 

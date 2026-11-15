@@ -75,8 +75,9 @@ export function BibleTracker({ tracker }: { tracker: TrackerPayload }) {
               </div>
               <Bar pct={l.progress} color={color} />
               <p className="tabular text-xs text-muted">
-                {l.progress}% toward ×{l.times + 1}
-                {l.sinceISO ? ` · since ${med(l.sinceISO)}` : ""}
+                {l.kind === "bible"
+                  ? `${l.progress}% toward ×${l.times + 1}${l.sinceISO ? ` · since ${med(l.sinceISO)}` : ""}`
+                  : `${l.progress}% this time through`}
               </p>
             </Card>
           );
