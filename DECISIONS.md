@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Preview a future day's movements (v0.731.0)
+
+- A day still to come stays faded and can't be logged, but its movement cards
+  now open the movement page read-only: the planned sets and target weights
+  (the same `loadMovementLog` the day uses), labelled "Preview", with no Swap,
+  Skip, calculator or Log, and leaving saves nothing. Web: the day's container
+  blocks pointer events for everything (`[&_*]:pointer-events-none`) except the
+  movement buttons (`!pointer-events-auto`); `MovementLogger` takes `preview`.
+  Core days and other cards stay closed.
+
 ## 2026-11 — Start over is a last resort (v0.730.0)
 
 - It came off the Bible reading pages. Family: a "Start over" section at the

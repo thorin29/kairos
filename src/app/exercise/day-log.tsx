@@ -409,6 +409,7 @@ export function DayLog({
         exercise={open.exercise}
         metric={open.metric}
         completedOnISO={completedOnISO}
+        preview={future}
         onBack={() => {
           setOpen(null);
           setTick((n) => n + 1);
@@ -699,7 +700,7 @@ export function DayLog({
         // keeps its plan in view, faded, so nothing on it looks open (v0.650).
         !state?.restPlanned && (
           <div
-            className={`space-y-5 ${state?.rested ? "opacity-40" : ""} ${future ? "pointer-events-none opacity-55" : ""}`}
+            className={`space-y-5 ${state?.rested ? "opacity-40" : ""} ${future ? "opacity-55 [&_*]:pointer-events-none" : ""}`}
             aria-disabled={future || undefined}
           >
             {withConditioning.map((s) => (
@@ -963,7 +964,8 @@ export function DayLog({
                         key={`${it.workoutId}:${it.poolExerciseId}`}
                         type="button"
                         onClick={() => setOpen({ workoutId: it.workoutId, exercise: ex, metric: it.metric })}
-                        className="flex min-h-[3.5rem] w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-accent"
+                        // A day still to come: only a movement opens, read-only (v0.730).
+                        className="flex min-h-[3.5rem] w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left transition-colors hover:border-accent !pointer-events-auto"
                       >
                         <span className="min-w-0 flex-1">
                           <span className="block line-clamp-2 text-sm font-semibold">{it.name}</span>
@@ -1654,6 +1656,7 @@ function MovementLogger({
   onBack,
   embedded,
   test = false,
+  preview = false,
 }: {
   userId: string;
   dateISO: string;
@@ -1669,6 +1672,8 @@ function MovementLogger({
   embedded?: (slot: string, handle: SectionHandle) => void;
   /** Opened from the month's test card (v0.707): hints from the last test. */
   test?: boolean;
+  /** A day still to come: shown read-only, nothing saved. */
+  preview?: boolean;
 }) {
   const slotId = exercise.poolExerciseId;
   const unit = metric === "WEIGHT" ? exercise.unit || "lb" : metric === "REPS" ? "reps" : "sec";
@@ -1967,9 +1972,9 @@ function MovementLogger({
       ? "grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem_2.75rem] sm:grid-cols-[2rem_5.5rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem_2.75rem]"
       : "grid-cols-[2rem_minmax(0,1fr)_2.75rem_2.75rem] sm:grid-cols-[2rem_5.5rem_minmax(0,1fr)_2.75rem_2.75rem]";
 
-  return (
+  const view = (
     <div className="space-y-4">
-      {!embedded && (
+      {!embedded && !preview && (
         <button
           type="button"
           onClick={() => void leave(false)}
@@ -2335,6 +2340,24 @@ function MovementLogger({
           }
         />
       )}
+    </div>
+  );
+  if (!preview) return view;
+  // A day still to come (v0.730): the planned sets and weights, read-only.
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex min-h-[2.75rem] items-center gap-1.5 text-sm font-semibold text-accent"
+      >
+        <ArrowLeftIcon className="h-4 w-4" />
+        {dayLabel(dateISO)}
+      </button>
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted">Preview</p>
+      <div className="pointer-events-none opacity-55" aria-disabled>
+        {view}
+      </div>
     </div>
   );
 }

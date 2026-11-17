@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (15 Nov 2026, web v0.730.0 / app v0.526.0, versionCode 598)
+## Current status (16 Nov 2026, web v0.731.0 / app v0.527.0, versionCode 599)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -1826,9 +1826,9 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.730.0 on Next.js 16.4.6 (migrations through 158_tracker_reset, all registered
+- Web APP_VERSION 0.731.0 on Next.js 16.4.6 (migrations through 158_tracker_reset, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.526.0 / versionCode 598 / CLIENT_BUILD 598.
+- App versionName 0.527.0 / versionCode 599 / CLIENT_BUILD 599.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.
