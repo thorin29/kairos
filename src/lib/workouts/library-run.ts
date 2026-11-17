@@ -53,6 +53,18 @@ export function cleanEquipment(raw: unknown): EquipmentItem[] {
  * movement or no sizes are listed (then weights step as usual).
  */
 export async function bellSizesFor(name: string, equipment: string | null | undefined, unit: string): Promise<number[] | null> {
+  // Sandbags and steel clubs step to the ones on hand too (v0.732): 60 → 80.
+  const eq = (equipment ?? "").toLowerCase();
+  const fixed = eq.includes("sandbags") || /sandbag|bear-hug|shuttle carry/i.test(name)
+    ? "sandbags"
+    : eq.includes("clubs") || /\bclubs?\b|shield cast/i.test(name)
+      ? "clubs"
+      : null;
+  if (fixed) {
+    const item = (await loadEquipment()).find((e) => e.key === fixed);
+    if (!item || !item.have || item.sizes.length === 0 || (item.unit && item.unit !== unit)) return null;
+    return [...item.sizes].sort((a, b) => a - b);
+  }
   const bell = bellOf(name, equipment);
   if (!bell) return null;
   const item = (await loadEquipment()).find((e) => e.key === (bell === "dumbbell" ? "dumbbells" : "kettlebells"));

@@ -12,7 +12,10 @@ import { applyLibrary, loadEquipment } from "@/lib/workouts/library-run";
 import { routineFor } from "@/lib/workouts/warmup-run";
 import { cleanVersion, setupDiffers, type ProgramVersion } from "@/lib/workouts/program-version";
 import { extraSlotFor } from "@/lib/workouts/day-extras-run";
+import { setCoreDay } from "@/lib/workouts/core-run";
+import { rotationLibrary } from "@/lib/workouts/core-library";
 import {
+  GARAGE_FEET,
   PROGRAMS,
   cleanPlanScheme,
   stepFor,
@@ -206,6 +209,8 @@ export type ProgramChoice = {
   blurb: string;
   weeks: number;
   defaultDays: number[];
+  /** Set up with the block builder (Odd squad, v0.732). */
+  builder?: boolean;
   days: {
     name: string;
     row: boolean;
@@ -216,6 +221,10 @@ export type ProgramChoice = {
       main: boolean;
       optional: boolean;
       scheme: string;
+      /** The builder's block ("A", "B", "C"). */
+      block?: string;
+      /** A finisher's sets by choice (option id → scheme), when they differ. */
+      schemes?: Record<string, string>;
       /** The pool movement it starts with (null: nothing fits; pick one or leave it out). */
       defaultId: string | null;
       /** Movements that fit (by group, or named by the slot), with the
@@ -272,6 +281,7 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
     blurb: p.blurb,
     weeks: p.weeks,
     defaultDays: p.defaultDays,
+    ...(p.builder ? { builder: true } : {}),
     days: p.days.map((d) => ({
       name: d.name,
       row: !!d.row,
@@ -279,7 +289,25 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
         const names = new Set(r.match.map(norm));
         let fits: typeof pool;
         let adds: { id: string; name: string; best: null; timed?: boolean; add: true; about: string }[] = [];
-        if (r.patterns && !r.main) {
+        if (r.offer) {
+          // Odd squad (v0.732): only the movements the slot offers, in its
+          // order; library ones the household has the equipment for.
+          const order = r.offer.map((x) => nameKey(x.name));
+          fits = pool
+            .filter((m) => order.includes(nameKey(m.name)))
+            .sort((a, b) => order.indexOf(nameKey(a.name)) - order.indexOf(nameKey(b.name)));
+          const libs = r.offer
+            .map((x) => libByName.get(nameKey(x.name)))
+            .filter((e): e is (typeof LIBRARY)[number] => !!e && !inPool.has(nameKey(e.name)) && e.equipment.every((k) => have.has(k)));
+          adds = libs.map((e) => ({
+            id: `lib:${e.key}`,
+            name: e.name,
+            best: null,
+            ...(e.metric === "DURATION" ? { timed: true } : {}),
+            add: true as const,
+            about: e.about,
+          }));
+        } else if (r.patterns && !r.main) {
           // A companion slot (v0.624): movements of its kind, never one of the
           // program's main lifts, plus what the library could add.
           const mains = new Set(p.days.flatMap((x) => x.roles.filter((y) => y.main).flatMap((y) => y.match)).map((n) => nameKey(n)));
@@ -316,7 +344,15 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
           );
         }
         const def = defaultFor(r, fits) ?? (r.patterns && !r.main ? (fits[0] ?? null) : null);
-        const libDef = !def && !r.main ? (r.match.map((n) => adds.find((a) => norm(a.name) === norm(n))).find(Boolean) ?? null) : null;
+        const libDef = !def && (!r.main || r.offer) ? (r.match.map((n) => adds.find((a) => norm(a.name) === norm(n))).find(Boolean) ?? null) : null;
+        const offered = r.offer
+          ? Object.fromEntries(
+              [...fits.map((m) => [m.id, m.name] as const), ...adds.map((a) => [a.id, a.name] as const)].flatMap(([id, name]) => {
+                const x = r.offer!.find((y) => nameKey(y.name) === nameKey(name));
+                return x?.scheme ? [[id, schemeKey(x.scheme)]] : [];
+              }),
+            )
+          : null;
         return {
           key: r.key,
           label: r.label,
@@ -324,7 +360,9 @@ export async function loadProgramChoices(userId?: string | null): Promise<Progra
           main: !!r.main,
           optional: !!r.optional,
           scheme: schemeKey(r.scheme),
-          defaultId: def?.id ?? libDef?.id ?? null,
+          ...(r.block ? { block: r.block } : {}),
+          ...(offered && Object.keys(offered).length ? { schemes: offered } : {}),
+          defaultId: def?.id ?? libDef?.id ?? (r.offer ? (fits[0]?.id ?? adds[0]?.id ?? null) : null),
           // A timed movement (a plank) logs by time: the setup shows Time, not sets.
           options: [
             ...fits.map((m) => ({
@@ -361,6 +399,8 @@ export type CurrentExtras = {
   warmupRoutine: string | null;
   cardioDays: number[];
   conditioningDays: number[];
+  /** The Core day's weekday (v0.732), for the builder; null with none. */
+  coreDay?: number | null;
 };
 
 const CARDIO_CATS = new Set(["CARDIO", "ROWING", "RUNNING", "RUCKING"]);
@@ -369,14 +409,22 @@ const isConditioning = (w: { category: string | null; hiitWorkoutId: string | nu
 export async function currentExtras(userId: string): Promise<CurrentExtras> {
   const rows = (await prisma.plannedWorkout.findMany({
     where: { userId, isRest: false },
-    select: { dayOfWeek: true, category: true, hiitWorkoutId: true, warmup: true },
-  })) as { dayOfWeek: number; category: string | null; hiitWorkoutId: string | null; warmup: string | null }[];
+    select: { dayOfWeek: true, category: true, hiitWorkoutId: true, warmup: true, muscleGroup: true, core: true },
+  })) as {
+    dayOfWeek: number;
+    category: string | null;
+    hiitWorkoutId: string | null;
+    warmup: string | null;
+    muscleGroup: string | null;
+    core: unknown;
+  }[];
   const days = (f: (w: (typeof rows)[number]) => boolean) => [...new Set(rows.filter(f).map((w) => w.dayOfWeek))].sort();
   return {
     warmup: rows.some((w) => w.category === "WARMUP"),
     warmupRoutine: rows.find((w) => w.category === "WARMUP" && w.warmup)?.warmup ?? null,
     cardioDays: days((w) => !!w.category && CARDIO_CATS.has(w.category)),
     conditioningDays: days(isConditioning),
+    coreDay: rows.find((w) => w.core != null && w.muscleGroup === "CORE")?.dayOfWeek ?? null,
   };
 }
 
@@ -452,7 +500,8 @@ export async function currentSetup(userId: string, loaded?: ActiveProgram | null
 async function snapshotVersion(userId: string): Promise<void> {
   try {
     const p = await loadActiveProgram(userId);
-    if (!p) return;
+    // A builder program starts over when picked again (v0.732): no version.
+    if (!p || p.program.builder) return;
     const setup = await currentSetup(userId, p);
     if (!setup) return;
     const choice = (await loadProgramChoices(userId)).find((c) => c.key === p.program.key);
@@ -508,6 +557,8 @@ type PlanSnapshot = {
     hiitWorkoutId: string | null;
     sortOrder: number;
     warmup?: string | null;
+    /** A Core, Arms or Isometric rotation (v0.732); those rows stay in place. */
+    core?: unknown;
     exercises: {
       poolExerciseId: string;
       tracked: boolean;
@@ -533,6 +584,7 @@ async function snapshotPlan(userId: string): Promise<PlanSnapshot> {
         hiitWorkoutId: true,
         sortOrder: true,
         warmup: true,
+        core: true,
         exercises: {
           orderBy: { sortOrder: "asc" },
           select: { poolExerciseId: true, tracked: true, metric: true, sortOrder: true, scheme: true, programRole: true },
@@ -542,6 +594,28 @@ async function snapshotPlan(userId: string): Promise<PlanSnapshot> {
     prisma.workoutRotation.findUnique({ where: { userId }, select: { isActive: true } }),
   ])) as [PlanSnapshot["workouts"], { isActive: boolean } | null];
   return { rotationActive: !!rotation?.isActive, workouts: rows };
+}
+
+
+/**
+ * Core, Arms and Isometric days (v0.732): they stay where they are when a
+ * program starts or ends, rotation and monthly test included, rather than
+ * being cleared with the rest of the plan. Returns their ids, and a test for
+ * a saved plan's row that stood for one of them (older saves didn't keep the
+ * rotation, so a row on the same day and group is taken as that day).
+ */
+async function keptRotations(userId: string): Promise<{ ids: string[]; covers: (w: PlanSnapshot["workouts"][number]) => boolean }> {
+  const rows = (await prisma.plannedWorkout.findMany({
+    where: { userId },
+    select: { id: true, dayOfWeek: true, muscleGroup: true, category: true, core: true },
+  })) as { id: string; dayOfWeek: number; muscleGroup: string | null; category: string | null; core: unknown }[];
+  const kept = rows.filter((r) => r.core != null);
+  return {
+    ids: kept.map((r) => r.id),
+    covers: (w) =>
+      w.core != null ||
+      kept.some((r) => r.dayOfWeek === w.dayOfWeek && r.muscleGroup === w.muscleGroup && r.category === w.category),
+  };
 }
 
 async function writePlan(userId: string, snap: PlanSnapshot["workouts"]): Promise<void> {
@@ -595,6 +669,9 @@ export type StartProgramInput = {
   warmupRoutine?: string | null;
   cardioDays?: number[];
   conditioningDays?: number[];
+  /** The builder's Core day (v0.732): the Core day moves to this weekday,
+   *  rotation and test as they are, or one is made there. */
+  coreDay?: number | null;
   /** The next cycle of the running program, with changes (v0.626): the program
    *  carries on (same start, the next block, these maxes) and plan entries the
    *  setup doesn't cover — a workout on another day, stretching, a sport — stay. */
@@ -644,8 +721,8 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
   const pool = pickIds.length
     ? ((await prisma.poolExercise.findMany({
         where: { id: { in: pickIds } },
-        select: { id: true, metric: true, muscleGroup: true, category: true },
-      })) as { id: string; metric: string | null; muscleGroup: string | null; category: string }[])
+        select: { id: true, name: true, metric: true, muscleGroup: true, category: true },
+      })) as { id: string; name: string; metric: string | null; muscleGroup: string | null; category: string }[])
     : [];
   const known = new Set(pool.map((p) => p.id));
   // An added lift files under its own group (a movement outside Weights under Full body).
@@ -681,10 +758,12 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
     });
   }
 
-  await prisma.plannedWorkout.deleteMany({ where: { userId } });
+  const rotations = await keptRotations(userId);
+  await prisma.plannedWorkout.deleteMany({ where: { userId, id: { notIn: rotations.ids } } });
   if (prev.rotationActive) {
     await prisma.workoutRotation.updateMany({ where: { userId }, data: { isActive: false } });
   }
+  if (typeof input.coreDay === "number" && okDay(input.coreDay)) await placeCoreDay(userId, input.coreDay);
 
   const units = await loadWeightUnits();
   const maxes: Record<string, number> = {};
@@ -752,7 +831,11 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
       const id = input.picks[`${i}:${r.key}`];
       if (!id || !known.has(id) || picks.some((e) => e.poolExerciseId === id)) continue;
       const own = !r.main ? input.schemes?.[`${i}:${r.key}`] : undefined;
-      const scheme = own !== undefined ? cleanPlanScheme(own, today) : schemeKey(r.scheme);
+      // A slot that offers its own list (Odd squad): the choice's own sets
+      // (a carry, a hold, clubs), else the slot's.
+      const name = pool.find((p) => p.id === id)?.name ?? "";
+      const offered = r.offer?.find((x) => nameKey(x.name) === nameKey(name))?.scheme;
+      const scheme = own !== undefined ? cleanPlanScheme(own, today) : schemeKey(offered ?? r.scheme);
       // Filed under the movement's own group when it has one (a good morning
       // under Legs), else the slot's (pull-ups kept under HIIT go to Back).
       const ownGroup = groupOf.get(id);
@@ -794,7 +877,8 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
               tracked: true,
               metric: timed.has(e.poolExerciseId) ? "DURATION" : repsOnly.has(e.poolExerciseId) ? "REPS" : "WEIGHT",
               sortOrder: k,
-              scheme: timed.has(e.poolExerciseId) ? null : e.scheme,
+              // A timed movement logs by time; a program's timed hold keeps its sets.
+              scheme: timed.has(e.poolExerciseId) && !e.scheme?.startsWith("hold:") ? null : e.scheme,
               programRole: e.programRole,
             })),
           },
@@ -816,6 +900,8 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
   if (next && running) {
     const programDays = new Set(input.days);
     const kept = prev.workouts.filter((w) => {
+      // Core days never left (v0.732).
+      if (rotations.covers(w)) return false;
       // The setup set these: a warm-up on each program day, cardio and conditioning days.
       if (w.category === "WARMUP" && programDays.has(w.dayOfWeek)) return false;
       if ((w.category && CARDIO_CATS.has(w.category)) || isConditioning(w)) return false;
@@ -866,6 +952,34 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
   return "ok";
 }
 
+/** Put the Core day on `dow` (v0.732): the one there is moves, rotation and
+ *  monthly test as they are; with none, one is made with the first core workout. */
+async function placeCoreDay(userId: string, dow: number): Promise<void> {
+  const rows = (await prisma.plannedWorkout.findMany({
+    where: { userId, category: "WEIGHTS" as never, muscleGroup: "CORE" as never },
+    select: { id: true, dayOfWeek: true, core: true },
+  })) as { id: string; dayOfWeek: number; core: unknown }[];
+  const core = rows.find((r) => r.core != null);
+  if (core) {
+    if (core.dayOfWeek !== dow) await prisma.plannedWorkout.update({ where: { id: core.id }, data: { dayOfWeek: dow } });
+    return;
+  }
+  await setCoreDay(userId, { day: dow, rotation: [rotationLibrary("core")[0].id], test: true });
+}
+
+/** The garage's length in feet, for a shuttle carry's lengths (v0.732). */
+const GARAGE_KEY = "workouts.garageFeet";
+export async function loadGarageFeet(): Promise<number> {
+  const n = Number(await getSetting(GARAGE_KEY));
+  return Number.isFinite(n) && n >= 5 && n <= 200 ? n : GARAGE_FEET;
+}
+export async function saveGarageFeet(feet: unknown): Promise<number> {
+  const n = Math.round(Number(feet));
+  const v = Number.isFinite(n) && n >= 5 && n <= 200 ? n : GARAGE_FEET;
+  await setSetting(GARAGE_KEY, String(v));
+  return v;
+}
+
 /** End the program. `restore` puts back the plan it replaced; otherwise the
  *  program's plan stays as the person's own. */
 export async function endProgram(userId: string, restore: boolean): Promise<void> {
@@ -881,8 +995,10 @@ export async function endProgram(userId: string, restore: boolean): Promise<void
   });
   const snap = row.previousPlan as PlanSnapshot | null;
   if (restore && snap && Array.isArray(snap.workouts)) {
-    await prisma.plannedWorkout.deleteMany({ where: { userId } });
-    await writePlan(userId, snap.workouts);
+    // Core days stay as they are now (v0.732).
+    const rotations = await keptRotations(userId);
+    await prisma.plannedWorkout.deleteMany({ where: { userId, id: { notIn: rotations.ids } } });
+    await writePlan(userId, snap.workouts.filter((w) => !rotations.covers(w)));
     if (snap.rotationActive) {
       await prisma.workoutRotation.updateMany({ where: { userId }, data: { isActive: true } });
     }

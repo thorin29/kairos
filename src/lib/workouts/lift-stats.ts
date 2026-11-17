@@ -21,29 +21,74 @@ export function estimatedMax(
 }
 
 /**
- * The lift row's trend: "+10 lb" over 30 days when it's climbing, else how
- * many whole weeks since the best ("Flat · 6 weeks"); null when there's no
- * session older than 30 days to compare with and no best.
+ * The lift row's trend (v0.732): "+10 lb" over 30 days when it's climbing;
+ * otherwise "Holding · N weeks in a row" while it's still trained (logged in
+ * the last two weeks), or "Last done N weeks ago" once it stopped. Null with
+ * nothing logged. `points` carry whatever the chart follows (top weight, est.
+ * max, or reps for a fixed weight); `intent` marks light days.
  */
 export function liftTrend(
-  points: { date: string; value: number }[],
-  best: { date: string } | null | undefined,
+  points: { date: string; value: number; intent?: string | null }[],
   todayISO: string,
-): { kind: "up"; delta: number } | { kind: "flat"; weeks: number } | null {
+): { kind: "up"; delta: number } | { kind: "holding"; weeks: number } | { kind: "stopped"; weeks: number } | null {
   const pts = [...points].sort((a, b) => (a.date < b.date ? -1 : 1));
   if (pts.length === 0) return null;
+  const lastDate = pts[pts.length - 1].date;
+  const ago = daysBetween(lastDate, todayISO);
+  if (ago > 14) return { kind: "stopped", weeks: Math.max(2, Math.floor(ago / 7)) };
   const cutoff = shift(todayISO, -30);
   const before = pts.filter((p) => p.date <= cutoff);
-  const latest = pts[pts.length - 1].value;
+  // A light day isn't meant to beat anything: the latest full day counts.
+  const latest = [...pts].reverse().find((p) => !p.intent)?.value ?? pts[pts.length - 1].value;
   if (before.length > 0) {
     const base = Math.max(...before.map((p) => p.value));
     const delta = Math.round(latest - base);
     if (delta > 0) return { kind: "up", delta };
   }
-  if (!best) return null;
-  const weeks = Math.floor(daysBetween(best.date, todayISO) / 7);
-  if (before.length === 0 && weeks < 1) return null;
-  return { kind: "flat", weeks: Math.max(0, weeks) };
+  const weeks = weeksInARow(pts, todayISO);
+  if (before.length === 0 && weeks < 2) return null;
+  return { kind: "holding", weeks };
+}
+
+/** Weeks in a row with the movement done (this week counts once it's done,
+ *  else the streak runs to last week). */
+export function weeksInARow(points: { date: string }[], todayISO: string): number {
+  const weeks = new Set(points.map((p) => mondayOf(p.date)));
+  let mon = mondayOf(todayISO);
+  if (!weeks.has(mon)) mon = shift(mon, -7);
+  let n = 0;
+  while (weeks.has(mon)) {
+    n++;
+    mon = shift(mon, -7);
+  }
+  return n;
+}
+
+/** The last `n` weeks, oldest first (v0.732): 2 done, 1 done light (only
+ *  light days that week), 0 missed, -1 before it was first done. */
+export function weekDots(points: { date: string; intent?: string | null }[], todayISO: string, n = 12): number[] {
+  const byWeek = new Map<string, boolean>();
+  for (const p of points) {
+    const w = mondayOf(p.date);
+    byWeek.set(w, (byWeek.get(w) ?? false) || p.intent !== "LIGHT");
+  }
+  const first = points.length ? mondayOf([...points].sort((a, b) => (a.date < b.date ? -1 : 1))[0].date) : null;
+  const out: number[] = [];
+  const thisMon = mondayOf(todayISO);
+  for (let k = n - 1; k >= 0; k--) {
+    const w = shift(thisMon, -7 * k);
+    if (!first || w < first) out.push(-1);
+    else if (byWeek.has(w)) out.push(byWeek.get(w) ? 2 : 1);
+    else out.push(k === 0 ? -1 : 0);
+  }
+  return out;
+}
+
+/** Sandbags and steel clubs (v0.732): the weight can't climb much, so the
+ *  chart follows reps, density or time. */
+export function isFixedWeight(name: string, equipment?: string | null): boolean {
+  const eq = (equipment ?? "").toLowerCase();
+  return eq.includes("sandbags") || eq.includes("clubs") || /sandbag|bear-hug|shuttle carry|\bclubs?\b|shield cast/i.test(name);
 }
 
 /** Monday-start weeks (as their Monday) holding a light session, for shading. */
@@ -67,3 +112,41 @@ export function mondayOf(iso: string): string {
   return shift(iso, -back);
 }
 export { shift as shiftISO };
+
+/** One day's numbers beyond its top set (v0.732), from every set that day:
+ *  the estimated max (Epley, sets of 12 or fewer, down to a plate step), the
+ *  volume, total reps and seconds, and reps a minute from the time between the
+ *  first and last set (3 minutes or more; null when logged together after). */
+export function dayNumbers(
+  sets: readonly { weight: number | null; reps: number | null; seconds?: number | null; at?: Date | string | null }[],
+  unit: string,
+): { est: number | null; volume: number; total: number; seconds: number; density: number | null } {
+  let est = 0;
+  let volume = 0;
+  let total = 0;
+  let seconds = 0;
+  let first = Infinity;
+  let last = -Infinity;
+  for (const s of sets) {
+    const r = s.reps ?? 0;
+    const w = s.weight ?? 0;
+    if (w > 0 && r >= 1 && r <= 12) est = Math.max(est, r === 1 ? w : w * (1 + r / 30));
+    volume += w * r;
+    total += r;
+    seconds += s.seconds ?? 0;
+    if (s.at) {
+      const t = new Date(s.at).getTime();
+      first = Math.min(first, t);
+      last = Math.max(last, t);
+    }
+  }
+  const step = unit === "kg" ? 2.5 : 5;
+  const mins = Number.isFinite(first) ? (last - first) / 60000 : 0;
+  return {
+    est: est > 0 ? Math.floor(est / step) * step : null,
+    volume: Math.round(volume),
+    total,
+    seconds,
+    density: mins >= 3 && total > 0 ? Math.round((total / mins) * 10) / 10 : null,
+  };
+}

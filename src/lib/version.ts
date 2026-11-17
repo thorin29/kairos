@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.731.0";
+export const APP_VERSION = "0.732.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -176,6 +176,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.732.0",
+    summary: [
+      "Workouts: Odd squad, a 5-week program set up by blocks: a muscle group a day, then A main lift in ladders, B a 15-minute density pair, C a carry, hold or club finisher.",
+      "Lift charts: estimated max from every set with the training max, a Top weight / Volume switch, a consistency row, and Holding or Last done in place of Flat. Sandbags and clubs chart reps, density or time.",
+      "The Core day and its monthly test carry across program changes, wherever the Core day moves.",
+    ],
+  },
   {
     version: "0.731.0",
     summary: ["Workouts: on a day still to come, a movement opens read-only to show its planned sets and weights."],

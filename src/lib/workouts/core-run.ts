@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { dayOfWeek, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { applyLibrary } from "@/lib/workouts/library-run";
+import { testedThisMonth } from "@/lib/workouts/test-history";
 import { nameKey } from "@/lib/workouts/library";
 import {
   CORE_LIB_PREFIX,
@@ -336,7 +337,11 @@ export async function syncCoreDays(userId?: string, today: string = todayISO()):
     const loggedOn = (await loggedDays(e.userId, ids, e.day.since, today)).filter(
       (d) => dayOfWeek(d) === e.dayOfWeek,
     );
-    let day = stepCoreDay(e.day, loggedOn, today);
+    // This month's test, if it was logged before today on any day (v0.732):
+    // a Core day made again, or moved to another weekday, doesn't ask again.
+    const kind = rotationKindOf(e.day.kind);
+    const tested = kind === "arms" || !e.day.test ? null : await testedThisMonth(e.userId, kind, today);
+    let day = stepCoreDay(tested && e.day.testedMonth !== tested ? { ...e.day, testedMonth: tested } : e.day, loggedOn, today);
     // Skip workouts that are gone (a deleted one of your own).
     let workout: CoreWorkout | null = null;
     for (let i = 0; i < day.rotation.length; i++) {

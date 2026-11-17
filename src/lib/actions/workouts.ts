@@ -127,6 +127,7 @@ import {
   programInfoFor,
   setTrainingMax,
   startProgram,
+  saveGarageFeet,
   type CurrentExtras,
   type CurrentSetup,
   type ProgramChoice,
@@ -374,6 +375,14 @@ export async function applyMovementLibrary(keys: string[] | null): Promise<{ add
 export async function saveHouseholdEquipment(list: EquipmentItem[]): Promise<EquipmentItem[]> {
   await requireAdmin();
   const r = await saveEquipment(list);
+  refresh();
+  return r;
+}
+
+/** The garage's length in feet (v0.732), for a shuttle carry's lengths. */
+export async function saveGarageLength(feet: number): Promise<number> {
+  await requireAdmin();
+  const r = await saveGarageFeet(feet);
   refresh();
   return r;
 }

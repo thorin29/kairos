@@ -1,5 +1,48 @@
 # Decisions
 
+## 2026-11 — Odd squad, progress charts, the Core test across programs (v0.732.0)
+
+- **Odd squad** is a code template (`ODD_SQUAD` in programs.ts) with
+  `builder: true`: five days named by muscle group, each with A (main lift,
+  `ladder`; deadlift `ladder:3`), B1/B2 (density pair, `density:15`) and C
+  (finisher). Slots carry `offer`, a short list by name, each with its own
+  sets when they differ (shuttle carry `carry`, holds `hold:`, clubs `clubs`).
+  Library movements were added for the lists (sandbag floor press, sandbag
+  row, sandbag to shoulder, shuttle carry, bear-hug hold, double kettlebell
+  floor press, kettlebell reverse lunge, club front swing).
+- The **block builder** replaces the usual setup for a builder program: Days
+  (a group, Core or Rest per weekday; every group once), Blocks (B and C can
+  come off), Movements (pair chips pick two; pull-ups Bodyweight / Weighted
+  pick the Pull-up or Weighted pull-up movement), Review (the weight for 5
+  reps, stored as the training max). Edit on the running program reopens it
+  and keeps the week; a builder program saves no "your version", so picking it
+  again after it ends starts over. No naming or week-count choices.
+- Targets: ladders 1-2-3 × 3, × 4, then 1-2-3-4 × 3, × 4 at the 5-rep weight;
+  week 5 two easy triples at 80% and a test set one step up (5 reps, deadlift
+  3; bodyweight: one more rep than the best). Density: sets of 5, one more
+  than last time; 20% more reps than the block's first session at that weight
+  (or Easy) steps the weight up; week 5 ⅔ the sets. Shuttle carry in lengths
+  of the garage (Admin → Workouts → Equipment, default 20 ft): 3 × 6, 4 × 6,
+  3 × 9, 4 × 9; week 5 2 × 6 with the next bag. Clubs two hands 3 × 10, 3 × 12,
+  one hand 3 × 8, 3 × 10 a side. `testMainOnly`: only main lifts test in week
+  5. Not done: "miss a rep and repeat the week" for ladders.
+- Sandbag and club weights step to the sizes on hand (`bellSizesFor`).
+- **Core test:** `startProgram` and `endProgram` (restore) no longer delete
+  Core / Arms / Isometric rows; snapshot rows standing for one are skipped.
+  `syncCoreDays` also reads this month's test from what was logged before
+  today (`testedThisMonth`, by the test's shape), so a Core day made again or
+  moved to another weekday doesn't test twice.
+- **Charts:** each day's point carries `est` (Epley over every set ≤ 12 reps),
+  `volume`, `total`, `seconds` and `density` (reps a minute from the first to
+  last set's times, only when that's 3+ minutes) via `dayNumbers`. Lift page:
+  Est. max (with top weight and the training max dashed) / Top weight /
+  Volume; sandbags and clubs (`fixed`) Reps / Density / Time. The trend
+  follows est. max for a lift in a program, reps for a fixed weight, else top
+  weight; "Flat" became "Holding · N weeks in a row" while it's still done
+  (logged in the last two weeks), else "Last done N weeks ago". A 12-week
+  consistency row (done / light / missed). Bodyweight movements still aren't
+  charted.
+
 ## 2026-11 — Preview a future day's movements (v0.731.0)
 
 - A day still to come stays faded and can't be logged, but its movement cards

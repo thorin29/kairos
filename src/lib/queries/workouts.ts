@@ -10,7 +10,8 @@ import { getSetting } from "@/lib/settings";
 import { loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
 import { setsSummary } from "@/lib/workouts/sets";
 import { loadDayOrders, type DayOrders } from "@/lib/workouts/day-order";
-import { programByKey } from "@/lib/workouts/programs";
+import { programByKey, programWeek, weekLabel } from "@/lib/workouts/programs";
+import { dayNumbers, isFixedWeight } from "@/lib/workouts/lift-stats";
 import { groupHistory } from "@/lib/workouts/history";
 import { loadProgramSpans, sportLabels } from "@/lib/workouts/history-run";
 import type { HeatMap } from "@/lib/workouts/heat";
@@ -46,7 +47,29 @@ export type GraphSeries = {
   color: string;
   /** value = the day's heaviest weight (the record). reps = how many that set
    *  was, when it was logged — never part of the record, only context. */
-  points: { date: string; value: number; reps?: number | null; intent?: string | null }[];
+  points: {
+    date: string;
+    value: number;
+    reps?: number | null;
+    intent?: string | null;
+    /** The day's estimated one-rep max from every set (Epley, sets of 12 or
+     *  fewer), so lighter sets for more reps count too (v0.732). */
+    est?: number | null;
+    /** The day's volume: weight × reps over every set. */
+    volume?: number;
+    /** The day's total reps, and seconds held (v0.732). */
+    total?: number;
+    seconds?: number;
+    /** Reps a minute, from the time between the first and last set (3 min or
+     *  more); null when they were logged together afterwards. */
+    density?: number | null;
+  }[];
+  /** A movement whose weight can't climb much (sandbags, clubs, v0.732): its
+   *  chart follows reps, density or time instead. */
+  fixed?: boolean;
+  /** The running program's training max and when the program started, for a
+   *  main lift in it (v0.732). */
+  program?: { name: string; label: string; tm: number | null; since: string } | null;
   /** The heaviest set ever logged for this movement. */
   best?: { value: number; reps: number | null; date: string } | null;
   /** Best weight actually lifted at each rep count — real lifts, no estimates.
@@ -303,8 +326,10 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           poolExerciseId: true,
           weight: true,
           reps: true,
+          seconds: true,
+          createdAt: true,
           session: { select: { date: true, completedOn: true, intent: true } },
-          poolExercise: { select: { name: true, muscleGroup: true } },
+          poolExercise: { select: { name: true, muscleGroup: true, equipment: true } },
         },
       }),
       prisma.task.findFirst({
@@ -459,8 +484,10 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       poolExerciseId: string;
       weight: number | null;
       reps: number | null;
+      seconds: number | null;
+      createdAt: Date;
       session: { date: Date; intent?: string | null };
-      poolExercise: { name: string; muscleGroup: MuscleGroup | null } | null;
+      poolExercise: { name: string; muscleGroup: MuscleGroup | null; equipment?: string | null } | null;
     }[];
     const sessions = (todaySessions ?? []) as unknown as SessShape[];
     // Prefill for the scheduled-lift prompt: what's already logged today for
@@ -498,7 +525,10 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     // Per-person progress: max weight per pool movement per day. Scoped to
     // today's planned movements when there's a plan (so the card shows where
     // you're at for today's lifts); otherwise every movement they've logged.
-    const movMeta = new Map<string, { name: string; muscleGroup: MuscleGroup | null }>();
+    const movMeta = new Map<string, { name: string; muscleGroup: MuscleGroup | null; fixed: boolean }>();
+    // Each day's sets, for its numbers beyond the top set (v0.732).
+    type DaySet = { weight: number | null; reps: number | null; seconds: number | null; at: Date };
+    const daySets = new Map<string, Map<string, DaySet[]>>();
     const perMovementDay = new Map<string, Map<string, { value: number; reps: number | null }>>();
     // movementId -> reps -> best weight at that rep count
     const repMaxes = new Map<string, Map<number, { value: number; date: string }>>();
@@ -512,6 +542,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         movMeta.set(id, {
           name: set.poolExercise.name,
           muscleGroup: set.poolExercise.muscleGroup,
+          fixed: isFixedWeight(set.poolExercise.name, set.poolExercise.equipment),
         });
       }
       // The day it was actually done. An overdue workout keeps `date` as the
@@ -528,6 +559,11 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         m.set(d, { value: set.weight, reps: set.reps });
       }
       perMovementDay.set(id, m);
+      {
+        const byDay = daySets.get(id) ?? new Map<string, DaySet[]>();
+        byDay.set(d, [...(byDay.get(d) ?? []), { weight: set.weight, reps: set.reps, seconds: set.seconds, at: set.createdAt }]);
+        daySets.set(id, byDay);
+      }
 
       // Best weight at each rep count, from real logged sets only.
       if (set.reps != null && set.reps > 0) {
@@ -541,6 +577,20 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
       }
     }
 
+    // The running program's main lifts (v0.732): training max and start, for
+    // the line on a lift's chart.
+    const prog = (await prisma.personProgram.findFirst({
+      where: { userId: person.id, status: "ACTIVE" },
+      select: { programKey: true, trainingMaxes: true, startedOn: true, blockStartedOn: true },
+    })) as { programKey: string; trainingMaxes: unknown; startedOn: Date; blockStartedOn: Date } | null;
+    const progDef = prog ? programByKey(prog.programKey) : null;
+    const tms = (prog?.trainingMaxes ?? {}) as Record<string, unknown>;
+    const programFor = (id: string): GraphSeries["program"] => {
+      if (!prog || !progDef || typeof tms[id] !== "number") return null;
+      const week = programWeek(progDef, fromDateColumn(prog.blockStartedOn), todayISO);
+      return { name: progDef.name, label: weekLabel(progDef, week), tm: tms[id] as number, since: fromDateColumn(prog.startedOn) };
+    };
+
     const allSeries: GraphSeries[] = [...movMeta.entries()]
       .sort((a, b) => a[1].name.localeCompare(b[1].name))
       .map(([id, meta], i) => ({
@@ -551,8 +601,16 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         unit: meta.muscleGroup ? weightUnits[meta.muscleGroup] : "",
         color: LINE_COLORS[i % LINE_COLORS.length],
         points: [...perMovementDay.get(id)!.entries()]
-          .map(([date, p]) => ({ date, value: p.value, reps: p.reps, intent: intentOn.get(date) ?? null }))
+          .map(([date, p]) => ({
+            date,
+            value: p.value,
+            reps: p.reps,
+            intent: intentOn.get(date) ?? null,
+            ...dayNumbers(daySets.get(id)?.get(date) ?? [], meta.muscleGroup ? weightUnits[meta.muscleGroup] : "lb"),
+          }))
           .sort((a, b) => (a.date < b.date ? -1 : 1)),
+        ...(meta.fixed ? { fixed: true } : {}),
+        program: programFor(id),
         best: [...perMovementDay.get(id)!.entries()]
           .map(([date, p]) => ({ date, value: p.value, reps: p.reps }))
           .sort((a, b) => b.value - a.value || (b.reps ?? 0) - (a.reps ?? 0))[0] ?? null,

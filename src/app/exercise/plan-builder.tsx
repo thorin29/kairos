@@ -22,7 +22,8 @@ import { PlusIcon, TrashIcon } from "@/components/icons";
 import { PlanFilePanel } from "./plan-file-panel";
 import { PRIMARY_BTN, SECTION_CARD, SECTION_LABEL } from "./buttons";
 import { blockKind, cleanOrder, isSimpleCategory, KIND_LABEL, type SectionKind } from "@/lib/workouts/blocks";
-import { SCHEME_CHOICES, schemeChoiceKey } from "@/lib/workouts/programs";
+import { SCHEME_CHOICES, parseScheme, schemeChoiceKey, schemeLabel } from "@/lib/workouts/programs";
+
 import type { DayOrders } from "@/lib/workouts/day-order";
 import { InfoToggle, MovementAbout, MovementInfo } from "@/components/movement-info";
 import type {
@@ -45,6 +46,12 @@ import {
   type MuscleGroup,
   type WorkoutCategory,
 } from "@/lib/workouts/catalog";
+
+/** A stored scheme in words ("Ladders", "3 × 8–12"). */
+const schemeText = (raw: string | null | undefined) => {
+  const sc = parseScheme(raw);
+  return sc ? schemeLabel(sc) : (raw ?? "");
+};
 
 /** The routine kind a done-with-a-tap category uses (v0.663). */
 const routineKindOf = (c: string | null | undefined): "warmup" | "mobility" | "stretching" =>
@@ -432,6 +439,10 @@ function DayRow({
                           }
                           className={SELECT_SM}
                         >
+                          {/* A program's own sets (ladders, a carry…) show as they are (v0.732). */}
+                          {!SCHEME_CHOICES.some((c) => c.key === schemeChoiceKey(e.scheme)) && (
+                            <option value={schemeChoiceKey(e.scheme)}>{schemeText(e.scheme)}</option>
+                          )}
                           {SCHEME_CHOICES.map((c) => (
                             <option key={c.key} value={c.key}>
                               {c.label}

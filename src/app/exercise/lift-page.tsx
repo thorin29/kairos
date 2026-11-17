@@ -5,7 +5,7 @@ import { Modal } from "./plan-file-panel";
 import { LineChart } from "@/components/line-chart";
 import { REP_BANDS } from "@/lib/workouts/records";
 import { formatShort } from "@/lib/dates";
-import { estimatedMax, liftTrend, lightWeeks } from "@/lib/workouts/lift-stats";
+import { estimatedMax, liftTrend, lightWeeks, weekDots, weeksInARow } from "@/lib/workouts/lift-stats";
 import { liftNextAction } from "@/lib/actions/workouts";
 import type { GraphSeries } from "@/lib/queries/workouts";
 import { coreValueText, type CoreMove } from "@/lib/workouts/core-moves";
@@ -19,6 +19,9 @@ import {
   type CoreSummary,
   type CoreTag,
 } from "@/lib/workouts/core-progress";
+
+/** The training max line (v0.732). */
+const TM_COLOR = "#3b6fb6";
 
 const sorted = (pts: GraphSeries["points"]) => [...pts].sort((a, b) => (a.date < b.date ? -1 : 1));
 const setText = (v: number, reps?: number | null) => `${v}${reps ? ` × ${reps}` : ""}`;
@@ -48,20 +51,31 @@ function Spark({ points, color }: { points: GraphSeries["points"]; color: string
   );
 }
 
+/** What a lift's trend follows (v0.732): reps for a fixed weight (a sandbag),
+ *  the estimated max for a lift in a program (a 5/3/1 top set drops on purpose),
+ *  else the top weight. */
+function trendPoints(s: GraphSeries): { date: string; value: number; intent?: string | null }[] {
+  if (s.fixed) return s.points.filter((p) => (p.total ?? 0) > 0).map((p) => ({ date: p.date, value: p.total ?? 0, intent: p.intent }));
+  if (s.program) return s.points.filter((p) => p.est != null).map((p) => ({ date: p.date, value: p.est as number, intent: p.intent }));
+  return s.points;
+}
+const trendUnit = (s: GraphSeries) => (s.fixed ? "reps" : s.unit);
+const wk = (n: number) => `${n} ${n === 1 ? "week" : "weeks"}`;
+
 function TrendText({ s, todayISO }: { s: GraphSeries; todayISO: string }) {
-  const t = liftTrend(s.points, s.best, todayISO);
+  const t = liftTrend(trendPoints(s), todayISO);
   if (!t) return null;
   return (
-    <span className="flex w-16 shrink-0 flex-col items-end text-right">
+    <span className="flex w-[4.5rem] shrink-0 flex-col items-end text-right">
       {t.kind === "up" ? (
         <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-          +{t.delta} {s.unit}
+          +{t.delta} {trendUnit(s)}
         </span>
       ) : (
-        <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">Flat</span>
+        <span className="text-sm font-semibold text-ink">{t.kind === "holding" ? "Holding" : "Last done"}</span>
       )}
       <span className="text-[11px] text-muted">
-        {t.kind === "up" ? "30 days" : `${t.weeks} ${t.weeks === 1 ? "week" : "weeks"}`}
+        {t.kind === "up" ? "30 days" : t.kind === "holding" ? `${wk(t.weeks)} in a row` : `${wk(t.weeks)} ago`}
       </span>
     </span>
   );
@@ -165,6 +179,9 @@ export function LiftPage({
   onClose: () => void;
 }) {
   const [band, setBand] = useState("all");
+  // What the chart follows (v0.732): Est. max / Top weight / Volume, or for a
+  // fixed weight Reps / Density / Time.
+  const [mode, setMode] = useState<string>(s.fixed ? "reps" : "est");
   const [next, setNext] = useState<{ date: string; weight: number; reps: number } | null>(null);
   useEffect(() => {
     let live = true;
@@ -182,7 +199,50 @@ export function LiftPage({
   const first = pts[0];
   const last = pts.at(-1);
   const from = first?.date ?? todayISO;
-  const trend = liftTrend(s.points, s.best, todayISO);
+  const trend = liftTrend(trendPoints(s), todayISO);
+  const streak = weeksInARow(pts, todayISO);
+  const dots = weekDots(pts, todayISO);
+  const doneWeeks = dots.filter((d) => d > 0).length;
+  const counted = dots.filter((d) => d >= 0).length;
+  const modes = s.fixed
+    ? [
+        ["reps", "Reps"],
+        ...(pts.some((p) => p.density != null) ? [["density", "Density"]] : []),
+        ...(pts.some((p) => (p.seconds ?? 0) > 0) ? [["time", "Time"]] : []),
+      ]
+    : [
+        ["est", "Est. max"],
+        ["top", "Top weight"],
+        ["volume", "Volume"],
+      ];
+  const lineSeries = (() => {
+    const base = { id: s.exerciseId, name: s.name, color, unit: s.unit };
+    if (mode === "top") return [{ ...base, points: shown }];
+    if (mode === "volume") return [{ ...base, unit: s.unit, points: pts.map((p) => ({ date: p.date, value: p.volume ?? 0, intent: p.intent })) }];
+    if (mode === "reps") return [{ ...base, unit: "reps", line: true, points: pts.filter((p) => (p.total ?? 0) > 0).map((p) => ({ date: p.date, value: p.total ?? 0, intent: p.intent })) }];
+    if (mode === "density")
+      return [{ ...base, unit: "reps/min", line: true, points: pts.filter((p) => p.density != null).map((p) => ({ date: p.date, value: p.density as number, intent: p.intent })) }];
+    if (mode === "time") return [{ ...base, unit: "sec", line: true, points: pts.filter((p) => (p.seconds ?? 0) > 0).map((p) => ({ date: p.date, value: p.seconds ?? 0, intent: p.intent })) }];
+    // Est. max from every set, with the top weight and the training max dashed.
+    const out = [
+      { ...base, line: true, points: pts.filter((p) => p.est != null).map((p) => ({ date: p.date, value: p.est as number, intent: p.intent })) },
+      { id: `${s.exerciseId}-top`, name: "Top weight", color: "var(--color-muted)", unit: s.unit, dashed: true, points: pts },
+    ];
+    const tm = s.program?.tm;
+    if (tm && s.program) {
+      const from = s.program.since > (pts[0]?.date ?? s.program.since) ? s.program.since : (pts[0]?.date ?? s.program.since);
+      out.push({ id: `${s.exerciseId}-tm`, name: "Training max", color: TM_COLOR, unit: s.unit, dashed: true, points: [{ date: from, value: tm }, { date: todayISO, value: tm }] });
+    }
+    return out;
+  })();
+  const trendChip =
+    trend?.kind === "up"
+      ? `${s.fixed ? "Reps" : s.program ? "Est. max" : "Top weight"} +${trend.delta} ${trendUnit(s)} in 30 days`
+      : trend?.kind === "holding"
+        ? `Holding · ${wk(trend.weeks)} in a row`
+        : trend?.kind === "stopped"
+          ? `Last done ${wk(trend.weeks)} ago`
+          : null;
   const est = estimatedMax(s.repMaxes, s.unit);
   const weeksSince = s.best ? Math.max(0, Math.floor((Date.parse(`${todayISO}T12:00:00Z`) - Date.parse(`${s.best.date}T12:00:00Z`)) / (7 * 86400000))) : null;
   const dayName = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
@@ -194,9 +254,44 @@ export function LiftPage({
       <div className="space-y-4">
         <p className="-mt-2 text-sm font-semibold" style={{ color }}>
           {groupLabel}
+          {s.program && (
+            <span className="font-normal text-muted">
+              {" "}
+              · {s.program.name} · {s.program.label}
+              {s.program.tm ? ` · training max ${s.program.tm} ${s.unit}` : ""}
+            </span>
+          )}
         </p>
+        {(trendChip || streak >= 2) && (
+          <div className="flex flex-wrap gap-2">
+            {trendChip && (
+              <span className="inline-flex h-7 items-center rounded-full border border-accent bg-accent px-3 text-xs font-semibold text-on-accent">
+                {trendChip}
+              </span>
+            )}
+            {streak >= 2 && trend?.kind !== "holding" && (
+              <span className="inline-flex h-7 items-center rounded-full border border-accent px-3 text-xs font-semibold text-accent">
+                {wk(streak)} in a row
+              </span>
+            )}
+          </div>
+        )}
         <div className="space-y-3 rounded-xl border border-hairline bg-surface p-3">
-        {bands.length > 0 && (
+        <div role="tablist" aria-label="Chart" className={`grid gap-1 rounded-full bg-ground p-1`} style={{ gridTemplateColumns: `repeat(${modes.length}, minmax(0, 1fr))` }}>
+          {modes.map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={mode === k}
+              onClick={() => setMode(k)}
+              className={`h-8 rounded-full text-xs font-semibold ${mode === k ? "bg-surface text-ink shadow-sm" : "text-muted"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {mode === "top" && bands.length > 0 && (
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Reps">
             {[{ key: "all", label: "All" }, ...bands].map((b) => (
               <button
@@ -214,25 +309,60 @@ export function LiftPage({
           </div>
         )}
         <LineChart
-          key={band}
-          weight
+          key={`${mode}-${band}`}
+          weight={mode === "est" || mode === "top"}
           dots
           legend={false}
-          series={[{ id: s.exerciseId, name: s.name, color, unit: s.unit, points: shown }]}
+          series={lineSeries}
           shade={lightWeeks(pts)}
           marks={marks.filter((m) => m.date >= from && m.date <= todayISO)}
-          ring={band === "all" && s.best ? { date: s.best.date, value: s.best.value } : null}
-          ahead={band === "all" && next ? { date: next.date, value: next.weight, label: `${dayName(next.date)} ${setText(next.weight, next.reps)}` } : null}
+          ring={mode === "top" && band === "all" && s.best ? { date: s.best.date, value: s.best.value } : null}
+          ahead={mode === "top" && band === "all" && next ? { date: next.date, value: next.weight, label: `${dayName(next.date)} ${setText(next.weight, next.reps)}` } : null}
         />
+        {mode === "est" && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+            <span>
+              <b style={{ color }}>—</b> Est. max
+            </span>
+            <span>
+              <b>- -</b> Top weight
+            </span>
+            {s.program?.tm ? (
+              <span>
+                <b style={{ color: TM_COLOR }}>- -</b> Training max
+              </span>
+            ) : null}
+          </div>
+        )}
         </div>
+        {counted > 1 && (
+          <div className="space-y-2 rounded-xl border border-hairline bg-surface p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Consistency</p>
+              <span className="text-xs text-muted">
+                {doneWeeks} of {counted} weeks
+              </span>
+            </div>
+            <div className="flex gap-1.5" aria-label={`Done ${doneWeeks} of the last ${counted} weeks`}>
+              {dots.map((d, i) => (
+                <span
+                  key={i}
+                  title={d === 2 ? "Done" : d === 1 ? "Done light" : d === 0 ? "Missed" : ""}
+                  className={`h-[18px] w-[18px] rounded-[5px] ${d === 2 ? "" : d === 1 ? "opacity-40" : "bg-ground"} ${d < 0 ? "opacity-40" : ""}`}
+                  style={d > 0 ? { background: color } : undefined}
+                />
+              ))}
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <Tile k="Record" v={s.best ? setText(s.best.value, s.best.reps) : "—"} sub={s.best ? formatShort(s.best.date) : "none yet"} />
           <Tile k="Est. max" v={est ? `${est} ${s.unit}` : "—"} sub={est ? "one rep, estimated" : "needs a set of 12 or fewer"} />
           <Tile
             k="30 days"
-            v={trend?.kind === "up" ? `+${trend.delta} ${s.unit}` : trend?.kind === "flat" ? "Flat" : "—"}
-            sub={trend?.kind === "up" ? "still climbing" : trend?.kind === "flat" ? "no gain" : "no older session"}
-            tone={trend?.kind}
+            v={trend?.kind === "up" ? `+${trend.delta} ${trendUnit(s)}` : trend?.kind === "holding" ? "Holding" : trend?.kind === "stopped" ? "Stopped" : "—"}
+            sub={trend?.kind === "up" ? "still climbing" : trend?.kind === "holding" ? `${wk(trend.weeks)} in a row` : trend?.kind === "stopped" ? `${wk(trend.weeks)} ago` : "no older session"}
+            tone={trend?.kind === "up" ? "up" : undefined}
           />
           <Tile k="Since best" v={weeksSince == null ? "—" : weeksSince < 1 ? "This week" : `${weeksSince} ${weeksSince === 1 ? "week" : "weeks"}`} sub={s.best ? formatShort(s.best.date) : ""} />
           <Tile k="Sessions" v={`${pts.length}`} sub={first ? `since ${formatShort(first.date)}` : ""} />

@@ -2,6 +2,7 @@ import "server-only";
 import { planDow, swapsFor } from "@/lib/workouts/day-swap-run";
 import { swapName } from "@/lib/workouts/day-swap";
 import { prisma } from "@/lib/prisma";
+import { dayNumbers, isFixedWeight } from "@/lib/workouts/lift-stats";
 import { slotForDate } from "@/lib/workouts/rotation";
 import { fmtClock, rowSummary } from "@/lib/workouts/concept2";
 import { CARDIO_CATEGORIES, blockKind, isSimpleCategory } from "@/lib/workouts/blocks";
@@ -31,9 +32,17 @@ import {
   targetsFor,
   weekIntent,
   weekLabel,
+  weekSchemeLabel,
   type Program,
 } from "@/lib/workouts/programs";
-import { dayHasProgramWork, loadActiveProgram, plannedSlotFor, programInfoFor, type ProgramInfo } from "@/lib/workouts/program-run";
+import {
+  dayHasProgramWork,
+  loadActiveProgram,
+  loadGarageFeet,
+  plannedSlotFor,
+  programInfoFor,
+  type ProgramInfo,
+} from "@/lib/workouts/program-run";
 import { dayAddedIds, dayAdjust, dayLightFactor, daySuggestionFor, movementSuggestionFor } from "@/lib/workouts/suggest-run";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
 import { pauseOn, pauseText, pausedDays, workoutPausesFor } from "@/lib/workouts/pause-run";
@@ -822,6 +831,13 @@ export type GraphPoint = {
   reps?: number | null;
   /** LIGHT or TEST: a program's light or test day, drawn hollow (v0.611). */
   intent?: string | null;
+  /** The day's estimated max from every set, volume, total reps, seconds
+   *  and reps a minute (v0.732, lift-stats dayNumbers). */
+  est?: number | null;
+  volume?: number;
+  total?: number;
+  seconds?: number;
+  density?: number | null;
 };
 /** Body-map facts for one movement, in the shape the clients consume. */
 function bodyMapFor(name: string, filed: string | null) {
@@ -865,6 +881,11 @@ export type ProgressSeries = {
   shadePrimary?: string | null;
   shadeSecondary?: string[];
   view?: string;
+  /** Sandbags and clubs (v0.732): the chart follows reps, density or time. */
+  fixed?: boolean;
+  /** A main lift in the running program: its training max, the program's
+   *  week and when it started (v0.732). */
+  program?: { name: string; label: string; tm: number | null; since: string } | null;
 };
 export type WorkoutHistoryEntry = {
   id: string;
@@ -1004,8 +1025,10 @@ export async function loadWorkoutProgress(
     select: {
       weight: true,
       reps: true,
+      seconds: true,
+      createdAt: true,
       poolExerciseId: true,
-      poolExercise: { select: { name: true, muscleGroup: true } },
+      poolExercise: { select: { name: true, muscleGroup: true, equipment: true } },
       session: { select: { date: true, completedOn: true, intent: true } },
     },
   });
@@ -1105,11 +1128,21 @@ export async function loadWorkoutProgress(
   const repMaxes = new Map<string, Map<number, { value: number; date: string }>>();
   // Days logged as a program's light or test day, drawn hollow (v0.611).
   const intentOn = new Map<string, string>();
+  // Each day's sets, for its numbers beyond the top set (v0.732).
+  const daySets = new Map<string, Map<string, { weight: number | null; reps: number | null; seconds: number | null; at: Date }[]>>();
+  const fixedIds = new Set<string>();
   for (const s of wSets) {
     if (s.weight == null || !s.poolExerciseId) continue;
     const d = doneOn(s.session);
     const intent = (s.session as { intent?: string | null }).intent;
     if (intent) intentOn.set(d, intent);
+    {
+      const byDay = daySets.get(s.poolExerciseId) ?? new Map();
+      byDay.set(d, [...(byDay.get(d) ?? []), { weight: s.weight, reps: s.reps, seconds: s.seconds, at: s.createdAt }]);
+      daySets.set(s.poolExerciseId, byDay);
+      const pe = s.poolExercise as { name: string; equipment?: string | null } | null;
+      if (pe && isFixedWeight(pe.name, pe.equipment)) fixedIds.add(s.poolExerciseId);
+    }
     const m = perDay.get(s.poolExerciseId) ?? new Map<string, { value: number; reps: number | null }>();
     const prev = m.get(d);
     // Heaviest wins the day; on a tie the set with more reps is the better one.
@@ -1128,6 +1161,19 @@ export async function loadWorkoutProgress(
     }
   }
 
+  // The running program's main lifts (v0.732): training max and start.
+  const active = await loadActiveProgram(userId);
+  const programLine = (id: string): ProgressSeries["program"] => {
+    const tm = active?.trainingMaxes[id];
+    if (!active || typeof tm !== "number") return null;
+    return {
+      name: active.program.name,
+      label: weekLabel(active.program, programWeek(active.program, active.blockStartedOn, todayISO)),
+      tm,
+      since: active.startedOn,
+    };
+  };
+
   const series: ProgressSeries[] = [...trackedNames.entries()]
     .map(([id, name]) => ({
       poolExerciseId: id,
@@ -1138,8 +1184,16 @@ export async function loadWorkoutProgress(
       ...bodyMapFor(name, trackedGroups.get(id) ?? null),
       unit: weightUnit,
       points: [...(perDay.get(id)?.entries() ?? [])]
-        .map(([date, p]) => ({ date, value: p.value, reps: p.reps, intent: intentOn.get(date) ?? null }))
+        .map(([date, p]) => ({
+          date,
+          value: p.value,
+          reps: p.reps,
+          intent: intentOn.get(date) ?? null,
+          ...dayNumbers(daySets.get(id)?.get(date) ?? [], weightUnit),
+        }))
         .sort((a, b) => (a.date < b.date ? -1 : 1)),
+      ...(fixedIds.has(id) ? { fixed: true } : {}),
+      program: programLine(id),
       // The heaviest set ever: the headline number, with the reps it was done
       // for as context. Never an estimate.
       best:
@@ -2029,7 +2083,8 @@ export async function loadMovementLog(
   const unit = (poolRow?.muscleGroup && units[poolRow.muscleGroup as MuscleGroup]) || "lb";
   // A carry logs the weight and the distance walked (v0.640): the reps field
   // is yards (metres in metric).
-  const repsUnit = isCarry(poolRow) ? (unit === "kg" ? "m" : "yd") : null;
+  // A shuttle carry (v0.732): lengths of the garage, down and back.
+  const repsUnit = isShuttle(poolRow) ? "lengths" : isCarry(poolRow) ? (unit === "kg" ? "m" : "yd") : null;
   if (repsUnit && target && !/[a-z]$/i.test(target.scheme)) target = { ...target, scheme: `${target.scheme} ${repsUnit}` };
   // A lighter day (a suggestion answered): today's targets, or last time's
   // sets, at 80% (90% easing back in), in place of the usual hints.
@@ -2077,6 +2132,9 @@ export async function loadMovementLog(
   };
 }
 
+/** A shuttle carry (v0.732): logged as weight and lengths of the garage. */
+export const isShuttle = (p: { name?: string } | null | undefined) => !!p && /shuttle carry/i.test(p.name ?? "");
+
 /** A loaded carry (suitcase, farmer, overhead…): logged as weight and distance. */
 export const isCarry = (p: { pattern?: string | null; name?: string } | null | undefined) =>
   !!p && /\bcarry\b|farmer/i.test(p.name ?? "");
@@ -2120,6 +2178,11 @@ export async function movementTarget(
   })) as { name: string; muscleGroup: string | null; equipment: string | null } | null;
   const moveLower = moveRow ? moveRow.muscleGroup === "LEGS" || moveRow.muscleGroup === "DEADLIFT" : !!role?.lower;
   const sizes = moveRow ? await bellSizesFor(moveRow.name, moveRow.equipment, unit) : null;
+  // Odd squad (v0.732): the garage's length for a shuttle carry, and a
+  // density block's first session this block (20% more reps moves it up).
+  const garageFeet = scheme.kind === "CARRY" ? await loadGarageFeet() : undefined;
+  const firstTotal =
+    scheme.kind === "DENSITY" && fromProgram ? await firstSessionTotal(userId, movement, fromProgram.blockStartedOn, dateISO) : null;
   const sets = targetsFor({
     program,
     week,
@@ -2141,6 +2204,9 @@ export async function movementTarget(
     // Only a program's own main lift moves up by itself (v0.627).
     progress: !!fromProgram && !!role?.main && movement === slotId,
     lastEasy: lastEffort === "EASY",
+    main: !!role?.main,
+    garageFeet,
+    firstTotal,
   });
   if (sets.length === 0) return null;
   const intent = weekIntent(program, week);
@@ -2148,14 +2214,39 @@ export async function movementTarget(
     // Only a main lift says the program and week; a companion lift shows its
     // sets, and the week only when it's light or a test (v0.620).
     title:
-      handWave || (fromProgram && scheme.kind === "WAVE")
+      handWave || (fromProgram && (scheme.kind === "WAVE" || scheme.kind === "LADDER"))
         ? `${program.name} · ${weekLabel(program, week)}`
         : fromProgram && intent
           ? weekLabel(program, week)
           : "",
-    scheme: intent === "TEST" ? "Work up to a heavy 3" : schemeLabel(scheme),
+    scheme: ODD_KINDS.has(scheme.kind)
+      ? weekSchemeLabel(scheme, program, week, garageFeet)
+      : intent === "TEST" && !(program.testMainOnly && !role?.main)
+        ? "Work up to a heavy 3"
+        : schemeLabel(scheme),
     sets,
   };
+}
+
+const ODD_KINDS = new Set(["LADDER", "DENSITY", "CARRY", "CLUBS"]);
+
+/** A movement's total reps and top weight on its first day logged since
+ *  `from` and before `before` (v0.732), or null. */
+async function firstSessionTotal(
+  userId: string,
+  poolExerciseId: string,
+  from: string,
+  before: string,
+): Promise<{ weight: number | null; reps: number } | null> {
+  const sets = (await prisma.sessionSet.findMany({
+    where: { poolExerciseId, session: { userId, isRest: false, date: { gte: toDateColumn(from), lt: toDateColumn(before) } } },
+    select: { weight: true, reps: true, session: { select: { date: true } } },
+  })) as { weight: number | null; reps: number | null; session: { date: Date } }[];
+  if (sets.length === 0) return null;
+  const firstDay = Math.min(...sets.map((x) => x.session.date.getTime()));
+  const day = sets.filter((x) => x.session.date.getTime() === firstDay);
+  const ws = day.map((x) => x.weight ?? 0).filter((w) => w > 0);
+  return { weight: ws.length ? Math.max(...ws) : null, reps: day.reduce((n, x) => n + (x.reps ?? 0), 0) };
 }
 
 /** Targets for a scheme outside any program: one week, no light or test weeks. */

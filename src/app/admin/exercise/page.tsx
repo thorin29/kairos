@@ -14,6 +14,7 @@ import { WorkoutExpiry } from "./workout-expiry";
 import { WorkoutExport } from "./workout-export";
 import { getWorkoutOverdueDays } from "@/lib/settings";
 import { libraryStatus, loadEquipment } from "@/lib/workouts/library-run";
+import { loadGarageFeet } from "@/lib/workouts/program-run";
 import { MovementLibrary, HouseholdEquipment, WorkoutsLibrary } from "./movement-library";
 import { wodLibraryStatus } from "@/lib/workouts/wod-run";
 import { sharedPlansForAdmin } from "@/lib/workouts/plan-share-run";
@@ -22,7 +23,7 @@ import { SharedPlans } from "./shared-plans";
 export const dynamic = "force-dynamic";
 
 export default async function AdminWorkoutsPage() {
-  const [{ people }, pool, weightUnits, hiitWorkouts, pendingShares, overdueDays, library, equipment, wods, sharedPlans] =
+  const [{ people }, pool, weightUnits, hiitWorkouts, pendingShares, overdueDays, library, equipment, wods, sharedPlans, garageFeet] =
     await Promise.all([
       loadWorkoutAdmin(),
       loadExercisePool(),
@@ -34,6 +35,7 @@ export default async function AdminWorkoutsPage() {
       loadEquipment(),
       wodLibraryStatus(),
       sharedPlansForAdmin(),
+      loadGarageFeet(),
     ]);
 
   return (
@@ -54,7 +56,7 @@ export default async function AdminWorkoutsPage() {
         <WorkoutExpiry days={overdueDays} />
         <ExercisePool pool={pool} weightUnits={weightUnits} />
         <MovementLibrary status={library} />
-        <HouseholdEquipment items={equipment} />
+        <HouseholdEquipment items={equipment} garageFeet={garageFeet} />
         <WorkoutsLibrary status={wods} />
         {pendingShares.length > 0 && <PendingShares shares={pendingShares} />}
         {sharedPlans.length > 0 && <SharedPlans plans={sharedPlans} />}

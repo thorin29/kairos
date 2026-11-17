@@ -32,18 +32,38 @@ export type Scheme =
   | { kind: "RANGE"; sets: number; min: number; max: number }
   | { kind: "SAME"; sets: number; reps: number }
   /** Timed holds (v0.637): sets of `min`–`max` seconds — a plank, a hollow hold. */
-  | { kind: "HOLD"; sets: number; min: number; max: number };
+  | { kind: "HOLD"; sets: number; min: number; max: number }
+  /** Odd squad (v0.732): ladders of 1-2-3 then 1-2-3-4 at a 5-rep weight;
+   *  `cap` limits the ladders (deadlift: 3). Stored "ladder" or "ladder:3". */
+  | { kind: "LADDER"; cap?: number }
+  /** A density block: sets of 5, alternated with its pair for `minutes`. */
+  | { kind: "DENSITY"; minutes: number }
+  /** A shuttle carry, logged in lengths of the garage. */
+  | { kind: "CARRY" }
+  /** Steel clubs: two hands, then one hand from week 3. */
+  | { kind: "CLUBS" };
 
 export function schemeKey(s: Scheme): string {
   if (s.kind === "WAVE") return s.start ? `wave:${s.start}` : "wave";
   if (s.kind === "RANGE") return `range:${s.sets}x${s.min}-${s.max}`;
   if (s.kind === "HOLD") return `hold:${s.sets}x${s.min}-${s.max}`;
+  if (s.kind === "LADDER") return s.cap ? `ladder:${s.cap}` : "ladder";
+  if (s.kind === "DENSITY") return `density:${s.minutes}`;
+  if (s.kind === "CARRY") return "carry";
+  if (s.kind === "CLUBS") return "clubs";
   return `same:${s.sets}x${s.reps}`;
 }
 
 export function parseScheme(raw: string | null | undefined): Scheme | null {
   if (!raw) return null;
   if (raw === "wave") return { kind: "WAVE" };
+  if (raw === "ladder") return { kind: "LADDER" };
+  if (raw === "carry") return { kind: "CARRY" };
+  if (raw === "clubs") return { kind: "CLUBS" };
+  let o: RegExpExecArray | null = /^ladder:([1-9])$/.exec(raw);
+  if (o) return { kind: "LADDER", cap: +o[1] };
+  o = /^density:(\d{1,2})$/.exec(raw);
+  if (o && +o[1] >= 5 && +o[1] <= 30) return { kind: "DENSITY", minutes: +o[1] };
   let m: RegExpExecArray | null = /^wave:(\d{4}-\d{2}-\d{2})$/.exec(raw);
   if (m) return { kind: "WAVE", start: m[1] };
   m = /^range:(\d+)x(\d+)-(\d+)$/.exec(raw);
@@ -84,6 +104,8 @@ export function cleanPlanScheme(raw: unknown, todayISO: string, current?: string
     if (cur?.kind === "WAVE" && cur.start) return schemeKey(cur);
     return `wave:${s.start ?? todayISO}`;
   }
+  // The Odd squad block kinds are set by the program, not picked in a plan.
+  if (s.kind === "LADDER" || s.kind === "DENSITY" || s.kind === "CARRY" || s.kind === "CLUBS") return schemeKey(s);
   if (s.sets < 1 || s.sets > 10) return null;
   if (s.kind === "RANGE" && !(s.min >= 1 && s.max >= s.min && s.max <= 50)) return null;
   if (s.kind === "SAME" && !(s.reps >= 1 && s.reps <= 50)) return null;
@@ -96,6 +118,10 @@ export function schemeLabel(s: Scheme): string {
   if (s.kind === "WAVE") return s.start ? "5/3/1 · work up to a top set" : "Work up to a top set";
   if (s.kind === "RANGE") return `${s.sets} × ${s.min}–${s.max}`;
   if (s.kind === "HOLD") return s.min === s.max ? `${s.sets} × ${clock(s.min)}` : `${s.sets} × ${clock(s.min)}–${clock(s.max)}`;
+  if (s.kind === "LADDER") return s.cap ? `Ladders · ${s.cap} at most` : "Ladders";
+  if (s.kind === "DENSITY") return `${s.minutes} min · sets of 5`;
+  if (s.kind === "CARRY") return "Shuttle carry";
+  if (s.kind === "CLUBS") return "Clubs";
   return `${s.sets} × ${s.reps}`;
 }
 
@@ -122,7 +148,15 @@ export type ProgramRole = {
    *  program's main lifts, plus library movements the household could add. */
   patterns?: Pattern[];
   groups?: MuscleGroup[];
+  /** Odd squad (v0.732): the only movements offered, in order, each with its
+   *  own sets when they differ from the slot's (a finisher: a carry, a hold
+   *  or clubs). Pool or library, by name; library ones need the equipment. */
+  offer?: Offer[];
+  /** The block it belongs to ("A" main lift, "B" density pair, "C" finisher). */
+  block?: "A" | "B" | "C";
 };
+
+export type Offer = { name: string; scheme?: Scheme };
 
 export type ProgramDay = {
   name: string;
@@ -150,6 +184,12 @@ export type Program = {
   /** 5/3/1 supplemental work after the main sets of the same lift (v0.620):
    *  FSL 5 × 5 at the first set's %, BBB 5 × 10 at 50%. Not in a light week. */
   supplemental?: "FSL" | "BBB";
+  /** Only main lifts test in a test week; the rest go light (Odd squad). */
+  testMainOnly?: boolean;
+  /** Set up with the block builder (Odd squad, v0.732): a muscle group per
+   *  weekday, then each day's blocks. Picked again after it ends, it starts
+   *  the builder over (no saved version). */
+  builder?: boolean;
 };
 
 const SQUAT = ["back squat", "squat", "front squat", "goblet squat"];
@@ -235,7 +275,7 @@ const extra = (
 const HINGE_GROUPS: MuscleGroup[] = ["LEGS", "DEADLIFT", "BACK"];
 const HAM_GROUPS: MuscleGroup[] = ["LEGS", "DEADLIFT"];
 
-export const PROGRAMS: readonly Program[] = [
+const BASE_PROGRAMS: readonly Program[] = [
   {
     key: "wendler-531",
     warmupSets: true,
@@ -543,6 +583,108 @@ export const PROGRAMS: readonly Program[] = [
   },
 ];
 
+/** Odd squad's blocks (v0.732). */
+const LADDER: Scheme = { kind: "LADDER" };
+const DENSITY: Scheme = { kind: "DENSITY", minutes: 15 };
+const CARRY: Scheme = { kind: "CARRY" };
+const CLUBS: Scheme = { kind: "CLUBS" };
+const o = (name: string, scheme?: Scheme): Offer => (scheme ? { name, scheme } : { name });
+/** C · Finisher, the same choices every day. */
+const FINISHERS: Offer[] = [
+  o("Shuttle carry", CARRY),
+  o("Bear-hug hold", { kind: "HOLD", sets: 3, min: 20, max: 45 }),
+  o("Farmer hold", { kind: "HOLD", sets: 3, min: 20, max: 45 }),
+  o("Sandbag over shoulder", r(3, 6, 10)),
+  o("Shield cast", CLUBS),
+  o("Club front swing", CLUBS),
+];
+const oddDay = (
+  name: string,
+  group: MuscleGroup,
+  mains: Offer[],
+  pair: Offer[],
+  finisher: string,
+  opts: { lower?: boolean; cap?: number } = {},
+): ProgramDay => {
+  const first = (list: Offer[], n = 0) => [list[n].name];
+  const fin = FINISHERS.find((f) => f.name === finisher) ?? FINISHERS[0];
+  return {
+    name,
+    roles: [
+      {
+        key: `${group.toLowerCase()}-a`,
+        label: "Main lift",
+        muscleGroup: group,
+        match: first(mains),
+        scheme: opts.cap ? { kind: "LADDER", cap: opts.cap } : LADDER,
+        main: true,
+        block: "A",
+        offer: mains,
+        ...(opts.lower ? { lower: true } : {}),
+      },
+      { key: `${group.toLowerCase()}-b1`, label: "Density pair", muscleGroup: group, match: first(pair), scheme: DENSITY, optional: true, block: "B", offer: pair, ...(opts.lower ? { lower: true } : {}) },
+      { key: `${group.toLowerCase()}-b2`, label: "Density pair", muscleGroup: group, match: first(pair, 1), scheme: DENSITY, optional: true, block: "B", offer: pair, ...(opts.lower ? { lower: true } : {}) },
+      { key: `${group.toLowerCase()}-c`, label: "Finisher", muscleGroup: group, match: [fin.name], scheme: fin.scheme ?? CARRY, optional: true, block: "C", offer: FINISHERS },
+    ],
+  };
+};
+
+/** Odd squad (v0.732): five weeks, a muscle group a day, three blocks a day. */
+export const ODD_SQUAD: Program = {
+  key: "odd-squad",
+  name: "Odd squad",
+  blurb:
+    "Five weeks, a muscle group a day. A: the main lift in ladders. B: a 15-minute density pair with kettlebells, sandbags or clubs. " +
+    "C: a carry, hold or club finisher. Week 5 is easy, then a test.",
+  weeks: 5,
+  lightWeeks: [],
+  testWeeks: [5],
+  testMainOnly: true,
+  builder: true,
+  defaultDays: [1, 2, 3, 4, 5],
+  days: [
+    oddDay(
+      "Chest",
+      "CHEST",
+      [o("Bench press"), o("Incline bench press"), o("Double kettlebell floor press"), o("Weighted dip")],
+      [o("Double kettlebell floor press"), o("TRX row"), o("Sandbag floor press"), o("Push-up"), o("Kettlebell row"), o("TRX push-up")],
+      "Shield cast",
+    ),
+    oddDay(
+      "Deadlift",
+      "DEADLIFT",
+      [o("Deadlift"), o("Sumo deadlift"), o("Kettlebell deadlift")],
+      [o("Kettlebell swing"), o("Sandbag to shoulder"), o("Sandbag clean"), o("Single-leg kettlebell deadlift"), o("Kettlebell high pull")],
+      "Shuttle carry",
+      { lower: true, cap: 3 },
+    ),
+    oddDay(
+      "Back",
+      "BACK",
+      [o("Pull-up"), o("Weighted pull-up")],
+      [o("Sandbag row"), o("Kettlebell row"), o("TRX row"), o("Kettlebell high pull"), o("Renegade row")],
+      "Club front swing",
+    ),
+    oddDay(
+      "Legs",
+      "LEGS",
+      [o("Front squat"), o("Back squat"), o("Goblet squat")],
+      [o("Sandbag squat"), o("Kettlebell reverse lunge"), o("Goblet squat"), o("Dumbbell lunge"), o("Club order squat")],
+      "Bear-hug hold",
+      { lower: true },
+    ),
+    oddDay(
+      "Shoulders & arms",
+      "SHOULDERS",
+      [o("Kettlebell clean and press"), o("Kettlebell press"), o("Overhead press"), o("Dumbbell shoulder press")],
+      [o("Barbell curl"), o("Dip"), o("Bench dip"), o("Weighted dip"), o("Kettlebell curl"), o("TRX triceps extension")],
+      "Shield cast",
+    ),
+  ],
+};
+
+export const PROGRAMS: readonly Program[] = [...BASE_PROGRAMS, ODD_SQUAD];
+
 /** Programs renamed since they were started (a running one keeps working). */
 const RENAMED: Record<string, string> = { "strength-waves": "wendler-531" };
 
@@ -673,6 +815,13 @@ export function targetsFor(input: {
   /** Dumbbell or kettlebell sizes on hand (v0.694): steps go to the next bell
    *  owned, and lighter or estimated weights to a bell that's there. */
   sizes?: readonly number[] | null;
+  /** A program's main lift (v0.732): with `testMainOnly`, only these test. */
+  main?: boolean;
+  /** The garage's length in feet, for a shuttle carry's lengths (v0.732). */
+  garageFeet?: number;
+  /** A density block's first session this block at this weight (v0.732):
+   *  20% more reps than it moves the weight up. */
+  firstTotal?: { weight: number | null; reps: number } | null;
 }): TargetSet[] {
   const { program, week, scheme, unit, lower, trainingMax, last } = input;
   const bells = input.sizes && input.sizes.length > 0 ? input.sizes : null;
@@ -680,7 +829,12 @@ export function targetsFor(input: {
   const up = (w: number, step: number) => (bells ? (nextBell(w, bells) ?? w) : w + step);
   /** A computed weight made loadable: a bell that's there, else rounded. */
   const load = (w: number) => (bells ? bellAtOrUnder(w, bells) : roundLoad(w, unit));
-  const intent = weekIntent(program, week);
+  const rawIntent = weekIntent(program, week);
+  // Odd squad's test week: the main lifts test, everything else goes light.
+  const intent = rawIntent === "TEST" && program.testMainOnly && !input.main ? "LIGHT" : rawIntent;
+
+  const odd = oddTargets({ ...input, intent, up, load });
+  if (odd) return odd;
 
   if (intent === "TEST") {
     const best = input.bestForThree ?? null;
@@ -728,6 +882,9 @@ export function targetsFor(input: {
       ...(s.supplemental ? { supplemental: true } : {}),
     }));
   }
+
+  // Odd squad's kinds were handled above.
+  if (scheme.kind !== "RANGE" && scheme.kind !== "SAME") return [];
 
   // A companion lift (anything but a program's own main lift) with sets last
   // time (v0.665): each set keeps last time's weight. Since v0.694 it steps up
@@ -800,6 +957,142 @@ export function targetsFor(input: {
     weight = weight != null ? load(weight * 0.8) : null;
   }
   return Array.from({ length: sets }, () => ({ weight, reps }));
+}
+
+// --- Odd squad's blocks (v0.732) ---------------------------------------------------
+
+/** Ladders per week: [ladders, top rung]. 1-2-3 × 3, × 4, then 1-2-3-4 × 3, × 4. */
+const LADDER_WEEKS: readonly [number, number][] = [
+  [3, 3],
+  [4, 3],
+  [3, 4],
+  [4, 4],
+];
+/** Shuttle carry per week: [trips, yards]. Week 5: 2 × 40, heavier. */
+const CARRY_WEEKS: readonly [number, number][] = [
+  [3, 40],
+  [4, 40],
+  [3, 60],
+  [4, 60],
+];
+/** Clubs per week: hands, sets, reps (a side, one hand). */
+const CLUB_WEEKS: readonly { hands: 1 | 2; sets: number; reps: number }[] = [
+  { hands: 2, sets: 3, reps: 10 },
+  { hands: 2, sets: 3, reps: 12 },
+  { hands: 1, sets: 3, reps: 8 },
+  { hands: 1, sets: 3, reps: 10 },
+];
+export const GARAGE_FEET = 20;
+
+/** Lengths of the garage for `yards` (20 ft: 40 yd = 6 lengths). */
+export function lengthsFor(yards: number, feet: number = GARAGE_FEET): number {
+  const f = feet > 0 ? feet : GARAGE_FEET;
+  return Math.max(1, Math.round((yards * 3) / f));
+}
+
+/** "1-2-3 × 3 ladders", "15 min · sets of 5", "3 × 6 lengths", "Two hands · 3 × 10"
+ *  — a block's sets for its week; other schemes as schemeLabel. */
+export function weekSchemeLabel(s: Scheme, program: Program, week: number, garageFeet: number = GARAGE_FEET): string {
+  const test = weekIntent(program, week) === "TEST";
+  const i = (week - 1) % 4;
+  if (s.kind === "LADDER") {
+    if (test) return s.cap ? "2 × 3 easy, then a heavy 3" : "2 × 3 easy, then a new 5-rep max";
+    const [n, top] = LADDER_WEEKS[i];
+    return `${Array.from({ length: top }, (_, k) => k + 1).join("-")} × ${s.cap ? Math.min(s.cap, n) : n} ladders`;
+  }
+  if (s.kind === "DENSITY") return test ? "10 min · easy" : `${s.minutes} min · sets of 5`;
+  if (s.kind === "CARRY") {
+    const [trips, yd] = test ? [2, 40] : CARRY_WEEKS[i];
+    return `${trips} × ${lengthsFor(yd, garageFeet)} lengths${test ? " · heavier" : ""}`;
+  }
+  if (s.kind === "CLUBS") {
+    if (test) return "A short flow · 3 rounds";
+    const c = CLUB_WEEKS[i];
+    return c.hands === 2 ? `Two hands · ${c.sets} × ${c.reps}` : `One hand · ${c.sets} × ${c.reps} a side`;
+  }
+  return schemeLabel(s);
+}
+
+/** Targets for Odd squad's block kinds; null for any other scheme. */
+function oddTargets(input: {
+  program: Program;
+  week: number;
+  scheme: Scheme;
+  unit: string;
+  lower?: boolean;
+  trainingMax?: number | null;
+  last: readonly LastSet[];
+  lastEasy?: boolean;
+  garageFeet?: number;
+  firstTotal?: { weight: number | null; reps: number } | null;
+  intent: Intent;
+  up: (w: number, step: number) => number;
+  load: (w: number) => number;
+}): TargetSet[] | null {
+  const { scheme, week, last, intent, up, load } = input;
+  const i = (week - 1) % 4;
+  const step = stepFor(input.lower, input.unit);
+  const weights = last.map((x) => x.weight ?? 0).filter((w) => w > 0);
+  const heaviest = weights.length ? Math.max(...weights) : null;
+
+  if (scheme.kind === "LADDER") {
+    // The weight you can do about 5 times (set as the training max), else
+    // last time's. Bodyweight (pull-ups): reps only.
+    const weight = input.trainingMax ?? heaviest;
+    if (intent === "TEST") {
+      const easy = weight != null ? load(weight * 0.8) : null;
+      const best = Math.max(0, ...last.map((x) => x.reps ?? 0));
+      const top: TargetSet =
+        weight == null
+          ? { weight: null, reps: Math.max(5, best + 1), top: true }
+          : { weight: up(weight, step), reps: scheme.cap ? 3 : 5, top: true };
+      return [{ weight: easy, reps: 3 }, { weight: easy, reps: 3 }, top];
+    }
+    const [n, rungs] = LADDER_WEEKS[i];
+    const ladders = scheme.cap ? Math.min(scheme.cap, n) : n;
+    const out: TargetSet[] = [];
+    for (let l = 0; l < ladders; l++) for (let k = 1; k <= rungs; k++) out.push({ weight, reps: k });
+    return out;
+  }
+
+  if (scheme.kind === "DENSITY") {
+    // Sets of 5 at last time's weight, one set more than last time (week 1:
+    // six to start). 20% more reps than the block's first time at this
+    // weight moves it up a step. Week 5: 10 minutes, easy.
+    const lastSets = last.filter((x) => (x.reps ?? 0) > 0);
+    const total = lastSets.reduce((n, x) => n + (x.reps ?? 0), 0);
+    let weight = heaviest;
+    let sets = lastSets.length ? Math.min(20, lastSets.length + 1) : 6;
+    const first = input.firstTotal;
+    if (
+      weight != null &&
+      intent !== "LIGHT" &&
+      ((first && first.reps > 0 && first.weight === weight && total >= first.reps * 1.2) || input.lastEasy)
+    ) {
+      const next = up(weight, step);
+      if (next > weight) {
+        weight = next;
+        sets = Math.max(4, lastSets.length);
+      }
+    }
+    if (intent === "LIGHT") sets = Math.max(3, Math.round((lastSets.length || 6) * (10 / scheme.minutes)));
+    return Array.from({ length: sets }, () => ({ weight, reps: 5 }));
+  }
+
+  if (scheme.kind === "CARRY") {
+    const light = intent === "LIGHT";
+    const [trips, yd] = light ? [2, 40] : CARRY_WEEKS[i];
+    const weight = heaviest != null && light ? up(heaviest, step) : heaviest;
+    const reps = lengthsFor(yd, input.garageFeet);
+    return Array.from({ length: trips }, () => ({ weight, reps }));
+  }
+
+  if (scheme.kind === "CLUBS") {
+    if (intent === "LIGHT") return Array.from({ length: 3 }, () => ({ weight: heaviest, reps: 6 }));
+    const c = CLUB_WEEKS[i];
+    return Array.from({ length: c.sets }, () => ({ weight: heaviest, reps: c.reps }));
+  }
+  return null;
 }
 
 /**

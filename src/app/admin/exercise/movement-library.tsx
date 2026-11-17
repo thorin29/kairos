@@ -6,7 +6,7 @@ import { PlusIcon, TrashIcon } from "@/components/icons";
 import { CATEGORY_LABEL, MUSCLE_GROUP_LABEL, type MuscleGroup, type WorkoutCategory } from "@/lib/workouts/catalog";
 import type { EquipmentItem } from "@/lib/workouts/library";
 import type { LibraryStatus } from "@/lib/workouts/library-run";
-import { applyMovementLibrary, applyWorkoutsLibrary, saveHouseholdEquipment } from "@/lib/actions/workouts";
+import { applyMovementLibrary, applyWorkoutsLibrary, saveGarageLength, saveHouseholdEquipment } from "@/lib/actions/workouts";
 import type { WodLibraryStatus } from "@/lib/workouts/wod-run";
 import { WORKOUT_TYPE_LABEL } from "@/lib/workouts/catalog";
 
@@ -241,8 +241,10 @@ const parseSizes = (s: string) =>
     .filter((n) => Number.isFinite(n) && n > 0);
 
 /** The household's equipment, with weights or sizes on hand. */
-export function HouseholdEquipment({ items }: { items: EquipmentItem[] }) {
+export function HouseholdEquipment({ items, garageFeet }: { items: EquipmentItem[]; garageFeet: number }) {
   const [list, setList] = useState(items.map((e) => ({ ...e, text: sizesText(e) })));
+  // The garage's length (v0.732): a shuttle carry is logged in lengths of it.
+  const [garage, setGarage] = useState(String(garageFeet));
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
 
@@ -256,6 +258,7 @@ export function HouseholdEquipment({ items }: { items: EquipmentItem[] }) {
         list.map(({ text, ...e }) => ({ ...e, sizes: parseSizes(text) })),
       );
       setList(clean.map((e) => ({ ...e, text: sizesText(e) })));
+      setGarage(String(await saveGarageLength(Number(garage))));
       setSaved(true);
     });
 
@@ -310,6 +313,22 @@ export function HouseholdEquipment({ items }: { items: EquipmentItem[] }) {
             </button>
           </div>
         ))}
+        <label className="flex items-center justify-between gap-2 p-3 text-sm">
+          <span className="font-semibold">Garage length</span>
+          <span className="flex items-center gap-2">
+            <input
+              value={garage}
+              aria-label="Garage length in feet"
+              inputMode="numeric"
+              onChange={(ev) => {
+                setSaved(false);
+                setGarage(ev.target.value);
+              }}
+              className={`${FIELD} tabular w-20 text-right`}
+            />
+            <span className="text-muted">ft</span>
+          </span>
+        </label>
         <div className="flex flex-wrap items-center gap-2 p-3">
           <button
             type="button"

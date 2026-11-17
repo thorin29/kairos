@@ -2072,7 +2072,7 @@ function MovementLogger({
               <span>Set</span>
               <span className="hidden sm:block">Last time</span>
               {showW && <span>Weight ({holdUnit ?? unit})</span>}
-              <span>{metric === "DURATION" ? "Time" : repsUnit ? `Distance (${repsUnit})` : "Reps"}</span>
+              <span>{metric === "DURATION" ? "Time" : repsUnit === "lengths" ? "Lengths" : repsUnit ? `Distance (${repsUnit})` : "Reps"}</span>
               <span className="text-center">Done</span>
               <span />
             </div>

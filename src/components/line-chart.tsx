@@ -10,6 +10,10 @@ export type Series = {
   unit: string;
   /** `reps`: the set the point stands for, shown with it ("185 × 3"). */
   points: { date: string; value: number; reps?: number | null; intent?: string | null }[];
+  /** Drawn as a line even when the chart draws dots (v0.732). */
+  line?: boolean;
+  /** A dashed line with no points: a reference (top weight, training max). */
+  dashed?: boolean;
 };
 
 const W = 520;
@@ -251,10 +255,18 @@ export function LineChart({
             .join(" ");
           return (
             <g key={s.id}>
-              {!dots && (
-                <path d={d} fill="none" stroke={s.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+              {(!dots || s.line || s.dashed) && (
+                <path
+                  d={d}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth={s.dashed ? 2 : 2.5}
+                  strokeDasharray={s.dashed ? "6 5" : undefined}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               )}
-              {s.points.map((p, i) => {
+              {!s.dashed && s.points.map((p, i) => {
                 const on = picked?.id === s.id && picked.i === i;
                 const cx = x(Date.parse(`${p.date}T00:00:00Z`));
                 const cy = y(p.value);

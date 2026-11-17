@@ -1258,6 +1258,17 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.732: `GET /api/v1/workouts/programs` choices add `builder` (Odd squad:
+set up with the block builder) and roles add `block` ("A" | "B" | "C") and
+`schemes` (option id → its own sets, for finishers); `current` adds `coreDay`
+(the Core day's weekday or null). `programs/start` takes `coreDay`: the Core
+day moves there (one is made if there's none). Core, Arms and Isometric days
+now stay in place when a program starts or ends. New stored schemes:
+`ladder` / `ladder:3`, `density:15`, `carry`, `clubs`; a shuttle carry's
+`repsUnit` is "lengths". `GET /api/v1/workouts/progress` points add `est`,
+`volume`, `total`, `seconds`, `density`; series add `fixed` and `program`
+`{ name, label, tm, since }`.
+
 v0.720: `GET /api/v1/coop` proposals add `voterNames` (string[]; parents only,
 empty otherwise). A sport's warm-up beside the plan no longer counts toward the
 day's workout or `workoutRemaining`.

@@ -186,6 +186,15 @@ const STRENGTH: Short[] = [
   ["Sandbag clean", "FULL_BODY", "HINGE", "sandbags", "W", "Bag on the floor, hinge to grab it, pull it into the lap, then stand and drive it up to the chest."],
   ["Sandbag squat", "LEGS", "SQUAT", "sandbags", "W", "Hug the bag at the chest and squat."],
   ["Sandbag over shoulder", "FULL_BODY", "HINGE", "sandbags", "W", "Lift the bag from the floor and throw it over one shoulder. Alternate sides."],
+  // Odd squad (v0.732)
+  ["Sandbag to shoulder", "FULL_BODY", "HINGE", "sandbags", "W", "Hinge, lap the bag, then stand and drive it up onto one shoulder. Set it down and alternate sides."],
+  ["Sandbag floor press", "CHEST", "PUSH", "sandbags", "W", "Lie on the floor with the bag across the chest, press it up until the arms are straight, lower until the elbows touch."],
+  ["Sandbag row", "BACK", "PULL", "sandbags", "W", "Hinge forward with a flat back, row the bag to the lower ribs by its handles, lower with control."],
+  ["Shuttle carry", "FULL_BODY", "CARRY", "sandbags", "W", "Carry the bag down the garage and back, turning at each end. Reps are lengths."],
+  ["Bear-hug hold", "FULL_BODY", "CARRY", "sandbags", "T", "Hug the bag high on the chest and stand tall. Log the weight and the time."],
+  ["Double kettlebell floor press", "CHEST", "PUSH", "kettlebells", "W", "Lie on the floor, a bell in each hand at the chest, press both up, lower until the elbows touch."],
+  ["Kettlebell reverse lunge", "LEGS", "SQUAT", "kettlebells", "W", "Bells racked at the shoulders, step back and lower the back knee, drive up through the front foot. Alternate legs."],
+  ["Club front swing", "SHOULDERS", "MOBILITY", "clubs", "W", "Club in both hands, swing it down between the legs and up in front to shoulder height, arms long."],
   // TRX
   ["TRX row", "BACK", "PULL", "trx", "R", "Lean back holding the handles, body straight. Pull the chest to the hands. Walk the feet forward to make it harder.", ["row", 1]],
   ["TRX Y-raise", "SHOULDERS", "PULL", "trx", "R", "Lean back, arms straight, raise them into a Y overhead, lower with control."],
@@ -346,4 +355,4 @@ export { watchUrl } from "@/lib/workouts/watch";
 /** A hold with a weight in hand (farmer, overhead kettlebell, plate pinch;
  *  v0.677.1): timed as usual, with the weight held beside each time. */
 export const isWeightedHold = (p: { name?: string } | null | undefined) =>
-  !!p && /farmer hold|overhead kettlebell hold|plate pinch hold/i.test(p.name ?? "");
+  !!p && /farmer hold|bear-hug hold|overhead kettlebell hold|plate pinch hold/i.test(p.name ?? "");

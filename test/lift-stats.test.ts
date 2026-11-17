@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estimatedMax, liftTrend, lightWeeks, mondayOf } from "@/lib/workouts/lift-stats";
+import { estimatedMax, liftTrend, lightWeeks, mondayOf, weekDots } from "@/lib/workouts/lift-stats";
 
 describe("lift stats", () => {
   it("estimated max from the best set of 12 or fewer, down to a plate step", () => {
@@ -9,19 +9,29 @@ describe("lift stats", () => {
     expect(estimatedMax([{ reps: 3, value: 100 }], "kg")).toBe(110);
     expect(estimatedMax([], "lb")).toBeNull();
   });
-  it("trend: climbing over 30 days, else weeks since the best", () => {
+  it("trend: climbing over 30 days, else holding weeks in a row, or last done", () => {
     const pts = [
       { date: "2026-09-01", value: 180 },
       { date: "2026-10-01", value: 190 },
       { date: "2026-11-08", value: 200 },
     ];
-    expect(liftTrend(pts, { date: "2026-11-08" }, "2026-11-11")).toEqual({ kind: "up", delta: 10 });
-    const flat = [
+    expect(liftTrend(pts, "2026-11-11")).toEqual({ kind: "up", delta: 10 });
+    const holding = [
       { date: "2026-09-01", value: 200 },
-      { date: "2026-11-08", value: 195 },
+      { date: "2026-10-27", value: 195 },
+      { date: "2026-11-03", value: 195 },
+      { date: "2026-11-10", value: 195 },
     ];
-    expect(liftTrend(flat, { date: "2026-09-01" }, "2026-11-11")).toEqual({ kind: "flat", weeks: 10 });
-    expect(liftTrend([{ date: "2026-11-08", value: 100 }], { date: "2026-11-08" }, "2026-11-11")).toBeNull();
+    expect(liftTrend(holding, "2026-11-11")).toEqual({ kind: "holding", weeks: 3 });
+    expect(liftTrend([{ date: "2026-09-01", value: 200 }], "2026-11-11")).toEqual({ kind: "stopped", weeks: 10 });
+    expect(liftTrend([{ date: "2026-11-08", value: 100 }], "2026-11-11")).toBeNull();
+  });
+  it("week dots: done, light, missed, before the start", () => {
+    const pts = [
+      { date: "2026-10-27" },
+      { date: "2026-11-10", intent: "LIGHT" },
+    ];
+    expect(weekDots(pts, "2026-11-11", 4)).toEqual([-1, 2, 0, 1]);
   });
   it("light weeks by their Monday", () => {
     expect(mondayOf("2026-11-11")).toBe("2026-11-09");

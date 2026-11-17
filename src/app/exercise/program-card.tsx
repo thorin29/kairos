@@ -23,6 +23,7 @@ import { InfoIcon } from "@/components/icons";
 import { MovementInfo } from "@/components/movement-info";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { PlanLibrary } from "./my-plans";
+import { BlockBuilder } from "./block-builder";
 import type { ProgramVersion } from "@/lib/workouts/program-version";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -84,6 +85,7 @@ export function ProgramCard({
   // "Make changes" at the end of a cycle: the next cycle's training maxes, and
   // the setup opened on the plan as it is (v0.626).
   const [changing, setChanging] = useState<Record<string, number> | null>(null);
+  const [editing, setEditing] = useState(false);
   const [pending, start] = useTransition();
 
   const reload = () =>
@@ -241,7 +243,9 @@ export function ProgramCard({
         )}
         {a.maxes.length > 0 && (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted">Training maxes</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+              {data.choices.find((c) => c.key === a.key)?.builder ? "Weight for 5 reps" : "Training maxes"}
+            </p>
             <div className="mt-1 divide-y divide-hairline">
               {/* Shown only (v0.685): a training max holds for the program and
                   changes at the end of a cycle or by restarting it. */}
@@ -255,6 +259,12 @@ export function ProgramCard({
           </div>
         )}
         <div className="flex flex-wrap gap-3 text-sm font-semibold">
+          {/* A builder program edits in place, same week (v0.732). */}
+          {data.setup && data.choices.find((c) => c.key === data.setup?.key)?.builder && (
+            <button type="button" onClick={() => setEditing(true)} className="text-accent">
+              Edit
+            </button>
+          )}
           <button type="button" onClick={() => setChoosing(true)} className="text-accent">
             Change program
           </button>
@@ -321,6 +331,31 @@ export function ProgramCard({
             }}
           />
         )}
+        {editing &&
+          data.setup &&
+          (() => {
+            const p = data.choices.find((c) => c.key === data.setup!.key);
+            return p ? (
+              <ProgramSetup
+                program={p}
+                current={data.current}
+                warmups={data.warmups}
+                busy={pending}
+                initial={data.setup}
+                nextMaxes={Object.fromEntries(a.maxes.map((m) => [m.poolExerciseId, m.weight]))}
+                onClose={() => setEditing(false)}
+                onStart={(input) =>
+                  start(async () => {
+                    const r = await startProgramFor(userId, { key: p.key, ...input });
+                    if (r.ok) {
+                      setEditing(false);
+                      done();
+                    }
+                  })
+                }
+              />
+            ) : null;
+          })()}
         {changing &&
           data.setup &&
           (() => {
@@ -620,7 +655,12 @@ const mainTag = (key: string) => (key.startsWith("wendler") ? "5/3/1" : key === 
  * and conditioning days, starting from the plan you have), and training maxes
  * (90% of the heaviest you've logged, editable; blank finds them the first week).
  */
-function ProgramSetup({
+/** A program set up by blocks (Odd squad, v0.732) opens the block builder. */
+function ProgramSetup(props: Parameters<typeof ProgramSetupSteps>[0]) {
+  return props.program.builder ? <BlockBuilder {...props} /> : <ProgramSetupSteps {...props} />;
+}
+
+function ProgramSetupSteps({
   program,
   current,
   warmups,

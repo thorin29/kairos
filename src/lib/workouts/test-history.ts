@@ -8,7 +8,7 @@ import "server-only";
 // shape: every hold in the test logged with exactly one set (the test is one
 // max hold each; the regular workouts do 2–3 sets of them).
 import { prisma } from "@/lib/prisma";
-import { fromDateColumn } from "@/lib/dates";
+import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { ISO_TEST, PLANK_TEST } from "@/lib/workouts/core-library";
 
 const GROUPS: readonly (readonly string[])[] = [
@@ -95,4 +95,38 @@ export async function lastTestsFor(userId: string, poolIds: string[], before: Da
     }
   }
   return out;
+}
+
+/**
+ * The month ("YYYY-MM") of `today` when this month's test was already logged
+ * before today (v0.732), else null. Read from what was logged, not from the
+ * plan entry, so the monthly test carries when a Core day is made again or
+ * moves to another weekday (a new program, a different day).
+ */
+export async function testedThisMonth(userId: string, kind: "core" | "iso", today: string): Promise<string | null> {
+  const group = GROUPS[kind === "iso" ? 1 : 0];
+  const month = today.slice(0, 7);
+  const members = (await prisma.poolExercise.findMany({
+    where: { OR: group.map((n) => ({ name: { equals: n, mode: "insensitive" as const } })) },
+    select: { id: true, name: true },
+  })) as { id: string; name: string }[];
+  if (members.length === 0) return null;
+  const nameOf = new Map(members.map((m) => [m.id, m.name.trim().toLowerCase()]));
+  const sets = (await prisma.sessionSet.findMany({
+    where: {
+      poolExerciseId: { in: members.map((m) => m.id) },
+      session: { userId, isRest: false, date: { gte: toDateColumn(`${month}-01`), lt: toDateColumn(today) } },
+    },
+    select: { poolExerciseId: true, session: { select: { date: true } } },
+  })) as { poolExerciseId: string; session: { date: Date } }[];
+  const byDay = new Map<string, Map<string, number>>();
+  for (const s of sets) {
+    const day = fromDateColumn(s.session.date);
+    const name = nameOf.get(s.poolExerciseId) ?? "";
+    const m = byDay.get(day) ?? new Map<string, number>();
+    m.set(name, (m.get(name) ?? 0) + 1);
+    byDay.set(day, m);
+  }
+  const hit = [...byDay.values()].some((m) => group.every((n) => m.get(n) === 1));
+  return hit ? month : null;
 }
