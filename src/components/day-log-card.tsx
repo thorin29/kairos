@@ -7,6 +7,9 @@ import { CATEGORY_LABELS } from "@/lib/colors";
 import { personDayLog, type DayLogItem } from "@/lib/actions/day-log";
 import { CheckIcon } from "@/components/icons";
 
+/** "Mon" for an ISO day. */
+const shortDay = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+
 /** Wraps a summary person card; tapping it opens a popup of what they actually
  *  did that day, with day-to-day scrolling. */
 export function DayLogCard({
@@ -19,18 +22,41 @@ export function DayLogCard({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [offset, setOffset] = useState(0); // 0 = today, -1 = yesterday…
+  return (
+    <>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") setOpen(true);
+        }}
+        className="cursor-pointer rounded-3xl outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-accent"
+      >
+        {children}
+      </div>
+      {open && <DayLogDialog userId={userId} name={name} day={todayISO()} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+/**
+ * A person's day: what was due, done or not, with day-to-day scrolling
+ * (v0.733: also opened from the Summary grid on any day). Work finished after
+ * its day shows "Done Mon" there and "From Sun" on the day it was finished.
+ */
+export function DayLogDialog({ userId, name, day, onClose }: { userId: string; name: string; day: string; onClose: () => void }) {
+  const today = todayISO();
+  const [dayISO, setDay] = useState(day > today ? today : day);
   const [data, setData] = useState<{
     items: DayLogItem[];
     doneCount: number;
     assigned: number;
   } | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const dayISO = addDays(todayISO(), offset);
+  const offset = dayISO === today ? 0 : dayISO === addDays(today, -1) ? -1 : -2;
 
   useEffect(() => {
-    if (!open) return;
     let live = true;
     setLoading(true);
     personDayLog(userId, dayISO).then((r) => {
@@ -42,30 +68,12 @@ export function DayLogCard({
     return () => {
       live = false;
     };
-  }, [open, dayISO, userId]);
+  }, [dayISO, userId]);
 
-  return (
-    <>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => {
-          setOffset(0);
-          setOpen(true);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") setOpen(true);
-        }}
-        className="cursor-pointer rounded-3xl outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-accent"
-      >
-        {children}
-      </div>
-
-      {open &&
-        createPortal(
+  return createPortal(
           <div
             className="animate-backdrop-fade fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-            onClick={() => setOpen(false)}
+            onClick={onClose}
           >
             <div
               className="w-full max-w-sm rounded-2xl border border-hairline bg-surface p-5 shadow-xl"
@@ -75,7 +83,7 @@ export function DayLogCard({
                 <h3 className="font-display text-lg font-semibold">{name}</h3>
                 <button
                   type="button"
-                  onClick={() => setOpen(false)}
+                  onClick={onClose}
                   className="text-muted hover:text-ink"
                   aria-label="Close"
                 >
@@ -86,7 +94,7 @@ export function DayLogCard({
               <div className="mb-3 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setOffset((o) => o - 1)}
+                  onClick={() => setDay((d) => addDays(d, -1))}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline text-muted hover:border-accent hover:text-accent"
                   aria-label="Previous day"
                 >
@@ -97,8 +105,8 @@ export function DayLogCard({
                 </span>
                 <button
                   type="button"
-                  disabled={offset >= 0}
-                  onClick={() => setOffset((o) => Math.min(0, o + 1))}
+                  disabled={dayISO >= today}
+                  onClick={() => setDay((d) => (d >= today ? d : addDays(d, 1)))}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline text-muted hover:border-accent hover:text-accent disabled:opacity-30"
                   aria-label="Next day"
                 >
@@ -138,6 +146,11 @@ export function DayLogCard({
                         >
                           {it.title}
                         </span>
+                        {(it.doneOn || it.from) && (
+                          <span className="shrink-0 rounded-full bg-ground px-2 py-0.5 text-[0.7rem] font-semibold text-ink">
+                            {it.doneOn ? `Done ${shortDay(it.doneOn)}` : `From ${shortDay(it.from!)}`}
+                          </span>
+                        )}
                         <span className="ml-auto text-[0.65rem] uppercase tracking-wide text-muted">
                           {CATEGORY_LABELS[it.category as keyof typeof CATEGORY_LABELS] ?? it.category}
                         </span>
@@ -149,7 +162,5 @@ export function DayLogCard({
             </div>
           </div>,
           document.body,
-        )}
-    </>
   );
 }

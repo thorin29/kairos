@@ -1004,6 +1004,32 @@ model GameSession {
 // any history — useful for starting a season even after months of testing.
 // ---------------------------------------------------------------
 
+/// Who changed what (v0.733): every change a parent makes from the web or a
+/// parent's phone, one row per change, only the fields that changed. Kept 12
+/// months (older rows are cleared when new ones are written, once a day).
+model AdminActivity {
+  id        String   @id @default(cuid())
+  at        DateTime @default(now())
+  actorId   String?
+  actorName String
+  /// Chores, Money, Bible… (activity.ts AREAS)
+  area      String
+  /// CREATE, UPDATE, DELETE
+  action    String
+  model     String
+  recordId  String?
+  /// The record's name or title when it was changed.
+  label     String?
+  /// The person the record belongs to, when it isn't the actor.
+  subjectId String?
+  /// [{ field, before, after }] for an update; secrets never written.
+  changes   Json?
+  /// Rows touched by a bulk change.
+  count     Int?
+
+  @@index([at])
+}
+
 model AppSetting {
   key       String   @id
   value     String

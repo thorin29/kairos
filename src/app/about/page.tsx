@@ -3,6 +3,9 @@ import { APP_VERSION, CHANGES, MIGRATIONS } from "@/lib/version";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
 import { CheckIcon, AlertIcon } from "@/components/icons";
+import { isAdmin } from "@/lib/session";
+import { getSetting } from "@/lib/settings";
+import { formatLong, todayISO } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +30,9 @@ export default async function AboutPage() {
   }
 
   const missing = MIGRATIONS.filter((m) => !applied.includes(m));
+  // Export (v0.733): admin only.
+  const admin = await isAdmin();
+  const lastExport = admin ? await getSetting("export.lastAt") : null;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
@@ -77,6 +83,32 @@ export default async function AboutPage() {
           </p>
         </Card>
       </section>
+
+      {admin && (
+        <section className="mb-10">
+          <SectionHeading>Export</SectionHeading>
+          <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
+            <div>
+              <p className="flex items-center gap-2 font-medium">
+                Everything, as JSON
+                <span
+                  className="cursor-help text-sm text-muted"
+                  title="Every table, one file. Passwords, PINs, device tokens and private calendar links are left out. Photos aren't included."
+                  aria-label="Every table, one file. Passwords, PINs, device tokens and private calendar links are left out. Photos aren't included."
+                >
+                  ⓘ
+                </span>
+              </p>
+              <p className="mt-0.5 text-sm text-muted">
+                {lastExport ? `Last exported ${formatLong(todayISO(new Date(lastExport)))}` : "Not exported yet"}
+              </p>
+            </div>
+            <a href="/admin/export" className="inline-flex h-10 items-center rounded-xl bg-accent px-4 text-sm font-semibold text-on-accent">
+              Download
+            </a>
+          </Card>
+        </section>
+      )}
 
       <section>
         <SectionHeading>Recent changes</SectionHeading>

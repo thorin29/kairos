@@ -270,6 +270,16 @@ export function TrophyIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+/** A grid of days, for Summary (v0.733). */
+export function SummaryIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <rect x="3.5" y="4" width="17" height="16" rx="2.5" />
+      <path d="M3.5 9h17M9.17 9v11M14.83 9v11M3.5 14.5h17" />
+    </svg>
+  );
+}
+
 export function CalendarPlusIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden>

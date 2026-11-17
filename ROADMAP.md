@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (16 Nov 2026, web v0.732.0 / app v0.528.0, versionCode 600)
+## Current status (17 Nov 2026, web v0.733.0 / app v0.529.0, versionCode 601)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -176,10 +176,7 @@ companions art) are recorded there and in DECISIONS.md.
 hours totals, recurring staples, bonus-size tuning, a lighter collect
 mechanic, and the interface polish and phone-layout items):
 
-- Household: export everything to JSON (workouts already have their own
-  export); an admin audit trail.
-- Dashboard: a weather panel and a weekly forecast page; a month/week
-  completion grid.
+- Dashboard: a weather panel and a weekly forecast page (web only).
 - Chores: smooth animated card reordering (dragging to reorder already works).
 - Bible: import a personal plan by pasting it; export a plan and re-import it;
   memory verses; reading eras; adding readings to a plan; a count of full passes; a "currently reading" nudge.
@@ -230,7 +227,7 @@ belong in the phone app. Admin keeps its PIN on the web for the same reason.
 - [x] Schema migrations applied automatically on container start
 - [x] Nightly `pg_dump` into the mapped data volume
 - [x] About page with version number and a migration completeness check
-- [ ] Export everything to JSON from the admin panel
+- [x] Export everything to JSON from the admin panel (About → Export, v0.733)
 
 #### Android app — decided direction
 
@@ -445,10 +442,11 @@ Characters. Each drawer entry keeps its web brand colour.
 - [x] Today's schedule strip with unlimited day navigation
 - [x] "Up for grabs" section for released and shared chores
 - [x] Weekly-start-Sunday convention throughout
-- [ ] Weather panel: current conditions, high and low, icon reflecting time
-      of day and sky, moon phase
-- [ ] Weekly forecast page styled after Breezy Weather
-- [ ] Month and week completion grid — every person's rate by day
+- [ ] Weather panel (web only): current conditions, high and low, icon
+      reflecting time of day and sky, moon phase
+- [ ] Weekly forecast page styled after Breezy Weather (web only)
+- [x] Month and week completion grid — every person's rate by day (Summary
+      page, web and app, v0.733)
 - [x] **Follow-up prompts on the home dashboard** (nudge, don't nag):
       - **"Did this happen?" for sporting calendar events** — after a sport event
         passes, ask whether it was completed (feeds scoring/streaks). Calendar-
@@ -570,7 +568,8 @@ the remaining personal-view items:
         with no explanatory text.
 - [x] **Personal / focused views** on a signed-in device, plus a summary page
       that's one tap away rather than front-and-centre. (done: the personal-view scoping below, verified 13 Nov)
-- [ ] Audit trail of admin changes
+- [x] Audit trail of admin changes (Admin → Activity, every parent change,
+      kept 12 months, v0.733)
 
 ## Chores
 
@@ -709,23 +708,24 @@ the remaining personal-view items:
 - [ ] Memory verses: assign verses to memorise, track progress, and count them
       toward the Wisdom stat (reciting/marking one done nudges you above the
       reading baseline)
-- [ ] Export a plan for editing and re-import
+- [x] Export a plan for editing and re-import (dated lines that round-trip;
+      family plans on the web only, v0.723 / v0.725)
 - [x] Coverage counts the whole run of the published plan, not just the
       current calendar year, and books can be marked already-read so the
       percentage reflects where the household actually is
-- [ ] **Reading eras** — statistics accumulate across successive plans and
-      reset only when an admin says so
+- [x] **Reading eras** — statistics accumulate across successive plans and
+      reset only when an admin says so. Built as the Bible tracker (v0.724):
+      every read is kept, times read per book, section and testament, and
+      Start over sets the bars back to 0% (v0.725, v0.730)
 - Dropped (Nov 2026): admin bulk-complete through a date
-- [ ] Add readings to the plan (was "admin override for a day"): passages from
-      a date, one a day, pushing the plan back, doubling up on existing days, or
-      some of each with the end date moved by a chosen number of days; a plan
-      with no end date always pushes back (mocked up Nov 2026)
+- [x] Add readings to the plan (was "admin override for a day"): additional
+      readings, or inserted into the plan, which pushes it back (v0.729)
 - [x] Mark reading read by chapter, not only whole books — a book part way
       through (Psalms) can be ticked as far as it's been read
 - [x] Plan progress marks its chapters automatically as the days pass,
       independently of whether anyone ticked their own daily box
 - [x] Badge for a complete Bible (household level)
-- [ ] A count of full passes through the whole Bible
+- [x] A count of full passes through the whole Bible (Whole Bible ×N, v0.724)
 
 ## Calendar
 
@@ -1059,7 +1059,7 @@ under **School** on each kid's card; a schoolwork card shows overdue + today +
 - [x] Event background images — per-kind/holiday background art on the event
       block and detail popup, dark scrim for legibility, graceful when a file is
       missing. Plumbing shipped; drop JPGs into public/event-bg/ (v0.99.2)
-- [ ] Weather on the calendar — daily conditions and temps (the dashboard panel
+- [ ] Weather on the calendar (web only) — daily conditions and temps (the dashboard panel
   is under Dashboard)
 - [ ] Moon phases displayed on the calendar
 
@@ -1826,9 +1826,9 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.732.0 on Next.js 16.4.6 (migrations through 158_tracker_reset, all registered
+- Web APP_VERSION 0.733.0 on Next.js 16.4.6 (migrations through 158_tracker_reset, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.528.0 / versionCode 600 / CLIENT_BUILD 600.
+- App versionName 0.529.0 / versionCode 601 / CLIENT_BUILD 601.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.

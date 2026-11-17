@@ -1258,6 +1258,16 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.733: `GET /api/v1/summary?view=week|month&at=YYYY-MM-DD&f=all|chores|bible|school|workouts`
+→ `{ seasonName, familyGoal: { text, kids }, view, from, to, today, filter,
+rows: [{ id, name, color, avatarPath, avatarPosition, total, days: [{ date,
+pct (null = nothing due), done, due, late, future }] }] }`. A parent's phone
+gets everyone, a child's only themselves. A day counts what was due and done
+by its deadline, plus late work finished that day (`late`). `GET
+/api/v1/summary/day?userId&date` → `{ items: [{ title, category, done,
+skipped, doneOn?, from? }], doneCount, assigned }` (a child: own only). A
+parent phone's changes (non-GET) are written to the Activity log.
+
 v0.732: `GET /api/v1/workouts/programs` choices add `builder` (Odd squad:
 set up with the block builder) and roles add `block` ("A" | "B" | "C") and
 `schemes` (option id → its own sets, for finishers); `current` adds `coreDay`

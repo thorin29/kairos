@@ -12,6 +12,7 @@ import {
   TasksIcon,
   SchoolIcon,
   TrophyIcon,
+  SummaryIcon,
   CartIcon,
   DumbbellIcon,
   DollarIcon,
@@ -44,7 +45,8 @@ const NAV: NavItem[] = [
   { href: "/money", label: "Money", color: "#15803d", icon: <DollarIcon className="h-6 w-6" /> },
   { href: "/games", label: "Game time", color: "#4338ca", icon: <GamepadIcon className="h-6 w-6" /> },
   { href: "/hockey", label: "Ice time", color: "#0e7490", icon: <HockeyIcon className="h-6 w-6" /> },
-  { href: "/summary", label: "Characters", color: "#db2777", icon: <TrophyIcon className="h-6 w-6" /> },
+  { href: "/characters", label: "Characters", color: "#db2777", icon: <TrophyIcon className="h-6 w-6" /> },
+  { href: "/summary", label: "Summary", color: "#b45309", icon: <SummaryIcon className="h-6 w-6" /> },
 ];
 
 /** Which nav item owns the current path (longest matching href wins). The

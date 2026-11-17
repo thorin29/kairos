@@ -1,4 +1,5 @@
 import "server-only";
+import { markDeviceRequest } from "@/lib/activity-context";
 import { randomBytes } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -472,6 +473,8 @@ export async function requireDevice(
     Number.isFinite(buildHeader) && buildHeader > 0 ? buildHeader : null,
     req.headers.get("x-client-version"),
   );
+  // A parent's phone: what it changes goes in the Activity log (v0.733).
+  await markDeviceRequest(result.device.person, req.method);
   return { device: result.device };
 }
 

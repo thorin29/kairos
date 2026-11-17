@@ -70,6 +70,7 @@ export async function resetScoring(): Promise<{ error: string | null }> {
   revalidatePath("/");
   revalidatePath("/setup");
   revalidatePath("/summary");
+  revalidatePath("/characters");
   revalidatePath("/chores");
   return { error: null };
 }
@@ -101,6 +102,7 @@ export async function setSeasonLength(
   }
 
   revalidatePath("/summary");
+  revalidatePath("/characters");
   revalidatePath("/admin/season");
   return { error: null };
 }

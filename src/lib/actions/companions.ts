@@ -14,5 +14,6 @@ export async function hatchEgg(
   const res = await hatchEggCore(userId, mode);
   revalidatePath(`/person/${userId}`);
   revalidatePath("/summary");
+  revalidatePath("/characters");
   return res;
 }

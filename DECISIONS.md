@@ -1,5 +1,38 @@
 # Decisions
 
+## 2026-11 — Summary page, completion grid, Activity log, export (v0.733.0)
+
+- **Summary** (`/summary`, last in the sidebar) is new: the family goal and
+  the completion grid. **Characters** moved to `/characters`, unchanged but
+  without the family goal. A parent (or the shared screen) sees everyone; a
+  child on a personal device sees only themselves (`completionPeople`).
+- **A day's share** (`queries/completion.ts`): due that day and done by its
+  deadline (the due date, or an anytime chore's last day), plus anything
+  finished that day that was late from an earlier day. Late work counts on the
+  day it was finished; its due day shows it missed. Skipped and open
+  (unclaimed) work isn't counted. No history of household pauses is applied.
+  The week or month figure is done ÷ due over the days so far, not an average
+  of percents.
+- **Day log**: `dayLogFor` (shared by Characters' popup, the grid, and the
+  app) adds `doneOn` (due here, finished later) and `from` (late from an
+  earlier day, finished here). `DayLogDialog` is now reusable and opens on any
+  day.
+- **Activity** (`AdminActivity`, migration 159): the Prisma client is
+  extended (`prisma.ts`) so a write to a followed model
+  (`activity-model.ts`: what parents set up or decide, never generated tasks,
+  reading days, synced plans, sessions or groceries) made by a parent is
+  logged after it succeeds, with only the fields that changed and secrets
+  masked. Who: a device request is marked in `requireDevice` (keyed on Next's
+  per-request headers object) and only non-GET requests from a parent count;
+  on the web only server actions (`next-action` header) by the signed-in
+  parent count, so page loads that tidy data don't. Tasks: only hand-made
+  ones for someone else; bulk changes record a count. Rows past 12 months are
+  cleared when a new one is written, once a day (there's no scheduler). About
+  half a kilobyte a row.
+- **Export** (`/admin/export`, admin only, a card on About): every table as
+  JSON, minus password/PIN/token hashes, secret settings, private calendar
+  links and the weather cache. Photos aren't included.
+
 ## 2026-11 — Odd squad, progress charts, the Core test across programs (v0.732.0)
 
 - **Odd squad** is a code template (`ODD_SQUAD` in programs.ts) with

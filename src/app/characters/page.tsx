@@ -1,0 +1,216 @@
+import { loadProgression, type PersonProgress } from "@/lib/queries/progression";
+import { loadCoop } from "@/lib/queries/coop";
+import { getScoringStart } from "@/lib/settings";
+import { todayISO } from "@/lib/dates";
+import { currentSeasonWindow } from "@/lib/season";
+import { fmtGrowth } from "@/lib/companions-growth";
+import { Avatar } from "@/components/avatar";
+import { Card, SectionHeading } from "@/components/ui";
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { FlameIcon, StarIcon, TrophyIcon } from "@/components/icons";
+import { Companion } from "@/components/companion";
+import { HatchControls } from "@/components/hatch-controls";
+import { personalUserId } from "@/lib/personal-scope";
+import { DayLogCard } from "@/components/day-log-card";
+
+export const dynamic = "force-dynamic";
+
+function Bar({ pct, tone = "accent" }: { pct: number; tone?: "accent" | "orange" | "emerald" }) {
+  const fill =
+    tone === "orange" ? "bg-orange-500" : tone === "emerald" ? "bg-emerald-500" : "bg-accent";
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-hairline">
+      <div className={`h-full rounded-full ${fill}`} style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
+    </div>
+  );
+}
+
+export default async function CharactersPage() {
+  const today = todayISO();
+  const allPeople = await loadProgression();
+  const meId = await personalUserId();
+  const people = meId ? allPeople.filter((p) => p.id === meId) : allPeople;
+  const personal = meId != null && people.length > 0;
+  const [since, seasonWin, coop] = await Promise.all([
+    getScoringStart(),
+    currentSeasonWindow(today),
+    loadCoop(allPeople),
+  ]);
+  const season = seasonWin.label;
+
+  return (
+    <>
+      
+
+      <main className="mx-auto max-w-3xl px-6 py-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <SectionHeading>This month &middot; {season}</SectionHeading>
+          <Link href="/scoring" className="text-sm font-medium text-accent hover:underline">
+            How scoring works
+          </Link>
+        </div>
+
+
+        <div className="space-y-5">
+          {people.map((p) => (
+            <DayLogCard key={p.id} userId={p.id} name={p.name}>
+              {personal && (
+                <div className="mb-6 flex flex-col items-center">
+                  <Companion
+                    companion={p.companion}
+                    colorHex={p.companionColor}
+                  />
+                  {p.companion.eggReady && (
+                    <HatchControls userId={p.id} phase={p.companion.phase} />
+                  )}
+                </div>
+              )}
+              <PersonCard p={p} full={personal} monthTarget={coop.target} />
+            </DayLogCard>
+          ))}
+        </div>
+      </main>
+    </>
+  );
+}
+
+function PersonCard({
+  p,
+  full = false,
+  monthTarget,
+}: {
+  p: PersonProgress;
+  full?: boolean;
+  monthTarget: number;
+}) {
+  const chips: { key: string; icon: ReactNode; label: string }[] = [];
+  const monthDone = p.monthlyCredit >= monthTarget;
+  if (monthDone) {
+    chips.push({
+      key: "month",
+      icon: <TrophyIcon className="h-3.5 w-3.5 text-amber-500" />,
+      label: "Month goal reached",
+    });
+  }
+  if (p.perfectWeeks > 0) {
+    chips.push({
+      key: "pw",
+      icon: <StarIcon className="h-3.5 w-3.5 text-sky-600" />,
+      label: `${p.perfectWeeks} perfect ${p.perfectWeeks === 1 ? "week" : "weeks"}`,
+    });
+  }
+  for (const m of p.milestones) {
+    chips.push({
+      key: `ms-${m}`,
+      icon: <FlameIcon className="h-3.5 w-3.5 text-orange-600" />,
+      label: `${m}-day streak`,
+    });
+  }
+  if (p.bestWeekPct != null) {
+    chips.push({
+      key: "best",
+      icon: <StarIcon className="h-3.5 w-3.5 text-emerald-600" />,
+      label: `Best week ${p.bestWeekPct}%`,
+    });
+  }
+
+  return (
+    <Card className="p-5">
+      {/* Header: avatar, class, level */}
+      <div className="flex items-center gap-4">
+        <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="lg" />
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-lg font-semibold leading-tight">{p.name}</p>
+          <p className="text-sm text-muted">{p.className}</p>
+        </div>
+        {!full && (
+          <Companion
+            companion={p.companion}
+            colorHex={p.companionColor}
+            size="sm"
+          />
+        )}
+        <div className="text-right">
+          <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
+            Level
+          </p>
+          <p className="font-display text-3xl font-semibold leading-none">{p.level.level}</p>
+        </div>
+      </div>
+
+      {/* Character XP bar */}
+      <div className="mt-3">
+        <Bar pct={p.level.pct} />
+        <p className="tabular mt-1 text-xs text-muted">
+          {p.level.span - p.level.intoLevel} XP to level {p.level.level + 1}
+        </p>
+      </div>
+
+      {/* This month: days of work, the family goal's count */}
+      <div className="mt-4 rounded-xl border border-hairline p-3">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-sm font-medium">This month</span>
+          <span className={`tabular text-xs font-medium ${monthDone ? "text-emerald-700" : "text-muted"}`}>
+            {fmtGrowth(p.monthlyCredit)} / {monthTarget} days
+          </span>
+        </div>
+        <Bar pct={(p.monthlyCredit / Math.max(1, monthTarget)) * 100} tone={monthDone ? "emerald" : "accent"} />
+      </div>
+
+      {/* Stats */}
+      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
+        {p.stats.map((s) => (
+          <div key={s.key}>
+            <div className="flex items-baseline justify-between">
+              <span className="text-xs text-muted">{s.label}</span>
+              <span className="tabular text-xs font-medium">Lv {s.level}</span>
+            </div>
+            <div className="mt-1">
+              <Bar pct={s.pct} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Streak + chips */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {p.currentStreak > 0 && (
+          <span
+            className="tabular inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700"
+            title={p.longestStreak > p.currentStreak ? `Best: ${p.longestStreak} days` : undefined}
+          >
+            <FlameIcon className="h-3.5 w-3.5" />
+            {p.currentStreak}-day streak
+          </span>
+        )}
+        {chips.map((c) => (
+          <span
+            key={c.key}
+            className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface px-2.5 py-1 text-xs text-ink"
+          >
+            {c.icon}
+            {c.label}
+          </span>
+        ))}
+      </div>
+
+      {/* Mastery titles */}
+      {p.masteries.length > 0 && (
+        <div className="mt-3 border-t border-hairline pt-3">
+          <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-muted">
+            Mastery
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+            {p.masteries.map((m) => (
+              <span key={m.chore} className="tabular text-xs text-muted">
+                <span className="font-medium text-ink">{m.title}</span> of {m.chore}{" "}
+                <span className="text-muted">&times;{m.count}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}

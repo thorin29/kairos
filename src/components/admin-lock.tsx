@@ -17,6 +17,7 @@ const SECTION: Record<string, string> = {
   "/school": "/admin/school",
   "/groceries": "/admin/groceries",
   "/money": "/admin/money",
+  "/characters": "/admin",
   "/summary": "/admin",
 };
 

@@ -111,6 +111,7 @@ export async function completeAlwaysOpenChoreCore(
 
   revalidatePath("/");
   revalidatePath("/summary");
+  revalidatePath("/characters");
   revalidatePath(`/person/${userId}`);
   return { error: null };
 }
