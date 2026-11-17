@@ -8,7 +8,7 @@ all live in the database, never in this repository.
 
 ---
 
-## Current status (17 Nov 2026, web v0.733.0 / app v0.529.0, versionCode 601)
+## Current status (17 Nov 2026, web v0.734.0 / app v0.530.0, versionCode 602)
 
 Rewritten on 13 Nov from the `CHANGES` history (web 0.582–0.695) and the app
 `CHANGELOG.md` (0.390–0.501). Details and reasons for each item are in
@@ -595,7 +595,8 @@ the remaining personal-view items:
 - [x] Reorder the household by dragging the chore cards
 - [x] Collaborative chores — one chore shared by several people, each doing
       their part, with a weekly / every-other-week / every-N-weeks frequency
-- [ ] Smooth animated card reordering with a dedicated drag library (dnd-kit)
+- [x] ~~Smooth animated card reordering with a dedicated drag library~~ — dropped
+      (Nov 2026: the chores page has changed since; drag to reorder is enough)
 - [x] Rotation helper — assign one chore across several people in sequence
 - [x] Gate a collaborative chore as complete only once everyone has done it,
       surfaced in a household view
@@ -848,13 +849,15 @@ the remaining personal-view items:
       the shared Family identity ("Family (shared)" in the subscribe form)
       instead of a person, so its whole feed shows for everyone in the family
       colour; person-owned feeds still take the owner's colour (v0.73.0)
-- [ ] Make the Family filter an independently togg(le)able owner, and add
-      holidays as a second Family-category source
+- [x] Make the Family filter an independently toggleable owner: "Family
+      events" in the calendar options on the web and the app; holidays have
+      their own colour
 
 ## Work
 
 - [x] Work shifts as calendar events with hours
-- [ ] Mark a subscribed calendar as Work, so its events show as work
+- [x] Mark a subscribed calendar as Work, so its events show as work (Admin →
+      Calendar → Work shifts: the Work label, colour and reminders, v0.734)
 
 ## School
 
@@ -1444,9 +1447,10 @@ the fairness engine above as the quiet fuel. No one is ranked against anyone.
 - [x] Test scores: mark a test done, enter a score out of a total; a higher
       score feeds the Scholar stat, so doing well (not just finishing) lifts
       School toward being your focus (v0.115.0)
-- [ ] More quality signals feeding the signature: workout progress (e.g. the
-      heat map's progress scoring) into Strength, reading beyond the plan into
-      Wisdom. Today Strength mostly counts that you worked out
+- [~] More quality signals feeding the signature: reading beyond the plan into
+      Wisdom is done (personal Bible reading, 2 XP a chapter); workout progress
+      (e.g. the heat map's progress scoring) into Strength is still open —
+      Strength counts that you worked out
 - [x] Companion starter variety + roster (3 creatures across eras) so people
       don't all share one; class bug fixed (no false "Athlete"); pixel XP bar
       showing level progress grouped by domain colour (v0.116.0)
@@ -1826,9 +1830,9 @@ From the original workouts plan, not built yet:
 
 ## Known-good baselines (end of this run)
 
-- Web APP_VERSION 0.733.0 on Next.js 16.4.6 (migrations through 158_tracker_reset, all registered
+- Web APP_VERSION 0.734.0 on Next.js 16.4.6 (migrations through 158_tracker_reset, all registered
   in `MIGRATIONS` since 0.695).
-- App versionName 0.529.0 / versionCode 601 / CLIENT_BUILD 601.
+- App versionName 0.530.0 / versionCode 602 / CLIENT_BUILD 602.
 - ice-time 0.1.3 (no Extra Parameters needed on Unraid).
 - Collector 5.0.0: deployed and running; Xbox totals come from real game sessions,
   plus the `ally` PC source where `GAME_APPS` is set.

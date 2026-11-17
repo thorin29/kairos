@@ -9,6 +9,7 @@ import {
   editCalendarPeople,
   retireCalendar,
   setCalendarSport,
+  setCalendarWork,
   type CalendarState,
   setCalendarDefaultDuration,
   setCalendarForceDuration,
@@ -40,6 +41,8 @@ export type Subscription = {
   eventCount: number;
   canRetire: boolean;
   sportWorkout: boolean;
+  /** A work schedule: its events are Work shifts (v0.734). */
+  isWork: boolean;
   defaultDurationMin: number | null;
   forceDuration: boolean;
   lastFetchedAt: string | null;
@@ -147,6 +150,10 @@ export function Subscriptions({
             <input type="checkbox" name="sportWorkout" className="h-4 w-4" />
             Sends an attendance confirmation to count as a workout
           </label>
+          <label className="flex w-full items-center gap-2 text-sm text-muted">
+            <input type="checkbox" name="isWork" className="h-4 w-4" />
+            Work shifts
+          </label>
         </form>
 
         <p className="mt-3 text-xs text-muted">
@@ -248,6 +255,20 @@ export function Subscriptions({
                     className="h-3.5 w-3.5"
                   />
                   Sends an attendance confirmation to count as a workout
+                </label>
+                <label className="mt-1 flex items-center gap-2 text-xs text-muted">
+                  <input
+                    type="checkbox"
+                    checked={s.isWork}
+                    disabled={busy}
+                    onChange={(e) =>
+                      startTransition(
+                        () => void setCalendarWork(s.id, e.target.checked),
+                      )
+                    }
+                    className="h-3.5 w-3.5"
+                  />
+                  Work shifts
                 </label>
 
                 {editMode && (

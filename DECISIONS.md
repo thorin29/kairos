@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-11 — Ladders repeat, bodyweight charts, work calendars (v0.734.0)
+
+- **Ladders** (`ladderStepAfter`): each earlier program week of the block
+  moves the lift's ladders on only when its logged reps reached that step's
+  total (`ladderTotal`, deadlift capped); a short week, or a week with no
+  session, repeats. Week 5's test is unchanged. The label follows the step.
+- **Bodyweight charts** (`queries/bodyweight.ts`): movements whose pool
+  metric is REPS (not Core), logged with no weight, join the lift charts as
+  `fixed` series in reps (best set a day; total and density from
+  `dayNumbers`), on the web and the phone. A movement also logged with weight
+  stays in the weight series only.
+- **Garage length** from a parent's phone: the builder's finisher card on the
+  app has a picker (`POST /workouts/garage`).
+- **Work calendars**: `ExternalCalendar.isWork` (migration 160). Its events
+  sync as `WORK` instead of `EXTERNAL` (still external and read-only), so
+  they get the Work label, the person's Work colour and Work reminders, and
+  the app draws them solid like a work shift. Turning it on or off re-kinds
+  the feed's events at once.
+- Roadmap tidy: the Family events toggle is done; smooth chore-card
+  animation dropped; Wisdom from personal Bible reading was already done
+  (Strength from workout progress is the open half).
+
 ## 2026-11 — Summary page, completion grid, Activity log, export (v0.733.0)
 
 - **Summary** (`/summary`, last in the sidebar) is new: the family goal and

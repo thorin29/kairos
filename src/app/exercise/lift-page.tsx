@@ -116,7 +116,8 @@ export function LiftRows({
               <span className="line-clamp-2 text-sm font-semibold">{s.name}</span>
               <span className="truncate text-xs text-muted">
                 Best {setText(s.best!.value, s.best!.reps)}
-                {last ? ` · last ${setText(last.value, last.reps)}` : ""}
+                {s.unit === "reps" ? " reps" : ""}
+                {last ? ` · last ${setText(last.value, last.reps)}${s.unit === "reps" ? " reps" : ""}` : ""}
               </span>
             </span>
             <Spark points={s.points} color={color} />
@@ -356,7 +357,7 @@ export function LiftPage({
           </div>
         )}
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <Tile k="Record" v={s.best ? setText(s.best.value, s.best.reps) : "—"} sub={s.best ? formatShort(s.best.date) : "none yet"} />
+          <Tile k="Record" v={s.best ? `${setText(s.best.value, s.best.reps)}${s.unit === "reps" ? " reps" : ""}` : "—"} sub={s.best ? formatShort(s.best.date) : "none yet"} />
           <Tile k="Est. max" v={est ? `${est} ${s.unit}` : "—"} sub={est ? "one rep, estimated" : "needs a set of 12 or fewer"} />
           <Tile
             k="30 days"

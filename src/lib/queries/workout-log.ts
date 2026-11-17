@@ -3,6 +3,7 @@ import { planDow, swapsFor } from "@/lib/workouts/day-swap-run";
 import { swapName } from "@/lib/workouts/day-swap";
 import { prisma } from "@/lib/prisma";
 import { dayNumbers, isFixedWeight } from "@/lib/workouts/lift-stats";
+import { bodyweightSeries } from "@/lib/queries/bodyweight";
 import { slotForDate } from "@/lib/workouts/rotation";
 import { fmtClock, rowSummary } from "@/lib/workouts/concept2";
 import { CARDIO_CATEGORIES, blockKind, isSimpleCategory } from "@/lib/workouts/blocks";
@@ -33,6 +34,7 @@ import {
   weekIntent,
   weekLabel,
   weekSchemeLabel,
+  ladderStepAfter,
   type Program,
 } from "@/lib/workouts/programs";
 import {
@@ -1210,6 +1212,24 @@ export async function loadWorkoutProgress(
       })).filter((b) => b.points.length > 0),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+  // Bodyweight movements (v0.734): charted by reps, like a fixed weight.
+  for (const b of await bodyweightSeries(userId, new Set(series.map((x) => x.poolExerciseId)))) {
+    series.push({
+      poolExerciseId: b.id,
+      name: b.name,
+      muscleGroup: shownGroup(b.name, b.muscleGroup) ?? null,
+      tracked: plannedIds.has(b.id),
+      ...bodyMapFor(b.name, b.muscleGroup),
+      unit: "reps",
+      points: b.points,
+      fixed: true,
+      program: null,
+      best: b.best,
+      repMaxes: [],
+      bands: [],
+    });
+  }
+  series.sort((a, b) => a.name.localeCompare(b.name));
 
   // Default: today's tracked weights, else the next day that has some.
   const weightsOn = (d: number): string[] =>
@@ -2183,6 +2203,11 @@ export async function movementTarget(
   const garageFeet = scheme.kind === "CARRY" ? await loadGarageFeet() : undefined;
   const firstTotal =
     scheme.kind === "DENSITY" && fromProgram ? await firstSessionTotal(userId, movement, fromProgram.blockStartedOn, dateISO) : null;
+  // Ladders hold back a week after a missed rep (v0.734).
+  const ladderStep =
+    scheme.kind === "LADDER" && fromProgram
+      ? await ladderStepFor(userId, movement, program, fromProgram.blockStartedOn, week, dateISO, scheme.cap)
+      : undefined;
   const sets = targetsFor({
     program,
     week,
@@ -2207,6 +2232,7 @@ export async function movementTarget(
     main: !!role?.main,
     garageFeet,
     firstTotal,
+    ladderStep,
   });
   if (sets.length === 0) return null;
   const intent = weekIntent(program, week);
@@ -2220,7 +2246,7 @@ export async function movementTarget(
           ? weekLabel(program, week)
           : "",
     scheme: ODD_KINDS.has(scheme.kind)
-      ? weekSchemeLabel(scheme, program, week, garageFeet)
+      ? weekSchemeLabel(scheme, program, week, garageFeet, ladderStep)
       : intent === "TEST" && !(program.testMainOnly && !role?.main)
         ? "Work up to a heavy 3"
         : schemeLabel(scheme),
@@ -2247,6 +2273,30 @@ async function firstSessionTotal(
   const day = sets.filter((x) => x.session.date.getTime() === firstDay);
   const ws = day.map((x) => x.weight ?? 0).filter((w) => w > 0);
   return { weight: ws.length ? Math.max(...ws) : null, reps: day.reduce((n, x) => n + (x.reps ?? 0), 0) };
+}
+
+/** The ladder step for this week (v0.734): reps logged in each earlier
+ *  program week of this block, through `ladderStepAfter`. */
+async function ladderStepFor(
+  userId: string,
+  poolExerciseId: string,
+  program: Program,
+  blockStartedOn: string,
+  week: number,
+  before: string,
+  cap?: number,
+): Promise<number> {
+  if (week <= 1) return 0;
+  const sets = (await prisma.sessionSet.findMany({
+    where: { poolExerciseId, session: { userId, isRest: false, date: { gte: toDateColumn(blockStartedOn), lt: toDateColumn(before) } } },
+    select: { reps: true, session: { select: { date: true } } },
+  })) as { reps: number | null; session: { date: Date } }[];
+  const byWeek = new Map<number, number>();
+  for (const s of sets) {
+    const w = programWeek(program, blockStartedOn, fromDateColumn(s.session.date));
+    if (w < week) byWeek.set(w, (byWeek.get(w) ?? 0) + (s.reps ?? 0));
+  }
+  return ladderStepAfter(byWeek, week, cap);
 }
 
 /** Targets for a scheme outside any program: one week, no light or test weeks. */

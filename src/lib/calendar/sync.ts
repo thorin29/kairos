@@ -62,7 +62,8 @@ export async function syncCalendar(id: string): Promise<SyncResult> {
         const data = {
           userId: calendar.userId,
           isFamily: calendar.isFamily,
-          kind: EventKind.EXTERNAL,
+          // A work schedule's events are Work (v0.734).
+          kind: calendar.isWork ? EventKind.WORK : EventKind.EXTERNAL,
           title: e.summary,
           location: e.location,
           notes: e.description,

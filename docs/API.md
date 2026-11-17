@@ -1258,6 +1258,13 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.734: `GET /api/v1/workouts/programs` adds `garageFeet` and
+`canEditGarage`; `POST /api/v1/workouts/garage { feet }` (5–200, a parent).
+`GET /api/v1/workouts/progress` also lists bodyweight movements (logged in
+reps, no weight) as `fixed` series with `unit: "reps"`, `value` the day's
+best set. Events from a subscribed calendar marked as work come as `kind:
+"WORK"` (still `external`).
+
 v0.733: `GET /api/v1/summary?view=week|month&at=YYYY-MM-DD&f=all|chores|bible|school|workouts`
 → `{ seasonName, familyGoal: { text, kids }, view, from, to, today, filter,
 rows: [{ id, name, color, avatarPath, avatarPosition, total, days: [{ date,

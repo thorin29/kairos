@@ -55,7 +55,9 @@ export function recolorForPersonal(
     const iAmOn = e.memberIds?.includes(meId) ?? false;
     if (!iAmOn) return paint(e, p.othersColor ?? GREY);
     const c = e.externalCalendarId ? p.subColors[e.externalCalendarId] : undefined;
-    return c ? paint(e, c) : e;
+    if (c) return paint(e, c);
+    // A work schedule's shifts take my Work colour (v0.734).
+    return e.kind === "WORK" && p.kindColors.WORK ? paint(e, p.kindColors.WORK) : e;
   }
 
   // Family / shared household events keep the household (family) color, unless

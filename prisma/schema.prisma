@@ -538,6 +538,9 @@ model ExternalCalendar {
   // When on, every event from this feed auto-logs a sport workout on its day
   // for the feed's owner (helpful for a hockey or game schedule).
   sportWorkout  Boolean   @default(false)
+  // A work schedule (v0.734): its events are Work, not Subscribed — the Work
+  // label, colour and reminders, drawn like any work shift.
+  isWork        Boolean   @default(false)
   // Length (minutes) to give a feed event that has no end time / duration of its
   // own. Null falls back to 60. Useful for league feeds (e.g. 75-minute games)
   // that publish only a start time.

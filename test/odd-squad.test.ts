@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ODD_SQUAD, lengthsFor, parseScheme, schemeKey, targetsFor, weekSchemeLabel, type Scheme } from "@/lib/workouts/programs";
+import { ODD_SQUAD, ladderStepAfter, ladderTotal, lengthsFor, parseScheme, schemeKey, targetsFor, weekSchemeLabel, type Scheme } from "@/lib/workouts/programs";
 
 const t = (scheme: Scheme, week: number, extra: Partial<Parameters<typeof targetsFor>[0]> = {}) =>
   targetsFor({ program: ODD_SQUAD, week, scheme, unit: "lb", last: [], ...extra });
@@ -14,6 +14,14 @@ describe("Odd squad", () => {
     expect(t({ kind: "LADDER", cap: 3 }, 4, { trainingMax: 275, main: true, lower: true })).toHaveLength(12);
     expect(t({ kind: "LADDER" }, 2, { trainingMax: 185, main: true }).every((s) => s.weight === 185)).toBe(true);
     expect(weekSchemeLabel({ kind: "LADDER" }, ODD_SQUAD, 3)).toBe("1-2-3-4 × 3 ladders");
+  });
+  it("a missed rep repeats that week's ladders", () => {
+    expect(ladderTotal(0)).toBe(18);
+    expect(ladderTotal(3, 3)).toBe(30);
+    expect(ladderStepAfter(new Map([[1, 18], [2, 24], [3, 30]]), 4)).toBe(3);
+    expect(ladderStepAfter(new Map([[1, 17], [2, 18], [3, 23]]), 4)).toBe(1);
+    expect(ladderStepAfter(new Map([[1, 18]]), 3)).toBe(1);
+    expect(t({ kind: "LADDER" }, 3, { trainingMax: 185, main: true, ladderStep: 1 })).toHaveLength(12);
   });
   it("week 5: two easy triples, then a new 5-rep max (deadlift a heavy 3)", () => {
     const w5 = t({ kind: "LADDER" }, 5, { trainingMax: 185, main: true });

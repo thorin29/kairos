@@ -29,6 +29,7 @@ export async function addCalendar(
   const name = String(formData.get("name") ?? "").trim().slice(0, 60);
   const rawUrl = String(formData.get("url") ?? "").trim();
   const sportWorkout = formData.get("sportWorkout") != null;
+  const isWork = formData.get("isWork") != null;
   // People this feed is also shared with, beyond the owner.
   const memberIds = Array.from(
     new Set(
@@ -63,7 +64,7 @@ export async function addCalendar(
   }
 
   const created = await prisma.externalCalendar.create({
-    data: { userId, isFamily, memberIds, name, url, sportWorkout },
+    data: { userId, isFamily, memberIds, name, url, sportWorkout, isWork },
   });
 
   // Opt-out visibility: make the new calendar visible to everyone. Users who
@@ -124,6 +125,20 @@ export async function setCalendarSport(
     where: { id },
     data: { sportWorkout },
   });
+  revalidatePath("/calendar");
+  revalidatePath("/");
+}
+
+/** Mark a feed as a work schedule (v0.734): its events become Work shifts
+ *  (the Work label, colour and reminders), now and on every sync. */
+export async function setCalendarWork(id: string, isWork: boolean): Promise<void> {
+  await requireAdmin();
+  await prisma.externalCalendar.update({ where: { id }, data: { isWork } });
+  await prisma.event.updateMany({
+    where: { externalCalendarId: id },
+    data: { kind: isWork ? "WORK" : "EXTERNAL" },
+  });
+  revalidatePath("/admin/calendar");
   revalidatePath("/calendar");
   revalidatePath("/");
 }

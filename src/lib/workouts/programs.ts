@@ -822,6 +822,8 @@ export function targetsFor(input: {
   /** A density block's first session this block at this weight (v0.732):
    *  20% more reps than it moves the weight up. */
   firstTotal?: { weight: number | null; reps: number } | null;
+  /** Ladders: which week's ladders (0–3), held back after a missed rep (v0.734). */
+  ladderStep?: number;
 }): TargetSet[] {
   const { program, week, scheme, unit, lower, trainingMax, last } = input;
   const bells = input.sizes && input.sizes.length > 0 ? input.sizes : null;
@@ -984,6 +986,31 @@ const CLUB_WEEKS: readonly { hands: 1 | 2; sets: number; reps: number }[] = [
 ];
 export const GARAGE_FEET = 20;
 
+/** Which week's ladders: the step held back by misses, else the week's own. */
+function ladderIndex(step: number | undefined, week: number): number {
+  return step != null ? Math.max(0, Math.min(3, step)) : (week - 1) % 4;
+}
+
+/** Reps in one session of a ladder step ("1-2-3 × 3" = 18; deadlift capped). */
+export function ladderTotal(step: number, cap?: number): number {
+  const [n, rungs] = LADDER_WEEKS[Math.max(0, Math.min(3, step))];
+  return (cap ? Math.min(cap, n) : n) * ((rungs * (rungs + 1)) / 2);
+}
+
+/**
+ * Where a lift's ladders stand (v0.734): "miss a rep and stay on that week's
+ * ladders next week". `byWeek` holds the reps logged in each earlier program
+ * week (1-based); a week that reached its step's reps moves on, a short or
+ * missed week repeats.
+ */
+export function ladderStepAfter(byWeek: ReadonlyMap<number, number>, week: number, cap?: number): number {
+  let step = 0;
+  for (let k = 1; k < week; k++) {
+    if ((byWeek.get(k) ?? 0) >= ladderTotal(step, cap)) step = Math.min(3, step + 1);
+  }
+  return step;
+}
+
 /** Lengths of the garage for `yards` (20 ft: 40 yd = 6 lengths). */
 export function lengthsFor(yards: number, feet: number = GARAGE_FEET): number {
   const f = feet > 0 ? feet : GARAGE_FEET;
@@ -992,12 +1019,18 @@ export function lengthsFor(yards: number, feet: number = GARAGE_FEET): number {
 
 /** "1-2-3 × 3 ladders", "15 min · sets of 5", "3 × 6 lengths", "Two hands · 3 × 10"
  *  — a block's sets for its week; other schemes as schemeLabel. */
-export function weekSchemeLabel(s: Scheme, program: Program, week: number, garageFeet: number = GARAGE_FEET): string {
+export function weekSchemeLabel(
+  s: Scheme,
+  program: Program,
+  week: number,
+  garageFeet: number = GARAGE_FEET,
+  ladderStep?: number,
+): string {
   const test = weekIntent(program, week) === "TEST";
   const i = (week - 1) % 4;
   if (s.kind === "LADDER") {
     if (test) return s.cap ? "2 × 3 easy, then a heavy 3" : "2 × 3 easy, then a new 5-rep max";
-    const [n, top] = LADDER_WEEKS[i];
+    const [n, top] = LADDER_WEEKS[ladderIndex(ladderStep, week)];
     return `${Array.from({ length: top }, (_, k) => k + 1).join("-")} × ${s.cap ? Math.min(s.cap, n) : n} ladders`;
   }
   if (s.kind === "DENSITY") return test ? "10 min · easy" : `${s.minutes} min · sets of 5`;
@@ -1025,6 +1058,7 @@ function oddTargets(input: {
   lastEasy?: boolean;
   garageFeet?: number;
   firstTotal?: { weight: number | null; reps: number } | null;
+  ladderStep?: number;
   intent: Intent;
   up: (w: number, step: number) => number;
   load: (w: number) => number;
@@ -1048,7 +1082,7 @@ function oddTargets(input: {
           : { weight: up(weight, step), reps: scheme.cap ? 3 : 5, top: true };
       return [{ weight: easy, reps: 3 }, { weight: easy, reps: 3 }, top];
     }
-    const [n, rungs] = LADDER_WEEKS[i];
+    const [n, rungs] = LADDER_WEEKS[ladderIndex(input.ladderStep, week)];
     const ladders = scheme.cap ? Math.min(scheme.cap, n) : n;
     const out: TargetSet[] = [];
     for (let l = 0; l < ladders; l++) for (let k = 1; k <= rungs; k++) out.push({ weight, reps: k });

@@ -12,6 +12,7 @@ import { setsSummary } from "@/lib/workouts/sets";
 import { loadDayOrders, type DayOrders } from "@/lib/workouts/day-order";
 import { programByKey, programWeek, weekLabel } from "@/lib/workouts/programs";
 import { dayNumbers, isFixedWeight } from "@/lib/workouts/lift-stats";
+import { bodyweightSeries } from "@/lib/queries/bodyweight";
 import { groupHistory } from "@/lib/workouts/history";
 import { loadProgramSpans, sportLabels } from "@/lib/workouts/history-run";
 import type { HeatMap } from "@/lib/workouts/heat";
@@ -622,6 +623,23 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         ),
       }))
       .filter((s) => s.points.length > 0);
+    // Bodyweight movements (v0.734): charted by reps, like a fixed weight.
+    for (const b of await bodyweightSeries(person.id, new Set(allSeries.map((x) => x.exerciseId)))) {
+      allSeries.push({
+        exerciseId: b.id,
+        name: b.name,
+        muscleGroup: (shownGroup(b.name, (b.muscleGroup as MuscleGroup) ?? null) as MuscleGroup | "LOWER_BACK" | null) ?? null,
+        unit: "reps",
+        color: LINE_COLORS[allSeries.length % LINE_COLORS.length],
+        points: b.points,
+        fixed: true,
+        program: null,
+        best: b.best,
+        repMaxes: [],
+        bands: [],
+      });
+    }
+    allSeries.sort((a, b) => a.name.localeCompare(b.name));
 
     const todayPoolIds = new Set<string>();
     // Today's planned movements, for the places that mean "today".
