@@ -1,12 +1,10 @@
 # Kairos API (v1) — mobile client contract
 
-Status: **partly built.** The identity model is settled (per-person device
-tokens) and the auth/identity surface is implemented: phones onboard by
-redeeming an invitation code via `POST /auth/join`, and `POST /auth/refresh`,
-`POST /auth/revoke`, `POST /auth/reauth`, `GET /me`, and `GET /meta` round out
-the surface. Everything else below remains a **proposal** until built. This
-document is the contract the native Android client and the Next.js backend both
-hold to, so the client is never coupled to Next.js implementation details.
+Status: **built.** 200 route files under `src/app/api/v1/`; the phone app uses
+all of them (see the inventory at the end). Sections marked *not built* are the
+only exceptions. This document is the contract the native Android client and
+the Next.js backend both hold to, so the client is never coupled to Next.js
+implementation details.
 
 The web app talks to the backend through Next.js Server Actions and will keep
 doing so. This REST surface is **additive** — a second door onto the same
@@ -18,9 +16,12 @@ same logic.
 
 ## The one decision that gates everything: identity
 
-The web dashboard is deliberately a **shared household screen with no
-per-person sign-in** (see ARCHITECTURE.md, "There is no per-person sign-in").
-Everyone sees everything; the only lock is the admin PIN.
+*Written when the web had no sign-in. Since v0.699 the web needs a parent's
+sign-in on every page (ARCHITECTURE.md, "The web needs a parent's sign-in");
+the phone identity below is unchanged.*
+
+At the time the web dashboard was a **shared household screen with no
+per-person sign-in**. Everyone saw everything; the only lock was the admin PIN.
 
 A personal mobile app breaks that assumption: a phone belongs to one person and
 should open to *their* chores, *their* points, *their* reading. So the mobile
@@ -1616,19 +1617,13 @@ POST /api/v1/devices/{id}/revoke   revoke one of your own devices
 404: not_found
 ```
 
-### Push & notifications — proposal
-```
-POST   /api/v1/devices/push        register FCM push token for this device
-DELETE /api/v1/devices/push        drop this device's push token
-GET    /api/v1/notifications       recent notifications for deep-linking
-```
+### Push and sync — *not built, not planned*
 
-### Sync
-```
-GET  /api/v1/sync?since=<cursor>   changes since cursor, for offline reconcile
-```
-Cursor-based, additive. Offline writes replay through the same POSTs above, so
-there is no separate write-sync path to keep consistent.
+Notifications are local on the phone (`GET /notifications/upcoming` feeds the
+alarms), so there is no push-token registration (FCM was ruled out; the path,
+if ever wanted, is self-hosted UnifiedPush). There is no `/sync` endpoint
+either: the phone repaints from its Room page cache and replays queued writes
+through the same POSTs above.
 
 ### Meta — **built (v0.177)**
 ```
@@ -1752,7 +1747,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**193 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**200 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1762,28 +1757,23 @@ silently invisible:
 - **dashboard**, **tasks** (`add`, `[id]/complete`, `[id]/uncomplete`, `[id]/update`, `[id]/edit-data`, `[id]/delete`), **chores** (`always-open`, `claim`, `claim-complete`, `release`)
 - **calendar** (`event`, `event/update`, `event/delete`, `prefs`, `subscribed-reminders`), **event-names**, **event-bg**, **addresses**, **sport/confirm**, **sport/decline**, **notifications/meta**, **notifications/upcoming**
 - **school** (`add`, `add-to-today`, `rename`, `delete`; `approvals` removed in v0.714), **classes**, **classes/form**
-- **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
+- **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`, `plan/add`, `plan/import`, `plan/export`, `tracker`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
 - **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
-- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool` (each exercise carries `about`, its how-to or null; v0.613), `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `cardio`, `cardio/remove`, `warmup`, `order` (v0.615), `conditioning/choices`, `conditioning/build`, `conditioning/log`, `conditioning/save`, `benchmark` (v0.617), `plan*` (incl. `plan/scheme` (v0.615), `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null, v0.609, and `about`, v0.613), `plan/copy`, `plan/start` (`{date}` the start; v0.686 `{end}` the last day, returned as `weeklyEnd` by `GET plan`), `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`, `plan/export`, `plan/import`, `plan/share`, `plan/shared`, `plan/shared/use`, `plan/shared/withdraw` (v0.618), `plan/saved`, `plan/saved/rename`, `plan/saved/delete` (v0.620), `plan/warmup` (v0.622)), `day-warmup` (one day, v0.711), `warmups`, `warmups/delete` (v0.622), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`, `strip` (v0.651), `adjust` (Adjust today, v0.658), `warmup-for` (v0.662), `core-workouts` (v0.637), `extras` (+ Additional, v0.667), `lift-next` (v0.670), `sore` (v0.675), `sport-session` (v0.656), `pause` (v0.678; admin one-person pauses read as `kind: "admin"`, v0.688), `family-wod` (v0.679)
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool` (each exercise carries `about`, its how-to or null; v0.613), `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `cardio`, `cardio/remove`, `warmup`, `order` (v0.615), `conditioning/choices`, `conditioning/build`, `conditioning/log`, `conditioning/save`, `benchmark` (v0.617), `plan*` (incl. `plan/scheme` (v0.615), `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null, v0.609, and `about`, v0.613), `plan/copy`, `plan/start` (`{date}` the start; v0.686 `{end}` the last day, returned as `weeklyEnd` by `GET plan`), `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`, `plan/export`, `plan/import`, `plan/share`, `plan/shared`, `plan/shared/use`, `plan/shared/withdraw` (v0.618), `plan/saved`, `plan/saved/rename`, `plan/saved/delete` (v0.620), `plan/warmup` (v0.622)), `day-warmup` (one day, v0.711), `warmups`, `warmups/delete` (v0.622), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`, `strip` (v0.651), `adjust` (Adjust today, v0.658), `warmup-for` (v0.662), `core-workouts` (v0.637), `extras` (+ Additional, v0.667), `lift-next` (v0.670), `sore` (v0.675), `sport-session` (v0.656), `pause` (v0.678; admin one-person pauses read as `kind: "admin"`, v0.688), `family-wod` (v0.679), `core-workouts/delete`, `extras/remove`, `plan/core`, `programs/version/forget`, `garage` (v0.734)
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
-- **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604)
+- **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604), **summary**, `summary/day` (v0.733)
 - **hockey** (the week from ice-time), `hockey/prefs`
 - **concept2** (status / disconnect), `concept2/connect`, `concept2/sync`, `concept2/undo` (v0.614)
 - **widget** (the Android home-screen widget's feed)
 
-## Deep links (notification -> screen)
+## What stays web-only
 
-Notifications carry a typed target so a tap opens the right screen:
-`chore:<id>`, `reward:<id>`, `event:<id>`, `reading:<ref>`. The client resolves
-these against the endpoints above.
-
-## What this contract deliberately excludes from v1
-
-Admin/editor surfaces (creating chores, editing plans, SMTP, device settings)
-stay web-only for now. The phone is a *personal client* — it completes and
-views; it does not administer. Parent-facing management can be a later,
-separate contract if wanted, and would reuse this auth layer.
+Household setup and editors (chores, the curriculum planner, Bible plan
+drafts, SMTP, device settings, equipment, the Activity log and export) are
+web admin. A parent's phone can approve and edit Money, pick and grant the
+family goal, set the garage length and import a family Bible
+plan; those routes check the device's role.
 
 ---
 
@@ -1802,5 +1792,5 @@ separate contract if wanted, and would reuse this auth layer.
    enrolled devices.** Enrolling a new phone is done from the invite / "Add a
    phone" buttons, which issue an invitation code the app redeems at `/auth/join`.
    Broader parent-facing management (creating chores etc.) stays web-only for v1.
-5. Offline scope: which screens must work with no network (likely today's
-   chores + completion), which can require it. Still open.
+5. ~~Offline scope~~ — **closed: every screen works offline** from the
+   phone's Room page cache, and writes queue and replay on reconnect.

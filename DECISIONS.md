@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — One open list; docs match the code (v0.735.0)
+
+- ROADMAP.md was rewritten: **Open** (the only list of agreed, unbuilt work),
+  **Not doing** (decided against, so it doesn't resurface), **Versions**, then
+  **Built** by area. The old per-run "Shipped" sections, status narratives and
+  scattered unchecked lines are gone; release history stays in `CHANGES`
+  (version.ts), the app's CHANGELOG.md and this file. Rule recorded in
+  ARCHITECTURE.md: a release that ships an Open item removes it there.
+- Dropped: workout progress into Strength (Strength counts workouts done),
+  memory verses, and an upload picker for event backgrounds (standard
+  images, now including game vs practice, stay open).
+- Found while checking: importing a personal Bible plan by pasting already
+  works (v0.723, `scope: "mine"`); listed in Open only until confirmed.
+- README: status and features current (Summary, work feeds, appearance,
+  Admin activity and export); the weather variables were removed (nothing reads
+  them until weather is built) and the variables the code does read
+  (`GAMETIME_INGEST_TOKEN`, `PUBLIC_URL`, `SMTP_*`, `COOKIE_SECURE`) added.
+  docs/API.md: status, the v0.699 sign-in note, push and sync marked not
+  built, what stays web-only, and the inventory at 200 routes.
+
 ## 2026-11 — Ladders repeat, bodyweight charts, work calendars (v0.734.0)
 
 - **Ladders** (`ladderStepAfter`): each earlier program week of the block

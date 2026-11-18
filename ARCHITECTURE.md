@@ -224,6 +224,9 @@ production:
 | The Activity log (v0.733): which writes, who, and the row | `activity-model.ts` (followed models), `activity-context.ts` (actor: device mark or web server action), `activity.ts` (before/diff/record/prune); hooked in `src/lib/prisma.ts`; page `src/app/admin/activity` |
 | Export everything (v0.733) | `src/app/admin/export/route.ts`; card on `src/app/about/page.tsx` |
 | Odd squad and the block builder (v0.732): `ladder` / `density` / `carry` / `clubs` targets, a slot's `offer` list, Core day placement | `ODD_SQUAD` / `oddTargets` / `weekSchemeLabel` / `lengthsFor` in `src/lib/workouts/programs.ts`; `offer` in `loadProgramChoices`, `placeCoreDay` / `keptRotations` / `loadGarageFeet` in `program-run.ts`; UI `src/app/exercise/block-builder.tsx` |
+| Odd squad ladders that repeat a short week (v0.734) | `ladderTotal` / `ladderStepAfter` in `src/lib/workouts/programs.ts` (pure); the reps per earlier week in `ladderStepFor` (`src/lib/queries/workout-log.ts`), passed to `targetsFor` and `weekSchemeLabel` |
+| Bodyweight movements charted by reps (v0.734) | `bodyweightSeries` in `src/lib/queries/bodyweight.ts`, merged into the lift series in `queries/workouts.ts` and the phone's progress series in `workout-log.ts` |
+| Work-shift calendar feeds (v0.734) | `ExternalCalendar.isWork` (migration 160); `kind` chosen in `src/lib/calendar/sync.ts`; `setCalendarWork` re-kinds a feed's events (`src/lib/actions/calendars.ts`); the WORK colour in `src/lib/calendar/colors.ts` |
 | A lift's chart numbers and trend (est. max, volume, reps, density; holding / last done; consistency) | `dayNumbers` / `liftTrend` / `weeksInARow` / `weekDots` / `isFixedWeight` in `src/lib/workouts/lift-stats.ts` (pure); UI `LiftPage` in `src/app/exercise/lift-page.tsx` |
 | The monthly core test from what was logged | `testedThisMonth` in `src/lib/workouts/test-history.ts`, read by `syncCoreDays` |
 | A companion slot's choices (pattern, never a main lift, library additions) | `loadProgramChoices` in `src/lib/workouts/program-run.ts`; role `patterns` / `groups` in `programs.ts`; additions joined by `applyLibrary` in `startProgram` |
@@ -346,11 +349,14 @@ PIN — `/chores` and `/admin/chores`, `/bible` and `/admin/bible`.
   partial deploy in seconds.
 - `src/lib/version.ts` carries the version and a short changelog.
 - Repository docs are the source of truth, not any tool's memory: ARCHITECTURE.md
-  (how it's built), ROADMAP.md (what's planned/done), DECISIONS.md (what was
+  (how it's built), ROADMAP.md (the open list, then what's built), DECISIONS.md (what was
   decided and why), docs/API.md (the mobile contract). A change that makes,
   reverses, or narrows a standing decision — a security posture, an auth
   boundary, a scoring rule, the mobile contract — updates DECISIONS.md in the
   same release, the same way version.ts and ROADMAP.md are always touched.
+- ROADMAP.md's **Open** list is the only list of agreed, unbuilt work. A release
+  that ships an item removes it from Open and describes it under Built; a
+  dropped item moves to "Not doing". No other section carries open items.
 - `scripts/preflight.sh` is the gate before shipping. It generates the real
   Prisma client, against a stand-in schema engine where the engine download is
   blocked, and runs a full type check with it. Only if generation fails does
