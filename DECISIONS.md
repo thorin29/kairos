@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — A side menu that never scrolls (v0.739.0)
+
+- 14 sections (15 with weather) at 48px each plus the logo and the old
+  three-row bottom came to ~860–910px, so a 650px laptop window and most
+  phones scrolled. The page list is now fixed, so the rows share the height
+  left: each `li` is `flex-1 basis-0` between `min-h-8` and `max-h-12` (a
+  28–44px row inside 2px padding). Tall screens look as before; it scrolls
+  only below about 600px.
+- Logo bar 80 → 56px. The bottom is one row when open: avatar, name with the
+  version under it, switch, collapse (`UserBadge` gains `version` and
+  `trailing`). Collapsed: the avatar, then a 32px expand arrow.
+- Mockup: artifact "Kairos side menu: fit the screen".
+
 ## 2026-11 — Repeat wording, again (v0.738.0)
 
 - "Already completed today" wasn't always true: the later card drops the

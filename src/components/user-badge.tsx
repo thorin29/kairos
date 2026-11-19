@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -23,6 +23,8 @@ export function UserBadge({
   onNavigate,
   family = false,
   pinSet = false,
+  version,
+  trailing,
 }: {
   userId?: string;
   name: string;
@@ -34,6 +36,10 @@ export function UserBadge({
   onNavigate?: () => void;
   family?: boolean;
   pinSet?: boolean;
+  /** Shown small under the name when expanded (v0.739). */
+  version?: string;
+  /** After the switch button when expanded: the menu's collapse control. */
+  trailing?: ReactNode;
 }) {
   const path = usePathname();
   const [confirm, setConfirm] = useState(false);
@@ -77,7 +83,7 @@ export function UserBadge({
 
   return (
     <>
-      <div className="flex w-full items-center gap-2 px-1.5 py-1.5">
+      <div className={`flex w-full items-center gap-2 px-1.5 ${expanded ? "py-1.5" : "justify-center py-0.5"}`}>
         {profileHref ? (
           <Link
             href={profileHref}
@@ -93,19 +99,20 @@ export function UserBadge({
         )}
         {expanded && (
           <>
-            {profileHref ? (
-              <Link
-                href={profileHref}
-                onClick={onNavigate}
-                className="min-w-0 flex-1 truncate text-sm font-medium text-ink hover:underline"
-              >
-                {name}
-              </Link>
-            ) : (
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
-                {name}
-              </span>
-            )}
+            <span className="flex min-w-0 flex-1 flex-col leading-tight">
+              {profileHref ? (
+                <Link
+                  href={profileHref}
+                  onClick={onNavigate}
+                  className="truncate text-sm font-medium text-ink hover:underline"
+                >
+                  {name}
+                </Link>
+              ) : (
+                <span className="truncate text-sm font-medium text-ink">{name}</span>
+              )}
+              {version && <span className="tabular text-[0.7rem] text-ink/55">{version}</span>}
+            </span>
             <button
               type="button"
               onClick={() => setConfirm(true)}
@@ -115,6 +122,7 @@ export function UserBadge({
             >
               <SwitchIcon className="h-4 w-4" />
             </button>
+            {trailing}
           </>
         )}
       </div>

@@ -87,9 +87,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.738.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.739.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   160_calendar_work, all registered in `MIGRATIONS`.
-- App 0.534.0 (versionCode 606, CLIENT_BUILD 606).
+- App 0.535.0 (versionCode 607, CLIENT_BUILD 607).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -355,6 +355,9 @@ Kept here so they don't come back as open items.
 
 - Nine colours, eight backgrounds (each light and dark) and System / Light /
   Dark: household-wide on the web (Admin → Appearance), per device in the app.
+- The side menu fits the screen (v0.739): rows share the height left (44 at
+  most, down to 28 on the web and 32 on the phone), and the bottom is one row
+  with you, the version under your name, switch and collapse.
 - One UI rule on both clients: anything you search, fill in or step through is
   a full page; small pop-ups only for short choices, confirmations, ⓘ, date
   pickers and breakdowns.

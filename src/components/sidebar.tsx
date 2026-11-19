@@ -170,7 +170,7 @@ export function Sidebar({
         style={{ width: expanded ? EXPANDED : COLLAPSED }}
       >
         {/* Logo + (when expanded) the current page name. */}
-        <div className="flex h-20 items-center gap-3 px-3">
+        <div className="flex h-14 shrink-0 items-center gap-3 px-3">
           <button
             type="button"
             onClick={onLogo}
@@ -186,12 +186,14 @@ export function Sidebar({
           )}
         </div>
 
-        {/* Icon column. Labels appear only when expanded. */}
-        <ul className="flex-1 space-y-1 overflow-y-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* Icon column. Labels appear only when expanded. Rows share the
+            height left (v0.739): 48px each at most, 32 at least, so the menu
+            fits without scrolling; it scrolls only below that. */}
+        <ul className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {navItems.map((item) => {
             const current = item.href === active?.href;
             return (
-              <li key={item.href}>
+              <li key={item.href} className="flex max-h-12 min-h-8 flex-1 basis-0 py-0.5">
                 <Link
                   href={item.href}
                   aria-label={item.label}
@@ -199,7 +201,7 @@ export function Sidebar({
                   title={expanded ? undefined : item.label}
                   onClick={() => setMobileOpen(false)}
                   className={[
-                    "flex h-11 items-center gap-3 rounded-xl px-2.5 transition-colors",
+                    "flex h-full w-full items-center gap-3 rounded-xl px-2.5 transition-colors",
                     current
                       ? "bg-white text-ink shadow-sm"
                       : "text-white/85 hover:bg-white/15 hover:text-white",
@@ -223,8 +225,9 @@ export function Sidebar({
           })}
         </ul>
 
-        {/* Sign-in, then the collapse/expand control, pinned to the bottom. */}
-        <div className="mt-auto space-y-2 border-t border-white/20 px-2 py-3">
+        {/* One row when open (v0.739): you, the version, switch, collapse.
+            Collapsed: your picture, then the expand arrow. */}
+        <div className="shrink-0 space-y-1 border-t border-white/20 px-2 py-2">
           {user && (
             <div className="px-1">
               <UserBadge
@@ -238,28 +241,32 @@ export function Sidebar({
                 inline
                 expanded={expanded}
                 onNavigate={() => setMobileOpen(false)}
+                version={`v${APP_VERSION}`}
+                trailing={
+                  expanded ? (
+                    <button
+                      type="button"
+                      onClick={toggleExpanded}
+                      aria-label="Collapse menu"
+                      title="Collapse"
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/85 transition-colors hover:bg-white/15 hover:text-white"
+                    >
+                      <ChevronLeftIcon className="h-5 w-5" />
+                    </button>
+                  ) : null
+                }
               />
             </div>
           )}
-          <button
-            type="button"
-            onClick={toggleExpanded}
-            aria-label={expanded ? "Collapse menu" : "Expand menu"}
-            className="flex h-10 w-full items-center gap-3 rounded-xl px-2.5 text-white/85 transition-colors hover:bg-white/15 hover:text-white"
-          >
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center">
-              {expanded ? (
-                <ChevronLeftIcon className="h-5 w-5" />
-              ) : (
-                <ChevronRightIcon className="h-5 w-5" />
-              )}
-            </span>
-            {expanded && <span className="text-sm font-medium">Collapse</span>}
-          </button>
-          {expanded && (
-            <p className="pr-1 text-right text-[0.6rem] leading-none text-white/50">
-              v{APP_VERSION}
-            </p>
+          {(!expanded || !user) && (
+            <button
+              type="button"
+              onClick={toggleExpanded}
+              aria-label={expanded ? "Collapse menu" : "Expand menu"}
+              className="flex h-8 w-full items-center justify-center gap-3 rounded-xl text-white/85 transition-colors hover:bg-white/15 hover:text-white"
+            >
+              {expanded ? <ChevronLeftIcon className="h-5 w-5" /> : <ChevronRightIcon className="h-5 w-5" />}
+            </button>
           )}
         </div>
       </nav>
