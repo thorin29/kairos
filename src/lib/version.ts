@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.736.0";
+export const APP_VERSION = "0.738.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -178,6 +178,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.738.0",
+    summary: ["The note now reads \"Hollow hold was removed because it is in another workout today.\" It's dropped whether or not the other workout is done yet."],
+  },
+  {
+    version: "0.737.0",
+    summary: ["A workout that leaves out a movement done on another workout today now says so plainly: \"Hollow hold was removed because it was already completed today.\""],
+  },
   {
     version: "0.736.0",
     summary: ["A movement on two workouts the same day (Hollow hold in Core and in Isometric) stays on the first one only. The second card shows it as \"in Core\" and no longer takes the first card's sets or how it felt as its own."],

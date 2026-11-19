@@ -323,9 +323,11 @@ export function DayLog({
     const r = repeats.get(w.id);
     if (!r) return null;
     const src = allPlans.find((p) => p.id === w.id);
-    return [...r.entries()]
-      .map(([id, inName]) => `${src?.exercises.find((e) => e.poolExerciseId === id)?.name ?? "A movement"} in ${inName}`)
-      .join(" · ");
+    const names = [...r.keys()].map((id) => src?.exercises.find((e) => e.poolExerciseId === id)?.name ?? "A movement");
+    const list = names.length <= 2 ? names.join(" and ") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+    return names.length === 1
+      ? `${list} was removed because it is in another workout today.`
+      : `${list} were removed because they are in another workout today.`;
   };
   const byId = useMemo(() => new Map(workouts.map((w) => [w.id, w])), [workouts]);
   const order = data?.order;
@@ -949,8 +951,8 @@ export function DayLog({
                             <span className="tabular block truncate text-xs text-muted">
                               {mine.length} {mine.length === 1 ? "movement" : "movements"}
                               {done > 0 ? ` · ${done} logged` : ""}
-                              {repeatLine(w) ? ` · ${repeatLine(w)}` : ""}
                             </span>
+                            {repeatLine(w) && <span className="block text-xs text-muted">{repeatLine(w)}</span>}
                           </span>
                           {all && (
                             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">

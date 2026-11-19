@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-11 — Repeat wording, again (v0.738.0)
+
+- "Already completed today" wasn't always true: the later card drops the
+  movement even when the first card isn't done yet. Now: "Hollow hold was
+  removed because it is in another workout today."
+
+## 2026-11 — Repeat wording (v0.737.0)
+
+- The later card's line "Hollow hold in Core · Bodyweight core" read as
+  nonsense. It now says "Hollow hold was removed because it was already
+  completed today.", on its own line under the card's count (web and app).
+- Checked the likely overlap before building a per-session swap: only Core +
+  Isometric collides in practice (Hollow hold, Side plank; 7 of 48 pairings).
+  Swapping isn't planned.
+
 ## 2026-11 — One movement, one card a day (v0.736.0)
 
 - A day's sets, skips and "how did it feel" are kept per movement, not per

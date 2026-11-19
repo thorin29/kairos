@@ -87,9 +87,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.736.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.738.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   160_calendar_work, all registered in `MIGRATIONS`.
-- App 0.532.0 (versionCode 604, CLIENT_BUILD 604).
+- App 0.534.0 (versionCode 606, CLIENT_BUILD 606).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -286,7 +286,8 @@ Kept here so they don't come back as open items.
   Hurt (with stand-ins).
 - A day is complete only when every part is done or skipped.
 - A movement planned on two cards the same day stays on the first card; the
-  later card shows it as "in <card>" and doesn't count it (v0.736).
+  later card doesn't count it and says "Hollow hold was removed because it is in
+  another workout today." (v0.736, wording v0.738).
 - Suggestions that never act on their own: next weight, lighter day, swaps
   around sore spots, hockey-aware days, push/pull balance, "plan too big", leg
   day away from a game.
