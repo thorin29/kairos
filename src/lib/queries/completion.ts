@@ -51,7 +51,7 @@ export function completionFilter(raw: unknown): CompletionFilter {
   return COMPLETION_FILTERS.some((f) => f.key === raw) ? (raw as CompletionFilter) : "all";
 }
 
-type TaskRow = {
+export type TaskRow = {
   id: string;
   userId: string;
   title: string;
@@ -94,26 +94,43 @@ async function tasksFor(userIds: string[], from: string, to: string, categories:
   return rows;
 }
 
-/** One person's day from their tasks. */
-function dayOf(tasks: TaskRow[], date: string, today: string): CompletionDay {
-  if (date > today) return { date, pct: null, done: 0, due: 0, late: false, future: true };
-  let due = 0;
-  let done = 0;
-  let late = false;
+type DayTally = { due: number; done: number; late: boolean };
+
+/** Each task's days worked out once (v0.741), then tallied by day in one
+ *  pass. The old way re-read every task's dates for every day of the range. */
+export function tallyByDay(tasks: TaskRow[]): Map<string, DayTally> {
+  const out = new Map<string, DayTally>();
+  const at = (d: string) => {
+    let t = out.get(d);
+    if (!t) {
+      t = { due: 0, done: 0, late: false };
+      out.set(d, t);
+    }
+    return t;
+  };
   for (const t of tasks) {
     const dueDay = fromDateColumn(t.dueDate);
-    const lateOn = lateDoneDay(t);
-    if (dueDay === date) {
-      due++;
-      if (doneDayOf(t) && !lateOn) done++;
-    } else if (lateOn === date && dueDay < date) {
-      // Late from an earlier day, finished today: it counts here.
-      due++;
-      done++;
-      late = true;
+    const doneDay = doneDayOf(t);
+    const lateOn = doneDay && doneDay > deadlineOf(t) ? doneDay : null;
+    const due = at(dueDay);
+    due.due++;
+    if (doneDay && !lateOn) due.done++;
+    if (lateOn && lateOn > dueDay) {
+      // Late from an earlier day, finished on lateOn: it counts there too.
+      const fin = at(lateOn);
+      fin.due++;
+      fin.done++;
+      fin.late = true;
     }
   }
-  return { date, pct: due > 0 ? Math.round((done / due) * 100) : null, done, due, late, future: false };
+  return out;
+}
+
+/** One person's day from their tallies. */
+function dayOf(tally: Map<string, DayTally>, date: string, today: string): CompletionDay {
+  if (date > today) return { date, pct: null, done: 0, due: 0, late: false, future: true };
+  const t = tally.get(date) ?? { due: 0, done: 0, late: false };
+  return { date, pct: t.due > 0 ? Math.round((t.done / t.due) * 100) : null, done: t.done, due: t.due, late: t.late, future: false };
 }
 
 /** Every listed person's days from `from` to `to`. */
@@ -133,9 +150,15 @@ export async function loadCompletion(
   );
   const dates: string[] = [];
   for (let d = from; d <= to; d = addDays(d, 1)) dates.push(d);
+  const byUser = new Map<string, TaskRow[]>();
+  for (const t of tasks) {
+    const list = byUser.get(t.userId);
+    if (list) list.push(t);
+    else byUser.set(t.userId, [t]);
+  }
   return people.map((p) => {
-    const mine = tasks.filter((t) => t.userId === p.id);
-    const days = dates.map((d) => dayOf(mine, d, today));
+    const tally = tallyByDay(byUser.get(p.id) ?? []);
+    const days = dates.map((d) => dayOf(tally, d, today));
     const due = days.reduce((n, d) => n + d.due, 0);
     const done = days.reduce((n, d) => n + d.done, 0);
     return { ...p, days, total: due > 0 ? Math.round((done / due) * 100) : null };

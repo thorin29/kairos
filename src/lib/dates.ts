@@ -19,9 +19,25 @@
 const HOUSEHOLD_TZ =
   process.env.HOUSEHOLD_TZ || process.env.TZ || "UTC";
 
+/**
+ * Formatters are built once and reused (v0.741). Building an
+ * Intl.DateTimeFormat costs far more than using one, and these run per task
+ * in loops: a month of the Summary grid built hundreds of thousands of them.
+ */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+function fmt(locale: string, opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = locale + JSON.stringify(opts);
+  let f = formatters.get(key);
+  if (!f) {
+    f = new Intl.DateTimeFormat(locale, opts);
+    formatters.set(key, f);
+  }
+  return f;
+}
+
 /** Calendar day in the household timezone, as YYYY-MM-DD. */
 export function todayISO(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
+  return fmt("en-CA", {
     timeZone: HOUSEHOLD_TZ,
     year: "numeric",
     month: "2-digit",
@@ -39,12 +55,8 @@ export function toDateColumn(iso: string): Date {
  * process runs in UTC; anything else reintroduces the off-by-one.
  */
 export function fromDateColumn(d: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "UTC",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
+  if (Number.isNaN(d.getTime())) throw new RangeError("Invalid time value");
+  return d.toISOString().slice(0, 10);
 }
 
 export function addDays(iso: string, days: number): string {
@@ -76,7 +88,7 @@ export function weekDays(iso: string): string[] {
 }
 
 export function formatLong(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+  return fmt("en-US", {
     timeZone: "UTC",
     weekday: "long",
     month: "long",
@@ -86,7 +98,7 @@ export function formatLong(iso: string): string {
 }
 
 export function formatShort(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+  return fmt("en-US", {
     timeZone: "UTC",
     month: "numeric",
     day: "numeric",
@@ -96,7 +108,7 @@ export function formatShort(iso: string): string {
 /** Like formatShort but with a two-digit year (e.g. "3/15/26") — for ledgers
  *  where rows span years and older lines need the year to make sense. */
 export function formatShortYear(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+  return fmt("en-US", {
     timeZone: "UTC",
     month: "numeric",
     day: "numeric",
@@ -114,7 +126,7 @@ export function householdTz(): string {
  * gives the offset, DST included.
  */
 export function tzOffsetMs(at: Date, tz: string): number {
-  const parts = new Intl.DateTimeFormat("en-US", {
+  const parts = fmt("en-US", {
     timeZone: tz,
     hour12: false,
     year: "numeric",
@@ -167,7 +179,7 @@ export function localParts(at: Date, tz: string = HOUSEHOLD_TZ): {
   minutes: number;
   label: string;
 } {
-  const parts = new Intl.DateTimeFormat("en-CA", {
+  const parts = fmt("en-CA", {
     timeZone: tz,
     hour12: false,
     year: "numeric",
@@ -186,7 +198,7 @@ export function localParts(at: Date, tz: string = HOUSEHOLD_TZ): {
   return {
     iso: `${get("year")}-${get("month")}-${get("day")}`,
     minutes: hour * 60 + minute,
-    label: new Intl.DateTimeFormat("en-US", {
+    label: fmt("en-US", {
       timeZone: tz,
       hour: "numeric",
       minute: "2-digit",
@@ -235,7 +247,7 @@ export function isSameMonth(iso: string, monthIso: string): boolean {
 }
 
 export function formatMonth(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+  return fmt("en-US", {
     timeZone: "UTC",
     month: "long",
     year: "numeric",
@@ -243,7 +255,7 @@ export function formatMonth(iso: string): string {
 }
 
 export function formatWeekday(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+  return fmt("en-US", {
     timeZone: "UTC",
     weekday: "short",
   }).format(new Date(`${iso}T00:00:00.000Z`));

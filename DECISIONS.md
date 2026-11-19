@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-11 — Reuse date formatters (v0.741.0)
+
+- The real cause of the slow Summary: `todayISO` and `fromDateColumn` built a
+  new `Intl.DateTimeFormat` on every call, and the grid called them for every
+  task on every day of the range (a month: hundreds of thousands of
+  formatters). A synthetic month of 6,750 tasks took 29 s in the sandbox.
+- `dates.ts` now builds each formatter once (`fmt`), and `fromDateColumn` is
+  `toISOString().slice(0, 10)` (same result: stored dates are UTC midnight).
+  The grid works out each task's days once and tallies by day in one pass
+  (`tallyByDay`). The same synthetic month: 16 ms. Every caller of these
+  helpers (scoring, streaks, the calendar) gets the same saving.
+
 ## 2026-11 — Faster Summary weeks (v0.740.0)
 
 - Every week change rebuilt the family goal, which runs `loadProgression`
