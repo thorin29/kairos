@@ -14,6 +14,8 @@ export const dynamic = "force-dynamic";
  * Summary (v0.733): the family goal and the completion grid. A parent's phone
  * gets everyone, a child's only themselves. `view` week|month, `at` any day in
  * the range (default today), `f` all|chores|bible|school|workouts.
+ * `goal=0` (v0.740) skips the family goal, which needs everyone's scoring and
+ * is the slow part; the phone sends it when only the range or filter changes.
  */
 export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
@@ -28,23 +30,28 @@ export async function GET(req: NextRequest) {
   const to = view === "month" ? addDays(addMonths(from, 1), -1) : addDays(from, 6);
 
   const me = authed.device.person;
-  const [people, all, season] = await Promise.all([
-    completionPeople({ id: me.id, kind: me.kind }),
-    loadProgression(),
-    currentSeasonWindow(today),
-  ]);
-  const [rows, coop] = await Promise.all([loadCompletion(people, from, to, filter), loadCoop(all)]);
-
-  return apiOk({
-    seasonName: season.label,
-    familyGoal: {
+  const withGoal = q.get("goal") !== "0";
+  const goal = async () => {
+    const coop = await loadCoop(await loadProgression());
+    return {
       text: coop.granted
         ? `Earned: ${coop.granted.title}`
         : coop.selected
           ? `Working toward: ${coop.selected.title}`
           : "Propose and vote on a family reward",
       kids: coop.childrenTotal > 0 ? `${coop.childrenMeeting}/${coop.childrenTotal} kids` : null,
-    },
+    };
+  };
+  const [people, season, familyGoal] = await Promise.all([
+    completionPeople({ id: me.id, kind: me.kind }),
+    currentSeasonWindow(today),
+    withGoal ? goal() : Promise.resolve(null),
+  ]);
+  const rows = await loadCompletion(people, from, to, filter);
+
+  return apiOk({
+    seasonName: season.label,
+    ...(familyGoal ? { familyGoal } : {}),
     view,
     from,
     to,

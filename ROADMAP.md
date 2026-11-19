@@ -87,9 +87,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.739.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.740.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   160_calendar_work, all registered in `MIGRATIONS`.
-- App 0.535.0 (versionCode 607, CLIENT_BUILD 607).
+- App 0.536.0 (versionCode 608, CLIENT_BUILD 608).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 

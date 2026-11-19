@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Faster Summary weeks (v0.740.0)
+
+- Every week change rebuilt the family goal, which runs `loadProgression`
+  (everyone's scoring from every task) before the grid could load. The API
+  now skips it with `goal=0`; the web page loads the grid and the goal side by
+  side instead of one after the other.
+
 ## 2026-11 — A side menu that never scrolls (v0.739.0)
 
 - 14 sections (15 with weather) at 48px each plus the logo and the old

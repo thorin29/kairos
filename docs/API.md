@@ -1259,6 +1259,10 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.740: `GET /api/v1/summary?goal=0` leaves `familyGoal` out. It needs
+everyone's scoring and was most of the response time; the phone asks for it
+once and sends `goal=0` when only the range or filter changes.
+
 v0.736: in `GET /api/v1/workouts`, a movement already on an earlier card that
 day carries `repeatOf` (that card's name) and `skipped: true`, with no value or
 sets; clients leave it off the card.

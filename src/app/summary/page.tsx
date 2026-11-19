@@ -35,8 +35,13 @@ export default async function SummaryPage({
   const me = meId
     ? ((await prisma.user.findUnique({ where: { id: meId }, select: { id: true, kind: true } })) as { id: string; kind: string | null } | null)
     : null;
-  const [people, all, seasonWin] = await Promise.all([completionPeople(me), loadProgression(), currentSeasonWindow(today)]);
-  const [rows, coop] = await Promise.all([loadCompletion(people, from, to, filter), loadCoop(all)]);
+  // The grid and the family goal load side by side (v0.740): the goal needs
+  // everyone's scoring and is the slow part.
+  const [people, seasonWin] = await Promise.all([completionPeople(me), currentSeasonWindow(today)]);
+  const [rows, coop] = await Promise.all([
+    loadCompletion(people, from, to, filter),
+    loadProgression().then((all) => loadCoop(all)),
+  ]);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-6">
