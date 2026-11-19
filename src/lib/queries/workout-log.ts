@@ -1,4 +1,5 @@
 import "server-only";
+import { repeatsByPlan } from "@/lib/workouts/day-repeats";
 import { planDow, swapsFor } from "@/lib/workouts/day-swap-run";
 import { swapName } from "@/lib/workouts/day-swap";
 import { prisma } from "@/lib/prisma";
@@ -197,6 +198,9 @@ export type PlannedMovement = {
   /** Sets logged but the movement not finished (v0.716): sets still to tick
    *  and Log not pressed. Doesn't count as done yet. */
   open?: boolean;
+  /** Planned on an earlier card the same day (v0.736): that card's name. Off
+   *  this card for the day; counts as skipped here (day-repeats.ts). */
+  repeatOf?: string;
 };
 
 /** The day-scoped marker for a movement left with sets to go (v0.716). */
@@ -761,6 +765,21 @@ export async function loadTodayPlannedWorkouts(
       ...(isExtraId(plan.id) ? { extra: true } : {}),
       ...((plan as { asLogged?: boolean }).asLogged ? { asLogged: true } : {}),
     });
+  }
+  // A movement on two cards today (v0.736) stays on the first; the later
+  // card drops it, so it can't show the first card's sets as its own.
+  const repeats = repeatsByPlan(out.map((w) => ({ id: w.plannedWorkoutId, name: w.name, exercises: w.exercises })));
+  for (let i = 0; i < out.length; i++) {
+    const r = repeats.get(out[i].plannedWorkoutId);
+    if (!r) continue;
+    out[i] = {
+      ...out[i],
+      exercises: out[i].exercises.map((e) =>
+        r.has(e.poolExerciseId)
+          ? { ...e, value: null, loggedAs: null, reps: null, open: false, skipped: true, repeatOf: r.get(e.poolExerciseId) }
+          : e,
+      ),
+    };
   }
   // Adjust today (v0.658): what an adjustment drops is gone for the day —
   // from the cards and from what completes it. Extras added that day stay.

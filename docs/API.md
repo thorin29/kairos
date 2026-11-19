@@ -1259,6 +1259,10 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.736: in `GET /api/v1/workouts`, a movement already on an earlier card that
+day carries `repeatOf` (that card's name) and `skipped: true`, with no value or
+sets; clients leave it off the card.
+
 v0.734: `GET /api/v1/workouts/programs` adds `garageFeet` and
 `canEditGarage`; `POST /api/v1/workouts/garage { feet }` (5–200, a parent).
 `GET /api/v1/workouts/progress` also lists bodyweight movements (logged in

@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — One movement, one card a day (v0.736.0)
+
+- A day's sets, skips and "how did it feel" are kept per movement, not per
+  card. So Hollow hold in Core and again in an Isometric workout showed the
+  Core sets and feeling on the Isometric card, and that card finished itself.
+- Now the first card in the day's order keeps the movement; every later card
+  drops it for the day (`repeatsByPlan`, `src/lib/workouts/day-repeats.ts`,
+  shared by the server and the web day page). The server sends it as
+  `repeatOf` with `skipped: true`, so completion is right even on an older
+  app. Nothing is stored and no logged data changes.
+- Swapping the dropped movement for a different one for that session isn't
+  built: sets would have to belong to a card rather than a movement first.
+
 ## 2026-11 — One open list; docs match the code (v0.735.0)
 
 - ROADMAP.md was rewritten: **Open** (the only list of agreed, unbuilt work),

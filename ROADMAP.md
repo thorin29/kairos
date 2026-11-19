@@ -34,25 +34,16 @@ live in the database, never in this repository.
 8. **PC play time.** A small program on the PC reports what was played and for
    how long, for PCs that Family Safety doesn't cover. The ROG Ally is already
    covered (collector 5.0.0, the `ally` source).
-9. **Season tier rewards.** Cosmetic unlocks only (avatar flair, companion
-   looks), never money. The tier ladder hasn't been shown since 0.603 ("This
-   month: X / target days" replaced it), so these need a new trigger, most
-   likely reaching the month's days of work.
-10. **Year-end reward, then archive the year.** Proposed:
-    - *What happens on 1 January:* everyone gets a year-end keepsake (a
-      cosmetic badge for the year, sized by the year's days of work, perfect
-      weeks and characters raised). The year is then frozen into a read-only
-      **Year in review** page per person: levels and skills gained, months the
-      goal was met, family goals reached, characters hatched, Bible passes,
-      books read and workout records.
-    - *What changes:* the Characters page shows this year's badges, bests and
-      streaks; earlier years move to the archive.
-    - *What doesn't change:* nothing is deleted or reset. Level, skills, the
-      companion collection and every completed task stay as they are.
-    - *Why:* lifetime numbers only climb, so one year's effort disappears into
-      the total. A year page gives a finish line and something to look back
-      on. Storing the year's summary also means past years never have to be
-      recomputed from every task.
+9. **Badges on the Characters page.**
+    - Finishing your grade or the year's school work, at the end of the school
+      year.
+    - Working out over long stretches: 3 months, 6 months, 1 year, 2 years and
+      on.
+    - Reading through the Bible (the tracker's times read), shown with the
+      character as well as on the Bible page.
+10. **Archive a finished school year.** Once the school year is complete, its
+    schedule and school work move out of the everyday lists and pickers so
+    they don't clutter them; still readable, nothing deleted.
 11. **Ice-time: find each season's schedule links** on the rink's index page
     instead of pasting them in each July. Tracked in the ice-time repo.
 
@@ -62,6 +53,12 @@ Kept here so they don't come back as open items.
 
 - Workout progress feeding Strength. Strength counts workouts done (Nov 2026).
 - Memory verses (Nov 2026).
+- Season tier rewards. The tier ladder isn't shown; badges cover it (Nov 2026).
+- Archiving the whole year, and a year-end reward. Only the school year is
+  archived (Nov 2026).
+- A finish-by date for curriculum plans; fitting to the term end covers it
+  (Nov 2026).
+- A note on shopping items; quantities cover it (Nov 2026).
 - An upload picker for event backgrounds. Backgrounds are standard images
   (Nov 2026).
 - Smooth animated chore-card reordering. Drag to reorder is enough (Nov 2026).
@@ -90,9 +87,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.735.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.736.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   160_calendar_work, all registered in `MIGRATIONS`.
-- App 0.531.0 (versionCode 603, CLIENT_BUILD 603).
+- App 0.532.0 (versionCode 604, CLIENT_BUILD 604).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -288,6 +285,8 @@ Kept here so they don't come back as open items.
   adds any of them to one day. Adjust today: Low energy, Short on time, Sick,
   Hurt (with stand-ins).
 - A day is complete only when every part is done or skipped.
+- A movement planned on two cards the same day stays on the first card; the
+  later card shows it as "in <card>" and doesn't count it (v0.736).
 - Suggestions that never act on their own: next weight, lighter day, swaps
   around sore spots, hockey-aware days, push/pull balance, "plan too big", leg
   day away from a game.

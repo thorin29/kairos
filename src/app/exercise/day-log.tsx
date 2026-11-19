@@ -1,5 +1,6 @@
 "use client";
 
+import { repeatsByPlan } from "@/lib/workouts/day-repeats";
 import { useRouter } from "next/navigation";
 import { planWeekday } from "@/lib/workouts/day-swap";
 import { clockText as clockFromSeconds, secondsFromTyped } from "@/lib/workouts/clock-entry";
@@ -303,10 +304,29 @@ export function DayLog({
       };
     });
   }, [planWorkouts, asLogged]);
-  const workouts: PlanWorkout[] = useMemo(
+  // A movement on two cards today (v0.736) stays on the first card only.
+  const allPlans: PlanWorkout[] = useMemo(
     () => [...basePlan, ...(extras ?? []).map(extraWorkout)],
     [basePlan, extras],
   );
+  const repeats = useMemo(() => repeatsByPlan(allPlans), [allPlans]);
+  const workouts: PlanWorkout[] = useMemo(
+    () =>
+      allPlans.map((w) => {
+        const r = repeats.get(w.id);
+        return r ? { ...w, exercises: w.exercises.filter((e) => !r.has(e.poolExerciseId)) } : w;
+      }),
+    [allPlans, repeats],
+  );
+  const planOnly = useMemo(() => workouts.slice(0, basePlan.length), [workouts, basePlan.length]);
+  const repeatLine = (w: PlanWorkout): string | null => {
+    const r = repeats.get(w.id);
+    if (!r) return null;
+    const src = allPlans.find((p) => p.id === w.id);
+    return [...r.entries()]
+      .map(([id, inName]) => `${src?.exercises.find((e) => e.poolExerciseId === id)?.name ?? "A movement"} in ${inName}`)
+      .join(" · ");
+  };
   const byId = useMemo(() => new Map(workouts.map((w) => [w.id, w])), [workouts]);
   const order = data?.order;
   const cardioCount = data?.cardio.length ?? 0;
@@ -336,7 +356,7 @@ export function DayLog({
     [order, cardioCount],
   );
   const sections = useMemo(() => sectionsOf(workouts), [sectionsOf, workouts]);
-  const planSections = useMemo(() => sectionsOf(basePlan), [sectionsOf, basePlan]);
+  const planSections = useMemo(() => sectionsOf(planOnly), [sectionsOf, planOnly]);
   const removeExtra = (id: string) =>
     startTransition(async () => {
       await removeDayExtraAction(userId, id);
@@ -929,6 +949,7 @@ export function DayLog({
                             <span className="tabular block truncate text-xs text-muted">
                               {mine.length} {mine.length === 1 ? "movement" : "movements"}
                               {done > 0 ? ` · ${done} logged` : ""}
+                              {repeatLine(w) ? ` · ${repeatLine(w)}` : ""}
                             </span>
                           </span>
                           {all && (

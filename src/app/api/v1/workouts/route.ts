@@ -63,6 +63,8 @@ export async function GET(req: NextRequest) {
     return list.map((w) => ({
       ...w,
       exercises: w.exercises.map((e) => {
+        // A repeat of an earlier card's movement (v0.736) carries none of its sets.
+        if (e.repeatOf) return e;
         const m = e.poolExerciseId ? st.movements[e.poolExerciseId] : undefined;
         // A monthly-test movement's last time is the last test (v0.707).
         const isTest = !!e.poolExerciseId && (w.coreTests ?? []).includes(e.poolExerciseId);
