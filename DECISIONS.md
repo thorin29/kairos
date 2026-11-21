@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-11 — ⓘ on every movement list (v0.743.0)
+
+- Conditioning workouts (today's card and the picker), Family WOD lines and
+  the core / arms / holds workout lists showed movements as plain text, with
+  no how-to. Each line now has the ⓘ. Those lists only carry names, so
+  `MovementInfo` without `about` looks the how-to up by name the first time
+  it opens (`movementAboutAction`); Family WOD sends `moveNames` beside its
+  lines.
+
 ## 2026-11 — White controls, no white footer box (v0.742.0)
 
 - Outlined buttons, choice chips (unselected) and fields drew no background,

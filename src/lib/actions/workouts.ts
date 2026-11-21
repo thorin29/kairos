@@ -1986,3 +1986,16 @@ export async function setSportWarmupStateAction(userId: string, dateISO: string,
   // It counts toward the day now (v0.716).
   await settleWorkoutTask(userId, dateISO, { fromSkip: state !== "done" });
 }
+
+/** A movement's how-to by name (v0.743), for an ⓘ where the list only has
+ *  names (conditioning workouts, core and Family WOD lists). */
+export async function movementAboutAction(name: string): Promise<string | null> {
+  await requireInteractive();
+  const n = name.trim().slice(0, 120);
+  if (!n) return null;
+  const p = await prisma.poolExercise.findFirst({
+    where: { name: { equals: n, mode: "insensitive" } },
+    select: { about: true },
+  });
+  return p?.about ?? null;
+}

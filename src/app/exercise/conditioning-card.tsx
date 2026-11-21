@@ -1,5 +1,6 @@
 "use client";
 
+import { MovementInfo } from "@/components/movement-info";
 import { SECONDARY_BTN } from "./buttons";
 import { useState, useTransition } from "react";
 import { EffortPicker } from "@/components/effort-picker";
@@ -100,7 +101,10 @@ export function ConditioningCard({
       {movements.length > 0 && (
         <ul className="space-y-0.5 text-sm">
           {movements.map((m, i) => (
-            <li key={i}>{m.line}</li>
+            <li key={i} className="flex items-center gap-1">
+            {m.line}
+            <MovementInfo name={m.name} />
+          </li>
           ))}
         </ul>
       )}

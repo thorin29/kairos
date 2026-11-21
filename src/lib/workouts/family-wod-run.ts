@@ -27,6 +27,8 @@ export type FamilyWodView = {
   /** "AMRAP 20 min", "For time". */
   typeLabel: string;
   movements: string[];
+  /** Each line's movement name, for its ⓘ (v0.743). */
+  moveNames: string[];
   members: { userId: string; name: string; how: FamilyWodHow }[];
   /** "Alex, Sam and Jordan", or "Everyone". */
   who: string;
@@ -77,6 +79,8 @@ export type FamilyWodChoice = {
   kind: string | null;
   /** What it is, for its ⓘ (v0.680): the movements, Rx, and its note. */
   movements: string[];
+  /** Each line's movement name, for its ⓘ (v0.743). */
+  moveNames: string[];
   about: string | null;
 };
 
@@ -176,6 +180,7 @@ async function views(rows: WodRow[], viewerId: string | null): Promise<FamilyWod
       movements: w.movements
         .filter((m) => m.poolExercise)
         .map((m) => formatHiitMovement({ name: m.poolExercise!.name, reps: m.reps, distance: m.distance, weight: m.weight })),
+      moveNames: w.movements.filter((m) => m.poolExercise).map((m) => m.poolExercise!.name),
       members,
       who: whoText(members.map((m) => m.name), all.length),
       mine: viewerId ? members.find((m) => m.userId === viewerId)?.how ?? null : null,
@@ -312,6 +317,7 @@ export async function familyWodChoices(): Promise<FamilyWodChoice[]> {
     movements: w.movements
       .filter((m) => m.poolExercise)
       .map((m) => formatHiitMovement({ name: m.poolExercise!.name, reps: m.reps, distance: m.distance, weight: m.weight })),
+    moveNames: w.movements.filter((m) => m.poolExercise).map((m) => m.poolExercise!.name),
     about: w.about,
   }));
 }

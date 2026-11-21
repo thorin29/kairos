@@ -1,5 +1,6 @@
 "use client";
 
+import { MovementInfo } from "@/components/movement-info";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Modal } from "./plan-file-panel";
 import {
@@ -367,7 +368,10 @@ export function FamilyWodPage({
           {next.movements.length > 0 && (
             <ul className="pt-1 text-sm">
               {next.movements.map((m, i) => (
-                <li key={i}>{m}</li>
+                <li key={i} className="flex items-center gap-1">
+                  {m}
+                  {next.moveNames?.[i] && <MovementInfo name={next.moveNames[i]} />}
+                </li>
               ))}
             </ul>
           )}
@@ -564,7 +568,10 @@ function WorkoutInfo({
       {choice.movements.length > 0 && (
         <ul className="space-y-1 text-sm">
           {choice.movements.map((m, i) => (
-            <li key={i}>{m}</li>
+            <li key={i} className="flex items-center gap-1">
+              {m}
+              {choice.moveNames?.[i] && <MovementInfo name={choice.moveNames[i]} />}
+            </li>
           ))}
         </ul>
       )}

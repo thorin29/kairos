@@ -1,5 +1,6 @@
 "use client";
 
+import { MovementInfo } from "@/components/movement-info";
 import { PRIMARY_BTN, SECONDARY_BTN } from "./buttons";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { EffortPicker } from "@/components/effort-picker";
@@ -132,7 +133,10 @@ function RunWorkout({
       {scaled && <VersionToggle value={version} onChange={setVersion} />}
       <ul className="space-y-0.5 text-sm">
         {movements.map((m, i) => (
-          <li key={i}>{m.line}</li>
+          <li key={i} className="flex items-center gap-1">
+            {m.line}
+            <MovementInfo name={m.name} />
+          </li>
         ))}
       </ul>
       {meta.length > 0 && <p className="text-xs text-muted">{meta.join(" · ")}</p>}
@@ -483,7 +487,10 @@ function BuildOne({
               <p className="text-sm font-semibold">{built.name}</p>
               <ul className="space-y-0.5 text-sm">
                 {lineUp(built.moves).map((m, i) => (
-                  <li key={i}>{m.line}</li>
+                  <li key={i} className="flex items-center gap-1">
+            {m.line}
+            <MovementInfo name={m.name} />
+          </li>
                 ))}
               </ul>
             </div>

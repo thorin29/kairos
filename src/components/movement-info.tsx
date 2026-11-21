@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { InfoIcon } from "@/components/icons";
 import { watchUrl } from "@/lib/workouts/watch";
+import { movementAboutAction } from "@/lib/actions/workouts";
 
 /**
  * ⓘ beside a movement name: tap for its how-to and a "Watch how" video
- * search. Used wherever a movement is picked or logged.
+ * search. Used wherever a movement is picked or logged. Leave `about` out
+ * where only the name is known: it's looked up the first time it opens.
  */
 export function MovementInfo({
   name,
@@ -14,10 +16,22 @@ export function MovementInfo({
   className = "",
 }: {
   name: string;
-  about: string | null | undefined;
+  about?: string | null;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [found, setFound] = useState<string | null | undefined>(about);
+  useEffect(() => setFound(about), [about]);
+  useEffect(() => {
+    if (!open || found !== undefined) return;
+    let live = true;
+    movementAboutAction(name)
+      .then((a) => live && setFound(a))
+      .catch(() => live && setFound(null));
+    return () => {
+      live = false;
+    };
+  }, [open, found, name]);
   const [at, setAt] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -69,7 +83,7 @@ export function MovementInfo({
           className="fixed z-50 block w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-hairline bg-surface p-4 text-left shadow-lg"
         >
           <span className="block text-sm font-semibold text-ink">{name}</span>
-          {about && <span className="mt-1.5 block text-sm leading-relaxed text-ink/80">{about}</span>}
+          {found && <span className="mt-1.5 block text-sm leading-relaxed text-ink/80">{found}</span>}
           <a
             href={watchUrl(name)}
             target="_blank"

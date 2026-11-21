@@ -1,5 +1,6 @@
 "use client";
 
+import { MovementInfo } from "@/components/movement-info";
 import { useEffect, useState, useTransition } from "react";
 import { InfoIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/icons";
 import {
@@ -165,8 +166,11 @@ export function CoreMovesList({ moves }: { moves: CoreMove[] }) {
   return (
     <ul className="divide-y divide-hairline text-sm">
       {moves.map((m, i) => (
-        <li key={i} className="flex items-baseline justify-between gap-3 py-2">
-          <span className="min-w-0 truncate font-medium">{m.name}</span>
+        <li key={i} className="flex items-center justify-between gap-3 py-1.5">
+          <span className="flex min-w-0 items-center gap-1">
+            <span className="truncate font-medium">{m.name}</span>
+            <MovementInfo name={m.name} />
+          </span>
           <span className="tabular shrink-0 text-muted">{coreMoveLabel(m)}</span>
         </li>
       ))}
