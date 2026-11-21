@@ -217,7 +217,7 @@ export function AddReadings({
                             addChapter(c, e.shiftKey);
                           }}
                           className={`tabular h-9 rounded-lg border text-sm ${
-                            picked ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+                            picked ? "border-accent bg-accent text-on-accent" : "border-hairline bg-surface hover:border-accent"
                           }`}
                         >
                           {c}
@@ -306,7 +306,7 @@ export function AddReadings({
               key={k}
               type="button"
               onClick={() => setMode(k)}
-              className={`flex w-full gap-3 rounded-2xl p-4 text-left ${mode === k ? "border-2 border-accent" : "border border-hairline"}`}
+              className={`flex w-full gap-3 rounded-2xl p-4 text-left ${mode === k ? "border-2 border-accent" : "border border-hairline bg-surface"}`}
             >
               <span
                 className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${

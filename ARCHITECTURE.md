@@ -355,6 +355,9 @@ PIN — `/chores` and `/admin/chores`, `/bible` and `/admin/bible`.
   reverses, or narrows a standing decision — a security posture, an auth
   boundary, a scoring rule, the mobile contract — updates DECISIONS.md in the
   same release, the same way version.ts and ROADMAP.md are always touched.
+- A bordered button, chip or field always sets `bg-surface` (v0.742), so it
+  stays white on the grey page. A sticky footer on a full page uses the page
+  background (`bg-ground`), not a white bar.
 - ROADMAP.md's **Open** list is the only list of agreed, unbuilt work. A release
   that ships an item removes it from Open and describes it under Built; a
   dropped item moves to "Not doing". No other section carries open items.

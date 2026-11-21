@@ -39,7 +39,7 @@ export function RolloverReminder({
           type="button"
           disabled={busy}
           onClick={() => start(() => void snoozeRollover())}
-          className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50"
+          className="rounded-md border border-hairline bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50"
         >
           {busy ? "\u2026" : "Later"}
         </button>

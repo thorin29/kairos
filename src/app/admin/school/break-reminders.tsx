@@ -51,7 +51,7 @@ export function BreakReminders({ breaks }: { breaks: BreakReminder[] }) {
                       await cancelSchoolBreak(b.id);
                     });
                 }}
-                className="rounded-md border border-hairline px-3 py-1 text-xs font-medium disabled:opacity-50"
+                className="rounded-md border border-hairline bg-surface px-3 py-1 text-xs font-medium disabled:opacity-50"
               >
                 Not taking it
               </button>

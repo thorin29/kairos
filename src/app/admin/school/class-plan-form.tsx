@@ -162,7 +162,7 @@ export function ClassPlanForm({
                 key={i}
                 type="button"
                 onClick={() => toggleWeekday(w.n)}
-                className={`h-8 w-8 rounded-md border text-xs font-medium ${weekdays.has(w.n) ? "border-accent bg-accent/10 text-accent" : "border-hairline text-muted"}`}
+                className={`h-8 w-8 rounded-md border text-xs font-medium ${weekdays.has(w.n) ? "border-accent bg-accent/10 text-accent" : "border-hairline bg-surface text-muted"}`}
               >
                 {w.label}
               </button>
@@ -186,10 +186,10 @@ export function ClassPlanForm({
       {/* Units */}
       <div className="rounded-md border border-hairline p-3">
         <div className="mb-2 flex gap-2 text-xs">
-          <button type="button" onClick={() => setMode("numbered")} className={`rounded-full border px-3 py-1 font-medium ${mode === "numbered" ? "border-accent bg-accent/10 text-accent" : "border-hairline text-muted"}`}>
+          <button type="button" onClick={() => setMode("numbered")} className={`rounded-full border px-3 py-1 font-medium ${mode === "numbered" ? "border-accent bg-accent/10 text-accent" : "border-hairline bg-surface text-muted"}`}>
             Numbered lessons
           </button>
-          <button type="button" onClick={() => setMode("list")} className={`rounded-full border px-3 py-1 font-medium ${mode === "list" ? "border-accent bg-accent/10 text-accent" : "border-hairline text-muted"}`}>
+          <button type="button" onClick={() => setMode("list")} className={`rounded-full border px-3 py-1 font-medium ${mode === "list" ? "border-accent bg-accent/10 text-accent" : "border-hairline bg-surface text-muted"}`}>
             Type a list
           </button>
         </div>

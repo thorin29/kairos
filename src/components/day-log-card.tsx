@@ -95,7 +95,7 @@ export function DayLogDialog({ userId, name, day, onClose }: { userId: string; n
                 <button
                   type="button"
                   onClick={() => setDay((d) => addDays(d, -1))}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline text-muted hover:border-accent hover:text-accent"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
                   aria-label="Previous day"
                 >
                   &lsaquo;
@@ -107,7 +107,7 @@ export function DayLogDialog({ userId, name, day, onClose }: { userId: string; n
                   type="button"
                   disabled={dayISO >= today}
                   onClick={() => setDay((d) => (d >= today ? d : addDays(d, 1)))}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline text-muted hover:border-accent hover:text-accent disabled:opacity-30"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline bg-surface text-muted hover:border-accent hover:text-accent disabled:opacity-30"
                   aria-label="Next day"
                 >
                   &rsaquo;

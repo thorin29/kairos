@@ -71,7 +71,7 @@ export function ProfileForm({
               maxLength={40}
               defaultValue={person.displayName ?? ""}
               placeholder={person.name}
-              className="mt-2 h-11 w-full rounded-full border border-hairline px-5 outline-none focus:border-accent"
+              className="mt-2 h-11 w-full rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent"
             />
             <p className="mt-2 text-xs text-muted">
               Leave empty to keep using {person.name}.

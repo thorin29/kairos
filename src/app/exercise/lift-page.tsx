@@ -301,7 +301,7 @@ export function LiftPage({
                 aria-pressed={band === b.key}
                 onClick={() => setBand(b.key)}
                 className={`inline-flex h-9 items-center rounded-full border px-3 text-xs font-semibold transition-colors ${
-                  band === b.key ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+                  band === b.key ? "border-accent bg-accent text-on-accent" : "border-hairline bg-surface hover:border-accent"
                 }`}
               >
                 {b.label}

@@ -15,7 +15,7 @@ const FIELD =
 const BUTTON =
   "inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-on-accent disabled:opacity-40";
 const QUIET =
-  "inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline px-4 text-sm font-semibold text-accent hover:border-accent disabled:opacity-40";
+  "inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline bg-surface px-4 text-sm font-semibold text-accent hover:border-accent disabled:opacity-40";
 
 /** Movement library: add the starting movements (all or picked). */
 export function MovementLibrary({ status }: { status: LibraryStatus }) {
@@ -95,7 +95,7 @@ export function MovementLibrary({ status }: { status: LibraryStatus }) {
                           })
                         }
                         className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                          on ? "border-accent bg-accent/10 text-accent" : "border-hairline text-muted"
+                          on ? "border-accent bg-accent/10 text-accent" : "border-hairline bg-surface text-muted"
                         }`}
                       >
                         {m.name}

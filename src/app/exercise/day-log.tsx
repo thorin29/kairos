@@ -1209,7 +1209,7 @@ function WarmupRow({
           aria-pressed={skipped}
           onClick={() => onSkip(!skipped)}
           className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
-            skipped ? "border-hairline bg-ground text-muted" : "border-hairline text-muted hover:border-accent"
+            skipped ? "border-hairline bg-ground text-muted" : "border-hairline bg-surface text-muted hover:border-accent"
           }`}
         >
           {skipped ? "Skipped" : "Skip"}
@@ -2137,7 +2137,7 @@ function MovementLogger({
                           onChange={(e) =>
                             update(r.key, { w: e.target.value, saved: r.saved && e.target.value === r.w })
                           }
-                          className={`tabular h-11 w-full max-w-[6rem] rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.w ? "border-accent/60" : "border-hairline"}`}
+                          className={`tabular h-11 w-full max-w-[6rem] rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.w ? "border-accent/60" : "border-hairline bg-surface"}`}
                         />
                       )}
                       {metric === "DURATION" ? (
@@ -2147,7 +2147,7 @@ function MovementLogger({
                           value={clockEntry(r.s)}
                           placeholder={r.hintS != null ? clockEntry(r.hintS) : "0:00"}
                           onChange={(e) => update(r.key, { s: secondsFromTyped(e.target.value), saved: false })}
-                          className={`tabular h-11 w-full max-w-[5.5rem] rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.s ? "border-accent/60" : "border-hairline"}`}
+                          className={`tabular h-11 w-full max-w-[5.5rem] rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.s ? "border-accent/60" : "border-hairline bg-surface"}`}
                         />
                       ) : (
                         <input
@@ -2156,7 +2156,7 @@ function MovementLogger({
                           value={r.r}
                           placeholder={r.hintR != null ? `${r.hintR}${r.plus ? "+" : ""}` : ""}
                           onChange={(e) => update(r.key, { r: e.target.value, saved: false })}
-                          className={`tabular h-11 w-full max-w-[4.5rem] rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.r ? "border-accent/60" : "border-hairline"}`}
+                          className={`tabular h-11 w-full max-w-[4.5rem] rounded-lg border bg-surface px-3 text-base outline-none placeholder:text-muted/80 focus:border-accent ${r.r ? "border-accent/60" : "border-hairline bg-surface"}`}
                         />
                       )}
                       <button
@@ -2457,7 +2457,7 @@ function SportWarmupRow({
           aria-pressed={skipped}
           onClick={() => onState(skipped ? null : "skip")}
           className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
-            skipped ? "border-hairline bg-ground text-muted" : "border-hairline text-muted hover:border-accent"
+            skipped ? "border-hairline bg-ground text-muted" : "border-hairline bg-surface text-muted hover:border-accent"
           }`}
         >
           {skipped ? "Skipped" : "Skip"}

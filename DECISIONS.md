@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-11 — White controls, no white footer box (v0.742.0)
+
+- Outlined buttons, choice chips (unselected) and fields drew no background,
+  so on the grey page (the Workouts full pages above all) they took the page
+  colour instead of white. Every bordered `border-hairline` button, link,
+  label or field without a background now has `bg-surface` (87 files, the
+  shared `CHIP` included). On a white card nothing changes.
+- The sticky Next / Start bar on the program setup and block builder pages
+  had a white fill and a top rule from when they were pop-ups; it now uses
+  the page background with no rule.
+- Rule (ARCHITECTURE.md): a bordered control always sets `bg-surface`.
+
 ## 2026-11 — Reuse date formatters (v0.741.0)
 
 - The real cause of the slow Summary: `todayISO` and `fromDateColumn` built a

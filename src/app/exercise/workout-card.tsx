@@ -619,7 +619,7 @@ export function PlanRow({
                       }
                       className={`inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-xs ${
                         sw
-                          ? "border-hairline text-muted hover:border-accent hover:text-accent"
+                          ? "border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
                           : "border-hairline text-accent hover:bg-accent/5"
                       }`}
                     >

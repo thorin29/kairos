@@ -212,7 +212,7 @@ export function GenerateForm({
                   key={label as string}
                   type="button"
                   onClick={() => preset(names as string[])}
-                  className={`${chip} border-hairline text-muted hover:border-accent hover:text-accent`}
+                  className={`${chip} border-hairline bg-surface text-muted hover:border-accent hover:text-accent`}
                 >
                   {label as string}
                 </button>
@@ -220,7 +220,7 @@ export function GenerateForm({
               <button
                 type="button"
                 onClick={() => setSegments([])}
-                className={`${chip} border-hairline text-muted hover:border-accent hover:text-accent`}
+                className={`${chip} border-hairline bg-surface text-muted hover:border-accent hover:text-accent`}
               >
                 Clear
               </button>
@@ -247,7 +247,7 @@ export function GenerateForm({
                               "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                               on
                                 ? "border-accent bg-accent/10 text-accent"
-                                : "border-hairline text-muted hover:border-accent",
+                                : "border-hairline bg-surface text-muted hover:border-accent",
                             ].join(" ")}
                           >
                             {b.name}

@@ -429,7 +429,7 @@ export function MoneyImport({
                         <button
                           type="button"
                           onClick={() => removeRow(r.key)}
-                          className="rounded-md border border-hairline px-2 py-1 text-xs text-muted hover:text-red-600"
+                          className="rounded-md border border-hairline bg-surface px-2 py-1 text-xs text-muted hover:text-red-600"
                         >
                           Remove
                         </button>

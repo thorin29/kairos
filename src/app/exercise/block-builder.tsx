@@ -439,7 +439,7 @@ export function BlockBuilder({
           </div>
         )}
 
-        <div className="sticky -bottom-4 -mx-4 flex gap-2 border-t border-hairline bg-surface px-4 py-3">
+        <div className="sticky -bottom-4 -mx-4 flex gap-2 bg-ground px-4 py-3">
           {step > 0 && (
             <button type="button" onClick={() => setStep(step - 1)} className={`${SECONDARY_BTN} flex-1 justify-center`}>
               Back

@@ -71,7 +71,7 @@ export function GameTimeCard({ status }: { status: GameStatus }) {
             type="button"
             disabled={pending}
             onClick={() => log(m, false)}
-            className="inline-flex h-9 items-center rounded-full border border-hairline px-3.5 text-sm font-medium transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+            className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-3.5 text-sm font-medium transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
           >
             +{m}m
           </button>

@@ -29,5 +29,5 @@ export const SECTION_LABEL = "text-xs font-semibold uppercase tracking-widest te
 /** A choice chip: filled when on. */
 export const CHIP = (on: boolean) =>
   `inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold transition-colors ${
-    on ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+    on ? "border-accent bg-accent text-on-accent" : "border-hairline bg-surface hover:border-accent"
   }`;

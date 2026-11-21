@@ -32,7 +32,7 @@ export function SharedTally({ rows }: { rows: SharedTallyRow[] }) {
             key={t.name}
             type="button"
             onClick={() => setOpen(t)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-3 py-1 text-xs transition-colors hover:border-accent"
+            className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-surface px-3 py-1 text-xs transition-colors hover:border-accent"
           >
             <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: t.color }} />
             {t.name}

@@ -99,7 +99,7 @@ export function CollaborativeForm({
                   "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors",
                   on
                     ? "border-accent bg-accent text-on-accent"
-                    : "border-hairline text-muted hover:border-accent",
+                    : "border-hairline bg-surface text-muted hover:border-accent",
                 ].join(" ")}
               >
                 <span

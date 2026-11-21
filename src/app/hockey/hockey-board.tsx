@@ -234,7 +234,7 @@ function SectionCard({
 
   const n = s.rows.length;
   const arrow =
-    "inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-ink transition-colors hover:border-accent hover:text-accent disabled:opacity-30 disabled:hover:border-hairline disabled:hover:text-ink";
+    "inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-ink transition-colors hover:border-accent hover:text-accent disabled:opacity-30 disabled:hover:border-hairline disabled:hover:text-ink";
 
   return (
     <section className="overflow-hidden rounded-2xl border border-hairline bg-surface">

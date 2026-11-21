@@ -80,7 +80,7 @@ export function RecurringTasksAdmin({
             <input
               name="title"
               placeholder="e.g. Add work schedule to the calendar"
-              className="w-full rounded-lg border border-hairline px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-hairline bg-surface px-3 py-2 text-sm"
               maxLength={120}
             />
           </label>
@@ -88,7 +88,7 @@ export function RecurringTasksAdmin({
             <span className="mb-1 block text-sm font-medium">For</span>
             <select
               name="userId"
-              className="w-full rounded-lg border border-hairline px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-hairline bg-surface px-3 py-2 text-sm"
               defaultValue=""
             >
               <option value="" disabled>
@@ -124,7 +124,7 @@ export function RecurringTasksAdmin({
             <select
               value={repeat}
               onChange={(e) => setRepeat(e.target.value)}
-              className="rounded-lg border border-hairline px-3 py-2 text-sm"
+              className="rounded-lg border border-hairline bg-surface px-3 py-2 text-sm"
             >
               {["DAILY", "WEEKLY", "MONTHLY", "YEARLY"].map((f) => (
                 <option key={f} value={f}>
@@ -144,12 +144,12 @@ export function RecurringTasksAdmin({
                   max={999}
                   value={every}
                   onChange={(e) => setEvery(Number(e.target.value))}
-                  className="w-20 rounded-lg border border-hairline px-3 py-2 text-sm"
+                  className="w-20 rounded-lg border border-hairline bg-surface px-3 py-2 text-sm"
                 />
                 <select
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
-                  className="rounded-lg border border-hairline px-3 py-2 text-sm"
+                  className="rounded-lg border border-hairline bg-surface px-3 py-2 text-sm"
                 >
                   {UNITS.map(([v, label]) => (
                     <option key={v} value={v}>
@@ -173,7 +173,7 @@ export function RecurringTasksAdmin({
                   aria-pressed={days.includes(code)}
                   onClick={() => setDays((cur) => (cur.includes(code) ? cur.filter((d) => d !== code) : [...cur, code]))}
                   className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                    days.includes(code) ? "border-accent bg-accent/10" : "border-hairline"
+                    days.includes(code) ? "border-accent bg-accent/10" : "border-hairline bg-surface"
                   }`}
                 >
                   {label}
@@ -216,7 +216,7 @@ export function RecurringTasksAdmin({
                 min={1}
                 max={999}
                 disabled={endMode !== "COUNT"}
-                className="w-16 rounded-lg border border-hairline px-2 py-1 text-sm disabled:opacity-40"
+                className="w-16 rounded-lg border border-hairline bg-surface px-2 py-1 text-sm disabled:opacity-40"
               />
               times
             </label>
@@ -274,7 +274,7 @@ export function RecurringTasksAdmin({
               >
                 <button
                   type="submit"
-                  className="rounded-lg border border-hairline px-3 py-1.5 text-sm text-muted transition-colors hover:border-red-300 hover:text-red-700"
+                  className="rounded-lg border border-hairline bg-surface px-3 py-1.5 text-sm text-muted transition-colors hover:border-red-300 hover:text-red-700"
                 >
                   Delete
                 </button>

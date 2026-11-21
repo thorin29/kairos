@@ -119,7 +119,7 @@ export function EffortPicker({
                     setHurtOpen(false);
                   }}
                   className={`inline-flex h-10 items-center rounded-full border px-3.5 text-sm font-medium ${
-                    hurt === a ? "border-red-300 bg-red-50 text-red-700" : "border-hairline hover:border-accent"
+                    hurt === a ? "border-red-300 bg-red-50 text-red-700" : "border-hairline bg-surface hover:border-accent"
                   }`}
                 >
                   {HURT_LABEL[a]}

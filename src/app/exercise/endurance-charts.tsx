@@ -221,7 +221,7 @@ export function CardioPage({ data, onClose }: { data: CardioCharts; onClose: () 
                 aria-pressed={x.key === a.key}
                 onClick={() => setPick(x.key)}
                 className={`inline-flex h-9 items-center rounded-full border px-3.5 text-xs font-semibold transition-colors ${
-                  x.key === a.key ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+                  x.key === a.key ? "border-accent bg-accent text-on-accent" : "border-hairline bg-surface hover:border-accent"
                 }`}
               >
                 {x.label}

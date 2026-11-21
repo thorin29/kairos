@@ -171,7 +171,7 @@ export function YearCalendar({ cal, students }: { cal: YearCal; students: Studen
                 key={st.studentId}
                 type="button"
                 onClick={() => { setStudentId(st.studentId === studentId ? null : st.studentId); setClassIdx(null); }}
-                className={`rounded-full border px-3 py-1 text-xs font-medium ${st.studentId === studentId ? "border-accent bg-accent/10 text-accent" : "border-hairline"}`}
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${st.studentId === studentId ? "border-accent bg-accent/10 text-accent" : "border-hairline bg-surface"}`}
               >
                 {st.studentName}
               </button>
@@ -192,7 +192,7 @@ export function YearCalendar({ cal, students }: { cal: YearCal; students: Studen
                     key={i}
                     type="button"
                     onClick={() => setClassIdx(i === classIdx ? null : i)}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${i === classIdx ? "border-accent" : "border-hairline"}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${i === classIdx ? "border-accent" : "border-hairline bg-surface"}`}
                   >
                     <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: displayColor(b.color) }} />
                     {b.className}

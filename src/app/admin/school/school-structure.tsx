@@ -571,7 +571,7 @@ function Classes({
                 className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                   days.includes(token)
                     ? "border-accent bg-accent/10 text-accent"
-                    : "border-hairline text-muted hover:border-accent"
+                    : "border-hairline bg-surface text-muted hover:border-accent"
                 }`}
               >
                 {label}
@@ -654,7 +654,7 @@ function Classes({
                   className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                     shared.includes(p.id)
                       ? "border-accent bg-accent/10 text-accent"
-                      : "border-hairline text-muted hover:border-accent"
+                      : "border-hairline bg-surface text-muted hover:border-accent"
                   }`}
                 >
                   {p.name}
@@ -818,7 +818,7 @@ function InlineTermAdd({ hasTerms }: { hasTerms: boolean }) {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-sm font-medium text-muted hover:text-ink"
+            className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-4 text-sm font-medium text-muted hover:text-ink"
           >
             Cancel
           </button>
@@ -871,7 +871,7 @@ function ClassRowView({
       <button
         type="button"
         onClick={onEdit}
-        className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+        className="shrink-0 rounded-full border border-hairline bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
       >
         Edit
       </button>
@@ -980,7 +980,7 @@ function SubjectGroupsEditor({ groups }: { groups: SubjectGroup[] }) {
                   <button
                     type="button"
                     onClick={() => run(() => setSubjectColor(g.id as string, null))}
-                    className="rounded-md border border-hairline px-2 py-0.5 text-xs text-muted"
+                    className="rounded-md border border-hairline bg-surface px-2 py-0.5 text-xs text-muted"
                   >
                     Auto
                   </button>
@@ -990,7 +990,7 @@ function SubjectGroupsEditor({ groups }: { groups: SubjectGroup[] }) {
                       type="button"
                       aria-label={c}
                       onClick={() => run(() => setSubjectColor(g.id as string, c))}
-                      className="h-5 w-5 rounded-full border border-hairline"
+                      className="h-5 w-5 rounded-full border border-hairline bg-surface"
                       style={{ backgroundColor: c }}
                     />
                   ))}

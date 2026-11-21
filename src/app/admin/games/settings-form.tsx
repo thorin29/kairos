@@ -11,7 +11,7 @@ import type { GameStatus } from "@/lib/queries/games";
 const initial: GameSettingsState = { error: null, saved: false };
 
 const num =
-  "tabular h-11 w-24 rounded-full border border-hairline px-4 outline-none focus:border-accent";
+  "tabular h-11 w-24 rounded-full border border-hairline bg-surface px-4 outline-none focus:border-accent";
 
 export function GameSettingsForm({ status }: { status: GameStatus }) {
   const [state, formAction, pending] = useActionState(

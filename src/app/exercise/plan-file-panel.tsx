@@ -250,7 +250,7 @@ export function PlanFilePanel({ userId }: { userId: string }) {
                 key={k}
                 type="button"
                 onClick={() => show(k)}
-                className="flex w-full items-center gap-3 rounded-xl border border-hairline px-4 py-3 text-left text-sm font-semibold hover:border-accent"
+                className="flex w-full items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left text-sm font-semibold hover:border-accent"
               >
                 <Icon className="h-5 w-5 text-accent" />
                 {label}

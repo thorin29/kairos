@@ -237,7 +237,7 @@ export function PlanReview({ plan, today }: { plan: PlanDetail; today: string })
                       className={`h-8 w-8 rounded-md border text-xs font-medium ${
                         weekdays.has(w.n)
                           ? "border-accent bg-accent/10 text-accent"
-                          : "border-hairline text-muted"
+                          : "border-hairline bg-surface text-muted"
                       }`}
                     >
                       {w.label}
@@ -421,7 +421,7 @@ export function PlanReview({ plan, today }: { plan: PlanDetail; today: string })
             <button
               onClick={save}
               disabled={pending || weekdaysEmpty}
-              className="rounded-md border border-hairline px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+              className="rounded-md border border-hairline bg-surface px-3 py-1.5 text-sm font-medium disabled:opacity-50"
             >
               {pending ? "Saving\u2026" : "Save draft"}
             </button>

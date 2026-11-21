@@ -62,7 +62,7 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
               key={s.subject}
               type="button"
               onClick={() => pick(s.subject)}
-              className="rounded-full border border-hairline px-4 py-2 text-sm font-medium hover:border-accent"
+              className="rounded-full border border-hairline bg-surface px-4 py-2 text-sm font-medium hover:border-accent"
             >
               {s.subject}
             </button>
@@ -79,7 +79,7 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
         <button
           type="button"
           onClick={back}
-          className="inline-flex items-center gap-1 rounded-full border border-hairline px-3 py-1 text-xs font-medium text-muted hover:border-accent hover:text-ink"
+          className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface px-3 py-1 text-xs font-medium text-muted hover:border-accent hover:text-ink"
         >
           <ChevronLeftIcon className="h-3.5 w-3.5" />
           Subjects
@@ -109,7 +109,7 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
           <button
             type="button"
             onClick={back}
-            className="mt-3 rounded-full border border-hairline px-4 py-2 text-sm font-medium hover:border-accent"
+            className="mt-3 rounded-full border border-hairline bg-surface px-4 py-2 text-sm font-medium hover:border-accent"
           >
             Pick another subject
           </button>

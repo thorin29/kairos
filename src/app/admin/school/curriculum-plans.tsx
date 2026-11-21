@@ -67,7 +67,7 @@ export function CurriculumPlans({ plans }: { plans: PlanRow[] }) {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={pending}
-            className="rounded-md border border-hairline px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="rounded-md border border-hairline bg-surface px-3 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             Upload CSV file
           </button>

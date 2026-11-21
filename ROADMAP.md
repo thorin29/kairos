@@ -87,7 +87,7 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.741.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.742.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   160_calendar_work, all registered in `MIGRATIONS`.
 - App 0.536.0 (versionCode 608, CLIENT_BUILD 608).
 - ice-time 0.1.3.

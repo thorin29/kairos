@@ -79,7 +79,7 @@ export function EffortControl({
               className={`ml-1 flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
                 locked
                   ? "border-accent bg-accent/10 text-accent"
-                  : "border-hairline text-muted hover:border-accent hover:text-accent"
+                  : "border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
               }`}
             >
               <LockIcon className="h-3.5 w-3.5" />

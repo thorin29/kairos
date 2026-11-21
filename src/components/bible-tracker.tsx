@@ -163,7 +163,7 @@ export function ManualRun({
           )
             start(onReset);
         }}
-        className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-sm font-medium hover:border-accent disabled:opacity-40"
+        className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-4 text-sm font-medium hover:border-accent disabled:opacity-40"
       >
         Reset
       </button>
@@ -200,7 +200,7 @@ export function StartOverDialog({
             key={k}
             type="button"
             onClick={() => setChoice(k)}
-            className={`flex w-full gap-3 rounded-2xl p-4 text-left ${choice === k ? "border-2 border-accent" : "border border-hairline"}`}
+            className={`flex w-full gap-3 rounded-2xl p-4 text-left ${choice === k ? "border-2 border-accent" : "border border-hairline bg-surface"}`}
           >
             <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${choice === k ? "border-accent" : "border-hairline"}`}>
               {choice === k && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
@@ -223,7 +223,7 @@ export function StartOverDialog({
           </ul>
         </div>
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="inline-flex h-11 items-center rounded-full border border-hairline px-5 text-sm font-medium">
+          <button type="button" onClick={onClose} className="inline-flex h-11 items-center rounded-full border border-hairline bg-surface px-5 text-sm font-medium">
             Cancel
           </button>
           <button

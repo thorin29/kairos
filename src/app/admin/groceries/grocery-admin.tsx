@@ -245,7 +245,7 @@ function StoreRow({
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           store.isActive
             ? "border-accent text-accent"
-            : "border-hairline text-muted"
+            : "border-hairline bg-surface text-muted"
         }`}
       >
         {store.isActive ? "Active" : "Hidden"}
@@ -475,7 +475,7 @@ function CatalogRow({
         onClick={() => startTransition(() => setCatalogActive(item.id, !item.isActive))}
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           item.isActive
-            ? "border-hairline text-muted hover:border-accent"
+            ? "border-hairline bg-surface text-muted hover:border-accent"
             : "border-accent text-accent"
         }`}
       >

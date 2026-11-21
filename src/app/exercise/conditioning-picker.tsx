@@ -718,7 +718,7 @@ export function PickConditioningCard({
               })
             }
             className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
-              skipped ? "border-hairline bg-ground text-muted" : "border-hairline text-muted hover:border-accent"
+              skipped ? "border-hairline bg-ground text-muted" : "border-hairline bg-surface text-muted hover:border-accent"
             }`}
           >
             {skipped ? "Skipped" : "Skip"}

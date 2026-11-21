@@ -106,7 +106,7 @@ export function AdminPinControls({ pinSet }: { pinSet: boolean }) {
           type="button"
           onClick={disable}
           disabled={pending}
-          className="h-10 rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-red-400 hover:text-red-700 disabled:opacity-50"
+          className="h-10 rounded-full border border-hairline bg-surface px-4 text-sm font-medium text-muted transition-colors hover:border-red-400 hover:text-red-700 disabled:opacity-50"
         >
           Turn PIN off
         </button>

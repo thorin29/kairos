@@ -42,7 +42,7 @@ export function PlanActions({
       )}
       <a
         href={`/admin/bible/add?plan=${id}`}
-        className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-xs font-medium text-muted hover:border-accent hover:text-accent"
+        className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-4 text-xs font-medium text-muted hover:border-accent hover:text-accent"
       >
         Add readings
       </a>
@@ -55,7 +55,7 @@ export function PlanActions({
             if (res) downloadText(res.fileName, res.text);
           })
         }
-        className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-xs font-medium text-muted hover:border-accent hover:text-accent disabled:opacity-50"
+        className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-4 text-xs font-medium text-muted hover:border-accent hover:text-accent disabled:opacity-50"
       >
         Export
       </button>
@@ -70,7 +70,7 @@ export function PlanActions({
         className={`inline-flex h-9 items-center rounded-full border px-4 text-xs font-medium transition-colors disabled:opacity-50 ${
           isPublished
             ? "border-accent bg-accent/10 text-accent"
-            : "border-hairline text-muted hover:border-accent hover:text-accent"
+            : "border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
         }`}
       >
         {isPublished ? "Published" : "Publish"}

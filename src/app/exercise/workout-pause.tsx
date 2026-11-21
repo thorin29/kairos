@@ -197,7 +197,7 @@ export function WorkoutPausePage({ userId, todayISO, onBack }: { userId: string;
                   type="button"
                   disabled={pending}
                   onClick={() => save(() => endPersonalPause(userId, p.id))}
-                  className="inline-flex h-9 shrink-0 items-center rounded-full border border-hairline px-3.5 text-sm font-semibold hover:border-accent disabled:opacity-50"
+                  className="inline-flex h-9 shrink-0 items-center rounded-full border border-hairline bg-surface px-3.5 text-sm font-semibold hover:border-accent disabled:opacity-50"
                 >
                   {p.from > todayISO ? "Remove" : "End"}
                 </button>

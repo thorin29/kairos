@@ -54,7 +54,7 @@ export async function FamilyGoalBanner() {
         </div>
         <Link
           href="/coop"
-          className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-sm font-medium hover:border-accent"
+          className="shrink-0 rounded-full border border-hairline bg-surface px-3 py-1.5 text-sm font-medium hover:border-accent"
         >
           {nudge === "pick" ? "Pick" : "Vote"}
         </Link>
@@ -111,7 +111,7 @@ export async function FamilyGoalBanner() {
       {!done && (!admin || !goal.gateMet) && (
         <Link
           href="/coop"
-          className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-sm font-medium hover:border-accent"
+          className="shrink-0 rounded-full border border-hairline bg-surface px-3 py-1.5 text-sm font-medium hover:border-accent"
         >
           Details
         </Link>

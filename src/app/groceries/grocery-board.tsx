@@ -297,7 +297,7 @@ export function GroceryBoard({
                       defaultStoreId: c.defaultStoreId,
                     })
                   }
-                  className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent hover:text-accent"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-surface px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent hover:text-accent"
                 >
                   <GroceryGlyph icon={c.icon} className="h-4 w-4" />
                   {c.name}
@@ -406,7 +406,7 @@ function QuantityControl({
         aria-label={value ? `Quantity ${value}, change it` : "Set a quantity"}
         title={value ? "Change quantity" : "Set a quantity"}
         className={[
-          "tabular flex h-8 shrink-0 items-center justify-center rounded-full border border-hairline text-xs font-medium transition-colors hover:border-accent hover:text-accent",
+          "tabular flex h-8 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-xs font-medium transition-colors hover:border-accent hover:text-accent",
           value ? "min-w-10 px-2 text-ink" : "w-8 text-muted",
         ].join(" ")}
       >

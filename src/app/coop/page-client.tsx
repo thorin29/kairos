@@ -251,7 +251,7 @@ function ProposalCard({
                     if (r.error) alert(r.error);
                   })
                 }
-                className="inline-flex h-8 items-center rounded-full border border-hairline px-3 text-xs font-medium hover:border-accent hover:text-accent disabled:opacity-50"
+                className="inline-flex h-8 items-center rounded-full border border-hairline bg-surface px-3 text-xs font-medium hover:border-accent hover:text-accent disabled:opacity-50"
               >
                 Make the goal
               </button>
@@ -292,7 +292,7 @@ function ProposalCard({
               className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors disabled:opacity-50 ${
                 voted
                   ? "border-accent bg-accent/10 text-accent"
-                  : "border-hairline text-muted hover:border-accent"
+                  : "border-hairline bg-surface text-muted hover:border-accent"
               }`}
             >
               <Avatar name={person.name} color={person.color} avatarPath={person.avatarPath} avatarPosition={person.avatarPosition} size="xs" />

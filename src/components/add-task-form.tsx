@@ -55,7 +55,7 @@ export function AddTaskForm({
             maxLength={120}
             autoFocus
             placeholder="What needs doing?"
-            className="mt-1.5 w-full rounded-md border border-hairline px-3 py-2 outline-none focus:border-accent"
+            className="mt-1.5 w-full rounded-md border border-hairline bg-surface px-3 py-2 outline-none focus:border-accent"
           />
         </div>
 
@@ -107,7 +107,7 @@ export function AddTaskForm({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md border border-hairline px-4 py-2 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+          className="rounded-md border border-hairline bg-surface px-4 py-2 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
         >
           Cancel
         </button>

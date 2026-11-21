@@ -61,7 +61,7 @@ function Choices({
             aria-checked={value === k}
             onClick={() => onPick(k)}
             className={`inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold ${
-              value === k ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+              value === k ? "border-accent bg-accent text-on-accent" : "border-hairline bg-surface hover:border-accent"
             }`}
           >
             {text}
@@ -101,7 +101,7 @@ function Looks({
             aria-checked={value === k}
             onClick={() => onPick(k)}
             className={`w-24 overflow-hidden rounded-xl border text-center ${
-              value === k ? "border-2 border-accent" : "border-hairline hover:border-accent"
+              value === k ? "border-2 border-accent" : "border-hairline bg-surface hover:border-accent"
             }`}
           >
             <span

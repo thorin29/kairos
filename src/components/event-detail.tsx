@@ -302,7 +302,7 @@ export function EventDetail({
                 <button
                   type="button"
                   onClick={() => setEditScope(false)}
-                  className="inline-flex h-9 w-full items-center justify-center rounded-full border border-hairline text-xs font-medium text-muted transition-colors hover:text-ink"
+                  className="inline-flex h-9 w-full items-center justify-center rounded-full border border-hairline bg-surface text-xs font-medium text-muted transition-colors hover:text-ink"
                 >
                   Cancel
                 </button>
@@ -365,7 +365,7 @@ export function EventDetail({
                           type="button"
                           disabled={deleting}
                           onClick={() => setConfirming(false)}
-                          className="inline-flex h-9 w-full items-center justify-center rounded-full border border-hairline text-xs font-medium text-muted transition-colors hover:text-ink disabled:opacity-50"
+                          className="inline-flex h-9 w-full items-center justify-center rounded-full border border-hairline bg-surface text-xs font-medium text-muted transition-colors hover:text-ink disabled:opacity-50"
                         >
                           Cancel
                         </button>
@@ -395,7 +395,7 @@ export function EventDetail({
                         type="button"
                         disabled={deleting}
                         onClick={() => setConfirming(false)}
-                        className="inline-flex h-8 flex-1 items-center justify-center rounded-full border border-hairline text-xs font-medium text-muted transition-colors hover:text-ink disabled:opacity-50"
+                        className="inline-flex h-8 flex-1 items-center justify-center rounded-full border border-hairline bg-surface text-xs font-medium text-muted transition-colors hover:text-ink disabled:opacity-50"
                       >
                         Cancel
                       </button>

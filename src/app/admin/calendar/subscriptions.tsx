@@ -178,7 +178,7 @@ export function Subscriptions({
               setEditMode((v) => !v);
               setEditing(null);
             }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline bg-surface px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
           >
             {editMode ? "Done" : "Edit"}
           </button>
@@ -291,7 +291,7 @@ export function Subscriptions({
                               ),
                           )
                         }
-                        className="w-16 rounded-md border border-hairline px-2 py-1 text-xs"
+                        className="w-16 rounded-md border border-hairline bg-surface px-2 py-1 text-xs"
                       />
                       min
                     </label>
@@ -377,7 +377,7 @@ export function Subscriptions({
                         <button
                           type="button"
                           onClick={() => openPeople(s)}
-                          className="inline-flex h-8 items-center rounded-full border border-hairline px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+                          className="inline-flex h-8 items-center rounded-full border border-hairline bg-surface px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
                         >
                           Edit people
                         </button>
@@ -394,7 +394,7 @@ export function Subscriptions({
                                 startTransition(() => void retireCalendar(s.id));
                               }
                             }}
-                            className="inline-flex h-8 items-center rounded-full border border-hairline px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+                            className="inline-flex h-8 items-center rounded-full border border-hairline bg-surface px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
                           >
                             Retire
                           </button>
@@ -431,7 +431,7 @@ export function Subscriptions({
           type="button"
           disabled={busy}
           onClick={() => startTransition(() => void refreshCalendars())}
-          className="inline-flex h-10 items-center gap-2 rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+          className="inline-flex h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
         >
           <RefreshIcon className="h-4 w-4" />
           {busy ? "Refreshing\u2026" : "Refresh all now"}

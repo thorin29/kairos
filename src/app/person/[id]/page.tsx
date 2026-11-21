@@ -472,7 +472,7 @@ export default async function PersonPage({
         {person.role === "ADMIN" && (
           <Link
             href="/admin"
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
           >
             <LockIcon className="h-4 w-4" />
             Admin

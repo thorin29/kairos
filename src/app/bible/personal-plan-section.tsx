@@ -250,7 +250,7 @@ function PlanCreator({
             key={label}
             type="button"
             onClick={fn}
-            className="rounded-full border border-hairline px-3 py-1 font-medium text-muted hover:text-ink"
+            className="rounded-full border border-hairline bg-surface px-3 py-1 font-medium text-muted hover:text-ink"
           >
             {label}
           </button>
@@ -269,7 +269,7 @@ function PlanCreator({
                 className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                   on
                     ? "bg-accent text-on-accent"
-                    : "border border-hairline text-muted hover:text-ink"
+                    : "border border-hairline bg-surface text-muted hover:text-ink"
                 }`}
               >
                 {b.name}
@@ -325,7 +325,7 @@ function PlanCreator({
         </button>
         <a
           href="/bible/import"
-          className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-sm font-medium text-muted hover:text-ink"
+          className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-4 text-sm font-medium text-muted hover:text-ink"
         >
           Import a plan
         </a>
@@ -333,7 +333,7 @@ function PlanCreator({
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-sm font-medium text-muted hover:text-ink"
+            className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-4 text-sm font-medium text-muted hover:text-ink"
           >
             Cancel
           </button>

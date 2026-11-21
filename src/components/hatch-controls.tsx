@@ -51,7 +51,7 @@ export function HatchControls({
             type="button"
             disabled={pending}
             onClick={() => go("deepen")}
-            className="inline-flex h-10 items-center rounded-full border border-hairline px-5 text-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50"
+            className="inline-flex h-10 items-center rounded-full border border-hairline bg-surface px-5 text-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50"
           >
             Deepen instead
           </button>

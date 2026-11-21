@@ -16,7 +16,7 @@ export function MasterEffortLock({ allLocked }: { allLocked: boolean }) {
       className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors disabled:opacity-50 ${
         allLocked
           ? "border-accent bg-accent/10 text-accent"
-          : "border-hairline text-muted hover:border-accent hover:text-accent"
+          : "border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
       }`}
     >
       <LockIcon className="h-4 w-4" />

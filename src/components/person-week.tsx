@@ -31,7 +31,7 @@ export function PersonWeek({
   label: string;
 }) {
   const nav =
-    "inline-flex h-8 items-center rounded-full border border-hairline px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent";
+    "inline-flex h-8 items-center rounded-full border border-hairline bg-surface px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent";
 
   return (
     <section>

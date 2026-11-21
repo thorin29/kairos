@@ -114,7 +114,7 @@ export function CalendarOptionsDrawer({
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Calendar options"
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-hairline text-ink transition-colors hover:border-accent hover:text-accent"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-hairline bg-surface text-ink transition-colors hover:border-accent hover:text-accent"
       >
         <SlidersIcon className="h-5 w-5" />
       </button>
@@ -328,7 +328,7 @@ function Choice({
       className={`h-10 rounded-lg text-sm font-medium transition-colors ${
         active
           ? "bg-accent text-on-accent"
-          : "border border-hairline text-ink hover:border-accent"
+          : "border border-hairline bg-surface text-ink hover:border-accent"
       }`}
     >
       {label}

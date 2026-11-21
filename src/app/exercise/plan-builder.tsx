@@ -495,7 +495,7 @@ function DayRow({
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-dashed border-hairline px-3 text-sm font-medium text-muted hover:border-accent hover:text-accent"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-dashed border-hairline bg-surface px-3 text-sm font-medium text-muted hover:border-accent hover:text-accent"
         >
           <PlusIcon className="h-4 w-4" />
           Add workout

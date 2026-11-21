@@ -476,7 +476,7 @@ export function WorkoutsGrid({
                       className={`flex flex-1 items-center justify-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors ${
                         browseFilter === "regular"
                           ? "border-accent bg-accent/10 text-accent"
-                          : "border-hairline text-muted hover:border-accent"
+                          : "border-hairline bg-surface text-muted hover:border-accent"
                       }`}
                     >
                       <DumbbellIcon className="h-4 w-4" />
@@ -489,7 +489,7 @@ export function WorkoutsGrid({
                       className={`flex flex-1 items-center justify-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors ${
                         browseFilter === "hero"
                           ? "border-accent bg-accent/10 text-accent"
-                          : "border-hairline text-muted hover:border-accent"
+                          : "border-hairline bg-surface text-muted hover:border-accent"
                       }`}
                     >
                       <TrophyIcon className="h-4 w-4" />
@@ -1001,7 +1001,7 @@ function LiftBlocks({
             <button
               type="button"
               onClick={() => setPicked(null)}
-              className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-muted transition-colors hover:border-accent hover:text-accent"
+              className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-muted transition-colors hover:border-accent hover:text-accent"
               aria-label="Back to today's workout"
               title="Back to today's workout"
             >

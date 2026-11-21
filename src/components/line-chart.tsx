@@ -312,7 +312,7 @@ export function LineChart({
               onClick={() => toggle(s.id)}
               className={[
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                off ? "border-hairline text-muted opacity-50" : "border-hairline",
+                off ? "border-hairline bg-surface text-muted opacity-50" : "border-hairline bg-surface",
               ].join(" ")}
             >
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />

@@ -388,7 +388,7 @@ function AddBook({ userId, onDone }: { userId: string; onDone: () => void }) {
         <button type="button" disabled={pending} onClick={submit} className="inline-flex h-9 items-center rounded-full bg-accent px-3 text-sm font-medium text-white disabled:opacity-50">
           Add book
         </button>
-        <button type="button" onClick={onDone} className="inline-flex h-9 items-center rounded-full border border-hairline px-3 text-sm font-medium text-muted">
+        <button type="button" onClick={onDone} className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-3 text-sm font-medium text-muted">
           Cancel
         </button>
       </div>
@@ -433,7 +433,7 @@ function EditBook({ book, onDone }: { book: BookProgress; onDone: () => void }) 
         >
           Save
         </button>
-        <button type="button" onClick={onDone} className="inline-flex h-9 items-center rounded-full border border-hairline px-3 text-sm font-medium text-muted">
+        <button type="button" onClick={onDone} className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-3 text-sm font-medium text-muted">
           Cancel
         </button>
       </div>

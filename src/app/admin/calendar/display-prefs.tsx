@@ -82,7 +82,7 @@ export function DisplayPrefs({
               className={`h-9 w-9 rounded-full border transition-transform ${
                 color.toLowerCase() === c.value
                   ? "scale-110 ring-2 ring-ink ring-offset-2 ring-offset-ground"
-                  : "border-hairline hover:scale-105"
+                  : "border-hairline bg-surface hover:scale-105"
               }`}
               style={{ backgroundColor: c.value }}
             />
@@ -103,7 +103,7 @@ export function DisplayPrefs({
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                 sec === r.value
                   ? "border-accent bg-accent/10 text-accent"
-                  : "border-hairline text-muted hover:border-accent"
+                  : "border-hairline bg-surface text-muted hover:border-accent"
               }`}
             >
               {r.label}
@@ -129,7 +129,7 @@ export function DisplayPrefs({
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                 block === b.value
                   ? "border-accent bg-accent/10 text-accent"
-                  : "border-hairline text-muted hover:border-accent"
+                  : "border-hairline bg-surface text-muted hover:border-accent"
               }`}
             >
               {b.label}
@@ -160,7 +160,7 @@ export function DisplayPrefs({
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                 style === o.value
                   ? "border-accent bg-accent/10 text-accent"
-                  : "border-hairline text-muted hover:border-accent"
+                  : "border-hairline bg-surface text-muted hover:border-accent"
               }`}
             >
               {o.label}
@@ -198,7 +198,7 @@ export function DisplayPrefs({
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                 is24 === o.value
                   ? "border-accent bg-accent/10 text-accent"
-                  : "border-hairline text-muted hover:border-accent"
+                  : "border-hairline bg-surface text-muted hover:border-accent"
               }`}
             >
               {o.label}

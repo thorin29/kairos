@@ -82,7 +82,7 @@ export function CatchUp({ students }: { students: RebaselineStudent[] }) {
                       `Restart ${s.name}'s overdue school work${s.firstDate ? ` on ${formatShort(s.firstDate)}` : ""}?`,
                     )
                   }
-                  className="shrink-0 rounded-md border border-hairline px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+                  className="shrink-0 rounded-md border border-hairline bg-surface px-3 py-1.5 text-sm font-medium disabled:opacity-50"
                 >
                   Re-baseline
                 </button>

@@ -196,7 +196,7 @@ export async function PersonalCalendar({
           : formatMonth(date);
 
   const chip =
-    "inline-flex h-10 items-center gap-2 rounded-full border border-hairline px-3.5 text-sm font-medium transition-colors hover:border-accent hover:text-accent";
+    "inline-flex h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-3.5 text-sm font-medium transition-colors hover:border-accent hover:text-accent";
 
   return (
     <AddEventProvider

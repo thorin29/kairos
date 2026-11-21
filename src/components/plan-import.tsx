@@ -67,7 +67,7 @@ export function PlanImport({
       />
 
       <div className="flex flex-wrap items-center gap-3">
-        <label className="inline-flex h-10 cursor-pointer items-center rounded-full border border-hairline px-4 text-sm font-medium hover:border-accent">
+        <label className="inline-flex h-10 cursor-pointer items-center rounded-full border border-hairline bg-surface px-4 text-sm font-medium hover:border-accent">
           Upload a file
           <input
             type="file"
@@ -120,7 +120,7 @@ export function PlanImport({
                     aria-pressed={on}
                     onClick={() => setWeekdays((w) => (on ? w.filter((x) => x !== i) : [...w, i]))}
                     className={`h-10 w-10 rounded-full border text-sm font-medium ${
-                      on ? "border-accent bg-accent text-on-accent" : "border-hairline"
+                      on ? "border-accent bg-accent text-on-accent" : "border-hairline bg-surface"
                     }`}
                   >
                     {d}

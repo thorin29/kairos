@@ -53,7 +53,7 @@ export function SchoolAdmin({
             type="button"
             onClick={() => setHideComplete((v) => !v)}
             className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium ${
-              hideComplete ? "border-accent text-accent" : "border-hairline text-muted hover:text-ink"
+              hideComplete ? "border-accent text-accent" : "border-hairline bg-surface text-muted hover:text-ink"
             }`}
           >
             {hideComplete ? "Show complete" : "Hide complete"}
@@ -62,7 +62,7 @@ export function SchoolAdmin({
             type="button"
             onClick={() => setCompletionEdit((v) => !v)}
             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
-              completionEdit ? "border-accent text-accent" : "border-hairline text-muted hover:text-ink"
+              completionEdit ? "border-accent text-accent" : "border-hairline bg-surface text-muted hover:text-ink"
             }`}
             title="Edit whether work is complete"
           >
@@ -460,7 +460,7 @@ function EditForm({
           type="button"
           disabled={pending}
           onClick={onClose}
-          className="rounded-md border border-hairline px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
+          className="rounded-md border border-hairline bg-surface px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
         >
           Cancel
         </button>

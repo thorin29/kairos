@@ -10,7 +10,7 @@ import { CalendarIcon } from "@/components/icons";
  * calendar's day view.
  */
 const navChip =
-  "inline-flex h-8 items-center rounded-full border border-hairline px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent";
+  "inline-flex h-8 items-center rounded-full border border-hairline bg-surface px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent";
 
 export function DaySchedule({
   events,

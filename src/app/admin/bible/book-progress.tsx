@@ -179,14 +179,14 @@ export function BookProgress({
         <button
           type="button"
           onClick={() => bulk(BOOKS.filter((b) => b.testament === "OT").map((b) => b.name), true)}
-          className={`${chip} border-hairline text-muted hover:border-accent hover:text-accent`}
+          className={`${chip} border-hairline bg-surface text-muted hover:border-accent hover:text-accent`}
         >
           Mark Old Testament read
         </button>
         <button
           type="button"
           onClick={() => bulk(BOOKS.filter((b) => b.testament === "NT").map((b) => b.name), true)}
-          className={`${chip} border-hairline text-muted hover:border-accent hover:text-accent`}
+          className={`${chip} border-hairline bg-surface text-muted hover:border-accent hover:text-accent`}
         >
           Mark New Testament read
         </button>
@@ -194,7 +194,7 @@ export function BookProgress({
           <button
             type="button"
             onClick={() => bulk(BOOKS.map((b) => b.name), false)}
-            className={`${chip} border-hairline text-muted hover:border-red-300 hover:text-red-700`}
+            className={`${chip} border-hairline bg-surface text-muted hover:border-red-300 hover:text-red-700`}
           >
             Clear hand-marked
           </button>
@@ -278,7 +278,7 @@ export function BookProgress({
                 type="button"
                 onClick={close}
                 aria-label="Close"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-muted hover:border-accent hover:text-accent"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
               >
                 ✕
               </button>
@@ -339,14 +339,14 @@ export function BookProgress({
                 <button
                   type="button"
                   onClick={() => draftWhole(true)}
-                  className={`${chip} border-hairline text-muted hover:border-accent hover:text-accent`}
+                  className={`${chip} border-hairline bg-surface text-muted hover:border-accent hover:text-accent`}
                 >
                   Select whole book
                 </button>
                 <button
                   type="button"
                   onClick={() => draftWhole(false)}
-                  className={`${chip} border-hairline text-muted hover:border-accent hover:text-accent`}
+                  className={`${chip} border-hairline bg-surface text-muted hover:border-accent hover:text-accent`}
                 >
                   Clear book
                 </button>
@@ -376,7 +376,7 @@ export function BookProgress({
                 <button
                   type="button"
                   onClick={close}
-                  className="inline-flex h-10 items-center rounded-full border border-hairline px-5 text-sm font-medium text-muted hover:border-accent hover:text-accent"
+                  className="inline-flex h-10 items-center rounded-full border border-hairline bg-surface px-5 text-sm font-medium text-muted hover:border-accent hover:text-accent"
                 >
                   Cancel
                 </button>

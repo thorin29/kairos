@@ -91,7 +91,7 @@ export function PoolChores({
                   min={1}
                   max={365}
                   defaultValue={7}
-                  className="tabular h-11 w-24 rounded-full border border-hairline px-5 outline-none focus:border-accent"
+                  className="tabular h-11 w-24 rounded-full border border-hairline bg-surface px-5 outline-none focus:border-accent"
                 />
                 <span className="text-sm text-muted">days</span>
               </div>
@@ -107,7 +107,7 @@ export function PoolChores({
                   min={0}
                   max={1440}
                   defaultValue={0}
-                  className="tabular h-9 w-20 rounded-full border border-hairline px-4 outline-none focus:border-accent"
+                  className="tabular h-9 w-20 rounded-full border border-hairline bg-surface px-4 outline-none focus:border-accent"
                 />
                 <span>min after done (0 = stays up)</span>
               </div>
@@ -239,7 +239,7 @@ function PoolRow({
             type="button"
             disabled={disabled}
             onClick={() => start(async () => void (await reopenPoolChore(c.id)))}
-            className="inline-flex h-9 items-center rounded-full border border-hairline px-4 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+            className="inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-4 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
           >
             Open now
           </button>
@@ -251,7 +251,7 @@ function PoolRow({
           className={`inline-flex h-9 items-center rounded-full border px-4 text-xs font-medium transition-colors disabled:opacity-50 ${
             c.isPaused
               ? "border-accent bg-accent/10 text-accent"
-              : "border-hairline text-muted hover:border-accent hover:text-accent"
+              : "border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
           }`}
         >
           {c.isPaused ? "Resume" : "Pause"}
@@ -276,7 +276,7 @@ function PoolRow({
                   className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors disabled:opacity-50 ${
                     on
                       ? "border-accent bg-accent/10 text-accent"
-                      : "border-hairline text-muted hover:border-accent hover:text-accent"
+                      : "border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
                   }`}
                 >
                   {p.name}
@@ -308,7 +308,7 @@ function PoolRow({
                   className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors disabled:opacity-50 ${
                     on
                       ? "border-accent bg-accent/10 text-accent"
-                      : "border-hairline text-muted hover:border-accent hover:text-accent"
+                      : "border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
                   }`}
                 >
                   {p.name}

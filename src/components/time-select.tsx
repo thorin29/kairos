@@ -187,7 +187,7 @@ export function TimeSelect({
         aria-label={ariaLabel}
         aria-invalid={invalid || undefined}
         onClick={() => setOpen((o) => !o)}
-        className={`tabular flex h-11 w-full items-center justify-between rounded-full border bg-surface px-5 text-left outline-none focus:border-accent ${invalid ? "border-red-500 text-red-700" : "border-hairline"}`}
+        className={`tabular flex h-11 w-full items-center justify-between rounded-full border bg-surface px-5 text-left outline-none focus:border-accent ${invalid ? "border-red-500 text-red-700" : "border-hairline bg-surface"}`}
       >
         <span>{label}</span>
         <svg

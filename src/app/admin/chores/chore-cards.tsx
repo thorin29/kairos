@@ -212,7 +212,7 @@ export function ChoreCards({
                 type="button"
                 onClick={() => setEditing(null)}
                 aria-label="Close"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-muted hover:border-accent hover:text-accent"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
               >
                 ✕
               </button>
@@ -244,7 +244,7 @@ export function ChoreCards({
                       "h-10 w-12 rounded-xl border text-sm font-medium transition-colors",
                       on
                         ? "border-accent bg-accent text-on-accent"
-                        : "border-hairline text-muted hover:border-accent",
+                        : "border-hairline bg-surface text-muted hover:border-accent",
                     ].join(" ")}
                   >
                     {label}
@@ -257,7 +257,7 @@ export function ChoreCards({
               <button
                 type="button"
                 onClick={() => setEditing(null)}
-                className="inline-flex h-10 items-center rounded-full border border-hairline px-5 text-sm font-medium text-muted hover:border-accent hover:text-accent"
+                className="inline-flex h-10 items-center rounded-full border border-hairline bg-surface px-5 text-sm font-medium text-muted hover:border-accent hover:text-accent"
               >
                 Cancel
               </button>

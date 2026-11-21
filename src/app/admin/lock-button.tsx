@@ -34,7 +34,7 @@ export function LockButton() {
           window.location.assign(dashboard);
         })
       }
-      className="inline-flex h-10 items-center rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+      className="inline-flex h-10 items-center rounded-full border border-hairline bg-surface px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
     >
       {pending ? "Locking\u2026" : "Lock admin"}
     </button>

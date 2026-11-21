@@ -49,7 +49,7 @@ export function VacationPrompts({ vacations }: { vacations: VacationPrompt[] }) 
                     await decideVacation(v.eventId, true);
                   })
                 }
-                className="rounded-md border border-hairline px-3 py-1 text-xs font-medium disabled:opacity-50"
+                className="rounded-md border border-hairline bg-surface px-3 py-1 text-xs font-medium disabled:opacity-50"
               >
                 Keep school on
               </button>

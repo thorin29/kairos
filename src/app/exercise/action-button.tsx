@@ -29,7 +29,7 @@ export function ActionButton({
       className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center text-xs font-semibold transition-colors ${
         primary
           ? "border-accent bg-accent/10 text-accent"
-          : "border-hairline text-ink hover:border-accent hover:text-accent"
+          : "border-hairline bg-surface text-ink hover:border-accent hover:text-accent"
       }`}
     >
       <Icon className="h-6 w-6" />

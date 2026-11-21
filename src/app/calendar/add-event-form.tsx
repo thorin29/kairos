@@ -354,7 +354,7 @@ function IcsImportButton({ onMessage }: { onMessage: (m: string | null) => void 
         type="button"
         disabled={busy}
         onClick={() => input.current?.click()}
-        className="inline-flex h-8 items-center gap-1.5 rounded-full border border-hairline px-3 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-60"
+        className="inline-flex h-8 items-center gap-1.5 rounded-full border border-hairline bg-surface px-3 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-60"
       >
         <UploadIcon className="h-4 w-4" />
         {busy ? "Reading\u2026" : "Import .ics"}
@@ -845,7 +845,7 @@ function EventModal({
                         className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                           participants.has(p.id)
                             ? "border-accent bg-accent/10 text-accent"
-                            : "border-hairline text-muted hover:border-accent"
+                            : "border-hairline bg-surface text-muted hover:border-accent"
                         }`}
                       >
                         {p.name}
@@ -1081,7 +1081,7 @@ function EventModal({
                         className={`h-10 w-10 rounded-full border text-sm font-medium transition-colors ${
                           on
                             ? "border-accent bg-accent text-on-accent"
-                            : "border-hairline text-muted hover:border-accent hover:text-accent"
+                            : "border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
                         }`}
                       >
                         {DAY_LETTERS[i]}
@@ -1291,7 +1291,7 @@ function EventModal({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-11 items-center rounded-full border border-hairline px-5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+              className="inline-flex h-11 items-center rounded-full border border-hairline bg-surface px-5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
             >
               Cancel
             </button>

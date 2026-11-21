@@ -90,7 +90,7 @@ export function CardioCard({
                 aria-pressed={skip.skipped}
                 onClick={() => skip.onToggle(!skip.skipped)}
                 className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
-                  skip.skipped ? "border-hairline bg-ground text-muted" : "border-hairline text-muted hover:border-accent"
+                  skip.skipped ? "border-hairline bg-ground text-muted" : "border-hairline bg-surface text-muted hover:border-accent"
                 }`}
               >
                 {skip.skipped ? "Skipped" : "Skip"}
@@ -248,7 +248,7 @@ export function AddCardioPage({
               aria-pressed={activity === x.key}
               onClick={() => setActivity(x.key)}
               className={`inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold ${
-                activity === x.key ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+                activity === x.key ? "border-accent bg-accent text-on-accent" : "border-hairline bg-surface hover:border-accent"
               }`}
             >
               {x.label}

@@ -97,7 +97,7 @@ export function MoneyView({
               className={`rounded-md border p-2 transition-colors ${
                 searching
                   ? "border-accent text-accent"
-                  : "border-hairline text-muted hover:text-foreground"
+                  : "border-hairline bg-surface text-muted hover:text-foreground"
               }`}
             >
               <SearchIcon className="h-4 w-4" />

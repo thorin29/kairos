@@ -45,7 +45,7 @@ export function Concept2Form({ userId, status }: { userId: string; status: Conce
             type="button"
             disabled={pending}
             onClick={() => start(() => disconnectConcept2Account(userId))}
-            className="inline-flex h-10 items-center rounded-full border border-hairline px-4 text-sm font-semibold text-accent hover:border-accent disabled:opacity-40"
+            className="inline-flex h-10 items-center rounded-full border border-hairline bg-surface px-4 text-sm font-semibold text-accent hover:border-accent disabled:opacity-40"
           >
             Disconnect
           </button>

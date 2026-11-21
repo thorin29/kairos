@@ -118,7 +118,7 @@ export function RotationBuilder({
                 className={`h-9 w-9 rounded-full text-xs font-semibold transition-colors disabled:opacity-50 ${
                   on
                     ? "bg-accent text-on-accent"
-                    : "border border-hairline text-muted hover:text-ink"
+                    : "border border-hairline bg-surface text-muted hover:text-ink"
                 }`}
               >
                 {d}

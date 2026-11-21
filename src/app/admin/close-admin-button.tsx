@@ -26,7 +26,7 @@ export function CloseAdminButton() {
     <button
       type="button"
       onClick={() => router.push(dashboard)}
-      className="inline-flex h-11 items-center rounded-full border border-hairline px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+      className="inline-flex h-11 items-center rounded-full border border-hairline bg-surface px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
     >
       Close admin
     </button>

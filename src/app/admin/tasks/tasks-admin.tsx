@@ -48,7 +48,7 @@ export function TasksAdmin({
           className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
             editMode
               ? "border-accent bg-accent/10 text-accent"
-              : "border-hairline text-muted hover:border-accent hover:text-accent"
+              : "border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
           }`}
         >
           {editMode ? (
@@ -171,7 +171,7 @@ function TaskRow({
             type="button"
             disabled={pending}
             onClick={reset}
-            className="rounded-md border border-hairline px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
+            className="rounded-md border border-hairline bg-surface px-3 py-1.5 text-sm text-muted hover:border-accent hover:text-accent"
           >
             Cancel
           </button>

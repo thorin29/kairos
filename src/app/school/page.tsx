@@ -310,7 +310,7 @@ function TermPill({
       className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
         active
           ? "border-accent bg-accent/10 text-accent"
-          : "border-hairline text-muted hover:border-accent"
+          : "border-hairline bg-surface text-muted hover:border-accent"
       }`}
     >
       {label}

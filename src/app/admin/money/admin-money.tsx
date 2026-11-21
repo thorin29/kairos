@@ -171,14 +171,14 @@ export function AdminMoney({
           <div className="flex items-center gap-2">
             <a
               href="/admin/money/import"
-              className="inline-flex items-center gap-1.5 rounded-md border border-hairline px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+              className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-surface px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
             >
               Import CSV
             </a>
             <button
               type="button"
               onClick={() => setStartFunds(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-hairline px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+              className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-surface px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
             >
               <DollarIcon className="h-4 w-4" />
               Set starting funds
@@ -234,7 +234,7 @@ export function AdminMoney({
                 <button
                   type="button"
                   onClick={() => setEditing(r)}
-                  className="shrink-0 rounded-md border border-hairline p-1.5 text-muted hover:text-accent"
+                  className="shrink-0 rounded-md border border-hairline bg-surface p-1.5 text-muted hover:text-accent"
                   aria-label="Edit"
                 >
                   <PencilIcon className="h-3.5 w-3.5" />
@@ -312,7 +312,7 @@ export function AdminMoney({
                           onClick={() =>
                             start(() => void approveMoneyEntry(r.id))
                           }
-                          className="rounded-md border border-hairline px-2 py-1 text-xs font-medium text-amber-700 hover:border-accent disabled:opacity-50"
+                          className="rounded-md border border-hairline bg-surface px-2 py-1 text-xs font-medium text-amber-700 hover:border-accent disabled:opacity-50"
                         >
                           Pending
                         </button>
@@ -322,7 +322,7 @@ export function AdminMoney({
                       <button
                         type="button"
                         onClick={() => setEditing(r)}
-                        className="rounded-md border border-hairline p-1.5 text-muted hover:text-accent"
+                        className="rounded-md border border-hairline bg-surface p-1.5 text-muted hover:text-accent"
                         aria-label="Edit"
                       >
                         <PencilIcon className="h-3.5 w-3.5" />
@@ -345,7 +345,7 @@ export function AdminMoney({
                           <button
                             type="button"
                             onClick={() => setConfirmDelete(null)}
-                            className="rounded-md border border-hairline px-2 py-1 text-xs text-muted"
+                            className="rounded-md border border-hairline bg-surface px-2 py-1 text-xs text-muted"
                           >
                             No
                           </button>
@@ -354,7 +354,7 @@ export function AdminMoney({
                         <button
                           type="button"
                           onClick={() => setConfirmDelete(r.id)}
-                          className="ml-1 rounded-md border border-hairline p-1.5 text-muted hover:text-red-600"
+                          className="ml-1 rounded-md border border-hairline bg-surface p-1.5 text-muted hover:text-red-600"
                           aria-label="Delete"
                         >
                           <TrashIcon className="h-3.5 w-3.5" />

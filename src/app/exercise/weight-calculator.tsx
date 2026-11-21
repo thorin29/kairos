@@ -283,7 +283,7 @@ export function WeightCalculator({
                   "rounded-full border px-3 py-1 text-sm font-medium",
                   bar.label === b.label
                     ? "border-accent text-accent"
-                    : "border-hairline text-muted",
+                    : "border-hairline bg-surface text-muted",
                 ].join(" ")}
               >
                 {b.label}
@@ -294,7 +294,7 @@ export function WeightCalculator({
             type="button"
             onClick={clear}
             disabled={loaded.length === 0}
-            className="rounded-full border border-hairline px-3 py-1 text-sm font-medium text-muted transition-colors hover:border-red-300 hover:text-red-700 disabled:opacity-40"
+            className="rounded-full border border-hairline bg-surface px-3 py-1 text-sm font-medium text-muted transition-colors hover:border-red-300 hover:text-red-700 disabled:opacity-40"
           >
             Clear
           </button>

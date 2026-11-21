@@ -193,7 +193,7 @@ export default async function CalendarPage({
 
   const chip =
     "inline-flex h-10 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors";
-  const idle = "border-hairline hover:border-accent hover:text-accent";
+  const idle = "border-hairline bg-surface hover:border-accent hover:text-accent";
 
   return (
     <>
@@ -259,7 +259,7 @@ export default async function CalendarPage({
               className={`inline-flex h-9 items-center gap-2 self-start rounded-full border px-3.5 text-sm font-medium transition-colors ${
                 showSchoolWork
                   ? "border-transparent bg-accent text-on-accent"
-                  : "border-hairline text-muted hover:border-accent hover:text-accent"
+                  : "border-hairline bg-surface text-muted hover:border-accent hover:text-accent"
               }`}
               aria-pressed={showSchoolWork}
               title="Show assignments and tests by due date"

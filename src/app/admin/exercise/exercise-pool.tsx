@@ -358,7 +358,7 @@ function PoolRow({ entry }: { entry: PoolEntry }) {
         className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-40 ${
           entry.isActive
             ? "border-accent/40 text-accent"
-            : "border-hairline text-muted"
+            : "border-hairline bg-surface text-muted"
         }`}
       >
         {entry.isActive ? "Active" : "Off"}

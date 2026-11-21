@@ -796,7 +796,7 @@ function ProgramSetupSteps({
           aria-pressed={value.includes(d)}
           onClick={() => onToggle(d)}
           className={`h-10 w-12 rounded-full border text-sm font-semibold ${
-            value.includes(d) ? "border-accent bg-accent text-on-accent" : "border-hairline hover:border-accent"
+            value.includes(d) ? "border-accent bg-accent text-on-accent" : "border-hairline bg-surface hover:border-accent"
           }`}
         >
           {w}
@@ -1015,7 +1015,7 @@ function ProgramSetupSteps({
           </div>
         )}
 
-        <div className="sticky -bottom-4 -mx-4 flex gap-2 border-t border-hairline bg-surface px-4 py-3">
+        <div className="sticky -bottom-4 -mx-4 flex gap-2 bg-ground px-4 py-3">
           {step < STEPS.length - 1 ? (
             <button type="button" onClick={() => setStep(step + 1)} className={`${PRIMARY} flex-1 justify-center`}>
               Next

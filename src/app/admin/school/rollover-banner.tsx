@@ -137,7 +137,7 @@ export function RolloverBanner({ state }: { state: RolloverState }) {
             type="button"
             disabled={pending || busy}
             onClick={() => start(() => void snoozeRollover())}
-            className="rounded-md border border-hairline px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50"
+            className="rounded-md border border-hairline bg-surface px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50"
           >
             Remind me later
           </button>

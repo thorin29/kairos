@@ -35,7 +35,7 @@ export function TestScore({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="tabular inline-flex h-8 shrink-0 items-center rounded-full border border-hairline px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+        className="tabular inline-flex h-8 shrink-0 items-center rounded-full border border-hairline bg-surface px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
       >
         {score != null ? (
           <>
