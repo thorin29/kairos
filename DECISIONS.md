@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-11 — Cardio colours, picking the sport, x of y (v0.745.0)
+
+- Cardio kinds: row, run and ruck by category; hike, walk, bike (Cycling)
+  and jump rope by the name a CARDIO session is logged under
+  (`cardioKeyOf`). Hike and Walk are new in Add cardio (distance and time);
+  Ruck keeps load. No enum change.
+- The Cardio card stacks each week by kind (`weeks[].parts`) with white
+  lines between; this week's lines and the Cardio page bars use the kind's
+  colour (`CARDIO_KIND_COLOR`). Weekly training keeps one Cardio colour, and
+  sport is always green.
+- Sport is picked on an event type or a subscribed calendar (`sport`,
+  migration 161). `eventSport`: the type's pick, the calendar's, else the
+  names, else "Sport" — no more Hockey by default. Existing sport types and
+  calendars whose names name no other sport were set to Hockey by the
+  migration, so nothing changed for them. A logged session goes by its
+  event's sport (`sportsOfEvents`), else its own name. A sport other than
+  Hockey warms up with Quick 5 minutes instead of Hockey legs.
+- Home card: with two or more workouts on the day (the planned one and each
+  sport event), "1 of 2 workouts" (`workoutBlocks`); done or skipped counts,
+  and all of them done or skipped is Complete for today!. A planned rest day
+  keeps Rest day.
+- Weekly training's Planned line (`plannedParts`) is planned parts, counted
+  like the bars, plus the week's sport events from the calendar. Each day's
+  parts are saved (`WorkoutSuggestionAnswer` key `plannedParts`) by the task
+  generator and by Weekly training, written only when they change, so a
+  later plan change doesn't rewrite past weeks. This week fills the days to
+  come from the plan; weeks before any were saved have no line. `planned`
+  (days) stays for the week's "x of y planned days".
+- Mockup: artifact "Kairos: cardio colours, sports, x of y".
+
 ## 2026-11 — Workouts as blocks (v0.744.0)
 
 - A day holds workouts, each its own block: the planned workout (its own
@@ -21,8 +51,8 @@
   each, every sport event; warm-ups never. A set's movement decides lifting,
   core or holds. Day labels list every kind in the bars' order (the old label
   kept the first two words, which were usually the warm-up and the row).
-- Kept: the dashed line stays planned days (past weeks' plans aren't stored),
-  and the home card's Workouts row is unchanged.
+- Kept: the dashed line stays planned days, and the home card's Workouts
+  row is unchanged (both changed in v0.745).
 - Mockup: artifact "Kairos: workouts as blocks" (overview and step by step).
 
 ## 2026-11 — ⓘ on every movement list (v0.743.0)

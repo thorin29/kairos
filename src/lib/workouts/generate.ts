@@ -20,6 +20,7 @@ import {
 } from "@/lib/workouts/rotation";
 import { WORKOUT_OVERDUE_MAX } from "@/lib/settings";
 import { resettleCompletedWorkoutsOnce, resettleTodayOnce } from "@/lib/workouts/mark";
+import { snapshotPlannedPartsAll } from "@/lib/queries/workout-log";
 
 const HORIZON_DAYS = 14;
 
@@ -338,6 +339,8 @@ export async function generateWorkoutTasks(
   // one movement completed the whole day. Cheap no-op after the first run.
   await resettleCompletedWorkoutsOnce(backfillStart, todayISO());
   await resettleTodayOnce(todayISO());
+  // The day's planned parts, for Weekly training's Planned line (v0.745).
+  await snapshotPlannedPartsAll(todayISO());
   return { created, removed };
 }
 

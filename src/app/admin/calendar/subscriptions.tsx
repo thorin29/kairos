@@ -9,12 +9,14 @@ import {
   editCalendarPeople,
   retireCalendar,
   setCalendarSport,
+  setCalendarSportName,
   setCalendarWork,
   type CalendarState,
   setCalendarDefaultDuration,
   setCalendarForceDuration,
 } from "@/lib/actions/calendars";
 import { Card } from "@/components/ui";
+import { SPORTS } from "@/lib/sport/label";
 import {
   CalendarPlusIcon,
   LinkIcon,
@@ -41,6 +43,8 @@ export type Subscription = {
   eventCount: number;
   canRetire: boolean;
   sportWorkout: boolean;
+  /** v0.745: which sport; null = told by the names. */
+  sport: string | null;
   /** A work schedule: its events are Work shifts (v0.734). */
   isWork: boolean;
   defaultDurationMin: number | null;
@@ -256,6 +260,25 @@ export function Subscriptions({
                   />
                   Sends an attendance confirmation to count as a workout
                 </label>
+                {s.sportWorkout && (
+                  <label className="mt-1 flex items-center gap-2 pl-[1.375rem] text-xs text-muted">
+                    Sport
+                    <select
+                      value={s.sport ?? ""}
+                      disabled={busy}
+                      onChange={(e) => startTransition(() => void setCalendarSportName(s.id, e.target.value || null))}
+                      aria-label={`Sport for ${s.name}`}
+                      className="h-7 rounded-full border border-hairline bg-surface px-2.5 text-xs text-ink outline-none focus:border-accent"
+                    >
+                      <option value="">From the title</option>
+                      {SPORTS.map((x) => (
+                        <option key={x} value={x}>
+                          {x}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <label className="mt-1 flex items-center gap-2 text-xs text-muted">
                   <input
                     type="checkbox"

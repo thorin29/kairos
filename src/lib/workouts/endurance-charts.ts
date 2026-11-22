@@ -61,8 +61,44 @@ function weekStarts(today: string): string[] {
 
 // --- cardio ------------------------------------------------------------------
 
-/** SPORT (v0.744): calendar sport events confirmed, minutes only. */
-export type CardioActivityKey = "ROWING" | "RUNNING" | "RUCKING" | "CARDIO" | "SPORT";
+/** SPORT (v0.744): calendar sport events confirmed, minutes only. HIKING,
+ *  WALKING, CYCLING and JUMP_ROPE (v0.745) are cardio sessions named so. */
+export type CardioActivityKey =
+  | "ROWING"
+  | "RUNNING"
+  | "RUCKING"
+  | "HIKING"
+  | "WALKING"
+  | "CYCLING"
+  | "JUMP_ROPE"
+  | "CARDIO"
+  | "SPORT";
+
+/** Each kind's colour on the Cardio card and page (v0.745). Weekly training
+ *  keeps one Cardio colour; sport is always its green. */
+export const CARDIO_KIND_COLOR: Record<CardioActivityKey, string> = {
+  ROWING: "#0ea5e9",
+  RUNNING: "#f97316",
+  RUCKING: "#92400e",
+  HIKING: "#a16207",
+  WALKING: "#8b5cf6",
+  CYCLING: "#4338ca",
+  JUMP_ROPE: "#e11d48",
+  CARDIO: "#94a3b8",
+  SPORT: "#65a30d",
+};
+
+/** A cardio session's kind: row, run and ruck by category, the rest by the
+ *  name it was logged under ("Bike" is Cycling). */
+export function cardioKeyOf(category: string, name: string | null): CardioActivityKey {
+  if (category === "ROWING" || category === "RUNNING" || category === "RUCKING") return category;
+  const n = (name ?? "").trim().toLowerCase();
+  if (n === "hiking" || n === "hike") return "HIKING";
+  if (n === "walking" || n === "walk") return "WALKING";
+  if (n === "bike" || n === "cycling" || n === "biking") return "CYCLING";
+  if (n === "jump rope") return "JUMP_ROPE";
+  return "CARDIO";
+}
 export type CardioSession = {
   date: string;
   activity: CardioActivityKey;
@@ -82,6 +118,8 @@ export type CardioSession = {
 export type CardioActivity = {
   key: CardioActivityKey;
   label: string;
+  /** Its colour (CARDIO_KIND_COLOR). */
+  color: string;
   /** What a week's bar counts: "m", "mi", "km" or "min". */
   measure: string;
   weeks: { start: string; value: number }[];
@@ -110,14 +148,25 @@ export type CardioActivity = {
 
 export type CardioCharts = {
   activities: CardioActivity[];
-  /** All cardio minutes per week. */
-  weeks: { start: string; minutes: number }[];
-  thisWeek: { minutes: number; lines: { label: string; detail: string }[] };
+  /** All cardio minutes per week, and each kind's share (v0.745), in the
+   *  activities' order. */
+  weeks: { start: string; minutes: number; parts: { key: CardioActivityKey; minutes: number; color: string }[] }[];
+  thisWeek: { minutes: number; lines: { key: CardioActivityKey; label: string; detail: string; color: string }[] };
   last: { date: string; label: string } | null;
 };
 
-const ACT_LABEL: Record<CardioActivityKey, string> = { ROWING: "Rowing", RUNNING: "Running", RUCKING: "Ruck", CARDIO: "Other cardio", SPORT: "Sport" };
-const ORDER: CardioActivityKey[] = ["ROWING", "RUNNING", "RUCKING", "CARDIO", "SPORT"];
+const ACT_LABEL: Record<CardioActivityKey, string> = {
+  ROWING: "Rowing",
+  RUNNING: "Running",
+  RUCKING: "Ruck",
+  HIKING: "Hiking",
+  WALKING: "Walking",
+  CYCLING: "Cycling",
+  JUMP_ROPE: "Jump rope",
+  CARDIO: "Other cardio",
+  SPORT: "Sport",
+};
+const ORDER: CardioActivityKey[] = ["ROWING", "RUNNING", "RUCKING", "HIKING", "WALKING", "CYCLING", "JUMP_ROPE", "CARDIO", "SPORT"];
 
 /** A sport line goes by its sport ("Hockey") when they all share one. */
 function labelOf(key: CardioActivityKey, list: readonly CardioSession[]): string {
@@ -128,7 +177,7 @@ function labelOf(key: CardioActivityKey, list: readonly CardioSession[]): string
 
 function measureOf(key: CardioActivityKey, list: CardioSession[]): string {
   if (key === "ROWING") return "m";
-  if (key === "CARDIO" || key === "SPORT") return "min";
+  if (key === "CARDIO" || key === "SPORT" || key === "JUMP_ROPE") return "min";
   const units = list.filter((s) => s.distance != null).map((s) => (s.unit === "km" ? "km" : "mi"));
   return units.filter((u) => u === "km").length > units.length / 2 ? "km" : "mi";
 }
@@ -205,6 +254,7 @@ export function buildCardioCharts(all: readonly CardioSession[], today: string):
     activities.push({
       key,
       label: labelOf(key, list),
+      color: CARDIO_KIND_COLOR[key],
       measure,
       weeks: wk,
       thisWeek: {
@@ -235,16 +285,26 @@ export function buildCardioCharts(all: readonly CardioSession[], today: string):
   const last = sessions[sessions.length - 1];
   return {
     activities,
-    weeks: weeks.map((start) => ({
-      start,
-      minutes: Math.round(sessions.filter((s) => monday(s.date) === start).reduce((t, s) => t + s.minutes, 0)),
-    })),
+    weeks: weeks.map((start) => {
+      const inWeek = sessions.filter((s) => monday(s.date) === start);
+      return {
+        start,
+        minutes: Math.round(inWeek.reduce((t, s) => t + s.minutes, 0)),
+        parts: ORDER.map((key) => ({
+          key,
+          minutes: Math.round(inWeek.filter((s) => s.activity === key).reduce((t, s) => t + s.minutes, 0)),
+          color: CARDIO_KIND_COLOR[key],
+        })).filter((p) => p.minutes > 0),
+      };
+    }),
     thisWeek: {
       minutes: Math.round(mine.reduce((t, s) => t + s.minutes, 0)),
       lines: activities
         .filter((a) => a.thisWeek.count > 0)
         .map((a) => ({
+          key: a.key,
           label: a.label,
+          color: a.color,
           detail: [
             a.measure === "min" ? `${a.thisWeek.minutes} min` : `${num(a.thisWeek.value)} ${a.measure}`,
             `${a.thisWeek.count} ${a.thisWeek.count === 1 ? "session" : "sessions"}`,

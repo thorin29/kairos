@@ -95,8 +95,9 @@ export async function dayWarmupRoutines(
   values: (string | null)[],
 ): Promise<Map<string, WarmupRoutine | null>> {
   // Warming up for the day's sport instead (v0.662): its routine, that day only.
-  if (values.length > 0 && (await sportDayView(userId, dateISO))?.forSport) {
-    return new Map(values.map((v) => [v ?? "", SPORT_WARMUP]));
+  const sportDay = values.length > 0 ? await sportDayView(userId, dateISO) : null;
+  if (sportDay?.forSport) {
+    return new Map(values.map((v) => [v ?? "", sportDay.routine]));
   }
   const { weights, focus } = await dayStrength(userId, dateISO);
   const picked = values.map((v) => pickWarmupId(parseWarmupChoice(v), dateISO, focus));
@@ -271,8 +272,11 @@ export async function warmupsForDay(
 
 // --- a sport on the day (v0.662) ----------------------------------------------
 
-/** The warm-up for a game or skate: the library's Hockey legs. */
+/** The warm-up for a game or skate: the library's Hockey legs. Another sport
+ *  gets the Quick 5 minutes (v0.745). */
 const SPORT_WARMUP: WarmupRoutine = libraryRoutine("lib:hockey-legs") as WarmupRoutine;
+const OTHER_SPORT_WARMUP: WarmupRoutine = libraryRoutine("lib:quick-five") as WarmupRoutine;
+const sportWarmup = (label: string) => (label === "Hockey" ? SPORT_WARMUP : OTHER_SPORT_WARMUP);
 const FOR_KEY = "warmupFor";
 
 /**
@@ -294,7 +298,7 @@ export async function sportDayView(userId: string, dateISO: string): Promise<Spo
   // own workout with its own warm-up, on its own page.
   const forSport = false;
   const st = rows.find((r) => r.key === STATE_KEY)?.answer;
-  return { label: sport.title, forSport, routine: SPORT_WARMUP, state: st === "done" || st === "skip" ? st : null };
+  return { label: sport.title, forSport, routine: sportWarmup(sport.title), state: st === "done" || st === "skip" ? st : null };
 }
 
 const STATE_KEY = "sportWarmup";

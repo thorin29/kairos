@@ -4,7 +4,7 @@ import { householdTz, localParts, toDateColumn } from "@/lib/dates";
 import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
 import { timeLabel } from "@/lib/workouts/workout-time";
 import { occurrencesIn } from "@/lib/calendar/recur";
-import { sportDayLabel, sportKindOf, type SportKind } from "@/lib/sport/label";
+import { eventSport, sportKindOf, type SportKind } from "@/lib/sport/label";
 
 /**
  * A person's sport on a day (v0.662): the first sport-flagged calendar event
@@ -26,8 +26,8 @@ export async function sportOn(userId: string, dateISO: string): Promise<{ eventI
       startsAt: true,
       rrule: true,
       participants: { select: { userId: true } },
-      eventType: { select: { sportWorkout: true, name: true } },
-      externalCalendar: { select: { sportWorkout: true, userId: true, memberIds: true, name: true } },
+      eventType: { select: { sport: true, sportWorkout: true, name: true } },
+      externalCalendar: { select: { sport: true, sportWorkout: true, userId: true, memberIds: true, name: true } },
     },
     orderBy: { startsAt: "asc" },
   })) as {
@@ -37,8 +37,8 @@ export async function sportOn(userId: string, dateISO: string): Promise<{ eventI
     startsAt: Date;
     rrule: string | null;
     participants: { userId: string }[];
-    eventType: { sportWorkout: boolean; name: string } | null;
-    externalCalendar: { sportWorkout: boolean; userId: string | null; memberIds: string[] | null; name: string } | null;
+    eventType: { sport: string | null; sportWorkout: boolean; name: string } | null;
+    externalCalendar: { sport: string | null; sportWorkout: boolean; userId: string | null; memberIds: string[] | null; name: string } | null;
   }[];
   for (const e of events) {
     const mine =
@@ -50,7 +50,7 @@ export async function sportOn(userId: string, dateISO: string): Promise<{ eventI
     const on = e.rrule
       ? occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz).length > 0
       : localParts(e.startsAt).iso === dateISO;
-    if (on) return { eventId: e.id, title: sportDayLabel(e.title, e.eventType?.name, e.externalCalendar?.name) };
+    if (on) return { eventId: e.id, title: eventSport(e) };
   }
   return null;
 }
@@ -76,8 +76,8 @@ export async function sportDaysBetween(
       startsAt: true,
       rrule: true,
       participants: { select: { userId: true } },
-      eventType: { select: { name: true, sportKind: true } },
-      externalCalendar: { select: { sportWorkout: true, userId: true, memberIds: true, name: true } },
+      eventType: { select: { sport: true, name: true, sportKind: true } },
+      externalCalendar: { select: { sport: true, sportWorkout: true, userId: true, memberIds: true, name: true } },
     },
   })) as {
     id: string;
@@ -86,8 +86,8 @@ export async function sportDaysBetween(
     startsAt: Date;
     rrule: string | null;
     participants: { userId: string }[];
-    eventType: { name: string; sportKind: string | null } | null;
-    externalCalendar: { sportWorkout: boolean; userId: string | null; memberIds: string[] | null; name: string } | null;
+    eventType: { sport: string | null; name: string; sportKind: string | null } | null;
+    externalCalendar: { sport: string | null; sportWorkout: boolean; userId: string | null; memberIds: string[] | null; name: string } | null;
   }[];
   const out: { date: string; label: string; kind: SportKind }[] = [];
   for (const e of events) {
@@ -100,7 +100,7 @@ export async function sportDaysBetween(
     const days = e.rrule
       ? occurrencesIn(e.startsAt, e.rrule, fromISO, toISO, tz).map((d) => localParts(d, tz).iso)
       : [localParts(e.startsAt).iso].filter((d) => d >= fromISO && d <= toISO);
-    const label = sportDayLabel(e.title, e.eventType?.name, e.externalCalendar?.name);
+    const label = eventSport(e);
     const kind = sportKindOf(e.title, e.eventType?.sportKind);
     for (const date of new Set(days)) out.push({ date, label, kind });
   }
@@ -113,7 +113,7 @@ export type DaySport = {
   eventId: string;
   /** The event's title ("Hockey practice", "Stars vs Ducks"). */
   title: string;
-  /** The sport ("Hockey", sportDayLabel). */
+  /** The sport ("Hockey", eventSport). */
   label: string;
   /** Minutes from midnight, household time. */
   start: number;
@@ -149,8 +149,8 @@ export async function sportsForDay(userId: string, dateISO: string): Promise<Day
       endsAt: true,
       rrule: true,
       participants: { select: { userId: true } },
-      eventType: { select: { name: true, sportFlexTime: true } },
-      externalCalendar: { select: { sportWorkout: true, userId: true, memberIds: true, name: true } },
+      eventType: { select: { sport: true, name: true, sportFlexTime: true } },
+      externalCalendar: { select: { sport: true, sportWorkout: true, userId: true, memberIds: true, name: true } },
     },
   })) as {
     id: string;
@@ -160,8 +160,8 @@ export async function sportsForDay(userId: string, dateISO: string): Promise<Day
     endsAt: Date;
     rrule: string | null;
     participants: { userId: string }[];
-    eventType: { name: string; sportFlexTime: boolean } | null;
-    externalCalendar: { sportWorkout: boolean; userId: string | null; memberIds: string[] | null; name: string } | null;
+    eventType: { sport: string | null; name: string; sportFlexTime: boolean } | null;
+    externalCalendar: { sport: string | null; sportWorkout: boolean; userId: string | null; memberIds: string[] | null; name: string } | null;
   }[];
   const found: { e: (typeof events)[number]; at: Date; ms: number }[] = [];
   for (const e of events) {
@@ -206,8 +206,8 @@ export async function sportsForDay(userId: string, dateISO: string): Promise<Day
       const f = feel.find((x) => x.slot === `sport:${e.id}`);
       return {
         eventId: e.id,
-        title: e.title?.trim() || e.eventType?.name || sportDayLabel(e.title, e.eventType?.name, e.externalCalendar?.name),
-        label: sportDayLabel(e.title, e.eventType?.name, e.externalCalendar?.name),
+        title: e.title?.trim() || e.eventType?.name || eventSport(e),
+        label: eventSport(e),
         start,
         end,
         startLabel: timeLabel(start),
@@ -222,4 +222,28 @@ export async function sportsForDay(userId: string, dateISO: string): Promise<Day
       } satisfies DaySport;
     })
     .sort((a, b) => a.start - b.start);
+}
+
+/**
+ * The sport of each event a logged sport session came from (v0.745), by event
+ * id. A session whose event is gone goes by its own name (sportDayLabel).
+ */
+export async function sportsOfEvents(ids: readonly (string | null)[]): Promise<Map<string, string>> {
+  const want = [...new Set(ids.filter((x): x is string => !!x))];
+  if (want.length === 0) return new Map();
+  const rows = (await prisma.event.findMany({
+    where: { id: { in: want } },
+    select: {
+      id: true,
+      title: true,
+      eventType: { select: { name: true, sport: true } },
+      externalCalendar: { select: { name: true, sport: true } },
+    },
+  })) as {
+    id: string;
+    title: string | null;
+    eventType: { name: string; sport: string | null } | null;
+    externalCalendar: { name: string; sport: string | null } | null;
+  }[];
+  return new Map(rows.map((r) => [r.id, eventSport(r)]));
 }

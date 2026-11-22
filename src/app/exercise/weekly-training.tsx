@@ -47,7 +47,7 @@ export function WeeklyTraining({ userId }: { userId: string }) {
 
   if (!data || data.weeks.every((w) => w.days === 0)) return null;
   const total = (w: TrainingWeek) => KINDS.reduce((n, k) => n + (w.kinds?.[k.key] ?? 0), 0) || w.days;
-  const max = Math.max(7, ...data.weeks.map((w) => Math.max(total(w), w.planned ?? 0)));
+  const max = Math.max(7, ...data.weeks.map((w) => Math.max(total(w), w.plannedParts ?? 0)));
   const at = picked ?? data.weeks.length - 1;
   const shown = data.weeks[at];
   const label = (iso: string) => `${MONTH[Number(iso.slice(5, 7)) - 1]} ${Number(iso.slice(8, 10))}`;
@@ -75,10 +75,11 @@ export function WeeklyTraining({ userId }: { userId: string }) {
               aria-pressed={on}
               className="relative flex h-full flex-1 flex-col justify-end"
             >
-              {(w.planned ?? 0) > 0 && (
+              {/* Planned parts plus sport events (v0.745); none before they were saved. */}
+              {(w.plannedParts ?? 0) > 0 && (
                 <span
                   className="absolute inset-x-0 border-t-2 border-dashed border-muted/60"
-                  style={{ bottom: `${((w.planned ?? 0) / max) * 100}%` }}
+                  style={{ bottom: `${((w.plannedParts ?? 0) / max) * 100}%` }}
                 />
               )}
               {KINDS.filter((k) => (w.kinds?.[k.key] ?? 0) > 0)
@@ -112,7 +113,7 @@ export function WeeklyTraining({ userId }: { userId: string }) {
         ))}
         <span className="flex items-center gap-1">
           <span className="w-3.5 border-t-2 border-dashed border-muted/60" />
-          Planned days
+          Planned
         </span>
       </div>
       <div className="mt-3 border-t border-hairline pt-3">

@@ -17,7 +17,7 @@ import {
   loadExercisePool,
   loadHiitWorkoutsForBoard,
 } from "@/lib/queries/workouts";
-import { loadDayPlanProgress, loadOverdueWorkoutDates, workoutRestFor } from "@/lib/queries/workout-log";
+import { loadDayPlanProgress, loadOverdueWorkoutDates, workoutBlocksFor, workoutRestFor } from "@/lib/queries/workout-log";
 import { loadReadingProgress } from "@/lib/queries/reading";
 import { WorkoutLauncher } from "./workout-launcher";
 import { ProgramCard } from "@/app/exercise/program-card";
@@ -179,7 +179,9 @@ export default async function PersonPage({
   const progressToday = restToday.rest ? null : await loadDayPlanProgress(id, today);
   const workoutLeft =
     progressToday && progressToday.logged && !progressToday.done ? progressToday.remaining : [];
-  const restDayToday = restToday.rest != null && !(restToday.rest === "skipped" && restToday.extraLogged);
+  // Two or more workouts today (v0.745): "1 of 2 workouts"; a skipped one counts.
+  const blocksToday = restToday.rest === "planned" ? null : await workoutBlocksFor(id, today);
+  const restDayToday = !blocksToday && restToday.rest != null && !(restToday.rest === "skipped" && restToday.extraLogged);
   // "Start a workout program?" for someone with no plan and nothing logged lately.
   const showInvite = await inviteFor(id);
   const unitSystem = board.unitSystem;
@@ -680,6 +682,7 @@ export default async function PersonPage({
                         summaryNames={restToday.rest ? [] : todayEx.map((r: { title: string }) => r.title)}
                         remaining={workoutLeft}
                         restDay={restDayToday}
+                        blocks={blocksToday}
                         overdueCount={overdueWorkoutDays.length}
                         // Same rule as the phone's home row: today's workout
                         // task is complete (every movement logged or skipped,
@@ -687,9 +690,11 @@ export default async function PersonPage({
                         completeForToday={
                           !restDayToday &&
                           overdueWorkoutDays.length === 0 &&
-                          ((restToday.rest === "skipped" && restToday.extraLogged) ||
-                            (todayEx.length > 0 &&
-                              todayEx.every((r: { status: string }) => r.status === "COMPLETE")))
+                          (blocksToday
+                            ? blocksToday.done === blocksToday.total
+                            : (restToday.rest === "skipped" && restToday.extraLogged) ||
+                              (todayEx.length > 0 &&
+                                todayEx.every((r: { status: string }) => r.status === "COMPLETE")))
                         }
                       />
                     </Card>

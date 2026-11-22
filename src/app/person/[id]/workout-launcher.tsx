@@ -48,6 +48,7 @@ export function WorkoutLauncher({
   completeForToday = false,
   remaining = [],
   restDay = false,
+  blocks = null,
   person = null,
 }: {
   userId: string;
@@ -78,6 +79,8 @@ export function WorkoutLauncher({
   completeForToday?: boolean;
   /** Started and not finished (v0.716): what's left, shown instead of the names. */
   remaining?: string[];
+  /** Two or more workouts today (v0.745): how many are done or skipped. */
+  blocks?: { done: number; total: number } | null;
   /** v0.650: a rest day (the plan's Rest, or Rest / skip pressed). */
   restDay?: boolean;
   /** The person's workout card data: when given, the overlay is the day page
@@ -172,9 +175,15 @@ export function WorkoutLauncher({
                   {overdueCount} overdue
                 </span>
               )}
+              {!completeForToday && blocks && (
+                <span className="flex items-center text-muted">
+                  {overdueCount > 0 && <span className="mx-1.5">&middot;</span>}
+                  {blocks.done} of {blocks.total} workouts
+                </span>
+              )}
               {!completeForToday && remaining.length > 0 && (
                 <span className="flex items-center">
-                  {overdueCount > 0 && <span className="mx-1.5">&middot;</span>}
+                  {(overdueCount > 0 || !!blocks) && <span className="mx-1.5">&middot;</span>}
                   Remaining: {remaining.slice(0, 4).join(" \u00b7 ")}
                   {remaining.length > 4 ? ` +${remaining.length - 4}` : ""}
                 </span>
@@ -182,7 +191,7 @@ export function WorkoutLauncher({
               {!completeForToday && remaining.length === 0 && (overdueCount > 0 ? names.slice(0, 2) : names.slice(0, 3)).map(
                 (n, i) => (
                 <span key={`${n}-${i}`} className="flex items-center">
-                  {(i > 0 || overdueCount > 0) && (
+                  {(i > 0 || overdueCount > 0 || !!blocks) && (
                     <span className="mx-1.5">&middot;</span>
                   )}
                   {n}
@@ -195,7 +204,8 @@ export function WorkoutLauncher({
                 <span className="font-medium text-emerald-600">Complete for today!</span>
               ) : (
                 names.length === 0 &&
-                overdueCount === 0 && (
+                overdueCount === 0 &&
+                !blocks && (
                   <span className="text-muted">No workout today</span>
                 )
               )}

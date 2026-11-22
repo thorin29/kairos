@@ -39,7 +39,7 @@ describe("cardio charts (v0.674)", () => {
     expect(r.pace?.change).toBe(-6); // middle of 120, 118, 100 (118) against 124.5
     expect(split(118)).toBe("1:58.0");
     expect(r.recent[0].text).toBe("500 m · 1:40 · Solid");
-    expect(c.thisWeek.lines).toEqual([{ label: "Rowing", detail: "2,500 m · 2 sessions" }]);
+    expect(c.thisWeek.lines).toEqual([{ key: "ROWING", label: "Rowing", detail: "2,500 m · 2 sessions", color: "#0ea5e9" }]);
     expect(r.count).toBe(5);
     expect(r.firstDate).toBe("2026-09-20");
     expect(r.last).toEqual({ date: "2026-11-10", text: "1:40.0 /500 m" });
@@ -106,5 +106,35 @@ describe("conditioning charts (v0.674)", () => {
     expect(c.weeks.at(-2)).toEqual({ start: "2026-11-02", count: 3 });
     expect(c.recent[0]).toEqual({ date: "2026-11-05", name: "AMRAP 20", text: "13 rounds" });
     expect(c.recent).toHaveLength(5);
+  });
+});
+
+describe("cardio kinds (v0.745)", () => {
+  it("tells hike, walk, bike and jump rope apart and splits each week by kind", async () => {
+    const { buildCardioCharts, cardioKeyOf } = await import("@/lib/workouts/endurance-charts");
+    expect(cardioKeyOf("CARDIO", "Hiking")).toBe("HIKING");
+    expect(cardioKeyOf("CARDIO", "Walking")).toBe("WALKING");
+    expect(cardioKeyOf("CARDIO", "Bike")).toBe("CYCLING");
+    expect(cardioKeyOf("CARDIO", "Jump rope")).toBe("JUMP_ROPE");
+    expect(cardioKeyOf("CARDIO", "Cardio")).toBe("CARDIO");
+    expect(cardioKeyOf("ROWING", "Rowing")).toBe("ROWING");
+    const base = { meters: null, distance: null, unit: null, seconds: null, load: null, effort: null };
+    const c = buildCardioCharts(
+      [
+        { ...base, date: "2026-11-17", activity: "ROWING", meters: 2000, seconds: 480, minutes: 8 },
+        { ...base, date: "2026-11-18", activity: "SPORT", minutes: 60, label: "Hockey" },
+        { ...base, date: "2026-11-19", activity: "HIKING", distance: 4, unit: "mi", seconds: 5400, minutes: 90 },
+      ],
+      "2026-11-20",
+    )!;
+    const week = c.weeks[c.weeks.length - 1];
+    expect(week.minutes).toBe(158);
+    expect(week.parts.map((p) => [p.key, p.minutes])).toEqual([
+      ["ROWING", 8],
+      ["HIKING", 90],
+      ["SPORT", 60],
+    ]);
+    expect(c.thisWeek.lines.map((l) => l.label)).toEqual(["Rowing", "Hiking", "Hockey"]);
+    expect(c.thisWeek.lines[2].color).toBe("#65a30d");
   });
 });

@@ -443,6 +443,8 @@ model EventType {
   /// v0.676: GAME, PRACTICE or OTHER for the hockey-aware suggestions; null =
   /// told by the event's title.
   sportKind String?
+  /// v0.745: which sport ("Hockey", "Soccer"); null = told by the names.
+  sport String?
   defaultMinutes Int?
   // Default reminder (minutes before) pre-filled on new events of this type.
   defaultReminder Int?
@@ -538,6 +540,8 @@ model ExternalCalendar {
   // When on, every event from this feed auto-logs a sport workout on its day
   // for the feed's owner (helpful for a hockey or game schedule).
   sportWorkout  Boolean   @default(false)
+  // v0.745: which sport ("Hockey", "Soccer"); null = told by the names.
+  sport         String?
   // A work schedule (v0.734): its events are Work, not Subscribed — the Work
   // label, colour and reminders, drawn like any work shift.
   isWork        Boolean   @default(false)

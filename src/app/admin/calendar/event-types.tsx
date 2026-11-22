@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions/events";
 import { FAMILY_PALETTE } from "@/lib/palette";
 import type { EventTypeRow } from "@/lib/queries/calendar";
+import { SPORTS } from "@/lib/sport/label";
 
 export function EventTypes({ types }: { types: EventTypeRow[] }) {
   const [name, setName] = useState("");
@@ -133,6 +134,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
   const [sport, setSport] = useState(type.sportWorkout);
   const [flex, setFlex] = useState(type.sportFlexTime);
   const [kind, setKind] = useState<string>(type.sportKind ?? "");
+  const [which, setWhich] = useState<string>(type.sport ?? "");
   const [dur, setDur] = useState(
     type.defaultMinutes != null ? String(type.defaultMinutes) : "",
   );
@@ -149,6 +151,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
         dur ? Number(dur) : null,
         flex,
         kind || null,
+        which || null,
       );
       if (res.error) setError(res.error);
       else setEditing(false);
@@ -182,6 +185,24 @@ function TypeRow({ type }: { type: EventTypeRow }) {
           />
           Counts as a sport workout
         </label>
+        {sport && (
+          <label className="flex w-full items-center gap-2 text-sm">
+            <span className="text-muted">Sport</span>
+            <select
+              value={which}
+              onChange={(e) => setWhich(e.target.value)}
+              aria-label="Which sport"
+              className="h-9 rounded-full border border-hairline bg-surface px-3 text-sm outline-none focus:border-accent"
+            >
+              <option value="">From the title</option>
+              {SPORTS.map((x) => (
+                <option key={x} value={x}>
+                  {x}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {sport && (
           <label className="flex w-full items-center gap-2 text-sm">
             <input
@@ -239,6 +260,7 @@ function TypeRow({ type }: { type: EventTypeRow }) {
             setSport(type.sportWorkout);
             setFlex(type.sportFlexTime);
             setKind(type.sportKind ?? "");
+            setWhich(type.sport ?? "");
             setDur(type.defaultMinutes != null ? String(type.defaultMinutes) : "");
             setError(null);
             setEditing(false);

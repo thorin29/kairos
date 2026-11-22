@@ -11,7 +11,7 @@ const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : nul
 
 /**
  * Log one cardio entry for a day (v0.615). Body: { date, activity: row|run|
- * ruck|jump_rope|bike|other, meters?, distance?, seconds?, load?, completedOn? }.
+ * ruck|hike|walk|jump_rope|bike|other, meters?, distance?, seconds?, load?, completedOn? }.
  * Returns the day's cardio.
  */
 export async function POST(req: NextRequest) {

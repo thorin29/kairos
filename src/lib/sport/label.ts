@@ -1,8 +1,8 @@
 /**
- * What to call a day's sport (v0.662; v0.671): sport-flagged events here are
- * hockey unless the event's title, its event type or its calendar names
- * another sport. A subscribed feed's event title is usually a team or rink
- * ("Team A @ Team B"), so the title alone is never the label. Pure.
+ * What to call a day's sport (v0.662; v0.745): the sport picked on the event's
+ * type or calendar, else the one its title, type or calendar names, else just
+ * "Sport". A subscribed feed's event title is usually a team or rink
+ * ("Team A @ Team B"), so the title often names none. Pure.
  */
 const OTHER_SPORTS: [RegExp, string][] = [
   [/soccer|futsal/i, "Soccer"],
@@ -18,11 +18,33 @@ const OTHER_SPORTS: [RegExp, string][] = [
   [/\bfootball\b/i, "Football"],
 ];
 
+/** The sports to pick from (Admin → Calendar), in menu order. */
+export const SPORTS: readonly string[] = ["Hockey", ...OTHER_SPORTS.map(([, l]) => l)];
+
+/** A picked sport, or null for anything not in SPORTS. */
+export function cleanSport(v: unknown): string | null {
+  return typeof v === "string" && SPORTS.includes(v) ? v : null;
+}
+
+/** The sport the names give ("Sport" when none names one). */
 export function sportDayLabel(...names: (string | null | undefined)[]): string {
   const text = names.filter(Boolean).join(" ");
   if (/hockey|stick\s*(and|&|n)\s*puck|skate|drop[-\s]?in|\bice\b|scrimmage/i.test(text)) return "Hockey";
   for (const [re, label] of OTHER_SPORTS) if (re.test(text)) return label;
-  return "Hockey";
+  return "Sport";
+}
+
+/** An event's sport: its type's pick, its calendar's, else its names. */
+export function eventSport(e: {
+  title?: string | null;
+  eventType?: { name?: string | null; sport?: string | null } | null;
+  externalCalendar?: { name?: string | null; sport?: string | null } | null;
+}): string {
+  return (
+    cleanSport(e.eventType?.sport) ??
+    cleanSport(e.externalCalendar?.sport) ??
+    sportDayLabel(e.title, e.eventType?.name, e.externalCalendar?.name)
+  );
 }
 
 export type SportKind = "GAME" | "PRACTICE" | "OTHER";

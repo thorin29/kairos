@@ -91,9 +91,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.744.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  160_calendar_work, all registered in `MIGRATIONS`.
-- App 0.538.0 (versionCode 610, CLIENT_BUILD 610).
+- Web 0.745.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  161_event_sport, all registered in `MIGRATIONS`.
+- App 0.540.0 (versionCode 612, CLIENT_BUILD 612).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -294,7 +294,10 @@ Kept here so they don't come back as open items.
   day). With two or more, Today's workouts lists them until one is left
   open; each opens its own page. A sport has its own page and warm-up, adds
   its minutes to Cardio and Endurance, and completes the day only when
-  nothing else was planned.
+  nothing else was planned. The home card reads "1 of 2 workouts" on such a
+  day; a skipped one counts (v0.745).
+- The sport is picked on its event type or subscribed calendar, else read
+  from the names; with none named it is just "Sport" (v0.745).
 - A day is complete only when every part is done or skipped.
 - A movement planned on two cards the same day stays on the first card; the
   later card doesn't count it and says "Hollow hold was removed because it is in
@@ -305,8 +308,10 @@ Kept here so they don't come back as open items.
 - Progress: body map with the training heat map (earned by progress, eases
   back), the endurance heart, a page per lift (estimated max, light weeks,
   trend, consistency), bodyweight movements by reps (v0.734), Weekly training
-  (workouts and parts per week by type, v0.744),
-  Core, Cardio and Conditioning charts, the Workout days grid, Compare across
+  (workouts and parts per week by type, v0.744; the Planned line counts
+  planned parts and sport events, saved each day, v0.745),
+  Core, Cardio (each type in its own colour: row, run, ruck, hike, walk,
+  cycling, jump rope, other, sport; v0.745) and Conditioning charts, the Workout days grid, Compare across
   people.
 - Family WOD: a parent picks a day's workout, people opt in, a board per WOD,
   suggestions for a parent to approve.

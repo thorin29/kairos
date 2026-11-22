@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { syncCalendar, syncStaleCalendars } from "@/lib/calendar/sync";
 import { isAdmin, requireAdmin } from "@/lib/session";
 import { currentUser } from "@/lib/user-session";
+import { cleanSport } from "@/lib/sport/label";
 
 export type CalendarState = { error: string | null; saved: boolean };
 
@@ -125,6 +126,15 @@ export async function setCalendarSport(
     where: { id },
     data: { sportWorkout },
   });
+  revalidatePath("/calendar");
+  revalidatePath("/");
+}
+
+/** Which sport a sport feed is (v0.745); null = told by the names. */
+export async function setCalendarSportName(id: string, sport: string | null): Promise<void> {
+  await requireAdmin();
+  await prisma.externalCalendar.update({ where: { id }, data: { sport: cleanSport(sport) } });
+  revalidatePath("/admin/calendar");
   revalidatePath("/calendar");
   revalidatePath("/");
 }

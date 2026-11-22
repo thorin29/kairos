@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.744.0";
+export const APP_VERSION = "0.745.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -173,11 +173,16 @@ export const MIGRATIONS = [
   "158_tracker_reset",
   "159_admin_activity",
   "160_calendar_work",
+  "161_event_sport",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.745.0",
+    summary: ["Cardio splits each week by type in its own colour, with sport in green. Hike and Walk are new.", "Pick the sport on an event type or subscribed calendar; with none named it is just Sport, not Hockey.", "The home card shows \"1 of 2 workouts\" on days with more than one; a skipped one counts. Weekly training's Planned line counts planned parts and sport events, saved each day from now on."],
+  },
   {
     version: "0.744.0",
     summary: ["Workouts as blocks: a sport event from the calendar is its own workout. With two or more on a day, Workouts lists them in time order and each opens its own page.", "Your workout has a time: a usual one per weekday, changeable for one day.", "Sport adds to Cardio. Weekly training counts workouts and parts by type, with Core and Isometric of their own; warm-ups no longer count."],

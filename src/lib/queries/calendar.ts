@@ -104,6 +104,8 @@ export type EventTypeRow = {
   sportFlexTime: boolean;
   /** v0.676: GAME, PRACTICE or OTHER; null = by the event's title. */
   sportKind: string | null;
+  /** v0.745: which sport; null = told by the names. */
+  sport: string | null;
   defaultMinutes: number | null;
   defaultReminder: number | null;
 };
@@ -119,6 +121,7 @@ export async function loadEventTypes(): Promise<EventTypeRow[]> {
       sportWorkout: true,
       sportFlexTime: true,
       sportKind: true,
+      sport: true,
       defaultMinutes: true,
       defaultReminder: true,
     },

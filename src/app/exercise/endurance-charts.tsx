@@ -57,6 +57,7 @@ function WeekBars({
   height,
   label,
   tip,
+  parts,
 }: {
   values: number[];
   starts: string[];
@@ -64,6 +65,8 @@ function WeekBars({
   height: number;
   label: string;
   tip?: (v: number) => string;
+  /** Each week split by kind (v0.745), bottom first; white lines between. */
+  parts?: { minutes: number; color: string }[][];
 }) {
   const max = Math.max(1, ...values);
   const { wrap, tip: shown, show, hide } = useChartTip();
@@ -84,6 +87,12 @@ function WeekBars({
               }}
             >
               <span className="block w-full rounded-t-[3px]" style={{ height: `${(v / max) * 100}%`, background: color, minHeight: v > 0 ? 2 : 0 }} />
+            </span>
+          ) : parts?.[i]?.length ? (
+            <span key={starts[i]} className="flex flex-1 flex-col-reverse overflow-hidden rounded-t-[3px]" style={{ height: `${(v / max) * 100}%`, minHeight: v > 0 ? 2 : 0 }}>
+              {parts[i].map((p, j) => (
+                <span key={j} className={j > 0 ? "border-b border-white" : undefined} style={{ flexGrow: p.minutes, flexBasis: 0, background: p.color }} />
+              ))}
             </span>
           ) : (
             <span key={starts[i]} className="block flex-1 rounded-t-[3px]" style={{ height: `${(v / max) * 100}%`, background: color, minHeight: v > 0 ? 2 : 0 }} />
@@ -119,8 +128,11 @@ export function CardioCard({ data, onOpen }: { data: CardioCharts; onOpen: () =>
           <span className="tabular text-2xl font-bold">{data.thisWeek.minutes} min</span>
           {data.thisWeek.lines.length > 0 ? (
             data.thisWeek.lines.map((l) => (
-              <span key={l.label} className="text-xs text-muted">
-                <span className="font-semibold text-ink">{l.label}</span> · {l.detail}
+              <span key={l.key} className="flex items-center gap-1.5 text-xs text-muted">
+                <span aria-hidden className="h-2 w-2 shrink-0 rounded-[2px]" style={{ background: l.color }} />
+                <span>
+                  <span className="font-semibold text-ink">{l.label}</span> · {l.detail}
+                </span>
               </span>
             ))
           ) : data.last ? (
@@ -134,7 +146,14 @@ export function CardioCard({ data, onOpen }: { data: CardioCharts; onOpen: () =>
         </span>
       </span>
       <span className="block w-full">
-        <WeekBars values={data.weeks.map((w) => w.minutes)} starts={data.weeks.map((w) => w.start)} color={CARDIO_COLOR} height={48} label="Cardio minutes per week" />
+        <WeekBars
+          values={data.weeks.map((w) => w.minutes)}
+          starts={data.weeks.map((w) => w.start)}
+          color={CARDIO_COLOR}
+          parts={data.weeks.map((w) => w.parts)}
+          height={48}
+          label="Cardio minutes per week"
+        />
       </span>
     </button>
   );
@@ -257,7 +276,7 @@ export function CardioPage({ data, onClose }: { data: CardioCharts; onClose: () 
           <div className="rounded-xl border border-hairline bg-surface p-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{volTitle}</p>
             <div className="mt-2">
-              <WeekBars values={a.weeks.map((w) => w.value)} starts={a.weeks.map((w) => w.start)} color={CARDIO_COLOR} height={90} label={volTitle} tip={(v) => (a.measure === "min" ? `${num(v)} min` : `${num(v)} ${unitWord}`)} />
+              <WeekBars values={a.weeks.map((w) => w.value)} starts={a.weeks.map((w) => w.start)} color={a.color} height={90} label={volTitle} tip={(v) => (a.measure === "min" ? `${num(v)} min` : `${num(v)} ${unitWord}`)} />
             </div>
           </div>
         )}
@@ -298,7 +317,7 @@ export function CardioPage({ data, onClose }: { data: CardioCharts; onClose: () 
           <div className="rounded-xl border border-hairline bg-surface p-3">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{volTitle}</p>
             <div className="mt-2">
-              <WeekBars values={a.weeks.map((w) => w.value)} starts={a.weeks.map((w) => w.start)} color={CARDIO_COLOR} height={90} label={volTitle} tip={(v) => (a.measure === "min" ? `${num(v)} min` : `${num(v)} ${unitWord}`)} />
+              <WeekBars values={a.weeks.map((w) => w.value)} starts={a.weeks.map((w) => w.start)} color={a.color} height={90} label={volTitle} tip={(v) => (a.measure === "min" ? `${num(v)} min` : `${num(v)} ${unitWord}`)} />
             </div>
           </div>
         )}

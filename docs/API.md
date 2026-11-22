@@ -1240,11 +1240,13 @@ v0.662 Sport days: `GET /api/v1/workouts` adds `sportDay` — `{ label,
 forSport, routine }` when the caller has a sport-flagged calendar event that
 day (owner, participant, or a sport feed's owner/member), else null.
 `POST /api/v1/workouts/warmup-for` `{ date, forSport }`: true makes that
-day's Warm-up the sport's routine (Hockey legs); false (the default) keeps
+day's Warm-up the sport's routine (Hockey legs; Quick 5 minutes for another
+sport, v0.745); false (the default) keeps
 the planned workout's. With `forSport` false the day shows the sport's
 warm-up as an optional extra; skipping the Warm-up is "none".
-v0.671: `label` is "Hockey" unless the event's title, event type or calendar
-names another sport (a feed's titles are matchups, never the label);
+v0.671: `label` is the sport the event's title, event type or calendar names
+(v0.745: the type's or calendar's picked sport first, and "Sport" when none
+names one, no longer Hockey);
 `sportDay.state` is "done", "skip" or null, set with `POST warmup-for
 { date, state }` ("" or null clears) — it only marks the card.
 
@@ -1258,6 +1260,15 @@ on Core, the three holds on Isometric) and `coreTestName` ("Plank test" /
 Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
+
+v0.745: cardio charts: activity keys add `HIKING`, `WALKING`, `CYCLING` and
+`JUMP_ROPE` (CARDIO sessions by name); each activity adds `color`; `weeks[]`
+adds `parts` (`key`, `minutes`, `color`, bottom first); `thisWeek.lines[]`
+add `key` and `color`. `POST /workouts/cardio` takes `hike` and `walk`.
+`GET /workouts/weekly`: each week adds `plannedParts` (planned parts plus the
+week's sport events; null before they were saved). The dashboard adds
+`workoutBlocks` (`{ done, total }` with two or more workouts on the day, else
+null). A sport's `label` is the picked sport, else the names, else "Sport".
 
 v0.744: workouts as blocks. `GET /api/v1/workouts` adds `sports` (each sport
 event that day: `eventId`, `title`, `label`, `start`/`end` minutes, labels,
@@ -1396,7 +1407,7 @@ GET  /api/v1/workouts adds:
   "cardio":[ CardioEntry ]
 CardioEntry: { "sessionId","name","summary",
                "concept2":{ "resultId","replaced":str|null }|null, "effort","hurt" }
-POST /api/v1/workouts/cardio         { "date","activity":row|run|ruck|jump_rope|bike|other,
+POST /api/v1/workouts/cardio         { "date","activity":row|run|ruck|hike|walk|jump_rope|bike|other,
                                        "meters"?,"distance"?,"seconds"?,"load"?,"completedOn"? } → { "date","cardio" }
 POST /api/v1/workouts/cardio/remove  { "date","sessionId" } → { "date","cardio" }   // a Concept2 row stays out
 POST /api/v1/workouts/warmup         { "date","plannedWorkoutId","done","completedOn"? } → { "date","status" }

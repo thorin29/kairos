@@ -19,6 +19,7 @@ import { doneOn, loadMovementStats, type MovementStats } from "@/lib/queries/mov
 import { loadStaleContext } from "@/lib/chores/stale";
 import { groupsFor, navRegionFor, shownGroup } from "@/lib/workouts/involvement";
 import { sportDayLabel } from "@/lib/sport/label";
+import { sportDaysBetween, sportsForDay, sportsOfEvents } from "@/lib/sport/day";
 import { setsSummary, topSet } from "@/lib/workouts/sets";
 import { lastTestsFor } from "@/lib/workouts/test-history";
 import { repRecords, REP_BANDS, bandPoints, weeksInARow, type RepRecord } from "@/lib/workouts/records";
@@ -2724,6 +2725,28 @@ export async function workoutRestFor(
   return { rest: (await planRestDay(userId, dateISO)) ? "planned" : null, extraLogged };
 }
 
+/**
+ * The day's workouts done of how many (v0.745), for the home card's "1 of 2
+ * workouts": the planned workout and each sport event. A skipped one counts
+ * as done. Null with fewer than two.
+ */
+export async function workoutBlocksFor(userId: string, dateISO: string): Promise<{ done: number; total: number } | null> {
+  const [sports, progress, task] = await Promise.all([
+    sportsForDay(userId, dateISO),
+    loadDayPlanProgress(userId, dateISO),
+    prisma.task.findFirst({
+      where: { userId, category: "EXERCISE", dueDate: toDateColumn(dateISO) },
+      select: { status: true },
+    }) as Promise<{ status: string } | null>,
+  ]);
+  const planned = progress.planCount > 0;
+  const total = (planned ? 1 : 0) + sports.length;
+  if (total < 2) return null;
+  const planDone = planned && (progress.done || (task != null && task.status !== "PENDING"));
+  const done = (planDone ? 1 : 0) + sports.filter((x) => x.state !== "open").length;
+  return { done, total };
+}
+
 /** The plan has a workout (not Rest) on this weekday. */
 async function planWorkDay(userId: string, dateISO: string): Promise<boolean> {
   return (await prisma.plannedWorkout.count({ where: { ...(await dayPlanWhereFor(userId, dateISO)), isRest: false } })) > 0;
@@ -2831,6 +2854,9 @@ export type TrainingWeek = {
   kinds: { lift: number; core: number; iso: number; cardio: number; conditioning: number; sport: number; other: number };
   /** Workout days the plan had that week (the day's workout tasks). */
   planned: number;
+  /** v0.745: planned parts plus sport events (plannedLine); null before
+   *  parts were saved. The chart's Planned line. */
+  plannedParts: number | null;
   /** Sunday to Saturday (v0.671): what each day held, for the week's detail. */
   dayList: TrainingDay[];
 };
@@ -2845,6 +2871,106 @@ export type TrainingDay = {
 
 type DayKind = TrainingDay["kinds"][number];
 const KIND_ORDER: DayKind[] = ["lift", "core", "iso", "conditioning", "cardio", "sport", "other"];
+
+// --- planned parts (v0.745) ----------------------------------------------------
+
+const PLANNED_PARTS_KEY = "plannedParts";
+
+/**
+ * How many parts the plan has on a day, counted like Weekly training's bars:
+ * lifting, core, holds, conditioning, cardio and mobility once each. Warm-ups
+ * and sport don't count (sport comes from the calendar).
+ */
+export async function plannedPartsFor(userId: string, dateISO: string): Promise<number> {
+  const rows = (await prisma.plannedWorkout.findMany({
+    where: { ...(await dayPlanWhereFor(userId, dateISO)), isRest: false },
+    select: {
+      category: true,
+      muscleGroup: true,
+      exercises: { select: { poolExercise: { select: { muscleGroup: true, category: true } } } },
+    },
+  })) as {
+    category: string | null;
+    muscleGroup: string | null;
+    exercises: { poolExercise: { muscleGroup: string | null; category: string | null } | null }[];
+  }[];
+  const kinds = new Set<DayKind>();
+  for (const r of rows) {
+    if (r.category === "WARMUP" || r.category === "SPORT") continue;
+    if (r.category === "HIIT") kinds.add("conditioning");
+    else if (r.category && CARDIO_CATEGORIES.includes(r.category)) kinds.add("cardio");
+    else if (r.category === "MOBILITY" || r.category === "STRETCHING") kinds.add("other");
+    else if (r.category === "ISOMETRIC") kinds.add("iso");
+    else if (r.exercises.length === 0) kinds.add(r.muscleGroup === "CORE" ? "core" : "lift");
+    else
+      for (const x of r.exercises) {
+        const pe = x.poolExercise;
+        if (pe?.category === "ISOMETRIC") kinds.add("iso");
+        else if (pe?.category === "MOBILITY" || pe?.category === "STRETCHING") kinds.add("other");
+        else if (pe?.muscleGroup === "CORE") kinds.add("core");
+        else kinds.add("lift");
+      }
+  }
+  return kinds.size;
+}
+
+/** Save the day's planned parts (v0.745), so a later plan change never
+ *  rewrites the week's Planned line. Written only when it changed. */
+export async function snapshotPlannedParts(userId: string, dateISO: string): Promise<void> {
+  const parts = String(await plannedPartsFor(userId, dateISO));
+  const key = { userId, date: toDateColumn(dateISO), key: PLANNED_PARTS_KEY, slot: "" };
+  const had = (await prisma.workoutSuggestionAnswer.findUnique({
+    where: { userId_date_key_slot: key },
+    select: { answer: true },
+  })) as { answer: string } | null;
+  if (had?.answer === parts) return;
+  await prisma.workoutSuggestionAnswer.upsert({
+    where: { userId_date_key_slot: key },
+    create: { ...key, answer: parts },
+    update: { answer: parts },
+  });
+}
+
+/** Today's planned parts for everyone with a plan (the task generator). */
+export async function snapshotPlannedPartsAll(dateISO: string): Promise<void> {
+  const users = (await prisma.plannedWorkout.findMany({ distinct: ["userId"], select: { userId: true } })) as { userId: string }[];
+  for (const u of users) await snapshotPlannedParts(u.userId, dateISO);
+}
+
+/**
+ * Each week's Planned line (v0.745): saved planned parts plus the sport events
+ * on the calendar. This week fills the days to come from the plan; an earlier
+ * week with nothing saved is null (no line).
+ */
+async function plannedLine(userId: string, today: string, starts: string[]): Promise<(number | null)[]> {
+  const from = starts[0];
+  const thisWeek = starts[starts.length - 1];
+  const end = addDays(thisWeek, 6);
+  const [saved, sports] = await Promise.all([
+    prisma.workoutSuggestionAnswer.findMany({
+      where: { userId, key: PLANNED_PARTS_KEY, slot: "", date: { gte: toDateColumn(from), lte: toDateColumn(end) } },
+      select: { date: true, answer: true },
+    }) as Promise<{ date: Date; answer: string }[]>,
+    sportDaysBetween(userId, from, end),
+  ]);
+  const byDay = new Map(saved.map((r) => [fromDateColumn(r.date), Number(r.answer) || 0]));
+  const out: (number | null)[] = [];
+  for (const start of starts) {
+    const days = Array.from({ length: 7 }, (_, j) => addDays(start, j));
+    const current = start === thisWeek;
+    if (!current && !days.some((d) => byDay.has(d))) {
+      out.push(null);
+      continue;
+    }
+    let n = sports.filter((x) => x.date >= start && x.date <= days[6]).length;
+    for (const d of days) {
+      const v = byDay.get(d);
+      n += v != null && d <= today ? v : current || d < today ? await plannedPartsFor(userId, d) : 0;
+    }
+    out.push(n);
+  }
+  return out;
+}
 
 /**
  * The last `weeks` weeks of training, oldest first, and the weeks trained in a
@@ -2876,6 +3002,7 @@ export async function loadWeeklyTraining(
         name: true,
         category: true,
         durationMin: true,
+        sourceEventId: true,
         sets: { select: { seconds: true, poolExercise: { select: { name: true, muscleGroup: true, category: true } } } },
       },
     }),
@@ -2886,9 +3013,11 @@ export async function loadWeeklyTraining(
       name: string | null;
       category: string | null;
       durationMin: number | null;
+      sourceEventId: string | null;
       sets: { seconds: number | null; poolExercise: { name: string; muscleGroup: string | null; category: string | null } | null }[];
     }[],
   ];
+  const sportOf = await sportsOfEvents(sessions.filter((s) => s.category === "SPORT").map((s) => s.sourceEventId));
   // What each day held (v0.744): each kind of work once a day, each sport
   // event on its own; a set's movement decides lifting, core or holds.
   const dayKinds = new Map<string, Map<DayKind, number>>();
@@ -2906,7 +3035,7 @@ export async function loadWeeklyTraining(
       if (!list.includes(w)) list.push(w);
       words.set(k, list);
     };
-    if (s.category === "SPORT") add("sport", sportDayLabel(s.name));
+    if (s.category === "SPORT") add("sport", (s.sourceEventId && sportOf.get(s.sourceEventId)) || sportDayLabel(s.name));
     else if (s.category === "HIIT") add("conditioning", "Conditioning");
     else if (s.category && CARDIO_CATEGORIES.includes(s.category)) add("cardio", CARDIO_WORD[s.category] ?? "Cardio");
     else if (s.category === "MOBILITY" || s.category === "STRETCHING") add("other", s.category === "MOBILITY" ? "Mobility" : "Stretching");
@@ -2972,6 +3101,12 @@ export async function loadWeeklyTraining(
 
   // Paused days (v0.678) read as rest, "Paused".
   const pausedSet = pausedDays(await workoutPausesFor(userId, from), from, addDays(from, 7 * weeks));
+  await snapshotPlannedParts(userId, today);
+  const line = await plannedLine(
+    userId,
+    today,
+    Array.from({ length: weeks }, (_, i) => addDays(from, 7 * i)),
+  );
   const out: TrainingWeek[] = [];
   for (let i = 0; i < weeks; i++) {
     const start = addDays(from, 7 * i);
@@ -3024,6 +3159,7 @@ export async function loadWeeklyTraining(
       trained: open === 0 && (due > 0 || logged),
       kinds,
       planned: due,
+      plannedParts: line[i] ?? null,
       dayList,
     });
   }

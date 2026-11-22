@@ -4,12 +4,13 @@ import { buildCoreSummary } from "@/lib/workouts/core-progress";
 import {
   buildCardioCharts,
   buildConditioningCharts,
-  type CardioActivityKey,
   type CardioSession,
   type ConditioningSession,
 } from "@/lib/workouts/endurance-charts";
 import type { WorkoutType } from "@/lib/workouts/catalog";
 import { sportDayLabel } from "@/lib/sport/label";
+import { sportsOfEvents } from "@/lib/sport/day";
+import { cardioKeyOf } from "@/lib/workouts/endurance-charts";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
 import { soreHeatGroups } from "@/lib/workouts/adjust";
 import { workoutPausesFor } from "@/lib/workouts/pause-run";
@@ -244,6 +245,9 @@ async function cardioEntries(
       weight: number | null;
     }[];
   }[];
+  // A sport goes by its event's picked sport (v0.745), else its own name.
+  const sportOf = await sportsOfEvents(rows.filter((r) => r.category === "SPORT").map((r) => r.sourceEventId));
+  const sportName = (r: (typeof rows)[number]) => (r.sourceEventId && sportOf.get(r.sourceEventId)) || sportDayLabel(r.name);
   const hiitEffort = new Map<string, string | null>();
   for (const [k, v] of effortOn) {
     const [d, slot] = k.split("|");
@@ -262,7 +266,7 @@ async function cardioEntries(
           ? (hiitEffort.get(day) ?? null)
           : (effortOn.get(`${day}|cardio:${r.id}`) ?? null);
     // A sport day goes by its sport, never the event's name (v0.673).
-    const kind = r.category === "SPORT" ? sportDayLabel(r.name).toLowerCase() : KIND_WORD[r.category] ?? "cardio";
+    const kind = r.category === "SPORT" ? sportName(r).toLowerCase() : KIND_WORD[r.category] ?? "cardio";
     const type = r.category === "SPORT" ? "sport" : r.category === "HIIT" ? "conditioning" : "cardio";
     if (r.category === "SPORT") {
       // A confirmed sport counts as cardio too (v0.744): its minutes.
@@ -276,7 +280,7 @@ async function cardioEntries(
         minutes,
         load: null,
         effort,
-        label: sportDayLabel(r.name),
+        label: sportName(r),
       });
     } else if (CARDIO_CATEGORIES.includes(r.category)) {
       const sum = (k: "meters" | "distance") => {
@@ -286,7 +290,7 @@ async function cardioEntries(
       const loads = r.sets.map((x) => x.weight).filter((v): v is number => v != null && v > 0);
       cardio.push({
         date: doneOn(r),
-        activity: (["ROWING", "RUNNING", "RUCKING"].includes(r.category) ? r.category : "CARDIO") as CardioActivityKey,
+        activity: cardioKeyOf(r.category, r.name),
         meters: sum("meters"),
         distance: sum("distance"),
         unit: r.sets.find((x) => x.distance != null)?.unit ?? null,

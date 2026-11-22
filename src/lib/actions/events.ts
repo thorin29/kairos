@@ -30,6 +30,7 @@ import {
   CAL_SHARED_STYLE,
   TIME_24H,
 } from "@/lib/settings";
+import { cleanSport } from "@/lib/sport/label";
 
 export type EventState = { error: string | null; saved: boolean };
 
@@ -104,6 +105,7 @@ export async function updateEventType(
   defaultMinutes: number | null = null,
   sportFlexTime = false,
   sportKind: string | null = null,
+  sport: string | null = null,
 ): Promise<{ error: string | null }> {
   if (!(await isAdmin())) return { error: "Only a parent can do that." };
   const clean = name.trim().slice(0, 40);
@@ -119,7 +121,15 @@ export async function updateEventType(
   await prisma.eventType
     .update({
       where: { id },
-      data: { name: clean, color, sportWorkout, defaultMinutes: mins, sportFlexTime: sportWorkout && sportFlexTime, sportKind: kind },
+      data: {
+        name: clean,
+        color,
+        sportWorkout,
+        defaultMinutes: mins,
+        sportFlexTime: sportWorkout && sportFlexTime,
+        sportKind: kind,
+        sport: sportWorkout ? cleanSport(sport) : null,
+      },
     })
     .catch(() => {});
   revalidatePath("/calendar");

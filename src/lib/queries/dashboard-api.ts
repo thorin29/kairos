@@ -6,7 +6,8 @@ import { Category, TaskStatus } from "@/generated/prisma/client";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadWorkoutDayExtras, loadWorkoutPlanNames } from "@/lib/queries/workouts";
 import { sportLabels } from "@/lib/workouts/history-run";
-import { loadDayPlanProgress, loadOverdueWorkoutDates, workoutRestFor } from "@/lib/queries/workout-log";
+import { loadDayPlanProgress, loadOverdueWorkoutDates,
+  workoutBlocksFor, workoutRestFor } from "@/lib/queries/workout-log";
 import { loadReadingProgress, type ReadingProgress } from "@/lib/queries/reading";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { CATEGORY_LABELS } from "@/lib/colors";
@@ -107,6 +108,9 @@ export type ApiDashboard = {
    *  by movement or plan name ("EZ bar skull crusher", "Warm-up"). Null before
    *  it starts, when it's done, and on other days. */
   workoutRemaining: string[] | null;
+  /** v0.745: with two or more workouts on the day (the planned one and each
+   *  sport event), how many are done or skipped. Null otherwise. */
+  workoutBlocks: { done: number; total: number } | null;
   /** Per-book reading-goal progress for the Book reading home section. */
   reading: ReadingProgress[];
   groups: { category: Category; label: string; items: ApiTask[] }[];
@@ -401,6 +405,7 @@ export async function loadApiDashboard(
     const progress = await loadDayPlanProgress(userId, dayISO);
     if (progress.logged && !progress.done && progress.remaining.length > 0) workoutRemaining = progress.remaining;
   }
+  const workoutBlocks = restDay.rest === "planned" ? null : await workoutBlocksFor(userId, dayISO);
 
   return {
     date: dayISO,
@@ -412,6 +417,7 @@ export async function loadApiDashboard(
     workoutRest: restDay.rest,
     workoutExtraLogged: restDay.extraLogged,
     workoutRemaining,
+    workoutBlocks,
     reading,
     groups,
     personalReading,

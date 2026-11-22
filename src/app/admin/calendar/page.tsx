@@ -69,6 +69,7 @@ export default async function AdminCalendarPage() {
       eventCount: c._count.events,
       canRetire: c._count.events > 0 && !hasUpcoming.has(c.id),
       sportWorkout: c.sportWorkout,
+      sport: c.sport ?? null,
       isWork: c.isWork,
       defaultDurationMin: c.defaultDurationMin,
       forceDuration: c.forceDuration,

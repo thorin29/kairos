@@ -3,8 +3,8 @@
  * for, and reading a typed time. Pure; the writes are in cardio-run.ts.
  *
  * Row, run and ruck keep their own categories (their history and Concept2
- * rows already use them); jump rope, bike and anything else are CARDIO
- * sessions named after the activity. Any of them completes a Cardio plan.
+ * rows already use them); hike, walk, jump rope, bike and anything else are
+ * CARDIO sessions named after the activity. Any of them completes a Cardio plan.
  */
 export type CardioActivity = {
   key: string;
@@ -22,6 +22,8 @@ export const CARDIO_ACTIVITIES: readonly CardioActivity[] = [
   { key: "row", label: "Row", category: "ROWING", name: "Rowing", meters: true },
   { key: "run", label: "Run", category: "RUNNING", name: "Running", distance: true },
   { key: "ruck", label: "Ruck", category: "RUCKING", name: "Rucking", distance: true, load: true },
+  { key: "hike", label: "Hike", category: "CARDIO", name: "Hiking", distance: true },
+  { key: "walk", label: "Walk", category: "CARDIO", name: "Walking", distance: true },
   { key: "jump_rope", label: "Jump rope", category: "CARDIO", name: "Jump rope" },
   { key: "bike", label: "Bike", category: "CARDIO", name: "Bike", distance: true },
   { key: "other", label: "Other", category: "CARDIO", name: "Cardio" },
