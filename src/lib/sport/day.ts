@@ -1,6 +1,8 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { householdTz, localParts } from "@/lib/dates";
+import { householdTz, localParts, toDateColumn } from "@/lib/dates";
+import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
+import { timeLabel } from "@/lib/workouts/workout-time";
 import { occurrencesIn } from "@/lib/calendar/recur";
 import { sportDayLabel, sportKindOf, type SportKind } from "@/lib/sport/label";
 
@@ -103,4 +105,121 @@ export async function sportDaysBetween(
     for (const date of new Set(days)) out.push({ date, label, kind });
   }
   return out.sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
+/** A sport event on one day as its own workout (v0.744): when it runs, and
+ *  whether the person went. */
+export type DaySport = {
+  eventId: string;
+  /** The event's title ("Hockey practice", "Stars vs Ducks"). */
+  title: string;
+  /** The sport ("Hockey", sportDayLabel). */
+  label: string;
+  /** Minutes from midnight, household time. */
+  start: number;
+  end: number;
+  /** "6:00 AM". */
+  startLabel: string;
+  endLabel: string;
+  /** The event has ended, so "Did you go?" can be answered. */
+  ended: boolean;
+  state: "open" | "went" | "skipped";
+  /** When went: the logged session, its minutes and how it felt. */
+  sessionId: string | null;
+  minutes: number;
+  flexTime: boolean;
+  effort: string | null;
+  hurt: string | null;
+};
+
+
+/** Every sport event a person is in on a day, in time order (v0.744). Who's
+ *  in follows sportOn: the owner, every participant, a sport feed's people. */
+export async function sportsForDay(userId: string, dateISO: string): Promise<DaySport[]> {
+  const tz = householdTz();
+  const events = (await prisma.event.findMany({
+    where: {
+      OR: [{ eventType: { is: { sportWorkout: true } } }, { externalCalendar: { is: { sportWorkout: true } } }],
+    },
+    select: {
+      id: true,
+      userId: true,
+      title: true,
+      startsAt: true,
+      endsAt: true,
+      rrule: true,
+      participants: { select: { userId: true } },
+      eventType: { select: { name: true, sportFlexTime: true } },
+      externalCalendar: { select: { sportWorkout: true, userId: true, memberIds: true, name: true } },
+    },
+  })) as {
+    id: string;
+    userId: string | null;
+    title: string | null;
+    startsAt: Date;
+    endsAt: Date;
+    rrule: string | null;
+    participants: { userId: string }[];
+    eventType: { name: string; sportFlexTime: boolean } | null;
+    externalCalendar: { sportWorkout: boolean; userId: string | null; memberIds: string[] | null; name: string } | null;
+  }[];
+  const found: { e: (typeof events)[number]; at: Date; ms: number }[] = [];
+  for (const e of events) {
+    const mine =
+      e.userId === userId ||
+      e.participants.some((p) => p.userId === userId) ||
+      (!!e.externalCalendar?.sportWorkout &&
+        (e.externalCalendar.userId === userId || (e.externalCalendar.memberIds ?? []).includes(userId)));
+    if (!mine) continue;
+    if (e.rrule) {
+      const ms = occurrenceSpanMs(e.startsAt, e.endsAt, false, tz);
+      for (const at of occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz)) found.push({ e, at, ms });
+    } else if (localParts(e.startsAt, tz).iso === dateISO) {
+      found.push({ e, at: e.startsAt, ms: e.endsAt.getTime() - e.startsAt.getTime() });
+    }
+  }
+  if (found.length === 0) return [];
+  const ids = found.map((f) => f.e.id);
+  const date = toDateColumn(dateISO);
+  const [sessions, skips, feel] = (await Promise.all([
+    prisma.workoutSession.findMany({
+      where: { userId, date, sourceEventId: { in: ids } },
+      select: { id: true, sourceEventId: true, durationMin: true },
+    }),
+    prisma.sportSkip.findMany({ where: { userId, date, eventId: { in: ids } }, select: { eventId: true } }),
+    prisma.workoutFeedback.findMany({
+      where: { userId, date, slot: { in: ids.map((id) => `sport:${id}`) } },
+      select: { slot: true, effort: true, hurt: true },
+    }),
+  ])) as [
+    { id: string; sourceEventId: string; durationMin: number | null }[],
+    { eventId: string }[],
+    { slot: string; effort: string | null; hurt: string | null }[],
+  ];
+  const now = Date.now();
+  return found
+    .map(({ e, at, ms }) => {
+      const start = localParts(at, tz).minutes;
+      const length = Math.max(1, Math.round(ms / 60000));
+      const end = start + length;
+      const s = sessions.find((x) => x.sourceEventId === e.id);
+      const f = feel.find((x) => x.slot === `sport:${e.id}`);
+      return {
+        eventId: e.id,
+        title: e.title?.trim() || e.eventType?.name || sportDayLabel(e.title, e.eventType?.name, e.externalCalendar?.name),
+        label: sportDayLabel(e.title, e.eventType?.name, e.externalCalendar?.name),
+        start,
+        end,
+        startLabel: timeLabel(start),
+        endLabel: timeLabel(end),
+        ended: at.getTime() + ms <= now,
+        state: s ? "went" : skips.some((k) => k.eventId === e.id) ? "skipped" : "open",
+        sessionId: s?.id ?? null,
+        minutes: s?.durationMin ?? length,
+        flexTime: !!e.eventType?.sportFlexTime,
+        effort: f?.effort ?? null,
+        hurt: f?.hurt ?? null,
+      } satisfies DaySport;
+    })
+    .sort((a, b) => a.start - b.start);
 }

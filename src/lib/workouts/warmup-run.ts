@@ -290,7 +290,9 @@ export async function sportDayView(userId: string, dateISO: string): Promise<Spo
     where: { userId, date: toDateColumn(dateISO), key: { in: [FOR_KEY, STATE_KEY] }, slot: "" },
     select: { key: true, answer: true },
   })) as { key: string; answer: string }[];
-  const forSport = rows.some((r) => r.key === FOR_KEY && r.answer === "sport");
+  // The planned Warm-up is never handed to the sport (v0.744): a sport is its
+  // own workout with its own warm-up, on its own page.
+  const forSport = false;
   const st = rows.find((r) => r.key === STATE_KEY)?.answer;
   return { label: sport.title, forSport, routine: SPORT_WARMUP, state: st === "done" || st === "skip" ? st : null };
 }

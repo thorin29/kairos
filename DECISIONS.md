@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-11 — Workouts as blocks (v0.744.0)
+
+- A day holds workouts, each its own block: the planned workout (its own
+  warm-up, cardio, lifts, core, mobility) and each sport event marked "counts
+  as a sport". Blocks never share parts: the planned Warm-up is no longer
+  handed to the sport (`sportDay.forSport` is always false), and a sport's
+  session leaves the planned page's logged list.
+- Order by time: sports from the calendar, the planned workout from a usual
+  time per weekday (`AppSetting workoutTimes:<userId>`), changed for one day
+  in `WorkoutSuggestionAnswer` key `workoutTime`. Untimed blocks go last.
+- With two or more blocks the day opens on Today's workouts while two or
+  more are still open; with one open it opens that one; back returns to the
+  list. One block: straight in, as before.
+- A sport completes the day only when nothing else was planned (unchanged
+  since v0.649; SCORING.md corrected). Its minutes count toward Cardio (a
+  SPORT activity, named by its sport) as well as Endurance.
+- Weekly training counts workouts and parts by type per week instead of
+  days: lifting, core, holds, conditioning, cardio and mobility once a day
+  each, every sport event; warm-ups never. A set's movement decides lifting,
+  core or holds. Day labels list every kind in the bars' order (the old label
+  kept the first two words, which were usually the warm-up and the row).
+- Kept: the dashed line stays planned days (past weeks' plans aren't stored),
+  and the home card's Workouts row is unchanged.
+- Mockup: artifact "Kairos: workouts as blocks" (overview and step by step).
+
 ## 2026-11 — ⓘ on every movement list (v0.743.0)
 
 - Conditioning workouts (today's card and the picker), Family WOD lines and

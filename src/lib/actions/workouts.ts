@@ -1,5 +1,7 @@
 "use server";
 
+import { sportsForDay, type DaySport } from "@/lib/sport/day";
+import { setUsualWorkoutTimes, setWorkoutTimeFor, usualWorkoutTimes, workoutTimeFor } from "@/lib/workouts/workout-time";
 import { planDow } from "@/lib/workouts/day-swap-run";
 import { cleanAdjust, CARDIO_CHOICES, TIME_CHOICES, type TimePick } from "@/lib/workouts/adjust";
 import { clearAdjust } from "@/lib/workouts/suggest-run";
@@ -1334,6 +1336,10 @@ export async function loadDayLog(
   extras: DayExtraView[];
   /** The day's family WOD (v0.679), or null. */
   familyWod: FamilyWodDay | null;
+  /** The day's sport events, each its own workout (v0.744). */
+  sports: DaySport[];
+  /** When the planned workout is done that day (v0.744). */
+  workoutTime: { time: number | null; usual: number | null; changed: boolean };
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1351,8 +1357,15 @@ export async function loadDayLog(
     conditioningOnDay(userId, dateISO),
     warmupsForDay(userId, dateISO),
   ]);
-  const [extras, familyWod] = await Promise.all([dayExtrasFor(userId, dateISO), familyWodDay(userId, dateISO, conditioning)]);
+  const [extras, familyWod, sports, workoutTime] = await Promise.all([
+    dayExtrasFor(userId, dateISO),
+    familyWodDay(userId, dateISO, conditioning),
+    sportsForDay(userId, dateISO),
+    workoutTimeFor(userId, dateISO),
+  ]);
   return {
+    sports,
+    workoutTime,
     state,
     adjusted,
     sportDay,
@@ -1998,4 +2011,27 @@ export async function movementAboutAction(name: string): Promise<string | null> 
     select: { about: true },
   });
   return p?.about ?? null;
+}
+
+// --- workout times (v0.744) -------------------------------------------------------
+
+/** One day's workout time (minutes from midnight), or null for the usual. */
+export async function setWorkoutTimeAction(userId: string, dateISO: string, time: number | null): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!ISO.test(dateISO)) throw new Error("Bad date");
+  await setWorkoutTimeFor(userId, dateISO, time);
+}
+
+/** Usual workout time per weekday, Sunday first. */
+export async function loadUsualWorkoutTimes(userId: string): Promise<(number | null)[]> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return usualWorkoutTimes(userId);
+}
+
+export async function saveUsualWorkoutTimes(userId: string, times: (number | null)[]): Promise<(number | null)[]> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  return setUsualWorkoutTimes(userId, times);
 }

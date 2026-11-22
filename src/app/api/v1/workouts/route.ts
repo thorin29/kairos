@@ -25,6 +25,8 @@ import { dayProgramInfo } from "@/lib/workouts/program-run";
 import { dayLightFactor, daySuggestionFor } from "@/lib/workouts/suggest-run";
 import { adjustView } from "@/lib/workouts/adjust-run";
 import { sportDayView } from "@/lib/workouts/warmup-run";
+import { sportsForDay } from "@/lib/sport/day";
+import { workoutTimeFor } from "@/lib/workouts/workout-time";
 import { extraSimplePlans } from "@/lib/workouts/day-extras-run";
 
 export const runtime = "nodejs";
@@ -115,7 +117,13 @@ export async function GET(req: NextRequest) {
     // v0.658: today's adjustment — { mode, label, dropped } — or null.
     adjusted,
     // v0.662: a sport on the calendar — { label, forSport, routine } — or null.
+    // Its warm-up is on the sport's own page since v0.744 (forSport is false).
     sportDay: await sportDayView(userId, date),
+    // v0.744: the day's sport events, each its own workout (sport/day.ts
+    // DaySport), and when the planned workout is done ({ time, usual,
+    // changed }, minutes from midnight or null).
+    sports: await sportsForDay(userId, date),
+    workoutTime: await workoutTimeFor(userId, date),
     // v0.615: the person's section order for this weekday; the day's Warm-up
     // and Cardio plans (no movements, so not in `workouts`); and the day's
     // cardio, Concept2 rows included, each with how it felt.

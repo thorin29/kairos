@@ -2478,6 +2478,8 @@ async function loggedOtherFor(
   const byName = new Map<string, Map<string, typeof rows[number]["sets"]>>();
   for (const r of rows) {
     if (!everything && r.category && (CARDIO_CATEGORIES.includes(r.category) || r.category === "HIIT")) continue;
+    // A sport from the calendar is its own workout (v0.744), on its own page.
+    if (r.sourceEventId) continue;
     // A warm-up isn't part of what's listed as done, unless it's all there was.
     if (r.category === "WARMUP" && !onlyWarmup) continue;
     const name = r.name?.trim() || (r.category ? (CATEGORY_LABEL as Record<string, string>)[r.category] ?? "Workout" : "Workout");
@@ -2822,9 +2824,11 @@ export type TrainingWeek = {
   minutes: number;
   /** Every workout due was done or excused (weeksInARow's rule). */
   trained: boolean;
-  /** Days of each kind (v0.671): a day with a lift and a game counts once in
-   *  each. "other" is warm-ups, mobility and stretching on their own. */
-  kinds: { lift: number; cardio: number; conditioning: number; sport: number; other: number };
+  /** Workouts and parts of each kind (v0.744; days of each kind before): a
+   *  day's lifting, core, holds, conditioning, cardio and mobility count once
+   *  each, every sport event counts. "other" is mobility and stretching;
+   *  warm-ups never count. */
+  kinds: { lift: number; core: number; iso: number; cardio: number; conditioning: number; sport: number; other: number };
   /** Workout days the plan had that week (the day's workout tasks). */
   planned: number;
   /** Sunday to Saturday (v0.671): what each day held, for the week's detail. */
@@ -2833,24 +2837,14 @@ export type TrainingWeek = {
 
 export type TrainingDay = {
   date: string;
-  kinds: ("lift" | "cardio" | "conditioning" | "sport" | "other")[];
+  kinds: ("lift" | "core" | "iso" | "cardio" | "conditioning" | "sport" | "other")[];
   /** A few words: "Legs, Back", "Row", "Hockey", "Planned", "Missed". */
   label: string;
   status: "done" | "planned" | "missed" | "rest" | null;
 };
 
 type DayKind = TrainingDay["kinds"][number];
-const kindOf = (category: string | null): DayKind =>
-  category === "SPORT"
-    ? "sport"
-    : category === "HIIT"
-      ? "conditioning"
-      : category && CARDIO_CATEGORIES.includes(category)
-        ? "cardio"
-        : category === "WARMUP" || category === "MOBILITY" || category === "STRETCHING"
-          ? "other"
-          : "lift";
-const KIND_ORDER: DayKind[] = ["lift", "conditioning", "cardio", "sport", "other"];
+const KIND_ORDER: DayKind[] = ["lift", "core", "iso", "conditioning", "cardio", "sport", "other"];
 
 /**
  * The last `weeks` weeks of training, oldest first, and the weeks trained in a
@@ -2882,7 +2876,7 @@ export async function loadWeeklyTraining(
         name: true,
         category: true,
         durationMin: true,
-        sets: { select: { seconds: true, poolExercise: { select: { name: true, muscleGroup: true } } } },
+        sets: { select: { seconds: true, poolExercise: { select: { name: true, muscleGroup: true, category: true } } } },
       },
     }),
   ])) as [
@@ -2892,31 +2886,47 @@ export async function loadWeeklyTraining(
       name: string | null;
       category: string | null;
       durationMin: number | null;
-      sets: { seconds: number | null; poolExercise: { name: string; muscleGroup: string | null } | null }[];
+      sets: { seconds: number | null; poolExercise: { name: string; muscleGroup: string | null; category: string | null } | null }[];
     }[],
   ];
-  // What each day held (v0.671), for the bars' colours and a week's detail.
-  const dayKinds = new Map<string, Set<DayKind>>();
-  const dayWords = new Map<string, string[]>();
+  // What each day held (v0.744): each kind of work once a day, each sport
+  // event on its own; a set's movement decides lifting, core or holds.
+  const dayKinds = new Map<string, Map<DayKind, number>>();
+  const dayWords = new Map<string, Map<DayKind, string[]>>();
   const taskOn = new Map<string, string>();
   for (const t of tasks) taskOn.set(fromDateColumn(t.dueDate), t.status);
   for (const s of sessions) {
     const d = fromDateColumn(s.date);
-    const k = kindOf(s.category);
-    const ks = dayKinds.get(d) ?? new Set<DayKind>();
-    ks.add(k);
-    dayKinds.set(d, ks);
-    const words = dayWords.get(d) ?? [];
-    if (k === "lift") {
+    if (s.category === "WARMUP") continue;
+    const ks = dayKinds.get(d) ?? new Map<DayKind, number>();
+    const words = dayWords.get(d) ?? new Map<DayKind, string[]>();
+    const add = (k: DayKind, w: string) => {
+      ks.set(k, k === "sport" ? (ks.get(k) ?? 0) + 1 : 1);
+      const list = words.get(k) ?? [];
+      if (!list.includes(w)) list.push(w);
+      words.set(k, list);
+    };
+    if (s.category === "SPORT") add("sport", sportDayLabel(s.name));
+    else if (s.category === "HIIT") add("conditioning", "Conditioning");
+    else if (s.category && CARDIO_CATEGORIES.includes(s.category)) add("cardio", CARDIO_WORD[s.category] ?? "Cardio");
+    else if (s.category === "MOBILITY" || s.category === "STRETCHING") add("other", s.category === "MOBILITY" ? "Mobility" : "Stretching");
+    else if (s.sets.length === 0) add("lift", "Strength");
+    else {
       for (const x of s.sets) {
-        const g = x.poolExercise ? shownGroup(x.poolExercise.name, x.poolExercise.muscleGroup) : null;
-        const w = g ? (GROUP_WORD[g] ?? null) : null;
-        if (w && !words.includes(w)) words.push(w);
+        const pe = x.poolExercise;
+        if (pe?.category === "ISOMETRIC") add("iso", "Holds");
+        else if (pe?.category === "MOBILITY" || pe?.category === "STRETCHING") add("other", "Mobility");
+        else if (pe?.muscleGroup === "CORE") add("core", "Core");
+        else {
+          const g = pe ? shownGroup(pe.name, pe.muscleGroup) : null;
+          add("lift", (g && GROUP_WORD[g]) || "Strength");
+        }
       }
-    } else {
-      const w = k === "sport" ? sportDayLabel(s.name) : k === "cardio" ? CARDIO_WORD[s.category ?? ""] ?? "Cardio" : k === "conditioning" ? "Conditioning" : "Mobility";
-      if (!words.includes(w)) words.push(w);
+      // A day's lifting is named by its groups; "Strength" only without one.
+      const lift = words.get("lift");
+      if (lift && lift.length > 1) words.set("lift", lift.filter((w) => w !== "Strength"));
     }
+    dayKinds.set(d, ks);
     dayWords.set(d, words);
   }
 
@@ -2969,12 +2979,13 @@ export async function loadWeeklyTraining(
     const due = a?.due ?? 0;
     const open = a?.open ?? 0;
     const logged = (a?.days.size ?? 0) > 0;
-    const kinds = { lift: 0, cardio: 0, conditioning: 0, sport: 0, other: 0 };
+    const kinds = { lift: 0, core: 0, iso: 0, cardio: 0, conditioning: 0, sport: 0, other: 0 };
     const dayList: TrainingDay[] = [];
     for (let j = 0; j < 7; j++) {
       const date = addDays(start, j);
-      const ks = [...(dayKinds.get(date) ?? [])].sort((x, y) => KIND_ORDER.indexOf(x) - KIND_ORDER.indexOf(y));
-      for (const k of ks) kinds[k]++;
+      const held = dayKinds.get(date) ?? new Map<DayKind, number>();
+      const ks = [...held.keys()].sort((x, y) => KIND_ORDER.indexOf(x) - KIND_ORDER.indexOf(y));
+      for (const k of ks) kinds[k] += held.get(k) ?? 0;
       const task = taskOn.get(date);
       const status: TrainingDay["status"] =
         ks.length > 0
@@ -2988,10 +2999,12 @@ export async function loadWeeklyTraining(
               : task === "SKIPPED"
                 ? "rest"
                 : null;
-      const words = dayWords.get(date) ?? [];
+      // Every kind named, in the bars' order (v0.744): "Chest · Row · Hockey".
+      const byKind = dayWords.get(date);
+      const words = ks.flatMap((k) => byKind?.get(k) ?? []);
       const label =
         ks.length > 0
-          ? words.slice(0, 2).join(", ")
+          ? words.join(" · ")
           : status === "planned"
             ? "Planned"
             : status === "missed"

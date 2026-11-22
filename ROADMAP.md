@@ -44,7 +44,11 @@ live in the database, never in this repository.
 10. **Archive a finished school year.** Once the school year is complete, its
     schedule and school work move out of the everyday lists and pickers so
     they don't clutter them; still readable, nothing deleted.
-11. **Ice-time: find each season's schedule links** on the rink's index page
+11. **Endurance workouts.** Define what builds endurance besides cardio and
+    sport (long steady work, intervals, muscular endurance such as long
+    holds, carries and high-rep circuits) and count it toward the endurance
+    heart.
+12. **Ice-time: find each season's schedule links** on the rink's index page
     instead of pasting them in each July. Tracked in the ice-time repo.
 
 ## Not doing (decided)
@@ -87,9 +91,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.743.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.744.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   160_calendar_work, all registered in `MIGRATIONS`.
-- App 0.537.0 (versionCode 609, CLIENT_BUILD 609).
+- App 0.538.0 (versionCode 610, CLIENT_BUILD 610).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -284,6 +288,13 @@ Kept here so they don't come back as open items.
   mobility, stretching and isometrics with a monthly test. **+ Additional**
   adds any of them to one day. Adjust today: Low energy, Short on time, Sick,
   Hurt (with stand-ins).
+- Workouts as blocks (v0.744): the planned workout and each sport event from
+  the calendar are separate workouts, listed by time (the sport's from the
+  calendar, the planned one from a usual time per weekday, changeable for a
+  day). With two or more, Today's workouts lists them until one is left
+  open; each opens its own page. A sport has its own page and warm-up, adds
+  its minutes to Cardio and Endurance, and completes the day only when
+  nothing else was planned.
 - A day is complete only when every part is done or skipped.
 - A movement planned on two cards the same day stays on the first card; the
   later card doesn't count it and says "Hollow hold was removed because it is in
@@ -293,7 +304,8 @@ Kept here so they don't come back as open items.
   day away from a game.
 - Progress: body map with the training heat map (earned by progress, eases
   back), the endurance heart, a page per lift (estimated max, light weeks,
-  trend, consistency), bodyweight movements by reps (v0.734), Weekly training,
+  trend, consistency), bodyweight movements by reps (v0.734), Weekly training
+  (workouts and parts per week by type, v0.744),
   Core, Cardio and Conditioning charts, the Workout days grid, Compare across
   people.
 - Family WOD: a parent picks a day's workout, people opt in, a board per WOD,

@@ -12,6 +12,9 @@ type Kind = TrainingDay["kinds"][number];
  *  theme's: an accent that happens to match one kind would read as it. */
 const KINDS: { key: Kind; label: string; color: string }[] = [
   { key: "lift", label: "Strength", color: "#4f46e5" },
+  // v0.744: core and holds count as themselves.
+  { key: "core", label: "Core", color: "#d97706" },
+  { key: "iso", label: "Isometric", color: "#db2777" },
   // v0.686: colours no muscle group uses, so Cardio never reads as Chest,
   // Conditioning as Core or Sport as Upper back.
   { key: "conditioning", label: "Conditioning", color: "#c026d3" },
@@ -23,8 +26,9 @@ const colorOf = (k: Kind) => KINDS.find((x) => x.key === k)?.color ?? "#4f46e5";
 
 /**
  * Weekly training (v0.671; was days-trained bars, v0.610): a bar per week for
- * the last 12, split by what the days held (lifting, conditioning, cardio,
- * sport), a dashed mark at the days the plan had, and weeks trained in a row.
+ * the last 12, split by the workouts and parts done (v0.744: lifting, core,
+ * holds, conditioning, cardio, each sport event, mobility; never warm-ups), a
+ * dashed mark at the days the plan had, and weeks trained in a row.
  * Tap a week for its seven days. It grows with turning up, not with weight.
  */
 export function WeeklyTraining({ userId }: { userId: string }) {
@@ -59,7 +63,7 @@ export function WeeklyTraining({ userId }: { userId: string }) {
           <span className="text-muted">{data.inARow === 1 ? "week" : "weeks"} in a row</span>
         </p>
       </div>
-      <div className="mt-3 flex h-28 items-end gap-1.5 border-b border-hairline" role="group" aria-label="Days trained per week">
+      <div className="mt-3 flex h-28 items-end gap-1.5 border-b border-hairline" role="group" aria-label="Workouts per week">
         {data.weeks.map((w, i) => {
           const on = at === i;
           return (
@@ -67,7 +71,7 @@ export function WeeklyTraining({ userId }: { userId: string }) {
               key={w.start}
               type="button"
               onClick={() => setPicked(i)}
-              aria-label={`Week of ${label(w.start)}: ${w.days} days`}
+              aria-label={`Week of ${label(w.start)}: ${total(w)} workouts and parts`}
               aria-pressed={on}
               className="relative flex h-full flex-1 flex-col justify-end"
             >

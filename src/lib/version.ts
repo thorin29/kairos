@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.743.0";
+export const APP_VERSION = "0.744.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -178,6 +178,10 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.744.0",
+    summary: ["Workouts as blocks: a sport event from the calendar is its own workout. With two or more on a day, Workouts lists them in time order and each opens its own page.", "Your workout has a time: a usual one per weekday, changeable for one day.", "Sport adds to Cardio. Weekly training counts workouts and parts by type, with Core and Isometric of their own; warm-ups no longer count."],
+  },
   {
     version: "0.743.0",
     summary: ["Every movement in a conditioning workout, a Family WOD and the core, arms and holds lists now has its ⓘ with the how-to and Watch how."],

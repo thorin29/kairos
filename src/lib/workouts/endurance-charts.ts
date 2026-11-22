@@ -61,7 +61,8 @@ function weekStarts(today: string): string[] {
 
 // --- cardio ------------------------------------------------------------------
 
-export type CardioActivityKey = "ROWING" | "RUNNING" | "RUCKING" | "CARDIO";
+/** SPORT (v0.744): calendar sport events confirmed, minutes only. */
+export type CardioActivityKey = "ROWING" | "RUNNING" | "RUCKING" | "CARDIO" | "SPORT";
 export type CardioSession = {
   date: string;
   activity: CardioActivityKey;
@@ -74,6 +75,8 @@ export type CardioSession = {
   /** A ruck's load. */
   load: number | null;
   effort: string | null;
+  /** A sport's name ("Hockey"), for its line (v0.744). */
+  label?: string;
 };
 
 export type CardioActivity = {
@@ -113,12 +116,19 @@ export type CardioCharts = {
   last: { date: string; label: string } | null;
 };
 
-const ACT_LABEL: Record<CardioActivityKey, string> = { ROWING: "Rowing", RUNNING: "Running", RUCKING: "Ruck", CARDIO: "Other cardio" };
-const ORDER: CardioActivityKey[] = ["ROWING", "RUNNING", "RUCKING", "CARDIO"];
+const ACT_LABEL: Record<CardioActivityKey, string> = { ROWING: "Rowing", RUNNING: "Running", RUCKING: "Ruck", CARDIO: "Other cardio", SPORT: "Sport" };
+const ORDER: CardioActivityKey[] = ["ROWING", "RUNNING", "RUCKING", "CARDIO", "SPORT"];
+
+/** A sport line goes by its sport ("Hockey") when they all share one. */
+function labelOf(key: CardioActivityKey, list: readonly CardioSession[]): string {
+  if (key !== "SPORT") return ACT_LABEL[key];
+  const names = [...new Set(list.map((s) => s.label).filter(Boolean))];
+  return names.length === 1 ? (names[0] as string) : ACT_LABEL.SPORT;
+}
 
 function measureOf(key: CardioActivityKey, list: CardioSession[]): string {
   if (key === "ROWING") return "m";
-  if (key === "CARDIO") return "min";
+  if (key === "CARDIO" || key === "SPORT") return "min";
   const units = list.filter((s) => s.distance != null).map((s) => (s.unit === "km" ? "km" : "mi"));
   return units.filter((u) => u === "km").length > units.length / 2 ? "km" : "mi";
 }
@@ -194,7 +204,7 @@ export function buildCardioCharts(all: readonly CardioSession[], today: string):
     const bestDate = pace?.best?.date ?? longest?.date ?? null;
     activities.push({
       key,
-      label: ACT_LABEL[key],
+      label: labelOf(key, list),
       measure,
       weeks: wk,
       thisWeek: {
@@ -241,7 +251,7 @@ export function buildCardioCharts(all: readonly CardioSession[], today: string):
           ].join(" · "),
         })),
     },
-    last: { date: last.date, label: ACT_LABEL[last.activity] },
+    last: { date: last.date, label: last.activity === "SPORT" ? (last.label ?? ACT_LABEL.SPORT) : ACT_LABEL[last.activity] },
   };
 }
 

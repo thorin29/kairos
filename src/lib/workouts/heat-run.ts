@@ -264,7 +264,21 @@ async function cardioEntries(
     // A sport day goes by its sport, never the event's name (v0.673).
     const kind = r.category === "SPORT" ? sportDayLabel(r.name).toLowerCase() : KIND_WORD[r.category] ?? "cardio";
     const type = r.category === "SPORT" ? "sport" : r.category === "HIIT" ? "conditioning" : "cardio";
-    if (CARDIO_CATEGORIES.includes(r.category)) {
+    if (r.category === "SPORT") {
+      // A confirmed sport counts as cardio too (v0.744): its minutes.
+      cardio.push({
+        date: doneOn(r),
+        activity: "SPORT",
+        meters: null,
+        distance: null,
+        unit: null,
+        seconds: null,
+        minutes,
+        load: null,
+        effort,
+        label: sportDayLabel(r.name),
+      });
+    } else if (CARDIO_CATEGORIES.includes(r.category)) {
       const sum = (k: "meters" | "distance") => {
         const xs = r.sets.map((x) => x[k]).filter((v): v is number => v != null && v > 0);
         return xs.length ? xs.reduce((t, v) => t + v, 0) : null;

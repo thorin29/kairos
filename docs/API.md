@@ -1,6 +1,6 @@
 # Kairos API (v1) — mobile client contract
 
-Status: **built.** 200 route files under `src/app/api/v1/`; the phone app uses
+Status: **built.** 202 route files under `src/app/api/v1/`; the phone app uses
 all of them (see the inventory at the end). Sections marked *not built* are the
 only exceptions. This document is the contract the native Android client and
 the Next.js backend both hold to, so the client is never coupled to Next.js
@@ -1259,6 +1259,17 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.744: workouts as blocks. `GET /api/v1/workouts` adds `sports` (each sport
+event that day: `eventId`, `title`, `label`, `start`/`end` minutes, labels,
+`ended`, `state` open|went|skipped, `sessionId`, `minutes`, `flexTime`,
+`effort`, `hurt`) and `workoutTime` (`{ time, usual, changed }`, minutes from
+midnight or null). `sportDay.forSport` is always false: the planned Warm-up is
+never handed to a sport. Sport sessions leave `loggedOther`. New:
+`POST /api/v1/workouts/time` `{ date, time }` (null for the usual) and
+`GET`/`POST /api/v1/workouts/usual-times` `{ times }` (seven, Sunday first).
+`GET /workouts/weekly`: `kinds` adds `core` and `iso` and counts workouts and
+parts, not days; warm-ups never count. Cardio charts add a `SPORT` activity.
+
 v0.743: Family WOD days and choices add `moveNames` (each line's movement
 name), for the ⓘ beside each line.
 
@@ -1758,7 +1769,7 @@ household layout (v0.602.2).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**200 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**202 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1771,7 +1782,7 @@ silently invisible:
 - **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`, `plan/add`, `plan/import`, `plan/export`, `tracker`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
 - **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
-- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool` (each exercise carries `about`, its how-to or null; v0.613), `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `cardio`, `cardio/remove`, `warmup`, `order` (v0.615), `conditioning/choices`, `conditioning/build`, `conditioning/log`, `conditioning/save`, `benchmark` (v0.617), `plan*` (incl. `plan/scheme` (v0.615), `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null, v0.609, and `about`, v0.613), `plan/copy`, `plan/start` (`{date}` the start; v0.686 `{end}` the last day, returned as `weeklyEnd` by `GET plan`), `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`, `plan/export`, `plan/import`, `plan/share`, `plan/shared`, `plan/shared/use`, `plan/shared/withdraw` (v0.618), `plan/saved`, `plan/saved/rename`, `plan/saved/delete` (v0.620), `plan/warmup` (v0.622)), `day-warmup` (one day, v0.711), `warmups`, `warmups/delete` (v0.622), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`, `strip` (v0.651), `adjust` (Adjust today, v0.658), `warmup-for` (v0.662), `core-workouts` (v0.637), `extras` (+ Additional, v0.667), `lift-next` (v0.670), `sore` (v0.675), `sport-session` (v0.656), `pause` (v0.678; admin one-person pauses read as `kind: "admin"`, v0.688), `family-wod` (v0.679), `core-workouts/delete`, `extras/remove`, `plan/core`, `programs/version/forget`, `garage` (v0.734)
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool` (each exercise carries `about`, its how-to or null; v0.613), `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `cardio`, `cardio/remove`, `warmup`, `order` (v0.615), `conditioning/choices`, `conditioning/build`, `conditioning/log`, `conditioning/save`, `benchmark` (v0.617), `plan*` (incl. `plan/scheme` (v0.615), `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null, v0.609, and `about`, v0.613), `plan/copy`, `plan/start` (`{date}` the start; v0.686 `{end}` the last day, returned as `weeklyEnd` by `GET plan`), `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`, `plan/export`, `plan/import`, `plan/share`, `plan/shared`, `plan/shared/use`, `plan/shared/withdraw` (v0.618), `plan/saved`, `plan/saved/rename`, `plan/saved/delete` (v0.620), `plan/warmup` (v0.622)), `day-warmup` (one day, v0.711), `warmups`, `warmups/delete` (v0.622), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`, `strip` (v0.651), `adjust` (Adjust today, v0.658), `warmup-for` (v0.662), `core-workouts` (v0.637), `extras` (+ Additional, v0.667), `lift-next` (v0.670), `sore` (v0.675), `sport-session` (v0.656), `pause` (v0.678; admin one-person pauses read as `kind: "admin"`, v0.688), `family-wod` (v0.679), `core-workouts/delete`, `extras/remove`, `plan/core`, `programs/version/forget`, `garage` (v0.734), `time`, `usual-times` (v0.744)
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604), **summary**, `summary/day` (v0.733)
 - **hockey** (the week from ice-time), `hockey/prefs`

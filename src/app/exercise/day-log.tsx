@@ -1,5 +1,7 @@
 "use client";
 
+import { DayWorkoutsList, SportPanel, TimeChip, WorkoutTimeModal, orderBlocks, type DayBlock } from "./day-workouts";
+import type { DaySport } from "@/lib/sport/day";
 import { repeatsByPlan } from "@/lib/workouts/day-repeats";
 import { useRouter } from "next/navigation";
 import { planWeekday } from "@/lib/workouts/day-swap";
@@ -16,7 +18,6 @@ import {
   loadWorkoutWeek,
   restDay,
   applyAdjustAction,
-  setWarmupForSportAction,
   setSportWarmupStateAction,
   saveMovementFeedback,
   answerWorkoutSuggestion,
@@ -177,7 +178,13 @@ export function DayLog({
     warmups?: { plannedWorkoutId: string; routine: WarmupRoutine | null }[];
     extras?: DayExtraView[];
     familyWod?: FamilyWodDay | null;
+    sports?: DaySport[];
+    workoutTime?: { time: number | null; usual: number | null; changed: boolean };
   } | null>(null);
+  // Which of the day's workouts is open (v0.744): null lets the day decide,
+  // "list" is Today's workouts, "plan" the planned workout, else a sport event.
+  const [pick, setPick] = useState<string | null>(null);
+  const [timeOpen, setTimeOpen] = useState(false);
   // + Additional → Family WOD (v0.679): set one (a parent) or suggest one.
   const [fwodSheet, setFwodSheet] = useState<{ parent: boolean; people: { userId: string; name: string }[] } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
@@ -227,6 +234,7 @@ export function DayLog({
       setTick((n) => n + 1);
     });
 
+  useEffect(() => setPick(null), [date]);
   // Reload when the date changes, after a movement closes, and whenever the
   // page's own data refreshes (a card logged or skipped through its action).
   useEffect(() => {
@@ -413,8 +421,8 @@ export function DayLog({
   }, [data]);
   const withConditioning = useMemo(() => {
     const s = (data?.picks.length ?? 0) > 0 || oneOffs > 0 ? withSection(sections, "CONDITIONING", order) : sections;
-    return sportDay ? withSection(s, "WARMUP", order) : s;
-  }, [sections, order, sportDay, data, oneOffs]);
+    return s;
+  }, [sections, data, oneOffs]);
   const progress = dayProgress(planSections, isDone);
   const late = date < todayISO;
   const completedOnISO = late ? todayISO : undefined;
@@ -475,6 +483,28 @@ export function DayLog({
 
   // The program and its main lift on a program day, else the kinds of work.
   const title = state?.programTitle ?? state?.program?.name ?? dayHeadline(planSections);
+
+  // The day's workouts (v0.744): the planned one and each sport event, in
+  // time order. Two or more and the list shows until only one is still open.
+  const sports = data?.sports ?? [];
+  const hasPlan = !isRestDay && progress.total > 0;
+  const blocks: DayBlock[] = orderBlocks([
+    ...(hasPlan ? [{ kind: "plan" as const, key: "plan" as const, time: data?.workoutTime?.time ?? null }] : []),
+    ...sports.map((sp) => ({ kind: "sport" as const, key: sp.eventId, time: sp.start, sport: sp })),
+  ]);
+  const openKeys = blocks
+    .filter((b) => (b.kind === "plan" ? progress.done < progress.total : b.sport.state === "open"))
+    .map((b) => b.key);
+  const view: string =
+    blocks.length < 2
+      ? (blocks[0]?.key ?? "plan")
+      : pick && (pick === "list" || blocks.some((b) => b.key === pick))
+        ? pick
+        : openKeys.length === 1
+          ? openKeys[0]
+          : "list";
+  const openSport = view !== "plan" && view !== "list" ? sports.find((sp) => sp.eventId === view) ?? null : null;
+  const reload = () => setTick((n) => n + 1);
 
   // + Additional → Family WOD (v0.680): a full page in place of the day.
   if (fwodSheet) {
@@ -557,6 +587,53 @@ export function DayLog({
         </div>
       ))}
 
+      {blocks.length >= 2 && view !== "list" && (
+        <button type="button" onClick={() => setPick("list")} className="text-sm font-semibold text-accent hover:underline">
+          ← Today&rsquo;s workouts
+        </button>
+      )}
+      {view === "list" ? (
+        <>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+              {date === todayISO ? "Today" : dayLabel(date)}
+            </p>
+            <h3 className="mt-1 font-display text-xl font-semibold">{blocks.length} workouts</h3>
+          </div>
+          <DayWorkoutsList
+            userId={userId}
+            dateISO={date}
+            blocks={blocks}
+            plan={{ title: title || "Workout", parts: planSections.map((x) => x.title), done: progress.done, total: progress.total }}
+            onOpen={(k) => setPick(k)}
+            onTime={() => setTimeOpen(true)}
+            onChanged={reload}
+          />
+        </>
+      ) : openSport ? (
+        <SportPanel
+          userId={userId}
+          dateISO={date}
+          sport={openSport}
+          onChanged={reload}
+          warmup={
+            sportDay ? (
+              <SportWarmupRow
+                label={sportDay.label}
+                routine={sportDay.routine}
+                state={sportDay.state ?? null}
+                onState={(st) =>
+                  startTransition(async () => {
+                    await setSportWarmupStateAction(userId, date, st);
+                    reload();
+                  })
+                }
+              />
+            ) : null
+          }
+        />
+      ) : (
+        <>
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-muted">
           {date === todayISO ? "Today" : dayLabel(date)}
@@ -564,6 +641,11 @@ export function DayLog({
           {late && workouts.length > 0 && !state?.loggedAny && " · logging late"}
           {state?.program && ` · ${state.program.label}`}
         </p>
+        {hasPlan && !future && (
+          <div className="mt-1.5">
+            <TimeChip time={data?.workoutTime?.time ?? null} onClick={() => setTimeOpen(true)} />
+          </div>
+        )}
         <h3 className="mt-1 font-display text-xl font-semibold">
           {isRestDay
             ? "Rest day"
@@ -814,19 +896,6 @@ export function DayLog({
                             userId={userId}
                             plannedWorkoutId={w.id}
                             name={w.name}
-                            sport={
-                              w.category === "WARMUP" && sportDay
-                                ? {
-                                    label: sportDay.label,
-                                    forSport: sportDay.forSport,
-                                    onChange: (v: boolean) =>
-                                      startTransition(async () => {
-                                        await setWarmupForSportAction(userId, date, v);
-                                        setTick((n) => n + 1);
-                                      }),
-                                  }
-                                : undefined
-                            }
                             routine={data.warmups?.find((x) => x.plannedWorkoutId === w.id)?.routine ?? null}
                             onChanged={() => setTick((n) => n + 1)}
                             onRemove={extraIds.has(w.id) ? () => removeExtra(w.id) : undefined}
@@ -1010,21 +1079,6 @@ export function DayLog({
                   })}
                   {/* The day's Conditioning section, where the person's order puts
                       it (v0.625): one-offs logged, then + Conditioning. */}
-                  {/* The day's sport (v0.662): its warm-up, optional, when the
-                      planned Warm-up isn't for it. */}
-                  {s.kind === "WARMUP" && sportDay && !sportDay.forSport && (
-                    <SportWarmupRow
-                      label={sportDay.label}
-                      routine={sportDay.routine}
-                      state={sportDay.state ?? null}
-                      onState={(st) =>
-                        startTransition(async () => {
-                          await setSportWarmupStateAction(userId, date, st);
-                          setTick((n) => n + 1);
-                        })
-                      }
-                    />
-                  )}
                   {s.kind === "CONDITIONING" && (
                     <>
                       {(() => {
@@ -1138,6 +1192,21 @@ export function DayLog({
                         }
                       />
         </div>
+      )}
+        </>
+      )}
+      {timeOpen && (
+        <WorkoutTimeModal
+          userId={userId}
+          dateISO={date}
+          time={data?.workoutTime?.time ?? null}
+          usual={data?.workoutTime?.usual ?? null}
+          onClose={() => setTimeOpen(false)}
+          onSaved={() => {
+            setTimeOpen(false);
+            reload();
+          }}
+        />
       )}
     </div>
   );

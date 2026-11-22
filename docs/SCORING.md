@@ -30,8 +30,9 @@ list and a short list are on equal footing.
 - Leisure reading → Scholar, 2 XP per chapter or 10 pages (`readingXpForBook`).
 - Personal Bible reading → Wisdom, 2 XP per chapter (`bibleXpForChapters`).
 - A confirmed team-sport event ("Yes, I did it") → Life, `SPORT_LIFE_XP` (10).
-  The same confirmation also completes the day's workout task (Strength) — that
-  one is the workout, this one is showing up for the team.
+  A sport is its own workout (v0.744): on a day with nothing planned the
+  confirmation completes the day's workout task (Strength); on a planned day
+  the planned workout still has to be done, skipped or adjusted.
 - Initiative bonuses (`loadBonuses`) add lifetime XP.
 - Skills: task category → skill via `SCORE_GROUPS`: CHORE→Chores,
   EXERCISE→Strength, BIBLE→Wisdom, SCHOOL→Scholar, WORK/APPOINTMENT/OTHER→Life.
