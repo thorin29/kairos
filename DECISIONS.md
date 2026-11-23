@@ -1,5 +1,59 @@
 # Decisions
 
+## 2026-11 — Places page (v0.757.0)
+
+- **One map per visit.** Google bills per map load, so the Places page creates
+  its map once and never rebuilds it: the 30-second refresh (a server action,
+  paused while the tab is hidden) only glides markers to new spots
+  (requestAnimationFrame, 0.9 s ease-out). The view is fitted to everyone once;
+  after that it stays where you panned ("Everyone" re-fits). Full screen is the
+  same map grown to the window (Esc closes), not a second map. Each load is
+  counted (`notePlacesMapLoad`) for Admin.
+- **Markers are the real avatars**: `AdvancedMarkerElement` (needs the Map ID)
+  with the shared `Avatar` rendered into it, faded after 12 h without a report,
+  "Moving" under it while travelling. Tapping a marker or a card opens a bubble
+  (name, place, since, updated) and a ring for GPS accuracy. Bubble text is set
+  with `textContent`, never HTML.
+- **Gestures:** a mouse, or full screen, moves the map directly; on a touch
+  screen inline, one finger scrolls the page and two move the map.
+- **Moving vs here** (`presenceOf`, src/lib/places/geo.ts): moving when the two
+  newest reports are over 120 m apart within 15 minutes, or raw speed ≥ 3 (true
+  for m/s, km/h or mph while speed's unit is unconfirmed). Otherwise "since" is
+  the oldest consecutive report within 120 m of the newest. A still phone
+  reports rarely, so "stale" waits 12 hours.
+- **Place names, cheapest first** (`resolvePlace`): a saved address within
+  120 m → a Google answer already cached within 60 m → Nearby Search (Places
+  API New, Pro; field mask id/displayName/formattedAddress/location/types,
+  nearest non-area result within the GPS accuracy, 30–80 m) → reverse
+  geocoding (the street address). Nobody moving is looked up; a fix worse than
+  150 m skips Nearby Search. Answers are memoised 10 minutes in-process, and
+  concurrent requests for one spot share a single Google call.
+- **Google's caching rules:** lat/lng may be kept 30 days and place ids
+  indefinitely, so `PlaceLookup` rows (and saved-address coordinates,
+  `geocodedAt`) are deleted/refreshed after 30 days; names are treated the same
+  way. Saved addresses are geocoded lazily (three per request at most); one
+  Google can't find is retried after 7 days; editing an address clears them.
+- **Kairos's own daily limits:** 140 Nearby Search and 280 geocoding calls per
+  household day (`PlacesApiUsage`), under the daily caps set in Google's console
+  (150 / 300) and inside the free monthly allowance (Pro 5,000; Essentials
+  10,000). Past a limit, the place shows as unknown until tomorrow.
+- **Admin → Places → Google usage** shows Kairos's own counts (today, month,
+  free allowance, Kairos limit). Google's real usage needs a Google sign-in, so
+  Admin links to Google's usage, quotas and billing pages rather than storing
+  Google credentials.
+- **Content policy:** only `/places` pages get the wider CSP from Google's guide
+  (Google image/font/data hosts, `worker-src blob:`, `'unsafe-eval'` and
+  `blob:` scripts) via `isMapPath`. A policy belongs to the document, so the
+  sidebar opens Places with a plain `<a>` (full load) instead of `Link`.
+- Places shows in the nav (web and the phone's `/api/v1/nav` hidden list) once
+  a map key, Map ID and a tracked person exist. `GET /api/v1/places/live` is in
+  place for the app's Places screen (release 3).
+- `@googlemaps/js-api-loader` 2.x (`setOptions` + `importLibrary`) loads the
+  API; `@types/google.maps` types it.
+- The Home Assistant guide now links **person** entities, reads speed/course/
+  altitude from the person's `source` tracker and battery from its Companion
+  battery sensor, and gives every optional payload value `| default(none)`.
+
 ## 2026-11 — Places setup and Map ID (v0.756.0)
 
 - Admin → Places stores a Google **Map ID** (`places.mapId`, not a secret): the

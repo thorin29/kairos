@@ -29,7 +29,15 @@ export async function createSavedAddress(
 export async function updateSavedAddress(id: string, input: AddressInput): Promise<void> {
   await requireAdmin();
   const { name, address, navByName } = cleanAddress(input);
-  await prisma.savedAddress.update({ where: { id }, data: { name, address, navByName } });
+  const before = (await prisma.savedAddress.findUnique({ where: { id }, select: { address: true } })) as {
+    address: string;
+  } | null;
+  // A changed address drops its Places coordinates so they're looked up again.
+  const moved = before != null && before.address !== address;
+  await prisma.savedAddress.update({
+    where: { id },
+    data: { name, address, navByName, ...(moved ? { lat: null, lng: null, geocodedAt: null } : {}) },
+  });
   bust();
 }
 

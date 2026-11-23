@@ -1873,10 +1873,39 @@ household layout (v0.602.2).
 - **Response:** `{ "stored": n, "skipped": [entity ids not linked], "errors": [...] }`.
   A body whose every point is malformed answers `validation`.
 
+### Places — live positions — **built (v0.757)**
+
+`GET /api/v1/places/live` (device auth). Everyone's current position, the
+same `loadLive` the web Places page uses. Everyone sees everyone.
+
+```jsonc
+{
+  "state": "ok",               // "off" until a map key, Map ID and a tracked person exist
+  "asOf": "2026-11-23T16:00:00.000Z",
+  "people": [{
+    "id": "…", "name": "Alex", "color": "#1e5fa8",
+    "avatarPath": null, "avatarPosition": "",
+    "lat": 10.5, "lng": -20.25, "accuracyM": 12,
+    "at": "2026-11-23T15:59:10.000Z",   // newest report
+    "battery": 64,
+    "moving": false,                     // two far-apart reports within 15 min, or raw speed ≥ 3
+    "since": "2026-11-23T14:02:00.000Z", // arrived here (null while moving)
+    "stale": false,                      // no report for 12 h
+    "place": { "name": "Target", "address": "1200 Main St, Springfield", "kind": "place" }
+    // kind: saved (a saved address) | place (Google business) | address | unknown; null while moving
+  }],
+  "waiting": [{ "id": "…", "name": "Sam", "color": "…", "avatarPath": null, "avatarPosition": "" }]
+}
+```
+
+Place names cost no Google call when known: a saved address within ~120 m, or
+an answer Google gave within ~60 m in the last 30 days. Otherwise one Nearby
+Search (then reverse geocoding), within Kairos's daily limits (140 / 280).
+
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**205 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**206 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1893,7 +1922,7 @@ silently invisible:
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604), **summary**, `summary/day` (v0.733)
 - **hockey** (the week from ice-time), `hockey/prefs`
-- **places/ingest** (Home Assistant → server, v0.755)
+- **places/ingest** (Home Assistant → server, v0.755), **places/live** (v0.757)
 - **concept2** (status / disconnect), `concept2/connect`, `concept2/sync`, `concept2/undo` (v0.614)
 - **widget** (the Android home-screen widget's feed)
 

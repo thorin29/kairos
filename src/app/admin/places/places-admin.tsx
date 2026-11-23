@@ -11,6 +11,7 @@ import {
   savePlacesKeysAction,
   savePlacesPeopleAction,
 } from "@/lib/actions/places";
+import type { UsageSummary } from "@/lib/places/usage-types";
 
 export type PersonView = {
   id: string;
@@ -64,6 +65,7 @@ export function PlacesAdminForm(props: {
   unlinked: { entityId: string; when: string } | null;
   totalPoints: number;
   storageBytes: number;
+  usage: UsageSummary;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -164,6 +166,55 @@ export function PlacesAdminForm(props: {
         )}
         <p className="text-sm text-muted">
           {props.totalPoints.toLocaleString()} point{props.totalPoints === 1 ? "" : "s"} stored · {size(props.storageBytes)}
+        </p>
+      </section>
+
+      <section className={card}>
+        <h2 className={label}>Google usage</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[30rem] text-sm">
+            <thead>
+              <tr className="text-left text-xs text-muted">
+                <th className="py-1 pr-3 font-medium">Calls by Kairos</th>
+                <th className="py-1 pr-3 text-right font-medium">Today</th>
+                <th className="py-1 pr-3 text-right font-medium">This month</th>
+                <th className="py-1 pr-3 text-right font-medium">Free / month</th>
+                <th className="py-1 text-right font-medium">Kairos limit / day</th>
+              </tr>
+            </thead>
+            <tbody className="font-mono">
+              {(
+                [
+                  ["mapload", "Map loads"],
+                  ["nearby", "Place names"],
+                  ["geocode", "Addresses"],
+                ] as const
+              ).map(([k, name]) => {
+                const u = props.usage[k];
+                const high = u.month > u.free * 0.8;
+                return (
+                  <tr key={k} className="border-t border-hairline">
+                    <td className="py-1.5 pr-3 font-sans">{name}</td>
+                    <td className="py-1.5 pr-3 text-right">{u.today.toLocaleString()}</td>
+                    <td className={`py-1.5 pr-3 text-right ${high ? "text-red-700" : ""}`}>{u.month.toLocaleString()}</td>
+                    <td className="py-1.5 pr-3 text-right">{u.free.toLocaleString()}</td>
+                    <td className="py-1.5 text-right">{u.limit == null ? "—" : u.limit.toLocaleString()}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <a href="https://console.cloud.google.com/google/maps-apis/metrics" target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
+            Google usage ↗
+          </a>
+          <a href="https://console.cloud.google.com/google/maps-apis/quotas" target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
+            Daily caps ↗
+          </a>
+          <a href="https://console.cloud.google.com/billing" target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
+            Billing ↗
+          </a>
         </p>
       </section>
 

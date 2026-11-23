@@ -7,7 +7,7 @@ import {
   webBootstrapOpen,
   webSessionUser,
 } from "@/lib/web-gate";
-import { contentSecurityPolicy, frameAncestors, newNonce } from "@/lib/csp";
+import { contentSecurityPolicy, frameAncestors, isMapPath, newNonce } from "@/lib/csp";
 
 /**
  * The web's sign-in gate, on every request (v0.699; Next 16's "proxy", the
@@ -55,7 +55,7 @@ export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
   const nonce = newNonce();
-  const csp = contentSecurityPolicy(nonce);
+  const csp = contentSecurityPolicy(nonce, undefined, isMapPath(path));
   const headers = new Headers(req.headers);
   headers.set("x-pathname", path);
   // Next reads the nonce from the request's policy and stamps its scripts.

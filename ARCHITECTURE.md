@@ -334,6 +334,14 @@ as a hash). Kairos holds no Home Assistant credentials. It keeps raw points
 links (`PlacesPerson`); stops, drives and place names are to be worked out when
 a day is read (planned), never stored. Setup: `docs/places-home-assistant.md`.
 
+The Places page (v0.757) draws one Google map per visit and only moves markers
+on its 30-second refreshes. Place names resolve server-side
+(`src/lib/places/resolve.ts`): saved address → cached Google answer
+(`PlaceLookup`, 30 days) → Nearby Search → reverse geocoding, with Kairos's own
+daily limits and counts (`PlacesApiUsage`). Only `/places` pages get the wider
+Content-Security-Policy Google Maps needs (`isMapPath` in `src/lib/csp.ts`), so
+the sidebar opens Places with a full page load.
+
 ## Hockey reads a separate container
 
 Ice times come from **ice-time** (its own repo), which reads a rink's public

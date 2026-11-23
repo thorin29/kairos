@@ -58,10 +58,9 @@ live in the database, never in this repository.
     until it's confirmed and removed.
 16. **Rest days on the charts.** Done in v0.753 (the moon). Kept here only
     until it's confirmed and removed.
-17. **Places** (family locations). Release 1
-    (collection and Admin → Places) done in v0.755. Still to come:
-    - The Places page: one map with everyone (Google map), each person's place,
-      last update, battery and speed, and a full-screen map.
+17. **Places** (family locations). Collection and Admin → Places done in
+    v0.755–0.756; the live Places page in v0.757. Still to come:
+    - Speed on the page, once its unit from Home Assistant is confirmed.
     - A person's day: path, stops with place names (saved addresses first, then
       Google), drives with distance and top speed, speed strip, replay. Saved
       addresses get coordinates. App Places and day screens show the web map.
@@ -108,8 +107,8 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.756.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  164_places, all registered in `MIGRATIONS`.
+- Web 0.757.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  165_places_lookups, all registered in `MIGRATIONS`.
 - App 0.549.0 (versionCode 621, CLIENT_BUILD 621).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
@@ -390,10 +389,16 @@ Kept here so they don't come back as open items.
 
 ### Places
 
-- Home Assistant posts each tracked phone's location to Kairos (v0.755).
-  Admin → Places: token (shown once, kept as a hash), person ↔ tracker links,
-  last location per person, Google keys, storage used, delete history by
-  person and dates. The Places page itself is still Open.
+- Home Assistant posts each person's location to Kairos (v0.755; person
+  entities, so a new phone is a Home Assistant change only). Admin → Places:
+  token (shown once, kept as a hash), person links, last location per person,
+  Google keys and Map ID, Google usage (today, this month, free allowance,
+  links to Google's pages), storage used, delete history by person and dates.
+- Places page (v0.757): one Google map with everyone's avatar, gliding as they
+  move; each person's place (saved address → cached Google answer → Google),
+  since when, last update and battery; faded after 12 h without a report;
+  traffic, fit everyone, full screen. Google answers cached 30 days; Kairos
+  stops itself at 140 place and 280 address lookups a day.
 
 ### Scoring and characters
 

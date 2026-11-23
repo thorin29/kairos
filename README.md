@@ -46,10 +46,12 @@ parties holding your family's schedule.
   service watches Xbox (via Home Assistant), Steam, and allowlisted PC apps
   through Family Safety, and pushes resolved daily
   totals to `/api/v1/game-time/ingest`; Kairos owns the durable history.
-- **Places** (in progress). Home Assistant sends each phone's location to
-  `/api/v1/places/ingest`, and Kairos keeps the history. Admin → Places links
-  people to their trackers and deletes history. The family map is next. Setup:
-  `docs/places-home-assistant.md`.
+- **Places.** One Google map with everyone on it: where each person is (a
+  saved address, a store name or a street address), since when, when their
+  phone last reported, and battery, with a full-screen map. Home Assistant
+  sends each phone's location to `/api/v1/places/ingest`; Kairos keeps the
+  history and caches Google's answers so the same place is never looked up
+  twice. Daily paths come next. Setup: `docs/places-home-assistant.md`.
 - **Shopping.** A shared shopping list that learns the items you buy and their
   icons — including a custom set of 244 colourful icons for the items and stores
   that emoji handle badly, offered as suggestions and searchable from the admin

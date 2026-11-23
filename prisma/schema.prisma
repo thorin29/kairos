@@ -566,7 +566,7 @@ model ExternalCalendar {
 // A reusable address for calendar event locations: a short friendly name plus
 // the full address (which is what gets sent to a phone's nav app). `category`
 // groups the picker (an event-type or subscribed-calendar name, or "General").
-// lat/lng are unused for now — Places (v0.755+) will fill them. `status` is APPROVED for
+// lat/lng are filled by Places (v0.757) to name the stops near them. `status` is APPROVED for
 // admin/web entries; a phone submission lands PENDING for admin approval.
 model SavedAddress {
   id        String   @id @default(cuid())
@@ -577,6 +577,9 @@ model SavedAddress {
   navByName Boolean  @default(true)
   lat       Float?
   lng       Float?
+  // When lat/lng were last looked up (Places, v0.757). Google allows keeping
+  // geocoded coordinates 30 days, so they're refreshed after that.
+  geocodedAt DateTime?
   status    AddressStatus @default(APPROVED)
   submittedById String?
   submittedBy   User?  @relation("SubmittedAddresses", fields: [submittedById], references: [id], onDelete: SetNull)
@@ -2173,4 +2176,32 @@ model LocationPoint {
   createdAt DateTime @default(now())
 
   @@unique([userId, at])
+}
+
+// Places (v0.757): Google's answer for a spot, so the same place isn't asked
+// twice. `source` is "nearby" (a business or landmark), "geocode" (an address
+// only) or "none" (Google had nothing). Rows older than 30 days are deleted
+// (Google's caching limit); the place id may be kept but isn't relied on.
+model PlaceLookup {
+  id            String   @id @default(cuid())
+  lat           Float
+  lng           Float
+  name          String?
+  address       String?
+  googlePlaceId String?
+  source        String
+  fetchedAt     DateTime @default(now())
+
+  @@index([lat, lng])
+  @@index([fetchedAt])
+}
+
+// Places (v0.757): calls Kairos made to Google per household day, by kind
+// ("nearby", "geocode", "mapload"), for Admin's usage view and daily limits.
+model PlacesApiUsage {
+  day   String
+  kind  String
+  count Int    @default(0)
+
+  @@id([day, kind])
 }

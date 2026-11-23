@@ -75,7 +75,7 @@ export async function savePeople(
       continue;
     }
     const id = cleanEntityId(raw);
-    if (!id) return { error: `"${raw}" isn't an entity id, like device_tracker.phone.` };
+    if (!id) return { error: `"${raw}" isn't an entity id, like person.alex.` };
     if (seen.has(id)) return { error: `${id} is set for two people.` };
     seen.set(id, r.userId);
     wanted.push({ userId: r.userId, entityId: id });

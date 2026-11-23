@@ -1,6 +1,7 @@
 import { AdminBack } from "@/components/admin-back";
 import { LockButton } from "../lock-button";
 import { loadPlacesAdmin } from "@/lib/places/config";
+import { usageSummary } from "@/lib/places/usage";
 import { householdTz } from "@/lib/dates";
 import { PlacesAdminForm, type PersonView } from "./places-admin";
 
@@ -16,7 +17,7 @@ function ago(iso: string, now: number): string {
 }
 
 export default async function PlacesAdminPage() {
-  const data = await loadPlacesAdmin();
+  const [data, usage] = await Promise.all([loadPlacesAdmin(), usageSummary()]);
   const now = Date.now();
   const tz = householdTz();
   const time = new Intl.DateTimeFormat("en-US", {
@@ -70,6 +71,7 @@ export default async function PlacesAdminPage() {
         lastReceived={data.lastReceivedAt ? when(data.lastReceivedAt) : null}
         unlinked={data.unlinked ? { entityId: data.unlinked.entityId, when: when(data.unlinked.at) } : null}
         totalPoints={data.totalPoints}
+        usage={usage}
         storageBytes={data.storageBytes}
       />
     </main>

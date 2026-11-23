@@ -5,7 +5,7 @@ app already reports. Home Assistant posts each update to Kairos; Kairos keeps th
 history and shows it. Kairos never gets a Home Assistant login.
 
 Everything below uses placeholder names (`kairos.example.com`,
-`device_tracker.phone_a`, `192.168.1.10`). Use your own.
+`person.alex`, `device_tracker.phone_a`, `192.168.1.10`). Use your own.
 
 Only an admin can open Admin → Places, change these settings or delete history.
 
@@ -28,11 +28,21 @@ On every phone that should be tracked:
 
 1. Admin → Places → **Make token**. Copy it right away — Kairos shows it once
    and keeps only a hash. **New token** replaces it (the old one stops working).
-2. Find each phone's tracker in Home Assistant: Settings → Devices & services →
-   Entities, search `device_tracker`. Each Companion phone has one, like
-   `device_tracker.phone_a`.
-3. Admin → Places → People: type each person's tracker and **Save people**.
-   Leave a person blank to not track them.
+2. Admin → Places → People: type each person's Home Assistant **person**
+   entity, like `person.alex`, and **Save people**. Leave a person blank to not
+   track them.
+
+Why person entities: Home Assistant decides which phone belongs to whom, so a
+new phone is changed only in Home Assistant. A person entity carries the
+location and accuracy, plus `source` — the phone tracker it came from — which
+the automation reads for speed, course, altitude and battery.
+
+Check each person first (Developer tools → States → `person.…`):
+- `latitude`, `longitude`, `gps_accuracy` and `source` are present.
+- `device_trackers` lists only the phone they carry. An extra tracker that
+  stays home (an old phone, a tablet, the same phone registered twice) can
+  win and pull the person back home. Remove extras under Settings → People →
+  the person → Track device.
 
 ## Part 3 — Home Assistant
 
@@ -61,6 +71,9 @@ Pick the URL:
   CDN/WAF sits in front (bot protection, an SSO gateway), let
   `/api/v1/places/ingest` through, or Home Assistant's requests get blocked.
 
+Every optional value has `| default(none)`, so a call that leaves one out
+still sends valid JSON.
+
 ```yaml
 rest_command:
   kairos_location:
@@ -75,12 +88,12 @@ rest_command:
         "entity_id": tracker,
         "latitude": lat,
         "longitude": lon,
-        "gps_accuracy": accuracy,
-        "speed": speed,
-        "course": course,
-        "altitude": altitude,
-        "battery": battery,
-        "last_updated": updated
+        "gps_accuracy": accuracy | default(none),
+        "speed": speed | default(none),
+        "course": course | default(none),
+        "altitude": altitude | default(none),
+        "battery": battery | default(none),
+        "last_updated": updated | default(none)
       } | to_json }}
 ```
 
@@ -92,7 +105,7 @@ restart.
 
 Settings → Automations & scenes → **Create automation** → **Create new
 automation** → ⋮ (top right) → **Edit in YAML**. Replace everything with this,
-put your trackers under `entity_id`, and **Save**:
+put your person entities under `entity_id`, and **Save**:
 
 ```yaml
 alias: Send locations to Kairos
@@ -101,42 +114,69 @@ max: 50
 triggers:
   - trigger: state
     entity_id:
-      - device_tracker.phone_a
-      - device_tracker.phone_b
+      - person.alex
+      - person.sam
 conditions:
   - condition: template
     value_template: "{{ trigger.to_state.attributes.latitude is defined }}"
 actions:
+  - variables:
+      src: "{{ trigger.to_state.attributes.source | default('') }}"
   - action: rest_command.kairos_location
     data:
       tracker: "{{ trigger.entity_id }}"
       lat: "{{ trigger.to_state.attributes.latitude }}"
       lon: "{{ trigger.to_state.attributes.longitude }}"
       accuracy: "{{ trigger.to_state.attributes.gps_accuracy | default(none) }}"
-      speed: "{{ trigger.to_state.attributes.speed | default(none) }}"
-      course: "{{ trigger.to_state.attributes.course | default(none) }}"
-      altitude: "{{ trigger.to_state.attributes.altitude | default(none) }}"
-      battery: "{{ trigger.to_state.attributes.battery_level | default(none) }}"
+      speed: "{{ state_attr(src, 'speed') if src else none }}"
+      course: "{{ state_attr(src, 'course') if src else none }}"
+      altitude: "{{ state_attr(src, 'altitude') if src else none }}"
+      battery: "{{ states('sensor.' ~ src.split('.')[1] ~ '_battery_level') | int(none) if src else none }}"
       updated: "{{ trigger.to_state.last_updated.isoformat() }}"
 ```
 
-A state trigger with no `to:` fires on attribute changes too, so every new
-position is sent, not only zone changes.
+- A state trigger with no `to:` fires on attribute changes too, so every new
+  position is sent, not only zone changes.
+- Speed, course and altitude come from the phone tracker behind the person;
+  battery from that phone's Companion battery sensor
+  (`device_tracker.phone_a` → `sensor.phone_a_battery_level`). If a phone has
+  no such sensor, battery is just left blank.
+- An update with no GPS position (a router-only tracker) is skipped.
 
 ### 3d. Check it
 
-1. Ask a phone for a fresh location: Developer tools → Actions → pick
-   `notify.mobile_app_<phone>` → YAML mode → `message: request_location_update`
-   → **Perform action**. (Or just walk outside with the phone for a minute.)
+1. Ask a phone for a fresh location: Developer tools → Actions → YAML mode:
+   ```yaml
+   action: notify.mobile_app_phone_a
+   data:
+     message: request_location_update
+   ```
+   → **Perform action**.
 2. Admin → Places → Status should read "Last location received …", and the
    person shows their last time, accuracy, battery and speed.
 
-If nothing arrives:
-- Settings → Automations → **Send locations to Kairos** → ⋮ → **Traces**: did it
-  run, and did the REST command step fail?
-- Settings → System → Logs, search `rest_command`. `401` = token wrong (check
-  `Bearer ` is in the secret); a timeout or connection error = wrong URL or port.
-- Status says a tracker "isn't linked to anyone": copy that id into People.
+If nothing arrives, call the REST command by hand to see Kairos's answer
+(Developer tools → Actions → YAML mode → **Perform action**; the response
+shows underneath):
+
+```yaml
+action: rest_command.kairos_location
+data:
+  tracker: person.alex
+  lat: "{{ state_attr('person.alex', 'latitude') }}"
+  lon: "{{ state_attr('person.alex', 'longitude') }}"
+  accuracy: "{{ state_attr('person.alex', 'gps_accuracy') }}"
+  updated: "{{ now().isoformat() }}"
+```
+
+- `status: 200` with `"stored": 1` — working.
+- `"skipped": ["person.alex"]` — that entity isn't saved under People.
+- `status: 401` — the token in `secrets.yaml` doesn't match (it must be
+  `"Bearer <token>"`, the newest token, and Home Assistant restarted after
+  editing). Automation traces show the step as finished even on a 401, so
+  test this way.
+- An error with no response — wrong URL or port (Settings → System → Logs,
+  search `rest_command`).
 - Speed is stored as Home Assistant sends it. Compare the number under People
   with a known drive before trusting its unit.
 
@@ -170,9 +210,15 @@ that way.
 7. **Map ID** — Google Maps Platform → **Map management → Create map ID**:
    name "Kairos", type **JavaScript**, **Vector**. Copy the Map ID into Admin →
    Places → Map ID.
-8. **Daily caps** — APIs & Services → each of Places API (New) and Geocoding API
-   → **Quotas & system limits** → set requests per day to 500. Maps JavaScript
-   API map loads: 300 per day.
+8. **Daily caps** — Google Maps Platform → **Quotas**, pick each API, edit the
+   per-day limit. These keep a whole month inside the free allowance
+   (Essentials 10,000 a month, Pro 5,000; Nearby Search is Pro):
+   - Maps JavaScript API: map loads per day **300**
+   - Geocoding API: v3 requests per day **300**
+   - Places API (New): Search Nearby requests per day **150** (if only
+     per-minute limits are offered, leave them)
+   A free-trial project can't change these; set them after upgrading. Kairos
+   also stops itself at 140 place-name and 280 address lookups a day.
 9. Admin → Places → **Save keys**.
 
 The map key is visible in the page by design; the website restriction is what
@@ -182,6 +228,11 @@ stops other sites from using it. The lookup key never leaves the server.
 
 - Retries are safe: the same tracker and `last_updated` replace the earlier copy.
 - A point with no GPS fix (0, 0) is refused.
+- Place names: Kairos names a stop from a saved address within about 120 m
+  first, then from Google. Google's answers are kept 30 days (Google's limit)
+  and reused for anyone stopping within about 60 m, so the same spot isn't
+  asked twice. Nobody moving is looked up.
 - Admin → Places → Status shows how many points are stored and how much space
-  they take. Delete history there (one person or everyone, optionally between
+  they take; Google usage shows the calls Kairos made today and this month,
+  with links to Google's own usage, caps and billing pages. Delete history there (one person or everyone, optionally between
   two dates).

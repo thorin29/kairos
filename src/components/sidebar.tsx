@@ -20,6 +20,7 @@ import {
   ChevronRightIcon,
   GamepadIcon,
   HockeyIcon,
+  MapIcon,
 } from "@/components/icons";
 import { UserBadge } from "@/components/user-badge";
 import { APP_VERSION } from "@/lib/version";
@@ -29,6 +30,9 @@ type NavItem = {
   label: string;
   color: string;
   icon: React.ReactNode;
+  /** Open with a full page load (Places: its Google map needs the page's
+   *  wider content policy, which only a fresh load picks up). */
+  hard?: boolean;
 };
 
 // Fixed order, so the target you're aiming at never moves between pages.
@@ -45,6 +49,7 @@ const NAV: NavItem[] = [
   { href: "/money", label: "Money", color: "#15803d", icon: <DollarIcon className="h-6 w-6" /> },
   { href: "/games", label: "Game time", color: "#4338ca", icon: <GamepadIcon className="h-6 w-6" /> },
   { href: "/hockey", label: "Ice time", color: "#0e7490", icon: <HockeyIcon className="h-6 w-6" /> },
+  { href: "/places", label: "Places", color: "#4d7c0f", icon: <MapIcon className="h-6 w-6" />, hard: true },
   { href: "/characters", label: "Characters", color: "#db2777", icon: <TrophyIcon className="h-6 w-6" /> },
   { href: "/summary", label: "Summary", color: "#b45309", icon: <SummaryIcon className="h-6 w-6" /> },
 ];
@@ -192,9 +197,10 @@ export function Sidebar({
         <ul className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {navItems.map((item) => {
             const current = item.href === active?.href;
+            const NavLink = (item.hard ? "a" : Link) as React.ElementType;
             return (
               <li key={item.href} className="flex max-h-12 min-h-8 flex-1 basis-0 py-0.5">
-                <Link
+                <NavLink
                   href={item.href}
                   aria-label={item.label}
                   aria-current={current ? "page" : undefined}
@@ -219,7 +225,7 @@ export function Sidebar({
                       {item.label}
                     </span>
                   )}
-                </Link>
+                </NavLink>
               </li>
             );
           })}
