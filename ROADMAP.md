@@ -58,6 +58,15 @@ live in the database, never in this repository.
     until it's confirmed and removed.
 16. **Rest days on the charts.** Done in v0.753 (the moon). Kept here only
     until it's confirmed and removed.
+17. **Places** (family locations). Release 1
+    (collection and Admin → Places) done in v0.755. Still to come:
+    - The Places page: one map with everyone (Google map), each person's place,
+      last update, battery and speed, and a full-screen map.
+    - A person's day: path, stops with place names (saved addresses first, then
+      Google), drives with distance and top speed, speed strip, replay. Saved
+      addresses get coordinates. App Places and day screens show the web map.
+    - Alerts through a Home Assistant webhook: arrive at / leave a saved
+      address, driving over a speed, no update for a while, low battery.
 
 ## Not doing (decided)
 
@@ -99,8 +108,8 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.754.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  163_plan_program, all registered in `MIGRATIONS`.
+- Web 0.755.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  164_places, all registered in `MIGRATIONS`.
 - App 0.549.0 (versionCode 621, CLIENT_BUILD 621).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
@@ -378,6 +387,13 @@ Kept here so they don't come back as open items.
 - The next 7 days of stick and puck, drop-in, parent and child, youth and
   public skate with sign-up counts, from the ice-time container. Add to
   calendar in one tap. Section order and open state per person.
+
+### Places
+
+- Home Assistant posts each tracked phone's location to Kairos (v0.755).
+  Admin → Places: token (shown once, kept as a hash), person ↔ tracker links,
+  last location per person, Google keys, storage used, delete history by
+  person and dates. The Places page itself is still Open.
 
 ### Scoring and characters
 

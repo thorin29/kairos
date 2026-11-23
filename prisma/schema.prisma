@@ -77,6 +77,8 @@ model User {
   gameDays        GameDay[]
   gameDayTitles   GameDayTitle[]
   playerCard      PlayerCard?
+  placesPerson    PlacesPerson?
+  locationPoints  LocationPoint[]
   tasks           Task[]         @relation("TaskOwner")
   schoolClasses   SchoolClass[]
   createdTasks    Task[]         @relation("TaskCreator")
@@ -564,7 +566,7 @@ model ExternalCalendar {
 // A reusable address for calendar event locations: a short friendly name plus
 // the full address (which is what gets sent to a phone's nav app). `category`
 // groups the picker (an event-type or subscribed-calendar name, or "General").
-// lat/lng are unused for now — room for maps later. `status` is APPROVED for
+// lat/lng are unused for now — Places (v0.755+) will fill them. `status` is APPROVED for
 // admin/web entries; a phone submission lands PENDING for admin approval.
 model SavedAddress {
   id        String   @id @default(cuid())
@@ -2141,4 +2143,34 @@ model ClassPlanUnit {
 
   @@unique([planId, seq])
   @@index([planId])
+}
+
+// Places (v0.755): family locations pushed from Home Assistant. Which HA
+// entity reports for a person; no row means the person isn't tracked.
+model PlacesPerson {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entityId  String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// One reported position. `at` is the phone's own time (HA's last_updated), so
+// a retried push lands on the same row. Raw values as HA sent them; stops,
+// drives and place names are worked out when a day is read.
+model LocationPoint {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  at        DateTime
+  lat       Float
+  lng       Float
+  accuracyM Float?
+  speed     Float?
+  courseDeg Float?
+  altitudeM Float?
+  battery   Int?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, at])
 }

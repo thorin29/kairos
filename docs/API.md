@@ -1843,10 +1843,40 @@ layout each time; returns `{ "ok": true, "order": [...], "open": [...] }`. The
 phone's layout is the person's own; the web on a shared device keeps a separate
 household layout (v0.602.2).
 
+### Places — ingest (Home Assistant → server) — **built (v0.755)**
+
+`POST /api/v1/places/ingest`. Not a mobile endpoint: Home Assistant's
+`rest_command` posts each tracked phone's position here. Setup:
+`docs/places-home-assistant.md`.
+
+- **Auth:** `Authorization: Bearer <token>`. The token is made under Admin →
+  Places, shown once, and stored only as a SHA-256 hash (`places.ingestTokenHash`
+  in AppSetting). Bad tokens are rate-limited per client address (20 per 10 min).
+- **Body:** one point, or `{ "points": [ ... ] }` (up to 500). Numbers may arrive
+  as strings; `"None"`, `"unknown"` and blanks read as missing.
+
+```jsonc
+{
+  "entity_id": "device_tracker.phone_a",  // linked to a person in Admin → Places
+  "latitude": 10.5, "longitude": -20.25,  // required; 0,0 (no fix) is refused
+  "gps_accuracy": 12,                     // metres
+  "speed": 3.4,                           // stored as sent (unit per HA)
+  "course": 90, "altitude": 200,
+  "battery": 64,                          // 0–100
+  "last_updated": "2026-11-22T17:59:30+00:00" // the point's time; missing/future → now
+}
+```
+
+- **Storage:** `LocationPoint`, unique per person + `last_updated`, so a retried
+  push replaces rather than doubles. A point from an entity linked to nobody is
+  skipped and remembered (`places.unlinked`) for Admin's Status.
+- **Response:** `{ "stored": n, "skipped": [entity ids not linked], "errors": [...] }`.
+  A body whose every point is malformed answers `validation`.
+
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**202 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**205 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1863,6 +1893,7 @@ silently invisible:
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604), **summary**, `summary/day` (v0.733)
 - **hockey** (the week from ice-time), `hockey/prefs`
+- **places/ingest** (Home Assistant → server, v0.755)
 - **concept2** (status / disconnect), `concept2/connect`, `concept2/sync`, `concept2/undo` (v0.614)
 - **widget** (the Android home-screen widget's feed)
 

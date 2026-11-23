@@ -23,6 +23,7 @@ import {
   PaletteIcon,
   GearIcon,
   HockeyIcon,
+  MapIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -104,6 +105,13 @@ const TILES: Tile[] = [
     label: "Ice time",
     blurb: "Connect ice-time for the week's ice times",
     icon: <HockeyIcon className="h-7 w-7" />,
+    ready: true,
+  },
+  {
+    href: "/admin/places",
+    label: "Places",
+    blurb: "Family locations from Home Assistant",
+    icon: <MapIcon className="h-7 w-7" />,
     ready: true,
   },
   {

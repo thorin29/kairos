@@ -324,6 +324,16 @@ fed by a subsystem that lives across three repositories:
 So credited minutes are computed once, in the collector, and flow one way:
 collector → web (store) → app/web (display).
 
+## Places: Home Assistant pushes, Kairos keeps
+
+Family locations come from the Home Assistant Companion app already on each
+phone. A Home Assistant automation posts every position change to
+`POST /api/v1/places/ingest` with a token made under Admin → Places (stored only
+as a hash). Kairos holds no Home Assistant credentials. It keeps raw points
+(`LocationPoint`, one row per person + reported time) and the person ↔ entity
+links (`PlacesPerson`); stops, drives and place names are to be worked out when
+a day is read (planned), never stored. Setup: `docs/places-home-assistant.md`.
+
 ## Hockey reads a separate container
 
 Ice times come from **ice-time** (its own repo), which reads a rink's public

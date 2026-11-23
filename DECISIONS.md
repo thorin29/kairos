@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-11 — Places, release 1: collection (v0.755.0)
+
+- Family locations come from the Home Assistant Companion app already on the
+  phones. HA posts each position to `POST /api/v1/places/ingest`; Kairos
+  stores and shows. Rejected: Kairos reading HA's websocket (would need an HA
+  token in Kairos), Traccar, and our own Android tracker (background location
+  is the expensive part).
+- The ingest token is made in Admin, shown once and stored only as its SHA-256
+  (`places.ingestTokenHash`), compared in constant time. Not an env var like
+  `GAMETIME_INGEST_TOKEN`: a database dump never reveals it, it isn't in the
+  container template in plain text, and replacing it is one button.
+- `PlacesPerson` links a person to one HA entity (unique). Blank = not
+  tracked; their history stays until deleted. Saving clears and rewrites the
+  rows so two people can swap entities.
+- `LocationPoint` keeps raw values, unique per person + reported time (HA's
+  `last_updated`), so retries upsert. `speed` is stored as sent; its unit is
+  confirmed from a live payload before any page converts it. 0,0 (no fix) is
+  refused; a missing or future time becomes now.
+- A point from an entity linked to nobody is skipped and the last one is
+  remembered (`places.unlinked`) so Admin can show its exact id.
+- Day boundaries for deleting by date (and the coming day view) use the
+  household timezone: `src/lib/places/day-bounds.ts` finds local midnight,
+  23 or 25 hours apart across DST.
+- History is kept until deleted (owner's choice: a long time, with delete
+  tools). Admin shows points and table size; delete by person and/or dates.
+- Two Google keys: the browser map key (public by design, restricted by
+  referrer in Google's console) and a server-only lookup key for place names.
+  Saved now, used from release 2 and 3.
+- Admin → Places uses the new `MapIcon` so it doesn't share Addresses' pin.
+
 ## 2026-11 — Endurance days, finishers, 5/3/1 misses (v0.754.0)
 
 - Endurance (Open #11) is an Other days add. Its window: Long steady (a

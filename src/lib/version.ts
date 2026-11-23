@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.754.0";
+export const APP_VERSION = "0.755.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -176,11 +176,16 @@ export const MIGRATIONS = [
   "161_event_sport",
   "162_program_cycles",
   "163_plan_program",
+  "164_places",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.755.0",
+    summary: ["Admin → Places: connect Home Assistant to send everyone's location to Kairos. Make a token, link each person's tracker, and see the last location received. Delete history by person and dates. The Places map comes next."],
+  },
   {
     version: "0.754.0",
     summary: ["Endurance days: in Other days, pick Long steady (cardio and minutes), Intervals, or circuits to rotate through; they count toward the endurance heart. Finishers after the lifts: Core, Holds or Carries on each lift day. 5/3/1's What's next: a missed + set drops the max 10%, and a lift that felt too hard holds."],

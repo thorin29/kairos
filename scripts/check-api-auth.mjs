@@ -21,6 +21,7 @@ const PUBLIC = new Set([
   "auth/forgot/route.ts",
   "auth/recover/route.ts",
   "game-time/ingest/route.ts", // service-token (GAMETIME_INGEST_TOKEN), not device auth
+  "places/ingest/route.ts", // Places token (hash in AppSetting, made in Admin), not device auth
 ]);
 
 // Any of these in a route's source counts as "this route authenticates".
