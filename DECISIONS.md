@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Places → Family map (v0.766.0)
+
+- Owner's choice. Only what people see changes (sidebar, page and Admin
+  titles, messages, the app's menu, screen title and notification channel).
+  URLs (`/places`, `/places/embed`, `/admin/places`), API paths, models,
+  settings keys and code names stay "places", so nothing breaks or migrates.
+
 ## 2026-11 — Places map controls (v0.765.0)
 
 - Map controls are one column of round icon buttons inside the map, top

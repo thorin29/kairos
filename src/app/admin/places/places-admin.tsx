@@ -577,7 +577,7 @@ export function PlacesAdminForm(props: {
       <section className={card}>
         <h2 className={label}>Named places</h2>
         {props.named.length === 0 ? (
-          <p className="text-sm text-muted">None yet. Use “Not right?” on a person in Places.</p>
+          <p className="text-sm text-muted">None yet. Use “Not right?” on a person in Family map.</p>
         ) : (
           <ul className="divide-y divide-hairline">
             {props.named.map((n) => (

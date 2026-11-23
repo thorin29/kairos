@@ -109,7 +109,7 @@ const TILES: Tile[] = [
   },
   {
     href: "/admin/places",
-    label: "Places",
+    label: "Family map",
     blurb: "Family locations from Home Assistant",
     icon: <MapIcon className="h-7 w-7" />,
     ready: true,

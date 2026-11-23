@@ -49,7 +49,7 @@ const NAV: NavItem[] = [
   { href: "/money", label: "Money", color: "#15803d", icon: <DollarIcon className="h-6 w-6" /> },
   { href: "/games", label: "Game time", color: "#4338ca", icon: <GamepadIcon className="h-6 w-6" /> },
   { href: "/hockey", label: "Ice time", color: "#0e7490", icon: <HockeyIcon className="h-6 w-6" /> },
-  { href: "/places", label: "Places", color: "#4d7c0f", icon: <MapIcon className="h-6 w-6" />, hard: true },
+  { href: "/places", label: "Family map", color: "#4d7c0f", icon: <MapIcon className="h-6 w-6" />, hard: true },
   { href: "/characters", label: "Characters", color: "#db2777", icon: <TrophyIcon className="h-6 w-6" /> },
   { href: "/summary", label: "Summary", color: "#b45309", icon: <SummaryIcon className="h-6 w-6" /> },
 ];

@@ -121,7 +121,7 @@ export function HistoryView({
   useEffect(() => {
     let cancelled = false;
     (window as unknown as { gm_authFailure?: () => void }).gm_authFailure = () =>
-      setMapError("Google refused the map key. Check the key and its website restriction in Admin → Places.");
+      setMapError("Google refused the map key. Check the key and its website restriction in Admin → Family map.");
     loadMaps(mapKey)
       .then(() => {
         if (cancelled || !mapDiv.current || mapRef.current) return;
@@ -140,7 +140,7 @@ export function HistoryView({
         void mapLoaded(embed).catch(() => undefined);
       })
       .catch(() => {
-        if (!cancelled) setMapError("The map couldn't load. Check your connection, or the map key in Admin → Places.");
+        if (!cancelled) setMapError("The map couldn't load. Check your connection, or the map key in Admin → Family map.");
       });
     return () => {
       cancelled = true;
@@ -257,7 +257,7 @@ export function HistoryView({
         <div className="flex items-center gap-3">
           <Link
             href={placesHref(embed)}
-            aria-label="Back to Places"
+            aria-label="Back to Family map"
             className="flex h-11 w-11 items-center justify-center rounded-xl border border-hairline bg-surface text-xl hover:border-accent"
           >
             ‹

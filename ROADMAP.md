@@ -58,7 +58,7 @@ live in the database, never in this repository.
     until it's confirmed and removed.
 16. **Rest days on the charts.** Done in v0.753 (the moon). Kept here only
     until it's confirmed and removed.
-17. **Places** (family locations). Collection and Admin → Places done in
+17. **Family map** (Places in the code; renamed v0.766). Collection and Admin → Places done in
     v0.755–0.756; the live Places page in v0.757; speed, Follow, tracks,
     History and place-name fixes in v0.758; icons, grouped markers and
     notification rules (server side) in v0.759; HA zones in v0.760; Routes

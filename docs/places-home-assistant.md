@@ -1,13 +1,14 @@
-# Places — setup (Home Assistant and Google)
+# Family map — setup (Home Assistant and Google)
 
-Places shows where everyone is, using the locations the Home Assistant Companion
+Family map (called Places in the code, URLs and Admin path `/admin/places`,
+and before v0.766) shows where everyone is, using the locations the Home Assistant Companion
 app already reports. Home Assistant posts each update to Kairos; Kairos keeps the
 history and shows it. Kairos never gets a Home Assistant login.
 
 Everything below uses placeholder names (`kairos.example.com`,
 `person.alex`, `device_tracker.phone_a`, `192.168.1.10`). Use your own.
 
-Only an admin can open Admin → Places, change these settings or delete history.
+Only an admin can open Admin → Family map, change these settings or delete history.
 
 ---
 
@@ -26,9 +27,9 @@ On every phone that should be tracked:
 
 ## Part 2 — Kairos
 
-1. Admin → Places → **Make token**. Copy it right away — Kairos shows it once
+1. Admin → Family map → **Make token**. Copy it right away — Kairos shows it once
    and keeps only a hash. **New token** replaces it (the old one stops working).
-2. Admin → Places → People: type each person's Home Assistant **person**
+2. Admin → Family map → People: type each person's Home Assistant **person**
    entity, like `person.alex`, and **Save people**. Leave a person blank to not
    track them.
 
@@ -159,7 +160,7 @@ actions:
      message: request_location_update
    ```
    → **Perform action**.
-2. Admin → Places → Status should read "Last location received …", and the
+2. Admin → Family map → Status should read "Last location received …", and the
    person shows their last time, accuracy, battery and speed.
 
 If nothing arrives, call the REST command by hand to see Kairos's answer
@@ -207,14 +208,14 @@ that way.
      (and the LAN address you open Kairos at, if any, e.g.
      `http://192.168.1.10:8642/*`)
    - API restrictions: **Restrict key** → Maps JavaScript API
-   - Save. Paste it into Admin → Places → Map key.
+   - Save. Paste it into Admin → Family map → Map key.
 6. **Lookup key** — Create credentials → API key again:
    - Name: Kairos lookups
    - Application restrictions: None (Kairos calls from your home connection,
      whose address can change; the API restriction and caps below protect it)
    - API restrictions: **Restrict key** → Places API (New), Geocoding API,
      Roads API, Routes API
-   - Save. Paste it into Admin → Places → Place lookup key.
+   - Save. Paste it into Admin → Family map → Place lookup key.
 7. **Map ID** — Google Maps Platform → **Map management → Create map ID**:
    name "Kairos", type **JavaScript**, **Vector**. Copy the Map ID into Admin →
    Places → Map ID.
@@ -232,14 +233,14 @@ that way.
    also stops itself at 140 place-name, 280 address, 140 road and 280 route
    lookups a day, and keeps each route request to 10 stops or fewer
    (Essentials pricing).
-9. Admin → Places → **Save keys**.
+9. Admin → Family map → **Save keys**.
 
 The map key is visible in the page by design; the website restriction is what
 stops other sites from using it. The lookup key never leaves the server.
 
 ## Part 5 — Notifications (optional)
 
-Admin → Places → **Notifications**: tell (anyone) when someone (or anyone)
+Admin → Family map → **Notifications**: tell (anyone) when someone (or anyone)
 **arrives at** and/or **leaves** a place: a Home Assistant zone (follows
 Home Assistant's own zone changes), or one of Kairos's named places (each with
 a size you set under Named places) or saved addresses (by distance). "Arrived" needs a fix inside the place; "left" needs one 50 m
@@ -260,7 +261,7 @@ Firebase setup (one time, free):
    steps — Kairos sends these values to the app at runtime instead.
 3. From Project settings → General copy the **Project ID**, **Project number**
    (Sender ID), and from the Android app the **App ID** and the **Web API key**
-   (or the API key shown for the app). Paste them in Admin → Places →
+   (or the API key shown for the app). Paste them in Admin → Family map →
    Instant push.
 4. Project settings → **Service accounts** → **Generate new private key** →
    paste the whole JSON file into **Service account key** → **Save**. It stays
@@ -304,7 +305,7 @@ was sent to another page.
 - Wrong name? In Places, tap the person → **Not right?**: pick another nearby
   business, **Just the address**, or **Name this place…** (for everyone, or
   just that person — e.g. their own "Work"). The family's names always win and
-  don't expire. Admin → Places → Named places lists and removes them.
+  don't expire. Admin → Family map → Named places lists and removes them.
 - Tracks: each finished drive is matched to the roads once and kept 30 days —
   snapped (Roads API) when the phone reported often, routed through the
   reports (Routes API) when there were long gaps. Either answer must pass
@@ -313,7 +314,7 @@ was sent to another page.
   never sent to Google.
 - People inside a Home Assistant zone are drawn at the zone's centre (learned
   from where phones report while in it), so everyone at home groups together.
-- Admin → Places → Status shows how many points are stored and how much space
+- Admin → Family map → Status shows how many points are stored and how much space
   they take; Google usage shows the calls Kairos made today and this month,
   with links to Google's own usage, caps and billing pages. Delete history there (one person or everyone, optionally between
   two dates).

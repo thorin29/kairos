@@ -46,7 +46,7 @@ parties holding your family's schedule.
   service watches Xbox (via Home Assistant), Steam, and allowlisted PC apps
   through Family Safety, and pushes resolved daily
   totals to `/api/v1/game-time/ingest`; Kairos owns the durable history.
-- **Places.** One Google map with everyone on it: where each person is (a
+- **Family map** (Places in the code). One Google map with everyone on it: where each person is (a
   saved address, a store name or a street address), since when, when their
   phone last reported, and battery, with a full-screen map. Home Assistant
   sends each phone's location to `/api/v1/places/ingest`; Kairos keeps the

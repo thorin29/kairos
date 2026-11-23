@@ -299,7 +299,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   useEffect(() => {
     let cancelled = false;
     (window as unknown as { gm_authFailure?: () => void }).gm_authFailure = () =>
-      setMapError("Google refused the map key. Check the key and its website restriction in Admin → Places.");
+      setMapError("Google refused the map key. Check the key and its website restriction in Admin → Family map.");
     loadMaps(mapKey)
       .then(() => {
         if (cancelled || !mapDiv.current || mapRef.current) return;
@@ -325,7 +325,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
         void mapLoaded(embed).catch(() => undefined);
       })
       .catch(() => {
-        if (!cancelled) setMapError("The map couldn't load. Check your connection, or the map key in Admin → Places.");
+        if (!cancelled) setMapError("The map couldn't load. Check your connection, or the map key in Admin → Family map.");
       });
     return () => {
       cancelled = true;
@@ -676,7 +676,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
 
   return (
     <main className={embed ? "px-3 py-3" : "mx-auto max-w-[96rem] px-4 py-6 sm:px-6"}>
-      {!embed && <h1 className="mb-4 font-display text-3xl font-semibold tracking-tight">Places</h1>}
+      {!embed && <h1 className="mb-4 font-display text-3xl font-semibold tracking-tight">Family map</h1>}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <section

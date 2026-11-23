@@ -53,7 +53,7 @@ export default async function PlacesAdminPage() {
 
       <header className="mb-8 mt-5 flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-5">
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Places</h1>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Family map</h1>
           <p className="mt-1 max-w-xl text-sm text-muted">
             Home Assistant sends each phone&rsquo;s location here. Setup steps are in
             docs/places-home-assistant.md.

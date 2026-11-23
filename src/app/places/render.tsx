@@ -19,16 +19,16 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 function NotSetUp({ embed }: { embed: boolean }) {
   return (
     <main className={embed ? "px-4 py-6" : "mx-auto max-w-[72rem] px-6 py-8"}>
-      {!embed && <h1 className="font-display text-3xl font-semibold tracking-tight">Places</h1>}
+      {!embed && <h1 className="font-display text-3xl font-semibold tracking-tight">Family map</h1>}
       <div className="mt-6 rounded-2xl border border-hairline bg-surface p-6 text-sm">
         {embed ? (
-          <p>Places isn&rsquo;t set up yet.</p>
+          <p>Family map isn&rsquo;t set up yet.</p>
         ) : (
           <p>
-            Places isn&rsquo;t set up yet. An admin adds the Google map key, Map ID and each person&rsquo;s tracker
+            Family map isn&rsquo;t set up yet. An admin adds the Google map key, Map ID and each person&rsquo;s tracker
             under{" "}
             <Link href="/admin/places" className="font-medium text-accent hover:underline">
-              Admin → Places
+              Admin → Family map
             </Link>
             .
           </p>
