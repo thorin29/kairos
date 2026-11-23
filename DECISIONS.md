@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-11 — Two programs at once, part 2 (v0.750.0)
+
+- Release 3b of the plan-builder proposal. `dayProgramBlocks` (workout-log)
+  splits a day two programs share into one block per program: its planned
+  entries (by `programId`; untagged entries and the plan-wide steps go to the
+  first), parts, done and skipped. Fewer than two programs on the day → `[]`,
+  and every screen works as before.
+- Day page: one card per program in Today's workouts (`prog:<id>`); opening
+  one narrows the day to that program's entries. Skip (and Unskip) marks
+  every movement of that program's entries skipped for the day
+  (`setProgramDaySkipped`), so it counts as done like any skip.
+- Home card x of y counts each program as its own workout.
+- `GET /workouts` adds `programBlocks`; `POST /workouts/program-skip`.
+
 ## 2026-11 — Two programs at once, part 1 (v0.749.0)
 
 - Release 3a of the plan-builder proposal. `PlannedWorkout.programId`

@@ -27,8 +27,10 @@ import {
   undoConcept2Row,
   setWarmup,
   removeDayExtraAction,
+  skipProgramDayAction,
   type LoggedSet,
 } from "@/lib/actions/workouts";
+import type { DayProgramBlock } from "@/lib/queries/workout-log";
 import type { DayExtraView } from "@/lib/workouts/day-extras-run";
 import type { Concept2Day } from "@/lib/workouts/concept2-run";
 import { AddCardioPage, CardioCard } from "./cardio-card";
@@ -183,6 +185,8 @@ export function DayLog({
     workoutTime?: { time: number | null; usual: number | null; changed: boolean };
     /** A program day waiting for What's next (v0.748). */
     programWait?: string | null;
+    /** One per program when two run today (v0.750). */
+    programBlocks?: DayProgramBlock[];
   } | null>(null);
   // Which of the day's workouts is open (v0.744): null lets the day decide,
   // "list" is Today's workouts, "plan" the planned workout, else a sport event.
@@ -276,17 +280,33 @@ export function DayLog({
   const planIds = data?.state.planIds;
   // Adjust today (v0.658): what it dropped is off the day.
   const dropped = data?.adjusted?.dropped;
+  // Two programs today (v0.750): each is its own workout. The open one
+  // narrows the plan to its own entries.
+  const progBlocks = useMemo(() => {
+    const b = data?.programBlocks ?? [];
+    return b.length >= 2 ? b : [];
+  }, [data?.programBlocks]);
+  const viewProg: DayProgramBlock | null = (() => {
+    if (progBlocks.length === 0) return null;
+    if (pick?.startsWith("prog:")) return progBlocks.find((b) => `prog:${b.programId}` === pick) ?? null;
+    if (pick) return null;
+    const openProgs = progBlocks.filter((b) => !b.done && !b.skipped);
+    const openSports = (data?.sports ?? []).filter((sp) => sp.state === "open").length;
+    return openProgs.length === 1 && openSports === 0 ? openProgs[0] : null;
+  })();
+  const viewIds = viewProg?.plannedWorkoutIds;
   const planWorkouts: PlanWorkout[] = useMemo(
     () =>
       (person.plan[planWeekday(person.swaps, date)]?.workouts ?? [])
         .filter((w) => !w.isRest && (date >= todayISO || !planIds || planIds.includes(w.id)))
+        .filter((w) => !viewIds || viewIds.includes(w.id))
         .filter((w) => !dropped?.plans.includes(w.id))
         .map((w) =>
           dropped?.movements.length
             ? { ...w, exercises: w.exercises.filter((e) => !dropped.movements.includes(e.poolExerciseId)) }
             : w,
         ),
-    [person.plan, date, todayISO, planIds, dropped],
+    [person.plan, date, todayISO, planIds, dropped, viewIds],
   );
   // What was added to this day only (v0.667): shown like plan entries, but
   // never counted toward the day being done.
@@ -485,18 +505,34 @@ export function DayLog({
   }
 
   // The program and its main lift on a program day, else the kinds of work.
-  const title = state?.programTitle ?? state?.program?.name ?? dayHeadline(planSections);
+  const title = viewProg?.name ?? state?.programTitle ?? state?.program?.name ?? dayHeadline(planSections);
 
   // The day's workouts (v0.744): the planned one and each sport event, in
   // time order. Two or more and the list shows until only one is still open.
   const sports = data?.sports ?? [];
   const hasPlan = !isRestDay && progress.total > 0;
+  const planTime = data?.workoutTime?.time ?? null;
   const blocks: DayBlock[] = orderBlocks([
-    ...(hasPlan ? [{ kind: "plan" as const, key: "plan" as const, time: data?.workoutTime?.time ?? null }] : []),
+    ...(progBlocks.length > 0 && !isRestDay
+      ? progBlocks.map((b) => ({
+          kind: "plan" as const,
+          key: `prog:${b.programId}`,
+          time: planTime,
+          program: { id: b.programId, name: b.name, parts: b.parts, doneCount: b.doneCount, total: b.total, done: b.done, skipped: b.skipped },
+        }))
+      : hasPlan
+        ? [{ kind: "plan" as const, key: "plan", time: planTime }]
+        : []),
     ...sports.map((sp) => ({ kind: "sport" as const, key: sp.eventId, time: sp.start, sport: sp })),
   ]);
   const openKeys = blocks
-    .filter((b) => (b.kind === "plan" ? progress.done < progress.total : b.sport.state === "open"))
+    .filter((b) =>
+      b.kind === "plan"
+        ? b.program
+          ? !b.program.done && !b.program.skipped
+          : progress.done < progress.total
+        : b.sport.state === "open",
+    )
     .map((b) => b.key);
   const view: string =
     blocks.length < 2
@@ -506,7 +542,7 @@ export function DayLog({
         : openKeys.length === 1
           ? openKeys[0]
           : "list";
-  const openSport = view !== "plan" && view !== "list" ? sports.find((sp) => sp.eventId === view) ?? null : null;
+  const openSport = view !== "plan" && view !== "list" && !view.startsWith("prog:") ? sports.find((sp) => sp.eventId === view) ?? null : null;
   const reload = () => setTick((n) => n + 1);
 
   // + Additional → Family WOD (v0.680): a full page in place of the day.
@@ -690,6 +726,22 @@ export function DayLog({
           >
             <MoonIcon className="h-4 w-4" />
             Rest / skip day
+          </button>
+        )}
+        {/* One program's workout skipped on its own (v0.750). */}
+        {viewProg && !isRestDay && !future && (
+          <button
+            type="button"
+            onClick={() =>
+              startTransition(async () => {
+                await skipProgramDayAction(userId, date, viewProg.programId, !viewProg.skipped);
+                if (!viewProg.skipped) setPick(null);
+                setTick((n) => n + 1);
+              })
+            }
+            className={`${SECONDARY_BTN} ml-2 mt-3`}
+          >
+            {viewProg.skipped ? "Unskip" : "Skip"}
           </button>
         )}
         {/* Adjust today (v0.658; was Go light): today only, until it's chosen. */}

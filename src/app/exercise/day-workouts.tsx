@@ -19,7 +19,13 @@ import type { DaySport } from "@/lib/sport/day";
 export const BLOCK_COLOR = { plan: "#4f46e5", sport: "#65a30d" } as const;
 
 export type DayBlock =
-  | { kind: "plan"; key: "plan"; time: number | null }
+  | {
+      kind: "plan";
+      /** "plan", or "prog:<id>" for one program's workout when two run (v0.749). */
+      key: string;
+      time: number | null;
+      program?: { id: string; name: string; parts: string[]; doneCount: number; total: number; done: boolean; skipped: boolean };
+    }
   | { kind: "sport"; key: string; time: number; sport: DaySport };
 
 export function timeText(m: number): string {
@@ -98,21 +104,34 @@ export function DayWorkoutsList({
       {blocks.map((b) =>
         b.kind === "plan" ? (
           <div
-            key="plan"
+            key={b.key}
             className="rounded-xl border border-hairline bg-surface px-4 py-3"
             style={{ borderLeft: `5px solid ${BLOCK_COLOR.plan}` }}
           >
             <TimeChip time={b.time} onClick={onTime} />
-            <button type="button" onClick={() => onOpen("plan")} className="mt-1 flex w-full items-center gap-3 text-left">
+            <button type="button" onClick={() => onOpen(b.key)} className="mt-1 flex w-full items-center gap-3 text-left">
               <span className="min-w-0 flex-1">
-                <span className="block font-display text-lg font-semibold">{plan.title}</span>
-                <span className="block text-xs text-muted">{plan.parts.join(" · ")}</span>
+                <span className="block font-display text-lg font-semibold">{b.program?.name ?? plan.title}</span>
+                <span className="block text-xs text-muted">{(b.program?.parts ?? plan.parts).join(" · ")}</span>
               </span>
               <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
             </button>
-            {plan.done >= plan.total && plan.total > 0 ? (
+            {b.program?.skipped ? (
+              <div className="mt-2">
+                <Chip>Skipped</Chip>
+              </div>
+            ) : (b.program ? b.program.done : plan.done >= plan.total && plan.total > 0) ? (
               <div className="mt-2">
                 <Chip>Done</Chip>
+              </div>
+            ) : b.program ? (
+              <div className="mt-2 flex items-center gap-3">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-hairline" aria-hidden>
+                  <div className="h-full rounded-full bg-accent" style={{ width: `${b.program.total ? (b.program.doneCount / b.program.total) * 100 : 0}%` }} />
+                </div>
+                <span className="tabular text-xs text-muted">
+                  {b.program.doneCount} of {b.program.total} done
+                </span>
               </div>
             ) : (
               <div className="mt-2 flex items-center gap-3">

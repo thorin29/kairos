@@ -12,8 +12,7 @@ import {
   programDayTitle,
   loadWeekStrip,
   type TodayPlanned,
-  pausedLine,
-} from "@/lib/queries/workout-log";
+  pausedLine, dayProgramBlocks } from "@/lib/queries/workout-log";
 import { dayHeadline, daySections, type DayWorkoutIn } from "@/lib/workouts/blocks";
 import type { Metric, MuscleGroup, WorkoutCategory } from "@/lib/workouts/catalog";
 import { dayOfWeek, todayISO } from "@/lib/dates";
@@ -81,6 +80,8 @@ export async function GET(req: NextRequest) {
   ]);
   const first = dayWorkouts[0] ?? null;
   const program = await dayProgramInfo(userId, date);
+  // Two programs that day (v0.749): each its own workout.
+  const programBlocks = await dayProgramBlocks(userId, date);
   return apiOk({
     date,
     loggable: dayWorkouts.length > 0,
@@ -105,6 +106,7 @@ export async function GET(req: NextRequest) {
     strip: { today, days: strip.days, overdue: strip.overdue },
     // The program and its week on this day (v0.611); null without one.
     program,
+    programBlocks,
     // The day's suggestion card and a lighter day, if chosen (v0.612).
     suggestion: await daySuggestionFor(userId, date),
     light: await dayLightFactor(userId, date),

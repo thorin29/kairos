@@ -50,10 +50,9 @@ live in the database, never in this repository.
     heart.
 12. **Ice-time: find each season's schedule links** on the rink's index page
     instead of pasting them in each July. Tracked in the ice-time repo.
-13. **Two programs on the day** (plan-builder release 3b): each running
-    program its own workout on the day page ("x of 3" with a sport) and in
-    the home card's count, skipped on its own. Running two at once is done
-    (v0.749).
+13. **Two programs on the day.** Done in v0.750: each running program is its
+    own workout on the day page and in the home card's count, skipped on its
+    own. Kept here only until it's confirmed and removed.
 14. **Plateau suggestion** (plan-builder release 4): your own plan, or a
     program that runs on, with two or more main muscle groups and no new best
     in 4 weeks: try a program (preview), a light week, swap movements, keep
@@ -102,9 +101,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.749.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.750.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   163_plan_program, all registered in `MIGRATIONS`.
-- App 0.543.0 (versionCode 615, CLIENT_BUILD 615).
+- App 0.544.0 (versionCode 616, CLIENT_BUILD 616).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -290,7 +289,8 @@ Kept here so they don't come back as open items.
   them fresh, the same program keeps them); What's next at a cycle's end
   suggests each lift's raise, and a continued program shows its cycle and
   what went up (v0.748). Two programs can run at once, each with its own
-  days, cycle, What's next and End (v0.749).
+  days, cycle, What's next and End (v0.749); on a day they share, each is its
+  own workout, skipped on its own (v0.750).
 - Plans: weekly plan and rolling plan (pausable, end dates, a future start),
   programs that write the plan (5/3/1, Boring But Big, 5/3/1 for Beginners,
   wave loading, Odd squad with ladders, density, carry and club finishers),

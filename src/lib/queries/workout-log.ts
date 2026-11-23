@@ -235,6 +235,56 @@ export type TodayPlanned = {
   sessionLogged?: boolean;
 } | null;
 
+/**
+ * Each running program's share of a day (v0.749), when two or more have work
+ * on it: each is its own workout on the day page and in the home card's
+ * count. Its planned entries, done (every movement logged or skipped),
+ * skipped (every movement skipped), and how many movements are done. The
+ * plan's own entries (warm-up, cardio) go with the first program. Empty with
+ * fewer than two.
+ */
+export type DayProgramBlock = {
+  programId: string;
+  name: string;
+  plannedWorkoutIds: string[];
+  parts: string[];
+  done: boolean;
+  skipped: boolean;
+  doneCount: number;
+  total: number;
+};
+
+export async function dayProgramBlocks(userId: string, dateISO: string): Promise<DayProgramBlock[]> {
+  const [plans, rows, actives] = await Promise.all([
+    loadTodayPlannedWorkouts(userId, dateISO),
+    prisma.plannedWorkout.findMany({ where: await dayPlanWhereFor(userId, dateISO), select: { id: true, programId: true } }) as Promise<
+      { id: string; programId: string | null }[]
+    >,
+    loadActivePrograms(userId),
+  ]);
+  const owner = new Map(rows.map((r) => [r.id, r.programId]));
+  const running = actives.filter((a) => rows.some((r) => r.programId === a.id));
+  if (running.length < 2) return [];
+  return running.map((a, i) => {
+    const mine = plans.filter((p): p is NonNullable<TodayPlanned> => {
+      if (!p) return false;
+      const o = owner.get(p.plannedWorkoutId) ?? null;
+      return o === a.id || (i === 0 && (o == null || !running.some((r) => r.id === o)));
+    });
+    const moves = mine.flatMap((p) => p.exercises.filter((e) => e.tracked !== false && !e.added));
+    return {
+      programId: a.id,
+      name: a.program.name,
+      plannedWorkoutIds: mine.map((p) => p.plannedWorkoutId),
+      parts: [...new Set(mine.map((p) => p.name))],
+      done: mine.length > 0 && mine.every(planDone),
+      skipped: moves.length > 0 && moves.every((e) => !!e.skipped),
+      doneCount: moves.filter((e) => (e.value != null && !e.open) || !!e.skipped).length,
+      total: moves.length,
+    };
+  });
+}
+
 /** The skip slot for a plan logged as one result (a named HIIT workout), which
  *  has no movement id of its own. */
 export function planSlot(plannedWorkoutId: string): string {
@@ -2748,10 +2798,13 @@ export async function workoutBlocksFor(userId: string, dateISO: string): Promise
     }) as Promise<{ status: string } | null>,
   ]);
   const planned = progress.planCount > 0;
-  const total = (planned ? 1 : 0) + sports.length;
+  // Two programs that day (v0.749): each counts as its own workout.
+  const progs = planned ? await dayProgramBlocks(userId, dateISO) : [];
+  const total = (progs.length ? progs.length : planned ? 1 : 0) + sports.length;
   if (total < 2) return null;
   const planDone = planned && (progress.done || (task != null && task.status !== "PENDING"));
-  const done = (planDone ? 1 : 0) + sports.filter((x) => x.state !== "open").length;
+  const plannedDone = progs.length ? progs.filter((b) => b.done || planDone).length : planDone ? 1 : 0;
+  const done = plannedDone + sports.filter((x) => x.state !== "open").length;
   return { done, total };
 }
 

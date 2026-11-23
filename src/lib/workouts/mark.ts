@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { fromDateColumn, toDateColumn } from "@/lib/dates";
 import { CATEGORY_LABEL, type WorkoutCategory } from "@/lib/workouts/catalog";
-import { loadDayPlanProgress, OPEN_KEY, openSlot, planSlot } from "@/lib/queries/workout-log";
+import { dayProgramBlocks, loadDayPlanProgress, OPEN_KEY, openSlot, planSlot } from "@/lib/queries/workout-log";
 import { topSet } from "@/lib/workouts/sets";
 import { dayIntentFor } from "@/lib/workouts/suggest-run";
 import type { WorkoutCategory as DbWorkoutCategory } from "@/generated/prisma/client";
@@ -286,6 +286,25 @@ export async function setMovementSkipped(
     });
   }
   await settleWorkoutTask(userId, dateISO, { fromSkip: true });
+  return true;
+}
+
+/**
+ * Skip (or un-skip) one program's workout for a day (v0.749), when two run:
+ * every movement on its entries that day; the other program's stay as they
+ * are.
+ */
+export async function setProgramDaySkipped(userId: string, dateISO: string, programId: string, skipped: boolean): Promise<boolean> {
+  const block = (await dayProgramBlocks(userId, dateISO)).find((b) => b.programId === programId);
+  if (!block) return false;
+  const rows = (await prisma.plannedWorkout.findMany({
+    where: { userId, id: { in: block.plannedWorkoutIds } },
+    select: { id: true, exercises: { select: { poolExerciseId: true } } },
+  })) as { id: string; exercises: { poolExerciseId: string }[] }[];
+  for (const r of rows) {
+    if (r.exercises.length === 0) await setMovementSkipped(userId, dateISO, r.id, "", skipped);
+    for (const e of r.exercises) await setMovementSkipped(userId, dateISO, r.id, e.poolExerciseId, skipped);
+  }
   return true;
 }
 

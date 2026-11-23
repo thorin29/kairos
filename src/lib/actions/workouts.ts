@@ -34,6 +34,8 @@ import {
   type DayLogState,
   type MovementLog,
   type WeekStripDay,
+  dayProgramBlocks,
+  type DayProgramBlock,
 } from "@/lib/queries/workout-log";
 import { topSet } from "@/lib/workouts/sets";
 import { loadExercisePool, type PoolEntry } from "@/lib/queries/workouts";
@@ -156,6 +158,7 @@ import {
 } from "@/lib/workouts/catalog";
 import {
   setMovementSkipped,
+  setProgramDaySkipped,
   logCustomEntry,
   skipWorkoutTask,
   findOrCreateSession,
@@ -789,6 +792,15 @@ export async function applyAdjustAction(userId: string, raw: unknown | null): Pr
 /** Skip or un-skip one planned movement for a day. A skip counts as done for
  *  that movement; the day completes once every movement is logged or skipped.
  *  `poolExerciseId` empty skips a plan logged as one result (HIIT). */
+/** Skip or un-skip one program's workout for a day (v0.749). */
+export async function skipProgramDayAction(userId: string, dateISO: string, programId: string, skipped: boolean): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return;
+  await setProgramDaySkipped(userId, dateISO, programId, skipped);
+  refresh();
+}
+
 export async function skipMovement(input: {
   userId: string;
   dateISO: string;
@@ -1349,6 +1361,8 @@ export async function loadDayLog(
   /** A program day after its cycle ended, before What's next was chosen
    *  (v0.748): the program's name; the day waits for the choice. */
   programWait: string | null;
+  /** Two programs that day (v0.749): each its own workout. */
+  programBlocks: DayProgramBlock[];
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1366,14 +1380,16 @@ export async function loadDayLog(
     conditioningOnDay(userId, dateISO),
     warmupsForDay(userId, dateISO),
   ]);
-  const [extras, familyWod, sports, workoutTime, prog] = await Promise.all([
+  const [extras, familyWod, sports, workoutTime, prog, programBlocks] = await Promise.all([
     dayExtrasFor(userId, dateISO),
     familyWodDay(userId, dateISO, conditioning),
     sportsForDay(userId, dateISO),
     workoutTimeFor(userId, dateISO),
     dayProgramInfo(userId, dateISO),
+    dayProgramBlocks(userId, dateISO),
   ]);
   return {
+    programBlocks,
     sports,
     workoutTime,
     programWait: prog?.blockDone ? prog.name : null,
