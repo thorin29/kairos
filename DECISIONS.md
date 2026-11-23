@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-11 — One visit, one stop; smoother raw paths (v0.770.0)
+
+- A stop is reports within 120 m of its first one, so GPS drift inside a big
+  store split one visit in two. `mergeNearbyStops` (in `planDay`) joins
+  back-to-back stops within 160 m and 12 min of each other, and stop–trip–stop
+  when the trip is a slow wander (not a drive, ≤ 12 min, never > 300 m from the
+  first stop). History also joins neighbouring stops that end up with the same
+  name (≤ 20 min, ≤ 0.5 mi between). Removals still match the visit's start.
+- Paths drawn from raw reports (parking lots, off-road, walks) get two passes
+  of a light 1-2-1 smoothing for drawing; replay and distances use the raw
+  reports.
+
 ## 2026-11 — Directions; fixing a day in History (v0.769.0)
 
 - Person card: History (clock) and Directions (arrow) only; no renaming from

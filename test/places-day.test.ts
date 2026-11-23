@@ -61,3 +61,21 @@ describe("snapLooksRight", () => {
     expect(snapLooksRight([])).toBe(false);
   });
 });
+
+describe("stops in one place", () => {
+  it("joins two stops split by GPS drift inside one building", () => {
+    const at = (min: number, lat: number): DayPoint => ({
+      at: new Date(BASE + min * 60_000),
+      lat,
+      lng: -90,
+      accuracyM: 15,
+      speed: 0.5,
+    });
+    const pts: DayPoint[] = [];
+    for (let m = 0; m <= 10; m += 1) pts.push(at(m, 20)); // one end of the store
+    pts.push(at(11, 20.0007), at(12, 20.0011)); // drifting across
+    for (let m = 13; m <= 25; m += 1) pts.push(at(m, 20.0012)); // the other end, ~130 m away
+    const plan = planDay(pts, new Date(BASE));
+    expect(plan.items.filter((i) => i.kind === "stop")).toHaveLength(1);
+  });
+});

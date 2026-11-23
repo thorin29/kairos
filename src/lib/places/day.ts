@@ -159,7 +159,71 @@ export function planDay(points: DayPoint[], dayStart: Date, before: DayPoint | n
     const legPts = [...lead, ...trip];
     if (legPts.length >= 2) items.push(legOf(legPts));
   }
-  return { items };
+  return { items: mergeNearbyStops(items) };
+}
+
+/** Two stops this close, with only a short slow wander between them, are one
+ *  visit (GPS drifting inside a big store, walking to the next shop). */
+const MERGE_STOPS_M = 160;
+const MERGE_GAP_MS = 12 * 60_000;
+const MERGE_WANDER_M = 300;
+
+export function mergeNearbyStops(items: (Stop | Leg)[]): (Stop | Leg)[] {
+  const out = [...items];
+  const join = (a: Stop, b: Stop): Stop => {
+    // Keep the spot of the longer half; the visit runs from first to last.
+    const longer = a.end.getTime() - a.start.getTime() >= b.end.getTime() - b.start.getTime() ? a : b;
+    return { kind: "stop", start: a.start, end: b.end, lat: longer.lat, lng: longer.lng, zone: a.zone ?? b.zone };
+  };
+  // Back-to-back stops (no trip between) that close together.
+  for (let k = 0; k + 1 < out.length; ) {
+    const a = out[k];
+    const b = out[k + 1];
+    if (
+      a.kind === "stop" &&
+      b.kind === "stop" &&
+      metres(a, b) <= MERGE_STOPS_M &&
+      b.start.getTime() - a.end.getTime() <= MERGE_GAP_MS
+    ) {
+      out.splice(k, 2, join(a, b));
+      continue;
+    }
+    k++;
+  }
+  for (let k = 0; k + 2 < out.length; ) {
+    const a = out[k];
+    const leg = out[k + 1];
+    const b = out[k + 2];
+    const wander =
+      leg.kind !== "stop" &&
+      leg.kind === "move" &&
+      (leg.topMps == null || leg.topMps < DRIVE_TOP_MPS) &&
+      leg.end.getTime() - leg.start.getTime() <= MERGE_GAP_MS &&
+      leg.points.every((p) => a.kind === "stop" && metres(p, a) <= MERGE_WANDER_M);
+    if (a.kind === "stop" && b.kind === "stop" && wander && metres(a, b) <= MERGE_STOPS_M) {
+      out.splice(k, 3, join(a, b));
+      continue; // the merged stop may merge with the next one too
+    }
+    k++;
+  }
+  return out;
+}
+
+/** Softens GPS jitter on a path drawn from raw reports (not on roads): each
+ *  inner point moves toward its neighbours; the ends stay put. */
+export function smoothPath(path: [number, number][], passes = 2): [number, number][] {
+  let p = path;
+  for (let n = 0; n < passes && p.length > 2; n++) {
+    p = p.map((pt, i) =>
+      i === 0 || i === p.length - 1
+        ? pt
+        : ([
+            0.25 * p[i - 1][0] + 0.5 * pt[0] + 0.25 * p[i + 1][0],
+            0.25 * p[i - 1][1] + 0.5 * pt[1] + 0.25 * p[i + 1][1],
+          ] as [number, number]),
+    );
+  }
+  return p;
 }
 
 function centroidPoint(s: Stop): { lat: number; lng: number; at: Date } {

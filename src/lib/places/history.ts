@@ -4,7 +4,7 @@ import { getSetting } from "@/lib/settings";
 import { householdTz } from "@/lib/dates";
 import { PLACES_LOOKUP_KEY } from "@/lib/places/config";
 import { dayEnd, dayStart } from "@/lib/places/day-bounds";
-import { MPS_TO_MPH, planDay, totalsOf, type DayPoint, type Leg } from "@/lib/places/day";
+import { MPS_TO_MPH, planDay, smoothPath, totalsOf, type DayPoint, type Leg } from "@/lib/places/day";
 import { snappedDrive } from "@/lib/places/roads";
 import { placeFor } from "@/lib/places/live";
 import { zoneCenters } from "@/lib/places/zones";
@@ -101,7 +101,9 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
       motion,
       start: leg.start.toISOString(),
       end: leg.end.toISOString(),
-      path: track.path,
+      // Raw reports (off-road, parking lots, walks) are softened for drawing;
+      // replay still uses the reports themselves.
+      path: track.snapped ? track.path : smoothPath(track.path),
       snapped: track.snapped,
       distanceM: Math.round(leg.distanceM),
       topMph: leg.topMps != null ? Math.round(leg.topMps * MPS_TO_MPH) : null,
@@ -109,6 +111,40 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
       raw: leg.points.map((p) => [p.lat, p.lng] as [number, number]),
     });
   }
+
+  // Two stops named the same, with only a short hop between, are one visit
+  // (a big store whose two halves fell out as separate stops).
+  for (let k = 0; k + 1 < items.length; ) {
+    const a = items[k];
+    const b = items[k + 1];
+    if (a.kind === "stop" && b.kind === "stop" && !a.editId && !b.editId && a.place?.name != null && a.place.name === b.place?.name) {
+      items.splice(k, 2, { ...a, end: b.end });
+      continue;
+    }
+    k++;
+  }
+  for (let k = 0; k + 2 < items.length; ) {
+    const a = items[k];
+    const leg = items[k + 1];
+    const b = items[k + 2];
+    const same =
+      a.kind === "stop" &&
+      b.kind === "stop" &&
+      leg.kind !== "stop" &&
+      !a.editId &&
+      !b.editId &&
+      a.place?.name != null &&
+      a.place.name === b.place?.name &&
+      Date.parse(leg.end) - Date.parse(leg.start) <= 20 * 60_000 &&
+      leg.distanceM <= 800;
+    if (same && a.kind === "stop" && b.kind === "stop") {
+      items.splice(k, 3, { ...a, end: b.end });
+      continue;
+    }
+    k++;
+  }
+  let stopNo = 0;
+  for (const it of items) if (it.kind === "stop") it.n = ++stopNo;
 
   const removed: DayRemovedStop[] = [];
   for (const r of edited.removed) {
@@ -129,7 +165,7 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
       miles: Math.round((t.distanceM / 1609.344) * 10) / 10,
       driveMin: Math.round(t.driveMs / 60_000),
       topMph: t.topMps != null ? Math.round(t.topMps * MPS_TO_MPH) : null,
-      stops: t.stops,
+      stops: stopNo,
     },
   };
 }
