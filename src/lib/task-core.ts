@@ -38,3 +38,23 @@ export async function addTaskCore(input: {
   });
   return { error: null, id: task.id };
 }
+
+/**
+ * "<name> gave you a task" (v0.772), for people who turned that on in their
+ * app. Not for a task someone adds for themselves. Best-effort.
+ */
+export async function tellAssigned(userId: string, byId: string | null, title: string): Promise<void> {
+  if (!byId || byId === userId) return;
+  try {
+    const { loadPrefs } = await import("@/lib/notify-prefs");
+    if (!(await loadPrefs(userId)).prefs.assigned) return;
+    const by = (await prisma.user.findUnique({ where: { id: byId }, select: { name: true, displayName: true } })) as {
+      name: string;
+      displayName: string | null;
+    } | null;
+    const { notify } = await import("@/lib/push");
+    await notify([userId], { kind: "task", title: `${by ? by.displayName || by.name : "Someone"} gave you a task`, body: title.trim().slice(0, 120), link: "/tasks" }, { quiet: true });
+  } catch {
+    // never block adding a task on a notification
+  }
+}

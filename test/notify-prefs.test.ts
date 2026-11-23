@@ -4,8 +4,9 @@ import { emptyPrefs, sanitizePrefs } from "@/lib/notify-prefs-shape";
 describe("notification choices", () => {
   it("starts with everything off", () => {
     const p = emptyPrefs();
-    expect(p.calendar).toEqual({ mine: false, others: false });
+    expect(p.calendar).toEqual({ mine: false, family: false, others: false });
     expect(p.tasks).toBe(false);
+    expect(p.assigned).toBe(false);
     expect(p.places).toEqual([]);
   });
 
@@ -23,7 +24,7 @@ describe("notification choices", () => {
       quiet: { from: "22:00", to: "07:00" },
       extra: true,
     });
-    expect(p.calendar).toEqual({ mine: true, others: false });
+    expect(p.calendar).toEqual({ mine: true, family: false, others: false });
     expect(p.places.map((r) => r.id)).toEqual(["a1", "a2"]);
     expect(p.safety.speed).toEqual({ kid1: 70 });
     expect(p.safety.noUpdateHours).toBe(4);

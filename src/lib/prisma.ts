@@ -36,19 +36,29 @@ const base =
  * (activity-context.ts) is noted after it succeeds, with the row as it was
  * before an update or delete. Everything else passes straight through.
  */
+const SYNC_MODELS = new Set(["Event", "EventParticipant", "Task", "SubscribedReminder", "RecurringTask"]);
+const SYNC_WRITES = new Set(["create", "createMany", "createManyAndReturn", "update", "updateMany", "updateManyAndReturn", "upsert", "delete", "deleteMany"]);
+
 export const prisma = base.$extends({
   query: {
     $allModels: {
       async $allOperations({ model, operation, args, query }) {
-        if (!activityTracked(model, operation)) return query(args);
-        const { activityActor } = await import("@/lib/activity-context");
-        const actor = await activityActor();
-        if (!actor) return query(args);
-        const { activityBefore, recordActivity } = await import("@/lib/activity");
-        const db = base as unknown as Record<string, unknown>;
-        const before = await activityBefore(db, model, operation, args as { where?: unknown });
-        const result = await query(args);
-        await recordActivity(db, actor, { model, operation, args, before, result });
+        const tracked = async () => {
+          const { activityActor } = await import("@/lib/activity-context");
+          const actor = await activityActor();
+          if (!actor) return query(args);
+          const { activityBefore, recordActivity } = await import("@/lib/activity");
+          const db = base as unknown as Record<string, unknown>;
+          const before = await activityBefore(db, model, operation, args as { where?: unknown });
+          const result = await query(args);
+          await recordActivity(db, actor, { model, operation, args, before, result });
+          return result;
+        };
+        const result = await (activityTracked(model, operation) ? tracked() : query(args));
+        // Phones refresh reminders and screens when these change (v0.772).
+        if (SYNC_MODELS.has(model) && SYNC_WRITES.has(operation)) {
+          void import("@/lib/push").then((m) => m.syncSoon()).catch(() => undefined);
+        }
         return result;
       },
     },

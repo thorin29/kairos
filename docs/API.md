@@ -1944,8 +1944,9 @@ saves (the phone then sends its current switches).
 ```jsonc
 {
   "prefs": {
-    "calendar": { "mine": true, "others": false },   // reminders on my events / set by others for me
+    "calendar": { "mine": true, "family": true, "others": false },  // of reminders that name me: my events / family events / others' events I'm on
     "tasks": true,
+    "assigned": false,                                  // "<name> gave you a task"
     "places": [{ "id": "r1", "about": "<userId>" /* or null = anyone */, "place": "z:Home" /* n:<id>, s:<id> */, "arrive": true, "leave": false }],
     "safety": { "speed": { "<childId>": 70 }, "noUpdateHours": 4, "lowBattery": 15 },  // parents only
     "quiet": { "from": "22:00", "to": "07:00" }      // or null; holds Family map news
@@ -1956,7 +1957,9 @@ saves (the phone then sends its current switches).
 ```
 
 The upcoming reminders feed honours `calendar` and `tasks`. Safety alerts arrive through the inbox
-with `kind: "safety"`.
+with `kind: "safety"`, task news with `kind: "task"`. After writes to events, tasks or reminders the
+server sends every registered phone a data-only `{ "k": "sync" }` message (v0.772): refresh reminders
+and screens.
 
 ### Push — config, token, inbox — **built (v0.759)**
 

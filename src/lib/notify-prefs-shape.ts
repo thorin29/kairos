@@ -14,13 +14,19 @@ export type PlaceRule = {
 };
 
 export type NotifyPrefsData = {
+  /** A reminder only ever comes when the event's reminders name this person;
+   *  these say which of those to let through. */
   calendar: {
-    /** Reminders on events that are mine. */
+    /** Events that are mine. */
     mine: boolean;
-    /** Reminders someone else put on an event for me (family events too). */
+    /** Family events. */
+    family: boolean;
+    /** Someone else's events I'm on. */
     others: boolean;
   };
   tasks: boolean;
+  /** "<name> gave you a task". */
+  assigned: boolean;
   places: PlaceRule[];
   /** Parents: alerts about the children. */
   safety: {
@@ -37,8 +43,9 @@ export type NotifyPrefsData = {
 
 export function emptyPrefs(): NotifyPrefsData {
   return {
-    calendar: { mine: false, others: false },
+    calendar: { mine: false, family: false, others: false },
     tasks: false,
+    assigned: false,
     places: [],
     safety: { speed: {}, noUpdateHours: null, lowBattery: null },
     quiet: null,
@@ -80,8 +87,10 @@ export function sanitizePrefs(raw: unknown): NotifyPrefsData {
       ? { from: q.from, to: q.to }
       : null;
   return {
-    calendar: { mine: bool(cal.mine), others: bool(cal.others) },
+    // Saved before family had its own switch (v0.771): it went with others.
+    calendar: { mine: bool(cal.mine), family: bool(cal.family, bool(cal.others)), others: bool(cal.others) },
     tasks: bool(r.tasks),
+    assigned: bool(r.assigned),
     places,
     safety: {
       speed,

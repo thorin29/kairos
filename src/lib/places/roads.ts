@@ -108,6 +108,7 @@ async function routeRun(key: string, pts: DayPoint[]): Promise<[number, number][
 async function routedDrive(key: string, pts: DayPoint[]): Promise<TrackPath | null> {
   const runs = waypointRuns(pts);
   const path: [number, number][] = [];
+  let anyRoad = false;
   for (const run of runs) {
     if (!(await canCall("routes"))) return null;
     await bump("routes");
@@ -116,11 +117,16 @@ async function routedDrive(key: string, pts: DayPoint[]): Promise<TrackPath | nu
       run.map((i) => pts[i]),
     );
     if (got == null) return null;
-    if (got.length < 2) return raw(pts);
-    path.push(...(path.length > 0 ? got.slice(1) : got));
+    // Each stretch is checked on its own: one off-road or badly guessed
+    // stretch is drawn as recorded without losing the roads either side.
+    const stretch = pts.slice(run[0], run[run.length - 1] + 1);
+    const secs = (stretch[stretch.length - 1].at.getTime() - stretch[0].at.getTime()) / 1000;
+    const ok = got.length >= 2 && routeLooksRight(stretch, got, secs);
+    const part: [number, number][] = ok ? got : stretch.map((p) => [p.lat, p.lng]);
+    if (ok) anyRoad = true;
+    path.push(...(path.length > 0 ? part.slice(1) : part));
   }
-  const secs = (pts[pts.length - 1].at.getTime() - pts[0].at.getTime()) / 1000;
-  return routeLooksRight(pts, path, secs) ? { path, snapped: true } : raw(pts);
+  return anyRoad && path.length >= 2 ? { path, snapped: true } : raw(pts);
 }
 
 async function roadSnapped(key: string, pts: DayPoint[]): Promise<TrackPath | null> {

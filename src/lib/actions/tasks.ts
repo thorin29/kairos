@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { syncPlanUnitDone } from "@/lib/school/plan-unit-sync";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { Category, TaskStatus } from "@/generated/prisma/client";
-import { addTaskCore } from "@/lib/task-core";
+import { addTaskCore, tellAssigned } from "@/lib/task-core";
+import { currentUser } from "@/lib/user-session";
 import { prisma } from "@/lib/prisma";
 import { toDateColumn, todayISO } from "@/lib/dates";
 import { claimTaskCore } from "@/lib/chores/dashboard-actions-core";
@@ -41,6 +42,7 @@ export async function addTask(
       dueDate: toDateColumn(dueDate),
     },
   });
+  await tellAssigned(userId, (await currentUser())?.id ?? null, title);
 
   revalidatePath("/");
   revalidatePath("/tasks");
@@ -192,6 +194,7 @@ export async function assignTask(input: {
   await requireInteractive();
   await requireCanActFor(input.userId);
   const r = await addTaskCore(input);
+  if (!r.error) await tellAssigned(input.userId, (await currentUser())?.id ?? null, input.title);
   revalidatePath("/tasks");
   revalidatePath("/");
   return r;

@@ -165,10 +165,30 @@ async function fcmToken(sa: ServiceAccount): Promise<string | null> {
 /** Ping each of these people's phones to fetch their inbox. Best-effort. */
 export async function pingPeople(userIds: string[]): Promise<void> {
   if (userIds.length === 0) return;
+  await pingDevices(userIds, "inbox", "HIGH");
+}
+
+/**
+ * Something on the server changed (an event, a task, a reminder): tell every
+ * phone to refresh its reminders and screens (v0.772, `{k: "sync"}`). Writes
+ * come in bursts, so this waits 20 seconds and sends one ping for the lot.
+ * Normal priority: nothing is shown, so Android may batch it.
+ */
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+export function syncSoon(): void {
+  if (syncTimer) return;
+  syncTimer = setTimeout(() => {
+    syncTimer = null;
+    void pingDevices(null, "sync", "NORMAL").catch(() => undefined);
+  }, 20_000);
+  syncTimer.unref?.();
+}
+
+async function pingDevices(userIds: string[] | null, kind: "inbox" | "sync", priority: "HIGH" | "NORMAL"): Promise<void> {
   const [cfg, sa] = await Promise.all([firebaseClientConfig(), serviceAccount()]);
   if (!cfg || !sa) return;
   const devices = (await prisma.device.findMany({
-    where: { userId: { in: userIds }, pushToken: { not: null }, revokedAt: null },
+    where: { ...(userIds ? { userId: { in: userIds } } : {}), pushToken: { not: null }, revokedAt: null },
     select: { id: true, pushToken: true },
   })) as { id: string; pushToken: string }[];
   if (devices.length === 0) return;
@@ -180,7 +200,7 @@ export async function pingPeople(userIds: string[]): Promise<void> {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: { token: d.pushToken, data: { k: "inbox" }, android: { priority: "HIGH", ttl: "3600s" } },
+          message: { token: d.pushToken, data: { k: kind }, android: { priority, ttl: "3600s" } },
         }),
         signal: AbortSignal.timeout(8_000),
         cache: "no-store",

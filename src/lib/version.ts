@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.771.0";
+export const APP_VERSION = "0.772.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -186,11 +186,16 @@ export const MIGRATIONS = [
   "171_places_name_lookup",
   "172_places_stop_edits",
   "173_notify_prefs",
+  "174_places_retrack",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.772.0",
+    summary: ["Phones hear about changes right away (reminders reschedule, screens refresh); calendar reminders split into my events, family events and others' events I'm on; an optional alert when someone gives you a task; Family map drives follow the roads better (each stretch checked on its own)."],
+  },
   {
     version: "0.771.0",
     summary: ["Notifications are each person's own, set in the app (0.553): calendar reminders (mine / set by others), task alerts, Family map arrive/leave, parents' safety alerts (speeding, no update, low battery) and quiet hours. Family map History: + between stops adds a stop by search along the trip or by dropping a pin."],

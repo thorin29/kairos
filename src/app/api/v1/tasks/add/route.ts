@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { addTaskCore } from "@/lib/task-core";
+import { addTaskCore, tellAssigned } from "@/lib/task-core";
 import { createRecurringTask } from "@/lib/tasks/recurring";
 
 export const runtime = "nodejs";
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
       createdById: me.id,
     });
     if (res.error) return apiError("validation", res.error);
+    await tellAssigned(userId, me.id, typeof body.title === "string" ? body.title : "");
     return apiOk({ status: "ok" });
   }
 
@@ -55,5 +56,6 @@ export async function POST(req: NextRequest) {
     clientId: typeof body.clientId === "string" ? body.clientId : null,
   });
   if (r.error) return apiError("validation", r.error);
+  await tellAssigned(userId, me.id, typeof body.title === "string" ? body.title : "");
   return apiOk({ status: "ok", id: r.id });
 }

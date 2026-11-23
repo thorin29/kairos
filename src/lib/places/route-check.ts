@@ -108,12 +108,22 @@ export function distanceToPath(p: Pt, path: [number, number][]): number {
 }
 
 /** True when the route fits every recorded point and the time it took. */
+/** A report this far from the route always means it isn't the road taken. */
+const NEVER_ON_ROUTE_M = 600;
+/** Up to this share of reports may miss the route (a fuzzy fix at speed). */
+const MAY_MISS = 0.15;
+
 export function routeLooksRight(pts: Pt[], path: [number, number][], seconds: number): boolean {
   if (path.length < 2) return false;
+  let missed = 0;
   for (const p of pts) {
-    const allow = Math.min(250, Math.max(ON_ROUTE_M, p.accuracyM ?? 0));
-    if (distanceToPath(p, path) > allow) return false;
+    const d = distanceToPath(p, path);
+    if (d > NEVER_ON_ROUTE_M) return false;
+    // A fuzzy fix (phones on cell or Wi-Fi location) gets room for its error.
+    const allow = Math.max(ON_ROUTE_M, Math.min(400, (p.accuracyM ?? 0) * 1.5));
+    if (d > allow) missed++;
   }
+  if (missed > Math.floor(pts.length * MAY_MISS)) return false;
   const routeM = pathLength(path);
   const pointsM = pathLength(pts.map((p) => [p.lat, p.lng]));
   // Too fast for the time taken, or a big detour the points never made.

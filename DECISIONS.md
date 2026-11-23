@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-11 — Sync pings, three calendar switches, per-stretch roads (v0.772.0, app 0.554.0)
+
+- **Sync ping**: the Prisma extension (alongside the Activity log hook) calls
+  `syncSoon()` after any write to Event, EventParticipant, Task,
+  SubscribedReminder or RecurringTask; one `{k: "sync"}` FCM message to every
+  registered phone 20 s after the burst, normal priority (nothing shown).
+- **Calendar choices**: mine / family / others. A reminder still only comes
+  when the event's reminders name the person; these decide which of those
+  pass. Saved choices from 0.771 take family = others.
+- **Assigned**: "<name> gave you a task" (one-off and recurring, from the app
+  or the web), for people who turn it on; held by quiet hours.
+- **Roads**: Routes answers are checked per stretch (one Routes call's worth
+  of reports): a bad stretch is drawn as recorded without losing the rest.
+  The check allows for fuzzy fixes (tolerance up to 1.5× the report's
+  accuracy, 400 m cap) and up to 15% of reports missing, but none over 600 m.
+  Migration 174 clears raw-drawn cached tracks to redo them.
+
 ## 2026-11 — Notifications per person; add stop by search or pin (v0.771.0, app 0.553.0)
 
 - **Each person's own choices** (`NotifyPrefs`, JSON, `notify-prefs-shape.ts`
