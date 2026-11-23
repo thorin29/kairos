@@ -347,6 +347,10 @@ v0.758 adds a person's day (`/places/<person>?date=`): `planDay`
 drives are snapped once with the Roads API (`src/lib/places/roads.ts`,
 `SnappedPath`, 30 days); the same plan draws today's per-person tracks on the
 live map. Family-named spots (`PlaceName`) come first in place naming.
+v0.761 routes sparse drives with the Routes API instead
+(`src/lib/places/route-check.ts` decides and validates, pure), and
+`src/lib/places/zones.ts` learns each HA zone's centre for the live map and
+History stops.
 
 v0.759 adds notifications: `checkPlaces` (`src/lib/places/notify.ts`) runs
 after each ingest on the person's newest point, against only the places a

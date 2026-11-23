@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.760.0";
+export const APP_VERSION = "0.761.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -181,11 +181,16 @@ export const MIGRATIONS = [
   "166_places_names",
   "167_places_notify",
   "168_places_zones",
+  "169_places_routes",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.761.0",
+    summary: ["Places: drives with long gaps between updates now follow the roads (Google Routes), off-road trips still show as recorded, and people inside a zone like Home are drawn at its centre so they group together."],
+  },
   {
     version: "0.760.0",
     summary: ["Places: Home Assistant zones (like Home and Work) name places and can be used in notifications; better street addresses; a nicer fan-out for people in the same spot."],

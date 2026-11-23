@@ -19,6 +19,8 @@ export type DayPoint = {
   speed: number | null;
   /** Home Assistant zone, when known. */
   zone?: string | null;
+  /** Direction of travel in degrees, when the phone reports it. */
+  courseDeg?: number | null;
 };
 
 export type Stop = {

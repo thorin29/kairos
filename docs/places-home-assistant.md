@@ -199,7 +199,7 @@ that way.
 3. **Billing → Budgets & alerts → Create budget**: amount $1, alerts at
    50/90/100%.
 4. **APIs & Services → Library**, enable: **Maps JavaScript API**, **Places API
-   (New)**, **Geocoding API**, **Roads API** (road-following tracks).
+   (New)**, **Geocoding API**, **Roads API** and **Routes API** (road-following tracks).
 5. **Map key** — APIs & Services → Credentials → **Create credentials → API
    key**. Edit it:
    - Name: Kairos map
@@ -213,7 +213,7 @@ that way.
    - Application restrictions: None (Kairos calls from your home connection,
      whose address can change; the API restriction and caps below protect it)
    - API restrictions: **Restrict key** → Places API (New), Geocoding API,
-     Roads API
+     Roads API, Routes API
    - Save. Paste it into Admin → Places → Place lookup key.
 7. **Map ID** — Google Maps Platform → **Map management → Create map ID**:
    name "Kairos", type **JavaScript**, **Vector**. Copy the Map ID into Admin →
@@ -226,9 +226,12 @@ that way.
    - Places API (New): Search Nearby requests per day **150** (if only
      per-minute limits are offered, leave them)
    - Roads API: requests per day **150**
+   - Routes API: **Directions - ComputeRoutes per request quota per day**
+     **300** (leave the per-minute and DistanceMatrix lines alone)
    A free-trial project can't change these; set them after upgrading. Kairos
-   also stops itself at 140 place-name, 280 address and 140 road lookups a
-   day.
+   also stops itself at 140 place-name, 280 address, 140 road and 280 route
+   lookups a day, and keeps each route request to 10 stops or fewer
+   (Essentials pricing).
 9. Admin → Places → **Save keys**.
 
 The map key is visible in the page by design; the website restriction is what
@@ -275,9 +278,14 @@ Firebase setup (one time, free):
   business, **Just the address**, or **Name this place…** (for everyone, or
   just that person — e.g. their own "Work"). The family's names always win and
   don't expire. Admin → Places → Named places lists and removes them.
-- Tracks: each finished drive is snapped to the roads once (Roads API) and
-  kept 30 days; drives that leave the road (trails, car parks) and walks are
-  drawn as recorded.
+- Tracks: each finished drive is matched to the roads once and kept 30 days —
+  snapped (Roads API) when the phone reported often, routed through the
+  reports (Routes API) when there were long gaps. Either answer must pass
+  within about 150 m of every report and fit the time taken, so off-road
+  drives (trails, a Jeep track) and walks are drawn as recorded; walks are
+  never sent to Google.
+- People inside a Home Assistant zone are drawn at the zone's centre (learned
+  from where phones report while in it), so everyone at home groups together.
 - Admin → Places → Status shows how many points are stored and how much space
   they take; Google usage shows the calls Kairos made today and this month,
   with links to Google's own usage, caps and billing pages. Delete history there (one person or everyone, optionally between

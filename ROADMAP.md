@@ -61,7 +61,8 @@ live in the database, never in this repository.
 17. **Places** (family locations). Collection and Admin → Places done in
     v0.755–0.756; the live Places page in v0.757; speed, Follow, tracks,
     History and place-name fixes in v0.758; icons, grouped markers and
-    notification rules (server side) in v0.759. Still to come:
+    notification rules (server side) in v0.759; HA zones in v0.760; Routes
+    for sparse drives and zone centres in v0.761. Still to come:
     - The app's Places, tracks and History screens (showing the web pages),
       and receiving notifications (Firebase ping → inbox, runtime config; a
       fallback check-in without Firebase).
@@ -417,6 +418,9 @@ Kept here so they don't come back as open items.
   wobble, name History stops, and can be notification places; tighter reuse
   of Google answers (30 m business, 25 m address) and building addresses
   first; the group fan-out is an arc with curved lines.
+- Places v0.761: drives with long gaps between reports are routed with the
+  Routes API (checked against the reports; off-road stays raw); people in a
+  zone are drawn at its learned centre so they group.
 
 ### Scoring and characters
 

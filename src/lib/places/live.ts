@@ -5,6 +5,7 @@ import { PLACES_MAP_ID, PLACES_MAP_KEY } from "@/lib/places/config";
 import { motionOf, presenceOf, STALE_MS, type TimedPt } from "@/lib/places/geo";
 import { resolvePlace, type PlaceLabel } from "@/lib/places/resolve";
 import { MPS_TO_MPH } from "@/lib/places/day";
+import { zoneCenters } from "@/lib/places/zones";
 
 /**
  * Everyone's current position for the Places page and the phone's API: the
@@ -79,6 +80,7 @@ export async function loadLive(): Promise<LiveData> {
     .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 
   const now = Date.now();
+  const centers = await zoneCenters();
   const people: LivePerson[] = [];
   const waiting: WaitingPerson[] = [];
 
@@ -122,11 +124,15 @@ export async function loadLive(): Promise<LiveData> {
       pres.moving = false;
       if (!pres.since || since < pres.since) pres.since = since;
     }
-    const place = pres.moving ? null : await placeFor(latest.lat, latest.lng, latest.accuracyM, u.id, latest.zone);
+    // Settled in a zone: drawn at the zone's centre, so people there stack.
+    const centre = !pres.moving && latest.zone ? centers.get(latest.zone) : undefined;
+    const lat = centre?.lat ?? latest.lat;
+    const lng = centre?.lng ?? latest.lng;
+    const place = pres.moving ? null : await placeFor(lat, lng, latest.accuracyM, u.id, latest.zone);
     people.push({
       ...base,
-      lat: latest.lat,
-      lng: latest.lng,
+      lat,
+      lng,
       accuracyM: latest.accuracyM,
       at: latest.at.toISOString(),
       battery: latest.battery,

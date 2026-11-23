@@ -7,6 +7,7 @@ import { dayEnd, dayStart } from "@/lib/places/day-bounds";
 import { MPS_TO_MPH, planDay, totalsOf, type DayPoint, type Leg } from "@/lib/places/day";
 import { snappedDrive } from "@/lib/places/roads";
 import { placeFor } from "@/lib/places/live";
+import { zoneCenters } from "@/lib/places/zones";
 import type { DayData, DayItem } from "@/lib/places/history-types";
 
 /**
@@ -19,7 +20,7 @@ import type { DayData, DayItem } from "@/lib/places/history-types";
 const MAX_POINTS = 6_000;
 /** A drive this recent may still be going; it's drawn raw until it settles. */
 const SETTLE_MS = 3 * 60_000;
-const SELECT = { at: true, lat: true, lng: true, accuracyM: true, speed: true, zone: true } as const;
+const SELECT = { at: true, lat: true, lng: true, accuracyM: true, speed: true, zone: true, courseDeg: true } as const;
 
 export async function loadDay(userId: string, dateISO: string, opts: { names: boolean }): Promise<DayData> {
   const tz = householdTz();
@@ -42,6 +43,7 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
   ]);
 
   const plan = planDay(points, start, before);
+  const centers = await zoneCenters();
   const now = Date.now();
   const items: DayItem[] = [];
   let n = 0;
@@ -50,14 +52,18 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
     const it = plan.items[i];
     if (it.kind === "stop") {
       n++;
+      // A stop inside a zone is pinned at the zone's centre.
+      const centre = it.zone ? centers.get(it.zone) : undefined;
+      const lat = centre?.lat ?? it.lat;
+      const lng = centre?.lng ?? it.lng;
       items.push({
         kind: "stop",
         n,
         start: it.start.toISOString(),
         end: it.end.toISOString(),
-        lat: it.lat,
-        lng: it.lng,
-        place: opts.names ? await placeFor(it.lat, it.lng, 30, userId, it.zone) : null,
+        lat,
+        lng,
+        place: opts.names ? await placeFor(lat, lng, 30, userId, it.zone) : null,
       });
       continue;
     }

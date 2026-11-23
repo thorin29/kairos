@@ -253,6 +253,7 @@ export function PlacesAdminForm(props: {
                   ["nearby", "Place names"],
                   ["geocode", "Addresses"],
                   ["roads", "Road tracks"],
+                  ["routes", "Routes"],
                 ] as const
               ).map(([k, name]) => {
                 const u = props.usage[k];

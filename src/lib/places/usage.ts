@@ -11,20 +11,22 @@ import type { ApiKind, UsageSummary } from "@/lib/places/usage-types";
 export type { ApiKind, UsageSummary };
 
 /** Kairos's own daily ceilings, under the daily caps set in Google's console
- *  (Places 150, Geocoding 300, Roads 150) and inside the free monthly allowance. */
+ *  (Places 150, Geocoding 300, Roads 150, Routes 300) and inside the free monthly allowance. */
 export const DAILY_LIMIT: Record<Exclude<ApiKind, "mapload">, number> = {
   nearby: 140,
   geocode: 280,
   roads: 140,
+  routes: 280,
 };
 
 /** Google's free calls per month for each SKU Kairos uses (since March 2025:
- *  Essentials 10,000; Pro 5,000 — Nearby Search and Roads are Pro). */
+ *  Essentials 10,000; Pro 5,000 — Nearby Search and Roads are Pro; Routes with ≤10 stops is Essentials). */
 export const FREE_PER_MONTH: Record<ApiKind, number> = {
   mapload: 10_000,
   geocode: 10_000,
   nearby: 5_000,
   roads: 5_000,
+  routes: 10_000,
 };
 
 export async function bump(kind: ApiKind): Promise<void> {
@@ -56,7 +58,7 @@ export async function usageSummary(): Promise<UsageSummary> {
     where: { day: { startsWith: month } },
     select: { day: true, kind: true, count: true },
   })) as { day: string; kind: string; count: number }[];
-  const kinds: ApiKind[] = ["mapload", "geocode", "nearby", "roads"];
+  const kinds: ApiKind[] = ["mapload", "geocode", "nearby", "roads", "routes"];
   const out = {} as UsageSummary;
   for (const k of kinds) {
     const mine = rows.filter((r) => r.kind === k);

@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-11 — Places: Routes for sparse drives, zone centres (v0.761.0)
+
+- **Two ways to put a drive on the roads.** Any gap over 400 m between reports
+  → Routes API (`computeRoutes`) through the reports as pass-through
+  waypoints, thinned to ≥1 km apart (wider on long drives, ≤4 calls),
+  ≤10 intermediates per call and traffic-unaware so each call stays in the
+  Essentials tier (10,000 free). Otherwise Roads snapping as before. Snapping
+  sparse points was what drew corner-cutting tracks.
+- **Every Google answer is checked against the recorded points.** Routes:
+  each report within 150 m of the route (or its own accuracy, up to 250 m),
+  average under 40 m/s for the time taken, and no more than 2.5× the
+  straight-line path + 2 km. Fails → raw points, cached, so off-road drives
+  (a Jeep trail) are drawn as recorded. A sparse drive never falls back to
+  Roads. Walks never go to Google.
+- Kairos stops at 280 route calls a day (owner caps Google at 300). Road
+  track cache cleared once (migration 169) so old straight drives redraw.
+- **Zone centres.** The median position of reports in each HA zone over 60
+  days (≥5 reports with accuracy ≤100 m), recomputed hourly. Someone settled
+  in a zone is drawn there, and History stops in a zone are pinned there, so
+  people at home stack into one group. Notifications and stored points are
+  untouched.
+
 ## 2026-11 — Places: Home Assistant zones, tighter address reuse (v0.760.0)
 
 - **HA zones feed Kairos when present** (owner: don't reinvent Home/Work). The
