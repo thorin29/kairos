@@ -134,7 +134,7 @@ import {
   type CurrentSetup,
   type ProgramChoice,
   type ProgramInfo,
-  type StartProgramInput, currentOtherDays, dayProgramInfo } from "@/lib/workouts/program-run";
+  type StartProgramInput, currentOtherDays, dayProgramInfo, alsoPrograms } from "@/lib/workouts/program-run";
 import { planSummary, type PlanSummary } from "@/lib/workouts/plan-summary";
 import type { ProgramVersion } from "@/lib/workouts/program-version";
 import { addDayExtra, dayExtrasFor, removeDayExtra, type DayExtraView } from "@/lib/workouts/day-extras-run";
@@ -1718,6 +1718,8 @@ export async function loadProgramsFor(userId: string): Promise<{
   plan: PlanSummary;
   /** What each weekday holds now, Sunday first (v0.748). */
   otherDays: string[];
+  /** Programs running beside the first (v0.749), each with its setup. */
+  also: (ProgramInfo & { setup: CurrentSetup | null })[];
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1729,12 +1731,13 @@ export async function loadProgramsFor(userId: string): Promise<{
     routinesFor(userId),
     currentSetup(userId),
   ]);
-  const [versions, plan, otherDays] = await Promise.all([
+  const [versions, plan, otherDays, also] = await Promise.all([
     versionsFor(userId, choices),
     planSummary(userId, active ? (setup?.days ?? []) : []),
     currentOtherDays(userId),
+    alsoPrograms(userId),
   ]);
-  return { choices, active, invite, current, warmups, setup, versions, plan, otherDays };
+  return { choices, active, invite, current, warmups, setup, versions, plan, otherDays, also };
 }
 
 /** Forget the person's own version of a program (v0.666). */
@@ -1752,17 +1755,17 @@ export async function startProgramFor(userId: string, input: StartProgramInput):
   return { ok: r === "ok" };
 }
 
-export async function endProgramFor(userId: string, restore: boolean): Promise<void> {
+export async function endProgramFor(userId: string, restore: boolean, programId?: string): Promise<void> {
   await requireInteractive();
   await requireCanActFor(userId);
-  await endProgram(userId, restore);
+  await endProgram(userId, restore, programId);
   refresh();
 }
 
-export async function nextProgramBlock(userId: string, raise: boolean, raises?: Record<string, number>): Promise<void> {
+export async function nextProgramBlock(userId: string, raise: boolean, raises?: Record<string, number>, programId?: string): Promise<void> {
   await requireInteractive();
   await requireCanActFor(userId);
-  await nextBlock(userId, raise, raises && typeof raises === "object" ? raises : undefined);
+  await nextBlock(userId, raise, raises && typeof raises === "object" ? raises : undefined, programId);
   refresh();
 }
 

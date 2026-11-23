@@ -1437,10 +1437,15 @@ model PlannedWorkout {
   /// A Core day's rotation (v0.637): { rotation: ids, test, at, since,
   /// testedMonth } (src/lib/workouts/core-library.ts). Null otherwise.
   core        Json?
+  /// v0.749: the program (PersonProgram id) this entry belongs to, when a
+  /// program wrote it; null for the plan's own entries. Two programs can run
+  /// at once, each changing and ending only its own.
+  programId   String?
 
   exercises PlannedExercise[]
 
   @@index([userId, dayOfWeek])
+  @@index([programId])
 }
 
 /// A person's own core workout (v0.637): movements with their sets, as JSON

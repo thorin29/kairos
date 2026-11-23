@@ -17,6 +17,8 @@ import { CardioStep, FinishersStep, OtherDaysStep, StepBar, StepHeader, WarmupSt
  */
 
 const STEPS = ["Days", "Other days", "Blocks", "Movements", "Warm-up", "Cardio", "Finishers", "Review"] as const;
+/** Left to the first program when another runs beside it (v0.749). */
+const PLAN_WIDE: readonly string[] = ["Other days", "Warm-up", "Cardio", "Finishers"];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 /** Monday first. */
 const WEEK = [1, 2, 3, 4, 5, 6, 0];
@@ -75,12 +77,15 @@ export function BlockBuilder({
   nextMaxes,
   editMode = false,
   otherDays,
+  alongside = false,
   onBack,
   onClose,
   onStart,
 }: {
   /** What each weekday holds now, Sunday first (v0.748). */
   otherDays?: string[];
+  /** Beside the running program (v0.749): its own days, blocks and weights only. */
+  alongside?: boolean;
   program: ProgramChoice;
   current: CurrentExtras;
   /** Warm-up routines for the Extras step (v0.747). */
@@ -95,6 +100,8 @@ export function BlockBuilder({
   onStart: (input: Omit<StartProgramInput, "key">) => void;
 }) {
   const [step, setStep] = useState(0);
+  const steps: readonly string[] = alongside ? STEPS.filter((x) => !PLAN_WIDE.includes(x)) : STEPS;
+  const cur = steps[step];
   // Weekday → what's on it.
   const [week, setWeek] = useState<Slot[]>(() => {
     const out: Slot[] = Array.from({ length: 7 }, () => "rest");
@@ -209,9 +216,9 @@ export function BlockBuilder({
   return (
     <Modal title={program.name} onClose={onClose} onBack={step > 0 ? () => setStep(step - 1) : onBack}>
       <div className="space-y-4">
-        <StepHeader steps={STEPS} step={step} />
+        <StepHeader steps={steps} step={step} />
 
-        {step === 0 && (
+        {cur === "Days" && (
           <Card title="Which muscle group each day">
             <div>
               {WEEK.map((dow) => {
@@ -242,7 +249,7 @@ export function BlockBuilder({
           </Card>
         )}
 
-        {step === 1 && (
+        {cur === "Other days" && (
           <OtherDaysStep
             programDays={placed.map((x) => x.dow)}
             other={other}
@@ -251,7 +258,7 @@ export function BlockBuilder({
           />
         )}
 
-        {step === 2 && (
+        {cur === "Blocks" && (
           <div className="space-y-3">
             {dayTabs}
             <Card title={`${program.days[tab].name} day`}>
@@ -280,7 +287,7 @@ export function BlockBuilder({
           </div>
         )}
 
-        {step === 3 && (
+        {cur === "Movements" && (
           <div className="space-y-3">
             {dayTabs}
             {roleOf(tab, "A").map((r) => {
@@ -389,11 +396,11 @@ export function BlockBuilder({
           </div>
         )}
 
-        {step === 4 && <WarmupStep warmups={warmups} warmup={warmup} onWarmup={setWarmup} />}
-        {step === 5 && <CardioStep days={cardioDays} onDays={setCardioDays} />}
-        {step === 6 && <FinishersStep days={conditioningDays} onDays={setConditioningDays} />}
+        {cur === "Warm-up" && <WarmupStep warmups={warmups} warmup={warmup} onWarmup={setWarmup} />}
+        {cur === "Cardio" && <CardioStep days={cardioDays} onDays={setCardioDays} />}
+        {cur === "Finishers" && <FinishersStep days={conditioningDays} onDays={setConditioningDays} />}
 
-        {step === 7 && (
+        {cur === "Review" && (
           <div className="space-y-3">
             <Card title={`${program.name} · ${program.weeks} weeks`}>
               <div>
@@ -456,8 +463,8 @@ export function BlockBuilder({
 
         <StepBar
           step={step}
-          steps={STEPS}
-          canNext={step !== 0 || allPlaced}
+          steps={steps}
+          canNext={cur !== "Days" || allPlaced}
           onStep={(n) => {
             setDayTab(0);
             setStep(n);

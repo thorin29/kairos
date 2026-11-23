@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.748.0";
+export const APP_VERSION = "0.749.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -175,11 +175,16 @@ export const MIGRATIONS = [
   "160_calendar_work",
   "161_event_sport",
   "162_program_cycles",
+  "163_plan_program",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.749.0",
+    summary: ["Two programs can run at once: Add program on the plan card sets one up beside the first (its own days, lifts and weights; a third asks first). Each has its own What's next, Change movements and End, and ending one takes only its days."],
+  },
   {
     version: "0.748.0",
     summary: ["Program setup asks about the other days: Rest, Skip, or add Core, Arms, Isometric, Mobility, Stretching, Cardio, Conditioning or a muscle group. Rest days carry over; a new program starts the other days fresh, the same program keeps them. Warm-up, Cardio and Finishers are their own steps, then the week to review.", "At the end of a cycle, What's next suggests each lift's raise from your + sets (or every ladder done) to keep or change: Continue, or New plan. The program's days wait for the choice. A continued program shows its cycle and what went up."],

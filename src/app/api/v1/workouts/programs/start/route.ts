@@ -18,6 +18,8 @@ export const dynamic = "force-dynamic";
  * v0.748: other {weekday: kind} for the days the program doesn't use (rest,
  * skip, core, arms, iso, mobility, stretching, cardio, conditioning,
  * strength:<GROUP>, custom); a day whose kind is unchanged keeps what it holds.
+ * v0.749: add true runs it beside the running program (its own days only);
+ * programId names the running program this changes or replaces.
  */
 export async function POST(req: NextRequest) {
   const authed = await requireDevice(req);
@@ -73,6 +75,8 @@ export async function POST(req: NextRequest) {
     next: b?.next === true,
     coreDay: typeof b?.coreDay === "number" && Number.isInteger(b.coreDay) && b.coreDay >= 0 && b.coreDay <= 6 ? b.coreDay : null,
     other: b?.other && typeof b.other === "object" ? (b.other as Record<string, string>) : undefined,
+    add: b?.add === true,
+    programId: typeof b?.programId === "string" ? b.programId : undefined,
   });
   if (r !== "ok") return apiError("validation", "Pick a program and one weekday for each of its days.");
   return apiOk({ status: "ok" });

@@ -40,7 +40,7 @@ import {
 } from "@/lib/workouts/programs";
 import {
   dayHasProgramWork,
-  loadActiveProgram,
+  loadActivePrograms,
   loadGarageFeet,
   plannedSlotFor,
   programInfoFor,
@@ -1183,8 +1183,9 @@ export async function loadWorkoutProgress(
   }
 
   // The running program's main lifts (v0.732): training max and start.
-  const active = await loadActiveProgram(userId);
+  const allActive = await loadActivePrograms(userId);
   const programLine = (id: string): ProgressSeries["program"] => {
+    const active = allActive.find((a) => typeof a.trainingMaxes[id] === "number") ?? null;
     const tm = active?.trainingMaxes[id];
     if (!active || typeof tm !== "number") return null;
     return {
@@ -2195,7 +2196,9 @@ export async function movementTarget(
   const planned = await plannedSlotFor(userId, dateISO, slotId);
   const scheme = parseScheme(planned?.scheme);
   if (!planned || !scheme) return null;
-  const active = await loadActiveProgram(userId);
+  // The program that owns the slot (v0.749: two can run at once).
+  const actives = planned.programRole ? await loadActivePrograms(userId) : [];
+  const active = actives.find((a) => a.id === planned.programId) ?? actives[0] ?? null;
   const fromProgram = active && planned.programRole ? active : null;
   // A wave chosen in a plan built by hand runs its own 4 weeks from the day
   // it was chosen, with a training max from the person's best for 3+ reps.

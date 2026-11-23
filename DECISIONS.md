@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-11 — Two programs at once, part 1 (v0.749.0)
+
+- Release 3a of the plan-builder proposal. `PlannedWorkout.programId`
+  (migration 163) marks a program's own entries; the migration gives today's
+  running program the entries holding its program lifts.
+- Several `PersonProgram` rows can be ACTIVE. The first started
+  (`loadActivePrograms` / `loadActiveProgram`, oldest first) owns the
+  plan-wide steps (other days, warm-up, cardio, conditioning).
+- `startProgram`: `add` runs a program beside the first; `programId` names
+  the one changed or replaced. Beside the first (`alongside`), only that
+  program's own entries are replaced and the plan-wide steps are skipped (the
+  setups hide those steps). Changing the first never deletes another
+  program's entries. New program rows are tagged with their program.
+- `endProgram(…, programId)`: with two running, ending one marks it ended
+  and deletes only its entries; with one, as before (kept entries lose
+  their tag). `nextBlock(…, programId)`, `alsoPrograms` (each with its
+  setup), `ProgramInfo.id`.
+- A lift's targets come from the program that owns its entry; a program's
+  setup reads only its own entries (and the plan's own).
+- Plan card: each extra program's name, week, What's next and End; Add
+  program (a third asks first). Your plan: a Program section per program.
+- Next (3b): each program as its own workout on the day page and in the
+  home card's x of y, skipped on its own.
+
 ## 2026-11 — Other days, What's next, success marks (v0.748.0)
 
 - Release 2 of the plan-builder proposal (project doc

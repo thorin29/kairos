@@ -22,7 +22,16 @@ export type PlanSummary = {
   others: string[];
 };
 
-type Row = { dayOfWeek: number; name: string; category: string | null; muscleGroup: string | null; isRest: boolean; sortOrder: number };
+type Row = {
+  dayOfWeek: number;
+  name: string;
+  category: string | null;
+  muscleGroup: string | null;
+  isRest: boolean;
+  sortOrder: number;
+  /** v0.749: set on a program's own entries. */
+  programId?: string | null;
+};
 
 const MONDAY_FIRST = [1, 2, 3, 4, 5, 6, 0];
 
@@ -66,10 +75,12 @@ export async function planSummary(userId: string, programDays: readonly number[]
   const [rows, end] = await Promise.all([
     prisma.plannedWorkout.findMany({
       where: { userId },
-      select: { dayOfWeek: true, name: true, category: true, muscleGroup: true, isRest: true, sortOrder: true },
+      select: { dayOfWeek: true, name: true, category: true, muscleGroup: true, isRest: true, sortOrder: true, programId: true },
     }) as Promise<Row[]>,
     getSetting(`weeklyEnd:${userId}`),
   ]);
-  const { strip, others } = buildStrip(rows, new Set(programDays));
+  // Every running program's days (v0.749: a program's own entries say so).
+  const days = new Set([...programDays, ...(programDays.length ? rows.filter((r) => r.programId).map((r) => r.dayOfWeek) : [])]);
+  const { strip, others } = buildStrip(rows, days);
   return { strip, ends: end && /^\d{4}-\d{2}-\d{2}$/.test(end) ? end : null, hasPlan: rows.length > 0, others };
 }

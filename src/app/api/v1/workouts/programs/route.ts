@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { apiOk } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { currentExtras, currentOtherDays, currentSetup, inviteFor, loadGarageFeet, loadProgramChoices, programInfoFor, versionsFor } from "@/lib/workouts/program-run";
+import { alsoPrograms, currentExtras, currentOtherDays, currentSetup, inviteFor, loadGarageFeet, loadProgramChoices, programInfoFor, versionsFor } from "@/lib/workouts/program-run";
 import { todayISO } from "@/lib/dates";
 import { routinesFor } from "@/lib/workouts/warmup-run";
 import { planSummary } from "@/lib/workouts/plan-summary";
@@ -16,7 +16,8 @@ export const dynamic = "force-dynamic";
  *  `versions`: the caller's own version of each program they changed, by key (v0.666);
  *  `garageFeet`: the garage's length for a shuttle carry, `canEditGarage` for a parent (v0.734);
  *  `plan`: the plan card's week strip, last day and other days (v0.747);
- *  `otherDays`: what each weekday holds now, Sunday first (v0.748). */
+ *  `otherDays`: what each weekday holds now, Sunday first (v0.748);
+ *  `also`: programs running beside the first, each with its `setup` (v0.749). */
 export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
@@ -29,13 +30,14 @@ export async function GET(req: NextRequest) {
     routinesFor(userId),
     currentSetup(userId),
   ]);
-  const [versions, garageFeet, plan, otherDays] = await Promise.all([
+  const [versions, garageFeet, plan, otherDays, also] = await Promise.all([
     versionsFor(userId, choices),
     loadGarageFeet(),
     planSummary(userId, active ? (setup?.days ?? []) : []),
     currentOtherDays(userId),
+    alsoPrograms(userId),
   ]);
   const me = authed.device.person;
   const canEditGarage = me.kind === "PARENT" || me.role === "ADMIN";
-  return apiOk({ choices, active, invite, current, warmups, setup, versions, garageFeet, canEditGarage, plan, otherDays });
+  return apiOk({ choices, active, invite, current, warmups, setup, versions, garageFeet, canEditGarage, plan, otherDays, also });
 }

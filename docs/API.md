@@ -1261,6 +1261,12 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.749: two programs can run at once. `GET /workouts/programs`: `active`
+(the first) and each program carry `id`; `also` lists the others, each with
+its `setup`. `POST /workouts/programs/start` takes `add` (beside the running
+one: its own days only) and `programId` (the program changed or replaced);
+`POST /workouts/programs/end` and `/block` take `programId`.
+
 v0.748: `GET /api/v1/workouts/programs` adds `otherDays` (what each weekday
 holds now, Sunday first: rest, skip, core, arms, iso, mobility, stretching,
 cardio, conditioning, strength:<GROUP>, custom); `active` adds `cycle`,
