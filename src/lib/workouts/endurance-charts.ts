@@ -168,11 +168,12 @@ const ACT_LABEL: Record<CardioActivityKey, string> = {
 };
 const ORDER: CardioActivityKey[] = ["ROWING", "RUNNING", "RUCKING", "HIKING", "WALKING", "CYCLING", "JUMP_ROPE", "CARDIO", "SPORT"];
 
-/** A sport line goes by its sport ("Hockey") when they all share one. */
+/** A sport line goes by its sports, the ones actually done: "Hockey", or
+ *  "Hockey, Soccer" (v0.746). "Sport" only when none is named. */
 function labelOf(key: CardioActivityKey, list: readonly CardioSession[]): string {
   if (key !== "SPORT") return ACT_LABEL[key];
-  const names = [...new Set(list.map((s) => s.label).filter(Boolean))];
-  return names.length === 1 ? (names[0] as string) : ACT_LABEL.SPORT;
+  const names = [...new Set(list.map((s) => s.label).filter((x): x is string => !!x && x !== ACT_LABEL.SPORT))];
+  return names.length ? names.join(", ") : ACT_LABEL.SPORT;
 }
 
 function measureOf(key: CardioActivityKey, list: CardioSession[]): string {
@@ -221,6 +222,8 @@ export function buildCardioCharts(all: readonly CardioSession[], today: string):
   const weeks = weekStarts(today);
   const thisWeekStart = weeks[weeks.length - 1];
   const activities: CardioActivity[] = [];
+  // This week's line names only this week's sports (v0.746).
+  const weekLabel = new Map<CardioActivityKey, string>();
   for (const key of ORDER) {
     const list = sessions.filter((s) => s.activity === key);
     if (list.length === 0) continue;
@@ -230,6 +233,7 @@ export function buildCardioCharts(all: readonly CardioSession[], today: string):
       value: Math.round(list.filter((s) => monday(s.date) === start).reduce((t, s) => t + amount(s, measure), 0) * 10) / 10,
     }));
     const mine = list.filter((s) => s.date >= thisWeekStart);
+    if (mine.length) weekLabel.set(key, labelOf(key, mine));
     let pace: CardioActivity["pace"] = null;
     if (measure !== "min") {
       const points = list
@@ -303,7 +307,7 @@ export function buildCardioCharts(all: readonly CardioSession[], today: string):
         .filter((a) => a.thisWeek.count > 0)
         .map((a) => ({
           key: a.key,
-          label: a.label,
+          label: weekLabel.get(a.key) ?? a.label,
           color: a.color,
           detail: [
             a.measure === "min" ? `${a.thisWeek.minutes} min` : `${num(a.thisWeek.value)} ${a.measure}`,

@@ -18,8 +18,7 @@ import { loadWorkoutPlanNames, loadWorkoutUnitSystem, loadWeightUnits } from "@/
 import { doneOn, loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
 import { loadStaleContext } from "@/lib/chores/stale";
 import { groupsFor, navRegionFor, shownGroup } from "@/lib/workouts/involvement";
-import { sportDayLabel } from "@/lib/sport/label";
-import { sportDaysBetween, sportsForDay, sportsOfEvents } from "@/lib/sport/day";
+import { sportDaysBetween, sportNamer, sportsForDay } from "@/lib/sport/day";
 import { setsSummary, topSet } from "@/lib/workouts/sets";
 import { lastTestsFor } from "@/lib/workouts/test-history";
 import { repRecords, REP_BANDS, bandPoints, weeksInARow, type RepRecord } from "@/lib/workouts/records";
@@ -3017,7 +3016,7 @@ export async function loadWeeklyTraining(
       sets: { seconds: number | null; poolExercise: { name: string; muscleGroup: string | null; category: string | null } | null }[];
     }[],
   ];
-  const sportOf = await sportsOfEvents(sessions.filter((s) => s.category === "SPORT").map((s) => s.sourceEventId));
+  const sportName = await sportNamer(userId, sessions.filter((s) => s.category === "SPORT"));
   // What each day held (v0.744): each kind of work once a day, each sport
   // event on its own; a set's movement decides lifting, core or holds.
   const dayKinds = new Map<string, Map<DayKind, number>>();
@@ -3035,7 +3034,7 @@ export async function loadWeeklyTraining(
       if (!list.includes(w)) list.push(w);
       words.set(k, list);
     };
-    if (s.category === "SPORT") add("sport", (s.sourceEventId && sportOf.get(s.sourceEventId)) || sportDayLabel(s.name));
+    if (s.category === "SPORT") add("sport", sportName(s));
     else if (s.category === "HIIT") add("conditioning", "Conditioning");
     else if (s.category && CARDIO_CATEGORIES.includes(s.category)) add("cardio", CARDIO_WORD[s.category] ?? "Cardio");
     else if (s.category === "MOBILITY" || s.category === "STRETCHING") add("other", s.category === "MOBILITY" ? "Mobility" : "Stretching");

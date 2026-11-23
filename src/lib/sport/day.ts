@@ -4,7 +4,7 @@ import { householdTz, localParts, toDateColumn } from "@/lib/dates";
 import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
 import { timeLabel } from "@/lib/workouts/workout-time";
 import { occurrencesIn } from "@/lib/calendar/recur";
-import { eventSport, sportKindOf, type SportKind } from "@/lib/sport/label";
+import { cleanSport, eventSport, sportDayLabel, sportKindOf, type SportKind } from "@/lib/sport/label";
 
 /**
  * A person's sport on a day (v0.662): the first sport-flagged calendar event
@@ -225,25 +225,50 @@ export async function sportsForDay(userId: string, dateISO: string): Promise<Day
 }
 
 /**
- * The sport of each event a logged sport session came from (v0.745), by event
- * id. A session whose event is gone goes by its own name (sportDayLabel).
+ * Names logged sport sessions (v0.745; v0.746): the sport of the event each
+ * came from; once a feed has dropped an old event, the session's own name if
+ * it names a sport, else the person's sport when every sport type and sport
+ * calendar of theirs picks the same one, else "Sport".
  */
-export async function sportsOfEvents(ids: readonly (string | null)[]): Promise<Map<string, string>> {
-  const want = [...new Set(ids.filter((x): x is string => !!x))];
-  if (want.length === 0) return new Map();
-  const rows = (await prisma.event.findMany({
-    where: { id: { in: want } },
-    select: {
-      id: true,
-      title: true,
-      eventType: { select: { name: true, sport: true } },
-      externalCalendar: { select: { name: true, sport: true } },
-    },
-  })) as {
-    id: string;
-    title: string | null;
-    eventType: { name: string; sport: string | null } | null;
-    externalCalendar: { name: string; sport: string | null } | null;
-  }[];
-  return new Map(rows.map((r) => [r.id, eventSport(r)]));
+export async function sportNamer(
+  userId: string,
+  sessions: readonly { sourceEventId: string | null; name: string | null }[],
+): Promise<(s: { sourceEventId: string | null; name: string | null }) => string> {
+  const want = [...new Set(sessions.map((s) => s.sourceEventId).filter((x): x is string => !!x))];
+  const [rows, types, cals] = (await Promise.all([
+    want.length
+      ? prisma.event.findMany({
+          where: { id: { in: want } },
+          select: {
+            id: true,
+            title: true,
+            eventType: { select: { name: true, sport: true } },
+            externalCalendar: { select: { name: true, sport: true } },
+          },
+        })
+      : Promise.resolve([]),
+    prisma.eventType.findMany({ where: { sportWorkout: true }, select: { sport: true } }),
+    prisma.externalCalendar.findMany({
+      where: { sportWorkout: true, OR: [{ userId }, { memberIds: { has: userId } }] },
+      select: { sport: true },
+    }),
+  ])) as [
+    {
+      id: string;
+      title: string | null;
+      eventType: { name: string; sport: string | null } | null;
+      externalCalendar: { name: string; sport: string | null } | null;
+    }[],
+    { sport: string | null }[],
+    { sport: string | null }[],
+  ];
+  const byEvent = new Map(rows.map((r) => [r.id, eventSport(r)]));
+  const picked = [...new Set([...types, ...cals].map((x) => cleanSport(x.sport)).filter((x): x is string => !!x))];
+  const theirs = picked.length === 1 ? picked[0] : null;
+  return (s) => {
+    const fromEvent = s.sourceEventId ? byEvent.get(s.sourceEventId) : undefined;
+    if (fromEvent) return fromEvent;
+    const named = sportDayLabel(s.name);
+    return named !== "Sport" ? named : (theirs ?? "Sport");
+  };
 }

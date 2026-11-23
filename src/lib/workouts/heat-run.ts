@@ -8,8 +8,7 @@ import {
   type ConditioningSession,
 } from "@/lib/workouts/endurance-charts";
 import type { WorkoutType } from "@/lib/workouts/catalog";
-import { sportDayLabel } from "@/lib/sport/label";
-import { sportsOfEvents } from "@/lib/sport/day";
+import { sportNamer } from "@/lib/sport/day";
 import { cardioKeyOf } from "@/lib/workouts/endurance-charts";
 import { soreSpotsFor } from "@/lib/workouts/sore-run";
 import { soreHeatGroups } from "@/lib/workouts/adjust";
@@ -246,8 +245,7 @@ async function cardioEntries(
     }[];
   }[];
   // A sport goes by its event's picked sport (v0.745), else its own name.
-  const sportOf = await sportsOfEvents(rows.filter((r) => r.category === "SPORT").map((r) => r.sourceEventId));
-  const sportName = (r: (typeof rows)[number]) => (r.sourceEventId && sportOf.get(r.sourceEventId)) || sportDayLabel(r.name);
+  const sportName = await sportNamer(userId, rows.filter((r) => r.category === "SPORT"));
   const hiitEffort = new Map<string, string | null>();
   for (const [k, v] of effortOn) {
     const [d, slot] = k.split("|");

@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Sport names on Cardio (v0.746.0)
+
+- A subscribed feed drops events once they age out, so an old sport
+  session's event is gone and its own name is the matchup ("Team A @ Team
+  B"), which read as "Sport". `sportNamer`: the event's sport, else the
+  session's name if it names one, else the person's sport when every sport
+  type and sport calendar of theirs picks the same one, else "Sport".
+- The Cardio sport line lists the sports done, with commas ("Hockey,
+  Soccer"); this week's line names only this week's. One colour.
+
 ## 2026-11 — Cardio colours, picking the sport, x of y (v0.745.0)
 
 - Cardio kinds: row, run and ruck by category; hike, walk, bike (Cycling)

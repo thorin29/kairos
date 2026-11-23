@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.745.0";
+export const APP_VERSION = "0.746.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -179,6 +179,10 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.746.0",
+    summary: ["Cardio names your sport (\"Hockey\") even for old games whose calendar event is gone, and lists more than one with commas (\"Hockey, Soccer\"), only the ones you did. Sport stays one green."],
+  },
   {
     version: "0.745.0",
     summary: ["Cardio splits each week by type in its own colour, with sport in green. Hike and Walk are new.", "Pick the sport on an event type or subscribed calendar; with none named it is just Sport, not Hockey.", "The home card shows \"1 of 2 workouts\" on days with more than one; a skipped one counts. Weekly training's Planned line counts planned parts and sport events, saved each day from now on."],

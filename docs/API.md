@@ -1261,6 +1261,10 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.746: a cardio `SPORT` activity's `label` lists its sports with commas
+("Hockey, Soccer"); a `thisWeek.lines` entry names that week's only. Old
+sessions whose event is gone take the person's one picked sport.
+
 v0.745: cardio charts: activity keys add `HIKING`, `WALKING`, `CYCLING` and
 `JUMP_ROPE` (CARDIO sessions by name); each activity adds `color`; `weeks[]`
 adds `parts` (`key`, `minutes`, `color`, bottom first); `thisWeek.lines[]`

@@ -91,7 +91,7 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.745.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.746.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   161_event_sport, all registered in `MIGRATIONS`.
 - App 0.540.0 (versionCode 612, CLIENT_BUILD 612).
 - ice-time 0.1.3.

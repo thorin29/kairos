@@ -138,3 +138,20 @@ describe("cardio kinds (v0.745)", () => {
     expect(c.thisWeek.lines[2].color).toBe("#65a30d");
   });
 });
+
+describe("sport names on Cardio (v0.746)", () => {
+  it("lists the sports done, with commas, and only this week's on the week line", async () => {
+    const { buildCardioCharts } = await import("@/lib/workouts/endurance-charts");
+    const base = { meters: null, distance: null, unit: null, seconds: null, load: null, effort: null };
+    const c = buildCardioCharts(
+      [
+        { ...base, date: "2026-11-03", activity: "SPORT", minutes: 60, label: "Soccer" },
+        { ...base, date: "2026-11-17", activity: "SPORT", minutes: 60, label: "Hockey" },
+        { ...base, date: "2026-11-18", activity: "SPORT", minutes: 60, label: "Sport" },
+      ],
+      "2026-11-20",
+    )!;
+    expect(c.activities[0].label).toBe("Soccer, Hockey");
+    expect(c.thisWeek.lines[0].label).toBe("Hockey");
+  });
+});
