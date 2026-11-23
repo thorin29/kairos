@@ -71,11 +71,33 @@ export function otherKindOf(rows: readonly Row[]): OtherKind {
   return "custom";
 }
 
-/** A kind the setup can send; anything else is dropped. */
+/** A kind the setup can send; anything else is dropped. It may carry what
+ *  its window picked (v0.753): "arms@id,id|notest", "mobility@routineId",
+ *  "strength:LEGS@poolId,poolId". */
 export function cleanOtherKind(v: unknown): OtherKind | null {
   if (typeof v !== "string") return null;
-  if (v === "rest" || v === "skip" || v === "custom") return v;
-  if ((OTHER_ADDS as readonly string[]).includes(v) && v !== "strength") return v;
-  const m = /^strength:([A-Z_]+)$/.exec(v);
-  return m && (STRENGTH_GROUPS as readonly string[]).includes(m[1]) ? v : null;
+  const { kind, ids, test } = splitOther(v);
+  if (kind === "rest" || kind === "skip" || kind === "custom") return ids.length ? null : kind;
+  const base = /^strength:([A-Z_]+)$/.exec(kind);
+  const ok =
+    ((OTHER_ADDS as readonly string[]).includes(kind) && kind !== "strength") ||
+    (!!base && (STRENGTH_GROUPS as readonly string[]).includes(base[1]));
+  if (!ok) return null;
+  if (ids.length === 0 && !v.includes("@")) return kind;
+  if (kind === "cardio" || kind === "conditioning" || ids.length === 0) return kind;
+  return joinOther(kind, ids, test);
+}
+
+/** "arms@a,b|notest" → arms, [a, b], false. Ids are plain tokens, at most 12. */
+export function splitOther(v: string): { kind: string; ids: string[]; test: boolean | null } {
+  const at = v.indexOf("@");
+  if (at < 0) return { kind: v, ids: [], test: null };
+  const [list, flag] = v.slice(at + 1).split("|");
+  const ids = [...new Set(list.split(",").filter((x) => /^[A-Za-z0-9_:.-]{1,80}$/.test(x)))].slice(0, 12);
+  return { kind: v.slice(0, at), ids, test: flag === "test" ? true : flag === "notest" ? false : null };
+}
+
+export function joinOther(kind: string, ids: readonly string[], test?: boolean | null): string {
+  if (ids.length === 0) return kind;
+  return `${kind}@${ids.join(",")}${test == null ? "" : test ? "|test" : "|notest"}`;
 }

@@ -78,10 +78,13 @@ export function BlockBuilder({
   editMode = false,
   otherDays,
   alongside = false,
+  userId,
   onBack,
   onClose,
   onStart,
 }: {
+  /** Opens each other day's window (v0.753). */
+  userId?: string;
   /** What each weekday holds now, Sunday first (v0.748). */
   otherDays?: string[];
   /** Beside the running program (v0.749): its own days, blocks and weights only. */
@@ -254,6 +257,7 @@ export function BlockBuilder({
             programDays={placed.map((x) => x.dow)}
             other={other}
             had={editMode || initial ? otherDays : undefined}
+            userId={userId}
             onChange={(d, k) => setOther((o) => ({ ...o, [d]: k }))}
           />
         )}

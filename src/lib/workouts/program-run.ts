@@ -9,12 +9,12 @@ import { getSetting, setSetting } from "@/lib/settings";
 import { savePlan } from "@/lib/workouts/plan-share-run";
 import { LIBRARY, guessPattern, nameKey } from "@/lib/workouts/library";
 import { applyLibrary, loadEquipment } from "@/lib/workouts/library-run";
-import { routineFor } from "@/lib/workouts/warmup-run";
+import { routineFor, routinesFor } from "@/lib/workouts/warmup-run";
 import { cleanVersion, setupDiffers, type ProgramVersion } from "@/lib/workouts/program-version";
 import { extraSlotFor } from "@/lib/workouts/day-extras-run";
 import { setCoreDay } from "@/lib/workouts/core-run";
 import { rotationLibrary } from "@/lib/workouts/core-library";
-import { cleanOtherKind, otherKindOf, setupRow } from "@/lib/workouts/other-days";
+import { cleanOtherKind, otherKindOf, setupRow, splitOther } from "@/lib/workouts/other-days";
 import { libraryRoutinesOf } from "@/lib/workouts/warmup-library";
 import {
   GARAGE_FEET,
@@ -1242,13 +1242,17 @@ function cleanOther(raw: unknown, programDays: readonly number[]): Map<number, s
 /** A fresh other day (v0.748): Rest, a Core / Arms / Isometric rotation from
  *  the library, a Mobility or Stretching routine, or a muscle group's day.
  *  Cardio and conditioning come from their own steps. */
-async function makeOtherDay(userId: string, dow: number, kind: string, sortOrder: number): Promise<void> {
+async function makeOtherDay(userId: string, dow: number, raw: string, sortOrder: number): Promise<void> {
+  // What the kind's window picked (v0.753), else the library's first.
+  const { kind, ids, test } = splitOther(raw);
   if (kind === "rest") {
     await prisma.plannedWorkout.create({ data: { userId, dayOfWeek: dow, name: "Rest", isRest: true, sortOrder } });
   } else if (kind === "core" || kind === "arms" || kind === "iso") {
-    await setCoreDay(userId, { day: dow, rotation: [rotationLibrary(kind)[0].id], test: kind !== "arms", kind });
+    const picked = ids.length ? await setCoreDay(userId, { day: dow, rotation: ids, test: test ?? kind !== "arms", kind }) : null;
+    if (!picked?.ok) await setCoreDay(userId, { day: dow, rotation: [rotationLibrary(kind)[0].id], test: test ?? kind !== "arms", kind });
   } else if (kind === "mobility" || kind === "stretching") {
-    const routine = libraryRoutinesOf(kind)[0]?.id ?? null;
+    const mine = ids[0] && (await routinesFor(userId, kind)).some((r) => r.id === ids[0]) ? ids[0] : null;
+    const routine = mine ?? libraryRoutinesOf(kind)[0]?.id ?? null;
     await prisma.plannedWorkout.create({
       data: {
         userId,
@@ -1261,8 +1265,34 @@ async function makeOtherDay(userId: string, dow: number, kind: string, sortOrder
     });
   } else if (kind.startsWith("strength:")) {
     const group = kind.slice(9) as MuscleGroup;
+    const pool = ids.length
+      ? ((await prisma.poolExercise.findMany({ where: { id: { in: ids } }, select: { id: true, metric: true } })) as {
+          id: string;
+          metric: string | null;
+        }[])
+      : [];
+    const moves = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is (typeof pool)[number] => !!p);
     await prisma.plannedWorkout.create({
-      data: { userId, dayOfWeek: dow, name: MUSCLE_GROUP_LABEL[group] ?? "Strength", category: "WEIGHTS", muscleGroup: group as never, sortOrder },
+      data: {
+        userId,
+        dayOfWeek: dow,
+        name: MUSCLE_GROUP_LABEL[group] ?? "Strength",
+        category: "WEIGHTS",
+        muscleGroup: group as never,
+        sortOrder,
+        ...(moves.length
+          ? {
+              exercises: {
+                create: moves.map((m, k) => ({
+                  poolExerciseId: m.id,
+                  tracked: true,
+                  metric: (m.metric ?? "WEIGHT") as never,
+                  sortOrder: k,
+                })),
+              },
+            }
+          : {}),
+      },
     });
   }
 }

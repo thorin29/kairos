@@ -1,5 +1,6 @@
 "use client";
 
+import { RestSquare } from "./rest-square";
 import { CHIP, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG, SECTION_CARD, SECTION_LABEL } from "./buttons";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/avatar";
@@ -314,6 +315,7 @@ export function WorkoutsGrid({
                           all={open.trackedSeries}
                           planDays={open.planDays}
                           extraDays={open.heat.days}
+                          restDays={open.heat.restDays}
                         />
                       )}
                       <WeeklyTraining userId={open.user.id} />
@@ -1144,10 +1146,13 @@ function LiftDetailPanel({
   planDays,
   chart,
   extraDays = [],
+  restDays = [],
 }: {
   all: LiftSeries[];
   /** Days a group was trained without weights (a core day of planks), v0.636. */
   extraDays?: { date: string; groups: string[] }[];
+  /** Days rested on purpose (v0.753): the moon. A planned rest day has no row. */
+  restDays?: string[];
   /** Weekdays the plan uses, so the grid only draws rows that mean something. */
   planDays?: { day: number; groups: string[] }[];
   /** The session plot, shown last. The numbers lead; the chart is the long
@@ -1226,6 +1231,7 @@ function LiftDetailPanel({
     byDate.set(d.date, list);
   }
   const trained = byDate;
+  const restSet = new Set(restDays);
 
   // A row for each weekday the plan uses AND each weekday something was
   // logged on in the last 16 weeks (v0.619), so switching to a plan with
@@ -1327,6 +1333,8 @@ function LiftDetailPanel({
                             style={cellStyle(cell.groups)}
                             className="block h-[18px] w-[18px] rounded-[4px]"
                           />
+                        ) : restSet.has(cell.date) ? (
+                          <RestSquare key={cell.date} title={`${cell.date}: Rest`} className="h-[18px] w-[18px] rounded-[4px]" />
                         ) : (
                           <span key={cell.date} title={cell.date} className="h-[18px] w-[18px] rounded-[4px] bg-surface" />
                         ),
@@ -1419,6 +1427,7 @@ function PersonalTop({
               all={open.trackedSeries}
               planDays={open.planDays}
               extraDays={open.heat.days}
+              restDays={open.heat.restDays}
             />
           </div>
         </div>

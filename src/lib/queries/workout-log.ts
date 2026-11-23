@@ -3194,7 +3194,11 @@ export async function loadWeeklyTraining(
                 : "planned"
               : task === "SKIPPED"
                 ? "rest"
-                : null;
+                : // A day gone by with nothing done and nothing due (v0.753): a
+                  // planned rest day, in a week the plan or a log covers.
+                  date < today && (due > 0 || logged)
+                  ? "rest"
+                  : null;
       // Every kind named, in the bars' order (v0.744): "Chest · Row · Hockey".
       const byKind = dayWords.get(date);
       const words = ks.flatMap((k) => byKind?.get(k) ?? []);

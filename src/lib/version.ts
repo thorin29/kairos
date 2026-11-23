@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.752.0";
+export const APP_VERSION = "0.753.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -181,6 +181,10 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.753.0",
+    summary: ["Rest days get a moon: on Workout days when you rested on a workout day, and in This week for a day that ended as a rest day. A missed day stays blank. Setup's Other days: picking Core, Arms, Isometric, Mobility, Stretching or Strength opens its own window to choose the workouts, routine or movements."],
+  },
   {
     version: "0.752.0",
     summary: ["Plateau card on the plan card: when two or more main muscle groups have no new best in 4 weeks, try a program (with a preview), take a light week at 60%, swap the movements, or keep going. For your own plan and programs without training maxes."],

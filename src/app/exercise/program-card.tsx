@@ -1,5 +1,6 @@
 "use client";
 
+import { splitOther } from "@/lib/workouts/other-days";
 import { PRIMARY_BTN, SECONDARY_BTN } from "./buttons";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { Plateau } from "@/lib/workouts/plateau-run";
@@ -264,6 +265,7 @@ export function ProgramCard({
       {program && (
         <ProgramSetup
           key={`${program.key}:${version ? "mine" : "default"}`}
+          userId={userId}
           program={program}
           current={version?.extras ?? data.current}
           warmups={data.warmups}
@@ -1038,10 +1040,13 @@ function ProgramSetupSteps({
   editMode = false,
   otherDays,
   alongside = false,
+  userId,
   onBack,
   onClose,
   onStart,
 }: {
+  /** Opens each other day's window (v0.753). */
+  userId?: string;
   /** Beside the running program (v0.749): its own days, lifts and maxes only. */
   alongside?: boolean;
   program: ProgramChoice;
@@ -1169,7 +1174,7 @@ function ProgramSetupSteps({
   const review = MONDAY_FIRST.map((d) => {
     const parts: string[] = [];
     const prog = program.days.filter((_, i) => days[i] === d).map((x) => x.name);
-    const k = other[d] ?? "skip";
+    const k = splitOther(other[d] ?? "skip").kind;
     const work = prog.length > 0 || (k !== "rest" && k !== "skip");
     if (warmup !== "none" && work && k !== "mobility" && k !== "stretching") parts.push("Warm-up");
     parts.push(...prog);
@@ -1208,6 +1213,7 @@ function ProgramSetupSteps({
             programDays={days}
             other={other}
             had={editMode ? otherDays : undefined}
+            userId={userId}
             onChange={(d, k) => setOther((o) => ({ ...o, [d]: k }))}
           />
         )}
@@ -1530,6 +1536,7 @@ export function ProgramSection({ userId, onChanged }: { userId: string; onChange
       ))}
       {opened && p && opened.setup && (
         <ProgramSetup
+          userId={userId}
           program={p}
           current={data.current}
           warmups={data.warmups}

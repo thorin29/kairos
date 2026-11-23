@@ -1,5 +1,6 @@
 "use client";
 
+import { RestSquare } from "./rest-square";
 import { useEffect, useState } from "react";
 import { loadWeeklyTrainingFor } from "@/lib/actions/workouts";
 import type { TrainingDay, TrainingWeek } from "@/lib/queries/workout-log";
@@ -134,6 +135,9 @@ export function WeeklyTraining({ userId }: { userId: string }) {
               return (
                 <div key={d.date} className="flex flex-col items-center gap-1">
                   <span className="text-[10px] text-muted">{DOW[i]}</span>
+                  {!k && d.status === "rest" ? (
+                    <RestSquare title={d.label} className="h-7 w-full max-w-[34px] rounded-md" />
+                  ) : (
                   <span
                     className={`block h-7 w-full max-w-[34px] rounded-md border ${
                       k
@@ -152,6 +156,7 @@ export function WeeklyTraining({ userId }: { userId: string }) {
                         : undefined
                     }
                   />
+                  )}
                   <span className="min-h-[24px] text-center text-[9px] leading-tight text-muted">{d.label}</span>
                 </div>
               );

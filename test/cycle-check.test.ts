@@ -43,3 +43,17 @@ describe("other days (v0.748)", () => {
     expect(cleanOtherKind(3)).toBeNull();
   });
 });
+
+describe("other days carry their picks (v0.753)", () => {
+  it("keeps a picked rotation, routine or movements", async () => {
+    const { cleanOtherKind, splitOther } = await import("@/lib/workouts/other-days");
+    expect(cleanOtherKind("arms@lib:arms-1,abc|notest")).toBe("arms@lib:arms-1,abc|notest");
+    expect(splitOther("arms@lib:arms-1,abc|notest")).toEqual({ kind: "arms", ids: ["lib:arms-1", "abc"], test: false });
+    expect(cleanOtherKind("strength:LEGS@p1,p2")).toBe("strength:LEGS@p1,p2");
+    expect(cleanOtherKind("mobility@lib:hips")).toBe("mobility@lib:hips");
+    expect(cleanOtherKind("core@")).toBe("core");
+    expect(cleanOtherKind("rest@x")).toBeNull();
+    expect(cleanOtherKind("strength:NOPE@p1")).toBeNull();
+    expect(cleanOtherKind("cardio@x")).toBe("cardio");
+  });
+});

@@ -14,7 +14,8 @@ import { soreSpotsFor } from "@/lib/workouts/sore-run";
 import { soreHeatGroups } from "@/lib/workouts/adjust";
 import { workoutPausesFor } from "@/lib/workouts/pause-run";
 import { prisma } from "@/lib/prisma";
-import { fromDateColumn } from "@/lib/dates";
+import { addDays, fromDateColumn, toDateColumn } from "@/lib/dates";
+import { pausedDays } from "@/lib/workouts/pause";
 import { doneOn } from "@/lib/queries/movement-stats";
 import { OPTIONAL_CATEGORIES } from "@/lib/workouts/blocks";
 import type { MuscleGroup } from "@/lib/workouts/catalog";
@@ -150,7 +151,23 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
     cardioCharts: buildCardioCharts(endurance.cardio, todayISO),
     conditioningCharts: buildConditioningCharts(endurance.conditioning, todayISO),
     sore: await soreSpotsFor(userId),
+    restDays: await restedDays(userId, todayISO),
   };
+}
+
+/** Rest / skip pressed with nothing else logged that day, and paused days,
+ *  over the last year (v0.753). */
+async function restedDays(userId: string, todayISO: string): Promise<string[]> {
+  const from = addDays(todayISO, -366);
+  const sessions = (await prisma.workoutSession.findMany({
+    where: { userId, date: { gte: toDateColumn(from), lte: toDateColumn(todayISO) } },
+    select: { date: true, isRest: true },
+  })) as { date: Date; isRest: boolean }[];
+  const rested = new Set<string>();
+  const trained = new Set<string>();
+  for (const s of sessions) (s.isRest ? rested : trained).add(fromDateColumn(s.date));
+  for (const d of pausedDays(await workoutPausesFor(userId, from), from, todayISO)) if (d <= todayISO) rested.add(d);
+  return [...rested].filter((d) => !trained.has(d)).sort();
 }
 
 /** Days made lighter (Lighter today, or an Adjust today choice). */

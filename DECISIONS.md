@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-11 — Rest days on the charts; Other days windows (v0.753.0)
+
+- Rest look: a pale slate square with a small moon (`RestSquare`), no legend.
+  Workout days: `heat.restDays` (Rest / skip with nothing else logged, or
+  paused, over a year) on the rows the grid already draws, so a planned rest
+  weekday still has no row. This week: a finished day with nothing done and
+  nothing due, in a week the plan or a log covers, is `rest` (as Rest / skip
+  and paused already were). Missed stays a dashed amber outline; the bars
+  don't change.
+- Open #15: an Other days add opens its window: Core / Arms / Isometric
+  workouts to rotate (and the monthly test), a Mobility or Stretching
+  routine, or a muscle group and its movements. The choice rides on the
+  kind: `arms@id,id|notest`, `mobility@routineId`, `strength:LEGS@id,id`
+  (`splitOther` / `joinOther`, other-days.ts). A kind with picks always
+  makes the day fresh; picks that don't check out fall back to the library's
+  first.
+
 ## 2026-11 — Plateau card (v0.752.0)
 
 - Release 4 of the plan-builder proposal. `plateau.ts` (pure): main groups

@@ -90,6 +90,9 @@ export type HeatMap = {
   conditioningCharts?: import("@/lib/workouts/endurance-charts").ConditioningCharts | null;
   /** Sore spots (v0.675), until marked better. */
   sore?: import("@/lib/workouts/sore").SoreSpot[];
+  /** Days rested on purpose (v0.753): Rest / skip with nothing else logged,
+   *  or paused. Workout days marks them with the moon. */
+  restDays?: string[];
 };
 
 const MAX_REPS_FOR_ESTIMATE = 12;

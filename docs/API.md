@@ -1261,6 +1261,14 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.753: `heat` adds `restDays` (dates rested on purpose: Rest / skip with
+nothing else logged, or paused). Weekly training `dayList[].status` is
+also `rest` for a finished day with nothing done and nothing due. An
+`other` kind for `POST /workouts/programs/start` may carry its window's
+picks: `core|arms|iso@<workout ids>[|test|notest]`,
+`mobility|stretching@<routine id>`, `strength:<GROUP>@<pool ids>` (up to 12
+ids); such a day is always made fresh.
+
 v0.752: `GET /api/v1/workouts/programs` adds `plateau` (null, or `{title,
 why, groups: [{group, movement: {poolExerciseId, name, weight, reps,
 since}}], program: {key, name, blurb, days, weeks} | null}`; `program` is
