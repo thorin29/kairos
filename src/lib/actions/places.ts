@@ -15,6 +15,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 export async function savePlacesKeysAction(input: {
   mapKey: string;
   lookupKey: string;
+  mapId: string;
   clearMap?: boolean;
   clearLookup?: boolean;
 }): Promise<{ error: string | null }> {

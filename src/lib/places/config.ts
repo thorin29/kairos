@@ -15,6 +15,8 @@ import { dayStart, dayEnd } from "@/lib/places/day-bounds";
  */
 export const PLACES_MAP_KEY = "places.mapKey";
 export const PLACES_LOOKUP_KEY = "places.lookupKey";
+/** Google Map ID — needed for the avatar markers; not a secret. */
+export const PLACES_MAP_ID = "places.mapId";
 export const PLACES_TOKEN_HASH = "places.ingestTokenHash";
 export const PLACES_TOKEN_AT = "places.ingestTokenCreatedAt";
 /** The last entity that pushed without being linked to anyone, as JSON. */
@@ -45,6 +47,7 @@ export async function noteUnlinked(entityId: string): Promise<void> {
 export async function saveKeys(input: {
   mapKey: string;
   lookupKey: string;
+  mapId: string;
   clearMap?: boolean;
   clearLookup?: boolean;
 }): Promise<void> {
@@ -53,6 +56,9 @@ export async function saveKeys(input: {
   else if (input.clearMap) await clearSetting(PLACES_MAP_KEY);
   if (clean(input.lookupKey)) await setSetting(PLACES_LOOKUP_KEY, clean(input.lookupKey));
   else if (input.clearLookup) await clearSetting(PLACES_LOOKUP_KEY);
+  const mapId = input.mapId.trim().slice(0, 100);
+  if (mapId) await setSetting(PLACES_MAP_ID, mapId);
+  else await clearSetting(PLACES_MAP_ID);
 }
 
 /** Link people to HA entities. A blank entity stops tracking that person
@@ -128,6 +134,7 @@ export type PlacesPersonRow = {
 export type PlacesAdmin = {
   mapKeySet: boolean;
   lookupKeySet: boolean;
+  mapId: string;
   tokenCreatedAt: string | null;
   lastReceivedAt: string | null;
   unlinked: { entityId: string; at: string } | null;
@@ -137,9 +144,10 @@ export type PlacesAdmin = {
 };
 
 export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
-  const [mapKey, lookupKey, tokenHash, tokenAt, unlinkedRaw] = await Promise.all([
+  const [mapKey, lookupKey, mapId, tokenHash, tokenAt, unlinkedRaw] = await Promise.all([
     getSetting(PLACES_MAP_KEY),
     getSetting(PLACES_LOOKUP_KEY),
+    getSetting(PLACES_MAP_ID),
     getSetting(PLACES_TOKEN_HASH),
     getSetting(PLACES_TOKEN_AT),
     getSetting(PLACES_UNLINKED),
@@ -217,6 +225,7 @@ export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
   return {
     mapKeySet: Boolean(mapKey),
     lookupKeySet: Boolean(lookupKey),
+    mapId: mapId ?? "",
     tokenCreatedAt: tokenHash ? tokenAt ?? null : null,
     lastReceivedAt: newest ? newest.createdAt.toISOString() : null,
     unlinked,

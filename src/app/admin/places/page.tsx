@@ -65,6 +65,7 @@ export default async function PlacesAdminPage() {
         people={people}
         mapKeySet={data.mapKeySet}
         lookupKeySet={data.lookupKeySet}
+        mapId={data.mapId}
         tokenMade={data.tokenCreatedAt ? time.format(new Date(data.tokenCreatedAt)) : null}
         lastReceived={data.lastReceivedAt ? when(data.lastReceivedAt) : null}
         unlinked={data.unlinked ? { entityId: data.unlinked.entityId, when: when(data.unlinked.at) } : null}

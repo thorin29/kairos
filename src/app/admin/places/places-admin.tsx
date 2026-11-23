@@ -58,6 +58,7 @@ export function PlacesAdminForm(props: {
   people: PersonView[];
   mapKeySet: boolean;
   lookupKeySet: boolean;
+  mapId: string;
   tokenMade: string | null;
   lastReceived: string | null;
   unlinked: { entityId: string; when: string } | null;
@@ -109,11 +110,12 @@ export function PlacesAdminForm(props: {
   const [lookupKey, setLookupKey] = useState("");
   const [clearMap, setClearMap] = useState(false);
   const [clearLookup, setClearLookup] = useState(false);
+  const [mapId, setMapId] = useState(props.mapId);
   const [keysMsg, setKeysMsg] = useState<Msg>(null);
   const saveKeys = () =>
     startTransition(async () => {
       setKeysMsg(null);
-      const res = await savePlacesKeysAction({ mapKey, lookupKey, clearMap, clearLookup });
+      const res = await savePlacesKeysAction({ mapKey, lookupKey, mapId, clearMap, clearLookup });
       setKeysMsg(res.error ? { ok: false, text: res.error } : { ok: true, text: "Saved." });
       setMapKey("");
       setLookupKey("");
@@ -249,6 +251,21 @@ export function PlacesAdminForm(props: {
               Remove the saved key
             </label>
           )}
+        </div>
+        <div>
+          <label htmlFor="places-map-id" className="mb-1 block text-sm font-medium">
+            Map ID
+          </label>
+          <input
+            id="places-map-id"
+            value={mapId}
+            onChange={(e) => setMapId(e.target.value)}
+            autoCapitalize="none"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="From Google Maps Platform → Map management"
+            className={`${field} font-mono`}
+          />
         </div>
         <div>
           <label htmlFor="places-lookup-key" className="mb-1 block text-sm font-medium">

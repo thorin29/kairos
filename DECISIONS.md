@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-11 — Places setup and Map ID (v0.756.0)
+
+- Admin → Places stores a Google **Map ID** (`places.mapId`, not a secret): the
+  coming map draws people as HTML avatar markers, which Google only allows on a
+  map with a Map ID.
+- The Home Assistant REST command takes its values as `tracker`, `lat`, `lon`,
+  `accuracy`, `speed`, `course`, `altitude`, `battery`, `updated` instead of
+  passing `entity_id` in the action's data, which Home Assistant can treat as a
+  target. The posted JSON keeps the documented field names.
+- The setup doc recommends the LAN URL when Home Assistant and Kairos share a
+  network, so pushes never meet a CDN bot filter or SSO gateway.
+- Deleting history stays admin-only: `/admin` is gated in its layout and
+  `deletePlacesHistoryAction` calls `requireAdmin`; there is no API route for it.
+
 ## 2026-11 — Places, release 1: collection (v0.755.0)
 
 - Family locations come from the Home Assistant Companion app already on the
