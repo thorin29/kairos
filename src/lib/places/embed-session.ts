@@ -88,6 +88,16 @@ export async function requirePlacesViewer(
   return { response: apiError("missing_bearer", "Missing bearer token.") };
 }
 
+/**
+ * For the WebView's writes and Google-costing reads: the page sends this
+ * header, which another site can't add to a request without a CORS
+ * preflight this server never grants, so the cookie can't be used from
+ * elsewhere.
+ */
+export function sameSiteRequest(req: NextRequest): boolean {
+  return req.headers.get("x-kairos-embed") === "1" || Boolean(req.headers.get("authorization"));
+}
+
 /** Places pages the cookie may open (and where a ticket may lead). */
 export function isEmbedPath(path: string): boolean {
   return /^\/places\/embed(\/[A-Za-z0-9_-]{1,40})?$/.test(path);

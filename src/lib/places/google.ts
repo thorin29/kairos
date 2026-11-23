@@ -89,6 +89,51 @@ export async function nearbySearch(
   }
 }
 
+/** What someone typed ("Lowe's", "the rink", an address), searched near a
+ *  point — Places API (New) Text Search, Pro SKU fields. null = the call failed. */
+export async function textSearch(
+  key: string,
+  query: string,
+  lat: number,
+  lng: number,
+): Promise<NearbyHit[] | null> {
+  try {
+    const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location",
+      },
+      body: JSON.stringify({
+        textQuery: query,
+        maxResultCount: 6,
+        languageCode: "en",
+        locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: 5000 } },
+      }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.warn(`[places] text search failed: HTTP ${res.status}`);
+      return null;
+    }
+    const data = (await res.json()) as NearbyResponse;
+    const hits: NearbyHit[] = [];
+    for (const p of data.places ?? []) {
+      const name = p.displayName?.text?.trim();
+      const plat = p.location?.latitude;
+      const plng = p.location?.longitude;
+      if (!name || !p.id || plat == null || plng == null) continue;
+      hits.push({ name, address: p.formattedAddress ?? null, placeId: p.id, lat: plat, lng: plng });
+    }
+    return hits;
+  } catch (e) {
+    console.warn(`[places] text search error: ${(e as Error).name}`);
+    return null;
+  }
+}
+
 type GeocodeResponse = {
   status?: string;
   results?: { formatted_address?: string; place_id?: string; geometry?: { location?: { lat?: number; lng?: number } } }[];

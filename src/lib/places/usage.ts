@@ -17,6 +17,7 @@ export const DAILY_LIMIT: Record<Exclude<ApiKind, "mapload">, number> = {
   geocode: 280,
   roads: 140,
   routes: 280,
+  search: 40,
 };
 
 /** Google's free calls per month for each SKU Kairos uses (since March 2025:
@@ -27,6 +28,7 @@ export const FREE_PER_MONTH: Record<ApiKind, number> = {
   nearby: 5_000,
   roads: 5_000,
   routes: 10_000,
+  search: 5_000,
 };
 
 export async function bump(kind: ApiKind): Promise<void> {
@@ -58,7 +60,7 @@ export async function usageSummary(): Promise<UsageSummary> {
     where: { day: { startsWith: month } },
     select: { day: true, kind: true, count: true },
   })) as { day: string; kind: string; count: number }[];
-  const kinds: ApiKind[] = ["mapload", "geocode", "nearby", "roads", "routes"];
+  const kinds: ApiKind[] = ["mapload", "geocode", "nearby", "search", "roads", "routes"];
   const out = {} as UsageSummary;
   for (const k of kinds) {
     const mine = rows.filter((r) => r.kind === k);

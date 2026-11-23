@@ -143,6 +143,26 @@ const iconBtnOn =
 
 const glyph = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round", className: "h-5 w-5", "aria-hidden": true } as const;
 
+const cardIcon = "flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-ground hover:text-ink";
+
+export function ClockGlyph() {
+  return (
+    <svg {...glyph}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </svg>
+  );
+}
+
+export function PencilGlyph() {
+  return (
+    <svg {...glyph}>
+      <path d="M4 20h4L19 9a2.1 2.1 0 0 0-4-4L4 16v4Z" />
+      <path d="m13.5 6.5 4 4" />
+    </svg>
+  );
+}
+
 function RouteGlyph() {
   return (
     <svg {...glyph}>
@@ -181,8 +201,6 @@ function LayersGlyph() {
   );
 }
 
-const small =
-  "inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-3 text-xs font-medium hover:border-accent";
 
 function readTracks(): string[] {
   try {
@@ -789,7 +807,8 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
                 }`}
                 style={isSel ? { borderColor: p.color, boxShadow: `0 0 0 1px ${p.color}`, backgroundColor: `${p.color}14` } : undefined}
               >
-                <button type="button" onClick={() => choose(p)} className="flex w-full items-start gap-3 px-3 py-3 text-left">
+                <div className="flex items-stretch">
+                <button type="button" onClick={() => choose(p)} className="flex min-w-0 flex-1 items-start gap-3 py-3 pl-3 text-left">
                   <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="md" />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
@@ -818,18 +837,17 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
                     )}
                   </span>
                 </button>
-                {isSel && (
-                  <div className="flex flex-wrap gap-2 px-3 pb-3 pl-[4.25rem]">
-                    <Link href={placesHref(embed, p.id)} className={small}>
-                      History
-                    </Link>
-                    {!p.moving && !embed && (
-                      <button type="button" onClick={() => setFixing(p)} className={small}>
-                        Not right?
-                      </button>
-                    )}
-                  </div>
-                )}
+                <div className="flex shrink-0 flex-col items-center justify-start gap-1 py-2 pl-1 pr-2">
+                  <Link href={placesHref(embed, p.id)} className={cardIcon} aria-label={`${p.name}'s day`} title="History">
+                    <ClockGlyph />
+                  </Link>
+                  {!p.moving && (
+                    <button type="button" onClick={() => setFixing(p)} className={cardIcon} aria-label="Not right?" title="Not right?">
+                      <PencilGlyph />
+                    </button>
+                  )}
+                </div>
+                </div>
               </div>
             );
           })}
@@ -850,7 +868,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           personId={fixing.id}
           personName={fixing.name}
           spot={{ lat: fixing.lat, lng: fixing.lng, accuracyM: fixing.accuracyM }}
-          kind={fixing.place?.kind}
+          current={fixing.place ? placeLine(fixing) : null}
           onClose={() => setFixing(null)}
           onSaved={() => void refreshNow()}
         />

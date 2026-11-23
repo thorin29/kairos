@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.767.0";
+export const APP_VERSION = "0.768.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -183,11 +183,16 @@ export const MIGRATIONS = [
   "168_places_zones",
   "169_places_routes",
   "170_places_lookup_retry",
+  "171_places_name_lookup",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.768.0",
+    summary: ["Family map: \"Not right?\" lets you type the real place (a business, place or address), looks it up and keeps it — on the web and in the app; History and fix-it are icons on each person; Named places shows each name's address and a map link."],
+  },
   {
     version: "0.767.0",
     summary: ["Family map: Home shows when you're home, saved addresses (like a rink) name the place by their address, and big stores are found from anywhere inside them."],

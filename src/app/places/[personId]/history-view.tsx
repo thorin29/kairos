@@ -9,6 +9,7 @@ import { mapLoaded, placesHref, useEmbed } from "../embed-context";
 import type { DayData, DayItem, DayLegItem, DayStopItem } from "@/lib/places/history-types";
 import { drawTrips, loadMaps, touchInline } from "../map-kit";
 import { PlaceFix } from "../place-fix";
+import { PencilGlyph } from "../places-view";
 
 /**
  * A person's day: totals, the map with their trips (drives on the roads,
@@ -21,7 +22,7 @@ type Person = { id: string; name: string; color: string; avatarPath: string | nu
 const btn =
   "inline-flex h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-sm font-medium shadow-sm hover:border-accent disabled:opacity-50";
 const small =
-  "inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-3 text-xs font-medium hover:border-accent";
+  "inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline bg-surface px-3 text-xs font-medium hover:border-accent";
 const statCard = "rounded-xl border border-hairline bg-surface px-4 py-3";
 const statLabel = "text-xs font-semibold uppercase tracking-widest text-muted";
 
@@ -371,9 +372,10 @@ export function HistoryView({
                       </span>
                     </span>
                   </button>
-                  {isSel && !embed && (
+                  {isSel && (
                     <div className="px-4 pb-3 pl-14">
                       <button type="button" onClick={() => setFixing(it)} className={small}>
+                        <PencilGlyph />
                         Not right?
                       </button>
                     </div>
@@ -410,7 +412,7 @@ export function HistoryView({
           personId={person.id}
           personName={person.name}
           spot={{ lat: fixing.lat, lng: fixing.lng, accuracyM: 30 }}
-          kind={fixing.place?.kind}
+          current={fixing.place?.name ?? fixing.place?.address ?? null}
           onClose={() => setFixing(null)}
           onSaved={() => router.refresh()}
         />

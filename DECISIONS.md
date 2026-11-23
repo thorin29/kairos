@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — "Not right?" is search-and-save (v0.768.0)
+
+- Owner: replacing a wrong business with a bare address wasn't a fix. Now a
+  full page: nearby businesses Google already returned, a search box (Places
+  API (New) Text Search, location-biased 5 km around the spot, 6 results by
+  distance, its own usage kind "search", 40 a day), and "Call it “…”" to save
+  what's typed. Saved as `PlaceName` with the picked place's address and
+  Google place id; the spot's radius is set from how far the place's pin is
+  (100–250 m) instead of a size control nobody could read.
+- "Just the address" is gone; migration 171 deletes the nameless spots it
+  made (they only hid business names) and adds `PlaceName.address` /
+  `googlePlaceId`.
+- Works in the app too: `/api/v1/places/view/{choices,search,name}` behind the
+  Places cookie plus an `x-kairos-embed: 1` header (another site can't add it
+  without a CORS preflight, so the cookie can't be used cross-site).
+- Person cards: the card selects; History (clock) and Not right? (pencil)
+  are icon buttons on the card, always there.
+- Admin → Named places: name, address, who, a Google Maps link, Remove; the
+  size selector (in metres) is gone.
+
 ## 2026-11 — Family map naming fixes from real data (v0.767.0)
 
 - **A zone beats "just the address".** v0.760 let a nameless family spot win

@@ -11,7 +11,7 @@ import { sameStreetAddress } from "@/lib/places/address-match";
 /**
  * Name the spot a person is at, as cheaply as possible:
  *   0. a spot the family named (PlaceName) — this person's own first, then
- *      everyone's; a nameless one means "just the street address here",
+ *      everyone's,
  *   1. a saved address within SAVED_RADIUS_M ("Home", "Rink"),
  *   2. an answer Google already gave within CACHE_RADIUS_M (30 days),
  *   3. Google Nearby Search (a business or landmark), then
@@ -191,7 +191,7 @@ async function askGoogle(
   return UNKNOWN;
 }
 
-type Named = { id: string; name: string | null; lat: number; lng: number; radiusM: number; userId: string | null };
+type Named = { id: string; name: string; address: string | null; lat: number; lng: number; radiusM: number; userId: string | null };
 
 /** The family's own name for this spot: this person's first, then everyone's. */
 async function namedNear(p: Pt, userId: string | null): Promise<Named | null> {
@@ -200,9 +200,10 @@ async function namedNear(p: Pt, userId: string | null): Promise<Named | null> {
     where: {
       lat: { gte: b.minLat, lte: b.maxLat },
       lng: { gte: b.minLng, lte: b.maxLng },
+      name: { not: null },
       OR: [{ userId: null }, ...(userId ? [{ userId }] : [])],
     },
-    select: { id: true, name: true, lat: true, lng: true, radiusM: true, userId: true },
+    select: { id: true, name: true, address: true, lat: true, lng: true, radiusM: true, userId: true },
     take: 100,
   })) as Named[];
   let best: Named | null = null;
@@ -265,19 +266,13 @@ export async function resolvePlace(
   const key = await getSetting(PLACES_LOOKUP_KEY);
 
   const named = await namedNear(p, userId);
-  if (named?.name) return { name: named.name, address: null, kind: "saved" };
+  if (named) return { name: named.name, address: shortAddress(named.address), kind: "saved" };
   // Home Assistant says they're in a zone (its boundaries and home-network
   // detection), or the spot is at a zone's learned centre: that's the name.
-  // It beats a "just the address" spot, which only stops business names.
   const inZone = zone ?? (await learnedZone(p));
   if (inZone) return { name: inZone, address: null, kind: "saved" };
 
   const cached = await cachedNear(p, now);
-  if (named) {
-    // "Just the address" here: never a business name.
-    if (cached?.address) return { name: null, address: shortAddress(cached.address), kind: "address" };
-    return withGoogle(key, p, true);
-  }
 
   const savedRows = await savedWithCoords(key, now);
   const saved = nearestSaved(p, savedRows);

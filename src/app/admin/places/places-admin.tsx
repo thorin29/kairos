@@ -13,7 +13,6 @@ import {
   saveFirebaseAction,
   saveNotifyRuleAction,
   sendTestNotificationAction,
-  setPlaceRadiusAction,
   savePlacesKeysAction,
   savePlacesPeopleAction,
 } from "@/lib/actions/places";
@@ -72,7 +71,7 @@ export function PlacesAdminForm(props: {
   totalPoints: number;
   storageBytes: number;
   usage: UsageSummary;
-  named: { id: string; name: string | null; who: string | null; radiusM: number; createdAt: string }[];
+  named: { id: string; name: string; address: string | null; who: string | null; lat: number; lng: number; createdAt: string }[];
   rules: { id: string; tell: string[]; about: string | null; place: string; onArrive: boolean; onLeave: boolean }[];
   placeOptions: { value: string; label: string }[];
   firebase: { projectId: string; applicationId: string; apiKey: string; senderId: string } | null;
@@ -251,6 +250,7 @@ export function PlacesAdminForm(props: {
                 [
                   ["mapload", "Map loads"],
                   ["nearby", "Place names"],
+                  ["search", "Place search"],
                   ["geocode", "Addresses"],
                   ["roads", "Road tracks"],
                   ["routes", "Routes"],
@@ -577,39 +577,30 @@ export function PlacesAdminForm(props: {
       <section className={card}>
         <h2 className={label}>Named places</h2>
         {props.named.length === 0 ? (
-          <p className="text-sm text-muted">None yet. Use “Not right?” on a person in Family map.</p>
+          <p className="text-sm text-muted">None yet. Use “Not right?” (the pencil) on a person in Family map.</p>
         ) : (
           <ul className="divide-y divide-hairline">
             {props.named.map((n) => (
               <li key={n.id} className="flex items-center justify-between gap-3 py-2 text-sm">
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{n.name ?? "Just the address"}</span>
-                  <span className="block text-xs text-muted">{n.who ? `Only ${n.who}` : "Everyone"}</span>
+                  <span className="block truncate font-medium">{n.name}</span>
+                  <span className="block truncate text-xs text-muted">
+                    {[n.address, n.who ? `Just ${n.who}` : "Everyone"].filter(Boolean).join(" · ")}
+                  </span>
                 </span>
-                <select
-                  aria-label="Size"
-                  value={n.radiusM}
-                  disabled={pending}
-                  onChange={(e) => {
-                    const r = Number(e.target.value);
-                    startTransition(async () => {
-                      await setPlaceRadiusAction(n.id, r);
-                      router.refresh();
-                    });
-                  }}
-                  className="h-9 rounded-lg border border-hairline bg-surface px-2 text-xs"
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${n.lat},${n.lng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-9 items-center rounded-full border border-hairline px-3 text-xs font-medium hover:border-accent"
                 >
-                  {[50, 100, 150, 250, 500].map((r) => (
-                    <option key={r} value={r}>
-                      {r} m
-                    </option>
-                  ))}
-                </select>
+                  Map ↗
+                </a>
                 <button
                   type="button"
                   disabled={pending}
                   onClick={() => {
-                    if (!confirm(`Remove “${n.name ?? "Just the address"}”?`)) return;
+                    if (!confirm(`Remove “${n.name}”?`)) return;
                     startTransition(async () => {
                       await deletePlaceNameAction(n.id);
                       router.refresh();

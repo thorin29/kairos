@@ -142,7 +142,7 @@ export type PlacesAdmin = {
   totalPoints: number;
   storageBytes: number;
   people: PlacesPersonRow[];
-  named: { id: string; name: string | null; who: string | null; radiusM: number; createdAt: string }[];
+  named: { id: string; name: string; address: string | null; who: string | null; lat: number; lng: number; createdAt: string }[];
   rules: { id: string; tell: string[]; about: string | null; place: string; onArrive: boolean; onLeave: boolean }[];
   placeOptions: { value: string; label: string }[];
   firebase: { projectId: string; applicationId: string; apiKey: string; senderId: string } | null;
@@ -231,11 +231,14 @@ export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
   const namedRows = (await prisma.placeName.findMany({
     orderBy: { createdAt: "desc" },
     take: 200,
-    select: { id: true, name: true, radiusM: true, createdAt: true, user: { select: { name: true, displayName: true } } },
+    where: { name: { not: null } },
+    select: { id: true, name: true, address: true, lat: true, lng: true, createdAt: true, user: { select: { name: true, displayName: true } } },
   })) as {
     id: string;
-    name: string | null;
-    radiusM: number;
+    name: string;
+    address: string | null;
+    lat: number;
+    lng: number;
     createdAt: Date;
     user: { name: string; displayName: string | null } | null;
   }[];
@@ -281,8 +284,10 @@ export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
     named: namedRows.map((r) => ({
       id: r.id,
       name: r.name,
+      address: r.address,
       who: r.user ? r.user.displayName || r.user.name : null,
-      radiusM: r.radiusM,
+      lat: r.lat,
+      lng: r.lng,
       createdAt: r.createdAt.toISOString(),
     })),
     rules: ruleRows.map((r) => ({

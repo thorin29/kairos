@@ -67,17 +67,6 @@ export async function deletePlaceNameAction(id: string): Promise<void> {
   revalidatePath("/admin/places");
 }
 
-const RADII = [50, 100, 150, 250, 500];
-
-/** How far from a named place still counts as there (names and notifications). */
-export async function setPlaceRadiusAction(id: string, radiusM: number): Promise<void> {
-  await requireAdmin();
-  if (!RADII.includes(radiusM)) return;
-  await prisma.placeName.updateMany({ where: { id }, data: { radiusM } });
-  bustPlaceMemo();
-  revalidatePath("/admin/places");
-}
-
 /** Add a notification rule: tell people when someone arrives at / leaves a place. */
 export async function saveNotifyRuleAction(input: {
   tellUserIds: string[];

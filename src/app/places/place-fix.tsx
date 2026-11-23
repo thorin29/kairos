@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { namePlace, placeChoices } from "@/lib/actions/places-live";
+import type { PlaceChoice } from "@/lib/places/naming-types";
+import { choicesNow, saveNameNow, searchNow, useEmbed } from "./embed-context";
 
 /**
- * "Not right?" for a person's place (live card or a History stop). A short
- * choice pop-up: another nearby business Google already returned, "Just the
- * address", or "Name this place…" — which opens a full page (filling in is a
- * full page, per the UI rule). Whatever is chosen is saved as the family's own
- * name for the spot and always wins from then on.
+ * "Not right?" for a person's place (live card or a History stop), v0.768: a
+ * full page to say what the place really is. Nearby businesses Google already
+ * returned come first; type anything ("Lowe's", "the rink", an address) to
+ * look it up near the spot, or save what's typed as the name ("Grandma's").
+ * The choice is the family's name for that spot from then on — everyone's, or
+ * just this person's — and History re-labels with it.
  */
 
 type Spot = { lat: number; lng: number; accuracyM: number | null };
@@ -90,39 +92,67 @@ export function PlaceFix({
   personId,
   personName,
   spot,
-  kind,
+  current,
   onClose,
   onSaved,
 }: {
   personId: string;
   personName: string;
   spot: Spot;
-  /** What the spot is called now; "Just the address" is hidden when it already is one. */
-  kind?: string | null;
+  /** What the spot is called now. */
+  current?: string | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [step, setStep] = useState<"choose" | "name">("choose");
-  const [choices, setChoices] = useState<{ name: string; address: string | null }[] | null>(null);
-  const [name, setName] = useState("");
+  const embed = useEmbed();
+  const [nearby, setNearby] = useState<PlaceChoice[] | null>(null);
+  const [query, setQuery] = useState("");
+  const [found, setFound] = useState<PlaceChoice[] | null>(null);
+  const [searching, setSearching] = useState(false);
   const [forOne, setForOne] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
+  const { lat, lng, accuracyM } = spot;
   useEffect(() => {
     let alive = true;
-    placeChoices(spot.lat, spot.lng, spot.accuracyM)
-      .then((c) => alive && setChoices(c))
-      .catch(() => alive && setChoices([]));
+    choicesNow(embed, { lat, lng, accuracyM })
+      .then((c) => alive && setNearby(c))
+      .catch(() => alive && setNearby([]));
     return () => {
       alive = false;
     };
-  }, [spot.lat, spot.lng, spot.accuracyM]);
+  }, [embed, lat, lng, accuracyM]);
 
-  const save = (value: string | null, mine: boolean) =>
+  const search = async () => {
+    const q = query.trim();
+    if (!q || searching) return;
+    setSearching(true);
+    setError(null);
+    try {
+      const res = await searchNow(embed, spot, q);
+      setFound(res.choices);
+      setError(res.error);
+    } catch {
+      setError("Couldn't search. Try again.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const save = (c: { name: string; address: string | null; placeId: string | null; lat: number | null; lng: number | null }) =>
     start(async () => {
       setError(null);
-      const res = await namePlace({ lat: spot.lat, lng: spot.lng, name: value, forUserId: mine ? personId : null });
+      const res = await saveNameNow(embed, {
+        lat: spot.lat,
+        lng: spot.lng,
+        name: c.name,
+        address: c.address,
+        placeId: c.placeId,
+        placeLat: c.lat,
+        placeLng: c.lng,
+        forUserId: forOne ? personId : null,
+      });
       if (res.error) setError(res.error);
       else {
         onSaved();
@@ -130,67 +160,101 @@ export function PlaceFix({
       }
     });
 
-  if (step === "name") {
-    return (
-      <Shell title="Name this place" onClose={onClose} onBack={() => setStep("choose")} full>
-        <div className="space-y-4 rounded-xl border border-hairline bg-surface px-4 py-4">
-          <div>
-            <label htmlFor="place-name" className="mb-1 block text-sm font-medium">
-              Name
-            </label>
-            <input
-              id="place-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={80}
-              autoFocus
-              placeholder="Work, Dentist, Grandma's"
-              className="h-11 w-full rounded-lg border border-hairline bg-surface px-3 text-base outline-none focus:border-accent"
-            />
-          </div>
-          <fieldset className="space-y-2">
-            <legend className="mb-1 text-sm font-medium">Who sees this name</legend>
-            <label className="flex min-h-11 items-center gap-3 text-sm">
-              <input type="radio" name="who" checked={!forOne} onChange={() => setForOne(false)} className="h-4 w-4" />
-              Everyone
-            </label>
-            <label className="flex min-h-11 items-center gap-3 text-sm">
-              <input type="radio" name="who" checked={forOne} onChange={() => setForOne(true)} className="h-4 w-4" />
-              Just {personName}
-            </label>
-          </fieldset>
-          {error && <p className="text-sm text-red-700">{error}</p>}
-          <button type="button" disabled={pending || !name.trim()} onClick={() => save(name, forOne)} className={primary}>
-            Save
-          </button>
-        </div>
-      </Shell>
-    );
-  }
+  const typed = query.trim();
+  const list = found ?? nearby;
 
   return (
-    <Shell title={`Where is ${personName}?`} onClose={onClose}>
-      {choices == null ? (
-        <p className="py-2 text-sm text-muted">Looking nearby…</p>
-      ) : (
-        choices.map((c) => (
-          <button key={`${c.name}|${c.address}`} type="button" disabled={pending} onClick={() => save(c.name, false)} className={row}>
-            <span className="min-w-0">
-              <span className="block truncate font-medium">{c.name}</span>
-              {c.address && <span className="block truncate text-xs text-muted">{c.address}</span>}
+    <Shell title={`Where was ${personName}?`} onClose={onClose} full>
+      {current && (
+        <p className="text-sm text-muted">
+          Showing <span className="font-medium text-ink">{current}</span>
+        </p>
+      )}
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void search();
+        }}
+      >
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (!e.target.value.trim()) setFound(null);
+          }}
+          maxLength={120}
+          autoFocus
+          enterKeyHint="search"
+          placeholder="Business, place or address"
+          aria-label="Business, place or address"
+          className="h-11 min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-3 text-base outline-none focus:border-accent"
+        />
+        <button type="submit" disabled={!typed || searching} className={primary}>
+          {searching ? "…" : "Search"}
+        </button>
+      </form>
+
+      <fieldset className="flex flex-wrap gap-x-5">
+        <legend className="sr-only">Who sees this name</legend>
+        <label className="flex min-h-11 items-center gap-2 text-sm">
+          <input type="radio" name="who" checked={!forOne} onChange={() => setForOne(false)} className="h-4 w-4" />
+          For everyone
+        </label>
+        <label className="flex min-h-11 items-center gap-2 text-sm">
+          <input type="radio" name="who" checked={forOne} onChange={() => setForOne(true)} className="h-4 w-4" />
+          Just {personName}
+        </label>
+      </fieldset>
+
+      {error && <p className="text-sm text-red-700">{error}</p>}
+
+      <div className="space-y-2">
+        {list == null ? (
+          <p className="py-2 text-sm text-muted">Looking nearby…</p>
+        ) : (
+          <>
+            {list.length > 0 && (
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted">{found ? "Found" : "Nearby"}</h4>
+            )}
+            {list.map((c) => (
+              <button
+                key={`${c.placeId ?? c.name}|${c.address}`}
+                type="button"
+                disabled={pending}
+                onClick={() => save(c)}
+                className={row}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{c.name}</span>
+                  {c.address && <span className="block truncate text-xs text-muted">{c.address}</span>}
+                </span>
+                {c.distanceM != null && <span className="shrink-0 pl-3 font-mono text-xs text-muted">{distance(c.distanceM)}</span>}
+              </button>
+            ))}
+            {found && found.length === 0 && <p className="py-1 text-sm text-muted">Nothing found near here.</p>}
+          </>
+        )}
+        {typed && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => save({ name: typed, address: null, placeId: null, lat: null, lng: null })}
+            className={row}
+          >
+            <span className="min-w-0 flex-1 truncate">
+              Call it <span className="font-medium">“{typed}”</span>
             </span>
           </button>
-        ))
-      )}
-      {kind !== "address" && (
-        <button type="button" disabled={pending} onClick={() => save(null, false)} className={row}>
-          Just the address
-        </button>
-      )}
-      <button type="button" disabled={pending} onClick={() => setStep("name")} className={row}>
-        Name this place…
-      </button>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+        )}
+      </div>
     </Shell>
   );
+}
+
+/** Feet under a tenth of a mile, then miles. */
+function distance(m: number): string {
+  const mi = m / 1609.344;
+  if (mi < 0.1) return `${Math.max(10, Math.round((m * 3.28084) / 10) * 10)} ft`;
+  return `${mi < 10 ? mi.toFixed(1) : Math.round(mi)} mi`;
 }

@@ -1920,10 +1920,15 @@ map. Web sign-in is for parents, so the device hands itself over:
   `/places/embed` pages, GET only, never a server action (proxy.ts), and stops working when the
   device is revoked or the person turned off. An expired session answers the page with 401; the
   app asks for a new ticket.
+- "Not right?" in the app (v0.768): `GET /api/v1/places/view/choices?lat=&lng=&acc=` (nearby
+  businesses), `GET /api/v1/places/view/search?lat=&lng=&q=` (Text Search near the spot, 40 a day →
+  `{ choices: [{ name, address, placeId, lat, lng, distanceM }], error }`), and
+  `POST /api/v1/places/view/name` `{ lat, lng, name, address, placeId, placeLat, placeLng, forUserId }`.
+  These three need the header `x-kairos-embed: 1` (or a device token), which another site can't
+  send with the cookie.
 - The embed pages read through `GET /api/v1/places/view/live`, `GET /api/v1/places/view/tracks?ids=a,b`
   and count map loads with `POST /api/v1/places/view/mapload`. These accept a device token, the
-  `fd_places` cookie, or a parent's web session (`requirePlacesViewer`). "Not right?" (naming a
-  place) stays on the web.
+  `fd_places` cookie, or a parent's web session (`requirePlacesViewer`).
 
 ### Push — config, token, inbox — **built (v0.759)**
 
@@ -1948,7 +1953,7 @@ local time, `link` `/places`, `kind` `places` (`test` for Admin's Send test).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**213 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**216 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1965,7 +1970,7 @@ silently invisible:
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604), **summary**, `summary/day` (v0.733)
 - **hockey** (the week from ice-time), `hockey/prefs`
-- **places/ingest** (Home Assistant → server, v0.755), **places/live** (v0.757), **places/web**, `places/view/live`, `places/view/tracks`, `places/view/mapload` (v0.762)
+- **places/ingest** (Home Assistant → server, v0.755), **places/live** (v0.757), **places/web**, `places/view/live`, `places/view/tracks`, `places/view/mapload` (v0.762), `places/view/choices`, `places/view/search`, `places/view/name` (v0.768)
 - **push/config**, **push/token**, **push/inbox** (v0.759)
 - **concept2** (status / disconnect), `concept2/connect`, `concept2/sync`, `concept2/undo` (v0.614)
 - **widget** (the Android home-screen widget's feed)

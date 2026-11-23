@@ -243,7 +243,7 @@ stops other sites from using it. The lookup key never leaves the server.
 Admin → Family map → **Notifications**: tell (anyone) when someone (or anyone)
 **arrives at** and/or **leaves** a place: a Home Assistant zone (follows
 Home Assistant's own zone changes), or one of Kairos's named places (each with
-a size you set under Named places) or saved addresses (by distance). "Arrived" needs a fix inside the place; "left" needs one 50 m
+sized when it was named) or saved addresses (by distance). "Arrived" needs a fix inside the place; "left" needs one 50 m
 beyond it, so GPS wobble at the edge doesn't repeat; the same person and place
 won't notify twice within 10 minutes; nobody is told about themselves.
 
@@ -307,10 +307,14 @@ was sent to another page.
   limit) and reused within about 30 m for a business and 25 m for a street
   address. Nobody moving is looked up. "Just the address" stops business
   names at a spot; it doesn't hide a zone.
-- Wrong name? In Places, tap the person → **Not right?**: pick another nearby
-  business, **Just the address**, or **Name this place…** (for everyone, or
-  just that person — e.g. their own "Work"). The family's names always win and
-  don't expire. Admin → Family map → Named places lists and removes them.
+- Wrong name? Tap the pencil on a person (or **Not right?** on a History
+  stop): pick a nearby business, or type anything — a business, a place or an
+  address — and Kairos looks it up near the spot (Places Text Search, 40 a
+  day); or save what you typed as the name ("Grandma's"). For everyone, or
+  just that person (their own "Work"). The family's names always win, don't
+  expire, and re-label History. Each covers about 330–820 ft around the spot,
+  set from how far the chosen place's map pin is. Admin → Family map → Named
+  places lists them with their address and a map link.
 - Tracks: each finished drive is matched to the roads once and kept 30 days —
   snapped (Roads API) when the phone reported often, routed through the
   reports (Routes API) when there were long gaps. Either answer must pass

@@ -2228,6 +2228,10 @@ model PlacesApiUsage {
 model PlaceName {
   id        String   @id @default(cuid())
   name      String?
+  // What the family picked or typed, looked up with Google (v0.768): its
+  // address and Google place id (kept indefinitely, Google allows ids).
+  address       String?
+  googlePlaceId String?
   lat       Float
   lng       Float
   radiusM   Int      @default(100)
