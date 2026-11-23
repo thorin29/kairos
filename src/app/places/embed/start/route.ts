@@ -10,10 +10,10 @@ export async function GET(req: NextRequest) {
   const value = await redeemTicket(req.nextUrl.searchParams.get("t"));
   if (!value) return new NextResponse("This link has expired.", { status: 401 });
   const to = req.nextUrl.searchParams.get("to") ?? "/places/embed";
-  const url = req.nextUrl.clone();
-  url.pathname = isEmbedPath(to) && to !== "/places/embed/start" ? to : "/places/embed";
-  url.search = "";
-  const res = NextResponse.redirect(url, 303);
+  const target = isEmbedPath(to) && to !== "/places/embed/start" ? to : "/places/embed";
+  // A relative Location: behind a reverse proxy, req.nextUrl carries the
+  // container's own bind address (0.0.0.0:3000), not the address the phone used.
+  const res = new NextResponse(null, { status: 303, headers: { Location: target } });
   res.cookies.set(PLACES_COOKIE, value, {
     httpOnly: true,
     sameSite: "lax",

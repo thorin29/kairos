@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Relative redirect for the Places hand-off (v0.763.0)
+
+- Behind a reverse proxy, `req.nextUrl` in a route handler carries the
+  container's bind address (`0.0.0.0:3000`), so the hand-off's redirect sent
+  the app's WebView off its own origin and the app opened it in the browser.
+  `/places/embed/start` now answers 303 with a relative `Location`. Don't
+  build absolute redirect URLs from `req.nextUrl` in route handlers.
+- Queued for the next app release: an off-origin redirect inside the Places
+  WebView is dropped, not handed to the browser.
+
 ## 2026-11 — Places in the phone app (v0.762.0, app 0.550.0)
 
 - **The app shows the web pages** (`/places/embed`, `/places/embed/<person>`)
