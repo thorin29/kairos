@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.747.0";
+export const APP_VERSION = "0.748.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -174,11 +174,16 @@ export const MIGRATIONS = [
   "159_admin_activity",
   "160_calendar_work",
   "161_event_sport",
+  "162_program_cycles",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.748.0",
+    summary: ["Program setup asks about the other days: Rest, Skip, or add Core, Arms, Isometric, Mobility, Stretching, Cardio, Conditioning or a muscle group. Rest days carry over; a new program starts the other days fresh, the same program keeps them. Warm-up, Cardio and Finishers are their own steps, then the week to review.", "At the end of a cycle, What's next suggests each lift's raise from your + sets (or every ladder done) to keep or change: Continue, or New plan. The program's days wait for the choice. A continued program shows its cycle and what went up."],
+  },
   {
     version: "0.747.0",
     summary: ["Workouts: the plan card shows your program or your own plan with the week at a glance, and Edit / Change / End. Edit opens Your plan, where a program's movements change too. The Edit plan button is gone; Saved plans takes its place.", "Every program setup looks and steps the same, and Odd squad now asks about warm-up, cardio and conditioning; each can be left out. Rotation is now Rolling plan."],

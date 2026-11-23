@@ -83,6 +83,7 @@ import {
 import { MovementInfo } from "@/components/movement-info";
 import { PlanRow, PlanActionTile, SwapPicker, type PoolPick } from "./workout-card";
 import { WeightCalculator } from "./weight-calculator";
+import { ProgramCard } from "./program-card";
 
 const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAY_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -180,6 +181,8 @@ export function DayLog({
     familyWod?: FamilyWodDay | null;
     sports?: DaySport[];
     workoutTime?: { time: number | null; usual: number | null; changed: boolean };
+    /** A program day waiting for What's next (v0.748). */
+    programWait?: string | null;
   } | null>(null);
   // Which of the day's workouts is open (v0.744): null lets the day decide,
   // "list" is Today's workouts, "plan" the planned workout, else a sport event.
@@ -632,6 +635,12 @@ export function DayLog({
             ) : null
           }
         />
+      ) : data?.programWait ? (
+        // The program's cycle ended (v0.748): its day waits for What's next.
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted">{date === todayISO ? "Today" : dayLabel(date)}</p>
+          <ProgramCard userId={userId} onChanged={reload} onEditPlan={() => onOpen?.("plan")} />
+        </div>
       ) : (
         <>
       <div>
@@ -2122,6 +2131,7 @@ function MovementLogger({
           <span className="font-semibold text-muted">Today</span>{" "}
           <span className="font-semibold">{log.target.scheme}</span>
           {log.target.title && <span className="text-muted"> · {log.target.title}</span>}
+          {log.target.up && <span className="font-semibold text-emerald-700"> · {log.target.up}</span>}
         </p>
       )}
 

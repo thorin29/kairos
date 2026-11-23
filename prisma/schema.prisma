@@ -1637,6 +1637,11 @@ model PersonProgram {
   previousPlan   Json?
   status         String    @default("ACTIVE")
   endedOn        DateTime? @db.Date
+  /// v0.748: which cycle this is (1 at the start; Continue adds one).
+  cycle          Int       @default(1)
+  /// v0.748: what each main lift went up by when this cycle began, by pool id
+  /// ({} on cycle 1): the success marks.
+  lastRaises     Json      @default("{}")
   createdAt      DateTime  @default(now())
 
   @@index([userId, status])

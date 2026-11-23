@@ -1261,6 +1261,16 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.748: `GET /api/v1/workouts/programs` adds `otherDays` (what each weekday
+holds now, Sunday first: rest, skip, core, arms, iso, mobility, stretching,
+cardio, conditioning, strength:<GROUP>, custom); `active` adds `cycle`,
+`lastRaises` ({poolExerciseId: raise}), `check` ([{poolExerciseId, suggest,
+reason}], with `blockDone`) and `harder` ({key, name, blurb, days, weeks} or
+null). `POST /workouts/programs/start` takes `other` ({weekday: kind}); a day
+whose kind matches what it holds keeps it. `GET /api/v1/workouts`: `program`
+carries the same fields; a movement's `target` adds `up` ("↑ 5 from cycle 1")
+and its title adds "Cycle N" from cycle 2.
+
 v0.747: `GET /api/v1/workouts/programs` adds `plan`: `strip` (Monday first:
 `day`, `label`, `kind` lift|core|iso|conditioning|cardio|other|rest|none,
 `program`), `ends` (the plan's last day or null), `hasPlan`, and `others`

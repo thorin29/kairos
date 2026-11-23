@@ -1964,6 +1964,8 @@ export type MovementLog = {
   target: {
     /** "Strength waves · Week 2 of 4", or just the scheme without a program. */
     title: string;
+    /** "↑ 5 from cycle 1" (v0.748): a main lift raised for this cycle. */
+    up?: string;
     /** "Work up to a top set", "3 × 8–12". */
     scheme: string;
     /** `pct`: a 5/3/1 set's share of the training max (v0.619). */
@@ -2260,10 +2262,14 @@ export async function movementTarget(
     // sets, and the week only when it's light or a test (v0.620).
     title:
       handWave || (fromProgram && (scheme.kind === "WAVE" || scheme.kind === "LADDER"))
-        ? `${program.name} · ${weekLabel(program, week)}`
+        ? `${program.name} · ${weekLabel(program, week)}${fromProgram && fromProgram.cycle > 1 ? ` · Cycle ${fromProgram.cycle}` : ""}`
         : fromProgram && intent
           ? weekLabel(program, week)
           : "",
+    // The success mark (v0.748): what this lift went up by for this cycle.
+    ...(fromProgram && movement === slotId && (fromProgram.lastRaises[slotId] ?? 0) > 0
+      ? { up: `\u2191 ${fromProgram.lastRaises[slotId]} from cycle ${fromProgram.cycle - 1}` }
+      : {}),
     scheme: ODD_KINDS.has(scheme.kind)
       ? weekSchemeLabel(scheme, program, week, garageFeet, ladderStep)
       : intent === "TEST" && !(program.testMainOnly && !role?.main)

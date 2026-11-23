@@ -1,5 +1,43 @@
 # Decisions
 
+## 2026-11 — Other days, What's next, success marks (v0.748.0)
+
+- Release 2 of the plan-builder proposal (project doc
+  `claude/plan-builder-proposal.md`).
+- Setup steps, every program: Days, Other days, Lifts (Odd squad: Blocks,
+  Movements), Warm-up, Cardio, Finishers, Maxes, Review. Odd squad's Days
+  step only places its days now; Core and Rest moved to Other days.
+- Other days (`src/lib/workouts/other-days.ts`): each weekday the program
+  doesn't use is rest, skip, core, arms, iso, mobility, stretching, cardio,
+  conditioning, strength:<GROUP>, or custom ("As it is", a hand-built day).
+  `startProgram({ other })` keeps a day's rows when its choice matches what
+  it holds now (`otherKindOf`), rotation state and all, and makes a changed
+  day fresh (`makeOtherDay`: library rotation, routine, or an empty muscle
+  group day). Warm-up goes on every workout day, other days with work too.
+- The setup starts the other days from `otherDays` (what each weekday holds
+  now): the same program (editing, Change movements) keeps them; a new
+  program keeps only the rest days. So Rest carries over, and Arms or Core
+  end with the program they came with unless picked again. Without `other`
+  (older apps) starting a program behaves as before.
+- What's next (`WhatsNext`, replacing Cycle done): per main lift a
+  suggestion (`cycleCheck`): wave lifts by the heaviest set of the last
+  heavy week (2+ reps raises, 1 or none holds), ladders by every ladder
+  done (`ladderStepAfter` reaching 3), others by their step; tap to switch
+  between +step and Same. Continue (`nextBlock` with those raises) or New
+  plan. Repeat and "with changes" are gone (Change movements covers it).
+  A harder program (`HARDER`) shows with a preview when 70% of the cycle's
+  answers were Easy (5 or more).
+- Until a choice, the program's days show the plan card instead of the
+  workout (web: `programWait` on the day; app: `program.blockDone`); other
+  workouts and sports carry on.
+- Success marks: `PersonProgram.cycle` and `lastRaises` (migration 162),
+  set by `nextBlock` and the next cycle with changes. The plan card says
+  "Cycle 2" and "↑ Cycle 1 done · 3 of 4 lifts went up"; a main lift's title
+  adds "Cycle 2" and `target.up` ("↑ 5 from cycle 1").
+- Not done here: the setup's Add opens no per-kind window (a rotation starts
+  from the library's first; change it on Your plan); core or holds on lift
+  days; a "too hard" week holding a lift (feedback isn't tied to a lift).
+
 ## 2026-11 — Plan card, one Edit, one setup style (v0.747.0)
 
 - Release 1 of the plan-builder proposal (project doc

@@ -50,6 +50,16 @@ live in the database, never in this repository.
     heart.
 12. **Ice-time: find each season's schedule links** on the rink's index page
     instead of pasting them in each July. Tracked in the ice-time repo.
+13. **Two programs at once** (plan-builder release 3): each program its own
+    workout on a day ("x of 3" with a sport), its own days and cycle; a
+    third asks first.
+14. **Plateau suggestion** (plan-builder release 4): your own plan, or a
+    program that runs on, with two or more main muscle groups and no new best
+    in 4 weeks: try a program (preview), a light week, swap movements, keep
+    going.
+15. **Setup's Add opens each kind's window** (Core, Arms, Isometric workouts
+    to rotate; a muscle group's movements) instead of starting from the
+    library's first.
 
 ## Not doing (decided)
 
@@ -91,9 +101,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.747.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  161_event_sport, all registered in `MIGRATIONS`.
-- App 0.541.0 (versionCode 613, CLIENT_BUILD 613).
+- Web 0.748.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  162_program_cycles, all registered in `MIGRATIONS`.
+- App 0.542.0 (versionCode 614, CLIENT_BUILD 614).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -275,6 +285,10 @@ Kept here so they don't come back as open items.
   glance, Edit / Change / End; Edit opens Your plan, with the program's
   maxes and Change movements on top. Saved plans is its own button. Every
   program setup steps the same way, each extra can be left out.
+- Setup asks about the other days (Rest carries over; a new program starts
+  them fresh, the same program keeps them); What's next at a cycle's end
+  suggests each lift's raise, and a continued program shows its cycle and
+  what went up (v0.748).
 - Plans: weekly plan and rolling plan (pausable, end dates, a future start),
   programs that write the plan (5/3/1, Boring But Big, 5/3/1 for Beginners,
   wave loading, Odd squad with ladders, density, carry and club finishers),

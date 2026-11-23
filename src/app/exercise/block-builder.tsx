@@ -5,7 +5,7 @@ import { Modal } from "./plan-file-panel";
 import { MovementInfo } from "@/components/movement-info";
 import type { CurrentExtras, CurrentSetup, ProgramChoice, StartProgramInput } from "@/lib/workouts/program-run";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
-import { ExtrasStep, StepBar, StepHeader } from "./setup-parts";
+import { CardioStep, FinishersStep, OtherDaysStep, StepBar, StepHeader, WarmupStep, otherPayload, otherWords, startOther } from "./setup-parts";
 
 /**
  * The block builder (v0.732), for a program set up by blocks (Odd squad):
@@ -16,7 +16,7 @@ import { ExtrasStep, StepBar, StepHeader } from "./setup-parts";
  * place (same week); picked again after it ends, it starts over.
  */
 
-const STEPS = ["Days", "Blocks", "Movements", "Extras", "Review"] as const;
+const STEPS = ["Days", "Other days", "Blocks", "Movements", "Warm-up", "Cardio", "Finishers", "Review"] as const;
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 /** Monday first. */
 const WEEK = [1, 2, 3, 4, 5, 6, 0];
@@ -25,7 +25,8 @@ const BLOCK_SUB: Record<string, string> = {
   B: "15 min · beat your rep total",
 };
 
-type Slot = "core" | "rest" | number;
+/** A weekday: one of the program's days, or "rest" (open: the Other days step decides). */
+type Slot = "rest" | number;
 type Option = ProgramChoice["days"][number]["roles"][number]["options"][number];
 
 /** How a finisher is logged, from its sets. */
@@ -73,10 +74,13 @@ export function BlockBuilder({
   initial,
   nextMaxes,
   editMode = false,
+  otherDays,
   onBack,
   onClose,
   onStart,
 }: {
+  /** What each weekday holds now, Sunday first (v0.748). */
+  otherDays?: string[];
   program: ProgramChoice;
   current: CurrentExtras;
   /** Warm-up routines for the Extras step (v0.747). */
@@ -98,8 +102,6 @@ export function BlockBuilder({
     days.forEach((dow, i) => {
       if (dow >= 0 && dow <= 6) out[dow] = i;
     });
-    const core = current.coreDay;
-    if (core != null && out[core] === "rest") out[core] = "core";
     return out;
   });
   const [picks, setPicks] = useState<Record<string, string | null>>(() => {
@@ -113,6 +115,9 @@ export function BlockBuilder({
   const [warmup, setWarmup] = useState<string>(current.warmup ? (current.warmupRoutine ?? "") : "none");
   const [cardioDays, setCardioDays] = useState<number[]>(current.cardioDays);
   const [conditioningDays, setConditioningDays] = useState<number[]>(current.conditioningDays);
+  // Other days (v0.748): the same program keeps what each day holds; a new one
+  // keeps the rest days.
+  const [other, setOther] = useState<Record<number, string>>(() => startOther(otherDays, editMode || !!initial));
   const [maxText, setMaxText] = useState<Record<string, string>>({});
 
   // The program's days in weekday order (Monday first).
@@ -170,7 +175,6 @@ export function BlockBuilder({
       const n = Number(maxFor(m.id));
       if (Number.isFinite(n) && n > 0) maxes[m.id] = n;
     }
-    const core = week.indexOf("core");
     onStart({
       days,
       picks: Object.fromEntries(Object.entries(picks).map(([k, v]) => [k, off.has(k) ? null : v])),
@@ -178,9 +182,7 @@ export function BlockBuilder({
       maxes,
       warmup: warmup !== "none",
       ...(warmup !== "none" ? { warmupRoutine: warmup } : {}),
-      cardioDays,
-      conditioningDays,
-      coreDay: core >= 0 ? core : null,
+      ...otherPayload(days, other, cardioDays, conditioningDays),
     });
   };
 
@@ -222,7 +224,7 @@ export function BlockBuilder({
                       value={String(v)}
                       onChange={(e) => {
                         const x = e.target.value;
-                        set(dow, x === "rest" || x === "core" ? x : Number(x));
+                        set(dow, x === "rest" ? x : Number(x));
                       }}
                       className="h-9 rounded-lg bg-transparent px-1 text-right text-sm font-semibold text-accent outline-none"
                     >
@@ -231,8 +233,7 @@ export function BlockBuilder({
                           {d.name}
                         </option>
                       ))}
-                      <option value="core">Core</option>
-                      <option value="rest">Rest</option>
+                      <option value="rest">—</option>
                     </select>
                   </label>
                 );
@@ -242,6 +243,15 @@ export function BlockBuilder({
         )}
 
         {step === 1 && (
+          <OtherDaysStep
+            programDays={placed.map((x) => x.dow)}
+            other={other}
+            had={editMode || initial ? otherDays : undefined}
+            onChange={(d, k) => setOther((o) => ({ ...o, [d]: k }))}
+          />
+        )}
+
+        {step === 2 && (
           <div className="space-y-3">
             {dayTabs}
             <Card title={`${program.days[tab].name} day`}>
@@ -270,7 +280,7 @@ export function BlockBuilder({
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className="space-y-3">
             {dayTabs}
             {roleOf(tab, "A").map((r) => {
@@ -379,29 +389,28 @@ export function BlockBuilder({
           </div>
         )}
 
-        {step === 3 && (
-          <ExtrasStep
-            warmups={warmups}
-            warmup={warmup}
-            onWarmup={setWarmup}
-            cardioDays={cardioDays}
-            onCardio={setCardioDays}
-            conditioningDays={conditioningDays}
-            onConditioning={setConditioningDays}
-          />
-        )}
+        {step === 4 && <WarmupStep warmups={warmups} warmup={warmup} onWarmup={setWarmup} />}
+        {step === 5 && <CardioStep days={cardioDays} onDays={setCardioDays} />}
+        {step === 6 && <FinishersStep days={conditioningDays} onDays={setConditioningDays} />}
 
-        {step === 4 && (
+        {step === 7 && (
           <div className="space-y-3">
             <Card title={`${program.name} · ${program.weeks} weeks`}>
               <div>
                 {WEEK.flatMap((dow) => {
                   const v = week[dow];
-                  if (v === "rest") return [];
-                  const head = `${DAY_NAMES[dow]} · ${v === "core" ? "Core" : program.days[v].name}`;
+                  if (v === "rest") {
+                    const k = other[dow] ?? "skip";
+                    if (k === "skip") return [];
+                    return [
+                      <div key={dow} className="border-t border-hairline py-2 text-sm first:border-t-0">
+                        <span className="font-semibold">{`${DAY_NAMES[dow]} · ${otherWords(k)}`}</span>
+                      </div>,
+                    ];
+                  }
+                  const head = `${DAY_NAMES[dow]} · ${program.days[v].name}`;
                   let body: string;
-                  if (v === "core") body = "Your core rotation · test stays monthly";
-                  else {
+                  {
                     const parts: string[] = [];
                     const a = roleOf(v, "A")[0];
                     if (a) parts.push(nameOf(v, a.key) ?? "Main lift");

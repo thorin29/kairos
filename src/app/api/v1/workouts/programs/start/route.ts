@@ -15,6 +15,9 @@ export const dynamic = "force-dynamic";
  * bool, cardioDays [weekday], conditioningDays [weekday]. v0.626: next true
  * carries the running program into its next cycle with these changes.
  * v0.732: coreDay weekday puts the Core day there (the builder's Days step).
+ * v0.748: other {weekday: kind} for the days the program doesn't use (rest,
+ * skip, core, arms, iso, mobility, stretching, cardio, conditioning,
+ * strength:<GROUP>, custom); a day whose kind is unchanged keeps what it holds.
  */
 export async function POST(req: NextRequest) {
   const authed = await requireDevice(req);
@@ -69,6 +72,7 @@ export async function POST(req: NextRequest) {
     conditioningDays: weekdays(b?.conditioningDays),
     next: b?.next === true,
     coreDay: typeof b?.coreDay === "number" && Number.isInteger(b.coreDay) && b.coreDay >= 0 && b.coreDay <= 6 ? b.coreDay : null,
+    other: b?.other && typeof b.other === "object" ? (b.other as Record<string, string>) : undefined,
   });
   if (r !== "ok") return apiError("validation", "Pick a program and one weekday for each of its days.");
   return apiOk({ status: "ok" });

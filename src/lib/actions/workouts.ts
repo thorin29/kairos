@@ -134,8 +134,7 @@ import {
   type CurrentSetup,
   type ProgramChoice,
   type ProgramInfo,
-  type StartProgramInput,
-} from "@/lib/workouts/program-run";
+  type StartProgramInput, currentOtherDays, dayProgramInfo } from "@/lib/workouts/program-run";
 import { planSummary, type PlanSummary } from "@/lib/workouts/plan-summary";
 import type { ProgramVersion } from "@/lib/workouts/program-version";
 import { addDayExtra, dayExtrasFor, removeDayExtra, type DayExtraView } from "@/lib/workouts/day-extras-run";
@@ -1347,6 +1346,9 @@ export async function loadDayLog(
   sports: DaySport[];
   /** When the planned workout is done that day (v0.744). */
   workoutTime: { time: number | null; usual: number | null; changed: boolean };
+  /** A program day after its cycle ended, before What's next was chosen
+   *  (v0.748): the program's name; the day waits for the choice. */
+  programWait: string | null;
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1364,15 +1366,17 @@ export async function loadDayLog(
     conditioningOnDay(userId, dateISO),
     warmupsForDay(userId, dateISO),
   ]);
-  const [extras, familyWod, sports, workoutTime] = await Promise.all([
+  const [extras, familyWod, sports, workoutTime, prog] = await Promise.all([
     dayExtrasFor(userId, dateISO),
     familyWodDay(userId, dateISO, conditioning),
     sportsForDay(userId, dateISO),
     workoutTimeFor(userId, dateISO),
+    dayProgramInfo(userId, dateISO),
   ]);
   return {
     sports,
     workoutTime,
+    programWait: prog?.blockDone ? prog.name : null,
     state,
     adjusted,
     sportDay,
@@ -1712,6 +1716,8 @@ export async function loadProgramsFor(userId: string): Promise<{
   versions: Record<string, ProgramVersion>;
   /** The plan card (v0.747). */
   plan: PlanSummary;
+  /** What each weekday holds now, Sunday first (v0.748). */
+  otherDays: string[];
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1723,8 +1729,12 @@ export async function loadProgramsFor(userId: string): Promise<{
     routinesFor(userId),
     currentSetup(userId),
   ]);
-  const [versions, plan] = await Promise.all([versionsFor(userId, choices), planSummary(userId, active ? (setup?.days ?? []) : [])]);
-  return { choices, active, invite, current, warmups, setup, versions, plan };
+  const [versions, plan, otherDays] = await Promise.all([
+    versionsFor(userId, choices),
+    planSummary(userId, active ? (setup?.days ?? []) : []),
+    currentOtherDays(userId),
+  ]);
+  return { choices, active, invite, current, warmups, setup, versions, plan, otherDays };
 }
 
 /** Forget the person's own version of a program (v0.666). */

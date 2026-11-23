@@ -1167,3 +1167,49 @@ export function raisedMaxes(
   for (const [id, w] of Object.entries(maxes)) out[id] = w + stepFor(lowerIds.has(id), unit);
   return out;
 }
+
+// --- What's next at the end of a cycle (v0.748) ---------------------------------
+
+/** A main lift's suggestion for the next cycle: how much to raise it (0 holds
+ *  it) and why, in a few words. */
+export type LiftCheck = { suggest: number; reason: string };
+
+/**
+ * A 5/3/1-style lift (a wave): the last "+" set of the cycle's last heavy
+ * week. 2 or more reps raises it by its step; 1 rep, or a week that felt too
+ * hard, holds it; nothing logged holds it too.
+ */
+export function waveCheck(plusReps: number | null, step: number, tooHard = false): LiftCheck {
+  if (plusReps == null) return { suggest: 0, reason: "No + set logged" };
+  const reps = `+ set: ${plusReps} ${plusReps === 1 ? "rep" : "reps"}`;
+  if (tooHard) return { suggest: 0, reason: `${reps}, felt too hard` };
+  return plusReps >= 2 ? { suggest: step, reason: reps } : { suggest: 0, reason: reps };
+}
+
+/** An Odd squad lift (ladders): every ladder done raises the 5-rep weight. */
+export function ladderCheck(step: number, finalStep: number): LiftCheck {
+  return finalStep >= 3 ? { suggest: step, reason: "Every ladder done" } : { suggest: 0, reason: "Ladders not all done" };
+}
+
+/** The cycle's last heavy week: the last week that isn't light or a test. */
+export function lastHeavyWeek(program: Program): number {
+  for (let w = program.weeks; w >= 1; w--) if (!program.lightWeeks.includes(w) && !program.testWeeks.includes(w)) return w;
+  return program.weeks;
+}
+
+/** A harder program to try when a cycle felt easy (by key), or none. */
+export const HARDER: Readonly<Record<string, string>> = {
+  "get-moving": "sets-of-ten",
+  maintain: "sets-of-ten",
+  "sets-of-ten": "full-body-3",
+  "full-body-3": "wendler-531",
+  "wendler-beginners": "wendler-531",
+  "wendler-531": "wendler-bbb",
+  "wave-loading": "wendler-bbb",
+};
+
+/** Easy enough to suggest something harder: 5 or more answers, 70% Easy. */
+export function feltEasy(efforts: readonly (string | null)[]): boolean {
+  const said = efforts.filter((e): e is string => !!e);
+  return said.length >= 5 && said.filter((e) => e === "EASY").length / said.length >= 0.7;
+}

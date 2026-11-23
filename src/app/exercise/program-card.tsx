@@ -26,7 +26,20 @@ import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { PlanLibrary } from "./my-plans";
 import type { PlanSummary, StripDay } from "@/lib/workouts/plan-summary";
 import { BlockBuilder } from "./block-builder";
-import { DayChips, ExtrasStep, StepBar, StepHeader } from "./setup-parts";
+import {
+  CardioStep,
+  DayChips,
+  FinishersStep,
+  MONDAY_FIRST,
+  OtherDaysStep,
+  ReviewWeek,
+  StepBar,
+  StepHeader,
+  WarmupStep,
+  otherPayload,
+  otherWords,
+  startOther,
+} from "./setup-parts";
 import type { ProgramVersion } from "@/lib/workouts/program-version";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -46,6 +59,8 @@ type Data = {
   versions?: Record<string, ProgramVersion>;
   /** The plan card (v0.747). */
   plan?: PlanSummary;
+  /** What each weekday holds now, Sunday first (v0.748). */
+  otherDays?: string[];
 };
 
 function shortDate(iso: string): string {
@@ -89,7 +104,6 @@ export function ProgramCard({
   const [cycleOpen, setCycleOpen] = useState(false);
   // "Make changes" at the end of a cycle: the next cycle's training maxes, and
   // the setup opened on the plan as it is (v0.626).
-  const [changing, setChanging] = useState<Record<string, number> | null>(null);
   const [endingOwn, setEndingOwn] = useState(false);
   const [pending, start] = useTransition();
 
@@ -209,6 +223,7 @@ export function ProgramCard({
           initial={version?.setup}
           nextMaxes={version?.setup.maxes}
           fromVersion={!!version}
+          otherDays={data.otherDays}
           onBack={
             choosing || data.versions?.[program.key]
               ? () => {
@@ -248,15 +263,20 @@ export function ProgramCard({
         <div>
           <div className="flex items-baseline justify-between gap-3">
             <h4 className="font-display text-base font-semibold">{a.name}</h4>
-            <span className="text-sm text-muted">{a.label}</span>
+            <span className="text-sm text-muted">{a.cycle > 1 ? `Cycle ${a.cycle} \u00b7 ${a.label}` : a.label}</span>
           </div>
           {data.plan && data.plan.others.length > 0 && (
             <p className="text-xs text-muted">With {listWords(data.plan.others)}</p>
           )}
+          {a.cycle > 1 && (
+            <p className="mt-1.5 inline-flex rounded-full bg-emerald-600/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+              {`\u2191 Cycle ${a.cycle - 1} done \u00b7 ${Object.keys(a.lastRaises).length} of ${a.maxes.length} lifts went up`}
+            </p>
+          )}
         </div>
         {a.blockDone && (
           <button type="button" onClick={() => setCycleOpen(true)} className={`${PRIMARY} w-full justify-center`}>
-            Cycle done · what&rsquo;s next?
+            What&rsquo;s next?
           </button>
         )}
         {data.plan && <WeekStrip days={data.plan.strip} />}
@@ -308,55 +328,27 @@ export function ProgramCard({
           </Modal>
         )}
         {cycleOpen && a.blockDone && (
-          <CycleEnd
+          <WhatsNext
             active={a}
             busy={pending}
-            canChange={!!data.setup && data.choices.some((c) => c.key === data.setup?.key)}
-            onChanges={(raises) => {
-              setCycleOpen(false);
-              setChanging(
-                Object.fromEntries(a.maxes.map((m) => [m.poolExerciseId, m.weight + (raises[m.poolExerciseId] ?? 0)])),
-              );
-            }}
             onClose={() => setCycleOpen(false)}
-            onNext={(raises) =>
+            onContinue={(raises) =>
               start(async () => {
                 await nextProgramBlock(userId, false, raises);
                 setCycleOpen(false);
                 done();
               })
             }
-            onSwitch={() => {
+            onNewPlan={() => {
               setCycleOpen(false);
               setChoosing(true);
             }}
+            onTry={(key) => {
+              setCycleOpen(false);
+              pick(key);
+            }}
           />
         )}
-        {changing &&
-          data.setup &&
-          (() => {
-            const p = data.choices.find((c) => c.key === data.setup!.key);
-            return p ? (
-              <ProgramSetup
-                program={p}
-                current={data.current}
-                warmups={data.warmups}
-                busy={pending}
-                initial={data.setup}
-                nextMaxes={changing}
-                onClose={() => setChanging(null)}
-                onStart={(input) =>
-                  start(async () => {
-                    const r = await startProgramFor(userId, { key: p.key, ...input, next: true });
-                    if (r.ok) {
-                      setChanging(null);
-                      done();
-                    }
-                  })
-                }
-              />
-            ) : null;
-          })()}
         {windows}
       </section>
     );
@@ -614,102 +606,112 @@ function ProgramList({
 }
 
 
-/** End of a cycle: each lift's raise (+5 upper, +10 lower to start, 0 holds
- *  it), Next cycle, Repeat, or Switch program. */
-function CycleEnd({
+/**
+ * What's next at the end of a cycle (v0.748): each main lift with the
+ * suggested raise or "Same" (tap to change), Continue (the next cycle, every
+ * other day as it is) or New plan (starts over). When the cycle felt easy, a
+ * harder program to preview.
+ */
+export function WhatsNext({
   active,
   busy,
-  canChange,
-  onChanges,
   onClose,
-  onNext,
-  onSwitch,
+  onContinue,
+  onNewPlan,
+  onTry,
 }: {
   active: ProgramInfo;
   busy: boolean;
-  /** "Make changes" opens the setup on the plan as it is (v0.626). */
-  canChange: boolean;
-  onChanges: (raises: Record<string, number>) => void;
   onClose: () => void;
-  onNext: (raises: Record<string, number>) => void;
-  onSwitch: () => void;
+  onContinue: (raises: Record<string, number>) => void;
+  onNewPlan: () => void;
+  /** Start the harder program (its setup). */
+  onTry: (key: string) => void;
 }) {
-  const [by, setBy] = useState<Record<string, string>>(() =>
-    Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, String(m.step)])),
+  const [on, setOn] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, (active.check.find((c) => c.poolExerciseId === m.poolExerciseId)?.suggest ?? m.step) > 0])),
   );
-  const amount = (id: string) => {
-    const n = Number(by[id]);
-    return Number.isFinite(n) && n > 0 ? n : 0;
+  const [preview, setPreview] = useState(false);
+  const by = (id: string) => {
+    const c = active.check.find((x) => x.poolExerciseId === id);
+    const m = active.maxes.find((x) => x.poolExerciseId === id);
+    return c && c.suggest > 0 ? c.suggest : (m?.step ?? 5);
   };
+  const h = active.harder;
   return (
-    <Modal title="Cycle done" onClose={onClose}>
+    <Modal title={`${active.name}: what\u2019s next?`} onClose={onClose}>
       <div className="space-y-4">
         {active.maxes.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted">Training maxes</p>
-            <div className="mt-1 divide-y divide-hairline">
-              {active.maxes.map((m) => (
+          <div className="divide-y divide-hairline">
+            {active.maxes.map((m) => {
+              const c = active.check.find((x) => x.poolExerciseId === m.poolExerciseId);
+              const up = on[m.poolExerciseId];
+              return (
                 <div key={m.poolExerciseId} className="flex items-center gap-3 py-2">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">{m.name}</span>
                     <span className="tabular block text-xs text-muted">
-                      {m.weight} → {m.weight + amount(m.poolExerciseId)}
+                      {c?.reason ? `${c.reason} \u00b7 ` : ""}
+                      {m.weight} → {up ? m.weight + by(m.poolExerciseId) : m.weight}
                     </span>
                   </span>
-                  <span className="text-sm text-muted">+</span>
-                  <input
-                    aria-label={`Raise ${m.name} by`}
-                    inputMode="decimal"
-                    value={by[m.poolExerciseId] ?? ""}
-                    onChange={(e) =>
-                      setBy((b) => ({
-                        ...b,
-                        [m.poolExerciseId]: e.target.value,
-                      }))
-                    }
-                    className="tabular h-10 w-16 rounded-lg border border-hairline bg-surface px-2 text-right text-sm outline-none focus:border-accent"
-                  />
+                  <button
+                    type="button"
+                    aria-pressed={up}
+                    onClick={() => setOn((o) => ({ ...o, [m.poolExerciseId]: !o[m.poolExerciseId] }))}
+                    className={`inline-flex h-8 min-w-[3.5rem] items-center justify-center rounded-full border px-3 text-sm font-semibold ${
+                      up ? "border-emerald-600 bg-emerald-600 text-white" : "border-hairline bg-surface text-ink"
+                    }`}
+                  >
+                    {up ? `+${by(m.poolExerciseId)}` : "Same"}
+                  </button>
                 </div>
-              ))}
+              );
+            })}
+          </div>
+        )}
+        {h && (
+          <div className="rounded-xl border border-hairline bg-surface p-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-sm font-semibold">Try {h.name}?</span>
+              <span className="text-xs text-muted">
+                {h.days.length} days · {h.weeks} weeks
+              </span>
             </div>
+            <button type="button" onClick={() => setPreview(true)} className={`${QUIET} mt-2`}>
+              Preview
+            </button>
           </div>
         )}
         <div className="flex flex-col gap-2">
           <button
             type="button"
             disabled={busy}
-            onClick={() =>
-              onNext(Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, amount(m.poolExerciseId)])))
-            }
+            onClick={() => onContinue(Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, on[m.poolExerciseId] ? by(m.poolExerciseId) : 0])))}
             className={`${PRIMARY} justify-center`}
           >
-            Next cycle
+            Continue {active.name} · cycle {active.cycle + 1}
           </button>
-          {canChange && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() =>
-                onChanges(Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, amount(m.poolExerciseId)])))
-              }
-              className={`${QUIET} justify-center`}
-            >
-              Next cycle, with changes
-            </button>
-          )}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onNext(Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, 0])))}
-            className={`${QUIET} justify-center`}
-          >
-            Repeat
-          </button>
-          <button type="button" onClick={onSwitch} className={`${QUIET} justify-center`}>
-            Switch program
+          <button type="button" onClick={onNewPlan} className={`${QUIET} justify-center`}>
+            New plan · starts over
           </button>
         </div>
       </div>
+      {preview && h && (
+        <Modal small title={h.name} onClose={() => setPreview(false)}>
+          <div className="space-y-3">
+            <p className="text-sm text-muted">{h.blurb}</p>
+            <ul className="space-y-1 text-sm">
+              {h.days.map((d, i) => (
+                <li key={`${d}-${i}`}>{d}</li>
+              ))}
+            </ul>
+            <button type="button" onClick={() => onTry(h.key)} className={`${PRIMARY} w-full justify-center`}>
+              Start {h.name}
+            </button>
+          </div>
+        </Modal>
+      )}
     </Modal>
   );
 }
@@ -717,7 +719,7 @@ function CycleEnd({
 type Added = { n: number; day: number; poolExerciseId: string; scheme: string };
 type SetupInput = Omit<StartProgramInput, "key">;
 
-const STEPS = ["Days", "Lifts", "Extras", "Maxes"] as const;
+const STEPS = ["Days", "Other days", "Lifts", "Warm-up", "Cardio", "Finishers", "Maxes", "Review"] as const;
 const COMPANION_SCHEMES = SCHEME_CHOICES.filter((c) => c.key !== "wave");
 
 /** What a main lift's tag says: 5/3/1, or Waves for wave loading. */
@@ -744,6 +746,7 @@ function ProgramSetupSteps({
   nextMaxes,
   fromVersion = false,
   editMode = false,
+  otherDays,
   onBack,
   onClose,
   onStart,
@@ -753,6 +756,9 @@ function ProgramSetupSteps({
   warmups: WarmupRoutine[];
   /** Changing the running program from the plan page (v0.747): "Save changes". */
   editMode?: boolean;
+  /** What each weekday holds now, Sunday first (v0.748): the other days start
+   *  from it (the same program) or from its rest days (a new one). */
+  otherDays?: string[];
   busy: boolean;
   /** Open on the running program's plan (the next cycle, with changes). */
   initial?: CurrentSetup;
@@ -787,6 +793,7 @@ function ProgramSetupSteps({
   const [warmup, setWarmup] = useState<string>(current.warmup ? (current.warmupRoutine ?? "") : "");
   const [cardio, setCardio] = useState<number[] | null>(null);
   const [conditioning, setConditioning] = useState<number[]>(current.conditioningDays);
+  const [other, setOther] = useState<Record<number, string>>(() => startOther(otherDays, editMode));
   const [maxText, setMaxText] = useState<Record<string, string>>({});
   const [tmHelp, setTmHelp] = useState(false);
 
@@ -859,10 +866,24 @@ function ProgramSetupSteps({
         })),
       warmup: warmup !== "none",
       ...(warmup !== "none" ? { warmupRoutine: warmup } : {}),
-      cardioDays,
-      conditioningDays: conditioning,
+      ...otherPayload(days, other, cardioDays, conditioning),
     });
   };
+
+  // The week before Start (v0.748).
+  const review = MONDAY_FIRST.map((d) => {
+    const parts: string[] = [];
+    const prog = program.days.filter((_, i) => days[i] === d).map((x) => x.name);
+    const k = other[d] ?? "skip";
+    const work = prog.length > 0 || (k !== "rest" && k !== "skip");
+    if (warmup !== "none" && work && k !== "mobility" && k !== "stretching") parts.push("Warm-up");
+    parts.push(...prog);
+    if (!prog.length && k !== "skip" && k !== "cardio" && k !== "conditioning") parts.push(otherWords(k));
+    const p = otherPayload(days, other, cardioDays, conditioning);
+    if (p.cardioDays.includes(d)) parts.push("Cardio");
+    if (p.conditioningDays.includes(d)) parts.push("Conditioning");
+    return { day: d, parts };
+  });
 
 
 
@@ -888,6 +909,15 @@ function ProgramSetupSteps({
         )}
 
         {step === 1 && (
+          <OtherDaysStep
+            programDays={days}
+            other={other}
+            had={editMode ? otherDays : undefined}
+            onChange={(d, k) => setOther((o) => ({ ...o, [d]: k }))}
+          />
+        )}
+
+        {step === 2 && (
           <div className="space-y-5">
             {/* In weekday order, whatever order the program lists its days (v0.624). */}
             {program.days
@@ -986,19 +1016,12 @@ function ProgramSetupSteps({
           </div>
         )}
 
-        {step === 2 && (
-          <ExtrasStep
-            warmups={warmups}
-            warmup={warmup}
-            onWarmup={setWarmup}
-            cardioDays={cardioDays}
-            onCardio={setCardio}
-            conditioningDays={conditioning}
-            onConditioning={setConditioning}
-          />
-        )}
+        {step === 3 && <WarmupStep warmups={warmups} warmup={warmup} onWarmup={setWarmup} />}
+        {step === 4 && <CardioStep days={cardioDays} onDays={setCardio} />}
+        {step === 5 && <FinishersStep days={conditioning} onDays={setConditioning} />}
+        {step === 7 && <ReviewWeek days={review} />}
 
-        {step === 3 && (
+        {step === 6 && (
           <div className="space-y-3">
             {mains.length === 0 ? (
               <p className="text-sm text-muted">No main lifts.</p>
@@ -1210,6 +1233,7 @@ export function ProgramSection({ userId, onChanged }: { userId: string; onChange
           busy={pending}
           initial={data.setup}
           editMode
+          otherDays={data.otherDays}
           nextMaxes={Object.fromEntries(a.maxes.map((m) => [m.poolExerciseId, m.weight]))}
           onClose={() => setOpen(false)}
           onStart={(input) =>
