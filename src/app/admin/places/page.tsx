@@ -72,6 +72,7 @@ export default async function PlacesAdminPage() {
         unlinked={data.unlinked ? { entityId: data.unlinked.entityId, when: when(data.unlinked.at) } : null}
         totalPoints={data.totalPoints}
         usage={usage}
+        named={data.named}
         storageBytes={data.storageBytes}
       />
     </main>

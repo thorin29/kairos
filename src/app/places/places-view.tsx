@@ -1,40 +1,30 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { Avatar } from "@/components/avatar";
 import { MapIcon } from "@/components/icons";
-import { notePlacesMapLoad, refreshPlacesLive } from "@/lib/actions/places-live";
+import { notePlacesMapLoad, placesTracks, refreshPlacesLive } from "@/lib/actions/places-live";
 import type { LiveData, LivePerson } from "@/lib/places/live-types";
+import type { DayData } from "@/lib/places/history-types";
+import { drawTrips, loadMaps, touchInline } from "./map-kit";
+import { PlaceFix } from "./place-fix";
 
 /**
- * Places (v0.757): one Google map with everyone, and a list beside it.
+ * Places: one Google map with everyone, and a list beside it.
  *
  * Smoothness and cost: the map is created once per visit (Google bills per
  * map load) and never rebuilt — refreshes only move markers, gliding them to
  * their new spot. Kairos is asked every 30 s while the tab is visible (that
  * never calls Google). The view isn't re-fitted after the first load, so it
  * stays where you've panned. Full screen is the same map grown to the window.
+ * Tracks (today, per person) and Follow ride on the same refresh.
  */
 
 const POLL_MS = 30_000;
 const GLIDE_MS = 900;
-
-let mapsOptionsSet = false;
-function loadMaps(key: string) {
-  if (!mapsOptionsSet) {
-    setOptions({ key, v: "weekly" });
-    mapsOptionsSet = true;
-  }
-  return Promise.all([importLibrary("maps"), importLibrary("marker")]);
-}
-
-/** On a phone the page scrolls past the map, so one finger scrolls the page
- *  and two move the map; full screen (and a mouse) moves the map directly. */
-function touchInline(): boolean {
-  return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
-}
+const TRACKS_KEY = "kairos.places.tracks";
 
 function ago(iso: string, now: number): string {
   const min = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000));
@@ -60,11 +50,19 @@ function clock(iso: string, now: number): string {
   return sameDay ? time : `${d.toLocaleDateString([], { weekday: "short" })} ${time}`;
 }
 
+function driving(p: LivePerson): boolean {
+  return p.moving && p.mph != null && p.mph >= 10;
+}
+
 function placeLine(p: LivePerson): string {
-  if (p.moving) return "On the move";
+  if (p.moving) return driving(p) ? "Driving" : "On the move";
   if (!p.place || p.place.kind === "unknown") return "Unknown place";
   if (p.place.name && p.place.address) return `${p.place.name} · ${p.place.address}`;
   return p.place.name ?? p.place.address ?? "Unknown place";
+}
+
+function speedTag(p: LivePerson): string {
+  return p.mph != null && p.mph > 0 ? `${p.mph} mph` : "Moving";
 }
 
 function Face({ p }: { p: LivePerson }) {
@@ -74,8 +72,8 @@ function Face({ p }: { p: LivePerson }) {
         <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="md" />
       </div>
       {p.moving && (
-        <span className="mt-0.5 rounded-full bg-ink px-1.5 text-[0.65rem] font-semibold leading-4 text-white">
-          Moving
+        <span className="mt-0.5 rounded-full bg-ink px-1.5 font-mono text-[0.65rem] font-semibold leading-4 text-white">
+          {speedTag(p)}
         </span>
       )}
     </div>
@@ -93,31 +91,70 @@ const btn =
   "inline-flex h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-sm font-medium shadow-sm hover:border-accent disabled:opacity-50";
 const btnOn =
   "inline-flex h-10 items-center gap-2 rounded-full border border-accent bg-accent px-4 text-sm font-medium text-on-accent shadow-sm";
+const small =
+  "inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-3 text-xs font-medium hover:border-accent";
+
+function readTracks(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(TRACKS_KEY) ?? "[]");
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeTracks(ids: string[]) {
+  try {
+    localStorage.setItem(TRACKS_KEY, JSON.stringify(ids));
+  } catch {
+    // Storage unavailable: tracks just reset next visit.
+  }
+}
 
 export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: string; initial: LiveData }) {
   const [data, setData] = useState<LiveData>(initial);
   const [now, setNow] = useState<number | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [follow, setFollow] = useState<string | null>(null);
   const [full, setFull] = useState(false);
   const [traffic, setTraffic] = useState(false);
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [tracksOn, setTracksOn] = useState<string[]>([]);
+  const [tracks, setTracks] = useState<Record<string, DayData>>({});
+  const [fixing, setFixing] = useState<LivePerson | null>(null);
 
   const mapDiv = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markers = useRef(new Map<string, MarkerEntry>());
+  const lines = useRef(new Map<string, google.maps.Polyline[]>());
   const info = useRef<google.maps.InfoWindow | null>(null);
   const circle = useRef<google.maps.Circle | null>(null);
   const trafficLayer = useRef<google.maps.TrafficLayer | null>(null);
   const fitted = useRef(false);
   const dataRef = useRef(data);
   dataRef.current = data;
+  const tracksOnRef = useRef(tracksOn);
+  tracksOnRef.current = tracksOn;
 
   // Relative times tick on the client only (no server/client mismatch).
   useEffect(() => {
     setNow(Date.now());
+    setTracksOn(readTracks());
     const t = setInterval(() => setNow(Date.now()), POLL_MS);
     return () => clearInterval(t);
+  }, []);
+
+  const pullTracks = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) {
+      setTracks({});
+      return;
+    }
+    try {
+      setTracks(await placesTracks(ids));
+    } catch {
+      // Keep the last tracks.
+    }
   }, []);
 
   // Live refresh while visible; straight away when the tab comes back.
@@ -134,6 +171,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       } catch {
         // Offline or signed out: keep showing the last good data.
       }
+      if (alive) void pullTracks(tracksOnRef.current);
     };
     const t = setInterval(pull, POLL_MS);
     const onVis = () => {
@@ -145,7 +183,18 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       clearInterval(t);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, []);
+  }, [pullTracks]);
+
+  // Tracks switched on/off: fetch straight away.
+  useEffect(() => {
+    void pullTracks(tracksOn);
+  }, [tracksOn, pullTracks]);
+
+  const toggleTrack = (id: string) => {
+    const next = tracksOn.includes(id) ? tracksOn.filter((x) => x !== id) : [...tracksOn, id];
+    setTracksOn(next);
+    writeTracks(next);
+  };
 
   // Create the map once.
   useEffect(() => {
@@ -156,7 +205,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       .then(() => {
         if (cancelled || !mapDiv.current || mapRef.current) return;
         const first = dataRef.current.people[0];
-        mapRef.current = new google.maps.Map(mapDiv.current, {
+        const map = new google.maps.Map(mapDiv.current, {
           mapId,
           center: first ? { lat: first.lat, lng: first.lng } : { lat: 39.5, lng: -98.35 },
           zoom: first ? 13 : 4,
@@ -167,6 +216,8 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           fullscreenControl: false,
           zoomControl: true,
         });
+        map.addListener("dragstart", () => setFollow(null));
+        mapRef.current = map;
         info.current = new google.maps.InfoWindow();
         info.current.addListener("closeclick", () => setSelected(null));
         setReady(true);
@@ -183,6 +234,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   const fitEveryone = useCallback(() => {
     const map = mapRef.current;
     const people = dataRef.current.people;
+    setFollow(null);
     if (!map || people.length === 0) return;
     if (people.length === 1) {
       map.panTo({ lat: people[0].lat, lng: people[0].lng });
@@ -245,7 +297,24 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       fitted.current = true;
       fitEveryone();
     }
-  }, [data, ready, fitEveryone]);
+    // Following someone: keep them in view as they move.
+    const f = follow ? data.people.find((p) => p.id === follow) : null;
+    if (f) map.panTo({ lat: f.lat, lng: f.lng });
+  }, [data, ready, fitEveryone, follow]);
+
+  // Today's tracks for the people switched on.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    for (const ls of lines.current.values()) for (const l of ls) l.setMap(null);
+    lines.current.clear();
+    for (const id of tracksOn) {
+      const day = tracks[id];
+      const person = data.people.find((p) => p.id === id);
+      if (!day || !person) continue;
+      lines.current.set(id, drawTrips(map, day.items, person.color));
+    }
+  }, [tracks, tracksOn, ready, data.people]);
 
   // The selected person's bubble and accuracy ring.
   useEffect(() => {
@@ -264,13 +333,12 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     title.style.fontWeight = "600";
     title.textContent = p.name;
     const where = document.createElement("div");
-    where.textContent = placeLine(p);
+    where.textContent = p.moving && p.mph != null ? `${placeLine(p)} · ${p.mph} mph` : placeLine(p);
     const when = document.createElement("div");
     when.style.cssText = "color: #5b6b7d; font-size: 12px; margin-top: 2px;";
     const t = now ?? Date.parse(data.asOf);
-    when.textContent = p.since && !p.moving
-      ? `Here since ${clock(p.since, t)} · updated ${ago(p.at, t)}`
-      : `Updated ${ago(p.at, t)}`;
+    when.textContent =
+      p.since && !p.moving ? `Here since ${clock(p.since, t)} · updated ${ago(p.at, t)}` : `Updated ${ago(p.at, t)}`;
     box.append(title, where, when);
     info.current?.setContent(box);
     info.current?.open({ map, anchor: entry.marker, shouldFocus: false });
@@ -293,6 +361,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
 
   const choose = (p: LivePerson) => {
     setSelected(p.id);
+    if (follow && follow !== p.id) setFollow(null);
     mapRef.current?.panTo({ lat: p.lat, lng: p.lng });
     if ((mapRef.current?.getZoom() ?? 0) < 14) mapRef.current?.setZoom(15);
   };
@@ -314,7 +383,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     mapRef.current?.setOptions({ gestureHandling: full || !touchInline() ? "greedy" : "cooperative" });
     if (!full) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFull(false);
+      if (e.key === "Escape" && !fixing) setFull(false);
     };
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
@@ -323,11 +392,12 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [full]);
+  }, [full, fixing]);
 
-  // Clean up markers when leaving the page.
+  // Clean up markers and lines when leaving the page.
   useEffect(() => {
     const all = markers.current;
+    const allLines = lines.current;
     return () => {
       for (const m of all.values()) {
         if (m.frame != null) cancelAnimationFrame(m.frame);
@@ -336,11 +406,22 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
         setTimeout(() => root.unmount(), 0);
       }
       all.clear();
+      for (const ls of allLines.values()) for (const l of ls) l.setMap(null);
+      allLines.clear();
     };
   }, []);
 
   const t = now ?? Date.parse(data.asOf);
   const empty = data.people.length === 0;
+  const sel = data.people.find((p) => p.id === selected) ?? null;
+
+  const refreshNow = async () => {
+    try {
+      setData(await refreshPlacesLive());
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <main className="mx-auto max-w-[96rem] px-4 py-6 sm:px-6">
@@ -369,6 +450,42 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           }
         >
           <div ref={mapDiv} className="h-full w-full" />
+
+          {data.people.length > 0 && (
+            <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1.5 rounded-full bg-surface/95 py-1 pl-3 pr-1.5 shadow-md">
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted">Tracks</span>
+              {data.people.map((p) => {
+                const on = tracksOn.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => toggleTrack(p.id)}
+                    aria-pressed={on}
+                    aria-label={`${p.name}'s track`}
+                    title={p.name}
+                    className={`flex h-9 w-9 items-center justify-center rounded-full transition-opacity ${on ? "" : "opacity-40 grayscale"}`}
+                  >
+                    <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="xs" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {sel && (
+            <div className="absolute bottom-6 left-3">
+              <button
+                type="button"
+                onClick={() => setFollow(follow === sel.id ? null : sel.id)}
+                aria-pressed={follow === sel.id}
+                className={follow === sel.id ? btnOn : btn}
+              >
+                {follow === sel.id ? `Following ${sel.name}` : `Follow ${sel.name}`}
+              </button>
+            </div>
+          )}
+
           {full && (
             <div className="absolute right-3 top-3 flex gap-2">
               <button type="button" onClick={fitEveryone} className={btn}>
@@ -401,39 +518,51 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
             const isSel = p.id === selected;
             const lowBattery = p.battery != null && p.battery < 20;
             return (
-              <button
+              <div
                 key={p.id}
-                type="button"
-                onClick={() => choose(p)}
-                className={`flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-colors ${
+                className={`rounded-2xl border transition-colors ${
                   p.stale ? "border-amber-200 bg-amber-50" : "border-hairline bg-surface hover:border-accent"
                 }`}
                 style={isSel ? { borderColor: p.color, boxShadow: `0 0 0 1px ${p.color}` } : undefined}
               >
-                <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="md" />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-2">
-                    <span className="truncate font-semibold">{p.name}</span>
+                <button type="button" onClick={() => choose(p)} className="flex w-full items-start gap-3 px-3 py-3 text-left">
+                  <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="md" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="truncate font-semibold">{p.name}</span>
+                      {now != null && (
+                        <span className={`shrink-0 text-xs ${p.moving ? "font-mono font-semibold text-ink" : "text-muted"}`}>
+                          {p.moving ? speedTag(p) : p.since ? span(p.since, t) : ""}
+                        </span>
+                      )}
+                    </span>
+                    <span className="block truncate text-sm">{placeLine(p)}</span>
                     {now != null && (
-                      <span className="shrink-0 text-xs text-muted">
-                        {p.moving ? "Moving" : p.since ? span(p.since, t) : ""}
+                      <span className={`block font-mono text-xs ${p.stale ? "text-amber-800" : "text-muted"}`}>
+                        {p.stale ? `No update ${ago(p.at, t)}` : `Updated ${ago(p.at, t)} · ${clock(p.at, t)}`}
+                        {p.battery != null && (
+                          <>
+                            {" · "}
+                            <span className={lowBattery ? "text-red-700" : undefined}>{p.battery}%</span>
+                          </>
+                        )}
                       </span>
                     )}
                   </span>
-                  <span className="block truncate text-sm">{placeLine(p)}</span>
-                  {now != null && (
-                    <span className={`block font-mono text-xs ${p.stale ? "text-amber-800" : "text-muted"}`}>
-                      {p.stale ? `No update ${ago(p.at, t)}` : `Updated ${ago(p.at, t)} · ${clock(p.at, t)}`}
-                      {p.battery != null && (
-                        <>
-                          {" · "}
-                          <span className={lowBattery ? "text-red-700" : undefined}>{p.battery}%</span>
-                        </>
-                      )}
-                    </span>
-                  )}
-                </span>
-              </button>
+                </button>
+                {isSel && (
+                  <div className="flex flex-wrap gap-2 px-3 pb-3 pl-[4.25rem]">
+                    <Link href={`/places/${p.id}`} className={small}>
+                      History
+                    </Link>
+                    {!p.moving && (
+                      <button type="button" onClick={() => setFixing(p)} className={small}>
+                        Not right?
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             );
           })}
           {data.waiting.map((p) => (
@@ -447,6 +576,16 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           ))}
         </aside>
       </div>
+
+      {fixing && (
+        <PlaceFix
+          personId={fixing.id}
+          personName={fixing.name}
+          spot={{ lat: fixing.lat, lng: fixing.lng, accuracyM: fixing.accuracyM }}
+          onClose={() => setFixing(null)}
+          onSaved={() => void refreshNow()}
+        />
+      )}
     </main>
   );
 }

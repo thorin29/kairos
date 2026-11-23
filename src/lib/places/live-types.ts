@@ -18,6 +18,8 @@ export type LivePerson = {
   /** ISO: the newest report. */
   at: string;
   battery: number | null;
+  /** Speed in mph while moving (from the phone; null when it gave none). */
+  mph: number | null;
   moving: boolean;
   /** ISO: arrived where they are (null while moving). */
   since: string | null;

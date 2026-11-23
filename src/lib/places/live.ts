@@ -4,6 +4,7 @@ import { getSetting } from "@/lib/settings";
 import { PLACES_MAP_ID, PLACES_MAP_KEY } from "@/lib/places/config";
 import { presenceOf, STALE_MS, type TimedPt } from "@/lib/places/geo";
 import { resolvePlace, type PlaceLabel } from "@/lib/places/resolve";
+import { MPS_TO_MPH } from "@/lib/places/day";
 
 /**
  * Everyone's current position for the Places page and the phone's API: the
@@ -20,12 +21,22 @@ const RECENT_POINTS = 300;
 const MEMO_MS = 10 * 60_000;
 const memo = new Map<string, { label: PlaceLabel; at: number }>();
 
-async function placeFor(lat: number, lng: number, accuracyM: number | null): Promise<PlaceLabel> {
-  const k = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+/** Forget memoised names (after the family names or corrects a place). */
+export function bustPlaceMemo(): void {
+  memo.clear();
+}
+
+export async function placeFor(
+  lat: number,
+  lng: number,
+  accuracyM: number | null,
+  userId: string | null,
+): Promise<PlaceLabel> {
+  const k = `${userId ?? "-"}:${lat.toFixed(4)},${lng.toFixed(4)}`;
   const hit = memo.get(k);
   const now = Date.now();
   if (hit && now - hit.at < MEMO_MS) return hit.label;
-  const label = await resolvePlace({ lat, lng, accuracyM });
+  const label = await resolvePlace({ lat, lng, accuracyM }, userId);
   memo.set(k, { label, at: now });
   if (memo.size > 500) {
     for (const [key, v] of memo) if (now - v.at >= MEMO_MS) memo.delete(key);
@@ -99,7 +110,7 @@ export async function loadLive(): Promise<LiveData> {
       continue;
     }
     const latest = rows[0];
-    const place = pres.moving ? null : await placeFor(latest.lat, latest.lng, latest.accuracyM);
+    const place = pres.moving ? null : await placeFor(latest.lat, latest.lng, latest.accuracyM, u.id);
     people.push({
       ...base,
       lat: latest.lat,
@@ -107,6 +118,7 @@ export async function loadLive(): Promise<LiveData> {
       accuracyM: latest.accuracyM,
       at: latest.at.toISOString(),
       battery: latest.battery,
+      mph: pres.moving && latest.speed != null ? Math.round(latest.speed * MPS_TO_MPH) : null,
       moving: pres.moving,
       since: pres.since ? pres.since.toISOString() : null,
       stale: now - latest.at.getTime() > STALE_MS,

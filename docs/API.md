@@ -1888,6 +1888,7 @@ same `loadLive` the web Places page uses. Everyone sees everyone.
     "lat": 10.5, "lng": -20.25, "accuracyM": 12,
     "at": "2026-11-23T15:59:10.000Z",   // newest report
     "battery": 64,
+    "mph": null,                         // speed while moving (v0.758; HA sends m/s)
     "moving": false,                     // two far-apart reports within 15 min, or raw speed ≥ 3
     "since": "2026-11-23T14:02:00.000Z", // arrived here (null while moving)
     "stale": false,                      // no report for 12 h
@@ -1898,8 +1899,10 @@ same `loadLive` the web Places page uses. Everyone sees everyone.
 }
 ```
 
-Place names cost no Google call when known: a saved address within ~120 m, or
-an answer Google gave within ~60 m in the last 30 days. Otherwise one Nearby
+Place names cost no Google call when known: a spot the family named
+(`PlaceName`, v0.758 — the person's own first, then everyone's), a saved
+address within ~120 m, or an answer Google gave within ~60 m in the last 30
+days. Otherwise one Nearby
 Search (then reverse geocoding), within Kairos's daily limits (140 / 280).
 
 ## Endpoint inventory (what exists vs what is written up here)

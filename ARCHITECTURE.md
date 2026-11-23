@@ -342,6 +342,12 @@ daily limits and counts (`PlacesApiUsage`). Only `/places` pages get the wider
 Content-Security-Policy Google Maps needs (`isMapPath` in `src/lib/csp.ts`), so
 the sidebar opens Places with a full page load.
 
+v0.758 adds a person's day (`/places/<person>?date=`): `planDay`
+(`src/lib/places/day.ts`, pure) splits points into stops and trips; finished
+drives are snapped once with the Roads API (`src/lib/places/roads.ts`,
+`SnappedPath`, 30 days); the same plan draws today's per-person tracks on the
+live map. Family-named spots (`PlaceName`) come first in place naming.
+
 ## Hockey reads a separate container
 
 Ice times come from **ice-time** (its own repo), which reads a rink's public

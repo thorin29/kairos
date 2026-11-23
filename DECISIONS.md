@@ -1,5 +1,44 @@
 # Decisions
 
+## 2026-11 — Places: speed, Follow, tracks, History, place names (v0.758.0)
+
+- **Speed** from Home Assistant is metres per second (confirmed against a
+  highway drive: stored 30–33 while position-derived speed was 70–73 mph);
+  `mph = speed × 2.23694`, whole-number m/s means ~2 mph steps. Cards and the
+  marker chip show it while moving ("Driving" from 10 mph); `mph` is in the
+  live payload.
+- **Follow** keeps the map on a selected person through refreshes; dragging
+  the map stops it.
+- **One day plan** (`planDay`, pure, src/lib/places/day.ts) feeds both today's
+  tracks and History: a stop is ≥5 min within 120 m (the newest place counts
+  even if short); a trip is a drive when it averages ≥3.5 m/s or reports ≥6 m/s,
+  otherwise "moving" (walks, runs, trails). Points worse than 250 m are left
+  out. The last point before midnight starts the day at that place.
+- **Road-following tracks:** finished drives (followed by a stop and settled
+  3 min) are snapped once with Roads API snapToRoads (interpolate, ≤100
+  points per call, chunked) and cached in `SnappedPath` 30 days. If the
+  snapped spots of the original points sit too far away (median > 35 m or
+  >30% beyond 60 m — off-road, car parks), the raw points are drawn. A drive
+  still under way is raw. Kairos limit 140 calls/day (Pro, 5,000 free a
+  month). Note: reports ~27 s apart at highway speed are ~800 m apart, more
+  than Roads prefers; the believability check falls back to raw if Google
+  can't follow it.
+- **Tracks on the map** are per person (avatar chips; the choice is kept per
+  browser in localStorage) and refresh with the 30 s poll. Drives solid
+  (thicker when snapped), other trips dotted.
+- **History** (`/places/<person>?date=`, under `/places` so the map policy
+  applies and Link navigation keeps the one map): totals, numbered stops,
+  timeline, replay (a dot along the day's trips at 30×/120×/480×, each stop a
+  short pause). Stepping days only redraws.
+- **Family names win:** `PlaceName` (where the person stood — Kairos's own
+  data, no expiry) is checked before saved addresses and Google: the person's
+  own names first, then everyone's. A nameless one means "just the street
+  address here". "Not right?" offers Google's other nearby results — stored as
+  `PlaceLookup.candidates` when Nearby Search first runs, so choosing costs no
+  extra call — plus "Just the address" and "Name this place…" (a full page:
+  name, everyone / just this person). Admin → Places → Named places removes
+  them. Names are memoised per person and the memo is cleared on any change.
+
 ## 2026-11 — Places page (v0.757.0)
 
 - **One map per visit.** Google bills per map load, so the Places page creates

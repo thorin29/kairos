@@ -51,7 +51,10 @@ parties holding your family's schedule.
   phone last reported, and battery, with a full-screen map. Home Assistant
   sends each phone's location to `/api/v1/places/ingest`; Kairos keeps the
   history and caches Google's answers so the same place is never looked up
-  twice. Daily paths come next. Setup: `docs/places-home-assistant.md`.
+  twice. Speed while driving, Follow someone, today's tracks per person
+  (drives on the roads), a History page per person (stops, drives, totals,
+  replay), and "Not right?" to fix a place's name. Setup:
+  `docs/places-home-assistant.md`.
 - **Shopping.** A shared shopping list that learns the items you buy and their
   icons — including a custom set of 244 colourful icons for the items and stores
   that emoji handle badly, offered as suggestions and searchable from the admin

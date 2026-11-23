@@ -8,6 +8,8 @@ import { bump, canCall } from "@/lib/places/usage";
 
 /**
  * Name the spot a person is at, as cheaply as possible:
+ *   0. a spot the family named (PlaceName) — this person's own first, then
+ *      everyone's; a nameless one means "just the street address here",
  *   1. a saved address within SAVED_RADIUS_M ("Home", "Rink"),
  *   2. an answer Google already gave within CACHE_RADIUS_M (30 days),
  *   3. Google Nearby Search (a business or landmark), then
@@ -125,17 +127,29 @@ function labelOf(l: Lookup): PlaceLabel {
 /** Ask Google once per spot even if several browsers poll at the same moment. */
 const inflight = new Map<string, Promise<PlaceLabel>>();
 
-async function askGoogle(key: string, p: Pt & { accuracyM: number | null }): Promise<PlaceLabel> {
+async function askGoogle(
+  key: string,
+  p: Pt & { accuracyM: number | null },
+  addressOnly = false,
+): Promise<PlaceLabel> {
   const fuzzy = p.accuracyM != null && p.accuracyM > FUZZY_M;
 
-  if (!fuzzy && (await canCall("nearby"))) {
+  if (!addressOnly && !fuzzy && (await canCall("nearby"))) {
     await bump("nearby");
     const radius = Math.min(80, Math.max(30, p.accuracyM ?? 40));
     const hits = await nearbySearch(key, p.lat, p.lng, radius);
     if (hits && hits.length > 0) {
       const hit = hits.reduce((a, b) => (metres(p, a) <= metres(p, b) ? a : b));
       await prisma.placeLookup.create({
-        data: { lat: p.lat, lng: p.lng, name: hit.name, address: hit.address, googlePlaceId: hit.placeId, source: "nearby" },
+        data: {
+          lat: p.lat,
+          lng: p.lng,
+          name: hit.name,
+          address: hit.address,
+          googlePlaceId: hit.placeId,
+          source: "nearby",
+          candidates: hits.slice(0, 5).map((h) => ({ name: h.name, address: h.address })),
+        },
       });
       return { name: hit.name, address: shortAddress(hit.address), kind: "place" };
     }
@@ -161,22 +175,110 @@ async function askGoogle(key: string, p: Pt & { accuracyM: number | null }): Pro
   return UNKNOWN;
 }
 
-export async function resolvePlace(p: Pt & { accuracyM: number | null }): Promise<PlaceLabel> {
+type Named = { id: string; name: string | null; lat: number; lng: number; radiusM: number; userId: string | null };
+
+/** The family's own name for this spot: this person's first, then everyone's. */
+async function namedNear(p: Pt, userId: string | null): Promise<Named | null> {
+  const b = boxAround(p, 500);
+  const rows = (await prisma.placeName.findMany({
+    where: {
+      lat: { gte: b.minLat, lte: b.maxLat },
+      lng: { gte: b.minLng, lte: b.maxLng },
+      OR: [{ userId: null }, ...(userId ? [{ userId }] : [])],
+    },
+    select: { id: true, name: true, lat: true, lng: true, radiusM: true, userId: true },
+    take: 100,
+  })) as Named[];
+  let best: Named | null = null;
+  let bestScore = Infinity;
+  for (const r of rows) {
+    const d = metres(p, r);
+    if (d > r.radiusM) continue;
+    // A person's own spot beats a shared one; then nearest wins.
+    const score = d - (r.userId ? 10_000 : 0);
+    if (score < bestScore) {
+      best = r;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+async function withGoogle(key: string | null, p: Pt & { accuracyM: number | null }, addressOnly: boolean): Promise<PlaceLabel> {
+  if (!key) return UNKNOWN;
+  const k = `${addressOnly ? "a" : "p"}:${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
+  const running = inflight.get(k);
+  if (running) return running;
+  const job = askGoogle(key, p, addressOnly).finally(() => inflight.delete(k));
+  inflight.set(k, job);
+  return job;
+}
+
+export async function resolvePlace(
+  p: Pt & { accuracyM: number | null },
+  userId: string | null = null,
+): Promise<PlaceLabel> {
   const now = Date.now();
   await purgeOld(now);
   const key = await getSetting(PLACES_LOOKUP_KEY);
 
-  const saved = nearestSaved(p, await savedWithCoords(key, now));
-  if (saved) return { name: saved.name, address: shortAddress(saved.address), kind: "saved" };
+  const named = await namedNear(p, userId);
+  if (named?.name) return { name: named.name, address: null, kind: "saved" };
+
+  if (!named) {
+    const saved = nearestSaved(p, await savedWithCoords(key, now));
+    if (saved) return { name: saved.name, address: shortAddress(saved.address), kind: "saved" };
+  }
 
   const cached = await cachedNear(p, now);
+  if (named) {
+    // "Just the address" here: never a business name.
+    if (cached?.address) return { name: null, address: shortAddress(cached.address), kind: "address" };
+    return withGoogle(key, p, true);
+  }
   if (cached) return labelOf(cached);
+  return withGoogle(key, p, false);
+}
 
-  if (!key) return UNKNOWN;
-  const k = `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
-  const running = inflight.get(k);
-  if (running) return running;
-  const job = askGoogle(key, p).finally(() => inflight.delete(k));
-  inflight.set(k, job);
-  return job;
+export type Candidate = { name: string; address: string | null };
+
+/** Nearby businesses for "Not right?". Uses what Google already returned for
+ *  this spot; asks once more only if nothing is cached (within today's limit). */
+export async function candidatesNear(p: Pt & { accuracyM: number | null }): Promise<Candidate[]> {
+  const now = Date.now();
+  const b = boxAround(p, CACHE_RADIUS_M);
+  const rows = (await prisma.placeLookup.findMany({
+    where: {
+      lat: { gte: b.minLat, lte: b.maxLat },
+      lng: { gte: b.minLng, lte: b.maxLng },
+      fetchedAt: { gte: new Date(now - KEEP_MS) },
+      source: "nearby",
+    },
+    select: { lat: true, lng: true, candidates: true },
+    take: 50,
+  })) as { lat: number; lng: number; candidates: unknown }[];
+  const near = rows
+    .filter((r) => metres(p, r) <= CACHE_RADIUS_M && Array.isArray(r.candidates))
+    .sort((a, b2) => metres(p, a) - metres(p, b2))[0];
+  if (near) return near.candidates as Candidate[];
+
+  const key = await getSetting(PLACES_LOOKUP_KEY);
+  if (!key || !(await canCall("nearby"))) return [];
+  await bump("nearby");
+  const radius = Math.min(80, Math.max(30, p.accuracyM ?? 40));
+  const hits = await nearbySearch(key, p.lat, p.lng, radius);
+  if (!hits || hits.length === 0) return [];
+  const candidates = hits.slice(0, 5).map((h) => ({ name: h.name, address: h.address }));
+  await prisma.placeLookup.create({
+    data: {
+      lat: p.lat,
+      lng: p.lng,
+      name: hits[0].name,
+      address: hits[0].address,
+      googlePlaceId: hits[0].placeId,
+      source: "nearby",
+      candidates,
+    },
+  });
+  return candidates;
 }

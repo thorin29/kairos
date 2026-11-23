@@ -141,6 +141,7 @@ export type PlacesAdmin = {
   totalPoints: number;
   storageBytes: number;
   people: PlacesPersonRow[];
+  named: { id: string; name: string | null; who: string | null; createdAt: string }[];
 };
 
 export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
@@ -222,7 +223,19 @@ export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
   // Once it's linked, the hint has done its job.
   if (unlinked && people.some((p) => p.entityId === unlinked!.entityId)) unlinked = null;
 
+  const namedRows = (await prisma.placeName.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    select: { id: true, name: true, createdAt: true, user: { select: { name: true, displayName: true } } },
+  })) as { id: string; name: string | null; createdAt: Date; user: { name: string; displayName: string | null } | null }[];
+
   return {
+    named: namedRows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      who: r.user ? r.user.displayName || r.user.name : null,
+      createdAt: r.createdAt.toISOString(),
+    })),
     mapKeySet: Boolean(mapKey),
     lookupKeySet: Boolean(lookupKey),
     mapId: mapId ?? "",

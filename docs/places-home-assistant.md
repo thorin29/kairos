@@ -192,7 +192,7 @@ that way.
 3. **Billing → Budgets & alerts → Create budget**: amount $1, alerts at
    50/90/100%.
 4. **APIs & Services → Library**, enable: **Maps JavaScript API**, **Places API
-   (New)**, **Geocoding API**.
+   (New)**, **Geocoding API**, **Roads API** (road-following tracks).
 5. **Map key** — APIs & Services → Credentials → **Create credentials → API
    key**. Edit it:
    - Name: Kairos map
@@ -205,7 +205,8 @@ that way.
    - Name: Kairos lookups
    - Application restrictions: None (Kairos calls from your home connection,
      whose address can change; the API restriction and caps below protect it)
-   - API restrictions: **Restrict key** → Places API (New), Geocoding API
+   - API restrictions: **Restrict key** → Places API (New), Geocoding API,
+     Roads API
    - Save. Paste it into Admin → Places → Place lookup key.
 7. **Map ID** — Google Maps Platform → **Map management → Create map ID**:
    name "Kairos", type **JavaScript**, **Vector**. Copy the Map ID into Admin →
@@ -217,8 +218,10 @@ that way.
    - Geocoding API: v3 requests per day **300**
    - Places API (New): Search Nearby requests per day **150** (if only
      per-minute limits are offered, leave them)
+   - Roads API: requests per day **150**
    A free-trial project can't change these; set them after upgrading. Kairos
-   also stops itself at 140 place-name and 280 address lookups a day.
+   also stops itself at 140 place-name, 280 address and 140 road lookups a
+   day.
 9. Admin → Places → **Save keys**.
 
 The map key is visible in the page by design; the website restriction is what
@@ -232,6 +235,13 @@ stops other sites from using it. The lookup key never leaves the server.
   first, then from Google. Google's answers are kept 30 days (Google's limit)
   and reused for anyone stopping within about 60 m, so the same spot isn't
   asked twice. Nobody moving is looked up.
+- Wrong name? In Places, tap the person → **Not right?**: pick another nearby
+  business, **Just the address**, or **Name this place…** (for everyone, or
+  just that person — e.g. their own "Work"). The family's names always win and
+  don't expire. Admin → Places → Named places lists and removes them.
+- Tracks: each finished drive is snapped to the roads once (Roads API) and
+  kept 30 days; drives that leave the road (trails, car parks) and walks are
+  drawn as recorded.
 - Admin → Places → Status shows how many points are stored and how much space
   they take; Google usage shows the calls Kairos made today and this month,
   with links to Google's own usage, caps and billing pages. Delete history there (one person or everyone, optionally between

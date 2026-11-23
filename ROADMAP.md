@@ -59,11 +59,9 @@ live in the database, never in this repository.
 16. **Rest days on the charts.** Done in v0.753 (the moon). Kept here only
     until it's confirmed and removed.
 17. **Places** (family locations). Collection and Admin → Places done in
-    v0.755–0.756; the live Places page in v0.757. Still to come:
-    - Speed on the page, once its unit from Home Assistant is confirmed.
-    - A person's day: path, stops with place names (saved addresses first, then
-      Google), drives with distance and top speed, speed strip, replay. Saved
-      addresses get coordinates. App Places and day screens show the web map.
+    v0.755–0.756; the live Places page in v0.757; speed, Follow, tracks,
+    History and place-name fixes in v0.758. Still to come:
+    - The app's Places, tracks and History screens (showing the web pages).
     - Alerts through a Home Assistant webhook: arrive at / leave a saved
       address, driving over a speed, no update for a while, low battery.
 
@@ -107,8 +105,8 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.757.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  165_places_lookups, all registered in `MIGRATIONS`.
+- Web 0.758.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  166_places_names, all registered in `MIGRATIONS`.
 - App 0.549.0 (versionCode 621, CLIENT_BUILD 621).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
@@ -399,6 +397,12 @@ Kept here so they don't come back as open items.
   since when, last update and battery; faded after 12 h without a report;
   traffic, fit everyone, full screen. Google answers cached 30 days; Kairos
   stops itself at 140 place and 280 address lookups a day.
+- Places v0.758: speed while driving (mph), Follow, today's tracks per person
+  (drives snapped to roads with Google's Roads API, walks dotted), a History
+  page per person (date stepper, miles / driving time / top speed / stops,
+  numbered stops, timeline, replay), "Not right?" (another nearby business,
+  just the address, or name it for everyone or one person), Named places in
+  Admin.
 
 ### Scoring and characters
 

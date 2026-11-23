@@ -7,6 +7,7 @@ import { SelectField } from "@/components/select-field";
 import { DateField } from "@/components/date-field";
 import {
   createPlacesTokenAction,
+  deletePlaceNameAction,
   deletePlacesHistoryAction,
   savePlacesKeysAction,
   savePlacesPeopleAction,
@@ -66,6 +67,7 @@ export function PlacesAdminForm(props: {
   totalPoints: number;
   storageBytes: number;
   usage: UsageSummary;
+  named: { id: string; name: string | null; who: string | null; createdAt: string }[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -188,6 +190,7 @@ export function PlacesAdminForm(props: {
                   ["mapload", "Map loads"],
                   ["nearby", "Place names"],
                   ["geocode", "Addresses"],
+                  ["roads", "Road tracks"],
                 ] as const
               ).map(([k, name]) => {
                 const u = props.usage[k];
@@ -348,6 +351,38 @@ export function PlacesAdminForm(props: {
           Save keys
         </button>
         <Note msg={keysMsg} />
+      </section>
+
+      <section className={card}>
+        <h2 className={label}>Named places</h2>
+        {props.named.length === 0 ? (
+          <p className="text-sm text-muted">None yet. Use “Not right?” on a person in Places.</p>
+        ) : (
+          <ul className="divide-y divide-hairline">
+            {props.named.map((n) => (
+              <li key={n.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{n.name ?? "Just the address"}</span>
+                  <span className="block text-xs text-muted">{n.who ? `Only ${n.who}` : "Everyone"}</span>
+                </span>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => {
+                    if (!confirm(`Remove “${n.name ?? "Just the address"}”?`)) return;
+                    startTransition(async () => {
+                      await deletePlaceNameAction(n.id);
+                      router.refresh();
+                    });
+                  }}
+                  className="inline-flex h-9 items-center rounded-full border border-hairline px-3 text-xs font-medium hover:border-red-300 hover:text-red-700 disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className={card}>

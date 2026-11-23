@@ -78,6 +78,7 @@ model User {
   gameDayTitles   GameDayTitle[]
   playerCard      PlayerCard?
   placesPerson    PlacesPerson?
+  placeNames      PlaceName[]
   locationPoints  LocationPoint[]
   tasks           Task[]         @relation("TaskOwner")
   schoolClasses   SchoolClass[]
@@ -2190,6 +2191,9 @@ model PlaceLookup {
   address       String?
   googlePlaceId String?
   source        String
+  // Up to five nearby businesses Google returned (v0.758), for "Not right?":
+  // [{ name, address }]. Same 30-day life as the row.
+  candidates    Json?
   fetchedAt     DateTime @default(now())
 
   @@index([lat, lng])
@@ -2204,4 +2208,39 @@ model PlacesApiUsage {
   count Int    @default(0)
 
   @@id([day, kind])
+}
+
+// Places (v0.758): spots the family named themselves ("Not right?" → pick,
+// "Just the address", "Name this place…"). Coordinates are where the person
+// was standing — Kairos's own data, kept until deleted. A null name means
+// "show the street address here, not a business". `userId` set = only that
+// person's stops get the name (e.g. their own "Work").
+model PlaceName {
+  id        String   @id @default(cuid())
+  name      String?
+  lat       Float
+  lng       Float
+  radiusM   Int      @default(100)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([lat, lng])
+}
+
+// Places (v0.758): a finished drive snapped to roads by Google's Roads API, so
+// it's asked once. `snapped` false = Google's path strayed from the real points
+// (off-road, a car park) and the raw points are drawn instead. Deleted after
+// 30 days (Google's caching limit); an older day is snapped again if opened.
+model SnappedPath {
+  id        String   @id @default(cuid())
+  userId    String
+  startAt   DateTime
+  endAt     DateTime
+  path      Json
+  snapped   Boolean
+  fetchedAt DateTime @default(now())
+
+  @@unique([userId, startAt, endAt])
+  @@index([fetchedAt])
 }

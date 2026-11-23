@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
+import { bustPlaceMemo } from "@/lib/places/live";
 import {
   createIngestToken,
   deleteHistory,
@@ -54,4 +56,12 @@ export async function deletePlacesHistoryAction(input: {
   const deleted = await deleteHistory({ userId: input.userId || null, from, to });
   revalidatePath("/admin/places");
   return { error: null, deleted };
+}
+
+/** Remove a spot the family named (Admin → Places → Named places). */
+export async function deletePlaceNameAction(id: string): Promise<void> {
+  await requireAdmin();
+  await prisma.placeName.deleteMany({ where: { id } });
+  bustPlaceMemo();
+  revalidatePath("/admin/places");
 }
