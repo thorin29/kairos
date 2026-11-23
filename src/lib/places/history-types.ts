@@ -11,7 +11,12 @@ export type DayStopItem = {
   lat: number;
   lng: number;
   place: PlaceLabel | null;
+  /** Set when the family added this stop (v0.769); removing it deletes the edit. */
+  editId?: string | null;
 };
+
+/** A recorded stop the family removed (v0.769), so it can be put back. */
+export type DayRemovedStop = { editId: string; start: string; end: string; place: PlaceLabel | null };
 
 export type DayLegItem = {
   kind: "drive" | "move";
@@ -35,4 +40,5 @@ export type DayData = {
   date: string;
   items: DayItem[];
   totals: { miles: number; driveMin: number; topMph: number | null; stops: number };
+  removed?: DayRemovedStop[];
 };

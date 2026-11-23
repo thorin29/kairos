@@ -7,6 +7,19 @@ import { loadDay } from "@/lib/places/history";
 import { PlacesView } from "./places-view";
 import { HistoryView } from "./[personId]/history-view";
 import { EmbedProvider } from "./embed-context";
+import { cookies } from "next/headers";
+import { PLACES_COOKIE, placesSessionUser } from "@/lib/places/embed-session";
+import { canEditHistory } from "@/lib/places/stop-edits";
+import { currentUser } from "@/lib/user-session";
+import { webBootstrapOpen } from "@/lib/web-gate";
+
+/** Parents may correct a day (the app's person, or the web's signed-in parent). */
+async function viewerCanEdit(embed: boolean): Promise<boolean> {
+  if (embed) return canEditHistory(await placesSessionUser((await cookies()).get(PLACES_COOKIE)?.value));
+  const me = await currentUser();
+  if (me) return canEditHistory(me.id);
+  return webBootstrapOpen();
+}
 
 /**
  * The Places pages, shared by the web (/places) and the phone app's WebView
@@ -65,7 +78,7 @@ export async function renderHistory(personId: string, rawDate: string | undefine
   if (!tracked) notFound();
   if (!cfg) return <NotSetUp embed={embed} />;
 
-  const day = await loadDay(personId, date, { names: true });
+  const [day, canEdit] = await Promise.all([loadDay(personId, date, { names: true }), viewerCanEdit(embed)]);
   const u = tracked.user;
   return wrap(
     embed,
@@ -75,6 +88,7 @@ export async function renderHistory(personId: string, rawDate: string | undefine
       person={{ id: u.id, name: u.displayName || u.name, color: u.color, avatarPath: u.avatarPath, avatarPosition: u.avatarPosition }}
       day={day}
       today={today}
+      canEdit={canEdit}
     />,
   );
 }

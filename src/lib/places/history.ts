@@ -8,7 +8,9 @@ import { MPS_TO_MPH, planDay, totalsOf, type DayPoint, type Leg } from "@/lib/pl
 import { snappedDrive } from "@/lib/places/roads";
 import { placeFor } from "@/lib/places/live";
 import { zoneCenters } from "@/lib/places/zones";
-import type { DayData, DayItem } from "@/lib/places/history-types";
+import { applyEdits, type AddedStop, type StopEdit } from "@/lib/places/day-edits";
+import { shortAddress } from "@/lib/places/geo";
+import type { DayData, DayItem, DayRemovedStop } from "@/lib/places/history-types";
 
 /**
  * One person's day for the History page and today's tracks on the map:
@@ -42,7 +44,20 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
     getSetting(PLACES_LOOKUP_KEY),
   ]);
 
-  const plan = planDay(points, start, before);
+  const editRows = (await prisma.placesStopEdit.findMany({
+    where: { userId, at: { gte: start, lt: end } },
+    orderBy: { at: "asc" },
+    select: { id: true, kind: true, at: true, lat: true, lng: true, name: true, address: true },
+  })) as { id: string; kind: string; at: Date; lat: number | null; lng: number | null; name: string | null; address: string | null }[];
+  const edits: StopEdit[] = editRows.flatMap((e): StopEdit[] =>
+    e.kind === "remove"
+      ? [{ id: e.id, kind: "remove", at: e.at }]
+      : e.kind === "add" && e.lat != null && e.lng != null
+        ? [{ id: e.id, kind: "add", at: e.at, lat: e.lat, lng: e.lng, name: e.name, address: e.address }]
+        : [],
+  );
+  const edited = applyEdits(planDay(points, start, before), edits);
+  const plan = edited.plan;
   const centers = await zoneCenters();
   const now = Date.now();
   const items: DayItem[] = [];
@@ -52,6 +67,7 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
     const it = plan.items[i];
     if (it.kind === "stop") {
       n++;
+      const added = "editId" in it ? (it as AddedStop) : null;
       // A stop inside a zone is pinned at the zone's centre.
       const centre = it.zone ? centers.get(it.zone) : undefined;
       const lat = centre?.lat ?? it.lat;
@@ -63,7 +79,12 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
         end: it.end.toISOString(),
         lat,
         lng,
-        place: opts.names ? await placeFor(lat, lng, 30, userId, it.zone) : null,
+        place: added?.name
+          ? { name: added.name, address: shortAddress(added.address), kind: "saved" }
+          : opts.names
+            ? await placeFor(lat, lng, 30, userId, it.zone)
+            : null,
+        editId: added?.editId ?? null,
       });
       continue;
     }
@@ -89,8 +110,19 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
     });
   }
 
+  const removed: DayRemovedStop[] = [];
+  for (const r of edited.removed) {
+    removed.push({
+      editId: r.editId,
+      start: r.start.toISOString(),
+      end: r.end.toISOString(),
+      place: opts.names ? await placeFor(r.lat, r.lng, 30, userId, r.zone) : null,
+    });
+  }
+
   const t = totalsOf(plan);
   return {
+    removed,
     date: dateISO,
     items,
     totals: {

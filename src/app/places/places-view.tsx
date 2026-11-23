@@ -10,7 +10,6 @@ import { liveNow, mapLoaded, placesHref, tracksNow, useEmbed } from "./embed-con
 import type { LiveData, LivePerson } from "@/lib/places/live-types";
 import type { DayData } from "@/lib/places/history-types";
 import { drawTrips, loadMaps, touchInline } from "./map-kit";
-import { PlaceFix } from "./place-fix";
 
 /**
  * Places: one Google map with everyone, and a list beside it.
@@ -49,6 +48,14 @@ function clock(iso: string, now: number): string {
   const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   const sameDay = new Date(now).toDateString() === d.toDateString();
   return sameDay ? time : `${d.toLocaleDateString([], { weekday: "short" })} ${time}`;
+}
+
+/** Directions to someone: the phone's own maps app inside the app (geo:),
+ *  Google Maps in a new tab on the web. */
+function directionsHref(embed: boolean, p: LivePerson): string {
+  const at = `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
+  if (embed) return `geo:${at}?q=${at}(${encodeURIComponent(p.name)})`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${at}`;
 }
 
 function placeLine(p: LivePerson): string {
@@ -163,6 +170,31 @@ export function PencilGlyph() {
   );
 }
 
+export function TrashGlyph() {
+  return (
+    <svg {...glyph}>
+      <path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9l1-12.5" />
+    </svg>
+  );
+}
+
+export function PinGlyph() {
+  return (
+    <svg {...glyph}>
+      <path d="M12 21s-6.5-6.2-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 14.8 12 21 12 21Z" />
+      <circle cx="12" cy="9.8" r="2.3" />
+    </svg>
+  );
+}
+
+export function NavigateGlyph() {
+  return (
+    <svg {...glyph}>
+      <path d="M21 3 3 10.5l7.5 3 3 7.5L21 3Z" />
+    </svg>
+  );
+}
+
 function RouteGlyph() {
   return (
     <svg {...glyph}>
@@ -232,7 +264,6 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   const [mapError, setMapError] = useState<string | null>(null);
   const [tracksOn, setTracksOn] = useState<string[]>([]);
   const [tracks, setTracks] = useState<Record<string, DayData>>({});
-  const [fixing, setFixing] = useState<LivePerson | null>(null);
   const [zoom, setZoom] = useState<number | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -586,7 +617,14 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     const title = document.createElement("div");
     title.style.fontWeight = "600";
     title.textContent = p.name;
-    const where = document.createElement("div");
+    // The place line opens directions to them (the phone's maps app in the app).
+    const where = document.createElement("a");
+    where.href = directionsHref(embed, p);
+    if (!embed) {
+      where.target = "_blank";
+      where.rel = "noreferrer";
+    }
+    where.style.cssText = "display:block; color: inherit; text-decoration: underline; text-underline-offset: 2px;";
     where.textContent = p.moving
       ? `${p.motion === "drive" ? "Driving" : p.motion === "walk" ? "Walking" : "Moving"}${p.mph != null && p.motion !== "walk" ? ` · ${p.mph} mph` : ""}`
       : placeLine(p);
@@ -613,7 +651,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     } else {
       circle.current?.setMap(null);
     }
-  }, [selected, data, ready, now, full]);
+  }, [selected, data, ready, now, full, embed]);
 
   const choose = (p: LivePerson) => {
     setSelected(p.id);
@@ -643,7 +681,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     mapRef.current?.setOptions({ gestureHandling: full || !touchInline() ? "greedy" : "cooperative" });
     if (!full) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !fixing) setFull(false);
+      if (e.key === "Escape") setFull(false);
     };
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
@@ -652,7 +690,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [full, fixing]);
+  }, [full]);
 
   // Clean up markers and lines when leaving the page.
   useEffect(() => {
@@ -684,13 +722,6 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   const empty = data.people.length === 0;
   const sel = data.people.find((p) => p.id === selected) ?? null;
 
-  const refreshNow = async () => {
-    try {
-      setData(await liveNow(embed));
-    } catch {
-      // ignore
-    }
-  };
 
   return (
     <main className={embed ? "px-3 py-3" : "mx-auto max-w-[96rem] px-4 py-6 sm:px-6"}>
@@ -841,11 +872,15 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
                   <Link href={placesHref(embed, p.id)} className={cardIcon} aria-label={`${p.name}'s day`} title="History">
                     <ClockGlyph />
                   </Link>
-                  {!p.moving && (
-                    <button type="button" onClick={() => setFixing(p)} className={cardIcon} aria-label="Not right?" title="Not right?">
-                      <PencilGlyph />
-                    </button>
-                  )}
+                  <a
+                    href={directionsHref(embed, p)}
+                    {...(embed ? {} : { target: "_blank", rel: "noreferrer" })}
+                    className={cardIcon}
+                    aria-label={`Directions to ${p.name}`}
+                    title="Directions"
+                  >
+                    <NavigateGlyph />
+                  </a>
                 </div>
                 </div>
               </div>
@@ -863,16 +898,6 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
         </aside>
       </div>
 
-      {fixing && (
-        <PlaceFix
-          personId={fixing.id}
-          personName={fixing.name}
-          spot={{ lat: fixing.lat, lng: fixing.lng, accuracyM: fixing.accuracyM }}
-          current={fixing.place ? placeLine(fixing) : null}
-          onClose={() => setFixing(null)}
-          onSaved={() => void refreshNow()}
-        />
-      )}
     </main>
   );
 }

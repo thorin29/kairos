@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — Directions; fixing a day in History (v0.769.0)
+
+- Person card: History (clock) and Directions (arrow) only; no renaming from
+  the live map. Directions = `geo:lat,lng?q=lat,lng(Name)` inside the app (the
+  WebView hands a tapped non-web link to Android, so whichever maps app the
+  person uses opens; no app update needed) and Google Maps directions in a
+  new tab on the web. The full-screen bubble's place line is the same link.
+- **History is where a day is fixed, by parents** (role ADMIN or kind
+  PARENT; children can't hide their own stops). "Not right?" is now **Edit**
+  on a stop (the search-and-save page). **Remove** writes a `PlacesStopEdit`
+  "remove" matched to the stop's start (±90 s); the trips either side join
+  (drive if either was). **Add a stop**: the pin on a trip, tap the map, then
+  pick or type what it was (or "Just add the stop"); stored as "add" at the
+  time the trip passed nearest the tapped spot, splitting that trip. Removed
+  stops list under the timeline with **Put back**. `applyEdits`
+  (`day-edits.ts`) is pure and runs over `planDay`; recorded points never
+  change.
+- App: `/api/v1/places/view/stops` (Places cookie + `x-kairos-embed`, parents
+  only). Web: server actions, which check the signed-in parent.
+
 ## 2026-11 — "Not right?" is search-and-save (v0.768.0)
 
 - Owner: replacing a wrong business with a bare address wasn't a fix. Now a

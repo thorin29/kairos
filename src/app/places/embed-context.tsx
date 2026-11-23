@@ -1,7 +1,17 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { namePlace, notePlacesMapLoad, placeChoices, placesTracks, refreshPlacesLive, searchPlaceChoices } from "@/lib/actions/places-live";
+import {
+  addStopAction,
+  namePlace,
+  notePlacesMapLoad,
+  placeChoices,
+  placesTracks,
+  refreshPlacesLive,
+  removeStopAction,
+  searchPlaceChoices,
+  undoStopEditAction,
+} from "@/lib/actions/places-live";
 import type { PlaceChoice } from "@/lib/places/naming-types";
 import type { LiveData } from "@/lib/places/live-types";
 import type { DayData } from "@/lib/places/history-types";
@@ -79,5 +89,27 @@ export async function saveNameNow(
     body: JSON.stringify(input),
   });
   if (!res.ok) return { error: "Couldn't save. Try again." };
+  return (await res.json()) as { error: string | null };
+}
+
+export type StopChange =
+  | { op: "remove"; personId: string; start: string }
+  | { op: "undo"; editId: string }
+  | { op: "add"; personId: string; from: string; to: string; lat: number; lng: number; name: string | null; address: string | null };
+
+/** A correction to a day (parents only; the server checks). */
+export async function changeStopNow(embed: boolean, c: StopChange): Promise<{ error: string | null }> {
+  if (!embed) {
+    if (c.op === "remove") return removeStopAction(c.personId, c.start);
+    if (c.op === "undo") return undoStopEditAction(c.editId);
+    return addStopAction({ personId: c.personId, fromISO: c.from, toISO: c.to, lat: c.lat, lng: c.lng, name: c.name, address: c.address });
+  }
+  const res = await fetch("/api/v1/places/view/stops", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "x-kairos-embed": "1" },
+    body: JSON.stringify(c),
+  });
+  if (!res.ok) return { error: res.status === 403 ? "Only parents can change history." : "Couldn't save. Try again." };
   return (await res.json()) as { error: string | null };
 }

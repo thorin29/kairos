@@ -307,12 +307,18 @@ was sent to another page.
   limit) and reused within about 30 m for a business and 25 m for a street
   address. Nobody moving is looked up. "Just the address" stops business
   names at a spot; it doesn't hide a zone.
-- Wrong name? Tap the pencil on a person (or **Not right?** on a History
-  stop): pick a nearby business, or type anything — a business, a place or an
+- Fixing a day is in History (parents only; everyone sees the result). Tap a
+  stop → **Edit** to rename it, or **Remove** if it wasn't really a stop (the
+  trips either side join up; **Put back** undoes it). Tap the pin on a trip,
+  then the map where they stopped, to add a stop the phone missed. Recorded
+  locations are never changed. Renaming: pick a nearby business, or type anything — a business, a place or an
   address — and Kairos looks it up near the spot (Places Text Search, 40 a
   day); or save what you typed as the name ("Grandma's"). For everyone, or
   just that person (their own "Work"). The family's names always win, don't
-  expire, and re-label History. Each covers about 330–820 ft around the spot,
+  expire, and re-label History.
+- Directions: the arrow on a person's card (or their place in the full-screen
+  bubble) opens directions to them — the phone's own maps app in the Kairos
+  app, Google Maps in a new tab on the web. Each covers about 330–820 ft around the spot,
   set from how far the chosen place's map pin is. Admin → Family map → Named
   places lists them with their address and a map link.
 - Tracks: each finished drive is matched to the roads once and kept 30 days —

@@ -79,6 +79,7 @@ model User {
   playerCard      PlayerCard?
   placesPerson    PlacesPerson?
   placeNames      PlaceName[]
+  placesStopEdits PlacesStopEdit[] @relation("PlacesStopEdits")
   placesAboutRules PlacesNotifyRule[] @relation("PlacesNotifyAbout")
   pushMessages    PushMessage[]
   locationPoints  LocationPoint[]
@@ -2225,6 +2226,25 @@ model PlacesApiUsage {
 // was standing — Kairos's own data, kept until deleted. A null name means
 // "show the street address here, not a business". `userId` set = only that
 // person's stops get the name (e.g. their own "Work").
+// A family correction to someone's day (v0.769): "remove" a stop that wasn't
+// one (matched by its start), or "add" a stop the phone missed (on a trip, at
+// the time nearest the tapped spot). Recorded points are never changed.
+model PlacesStopEdit {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("PlacesStopEdits", fields: [userId], references: [id], onDelete: Cascade)
+  kind        String
+  at          DateTime
+  lat         Float?
+  lng         Float?
+  name        String?
+  address     String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, at])
+}
+
 model PlaceName {
   id        String   @id @default(cuid())
   name      String?

@@ -4,6 +4,8 @@ import { todaysTracks, trackedIds } from "@/lib/places/tracks";
 import { loadLive } from "@/lib/places/live";
 import { loadDay } from "@/lib/places/history";
 import { nearbyChoices, saveFamilyName, searchChoices, type PlaceChoice } from "@/lib/places/naming";
+import { addStop, canEditHistory, removeStop, undoStopEdit } from "@/lib/places/stop-edits";
+import { currentUser } from "@/lib/user-session";
 import { bump } from "@/lib/places/usage";
 import type { LiveData } from "@/lib/places/live-types";
 import type { DayData } from "@/lib/places/history-types";
@@ -60,4 +62,37 @@ export async function namePlace(input: {
   forUserId: string | null;
 }): Promise<{ error: string | null }> {
   return saveFamilyName(input);
+}
+
+/** Day corrections from the web (v0.769): only parents sign in there, but
+ *  check anyway (first-run open mode has no one signed in). */
+async function editor(): Promise<string | null | false> {
+  const me = await currentUser();
+  if (!me) return null; // first run, before anyone has a password
+  return (await canEditHistory(me.id)) ? me.id : false;
+}
+
+export async function removeStopAction(personId: string, startISO: string): Promise<{ error: string | null }> {
+  const by = await editor();
+  if (by === false) return { error: "Only parents can change history." };
+  return removeStop(personId, startISO, by);
+}
+
+export async function undoStopEditAction(editId: string): Promise<{ error: string | null }> {
+  if ((await editor()) === false) return { error: "Only parents can change history." };
+  return undoStopEdit(editId);
+}
+
+export async function addStopAction(input: {
+  personId: string;
+  fromISO: string;
+  toISO: string;
+  lat: number;
+  lng: number;
+  name: string | null;
+  address: string | null;
+}): Promise<{ error: string | null }> {
+  const by = await editor();
+  if (by === false) return { error: "Only parents can change history." };
+  return addStop({ ...input, byId: by });
 }

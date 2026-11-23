@@ -93,6 +93,7 @@ export function PlaceFix({
   personName,
   spot,
   current,
+  onPick,
   onClose,
   onSaved,
 }: {
@@ -101,6 +102,9 @@ export function PlaceFix({
   spot: Spot;
   /** What the spot is called now. */
   current?: string | null;
+  /** Adding a stop: hand the choice back instead of naming the spot
+   *  (`null` = a stop without a name; Kairos names it as usual). */
+  onPick?: (c: PlaceChoice | null) => Promise<string | null>;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -143,6 +147,12 @@ export function PlaceFix({
   const save = (c: { name: string; address: string | null; placeId: string | null; lat: number | null; lng: number | null }) =>
     start(async () => {
       setError(null);
+      if (onPick) {
+        const err = await onPick({ ...c, distanceM: null });
+        if (err) setError(err);
+        else onClose();
+        return;
+      }
       const res = await saveNameNow(embed, {
         lat: spot.lat,
         lng: spot.lng,
@@ -164,7 +174,7 @@ export function PlaceFix({
   const list = found ?? nearby;
 
   return (
-    <Shell title={`Where was ${personName}?`} onClose={onClose} full>
+    <Shell title={onPick ? `Where did ${personName} stop?` : `Where was ${personName}?`} onClose={onClose} full>
       {current && (
         <p className="text-sm text-muted">
           Showing <span className="font-medium text-ink">{current}</span>
@@ -195,6 +205,7 @@ export function PlaceFix({
         </button>
       </form>
 
+      {!onPick && (
       <fieldset className="flex flex-wrap gap-x-5">
         <legend className="sr-only">Who sees this name</legend>
         <label className="flex min-h-11 items-center gap-2 text-sm">
@@ -206,6 +217,7 @@ export function PlaceFix({
           Just {personName}
         </label>
       </fieldset>
+      )}
 
       {error && <p className="text-sm text-red-700">{error}</p>}
 
@@ -234,6 +246,22 @@ export function PlaceFix({
             ))}
             {found && found.length === 0 && <p className="py-1 text-sm text-muted">Nothing found near here.</p>}
           </>
+        )}
+        {onPick && !typed && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const err = await onPick(null);
+                if (err) setError(err);
+                else onClose();
+              })
+            }
+            className={row}
+          >
+            <span className="min-w-0 flex-1 truncate">Just add the stop</span>
+          </button>
         )}
         {typed && (
           <button
