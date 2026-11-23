@@ -1947,6 +1947,7 @@ saves (the phone then sends its current switches).
     "calendar": { "mine": true, "family": true, "others": false },  // of reminders that name me: my events / family events / others' events I'm on
     "tasks": true,
     "assigned": false,                                  // "<name> gave you a task"
+    "approvals": false, "familyWorkout": false, "choreTurn": false,  // v0.773
     "places": [{ "id": "r1", "about": "<userId>" /* or null = anyone */, "place": "z:Home" /* n:<id>, s:<id> */, "arrive": true, "leave": false }],
     "safety": { "speed": { "<childId>": 70 }, "noUpdateHours": 4, "lowBattery": 15 },  // parents only
     "quiet": { "from": "22:00", "to": "07:00" }      // or null; holds Family map news
@@ -1957,7 +1958,7 @@ saves (the phone then sends its current switches).
 ```
 
 The upcoming reminders feed honours `calendar` and `tasks`. Safety alerts arrive through the inbox
-with `kind: "safety"`, task news with `kind: "task"`. After writes to events, tasks or reminders the
+with `kind: "safety"`, task news with `kind: "task"`, and (v0.773) `approval`, `workout`, `chore`. After writes to events, tasks or reminders the
 server sends every registered phone a data-only `{ "k": "sync" }` message (v0.772): refresh reminders
 and screens.
 

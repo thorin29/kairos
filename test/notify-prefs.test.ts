@@ -7,6 +7,8 @@ describe("notification choices", () => {
     expect(p.calendar).toEqual({ mine: false, family: false, others: false });
     expect(p.tasks).toBe(false);
     expect(p.assigned).toBe(false);
+    expect(p.approvals).toBe(false);
+    expect(p.familyWorkout).toBe(false);
     expect(p.places).toEqual([]);
   });
 

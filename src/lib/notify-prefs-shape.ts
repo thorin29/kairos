@@ -27,6 +27,12 @@ export type NotifyPrefsData = {
   tasks: boolean;
   /** "<name> gave you a task". */
   assigned: boolean;
+  /** Parents: money and suggested family workouts waiting for an OK. */
+  approvals: boolean;
+  /** A family workout you're in. */
+  familyWorkout: boolean;
+  /** Morning: shared chores where it's most your turn. */
+  choreTurn: boolean;
   places: PlaceRule[];
   /** Parents: alerts about the children. */
   safety: {
@@ -46,6 +52,9 @@ export function emptyPrefs(): NotifyPrefsData {
     calendar: { mine: false, family: false, others: false },
     tasks: false,
     assigned: false,
+    approvals: false,
+    familyWorkout: false,
+    choreTurn: false,
     places: [],
     safety: { speed: {}, noUpdateHours: null, lowBattery: null },
     quiet: null,
@@ -91,6 +100,9 @@ export function sanitizePrefs(raw: unknown): NotifyPrefsData {
     calendar: { mine: bool(cal.mine), family: bool(cal.family, bool(cal.others)), others: bool(cal.others) },
     tasks: bool(r.tasks),
     assigned: bool(r.assigned),
+    approvals: bool(r.approvals),
+    familyWorkout: bool(r.familyWorkout),
+    choreTurn: bool(r.choreTurn),
     places,
     safety: {
       speed,

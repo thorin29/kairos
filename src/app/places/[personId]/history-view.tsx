@@ -447,16 +447,20 @@ export function HistoryView({
                   {it.topMph != null && it.motion !== "walk" ? ` · top ${it.topMph} mph` : ""}
                 </span>
                 {canEdit && (
-                  <button
-                    type="button"
-                    onClick={() => startAdding(it)}
-                    className="mt-1 flex h-8 items-center gap-0.5 rounded-full px-2 text-accent hover:bg-ground"
-                    aria-label="Add a stop here"
-                    title="Add a stop here"
-                  >
-                    <span className="text-lg font-semibold leading-none">+</span>
-                    <PinGlyph />
-                  </button>
+                  // Sits on the dashed line between the two stops.
+                  <div className="relative h-9">
+                    <button
+                      type="button"
+                      onClick={() => startAdding(it)}
+                      className="absolute top-1/2 flex h-8 -translate-x-1/2 -translate-y-1/2 items-center rounded-full border-2 bg-surface pl-1.5 pr-1 shadow-sm hover:brightness-95"
+                      style={{ left: "calc(-1.5rem - 1px)", color: person.color, borderColor: person.color }}
+                      aria-label="Add a stop here"
+                      title="Add a stop here"
+                    >
+                      <span className="-mr-0.5 text-base font-bold leading-none">+</span>
+                      <PinGlyph />
+                    </button>
+                  </div>
                 )}
               </div>
             );

@@ -28,6 +28,8 @@ export type AddMoneyInput = {
   /** YYYY-MM-DD; defaults to today when missing or malformed. */
   dateISO?: string | null;
   clientId?: string | null;
+  /** Who logged it (a parent isn't told about their own entry). */
+  byId?: string | null;
 };
 
 export type AddMoneyResult = { ok: true; id?: string } | { ok: false; error: string };
@@ -92,6 +94,8 @@ export async function addMoneyEntryCore(
       clientId,
     },
   });
+  const { tellMoneyWaiting } = await import("@/lib/notify-news");
+  await tellMoneyWaiting({ userId, amountCents, direction, detail, byId: input.byId ?? null });
 
   return { ok: true, id: entry.id };
 }

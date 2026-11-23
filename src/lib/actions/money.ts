@@ -1,5 +1,7 @@
 "use server";
 
+import { currentUser } from "@/lib/user-session";
+
 import { revalidatePath } from "next/cache";
 import { requireInteractive, requireCanActFor } from "@/lib/gate";
 import { requireAdmin, currentAdmin, isAdmin } from "@/lib/session";
@@ -78,6 +80,7 @@ export async function addMoneyEntry(
     detail: String(fd.get("detail") ?? ""),
     category: direction === "DEPOSIT" ? readCategory(fd) : null,
     dateISO: readDate(fd),
+    byId: (await currentUser())?.id ?? null,
   });
   if (!res.ok) return { error: res.error };
 

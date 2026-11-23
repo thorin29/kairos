@@ -366,6 +366,10 @@ export async function setFamilyWod(input: {
     }
     return row.id;
   });
+  const name = (await prisma.hiitWorkout.findFirst({ where: { id: w.id }, select: { name: true } }))?.name ?? "A workout";
+  const when = input.dateISO === input.todayISO ? "today" : input.dateISO === addDays(input.todayISO, 1) ? "tomorrow" : `on ${input.dateISO}`;
+  const { tellFamilyWorkout } = await import("@/lib/notify-news");
+  await tellFamilyWorkout(picked, input.byId, name, when);
   return { ok: true, id };
 }
 
@@ -408,6 +412,9 @@ export async function suggestFamilyWod(input: {
     data: { userId: input.userId, date: toDateColumn(input.dateISO), hiitWorkoutId: w.id, note },
     select: { id: true },
   });
+  const name = (await prisma.hiitWorkout.findFirst({ where: { id: w.id }, select: { name: true } }))?.name ?? "A workout";
+  const { tellWorkoutSuggested } = await import("@/lib/notify-news");
+  await tellWorkoutSuggested(input.userId, name);
   return { ok: true, id: row.id };
 }
 

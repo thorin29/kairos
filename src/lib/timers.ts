@@ -21,6 +21,12 @@ export function startTimers(): void {
       console.warn(`[timers] safety check failed: ${(e as Error).message}`);
     }
     try {
+      const { morningChoreTurns } = await import("@/lib/notify-news");
+      await morningChoreTurns();
+    } catch (e) {
+      console.warn(`[timers] chore turns failed: ${(e as Error).message}`);
+    }
+    try {
       const { pingDue } = await import("@/lib/push");
       await pingDue(since);
     } catch (e) {

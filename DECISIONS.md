@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-11 — More optional news; add-stop button on the line (v0.773.0, app 0.555.0)
+
+- `notify-news.ts`: money entries logged (PENDING) → parents with
+  `approvals` (not the parent who logged it); family workout suggestions →
+  parents with `approvals`; a family workout set → its members with
+  `familyWorkout` (not the parent who set it); each morning from 8 AM
+  household time (the timer, once a day via `notify.choreTurnDay`) → people
+  with `choreTurn` get the shared chores where they're furthest behind (the
+  home card's "your turn"). All held by quiet hours; all best-effort.
+- History: "+ pin" is a pill on the dashed line between stops, in the
+  person's colour.
+
 ## 2026-11 — Sync pings, three calendar switches, per-stretch roads (v0.772.0, app 0.554.0)
 
 - **Sync ping**: the Prisma extension (alongside the Activity log hook) calls

@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
     category,
     dateISO,
     clientId: typeof body.clientId === "string" ? body.clientId : null,
+    byId: person.id,
   });
   if (!res.ok) return apiError("validation", res.error);
 
