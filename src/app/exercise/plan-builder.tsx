@@ -19,7 +19,6 @@ import {
   setWeeklyActive,
 } from "@/lib/actions/workouts";
 import { PlusIcon, TrashIcon } from "@/components/icons";
-import { PlanFilePanel } from "./plan-file-panel";
 import { PRIMARY_BTN, SECTION_CARD, SECTION_LABEL } from "./buttons";
 import { blockKind, cleanOrder, isSimpleCategory, KIND_LABEL, type SectionKind } from "@/lib/workouts/blocks";
 import { SCHEME_CHOICES, parseScheme, schemeChoiceKey, schemeLabel } from "@/lib/workouts/programs";
@@ -288,7 +287,6 @@ export function PlanBuilder({
           isToday={d.day === todayDow}
         />
       ))}
-      <PlanFilePanel userId={userId} />
       {onDone && (
         <button type="button" onClick={onDone} className={`${PRIMARY_BTN} mt-2 w-full`}>
           Done

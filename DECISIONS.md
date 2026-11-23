@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-11 — Plan card, one Edit, one setup style (v0.747.0)
+
+- Release 1 of the plan-builder proposal (project doc
+  `claude/plan-builder-proposal.md`, mockup "Kairos: building and editing a
+  plan").
+- The program card is the plan card for every plan: the program (name, week,
+  "With Arms and Core") or "My plan" (its end date), a week strip
+  (`planSummary` / `buildStrip`, Monday first, each day's main work and
+  kind), and Edit / Change / End. Own plans end with "End today" (the plan's
+  end date, nothing deleted). No plan: New plan.
+- Edit opens Your plan (the plan editor) with a Program section on top:
+  training maxes and Change movements, which opens the program's setup on
+  the plan as it is and saves in place (same week) for every program, not
+  only Odd squad. Odd squad's own Edit link and the card's maxes moved there.
+- The Edit plan button is gone; Saved plans (My plans, Household, save /
+  share / export / import) takes its place. The plan editor no longer has
+  the save / share button at its foot.
+- One setup style (`setup-parts.tsx`): bars with "2 of 5 · Lifts", the same
+  Back / Next bar, and the Warm-up / Cardio / Conditioning step for Odd squad
+  too (it used to keep the current ones silently). Warm-up None and no
+  cardio or conditioning days leave them out.
+- The chooser is "New plan" with Build my own (the plan page, no program).
+  The every-few-days plan is called Rolling plan ("cycle" is 5/3/1's word).
+- No data changes: plans and programs carry on as they are.
+
 ## 2026-11 — Sport names on Cardio (v0.746.0)
 
 - A subscribed feed drops events once they age out, so an old sport

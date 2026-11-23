@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.746.0";
+export const APP_VERSION = "0.747.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -179,6 +179,10 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.747.0",
+    summary: ["Workouts: the plan card shows your program or your own plan with the week at a glance, and Edit / Change / End. Edit opens Your plan, where a program's movements change too. The Edit plan button is gone; Saved plans takes its place.", "Every program setup looks and steps the same, and Odd squad now asks about warm-up, cardio and conditioning; each can be left out. Rotation is now Rolling plan."],
+  },
   {
     version: "0.746.0",
     summary: ["Cardio names your sport (\"Hockey\") even for old games whose calendar event is gone, and lists more than one with commas (\"Hockey, Soccer\"), only the ones you did. Sport stays one green."],

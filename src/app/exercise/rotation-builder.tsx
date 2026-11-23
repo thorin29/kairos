@@ -39,7 +39,7 @@ export function RotationBuilder({
   if (!rotation) {
     return (
       <section className="rounded-2xl border border-hairline p-5">
-        <h2 className="font-display text-lg font-semibold">Rotation</h2>
+        <h2 className="font-display text-lg font-semibold">Rolling plan</h2>
         <p className="mt-1 text-sm text-muted">
           Put this person on a repeating cycle of workouts (e.g. Chest, Legs,
           Push every three days) instead of a fixed weekly plan. Fixed rest days
@@ -85,7 +85,7 @@ export function RotationBuilder({
     <section className="space-y-5 rounded-2xl border border-hairline p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-semibold">Rotation</h2>
+          <h2 className="font-display text-lg font-semibold">Rolling plan</h2>
           <p className="mt-1 text-sm text-muted">
             An ordered cycle that repeats. Rest days in the list advance the
             cycle; fixed rest weekdays below pause it.

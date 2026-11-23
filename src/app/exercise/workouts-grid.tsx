@@ -6,7 +6,7 @@ import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
 import {
   CheckIcon,
-  CalendarPlusIcon,
+  BookmarkIcon,
   DumbbellIcon,
   BookIcon,
   FlameIcon,
@@ -38,7 +38,8 @@ import type { SoreSpot } from "@/lib/workouts/sore";
 import { CARDIO_COLOR, CONDITIONING_COLOR, CardioCard, CardioPage, ConditioningCard, ConditioningPage } from "./endurance-charts";
 import { Modal } from "./plan-file-panel";
 import type { CoreMove } from "@/lib/workouts/core-moves";
-import { ProgramCard } from "./program-card";
+import { ProgramCard, ProgramSection } from "./program-card";
+import { SavedPlans } from "./saved-plans";
 import { WeightCalculator } from "./weight-calculator";
 import type {
   PersonWorkout,
@@ -82,7 +83,7 @@ import {
   type NavRegion,
 } from "@/lib/workouts/involvement";
 
-type Step = "menu" | "plan" | "log" | "history" | "browse" | "rotation" | "warmups" | "familywod" | "pause" | "hiit";
+type Step = "menu" | "plan" | "log" | "history" | "browse" | "rotation" | "warmups" | "familywod" | "pause" | "hiit" | "saved";
 
 export function WorkoutsGrid({
   people,
@@ -175,9 +176,9 @@ export function WorkoutsGrid({
                     rest; they come sharp (and gain their labels) once the card is
                     tapped open. */}
                 <div className="mt-4 grid grid-cols-3 gap-3" aria-hidden>
-                  <ActionChip icon={CalendarPlusIcon} />
                   <ActionChip icon={DumbbellIcon} />
                   <ActionChip icon={FlameIcon} />
+                  <ActionChip icon={BookIcon} />
                 </div>
               </button>
             );
@@ -319,6 +320,8 @@ export function WorkoutsGrid({
                     </div>
                   )}
 
+                  {/* The plan card (v0.747): the program or your own plan, with
+                      Edit / Change / End. It replaces the Edit plan button. */}
                   <ProgramCard
                     userId={open.user.id}
                     onEditPlan={() => setStep("plan")}
@@ -327,15 +330,9 @@ export function WorkoutsGrid({
                   />
 
                   {/* The same nine buttons as the app (v0.684), three to a row:
-                      plan, log, routines; browse, HIIT/CrossFit, calculator;
-                      Family WOD, Pause, Recent. The last row says what's on. */}
+                      log, routines, browse; HIIT/CrossFit, calculator, Family
+                      WOD; Pause, Recent, Saved plans (v0.747). */}
                   <div className="grid grid-cols-3 gap-3">
-                    <ActionButton
-                      icon={CalendarPlusIcon}
-                      label={hasPlan ? "Edit plan" : "Create plan"}
-                      onClick={() => setStep("plan")}
-                      primary={!hasPlan}
-                    />
                     <ActionButton icon={DumbbellIcon} label="Log workout" onClick={() => setStep("log")} primary={hasPlan} />
                     <ActionButton icon={FlameIcon} label="Routines" onClick={() => setStep("warmups")} />
                     <ActionButton icon={BookIcon} label="Browse workouts" onClick={() => setStep("browse")} />
@@ -344,6 +341,7 @@ export function WorkoutsGrid({
                     <FamilyWodButton userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("familywod")} />
                     <WorkoutPauseButton userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("pause")} />
                     <ActionButton icon={ClockIcon} label="Recent" onClick={() => setStep("history")} />
+                    <ActionButton icon={BookmarkIcon} label="Saved plans" onClick={() => setStep("saved")} />
                   </div>
                 </div>
               )}
@@ -351,9 +349,10 @@ export function WorkoutsGrid({
               {step === "plan" && (
                 <div className="mt-4">
                   <BackLink onClick={() => setStep("menu")} />
-                  <h3 className="mb-3 font-display text-lg font-semibold">
-                    Workout plan
-                  </h3>
+                  <h3 className="mb-3 font-display text-lg font-semibold">Your plan</h3>
+                  <div className="mb-4">
+                    <ProgramSection userId={open.user.id} />
+                  </div>
                   <PlanBuilder
                     onDone={() => setStep("menu")}
                     userId={open.user.id}
@@ -395,10 +394,18 @@ export function WorkoutsGrid({
                 </div>
               )}
 
+              {step === "saved" && (
+                <div className="mt-4">
+                  <BackLink onClick={() => setStep("menu")} />
+                  <h3 className="mb-3 font-display text-lg font-semibold">Saved plans</h3>
+                  <SavedPlans userId={open.user.id} onUsed={() => setStep("menu")} />
+                </div>
+              )}
+
               {step === "rotation" && (
                 <div className="mt-4">
                   <BackLink onClick={() => setStep("menu")} />
-                  <h3 className="mb-3 font-display text-lg font-semibold">Rotation</h3>
+                  <h3 className="mb-3 font-display text-lg font-semibold">Rolling plan</h3>
                   <RotationBuilder userId={open.user.id} rotation={open.rotation} />
                 </div>
               )}

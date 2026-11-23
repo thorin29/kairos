@@ -4,6 +4,7 @@ import { PRIMARY_BTN, SECONDARY_BTN } from "./buttons";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   answerProgramInvite,
+  endOwnPlan,
   endProgramFor,
   forgetProgramVersion,
   loadProgramsFor,
@@ -23,7 +24,9 @@ import { InfoIcon } from "@/components/icons";
 import { MovementInfo } from "@/components/movement-info";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { PlanLibrary } from "./my-plans";
+import type { PlanSummary, StripDay } from "@/lib/workouts/plan-summary";
 import { BlockBuilder } from "./block-builder";
+import { DayChips, ExtrasStep, StepBar, StepHeader } from "./setup-parts";
 import type { ProgramVersion } from "@/lib/workouts/program-version";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -41,6 +44,8 @@ type Data = {
   setup?: CurrentSetup | null;
   /** The person's own version of each program they changed (v0.666). */
   versions?: Record<string, ProgramVersion>;
+  /** The plan card (v0.747). */
+  plan?: PlanSummary;
 };
 
 function shortDate(iso: string): string {
@@ -66,7 +71,7 @@ export function ProgramCard({
 }: {
   userId: string;
   onChanged?: () => void;
-  /** Opens the plan editor once a program has started. */
+  /** Opens the plan page (Edit), and the plan editor once a program has started. */
   onEditPlan?: () => void;
   /** Opens the rotation builder: a rotation is chosen with the programs (v0.624). */
   onOpenRotation?: () => void;
@@ -85,7 +90,7 @@ export function ProgramCard({
   // "Make changes" at the end of a cycle: the next cycle's training maxes, and
   // the setup opened on the plan as it is (v0.626).
   const [changing, setChanging] = useState<Record<string, number> | null>(null);
-  const [editing, setEditing] = useState(false);
+  const [endingOwn, setEndingOwn] = useState(false);
   const [pending, start] = useTransition();
 
   const reload = () =>
@@ -164,7 +169,7 @@ export function ProgramCard({
         </Modal>
       )}
       {choosing && !program && !asking && (
-        <Modal title={data.active ? "Change program" : "Start a program"} onClose={() => setChoosing(false)}>
+        <Modal title="New plan" onClose={() => setChoosing(false)}>
           <Chooser
             userId={userId}
             choices={data.choices}
@@ -177,6 +182,14 @@ export function ProgramCard({
                 : undefined
             }
             hasRotation={hasRotation}
+            onOwn={
+              onEditPlan
+                ? () => {
+                    setChoosing(false);
+                    onEditPlan();
+                  }
+                : undefined
+            }
             edited={edited}
             onPick={pick}
             onUsed={() => {
@@ -232,44 +245,32 @@ export function ProgramCard({
   if (a) {
     return (
       <section className="space-y-3 rounded-2xl border border-hairline bg-surface p-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <h4 className="font-display text-base font-semibold">{a.name}</h4>
-          <span className="text-sm text-muted">{a.label}</span>
+        <div>
+          <div className="flex items-baseline justify-between gap-3">
+            <h4 className="font-display text-base font-semibold">{a.name}</h4>
+            <span className="text-sm text-muted">{a.label}</span>
+          </div>
+          {data.plan && data.plan.others.length > 0 && (
+            <p className="text-xs text-muted">With {listWords(data.plan.others)}</p>
+          )}
         </div>
         {a.blockDone && (
           <button type="button" onClick={() => setCycleOpen(true)} className={`${PRIMARY} w-full justify-center`}>
             Cycle done · what&rsquo;s next?
           </button>
         )}
-        {a.maxes.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-              {data.choices.find((c) => c.key === a.key)?.builder ? "Weight for 5 reps" : "Training maxes"}
-            </p>
-            <div className="mt-1 divide-y divide-hairline">
-              {/* Shown only (v0.685): a training max holds for the program and
-                  changes at the end of a cycle or by restarting it. */}
-              {a.maxes.map((m) => (
-                <div key={m.poolExerciseId} className="flex items-center gap-3 py-2">
-                  <span className="min-w-0 flex-1 truncate text-sm">{m.name}</span>
-                  <span className="tabular text-sm font-semibold">{m.weight}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="flex flex-wrap gap-3 text-sm font-semibold">
-          {/* A builder program edits in place, same week (v0.732). */}
-          {data.setup && data.choices.find((c) => c.key === data.setup?.key)?.builder && (
-            <button type="button" onClick={() => setEditing(true)} className="text-accent">
+        {data.plan && <WeekStrip days={data.plan.strip} />}
+        <div className="flex flex-wrap gap-4 text-sm font-semibold">
+          {onEditPlan && (
+            <button type="button" onClick={onEditPlan} className="text-accent">
               Edit
             </button>
           )}
           <button type="button" onClick={() => setChoosing(true)} className="text-accent">
-            Change program
+            Change
           </button>
           <button type="button" onClick={() => setEnding(true)} className="text-muted hover:text-ink">
-            End program
+            End
           </button>
         </div>
         {ending && (
@@ -331,31 +332,6 @@ export function ProgramCard({
             }}
           />
         )}
-        {editing &&
-          data.setup &&
-          (() => {
-            const p = data.choices.find((c) => c.key === data.setup!.key);
-            return p ? (
-              <ProgramSetup
-                program={p}
-                current={data.current}
-                warmups={data.warmups}
-                busy={pending}
-                initial={data.setup}
-                nextMaxes={Object.fromEntries(a.maxes.map((m) => [m.poolExerciseId, m.weight]))}
-                onClose={() => setEditing(false)}
-                onStart={(input) =>
-                  start(async () => {
-                    const r = await startProgramFor(userId, { key: p.key, ...input });
-                    if (r.ok) {
-                      setEditing(false);
-                      done();
-                    }
-                  })
-                }
-              />
-            ) : null;
-          })()}
         {changing &&
           data.setup &&
           (() => {
@@ -425,13 +401,101 @@ export function ProgramCard({
     );
   }
 
+  // Your own plan (v0.747): the same card, Edit / Change / End.
+  if (data.plan?.hasPlan) {
+    return (
+      <section className="space-y-3 rounded-2xl border border-hairline bg-surface p-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h4 className="font-display text-base font-semibold">My plan</h4>
+          <span className="text-sm text-muted">{data.plan.ends ? `Ends ${shortDate(data.plan.ends)}` : "No end date"}</span>
+        </div>
+        <WeekStrip days={data.plan.strip} />
+        <div className="flex flex-wrap gap-4 text-sm font-semibold">
+          {onEditPlan && (
+            <button type="button" onClick={onEditPlan} className="text-accent">
+              Edit
+            </button>
+          )}
+          <button type="button" onClick={() => setChoosing(true)} className="text-accent">
+            Change
+          </button>
+          <button type="button" onClick={() => setEndingOwn(true)} className="text-muted hover:text-ink">
+            End
+          </button>
+        </div>
+        {endingOwn && (
+          <Modal small title="End my plan?" onClose={() => setEndingOwn(false)}>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() =>
+                  start(async () => {
+                    await endOwnPlan(userId);
+                    setEndingOwn(false);
+                    done();
+                  })
+                }
+                className={`${PRIMARY} justify-center`}
+              >
+                End today
+              </button>
+              <button type="button" onClick={() => setEndingOwn(false)} className={`${QUIET} justify-center`}>
+                Cancel
+              </button>
+            </div>
+          </Modal>
+        )}
+        {windows}
+      </section>
+    );
+  }
+
   return (
-    <>
-      <button type="button" onClick={() => setChoosing(true)} className="text-sm font-semibold text-accent">
-        Start a program
+    <section className="space-y-3 rounded-2xl border border-hairline bg-surface p-4">
+      <h4 className="font-display text-base font-semibold">No plan yet</h4>
+      <button type="button" onClick={() => setChoosing(true)} className={`${PRIMARY} w-full justify-center`}>
+        New plan
       </button>
       {windows}
-    </>
+    </section>
+  );
+}
+
+/** "Arms", "Arms and Core", "Arms, Core and Mobility". */
+function listWords(xs: string[]): string {
+  if (xs.length <= 1) return xs.join("");
+  return `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+}
+
+const STRIP_COLOR: Record<StripDay["kind"], string> = {
+  lift: "#4f46e5",
+  core: "#d97706",
+  iso: "#db2777",
+  conditioning: "#c026d3",
+  cardio: "#0ea5e9",
+  other: "#9aa3ad",
+  rest: "#cbd5e1",
+  none: "transparent",
+};
+const STRIP_DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** The week at a glance (v0.747): a bar per weekday in its kind's colour and
+ *  the day's main workout. */
+export function WeekStrip({ days }: { days: StripDay[] }) {
+  return (
+    <div className="grid grid-cols-7 gap-1" role="list" aria-label="This plan's week">
+      {days.map((d) => (
+        <div key={d.day} role="listitem" className="min-w-0 text-center" aria-label={`${STRIP_DAY[d.day]}: ${d.label || "nothing"}`}>
+          <span className="block text-[11px] text-muted">{STRIP_DAY[d.day]}</span>
+          <span
+            className={`my-1 block h-1.5 rounded-full ${d.kind === "none" ? "border border-hairline" : ""}`}
+            style={{ background: STRIP_COLOR[d.kind] }}
+          />
+          <span className="block truncate text-[10px] leading-tight">{d.label}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -444,6 +508,7 @@ function Chooser({
   choices,
   onRotation,
   hasRotation,
+  onOwn,
   edited,
   onPick,
   onUsed,
@@ -452,6 +517,8 @@ function Chooser({
   choices: ProgramChoice[];
   onRotation?: () => void;
   hasRotation?: boolean;
+  /** Build my own (v0.747): the plan page, no program. */
+  onOwn?: () => void;
   edited: Set<string>;
   onPick: (key: string) => void;
   onUsed: () => void;
@@ -481,16 +548,24 @@ function Chooser({
       {tab === "programs" ? (
         <>
           <ProgramList choices={choices} edited={edited} onPick={onPick} />
+          {onOwn && (
+            <button
+              type="button"
+              onClick={onOwn}
+              className="block w-full rounded-xl border border-dashed border-hairline bg-surface p-3 text-left transition-colors hover:border-accent"
+            >
+              <span className="font-semibold">Build my own</span>
+              <span className="mt-0.5 block text-sm text-muted">No program: pick each day yourself.</span>
+            </button>
+          )}
           {onRotation && (
             <button
               type="button"
               onClick={onRotation}
               className="block w-full rounded-xl border border-dashed border-hairline bg-surface p-3 text-left transition-colors hover:border-accent"
             >
-              <span className="font-semibold">{hasRotation ? "Your rotation" : "Rotation"}</span>
-              <span className="mt-0.5 block text-sm text-muted">
-                A cycle of workouts that repeats every few days, whatever the weekday.
-              </span>
+              <span className="font-semibold">{hasRotation ? "Your rolling plan" : "Rolling plan"}</span>
+              <span className="mt-0.5 block text-sm text-muted">Workouts in a set order every few days, whatever the weekday.</span>
             </button>
           )}
         </>
@@ -668,6 +743,7 @@ function ProgramSetupSteps({
   initial,
   nextMaxes,
   fromVersion = false,
+  editMode = false,
   onBack,
   onClose,
   onStart,
@@ -675,6 +751,8 @@ function ProgramSetupSteps({
   program: ProgramChoice;
   current: CurrentExtras;
   warmups: WarmupRoutine[];
+  /** Changing the running program from the plan page (v0.747): "Save changes". */
+  editMode?: boolean;
   busy: boolean;
   /** Open on the running program's plan (the next cycle, with changes). */
   initial?: CurrentSetup;
@@ -758,7 +836,6 @@ function ProgramSetupSteps({
     return nextMaxes ? n : roundLoad(n * 0.9, "lb");
   };
 
-  const toggle = (list: number[], d: number) => (list.includes(d) ? list.filter((x) => x !== d) : [...list, d].sort());
 
   const startNow = () => {
     const maxes: Record<string, number> = {};
@@ -787,37 +864,12 @@ function ProgramSetupSteps({
     });
   };
 
-  const DayChips = ({ value, onToggle, label }: { value: number[]; onToggle: (d: number) => void; label: string }) => (
-    <div role="group" aria-label={label} className="flex flex-wrap gap-1.5">
-      {WEEKDAYS.map((w, d) => (
-        <button
-          key={w}
-          type="button"
-          aria-pressed={value.includes(d)}
-          onClick={() => onToggle(d)}
-          className={`h-10 w-12 rounded-full border text-sm font-semibold ${
-            value.includes(d) ? "border-accent bg-accent text-on-accent" : "border-hairline bg-surface hover:border-accent"
-          }`}
-        >
-          {w}
-        </button>
-      ))}
-    </div>
-  );
+
 
   return (
     <Modal title={program.name} onClose={onClose} onBack={step > 0 ? () => setStep(step - 1) : onBack}>
       <div className="space-y-4">
-        <ol className="flex gap-1" aria-label="Steps">
-          {STEPS.map((s, i) => (
-            <li
-              key={s}
-              aria-current={i === step ? "step" : undefined}
-              className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-accent" : "bg-hairline"}`}
-            />
-          ))}
-        </ol>
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted">{STEPS[step]}</p>
+        <StepHeader steps={STEPS} step={step} />
 
         {step === 0 && (
           <div className="space-y-4">
@@ -935,37 +987,15 @@ function ProgramSetupSteps({
         )}
 
         {step === 2 && (
-          <div className="space-y-5">
-            <label className="flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold">Warm-up</span>
-              <select
-                aria-label="Warm-up"
-                value={warmup}
-                onChange={(e) => setWarmup(e.target.value)}
-                className={`${SELECT} max-w-[60%]`}
-              >
-                <option value="none">None</option>
-                <option value="">Just a check</option>
-                {warmups.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="space-y-1.5">
-              <p className="text-sm font-semibold">Cardio</p>
-              <DayChips label="Cardio" value={cardioDays} onToggle={(d) => setCardio(toggle(cardioDays, d))} />
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-sm font-semibold">Conditioning</p>
-              <DayChips
-                label="Conditioning"
-                value={conditioning}
-                onToggle={(d) => setConditioning(toggle(conditioning, d))}
-              />
-            </div>
-          </div>
+          <ExtrasStep
+            warmups={warmups}
+            warmup={warmup}
+            onWarmup={setWarmup}
+            cardioDays={cardioDays}
+            onCardio={setCardio}
+            conditioningDays={conditioning}
+            onConditioning={setConditioning}
+          />
         )}
 
         {step === 3 && (
@@ -1015,17 +1045,16 @@ function ProgramSetupSteps({
           </div>
         )}
 
-        <div className="sticky -bottom-4 -mx-4 flex gap-2 bg-ground px-4 py-3">
-          {step < STEPS.length - 1 ? (
-            <button type="button" onClick={() => setStep(step + 1)} className={`${PRIMARY} flex-1 justify-center`}>
-              Next
-            </button>
-          ) : (
-            <button type="button" disabled={busy} onClick={startNow} className={`${PRIMARY} flex-1 justify-center`}>
-              {busy ? "Starting…" : nextMaxes && !fromVersion ? "Start next cycle" : "Start program"}
-            </button>
-          )}
-        </div>
+        <StepBar
+          step={step}
+          steps={STEPS}
+          onStep={setStep}
+          last={{
+            label: busy ? "Starting…" : editMode ? "Save changes" : nextMaxes && !fromVersion ? "Start next cycle" : "Start program",
+            busy,
+            onClick: startNow,
+          }}
+        />
       </div>
       {tmHelp && (
         <Modal small title="Training max" onClose={() => setTmHelp(false)}>
@@ -1128,4 +1157,73 @@ function CompanionRow({
 function schemeText(key: string): string {
   const s = parseScheme(key);
   return s ? schemeLabel(s) : key;
+}
+
+/**
+ * The program on the plan page (v0.747): its week, training maxes and
+ * "Change movements", which opens its setup on the plan as it is and saves in
+ * place (same week). The one way to change a program's movements, Odd squad
+ * included.
+ */
+export function ProgramSection({ userId, onChanged }: { userId: string; onChanged?: () => void }) {
+  const [data, setData] = useState<Data | null>(null);
+  const [open, setOpen] = useState(false);
+  const [pending, start] = useTransition();
+  const reload = () =>
+    loadProgramsFor(userId)
+      .then(setData)
+      .catch(() => {});
+  useEffect(() => {
+    void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+  const a = data?.active;
+  if (!data || !a) return null;
+  const p = data.setup ? data.choices.find((c) => c.key === data.setup!.key) : undefined;
+  return (
+    <div className="space-y-2 rounded-xl border border-hairline bg-surface p-3.5">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted">Program</p>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="font-semibold">{a.name}</span>
+        <span className="text-sm text-muted">{a.label}</span>
+      </div>
+      {a.maxes.length > 0 && (
+        <div className="divide-y divide-hairline">
+          {a.maxes.map((m) => (
+            <div key={m.poolExerciseId} className="flex items-center gap-3 py-1.5">
+              <span className="min-w-0 flex-1 truncate text-sm">{m.name}</span>
+              <span className="tabular text-sm font-semibold">{m.weight}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {p && (
+        <button type="button" onClick={() => setOpen(true)} className="text-sm font-semibold text-accent">
+          Change movements
+        </button>
+      )}
+      {open && p && data.setup && (
+        <ProgramSetup
+          program={p}
+          current={data.current}
+          warmups={data.warmups}
+          busy={pending}
+          initial={data.setup}
+          editMode
+          nextMaxes={Object.fromEntries(a.maxes.map((m) => [m.poolExerciseId, m.weight]))}
+          onClose={() => setOpen(false)}
+          onStart={(input) =>
+            start(async () => {
+              const r = await startProgramFor(userId, { key: p.key, ...input });
+              if (r.ok) {
+                setOpen(false);
+                void reload();
+                onChanged?.();
+              }
+            })
+          }
+        />
+      )}
+    </div>
+  );
 }

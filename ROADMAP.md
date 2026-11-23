@@ -91,9 +91,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.746.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.747.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   161_event_sport, all registered in `MIGRATIONS`.
-- App 0.540.0 (versionCode 612, CLIENT_BUILD 612).
+- App 0.541.0 (versionCode 613, CLIENT_BUILD 613).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -271,7 +271,11 @@ Kept here so they don't come back as open items.
 
 ### Workouts
 
-- Plans: weekly plan and rotation (pausable, end dates, a future start),
+- The plan card (v0.747): the program or your own plan, the week at a
+  glance, Edit / Change / End; Edit opens Your plan, with the program's
+  maxes and Change movements on top. Saved plans is its own button. Every
+  program setup steps the same way, each extra can be left out.
+- Plans: weekly plan and rolling plan (pausable, end dates, a future start),
   programs that write the plan (5/3/1, Boring But Big, 5/3/1 for Beginners,
   wave loading, Odd squad with ladders, density, carry and club finishers),
   "your version" of a program kept across switches, saved plans, export and

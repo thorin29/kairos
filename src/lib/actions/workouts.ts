@@ -136,6 +136,7 @@ import {
   type ProgramInfo,
   type StartProgramInput,
 } from "@/lib/workouts/program-run";
+import { planSummary, type PlanSummary } from "@/lib/workouts/plan-summary";
 import type { ProgramVersion } from "@/lib/workouts/program-version";
 import { addDayExtra, dayExtrasFor, removeDayExtra, type DayExtraView } from "@/lib/workouts/day-extras-run";
 import { liftNext } from "@/lib/workouts/lift-next-run";
@@ -206,6 +207,12 @@ export async function setWeeklyEnd(userId: string, dateISO: string): Promise<voi
   await setSetting(`weeklyEnd:${userId}`, clean);
   await generateWorkoutTasks();
   refresh();
+}
+
+/** End your own plan today (v0.747): the plan card's End. The plan stays to
+ *  edit; after today it stops. */
+export async function endOwnPlan(userId: string): Promise<void> {
+  await setWeeklyEnd(userId, todayISO());
 }
 
 /** Pause or resume the weekly plan (so it can run alongside a rotation, or be
@@ -1703,6 +1710,8 @@ export async function loadProgramsFor(userId: string): Promise<{
   warmups: WarmupRoutine[];
   setup: CurrentSetup | null;
   versions: Record<string, ProgramVersion>;
+  /** The plan card (v0.747). */
+  plan: PlanSummary;
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1714,8 +1723,8 @@ export async function loadProgramsFor(userId: string): Promise<{
     routinesFor(userId),
     currentSetup(userId),
   ]);
-  const versions = await versionsFor(userId, choices);
-  return { choices, active, invite, current, warmups, setup, versions };
+  const [versions, plan] = await Promise.all([versionsFor(userId, choices), planSummary(userId, active ? (setup?.days ?? []) : [])]);
+  return { choices, active, invite, current, warmups, setup, versions, plan };
 }
 
 /** Forget the person's own version of a program (v0.666). */

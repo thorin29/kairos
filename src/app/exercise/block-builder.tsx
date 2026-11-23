@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { PRIMARY_BTN, SECONDARY_BTN } from "./buttons";
 import { Modal } from "./plan-file-panel";
 import { MovementInfo } from "@/components/movement-info";
 import type { CurrentExtras, CurrentSetup, ProgramChoice, StartProgramInput } from "@/lib/workouts/program-run";
+import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
+import { ExtrasStep, StepBar, StepHeader } from "./setup-parts";
 
 /**
  * The block builder (v0.732), for a program set up by blocks (Odd squad):
@@ -15,7 +16,7 @@ import type { CurrentExtras, CurrentSetup, ProgramChoice, StartProgramInput } fr
  * place (same week); picked again after it ends, it starts over.
  */
 
-const STEPS = ["Days", "Blocks", "Movements", "Review"] as const;
+const STEPS = ["Days", "Blocks", "Movements", "Extras", "Review"] as const;
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 /** Monday first. */
 const WEEK = [1, 2, 3, 4, 5, 6, 0];
@@ -67,15 +68,21 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 export function BlockBuilder({
   program,
   current,
+  warmups,
   busy,
   initial,
   nextMaxes,
+  editMode = false,
   onBack,
   onClose,
   onStart,
 }: {
   program: ProgramChoice;
   current: CurrentExtras;
+  /** Warm-up routines for the Extras step (v0.747). */
+  warmups: WarmupRoutine[];
+  /** Changing the running program from the plan page: "Save changes". */
+  editMode?: boolean;
   busy: boolean;
   initial?: CurrentSetup;
   nextMaxes?: Record<string, number>;
@@ -102,6 +109,10 @@ export function BlockBuilder({
     return out;
   });
   const [off, setOff] = useState<Set<string>>(() => new Set(initial?.removed ?? []));
+  // Extras (v0.747), as the other programs: each can be left out.
+  const [warmup, setWarmup] = useState<string>(current.warmup ? (current.warmupRoutine ?? "") : "none");
+  const [cardioDays, setCardioDays] = useState<number[]>(current.cardioDays);
+  const [conditioningDays, setConditioningDays] = useState<number[]>(current.conditioningDays);
   const [maxText, setMaxText] = useState<Record<string, string>>({});
 
   // The program's days in weekday order (Monday first).
@@ -165,10 +176,10 @@ export function BlockBuilder({
       picks: Object.fromEntries(Object.entries(picks).map(([k, v]) => [k, off.has(k) ? null : v])),
       tops: {},
       maxes,
-      warmup: current.warmup,
-      ...(current.warmup ? { warmupRoutine: current.warmupRoutine ?? "" } : {}),
-      cardioDays: current.cardioDays,
-      conditioningDays: current.conditioningDays,
+      warmup: warmup !== "none",
+      ...(warmup !== "none" ? { warmupRoutine: warmup } : {}),
+      cardioDays,
+      conditioningDays,
       coreDay: core >= 0 ? core : null,
     });
   };
@@ -196,24 +207,7 @@ export function BlockBuilder({
   return (
     <Modal title={program.name} onClose={onClose} onBack={step > 0 ? () => setStep(step - 1) : onBack}>
       <div className="space-y-4">
-        <ol className="flex flex-wrap gap-2.5" aria-label="Steps">
-          {STEPS.map((s, k) => (
-            <li
-              key={s}
-              aria-current={k === step ? "step" : undefined}
-              className={`flex items-center gap-1.5 text-xs ${k === step ? "font-semibold text-accent" : "text-muted"}`}
-            >
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full border-[1.5px] text-[0.7rem] ${
-                  k === step ? "border-accent" : "border-hairline"
-                }`}
-              >
-                {k + 1}
-              </span>
-              {s}
-            </li>
-          ))}
-        </ol>
+        <StepHeader steps={STEPS} step={step} />
 
         {step === 0 && (
           <Card title="Which muscle group each day">
@@ -386,6 +380,18 @@ export function BlockBuilder({
         )}
 
         {step === 3 && (
+          <ExtrasStep
+            warmups={warmups}
+            warmup={warmup}
+            onWarmup={setWarmup}
+            cardioDays={cardioDays}
+            onCardio={setCardioDays}
+            conditioningDays={conditioningDays}
+            onConditioning={setConditioningDays}
+          />
+        )}
+
+        {step === 4 && (
           <div className="space-y-3">
             <Card title={`${program.name} · ${program.weeks} weeks`}>
               <div>
@@ -439,30 +445,16 @@ export function BlockBuilder({
           </div>
         )}
 
-        <div className="sticky -bottom-4 -mx-4 flex gap-2 bg-ground px-4 py-3">
-          {step > 0 && (
-            <button type="button" onClick={() => setStep(step - 1)} className={`${SECONDARY_BTN} flex-1 justify-center`}>
-              Back
-            </button>
-          )}
-          {step < STEPS.length - 1 ? (
-            <button
-              type="button"
-              disabled={step === 0 && !allPlaced}
-              onClick={() => {
-                setDayTab(0);
-                setStep(step + 1);
-              }}
-              className={`${PRIMARY_BTN} flex-1 justify-center`}
-            >
-              Next
-            </button>
-          ) : (
-            <button type="button" disabled={busy} onClick={start} className={`${PRIMARY_BTN} flex-1 justify-center`}>
-              {busy ? "Starting…" : initial ? "Save changes" : "Start program"}
-            </button>
-          )}
-        </div>
+        <StepBar
+          step={step}
+          steps={STEPS}
+          canNext={step !== 0 || allPlaced}
+          onStep={(n) => {
+            setDayTab(0);
+            setStep(n);
+          }}
+          last={{ label: busy ? "Starting…" : editMode || initial ? "Save changes" : "Start program", busy, onClick: start }}
+        />
       </div>
     </Modal>
   );

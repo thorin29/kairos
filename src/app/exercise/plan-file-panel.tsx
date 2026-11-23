@@ -1,7 +1,7 @@
 "use client";
 
 import { PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG } from "./buttons";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import {
   exportMyWorkouts,
   importWorkouts,
@@ -146,7 +146,12 @@ type Open = "menu" | "export" | "import" | "share" | "plans" | "mine" | null;
  * Export, Import, Share this plan and Household plans (v0.618), each in its
  * own window.
  */
-export function PlanFilePanel({ userId }: { userId: string }) {
+/** The actions window, or the actions in place on the Saved plans page. */
+function MenuFrame({ inline, onClose, children }: { inline: boolean; onClose: () => void; children: ReactNode }) {
+  return inline ? <>{children}</> : <Modal title="This plan" onClose={onClose}>{children}</Modal>;
+}
+
+export function PlanFilePanel({ userId, inline = false }: { userId: string; /** Saved plans page (v0.747): the four actions shown, not behind a button. */ inline?: boolean }) {
   const [open, setOpen] = useState<Open>(null);
   const [history, setHistory] = useState(false);
   const [busy, start] = useTransition();
@@ -226,17 +231,19 @@ export function PlanFilePanel({ userId }: { userId: string }) {
       {/* One button at the foot of the plan (v0.624): save, share, export and
           import in a window. Opening a saved or household plan is with the
           programs (Start / Change program). */}
-      <button
-        type="button"
-        onClick={() => show("menu")}
-        className={`${SECONDARY_LG} w-full`}
-      >
-        <ShareIcon className="h-4 w-4" />
-        Save, share or export
-      </button>
+      {!inline && (
+        <button
+          type="button"
+          onClick={() => show("menu")}
+          className={`${SECONDARY_LG} w-full`}
+        >
+          <ShareIcon className="h-4 w-4" />
+          Save, share or export
+        </button>
+      )}
 
-      {open === "menu" && (
-        <Modal title="This plan" onClose={close}>
+      {(open === "menu" || inline) && (
+        <MenuFrame inline={inline} onClose={close}>
           <div className="space-y-2">
             {(
               [
@@ -257,7 +264,7 @@ export function PlanFilePanel({ userId }: { userId: string }) {
               </button>
             ))}
           </div>
-        </Modal>
+        </MenuFrame>
       )}
 
       {open === "export" && (

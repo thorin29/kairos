@@ -1261,6 +1261,13 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.747: `GET /api/v1/workouts/programs` adds `plan`: `strip` (Monday first:
+`day`, `label`, `kind` lift|core|iso|conditioning|cardio|other|rest|none,
+`program`), `ends` (the plan's last day or null), `hasPlan`, and `others`
+(the other days' workouts when a program runs). A running program changed
+from the plan page is `POST /workouts/programs/start` with its own key, as
+before (same week).
+
 v0.746: a cardio `SPORT` activity's `label` lists its sports with commas
 ("Hockey, Soccer"); a `thisWeek.lines` entry names that week's only. Old
 sessions whose event is gone take the person's one picked sport.
