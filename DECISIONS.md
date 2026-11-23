@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-11 — Fan-out lines straight (v0.764.0)
+
+- The curved fan-out connectors (quadratic, 16 segments, 2.5 px at 70%
+  opacity) read as wavy over the base map. Now straight, full colour 3 px on a
+  6 px white casing, like Google's own route lines.
+- Docs: a sign-in portal in front of Kairos must bypass `/places/embed`,
+  `/_next/static` and `/api/avatars` as well as `/api/v1` for the app's
+  Places screen (Authelia example in the Places doc, Part 6).
+
 ## 2026-11 — Relative redirect for the Places hand-off (v0.763.0)
 
 - Behind a reverse proxy, `req.nextUrl` in a route handler carries the

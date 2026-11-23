@@ -274,6 +274,25 @@ The map loads from the address the app is set to, so the **Kairos map** key's
 website restrictions need that address (Part 4, step 5): add the LAN address
 too if phones use it. Phones ask once for permission to show notifications.
 
+If a sign-in portal (Authelia, Authentik, …) sits in front of Kairos, it must
+let the app's Places pages through the same way it lets `/api/v1` through —
+Kairos still locks those pages itself (the phone's 12-hour Places sign-in).
+Authelia example:
+
+```yaml
+    - domain:
+        - 'kairos.example.com'
+      resources:
+        - '^/api/v1([/?].*)?$'
+        - '^/places/embed([/?].*)?$'
+        - '^/_next/static/.*$'
+        - '^/api/avatars/.*$'
+      policy: 'bypass'
+```
+
+Without it the portal's sign-in page opens instead and the app says Places
+was sent to another page.
+
 ## Notes
 
 - Retries are safe: the same tracker and `last_updated` replace the earlier copy.

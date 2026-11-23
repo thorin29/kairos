@@ -395,7 +395,8 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       };
       if (expanded === key && zoom != null) {
         // Fan out in an arc above the real spot, spaced so avatars never
-        // overlap, with soft curved lines meeting at a dot on the spot.
+        // overlap, with straight lines (white-edged, like Google's own) meeting
+        // at a dot on the spot.
         const mpp = metresPerPixel(center.lat, zoom);
         const n = g.length;
         const step = n > 1 ? Math.min(50, 150 / (n - 1)) : 0;
@@ -417,25 +418,24 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           m.frame = null;
           m.marker.map = map;
           m.marker.position = spot;
-          // A gentle curve: control point bowed sideways from the midpoint.
-          const bow = Math.abs(x) < 1 ? 0 : 0.18 * Math.sign(x);
-          const cx = x / 2 - y * bow;
-          const cy = y / 2 + x * bow;
-          const curve: google.maps.LatLngLiteral[] = [];
-          for (let k = 0; k <= 16; k++) {
-            const t = k / 16;
-            const px = 2 * (1 - t) * t * cx + t * t * x;
-            const py = 2 * (1 - t) * t * cy + t * t * y;
-            curve.push(toLatLng(px, py));
-          }
+          const line = [center, spot];
           spiderLines.current.push(
             new google.maps.Polyline({
               map,
-              path: curve,
+              path: line,
+              clickable: false,
+              strokeColor: "#ffffff",
+              strokeOpacity: 1,
+              strokeWeight: 6,
+              zIndex: 4,
+            }),
+            new google.maps.Polyline({
+              map,
+              path: line,
               clickable: false,
               strokeColor: p.color,
-              strokeOpacity: 0.7,
-              strokeWeight: 2.5,
+              strokeOpacity: 1,
+              strokeWeight: 3,
               zIndex: 5,
             }),
           );
