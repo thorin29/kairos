@@ -34,3 +34,33 @@ describe("motionOf", () => {
     expect(motionOf([pt(10 + 1000 / 111_195, 100, null), pt(10, 0, null)])).toBe("drive");
   });
 });
+
+import { cleanZone } from "@/lib/places/ingest-parse";
+import { planDay } from "@/lib/places/day";
+
+describe("cleanZone", () => {
+  it("turns HA person states into zone names", () => {
+    expect(cleanZone("home")).toBe("Home");
+    expect(cleanZone("Work")).toBe("Work");
+    expect(cleanZone("not_home")).toBeNull();
+    expect(cleanZone("unknown")).toBeNull();
+    expect(cleanZone(undefined)).toBeNull();
+  });
+});
+
+describe("stop zones", () => {
+  it("names a stop with the zone most of its reports were in", () => {
+    const base = Date.UTC(2026, 10, 23, 6, 0);
+    const p = (min: number, zone: string | null) => ({
+      at: new Date(base + min * 60_000),
+      lat: 10,
+      lng: 20,
+      accuracyM: 10,
+      speed: null,
+      zone,
+    });
+    const plan = planDay([p(0, "Home"), p(20, "Home"), p(40, null)], new Date(base));
+    expect(plan.items[0].kind).toBe("stop");
+    expect((plan.items[0] as { zone: string | null }).zone).toBe("Home");
+  });
+});

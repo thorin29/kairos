@@ -1863,7 +1863,8 @@ household layout (v0.602.2).
   "speed": 3.4,                           // stored as sent (unit per HA)
   "course": 90, "altitude": 200,
   "battery": 64,                          // 0–100
-  "last_updated": "2026-11-22T17:59:30+00:00" // the point's time; missing/future → now
+  "last_updated": "2026-11-22T17:59:30+00:00", // the point's time; missing/future → now
+  "zone": "home"                          // v0.760: HA person state; "home" → Home, not_home/unknown → none
 }
 ```
 

@@ -108,8 +108,8 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.759.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  167_places_notify, all registered in `MIGRATIONS`.
+- Web 0.760.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  168_places_zones, all registered in `MIGRATIONS`.
 - App 0.549.0 (versionCode 621, CLIENT_BUILD 621).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
@@ -412,6 +412,11 @@ Kept here so they don't come back as open items.
   rules (tell anyone when someone arrives at / leaves a named place or saved
   address) with Kairos's own geofences; push queue and optional Firebase
   settings (app side still to come); named places get a size.
+- Places v0.760: Home Assistant zones (sent with each location) name places
+  first after the family's own names, hold a person at Home through GPS
+  wobble, name History stops, and can be notification places; tighter reuse
+  of Google answers (30 m business, 25 m address) and building addresses
+  first; the group fan-out is an arc with curved lines.
 
 ### Scoring and characters
 

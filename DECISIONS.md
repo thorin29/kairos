@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-11 — Places: Home Assistant zones, tighter address reuse (v0.760.0)
+
+- **HA zones feed Kairos when present** (owner: don't reinvent Home/Work). The
+  automation sends the person's state as `zone` ("home" → Home; not_home /
+  unknown → none); stored on `LocationPoint.zone`. Order for a place name:
+  the family's own `PlaceName` → HA zone → saved address → cached Google →
+  Google. A nameless family spot ("just the address") still beats the zone.
+- In a zone and slower than 3 m/s, a person counts as there whatever the GPS
+  wobble says; "since" runs back through the same zone. History stops take
+  the zone most of their reports were in.
+- Notification rules can name a zone (`PlacesNotifyRule.zone`): arrive/leave
+  follow HA's own zone changes (its boundaries and home-network detection),
+  no distance check. Zones offered are those seen in the last 60 days.
+  Kairos's own places keep working with no HA.
+- **Reuse radius ≠ search area.** A cached Google answer is reused within 30 m
+  for a business (was 60 — neighbouring shops) and 25 m for a street address
+  (the house across the street was being reused for the whole home). Reverse
+  geocoding asks for `street_address|premise` first, then anything.
+- **Fan-out** is an arc above the spot (up to 150°, spacing chosen so avatars
+  never overlap, radius ≥ 68 px) with curved lines (quadratic, bowed outward)
+  meeting at a dot on the real spot, instead of evenly spaced straight spokes.
+
 ## 2026-11 — Places: icons, grouped markers, notifications (v0.759.0)
 
 - **Notifications are Kairos's own**, not Home Assistant's (owner's choice:

@@ -93,7 +93,8 @@ rest_command:
         "course": course | default(none),
         "altitude": altitude | default(none),
         "battery": battery | default(none),
-        "last_updated": updated | default(none)
+        "last_updated": updated | default(none),
+        "zone": zone | default(none)
       } | to_json }}
 ```
 
@@ -133,6 +134,7 @@ actions:
       altitude: "{{ state_attr(src, 'altitude') if src else none }}"
       battery: "{{ states('sensor.' ~ src.split('.')[1] ~ '_battery_level') | int(none) if src else none }}"
       updated: "{{ trigger.to_state.last_updated.isoformat() }}"
+      zone: "{{ trigger.to_state.state }}"
 ```
 
 - A state trigger with no `to:` fires on attribute changes too, so every new
@@ -142,6 +144,11 @@ actions:
   (`device_tracker.phone_a` → `sensor.phone_a_battery_level`). If a phone has
   no such sensor, battery is just left blank.
 - An update with no GPS position (a router-only tracker) is skipped.
+- `zone` is the person's state: the Home Assistant zone they're in ("home",
+  "Work", …) or `not_home`. Kairos names the place after the zone (before
+  asking Google) and offers zones in notification rules, so Home Assistant's
+  zone boundaries and home-network detection decide "Home". Without it,
+  Kairos's own named places and saved addresses still work.
 
 ### 3d. Check it
 
@@ -230,9 +237,9 @@ stops other sites from using it. The lookup key never leaves the server.
 ## Part 5 — Notifications (optional)
 
 Admin → Places → **Notifications**: tell (anyone) when someone (or anyone)
-**arrives at** and/or **leaves** a place. Places are Kairos's own named places
-(each with a size you set under Named places) and saved addresses — not Home
-Assistant zones. "Arrived" needs a fix inside the place; "left" needs one 50 m
+**arrives at** and/or **leaves** a place: a Home Assistant zone (follows
+Home Assistant's own zone changes), or one of Kairos's named places (each with
+a size you set under Named places) or saved addresses (by distance). "Arrived" needs a fix inside the place; "left" needs one 50 m
 beyond it, so GPS wobble at the edge doesn't repeat; the same person and place
 won't notify twice within 10 minutes; nobody is told about themselves.
 
@@ -260,10 +267,10 @@ Firebase setup (one time, free):
 
 - Retries are safe: the same tracker and `last_updated` replace the earlier copy.
 - A point with no GPS fix (0, 0) is refused.
-- Place names: Kairos names a stop from a saved address within about 120 m
-  first, then from Google. Google's answers are kept 30 days (Google's limit)
-  and reused for anyone stopping within about 60 m, so the same spot isn't
-  asked twice. Nobody moving is looked up.
+- Place names, in order: the family's own names ("Not right?"), the Home
+  Assistant zone, a saved address within about 120 m, then Google. Google's
+  answers are kept 30 days (Google's limit) and reused within about 30 m for a
+  business and 25 m for a street address. Nobody moving is looked up.
 - Wrong name? In Places, tap the person → **Not right?**: pick another nearby
   business, **Just the address**, or **Name this place…** (for everyone, or
   just that person — e.g. their own "Work"). The family's names always win and

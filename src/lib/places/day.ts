@@ -17,6 +17,8 @@ export type DayPoint = {
   accuracyM: number | null;
   /** Metres per second, as Home Assistant sends it. */
   speed: number | null;
+  /** Home Assistant zone, when known. */
+  zone?: string | null;
 };
 
 export type Stop = {
@@ -25,7 +27,18 @@ export type Stop = {
   end: Date;
   lat: number;
   lng: number;
+  /** The Home Assistant zone most of the stop's reports were in, if any. */
+  zone: string | null;
 };
+
+function mainZone(points: DayPoint[]): string | null {
+  const count = new Map<string, number>();
+  for (const p of points) if (p.zone) count.set(p.zone, (count.get(p.zone) ?? 0) + 1);
+  let best: string | null = null;
+  let n = 0;
+  for (const [z, c] of count) if (c > n) [best, n] = [z, c];
+  return best && n * 2 >= points.length ? best : null;
+}
 
 export type Leg = {
   kind: "drive" | "move";
@@ -124,7 +137,14 @@ export function planDay(points: DayPoint[], dayStart: Date, before: DayPoint | n
         trip = [];
       }
       const c = centroid(cluster);
-      items.push({ kind: "stop", start: cluster[0].at, end: cluster[cluster.length - 1].at, lat: c.lat, lng: c.lng });
+      items.push({
+        kind: "stop",
+        start: cluster[0].at,
+        end: cluster[cluster.length - 1].at,
+        lat: c.lat,
+        lng: c.lng,
+        zone: mainZone(cluster),
+      });
       i = j;
     } else {
       trip.push(pts[i]);

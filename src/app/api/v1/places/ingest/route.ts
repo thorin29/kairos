@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
       courseDeg: p.courseDeg,
       altitudeM: p.altitudeM,
       battery: p.battery,
+      zone: p.zone,
     };
     await prisma.locationPoint.upsert({
       where: { userId_at: { userId, at: p.at } },

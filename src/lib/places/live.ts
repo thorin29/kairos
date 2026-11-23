@@ -31,12 +31,13 @@ export async function placeFor(
   lng: number,
   accuracyM: number | null,
   userId: string | null,
+  zone: string | null = null,
 ): Promise<PlaceLabel> {
-  const k = `${userId ?? "-"}:${lat.toFixed(4)},${lng.toFixed(4)}`;
+  const k = `${userId ?? "-"}:${zone ?? ""}:${lat.toFixed(4)},${lng.toFixed(4)}`;
   const hit = memo.get(k);
   const now = Date.now();
   if (hit && now - hit.at < MEMO_MS) return hit.label;
-  const label = await resolvePlace({ lat, lng, accuracyM }, userId);
+  const label = await resolvePlace({ lat, lng, accuracyM }, userId, zone);
   memo.set(k, { label, at: now });
   if (memo.size > 500) {
     for (const [key, v] of memo) if (now - v.at >= MEMO_MS) memo.delete(key);
@@ -93,16 +94,16 @@ export async function loadLive(): Promise<LiveData> {
       where: { userId: u.id, at: { gte: new Date(now - RECENT_MS) } },
       orderBy: { at: "desc" },
       take: RECENT_POINTS,
-      select: { at: true, lat: true, lng: true, accuracyM: true, speed: true, battery: true },
-    })) as (TimedPt & { battery: number | null })[];
+      select: { at: true, lat: true, lng: true, accuracyM: true, speed: true, battery: true, zone: true },
+    })) as (TimedPt & { battery: number | null; zone: string | null })[];
     if (rows.length === 0) {
       // Quiet for a day: the newest point ever is still where they are.
       rows = (await prisma.locationPoint.findMany({
         where: { userId: u.id },
         orderBy: { at: "desc" },
         take: 1,
-        select: { at: true, lat: true, lng: true, accuracyM: true, speed: true, battery: true },
-      })) as (TimedPt & { battery: number | null })[];
+        select: { at: true, lat: true, lng: true, accuracyM: true, speed: true, battery: true, zone: true },
+      })) as (TimedPt & { battery: number | null; zone: string | null })[];
     }
     const pres = presenceOf(rows);
     if (!pres) {
@@ -110,7 +111,18 @@ export async function loadLive(): Promise<LiveData> {
       continue;
     }
     const latest = rows[0];
-    const place = pres.moving ? null : await placeFor(latest.lat, latest.lng, latest.accuracyM, u.id);
+    // Inside a Home Assistant zone and not going anywhere fast: they're there,
+    // whatever the GPS wobble says; "since" runs back through the same zone.
+    if (latest.zone && (latest.speed == null || latest.speed < 3)) {
+      let since = latest.at;
+      for (const r of rows.slice(1)) {
+        if (r.zone !== latest.zone) break;
+        since = r.at;
+      }
+      pres.moving = false;
+      if (!pres.since || since < pres.since) pres.since = since;
+    }
+    const place = pres.moving ? null : await placeFor(latest.lat, latest.lng, latest.accuracyM, u.id, latest.zone);
     people.push({
       ...base,
       lat: latest.lat,

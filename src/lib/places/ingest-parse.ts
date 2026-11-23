@@ -39,7 +39,19 @@ export type ParsedPoint = {
   courseDeg: number | null;
   altitudeM: number | null;
   battery: number | null;
+  zone: string | null;
 };
+
+/** HA states that mean "in no zone". */
+const NO_ZONE = new Set(["not_home", "unknown", "unavailable", "none", ""]);
+
+/** A Home Assistant person state → zone name ("home" → "Home"), or null. */
+export function cleanZone(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim().slice(0, 100);
+  if (NO_ZONE.has(s.toLowerCase())) return null;
+  return s.toLowerCase() === "home" ? "Home" : s;
+}
 
 export type ParseResult = { ok: true; point: ParsedPoint } | { ok: false; error: string };
 
@@ -84,6 +96,7 @@ export function parsePoint(raw: unknown, now: Date): ParseResult {
       courseDeg: course != null && course >= 0 && course <= 360 ? course : null,
       altitudeM: num(r.altitude),
       battery: battery != null && battery >= 0 && battery <= 100 ? Math.round(battery) : null,
+      zone: cleanZone(r.zone),
     },
   };
 }

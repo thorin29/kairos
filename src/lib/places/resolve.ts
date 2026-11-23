@@ -22,7 +22,12 @@ import type { PlaceLabel } from "@/lib/places/live-types";
 export type { PlaceLabel };
 
 const SAVED_RADIUS_M = 120;
-const CACHE_RADIUS_M = 60;
+/** How close a cached Google answer must be to be reused: tight for a business
+ *  (neighbouring shops), tighter for a street address (the house across the
+ *  street). This is reuse distance, not the search area. */
+const CACHE_PLACE_M = 30;
+const CACHE_ADDRESS_M = 25;
+const CACHE_RADIUS_M = Math.max(CACHE_PLACE_M, CACHE_ADDRESS_M);
 /** Too fuzzy to pick a business; fall back to the street address. */
 const FUZZY_M = 150;
 /** Google lets geocoded coordinates be kept 30 days. */
@@ -110,7 +115,8 @@ async function cachedNear(p: Pt, now: number): Promise<Lookup | null> {
   let bestD = Infinity;
   for (const r of rows) {
     const d = metres(p, r);
-    if (d <= CACHE_RADIUS_M && d < bestD) {
+    const reach = r.source === "nearby" ? CACHE_PLACE_M : CACHE_ADDRESS_M;
+    if (d <= reach && d < bestD) {
       best = r;
       bestD = d;
     }
@@ -217,6 +223,7 @@ async function withGoogle(key: string | null, p: Pt & { accuracyM: number | null
 export async function resolvePlace(
   p: Pt & { accuracyM: number | null },
   userId: string | null = null,
+  zone: string | null = null,
 ): Promise<PlaceLabel> {
   const now = Date.now();
   await purgeOld(now);
@@ -224,6 +231,10 @@ export async function resolvePlace(
 
   const named = await namedNear(p, userId);
   if (named?.name) return { name: named.name, address: null, kind: "saved" };
+  // Home Assistant says they're in a zone (its boundaries and home-network
+  // detection): that's the name, unless the family marked this spot "just the
+  // address".
+  if (zone && !named) return { name: zone, address: null, kind: "saved" };
 
   if (!named) {
     const saved = nearestSaved(p, await savedWithCoords(key, now));

@@ -253,6 +253,7 @@ export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
       aboutUserId: true,
       onArrive: true,
       onLeave: true,
+      zone: true,
       placeName: { select: { name: true } },
       savedAddress: { select: { name: true } },
     },
@@ -262,9 +263,17 @@ export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
     aboutUserId: string | null;
     onArrive: boolean;
     onLeave: boolean;
+    zone: string | null;
     placeName: { name: string | null } | null;
     savedAddress: { name: string } | null;
   }[];
+  const zoneRows = (await prisma.locationPoint.findMany({
+    where: { zone: { not: null }, at: { gte: new Date(Date.now() - 60 * 24 * 60 * 60_000) } },
+    distinct: ["zone"],
+    select: { zone: true },
+    take: 50,
+  })) as { zone: string | null }[];
+  const zones = [...new Set(zoneRows.map((z) => z.zone).filter((z): z is string => Boolean(z)))].sort();
   const nameOf = new Map(users.map((u) => [u.id, u.displayName || u.name]));
   const [firebase, push] = await Promise.all([firebaseClientConfig(), pushStatus()]);
 
@@ -282,11 +291,12 @@ export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
         .filter((x): x is string => typeof x === "string")
         .map((id) => nameOf.get(id) ?? "Someone"),
       about: r.aboutUserId ? nameOf.get(r.aboutUserId) ?? "Someone" : null,
-      place: r.placeName ? r.placeName.name ?? "Unnamed spot" : r.savedAddress?.name ?? "A place",
+      place: r.zone ? `${r.zone} (zone)` : r.placeName ? r.placeName.name ?? "Unnamed spot" : r.savedAddress?.name ?? "A place",
       onArrive: r.onArrive,
       onLeave: r.onLeave,
     })),
     placeOptions: [
+      ...zones.map((z) => ({ value: `z:${z}`, label: `${z} (Home Assistant zone)` })),
       ...namedRows.filter((r) => r.name).map((r) => ({
         value: `n:${r.id}`,
         label: r.user ? `${r.name} (${r.user.displayName || r.user.name})` : (r.name as string),

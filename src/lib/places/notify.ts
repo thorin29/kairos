@@ -7,8 +7,8 @@ import { notify } from "@/lib/push";
 
 /**
  * Places notifications (v0.759): after a new position arrives, check it
- * against the places that rules mention (named places and saved addresses —
- * Kairos's own, not Home Assistant zones) and queue "<name> arrived at
+ * against the places that rules mention (named places and saved addresses by
+ * distance; Home Assistant zones by HA's own zone changes) and queue "<name> arrived at
  * <place>" / "left" for the people each rule tells. Only places some rule
  * uses are tracked, so with no rules this costs one query.
  */
@@ -25,13 +25,15 @@ type Rule = {
   aboutUserId: string | null;
   onArrive: boolean;
   onLeave: boolean;
+  zone: string | null;
   placeName: { id: string; name: string | null; lat: number; lng: number; radiusM: number; userId: string | null } | null;
   savedAddress: { id: string; name: string; lat: number | null; lng: number | null } | null;
 };
 
-type Place = { key: string; name: string; lat: number; lng: number; radiusM: number };
+type Place = { key: string; name: string; lat: number; lng: number; radiusM: number; zone?: string };
 
 function placeOf(r: Rule, userId: string): Place | null {
+  if (r.zone) return { key: `z:${r.zone}`, name: r.zone, lat: 0, lng: 0, radiusM: 0, zone: r.zone };
   if (r.placeName) {
     const p = r.placeName;
     if (p.userId && p.userId !== userId) return null; // someone else's own place
@@ -46,7 +48,7 @@ function placeOf(r: Rule, userId: string): Place | null {
 
 export async function checkPlaces(
   userId: string,
-  point: { lat: number; lng: number; accuracyM: number | null; at: Date },
+  point: { lat: number; lng: number; accuracyM: number | null; at: Date; zone: string | null },
 ): Promise<void> {
   if (Date.now() - point.at.getTime() > FRESH_MS) return;
   const rules = (await prisma.placesNotifyRule.findMany({
@@ -57,6 +59,7 @@ export async function checkPlaces(
       aboutUserId: true,
       onArrive: true,
       onLeave: true,
+      zone: true,
       placeName: { select: { id: true, name: true, lat: true, lng: true, radiusM: true, userId: true } },
       savedAddress: { select: { id: true, name: true, lat: true, lng: true } },
     },
@@ -83,7 +86,12 @@ export async function checkPlaces(
   const now = Date.now();
   for (const { place, rules: placeRules } of places.values()) {
     const prev = stateOf.get(place.key) ?? null;
-    const step = fenceStep(prev, metres(point, place), place.radiusM, point.accuracyM);
+    // Zones follow Home Assistant's own decision; places use distance.
+    const step = place.zone
+      ? prev
+        ? { inside: point.zone === place.zone, changed: prev.inside !== (point.zone === place.zone) }
+        : { inside: point.zone === place.zone, changed: false }
+      : fenceStep(prev, metres(point, place), place.radiusM, point.accuracyM);
     if (!step) continue;
     if (!prev || prev.inside !== step.inside) {
       await prisma.placesAlertState.upsert({

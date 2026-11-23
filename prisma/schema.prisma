@@ -2181,6 +2181,9 @@ model LocationPoint {
   courseDeg Float?
   altitudeM Float?
   battery   Int?
+  // The Home Assistant zone the person was in (v0.760), e.g. "Home", "Work";
+  // null when in none or when the source isn't Home Assistant.
+  zone      String?
   createdAt DateTime @default(now())
 
   @@unique([userId, at])
@@ -2265,6 +2268,9 @@ model PlacesNotifyRule {
   placeName      PlaceName?    @relation(fields: [placeNameId], references: [id], onDelete: Cascade)
   savedAddressId String?
   savedAddress   SavedAddress? @relation(fields: [savedAddressId], references: [id], onDelete: Cascade)
+  // A Home Assistant zone name instead (v0.760): arrive/leave follow HA's own
+  // zone changes (its boundaries and home-network detection).
+  zone           String?
   onArrive       Boolean       @default(true)
   onLeave        Boolean       @default(false)
   createdAt      DateTime      @default(now())

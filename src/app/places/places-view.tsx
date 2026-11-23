@@ -180,6 +180,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   const trafficLayer = useRef<google.maps.TrafficLayer | null>(null);
   const clusters = useRef(new Map<string, { marker: google.maps.marker.AdvancedMarkerElement; root: Root }>());
   const spiderLines = useRef<google.maps.Polyline[]>([]);
+  const hub = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   /** People drawn away from their real spot (fanned out) — gliding skips them. */
   const pinned = useRef(new Set<string>());
   const fitted = useRef(false);
@@ -375,6 +376,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     spiderLines.current = [];
     const wasPinned = new Set(pinned.current);
     pinned.current.clear();
+    let hubShown = false;
 
     for (const g of groups) {
       if (g.length === 1) {
@@ -391,16 +393,22 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
         lng: g.reduce((s2, p) => s2 + p.lng, 0) / g.length,
       };
       if (expanded === key && zoom != null) {
+        // Fan out in an arc above the real spot, spaced so avatars never
+        // overlap, with soft curved lines meeting at a dot on the spot.
         const mpp = metresPerPixel(center.lat, zoom);
-        const radiusPx = g.length > 6 ? 76 : 58;
+        const n = g.length;
+        const step = n > 1 ? Math.min(50, 150 / (n - 1)) : 0;
+        const radiusPx = Math.max(68, n > 1 ? 56 / (2 * Math.sin(((step / 2) * Math.PI) / 180)) : 68);
+        const toLatLng = (x: number, y: number) => ({
+          lat: center.lat - (y * mpp) / 111_320,
+          lng: center.lng + (x * mpp) / (111_320 * Math.cos((center.lat * Math.PI) / 180)),
+        });
         g.forEach((p, i) => {
-          const a = (2 * Math.PI * i) / g.length - Math.PI / 2;
-          const dy = Math.sin(a) * radiusPx * mpp;
-          const dx = Math.cos(a) * radiusPx * mpp;
-          const spot = {
-            lat: center.lat - dy / 111_320,
-            lng: center.lng + dx / (111_320 * Math.cos((center.lat * Math.PI) / 180)),
-          };
+          const deg = -90 - (step * (n - 1)) / 2 + step * i;
+          const a = (deg * Math.PI) / 180;
+          const x = Math.cos(a) * radiusPx;
+          const y = Math.sin(a) * radiusPx;
+          const spot = toLatLng(x, y);
           const m = markers.current.get(p.id);
           if (!m) return;
           pinned.current.add(p.id);
@@ -408,18 +416,38 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           m.frame = null;
           m.marker.map = map;
           m.marker.position = spot;
+          // A gentle curve: control point bowed sideways from the midpoint.
+          const bow = Math.abs(x) < 1 ? 0 : 0.18 * Math.sign(x);
+          const cx = x / 2 - y * bow;
+          const cy = y / 2 + x * bow;
+          const curve: google.maps.LatLngLiteral[] = [];
+          for (let k = 0; k <= 16; k++) {
+            const t = k / 16;
+            const px = 2 * (1 - t) * t * cx + t * t * x;
+            const py = 2 * (1 - t) * t * cy + t * t * y;
+            curve.push(toLatLng(px, py));
+          }
           spiderLines.current.push(
             new google.maps.Polyline({
               map,
-              path: [center, spot],
+              path: curve,
               clickable: false,
               strokeColor: p.color,
-              strokeOpacity: 0.85,
-              strokeWeight: 2,
+              strokeOpacity: 0.7,
+              strokeWeight: 2.5,
               zIndex: 5,
             }),
           );
         });
+        if (!hub.current) {
+          const dot = document.createElement("div");
+          dot.style.cssText =
+            "width:12px;height:12px;border-radius:9999px;background:#10202f;border:2px solid #fff;box-shadow:0 1px 3px rgba(16,32,47,.35);transform:translateY(50%)";
+          hub.current = new google.maps.marker.AdvancedMarkerElement({ content: dot, zIndex: 6 });
+        }
+        hub.current.map = map;
+        hub.current.position = center;
+        hubShown = true;
         const c = clusters.current.get(key);
         if (c) c.marker.map = null;
         liveKeys.add(key);
@@ -450,6 +478,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       c.root.render(<ClusterFace people={g} />);
       liveKeys.add(key);
     }
+    if (!hubShown && hub.current) hub.current.map = null;
     for (const [key, c] of clusters.current) {
       if (liveKeys.has(key)) continue;
       c.marker.map = null;

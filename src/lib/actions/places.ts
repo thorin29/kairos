@@ -90,7 +90,7 @@ export async function saveNotifyRuleAction(input: {
   const tell = [...new Set(input.tellUserIds.filter((x) => typeof x === "string"))].slice(0, 20);
   if (tell.length === 0) return { error: "Pick who to tell." };
   if (!input.onArrive && !input.onLeave) return { error: "Pick arrives, leaves or both." };
-  const m = /^(n|s):(.+)$/.exec(input.place);
+  const m = /^(n|s|z):(.+)$/.exec(input.place);
   if (!m) return { error: "Pick a place." };
   const users = (await prisma.user.findMany({
     where: { id: { in: [...tell, ...(input.aboutUserId ? [input.aboutUserId] : [])] }, isActive: true },
@@ -102,8 +102,10 @@ export async function saveNotifyRuleAction(input: {
   }
   if (m[1] === "n") {
     if (!(await prisma.placeName.findUnique({ where: { id: m[2] }, select: { id: true } }))) return { error: "That place is gone." };
-  } else if (!(await prisma.savedAddress.findUnique({ where: { id: m[2] }, select: { id: true } }))) {
-    return { error: "That place is gone." };
+  } else if (m[1] === "s") {
+    if (!(await prisma.savedAddress.findUnique({ where: { id: m[2] }, select: { id: true } }))) return { error: "That place is gone." };
+  } else if (m[2].length > 100) {
+    return { error: "Pick a place." };
   }
   await prisma.placesNotifyRule.create({
     data: {
@@ -111,6 +113,7 @@ export async function saveNotifyRuleAction(input: {
       aboutUserId: input.aboutUserId,
       placeNameId: m[1] === "n" ? m[2] : null,
       savedAddressId: m[1] === "s" ? m[2] : null,
+      zone: m[1] === "z" ? m[2] : null,
       onArrive: input.onArrive,
       onLeave: input.onLeave,
     },

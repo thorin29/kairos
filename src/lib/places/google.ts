@@ -123,9 +123,17 @@ export async function reverseGeocode(
   lat: number,
   lng: number,
 ): Promise<{ address: string | null; placeId: string | null } | null> {
-  const data = await geocode(`latlng=${lat},${lng}&language=en&key=${encodeURIComponent(key)}`);
-  if (!data) return null;
-  const r = data.results?.[0];
+  // A building's own address first; any address only if there's none.
+  const exact = await geocode(
+    `latlng=${lat},${lng}&result_type=street_address|premise&language=en&key=${encodeURIComponent(key)}`,
+  );
+  if (!exact) return null;
+  let r = exact.results?.[0];
+  if (!r) {
+    const any = await geocode(`latlng=${lat},${lng}&language=en&key=${encodeURIComponent(key)}`);
+    if (!any) return null;
+    r = any.results?.[0];
+  }
   return { address: r?.formatted_address ?? null, placeId: r?.place_id ?? null };
 }
 

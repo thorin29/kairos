@@ -357,6 +357,12 @@ JWT, no SDK) to the person's registered devices; the app fetches the text from
 `/api/v1/push/inbox`. Firebase app values are served to the app at runtime
 (`/api/v1/push/config`), so the APK carries no project config.
 
+v0.760: points carry the Home Assistant zone (`LocationPoint.zone`). A zone
+names the place right after the family's own names, keeps a person "there"
+through GPS wobble, names History stops by majority, and can be a notification
+place (`PlacesNotifyRule.zone`, following HA's zone changes). Kairos's own
+places keep working without it.
+
 ## Hockey reads a separate container
 
 Ice times come from **ice-time** (its own repo), which reads a rink's public
