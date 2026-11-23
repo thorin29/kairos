@@ -686,8 +686,11 @@ POST /api/v1/calendar/prefs
      → { "status":"ok" }
 
 POST /api/v1/calendar/subscribed-reminders
-     { "eventId", "reminders":[minutesBefore] }    // [] clears; reminders on feed events are app-only
+     { "eventId", "reminders":[minutesBefore] }    // v0.774: any event — this person's own; [] mutes it for them
+     { "eventId", "reset": true }                  // back to the event's own reminders
      → { "status":"ok" }
+     // In GET /calendar events: "reminders" = the viewer's (own, else the event's when they're on it),
+     // "eventReminders" = the event's own, "myReminders" = they set their own.
 ```
 Notes: the GET refreshes stale ICS feeds **in the background** (single-flight) and
 returns what the database already holds, so a fresh feed shows up on the next load
@@ -1950,6 +1953,7 @@ saves (the phone then sends its current switches).
     "approvals": false, "familyWorkout": false, "choreTurn": false,  // v0.773
     "places": [{ "id": "r1", "about": "<userId>" /* or null = anyone */, "place": "z:Home" /* n:<id>, s:<id> */, "arrive": true, "leave": false }],
     "safety": { "speed": { "<childId>": 70 }, "noUpdateHours": 4, "lowBattery": 15 },  // parents only
+    "reminderDefaults": { "APPOINTMENT": 30, "CLASS": -1 },  // v0.774; minutes, -1 none
     "quiet": { "from": "22:00", "to": "07:00" }      // or null; holds Family map news
   },
   "saved": true,

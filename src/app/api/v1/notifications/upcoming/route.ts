@@ -23,10 +23,11 @@ export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
   const uid = authed.device.person.id;
-  // The person's own choices (v0.771): of the reminders that name them, ones
-  // on their own events, family events, and others' events, each on or off. Until their
-  // phone has saved choices, everything that names them comes through and
-  // the phone's own switches decide, as before.
+  // v0.774: an event's reminders go to everyone on it; each person may set
+  // their own (or mute them) on any event, and those always count. The
+  // event's own reminders pass only through the person's switches: their own
+  // events, family events, others' events they're on. Until their phone has
+  // saved choices, the phone's own switches decide, as before.
   const { prefs, saved } = await loadPrefs(uid);
   const wants = (e: { userId: string | null; isFamily: boolean }) =>
     !saved || (e.userId === uid ? prefs.calendar.mine : e.isFamily ? prefs.calendar.family : prefs.calendar.others);
@@ -37,16 +38,16 @@ export async function GET(req: NextRequest) {
   const fromISO = todayISO();
   const toISO = addDays(fromISO, WINDOW_DAYS);
 
-  // Scope: owned, family, or a participant. Only events that actually have
-  // reminders. Subscribed (external) events are included too — a reminder set
-  // on one is honoured like any other.
+  // Scope: events with reminders this person is on, and any event they set
+  // their own reminders on (feed events included).
   const scope = {
     cancelled: false,
-    NOT: { reminders: { isEmpty: true } },
     OR: [
-      { userId: uid },
-      { isFamily: true },
-      { participants: { some: { userId: uid } } },
+      {
+        NOT: { reminders: { isEmpty: true } },
+        OR: [{ userId: uid }, { isFamily: true }, { participants: { some: { userId: uid } } }],
+      },
+      { subscribedReminders: { some: { userId: uid } } },
     ],
   };
 
@@ -57,21 +58,41 @@ export async function GET(req: NextRequest) {
         rrule: null,
         startsAt: { gte: new Date(now), lte: windowEnd },
       },
-      select: { id: true, userId: true, isFamily: true, title: true, location: true, locationOverride: true, startsAt: true, reminders: true, reminderUserIds: true },
+      select: { id: true, userId: true, isFamily: true, title: true, location: true, locationOverride: true, startsAt: true, reminders: true, participants: { select: { userId: true } }, subscribedReminders: { where: { userId: uid }, select: { minutes: true } } },
     }),
     prisma.event.findMany({
       where: { ...scope, rrule: { not: null }, startsAt: { lte: windowEnd } },
-      select: { id: true, userId: true, isFamily: true, title: true, location: true, locationOverride: true, startsAt: true, rrule: true, reminders: true, reminderUserIds: true },
+      select: { id: true, userId: true, isFamily: true, title: true, location: true, locationOverride: true, startsAt: true, rrule: true, reminders: true, participants: { select: { userId: true } }, subscribedReminders: { where: { userId: uid }, select: { minutes: true } } },
     }),
   ]);
 
-  type Row = { id: string; userId: string | null; isFamily: boolean; title: string; location: string | null; locationOverride: string | null; startsAt: Date; reminders: number[]; reminderUserIds: string[] };
+  type Row = {
+    id: string;
+    userId: string | null;
+    isFamily: boolean;
+    title: string;
+    location: string | null;
+    locationOverride: string | null;
+    startsAt: Date;
+    reminders: number[];
+    participants: { userId: string }[];
+    subscribedReminders: { minutes: number[] }[];
+  };
+  /** This person's minutes on an event: their own if set, else the event's
+   *  when they're on it and their switches let it through. */
+  const minutesFor = (e: Row): number[] => {
+    const own = e.subscribedReminders[0];
+    if (own) return own.minutes ?? [];
+    const on = e.isFamily || e.userId === uid || e.participants.some((p) => p.userId === uid);
+    return on && wants(e) ? e.reminders : [];
+  };
 
   const out: { id: string; title: string; location: string | null; startMs: number; reminders: number[] }[] = [];
 
   for (const e of singles as Row[]) {
-    if (!e.reminderUserIds.includes(uid) || !wants(e)) continue; // only this person's reminders
-    out.push({ id: e.id, title: e.title, location: e.locationOverride ?? e.location, startMs: e.startsAt.getTime(), reminders: e.reminders });
+    const mins = minutesFor(e);
+    if (mins.length === 0) continue;
+    out.push({ id: e.id, title: e.title, location: e.locationOverride ?? e.location, startMs: e.startsAt.getTime(), reminders: mins });
   }
 
   // Dates cancelled by a single-occurrence override, so the series skips them.
@@ -91,14 +112,15 @@ export async function GET(req: NextRequest) {
 
   for (const s of series as (Row & { rrule: string | null })[]) {
     if (!s.rrule) continue;
-    if (!s.reminderUserIds.includes(uid) || !wants(s)) continue; // only this person's reminders
+    const mins = minutesFor(s);
+    if (mins.length === 0) continue;
     const occs = occurrencesIn(s.startsAt, s.rrule, fromISO, toISO, tz);
     for (const occ of occs) {
       const ms = occ.getTime();
       if (ms < now || ms > windowEnd.getTime()) continue;
       const dayKey = occ.toISOString().slice(0, 10);
       if (cancelledDates.has(`${s.id}|${dayKey}`)) continue;
-      out.push({ id: `${s.id}:${ms}`, title: s.title, location: s.locationOverride ?? s.location, startMs: ms, reminders: s.reminders });
+      out.push({ id: `${s.id}:${ms}`, title: s.title, location: s.locationOverride ?? s.location, startMs: ms, reminders: mins });
     }
   }
 

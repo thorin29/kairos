@@ -69,25 +69,6 @@ const REMINDER_PRESETS = [
   { min: 1440, label: "1 day" },
 ];
 
-function BellToggle({ on }: { on: boolean }) {
-  return (
-    <svg
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-      {!on && <line x1="2" x2="22" y1="2" y2="22" />}
-    </svg>
-  );
-}
-
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 const DAY_NAMES = [
   "Sunday",
@@ -422,7 +403,6 @@ function EventModal({
   // What an Import .ics attempt had to say when it didn't produce an event.
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [allDay, setAllDay] = useState(allDayInit ?? false);
-  const [bells, setBells] = useState<Set<string>>(() => new Set(reminderUserIdsInit ?? []));
   const [participants, setParticipants] = useState<Set<string>>(
     () => new Set(participantIdsInit ?? []),
   );
@@ -454,13 +434,6 @@ function EventModal({
       const n = new Set(prev);
       if (n.has(min)) n.delete(min);
       else n.add(min);
-      return n;
-    });
-  const toggleBell = (uid: string) =>
-    setBells((prev) => {
-      const n = new Set(prev);
-      if (n.has(uid)) n.delete(uid);
-      else n.add(uid);
       return n;
     });
   const [kind, setKind] = useState(kindInit ?? "APPOINTMENT");
@@ -850,23 +823,6 @@ function EventModal({
                       >
                         {p.name}
                       </button>
-                      {participants.has(p.id) && (
-                        <button
-                          type="button"
-                          onClick={() => toggleBell(p.id)}
-                          title={
-                            bells.has(p.id)
-                              ? `Notifications on for ${p.name}`
-                              : `Notifications off for ${p.name}`
-                          }
-                          aria-label="Toggle notifications"
-                          className={
-                            bells.has(p.id) ? "text-green-600" : "text-red-500"
-                          }
-                        >
-                          <BellToggle on={bells.has(p.id)} />
-                        </button>
-                      )}
                     </span>
                   ))}
                 </div>
@@ -884,11 +840,6 @@ function EventModal({
               .filter((id) => id !== owner)
               .map((id) => (
                 <input key={id} type="hidden" name="participants" value={id} />
-              ))}
-            {[...bells]
-              .filter((id) => participants.has(id))
-              .map((id) => (
-                <input key={id} type="hidden" name="reminderBell" value={id} />
               ))}
             {[...reminders].map((m) => (
               <input key={m} type="hidden" name="reminders" value={m} />

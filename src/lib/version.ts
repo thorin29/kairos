@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.773.0";
+export const APP_VERSION = "0.774.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -187,11 +187,16 @@ export const MIGRATIONS = [
   "172_places_stop_edits",
   "173_notify_prefs",
   "174_places_retrack",
+  "175_my_reminders",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.774.0",
+    summary: ["Calendar reminders: an event's reminders go to everyone on it, and each person can change or mute their own on any event (app 0.556); reminders on calendar subscriptions now go off; the bell picker is gone from the event form; default reminders are saved per person. Existing events keep exactly who got reminders before."],
+  },
   {
     version: "0.773.0",
     summary: ["Optional news for those who turn it on in the app (0.555): money and suggested family workouts waiting for approval (parents), a family workout you're in, and each morning your turn on shared chores. Family map History: the add-stop button sits on the line between stops in the person's colour."],

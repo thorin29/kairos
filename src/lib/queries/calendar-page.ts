@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { eventsForReminders, remindersFor } from "@/lib/calendar/my-reminders";
 import {
   loadRange,
   loadEventTypes,
@@ -72,7 +73,13 @@ export type CalEvent = {
   attendees: { name: string; state: string }[];
   ownerId: string | null;
   eventTypeId: string | null;
+  /** This viewer's reminders (v0.774: their own if set, else the event's
+   *  when they're on it). */
   reminders: number[];
+  /** The event's own (suggested) reminders, for the edit form. */
+  eventReminders?: number[];
+  /** True when the viewer set their own. */
+  myReminders?: boolean;
   reminderUserIds: string[];
   /** Everyone this event belongs to (owner + participants); minus owner = the
    *  shared-with people, for edit prefill. */
@@ -352,21 +359,17 @@ export async function loadCalendarPagePayload(
   const allDay = rawRange.allDay.filter(keep).map(recolor);
   const events = [...allDay, ...timed].map(toWire);
 
-  // Subscribed (feed) events store reminders per person, so swap in this
-  // viewer's own minutes (empty if they haven't set any).
-  const feedIds = [
-    ...new Set(events.filter((e) => e.external).map((e) => e.eventId)),
-  ];
-  if (feedIds.length > 0) {
-    const rows = await prisma.subscribedReminder.findMany({
-      where: { userId, eventId: { in: feedIds } },
-      select: { eventId: true, minutes: true },
-    });
-    const byId = new Map<string, number[]>(
-      rows.map((r) => [r.eventId, (r.minutes as number[]) ?? []]),
-    );
+  // Each event shows this viewer's own reminders (v0.774): theirs if they set
+  // them, else the event's when they're on it.
+  if (userId && events.length > 0) {
+    const mine = await remindersFor(userId, await eventsForReminders(events.map((e) => e.eventId)));
     for (const e of events) {
-      if (e.external) e.reminders = byId.get(e.eventId) ?? [];
+      const r = mine.get(e.eventId);
+      if (r) {
+        e.eventReminders = e.reminders;
+        e.reminders = r.minutes;
+        e.myReminders = r.mine;
+      }
     }
   }
 

@@ -43,6 +43,9 @@ export type NotifyPrefsData = {
     /** Battery % a child's phone drops below; null = off. */
     lowBattery: number | null;
   };
+  /** Default reminder for new events, by kind ("APPOINTMENT", "CLASS", …) or
+   *  "t:<event type id>"; minutes before, -1 = none (v0.774). */
+  reminderDefaults: Record<string, number>;
   /** "HH:MM" in the household's time; held Family map news waits until `to`. */
   quiet: { from: string; to: string } | null;
 };
@@ -57,6 +60,7 @@ export function emptyPrefs(): NotifyPrefsData {
     choreTurn: false,
     places: [],
     safety: { speed: {}, noUpdateHours: null, lowBattery: null },
+    reminderDefaults: {},
     quiet: null,
   };
 }
@@ -78,6 +82,11 @@ export function sanitizePrefs(raw: unknown): NotifyPrefsData {
   for (const [k, v] of Object.entries(obj(safety.speed))) {
     const mph = intIn(v, 10, 150);
     if (ID.test(k) && mph != null) speed[k] = mph;
+  }
+  const reminderDefaults: Record<string, number> = {};
+  for (const [k, v] of Object.entries(obj(r.reminderDefaults)).slice(0, 60)) {
+    const m = intIn(v, -1, 40_320);
+    if (m != null && /^([A-Z_]{2,20}|t:[A-Za-z0-9_-]{1,40})$/.test(k)) reminderDefaults[k] = m;
   }
   const places: PlaceRule[] = [];
   for (const p of Array.isArray(r.places) ? r.places.slice(0, 50) : []) {
@@ -109,6 +118,7 @@ export function sanitizePrefs(raw: unknown): NotifyPrefsData {
       noUpdateHours: intIn(safety.noUpdateHours, 1, 72),
       lowBattery: intIn(safety.lowBattery, 5, 50),
     },
+    reminderDefaults,
     quiet,
   };
 }

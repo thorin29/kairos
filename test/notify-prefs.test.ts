@@ -24,6 +24,7 @@ describe("notification choices", () => {
       ],
       safety: { speed: { kid1: 70, kid2: 3, "bad id!": 60 }, noUpdateHours: 4, lowBattery: 99 },
       quiet: { from: "22:00", to: "07:00" },
+      reminderDefaults: { APPOINTMENT: 30, CLASS: -1, "bad key": 5, WORK: 99999 },
       extra: true,
     });
     expect(p.calendar).toEqual({ mine: true, family: false, others: false });
@@ -32,5 +33,6 @@ describe("notification choices", () => {
     expect(p.safety.noUpdateHours).toBe(4);
     expect(p.safety.lowBattery).toBeNull();
     expect(p.quiet).toEqual({ from: "22:00", to: "07:00" });
+    expect(p.reminderDefaults).toEqual({ APPOINTMENT: 30, CLASS: -1 });
   });
 });

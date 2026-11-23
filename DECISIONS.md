@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-11 — One reminder model (v0.774.0, app 0.556.0)
+
+- **An event's reminders are a suggestion to everyone on it** — owner, people
+  it's shared with, everyone for a family event — passed through each
+  person's switches (my events / family / others'). **Each person can set
+  their own on any event** (`SubscribedReminder`, now for every event: their
+  minutes; empty = muted); their own always count. `lib/calendar/my-reminders.ts`.
+- The bell list (`reminderUserIds`) is no longer read; the bell toggles are
+  gone from the web form and "Remind me" from the app form. Migration 175
+  writes the old outcome down for existing events with reminders: people on
+  an event who weren't belled get a muted row; belled people who aren't on
+  it keep the event's minutes as their own. So nothing changes for existing
+  events; new events follow the new rule.
+- Found and fixed: reminders set on calendar-subscription events were stored
+  but never sent to phones (the upcoming feed didn't read them). The feed now
+  includes any event the person set their own reminders on.
+- The calendar payload's `reminders` is the viewer's; `eventReminders` is the
+  event's own (for editing); `myReminders` says they set their own.
+- Default reminders per kind live in each person's choices
+  (`reminderDefaults`), kept by the app; the web form has no defaults yet.
+
 ## 2026-11 — More optional news; add-stop button on the line (v0.773.0, app 0.555.0)
 
 - `notify-news.ts`: money entries logged (PENDING) → parents with

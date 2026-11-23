@@ -6,8 +6,9 @@ import { setSubscribedRemindersCore } from "@/lib/calendar/subscribed-reminders-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Set the signed-in phone's reminders on a subscribed (feed) event.
- *  Body: { eventId: string, reminders: number[] } — minutes before, [] to clear. */
+/** Set the signed-in person's own reminders on an event (v0.774: any event).
+ *  Body: { eventId, reminders: number[] } — minutes before, [] to mute — or
+ *  { eventId, reset: true } to go back to the event's own reminders. */
 export async function POST(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
@@ -27,6 +28,6 @@ export async function POST(req: NextRequest) {
         .filter((n) => Number.isFinite(n) && n >= 0)
     : [];
 
-  await setSubscribedRemindersCore(authed.device.person.id, eventId, reminders);
+  await setSubscribedRemindersCore(authed.device.person.id, eventId, reminders, body.reset === true);
   return apiOk({ status: "ok" });
 }

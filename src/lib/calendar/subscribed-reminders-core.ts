@@ -1,32 +1,13 @@
 import "server-only";
-// Shared by the web action (actions/calendars.ts, which resolves and checks the
-// person) and the app's device-auth API route. Kept out of the "use server"
-// module (v0.699): it trusts the userId it's given.
-import { prisma } from "@/lib/prisma";
+import { setMyReminders } from "@/lib/calendar/my-reminders";
 
-/** Set the current user's own reminder minutes on a subscribed feed event.
- *  Stored per-person (SubscribedReminder), so each person keeps their own
- *  minutes. Empty clears them. Feed events only. */
+/** Set this person's own reminders on an event (v0.774: any event, not only
+ *  feed events). Empty mutes them; `reset` goes back to the event's own. */
 export async function setSubscribedRemindersCore(
   userId: string,
   eventId: string,
   reminders: number[],
+  reset = false,
 ): Promise<void> {
-  const ev = await prisma.event.findUnique({
-    where: { id: eventId },
-    select: { externalCalendarId: true },
-  });
-  if (!ev || !ev.externalCalendarId) return;
-  const mins = [
-    ...new Set(reminders.filter((m) => Number.isFinite(m) && m >= 0)),
-  ].sort((a, b) => a - b);
-  if (mins.length === 0) {
-    await prisma.subscribedReminder.deleteMany({ where: { eventId, userId } });
-  } else {
-    await prisma.subscribedReminder.upsert({
-      where: { eventId_userId: { eventId, userId } },
-      create: { eventId, userId, minutes: mins },
-      update: { minutes: mins },
-    });
-  }
+  await setMyReminders(userId, eventId, reset ? null : reminders);
 }
