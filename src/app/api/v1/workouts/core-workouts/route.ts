@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
-  // ?kind=arms for Arms days (v0.651), ?kind=iso for Isometric (v0.661); Core otherwise.
+  // ?kind=arms for Arms days (v0.651), ?kind=iso for Isometric (v0.661),
+  // ?kind=endurance or carry (v0.754); Core otherwise.
   const kind = rotationKindOf(req.nextUrl.searchParams.get("kind"));
   return apiOk({ workouts: (await coreWorkoutsFor(authed.device.person.id, kind)).map(coreWorkoutView) });
 }

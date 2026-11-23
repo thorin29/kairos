@@ -10,6 +10,9 @@ import {
   setCoreDayAction,
 } from "@/lib/actions/workouts";
 import {
+  hasRotationTest,
+  rotationKindOf,
+  type RotationKind,
   CORE_KINDS,
   CORE_KIND_LABEL,
   coreMoveLabel,
@@ -26,9 +29,9 @@ import { Modal } from "./plan-file-panel";
  * rotates through, making your own, and the plan line for a Core day.
  */
 
-type Kind = "core" | "arms" | "iso";
-/** "Core" / "Arms" / "Isometric" (v0.661). */
-const LABEL: Record<Kind, string> = { core: "Core", arms: "Arms", iso: "Isometric" };
+type Kind = RotationKind;
+/** "Core" / "Arms" / "Isometric" (v0.661); circuits and carries (v0.754). */
+const LABEL: Record<Kind, string> = { core: "Core", arms: "Arms", iso: "Isometric", endurance: "Circuit", carry: "Carry" };
 
 export function useCoreWorkouts(userId: string, kind: Kind = "core") {
   const [list, setList] = useState<CoreWorkout[] | null>(null);
@@ -61,7 +64,7 @@ export function CoreRotationPicker({
   test: boolean;
   onTest: (t: boolean) => void;
   /** An Arms day's rotation (v0.651): its own workouts, no plank test. */
-  kind?: "core" | "arms" | "iso";
+  kind?: Kind;
 }) {
   const { list, reload } = useCoreWorkouts(userId, kind);
   const [peek, setPeek] = useState<CoreWorkout | null>(null);
@@ -123,7 +126,7 @@ export function CoreRotationPicker({
         <PlusIcon className="h-4 w-4" />
         New {LABEL[kind].toLowerCase()} workout
       </button>
-      {kind !== "arms" && (
+      {hasRotationTest(kind) && (
         <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 text-sm">
           <span>
             {kind === "iso"
@@ -207,6 +210,11 @@ export function CoreWorkoutEditor({
       p.isActive &&
       (kind === "arms"
         ? p.muscleGroup === "ARMS"
+        : kind === "endurance"
+          ? // Circuits (v0.754): any movement.
+            true
+          : kind === "carry"
+            ? /carry|farmer/i.test(p.name)
         : kind === "iso"
           ? // Holds (v0.661): isometric movements and any logged as time.
             p.category === "ISOMETRIC" || p.metric === "DURATION"
@@ -371,7 +379,7 @@ export function CoreWorkoutEditor({
 /** A Core day in the plan editor: the workout planned now, and its rotation to change. */
 export function CorePlanLine({ userId, pool, workout }: { userId: string; pool: PoolEntry[]; workout: PlanWorkout }) {
   const core = workout.core!;
-  const kind: Kind = core.kind === "arms" ? "arms" : core.kind === "iso" ? "iso" : "core";
+  const kind: Kind = rotationKindOf(core.kind);
   const label = LABEL[kind];
   const [open, setOpen] = useState(false);
   const [rotation, setRotation] = useState(core.rotation);

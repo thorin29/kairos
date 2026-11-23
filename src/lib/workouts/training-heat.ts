@@ -65,7 +65,7 @@ export type CardioEntry = {
   effort?: string | null;
   kind: string;
   /** Which row of the Endurance pop-up it's on (v0.673). */
-  type?: "sport" | "cardio" | "conditioning";
+  type?: "sport" | "cardio" | "conditioning" | "circuit";
 };
 export type Pause = { from: string; to: string };
 
@@ -500,8 +500,11 @@ export function enduranceWeek(entries: readonly CardioEntry[], curWeek: string, 
   const sport = mine.filter((c) => c.type === "sport");
   const cardio = mine.filter((c) => (c.type ?? "cardio") === "cardio");
   const cond = mine.filter((c) => c.type === "conditioning");
+  // Endurance circuits and carry finishers (v0.754), by name.
+  const circ = mine.filter((c) => c.type === "circuit");
   if (sport.length) rows.push({ name: "Sport", detail: `${kinds(sport)} \u00b7 ${plural(sport.length, "session")}`, amount: mins(sport) });
   if (cardio.length) rows.push({ name: "Cardio", detail: `${kinds(cardio)} \u00b7 ${plural(cardio.length, "session")}`, amount: mins(cardio) });
   if (cond.length) rows.push({ name: "Conditioning", detail: plural(cond.length, "workout"), amount: mins(cond) });
+  if (circ.length) rows.push({ name: "Circuits", detail: `${kinds(circ)} \u00b7 ${plural(circ.length, "workout")}`, amount: mins(circ) });
   return { headline: total > 0 ? `${total} min this week` : "No endurance this week", rows };
 }

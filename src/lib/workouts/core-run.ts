@@ -12,6 +12,7 @@ import {
   coreDayMoves,
   coreDayName,
   kindTag,
+  hasRotationTest,
   coreMetric,
   coreScheme,
   libraryCoreWorkout,
@@ -147,10 +148,12 @@ export async function setCoreDay(
   if (rotation.length === 0) return { ok: false, error: `Pick at least one ${rotationLabel(kind).toLowerCase()} workout.` };
   // Core has the plank test and Isometric its three holds (v0.661); an Arms
   // day has none.
-  const test = kind !== "arms" && input.test !== false;
+  const test = hasRotationTest(kind) && input.test !== false;
   const tag = kindTag(kind);
-  // Isometric is its own category with no muscle group (v0.661).
-  const group = kind === "arms" ? "ARMS" : kind === "iso" ? null : "CORE";
+  // Isometric is its own category with no muscle group (v0.661); an
+  // endurance circuit or a carry finisher (v0.754) is a weights entry with
+  // none, titled by its own name.
+  const group = kind === "arms" ? "ARMS" : kind === "core" ? "CORE" : null;
   const category = kind === "iso" ? "ISOMETRIC" : "WEIGHTS";
   const today = todayISO();
 
@@ -212,6 +215,8 @@ async function coreEntries(userId?: string): Promise<(Entry & { userId: string }
       OR: [
         { category: "WEIGHTS" as never, muscleGroup: { in: ["CORE", "ARMS"] as never } },
         { category: "ISOMETRIC" as never },
+        // Endurance circuits and carry finishers (v0.754).
+        { category: "WEIGHTS" as never, muscleGroup: null },
       ],
     },
     orderBy: { sortOrder: "asc" },
@@ -340,7 +345,7 @@ export async function syncCoreDays(userId?: string, today: string = todayISO()):
     // This month's test, if it was logged before today on any day (v0.732):
     // a Core day made again, or moved to another weekday, doesn't ask again.
     const kind = rotationKindOf(e.day.kind);
-    const tested = kind === "arms" || !e.day.test ? null : await testedThisMonth(e.userId, kind, today);
+    const tested = (kind !== "core" && kind !== "iso") || !e.day.test ? null : await testedThisMonth(e.userId, kind, today);
     let day = stepCoreDay(tested && e.day.testedMonth !== tested ? { ...e.day, testedMonth: tested } : e.day, loggedOn, today);
     // Skip workouts that are gone (a deleted one of your own).
     let workout: CoreWorkout | null = null;

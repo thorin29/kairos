@@ -42,9 +42,10 @@ export type CoreWorkout = {
   gear: string;
   moves: CoreMove[];
   mine: boolean;
-  /** "arms" for an Arms workout (v0.651), "iso" for Isometric (v0.661);
+  /** "arms" for an Arms workout (v0.651), "iso" for Isometric (v0.661),
+   *  "endurance" for a circuit and "carry" for a carry finisher (v0.754);
    *  absent means Core. */
-  kind?: "arms" | "iso";
+  kind?: "arms" | "iso" | "endurance" | "carry";
 };
 
 export const CORE_LIB_PREFIX = "lib:";
@@ -213,21 +214,71 @@ export const ISO_LIBRARY: readonly CoreWorkout[] = ([
 
 /** What a rotation day trains (v0.651): Core (the default), Arms, or
  *  Isometric holds (v0.661). */
-export type RotationKind = "core" | "arms" | "iso";
-export const rotationKindOf = (v: unknown): RotationKind => (v === "arms" ? "arms" : v === "iso" ? "iso" : "core");
+/**
+ * Endurance circuits (v0.754): muscular endurance built as a workout of its
+ * own (high reps, long holds, carries), counted toward the endurance heart.
+ * A set or two of high reps on a lift day never is.
+ */
+export const ENDURANCE_LIBRARY: readonly CoreWorkout[] = ([
+  lib("end-db", "High-rep dumbbell circuit", 25, "Dumbbells, kettlebell", [
+    ["Dumbbell thruster", "WEIGHT", 4, 15, 20],
+    ["Dumbbell bench press", "WEIGHT", 4, 15, 20],
+    ["Goblet squat", "WEIGHT", 4, 15, 20],
+    ["Push-up", "REPS", 4, 15, 25],
+  ]),
+  lib("end-carry-hold", "Carry and hold ladder", 20, "Dumbbells, wall, pull-up bar", [
+    ["Farmer carry", "WEIGHT", 4, 40, 60],
+    ["Wall sit", "TIME", 3, 45, 90],
+    ["Dead hang", "TIME", 3, 30, 60],
+  ]),
+  lib("end-bw100", "Bodyweight 100s", 20, "No equipment", [
+    ["Air squat", "REPS", 5, 20, 25],
+    ["Push-up", "REPS", 5, 15, 20],
+    ["Burpee", "REPS", 5, 8, 12],
+  ]),
+  lib("end-swing", "Kettlebell swing EMOM", 20, "Kettlebell", [["Kettlebell swing", "WEIGHT", 20, 15, 20]]),
+] as CoreWorkout[]).map((w) => ({ ...w, kind: "endurance" as const }));
+
+/** Carry finishers (v0.754) for the end of a lift day. A carry's reps are
+ *  yards walked. */
+export const CARRY_LIBRARY: readonly CoreWorkout[] = ([
+  lib("carry-farmer", "Farmer carry finisher", 8, "Dumbbells or kettlebells", [["Farmer carry", "WEIGHT", 3, 40, 60]]),
+  lib("carry-medley", "Carry medley", 10, "Dumbbells or kettlebells", [
+    ["Suitcase carry", "WEIGHT", 2, 40, 40],
+    ["Front rack carry", "WEIGHT", 2, 40, 40],
+    ["Overhead carry", "WEIGHT", 2, 40, 40],
+  ]),
+] as CoreWorkout[]).map((w) => ({ ...w, kind: "carry" as const }));
+
+export type RotationKind = "core" | "arms" | "iso" | "endurance" | "carry";
+export const rotationKindOf = (v: unknown): RotationKind =>
+  v === "arms" ? "arms" : v === "iso" ? "iso" : v === "endurance" ? "endurance" : v === "carry" ? "carry" : "core";
 export const rotationLibrary = (kind: RotationKind): readonly CoreWorkout[] =>
-  kind === "arms" ? ARMS_LIBRARY : kind === "iso" ? ISO_LIBRARY : CORE_LIBRARY;
-/** "Core" / "Arms" / "Isometric": the day's name (and Core's and Arms'
- *  muscle group). */
-export const rotationLabel = (kind: RotationKind) => (kind === "arms" ? "Arms" : kind === "iso" ? "Isometric" : "Core");
+  kind === "arms"
+    ? ARMS_LIBRARY
+    : kind === "iso"
+      ? ISO_LIBRARY
+      : kind === "endurance"
+        ? ENDURANCE_LIBRARY
+        : kind === "carry"
+          ? CARRY_LIBRARY
+          : CORE_LIBRARY;
+/** "Core" / "Arms" / "Isometric" / "Endurance" / "Carries": the day's name
+ *  (and Core's and Arms' muscle group). */
+export const rotationLabel = (kind: RotationKind) =>
+  kind === "arms" ? "Arms" : kind === "iso" ? "Isometric" : kind === "endurance" ? "Endurance" : kind === "carry" ? "Carries" : "Core";
 /** The kind as stored on a workout or day: absent for Core. */
-export const kindTag = (kind: RotationKind): { kind?: "arms" | "iso" } => (kind === "core" ? {} : { kind });
+export const kindTag = (kind: RotationKind): { kind?: Exclude<RotationKind, "core"> } => (kind === "core" ? {} : { kind });
+/** Kinds with a monthly test: Core's plank, Isometric's three holds. */
+export const hasRotationTest = (kind: RotationKind) => kind === "core" || kind === "iso";
 
 export function libraryCoreWorkout(id: string | null | undefined): CoreWorkout | null {
   return (
     CORE_LIBRARY.find((w) => w.id === id) ??
     ARMS_LIBRARY.find((w) => w.id === id) ??
     ISO_LIBRARY.find((w) => w.id === id) ??
+    ENDURANCE_LIBRARY.find((w) => w.id === id) ??
+    CARRY_LIBRARY.find((w) => w.id === id) ??
     null
   );
 }
@@ -343,8 +394,9 @@ export type CoreDay = {
   withTest: boolean;
   /** 2 once stored by v0.644+ (moves on a week after the log, not the day after). */
   v?: number;
-  /** "arms" for an Arms day (v0.651), "iso" for Isometric (v0.661); absent means Core. */
-  kind?: "arms" | "iso";
+  /** "arms" for an Arms day (v0.651), "iso" for Isometric (v0.661),
+   *  "endurance" or "carry" (v0.754); absent means Core. */
+  kind?: Exclude<RotationKind, "core">;
 };
 
 export function cleanCoreDay(raw: unknown, todayISO: string): CoreDay | null {

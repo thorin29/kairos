@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-11 — Endurance days, finishers, 5/3/1 misses (v0.754.0)
+
+- Endurance (Open #11) is an Other days add. Its window: Long steady (a
+  cardio and minutes), Intervals (rounds, work, rest) or Circuit. Long steady
+  and Intervals are a cardio plan entry whose name says it all ("Long steady
+  · Row 40 min"); Row, Run and Ruck plan as their category, Bike, Walk, Hike
+  and Jump rope as any cardio. `enduranceCardioRow` tells them from the
+  Cardio step's rows by name. Picks ride on the kind: `endurance@steady.ROW.40`,
+  `endurance@int.BIKE.8.60.60`, or circuit ids.
+- Circuits and carries are rotation kinds (`endurance`, `carry`) beside
+  Core, Arms and Isometric: a library each (`ENDURANCE_LIBRARY`,
+  `CARRY_LIBRARY`) plus your own, a weights entry with no muscle group,
+  titled by its name, no monthly test (`hasRotationTest`).
+- What counts toward the endurance heart: cardio as before, and a circuit or
+  carry finisher's minutes once anything in it is logged that day (marker
+  `endurance` in `workoutSuggestionAnswer`, "<minutes>|<name>", set by
+  `logMovementSets`). High reps count only inside such a workout, never a set
+  or two on a lift day. The heart's week adds a Circuits row.
+- Finishers after the lifts (the last of release 2): the Finishers step has
+  a row per lift day, None / Core / Holds / Carries, each with its window.
+  `finishers` on start; an unchanged one keeps its rotation, any other is
+  made fresh and is the program's own. `currentSetup.finishers` fills the
+  step; a rotation on a program day no longer reads as added lifts. Odd
+  squad keeps its own C finishers.
+- 5/3/1's What's next: the + set short of its asked-for reps drops the
+  training max 10% (to the lift's step); that day's "Too hard" on the lift
+  holds it. The v0.748 note that feedback "isn't tied to a lift" was wrong:
+  it's filed per movement.
+
 ## 2026-11 — Rest days on the charts; Other days windows (v0.753.0)
 
 - Rest look: a pale slate square with a small moon (`RestSquare`), no legend.

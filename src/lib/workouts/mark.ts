@@ -934,8 +934,40 @@ export async function logMovementSets(
   } else {
     await prisma.workoutSuggestionAnswer.deleteMany({ where: { userId, date, key: OPEN_KEY, slot: mark } });
   }
+  await markCircuit(userId, date, plannedWorkoutId);
   await settleWorkoutTask(userId, dateISO, { fallbackComplete: true });
   return "ok";
+}
+
+/**
+ * An endurance circuit or carry finisher (v0.754): once anything in it is
+ * logged that day, its minutes count toward the endurance heart (a marker,
+ * "<minutes>|<name>"); cleared when nothing in it is logged any more. High
+ * reps elsewhere never count.
+ */
+async function markCircuit(userId: string, date: Date, plannedWorkoutId: string): Promise<void> {
+  if (isExtraId(plannedWorkoutId)) return;
+  const row = (await prisma.plannedWorkout.findUnique({
+    where: { id: plannedWorkoutId },
+    select: { core: true, exercises: { select: { poolExerciseId: true } } },
+  })) as { core: unknown; exercises: { poolExerciseId: string }[] } | null;
+  const day = row?.core as { kind?: string; rotation?: string[]; at?: number } | null | undefined;
+  if (!row || !day || (day.kind !== "endurance" && day.kind !== "carry")) return;
+  const ids = row.exercises.map((e) => e.poolExerciseId);
+  const logged = (await prisma.sessionSet.count({
+    where: { poolExerciseId: { in: ids }, session: { userId, date, isRest: false } },
+  })) as number;
+  const where = { userId_date_key_slot: { userId, date, key: "endurance", slot: plannedWorkoutId } };
+  if (logged === 0) {
+    await prisma.workoutSuggestionAnswer.deleteMany({ where: { userId, date, key: "endurance", slot: plannedWorkoutId } });
+    return;
+  }
+  const kind = day.kind === "carry" ? "carry" : "endurance";
+  const id = day.rotation?.[day.at ?? 0];
+  const { coreWorkoutsFor } = await import("@/lib/workouts/core-run");
+  const w = (await coreWorkoutsFor(userId, kind)).find((x) => x.id === id);
+  const answer = `${w?.minutes ?? 15}|${(w?.name ?? (kind === "carry" ? "Carries" : "Circuit")).slice(0, 60)}`;
+  await prisma.workoutSuggestionAnswer.upsert({ where, create: { userId, date, key: "endurance", slot: plannedWorkoutId, answer }, update: { answer } });
 }
 
 /** Delete one of the caller's own workout sessions (for the Recent page's

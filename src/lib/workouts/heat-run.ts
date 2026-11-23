@@ -131,6 +131,7 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
   const endurance = await cardioEntries(userId, effortOn);
   const heartEntries: CardioEntry[] = [
     ...endurance.entries,
+    ...(await circuitEntries(userId)),
     ...[...extraHeart.values()].map((e) => ({ ...e, kind: "conditioning", type: "conditioning" as const })),
   ];
   const training: TrainingHeat = buildTrainingHeat(
@@ -153,6 +154,20 @@ export async function loadHeat(userId: string, todayISO: string, unit: string): 
     sore: await soreSpotsFor(userId),
     restDays: await restedDays(userId, todayISO),
   };
+}
+
+/** Endurance circuits and carry finishers logged (v0.754): their minutes,
+ *  marked when something in them was logged (mark.ts). */
+async function circuitEntries(userId: string): Promise<CardioEntry[]> {
+  const rows = (await prisma.workoutSuggestionAnswer.findMany({
+    where: { userId, key: "endurance" },
+    select: { date: true, answer: true },
+  })) as { date: Date; answer: string }[];
+  return rows.flatMap((r) => {
+    const [m, ...name] = r.answer.split("|");
+    const minutes = Number(m);
+    return minutes > 0 ? [{ date: fromDateColumn(r.date), minutes, effort: null, kind: name.join("|") || "circuit", type: "circuit" as const }] : [];
+  });
 }
 
 /** Rest / skip pressed with nothing else logged that day, and paused days,

@@ -32,6 +32,7 @@ import { BlockBuilder } from "./block-builder";
 import {
   CardioStep,
   DayChips,
+  FINISH_LABEL,
   FinishersStep,
   MONDAY_FIRST,
   OtherDaysStep,
@@ -919,13 +920,14 @@ export function WhatsNext({
   onTry: (key: string) => void;
 }) {
   const [on, setOn] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, (active.check.find((c) => c.poolExerciseId === m.poolExerciseId)?.suggest ?? m.step) > 0])),
+    Object.fromEntries(active.maxes.map((m) => [m.poolExerciseId, (active.check.find((c) => c.poolExerciseId === m.poolExerciseId)?.suggest ?? m.step) !== 0])),
   );
   const [preview, setPreview] = useState(false);
   const by = (id: string) => {
     const c = active.check.find((x) => x.poolExerciseId === id);
     const m = active.maxes.find((x) => x.poolExerciseId === id);
-    return c && c.suggest > 0 ? c.suggest : (m?.step ?? 5);
+    // A raise, or a drop after a missed + set (v0.754).
+    return c && c.suggest !== 0 ? c.suggest : (m?.step ?? 5);
   };
   const h = active.harder;
   return (
@@ -950,10 +952,14 @@ export function WhatsNext({
                     aria-pressed={up}
                     onClick={() => setOn((o) => ({ ...o, [m.poolExerciseId]: !o[m.poolExerciseId] }))}
                     className={`inline-flex h-8 min-w-[3.5rem] items-center justify-center rounded-full border px-3 text-sm font-semibold ${
-                      up ? "border-emerald-600 bg-emerald-600 text-white" : "border-hairline bg-surface text-ink"
+                      !up
+                        ? "border-hairline bg-surface text-ink"
+                        : by(m.poolExerciseId) < 0
+                          ? "border-amber-600 bg-amber-600 text-white"
+                          : "border-emerald-600 bg-emerald-600 text-white"
                     }`}
                   >
-                    {up ? `+${by(m.poolExerciseId)}` : "Same"}
+                    {up ? (by(m.poolExerciseId) < 0 ? `−${-by(m.poolExerciseId)}` : `+${by(m.poolExerciseId)}`) : "Same"}
                   </button>
                 </div>
               );
@@ -1094,6 +1100,8 @@ function ProgramSetupSteps({
   const [cardio, setCardio] = useState<number[] | null>(null);
   const [conditioning, setConditioning] = useState<number[]>(current.conditioningDays);
   const [other, setOther] = useState<Record<number, string>>(() => startOther(otherDays, editMode));
+  // Finishers after the lifts (v0.754), by weekday; the running program's own when changing it.
+  const [finishers, setFinishers] = useState<Record<number, string>>(() => ({ ...(initial?.finishers ?? {}) }));
   const [maxText, setMaxText] = useState<Record<string, string>>({});
   const [tmHelp, setTmHelp] = useState(false);
 
@@ -1167,6 +1175,7 @@ function ProgramSetupSteps({
       warmup: warmup !== "none",
       ...(warmup !== "none" ? { warmupRoutine: warmup } : {}),
       ...otherPayload(days, other, cardioDays, conditioning),
+      ...(alongside ? {} : { finishers: Object.fromEntries([...new Set(days)].map((d) => [String(d), finishers[d] ?? "none"])) }),
     });
   };
 
@@ -1178,6 +1187,8 @@ function ProgramSetupSteps({
     const work = prog.length > 0 || (k !== "rest" && k !== "skip");
     if (warmup !== "none" && work && k !== "mobility" && k !== "stretching") parts.push("Warm-up");
     parts.push(...prog);
+    const fin = prog.length ? splitOther(finishers[d] ?? "none").kind : "none";
+    if (fin !== "none") parts.push(FINISH_LABEL[fin] ?? fin);
     if (!prog.length && k !== "skip" && k !== "cardio" && k !== "conditioning") parts.push(otherWords(k));
     const p = otherPayload(days, other, cardioDays, conditioning);
     if (p.cardioDays.includes(d)) parts.push("Cardio");
@@ -1319,7 +1330,19 @@ function ProgramSetupSteps({
 
         {cur === "Warm-up" && <WarmupStep warmups={warmups} warmup={warmup} onWarmup={setWarmup} />}
         {cur === "Cardio" && <CardioStep days={cardioDays} onDays={setCardio} />}
-        {cur === "Finishers" && <FinishersStep days={conditioning} onDays={setConditioning} />}
+        {cur === "Finishers" && (
+          <FinishersStep
+            days={conditioning}
+            onDays={setConditioning}
+            userId={userId}
+            liftDays={MONDAY_FIRST.flatMap((d) => {
+              const names = program.days.filter((_, i) => days[i] === d).map((x) => x.name);
+              return names.length ? [{ day: d, name: names.join(" + ") }] : [];
+            })}
+            finishers={finishers}
+            onFinisher={(d, v) => setFinishers((f) => ({ ...f, [d]: v }))}
+          />
+        )}
         {cur === "Review" && <ReviewWeek days={review} />}
 
         {cur === "Maxes" && (

@@ -3,7 +3,17 @@
 import { PRIMARY_BTN, SECONDARY_BTN } from "./buttons";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { MUSCLE_GROUP_LABEL, type MuscleGroup } from "@/lib/workouts/catalog";
-import { OTHER_ADDS, OTHER_LABEL, STRENGTH_GROUPS, joinOther, splitOther } from "@/lib/workouts/other-days";
+import {
+  ENDURANCE_CARDIO,
+  OTHER_ADDS,
+  OTHER_LABEL,
+  STRENGTH_GROUPS,
+  enduranceIds,
+  enduranceName,
+  enduranceOf,
+  joinOther,
+  splitOther,
+} from "@/lib/workouts/other-days";
 import { useEffect, useState } from "react";
 import { Modal } from "./plan-file-panel";
 import { CoreRotationPicker } from "./core-days";
@@ -153,7 +163,7 @@ export function OtherDaysStep({
       {open.map((d) => {
         const raw = other[d] ?? "skip";
         const k = splitOther(raw).kind;
-        const picked = splitOther(raw).ids.length;
+        const picked = pickedWords(raw);
         const added = k !== "rest" && k !== "skip";
         const custom = had?.[d] === "custom";
         return (
@@ -195,7 +205,7 @@ export function OtherDaysStep({
                 )}
                 {userId && hasWindow(k) && (
                   <button type="button" onClick={() => setWin({ day: d, raw })} className="h-8 px-1 text-sm font-semibold text-accent">
-                    {picked ? `${otherWords(k)} · ${picked} picked` : "Choose"}
+                    {picked}
                   </button>
                 )}
               </div>
@@ -219,7 +229,18 @@ export function OtherDaysStep({
   );
 }
 
-const hasWindow = (k: string) => ["core", "arms", "iso", "mobility", "stretching"].includes(k) || k.startsWith("strength:");
+const hasWindow = (k: string) => ["core", "arms", "iso", "mobility", "stretching", "endurance", "carry"].includes(k) || k.startsWith("strength:");
+
+/** What a day's window picked, in a few words: "Long steady · Row 40 min",
+ *  "Core · 2 picked", or "Choose". */
+export function pickedWords(raw: string): string {
+  const { kind, ids } = splitOther(raw);
+  if (kind === "endurance" && ids.length) {
+    const p = enduranceOf(ids);
+    return p.mode === "circuit" ? `Circuits · ${ids.length} picked` : enduranceName(p);
+  }
+  return ids.length ? `${FINISH_LABEL[kind] ?? otherWords(kind)} · ${ids.length} picked` : "Choose";
+}
 
 /**
  * An added other day's own window (v0.753): the Core, Arms or Isometric
@@ -231,20 +252,32 @@ function OtherDayWindow({
   userId,
   day,
   raw,
+  title,
   onClose,
   onDone,
 }: {
   userId: string;
   day: number;
   raw: string;
+  /** "Mon · Holds" for a finisher (v0.754). */
+  title?: string;
   onClose: () => void;
   onDone: (raw: string) => void;
 }) {
   const start = splitOther(raw);
   const kind = start.kind;
-  const rot = kind === "core" || kind === "arms" || kind === "iso";
-  const [ids, setIds] = useState<string[]>(start.ids);
-  const [test, setTest] = useState(start.test ?? kind !== "arms");
+  const rot = kind === "core" || kind === "arms" || kind === "iso" || kind === "carry";
+  const end = kind === "endurance";
+  // Endurance (v0.754): Long steady, Intervals, or circuits to rotate.
+  const first = enduranceOf(end ? start.ids : []);
+  const [mode, setMode] = useState<"steady" | "int" | "circuit">(first.mode);
+  const [cardio, setCardio] = useState(first.mode === "circuit" ? "ROW" : first.cardio);
+  const [minutes, setMinutes] = useState(first.mode === "steady" ? first.minutes : 30);
+  const [rounds, setRounds] = useState(first.mode === "int" ? first.rounds : 8);
+  const [work, setWork] = useState(first.mode === "int" ? first.work : 60);
+  const [rest, setRest] = useState(first.mode === "int" ? first.rest : 60);
+  const [ids, setIds] = useState<string[]>(end ? (first.mode === "circuit" ? first.ids : []) : start.ids);
+  const [test, setTest] = useState(start.test ?? (kind === "core" || kind === "iso"));
   const [group, setGroup] = useState(kind.startsWith("strength:") ? kind.slice(9) : "CHEST");
   const [pool, setPool] = useState<PoolEntry[] | null>(null);
   const [routines, setRoutines] = useState<{ id: string; name: string }[] | null>(null);
@@ -261,15 +294,49 @@ function OtherDayWindow({
   }, [userId, kind]);
   const toggle = (id: string) => setIds((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
   const done = () => {
-    if (rot) onDone(joinOther(kind, ids, kind === "arms" ? null : test));
+    if (end) {
+      const pick =
+        mode === "steady"
+          ? ({ mode, cardio, minutes } as const)
+          : mode === "int"
+            ? ({ mode, cardio, rounds, work, rest } as const)
+            : ({ mode: "circuit", ids } as const);
+      onDone(pick.mode === "circuit" && ids.length === 0 ? "endurance" : joinOther("endurance", enduranceIds(pick)));
+    } else if (rot) onDone(joinOther(kind, ids, kind === "core" || kind === "iso" ? test : null));
     else if (kind.startsWith("strength:")) onDone(joinOther(`strength:${group}`, ids));
     else onDone(joinOther(kind, ids.slice(0, 1)));
   };
   const moves = (pool ?? []).filter((p) => p.isActive && p.category === "WEIGHTS" && p.muscleGroup === group);
   return (
-    <Modal title={`${SETUP_WEEKDAYS[day]} · ${otherWords(kind)}`} onClose={onClose}>
+    <Modal title={title ?? `${SETUP_WEEKDAYS[day]} · ${otherWords(kind)}`} onClose={onClose}>
       <div className="space-y-3">
-        {rot ? (
+        {end && (
+          <div className="flex flex-wrap gap-1.5">
+            {(["steady", "int", "circuit"] as const).map((m) => (
+              <Chip key={m} on={mode === m} label={m === "steady" ? "Long steady" : m === "int" ? "Intervals" : "Circuit"} onClick={() => setMode(m)} />
+            ))}
+          </div>
+        )}
+        {end && mode !== "circuit" ? (
+          <div className="divide-y divide-hairline">
+            <PickRow label="Cardio" value={cardio} onChange={setCardio} options={ENDURANCE_CARDIO.map((c) => [c.key, c.label] as const)} />
+            {mode === "steady" ? (
+              <PickRow label="Minutes" value={String(minutes)} onChange={(v) => setMinutes(Number(v))} options={MINUTE_CHOICES} />
+            ) : (
+              <>
+                <PickRow label="Rounds" value={String(rounds)} onChange={(v) => setRounds(Number(v))} options={ROUND_CHOICES} />
+                <PickRow label="Work" value={String(work)} onChange={(v) => setWork(Number(v))} options={WORK_CHOICES} />
+                <PickRow label="Rest" value={String(rest)} onChange={(v) => setRest(Number(v))} options={REST_CHOICES} />
+              </>
+            )}
+          </div>
+        ) : end ? (
+          pool ? (
+            <CoreRotationPicker userId={userId} pool={pool} rotation={ids} onRotation={setIds} test={false} onTest={() => {}} kind="endurance" />
+          ) : (
+            <p className="text-sm text-muted">Loading…</p>
+          )
+        ) : rot ? (
           pool ? (
             <CoreRotationPicker userId={userId} pool={pool} rotation={ids} onRotation={setIds} test={test} onTest={setTest} kind={kind} />
           ) : (
@@ -359,15 +426,119 @@ export function CardioStep({ days, onDays }: { days: number[]; onDays: (d: numbe
   );
 }
 
-/** Finishers: conditioning days (picked on the day); none leaves it out. */
-export function FinishersStep({ days, onDays }: { days: number[]; onDays: (d: number[]) => void }) {
+/** Finishers (v0.754 adds the lift days): a Core, Holds or Carries rotation
+ *  after the lifts on each lift day, each picked in its window; and
+ *  conditioning days (picked on the day). None leaves either out. */
+export function FinishersStep({
+  days,
+  onDays,
+  liftDays = [],
+  finishers = {},
+  onFinisher,
+  userId,
+}: {
+  days: number[];
+  onDays: (d: number[]) => void;
+  liftDays?: { day: number; name: string }[];
+  finishers?: Record<number, string>;
+  onFinisher?: (day: number, raw: string) => void;
+  userId?: string;
+}) {
+  const [win, setWin] = useState<{ day: number; raw: string } | null>(null);
   return (
-    <div className="space-y-1.5">
-      <p className="text-sm font-semibold">Conditioning</p>
-      <DayChips label="Conditioning" value={days} onToggle={(d) => onDays(toggleDay(days, d))} />
+    <div className="space-y-4">
+      {liftDays.length > 0 && onFinisher && (
+        <div>
+          <p className="text-sm font-semibold">After the lifts</p>
+          <div className="divide-y divide-hairline">
+            {liftDays.map(({ day, name }) => {
+              const raw = finishers[day] ?? "none";
+              const k = splitOther(raw).kind;
+              return (
+                <div key={day} className="space-y-1.5 py-2.5">
+                  <p className="text-sm">{`${SETUP_WEEKDAYS[day]} · ${name}`}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {FINISH_KINDS.map((f) => (
+                      <Chip
+                        key={f}
+                        on={k === f}
+                        label={FINISH_LABEL[f]}
+                        onClick={() => {
+                          if (f === "none") return onFinisher(day, "none");
+                          if (k === f && userId) return setWin({ day, raw });
+                          onFinisher(day, f);
+                          if (userId) setWin({ day, raw: f });
+                        }}
+                      />
+                    ))}
+                  </div>
+                  {k !== "none" && userId && (
+                    <button type="button" onClick={() => setWin({ day, raw })} className="text-sm font-semibold text-accent">
+                      {pickedWords(raw)}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <p className="text-sm font-semibold">Conditioning days</p>
+        <DayChips label="Conditioning" value={days} onToggle={(d) => onDays(toggleDay(days, d))} />
+      </div>
+      {win && userId && onFinisher && (
+        <OtherDayWindow
+          userId={userId}
+          day={win.day}
+          raw={win.raw}
+          title={`${SETUP_WEEKDAYS[win.day]} · ${FINISH_LABEL[splitOther(win.raw).kind] ?? ""}`}
+          onClose={() => setWin(null)}
+          onDone={(v) => {
+            onFinisher(win.day, v);
+            setWin(null);
+          }}
+        />
+      )}
     </div>
   );
 }
+
+/** Finisher kinds (v0.754): Holds are Isometric workouts. */
+const FINISH_KINDS = ["none", "core", "iso", "carry"] as const;
+export const FINISH_LABEL: Record<string, string> = { none: "None", core: "Core", iso: "Holds", carry: "Carries" };
+
+/** One line of a window: its label and a choice. */
+function PickRow({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: readonly (readonly [string, string])[];
+}) {
+  return (
+    <label className="flex items-center justify-between gap-3 py-2">
+      <span className="text-sm">{label}</span>
+      <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} className={SELECT}>
+        {options.map(([v, t]) => (
+          <option key={v} value={v}>
+            {t}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+const MINUTE_CHOICES = [10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 75, 90, 120].map((m) => [String(m), `${m} min`] as const);
+const ROUND_CHOICES = Array.from({ length: 20 }, (_, i) => [String(i + 1), String(i + 1)] as const);
+const WORK_CHOICES = [20, 30, 40, 45, 60, 90, 120, 180, 240, 300].map((x) => [String(x), clock(x)] as const);
+const REST_CHOICES = [10, 15, 20, 30, 45, 60, 90, 120, 180].map((x) => [String(x), clock(x)] as const);
 
 /** The week before Start: each weekday and what's on it. */
 export function ReviewWeek({ days }: { days: { day: number; parts: string[] }[] }) {

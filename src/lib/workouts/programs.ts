@@ -1179,9 +1179,17 @@ export type LiftCheck = { suggest: number; reason: string };
  * week. 2 or more reps raises it by its step; 1 rep, or a week that felt too
  * hard, holds it; nothing logged holds it too.
  */
-export function waveCheck(plusReps: number | null, step: number, tooHard = false): LiftCheck {
+export function waveCheck(
+  plusReps: number | null,
+  step: number,
+  tooHard = false,
+  /** v0.754: the + set's asked-for reps and 10% of the training max. Fewer
+   *  reps than asked is a miss: the max drops by that much. */
+  miss?: { asked: number; drop: number },
+): LiftCheck {
   if (plusReps == null) return { suggest: 0, reason: "No + set logged" };
   const reps = `+ set: ${plusReps} ${plusReps === 1 ? "rep" : "reps"}`;
+  if (miss && miss.drop > 0 && plusReps < miss.asked) return { suggest: -miss.drop, reason: `${reps}, missed` };
   if (tooHard) return { suggest: 0, reason: `${reps}, felt too hard` };
   return plusReps >= 2 ? { suggest: step, reason: reps } : { suggest: 0, reason: reps };
 }

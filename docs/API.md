@@ -1261,6 +1261,15 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.754: an `other` kind may be `endurance` (`@steady.<CARDIO>.<min>`,
+`@int.<CARDIO>.<rounds>.<work s>.<rest s>`, or circuit ids; CARDIO is ROW,
+RUN, RUCK, BIKE, WALK, HIKE or ROPE). `POST /workouts/programs/start` takes
+`finishers` ({weekday: "none" | "core" | "iso" | "carry"[@ids][|test]}) and
+`setup.finishers` returns them. `GET /workouts/core-workouts?kind=` also
+takes `endurance` and `carry`. What's next `check[].suggest` may be negative
+(a missed + set: the max drops); `POST /workouts/programs/block` `raises`
+take it (down to a fifth of the max).
+
 v0.753: `heat` adds `restDays` (dates rested on purpose: Rest / skip with
 nothing else logged, or paused). Weekly training `dayList[].status` is
 also `rest` for a finished day with nothing done and nothing due. An

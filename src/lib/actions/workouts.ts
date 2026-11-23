@@ -1970,7 +1970,7 @@ export async function deleteWarmupRoutine(userId: string, id: string): Promise<v
 
 // --- core days (v0.637) -------------------------------------------------------
 
-export async function loadCoreWorkouts(userId: string, kind: "core" | "arms" | "iso" = "core"): Promise<CoreWorkout[]> {
+export async function loadCoreWorkouts(userId: string, kind: import("@/lib/workouts/core-library").RotationKind = "core"): Promise<CoreWorkout[]> {
   await requireInteractive();
   await requireCanActFor(userId);
   return coreWorkoutsFor(userId, rotationKindOf(kind));
@@ -1979,7 +1979,7 @@ export async function loadCoreWorkouts(userId: string, kind: "core" | "arms" | "
 /** Save one's own core workout (new without an id). */
 export async function saveCoreWorkoutAction(
   userId: string,
-  input: { id?: string | null; name: string; moves: unknown; kind?: "core" | "arms" | "iso" },
+  input: { id?: string | null; name: string; moves: unknown; kind?: import("@/lib/workouts/core-library").RotationKind },
 ) {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1998,7 +1998,7 @@ export async function deleteCoreWorkoutAction(userId: string, id: string): Promi
 /** Make a Core day on `day`, or change the rotation of `plannedWorkoutId`. */
 export async function setCoreDayAction(
   userId: string,
-  input: { plannedWorkoutId?: string | null; day?: number | null; rotation: string[]; test: boolean; kind?: "core" | "arms" | "iso" },
+  input: { plannedWorkoutId?: string | null; day?: number | null; rotation: string[]; test: boolean; kind?: import("@/lib/workouts/core-library").RotationKind },
 ) {
   await requireInteractive();
   await requireCanActFor(userId);

@@ -44,10 +44,9 @@ live in the database, never in this repository.
 10. **Archive a finished school year.** Once the school year is complete, its
     schedule and school work move out of the everyday lists and pickers so
     they don't clutter them; still readable, nothing deleted.
-11. **Endurance workouts.** Define what builds endurance besides cardio and
-    sport (long steady work, intervals, muscular endurance such as long
-    holds, carries and high-rep circuits) and count it toward the endurance
-    heart.
+11. **Endurance workouts.** Done in v0.754: Endurance days (Long steady,
+    Intervals, circuits) and lift-day finishers. Kept here only until it's
+    confirmed and removed.
 12. **Ice-time: find each season's schedule links** on the rink's index page
     instead of pasting them in each July. Tracked in the ice-time repo.
 13. **Two programs on the day.** Done in v0.750: each running program is its
@@ -100,9 +99,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.753.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.754.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   163_plan_program, all registered in `MIGRATIONS`.
-- App 0.547.0 (versionCode 619, CLIENT_BUILD 619).
+- App 0.548.0 (versionCode 620, CLIENT_BUILD 620).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -293,7 +292,10 @@ Kept here so they don't come back as open items.
   main groups with no new best in 4 weeks, on your own plan or a program
   without training maxes (v0.752). An Other days add opens its own window
   (the workouts to rotate, the routine, the movements), and rest days show
-  a moon on Workout days and This week (v0.753).
+  a moon on Workout days and This week (v0.753). Endurance days (Long steady,
+  Intervals, circuits) count toward the endurance heart; lift days can end
+  with a Core, Holds or Carries finisher; a missed 5/3/1 + set drops the max
+  10% and a too-hard lift holds (v0.754).
 - Plans: weekly plan and rolling plan (pausable, end dates, a future start),
   programs that write the plan (5/3/1, Boring But Big, 5/3/1 for Beginners,
   wave loading, Odd squad with ladders, density, carry and club finishers),

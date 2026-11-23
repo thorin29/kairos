@@ -57,3 +57,12 @@ describe("other days carry their picks (v0.753)", () => {
     expect(cleanOtherKind("cardio@x")).toBe("cardio");
   });
 });
+
+describe("5/3/1 misses and too-hard weeks (v0.754)", () => {
+  it("drops on a miss, holds when too hard", async () => {
+    const { waveCheck } = await import("@/lib/workouts/programs");
+    expect(waveCheck(0, 5, false, { asked: 1, drop: 15 })).toEqual({ suggest: -15, reason: "+ set: 0 reps, missed" });
+    expect(waveCheck(4, 5, true, { asked: 1, drop: 15 })).toEqual({ suggest: 0, reason: "+ set: 4 reps, felt too hard" });
+    expect(waveCheck(4, 5, false, { asked: 1, drop: 15 })).toEqual({ suggest: 5, reason: "+ set: 4 reps" });
+  });
+});

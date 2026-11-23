@@ -8,7 +8,7 @@ import { CARDIO_CATEGORIES } from "@/lib/workouts/blocks";
  * Pure, shared by the setup and the server.
  */
 
-export const OTHER_ADDS = ["core", "arms", "iso", "mobility", "stretching", "cardio", "conditioning", "strength"] as const;
+export const OTHER_ADDS = ["core", "arms", "iso", "mobility", "stretching", "cardio", "conditioning", "strength", "endurance"] as const;
 export type OtherAdd = (typeof OTHER_ADDS)[number];
 /** "rest", "skip", an add, or "strength:<GROUP>". "custom" is a day that's
  *  none of these (hand-built): kept as it is while it stays "custom". */
@@ -25,6 +25,7 @@ export const OTHER_LABEL: Record<string, string> = {
   cardio: "Cardio",
   conditioning: "Conditioning",
   strength: "Strength",
+  endurance: "Endurance",
   custom: "As it is",
 };
 
@@ -32,6 +33,7 @@ export const OTHER_LABEL: Record<string, string> = {
 export const STRENGTH_GROUPS = ["CHEST", "BACK", "SHOULDERS", "LEGS", "DEADLIFT", "ARMS", "FULL_BODY"] as const;
 
 type Row = {
+  name?: string | null;
   category: string | null;
   muscleGroup: string | null;
   isRest: boolean;
@@ -39,15 +41,74 @@ type Row = {
   core?: unknown;
 };
 
-/** Rows the setup's own steps write (warm-up, cardio, conditioning). */
+/** Rows the setup's own steps write (warm-up, cardio, conditioning). An
+ *  endurance day's cardio (v0.754) is the day's own. */
 export function setupRow(r: Row): boolean {
+  if (enduranceCardioRow(r)) return false;
   return r.category === "WARMUP" || (!!r.category && CARDIO_CATEGORIES.includes(r.category)) || r.category === "HIIT" || !!r.hiitWorkoutId;
 }
 
 function rotationKind(core: unknown): string | null {
   if (!core || typeof core !== "object") return null;
   const k = (core as { kind?: unknown }).kind;
-  return k === "arms" ? "arms" : k === "iso" ? "iso" : "core";
+  return k === "arms" ? "arms" : k === "iso" ? "iso" : k === "endurance" ? "endurance" : k === "carry" ? "carry" : "core";
+}
+
+// --- Endurance days (v0.754) -------------------------------------------------
+
+/** Cardio for Long steady and Intervals: its word, and the category it plans as. */
+export const ENDURANCE_CARDIO: readonly { key: string; label: string; category: string }[] = [
+  { key: "ROW", label: "Row", category: "ROWING" },
+  { key: "RUN", label: "Run", category: "RUNNING" },
+  { key: "RUCK", label: "Ruck", category: "RUCKING" },
+  { key: "BIKE", label: "Bike", category: "CARDIO" },
+  { key: "WALK", label: "Walk", category: "CARDIO" },
+  { key: "HIKE", label: "Hike", category: "CARDIO" },
+  { key: "ROPE", label: "Jump rope", category: "CARDIO" },
+];
+
+export type EndurancePick =
+  | { mode: "steady"; cardio: string; minutes: number }
+  | { mode: "int"; cardio: string; rounds: number; work: number; rest: number }
+  | { mode: "circuit"; ids: string[] };
+
+const n = (v: string | undefined, lo: number, hi: number, d: number) => {
+  const x = Number(v);
+  return Number.isInteger(x) && x >= lo && x <= hi ? x : d;
+};
+
+/** An endurance day's picks, from its ids: "steady.ROW.40",
+ *  "int.BIKE.8.60.60" (rounds, work and rest in seconds), else circuits. */
+export function enduranceOf(ids: readonly string[]): EndurancePick {
+  const first = ids[0] ?? "";
+  const parts = first.split(".");
+  const cardio = ENDURANCE_CARDIO.some((c) => c.key === parts[1]) ? parts[1] : "ROW";
+  if (parts[0] === "steady") return { mode: "steady", cardio, minutes: n(parts[2], 5, 240, 30) };
+  if (parts[0] === "int") return { mode: "int", cardio, rounds: n(parts[2], 1, 40, 8), work: n(parts[3], 10, 1200, 60), rest: n(parts[4], 0, 1200, 60) };
+  if (ids.length) return { mode: "circuit", ids: [...ids] };
+  return { mode: "steady", cardio: "ROW", minutes: 30 };
+}
+
+export function enduranceIds(p: EndurancePick): string[] {
+  if (p.mode === "steady") return [`steady.${p.cardio}.${p.minutes}`];
+  if (p.mode === "int") return [`int.${p.cardio}.${p.rounds}.${p.work}.${p.rest}`];
+  return p.ids;
+}
+
+const clockOf = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+
+/** The plan entry's name, which says it all: "Long steady · Row 40 min",
+ *  "Intervals · Bike 8 × 1:00 / 1:00". */
+export function enduranceName(p: Exclude<EndurancePick, { mode: "circuit" }>): string {
+  const c = ENDURANCE_CARDIO.find((x) => x.key === p.cardio)?.label ?? "Cardio";
+  return p.mode === "steady"
+    ? `Long steady \u00b7 ${c} ${p.minutes} min`
+    : `Intervals \u00b7 ${c} ${p.rounds} \u00d7 ${clockOf(p.work)} / ${clockOf(p.rest)}`;
+}
+
+/** A Long steady or Intervals entry (its cardio row, named for it). */
+export function enduranceCardioRow(r: { category: string | null; name?: string | null }): boolean {
+  return !!r.category && CARDIO_CATEGORIES.includes(r.category) && /^(Long steady|Intervals) \u00b7 /.test(r.name ?? "");
 }
 
 /** What a day holds now, as an Other days choice. */
@@ -61,7 +122,9 @@ export function otherKindOf(rows: readonly Row[]): OtherKind {
   }
   if (own.length > 1) return "custom";
   const r = own[0];
+  if (enduranceCardioRow(r)) return "endurance";
   const rot = rotationKind(r.core);
+  if (rot === "carry") return "custom";
   if (rot) return rot;
   if (r.category === "ISOMETRIC") return "iso";
   if (r.category === "MOBILITY") return "mobility";

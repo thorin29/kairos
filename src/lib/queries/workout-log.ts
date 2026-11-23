@@ -1634,7 +1634,7 @@ export type PlanWorkoutLite = {
   warmup: string | null;
   /** A Core day's rotation (v0.637): workout ids in order, the monthly plank
    *  test, and which one is planned now. Null for anything else. */
-  core: { rotation: string[]; test: boolean; at: number; withTest?: boolean; kind?: "core" | "arms" | "iso" } | null;
+  core: { rotation: string[]; test: boolean; at: number; withTest?: boolean; kind?: import("@/lib/workouts/core-library").RotationKind } | null;
   /** Movements, each with its set structure (weights only carry one). */
   exercises: {
     poolExerciseId: string;
