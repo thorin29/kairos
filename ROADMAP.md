@@ -62,10 +62,8 @@ live in the database, never in this repository.
     v0.755–0.756; the live Places page in v0.757; speed, Follow, tracks,
     History and place-name fixes in v0.758; icons, grouped markers and
     notification rules (server side) in v0.759; HA zones in v0.760; Routes
-    for sparse drives and zone centres in v0.761. Still to come:
-    - The app's Places, tracks and History screens (showing the web pages),
-      and receiving notifications (Firebase ping → inbox, runtime config; a
-      fallback check-in without Firebase).
+    for sparse drives and zone centres in v0.761; the app's Places screen and
+    notifications in v0.762 / app 0.550. Still to come:
     - More alerts once notifications reach phones: driving over a speed, no
       update for a while, low battery.
 
@@ -421,6 +419,9 @@ Kept here so they don't come back as open items.
 - Places v0.761: drives with long gaps between reports are routed with the
   Routes API (checked against the reports; off-road stays raw); people in a
   zone are drawn at its learned centre so they group.
+- Places v0.762 (app 0.550): the app shows Places as the web pages in a
+  WebView via a one-time hand-off (read-only `fd_places` cookie, 12 h), and
+  collects Kairos notifications (Firebase ping or a 15-minute check).
 
 ### Scoring and characters
 

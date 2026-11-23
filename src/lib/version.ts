@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.761.0";
+export const APP_VERSION = "0.762.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -187,6 +187,10 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.762.0",
+    summary: ["Places for the phone app: the app (0.550) shows the Places map and each person's day, signed in through the phone, and collects Kairos notifications."],
+  },
   {
     version: "0.761.0",
     summary: ["Places: drives with long gaps between updates now follow the roads (Google Routes), off-road trips still show as recorded, and people inside a zone like Home are drawn at its centre so they group together."],

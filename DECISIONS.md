@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-11 — Places in the phone app (v0.762.0, app 0.550.0)
+
+- **The app shows the web pages** (`/places/embed`, `/places/embed/<person>`)
+  in a WebView: one map implementation, no Maps SDK in the app.
+- **Hand-off, not the device token in the page.** `POST /places/web` (device
+  auth) → a random single-use ticket, 60 s, in memory (single server
+  process; a restart only means the app asks again). `/places/embed/start`
+  swaps it for `fd_places` = `p1.userId.deviceId.expires.hmac` (appSecret),
+  12 h, httpOnly, lax. Checked on every request: signature, expiry, device not
+  revoked/expired, person active.
+- **The cookie is read-only by construction.** Server action ids aren't tied
+  to the page that posts them, so proxy.ts lets the Places cookie through
+  only for GET/HEAD on embed paths with no `Next-Action` header. The embed
+  pages read via `/api/v1/places/view/*` (`requirePlacesViewer`: device
+  token, Places cookie or parent session; added to the API auth check's
+  guards). "Not right?" is hidden in the app. Without a session an embed page
+  answers 401 (not the login page) so the app can renew.
+- The root layout renders embed paths with no chrome and no web sign-in
+  check; proxy.ts has already decided.
+- Pages share `src/app/places/render.tsx`; `EmbedProvider` / `useEmbed`
+  switch links and data sources in the client views.
+
 ## 2026-11 — Places: Routes for sparse drives, zone centres (v0.761.0)
 
 - **Two ways to put a drive on the roads.** Any gap over 400 m between reports

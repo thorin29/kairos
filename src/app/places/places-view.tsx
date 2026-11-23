@@ -6,7 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { Avatar } from "@/components/avatar";
 import { CarIcon, MapIcon, MotionIcon, WalkIcon } from "@/components/icons";
 import { metres } from "@/lib/places/geo";
-import { notePlacesMapLoad, placesTracks, refreshPlacesLive } from "@/lib/actions/places-live";
+import { liveNow, mapLoaded, placesHref, tracksNow, useEmbed } from "./embed-context";
 import type { LiveData, LivePerson } from "@/lib/places/live-types";
 import type { DayData } from "@/lib/places/history-types";
 import { drawTrips, loadMaps, touchInline } from "./map-kit";
@@ -157,6 +157,7 @@ function writeTracks(ids: string[]) {
 }
 
 export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: string; initial: LiveData }) {
+  const embed = useEmbed();
   const [data, setData] = useState<LiveData>(initial);
   const [now, setNow] = useState<number | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -203,11 +204,11 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       return;
     }
     try {
-      setTracks(await placesTracks(ids));
+      setTracks(await tracksNow(embed, ids));
     } catch {
       // Keep the last tracks.
     }
-  }, []);
+  }, [embed]);
 
   // Live refresh while visible; straight away when the tab comes back.
   useEffect(() => {
@@ -215,7 +216,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     const pull = async () => {
       if (document.visibilityState !== "visible") return;
       try {
-        const next = await refreshPlacesLive();
+        const next = await liveNow(embed);
         if (alive) {
           setData(next);
           setNow(Date.now());
@@ -235,7 +236,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       clearInterval(t);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [pullTracks]);
+  }, [pullTracks, embed]);
 
   // Tracks switched on/off: fetch straight away.
   useEffect(() => {
@@ -275,7 +276,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
         info.current = new google.maps.InfoWindow();
         info.current.addListener("closeclick", () => setSelected(null));
         setReady(true);
-        void notePlacesMapLoad().catch(() => undefined);
+        void mapLoaded(embed).catch(() => undefined);
       })
       .catch(() => {
         if (!cancelled) setMapError("The map couldn't load. Check your connection, or the map key in Admin → Places.");
@@ -283,7 +284,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     return () => {
       cancelled = true;
     };
-  }, [mapKey, mapId]);
+  }, [mapKey, mapId, embed]);
 
   const fitEveryone = useCallback(() => {
     const map = mapRef.current;
@@ -614,16 +615,16 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
 
   const refreshNow = async () => {
     try {
-      setData(await refreshPlacesLive());
+      setData(await liveNow(embed));
     } catch {
       // ignore
     }
   };
 
   return (
-    <main className="mx-auto max-w-[96rem] px-4 py-6 sm:px-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Places</h1>
+    <main className={embed ? "px-3 py-3" : "mx-auto max-w-[96rem] px-4 py-6 sm:px-6"}>
+      <div className={`mb-4 flex flex-wrap items-center gap-3 ${embed ? "justify-end" : "justify-between"}`}>
+        {!embed && <h1 className="font-display text-3xl font-semibold tracking-tight">Places</h1>}
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setTraffic((v) => !v)} className={traffic ? btnOn : btn} aria-pressed={traffic}>
             Traffic
@@ -753,10 +754,10 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
                 </button>
                 {isSel && (
                   <div className="flex flex-wrap gap-2 px-3 pb-3 pl-[4.25rem]">
-                    <Link href={`/places/${p.id}`} className={small}>
+                    <Link href={placesHref(embed, p.id)} className={small}>
                       History
                     </Link>
-                    {!p.moving && (
+                    {!p.moving && !embed && (
                       <button type="button" onClick={() => setFixing(p)} className={small}>
                         Not right?
                       </button>

@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { todayISO } from "@/lib/dates";
+import { todaysTracks, trackedIds } from "@/lib/places/tracks";
 import { loadLive, bustPlaceMemo } from "@/lib/places/live";
 import { loadDay } from "@/lib/places/history";
 import { candidatesNear, type Candidate } from "@/lib/places/resolve";
@@ -24,20 +24,9 @@ export async function notePlacesMapLoad(): Promise<void> {
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-async function trackedIds(ids: string[]): Promise<string[]> {
-  const rows = (await prisma.placesPerson.findMany({
-    where: { userId: { in: ids.slice(0, 20) } },
-    select: { userId: true },
-  })) as { userId: string }[];
-  return rows.map((r) => r.userId);
-}
-
 /** Today's tracks for the people whose tracks are switched on (no names). */
 export async function placesTracks(ids: string[]): Promise<Record<string, DayData>> {
-  const today = todayISO();
-  const out: Record<string, DayData> = {};
-  for (const id of await trackedIds(ids)) out[id] = await loadDay(id, today, { names: false });
-  return out;
+  return todaysTracks(ids);
 }
 
 /** A person's whole day, named, for the History page. */

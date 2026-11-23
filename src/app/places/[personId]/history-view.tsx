@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { CarIcon, MapIcon, MotionIcon, WalkIcon } from "@/components/icons";
-import { notePlacesMapLoad } from "@/lib/actions/places-live";
+import { mapLoaded, placesHref, useEmbed } from "../embed-context";
 import type { DayData, DayItem, DayLegItem, DayStopItem } from "@/lib/places/history-types";
 import { drawTrips, loadMaps, touchInline } from "../map-kit";
 import { PlaceFix } from "../place-fix";
@@ -97,6 +97,7 @@ export function HistoryView({
   today: string;
 }) {
   const router = useRouter();
+  const embed = useEmbed();
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
@@ -136,7 +137,7 @@ export function HistoryView({
           zoomControl: true,
         });
         setReady(true);
-        void notePlacesMapLoad().catch(() => undefined);
+        void mapLoaded(embed).catch(() => undefined);
       })
       .catch(() => {
         if (!cancelled) setMapError("The map couldn't load. Check your connection, or the map key in Admin → Places.");
@@ -144,7 +145,7 @@ export function HistoryView({
     return () => {
       cancelled = true;
     };
-  }, [mapKey, mapId]);
+  }, [mapKey, mapId, embed]);
 
   // Draw the day: trips, numbered stops, then fit it all in view.
   useEffect(() => {
@@ -251,11 +252,11 @@ export function HistoryView({
   const t = day.totals;
 
   return (
-    <main className="mx-auto max-w-[96rem] px-4 py-6 sm:px-6">
+    <main className={embed ? "px-3 py-3" : "mx-auto max-w-[96rem] px-4 py-6 sm:px-6"}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link
-            href="/places"
+            href={placesHref(embed)}
             aria-label="Back to Places"
             className="flex h-11 w-11 items-center justify-center rounded-xl border border-hairline bg-surface text-xl hover:border-accent"
           >
@@ -265,12 +266,12 @@ export function HistoryView({
           <h1 className="font-display text-3xl font-semibold tracking-tight">{person.name}</h1>
         </div>
         <div className="flex items-center gap-1 rounded-full border border-hairline bg-surface p-1">
-          <Link href={`/places/${person.id}?date=${prev}`} aria-label="Previous day" className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-ground">
+          <Link href={placesHref(embed, person.id, prev)} aria-label="Previous day" className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-ground">
             ‹
           </Link>
           <span className="min-w-28 px-2 text-center text-sm font-semibold">{dateLabel(day.date, today)}</span>
           {day.date < today ? (
-            <Link href={`/places/${person.id}?date=${next}`} aria-label="Next day" className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-ground">
+            <Link href={placesHref(embed, person.id, next)} aria-label="Next day" className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-ground">
               ›
             </Link>
           ) : (
@@ -370,7 +371,7 @@ export function HistoryView({
                       </span>
                     </span>
                   </button>
-                  {isSel && (
+                  {isSel && !embed && (
                     <div className="px-4 pb-3 pl-14">
                       <button type="button" onClick={() => setFixing(it)} className={small}>
                         Not right?

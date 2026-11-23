@@ -25,7 +25,7 @@ const PUBLIC = new Set([
 ]);
 
 // Any of these in a route's source counts as "this route authenticates".
-const GUARDS = ["requireDevice", "requireDeviceForReauth", "withDeviceAuth"];
+const GUARDS = ["requireDevice", "requireDeviceForReauth", "withDeviceAuth", "requirePlacesViewer"];
 
 function walk(dir) {
   const out = [];

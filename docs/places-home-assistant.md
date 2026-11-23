@@ -249,14 +249,14 @@ won't notify twice within 10 minutes; nobody is told about themselves.
 Notifications reach phones through the Kairos app. For instant delivery the
 server can use Firebase Cloud Messaging: Kairos sends only a content-free
 "check your inbox" ping; the app then fetches the text from Kairos, so no
-names or places pass through Google. Without Firebase they wait for the app
-to check in.
+names or places pass through Google. Without Firebase the app checks for
+them every 15 minutes.
 
 Firebase setup (one time, free):
 1. <https://console.firebase.google.com> → **Add project** (use the Google
    Cloud project you already have, or a new one).
-2. Project settings → General → **Add app → Android**, package name of the
-   Kairos app (from the app's build), register. Skip the config-file and SDK
+2. Project settings → General → **Add app → Android**, package name
+   `com.kairos.app`, register. Skip the config-file and SDK
    steps — Kairos sends these values to the app at runtime instead.
 3. From Project settings → General copy the **Project ID**, **Project number**
    (Sender ID), and from the Android app the **App ID** and the **Web API key**
@@ -265,6 +265,14 @@ Firebase setup (one time, free):
 4. Project settings → **Service accounts** → **Generate new private key** →
    paste the whole JSON file into **Service account key** → **Save**. It stays
    on the server.
+
+## Part 6 — Places in the phone app
+
+Places is in the app's menu once it's set up here (app 0.550+). It shows these
+same pages, signed in through the phone itself, so nobody needs a web sign-in.
+The map loads from the address the app is set to, so the **Kairos map** key's
+website restrictions need that address (Part 4, step 5): add the LAN address
+too if phones use it. Phones ask once for permission to show notifications.
 
 ## Notes
 

@@ -8,6 +8,7 @@ import {
   webSessionUser,
 } from "@/lib/web-gate";
 import { contentSecurityPolicy, frameAncestors, isMapPath, newNonce } from "@/lib/csp";
+import { isEmbedPath, PLACES_COOKIE, placesSessionUser } from "@/lib/places/embed-session";
 
 /**
  * The web's sign-in gate, on every request (v0.699; Next 16's "proxy", the
@@ -66,7 +67,24 @@ export async function proxy(req: NextRequest) {
   if (isPublicPath(path)) return pass();
   if (await webBootstrapOpen()) return pass();
 
+  // The app's Places WebView (v0.762): the ticket hand-off is open (the
+  // ticket is the check), and the Places cookie opens only the embed pages,
+  // read-only — no server actions, whose ids aren't tied to a page.
+  if (path === "/places/embed/start") return pass();
+  if (
+    isEmbedPath(path) &&
+    (req.method === "GET" || req.method === "HEAD") &&
+    !req.headers.has("next-action") &&
+    (await placesSessionUser(req.cookies.get(PLACES_COOKIE)?.value))
+  ) {
+    return pass();
+  }
+
   const user = await webSessionUser(req.cookies.get(USER_COOKIE)?.value);
+  if (!user && path.startsWith("/places/embed")) {
+    // The app re-opens Places with a fresh ticket when it sees this.
+    return withSecurityHeaders(new NextResponse("Sign-in expired.", { status: 401 }), csp);
+  }
   if (!user) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";

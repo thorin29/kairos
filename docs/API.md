@@ -1907,6 +1907,24 @@ address within ~120 m, or an answer Google gave within ~60 m in the last 30
 days. Otherwise one Nearby
 Search (then reverse geocoding), within Kairos's daily limits (140 / 280).
 
+### Places in the app (WebView) — **built (v0.762)**
+
+The app shows the web's Places pages in a WebView rather than drawing its own
+map. Web sign-in is for parents, so the device hands itself over:
+
+- `POST /api/v1/places/web` (device auth) `{ "to": "/places/embed" | "/places/embed/<personId>" }`
+  → `{ "state": "ok", "path": "/places/embed/start?t=…&to=…" }` (`state: "off"` until Places is set
+  up). The ticket is random, single use and good for 60 seconds (kept in memory).
+- `GET /places/embed/start?t=&to=` swaps it for an `fd_places` cookie (12 hours,
+  `p1.userId.deviceId.expires.hmac`) and redirects to `to`. The cookie opens only the
+  `/places/embed` pages, GET only, never a server action (proxy.ts), and stops working when the
+  device is revoked or the person turned off. An expired session answers the page with 401; the
+  app asks for a new ticket.
+- The embed pages read through `GET /api/v1/places/view/live`, `GET /api/v1/places/view/tracks?ids=a,b`
+  and count map loads with `POST /api/v1/places/view/mapload`. These accept a device token, the
+  `fd_places` cookie, or a parent's web session (`requirePlacesViewer`). "Not right?" (naming a
+  place) stays on the web.
+
 ### Push — config, token, inbox — **built (v0.759)**
 
 General app notifications (first used by Places arrive/leave). Kairos stores
@@ -1930,7 +1948,7 @@ local time, `link` `/places`, `kind` `places` (`test` for Admin's Send test).
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**209 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**213 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1947,7 +1965,7 @@ silently invisible:
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604), **summary**, `summary/day` (v0.733)
 - **hockey** (the week from ice-time), `hockey/prefs`
-- **places/ingest** (Home Assistant → server, v0.755), **places/live** (v0.757)
+- **places/ingest** (Home Assistant → server, v0.755), **places/live** (v0.757), **places/web**, `places/view/live`, `places/view/tracks`, `places/view/mapload` (v0.762)
 - **push/config**, **push/token**, **push/inbox** (v0.759)
 - **concept2** (status / disconnect), `concept2/connect`, `concept2/sync`, `concept2/undo` (v0.614)
 - **widget** (the Android home-screen widget's feed)

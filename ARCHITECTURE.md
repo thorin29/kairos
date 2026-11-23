@@ -351,6 +351,11 @@ v0.761 routes sparse drives with the Routes API instead
 (`src/lib/places/route-check.ts` decides and validates, pure), and
 `src/lib/places/zones.ts` learns each HA zone's centre for the live map and
 History stops.
+v0.762 serves the same pages to the phone app under `/places/embed` (shared
+`src/app/places/render.tsx`; `embed-context.tsx` switches data to
+`/api/v1/places/view/*`). `src/lib/places/embed-session.ts` holds the
+ticket → `fd_places` cookie hand-off; proxy.ts admits that cookie only for
+GET on embed paths, and the root layout renders them without chrome.
 
 v0.759 adds notifications: `checkPlaces` (`src/lib/places/notify.ts`) runs
 after each ingest on the person's newest point, against only the places a

@@ -74,6 +74,37 @@ export default async function RootLayout({
   ]);
   const sidebarExpanded = (await cookies()).get("sidebar")?.value === "1";
 
+  // The phone app's Places WebView (v0.762): no chrome, and no web sign-in —
+  // proxy.ts has already checked the app's Places cookie for these pages.
+  if (path.startsWith("/places/embed")) {
+    return (
+      <html
+        lang="en"
+        data-theme={appearance.theme}
+        data-bg={appearance.background}
+        className={appearance.mode === "dark" ? "dark" : undefined}
+        suppressHydrationWarning
+      >
+        {appearance.mode === "system" && (
+          <head>
+            <script
+              nonce={nonce}
+              dangerouslySetInnerHTML={{
+                __html:
+                  "(function(){var q=window.matchMedia('(prefers-color-scheme: dark)');function a(){document.documentElement.classList.toggle('dark',q.matches)}a();q.addEventListener('change',a)})()",
+              }}
+            />
+          </head>
+        )}
+        <body
+          className={`${bricolage.variable} ${plexSans.variable} ${plexMono.variable} min-h-dvh bg-ground text-ink antialiased`}
+        >
+          {children}
+        </body>
+      </html>
+    );
+  }
+
   // When login is required, every page but the public ones needs a session.
   // This is a hard-load backstop; proxy.ts enforces it on every navigation.
   if (gate && !me && !isPublicPath(path)) {
