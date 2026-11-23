@@ -73,6 +73,10 @@ export default async function PlacesAdminPage() {
         totalPoints={data.totalPoints}
         usage={usage}
         named={data.named}
+        rules={data.rules}
+        placeOptions={data.placeOptions}
+        firebase={data.firebase}
+        push={data.push}
         storageBytes={data.storageBytes}
       />
     </main>

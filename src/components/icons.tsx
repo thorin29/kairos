@@ -764,3 +764,37 @@ export function MapIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+/** Car — Places: driving. */
+export function CarIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M5 16V12.5l1.6-4.1A2 2 0 0 1 8.5 7h7a2 2 0 0 1 1.9 1.4L19 12.5V16" />
+      <path d="M4 16h16v2.5H4z" />
+      <path d="M5 12.5h14" />
+      <path d="M7 18.5V20M17 18.5V20" />
+    </svg>
+  );
+}
+
+/** Walking person — Places: on foot. */
+export function WalkIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="13" cy="4.5" r="1.6" />
+      <path d="M10.5 21l1.8-6 2.7 2.5V21" />
+      <path d="M12.3 15l.9-5.2" />
+      <path d="M7.5 12.5l2-3.2 3.7-.5 2.2 3.2 2.6.9" />
+    </svg>
+  );
+}
+
+/** Motion lines — Places: moving faster than walking, slower than driving. */
+export function MotionIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 12h11M5 8h6M5 16h6" />
+      <path d="M14 6l6 6-6 6" />
+    </svg>
+  );
+}

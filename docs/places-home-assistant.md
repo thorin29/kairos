@@ -227,6 +227,35 @@ that way.
 The map key is visible in the page by design; the website restriction is what
 stops other sites from using it. The lookup key never leaves the server.
 
+## Part 5 — Notifications (optional)
+
+Admin → Places → **Notifications**: tell (anyone) when someone (or anyone)
+**arrives at** and/or **leaves** a place. Places are Kairos's own named places
+(each with a size you set under Named places) and saved addresses — not Home
+Assistant zones. "Arrived" needs a fix inside the place; "left" needs one 50 m
+beyond it, so GPS wobble at the edge doesn't repeat; the same person and place
+won't notify twice within 10 minutes; nobody is told about themselves.
+
+Notifications reach phones through the Kairos app. For instant delivery the
+server can use Firebase Cloud Messaging: Kairos sends only a content-free
+"check your inbox" ping; the app then fetches the text from Kairos, so no
+names or places pass through Google. Without Firebase they wait for the app
+to check in.
+
+Firebase setup (one time, free):
+1. <https://console.firebase.google.com> → **Add project** (use the Google
+   Cloud project you already have, or a new one).
+2. Project settings → General → **Add app → Android**, package name of the
+   Kairos app (from the app's build), register. Skip the config-file and SDK
+   steps — Kairos sends these values to the app at runtime instead.
+3. From Project settings → General copy the **Project ID**, **Project number**
+   (Sender ID), and from the Android app the **App ID** and the **Web API key**
+   (or the API key shown for the app). Paste them in Admin → Places →
+   Instant push.
+4. Project settings → **Service accounts** → **Generate new private key** →
+   paste the whole JSON file into **Service account key** → **Save**. It stays
+   on the server.
+
 ## Notes
 
 - Retries are safe: the same tracker and `last_updated` replace the earlier copy.

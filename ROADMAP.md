@@ -60,10 +60,13 @@ live in the database, never in this repository.
     until it's confirmed and removed.
 17. **Places** (family locations). Collection and Admin → Places done in
     v0.755–0.756; the live Places page in v0.757; speed, Follow, tracks,
-    History and place-name fixes in v0.758. Still to come:
-    - The app's Places, tracks and History screens (showing the web pages).
-    - Alerts through a Home Assistant webhook: arrive at / leave a saved
-      address, driving over a speed, no update for a while, low battery.
+    History and place-name fixes in v0.758; icons, grouped markers and
+    notification rules (server side) in v0.759. Still to come:
+    - The app's Places, tracks and History screens (showing the web pages),
+      and receiving notifications (Firebase ping → inbox, runtime config; a
+      fallback check-in without Firebase).
+    - More alerts once notifications reach phones: driving over a speed, no
+      update for a while, low battery.
 
 ## Not doing (decided)
 
@@ -105,8 +108,8 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.758.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  166_places_names, all registered in `MIGRATIONS`.
+- Web 0.759.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  167_places_notify, all registered in `MIGRATIONS`.
 - App 0.549.0 (versionCode 621, CLIENT_BUILD 621).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
@@ -403,6 +406,12 @@ Kept here so they don't come back as open items.
   numbered stops, timeline, replay), "Not right?" (another nearby business,
   just the address, or name it for everyone or one person), Named places in
   Admin.
+- Places v0.759: car / walking / moving icons instead of words; overlapping
+  people merge into one stacked marker that fans out with lines to the real
+  spot; selected stop and card tinted in the person's colour; notification
+  rules (tell anyone when someone arrives at / leaves a named place or saved
+  address) with Kairos's own geofences; push queue and optional Firebase
+  settings (app side still to come); named places get a size.
 
 ### Scoring and characters
 

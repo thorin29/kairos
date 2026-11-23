@@ -53,7 +53,8 @@ parties holding your family's schedule.
   history and caches Google's answers so the same place is never looked up
   twice. Speed while driving, Follow someone, today's tracks per person
   (drives on the roads), a History page per person (stops, drives, totals,
-  replay), and "Not right?" to fix a place's name. Setup:
+  replay), "Not right?" to fix a place's name, and arrive/leave notification
+  rules (delivered by the app; instant with optional Firebase). Setup:
   `docs/places-home-assistant.md`.
 - **Shopping.** A shared shopping list that learns the items you buy and their
   icons — including a custom set of 244 colourful icons for the items and stores

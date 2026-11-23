@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { bustPlaceMemo } from "@/lib/places/live";
+import { notify, saveFirebase } from "@/lib/push";
 import {
   createIngestToken,
   deleteHistory,
@@ -64,4 +65,85 @@ export async function deletePlaceNameAction(id: string): Promise<void> {
   await prisma.placeName.deleteMany({ where: { id } });
   bustPlaceMemo();
   revalidatePath("/admin/places");
+}
+
+const RADII = [50, 100, 150, 250, 500];
+
+/** How far from a named place still counts as there (names and notifications). */
+export async function setPlaceRadiusAction(id: string, radiusM: number): Promise<void> {
+  await requireAdmin();
+  if (!RADII.includes(radiusM)) return;
+  await prisma.placeName.updateMany({ where: { id }, data: { radiusM } });
+  bustPlaceMemo();
+  revalidatePath("/admin/places");
+}
+
+/** Add a notification rule: tell people when someone arrives at / leaves a place. */
+export async function saveNotifyRuleAction(input: {
+  tellUserIds: string[];
+  aboutUserId: string | null;
+  place: string;
+  onArrive: boolean;
+  onLeave: boolean;
+}): Promise<{ error: string | null }> {
+  await requireAdmin();
+  const tell = [...new Set(input.tellUserIds.filter((x) => typeof x === "string"))].slice(0, 20);
+  if (tell.length === 0) return { error: "Pick who to tell." };
+  if (!input.onArrive && !input.onLeave) return { error: "Pick arrives, leaves or both." };
+  const m = /^(n|s):(.+)$/.exec(input.place);
+  if (!m) return { error: "Pick a place." };
+  const users = (await prisma.user.findMany({
+    where: { id: { in: [...tell, ...(input.aboutUserId ? [input.aboutUserId] : [])] }, isActive: true },
+    select: { id: true },
+  })) as { id: string }[];
+  const known = new Set(users.map((u) => u.id));
+  if (tell.some((id) => !known.has(id)) || (input.aboutUserId && !known.has(input.aboutUserId))) {
+    return { error: "Someone in that rule isn't in the household." };
+  }
+  if (m[1] === "n") {
+    if (!(await prisma.placeName.findUnique({ where: { id: m[2] }, select: { id: true } }))) return { error: "That place is gone." };
+  } else if (!(await prisma.savedAddress.findUnique({ where: { id: m[2] }, select: { id: true } }))) {
+    return { error: "That place is gone." };
+  }
+  await prisma.placesNotifyRule.create({
+    data: {
+      tellUserIds: tell,
+      aboutUserId: input.aboutUserId,
+      placeNameId: m[1] === "n" ? m[2] : null,
+      savedAddressId: m[1] === "s" ? m[2] : null,
+      onArrive: input.onArrive,
+      onLeave: input.onLeave,
+    },
+  });
+  revalidatePath("/admin/places");
+  return { error: null };
+}
+
+export async function deleteNotifyRuleAction(id: string): Promise<void> {
+  await requireAdmin();
+  await prisma.placesNotifyRule.deleteMany({ where: { id } });
+  revalidatePath("/admin/places");
+}
+
+export async function saveFirebaseAction(input: {
+  projectId: string;
+  applicationId: string;
+  apiKey: string;
+  senderId: string;
+  serviceAccountJson: string;
+  clear?: boolean;
+}): Promise<{ error: string | null }> {
+  await requireAdmin();
+  const res = await saveFirebase(input);
+  if (!res.error) revalidatePath("/admin/places");
+  return res;
+}
+
+/** Queue a test notification for one person (shows on their phone once the
+ *  app collects it). */
+export async function sendTestNotificationAction(userId: string): Promise<{ error: string | null }> {
+  await requireAdmin();
+  await notify([userId], { kind: "test", title: "Kairos", body: "Test notification", link: "/places" });
+  revalidatePath("/admin/places");
+  return { error: null };
 }

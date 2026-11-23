@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
-import { MapIcon } from "@/components/icons";
+import { CarIcon, MapIcon, MotionIcon, WalkIcon } from "@/components/icons";
 import { notePlacesMapLoad } from "@/lib/actions/places-live";
 import type { DayData, DayItem, DayLegItem, DayStopItem } from "@/lib/places/history-types";
 import { drawTrips, loadMaps, touchInline } from "../map-kit";
@@ -351,7 +351,7 @@ export function HistoryView({
             if (it.kind === "stop") {
               const isSel = selected === it.n;
               return (
-                <div key={`s${idx}`} className={isSel ? "bg-ground" : undefined}>
+                <div key={`s${idx}`} style={isSel ? { backgroundColor: `${person.color}1f` } : undefined}>
                   <button type="button" onClick={() => focusStop(it)} className="flex w-full gap-3 px-4 py-3 text-left">
                     <span
                       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] bg-white font-mono text-xs font-semibold"
@@ -386,8 +386,18 @@ export function HistoryView({
                 className="ml-[1.85rem] border-l-2 border-dashed py-1 pl-6 text-sm text-muted"
                 style={{ borderColor: `${person.color}66` }}
               >
-                {it.kind === "drive" ? "Drive" : "Moving"} {minutes(it.start, it.end)} · {miles(it.distanceM)}
-                {it.topMph != null && it.kind === "drive" ? ` · top ${it.topMph} mph` : ""}
+                <span className="inline-flex items-center gap-1.5">
+                  {it.motion === "drive" ? (
+                    <CarIcon className="h-4 w-4" />
+                  ) : it.motion === "walk" ? (
+                    <WalkIcon className="h-4 w-4" />
+                  ) : (
+                    <MotionIcon className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">{it.motion === "drive" ? "Drive" : it.motion === "walk" ? "Walk" : "Moving"}</span>
+                  {minutes(it.start, it.end)} · {miles(it.distanceM)}
+                  {it.topMph != null && it.motion !== "walk" ? ` · top ${it.topMph} mph` : ""}
+                </span>
               </div>
             );
           })}

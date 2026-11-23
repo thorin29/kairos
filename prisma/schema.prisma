@@ -79,6 +79,8 @@ model User {
   playerCard      PlayerCard?
   placesPerson    PlacesPerson?
   placeNames      PlaceName[]
+  placesAboutRules PlacesNotifyRule[] @relation("PlacesNotifyAbout")
+  pushMessages    PushMessage[]
   locationPoints  LocationPoint[]
   tasks           Task[]         @relation("TaskOwner")
   schoolClasses   SchoolClass[]
@@ -584,6 +586,7 @@ model SavedAddress {
   status    AddressStatus @default(APPROVED)
   submittedById String?
   submittedBy   User?  @relation("SubmittedAddresses", fields: [submittedById], references: [id], onDelete: SetNull)
+  notifyRules   PlacesNotifyRule[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1125,6 +1128,10 @@ model Device {
   credentialVersion Int @default(0) // password version this device last authenticated at
   clientBuild Int? // last app build this device reported (X-Client-Build header)
   clientVersion String? // human version name, e.g. "0.177.0" (X-Client-Version)
+  // Firebase Cloud Messaging token (v0.759): where a "check your inbox" ping
+  // goes. Null until the app registers one; cleared when Google rejects it.
+  pushToken   String?
+  pushTokenAt DateTime?
   createdAt  DateTime  @default(now())
 
   @@index([userId])
@@ -2224,6 +2231,7 @@ model PlaceName {
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  notifyRules PlacesNotifyRule[]
 
   @@index([lat, lng])
 }
@@ -2243,4 +2251,50 @@ model SnappedPath {
 
   @@unique([userId, startAt, endAt])
   @@index([fetchedAt])
+}
+
+// Places (v0.759): "tell these people when <someone> arrives at / leaves
+// <place>". The place is a named place or a saved address (exactly one).
+// aboutUserId null = anyone tracked. tellUserIds = the people notified.
+model PlacesNotifyRule {
+  id             String        @id @default(cuid())
+  tellUserIds    Json
+  aboutUserId    String?
+  aboutUser      User?         @relation("PlacesNotifyAbout", fields: [aboutUserId], references: [id], onDelete: Cascade)
+  placeNameId    String?
+  placeName      PlaceName?    @relation(fields: [placeNameId], references: [id], onDelete: Cascade)
+  savedAddressId String?
+  savedAddress   SavedAddress? @relation(fields: [savedAddressId], references: [id], onDelete: Cascade)
+  onArrive       Boolean       @default(true)
+  onLeave        Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+}
+
+// Places (v0.759): whether a person is inside a place, so arrive/leave fire
+// once. placeKey = "n:<PlaceName id>" or "s:<SavedAddress id>".
+model PlacesAlertState {
+  userId     String
+  placeKey   String
+  inside     Boolean
+  changedAt  DateTime @default(now())
+  notifiedAt DateTime?
+
+  @@id([userId, placeKey])
+}
+
+// Push (v0.759): a notification waiting for a person's phone. The phone gets a
+// content-free Firebase ping, then fetches these from Kairos — no names or
+// places pass through Google. Delivered rows are kept a week, then deleted.
+model PushMessage {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind        String
+  title       String
+  body        String
+  link        String?
+  createdAt   DateTime  @default(now())
+  deliveredAt DateTime?
+
+  @@index([userId, deliveredAt])
 }

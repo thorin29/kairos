@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Avatar } from "@/components/avatar";
-import { MapIcon } from "@/components/icons";
+import { CarIcon, MapIcon, MotionIcon, WalkIcon } from "@/components/icons";
+import { metres } from "@/lib/places/geo";
 import { notePlacesMapLoad, placesTracks, refreshPlacesLive } from "@/lib/actions/places-live";
 import type { LiveData, LivePerson } from "@/lib/places/live-types";
 import type { DayData } from "@/lib/places/history-types";
@@ -50,19 +51,27 @@ function clock(iso: string, now: number): string {
   return sameDay ? time : `${d.toLocaleDateString([], { weekday: "short" })} ${time}`;
 }
 
-function driving(p: LivePerson): boolean {
-  return p.moving && p.mph != null && p.mph >= 10;
-}
-
 function placeLine(p: LivePerson): string {
-  if (p.moving) return driving(p) ? "Driving" : "On the move";
   if (!p.place || p.place.kind === "unknown") return "Unknown place";
   if (p.place.name && p.place.address) return `${p.place.name} · ${p.place.address}`;
   return p.place.name ?? p.place.address ?? "Unknown place";
 }
 
-function speedTag(p: LivePerson): string {
-  return p.mph != null && p.mph > 0 ? `${p.mph} mph` : "Moving";
+function MotionGlyph({ motion, className }: { motion: LivePerson["motion"]; className: string }) {
+  if (motion === "drive") return <CarIcon className={className} />;
+  if (motion === "walk") return <WalkIcon className={className} />;
+  return <MotionIcon className={className} />;
+}
+
+/** Icon plus speed while moving: car 72 mph, a walker, or motion lines + mph. */
+function Movement({ p, className = "h-4 w-4" }: { p: LivePerson; className?: string }) {
+  const showMph = p.motion !== "walk" && p.mph != null && p.mph > 0;
+  return (
+    <span className="inline-flex items-center gap-1" aria-label={p.motion === "drive" ? "Driving" : p.motion === "walk" ? "Walking" : "Moving"}>
+      <MotionGlyph motion={p.motion} className={className} />
+      {showMph && <span className="font-mono">{p.mph} mph</span>}
+    </span>
+  );
 }
 
 function Face({ p }: { p: LivePerson }) {
@@ -72,13 +81,49 @@ function Face({ p }: { p: LivePerson }) {
         <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="md" />
       </div>
       {p.moving && (
-        <span className="mt-0.5 rounded-full bg-ink px-1.5 font-mono text-[0.65rem] font-semibold leading-4 text-white">
-          {speedTag(p)}
+        <span className="mt-0.5 rounded-full bg-ink px-1.5 py-0.5 text-[0.65rem] font-semibold leading-4 text-white">
+          <Movement p={p} className="h-3.5 w-3.5" />
         </span>
       )}
     </div>
   );
 }
+
+/** Several people in one spot: stacked avatars and how many. */
+function ClusterFace({ people }: { people: LivePerson[] }) {
+  return (
+    <div className="flex items-center rounded-full bg-white py-[3px] pl-[3px] pr-2 shadow-md">
+      {people.slice(0, 3).map((p, i) => (
+        <span key={p.id} className={i > 0 ? "-ml-4" : undefined}>
+          <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="md" />
+        </span>
+      ))}
+      <span className="ml-1.5 font-mono text-sm font-semibold text-ink">{people.length}</span>
+    </div>
+  );
+}
+
+/** Metres one screen pixel covers at a zoom and latitude (Web Mercator). */
+function metresPerPixel(lat: number, zoom: number): number {
+  return (156543.03392 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom;
+}
+
+/** People whose markers would overlap at this zoom, grouped. */
+function groupPeople(people: LivePerson[], zoom: number | null): LivePerson[][] {
+  if (zoom == null) return people.map((p) => [p]);
+  const used = new Set<string>();
+  const groups: LivePerson[][] = [];
+  for (const p of people) {
+    if (used.has(p.id)) continue;
+    const reach = 46 * metresPerPixel(p.lat, zoom);
+    const g = people.filter((q) => !used.has(q.id) && metres(p, q) <= reach);
+    for (const q of g) used.add(q.id);
+    groups.push(g);
+  }
+  return groups;
+}
+
+const keyOf = (g: LivePerson[]) => g.map((p) => p.id).sort().join("|");
 
 type MarkerEntry = {
   marker: google.maps.marker.AdvancedMarkerElement;
@@ -123,6 +168,8 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   const [tracksOn, setTracksOn] = useState<string[]>([]);
   const [tracks, setTracks] = useState<Record<string, DayData>>({});
   const [fixing, setFixing] = useState<LivePerson | null>(null);
+  const [zoom, setZoom] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const mapDiv = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -131,6 +178,10 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   const info = useRef<google.maps.InfoWindow | null>(null);
   const circle = useRef<google.maps.Circle | null>(null);
   const trafficLayer = useRef<google.maps.TrafficLayer | null>(null);
+  const clusters = useRef(new Map<string, { marker: google.maps.marker.AdvancedMarkerElement; root: Root }>());
+  const spiderLines = useRef<google.maps.Polyline[]>([]);
+  /** People drawn away from their real spot (fanned out) — gliding skips them. */
+  const pinned = useRef(new Set<string>());
   const fitted = useRef(false);
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -217,6 +268,8 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           zoomControl: true,
         });
         map.addListener("dragstart", () => setFollow(null));
+        map.addListener("click", () => setExpanded(null));
+        map.addListener("idle", () => setZoom(map.getZoom() ?? null));
         mapRef.current = map;
         info.current = new google.maps.InfoWindow();
         info.current.addListener("closeclick", () => setSelected(null));
@@ -274,7 +327,12 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
         const from = { ...entry.pos };
         const start = performance.now();
         if (entry.frame != null) cancelAnimationFrame(entry.frame);
+        const id = p.id;
         const step = (t: number) => {
+          if (pinned.current.has(id)) {
+            entry.frame = null;
+            return;
+          }
           const k = Math.min(1, (t - start) / GLIDE_MS);
           const e = 1 - (1 - k) ** 3;
           entry.marker.position = { lat: from.lat + (to.lat - from.lat) * e, lng: from.lng + (to.lng - from.lng) * e };
@@ -301,6 +359,105 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     const f = follow ? data.people.find((p) => p.id === follow) : null;
     if (f) map.panTo({ lat: f.lat, lng: f.lng });
   }, [data, ready, fitEveryone, follow]);
+
+  // A fanned-out group folds back when the zoom changes.
+  useEffect(() => {
+    setExpanded(null);
+  }, [zoom]);
+
+  // Group overlapping people; fan a group out when it's tapped.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    const groups = groupPeople(data.people, zoom);
+    const liveKeys = new Set<string>();
+    for (const l of spiderLines.current) l.setMap(null);
+    spiderLines.current = [];
+    const wasPinned = new Set(pinned.current);
+    pinned.current.clear();
+
+    for (const g of groups) {
+      if (g.length === 1) {
+        const m = markers.current.get(g[0].id);
+        if (m) {
+          m.marker.map = map;
+          if (wasPinned.has(g[0].id)) m.marker.position = m.pos;
+        }
+        continue;
+      }
+      const key = keyOf(g);
+      const center = {
+        lat: g.reduce((s2, p) => s2 + p.lat, 0) / g.length,
+        lng: g.reduce((s2, p) => s2 + p.lng, 0) / g.length,
+      };
+      if (expanded === key && zoom != null) {
+        const mpp = metresPerPixel(center.lat, zoom);
+        const radiusPx = g.length > 6 ? 76 : 58;
+        g.forEach((p, i) => {
+          const a = (2 * Math.PI * i) / g.length - Math.PI / 2;
+          const dy = Math.sin(a) * radiusPx * mpp;
+          const dx = Math.cos(a) * radiusPx * mpp;
+          const spot = {
+            lat: center.lat - dy / 111_320,
+            lng: center.lng + dx / (111_320 * Math.cos((center.lat * Math.PI) / 180)),
+          };
+          const m = markers.current.get(p.id);
+          if (!m) return;
+          pinned.current.add(p.id);
+          if (m.frame != null) cancelAnimationFrame(m.frame);
+          m.frame = null;
+          m.marker.map = map;
+          m.marker.position = spot;
+          spiderLines.current.push(
+            new google.maps.Polyline({
+              map,
+              path: [center, spot],
+              clickable: false,
+              strokeColor: p.color,
+              strokeOpacity: 0.85,
+              strokeWeight: 2,
+              zIndex: 5,
+            }),
+          );
+        });
+        const c = clusters.current.get(key);
+        if (c) c.marker.map = null;
+        liveKeys.add(key);
+        continue;
+      }
+      for (const p of g) {
+        const m = markers.current.get(p.id);
+        if (m) m.marker.map = null;
+      }
+      let c = clusters.current.get(key);
+      if (!c) {
+        const el = document.createElement("div");
+        const root = createRoot(el);
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          map,
+          position: center,
+          content: el,
+          title: g.map((p) => p.name).join(", "),
+          zIndex: 200,
+          gmpClickable: true,
+        });
+        marker.addEventListener("gmp-click", () => setExpanded(key));
+        c = { marker, root };
+        clusters.current.set(key, c);
+      }
+      c.marker.map = map;
+      c.marker.position = center;
+      c.root.render(<ClusterFace people={g} />);
+      liveKeys.add(key);
+    }
+    for (const [key, c] of clusters.current) {
+      if (liveKeys.has(key)) continue;
+      c.marker.map = null;
+      const root = c.root;
+      setTimeout(() => root.unmount(), 0);
+      clusters.current.delete(key);
+    }
+  }, [data, zoom, expanded, ready]);
 
   // Today's tracks for the people switched on.
   useEffect(() => {
@@ -333,7 +490,9 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     title.style.fontWeight = "600";
     title.textContent = p.name;
     const where = document.createElement("div");
-    where.textContent = p.moving && p.mph != null ? `${placeLine(p)} · ${p.mph} mph` : placeLine(p);
+    where.textContent = p.moving
+      ? `${p.motion === "drive" ? "Driving" : p.motion === "walk" ? "Walking" : "Moving"}${p.mph != null && p.motion !== "walk" ? ` · ${p.mph} mph` : ""}`
+      : placeLine(p);
     const when = document.createElement("div");
     when.style.cssText = "color: #5b6b7d; font-size: 12px; margin-top: 2px;";
     const t = now ?? Date.parse(data.asOf);
@@ -398,6 +557,8 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   useEffect(() => {
     const all = markers.current;
     const allLines = lines.current;
+    const allClusters = clusters.current;
+    const allSpider = spiderLines;
     return () => {
       for (const m of all.values()) {
         if (m.frame != null) cancelAnimationFrame(m.frame);
@@ -408,6 +569,13 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       all.clear();
       for (const ls of allLines.values()) for (const l of ls) l.setMap(null);
       allLines.clear();
+      for (const c of allClusters.values()) {
+        c.marker.map = null;
+        const root = c.root;
+        setTimeout(() => root.unmount(), 0);
+      }
+      allClusters.clear();
+      for (const l of allSpider.current) l.setMap(null);
     };
   }, []);
 
@@ -523,20 +691,24 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
                 className={`rounded-2xl border transition-colors ${
                   p.stale ? "border-amber-200 bg-amber-50" : "border-hairline bg-surface hover:border-accent"
                 }`}
-                style={isSel ? { borderColor: p.color, boxShadow: `0 0 0 1px ${p.color}` } : undefined}
+                style={isSel ? { borderColor: p.color, boxShadow: `0 0 0 1px ${p.color}`, backgroundColor: `${p.color}14` } : undefined}
               >
                 <button type="button" onClick={() => choose(p)} className="flex w-full items-start gap-3 px-3 py-3 text-left">
                   <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="md" />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
                       <span className="truncate font-semibold">{p.name}</span>
-                      {now != null && (
-                        <span className={`shrink-0 text-xs ${p.moving ? "font-mono font-semibold text-ink" : "text-muted"}`}>
-                          {p.moving ? speedTag(p) : p.since ? span(p.since, t) : ""}
-                        </span>
+                      {now != null && !p.moving && p.since && (
+                        <span className="shrink-0 text-xs text-muted">{span(p.since, t)}</span>
                       )}
                     </span>
-                    <span className="block truncate text-sm">{placeLine(p)}</span>
+                    {p.moving ? (
+                      <span className="block text-sm font-semibold">
+                        <Movement p={p} />
+                      </span>
+                    ) : (
+                      <span className="block truncate text-sm">{placeLine(p)}</span>
+                    )}
                     {now != null && (
                       <span className={`block font-mono text-xs ${p.stale ? "text-amber-800" : "text-muted"}`}>
                         {p.stale ? `No update ${ago(p.at, t)}` : `Updated ${ago(p.at, t)} · ${clock(p.at, t)}`}

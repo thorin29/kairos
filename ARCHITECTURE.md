@@ -348,6 +348,15 @@ drives are snapped once with the Roads API (`src/lib/places/roads.ts`,
 `SnappedPath`, 30 days); the same plan draws today's per-person tracks on the
 live map. Family-named spots (`PlaceName`) come first in place naming.
 
+v0.759 adds notifications: `checkPlaces` (`src/lib/places/notify.ts`) runs
+after each ingest on the person's newest point, against only the places a
+`PlacesNotifyRule` mentions (`fenceStep`: arrive inside the radius, leave 50 m
+beyond, state in `PlacesAlertState`). Messages go through `src/lib/push.ts`:
+stored in `PushMessage`, then a content-free FCM HTTP v1 ping (service-account
+JWT, no SDK) to the person's registered devices; the app fetches the text from
+`/api/v1/push/inbox`. Firebase app values are served to the app at runtime
+(`/api/v1/push/config`), so the APK carries no project config.
+
 ## Hockey reads a separate container
 
 Ice times come from **ice-time** (its own repo), which reads a rink's public

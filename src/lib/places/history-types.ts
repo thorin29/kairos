@@ -15,6 +15,8 @@ export type DayStopItem = {
 
 export type DayLegItem = {
   kind: "drive" | "move";
+  /** drive, walk (averaging under 5 mph) or move (in between). */
+  motion: "drive" | "walk" | "move";
   start: string;
   end: string;
   /** What to draw: the road-snapped path, or the raw points. */

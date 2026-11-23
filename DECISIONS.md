@@ -1,5 +1,46 @@
 # Decisions
 
+## 2026-11 — Places: icons, grouped markers, notifications (v0.759.0)
+
+- **Notifications are Kairos's own**, not Home Assistant's (owner's choice:
+  Kairos should not depend on HA). Geofences are Kairos places — named places
+  (now with a size: 50–500 m) and saved addresses (120 m) — not HA zones.
+  `checkPlaces` runs after each ingest on each person's newest point (skipped
+  if older than 30 min), only for places some rule mentions. `fenceStep`:
+  first fix records silently; arrive inside the radius; leave 50 m beyond it;
+  fixes worse than 150 m ignored; 10-minute cooldown per person and place;
+  nobody is told about themselves. A person's own named place only applies to
+  them.
+- **Delivery: content-free Firebase ping → Kairos inbox.** A server can't reach
+  a phone directly; every Android push rides a connection the phone keeps open.
+  Firebase Cloud Messaging uses the one Play services already holds, so no
+  battery cost or always-on notification. Kairos sends only `{k: "inbox"}`;
+  the app fetches the text from `/api/v1/push/inbox`. Rejected: ntfy (another
+  app on every phone, owner refused), an HA relay (owner refused), Kairos's own
+  persistent connection as the main path (battery + always-on notification —
+  kept as the fallback idea for phones without Play services).
+- **No Firebase config in the APK.** The app starts Firebase at runtime
+  (`FirebaseApp.initializeApp(context, FirebaseOptions)`) with values from
+  `/api/v1/push/config`, so one APK and one image work for any household; a
+  server without Firebase returns null and the app falls back. The service
+  account key (FCM HTTP v1, JWT signed with node:crypto, no SDK) stays on the
+  server; its project must match the app values. Tokens Google rejects are
+  cleared.
+- `PushMessage` is a general inbox (kind places / test now) for later app
+  notifications; delivered rows go after a week. Until the app release,
+  messages queue (Admin shows how many are waiting).
+- **Movement as icons**: car with mph, walking person, motion lines with mph
+  for the in-between band. Live: `motionOf` — median reported speed over the
+  last 3 minutes, else distance over ~2 minutes; drive ≥10 mph, walk <5.
+  History legs: drive, or walk/move by average speed.
+- **Grouped markers**: people whose markers would overlap at the current zoom
+  (46 px, Web-Mercator metres per pixel) merge into one stacked marker with a
+  count; tapping fans them out in a circle with lines in each person's colour
+  to the real spot; tapping the map or zooming folds them. Fanned-out markers
+  are pinned so the 30 s glide doesn't pull them back.
+- Selected History stop and selected live card are tinted with the person's
+  colour instead of the page background.
+
 ## 2026-11 — Places: speed, Follow, tracks, History, place names (v0.758.0)
 
 - **Speed** from Home Assistant is metres per second (confirmed against a

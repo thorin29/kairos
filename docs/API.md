@@ -1889,6 +1889,7 @@ same `loadLive` the web Places page uses. Everyone sees everyone.
     "at": "2026-11-23T15:59:10.000Z",   // newest report
     "battery": 64,
     "mph": null,                         // speed while moving (v0.758; HA sends m/s)
+    "motion": null,                      // while moving: drive (≥10 mph) | walk (<5) | move (v0.759)
     "moving": false,                     // two far-apart reports within 15 min, or raw speed ≥ 3
     "since": "2026-11-23T14:02:00.000Z", // arrived here (null while moving)
     "stale": false,                      // no report for 12 h
@@ -1905,10 +1906,30 @@ address within ~120 m, or an answer Google gave within ~60 m in the last 30
 days. Otherwise one Nearby
 Search (then reverse geocoding), within Kairos's daily limits (140 / 280).
 
+### Push — config, token, inbox — **built (v0.759)**
+
+General app notifications (first used by Places arrive/leave). Kairos stores
+each notification for the person; their phones get a content-free Firebase
+Cloud Messaging ping (`data: { k: "inbox" }`, high priority) and then fetch
+the text here. Nothing about people or places goes through Google. Firebase is
+optional per server and configured in Admin → Places → Instant push; nothing
+is built into the APK.
+
+- `GET /api/v1/push/config` (device auth) → `{ "firebase": { projectId, applicationId, apiKey, senderId } | null }`.
+  The app starts Firebase at runtime with these (`FirebaseApp.initializeApp(context, FirebaseOptions)`,
+  no google-services.json). Null = no Firebase on this server: collect the inbox on the app's own schedule.
+- `POST /api/v1/push/token` (device auth) `{ "token": "<FCM token>" | null }` — register or clear this
+  device's token. Kairos clears a token Google rejects.
+- `GET /api/v1/push/inbox` (device auth) → `{ "messages": [{ id, kind, title, body, link, createdAt }] }`,
+  oldest first, each handed over once (marked delivered). Delivered rows are deleted after a week.
+
+Places notification text: title `"<Name> arrived at <Place>"` / `"<Name> left <Place>"`, body the
+local time, `link` `/places`, `kind` `places` (`test` for Admin's Send test).
+
 ## Endpoint inventory (what exists vs what is written up here)
 
 The sections above describe the surfaces in detail. The server currently exposes
-**206 route files** under `src/app/api/v1/`, and the detailed sections cover the
+**209 route files** under `src/app/api/v1/`, and the detailed sections cover the
 ones a client needs to reason about; the rest are thin verbs over the same models
 (a single-purpose POST that takes an id and returns `{ "status":"ok" }`).
 Authoritative list — `find src/app/api/v1 -name route.ts`. Groups, so nothing is
@@ -1926,6 +1947,7 @@ silently invisible:
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604), **summary**, `summary/day` (v0.733)
 - **hockey** (the week from ice-time), `hockey/prefs`
 - **places/ingest** (Home Assistant → server, v0.755), **places/live** (v0.757)
+- **push/config**, **push/token**, **push/inbox** (v0.759)
 - **concept2** (status / disconnect), `concept2/connect`, `concept2/sync`, `concept2/undo` (v0.614)
 - **widget** (the Android home-screen widget's feed)
 

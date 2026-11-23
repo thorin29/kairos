@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
 import { PLACES_MAP_ID, PLACES_MAP_KEY } from "@/lib/places/config";
-import { presenceOf, STALE_MS, type TimedPt } from "@/lib/places/geo";
+import { motionOf, presenceOf, STALE_MS, type TimedPt } from "@/lib/places/geo";
 import { resolvePlace, type PlaceLabel } from "@/lib/places/resolve";
 import { MPS_TO_MPH } from "@/lib/places/day";
 
@@ -119,6 +119,7 @@ export async function loadLive(): Promise<LiveData> {
       at: latest.at.toISOString(),
       battery: latest.battery,
       mph: pres.moving && latest.speed != null ? Math.round(latest.speed * MPS_TO_MPH) : null,
+      motion: pres.moving ? motionOf(rows) : null,
       moving: pres.moving,
       since: pres.since ? pres.since.toISOString() : null,
       stale: now - latest.at.getTime() > STALE_MS,

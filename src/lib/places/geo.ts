@@ -78,3 +78,25 @@ export function shortAddress(formatted: string | null | undefined): string | nul
   if (parts.length === 0) return null;
   return parts.slice(0, 2).join(", ");
 }
+
+export type Motion = "drive" | "walk" | "move";
+
+/**
+ * How someone is moving, from the last couple of minutes (newest first):
+ * the median reported speed, else distance over time between the newest
+ * report and one about two minutes older. drive ≥ 10 mph, walk < 5 mph.
+ */
+export function motionOf(newestFirst: TimedPt[]): Motion {
+  const latest = newestFirst[0];
+  const recent = newestFirst.filter((p) => latest.at.getTime() - p.at.getTime() <= 3 * 60_000);
+  const speeds = recent.map((p) => p.speed).filter((s): s is number => s != null).sort((a, b) => a - b);
+  let mps: number | null = speeds.length > 0 ? speeds[Math.floor(speeds.length / 2)] : null;
+  if (mps == null) {
+    const older = newestFirst.find((p) => latest.at.getTime() - p.at.getTime() >= 90_000);
+    if (older) mps = metres(older, latest) / ((latest.at.getTime() - older.at.getTime()) / 1000);
+  }
+  const mph = (mps ?? 0) * 2.23694;
+  if (mph >= 10) return "drive";
+  if (mph < 5) return "walk";
+  return "move";
+}

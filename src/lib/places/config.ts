@@ -6,6 +6,7 @@ import { hashToken } from "@/lib/auth";
 import { householdTz } from "@/lib/dates";
 import { cleanEntityId } from "@/lib/places/ingest-parse";
 import { dayStart, dayEnd } from "@/lib/places/day-bounds";
+import { firebaseClientConfig, pushStatus } from "@/lib/push";
 
 /**
  * Places settings. Home Assistant pushes positions to the ingest route with a
@@ -141,7 +142,11 @@ export type PlacesAdmin = {
   totalPoints: number;
   storageBytes: number;
   people: PlacesPersonRow[];
-  named: { id: string; name: string | null; who: string | null; createdAt: string }[];
+  named: { id: string; name: string | null; who: string | null; radiusM: number; createdAt: string }[];
+  rules: { id: string; tell: string[]; about: string | null; place: string; onArrive: boolean; onLeave: boolean }[];
+  placeOptions: { value: string; label: string }[];
+  firebase: { projectId: string; applicationId: string; apiKey: string; senderId: string } | null;
+  push: { firebase: boolean; devices: number; waiting: number };
 };
 
 export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
@@ -226,16 +231,70 @@ export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
   const namedRows = (await prisma.placeName.findMany({
     orderBy: { createdAt: "desc" },
     take: 200,
-    select: { id: true, name: true, createdAt: true, user: { select: { name: true, displayName: true } } },
-  })) as { id: string; name: string | null; createdAt: Date; user: { name: string; displayName: string | null } | null }[];
+    select: { id: true, name: true, radiusM: true, createdAt: true, user: { select: { name: true, displayName: true } } },
+  })) as {
+    id: string;
+    name: string | null;
+    radiusM: number;
+    createdAt: Date;
+    user: { name: string; displayName: string | null } | null;
+  }[];
+
+  const saved = (await prisma.savedAddress.findMany({
+    where: { status: "APPROVED" },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  })) as { id: string; name: string }[];
+  const ruleRows = (await prisma.placesNotifyRule.findMany({
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      tellUserIds: true,
+      aboutUserId: true,
+      onArrive: true,
+      onLeave: true,
+      placeName: { select: { name: true } },
+      savedAddress: { select: { name: true } },
+    },
+  })) as {
+    id: string;
+    tellUserIds: unknown;
+    aboutUserId: string | null;
+    onArrive: boolean;
+    onLeave: boolean;
+    placeName: { name: string | null } | null;
+    savedAddress: { name: string } | null;
+  }[];
+  const nameOf = new Map(users.map((u) => [u.id, u.displayName || u.name]));
+  const [firebase, push] = await Promise.all([firebaseClientConfig(), pushStatus()]);
 
   return {
     named: namedRows.map((r) => ({
       id: r.id,
       name: r.name,
       who: r.user ? r.user.displayName || r.user.name : null,
+      radiusM: r.radiusM,
       createdAt: r.createdAt.toISOString(),
     })),
+    rules: ruleRows.map((r) => ({
+      id: r.id,
+      tell: (Array.isArray(r.tellUserIds) ? (r.tellUserIds as unknown[]) : [])
+        .filter((x): x is string => typeof x === "string")
+        .map((id) => nameOf.get(id) ?? "Someone"),
+      about: r.aboutUserId ? nameOf.get(r.aboutUserId) ?? "Someone" : null,
+      place: r.placeName ? r.placeName.name ?? "Unnamed spot" : r.savedAddress?.name ?? "A place",
+      onArrive: r.onArrive,
+      onLeave: r.onLeave,
+    })),
+    placeOptions: [
+      ...namedRows.filter((r) => r.name).map((r) => ({
+        value: `n:${r.id}`,
+        label: r.user ? `${r.name} (${r.user.displayName || r.user.name})` : (r.name as string),
+      })),
+      ...saved.map((a) => ({ value: `s:${a.id}`, label: a.name })),
+    ],
+    firebase,
+    push,
     mapKeySet: Boolean(mapKey),
     lookupKeySet: Boolean(lookupKey),
     mapId: mapId ?? "",

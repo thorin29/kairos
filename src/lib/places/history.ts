@@ -67,8 +67,11 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
       leg.kind === "drive" && settled
         ? await snappedDrive(key, userId, leg.points)
         : { path: leg.points.map((p) => [p.lat, p.lng] as [number, number]), snapped: false };
+    const secs = Math.max(1, (leg.end.getTime() - leg.start.getTime()) / 1000);
+    const motion = leg.kind === "drive" ? "drive" : (leg.distanceM / secs) * MPS_TO_MPH < 5 ? "walk" : "move";
     items.push({
       kind: leg.kind,
+      motion,
       start: leg.start.toISOString(),
       end: leg.end.toISOString(),
       path: track.path,
