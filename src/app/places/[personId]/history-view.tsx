@@ -410,6 +410,7 @@ export function HistoryView({
           personId={person.id}
           personName={person.name}
           spot={{ lat: fixing.lat, lng: fixing.lng, accuracyM: 30 }}
+          kind={fixing.place?.kind}
           onClose={() => setFixing(null)}
           onSaved={() => router.refresh()}
         />

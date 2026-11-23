@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Avatar } from "@/components/avatar";
-import { CarIcon, MapIcon, MotionIcon, WalkIcon } from "@/components/icons";
+import { CarIcon, MapIcon, MotionIcon, PeopleIcon, WalkIcon, XIcon } from "@/components/icons";
 import { metres } from "@/lib/places/geo";
 import { liveNow, mapLoaded, placesHref, tracksNow, useEmbed } from "./embed-context";
 import type { LiveData, LivePerson } from "@/lib/places/live-types";
@@ -136,6 +136,51 @@ const btn =
   "inline-flex h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-sm font-medium shadow-sm hover:border-accent disabled:opacity-50";
 const btnOn =
   "inline-flex h-10 items-center gap-2 rounded-full border border-accent bg-accent px-4 text-sm font-medium text-on-accent shadow-sm";
+const iconBtn =
+  "flex h-10 w-10 items-center justify-center rounded-full border border-hairline bg-surface text-ink shadow-md hover:border-accent disabled:opacity-50";
+const iconBtnOn =
+  "flex h-10 w-10 items-center justify-center rounded-full border border-accent bg-accent text-on-accent shadow-md";
+
+const glyph = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round", className: "h-5 w-5", "aria-hidden": true } as const;
+
+function RouteGlyph() {
+  return (
+    <svg {...glyph}>
+      <circle cx="6" cy="19" r="2" />
+      <circle cx="18" cy="5" r="2" />
+      <path d="M8 19h7.5a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7H16" />
+    </svg>
+  );
+}
+
+function ExpandGlyph() {
+  return (
+    <svg {...glyph}>
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+    </svg>
+  );
+}
+
+function TrafficGlyph() {
+  return (
+    <svg {...glyph}>
+      <rect x="8" y="2.5" width="8" height="19" rx="3" />
+      <circle cx="12" cy="7" r="1.4" />
+      <circle cx="12" cy="12" r="1.4" />
+      <circle cx="12" cy="17" r="1.4" />
+    </svg>
+  );
+}
+
+function LayersGlyph() {
+  return (
+    <svg {...glyph}>
+      <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 13 9 5 9-5" />
+    </svg>
+  );
+}
+
 const small =
   "inline-flex h-9 items-center rounded-full border border-hairline bg-surface px-3 text-xs font-medium hover:border-accent";
 
@@ -164,6 +209,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   const [follow, setFollow] = useState<string | null>(null);
   const [full, setFull] = useState(false);
   const [traffic, setTraffic] = useState(false);
+  const [satellite, setSatellite] = useState(false);
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [tracksOn, setTracksOn] = useState<string[]>([]);
@@ -264,7 +310,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           zoom: first ? 13 : 4,
           gestureHandling: touchInline() ? "cooperative" : "greedy",
           clickableIcons: true,
-          mapTypeControl: true,
+          mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
           zoomControl: true,
@@ -514,6 +560,9 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       circle.current?.setMap(null);
       return;
     }
+    // The bubble repeats the person's card, so it shows only in full screen,
+    // where the cards are hidden.
+    if (!full) info.current?.close();
     const box = document.createElement("div");
     box.style.cssText = "font: 14px/1.35 var(--font-plex-sans, system-ui, sans-serif); color: #10202f; min-width: 180px;";
     const title = document.createElement("div");
@@ -530,7 +579,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       p.since && !p.moving ? `Here since ${clock(p.since, t)} · updated ${ago(p.at, t)}` : `Updated ${ago(p.at, t)}`;
     box.append(title, where, when);
     info.current?.setContent(box);
-    info.current?.open({ map, anchor: entry.marker, shouldFocus: false });
+    if (full) info.current?.open({ map, anchor: entry.marker, shouldFocus: false });
 
     if (p.accuracyM && p.accuracyM > 15) {
       if (!circle.current) {
@@ -546,7 +595,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     } else {
       circle.current?.setMap(null);
     }
-  }, [selected, data, ready, now]);
+  }, [selected, data, ready, now, full]);
 
   const choose = (p: LivePerson) => {
     setSelected(p.id);
@@ -566,6 +615,10 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       trafficLayer.current?.setMap(null);
     }
   }, [traffic, ready]);
+
+  useEffect(() => {
+    if (ready) mapRef.current?.setMapTypeId(satellite ? "hybrid" : "roadmap");
+  }, [satellite, ready]);
 
   // Full screen: same map, grown to the window. Esc closes it.
   useEffect(() => {
@@ -623,20 +676,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
 
   return (
     <main className={embed ? "px-3 py-3" : "mx-auto max-w-[96rem] px-4 py-6 sm:px-6"}>
-      <div className={`mb-4 flex flex-wrap items-center gap-3 ${embed ? "justify-end" : "justify-between"}`}>
-        {!embed && <h1 className="font-display text-3xl font-semibold tracking-tight">Places</h1>}
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setTraffic((v) => !v)} className={traffic ? btnOn : btn} aria-pressed={traffic}>
-            Traffic
-          </button>
-          <button type="button" onClick={fitEveryone} disabled={empty} className={btn}>
-            Everyone
-          </button>
-          <button type="button" onClick={() => setFull(true)} className={btn}>
-            Full screen
-          </button>
-        </div>
-      </div>
+      {!embed && <h1 className="mb-4 font-display text-3xl font-semibold tracking-tight">Places</h1>}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <section
@@ -650,8 +690,10 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           <div ref={mapDiv} className="h-full w-full" />
 
           {data.people.length > 0 && (
-            <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1.5 rounded-full bg-surface/95 py-1 pl-3 pr-1.5 shadow-md">
-              <span className="text-xs font-semibold uppercase tracking-widest text-muted">Tracks</span>
+            <div className="absolute left-3 top-3 flex max-w-[calc(100%-4.5rem)] items-center gap-1 overflow-x-auto rounded-full bg-surface/95 py-1 pl-2.5 pr-1 shadow-md">
+              <span className="shrink-0 text-muted" title="Tracks" aria-label="Tracks">
+                <RouteGlyph />
+              </span>
               {data.people.map((p) => {
                 const on = tracksOn.includes(p.id);
                 return (
@@ -662,7 +704,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
                     aria-pressed={on}
                     aria-label={`${p.name}'s track`}
                     title={p.name}
-                    className={`flex h-9 w-9 items-center justify-center rounded-full transition-opacity ${on ? "" : "opacity-40 grayscale"}`}
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-opacity ${on ? "" : "opacity-40 grayscale"}`}
                   >
                     <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="xs" />
                   </button>
@@ -684,16 +726,40 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
             </div>
           )}
 
-          {full && (
-            <div className="absolute right-3 top-3 flex gap-2">
-              <button type="button" onClick={fitEveryone} className={btn}>
-                Everyone
-              </button>
-              <button type="button" onClick={() => setFull(false)} className={btn} aria-label="Close full screen">
-                Close
-              </button>
-            </div>
-          )}
+          <div className="absolute right-3 top-3 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => setFull((v) => !v)}
+              className={iconBtn}
+              aria-label={full ? "Close full screen" : "Full screen"}
+              title={full ? "Close full screen" : "Full screen"}
+            >
+              {full ? <XIcon className="h-5 w-5" /> : <ExpandGlyph />}
+            </button>
+            <button type="button" onClick={fitEveryone} disabled={empty} className={iconBtn} aria-label="Everyone" title="Everyone">
+              <PeopleIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setTraffic((v) => !v)}
+              className={traffic ? iconBtnOn : iconBtn}
+              aria-pressed={traffic}
+              aria-label="Traffic"
+              title="Traffic"
+            >
+              <TrafficGlyph />
+            </button>
+            <button
+              type="button"
+              onClick={() => setSatellite((v) => !v)}
+              className={satellite ? iconBtnOn : iconBtn}
+              aria-pressed={satellite}
+              aria-label="Satellite"
+              title="Satellite"
+            >
+              <LayersGlyph />
+            </button>
+          </div>
           {(mapError || !ready || empty) && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
               <div className="pointer-events-auto max-w-sm rounded-xl border border-hairline bg-surface px-4 py-3 text-center text-sm shadow-sm">
@@ -784,6 +850,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           personId={fixing.id}
           personName={fixing.name}
           spot={{ lat: fixing.lat, lng: fixing.lng, accuracyM: fixing.accuracyM }}
+          kind={fixing.place?.kind}
           onClose={() => setFixing(null)}
           onSaved={() => void refreshNow()}
         />

@@ -90,12 +90,15 @@ export function PlaceFix({
   personId,
   personName,
   spot,
+  kind,
   onClose,
   onSaved,
 }: {
   personId: string;
   personName: string;
   spot: Spot;
+  /** What the spot is called now; "Just the address" is hidden when it already is one. */
+  kind?: string | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -179,9 +182,11 @@ export function PlaceFix({
           </button>
         ))
       )}
-      <button type="button" disabled={pending} onClick={() => save(null, false)} className={row}>
-        Just the address
-      </button>
+      {kind !== "address" && (
+        <button type="button" disabled={pending} onClick={() => save(null, false)} className={row}>
+          Just the address
+        </button>
+      )}
       <button type="button" disabled={pending} onClick={() => setStep("name")} className={row}>
         Name this place…
       </button>

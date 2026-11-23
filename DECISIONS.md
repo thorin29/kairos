@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — Places map controls (v0.765.0)
+
+- Map controls are one column of round icon buttons inside the map, top
+  right (full screen / close, everyone, traffic, satellite), the same in and
+  out of full screen and on phone and web; the tracks bar (route glyph, not
+  the word) takes the rest of the top edge and scrolls sideways. Google's
+  Map/Satellite control is off (it sat under the tracks bar); Satellite is
+  our toggle (`hybrid` ↔ `roadmap`).
+- The person bubble on the map shows only in full screen, where the cards
+  are hidden; otherwise it repeated the card.
+- "Not right?" hides "Just the address" when the spot is already shown as an
+  address (it changed nothing and looked broken).
+
 ## 2026-11 — Fan-out lines straight (v0.764.0)
 
 - The curved fan-out connectors (quadratic, 16 segments, 2.5 px at 70%
