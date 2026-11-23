@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { Modal } from "./plan-file-panel";
+import { useState, useTransition } from "react";
 import { PRIMARY_BTN, SECONDARY_BTN } from "./buttons";
 import { SportEditModal } from "./sport-edit";
 import { ChevronRightIcon } from "@/components/icons";
 import { confirmSportWorkout, declineSportWorkout } from "@/lib/actions/sport";
-import { loadUsualWorkoutTimes, saveUsualWorkoutTimes, setWorkoutTimeAction } from "@/lib/actions/workouts";
 import type { DaySport } from "@/lib/sport/day";
 
 /**
@@ -32,13 +30,6 @@ export function timeText(m: number): string {
   const h = Math.floor(m / 60) % 24;
   return `${((h + 11) % 12) + 1}:${String(m % 60).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 }
-
-const toInput = (m: number | null) =>
-  m == null ? "" : `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-const fromInput = (v: string): number | null => {
-  const m = /^(\d{2}):(\d{2})$/.exec(v);
-  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
-};
 
 /** Timed blocks by time; a block without a time after them, in the order given. */
 export function orderBlocks(blocks: DayBlock[]): DayBlock[] {
@@ -67,35 +58,23 @@ function Chip({ children, positive = true }: { children: React.ReactNode; positi
   );
 }
 
-/** The time on the planned workout: tap to change it for this day. */
-export function TimeChip({ time, onClick }: { time: number | null; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="tabular inline-flex h-7 items-center gap-1 rounded-full border border-hairline bg-surface px-2.5 text-xs font-semibold text-accent hover:border-accent"
-    >
-      {time == null ? "Set a time" : timeText(time)} ✎
-    </button>
-  );
-}
-
 /** Today's workouts: one card per workout, in time order. */
 export function DayWorkoutsList({
   userId,
   dateISO,
   blocks,
   plan,
+  future = false,
   onOpen,
-  onTime,
   onChanged,
 }: {
   userId: string;
   dateISO: string;
   blocks: DayBlock[];
   plan: { title: string; parts: string[]; done: number; total: number };
+  /** A day still to come: a preview, no progress (v0.751). */
+  future?: boolean;
   onOpen: (key: string) => void;
-  onTime: () => void;
   onChanged: () => void;
 }) {
   const [, start] = useTransition();
@@ -108,21 +87,21 @@ export function DayWorkoutsList({
             className="rounded-xl border border-hairline bg-surface px-4 py-3"
             style={{ borderLeft: `5px solid ${BLOCK_COLOR.plan}` }}
           >
-            <TimeChip time={b.time} onClick={onTime} />
-            <button type="button" onClick={() => onOpen(b.key)} className="mt-1 flex w-full items-center gap-3 text-left">
+            {b.time != null && <p className="tabular text-xs font-semibold text-muted">{timeText(b.time)}</p>}
+            <button type="button" onClick={() => onOpen(b.key)} className="mt-0.5 flex w-full items-center gap-3 text-left">
               <span className="min-w-0 flex-1">
                 <span className="block font-display text-lg font-semibold">{b.program?.name ?? plan.title}</span>
                 <span className="block text-xs text-muted">{(b.program?.parts ?? plan.parts).join(" · ")}</span>
               </span>
               <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
             </button>
-            {b.program?.skipped ? (
+            {future ? null : b.program?.skipped ? (
               <div className="mt-2">
-                <Chip>Skipped</Chip>
+                <Chip positive={false}>Skipped</Chip>
               </div>
             ) : (b.program ? b.program.done : plan.done >= plan.total && plan.total > 0) ? (
               <div className="mt-2">
-                <Chip>Done</Chip>
+                <Chip>Complete</Chip>
               </div>
             ) : b.program ? (
               <div className="mt-2 flex items-center gap-3">
@@ -133,10 +112,10 @@ export function DayWorkoutsList({
                   {b.program.doneCount} of {b.program.total} done
                 </span>
               </div>
-            ) : (
+            ) : plan.total === 0 ? null : (
               <div className="mt-2 flex items-center gap-3">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-hairline" aria-hidden>
-                  <div className="h-full rounded-full bg-accent" style={{ width: `${plan.total ? (plan.done / plan.total) * 100 : 0}%` }} />
+                  <div className="h-full rounded-full bg-accent" style={{ width: `${(plan.done / plan.total) * 100}%` }} />
                 </div>
                 <span className="tabular text-xs text-muted">
                   {plan.done} of {plan.total} done
@@ -159,13 +138,13 @@ export function DayWorkoutsList({
             </button>
             {b.sport.state === "went" ? (
               <div className="mt-1.5">
-                <Chip>Went · {b.sport.minutes} min</Chip>
+                <Chip>Logged · {b.sport.minutes} min</Chip>
               </div>
             ) : b.sport.state === "skipped" ? (
               <div className="mt-1.5">
                 <Chip positive={false}>Didn&rsquo;t go</Chip>
               </div>
-            ) : (
+            ) : !b.sport.ended ? null : (
               <div className="mt-2 flex items-center gap-2">
                 <span className="flex-1 text-sm">Did you go?</span>
                 <button
@@ -226,6 +205,7 @@ export function SportPanel({
         </p>
         <h3 className="mt-1 font-display text-xl font-semibold">{sport.title}</h3>
       </div>
+      {(sport.ended || sport.state !== "open") && (
       <section className="space-y-2">
         <h4 className="text-xs font-semibold uppercase tracking-widest text-muted">Did you go?</h4>
         <div className="flex flex-wrap gap-2">
@@ -259,6 +239,7 @@ export function SportPanel({
           </button>
         </div>
       </section>
+      )}
       {sport.state === "went" && sport.sessionId && (
         <section className="space-y-2">
           <h4 className="text-xs font-semibold uppercase tracking-widest text-muted">Time and how it felt</h4>
@@ -295,116 +276,3 @@ export function SportPanel({
   );
 }
 
-/** Change the planned workout's time for one day, or every week. */
-export function WorkoutTimeModal({
-  userId,
-  dateISO,
-  time,
-  usual,
-  onClose,
-  onSaved,
-}: {
-  userId: string;
-  dateISO: string;
-  time: number | null;
-  usual: number | null;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [value, setValue] = useState(toInput(time));
-  const [weekly, setWeekly] = useState(false);
-  const [pending, start] = useTransition();
-  if (weekly) return <UsualTimesModal userId={userId} onClose={onClose} onSaved={onSaved} />;
-  return (
-    <Modal small title="Workout time" onClose={onClose}>
-      <div className="space-y-4">
-        <p className="text-sm text-muted">Today only · {usual == null ? "no usual time" : `usually ${timeText(usual)}`}</p>
-        <input
-          type="time"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          className="tabular h-11 w-full rounded-lg border border-hairline bg-surface px-3 text-lg"
-        />
-        <div className="flex flex-wrap justify-end gap-2">
-          <button type="button" className={SECONDARY_BTN} onClick={() => setWeekly(true)}>
-            Usual times
-          </button>
-          <button type="button" className={SECONDARY_BTN} onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            className={PRIMARY_BTN}
-            onClick={() =>
-              start(async () => {
-                await setWorkoutTimeAction(userId, dateISO, fromInput(value));
-                onSaved();
-              })
-            }
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-/** Usual workout time per weekday. */
-export function UsualTimesModal({ userId, onClose, onSaved }: { userId: string; onClose: () => void; onSaved: () => void }) {
-  const [times, setTimes] = useState<string[] | null>(null);
-  const [pending, start] = useTransition();
-  useEffect(() => {
-    let live = true;
-    loadUsualWorkoutTimes(userId)
-      .then((t) => live && setTimes(t.map(toInput)))
-      .catch(() => live && setTimes(Array(7).fill("")));
-    return () => {
-      live = false;
-    };
-  }, [userId]);
-  return (
-    <Modal small title="Usual workout time" onClose={onClose}>
-      {!times ? (
-        <p className="text-sm text-muted">Loading…</p>
-      ) : (
-        <div className="space-y-3">
-          <ul className="divide-y divide-hairline">
-            {WEEKDAYS.map((d, i) => (
-              <li key={d} className="flex items-center gap-3 py-2">
-                <span className="flex-1 text-sm">{d}</span>
-                <input
-                  type="time"
-                  value={times[i]}
-                  onChange={(e) => setTimes((t) => (t ? t.map((v, j) => (j === i ? e.target.value : v)) : t))}
-                  className="tabular h-9 rounded-lg border border-hairline bg-surface px-2 text-sm"
-                />
-              </li>
-            ))}
-          </ul>
-          <div className="flex justify-end gap-2">
-            <button type="button" className={SECONDARY_BTN} onClick={onClose}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              className={PRIMARY_BTN}
-              onClick={() =>
-                start(async () => {
-                  await saveUsualWorkoutTimes(userId, times.map(fromInput));
-                  onSaved();
-                })
-              }
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      )}
-    </Modal>
-  );
-}

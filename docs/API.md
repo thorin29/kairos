@@ -1313,7 +1313,8 @@ event that day: `eventId`, `title`, `label`, `start`/`end` minutes, labels,
 `effort`, `hurt`) and `workoutTime` (`{ time, usual, changed }`, minutes from
 midnight or null). `sportDay.forSport` is always false: the planned Warm-up is
 never handed to a sport. Sport sessions leave `loggedOther`. New:
-`POST /api/v1/workouts/time` `{ date, time }` (null for the usual) and
+`POST /api/v1/workouts/time` `{ date, time }` (null for the usual; no client
+calls it since v0.751, kept for older apps) and
 `GET`/`POST /api/v1/workouts/usual-times` `{ times }` (seven, Sunday first).
 `GET /workouts/weekly`: `kinds` adds `core` and `iso` and counts workouts and
 parts, not days; warm-ups never count. Cardio charts add a `SPORT` activity.

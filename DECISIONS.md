@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Day page: always the list, plainer states (v0.751.0)
+
+- The day opens on its workouts whenever it has any, one included (was: the
+  only open workout opened straight away, so a future core day with a sport
+  went to the sport). No workouts (rest, nothing planned) → the day page.
+- "Logging late" only for a day in the strip's `overdue` (a past workout task
+  still pending). It used "planned and nothing logged", and the list header
+  never passed "logged", so finished days read late.
+- Card words: Complete (a workout of many parts), Logged · N min (a sport,
+  like one movement), Didn't go and Skipped (neutral). A day to come shows no
+  progress; "Did you go?" shows only once the event has `ended`.
+- The time chip left the day page and its cards (it wrapped the date and
+  meant nothing on old days). Usual workout time lives on the profile page
+  (web) and in Settings (app). `POST /workouts/time` stays for older apps; no
+  client calls it.
+
 ## 2026-11 — Two programs at once, part 2 (v0.750.0)
 
 - Release 3b of the plan-builder proposal. `dayProgramBlocks` (workout-log)

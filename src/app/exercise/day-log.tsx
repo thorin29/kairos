@@ -1,6 +1,6 @@
 "use client";
 
-import { DayWorkoutsList, SportPanel, TimeChip, WorkoutTimeModal, orderBlocks, type DayBlock } from "./day-workouts";
+import { DayWorkoutsList, SportPanel, orderBlocks, type DayBlock } from "./day-workouts";
 import type { DaySport } from "@/lib/sport/day";
 import { repeatsByPlan } from "@/lib/workouts/day-repeats";
 import { useRouter } from "next/navigation";
@@ -191,7 +191,6 @@ export function DayLog({
   // Which of the day's workouts is open (v0.744): null lets the day decide,
   // "list" is Today's workouts, "plan" the planned workout, else a sport event.
   const [pick, setPick] = useState<string | null>(null);
-  const [timeOpen, setTimeOpen] = useState(false);
   // + Additional → Family WOD (v0.679): set one (a parent) or suggest one.
   const [fwodSheet, setFwodSheet] = useState<{ parent: boolean; people: { userId: string; name: string }[] } | null>(null);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
@@ -286,14 +285,8 @@ export function DayLog({
     const b = data?.programBlocks ?? [];
     return b.length >= 2 ? b : [];
   }, [data?.programBlocks]);
-  const viewProg: DayProgramBlock | null = (() => {
-    if (progBlocks.length === 0) return null;
-    if (pick?.startsWith("prog:")) return progBlocks.find((b) => `prog:${b.programId}` === pick) ?? null;
-    if (pick) return null;
-    const openProgs = progBlocks.filter((b) => !b.done && !b.skipped);
-    const openSports = (data?.sports ?? []).filter((sp) => sp.state === "open").length;
-    return openProgs.length === 1 && openSports === 0 ? openProgs[0] : null;
-  })();
+  const viewProg: DayProgramBlock | null =
+    pick?.startsWith("prog:") ? (progBlocks.find((b) => `prog:${b.programId}` === pick) ?? null) : null;
   const viewIds = viewProg?.plannedWorkoutIds;
   const planWorkouts: PlanWorkout[] = useMemo(
     () =>
@@ -450,6 +443,8 @@ export function DayLog({
   const late = date < todayISO;
   const completedOnISO = late ? todayISO : undefined;
   const openDays = (week?.overdue ?? []).filter((d) => d !== date);
+  // Logging late only while the day is still open for it (v0.751).
+  const lateDay = late && (week?.overdue ?? []).includes(date);
 
   if (open) {
     return (
@@ -525,23 +520,9 @@ export function DayLog({
         : []),
     ...sports.map((sp) => ({ kind: "sport" as const, key: sp.eventId, time: sp.start, sport: sp })),
   ]);
-  const openKeys = blocks
-    .filter((b) =>
-      b.kind === "plan"
-        ? b.program
-          ? !b.program.done && !b.program.skipped
-          : progress.done < progress.total
-        : b.sport.state === "open",
-    )
-    .map((b) => b.key);
+  // The day always opens on its workouts (v0.751), even with only one.
   const view: string =
-    blocks.length < 2
-      ? (blocks[0]?.key ?? "plan")
-      : pick && (pick === "list" || blocks.some((b) => b.key === pick))
-        ? pick
-        : openKeys.length === 1
-          ? openKeys[0]
-          : "list";
+    blocks.length === 0 ? "plan" : pick && blocks.some((b) => b.key === pick) ? pick : "list";
   const openSport = view !== "plan" && view !== "list" && !view.startsWith("prog:") ? sports.find((sp) => sp.eventId === view) ?? null : null;
   const reload = () => setTick((n) => n + 1);
 
@@ -626,7 +607,7 @@ export function DayLog({
         </div>
       ))}
 
-      {blocks.length >= 2 && view !== "list" && (
+      {blocks.length > 0 && view !== "list" && (
         <button type="button" onClick={() => setPick("list")} className="text-sm font-semibold text-accent hover:underline">
           ← Today&rsquo;s workouts
         </button>
@@ -634,18 +615,22 @@ export function DayLog({
       {view === "list" ? (
         <>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+            <p className={`text-xs font-semibold uppercase tracking-widest ${lateDay ? "text-red-700 dark:text-red-400" : "text-muted"}`}>
               {date === todayISO ? "Today" : dayLabel(date)}
+              {future && " · planned"}
+              {lateDay && " · logging late"}
             </p>
-            <h3 className="mt-1 font-display text-xl font-semibold">{blocks.length} workouts</h3>
+            <h3 className="mt-1 font-display text-xl font-semibold">
+              {blocks.length} {blocks.length === 1 ? "workout" : "workouts"}
+            </h3>
           </div>
           <DayWorkoutsList
             userId={userId}
             dateISO={date}
             blocks={blocks}
             plan={{ title: title || "Workout", parts: planSections.map((x) => x.title), done: progress.done, total: progress.total }}
+            future={future}
             onOpen={(k) => setPick(k)}
-            onTime={() => setTimeOpen(true)}
             onChanged={reload}
           />
         </>
@@ -680,17 +665,12 @@ export function DayLog({
       ) : (
         <>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+        <p className={`text-xs font-semibold uppercase tracking-widest ${lateDay ? "text-red-700 dark:text-red-400" : "text-muted"}`}>
           {date === todayISO ? "Today" : dayLabel(date)}
           {future && " · planned"}
-          {late && workouts.length > 0 && !state?.loggedAny && " · logging late"}
+          {lateDay && " · logging late"}
           {state?.program && ` · ${state.program.label}`}
         </p>
-        {hasPlan && !future && (
-          <div className="mt-1.5">
-            <TimeChip time={data?.workoutTime?.time ?? null} onClick={() => setTimeOpen(true)} />
-          </div>
-        )}
         <h3 className="mt-1 font-display text-xl font-semibold">
           {isRestDay
             ? "Rest day"
@@ -1255,19 +1235,6 @@ export function DayLog({
         </div>
       )}
         </>
-      )}
-      {timeOpen && (
-        <WorkoutTimeModal
-          userId={userId}
-          dateISO={date}
-          time={data?.workoutTime?.time ?? null}
-          usual={data?.workoutTime?.usual ?? null}
-          onClose={() => setTimeOpen(false)}
-          onSaved={() => {
-            setTimeOpen(false);
-            reload();
-          }}
-        />
       )}
     </div>
   );

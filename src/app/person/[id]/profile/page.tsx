@@ -9,6 +9,7 @@ import { fromDateColumn } from "@/lib/dates";
 import { concept2Status } from "@/lib/workouts/concept2-run";
 import { Concept2Form } from "./concept2-form";
 import { TimerThemeForm } from "./timer-theme-form";
+import { WorkoutTimesForm } from "./workout-times-form";
 import { requireCanActFor } from "@/lib/gate";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +59,7 @@ export default async function ProfilePage({
       {(await requireCanActFor(person.id).then(() => true, () => false)) && (
         <>
           <Concept2Form userId={person.id} status={await concept2Status(person.id)} />
+          <WorkoutTimesForm userId={person.id} />
           <TimerThemeForm />
         </>
       )}

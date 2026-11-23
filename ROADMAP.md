@@ -101,9 +101,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.750.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.751.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   163_plan_program, all registered in `MIGRATIONS`.
-- App 0.544.0 (versionCode 616, CLIENT_BUILD 616).
+- App 0.545.0 (versionCode 617, CLIENT_BUILD 617).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -310,9 +310,10 @@ Kept here so they don't come back as open items.
   Hurt (with stand-ins).
 - Workouts as blocks (v0.744): the planned workout and each sport event from
   the calendar are separate workouts, listed by time (the sport's from the
-  calendar, the planned one from a usual time per weekday, changeable for a
-  day). With two or more, Today's workouts lists them until one is left
-  open; each opens its own page. A sport has its own page and warm-up, adds
+  calendar, the planned one from a usual time per weekday, set on the
+  profile or in the app's Settings). The day opens on Today's workouts
+  whenever it has any (v0.751); each opens its own page. Did you go? waits
+  for the event to end. A sport has its own page and warm-up, adds
   its minutes to Cardio and Endurance, and completes the day only when
   nothing else was planned. The home card reads "1 of 2 workouts" on such a
   day; a skipped one counts (v0.745).
