@@ -72,9 +72,15 @@ export async function choicesNow(embed: boolean, spot: Spot): Promise<PlaceChoic
   return (await getJson<{ choices: PlaceChoice[] }>(`/api/v1/places/view/choices?lat=${spot.lat}&lng=${spot.lng}${acc}`)).choices;
 }
 
-export async function searchNow(embed: boolean, spot: Spot, q: string): Promise<{ choices: PlaceChoice[]; error: string | null }> {
-  if (!embed) return searchPlaceChoices(spot.lat, spot.lng, q);
-  return getJson(`/api/v1/places/view/search?lat=${spot.lat}&lng=${spot.lng}&q=${encodeURIComponent(q)}`);
+export async function searchNow(
+  embed: boolean,
+  spot: Spot,
+  q: string,
+  radiusM?: number,
+): Promise<{ choices: PlaceChoice[]; error: string | null }> {
+  if (!embed) return searchPlaceChoices(spot.lat, spot.lng, q, radiusM);
+  const r = radiusM ? `&r=${Math.round(radiusM)}` : "";
+  return getJson(`/api/v1/places/view/search?lat=${spot.lat}&lng=${spot.lng}&q=${encodeURIComponent(q)}${r}`);
 }
 
 export async function saveNameNow(

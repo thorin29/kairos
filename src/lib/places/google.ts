@@ -96,6 +96,7 @@ export async function textSearch(
   query: string,
   lat: number,
   lng: number,
+  radiusM = 5000,
 ): Promise<NearbyHit[] | null> {
   try {
     const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
@@ -109,7 +110,7 @@ export async function textSearch(
         textQuery: query,
         maxResultCount: 6,
         languageCode: "en",
-        locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: 5000 } },
+        locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: Math.min(50_000, Math.max(200, radiusM)) } },
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
       cache: "no-store",

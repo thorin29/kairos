@@ -1,6 +1,7 @@
 import "server-only";
 import { createSign } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { loadPrefs, quietUntil } from "@/lib/notify-prefs";
 import { getSetting, setSetting, clearSetting } from "@/lib/settings";
 
 /**
@@ -200,13 +201,40 @@ export async function pingPeople(userIds: string[]): Promise<void> {
 export async function notify(
   userIds: string[],
   msg: { kind: string; title: string; body: string; link?: string | null },
+  opts: { quiet?: boolean } = {},
 ): Promise<void> {
   const ids = [...new Set(userIds)];
   if (ids.length === 0) return;
+  // Quiet hours (v0.772): news that can wait is held until each person's
+  // quiet hours end; safety alerts and tests aren't (opts.quiet false).
+  const held = new Map<string, Date>();
+  if (opts.quiet) {
+    for (const id of ids) {
+      const until = quietUntil((await loadPrefs(id)).prefs);
+      if (until) held.set(id, until);
+    }
+  }
   await prisma.pushMessage.createMany({
-    data: ids.map((userId) => ({ userId, kind: msg.kind, title: msg.title, body: msg.body, link: msg.link ?? null })),
+    data: ids.map((userId) => ({
+      userId,
+      kind: msg.kind,
+      title: msg.title,
+      body: msg.body,
+      link: msg.link ?? null,
+      deliverAfter: held.get(userId) ?? null,
+    })),
   });
-  await pingPeople(ids);
+  await pingPeople(ids.filter((id) => !held.has(id)));
+}
+
+/** Ping people whose held notifications are now due (the background timer). */
+export async function pingDue(since: Date): Promise<void> {
+  const rows = (await prisma.pushMessage.findMany({
+    where: { deliveredAt: null, deliverAfter: { gt: since, lte: new Date() } },
+    select: { userId: true },
+    distinct: ["userId"],
+  })) as { userId: string }[];
+  await pingPeople(rows.map((r) => r.userId));
 }
 
 let lastPurge = 0;
@@ -221,7 +249,7 @@ export async function takeInbox(
     await prisma.pushMessage.deleteMany({ where: { deliveredAt: { lt: new Date(now - 7 * 24 * 60 * 60_000) } } });
   }
   const rows = (await prisma.pushMessage.findMany({
-    where: { userId, deliveredAt: null },
+    where: { userId, deliveredAt: null, OR: [{ deliverAfter: null }, { deliverAfter: { lte: new Date(now) } }] },
     orderBy: { createdAt: "asc" },
     take: 50,
     select: { id: true, kind: true, title: true, body: true, link: true, createdAt: true },

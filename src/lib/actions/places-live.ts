@@ -46,8 +46,9 @@ export async function searchPlaceChoices(
   lat: number,
   lng: number,
   query: string,
+  radiusM?: number,
 ): Promise<{ choices: PlaceChoice[]; error: string | null }> {
-  return searchChoices(lat, lng, query);
+  return searchChoices(lat, lng, query, radiusM);
 }
 
 /** Save the family's name for a spot (everyone, or `forUserId` only). */

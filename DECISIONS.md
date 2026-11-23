@@ -1,5 +1,33 @@
 # Decisions
 
+## 2026-11 — Notifications per person; add stop by search or pin (v0.771.0, app 0.553.0)
+
+- **Each person's own choices** (`NotifyPrefs`, JSON, `notify-prefs-shape.ts`
+  checks it): set on the phone, kept on the server for the next phone. Admin
+  → Family map → Notifications now only points there (plus Send test).
+  Until a person's phone saves, admin rules that told them are their
+  starting Family map choices; calendar and tasks start from the phone's own
+  switches (sent by app 0.553), so nobody gains or loses alerts.
+- **Calendar**: "mine" (events the person owns) and "others" (family events
+  and events someone else made that name them). The upcoming feed drops what
+  they turned off; with no saved choices it behaves as before. This is the
+  owner's worry addressed: suggested reminders from others are their own
+  switch.
+- **Safety alerts** (`places/safety.ts`), parents (ADMIN or PARENT) about
+  children (CHILD): speed per child (once per drive; a drive ends after 10
+  min not moving), battery below N (again only after +5%), no update for N h
+  (background timer; again after a new report). `SafetyAlertState` remembers.
+  Not held for quiet hours.
+- **Quiet hours**: `PushMessage.deliverAfter`; Family map news is held until
+  the quiet window ends (household time), no ping meanwhile; the inbox skips
+  held rows; the timer pings when they come due.
+- **Background timer** (`src/instrumentation.ts` → `lib/timers.ts`, every 5
+  min): the first one in Kairos; no-update checks and held-notification pings.
+- **Add a stop**: "+ pin" (accent) between stops opens a page: Search (Text
+  Search biased to the trip's middle, radius half the trip + 300 m, 500 m–5 km)
+  or Drop a pin (a map with a fixed centre pin, starting at the trip's middle;
+  move the map, "Use this spot", then name it). Replaces tap-on-the-History-map.
+
 ## 2026-11 — One visit, one stop; smoother raw paths (v0.770.0)
 
 - A stop is reports within 120 m of its first one, so GPS drift inside a big

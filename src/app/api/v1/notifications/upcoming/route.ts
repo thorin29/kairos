@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { householdTz, todayISO, addDays, toDateColumn, fromDateColumn } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
 import { TaskStatus } from "@/generated/prisma/client";
+import { loadPrefs } from "@/lib/notify-prefs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,12 @@ export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
   const uid = authed.device.person.id;
+  // The person's own choices (v0.772): reminders on their own events, and
+  // ones someone else put on an event for them, each on or off. Until their
+  // phone has saved choices, everything that names them comes through and
+  // the phone's own switches decide, as before.
+  const { prefs, saved } = await loadPrefs(uid);
+  const wants = (ownerId: string | null) => !saved || (ownerId === uid ? prefs.calendar.mine : prefs.calendar.others);
 
   const now = Date.now();
   const windowEnd = new Date(now + WINDOW_DAYS * 86_400_000);
@@ -49,20 +56,20 @@ export async function GET(req: NextRequest) {
         rrule: null,
         startsAt: { gte: new Date(now), lte: windowEnd },
       },
-      select: { id: true, title: true, location: true, locationOverride: true, startsAt: true, reminders: true, reminderUserIds: true },
+      select: { id: true, userId: true, title: true, location: true, locationOverride: true, startsAt: true, reminders: true, reminderUserIds: true },
     }),
     prisma.event.findMany({
       where: { ...scope, rrule: { not: null }, startsAt: { lte: windowEnd } },
-      select: { id: true, title: true, location: true, locationOverride: true, startsAt: true, rrule: true, reminders: true, reminderUserIds: true },
+      select: { id: true, userId: true, title: true, location: true, locationOverride: true, startsAt: true, rrule: true, reminders: true, reminderUserIds: true },
     }),
   ]);
 
-  type Row = { id: string; title: string; location: string | null; locationOverride: string | null; startsAt: Date; reminders: number[]; reminderUserIds: string[] };
+  type Row = { id: string; userId: string | null; title: string; location: string | null; locationOverride: string | null; startsAt: Date; reminders: number[]; reminderUserIds: string[] };
 
   const out: { id: string; title: string; location: string | null; startMs: number; reminders: number[] }[] = [];
 
   for (const e of singles as Row[]) {
-    if (!e.reminderUserIds.includes(uid)) continue; // only this person's reminders
+    if (!e.reminderUserIds.includes(uid) || !wants(e.userId)) continue; // only this person's reminders
     out.push({ id: e.id, title: e.title, location: e.locationOverride ?? e.location, startMs: e.startsAt.getTime(), reminders: e.reminders });
   }
 
@@ -83,7 +90,7 @@ export async function GET(req: NextRequest) {
 
   for (const s of series as (Row & { rrule: string | null })[]) {
     if (!s.rrule) continue;
-    if (!s.reminderUserIds.includes(uid)) continue; // only this person's reminders
+    if (!s.reminderUserIds.includes(uid) || !wants(s.userId)) continue; // only this person's reminders
     const occs = occurrencesIn(s.startsAt, s.rrule, fromISO, toISO, tz);
     for (const occ of occs) {
       const ms = occ.getTime();
@@ -96,7 +103,7 @@ export async function GET(req: NextRequest) {
 
   // Tasks this person has an alert time on, due within the window. The app
   // schedules each at (dueISO at `minute`) in device-local time.
-  const taskRows = await prisma.task.findMany({
+  const taskRows = saved && !prefs.tasks ? [] : await prisma.task.findMany({
     where: {
       userId: uid,
       status: TaskStatus.PENDING,

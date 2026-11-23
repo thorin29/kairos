@@ -240,12 +240,16 @@ stops other sites from using it. The lookup key never leaves the server.
 
 ## Part 5 — Notifications (optional)
 
-Admin → Family map → **Notifications**: tell (anyone) when someone (or anyone)
-**arrives at** and/or **leaves** a place: a Home Assistant zone (follows
-Home Assistant's own zone changes), or one of Kairos's named places (each with
-sized when it was named) or saved addresses (by distance). "Arrived" needs a fix inside the place; "left" needs one 50 m
-beyond it, so GPS wobble at the edge doesn't repeat; the same person and place
-won't notify twice within 10 minutes; nobody is told about themselves.
+Notifications are each person's own (v0.771, app 0.553): in the app,
+Settings → Notifications → Family map → **Tell me when…** — who (or anyone),
+which place (a Home Assistant zone, a named place or a saved address), and
+arrives and/or leaves. Parents also get **Safety**: a child driving over a
+speed they set (once per drive), no update from a child's phone for some
+hours, or its battery running low. **Quiet hours** hold Family map news until
+morning (safety alerts still come through). "Arrived" needs a fix inside the
+place; "left" needs one 160 ft beyond it, so GPS wobble at the edge doesn't
+repeat; the same person and place won't notify twice within 10 minutes;
+nobody is told about themselves.
 
 Notifications reach phones through the Kairos app. For instant delivery the
 server can use Firebase Cloud Messaging: Kairos sends only a content-free

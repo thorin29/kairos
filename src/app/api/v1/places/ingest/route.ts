@@ -6,6 +6,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { verifyIngestToken, noteUnlinked } from "@/lib/places/config";
 import { parsePoint, pointsFromBody, type ParsedPoint } from "@/lib/places/ingest-parse";
 import { checkPlaces } from "@/lib/places/notify";
+import { checkSafety } from "@/lib/places/safety";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -90,6 +91,11 @@ export async function POST(req: NextRequest) {
       await checkPlaces(userId, p);
     } catch (e) {
       console.warn(`[places] notify check failed: ${(e as Error).message}`);
+    }
+    try {
+      await checkSafety(userId, p);
+    } catch (e) {
+      console.warn(`[places] safety check failed: ${(e as Error).message}`);
     }
   }
 

@@ -32,14 +32,19 @@ export async function nearbyChoices(lat: number, lng: number, accuracyM: number 
 }
 
 /** Look up what was typed near the spot. Limited per day like every Google call. */
-export async function searchChoices(lat: number, lng: number, query: string): Promise<{ choices: PlaceChoice[]; error: string | null }> {
+export async function searchChoices(
+  lat: number,
+  lng: number,
+  query: string,
+  radiusM = 5000,
+): Promise<{ choices: PlaceChoice[]; error: string | null }> {
   const q = query.trim().slice(0, 120);
   if (!q || !usable(lat, lng)) return { choices: [], error: null };
   const key = await getSetting(PLACES_LOOKUP_KEY);
   if (!key) return { choices: [], error: "Place search needs the lookup key in Admin." };
   if (!(await canCall("search"))) return { choices: [], error: "Today's place searches are used up. Save it as typed, or try tomorrow." };
   await bump("search");
-  const hits = await textSearch(key, q, lat, lng);
+  const hits = await textSearch(key, q, lat, lng, radiusM);
   if (hits == null) return { choices: [], error: "Couldn't reach Google. Try again." };
   return {
     choices: hits

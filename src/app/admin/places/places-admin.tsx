@@ -7,11 +7,9 @@ import { SelectField } from "@/components/select-field";
 import { DateField } from "@/components/date-field";
 import {
   createPlacesTokenAction,
-  deleteNotifyRuleAction,
   deletePlaceNameAction,
   deletePlacesHistoryAction,
   saveFirebaseAction,
-  saveNotifyRuleAction,
   sendTestNotificationAction,
   savePlacesKeysAction,
   savePlacesPeopleAction,
@@ -137,28 +135,8 @@ export function PlacesAdminForm(props: {
     });
 
   // Notifications
-  const [tell, setTell] = useState<string[]>([]);
-  const [about, setAbout] = useState("");
-  const [place, setPlace] = useState("");
-  const [onArrive, setOnArrive] = useState(true);
-  const [onLeave, setOnLeave] = useState(false);
   const [ruleMsg, setRuleMsg] = useState<Msg>(null);
   const [testWho, setTestWho] = useState("");
-  const addRule = () =>
-    startTransition(async () => {
-      setRuleMsg(null);
-      const res = await saveNotifyRuleAction({ tellUserIds: tell, aboutUserId: about || null, place, onArrive, onLeave });
-      if (res.error) setRuleMsg({ ok: false, text: res.error });
-      else {
-        setRuleMsg({ ok: true, text: "Added." });
-        setTell([]);
-        setAbout("");
-        setPlace("");
-        setOnArrive(true);
-        setOnLeave(false);
-        router.refresh();
-      }
-    });
   const test = () =>
     startTransition(async () => {
       if (!testWho) return;
@@ -418,87 +396,7 @@ export function PlacesAdminForm(props: {
 
       <section className={card}>
         <h2 className={label}>Notifications</h2>
-        {props.rules.length === 0 ? (
-          <p className="text-sm text-muted">No notifications yet.</p>
-        ) : (
-          <ul className="divide-y divide-hairline">
-            {props.rules.map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <span className="min-w-0">
-                  <span className="block font-medium">
-                    {r.about ?? "Anyone"} · {[r.onArrive && "arrives at", r.onLeave && "leaves"].filter(Boolean).join(" / ")} {r.place}
-                  </span>
-                  <span className="block text-xs text-muted">Tell {r.tell.join(", ")}</span>
-                </span>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() =>
-                    startTransition(async () => {
-                      await deleteNotifyRuleAction(r.id);
-                      router.refresh();
-                    })
-                  }
-                  className="inline-flex h-9 items-center rounded-full border border-hairline px-3 text-xs font-medium hover:border-red-300 hover:text-red-700 disabled:opacity-50"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="space-y-3 rounded-lg border border-hairline px-3 py-3">
-          <div>
-            <span className="mb-1 block text-sm font-medium">Tell</span>
-            <div className="flex flex-wrap gap-2">
-              {props.people.map((p) => {
-                const on = tell.includes(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => setTell(on ? tell.filter((x) => x !== p.id) : [...tell, p.id])}
-                    className={on ? `${primary} h-9 px-3` : `${secondary} h-9 px-3`}
-                  >
-                    {p.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={about}
-              onChange={setAbout}
-              ariaLabel="About"
-              placeholder="About anyone"
-              options={[{ value: "", label: "About anyone" }, ...props.people.filter((p) => p.entityId).map((p) => ({ value: p.id, label: `About ${p.name}` }))]}
-            />
-            <SelectField
-              value={place}
-              onChange={setPlace}
-              ariaLabel="Place"
-              placeholder={props.placeOptions.length ? "Place" : "No places yet"}
-              options={props.placeOptions}
-            />
-          </div>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <label className="flex min-h-10 items-center gap-2">
-              <input type="checkbox" checked={onArrive} onChange={(e) => setOnArrive(e.target.checked)} className="h-4 w-4" />
-              Arrives
-            </label>
-            <label className="flex min-h-10 items-center gap-2">
-              <input type="checkbox" checked={onLeave} onChange={(e) => setOnLeave(e.target.checked)} className="h-4 w-4" />
-              Leaves
-            </label>
-          </div>
-          <button type="button" onClick={addRule} disabled={pending} className={primary}>
-            Add notification
-          </button>
-        </div>
-
+        <p className="text-sm text-muted">Each person picks theirs in the app: Settings → Notifications.</p>
         <div className="flex flex-wrap items-center gap-2">
           <div className="w-48">
             <SelectField

@@ -9,6 +9,8 @@ import { changeStopNow, mapLoaded, placesHref, useEmbed, type StopChange } from 
 import type { DayData, DayItem, DayLegItem, DayStopItem } from "@/lib/places/history-types";
 import { drawTrips, loadMaps, touchInline } from "../map-kit";
 import { PlaceFix } from "../place-fix";
+import { AddStop } from "./add-stop";
+import { metres } from "@/lib/places/geo";
 import { PencilGlyph, PinGlyph, TrashGlyph } from "../places-view";
 
 /**
@@ -106,11 +108,9 @@ export function HistoryView({
   const [mapError, setMapError] = useState<string | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [fixing, setFixing] = useState<DayStopItem | null>(null);
-  /** Adding a stop: the trip it's on, then the spot tapped on the map. */
-  const [adding, setAdding] = useState<{ from: string; to: string } | null>(null);
-  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
+  /** Adding a stop on a trip: its times, middle and search reach. */
+  const [adding, setAdding] = useState<{ from: string; to: string; middle: { lat: number; lng: number }; radiusM: number } | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
-  const pinMarker = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(SPEEDS[1]);
   const [replayAt, setReplayAt] = useState<number | null>(null);
@@ -156,36 +156,6 @@ export function HistoryView({
     };
   }, [mapKey, mapId, embed]);
 
-  // Adding a stop: the next tap on the map drops the pin.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!ready || !map || !adding) return;
-    const l = map.addListener("click", (e: google.maps.MapMouseEvent) => {
-      if (e.latLng) setPin({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-    });
-    map.setOptions({ draggableCursor: "crosshair" });
-    return () => {
-      l.remove();
-      map.setOptions({ draggableCursor: null });
-    };
-  }, [ready, adding]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!ready || !map) return;
-    if (!pin) {
-      if (pinMarker.current) pinMarker.current.map = null;
-      return;
-    }
-    if (!pinMarker.current) {
-      const el = document.createElement("div");
-      el.style.cssText = `width:22px;height:22px;border-radius:9999px;background:${person.color};border:3px solid #fff;box-shadow:0 1px 6px rgba(16,32,47,.45);transform:translateY(50%)`;
-      pinMarker.current = new google.maps.marker.AdvancedMarkerElement({ content: el, zIndex: 20 });
-    }
-    pinMarker.current.position = pin;
-    pinMarker.current.map = map;
-  }, [ready, pin, person.color]);
-
   const change = async (c: StopChange) => {
     setEditError(null);
     const res = await changeStopNow(embed, c);
@@ -198,9 +168,17 @@ export function HistoryView({
     return null;
   };
 
-  const stopAdding = () => {
-    setAdding(null);
-    setPin(null);
+  const startAdding = (leg: DayLegItem) => {
+    const pts = leg.raw.length > 0 ? leg.raw : leg.path;
+    if (pts.length === 0) return;
+    const mid = pts[Math.floor(pts.length / 2)];
+    const ends = metres({ lat: pts[0][0], lng: pts[0][1] }, { lat: pts[pts.length - 1][0], lng: pts[pts.length - 1][1] });
+    setAdding({
+      from: leg.start,
+      to: leg.end,
+      middle: { lat: mid[0], lng: mid[1] },
+      radiusM: Math.min(5000, Math.max(500, ends / 2 + 300)),
+    });
   };
 
   // Draw the day: trips, numbered stops, then fit it all in view.
@@ -365,16 +343,7 @@ export function HistoryView({
           className="relative h-[52vh] min-h-[340px] overflow-hidden rounded-2xl border border-hairline bg-surface lg:h-[calc(100dvh-14rem)] lg:min-w-0 lg:flex-1"
         >
           <div ref={mapDiv} className="h-full w-full" />
-          {adding && (
-            <div className="absolute inset-x-3 top-3 flex items-center gap-2 rounded-full bg-surface/95 py-1.5 pl-4 pr-1.5 text-sm shadow-md">
-              <PinGlyph />
-              <span className="min-w-0 flex-1 truncate font-medium">Tap the map where {person.name} stopped</span>
-              <button type="button" onClick={stopAdding} className={small}>
-                Cancel
-              </button>
-            </div>
-          )}
-          {hasTrips && !adding && (
+          {hasTrips && (
             <div className="absolute bottom-6 left-3 flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => setPlaying((v) => !v)} className={btn}>
                 {playing ? "Pause" : "Replay"}
@@ -480,15 +449,12 @@ export function HistoryView({
                 {canEdit && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setPin(null);
-                      setAdding({ from: it.start, to: it.end });
-                      mapDiv.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }}
-                    className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full align-middle text-muted hover:bg-ground hover:text-ink"
-                    aria-label="Add a stop on this trip"
-                    title="Add a stop on this trip"
+                    onClick={() => startAdding(it)}
+                    className="mt-1 flex h-8 items-center gap-0.5 rounded-full px-2 text-accent hover:bg-ground"
+                    aria-label="Add a stop here"
+                    title="Add a stop here"
                   >
+                    <span className="text-lg font-semibold leading-none">+</span>
                     <PinGlyph />
                   </button>
                 )}
@@ -524,25 +490,19 @@ export function HistoryView({
           onSaved={() => router.refresh()}
         />
       )}
-      {adding && pin && (
-        <PlaceFix
+      {adding && (
+        <AddStop
           personId={person.id}
           personName={person.name}
-          spot={{ lat: pin.lat, lng: pin.lng, accuracyM: 30 }}
-          onPick={(c) =>
-            change({
-              op: "add",
-              personId: person.id,
-              from: adding.from,
-              to: adding.to,
-              lat: pin.lat,
-              lng: pin.lng,
-              name: c?.name ?? null,
-              address: c?.address ?? null,
-            })
+          middle={adding.middle}
+          radiusM={adding.radiusM}
+          mapKey={mapKey}
+          mapId={mapId}
+          color={person.color}
+          onAdd={(n) =>
+            change({ op: "add", personId: person.id, from: adding.from, to: adding.to, lat: n.lat, lng: n.lng, name: n.name, address: n.address })
           }
-          onClose={stopAdding}
-          onSaved={() => undefined}
+          onClose={() => setAdding(null)}
         />
       )}
     </main>

@@ -82,6 +82,7 @@ model User {
   placesStopEdits PlacesStopEdit[] @relation("PlacesStopEdits")
   placesAboutRules PlacesNotifyRule[] @relation("PlacesNotifyAbout")
   pushMessages    PushMessage[]
+  notifyPrefs     NotifyPrefs?
   locationPoints  LocationPoint[]
   tasks           Task[]         @relation("TaskOwner")
   schoolClasses   SchoolClass[]
@@ -2324,7 +2325,32 @@ model PushMessage {
   body        String
   link        String?
   createdAt   DateTime  @default(now())
+  // Held until this time (the person's quiet hours, v0.772); null = now.
+  deliverAfter DateTime?
   deliveredAt DateTime?
 
   @@index([userId, deliveredAt])
+}
+
+// What each person wants to be told (v0.772): set on their phone, kept here
+// so a new phone gets the same choices. Shape in src/lib/notify-prefs.ts.
+model NotifyPrefs {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prefs     Json
+  updatedAt DateTime @updatedAt
+}
+
+// Safety alerts' memory (v0.772), per child and parent: whether this alert
+// already went out ("speed" once per drive, "battery" until it recovers,
+// "stale" until a new update arrives). recipientId "" holds the child's own
+// last time moving, which is how a drive's end is told.
+model SafetyAlertState {
+  aboutUserId String
+  recipientId String
+  kind        String
+  active      Boolean  @default(false)
+  at          DateTime @default(now())
+
+  @@id([aboutUserId, recipientId, kind])
 }

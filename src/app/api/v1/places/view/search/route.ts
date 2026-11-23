@@ -12,5 +12,6 @@ export async function GET(req: NextRequest) {
   if ("response" in viewer) return viewer.response;
   if (!sameSiteRequest(req)) return apiError("forbidden", "Not allowed.");
   const q = req.nextUrl.searchParams;
-  return apiOk(await searchChoices(Number(q.get("lat")), Number(q.get("lng")), q.get("q") ?? ""));
+  const r = Number(q.get("r"));
+  return apiOk(await searchChoices(Number(q.get("lat")), Number(q.get("lng")), q.get("q") ?? "", Number.isFinite(r) && r > 0 ? r : undefined));
 }
