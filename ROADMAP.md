@@ -53,13 +53,16 @@ live in the database, never in this repository.
 13. **Two programs on the day.** Done in v0.750: each running program is its
     own workout on the day page and in the home card's count, skipped on its
     own. Kept here only until it's confirmed and removed.
-14. **Plateau suggestion** (plan-builder release 4): your own plan, or a
-    program that runs on, with two or more main muscle groups and no new best
-    in 4 weeks: try a program (preview), a light week, swap movements, keep
-    going.
+14. **Plateau suggestion.** Done in v0.752: the plateau card on the plan
+    card. Kept here only until it's confirmed and removed.
 15. **Setup's Add opens each kind's window** (Core, Arms, Isometric workouts
     to rotate; a muscle group's movements) instead of starting from the
     library's first.
+16. **Rest days on the charts.** Workout days: Rest / skip on a workout day
+    gets a rest square (planned rest days stay off the grid); a missed day
+    stays blank. This week: a day that ended as a rest day with nothing else
+    done gets the rest square. Mockup "Kairos: rest days on the charts";
+    the look is still to be picked.
 
 ## Not doing (decided)
 
@@ -101,9 +104,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.751.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.752.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   163_plan_program, all registered in `MIGRATIONS`.
-- App 0.545.0 (versionCode 617, CLIENT_BUILD 617).
+- App 0.546.0 (versionCode 618, CLIENT_BUILD 618).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -290,7 +293,9 @@ Kept here so they don't come back as open items.
   suggests each lift's raise, and a continued program shows its cycle and
   what went up (v0.748). Two programs can run at once, each with its own
   days, cycle, What's next and End (v0.749); on a day they share, each is its
-  own workout, skipped on its own (v0.750).
+  own workout, skipped on its own (v0.750). The plateau card: two or more
+  main groups with no new best in 4 weeks, on your own plan or a program
+  without training maxes (v0.752).
 - Plans: weekly plan and rolling plan (pausable, end dates, a future start),
   programs that write the plan (5/3/1, Boring But Big, 5/3/1 for Beginners,
   wave loading, Odd squad with ladders, density, carry and club finishers),

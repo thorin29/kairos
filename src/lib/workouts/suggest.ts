@@ -13,6 +13,7 @@ import { adjustFactor, parseAdjust } from "@/lib/workouts/adjust";
 import type { MuscleGroup } from "@/lib/workouts/catalog";
 import { EFFORT_LABEL, HURT_LABEL, type Effort, type HurtArea } from "@/lib/workouts/catalog";
 import { nextBell } from "@/lib/workouts/bells";
+import { PLATEAU } from "@/lib/workouts/plateau";
 
 export const RULES = {
   /** Days without a workout before "welcome back". */
@@ -424,6 +425,8 @@ export function bigJump(weight: number | null, recentTop: number | null): number
 export function lightFactor(answer: string | null | undefined): number | null {
   if (answer === "ease") return RULES.easeIn;
   if (answer === "light") return RULES.light;
+  // A plateau's light week (v0.752).
+  if (answer === "deload") return PLATEAU.light;
   // Low energy and Sick (v0.658) lighten the weights too.
   return adjustFactor(parseAdjust(answer));
 }

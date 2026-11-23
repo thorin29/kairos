@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-11 — Plateau card (v0.752.0)
+
+- Release 4 of the plan-builder proposal. `plateau.ts` (pure): main groups
+  are Chest, Back, Legs, Shoulders, Deadlift. A group has stalled when it
+  was trained on 3+ days in the last 4 weeks, has sets from before to beat,
+  and no set in the window is a new best (`isNewBest` against that
+  movement's earlier sets). Two or more → the card.
+- Only for your own plan (weekly or rolling) and programs without training
+  maxes; a program with maxes has What's next at each cycle's end. Not
+  while a program is 4 weeks old or less.
+- `plateauFor` rides on the programs payload (`plateau`). Own plan: Try
+  5/3/1 (preview, starts its setup), Light week, Swap the movements (opens
+  Your plan). A program that runs on: New plan, Light week. Keep going.
+- Light week writes the day answer `deload` for 7 days (60%, `lightFactor`),
+  leaving days already adjusted alone. Light, swap and keep hide the card
+  for 4 weeks (setting `workouts.plateau.<id>`, after the light week for
+  light); starting a program hides it by itself. `POST /workouts/plateau`.
+
 ## 2026-11 — Day page: always the list, plainer states (v0.751.0)
 
 - The day opens on its workouts whenever it has any, one included (was: the

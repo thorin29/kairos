@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.751.0";
+export const APP_VERSION = "0.752.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -181,6 +181,10 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.752.0",
+    summary: ["Plateau card on the plan card: when two or more main muscle groups have no new best in 4 weeks, try a program (with a preview), take a light week at 60%, swap the movements, or keep going. For your own plan and programs without training maxes."],
+  },
   {
     version: "0.751.0",
     summary: ["A day always opens on its workouts, even with one. Finished workouts read Complete and sport events Logged · minutes; Did you go? waits until the event is over; a day to come shows no progress. Logging late shows only while the day is still open. Set a time left the day page: Usual workout time is on your profile."],

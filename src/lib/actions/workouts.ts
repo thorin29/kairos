@@ -1,5 +1,6 @@
 "use server";
 
+import { answerPlateau, plateauFor, type Plateau } from "@/lib/workouts/plateau-run";
 import { sportsForDay, type DaySport } from "@/lib/sport/day";
 import { setUsualWorkoutTimes, setWorkoutTimeFor, usualWorkoutTimes, workoutTimeFor } from "@/lib/workouts/workout-time";
 import { planDow } from "@/lib/workouts/day-swap-run";
@@ -1736,6 +1737,8 @@ export async function loadProgramsFor(userId: string): Promise<{
   otherDays: string[];
   /** Programs running beside the first (v0.749), each with its setup. */
   also: (ProgramInfo & { setup: CurrentSetup | null })[];
+  /** Two or more main groups with no new best in 4 weeks (v0.752), or null. */
+  plateau: Plateau | null;
 }> {
   await requireInteractive();
   await requireCanActFor(userId);
@@ -1747,13 +1750,23 @@ export async function loadProgramsFor(userId: string): Promise<{
     routinesFor(userId),
     currentSetup(userId),
   ]);
-  const [versions, plan, otherDays, also] = await Promise.all([
+  const [versions, plan, otherDays, also, plateau] = await Promise.all([
     versionsFor(userId, choices),
     planSummary(userId, active ? (setup?.days ?? []) : []),
     currentOtherDays(userId),
     alsoPrograms(userId),
+    plateauFor(userId, todayISO()),
   ]);
-  return { choices, active, invite, current, warmups, setup, versions, plan, otherDays, also };
+  return { choices, active, invite, current, warmups, setup, versions, plan, otherDays, also, plateau };
+}
+
+/** Answer the plateau card (v0.752): light, swap or keep. */
+export async function answerPlateauAction(userId: string, answer: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  if (!["light", "swap", "keep"].includes(answer)) throw new Error("Bad answer");
+  await answerPlateau(userId, todayISO(), answer);
+  refresh();
 }
 
 /** Forget the person's own version of a program (v0.666). */

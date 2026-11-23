@@ -1261,6 +1261,17 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.752: `GET /api/v1/workouts/programs` adds `plateau` (null, or `{title,
+why, groups: [{group, movement: {poolExerciseId, name, weight, reps,
+since}}], program: {key, name, blurb, days, weeks} | null}`; `program` is
+the one to try with your own plan, null when a program that runs on is the
+plan). Answer it:
+```
+POST /api/v1/workouts/plateau
+request: { "answer": "light" | "swap" | "keep" }
+200: { "answer" }   light: the next 7 days at 60%; each hides it for 4 weeks
+```
+
 v0.750: a day two programs share. `GET /api/v1/workouts` adds
 `programBlocks` ([] unless two programs have entries that day): each
 `{programId, name, plannedWorkoutIds, parts, done, skipped, doneCount,
@@ -1831,7 +1842,7 @@ silently invisible:
 - **reading** (`books`, `books/bulk`, `mark`, `plan`, `plan/preview`, `plan/delete`, `plan/add`, `plan/import`, `plan/export`, `tracker`), **books** (`add`, `update`, `delete`, `finish`, `log`, `shelf`, `goals`), **settings/reading-reminder**
 - **groceries** (`add`, `add-catalog`, `move`, `purchased`, `quantity`, `remove`, `trip/start`, `trip/complete`)
 - **money** (`entry`, `update`, `delete`, `approve`, `approve-all`, `unapprove`, `starting`, `rewards/approve-base`, `rewards/approve-month`)
-- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool` (each exercise carries `about`, its how-to or null; v0.613), `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `cardio`, `cardio/remove`, `warmup`, `order` (v0.615), `conditioning/choices`, `conditioning/build`, `conditioning/log`, `conditioning/save`, `benchmark` (v0.617), `plan*` (incl. `plan/scheme` (v0.615), `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null, v0.609, and `about`, v0.613), `plan/copy`, `plan/start` (`{date}` the start; v0.686 `{end}` the last day, returned as `weeklyEnd` by `GET plan`), `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`, `plan/export`, `plan/import`, `plan/share`, `plan/shared`, `plan/shared/use`, `plan/shared/withdraw` (v0.618), `plan/saved`, `plan/saved/rename`, `plan/saved/delete` (v0.620), `plan/warmup` (v0.622)), `day-warmup` (one day, v0.711), `warmups`, `warmups/delete` (v0.622), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`, `strip` (v0.651), `adjust` (Adjust today, v0.658), `warmup-for` (v0.662), `core-workouts` (v0.637), `extras` (+ Additional, v0.667), `lift-next` (v0.670), `sore` (v0.675), `sport-session` (v0.656), `pause` (v0.678; admin one-person pauses read as `kind: "admin"`, v0.688), `family-wod` (v0.679), `core-workouts/delete`, `extras/remove`, `plan/core`, `programs/version/forget`, `garage` (v0.734), `time`, `usual-times` (v0.744), `program-skip` (v0.750)
+- **workouts** — the largest group: `week`, `browse`, `builder`, `progress`, `pool` (each exercise carries `about`, its how-to or null; v0.613), `rest`, `skip`, `expire`, `log`, `log-custom`, `sets`, `feedback`, `weekly`, `programs*` (incl. `start`, `end`, `block`, `max`), `invite`, `suggestion`, `complete`, `uncomplete`, `movement*`, `personal*` (incl. `personal/share`), `cardio`, `cardio/remove`, `warmup`, `order` (v0.615), `conditioning/choices`, `conditioning/build`, `conditioning/log`, `conditioning/save`, `benchmark` (v0.617), `plan*` (incl. `plan/scheme` (v0.615), `plan/active`, `plan/options` (each exercise carries `metric`, its own "Logs as" or null, v0.609, and `about`, v0.613), `plan/copy`, `plan/start` (`{date}` the start; v0.686 `{end}` the last day, returned as `weeklyEnd` by `GET plan`), `plan/rest`, `plan/add-hiit`, `plan/add-pool`, `plan/[id]/remove`, `plan/export`, `plan/import`, `plan/share`, `plan/shared`, `plan/shared/use`, `plan/shared/withdraw` (v0.618), `plan/saved`, `plan/saved/rename`, `plan/saved/delete` (v0.620), `plan/warmup` (v0.622)), `day-warmup` (one day, v0.711), `warmups`, `warmups/delete` (v0.622), `rotation*` (incl. `anchor`, `add-slot`, `move-slot`, `remove-slot`, `rest-days`, `start`, `stop`), `sessions/[id]/delete`, `strip` (v0.651), `adjust` (Adjust today, v0.658), `warmup-for` (v0.662), `core-workouts` (v0.637), `extras` (+ Additional, v0.667), `lift-next` (v0.670), `sore` (v0.675), `sport-session` (v0.656), `pause` (v0.678; admin one-person pauses read as `kind: "admin"`, v0.688), `family-wod` (v0.679), `core-workouts/delete`, `extras/remove`, `plan/core`, `programs/version/forget`, `garage` (v0.734), `time`, `usual-times` (v0.744), `program-skip` (v0.750), `plateau` (v0.752)
 - **characters** (`collection`, `hatch`, `activate`), **companion-sprite**, **coop** (`propose`, `vote`, `select`, `grant`, `remove`)
 - **game-time**, **game-time/ingest** (collector → server), **scoring/guide**, **nav** (drawer sections to hide, v0.604), **summary**, `summary/day` (v0.733)
 - **hockey** (the week from ice-time), `hockey/prefs`

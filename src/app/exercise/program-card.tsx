@@ -2,7 +2,9 @@
 
 import { PRIMARY_BTN, SECONDARY_BTN } from "./buttons";
 import { useEffect, useMemo, useState, useTransition } from "react";
+import type { Plateau } from "@/lib/workouts/plateau-run";
 import {
+  answerPlateauAction,
   answerProgramInvite,
   endOwnPlan,
   endProgramFor,
@@ -20,7 +22,7 @@ import type {
   StartProgramInput,
 } from "@/lib/workouts/program-run";
 import { Modal } from "./plan-file-panel";
-import { InfoIcon } from "@/components/icons";
+import { ChevronRightIcon, InfoIcon } from "@/components/icons";
 import { MovementInfo } from "@/components/movement-info";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { PlanLibrary } from "./my-plans";
@@ -63,6 +65,8 @@ type Data = {
   otherDays?: string[];
   /** Programs running beside the first (v0.749), each with its setup. */
   also?: (ProgramInfo & { setup: CurrentSetup | null })[];
+  /** No new best in 2+ main groups for 4 weeks (v0.752). */
+  plateau?: Plateau | null;
 };
 
 function shortDate(iso: string): string {
@@ -500,6 +504,22 @@ export function ProgramCard({
             }}
           />
         )}
+        {data.plateau && (
+          <PlateauCard
+            plateau={data.plateau}
+            busy={pending}
+            onAnswer={(answer, then) =>
+              start(async () => {
+                await answerPlateauAction(userId, answer);
+                done();
+                then?.();
+              })
+            }
+            onTry={pick}
+            onNewPlan={() => setChoosing(true)}
+            onSwap={onEditPlan}
+          />
+        )}
         {windows}
       </section>
     );
@@ -589,6 +609,22 @@ export function ProgramCard({
             </div>
           </Modal>
         )}
+        {data.plateau && (
+          <PlateauCard
+            plateau={data.plateau}
+            busy={pending}
+            onAnswer={(answer, then) =>
+              start(async () => {
+                await answerPlateauAction(userId, answer);
+                done();
+                then?.();
+              })
+            }
+            onTry={pick}
+            onNewPlan={() => setChoosing(true)}
+            onSwap={onEditPlan}
+          />
+        )}
         {windows}
       </section>
     );
@@ -602,6 +638,107 @@ export function ProgramCard({
       </button>
       {windows}
     </section>
+  );
+}
+
+/**
+ * Plateau (v0.752): two or more main groups with no new best in 4 weeks. Your
+ * own plan: try a program (preview), a light week, swap the movements. A
+ * program that runs on: new plan or a light week. Keep going, a light week
+ * or a swap hides it for 4 weeks; a new program hides it by starting.
+ */
+function PlateauCard({
+  plateau,
+  busy,
+  onAnswer,
+  onTry,
+  onNewPlan,
+  onSwap,
+}: {
+  plateau: Plateau;
+  busy: boolean;
+  onAnswer: (answer: "light" | "swap" | "keep", then?: () => void) => void;
+  onTry: (key: string) => void;
+  onNewPlan: () => void;
+  onSwap?: () => void;
+}) {
+  const [preview, setPreview] = useState(false);
+  const p = plateau.program;
+  const row = "flex w-full items-center gap-3 py-2.5 text-left disabled:opacity-50";
+  return (
+    <div className="rounded-xl border border-hairline bg-surface p-3">
+      <p className="text-sm font-semibold">{plateau.title}</p>
+      <p className="mt-0.5 text-xs text-muted">{plateau.why}</p>
+      {p ? (
+        <div className="mt-2 divide-y divide-hairline">
+          <div className={row}>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">Try {p.name}</span>
+              <span className="block text-xs text-muted">
+                {p.days.length} days · {p.weeks} weeks
+              </span>
+            </span>
+            <button type="button" onClick={() => setPreview(true)} className="text-sm font-semibold text-accent">
+              Preview
+            </button>
+          </div>
+          <button type="button" disabled={busy} onClick={() => onAnswer("light")} className={row}>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">Light week</span>
+              <span className="block text-xs text-muted">Everything at 60%, then back</span>
+            </span>
+            <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
+          </button>
+          {onSwap && (
+            <button type="button" disabled={busy} onClick={() => onAnswer("swap", onSwap)} className={row}>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">Swap the movements</span>
+                <span className="block truncate text-xs text-muted">{plateau.groups.map((g) => g.movement.name).join(", ")}</span>
+              </span>
+              <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted" />
+            </button>
+          )}
+        </div>
+      ) : null}
+      <div className="mt-2 flex flex-wrap gap-2">
+        {!p && (
+          <>
+            <button type="button" disabled={busy} onClick={onNewPlan} className={PRIMARY}>
+              New plan
+            </button>
+            <button type="button" disabled={busy} onClick={() => onAnswer("light")} className={QUIET}>
+              Light week
+            </button>
+          </>
+        )}
+        <button type="button" disabled={busy} onClick={() => onAnswer("keep")} className={QUIET}>
+          Keep going
+        </button>
+      </div>
+      {preview && p && (
+        <Modal small title={p.name} onClose={() => setPreview(false)}>
+          <div className="space-y-3">
+            <p className="text-sm text-muted">{p.blurb}</p>
+            <ul className="space-y-1 text-sm">
+              {p.days.map((d, i) => (
+                <li key={`${d}-${i}`}>{d}</li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setPreview(false);
+                onTry(p.key);
+              }}
+              className={`${PRIMARY} w-full justify-center`}
+            >
+              Start {p.name}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }
 

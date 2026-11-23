@@ -5,6 +5,7 @@ import { alsoPrograms, currentExtras, currentOtherDays, currentSetup, inviteFor,
 import { todayISO } from "@/lib/dates";
 import { routinesFor } from "@/lib/workouts/warmup-run";
 import { planSummary } from "@/lib/workouts/plan-summary";
+import { plateauFor } from "@/lib/workouts/plateau-run";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +18,8 @@ export const dynamic = "force-dynamic";
  *  `garageFeet`: the garage's length for a shuttle carry, `canEditGarage` for a parent (v0.734);
  *  `plan`: the plan card's week strip, last day and other days (v0.747);
  *  `otherDays`: what each weekday holds now, Sunday first (v0.748);
- *  `also`: programs running beside the first, each with its `setup` (v0.749). */
+ *  `also`: programs running beside the first, each with its `setup` (v0.749);
+ *  `plateau`: two or more main groups with no new best in 4 weeks, or null (v0.752). */
 export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
@@ -30,14 +32,15 @@ export async function GET(req: NextRequest) {
     routinesFor(userId),
     currentSetup(userId),
   ]);
-  const [versions, garageFeet, plan, otherDays, also] = await Promise.all([
+  const [versions, garageFeet, plan, otherDays, also, plateau] = await Promise.all([
     versionsFor(userId, choices),
     loadGarageFeet(),
     planSummary(userId, active ? (setup?.days ?? []) : []),
     currentOtherDays(userId),
     alsoPrograms(userId),
+    plateauFor(userId, todayISO()),
   ]);
   const me = authed.device.person;
   const canEditGarage = me.kind === "PARENT" || me.role === "ADMIN";
-  return apiOk({ choices, active, invite, current, warmups, setup, versions, garageFeet, canEditGarage, plan, otherDays, also });
+  return apiOk({ choices, active, invite, current, warmups, setup, versions, garageFeet, canEditGarage, plan, otherDays, also, plateau });
 }
