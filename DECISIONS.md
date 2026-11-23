@@ -1,5 +1,26 @@
 # Decisions
 
+## 2026-11 — Family map naming fixes from real data (v0.767.0)
+
+- **A zone beats "just the address".** v0.760 let a nameless family spot win
+  over the HA zone; one tap of "Just the address" on a home stop then hid
+  "Home" for everyone there (and a stale cached neighbour's address showed instead). A
+  nameless spot now only stops business names.
+- **Learned zones.** A report with no zone within 60 m of a zone's learned
+  centre (`zones.ts`) is named as that zone — older points from before the
+  automation sent zones, and phones whose update missed it.
+- **Saved addresses by address.** A saved venue's geocoded pin can sit far
+  from where people are (a rink's address matched Google's reverse geocode
+  exactly, but its pin was beyond 120 m). When Google's street
+  address (number + street, suite and spelling normalised —
+  `address-match.ts`) equals a saved address's, the saved name is used.
+  Saved radius 120 → 150 m.
+- **Nearby Search radius** was 30–80 m from the accuracy; with a good fix
+  (10 m) that was 30 m, too small to reach any business centre from inside
+  a big store, so it fell to a street address. Now 60–150 m (2× accuracy),
+  still nearest first. Migration 170 forgets cached address-only answers so
+  those spots are asked again.
+
 ## 2026-11 — Places → Family map (v0.766.0)
 
 - Owner's choice. Only what people see changes (sidebar, page and Admin

@@ -5,6 +5,8 @@ import { PLACES_LOOKUP_KEY } from "@/lib/places/config";
 import { boxAround, metres, shortAddress, type Pt } from "@/lib/places/geo";
 import { nearbySearch, reverseGeocode, forwardGeocode } from "@/lib/places/google";
 import { bump, canCall } from "@/lib/places/usage";
+import { zoneCenters } from "@/lib/places/zones";
+import { sameStreetAddress } from "@/lib/places/address-match";
 
 /**
  * Name the spot a person is at, as cheaply as possible:
@@ -21,7 +23,15 @@ import { bump, canCall } from "@/lib/places/usage";
 import type { PlaceLabel } from "@/lib/places/live-types";
 export type { PlaceLabel };
 
-const SAVED_RADIUS_M = 120;
+const SAVED_RADIUS_M = 150;
+/** A report with no zone this close to a zone's learned centre counts as in
+ *  it (older points, phones whose update missed the zone). */
+const ZONE_NEAR_M = 60;
+/** Nearby Search area: wide enough to reach a big store's centre from its
+ *  aisles or garden centre, still nearest-first. */
+function searchRadius(accuracyM: number | null): number {
+  return Math.min(150, Math.max(60, (accuracyM ?? 40) * 2));
+}
 /** How close a cached Google answer must be to be reused: tight for a business
  *  (neighbouring shops), tighter for a street address (the house across the
  *  street). This is reuse distance, not the search area. */
@@ -142,7 +152,7 @@ async function askGoogle(
 
   if (!addressOnly && !fuzzy && (await canCall("nearby"))) {
     await bump("nearby");
-    const radius = Math.min(80, Math.max(30, p.accuracyM ?? 40));
+    const radius = searchRadius(p.accuracyM);
     const hits = await nearbySearch(key, p.lat, p.lng, radius);
     if (hits && hits.length > 0) {
       const hit = hits.reduce((a, b) => (metres(p, a) <= metres(p, b) ? a : b));
@@ -220,6 +230,31 @@ async function withGoogle(key: string | null, p: Pt & { accuracyM: number | null
   return job;
 }
 
+/** The saved address whose street address is the one Google gave, if any. */
+function savedByAddress(address: string | null, rows: Saved[]): Saved | null {
+  if (!address) return null;
+  return rows.find((r) => sameStreetAddress(r.address, address)) ?? null;
+}
+
+/** A Google answer, named by the family's saved address when it's the same address. */
+function preferSaved(label: PlaceLabel, rows: Saved[]): PlaceLabel {
+  const saved = savedByAddress(label.address, rows);
+  return saved ? { name: saved.name, address: shortAddress(saved.address), kind: "saved" } : label;
+}
+
+async function learnedZone(p: Pt): Promise<string | null> {
+  let best: string | null = null;
+  let bestD = ZONE_NEAR_M;
+  for (const [zone, c] of await zoneCenters()) {
+    const d = metres(p, c);
+    if (d <= bestD) {
+      best = zone;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
 export async function resolvePlace(
   p: Pt & { accuracyM: number | null },
   userId: string | null = null,
@@ -232,14 +267,10 @@ export async function resolvePlace(
   const named = await namedNear(p, userId);
   if (named?.name) return { name: named.name, address: null, kind: "saved" };
   // Home Assistant says they're in a zone (its boundaries and home-network
-  // detection): that's the name, unless the family marked this spot "just the
-  // address".
-  if (zone && !named) return { name: zone, address: null, kind: "saved" };
-
-  if (!named) {
-    const saved = nearestSaved(p, await savedWithCoords(key, now));
-    if (saved) return { name: saved.name, address: shortAddress(saved.address), kind: "saved" };
-  }
+  // detection), or the spot is at a zone's learned centre: that's the name.
+  // It beats a "just the address" spot, which only stops business names.
+  const inZone = zone ?? (await learnedZone(p));
+  if (inZone) return { name: inZone, address: null, kind: "saved" };
 
   const cached = await cachedNear(p, now);
   if (named) {
@@ -247,8 +278,14 @@ export async function resolvePlace(
     if (cached?.address) return { name: null, address: shortAddress(cached.address), kind: "address" };
     return withGoogle(key, p, true);
   }
-  if (cached) return labelOf(cached);
-  return withGoogle(key, p, false);
+
+  const savedRows = await savedWithCoords(key, now);
+  const saved = nearestSaved(p, savedRows);
+  if (saved) return { name: saved.name, address: shortAddress(saved.address), kind: "saved" };
+  // A big venue's saved address can be geocoded far from where people stand
+  // in it; the same street address from Google still means that place.
+  if (cached) return preferSaved(labelOf(cached), savedRows);
+  return preferSaved(await withGoogle(key, p, false), savedRows);
 }
 
 export type Candidate = { name: string; address: string | null };
@@ -276,7 +313,7 @@ export async function candidatesNear(p: Pt & { accuracyM: number | null }): Prom
   const key = await getSetting(PLACES_LOOKUP_KEY);
   if (!key || !(await canCall("nearby"))) return [];
   await bump("nearby");
-  const radius = Math.min(80, Math.max(30, p.accuracyM ?? 40));
+  const radius = searchRadius(p.accuracyM);
   const hits = await nearbySearch(key, p.lat, p.lng, radius);
   if (!hits || hits.length === 0) return [];
   const candidates = hits.slice(0, 5).map((h) => ({ name: h.name, address: h.address }));

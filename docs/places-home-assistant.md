@@ -299,9 +299,14 @@ was sent to another page.
 - Retries are safe: the same tracker and `last_updated` replace the earlier copy.
 - A point with no GPS fix (0, 0) is refused.
 - Place names, in order: the family's own names ("Not right?"), the Home
-  Assistant zone, a saved address within about 120 m, then Google. Google's
-  answers are kept 30 days (Google's limit) and reused within about 30 m for a
-  business and 25 m for a street address. Nobody moving is looked up.
+  Assistant zone (or within about 60 m of where phones usually report from
+  inside it), a saved address within about 150 m, then Google — and when
+  Google's street address is a saved address's, the saved name is used (a big
+  venue's entrance can be far from its map pin). Google searches up to about
+  150 m for a business, nearest first. Its answers are kept 30 days (Google's
+  limit) and reused within about 30 m for a business and 25 m for a street
+  address. Nobody moving is looked up. "Just the address" stops business
+  names at a spot; it doesn't hide a zone.
 - Wrong name? In Places, tap the person → **Not right?**: pick another nearby
   business, **Just the address**, or **Name this place…** (for everyone, or
   just that person — e.g. their own "Work"). The family's names always win and
