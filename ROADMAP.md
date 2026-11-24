@@ -69,9 +69,6 @@ live in the database, never in this repository.
 18. **Program tile look.** Done in v0.784 (option B); one row of icon
     buttons, a Sunday-first week and the Progress | Train tabs in v0.786.
     Kept here only until it's confirmed and removed.
-19. **The program tile elsewhere.** Mockup "Kairos: Tile everywhere": Bible
-    plan, reading goal, school students, backpacking trip, the log screen's
-    groups, Pause, Family WOD, ice time. Waiting on which to build.
 
 ## Not doing (decided)
 
@@ -113,9 +110,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.786.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.787.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   180_seventh_week, all registered in `MIGRATIONS`.
-- App 0.563.0 (versionCode 635, CLIENT_BUILD 635).
+- App 0.564.0 (versionCode 636, CLIENT_BUILD 636).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -297,6 +294,10 @@ Kept here so they don't come back as open items.
 
 - Two tabs (v0.786): Progress (the charts) and Train (the plan card and the
   buttons in three titled groups: Train, Find & build, Tools).
+- Trips from the calendar (v0.787 / app 0.564): Start a… → Backpacking trip
+  opens New event on the Backpacking type. On trip days the trip tile leads
+  the Train tab: Track / Pause, Camp / Hike, Finished on the last day (ends
+  the trip today), Map and Trip (the event). Family WOD shows only on its day.
 - Backpacking trips (v0.778 / app 0.558): a Backpacking calendar event makes
   each trip day's hiking (from Family map locations) a workout of its own;
   "Hiking today?" on the first walk of the day; Camp and hiking lines on

@@ -5,10 +5,10 @@ import { dayEnd, dayStart } from "@/lib/places/day-bounds";
 import { planDay, type DayPoint } from "@/lib/places/day";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
 import { logCardio } from "@/lib/workouts/cardio-run";
-import { dayOfTrip, hoursMinutes, runOf, tripDays, tripTotals } from "@/lib/workouts/backpacking-days";
+import { dayOfTrip, eventDays, hoursMinutes, runOf, tripDays, tripTotals } from "@/lib/workouts/backpacking-days";
 import { elevationOf } from "@/lib/places/elevation";
 import { elevationNote } from "@/lib/places/elevation-calc";
-import { tripDaysFor, tripEvents } from "@/lib/workouts/backpacking-trips";
+import { tripDaysFor, tripEventOn, tripEvents } from "@/lib/workouts/backpacking-trips";
 import { notify } from "@/lib/push";
 
 /**
@@ -77,6 +77,8 @@ export type BackpackToday = {
   of: number;
   /** asked, hiking, skip, or null (not asked yet). */
   status: string | null;
+  eventId?: string | null;
+  title?: string | null;
   miles: number;
 };
 
@@ -93,7 +95,26 @@ export async function backpackToday(userId: string): Promise<BackpackToday | nul
     of: at.of,
     status: row?.status ?? null,
     miles: Math.round((hike.distanceM / 1609.344) * 10) / 10,
+    ...(await tripEventOn(userId, today).then((e) => ({ eventId: e?.id ?? null, title: e?.title ?? null }))),
   };
+}
+
+/**
+ * Finished (v0.787): the trip ends today. A single trip event ending later
+ * is cut to end today; the days after drop off. A repeating one is left
+ * alone (its own event's dates say when it ends).
+ */
+export async function finishTrip(userId: string): Promise<void> {
+  const today = todayISO();
+  const e = await tripEventOn(userId, today);
+  if (!e?.id || e.rrule) return;
+  if (eventDays(e, today, addDays(today, 60)).length <= 1) return;
+  await prisma.event.update({
+    where: { id: e.id },
+    data: e.allDay
+      ? { endsAt: toDateColumn(addDays(today, 1)) }
+      : { endsAt: new Date(Math.max(Date.now(), e.startsAt.getTime() + 60_000)) },
+  });
 }
 
 /** "Hiking today?" answered: yes (logged at the day's end) or no (not logged). */

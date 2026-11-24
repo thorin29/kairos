@@ -103,7 +103,7 @@ export type CalendarOptions = {
    *  repeats (parent or admin). */
   canManageFamily: boolean;
   /** Custom event types, for the type picker. */
-  eventTypes: { id: string; name: string; color: string; defaultMinutes: number | null; defaultReminder: number | null }[];
+  eventTypes: { id: string; name: string; color: string; defaultMinutes: number | null; defaultReminder: number | null; backpacking: boolean }[];
   /** Phase 5 color personalization: current prefs + the fallback colors the
    *  picker shows for unset slots. */
   colorPrefs: {
@@ -433,7 +433,7 @@ export async function loadCalendarPagePayload(
       showFamily: prefs.showFamily,
       showSchoolWork: prefs.showSchoolWork,
       canManageFamily,
-      eventTypes: eventTypes.map((t) => ({ id: t.id, name: t.name, color: t.color, defaultMinutes: t.defaultMinutes, defaultReminder: t.defaultReminder })),
+      eventTypes: eventTypes.map((t) => ({ id: t.id, name: t.name, color: t.color, defaultMinutes: t.defaultMinutes, defaultReminder: t.defaultReminder, backpacking: t.backpacking })),
       colorPrefs: {
         personalizeColors: prefs.personalizeColors,
         othersMode: prefs.othersMode,

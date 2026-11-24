@@ -108,6 +108,8 @@ export type EventTypeRow = {
   sport: string | null;
   defaultMinutes: number | null;
   defaultReminder: number | null;
+  /** v0.787: the Backpacking type, so the app's Start a… can preselect it. */
+  backpacking: boolean;
 };
 
 /** Admin-managed custom event types, in display order. */
@@ -124,6 +126,7 @@ export async function loadEventTypes(): Promise<EventTypeRow[]> {
       sport: true,
       defaultMinutes: true,
       defaultReminder: true,
+      backpacking: true,
     },
   });
   return rows as unknown as EventTypeRow[];

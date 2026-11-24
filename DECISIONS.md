@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Trips start on the calendar; the trip tile (v0.787.0)
+
+- Mockup "Kairos: Trips and home tiles". The colored band stays for things
+  that should stand out; of "Tile everywhere" only the trip tile is built.
+- A trip is deliberate, so it's planned, not started: Start a… (was Go for
+  a…) → Backpacking trip opens the calendar's New event on the Backpacking
+  type (`backpacking` on the calendar's event types). The app's "Back on"
+  screen is gone; `start` stays in the API for older apps.
+- The trip tile has no End: the trip ends with its event. Finished on the last
+  day turns the phone's GPS off; `{ finish: true }` cuts a longer single trip
+  event to end today (a repeating one is left alone). Trip opens the event
+  (`eventId`, `title` on today's trip). No Rest day button: "Hiking today?" No
+  is the zero day.
+- Family WOD's button shows only on a day with one; parents set one from the
+  day's + Additional, as before.
+
 ## 2026-11 — Workouts in two tabs; the tile's buttons in one row (v0.786.0)
 
 - Mockup "Kairos: Workouts page": Progress | Train tabs (Progress first). Train

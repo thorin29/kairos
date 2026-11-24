@@ -8,6 +8,9 @@ import { occurrencesIn } from "@/lib/calendar/recur";
 import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
 
 export type TripEvent = {
+  /** The event (v0.787), for the trip tile's Trip and Finished. */
+  id?: string;
+  title?: string;
   userId: string | null;
   participants: string[];
   startsAt: Date;

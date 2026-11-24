@@ -1491,10 +1491,10 @@ POST /api/v1/workouts/cardio/remove  { "date","sessionId" } → { "date","cardio
 POST /api/v1/workouts/track          { "clientId","activity":walk|run|ruck|hike,"startAt","endAt" (ISO),
                                        "movingSec","distanceM","load"? (ruck),"path":[[lat,lng,ms]…] }
                                        → { "sessionId","date","cardio" }   // v0.777; same clientId again = no change
-GET  /api/v1/workouts/backpacking    → { "today": { "date","day","of","status":asked|hiking|skip|null,"miles" }|null,
+GET  /api/v1/workouts/backpacking    → { "today": { "date","day","of","status":asked|hiking|skip|null,"miles","eventId","title" }|null,   // eventId, title v0.787
                                          "lastTrip": { "from","to","days","miles","minutes","gainFt","lossFt" }|null }   // v0.778; lastTrip v0.779
 POST /api/v1/places/phone-points     { "points":[{ "t" (ms),"lat","lng","acc"?,"speed"?,"alt"? }] } → { "stored" }   // v0.779, a trip's GPS
-POST /api/v1/workouts/backpacking    { "hiking":bool } | { "start":true,"until":"YYYY-MM-DD" } → the same
+POST /api/v1/workouts/backpacking    { "hiking":bool } | { "start":true,"until":"YYYY-MM-DD" } | { "finish":true } → the same   // finish v0.787
 POST /api/v1/workouts/warmup         { "date","plannedWorkoutId","done","completedOn"? } → { "date","status" }
 GET  /api/v1/workouts/order          → { "everyDay":[kind…], "days":{ "1":[kind…] } }
 POST /api/v1/workouts/order          { "day":0-6|null, "order":[kind…]|null } → the same   // null order resets

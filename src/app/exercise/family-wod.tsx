@@ -268,12 +268,13 @@ function PageHead({ title, onBack }: { title: string; onBack: () => void }) {
  * Family WOD on the Workouts menu (v0.679; v0.684 a button like Edit plan):
  * under the label, the next one's day, else suggestions waiting for a parent.
  */
+/** Only on a day that has a family WOD (v0.787); a parent sets one from the
+ *  day's + Additional. */
 export function FamilyWodButton({ userId, todayISO, onOpen }: { userId: string; todayISO: string; onOpen: () => void }) {
   const { data } = useFamilyWod(userId);
   const next = data?.next ?? null;
-  const n = data?.parent ? data.suggestions.length : 0;
-  const sub = next ? whenText(next.date, todayISO) : n > 0 ? `${n} to look at` : undefined;
-  return <ActionButton icon={PeopleIcon} label="Family WOD" sub={sub} onClick={onOpen} primary={next?.date === todayISO} />;
+  if (next?.date !== todayISO) return null;
+  return <ActionButton icon={PeopleIcon} label="Family WOD" sub={whenText(next.date, todayISO)} onClick={onOpen} primary />;
 }
 
 type View =
