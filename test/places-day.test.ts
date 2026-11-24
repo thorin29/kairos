@@ -52,6 +52,38 @@ describe("planDay", () => {
   });
 });
 
+describe("a drive the phone was quiet for (v0.790)", () => {
+  it("calls a quiet trip with one report on the way out a drive", () => {
+    const pts: DayPoint[] = [
+      p(0, 470, 0), p(10, 480, 0), p(5, 490, 0), // home
+      p(250, 509, 0), // just outside, 8:29
+      p(6276, 541, 0), p(6280, 560, 0), p(6270, 600, 0), // work from 9:01
+    ];
+    expect(planDay(pts, at(0)).items.map((i) => i.kind)).toEqual(["stop", "drive", "stop"]);
+  });
+
+  it("calls 4 miles in 32 minutes with no reports between a drive, not a walk", () => {
+    const pts: DayPoint[] = [
+      p(0, 480, 0), p(10, 495, 0), p(5, 509, 0), // home until 8:29, speed 0
+      p(6276, 541, 0), p(6280, 560, 0), p(6270, 600, 0), // work from 9:01
+    ];
+    const plan = planDay(pts, at(0));
+    const kinds = plan.items.map((i) => i.kind);
+    expect(kinds).toEqual(["stop", "drive", "stop"]);
+    const leg = plan.items[1];
+    expect(leg.kind === "drive" && leg.topMps).toBeNull();
+  });
+
+  it("keeps a slow walk with steady reports a walk", () => {
+    const pts: DayPoint[] = [
+      p(0, 60), p(10, 75), p(5, 90),
+      ...Array.from({ length: 15 }, (_, k) => p(100 + k * 90, 92 + k * 2, 1.3)),
+      p(1500, 125), p(1510, 140),
+    ];
+    expect(planDay(pts, at(0)).items.map((i) => i.kind)).toEqual(["stop", "move", "stop"]);
+  });
+});
+
 describe("snapLooksRight", () => {
   it("accepts a path that hugs the points", () => {
     expect(snapLooksRight([3, 5, 8, 12, 4, 6])).toBe(true);

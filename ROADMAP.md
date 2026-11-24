@@ -110,9 +110,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.789.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.790.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   180_seventh_week, all registered in `MIGRATIONS`.
-- App 0.566.0 (versionCode 638, CLIENT_BUILD 638).
+- App 0.567.0 (versionCode 639, CLIENT_BUILD 639).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -417,6 +417,12 @@ Kept here so they don't come back as open items.
 
 ### Places
 
+- Quiet drives (v0.790): a trip with a 5-minute gap between reports that
+  averages past a fast walk over 1.5 km is a drive (so it's put on roads), and
+  two far-apart stops with nothing between still get a trip. A phone that only
+  ever reported 0 has no top speed. The tracks row folds under its icon; all
+  home opens at street level; History has layer icons and opens on the last
+  known spot.
 - Home Assistant posts each person's location to Kairos (v0.755; person
   entities, so a new phone is a Home Assistant change only). Admin → Places:
   token (shown once, kept as a hash), person links, last location per person,

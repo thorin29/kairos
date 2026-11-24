@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-11 — Quiet drives on Family map (v0.790.0)
+
+- Home Assistant often sends nothing while someone drives, so a 3.9-mile
+  drive arrived as two points 32 minutes apart: under the 8 mph average a
+  drive needs, and "top 0 mph" (the phone's 0 counted as a speed). Now a trip
+  with a gap of 5 minutes or more between reports, 1.5 km or longer, averaging
+  1.9 m/s (≈ 4.3 mph, past a fast walk) is a drive; the gap includes the wait
+  before leaving, so the real pace was higher. Its top speed is unknown unless
+  the phone reported one. Two stops 1.5 km or more apart with no reports
+  between get a trip from leaving one to reaching the other.
+- Still unknown: when they really left. The trip starts at the last report at
+  home; a phone set to report more often while moving (the HA Companion's
+  high-accuracy or location-update settings) is the real fix.
+- The tracks row is one icon that opens the people (an animated width);
+  closing it clears every track. Everyone within 400 m opens at zoom 15.
+  History's map type is the live map's icons; an empty day centres on the last
+  point before it at zoom 13.
+
 ## 2026-11 — Summary gold (v0.789.0)
 
 - Summary's side-menu color is gold (#ca8a04, was #b45309, which Bible's

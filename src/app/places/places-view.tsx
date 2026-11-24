@@ -143,9 +143,9 @@ const btn =
   "inline-flex h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-sm font-medium shadow-sm hover:border-accent disabled:opacity-50";
 const btnOn =
   "inline-flex h-10 items-center gap-2 rounded-full border border-accent bg-accent px-4 text-sm font-medium text-on-accent shadow-sm";
-const iconBtn =
+export const iconBtn =
   "flex h-10 w-10 items-center justify-center rounded-full border border-hairline bg-surface text-ink shadow-md hover:border-accent disabled:opacity-50";
-const iconBtnOn =
+export const iconBtnOn =
   "flex h-10 w-10 items-center justify-center rounded-full border border-accent bg-accent text-on-accent shadow-md";
 
 const glyph = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round", className: "h-5 w-5", "aria-hidden": true } as const;
@@ -237,7 +237,7 @@ function BackpackGlyph() {
 }
 
 /** Terrain (v0.778): Tabler's mountain. */
-function TerrainGlyph() {
+export function TerrainGlyph() {
   return (
     <svg {...glyph}>
       <path d="M3 20h18l-6.921-14.612a2.3 2.3 0 0 0-4.158 0L3 20Z" />
@@ -246,7 +246,7 @@ function TerrainGlyph() {
   );
 }
 
-function LayersGlyph() {
+export function LayersGlyph() {
   return (
     <svg {...glyph}>
       <path d="m12 3 9 5-9 5-9-5 9-5Z" />
@@ -286,6 +286,8 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [tracksOn, setTracksOn] = useState<string[]>([]);
+  // The tracks row folds under its icon (v0.790); open when tracks are on.
+  const [tracksOpen, setTracksOpen] = useState(false);
   const [tracks, setTracks] = useState<Record<string, DayData>>({});
   const [zoom, setZoom] = useState<number | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -311,7 +313,9 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   // Relative times tick on the client only (no server/client mismatch).
   useEffect(() => {
     setNow(Date.now());
-    setTracksOn(readTracks());
+    const saved = readTracks();
+    setTracksOn(saved);
+    setTracksOpen(saved.length > 0);
     const t = setInterval(() => setNow(Date.now()), POLL_MS);
     return () => clearInterval(t);
   }, []);
@@ -414,13 +418,17 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     const people = dataRef.current.people;
     setFollow(null);
     if (!map || people.length === 0) return;
-    if (people.length === 1) {
-      map.panTo({ lat: people[0].lat, lng: people[0].lng });
+    const b = new google.maps.LatLngBounds();
+    for (const p of people) b.extend({ lat: p.lat, lng: p.lng });
+    // Everyone in one spot (all home, v0.790): the neighbourhood, not the
+    // rooftop that fitting a few metres would zoom to.
+    const c = b.getCenter();
+    const spread = Math.max(...people.map((p) => metres({ lat: c.lat(), lng: c.lng() }, p)));
+    if (people.length === 1 || spread < 400) {
+      map.panTo({ lat: c.lat(), lng: c.lng() });
       map.setZoom(15);
       return;
     }
-    const b = new google.maps.LatLngBounds();
-    for (const p of people) b.extend({ lat: p.lat, lng: p.lng });
     map.fitBounds(b, 64);
   }, []);
 
@@ -767,26 +775,54 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           <div ref={mapDiv} className="h-full w-full" />
 
           {data.people.length > 0 && (
-            <div className="absolute left-3 top-3 flex max-w-[calc(100%-4.5rem)] items-center gap-1 overflow-x-auto rounded-full bg-surface/95 py-1 pl-2.5 pr-1 shadow-md">
-              <span className="shrink-0 text-muted" title="Tracks" aria-label="Tracks">
+            <div className="absolute left-3 top-3 flex max-w-[calc(100%-4.5rem)] items-center rounded-full bg-surface/95 p-0.5 shadow-md">
+              {/* Tracks (v0.790): the icon alone; tap it and the people slide
+                  out to pick whose tracks to show. Tap it again and they fold
+                  back under it, and every track goes. */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (tracksOpen) {
+                    setTracksOpen(false);
+                    setTracksOn([]);
+                    writeTracks([]);
+                  } else {
+                    setTracksOpen(true);
+                  }
+                }}
+                aria-expanded={tracksOpen}
+                aria-label={tracksOpen ? "Hide tracks" : "Tracks"}
+                title={tracksOpen ? "Hide tracks" : "Tracks"}
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors ${
+                  tracksOpen ? "bg-accent text-on-accent" : "text-ink hover:bg-black/5"
+                }`}
+              >
                 <RouteGlyph />
-              </span>
-              {data.people.map((p) => {
-                const on = tracksOn.includes(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => toggleTrack(p.id)}
-                    aria-pressed={on}
-                    aria-label={`${p.name}'s track`}
-                    title={p.name}
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-opacity ${on ? "" : "opacity-40 grayscale"}`}
-                  >
-                    <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="xs" />
-                  </button>
-                );
-              })}
+              </button>
+              <div
+                className={`flex items-center gap-1 overflow-x-auto transition-[max-width,opacity,padding] duration-300 ease-out ${
+                  tracksOpen ? "max-w-[40rem] pl-1 pr-0.5 opacity-100" : "pointer-events-none max-w-0 opacity-0"
+                }`}
+                aria-hidden={!tracksOpen}
+              >
+                {data.people.map((p) => {
+                  const on = tracksOn.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      tabIndex={tracksOpen ? 0 : -1}
+                      onClick={() => toggleTrack(p.id)}
+                      aria-pressed={on}
+                      aria-label={`${p.name}'s track`}
+                      title={p.name}
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-opacity ${on ? "" : "opacity-40 grayscale"}`}
+                    >
+                      <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="xs" />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 

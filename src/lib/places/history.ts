@@ -210,6 +210,7 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
     removed,
     date: dateISO,
     items: shown,
+    lastSeen: before ? { lat: before.lat, lng: before.lng } : null,
     totals: {
       miles: Math.round((t.distanceM / 1609.344) * 10) / 10,
       driveMin: Math.round(t.driveMs / 60_000),

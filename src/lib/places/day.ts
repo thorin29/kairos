@@ -86,6 +86,14 @@ const DRIVE_AVG_MPS = 3.5; // ≈ 8 mph
 const DRIVE_TOP_MPS = 6; // ≈ 13 mph
 /** Only trust a speed worked out from two points when both are this sharp. */
 const SHARP_M = 50;
+/** A trip with a gap this long between two reports: the phone went quiet on
+ *  the way (Home Assistant often sends nothing while driving). */
+const QUIET_GAP_MS = 5 * 60_000;
+/** Over such a gap, a trip averaging this (≈ 4.3 mph, past a fast walk) over
+ *  1.5 km or more was a vehicle: the time includes the wait before leaving,
+ *  so the real pace was faster still (v0.790). */
+const QUIET_DRIVE_MPS = 1.9;
+const QUIET_MIN_M = 1_500;
 
 export const MPS_TO_MPH = 2.23694;
 
@@ -107,6 +115,8 @@ function topSpeed(points: DayPoint[]): number | null {
   let reported: number | null = null;
   for (const p of points) if (p.speed != null && (reported == null || p.speed > reported)) reported = p.speed;
   if (reported != null && reported > 0) return reported;
+  // A phone that only ever said 0 hasn't told us a speed.
+  reported = null;
   // No speed from the phone: the median of point-to-point speeds between sharp
   // fixes (one GPS jump can't fake a top speed).
   const est: number[] = [];
@@ -127,8 +137,15 @@ function legOf(points: DayPoint[]): Leg {
   const end = points[points.length - 1].at;
   const distanceM = pathMetres(points);
   const secs = Math.max(1, (end.getTime() - start.getTime()) / 1000);
-  const top = topSpeed(points);
-  const drive = distanceM / secs >= DRIVE_AVG_MPS || (top != null && top >= DRIVE_TOP_MPS);
+  let top = topSpeed(points);
+  let quiet = false;
+  for (let i = 1; i < points.length; i++) {
+    if (points[i].at.getTime() - points[i - 1].at.getTime() >= QUIET_GAP_MS) quiet = true;
+  }
+  const quietDrive = quiet && distanceM >= QUIET_MIN_M && distanceM / secs >= QUIET_DRIVE_MPS;
+  // Over a quiet gap a two-point estimate is just the average, not a top speed.
+  if (quietDrive && !points.some((p) => p.speed != null && p.speed > 0)) top = null;
+  const drive = quietDrive || distanceM / secs >= DRIVE_AVG_MPS || (top != null && top >= DRIVE_TOP_MPS);
   return { kind: drive ? "drive" : "move", start, end, points, distanceM, topMps: top };
 }
 
@@ -194,6 +211,14 @@ export function planDay(
         const legPts = [...lead, ...trip, cluster[0]];
         if (legPts.length >= 2) items.push(legOf(legPts));
         trip = [];
+      } else {
+        // No reports at all between two stops far apart (v0.790): the phone
+        // was quiet the whole way. It's still a trip, from leaving one to
+        // reaching the other, so it's counted and drawn (a drive goes on roads).
+        const prevStop = items[items.length - 1];
+        if (prevStop && prevStop.kind === "stop" && metres(prevStop, cluster[0]) >= QUIET_MIN_M) {
+          items.push(legOf([{ ...cluster[0], lat: prevStop.lat, lng: prevStop.lng, at: prevStop.end, speed: null }, cluster[0]]));
+        }
       }
       const c = centroid(cluster);
       items.push({

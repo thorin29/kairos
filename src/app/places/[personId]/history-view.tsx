@@ -11,7 +11,7 @@ import { drawTrips, loadMaps, touchInline } from "../map-kit";
 import { PlaceFix } from "../place-fix";
 import { AddStop } from "./add-stop";
 import { metres } from "@/lib/places/geo";
-import { PencilGlyph, PinGlyph, TrashGlyph } from "../places-view";
+import { LayersGlyph, PencilGlyph, PinGlyph, TerrainGlyph, TrashGlyph, iconBtn, iconBtnOn } from "../places-view";
 
 /**
  * A person's day: totals, the map with their trips (drives on the roads,
@@ -121,6 +121,10 @@ export function HistoryView({
   const vRef = useRef(0);
   const frameRef = useRef<number | null>(null);
 
+  const [layer, setLayer] = useState<"map" | "satellite" | "terrain">("map");
+  useEffect(() => {
+    if (ready) mapRef.current?.setMapTypeId(layer === "satellite" ? "hybrid" : layer === "terrain" ? "terrain" : "roadmap");
+  }, [layer, ready]);
   const stops = useMemo(() => day.items.filter((i): i is DayStopItem => i.kind === "stop"), [day]);
   const frames = useMemo(() => buildFrames(day.items), [day]);
   const hasTrips = frames.length >= 2;
@@ -144,7 +148,8 @@ export function HistoryView({
           zoom: 4,
           gestureHandling: touchInline() ? "cooperative" : "greedy",
           clickableIcons: true,
-          mapTypeControl: true,
+          // Satellite and terrain are icons (v0.790), as on the live map.
+          mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
           zoomControl: true,
@@ -219,6 +224,10 @@ export function HistoryView({
     if (any) {
       map.fitBounds(b, 56);
       if (stops.length === 1 && !hasTrips) map.setZoom(15);
+    } else if (day.lastSeen) {
+      // Nothing that day (v0.790): open where they were last seen.
+      map.setCenter(day.lastSeen);
+      map.setZoom(13);
     }
   }, [day, ready, person.color, stops, hasTrips]);
 
@@ -341,6 +350,28 @@ export function HistoryView({
           className="sticky top-0 z-10 h-[42vh] min-h-[280px] shrink-0 overflow-hidden rounded-2xl border border-hairline bg-surface lg:relative lg:h-full lg:min-w-0 lg:flex-1"
         >
           <div ref={mapDiv} className="h-full w-full" />
+          <div className="absolute right-3 top-3 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => setLayer(layer === "satellite" ? "map" : "satellite")}
+              className={layer === "satellite" ? iconBtnOn : iconBtn}
+              aria-pressed={layer === "satellite"}
+              aria-label="Satellite"
+              title="Satellite"
+            >
+              <LayersGlyph />
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayer(layer === "terrain" ? "map" : "terrain")}
+              className={layer === "terrain" ? iconBtnOn : iconBtn}
+              aria-pressed={layer === "terrain"}
+              aria-label="Terrain"
+              title="Terrain"
+            >
+              <TerrainGlyph />
+            </button>
+          </div>
           {hasTrips && (
             <div className="absolute bottom-6 left-3 flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => setPlaying((v) => !v)} className={btn}>

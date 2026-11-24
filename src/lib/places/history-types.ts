@@ -48,4 +48,7 @@ export type DayData = {
   items: DayItem[];
   totals: { miles: number; driveMin: number; topMph: number | null; stops: number };
   removed?: DayRemovedStop[];
+  /** v0.790: where they were last seen before this day, so a day with
+   *  nothing recorded opens there instead of on the whole country. */
+  lastSeen?: { lat: number; lng: number } | null;
 };
