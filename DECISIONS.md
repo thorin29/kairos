@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-11 — Web Saved plans on the plan card (v0.781.0)
+
+- As in app 0.557: Saved plans is a "Saved" link on the plan card (and
+  "Saved plans" on the invite and No plan cards). The web has no Go for a…
+  (it needs the phone's GPS), so its eight buttons are four to a row (two on
+  a phone).
+
+
 ## 2026-11 — Elevation for tracked outings (v0.780.0)
 
 - `saveTrackedWorkout` makes one Elevation call per saved walk, run, ruck or

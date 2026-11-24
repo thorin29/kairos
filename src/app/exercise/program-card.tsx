@@ -91,6 +91,7 @@ export function ProgramCard({
   onOpenRotation,
   hasRotation = false,
   inviteOnly = false,
+  onSaved,
 }: {
   userId: string;
   onChanged?: () => void;
@@ -101,6 +102,8 @@ export function ProgramCard({
   hasRotation?: boolean;
   /** The home page: show only the invite (and its setup), nothing otherwise. */
   inviteOnly?: boolean;
+  /** Saved plans (v0.781; was a button of its own on Workouts). */
+  onSaved?: () => void;
 }) {
   const [data, setData] = useState<Data | null>(null);
   const [setup, setSetup] = useState<string | null>(null);
@@ -374,6 +377,11 @@ export function ProgramCard({
           >
             Add program
           </button>
+          {onSaved && (
+            <button type="button" onClick={onSaved} className="text-accent">
+              Saved
+            </button>
+          )}
           <button type="button" onClick={() => setEnding(true)} className="text-muted hover:text-ink">
             End
           </button>
@@ -537,6 +545,11 @@ export function ProgramCard({
           <button type="button" onClick={() => setChoosing(true)} className="text-accent">
             More
           </button>
+          {onSaved && (
+            <button type="button" onClick={onSaved} className="text-accent">
+              Saved plans
+            </button>
+          )}
           <button
             type="button"
             onClick={() =>
@@ -585,6 +598,11 @@ export function ProgramCard({
           <button type="button" onClick={() => setChoosing(true)} className="text-accent">
             Change
           </button>
+          {onSaved && (
+            <button type="button" onClick={onSaved} className="text-accent">
+              Saved
+            </button>
+          )}
           <button type="button" onClick={() => setEndingOwn(true)} className="text-muted hover:text-ink">
             End
           </button>
@@ -639,6 +657,11 @@ export function ProgramCard({
       <button type="button" onClick={() => setChoosing(true)} className={`${PRIMARY} w-full justify-center`}>
         New plan
       </button>
+      {onSaved && (
+        <button type="button" onClick={onSaved} className="w-full text-center text-sm font-semibold text-accent">
+          Saved plans
+        </button>
+      )}
       {windows}
     </section>
   );

@@ -7,7 +7,6 @@ import { Avatar } from "@/components/avatar";
 import { PersonAvatar } from "@/components/person-filter";
 import {
   CheckIcon,
-  BookmarkIcon,
   DumbbellIcon,
   BookIcon,
   FlameIcon,
@@ -329,12 +328,13 @@ export function WorkoutsGrid({
                     onEditPlan={() => setStep("plan")}
                     onOpenRotation={() => setStep("rotation")}
                     hasRotation={!!open.rotation}
+                    onSaved={() => setStep("saved")}
                   />
 
-                  {/* The same nine buttons as the app (v0.684), three to a row:
-                      log, routines, browse; HIIT/CrossFit, calculator, Family
-                      WOD; Pause, Recent, Saved plans (v0.747). */}
-                  <div className="grid grid-cols-3 gap-3">
+                  {/* The app's buttons (v0.684) less Go for a… (the phone's
+                      GPS): eight, four to a row (two on a phone). Saved plans
+                      is on the plan card (v0.781). */}
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <ActionButton icon={DumbbellIcon} label="Log workout" onClick={() => setStep("log")} primary={hasPlan} />
                     <ActionButton icon={FlameIcon} label="Routines" onClick={() => setStep("warmups")} />
                     <ActionButton icon={BookIcon} label="Browse workouts" onClick={() => setStep("browse")} />
@@ -343,7 +343,6 @@ export function WorkoutsGrid({
                     <FamilyWodButton userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("familywod")} />
                     <WorkoutPauseButton userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("pause")} />
                     <ActionButton icon={ClockIcon} label="Recent" onClick={() => setStep("history")} />
-                    <ActionButton icon={BookmarkIcon} label="Saved plans" onClick={() => setStep("saved")} />
                   </div>
                 </div>
               )}
