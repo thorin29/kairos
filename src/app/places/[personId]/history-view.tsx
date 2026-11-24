@@ -431,7 +431,7 @@ export function HistoryView({
             return (
               <div
                 key={`l${idx}`}
-                className="ml-[1.85rem] border-l-2 border-dashed py-1 pl-6 text-sm text-muted"
+                className={`ml-[1.85rem] border-l-2 border-dashed pl-6 pt-1 text-sm text-muted ${canEdit ? "pb-0" : "pb-1"}`}
                 style={{ borderColor: `${person.color}66` }}
               >
                 <span className="inline-flex items-center gap-1.5">
@@ -447,18 +447,25 @@ export function HistoryView({
                   {it.topMph != null && it.motion !== "walk" ? ` · top ${it.topMph} mph` : ""}
                 </span>
                 {canEdit && (
-                  // Sits on the dashed line between the two stops.
-                  <div className="relative h-9">
+                  // On the dashed line between the two stops: a small + and pin
+                  // in the person's colour, softer until hovered or tapped; the
+                  // page colour behind just the icon lets the dots run on.
+                  <div className="relative h-6">
                     <button
                       type="button"
                       onClick={() => startAdding(it)}
-                      className="absolute top-1/2 flex h-8 -translate-x-1/2 -translate-y-1/2 items-center rounded-full border-2 bg-surface pl-1.5 pr-1 shadow-sm hover:brightness-95"
-                      style={{ left: "calc(-1.5rem - 1px)", color: person.color, borderColor: person.color }}
+                      className="absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center bg-surface py-0.5 opacity-50 transition-opacity hover:opacity-100 focus-visible:opacity-100 active:opacity-100"
+                      style={{ left: "calc(-1.5rem - 1px)", color: person.color }}
                       aria-label="Add a stop here"
                       title="Add a stop here"
                     >
-                      <span className="-mr-0.5 text-base font-bold leading-none">+</span>
-                      <PinGlyph />
+                      <svg viewBox="0 0 10 10" className="-mr-px h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+                        <path d="M5 1.5v7M1.5 5h7" />
+                      </svg>
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M12 21s-6.5-6.2-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 14.8 12 21 12 21Z" />
+                        <circle cx="12" cy="9.8" r="2.3" />
+                      </svg>
                     </button>
                   </div>
                 )}

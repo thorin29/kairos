@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Add-stop icon, design B4 (v0.775.0)
+
+- Owner picked B4 from mockups: a small + (10 px) and pin (14 px) on the
+  dashed line between stops, the person's colour at half strength (full on
+  hover, focus or tap), no border; the page colour sits behind just the icon
+  so the dots carry on above and below.
+
 ## 2026-11 — One reminder model (v0.774.0, app 0.556.0)
 
 - **An event's reminders are a suggestion to everyone on it** — owner, people
