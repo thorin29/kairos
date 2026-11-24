@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Elevation for tracked outings (v0.780.0)
+
+- `saveTrackedWorkout` makes one Elevation call per saved walk, run, ruck or
+  hike (the route, ≤ 512 points) and keeps gain/loss on `WorkoutTrack` and as
+  the session's notes ("↑ … ft ↓ … ft", `elevationNote`). `cardioDay`
+  appends that line to the entry's summary, so the web and the app show it
+  with no app change. Calls: one per outing, one per backpacking day; Kairos
+  stops at 40 a day.
+
+
 ## 2026-11 — Trip GPS, trip summary, zone colours (v0.779.0)
 
 - Backpacking uses the phone's GPS after all (owner): the app's trip points

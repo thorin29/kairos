@@ -96,3 +96,14 @@ describe("preferPhone", () => {
     expect(out.map((p) => p.source ?? "ha")).toEqual(["ha", "phone", "phone", "ha"]);
   });
 });
+
+import { elevationNote, isElevationNote } from "@/lib/places/elevation-calc";
+
+describe("elevationNote", () => {
+  it("reads in feet and is recognised", () => {
+    const n = elevationNote(378, 360);
+    expect(n).toBe("↑ 1,240 ft ↓ 1,181 ft");
+    expect(isElevationNote(n)).toBe(true);
+    expect(isElevationNote("felt good")).toBe(false);
+  });
+});

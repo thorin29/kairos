@@ -7,6 +7,7 @@ import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
 import { logCardio } from "@/lib/workouts/cardio-run";
 import { dayOfTrip, hoursMinutes, runOf, tripDays, tripTotals } from "@/lib/workouts/backpacking-days";
 import { elevationOf } from "@/lib/places/elevation";
+import { elevationNote } from "@/lib/places/elevation-calc";
 import { tripDaysFor, tripEvents } from "@/lib/workouts/backpacking-trips";
 import { notify } from "@/lib/push";
 
@@ -126,8 +127,6 @@ export async function startTrip(userId: string, untilISO: string): Promise<boole
   return true;
 }
 
-const ft = (m: number) => Math.round(m * 3.28084).toLocaleString("en-US");
-
 /** Log one finished trip day (unless they said they weren't hiking), with
  *  its elevation gain and loss. */
 async function logDay(userId: string, dateISO: string): Promise<void> {
@@ -152,7 +151,7 @@ async function logDay(userId: string, dateISO: string): Promise<void> {
   if (sessionId && elev) {
     await prisma.workoutSession.update({
       where: { id: sessionId },
-      data: { notes: `\u2191 ${ft(elev.gainM)} ft \u2193 ${ft(elev.lossM)} ft` },
+      data: { notes: elevationNote(elev.gainM, elev.lossM) },
     });
   }
   const stats = {

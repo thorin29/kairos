@@ -4,6 +4,8 @@ import { todayISO } from "@/lib/dates";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
 import { logCardio } from "@/lib/workouts/cardio-run";
 import type { TrackIn } from "@/lib/workouts/tracked-shape";
+import { elevationOf } from "@/lib/places/elevation";
+import { elevationNote } from "@/lib/places/elevation-calc";
 
 /**
  * A walk, run, ruck or hike tracked in the app (v0.777): logged as a cardio
@@ -31,9 +33,14 @@ export async function saveTrackedWorkout(
     load: t.load,
   });
   if (!sessionId) return null;
+  // Elevation gain and loss (v0.780): one Google call for the route.
+  const elev = t.path.length >= 2 ? await elevationOf(t.path.map(([lat, lng]) => [lat, lng] as [number, number])) : null;
   await prisma.workoutSession.update({
     where: { id: sessionId },
-    data: { durationMin: Math.max(1, Math.round(t.movingSec / 60)) },
+    data: {
+      durationMin: Math.max(1, Math.round(t.movingSec / 60)),
+      ...(elev ? { notes: elevationNote(elev.gainM, elev.lossM) } : {}),
+    },
   });
   await prisma.workoutTrack.create({
     data: {
@@ -46,6 +53,8 @@ export async function saveTrackedWorkout(
       movingSec: t.movingSec,
       distanceM: t.distanceM,
       path: t.path,
+      gainM: elev?.gainM ?? null,
+      lossM: elev?.lossM ?? null,
     },
   });
   return { sessionId, date };

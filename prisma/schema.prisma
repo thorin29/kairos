@@ -1843,6 +1843,9 @@ model WorkoutTrack {
   distanceM Float
   /// [[lat, lng, ms], …]
   path      Json
+  /// Elevation gain and loss in metres (v0.780; null when it couldn't be had).
+  gainM     Float?
+  lossM     Float?
   createdAt DateTime       @default(now())
 
   @@index([userId, startAt])

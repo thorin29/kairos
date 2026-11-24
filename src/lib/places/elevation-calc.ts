@@ -57,3 +57,14 @@ export function gainLoss(heights: number[]): { gainM: number; lossM: number } {
   }
   return { gainM: Math.round(gainM), lossM: Math.round(lossM) };
 }
+
+/** "\u2191 1,240 ft \u2193 1,180 ft", stored in a session's notes (shown with its cardio). */
+export function elevationNote(gainM: number, lossM: number): string {
+  const ft = (m: number) => Math.round(m * 3.28084).toLocaleString("en-US");
+  return `\u2191 ${ft(gainM)} ft \u2193 ${ft(lossM)} ft`;
+}
+
+/** Whether a session's notes are that elevation line. */
+export function isElevationNote(notes: string | null | undefined): notes is string {
+  return !!notes && notes.startsWith("\u2191 ");
+}

@@ -10,6 +10,7 @@ import { historyResult } from "@/lib/queries/workout-log";
 import { logPlannedWorkout, settleWorkoutTask } from "@/lib/workouts/mark";
 import { CARDIO_CATEGORIES } from "@/lib/workouts/blocks";
 import { cardioActivity, cardioSlot } from "@/lib/workouts/cardio";
+import { isElevationNote } from "@/lib/places/elevation-calc";
 
 /** One cardio session on a day, as the day page lists it. */
 export type CardioEntry = {
@@ -34,6 +35,7 @@ export async function cardioDay(userId: string, dateISO: string): Promise<Cardio
     select: {
       id: true,
       name: true,
+      notes: true,
       sets: {
         orderBy: { setNumber: "asc" },
         select: {
@@ -50,6 +52,7 @@ export async function cardioDay(userId: string, dateISO: string): Promise<Cardio
   })) as {
     id: string;
     name: string | null;
+    notes: string | null;
     sets: Parameters<typeof historyResult>[0];
   }[];
   if (sessions.length === 0) return [];
@@ -76,7 +79,8 @@ export async function cardioDay(userId: string, dateISO: string): Promise<Cardio
     return {
       sessionId: s.id,
       name: s.name ?? "Cardio",
-      summary: historyResult(s.sets),
+      // A tracked outing's or backpacking day's elevation (v0.780).
+      summary: historyResult(s.sets) + (isElevationNote(s.notes) ? ` \u00b7 ${s.notes}` : ""),
       concept2: l
         ? {
             resultId: l.resultId,

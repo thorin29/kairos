@@ -107,8 +107,8 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.779.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  178_trip_gps, all registered in `MIGRATIONS`.
+- Web 0.780.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  179_track_elevation, all registered in `MIGRATIONS`.
 - App 0.559.0 (versionCode 631, CLIENT_BUILD 631).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.

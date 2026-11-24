@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.779.0";
+export const APP_VERSION = "0.780.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -191,11 +191,16 @@ export const MIGRATIONS = [
   "176_workout_tracks",
   "177_backpacking",
   "178_trip_gps",
+  "179_track_elevation",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.780.0",
+    summary: ["Walks, runs, rucks and hikes tracked in the app get their elevation gain and loss, shown with the cardio entry (backpacking days too)."],
+  },
   {
     version: "0.779.0",
     summary: ["Backpacking with the phone's GPS: the app's points go to Family map and are used where Home Assistant's overlap, so trip miles and routes are exact; without it the trip still goes by Home Assistant. Each trip day keeps its elevation gain and loss, and a summary (miles, time hiking, feet up and down) arrives when the trip is over. Family map cards are tinted by where people are: the zone's colour with its Home Assistant icon, coral when in no zone; pick zone colours in Admin → Family map."],
