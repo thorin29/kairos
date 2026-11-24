@@ -79,3 +79,32 @@ describe("stops in one place", () => {
     expect(plan.items.filter((i) => i.kind === "stop")).toHaveLength(1);
   });
 });
+
+describe("quick stops at known places", () => {
+  const at = (sec: number, lat: number, zone: string | null = null, speed = 0.3): DayPoint => ({
+    at: new Date(BASE + sec * 1000),
+    lat,
+    lng: -91,
+    accuracyM: 10,
+    speed,
+    zone,
+  });
+  const drive = (fromSec: number, fromLat: number, n: number) =>
+    Array.from({ length: n }, (_, i) => at(fromSec + i * 60, fromLat + (i + 1) * 0.01, null, 20));
+
+  it("counts a two-minute drop-off inside a zone", () => {
+    const pts = [...drive(0, 30, 5), at(330, 30.06, "Rink"), at(400, 30.0601, "Rink"), at(450, 30.0602, "Rink"), ...drive(480, 30.0602, 5)];
+    expect(planDay(pts, new Date(BASE)).items.filter((i) => i.kind === "stop")).toHaveLength(1);
+  });
+
+  it("doesn't count a short pause somewhere unknown", () => {
+    const pts = [...drive(0, 30, 5), at(330, 30.06), at(400, 30.0601), at(450, 30.0602), ...drive(480, 30.0602, 5)];
+    expect(planDay(pts, new Date(BASE)).items.filter((i) => i.kind === "stop")).toHaveLength(0);
+  });
+
+  it("counts a short stop at a saved place", () => {
+    const pts = [...drive(0, 30, 5), at(330, 30.06), at(400, 30.0601), at(450, 30.0602), ...drive(480, 30.0602, 5)];
+    const known = [{ lat: 30.0601, lng: -91, radiusM: 150 }];
+    expect(planDay(pts, new Date(BASE), null, known).items.filter((i) => i.kind === "stop")).toHaveLength(1);
+  });
+});

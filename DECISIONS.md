@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-11 — History layout; smarter places (v0.776.0)
+
+- History: totals are one line under the name (no tiles). Wide screens: map
+  and timeline fill the window side by side, only the timeline scrolls.
+  Phones: the map sticks to the top (42vh) while the page scrolls the
+  timeline.
+- Quick stops: a cluster of ≥ 2 reports spanning ≥ 1 min, none faster than
+  3.5 m/s, counts as a stop when most reports are in one HA zone or its centre
+  is inside a saved address (150 m) or a named spot (its radius) —
+  `planDay(..., known)`. A drop-off at the rink was being skipped (stops need
+  5 min otherwise).
+- Naming: Nearby Search asks for 10 results with types; places people park
+  beside (EV chargers, ATMs, parking, bus/transit stops, post boxes, …,
+  `MINOR_TYPES`) are named only when nothing else is near.
+- Live: a person last reported moving more than 10 min ago is shown as last
+  seen there (not moving, no mph), "since" that report — a slow or silent
+  phone no longer reads "51 mph" forever.
+
 ## 2026-11 — Add-stop icon, design B4 (v0.775.0)
 
 - Owner picked B4 from mockups: a small + (10 px) and pin (14 px) on the

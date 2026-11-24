@@ -31,7 +31,31 @@ export type NearbyHit = {
   placeId: string;
   lat: number;
   lng: number;
+  /** Google's types for the place (Nearby Search only). */
+  types?: string[];
 };
+
+/** Things people park beside rather than go to: a charger, an ATM, a parking
+ *  lot. Named only when nothing else is near (v0.776). */
+export const MINOR_TYPES = new Set([
+  "electric_vehicle_charging_station",
+  "atm",
+  "parking",
+  "parking_lot",
+  "parking_garage",
+  "bus_stop",
+  "bus_station",
+  "transit_station",
+  "taxi_stand",
+  "post_box",
+  "public_bathroom",
+  "vending_machine",
+  "drop_off_point",
+]);
+
+export function isMinorPlace(h: NearbyHit): boolean {
+  return (h.types ?? []).length > 0 && (h.types ?? []).every((t) => MINOR_TYPES.has(t) || AREA_TYPES.has(t));
+}
 
 type NearbyResponse = {
   places?: {
@@ -60,7 +84,7 @@ export async function nearbySearch(
         "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.types",
       },
       body: JSON.stringify({
-        maxResultCount: 5,
+        maxResultCount: 10,
         rankPreference: "DISTANCE",
         languageCode: "en",
         locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: radiusM } },
@@ -80,7 +104,7 @@ export async function nearbySearch(
       const plng = p.location?.longitude;
       if (!name || !p.id || plat == null || plng == null) continue;
       if ((p.types ?? []).length > 0 && (p.types ?? []).every((t) => AREA_TYPES.has(t))) continue;
-      hits.push({ name, address: p.formattedAddress ?? null, placeId: p.id, lat: plat, lng: plng });
+      hits.push({ name, address: p.formattedAddress ?? null, placeId: p.id, lat: plat, lng: plng, types: p.types ?? [] });
     }
     return hits;
   } catch (e) {

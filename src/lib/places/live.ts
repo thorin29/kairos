@@ -20,6 +20,7 @@ import type { LivePerson, WaitingPerson, LiveData } from "@/lib/places/live-type
 const RECENT_MS = 24 * 60 * 60_000;
 const RECENT_POINTS = 300;
 const MEMO_MS = 10 * 60_000;
+const QUIET_MOVING_MS = 10 * 60_000;
 const memo = new Map<string, { label: PlaceLabel; at: number }>();
 
 /** Forget memoised names (after the family names or corrects a place). */
@@ -113,6 +114,13 @@ export async function loadLive(): Promise<LiveData> {
       continue;
     }
     const latest = rows[0];
+    // A phone that went quiet while moving (a slow-updating phone, a dead
+    // battery) isn't still going 51 mph: after 10 minutes it's "last seen"
+    // there, not driving (v0.776).
+    if (pres.moving && now - latest.at.getTime() > QUIET_MOVING_MS) {
+      pres.moving = false;
+      pres.since = latest.at;
+    }
     // Inside a Home Assistant zone and not going anywhere fast: they're there,
     // whatever the GPS wobble says; "since" runs back through the same zone.
     if (latest.zone && (latest.speed == null || latest.speed < 3)) {

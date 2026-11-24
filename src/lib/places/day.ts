@@ -112,7 +112,26 @@ function legOf(points: DayPoint[]): Leg {
  * point from before the day as `before` (with its time) so a day that starts
  * at home begins with a stop from `dayStart`.
  */
-export function planDay(points: DayPoint[], dayStart: Date, before: DayPoint | null = null): DayPlan {
+/** A place the family knows (a saved address, a named spot): a short stop
+ *  there still counts (a drop-off at the rink). */
+export type KnownPlace = { lat: number; lng: number; radiusM: number };
+
+/** Inside a Home Assistant zone or at a known place, this long is a stop. */
+const KNOWN_STOP_MS = 60_000;
+
+function atKnownPlace(cluster: DayPoint[], known: KnownPlace[]): boolean {
+  const zoned = cluster.filter((p) => p.zone).length;
+  if (zoned >= 2 && mainZone(cluster)) return true;
+  const c = centroid(cluster);
+  return known.some((k) => metres(c, k) <= k.radiusM);
+}
+
+export function planDay(
+  points: DayPoint[],
+  dayStart: Date,
+  before: DayPoint | null = null,
+  known: KnownPlace[] = [],
+): DayPlan {
   const pts = points.filter((p) => p.accuracyM == null || p.accuracyM <= MAX_ACCURACY_M);
   if (before && (before.accuracyM == null || before.accuracyM <= MAX_ACCURACY_M)) {
     pts.unshift({ ...before, at: dayStart });
@@ -127,7 +146,15 @@ export function planDay(points: DayPoint[], dayStart: Date, before: DayPoint | n
     const span = cluster[cluster.length - 1].at.getTime() - cluster[0].at.getTime();
     const lastOfDay = j >= pts.length;
     // The newest place someone is still at counts as a stop even if short.
-    const isStop = span >= STOP_MIN_MS || (lastOfDay && cluster.length >= 2 && items.length > 0 && span > 0);
+    const isStop =
+      span >= STOP_MIN_MS ||
+      (lastOfDay && cluster.length >= 2 && items.length > 0 && span > 0) ||
+      // A quick stop at a zone or known place (a drop-off), but not just
+      // driving through it: at least a minute, two reports, nobody speeding.
+      (span >= KNOWN_STOP_MS &&
+        cluster.length >= 2 &&
+        cluster.every((p) => p.speed == null || p.speed < DRIVE_AVG_MPS) &&
+        atKnownPlace(cluster, known));
     if (isStop) {
       if (trip.length > 0) {
         // The trip runs from the last stop's final point to this stop's first.

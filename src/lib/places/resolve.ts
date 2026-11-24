@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
 import { PLACES_LOOKUP_KEY } from "@/lib/places/config";
 import { boxAround, metres, shortAddress, type Pt } from "@/lib/places/geo";
-import { nearbySearch, reverseGeocode, forwardGeocode } from "@/lib/places/google";
+import { isMinorPlace, nearbySearch, reverseGeocode, forwardGeocode } from "@/lib/places/google";
 import { bump, canCall } from "@/lib/places/usage";
 import { zoneCenters } from "@/lib/places/zones";
 import { sameStreetAddress } from "@/lib/places/address-match";
@@ -155,7 +155,10 @@ async function askGoogle(
     const radius = searchRadius(p.accuracyM);
     const hits = await nearbySearch(key, p.lat, p.lng, radius);
     if (hits && hits.length > 0) {
-      const hit = hits.reduce((a, b) => (metres(p, a) <= metres(p, b) ? a : b));
+      // Nearest place someone would go to; a charger or ATM only if that's all.
+      const real = hits.filter((h) => !isMinorPlace(h));
+      const pool = real.length > 0 ? real : hits;
+      const hit = pool.reduce((a, b) => (metres(p, a) <= metres(p, b) ? a : b));
       await prisma.placeLookup.create({
         data: {
           lat: p.lat,
@@ -164,7 +167,7 @@ async function askGoogle(
           address: hit.address,
           googlePlaceId: hit.placeId,
           source: "nearby",
-          candidates: hits.slice(0, 5).map((h) => ({ name: h.name, address: h.address })),
+          candidates: [...real, ...hits.filter((h) => isMinorPlace(h))].slice(0, 6).map((h) => ({ name: h.name, address: h.address })),
         },
       });
       return { name: hit.name, address: shortAddress(hit.address), kind: "place" };

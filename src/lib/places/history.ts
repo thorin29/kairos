@@ -4,7 +4,7 @@ import { getSetting } from "@/lib/settings";
 import { householdTz } from "@/lib/dates";
 import { PLACES_LOOKUP_KEY } from "@/lib/places/config";
 import { dayEnd, dayStart } from "@/lib/places/day-bounds";
-import { MPS_TO_MPH, planDay, smoothPath, totalsOf, type DayPoint, type Leg } from "@/lib/places/day";
+import { MPS_TO_MPH, planDay, smoothPath, totalsOf, type DayPoint, type KnownPlace, type Leg } from "@/lib/places/day";
 import { snappedDrive } from "@/lib/places/roads";
 import { placeFor } from "@/lib/places/live";
 import { zoneCenters } from "@/lib/places/zones";
@@ -23,6 +23,24 @@ const MAX_POINTS = 6_000;
 /** A drive this recent may still be going; it's drawn raw until it settles. */
 const SETTLE_MS = 3 * 60_000;
 const SELECT = { at: true, lat: true, lng: true, accuracyM: true, speed: true, zone: true, courseDeg: true } as const;
+
+/** Saved addresses and the family's named spots (everyone's and this
+ *  person's own), so a quick stop there still shows. */
+async function knownPlaces(userId: string): Promise<KnownPlace[]> {
+  const [saved, named] = await Promise.all([
+    prisma.savedAddress.findMany({ where: { status: "APPROVED", lat: { not: null } }, select: { lat: true, lng: true } }) as Promise<
+      { lat: number | null; lng: number | null }[]
+    >,
+    prisma.placeName.findMany({
+      where: { name: { not: null }, OR: [{ userId: null }, { userId }] },
+      select: { lat: true, lng: true, radiusM: true },
+    }) as Promise<{ lat: number; lng: number; radiusM: number }[]>,
+  ]);
+  return [
+    ...saved.flatMap((s) => (s.lat != null && s.lng != null ? [{ lat: s.lat, lng: s.lng, radiusM: 150 }] : [])),
+    ...named,
+  ];
+}
 
 export async function loadDay(userId: string, dateISO: string, opts: { names: boolean }): Promise<DayData> {
   const tz = householdTz();
@@ -56,7 +74,8 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
         ? [{ id: e.id, kind: "add", at: e.at, lat: e.lat, lng: e.lng, name: e.name, address: e.address }]
         : [],
   );
-  const edited = applyEdits(planDay(points, start, before), edits);
+  const known = await knownPlaces(userId);
+  const edited = applyEdits(planDay(points, start, before, known), edits);
   const plan = edited.plan;
   const centers = await zoneCenters();
   const now = Date.now();

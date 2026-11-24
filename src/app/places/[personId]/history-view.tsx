@@ -25,8 +25,6 @@ const btn =
   "inline-flex h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-sm font-medium shadow-sm hover:border-accent disabled:opacity-50";
 const small =
   "inline-flex h-9 items-center gap-1.5 rounded-full border border-hairline bg-surface px-3 text-xs font-medium hover:border-accent";
-const statCard = "rounded-xl border border-hairline bg-surface px-4 py-3";
-const statLabel = "text-xs font-semibold uppercase tracking-widest text-muted";
 
 const SPEEDS = [30, 120, 480] as const;
 /** Time a stop takes during replay, in replay milliseconds. */
@@ -297,7 +295,20 @@ export function HistoryView({
             ‹
           </Link>
           <Avatar name={person.name} color={person.color} avatarPath={person.avatarPath} avatarPosition={person.avatarPosition} size="md" />
-          <h1 className="font-display text-3xl font-semibold tracking-tight">{person.name}</h1>
+          <div className="min-w-0">
+            <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{person.name}</h1>
+            {/* The day's totals in one line (they were four tiles). */}
+            <p className="font-mono text-xs text-muted sm:text-sm">
+              {[
+                `${t.miles} mi`,
+                `${t.driveMin < 60 ? `${t.driveMin} min` : `${Math.floor(t.driveMin / 60)} h ${t.driveMin % 60} min`} driving`,
+                t.topMph != null ? `top ${t.topMph} mph` : null,
+                `${t.stops} stop${t.stops === 1 ? "" : "s"}`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-1 rounded-full border border-hairline bg-surface p-1">
           <Link href={placesHref(embed, person.id, prev)} aria-label="Previous day" className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-ground">
@@ -316,31 +327,13 @@ export function HistoryView({
         </div>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className={statCard}>
-          <div className={statLabel}>Distance</div>
-          <div className="mt-1 font-mono text-xl">{t.miles} mi</div>
-        </div>
-        <div className={statCard}>
-          <div className={statLabel}>Driving</div>
-          <div className="mt-1 font-mono text-xl">
-            {t.driveMin < 60 ? `${t.driveMin} min` : `${Math.floor(t.driveMin / 60)} h ${t.driveMin % 60} min`}
-          </div>
-        </div>
-        <div className={statCard}>
-          <div className={statLabel}>Top speed</div>
-          <div className="mt-1 font-mono text-xl">{t.topMph != null ? `${t.topMph} mph` : "—"}</div>
-        </div>
-        <div className={statCard}>
-          <div className={statLabel}>Stops</div>
-          <div className="mt-1 font-mono text-xl">{t.stops}</div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      {/* The map stays put; only the timeline scrolls — beside it on a wide
+          screen (both fill the window), under it on a phone (the map sticks
+          to the top while the page scrolls the timeline). */}
+      <div className={`flex flex-col gap-4 lg:flex-row lg:items-stretch ${embed ? "lg:h-[calc(100dvh-5.5rem)]" : "lg:h-[calc(100dvh-9rem)]"}`}>
         <section
           aria-label="Map"
-          className="relative h-[52vh] min-h-[340px] overflow-hidden rounded-2xl border border-hairline bg-surface lg:h-[calc(100dvh-14rem)] lg:min-w-0 lg:flex-1"
+          className="sticky top-0 z-10 h-[42vh] min-h-[280px] shrink-0 overflow-hidden rounded-2xl border border-hairline bg-surface lg:relative lg:h-full lg:min-w-0 lg:flex-1"
         >
           <div ref={mapDiv} className="h-full w-full" />
           {hasTrips && (
@@ -380,7 +373,7 @@ export function HistoryView({
           )}
         </section>
 
-        <aside aria-label="Timeline" className="rounded-2xl border border-hairline bg-surface py-2 lg:w-96 lg:shrink-0">
+        <aside aria-label="Timeline" className="rounded-2xl border border-hairline bg-surface py-2 lg:h-full lg:w-96 lg:shrink-0 lg:overflow-y-auto">
           {day.items.length === 0 && <p className="px-4 py-3 text-sm text-muted">Nothing recorded.</p>}
           {day.items.map((it, idx) => {
             if (it.kind === "stop") {
