@@ -7,6 +7,7 @@ import { verifyIngestToken, noteUnlinked } from "@/lib/places/config";
 import { parsePoint, pointsFromBody, type ParsedPoint } from "@/lib/places/ingest-parse";
 import { checkPlaces } from "@/lib/places/notify";
 import { checkSafety } from "@/lib/places/safety";
+import { noteZoneIcons } from "@/lib/places/zones-look";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
   const errors: string[] = [];
   let unlinked: string | null = null;
   const newest = new Map<string, ParsedPoint>();
+  const icons = new Map<string, string>();
 
   for (const r of raw) {
     const res = parsePoint(r, now);
@@ -80,6 +82,7 @@ export async function POST(req: NextRequest) {
       update: values,
     });
     stored++;
+    if (p.zone && p.zoneIcon) icons.set(p.zone, p.zoneIcon);
     const prev = newest.get(userId);
     if (!prev || p.at > prev.at) newest.set(userId, p);
   }
@@ -99,6 +102,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (icons.size > 0) {
+    try {
+      await noteZoneIcons(icons);
+    } catch (e) {
+      console.warn(`[places] zone icons failed: ${(e as Error).message}`);
+    }
+  }
   if (unlinked) await noteUnlinked(unlinked);
 
   if (stored === 0 && errors.length > 0 && skipped.length === 0) {

@@ -40,6 +40,8 @@ export type ParsedPoint = {
   altitudeM: number | null;
   battery: number | null;
   zone: string | null;
+  /** The zone's icon as HA has it ("mdi:hockey-sticks"), v0.779. */
+  zoneIcon: string | null;
 };
 
 /** HA states that mean "in no zone". */
@@ -97,6 +99,7 @@ export function parsePoint(raw: unknown, now: Date): ParseResult {
       altitudeM: num(r.altitude),
       battery: battery != null && battery >= 0 && battery <= 100 ? Math.round(battery) : null,
       zone: cleanZone(r.zone),
+      zoneIcon: typeof r.zone_icon === "string" && /^mdi:[a-z0-9-]{1,64}$/.test(r.zone_icon.trim()) ? r.zone_icon.trim() : null,
     },
   };
 }

@@ -880,7 +880,12 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
                 className={`rounded-2xl border transition-colors ${
                   p.stale ? "border-amber-200 bg-amber-50" : "border-hairline bg-surface hover:border-accent"
                 }`}
-                style={isSel ? { borderColor: p.color, boxShadow: `0 0 0 1px ${p.color}`, backgroundColor: `${p.color}14` } : undefined}
+                // A light tint of where they are (v0.779): the zone's colour,
+                // coral when in no zone. A stale phone stays amber.
+                style={{
+                  ...(!p.stale && p.look ? { backgroundColor: `${p.look.color}1F`, borderColor: `${p.look.color}55` } : {}),
+                  ...(isSel ? { borderColor: p.color, boxShadow: `0 0 0 1px ${p.color}` } : {}),
+                }}
               >
                 <div className="flex items-stretch">
                 <button type="button" onClick={() => choose(p)} className="flex min-w-0 flex-1 items-start gap-3 py-3 pl-3 text-left">
@@ -904,7 +909,14 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
                         <Movement p={p} />
                       </span>
                     ) : (
-                      <span className="block truncate text-sm">{placeLine(p)}</span>
+                      <span className="flex min-w-0 items-center gap-1.5 text-sm">
+                        {p.look?.icon && (
+                          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill={p.look.color} aria-hidden>
+                            <path d={p.look.icon} />
+                          </svg>
+                        )}
+                        <span className="truncate">{placeLine(p)}</span>
+                      </span>
                     )}
                     {now != null && (
                       <span className={`block font-mono text-xs ${p.stale ? "text-amber-800" : "text-muted"}`}>

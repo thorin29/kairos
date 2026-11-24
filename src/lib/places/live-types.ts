@@ -29,6 +29,9 @@ export type LivePerson = {
   place: PlaceLabel | null;
   /** On a backpacking trip today (v0.778). */
   backpacking?: boolean;
+  /** The card's colour (v0.779): the zone's while settled in one, else coral;
+   *  and the zone's icon (an SVG path, 24×24) when it has one. */
+  look?: { color: string; icon: string | null; zone: string | null };
 };
 
 /** People without any location yet still appear in the list (not the map). */

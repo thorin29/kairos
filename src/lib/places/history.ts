@@ -26,7 +26,7 @@ const MAX_POINTS = 6_000;
 const CAMP_MS = 2 * 60 * 60_000;
 /** A drive this recent may still be going; it's drawn raw until it settles. */
 const SETTLE_MS = 60_000;
-const SELECT = { at: true, lat: true, lng: true, accuracyM: true, speed: true, zone: true, courseDeg: true } as const;
+const SELECT = { at: true, lat: true, lng: true, accuracyM: true, speed: true, zone: true, courseDeg: true, source: true } as const;
 
 /** Saved addresses and the family's named spots (everyone's and this
  *  person's own), so a quick stop there still shows. */

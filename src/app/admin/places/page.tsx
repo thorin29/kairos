@@ -4,6 +4,8 @@ import { loadPlacesAdmin } from "@/lib/places/config";
 import { usageSummary } from "@/lib/places/usage";
 import { householdTz } from "@/lib/dates";
 import { PlacesAdminForm, type PersonView } from "./places-admin";
+import { ZoneColors } from "./zone-colors";
+import { zonesForAdmin } from "@/lib/places/zones-look";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +19,7 @@ function ago(iso: string, now: number): string {
 }
 
 export default async function PlacesAdminPage() {
-  const [data, usage] = await Promise.all([loadPlacesAdmin(), usageSummary()]);
+  const [data, usage, zones] = await Promise.all([loadPlacesAdmin(), usageSummary(), zonesForAdmin()]);
   const now = Date.now();
   const tz = householdTz();
   const time = new Intl.DateTimeFormat("en-US", {
@@ -79,6 +81,9 @@ export default async function PlacesAdminPage() {
         push={data.push}
         storageBytes={data.storageBytes}
       />
+      <div className="mt-6">
+        <ZoneColors zones={zones} />
+      </div>
     </main>
   );
 }

@@ -21,7 +21,30 @@ export type DayPoint = {
   zone?: string | null;
   /** Direction of travel in degrees, when the phone reports it. */
   courseDeg?: number | null;
+  /** "phone": the Kairos app's own GPS (v0.779); else Home Assistant. */
+  source?: string | null;
 };
+
+/** Home Assistant reports this close to one of the phone's own are dropped. */
+const PHONE_COVERS_MS = 5 * 60_000;
+
+/**
+ * Where the Kairos app was recording with the phone's GPS (a backpacking
+ * trip, v0.779), its points are the better ones: Home Assistant's within 5
+ * minutes of one are left out. Oldest first in, oldest first out.
+ */
+export function preferPhone(points: DayPoint[]): DayPoint[] {
+  const phone = points.filter((p) => p.source === "phone").map((p) => p.at.getTime());
+  if (phone.length === 0) return points;
+  let j = 0;
+  return points.filter((p) => {
+    if (p.source === "phone") return true;
+    const t = p.at.getTime();
+    while (j < phone.length - 1 && phone[j + 1] <= t) j++;
+    const near = Math.min(Math.abs(phone[j] - t), j + 1 < phone.length ? Math.abs(phone[j + 1] - t) : Infinity);
+    return near > PHONE_COVERS_MS;
+  });
+}
 
 export type Stop = {
   kind: "stop";
@@ -139,7 +162,7 @@ export function planDay(
   /** The time now (ms), so a trip that went quiet can be ended; omit in tests that don't care. */
   now: number | null = null,
 ): DayPlan {
-  const pts = points.filter((p) => p.accuracyM == null || p.accuracyM <= MAX_ACCURACY_M);
+  const pts = preferPhone(points).filter((p) => p.accuracyM == null || p.accuracyM <= MAX_ACCURACY_M);
   if (before && (before.accuracyM == null || before.accuracyM <= MAX_ACCURACY_M)) {
     pts.unshift({ ...before, at: dayStart });
   }

@@ -55,3 +55,34 @@ export function dayOfTrip(days: string[], iso: string): { day: number; of: numbe
   while (days.includes(addDays(last, 1))) last = addDays(last, 1);
   return { day: Math.round((Date.parse(iso) - Date.parse(first)) / DAY) + 1, of: Math.round((Date.parse(last) - Date.parse(first)) / DAY) + 1 };
 }
+
+/** The run of back-to-back trip days `iso` is in, first to last. */
+export function runOf(days: string[], iso: string): string[] {
+  if (!days.includes(iso)) return [];
+  let first = iso;
+  while (days.includes(addDays(first, -1))) first = addDays(first, -1);
+  const out: string[] = [];
+  for (let d = first; days.includes(d); d = addDays(d, 1)) out.push(d);
+  return out;
+}
+
+export type TripDayStats = { distanceM: number | null; seconds: number | null; gainM: number | null; lossM: number | null };
+
+/** A trip's totals in miles, minutes and feet; elevation null when no day had it. */
+export function tripTotals(rows: TripDayStats[]): { miles: number; minutes: number; gainFt: number | null; lossFt: number | null } {
+  const sum = (k: keyof TripDayStats) => rows.reduce((s, r) => s + (r[k] ?? 0), 0);
+  const any = rows.some((r) => r.gainM != null);
+  return {
+    miles: Math.round((sum("distanceM") / 1609.344) * 10) / 10,
+    minutes: Math.round(sum("seconds") / 60),
+    gainFt: any ? Math.round(sum("gainM") * 3.28084) : null,
+    lossFt: any ? Math.round(sum("lossM") * 3.28084) : null,
+  };
+}
+
+/** "14 h 10 min". */
+export function hoursMinutes(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h} h ${m} min` : `${m} min`;
+}

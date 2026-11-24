@@ -107,9 +107,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.778.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  177_backpacking, all registered in `MIGRATIONS`.
-- App 0.558.0 (versionCode 630, CLIENT_BUILD 630).
+- Web 0.779.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  178_trip_gps, all registered in `MIGRATIONS`.
+- App 0.559.0 (versionCode 631, CLIENT_BUILD 631).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -290,7 +290,8 @@ Kept here so they don't come back as open items.
 - Backpacking trips (v0.778 / app 0.558): a Backpacking calendar event makes
   each trip day's hiking (from Family map locations) a workout of its own;
   "Hiking today?" on the first walk of the day; Camp and hiking lines on
-  History; a backpack on the person's card.
+  History; a backpack on the person's card. v0.779 / app 0.559: the phone's
+  GPS for the trip (battery-saving), elevation, and an end-of-trip summary.
 
 - Go for a walk, run, ruck or hike (v0.777 / app 0.557): tracked with the
   phone's GPS from a Workouts tile, + Additional or a long-press shortcut;

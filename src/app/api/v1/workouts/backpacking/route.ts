@@ -1,16 +1,21 @@
 import type { NextRequest } from "next/server";
 import { apiOk, apiError } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
-import { answerToday, backpackToday, startTrip } from "@/lib/workouts/backpacking";
+import { answerToday, backpackToday, lastTrip, startTrip } from "@/lib/workouts/backpacking";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Today on a backpacking trip (v0.778): { today: { date, day, of, status, miles } | null }. */
+/**
+ * Today on a backpacking trip (v0.778): { today: { date, day, of, status,
+ * miles } | null, lastTrip: { from, to, days, miles, minutes, gainFt, lossFt }
+ * | null } (v0.779: the latest trip finished in the last 14 days).
+ */
 export async function GET(req: NextRequest) {
   const authed = await requireDevice(req);
   if ("response" in authed) return authed.response;
-  return apiOk({ today: await backpackToday(authed.device.person.id) });
+  const userId = authed.device.person.id;
+  return apiOk({ today: await backpackToday(userId), lastTrip: await lastTrip(userId) });
 }
 
 /**
@@ -32,5 +37,5 @@ export async function POST(req: NextRequest) {
   } else {
     return apiError("validation", "Send hiking or start.");
   }
-  return apiOk({ today: await backpackToday(userId) });
+  return apiOk({ today: await backpackToday(userId), lastTrip: await lastTrip(userId) });
 }

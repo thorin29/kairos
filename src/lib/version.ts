@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.778.0";
+export const APP_VERSION = "0.779.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -190,11 +190,16 @@ export const MIGRATIONS = [
   "175_my_reminders",
   "176_workout_tracks",
   "177_backpacking",
+  "178_trip_gps",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.779.0",
+    summary: ["Backpacking with the phone's GPS: the app's points go to Family map and are used where Home Assistant's overlap, so trip miles and routes are exact; without it the trip still goes by Home Assistant. Each trip day keeps its elevation gain and loss, and a summary (miles, time hiking, feet up and down) arrives when the trip is over. Family map cards are tinted by where people are: the zone's colour with its Home Assistant icon, coral when in no zone; pick zone colours in Admin → Family map."],
+  },
   {
     version: "0.778.0",
     summary: ["Backpacking: a new Backpacking event type. On the days of a trip (one event over several days, or a repeating one on back-to-back days) each day's hiking is read from Family map locations and logged as that day's workout; the first time you're seen hiking you're asked \"Hiking today?\", and a day you didn't answer is still logged. Long stops show as Camp and the hiking as a workout line on History; people on a trip have a backpack on their card. Family map: a Terrain button, and Kairos stops opening maps for the day at 300 map loads."],

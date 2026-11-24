@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-11 — Trip GPS, trip summary, zone colours (v0.779.0)
+
+- Backpacking uses the phone's GPS after all (owner): the app's trip points
+  go to `POST /api/v1/places/phone-points` and into `LocationPoint` with
+  `source: "phone"`, so Family map, History and the trip's miles all use
+  them. `preferPhone` drops Home Assistant points within 5 min of a phone
+  point. Without the app, the trip still goes by Home Assistant.
+- Each logged trip day keeps distance, time and elevation on `BackpackDay`.
+  Elevation: one Google Elevation call per day (≤ 512 points of the day's
+  hiking, `elevationOf`; usage kind "elevation", 40/day; the Elevation API
+  must be on for the lookup key), gain/loss ignoring changes under 3 m; also
+  written to the session's notes. When a trip's last day is logged (or
+  answered no) a "Backpacking trip done" summary goes out once
+  (`summarySent`); `GET workouts/backpacking` adds `lastTrip` (finished in
+  the last 14 days).
+- Zones: `PlacesZone` (name → HA icon, colour). The HA automation sends
+  `zone_icon`; Admin → Family map → Zone colours picks a colour per zone
+  (default: Home green, others from a palette by name). Live people carry
+  `look` (`color`, `icon` as an MDI SVG path from `@mdi/js`, `zone`); cards
+  are tinted with it, coral when in no zone; stale stays amber.
+
+
 ## 2026-11 — Backpacking trips; terrain; a daily map cap (v0.778.0)
 
 - Owner's call: no phone GPS for multi-day trips (he has a backpacking app

@@ -1813,6 +1813,13 @@ model BackpackDay {
   status    String
   /// The cardio session logged for the day (null: nothing to log).
   sessionId String?
+  /// The day's hiking once logged (v0.779), for the trip's summary.
+  distanceM Float?
+  seconds   Int?
+  gainM     Float?
+  lossM     Float?
+  /// The trip's summary went out (set on its last day).
+  summarySent Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2233,9 +2240,21 @@ model LocationPoint {
   // The Home Assistant zone the person was in (v0.760), e.g. "Home", "Work";
   // null when in none or when the source isn't Home Assistant.
   zone      String?
+  /// "phone" for the Kairos app's own GPS on a backpacking trip (v0.779);
+  /// null for Home Assistant.
+  source    String?
   createdAt DateTime @default(now())
 
   @@unique([userId, at])
+}
+
+// A Home Assistant zone's look on Family map (v0.779): its icon (sent by the
+// HA automation) and the colour picked in Admin → Family map.
+model PlacesZone {
+  name      String   @id
+  icon      String?
+  color     String?
+  updatedAt DateTime @updatedAt
 }
 
 // Places (v0.757): Google's answer for a spot, so the same place isn't asked

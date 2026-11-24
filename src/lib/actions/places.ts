@@ -139,3 +139,15 @@ export async function sendTestNotificationAction(userId: string): Promise<{ erro
   revalidatePath("/admin/places");
   return { error: null };
 }
+
+/** A zone's colour on Family map cards (v0.779); null goes back to the default. */
+export async function setPlacesZoneColorAction(name: string, color: string | null): Promise<{ error: string | null }> {
+  await requireAdmin();
+  const { cleanColor } = await import("@/lib/places/zone-colors");
+  const { setZoneColor } = await import("@/lib/places/zones-look");
+  const clean = color == null ? null : cleanColor(color);
+  if (!name.trim() || name.length > 100 || (color != null && !clean)) return { error: "Pick a colour." };
+  await setZoneColor(name, clean);
+  revalidatePath("/admin/places");
+  return { error: null };
+}

@@ -18,6 +18,8 @@ export const DAILY_LIMIT: Record<Exclude<ApiKind, "mapload">, number> = {
   roads: 140,
   routes: 280,
   search: 40,
+  // Elevation (v0.779): one call per backpacking trip day.
+  elevation: 40,
 };
 
 /** Map loads Kairos allows a day (v0.778): a map that would go past it isn't
@@ -33,6 +35,7 @@ export const FREE_PER_MONTH: Record<ApiKind, number> = {
   roads: 5_000,
   routes: 10_000,
   search: 5_000,
+  elevation: 5_000,
 };
 
 export async function bump(kind: ApiKind): Promise<void> {
@@ -71,7 +74,7 @@ export async function usageSummary(): Promise<UsageSummary> {
     where: { day: { startsWith: month } },
     select: { day: true, kind: true, count: true },
   })) as { day: string; kind: string; count: number }[];
-  const kinds: ApiKind[] = ["mapload", "geocode", "nearby", "search", "roads", "routes"];
+  const kinds: ApiKind[] = ["mapload", "geocode", "nearby", "search", "roads", "routes", "elevation"];
   const out = {} as UsageSummary;
   for (const k of kinds) {
     const mine = rows.filter((r) => r.kind === k);

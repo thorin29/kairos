@@ -5,7 +5,8 @@ import { dayEnd, dayStart } from "@/lib/places/day-bounds";
 import { planDay, type DayPoint } from "@/lib/places/day";
 import { loadWorkoutUnitSystem } from "@/lib/queries/workouts";
 import { logCardio } from "@/lib/workouts/cardio-run";
-import { dayOfTrip, tripDays } from "@/lib/workouts/backpacking-days";
+import { dayOfTrip, hoursMinutes, runOf, tripDays, tripTotals } from "@/lib/workouts/backpacking-days";
+import { elevationOf } from "@/lib/places/elevation";
 import { tripDaysFor, tripEvents } from "@/lib/workouts/backpacking-trips";
 import { notify } from "@/lib/push";
 
@@ -27,10 +28,13 @@ const MIN_LEG_M = 100;
 /** How far back a missed day is still logged. */
 const BACK_DAYS = 21;
 
-const SELECT = { at: true, lat: true, lng: true, accuracyM: true, speed: true, zone: true } as const;
+const SELECT = { at: true, lat: true, lng: true, accuracyM: true, speed: true, zone: true, source: true } as const;
 
 /** The hiking in a day, from the person's locations: the walks between stops. */
-export async function hikeOn(userId: string, dateISO: string): Promise<{ distanceM: number; seconds: number }> {
+export async function hikeOn(
+  userId: string,
+  dateISO: string,
+): Promise<{ distanceM: number; seconds: number; path: [number, number][] }> {
   const tz = householdTz();
   const start = dayStart(dateISO, tz);
   const end = dayEnd(dateISO, tz);
@@ -40,12 +44,14 @@ export async function hikeOn(userId: string, dateISO: string): Promise<{ distanc
   ])) as [DayPoint[], DayPoint | null];
   let distanceM = 0;
   let seconds = 0;
+  const path: [number, number][] = [];
   for (const it of planDay(points, start, before, [], Date.now()).items) {
     if (it.kind !== "move" || it.distanceM < MIN_LEG_M) continue;
     distanceM += it.distanceM;
     seconds += (it.end.getTime() - it.start.getTime()) / 1000;
+    for (const p of it.points) path.push([p.lat, p.lng]);
   }
-  return { distanceM, seconds: Math.round(seconds) };
+  return { distanceM, seconds: Math.round(seconds), path };
 }
 
 async function dayRow(userId: string, dateISO: string) {
@@ -120,13 +126,22 @@ export async function startTrip(userId: string, untilISO: string): Promise<boole
   return true;
 }
 
-/** Log one finished trip day (unless they said they weren't hiking). */
+const ft = (m: number) => Math.round(m * 3.28084).toLocaleString("en-US");
+
+/** Log one finished trip day (unless they said they weren't hiking), with
+ *  its elevation gain and loss. */
 async function logDay(userId: string, dateISO: string): Promise<void> {
   const hike = await hikeOn(userId, dateISO);
+  const date = toDateColumn(dateISO);
   if (hike.distanceM < MIN_HIKE_M) {
-    await setDay(userId, dateISO, "logged", null);
+    await prisma.backpackDay.upsert({
+      where: { userId_date: { userId, date } },
+      create: { userId, date, status: "logged", distanceM: 0, seconds: 0 },
+      update: { status: "logged", sessionId: null, distanceM: 0, seconds: 0 },
+    });
     return;
   }
+  const elev = await elevationOf(hike.path);
   const system = await loadWorkoutUnitSystem();
   const distance = hike.distanceM / (system === "metric" ? 1000 : 1609.344);
   const sessionId = await logCardio(userId, dateISO, {
@@ -134,7 +149,86 @@ async function logDay(userId: string, dateISO: string): Promise<void> {
     distance: Math.round(distance * 100) / 100,
     seconds: Math.min(Math.max(hike.seconds, 60), 24 * 3600),
   });
-  await setDay(userId, dateISO, "logged", sessionId);
+  if (sessionId && elev) {
+    await prisma.workoutSession.update({
+      where: { id: sessionId },
+      data: { notes: `\u2191 ${ft(elev.gainM)} ft \u2193 ${ft(elev.lossM)} ft` },
+    });
+  }
+  const stats = {
+    status: "logged",
+    sessionId,
+    distanceM: hike.distanceM,
+    seconds: hike.seconds,
+    gainM: elev?.gainM ?? null,
+    lossM: elev?.lossM ?? null,
+  };
+  await prisma.backpackDay.upsert({ where: { userId_date: { userId, date } }, create: { userId, date, ...stats }, update: stats });
+}
+
+export type TripSummary = {
+  from: string;
+  to: string;
+  days: number;
+  miles: number;
+  minutes: number;
+  gainFt: number | null;
+  lossFt: number | null;
+};
+
+type StatRow = { date: Date; status: string; distanceM: number | null; seconds: number | null; gainM: number | null; lossM: number | null; summarySent: boolean };
+
+async function runRows(userId: string, run: string[]): Promise<StatRow[]> {
+  return (await prisma.backpackDay.findMany({
+    where: { userId, date: { in: run.map(toDateColumn) } },
+    select: { date: true, status: true, distanceM: true, seconds: true, gainM: true, lossM: true, summarySent: true },
+  })) as StatRow[];
+}
+
+/** A finished trip's summary once every day of it is logged (or said no to). */
+function summaryOf(run: string[], rows: StatRow[]): TripSummary | null {
+  if (run.length === 0 || rows.length < run.length || rows.some((r) => r.status !== "logged" && r.status !== "skip")) return null;
+  return { from: run[0], to: run[run.length - 1], days: run.length, ...tripTotals(rows.filter((r) => r.status === "logged")) };
+}
+
+/** The trip's summary as a notification, once, when its last day is logged. */
+async function maybeSummary(userId: string, days: string[], dateISO: string): Promise<void> {
+  const run = runOf(days, dateISO);
+  if (run.length === 0 || run[run.length - 1] !== dateISO) return;
+  const rows = await runRows(userId, run);
+  const last = rows.find((r) => r.date.toISOString().slice(0, 10) === dateISO);
+  if (!last || last.summarySent) return;
+  const sum = summaryOf(run, rows);
+  if (!sum) return;
+  await prisma.backpackDay.update({
+    where: { userId_date: { userId, date: toDateColumn(dateISO) } },
+    data: { summarySent: true },
+  });
+  const elev = sum.gainFt != null ? ` \u00b7 \u2191 ${sum.gainFt.toLocaleString("en-US")} ft \u2193 ${(sum.lossFt ?? 0).toLocaleString("en-US")} ft` : "";
+  await notify(
+    [userId],
+    {
+      kind: "backpacking",
+      title: "Backpacking trip done",
+      body: `${sum.miles} mi in ${sum.days} ${sum.days === 1 ? "day" : "days"} \u00b7 ${hoursMinutes(sum.minutes)} hiking${elev}`,
+      link: "/exercise",
+    },
+    { quiet: true },
+  );
+}
+
+/** The most recent finished trip in the last 14 days, for the Workouts card. */
+export async function lastTrip(userId: string): Promise<TripSummary | null> {
+  const today = todayISO();
+  const days = await tripDaysFor(userId, addDays(today, -45), addDays(today, 1));
+  const past = days.filter((d) => d < today);
+  if (past.length === 0) return null;
+  const lastDay = past[past.length - 1];
+  if (lastDay < addDays(today, -14)) return null;
+  const run = runOf(days, lastDay);
+  // Still going today: not finished.
+  if (run[run.length - 1] >= today) return null;
+  return summaryOf(run, await runRows(userId, run));
 }
 
 /**
@@ -173,8 +267,13 @@ export async function backpackingTick(): Promise<void> {
     for (const d of days) {
       if (d >= today || logged >= 10) continue;
       const row = await dayRow(userId, d);
-      if (row && (row.status === "logged" || row.status === "skip")) continue;
+      if (row && (row.status === "logged" || row.status === "skip")) {
+        // A last day answered no still sends the trip's summary.
+        if (row.status === "skip") await maybeSummary(userId, days, d);
+        continue;
+      }
       await logDay(userId, d);
+      await maybeSummary(userId, days, d);
       logged++;
     }
   }

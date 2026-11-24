@@ -95,7 +95,8 @@ rest_command:
         "altitude": altitude | default(none),
         "battery": battery | default(none),
         "last_updated": updated | default(none),
-        "zone": zone | default(none)
+        "zone": zone | default(none),
+        "zone_icon": zone_icon | default(none)
       } | to_json }}
 ```
 
@@ -136,6 +137,10 @@ actions:
       battery: "{{ states('sensor.' ~ src.split('.')[1] ~ '_battery_level') | int(none) if src else none }}"
       updated: "{{ trigger.to_state.last_updated.isoformat() }}"
       zone: "{{ trigger.to_state.state }}"
+      zone_icon: >-
+        {% set z = trigger.to_state.state %}
+        {% if z == 'home' %}{{ state_attr('zone.home', 'icon') or 'mdi:home' }}
+        {% else %}{{ states.zone | selectattr('name', 'eq', z) | map(attribute='attributes.icon') | first | default('') }}{% endif %}
 ```
 
 - A state trigger with no `to:` fires on attribute changes too, so every new
@@ -145,6 +150,9 @@ actions:
   (`device_tracker.phone_a` → `sensor.phone_a_battery_level`). If a phone has
   no such sensor, battery is just left blank.
 - An update with no GPS position (a router-only tracker) is skipped.
+- `zone_icon` (v0.779) is the zone's icon in Home Assistant ("mdi:hockey-sticks");
+  Family map shows it on the person's card in the zone's colour (Admin →
+  Family map → Zone colours). Leave it out and cards just have no icon.
 - `zone` is the person's state: the Home Assistant zone they're in ("home",
   "Work", …) or `not_home`. Kairos names the place after the zone (before
   asking Google) and offers zones in notification rules, so Home Assistant's

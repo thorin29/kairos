@@ -51,3 +51,48 @@ describe("dayOfTrip", () => {
     expect(dayOfTrip(days, "2026-12-08")).toBeNull();
   });
 });
+
+import { runOf, tripTotals } from "@/lib/workouts/backpacking-days";
+import { encodePolyline, gainLoss } from "@/lib/places/elevation-calc";
+import { decodePolyline } from "@/lib/places/route-check";
+import { preferPhone, type DayPoint } from "@/lib/places/day";
+
+describe("trip summary pieces", () => {
+  it("finds the run a day is in", () => {
+    expect(runOf(["2026-12-04", "2026-12-05", "2026-12-09"], "2026-12-05")).toEqual(["2026-12-04", "2026-12-05"]);
+  });
+
+  it("totals miles, minutes and feet", () => {
+    const t = tripTotals([
+      { distanceM: 16_093.44, seconds: 18_000, gainM: 300, lossM: 100 },
+      { distanceM: 8_046.72, seconds: 9_000, gainM: null, lossM: null },
+    ]);
+    expect(t).toEqual({ miles: 15, minutes: 450, gainFt: 984, lossFt: 328 });
+  });
+
+  it("counts climbs and drops, not wobble", () => {
+    expect(gainLoss([100, 101, 99, 100, 110, 120, 118, 105])).toEqual({ gainM: 20, lossM: 15 });
+  });
+
+  it("encodes a polyline Google can read back", () => {
+    const pts: [number, number][] = [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]];
+    expect(encodePolyline(pts)).toBe("_p~iF~ps|U_ulLnnqC_mqNvxq`@");
+    expect(decodePolyline(encodePolyline(pts))).toEqual(pts);
+  });
+});
+
+describe("preferPhone", () => {
+  const pt = (min: number, source: string | null): DayPoint => ({
+    at: new Date(Date.UTC(2026, 11, 4, 15, min)),
+    lat: 10,
+    lng: 20,
+    accuracyM: 10,
+    speed: null,
+    source,
+  });
+
+  it("drops Home Assistant points near the phone's own", () => {
+    const out = preferPhone([pt(0, null), pt(10, "phone"), pt(12, null), pt(20, "phone"), pt(40, null)]);
+    expect(out.map((p) => p.source ?? "ha")).toEqual(["ha", "phone", "phone", "ha"]);
+  });
+});

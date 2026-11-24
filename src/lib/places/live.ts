@@ -1,5 +1,7 @@
 import "server-only";
 import { onTripToday } from "@/lib/workouts/backpacking-trips";
+import { zoneLook } from "@/lib/places/zones-look";
+import { AWAY_COLOR } from "@/lib/places/zone-colors";
 import { prisma } from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
 import { PLACES_MAP_ID, PLACES_MAP_KEY } from "@/lib/places/config";
@@ -139,6 +141,8 @@ export async function loadLive(): Promise<LiveData> {
     const lat = centre?.lat ?? latest.lat;
     const lng = centre?.lng ?? latest.lng;
     const place = pres.moving ? null : await placeFor(lat, lng, latest.accuracyM, u.id, latest.zone);
+    const inZone = !pres.moving && latest.zone ? latest.zone : null;
+    const look = inZone ? { ...(await zoneLook(inZone)), zone: inZone } : { color: AWAY_COLOR, icon: null, zone: null };
     people.push({
       ...base,
       lat,
@@ -153,6 +157,7 @@ export async function loadLive(): Promise<LiveData> {
       stale: now - latest.at.getTime() > STALE_MS,
       place,
       ...(onTrip.has(u.id) ? { backpacking: true } : {}),
+      look,
     });
   }
   return { people, waiting, asOf: new Date(now).toISOString() };
