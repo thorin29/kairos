@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-11 — Workouts in two tabs; the tile's buttons in one row (v0.786.0)
+
+- Mockup "Kairos: Workouts page": Progress | Train tabs (Progress first). Train
+  holds the plan card, then the buttons in three groups built like it, under a
+  tinted band (`ActionGroup`): Train (Log workout, Go for a… on the phone,
+  Family WOD), Find & build (Browse, Routines, HIIT / CrossFit), Tools
+  (Calculator, Recent, Pause).
+- The plan card's five actions are one row, the icon over the label (option
+  B). Its week strip starts on Sunday like the charts (`buildStrip`), and its
+  labels are sized like Workout days' so long names wrap instead of truncating.
+- Every workout button has the accent outline; Saved plans' rows are on white.
+- The app keeps the page's loaded data in a ViewModel, so coming back from a
+  button's page lands where you were instead of at the top.
+
 ## 2026-11 — Replaced occurrences outside the calendar (v0.785.0)
 
 - Editing or cancelling one occurrence of a repeating event makes a child

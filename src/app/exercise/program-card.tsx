@@ -23,7 +23,8 @@ import type {
   StartProgramInput,
 } from "@/lib/workouts/program-run";
 import { Modal } from "./plan-file-panel";
-import { ChevronRightIcon, InfoIcon } from "@/components/icons";
+import { TileHeader } from "./action-button";
+import { BookmarkIcon, ChevronRightIcon, InfoIcon, PencilIcon, PlusIcon, SwapIcon } from "@/components/icons";
 import { MovementInfo } from "@/components/movement-info";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { PlanLibrary } from "./my-plans";
@@ -356,10 +357,10 @@ export function ProgramCard({
         {data.plan && <WeekStrip days={data.plan.strip} />}
         <TileButtons
           buttons={[
-            ...(onEditPlan ? [["Edit", onEditPlan] as const] : []),
-            ["Change", () => setChoosing(true)] as const,
+            ...(onEditPlan ? [["Edit", onEditPlan, PencilIcon] as const] : []),
+            ["Change", () => setChoosing(true), SwapIcon] as const,
             [
-              "Add program",
+              "Add",
               () => {
                 if ((data.also ?? []).length >= 1) setAskThird(true);
                 else {
@@ -367,9 +368,10 @@ export function ProgramCard({
                   setChoosing(true);
                 }
               },
+              PlusIcon,
             ] as const,
-            ...(onSaved ? [["Saved", onSaved] as const] : []),
-            ["End", () => setEnding(true)] as const,
+            ...(onSaved ? [["Saved", onSaved, BookmarkIcon] as const] : []),
+            ["End", () => setEnding(true), StopIcon] as const,
           ]}
         />
         </div>
@@ -576,10 +578,10 @@ export function ProgramCard({
         <WeekStrip days={data.plan.strip} />
         <TileButtons
           buttons={[
-            ...(onEditPlan ? [["Edit", onEditPlan] as const] : []),
-            ["Change", () => setChoosing(true)] as const,
-            ...(onSaved ? [["Saved", onSaved] as const] : []),
-            ["End", () => setEndingOwn(true)] as const,
+            ...(onEditPlan ? [["Edit", onEditPlan, PencilIcon] as const] : []),
+            ["Change", () => setChoosing(true), SwapIcon] as const,
+            ...(onSaved ? [["Saved", onSaved, BookmarkIcon] as const] : []),
+            ["End", () => setEndingOwn(true), StopIcon] as const,
           ]}
         />
         </div>
@@ -744,24 +746,30 @@ function PlateauCard({
   );
 }
 
-/** The plan tile's header band (v0.784): PROGRAM or PLAN, the name, and its
- *  week (or end date) on the right. */
-function TileHeader({ kind, title, trailing }: { kind: string; title: string; trailing: string }) {
+type TileIcon = (p: { className?: string }) => React.ReactNode;
+
+/** End's square. */
+function StopIcon({ className = "" }: { className?: string }) {
   return (
-    <div className="flex items-center gap-2 bg-accent px-4 py-2.5 text-on-accent">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-85">{kind}</span>
-      <span className="min-w-0 flex-1 truncate font-display text-base font-bold">{title}</span>
-      <span className="shrink-0 text-xs opacity-90">{trailing}</span>
-    </div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className} aria-hidden>
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
   );
 }
 
-/** The plan tile's actions (v0.784): white outlined buttons, two to a row. */
-function TileButtons({ buttons }: { buttons: readonly (readonly [string, () => void])[] }) {
+/** The plan tile's actions (v0.786, option B): one row of accent-outlined
+ *  buttons, the icon over the label. */
+function TileButtons({ buttons }: { buttons: readonly (readonly [string, () => void, TileIcon])[] }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {buttons.map(([label, onClick]) => (
-        <button key={label} type="button" onClick={onClick} className={`${QUIET} justify-center`}>
+    <div className="flex gap-1.5">
+      {buttons.map(([label, onClick, Icon]) => (
+        <button
+          key={label}
+          type="button"
+          onClick={onClick}
+          className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl border border-accent bg-surface py-2 text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
+        >
+          <Icon className="h-[18px] w-[18px]" />
           {label}
         </button>
       ))}
@@ -791,7 +799,7 @@ const STRIP_DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
  *  the day's main workout. */
 export function WeekStrip({ days }: { days: StripDay[] }) {
   return (
-    <div className="grid grid-cols-7 gap-1" role="list" aria-label="This plan's week">
+    <div className="grid grid-cols-7 gap-0.5" role="list" aria-label="This plan's week">
       {days.map((d) => (
         <div key={d.day} role="listitem" className="min-w-0 text-center" aria-label={`${STRIP_DAY[d.day]}: ${d.label || "nothing"}`}>
           <span className="block text-[11px] text-muted">{STRIP_DAY[d.day]}</span>
@@ -799,7 +807,7 @@ export function WeekStrip({ days }: { days: StripDay[] }) {
             className={`my-1 block h-1.5 rounded-full ${d.kind === "none" ? "border border-hairline" : ""}`}
             style={{ background: STRIP_COLOR[d.kind] }}
           />
-          <span className="block truncate text-[10px] leading-tight">{d.label}</span>
+          <span className="block text-[10px] leading-tight hyphens-auto">{d.label}</span>
         </div>
       ))}
     </div>

@@ -33,7 +33,8 @@ type Row = {
   programId?: string | null;
 };
 
-const MONDAY_FIRST = [1, 2, 3, 4, 5, 6, 0];
+// Sunday first, like the charts (v0.786).
+const SUNDAY_FIRST = [0, 1, 2, 3, 4, 5, 6];
 
 function kindOf(w: Row): StripKind {
   if (w.isRest) return "rest";
@@ -53,7 +54,7 @@ export function shortName(name: string): string {
 /** Pure: the strip from plan rows and the program's weekdays. */
 export function buildStrip(rows: readonly Row[], programDays: ReadonlySet<number>): { strip: StripDay[]; others: string[] } {
   const others: string[] = [];
-  const strip = MONDAY_FIRST.map((day): StripDay => {
+  const strip = SUNDAY_FIRST.map((day): StripDay => {
     const on = rows.filter((w) => w.dayOfWeek === day).sort((a, b) => a.sortOrder - b.sortOrder);
     const work = on.filter((w) => !w.isRest && w.category !== "WARMUP");
     // The day's main work: strength or holds before conditioning, cardio last.

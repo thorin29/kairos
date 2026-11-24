@@ -171,7 +171,7 @@ export function PlanLibrary({
                 </button>
               </form>
             ) : (
-              <div key={p.id} className="flex items-center gap-1 rounded-xl border border-hairline py-1 pl-4 pr-1">
+              <div key={p.id} className="flex items-center gap-1 rounded-xl border border-hairline bg-surface py-1 pl-4 pr-1">
                 <button
                   type="button"
                   onClick={() => {

@@ -32,7 +32,7 @@ import { WeeklyTraining } from "./weekly-training";
 import { CoreCard, CoreOverview, CorePage, LiftPage, LiftRows } from "./lift-page";
 import { SoreSpots, soreRegions } from "./sore-spots";
 import { WorkoutPauseButton, WorkoutPausePage } from "./workout-pause";
-import { ActionButton } from "./action-button";
+import { ActionButton, ActionGroup } from "./action-button";
 import { FamilyWodButton, FamilyWodPage } from "./family-wod";
 import type { SoreSpot } from "@/lib/workouts/sore";
 import { CARDIO_COLOR, CONDITIONING_COLOR, CardioCard, CardioPage, ConditioningCard, ConditioningPage } from "./endurance-charts";
@@ -108,6 +108,8 @@ export function WorkoutsGrid({
     personal ? (people[0]?.user.id ?? null) : null,
   );
   const [step, setStep] = useState<Step>("menu");
+  // Two tabs (v0.786): Progress (the charts) and Train (the plan and the buttons).
+  const [tab, setTab] = useState<"progress" | "train">("progress");
   const [routineKind, setRoutineKind] = useState<"warmup" | "mobility" | "stretching">("warmup");
 
   // The overlay is one scrolling container and the steps swap inside it, so
@@ -293,7 +295,27 @@ export function WorkoutsGrid({
                     )}
                   </div>
 
-                  {!personal && open.weightSeries.length > 0 && (
+                  <div role="tablist" className="grid grid-cols-2 gap-1 rounded-full bg-ground p-1">
+                    {(
+                      [
+                        ["progress", "Progress"],
+                        ["train", "Train"],
+                      ] as const
+                    ).map(([k, label]) => (
+                      <button
+                        key={k}
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === k}
+                        onClick={() => setTab(k)}
+                        className={`h-9 rounded-full text-sm font-semibold ${tab === k ? "bg-surface text-ink shadow-sm" : "text-muted"}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {tab === "progress" && !personal && open.weightSeries.length > 0 && (
                     <div>
                       <LiftBlocks
                         userId={open.user.id}
@@ -307,7 +329,7 @@ export function WorkoutsGrid({
 
                   {/* Workout days and Weekly training side by side (v0.670);
                       stacked on a phone. */}
-                  {!personal && (
+                  {tab === "progress" && !personal && (
                     <div className="grid items-start gap-3 sm:grid-cols-2">
                       {open.weightSeries.length > 0 && (
                         <LiftDetailPanel
@@ -321,6 +343,8 @@ export function WorkoutsGrid({
                     </div>
                   )}
 
+                  {tab === "train" && (
+                    <>
                   {/* The plan card (v0.747): the program or your own plan, with
                       Edit / Change / End. It replaces the Edit plan button. */}
                   <ProgramCard
@@ -331,19 +355,25 @@ export function WorkoutsGrid({
                     onSaved={() => setStep("saved")}
                   />
 
-                  {/* The app's buttons (v0.684) less Go for a… (the phone's
-                      GPS): eight, four to a row (two on a phone). Saved plans
-                      is on the plan card (v0.781). */}
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <ActionButton icon={DumbbellIcon} label="Log workout" onClick={() => setStep("log")} primary={hasPlan} />
-                    <ActionButton icon={FlameIcon} label="Routines" onClick={() => setStep("warmups")} />
-                    <ActionButton icon={BookIcon} label="Browse workouts" onClick={() => setStep("browse")} />
-                    <ActionButton icon={PlusIcon} label="HIIT / CrossFit" sub="Create / edit" onClick={() => setStep("hiit")} />
-                    <ActionButton icon={DumbbellIcon} label="Calculator" onClick={() => setCalcOpen(true)} />
-                    <FamilyWodButton userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("familywod")} />
-                    <WorkoutPauseButton userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("pause")} />
-                    <ActionButton icon={ClockIcon} label="Recent" onClick={() => setStep("history")} />
-                  </div>
+                      {/* The buttons in three groups (v0.786), built like the
+                          program tile. Go for a… is the phone's (GPS). Saved
+                          plans is on the plan card (v0.781). */}
+                      <ActionGroup kind="Train" title="Today">
+                        <ActionButton icon={DumbbellIcon} label="Log workout" onClick={() => setStep("log")} primary={hasPlan} />
+                        <FamilyWodButton userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("familywod")} />
+                      </ActionGroup>
+                      <ActionGroup kind="Workouts" title="Find & build">
+                        <ActionButton icon={BookIcon} label="Browse workouts" onClick={() => setStep("browse")} />
+                        <ActionButton icon={FlameIcon} label="Routines" onClick={() => setStep("warmups")} />
+                        <ActionButton icon={PlusIcon} label="HIIT / CrossFit" sub="Create / edit" onClick={() => setStep("hiit")} />
+                      </ActionGroup>
+                      <ActionGroup kind="Tools" title="">
+                        <ActionButton icon={DumbbellIcon} label="Calculator" onClick={() => setCalcOpen(true)} />
+                        <ActionButton icon={ClockIcon} label="Recent" onClick={() => setStep("history")} />
+                        <WorkoutPauseButton userId={open.user.id} todayISO={todayISO} onOpen={() => setStep("pause")} />
+                      </ActionGroup>
+                    </>
+                  )}
                 </div>
               )}
 

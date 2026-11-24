@@ -25,11 +25,11 @@ describe("plan card strip (v0.747)", () => {
       w(0, "Rest", null, { isRest: true }),
     ];
     const { strip, others } = buildStrip(rows, new Set([1, 2, 4, 5]));
-    expect(strip.map((d) => d.day)).toEqual([1, 2, 3, 4, 5, 6, 0]);
-    expect(strip[0]).toEqual({ day: 1, label: "Press", kind: "lift", program: true });
-    expect(strip[1]).toEqual({ day: 2, label: "", kind: "none", program: true });
-    expect(strip[5]).toEqual({ day: 6, label: "Core", kind: "core", program: false });
-    expect(strip[6]).toEqual({ day: 0, label: "Rest", kind: "rest", program: false });
+    expect(strip.map((d) => d.day)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(strip[1]).toEqual({ day: 1, label: "Press", kind: "lift", program: true });
+    expect(strip[2]).toEqual({ day: 2, label: "", kind: "none", program: true });
+    expect(strip[6]).toEqual({ day: 6, label: "Core", kind: "core", program: false });
+    expect(strip[0]).toEqual({ day: 0, label: "Rest", kind: "rest", program: false });
     expect(others).toEqual(["Arms", "Core"]);
     expect(shortName("Squat day")).toBe("Squat");
     // Your own plan: no program, no "others".

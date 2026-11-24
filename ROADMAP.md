@@ -66,8 +66,12 @@ live in the database, never in this repository.
     notifications in v0.762 / app 0.550. Still to come:
     - More alerts once notifications reach phones: driving over a speed, no
       update for a while, low battery.
-18. **Program tile look.** Done in v0.784 (option B). Kept here only until
-    it's confirmed and removed.
+18. **Program tile look.** Done in v0.784 (option B); one row of icon
+    buttons, a Sunday-first week and the Progress | Train tabs in v0.786.
+    Kept here only until it's confirmed and removed.
+19. **The program tile elsewhere.** Mockup "Kairos: Tile everywhere": Bible
+    plan, reading goal, school students, backpacking trip, the log screen's
+    groups, Pause, Family WOD, ice time. Waiting on which to build.
 
 ## Not doing (decided)
 
@@ -109,9 +113,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.785.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.786.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   180_seventh_week, all registered in `MIGRATIONS`.
-- App 0.562.0 (versionCode 634, CLIENT_BUILD 634).
+- App 0.563.0 (versionCode 635, CLIENT_BUILD 635).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -291,6 +295,8 @@ Kept here so they don't come back as open items.
 
 ### Workouts
 
+- Two tabs (v0.786): Progress (the charts) and Train (the plan card and the
+  buttons in three titled groups: Train, Find & build, Tools).
 - Backpacking trips (v0.778 / app 0.558): a Backpacking calendar event makes
   each trip day's hiking (from Family map locations) a workout of its own;
   "Hiking today?" on the first walk of the day; Camp and hiking lines on
